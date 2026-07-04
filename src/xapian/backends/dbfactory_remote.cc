@@ -1,7 +1,7 @@
-/** @file dbfactory_remote.cc
+/** @file
  * @brief Database factories for remote databases.
  */
-/* Copyright (C) 2006,2007,2008,2010,2011,2014 Olly Betts
+/* Copyright (C) 2006,2007,2008,2010,2011,2014,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -26,76 +26,47 @@
 #include "xapian/net/progclient.h"
 #include "xapian/net/remotetcpclient.h"
 
-#include <string>
+#include <string_view>
 
 using namespace std;
 
 namespace Xapian {
 
 Database
-Remote::open(const string &host, unsigned int port, unsigned timeout_,
-	     unsigned connect_timeout, int flags, const string &dir)
-{
-    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout | flags | dir);
-    RETURN(Database(new RemoteTcpClient(host, port, timeout_ * 1e-3,
-					connect_timeout * 1e-3, false, flags, dir)));
-}
-
-Database
-Remote::open(const string &host, unsigned int port, unsigned timeout_,
+Remote::open(string_view host, unsigned int port, unsigned timeout_,
 	     unsigned connect_timeout)
 {
-	RETURN(Remote::open(host, port, timeout_, connect_timeout, 0, string()));
+    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout);
+    RETURN(Database(new RemoteTcpClient(host, port, timeout_ * 1e-3,
+					connect_timeout * 1e-3, false, 0)));
 }
 
 WritableDatabase
-Remote::open_writable(const string &host, unsigned int port,
-		      unsigned timeout_, unsigned connect_timeout,
-		      int flags, const string &dir)
-{
-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags | dir);
-    RETURN(WritableDatabase(new RemoteTcpClient(host, port, timeout_ * 1e-3,
-						connect_timeout * 1e-3, true,
-						flags, dir)));
-}
-
-WritableDatabase
-Remote::open_writable(const string &host, unsigned int port,
+Remote::open_writable(string_view host, unsigned int port,
 		      unsigned timeout_, unsigned connect_timeout,
 		      int flags)
 {
-	RETURN(Remote::open_writable(host, port, timeout_, connect_timeout, flags, string()));
+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags);
+    RETURN(WritableDatabase(new RemoteTcpClient(host, port, timeout_ * 1e-3,
+						connect_timeout * 1e-3, true,
+						flags)));
 }
 
 Database
-Remote::open(const string &program, const string &args,
-	     unsigned timeout_, int flags, const string &dir)
-{
-    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_ | flags | dir);
-    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, flags, dir)));
-}
-
-Database
-Remote::open(const string &program, const string &args,
+Remote::open(string_view program, string_view args,
 	     unsigned timeout_)
 {
-	RETURN(Remote::open(program, args, timeout_, 0, string()));
+    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_);
+    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, 0)));
 }
 
 WritableDatabase
-Remote::open_writable(const string &program, const string &args,
-		      unsigned timeout_, int flags, const string &dir)
-{
-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags | dir);
-    RETURN(WritableDatabase(new ProgClient(program, args,
-					   timeout_ * 1e-3, true, flags, dir)));
-}
-
-WritableDatabase
-Remote::open_writable(const string &program, const string &args,
+Remote::open_writable(string_view program, string_view args,
 		      unsigned timeout_, int flags)
 {
-	RETURN(open_writable(program, args, timeout_, flags, string()));
+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags);
+    RETURN(WritableDatabase(new ProgClient(program, args,
+					   timeout_ * 1e-3, true, flags)));
 }
 
 }

@@ -1,4 +1,4 @@
-/** @file esetinternal.cc
+/** @file
  * @brief Xapian::ESet::Internal class
  */
 /* Copyright (C) 2008,2010,2011,2013,2016,2017,2018 Olly Betts
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -38,6 +38,7 @@
 #include "xapian/expand/termlistmerger.h"
 #include "xapian/unicode/description_append.h"
 
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
@@ -57,10 +58,6 @@ Internal::ExpandTerm::get_description() const
     desc += ')';
     return desc;
 }
-
-template<class CLASS> struct delete_ptr {
-    void operator()(CLASS *p) const { delete p; }
-};
 
 /** Build a tree of binary TermList objects like QueryOptimiser does for
  *  OrPostList objects.
@@ -82,7 +79,8 @@ build_termlist_tree(const Xapian::Database &db, const RSet & rset)
 	Assert(!termlists.empty());
 	return make_termlist_merger(termlists);
     } catch (...) {
-	for_each(termlists.begin(), termlists.end(), delete_ptr<TermList>());
+	for_each(termlists.begin(), termlists.end(),
+		 [](TermList* p) { delete p; });
 	throw;
     }
 }
@@ -105,18 +103,20 @@ ESet::Internal::expand(Xapian::termcount max_esize,
     Assert(items.empty());
 
     unique_ptr<TermList> tree(build_termlist_tree(db, rset));
-    Assert(tree.get());
+    Assert(tree);
 
     bool is_heap = false;
     while (true) {
 	// See if the root needs replacing.
 	TermList * new_root = tree->next();
+	if (new_root == tree.get()) {
+	    // No more entries.
+	    break;
+	}
 	if (new_root) {
 	    LOGLINE(EXPAND, "Replacing the root of the termlist tree");
 	    tree.reset(new_root);
 	}
-
-	if (tree->at_end()) break;
 
 	string term = tree->get_termname();
 
@@ -172,10 +172,9 @@ ESet::Internal::get_description() const
     string desc("ESet::Internal(ebound=");
     desc += str(ebound);
 
-    vector<Xapian::Internal::ExpandTerm>::const_iterator i;
-    for (i = items.begin(); i != items.end(); ++i) {
+    for (auto&& i : items) {
 	desc += ", ";
-	desc += i->get_description();
+	desc += i.get_description();
     }
     desc += ')';
 
@@ -196,10 +195,10 @@ ESet::operator=(ESet &&) = default;
 
 ESet::~ESet() { }
 
-Xapian::doccount
+Xapian::termcount
 ESet::size() const
 {
-    return internal->items.size();
+    return Xapian::termcount(internal->items.size());
 }
 
 Xapian::termcount

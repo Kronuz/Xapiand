@@ -1,7 +1,7 @@
-/** @file remote_termlist.h
+/** @file
  * @brief Iterate terms in a remote document
  */
-/* Copyright (C) 2007,2008,2011,2018 Olly Betts
+/* Copyright (C) 2007,2008,2011,2018,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_REMOTE_TERMLIST_H
@@ -32,8 +32,6 @@ class RemoteTermList : public TermList {
 
     /// Don't allow copying.
     RemoteTermList(const RemoteTermList &) = delete;
-
-    std::string current_term;
 
     Xapian::termcount current_wdf;
 
@@ -73,9 +71,6 @@ class RemoteTermList : public TermList {
 
     void accumulate_stats(Xapian::Internal::ExpandStats& stats) const;
 
-    /// Return the termname at the current position.
-    std::string get_termname() const;
-
     /// Return the wdf for the term at the current position.
     Xapian::termcount get_wdf() const;
 
@@ -90,10 +85,7 @@ class RemoteTermList : public TermList {
      *  If the specified term isn't in the list, position ourselves on the
      *  first term after @a term (or at_end() if no terms after @a term exist).
      */
-    TermList* skip_to(const std::string& term);
-
-    /// Return true if the current position is past the last term in this list.
-    bool at_end() const;
+    TermList* skip_to(std::string_view term);
 
     /// Return the length of the position list for the current position.
     Xapian::termcount positionlist_count() const;

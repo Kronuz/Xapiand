@@ -1,7 +1,7 @@
-/** @file query.h
+/** @file
  * @brief Xapian::Query API class
  */
-/* Copyright (C) 2011,2012,2013,2014,2015,2016,2017,2018,2019 Olly Betts
+/* Copyright (C) 2011-2026 Olly Betts
  * Copyright (C) 2008 Richard Boulton
  *
  * This program is free software; you can redistribute it and/or
@@ -15,18 +15,19 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_QUERY_H
 #define XAPIAN_INCLUDED_QUERY_H
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-# error "Never use <xapian/query.h> directly; include <xapian.h> instead."
+# error Never use <xapian/query.h> directly; include <xapian.h> instead.
 #endif
 
 #include <string>
+#include <string_view>
 
 #include "xapian/attributes.h"
 #include "xapian/intrusive_ptr.h"
@@ -64,11 +65,12 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 
     /** A query matching all documents.
      *
-     *  This is a static instance of <code>Xapian::Query(std::string())</code>.
+     *  This is a static instance of
+     *  <code>Xapian::Query(std::string_view())</code>.
      *  If you are constructing Query objects which use @a MatchAll in
      *  different threads then the reference counting of the static object can
      *  get messed up by concurrent access so you should instead use
-     *  <code>Xapian::Query(std::string())</code> directly.
+     *  <code>Xapian::Query(std::string_view())</code> directly.
      */
     static const Xapian::Query MatchAll;
 
@@ -119,6 +121,9 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 	 *
 	 *  When used in a non-weighted context, OP_FILTER and OP_AND are
 	 *  equivalent.
+	 *
+	 *  In older 1.4.x, the third and subsequent subqueries were ignored
+	 *  in some situations.  This was fixed in 1.4.15.
 	 */
 	OP_FILTER = 5,
 
@@ -179,13 +184,15 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 	 *  large OR query, but it doesn't matter if the search completely
 	 *  ignores some of the less important terms in the query.
 	 *
-	 *  The subqueries don't have to be terms, but if they aren't then
-	 *  OP_ELITE_SET will look at the estimated frequencies of the
-	 *  subqueries and so could pick a subset which don't actually
-	 *  match any documents even if the full OR would match some.
+	 *  The subqueries don't have to be terms.  If they aren't then
+	 *  OP_ELITE_SET could potentially pick a subset which doesn't
+	 *  actually match any documents even if the full OR would match some
+	 *  (because OP_ELITE_SET currently selects those subqueries which can
+	 *  return the highest weights).  This is probably rare in practice
+	 *  though.
 	 *
-	 *  You can specify a parameter to the query constructor which control
-	 *  the number of terms which OP_ELITE_SET will pick.  If not
+	 *  You can specify a parameter to the query constructor which controls
+	 *  the number of subqueries which OP_ELITE_SET will pick.  If not
 	 *  specified, this defaults to 10 (Xapian used to default to
 	 *  <code>ceil(sqrt(number_of_subqueries))</code> if there are more
 	 *  than 100 subqueries, but this rather arbitrary special case was
@@ -195,8 +202,15 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 	 *  Xapian::Query query(Xapian::Query::OP_ELITE_SET, subqs.begin(), subqs.end(), 7);
 	 *  </pre>
 	 *
-	 * If the number of subqueries is less than this threshold,
-	 * OP_ELITE_SET behaves identically to OP_OR.
+	 *  If the number of subqueries is less than this threshold,
+	 *  OP_ELITE_SET behaves identically to OP_OR.
+	 *
+	 *  When used with a sharded database, OP_ELITE_SET currently picks
+	 *  the subqueries to use separately for each shard based on the
+	 *  maximum weight they can return in that shard.  This means it
+	 *  probably won't select exactly the same terms, and so the results
+	 *  of the search may not be exactly the same as for a single database
+	 *  with equivalent contents.
 	 */
 	OP_ELITE_SET = 10,
 
@@ -230,13 +244,13 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 	 *  is the maximum weight from any matching subquery (for OP_OR, it's
 	 *  the sum of the weights from the matching subqueries).
 	 *
-	 *  Added in Xapian 1.3.2.
+	 *  @since Added in Xapian 1.3.2.
 	 */
 	OP_MAX = 14,
 
 	/** Wildcard expansion.
 	 *
-	 *  Added in Xapian 1.3.3.
+	 *  @since Added in Xapian 1.3.3.
 	 */
 	OP_WILDCARD = 15,
 
@@ -250,7 +264,7 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 	 *  deletion or substitution of a character, or transposition of two
 	 *  adjacent characters) of a specified target.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	OP_EDIT_DISTANCE = 16,
 
@@ -270,8 +284,8 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 
 	/** Value returned by get_type() for MatchAll or equivalent.
 	 *
-	 *  This is returned for any <code>Xapian::Query(std::string())</code>
-	 *  object.
+	 *  This is returned for any
+	 *  <code>Xapian::Query(std::string_view())</code> object.
 	 */
 	LEAF_MATCH_ALL,
 
@@ -306,23 +320,24 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 	 */
 	WILDCARD_LIMIT_MOST_FREQUENT = 0x02,
 
+	/** @private @internal */
 	WILDCARD_LIMIT_MASK_ = 0x03,
 
 	/** Support * which matches 0 or more characters.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0
 	 */
 	WILDCARD_PATTERN_MULTI = 0x10,
 
 	/** Support ? which matches a single character.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	WILDCARD_PATTERN_SINGLE = 0x20,
 
 	/** Enable all supported glob-like features.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	WILDCARD_PATTERN_GLOB = WILDCARD_PATTERN_MULTI|WILDCARD_PATTERN_SINGLE
     };
@@ -336,7 +351,7 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *  so <code>Query() & q</code> is @c Query(), while
      *  <code>Query() | q</code> is @c q.
      */
-    XAPIAN_NOTHROW(Query()) { }
+    Query() noexcept { }
 
     /// Destructor.
     ~Query() { }
@@ -368,7 +383,37 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *		    determine the order of terms obtained via
      *		    get_terms_begin(). (default: 0)
      */
-    Query(const std::string & term,
+    Query(const std::string& term,
+	  Xapian::termcount wqf = 1,
+	  Xapian::termpos pos = 0)
+	: Query(std::string_view(term), wqf, pos)
+    { }
+
+    /** Construct a Query object for a term.
+     *
+     *  @param term The term.  An empty string constructs a query matching
+     *		    all documents (@a MatchAll is a static instance of this).
+     *  @param wqf  The within-query frequency. (default: 1)
+     *  @param pos  The query position.  Currently this is mainly used to
+     *		    determine the order of terms obtained via
+     *		    get_terms_begin(). (default: 0)
+     */
+    Query(const char* term,
+	  Xapian::termcount wqf = 1,
+	  Xapian::termpos pos = 0)
+	: Query(std::string_view(term), wqf, pos)
+    { }
+
+    /** Construct a Query object for a term.
+     *
+     *  @param term The term.  An empty string constructs a query matching
+     *		    all documents (@a MatchAll is a static instance of this).
+     *  @param wqf  The within-query frequency. (default: 1)
+     *  @param pos  The query position.  Currently this is mainly used to
+     *		    determine the order of terms obtained via
+     *		    get_terms_begin(). (default: 0)
+     */
+    Query(std::string_view term,
 	  Xapian::termcount wqf = 1,
 	  Xapian::termpos pos = 0);
 
@@ -414,11 +459,16 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *  @param a	First term.
      *  @param b	Second term.
      */
-    Query(op op_, const std::string & a, const std::string & b)
+    template<typename S1, typename S2,
+	typename
+	std::enable_if<std::is_constructible<std::string_view, S1>::value &&
+		       std::is_constructible<std::string_view, S2>::value,
+		       bool>::type = true>
+    Query(op op_, S1 a, S2 b)
     {
 	init(op_, 2);
-	add_subquery(false, a);
-	add_subquery(false, b);
+	add_subquery(false, std::string_view(a));
+	add_subquery(false, std::string_view(b));
 	done();
     }
 
@@ -428,7 +478,7 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *  @param slot		The value slot to work over.
      *  @param range_limit	The limit of the range.
      */
-    Query(op op_, Xapian::valueno slot, const std::string & range_limit);
+    Query(op op_, Xapian::valueno slot, std::string_view range_limit);
 
     /** Construct a Query object for a value range.
      *
@@ -438,7 +488,7 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *  @param range_upper	Upper end of the range.
      */
     Query(op op_, Xapian::valueno slot,
-	  const std::string & range_lower, const std::string & range_upper);
+	  std::string_view range_lower, std::string_view range_upper);
 
     /** Query constructor for OP_EDIT_DISTANCE and OP_WILDCARD queries.
      *
@@ -479,7 +529,7 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *	ASCII capital letter, as this is assumed to be part of a term prefix.
      */
     Query(op op_,
-	  const std::string & pattern,
+	  std::string_view pattern,
 	  Xapian::termcount max_expansion = 0,
 	  int flags = WILDCARD_LIMIT_ERROR,
 	  op combiner = OP_SYNONYM);
@@ -515,9 +565,11 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *	@param min_prefix_len
      *			The length in bytes of any initial substring of target
      *			that is required to match exactly.  Default: 0
+     *
+     *  @since Added in Xapian 2.0.0.
      */
     Query(op op_,
-	  const std::string& pattern,
+	  std::string_view pattern,
 	  Xapian::termcount max_expansion,
 	  int flags,
 	  op combiner,
@@ -527,8 +579,8 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
     /** Construct a Query object from a begin/end iterator pair.
      *
      *  Dereferencing the iterator should return a Xapian::Query, a non-NULL
-     *  Xapian::Query*, a std::string or a type which converts to one of
-     *  these (e.g. const char*).
+     *  Xapian::Query*, a std::string_view or a type which converts to one of
+     *  these (e.g. std::string or const char*).
      *
      *  If begin == end then there are no subqueries and the resulting Query
      *  won't match anything.
@@ -539,11 +591,20 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *  @param window	Window size for OP_NEAR and OP_PHRASE, or 0 to use the
      *			number of subqueries as the window size (default: 0).
      */
-    template<typename I>
+    template<typename I,
+	typename std::enable_if<
+	    std::is_convertible<typename std::iterator_traits<I>::value_type,
+				Xapian::Query>::value ||
+	    std::is_convertible<typename std::iterator_traits<I>::value_type,
+				Xapian::Query*>::value ||
+	    std::is_convertible<typename std::iterator_traits<I>::value_type,
+				std::string_view>::value,
+	    bool>::type = true,
+	typename iterator_category =
+	    typename std::iterator_traits<I>::iterator_category>
     Query(op op_, I begin, I end, Xapian::termcount window = 0)
     {
 	if (begin != end) {
-	    typedef typename std::iterator_traits<I>::iterator_category iterator_category;
 	    init(op_, window, begin, end, iterator_category());
 	    bool positional = (op_ == OP_NEAR || op_ == OP_PHRASE);
 	    for (I i = begin; i != end; ++i) {
@@ -575,7 +636,7 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
     const TermIterator get_terms_begin() const;
 
     /// End iterator for terms in the query object.
-    const TermIterator XAPIAN_NOTHROW(get_terms_end() const) {
+    const TermIterator get_terms_end() const noexcept {
 	return TermIterator();
     }
 
@@ -588,12 +649,17 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      */
     const TermIterator get_unique_terms_begin() const;
 
+    /// End iterator for unique terms in the query object.
+    const TermIterator get_unique_terms_end() const noexcept {
+	return TermIterator();
+    }
+
     /** Return the length of this query object. */
-    Xapian::termcount XAPIAN_NOTHROW(get_length() const) XAPIAN_PURE_FUNCTION;
+    Xapian::termcount get_length() const noexcept XAPIAN_PURE_FUNCTION;
 
     /** Check if this query is Xapian::Query::MatchNothing. */
-    bool XAPIAN_NOTHROW(empty() const) {
-	return internal.get() == 0;
+    bool empty() const noexcept {
+	return !internal;
     }
 
     /** Serialise this object into a string. */
@@ -606,19 +672,25 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
      *				user-subclasses of Xapian::PostingSource
      *				(default: standard registry).
      */
-    static const Query unserialise(const std::string & serialised,
+    static const Query unserialise(std::string_view serialised,
 				   const Registry & reg = Registry());
 
     /** Get the type of the top level of the query. */
-    op XAPIAN_NOTHROW(get_type() const) XAPIAN_PURE_FUNCTION;
+    op get_type() const noexcept XAPIAN_PURE_FUNCTION;
 
     /** Get the number of subqueries of the top level query. */
-    size_t XAPIAN_NOTHROW(get_num_subqueries() const) XAPIAN_PURE_FUNCTION;
+    size_t get_num_subqueries() const noexcept XAPIAN_PURE_FUNCTION;
 
-    /** Get the wqf parameter of a leaf node. */
+    /** Get the wqf parameter of a leaf node.
+     *
+     *  @since Added in Xapian 2.0.0.
+     */
     Xapian::termcount get_leaf_wqf() const;
 
-    /** Get the pos parameter of a leaf node. */
+    /** Get the pos parameter of a leaf node.
+     *
+     *  @since Added in Xapian 2.0.0.
+     */
     Xapian::termpos get_leaf_pos() const;
 
     /** Read a top level subquery.
@@ -705,7 +777,15 @@ class XAPIAN_VISIBILITY_DEFAULT Query {
 
     void add_subquery(bool positional, const Xapian::Query & subquery);
 
-    void add_subquery(bool, const std::string & subquery) {
+    void add_subquery(bool, const std::string& subquery) {
+	add_subquery(false, Xapian::Query(subquery));
+    }
+
+    void add_subquery(bool, const char* subquery) {
+	add_subquery(false, Xapian::Query(subquery));
+    }
+
+    void add_subquery(bool, std::string_view subquery) {
 	add_subquery(false, Xapian::Query(subquery));
     }
 
@@ -784,7 +864,7 @@ class InvertedQuery_ {
     InvertedQuery_(const InvertedQuery_ & o) : query(o.query) { }
 
     operator Query() const {
-	return Query(Query::OP_AND_NOT, Query(std::string()), query);
+	return Query(Query::OP_AND_NOT, Query(std::string_view{}), query);
     }
 
     friend const InvertedQuery_ operator~(const Query &q);
@@ -825,55 +905,81 @@ operator~(const Query &q)
 
 namespace Internal {
 class AndContext;
-class BoolOrContext;
 class OrContext;
 class XorContext;
 
-class PostList;
+struct PostListAndEstimate;
 class QueryOptimiser;
+struct TermFreqs;
 }
 
 /** @private @internal */
 class Query::Internal : public Xapian::Internal::intrusive_base {
   public:
-    XAPIAN_NOTHROW(Internal()) { }
+    Internal() noexcept { }
 
     virtual ~Internal();
 
-    virtual
-    Xapian::Internal::PostList* postlist(Xapian::Internal::QueryOptimiser* qopt,
-					 double factor) const = 0;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual Xapian::Internal::PostListAndEstimate
+    postlist(Xapian::Internal::QueryOptimiser* qopt,
+	     double factor,
+	     Xapian::Internal::TermFreqs* termfreqs) const = 0;
 
-    virtual bool postlist_sub_and_like(Xapian::Internal::AndContext& ctx,
-				       Xapian::Internal::QueryOptimiser* qopt,
-				       double factor) const;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual bool
+    postlist_sub_and_like(Xapian::Internal::AndContext& ctx,
+			  Xapian::Internal::QueryOptimiser* qopt,
+			  double factor,
+			  Xapian::Internal::TermFreqs* termfreqs) const;
 
-    virtual void postlist_sub_bool_or_like(Xapian::Internal::BoolOrContext& ctx,
-					   Xapian::Internal::QueryOptimiser* qopt) const;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual void
+    postlist_sub_bool_or_like(Xapian::Internal::OrContext& ctx,
+			      Xapian::Internal::QueryOptimiser* qopt,
+			      Xapian::Internal::TermFreqs* termfreqs) const;
 
-    virtual void postlist_sub_or_like(Xapian::Internal::OrContext& ctx,
-				      Xapian::Internal::QueryOptimiser* qopt,
-				      double factor) const;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual void
+    postlist_sub_or_like(Xapian::Internal::OrContext& ctx,
+			 Xapian::Internal::QueryOptimiser* qopt,
+			 double factor,
+			 Xapian::Internal::TermFreqs* termfreqs,
+			 bool keep_zero_weight = true) const;
 
-    virtual void postlist_sub_xor(Xapian::Internal::XorContext& ctx,
-				  Xapian::Internal::QueryOptimiser* qopt,
-				  double factor) const;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual void
+    postlist_sub_xor(Xapian::Internal::XorContext& ctx,
+		     Xapian::Internal::QueryOptimiser* qopt,
+		     double factor,
+		     Xapian::Internal::TermFreqs* termfreqs) const;
 
-    virtual termcount XAPIAN_NOTHROW(get_length() const) XAPIAN_PURE_FUNCTION;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual termcount get_length() const noexcept XAPIAN_PURE_FUNCTION;
 
+    XAPIAN_VISIBILITY_INTERNAL
     virtual void serialise(std::string & result) const = 0;
 
-    static Query::Internal * unserialise(const char ** p, const char * end, const Registry & reg);
+    XAPIAN_VISIBILITY_INTERNAL
+    static Query::Internal* unserialise(const char** p, const char* end,
+					const Registry& reg);
 
-    virtual Query::op XAPIAN_NOTHROW(get_type() const) XAPIAN_PURE_FUNCTION = 0;
-    virtual size_t XAPIAN_NOTHROW(get_num_subqueries() const) XAPIAN_PURE_FUNCTION;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual Query::op get_type() const noexcept XAPIAN_PURE_FUNCTION = 0;
+    XAPIAN_VISIBILITY_INTERNAL
+    virtual size_t get_num_subqueries() const noexcept XAPIAN_PURE_FUNCTION;
+    XAPIAN_VISIBILITY_INTERNAL
     virtual const Query get_subquery(size_t n) const;
+    XAPIAN_VISIBILITY_INTERNAL
     virtual termcount get_wqf() const;
+    XAPIAN_VISIBILITY_INTERNAL
     virtual termpos get_pos() const;
 
+    XAPIAN_VISIBILITY_INTERNAL
     virtual std::string get_description() const = 0;
 
     // Pass argument as void* to avoid need to include <vector>.
+    XAPIAN_VISIBILITY_INTERNAL
     virtual void gather_terms(void * void_terms) const;
 };
 
@@ -884,7 +990,7 @@ Query::operator&=(const Query & o)
 	// q &= empty_query sets q to empty_query.
 	*this = o;
     } else if (this != &o &&
-	       internal.get() &&
+	       internal &&
 	       internal->_refs == 1 &&
 	       get_type() == OP_AND) {
 	// Appending a subquery to an existing AND.
@@ -901,7 +1007,7 @@ Query::operator|=(const Query & o)
     if (o.empty()) {
 	// q |= empty_query is a no-op.
     } else if (this != &o &&
-	       internal.get() &&
+	       internal &&
 	       internal->_refs == 1 &&
 	       get_type() == OP_OR) {
 	// Appending a subquery to an existing OR.
@@ -920,7 +1026,7 @@ Query::operator^=(const Query & o)
     } else if (internal.get() == o.internal.get()) {
 	// q ^= q gives MatchNothing.
 	internal = NULL;
-    } else if (internal.get() &&
+    } else if (internal &&
 	       internal->_refs == 1 &&
 	       get_type() == OP_XOR) {
 	// Appending a subquery to an existing XOR.

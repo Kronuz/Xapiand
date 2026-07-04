@@ -1,4 +1,4 @@
-/** @file uuids.cc
+/** @file
  * @brief Class for handling UUIDs
  */
 /* Copyright (C) 2008 Lemur Consulting Ltd
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -39,7 +39,7 @@
 # include <exception>
 # include <uuid/uuid.h>
 #elif defined HAVE_UUID_H
-// UUID API on FreeBSD, NetBSD and AIX.
+// UUID API on FreeBSD, NetBSD, OpenBSD and AIX.
 # include <arpa/inet.h> // For htonl() and htons().
 # include <exception>
 # include <uuid.h>
@@ -111,7 +111,7 @@ void
 Uuid::parse(const char* in)
 {
     for (unsigned i = 0; i != BINARY_SIZE; ++i) {
-	uuid_data[i] = hex_digit(in[0]) << 4 | hex_digit(in[1]);
+	uuid_data[i] = hex_decode(in[0], in[1]);
 	in += ((UUID_GAP_MASK >> i) & 1) | 2;
     }
 }

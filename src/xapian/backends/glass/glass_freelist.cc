@@ -1,7 +1,7 @@
-/** @file glass_freelist.cc
+/** @file
  * @brief Glass freelist
  */
-/* Copyright 2014,2015,2016 Olly Betts
+/* Copyright 2014,2015,2016,2020 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,9 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -27,16 +26,9 @@
 #include "xapian/error.h"
 
 #include "xapian/common/omassert.h"
+#include "xapian/common/popcount.h"
 #include "xapian/common/wordaccess.h"
 #include <cstring>
-
-#if !HAVE_DECL___BUILTIN_POPCOUNT
-// Only include <intrin.h> if we have to as it can result in warnings about
-// duplicate declarations of builtin functions under mingw.
-# if HAVE_DECL___POPCNT || HAVE_DECL___POPCNT64
-#  include <intrin.h>
-# endif
-#endif
 
 using namespace std;
 using namespace Glass;
@@ -285,19 +277,19 @@ GlassFreeListChecker::count_set_bits(uint4 * p_first_bad_blk) const
 	elt_type elt = bitmap[i];
 	if (usual(elt == 0))
 	    continue;
-	if (c == 0 && p_first_bad_blk) {
+	if (p_first_bad_blk) {
 	    uint4 first_bad_blk = i * BITS_PER_ELT;
 	    if (false) {
 #if HAVE_DECL___BUILTIN_CTZ
-	    } else if (sizeof(elt_type) == sizeof(unsigned)) {
+	    } else if constexpr(sizeof(elt_type) == sizeof(unsigned)) {
 		first_bad_blk += __builtin_ctz(elt);
 #endif
 #if HAVE_DECL___BUILTIN_CTZL
-	    } else if (sizeof(elt_type) == sizeof(unsigned long)) {
+	    } else if constexpr(sizeof(elt_type) == sizeof(unsigned long)) {
 		first_bad_blk += __builtin_ctzl(elt);
 #endif
 #if HAVE_DECL___BUILTIN_CTZLL
-	    } else if (sizeof(elt_type) == sizeof(unsigned long long)) {
+	    } else if constexpr(sizeof(elt_type) == sizeof(unsigned long long)) {
 		first_bad_blk += __builtin_ctzll(elt);
 #endif
 	    } else {
@@ -306,34 +298,11 @@ GlassFreeListChecker::count_set_bits(uint4 * p_first_bad_blk) const
 		}
 	    }
 	    *p_first_bad_blk = first_bad_blk;
+	    p_first_bad_blk = nullptr;
 	}
 
 	// Count set bits in elt.
-	if (false) {
-#if HAVE_DECL___BUILTIN_POPCOUNT
-	} else if (sizeof(elt_type) == sizeof(unsigned)) {
-	    c += __builtin_popcount(elt);
-#elif HAVE_DECL___POPCNT
-	} else if (sizeof(elt_type) == sizeof(unsigned)) {
-	    c += __popcnt(elt);
-#endif
-#if HAVE_DECL___BUILTIN_POPCOUNTL
-	} else if (sizeof(elt_type) == sizeof(unsigned long)) {
-	    c += __builtin_popcountl(elt);
-#endif
-#if HAVE_DECL___BUILTIN_POPCOUNTLL
-	} else if (sizeof(elt_type) == sizeof(unsigned long long)) {
-	    c += __builtin_popcountll(elt);
-#elif HAVE_DECL___POPCNT64
-	} else if (sizeof(elt_type) == sizeof(unsigned long long)) {
-	    c += __popcnt64(elt);
-#endif
-	} else {
-	    do {
-		++c;
-		elt &= elt - 1;
-	    } while (elt);
-	}
+	add_popcount(c, elt);
     }
     return c;
 }

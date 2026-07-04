@@ -5,7 +5,7 @@
 //  Based on Boost's intrusive_ptr.hpp
 //
 //  Copyright (c) 2001, 2002 Peter Dimov
-//  Copyright (c) 2011,2013,2014,2015,2017 Olly Betts
+//  Copyright (c) 2011,2013,2014,2015,2017,2022 Olly Betts
 //
 // Distributed under the Boost Software License, Version 1.0.
 //
@@ -37,7 +37,7 @@
 //
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-# error "Never use <xapian/intrusive_ptr.h> directly; include <xapian.h> instead."
+# error Never use <xapian/intrusive_ptr.h> directly; include <xapian.h> instead.
 #endif
 
 #include "xapian/attributes.h"
@@ -173,6 +173,11 @@ public:
         rhs.px = tmp;
     }
 
+    explicit operator bool() const
+    {
+	return px != nullptr;
+    }
+
 private:
 
     T * px;
@@ -208,7 +213,13 @@ template<class T, class U> inline bool operator!=(T * a, intrusive_ptr<U> const 
     return a != b.get();
 }
 
-/// A smart pointer that uses intrusive reference counting and can't be NULL.
+/** A normally non-NULL smart pointer using intrusive reference counting.
+ *
+ *  The only case where it can be NULL is when it's been moved-from.  Once
+ *  moved from, the only valid operations are to destroy the smart pointer,
+ *  or to assign or move assign to it (after which all operations are valid
+ *  again).
+ */
 template<class T> class intrusive_ptr_nonnull
 {
 private:
@@ -236,12 +247,12 @@ public:
 
     ~intrusive_ptr_nonnull()
     {
-        if(--px->_refs == 0 ) delete px;
+        if( px && --px->_refs == 0 ) delete px;
     }
 
     intrusive_ptr_nonnull(intrusive_ptr_nonnull && rhs) : px( rhs.px )
     {
-        ++px->_refs;
+        rhs.px = 0;
     }
 
     intrusive_ptr_nonnull & operator=(intrusive_ptr_nonnull && rhs)
@@ -255,7 +266,7 @@ public:
     template<class U>
     intrusive_ptr_nonnull(intrusive_ptr_nonnull<U> && rhs) : px( rhs.px )
     {
-        ++px->_refs;
+        rhs.px = 0;
     }
 
     template<class U>
@@ -299,6 +310,11 @@ public:
         rhs.px = tmp;
     }
 
+    // No operator bool() here - the held pointer should only be NULL if this
+    // pointer has been moved from, and in that case it's not valid to use its
+    // value so it seems more helpful to error on attempts to check if the
+    // pointer is NULL.
+
 private:
 
     T * px;
@@ -330,143 +346,6 @@ template<class T, class U> inline bool operator==(T * a, intrusive_ptr_nonnull<U
 }
 
 template<class T, class U> inline bool operator!=(T * a, intrusive_ptr_nonnull<U> const & b)
-{
-    return a != b.get();
-}
-
-/// A smart pointer that uses intrusive reference counting and can't be NULL.
-template<class T, class V> class internal_intrusive_ptr
-{
-private:
-
-    typedef internal_intrusive_ptr this_type;
-
-public:
-
-    internal_intrusive_ptr()
-    {
-        V tmp;
-        px = tmp.internal.px;
-        tmp.internal.px = 0;  // only case px can be 0
-    }
-
-    internal_intrusive_ptr( T * p) XAPIAN_NONNULL() : px( p )
-    {
-        ++px->_refs;
-    }
-
-    template<class U, class W>
-    internal_intrusive_ptr( internal_intrusive_ptr<U, W> const & rhs )
-    : px( rhs.get() )
-    {
-        ++px->_refs;
-    }
-
-    internal_intrusive_ptr(internal_intrusive_ptr const & rhs): px( rhs.px )
-    {
-        ++px->_refs;
-    }
-
-    ~internal_intrusive_ptr()
-    {
-        if( px != 0 && --px->_refs == 0 ) delete px;
-    }
-
-    internal_intrusive_ptr(internal_intrusive_ptr && rhs) : px( rhs.px )
-    {
-        V tmp;
-        rhs.px = tmp.internal.px;
-        tmp.internal.px = 0;  // only case px can be 0
-    }
-
-    internal_intrusive_ptr & operator=(internal_intrusive_ptr && rhs)
-    {
-        this_type( static_cast< internal_intrusive_ptr && >( rhs ) ).swap(*this);
-        return *this;
-    }
-
-    template<class U, class W> friend class internal_intrusive_ptr;
-
-    template<class U, class W>
-    internal_intrusive_ptr(internal_intrusive_ptr<U, W> && rhs) : px( rhs.px )
-    {
-        W tmp;
-        rhs.px = tmp.internal.px;
-        tmp.internal.px = 0;  // only case px can be 0
-    }
-
-    template<class U, class W>
-    internal_intrusive_ptr & operator=(internal_intrusive_ptr<U, W> && rhs)
-    {
-        this_type( static_cast< internal_intrusive_ptr<U, W> && >( rhs ) ).swap(*this);
-        return *this;
-    }
-
-    internal_intrusive_ptr & operator=(internal_intrusive_ptr const & rhs)
-    {
-        this_type(rhs).swap(*this);
-        return *this;
-    }
-
-    internal_intrusive_ptr & operator=(T * rhs) XAPIAN_NONNULL()
-    {
-        this_type(rhs).swap(*this);
-        return *this;
-    }
-
-    T * get() const
-    {
-        return px;
-    }
-
-    T & operator*() const
-    {
-        return *px;
-    }
-
-    T * operator->() const
-    {
-        return px;
-    }
-
-    void swap(internal_intrusive_ptr & rhs)
-    {
-        T * tmp = px;
-        px = rhs.px;
-        rhs.px = tmp;
-    }
-
-private:
-
-    T * px;
-};
-
-template<class T, class U, class V, class W> inline bool operator==(internal_intrusive_ptr<T, V> const & a, internal_intrusive_ptr<U, W> const & b)
-{
-    return a.get() == b.get();
-}
-
-template<class T, class U, class V, class W> inline bool operator!=(internal_intrusive_ptr<T, V> const & a, internal_intrusive_ptr<U, W> const & b)
-{
-    return a.get() != b.get();
-}
-
-template<class T, class U, class V> inline bool operator==(internal_intrusive_ptr<T, V> const & a, U * b)
-{
-    return a.get() == b;
-}
-
-template<class T, class U, class V> inline bool operator!=(internal_intrusive_ptr<T, V> const & a, U * b)
-{
-    return a.get() != b;
-}
-
-template<class T, class U, class W> inline bool operator==(T * a, internal_intrusive_ptr<U, W> const & b)
-{
-    return a == b.get();
-}
-
-template<class T, class U, class W> inline bool operator!=(T * a, internal_intrusive_ptr<U, W> const & b)
 {
     return a != b.get();
 }
@@ -632,6 +511,11 @@ public:
 	bool tmp2 = counting;
 	counting = rhs.counting;
 	rhs.counting = tmp2;
+    }
+
+    explicit operator bool() const
+    {
+	return px != nullptr;
     }
 
 private:

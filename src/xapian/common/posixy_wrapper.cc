@@ -1,8 +1,8 @@
-/** @file posixy_wrapper.cc
+/** @file
  * @brief Provides wrappers with POSIXy semantics.
  */
 /* Copyright (C) 2007 Lemur Consulting Ltd
- * Copyright (C) 2007,2012,2018 Olly Betts
+ * Copyright (C) 2007,2012,2018,2023,2025 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -62,9 +62,8 @@ posixy_unlink(const char * filename)
 #include "xapian/common/safefcntl.h"
 #include "xapian/common/safewindows.h"
 
-/** Call GetLastError() and set errno appropriately. */
-static int
-set_errno_from_getlasterror()
+int
+posixy_set_errno_from_getlasterror()
 {
     int e;
     unsigned long winerr = GetLastError();
@@ -152,13 +151,7 @@ set_errno_from_getlasterror()
 		e = EINVAL;
 	    break;
     }
-    /* Some versions of Microsoft's C++ compiler earlier than 2005 do not have
-     * _set_errno(). */
-#ifdef _set_errno
-    _set_errno(e);
-#else
     errno = e;
-#endif
     return -1;
 }
 
@@ -170,7 +163,7 @@ posixy_unlink(const char * filename)
 	return 0;
     }
 
-    return set_errno_from_getlasterror();
+    return posixy_set_errno_from_getlasterror();
 }
 
 int
@@ -227,7 +220,7 @@ posixy_open(const char *filename, int flags)
 		   FILE_ATTRIBUTE_NORMAL,
 		   NULL);
     if (handleWin == INVALID_HANDLE_VALUE) {
-	return set_errno_from_getlasterror();
+	return posixy_set_errno_from_getlasterror();
     }
 
     /* Return a standard file descriptor. */
@@ -241,7 +234,7 @@ posixy_rename(const char *from, const char *to)
 	return 0;
     }
 
-    return set_errno_from_getlasterror();
+    return posixy_set_errno_from_getlasterror();
 }
 
 #endif // __WIN32__

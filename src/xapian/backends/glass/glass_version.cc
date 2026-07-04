@@ -1,7 +1,7 @@
-/** @file glass_version.cc
+/** @file
  * @brief GlassVersion class
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2013,2014,2015,2016,2017 Olly Betts
+/* Copyright (C) 2006,2007,2008,2009,2010,2013,2014,2015,2016,2017,2024 Olly Betts
  * Copyright (C) 2011 Dan Colish
  *
  * This program is free software; you can redistribute it and/or modify
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -296,9 +296,9 @@ GlassVersion::write(glass_revision_number_t new_rev, int flags)
 	    tmpfile += "/v.tmp";
 
 #ifdef __EMSCRIPTEN__
-	// Emscripten fails to create a file if O_TRUNC is specified and the
-	// filename is the previous name of a renamed file (which it will be
-	// the second time we write out the version file for a DB):
+	// Emscripten < 1.39.10 fails to create a file if O_TRUNC is specified
+	// and the filename is the previous name of a renamed file (which it
+	// will be the second time we write out the version file for a DB):
 	//
 	// https://github.com/emscripten-core/emscripten/issues/8187
 	//
@@ -395,12 +395,18 @@ GlassVersion::sync(const string & tmpfile,
     return true;
 }
 
-// Only try to compress tags longer than this many bytes.
-const size_t COMPRESS_MIN = 4;
+/* Only try to compress tags strictly longer than this many bytes.
+ *
+ * This can theoretically usefully be set as low as 4, but in practical terms
+ * zlib can't compress in very many cases for short inputs and even when it can
+ * the savings are small, so we default to a higher threshold to save CPU time
+ * for marginal size reductions.
+ */
+const size_t COMPRESS_MIN = 18;
 
 static const uint4 compress_min_tab[] = {
     0, // POSTLIST
-    0, // DOCDATA
+    COMPRESS_MIN, // DOCDATA
     COMPRESS_MIN, // TERMLIST
     0, // POSITION
     COMPRESS_MIN, // SPELLING
@@ -450,18 +456,37 @@ RootInfo::serialise(string &s) const
 bool
 RootInfo::unserialise(const char ** p, const char * end)
 {
-    unsigned val;
+    unsigned val, b;
     if (!unpack_uint(p, end, &root) ||
 	!unpack_uint(p, end, &val) ||
 	!unpack_uint(p, end, &num_entries) ||
-	!unpack_uint(p, end, &blocksize) ||
+	!unpack_uint(p, end, &b) ||
 	!unpack_uint(p, end, &compress_min) ||
 	!unpack_string(p, end, fl_serialised)) return false;
-    level = val >> 2;
+    auto level_ = val >> 2;
+    if (rare(level_ >= GLASS_BTREE_CURSOR_LEVELS))
+	throw Xapian::DatabaseCorruptError("Impossibly deep Btree");
+    level = level_;
     sequential = val & 0x02;
     root_is_fake = val & 0x01;
-    blocksize <<= 11;
-    AssertRel(blocksize,>=,GLASS_MIN_BLOCKSIZE);
+
+    if (root_is_fake && level > 0) {
+	throw Xapian::DatabaseCorruptError("Fake root but level > 0");
+    }
+
+    b <<= 11;
+    if (rare(b < GLASS_MIN_BLOCKSIZE ||
+	     b > GLASS_MAX_BLOCKSIZE ||
+	     (b & (b - 1)) != 0)) {
+	throw Xapian::DatabaseCorruptError("Invalid block size");
+    }
+    blocksize = b;
+
+    // Map old default to new default.
+    if (compress_min == 4) {
+	compress_min = COMPRESS_MIN;
+    }
+
     return true;
 }
 

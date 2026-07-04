@@ -1,4 +1,4 @@
-/** @file honey_positionlist.cc
+/** @file
  * @brief A position list in a honey database.
  */
 /* Copyright (C) 2004,2005,2006,2008,2009,2010,2013,2017,2019 Olly Betts
@@ -14,9 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -35,8 +34,8 @@
 using namespace std;
 
 void
-HoneyPositionTable::pack(string & s,
-			 const Xapian::VecCOW<Xapian::termpos> & vec) const
+HoneyPositionTable::pack(string& s,
+			 const Xapian::VecCOW<Xapian::termpos>& vec) const
 {
     LOGCALL_VOID(DB, "HoneyPositionTable::pack", s | vec);
     Assert(!vec.empty());
@@ -54,7 +53,7 @@ HoneyPositionTable::pack(string & s,
 
 Xapian::termcount
 HoneyPositionTable::positionlist_count(Xapian::docid did,
-				       const string & term) const
+				       string_view term) const
 {
     LOGCALL(DB, Xapian::termcount, "HoneyPositionTable::positionlist_count", did | term);
 
@@ -63,8 +62,8 @@ HoneyPositionTable::positionlist_count(Xapian::docid did,
 	RETURN(0);
     }
 
-    const char * pos = data.data();
-    const char * end = pos + data.size();
+    const char* pos = data.data();
+    const char* end = pos + data.size();
     Xapian::termpos pos_last;
     if (!unpack_uint(&pos, end, &pos_last)) {
 	throw Xapian::DatabaseCorruptError("Position list data corrupt");
@@ -184,20 +183,6 @@ HoneyPositionList::HoneyPositionList(string&& data)
     LOGCALL_CTOR(DB, "HoneyPositionList", data);
 
     pos_data = std::move(data);
-
-    set_data(pos_data);
-}
-
-HoneyPositionList::HoneyPositionList(const HoneyTable& table,
-				     Xapian::docid did,
-				     const string& term)
-{
-    LOGCALL_CTOR(DB, "HoneyPositionList", table | did | term);
-
-    if (!table.get_exact_entry(HoneyPositionTable::make_key(did, term),
-			       pos_data)) {
-	pos_data.clear();
-    }
 
     set_data(pos_data);
 }

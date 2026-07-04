@@ -1,7 +1,7 @@
-/** @file  remoteconnection.cc
+/** @file
  *  @brief RemoteConnection class used by the remote backend.
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2017 Olly Betts
+/* Copyright (C) 2006-2025 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -65,9 +65,9 @@ throw_database_closed()
 
 [[noreturn]]
 static void
-throw_network_error_insane_message_length()
+throw_network_error_message_too_long_for_off_t()
 {
-    throw Xapian::NetworkError("Insane message length specified!");
+    throw Xapian::NetworkError("Message too long for size to fit in off_t");
 }
 
 [[noreturn]]
@@ -97,6 +97,51 @@ RemoteConnection::RemoteConnection(int fdin_, int fdout_,
 	throw Xapian::NetworkError("Failed to setup OVERLAPPED",
 				   context, -int(GetLastError()));
 
+#elif defined USE_SO_NOSIGPIPE
+    // SO_NOSIGPIPE is a non-standardised socket option supported by a number
+    // of platforms - at least DragonFlyBSD, FreeBSD, macOS (not older
+    // versions, e.g. 10.15 apparently lacks it), Solaris; notably not
+    // supported by Linux or OpenBSD though.
+    //
+    // We use it where supported due to one big advantage over POSIX's
+    // MSG_NOSIGNAL which is that we can just set it once for a socket whereas
+    // with MSG_NOSIGNAL we need to call send(..., MSG_NOSIGNAL) instead of
+    // write(...), but send() only works on sockets, so with MSG_NOSIGNAL any
+    // code which might be working with files or pipes as well as sockets needs
+    // conditional handling depending on whether the fd is a socket or not.
+    //
+    // SO_NOSIGPIPE is present on NetBSD, but it seems when using it we still
+    // get SIGPIPE (reproduced on NetBSD 9.3 and 10.0) so we avoid using it
+    // there.
+    int on = 1;
+    if (setsockopt(fdout, SOL_SOCKET, SO_NOSIGPIPE,
+		   reinterpret_cast<char*>(&on), sizeof(on)) < 0) {
+	// Some platforms (including FreeBSD, macOS, DragonflyBSD) seem to
+	// fail with EBADF instead of ENOTSOCK when passed a non-socket so
+	// allow either.  If the descriptor is actually not valid we'll report
+	// it the next time we try to use it (as we would when not trying to
+	// use SO_NOSIGPIPE so this actually gives a more consistent error
+	// across platforms.
+	if (errno != ENOTSOCK && errno != EBADF) {
+	    throw Xapian::NetworkError("Couldn't set SO_NOSIGPIPE on socket",
+				       errno);
+	}
+    }
+#elif defined USE_MSG_NOSIGNAL
+    // We can use send(..., MSG_NOSIGNAL) to avoid generating SIGPIPE
+    // (MSG_NOSIGNAL was added in POSIX.1-2008).  This seems to be pretty much
+    // universally supported by current Unix-like platforms, but older macOS
+    // and Solaris apparently didn't have it.
+    //
+    // If fdout is not a socket, we'll set send_flags = 0 when the first send()
+    // fails with ENOTSOCK and use write() instead from then on.
+#else
+    // It's simplest to just ignore SIGPIPE.  Not ideal, but it seems only old
+    // versions of macOS and of Solaris will end up here so let's not bother
+    // trying to do any clever trickery.
+    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+	throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
+    }
 #endif
 }
 
@@ -113,7 +158,7 @@ RemoteConnection::read_at_least(size_t min_len, double end_time)
 {
     LOGCALL(REMOTE, bool, "RemoteConnection::read_at_least", min_len | end_time);
 
-    if (buffer.length() >= min_len) return true;
+    if (buffer.length() >= min_len) RETURN(true);
 
 #ifdef __WIN32__
     HANDLE hin = fd_to_handle(fdin);
@@ -139,7 +184,7 @@ RemoteConnection::read_at_least(size_t min_len, double end_time)
 	}
 
 	if (received == 0) {
-	    return false;
+	    RETURN(false);
 	}
 
 	buffer.append(buf, received);
@@ -160,12 +205,12 @@ RemoteConnection::read_at_least(size_t min_len, double end_time)
 
 	if (received > 0) {
 	    buffer.append(buf, received);
-	    if (buffer.length() >= min_len) return true;
+	    if (buffer.length() >= min_len) RETURN(true);
 	    continue;
 	}
 
 	if (received == 0) {
-	    return false;
+	    RETURN(false);
 	}
 
 	LOGLINE(REMOTE, "read gave errno = " << errno);
@@ -230,12 +275,29 @@ RemoteConnection::read_at_least(size_t min_len, double end_time)
 	}
     }
 #endif
-    return true;
+    RETURN(true);
 }
 
+#ifndef __WIN32__
+ssize_t
+RemoteConnection::send_or_write(const void* p, size_t len)
+{
+# ifdef USE_MSG_NOSIGNAL
+    if (send_flags) {
+	ssize_t n = send(fdout, p, len, send_flags);
+	if (usual(n >= 0 || errno != ENOTSOCK)) return n;
+	// In some testcases in the testsuite and in xapian-progsrv (in some
+	// cases) fdout won't be a socket.  Clear send_flags so we only try
+	// send() once in this case.
+	send_flags = 0;
+    }
+# endif
+    return write(fdout, p, len);
+}
+#endif
+
 void
-RemoteConnection::send_message(char type, const string &message,
-			       double end_time)
+RemoteConnection::send_message(char type, string_view message, double end_time)
 {
     LOGCALL_VOID(REMOTE, "RemoteConnection::send_message", type | message | end_time);
     if (fdout == -1)
@@ -244,10 +306,11 @@ RemoteConnection::send_message(char type, const string &message,
     string header;
     header += type;
     pack_uint(header, message.size());
+    string_view header_view = header;
 
 #ifdef __WIN32__
     HANDLE hout = fd_to_handle(fdout);
-    const string * str = &header;
+    const string_view* str = &header_view;
 
     size_t count = 0;
     while (true) {
@@ -288,13 +351,13 @@ RemoteConnection::send_message(char type, const string &message,
 				   context, errno);
     }
 
-    const string * str = &header;
+    const string_view* str = &header_view;
 
     size_t count = 0;
     while (true) {
 	// We've set write to non-blocking, so just try writing as there
 	// will usually be space.
-	ssize_t n = write(fdout, str->data() + count, str->size() - count);
+	ssize_t n = send_or_write(str->data() + count, str->size() - count);
 
 	if (n >= 0) {
 	    count += n;
@@ -368,7 +431,7 @@ RemoteConnection::send_file(char type, int fd, double end_time)
     if (fdout == -1)
 	throw_database_closed();
 
-    off_t size = file_size(fd);
+    auto size = file_size(fd);
     if (errno)
 	throw Xapian::NetworkError("Couldn't stat file to send", errno);
     // FIXME: Use sendfile() or similar if available?
@@ -378,7 +441,7 @@ RemoteConnection::send_file(char type, int fd, double end_time)
     size_t c = 1;
     {
 	string enc_size;
-	pack_uint(enc_size, std::make_unsigned<off_t>::type(size));
+	pack_uint(enc_size, size);
 	c += enc_size.size();
 	// An encoded length should be just a few bytes.
 	AssertRel(c, <=, sizeof(buf));
@@ -438,7 +501,7 @@ RemoteConnection::send_file(char type, int fd, double end_time)
     while (true) {
 	// We've set write to non-blocking, so just try writing as there
 	// will usually be space.
-	ssize_t n = write(fdout, buf + count, c - count);
+	ssize_t n = send_or_write(buf + count, c - count);
 
 	if (n >= 0) {
 	    count += n;
@@ -599,7 +662,7 @@ RemoteConnection::get_message_chunked(double end_time)
     chunked_data_left = off_t(len);
     // Check that the value of len fits in an off_t without loss.
     if (rare(uint_least64_t(chunked_data_left) != len)) {
-	throw_network_error_insane_message_length();
+	throw_network_error_message_too_long_for_off_t();
     }
     size_t header_len = (p - buffer.data());
     unsigned char type = buffer[0];
@@ -680,7 +743,7 @@ RemoteConnection::shutdown()
 
     // We can be called from a destructor, so we can't throw an exception.
     try {
-	send_message(MSG_SHUTDOWN, string(), 0.0);
+	send_message(MSG_SHUTDOWN, {}, 0.0);
 #ifdef __WIN32__
 	HANDLE hin = fd_to_handle(fdin);
 	char dummy;

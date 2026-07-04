@@ -1,7 +1,7 @@
-/** @file glass_version.h
+/** @file
  * @brief GlassVersion class
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2013,2014,2015,2016,2018 Olly Betts
+/* Copyright (C) 2006-2024 Olly Betts
  * Copyright (C) 2011 Dan Colish
  *
  * This program is free software; you can redistribute it and/or modify
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_GLASS_VERSION_H
@@ -157,7 +157,7 @@ class GlassVersion {
     void unserialise_stats();
 
   public:
-    explicit GlassVersion(const std::string & db_dir_)
+    explicit GlassVersion(std::string_view db_dir_)
 	: rev(0), fd(-1), offset(0), db_dir(db_dir_), changes(NULL),
 	  doccount(0), total_doclen(0), last_docid(0),
 	  doclen_lbound(0), doclen_ubound(0),

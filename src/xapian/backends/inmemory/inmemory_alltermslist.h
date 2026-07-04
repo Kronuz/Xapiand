@@ -1,8 +1,8 @@
-/** @file inmemory_alltermslist.h
+/** @file
  * @brief Iterate all terms in an inmemory db
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
- * Copyright 2003,2008,2009,2011,2017 Olly Betts
+ * Copyright 2003,2008,2009,2011,2017,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,9 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_INMEMORY_ALLTERMSLIST_H
@@ -36,19 +35,23 @@ class InMemoryAllTermsList : public AllTermsList
     /// Assignment is not allowed.
     void operator=(const InMemoryAllTermsList &);
 
-    const std::map<string, InMemoryTerm> *tmap;
+    const std::map<std::string,
+		   InMemoryTerm,
+		   std::less<>>* tmap;
 
-    std::map<string, InMemoryTerm>::const_iterator it;
+    std::map<std::string, InMemoryTerm, std::less<>>::const_iterator it;
 
     Xapian::Internal::intrusive_ptr<const InMemoryDatabase> database;
 
-    string prefix;
+    std::string prefix;
 
   public:
     /// Constructor.
-    InMemoryAllTermsList(const std::map<string, InMemoryTerm>* tmap_,
+    InMemoryAllTermsList(const std::map<std::string,
+					InMemoryTerm,
+					std::less<>>* tmap_,
 			 Xapian::Internal::intrusive_ptr<const InMemoryDatabase> database_,
-			 const string& prefix_)
+			 std::string_view prefix_)
 	: tmap(tmap_), it(tmap->begin()), database(database_),
 	  prefix(prefix_)
     {
@@ -56,23 +59,14 @@ class InMemoryAllTermsList : public AllTermsList
 
     Xapian::termcount get_approx_size() const;
 
-    // Gets current termname
-    string get_termname() const;
-
     // Get num of docs indexed by term
     Xapian::doccount get_termfreq() const;
 
-    // Get num of docs indexed by term
-    Xapian::termcount get_collection_freq() const;
-
-    TermList * skip_to(const string &tname);
+    TermList* skip_to(std::string_view tname);
 
     /** next() causes the AllTermsList to move to the next term in the list.
      */
     TermList * next();
-
-    // True if we're off the end of the list
-    bool at_end() const;
 };
 
 #ifdef DISABLE_GPL_LIBXAPIAN

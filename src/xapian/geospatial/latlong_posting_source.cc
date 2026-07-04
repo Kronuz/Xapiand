@@ -1,4 +1,4 @@
-/** @file latlong_posting_source.cc
+/** @file
  * @brief LatLongDistancePostingSource implementation.
  */
 /* Copyright 2008 Lemur Consulting Ltd
@@ -16,9 +16,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -40,6 +39,10 @@ using namespace std;
 static double
 weight_from_distance(double dist, double k1, double k2)
 {
+    // k2 defaults to 1.0, so handle that case with a fast path which avoids
+    // calling pow().
+    if (k2 == 1.0)
+	return k1 / (dist + k1);
     return k1 * pow(dist + k1, -k2);
 }
 
@@ -247,9 +250,10 @@ LatLongDistancePostingSource::unserialise_with_registry(const string &s,
 }
 
 void
-LatLongDistancePostingSource::init(const Database & db_)
+LatLongDistancePostingSource::reset(const Database& db_,
+				    Xapian::doccount shard_index)
 {
-    ValuePostingSource::init(db_);
+    ValuePostingSource::reset(db_, shard_index);
     if (max_range > 0.0) {
 	// Possible that no documents are in range.
 	set_termfreq_min(0);

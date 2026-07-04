@@ -1,7 +1,7 @@
-/** @file remote_termlist.cc
+/** @file
  * @brief Iterate terms in a remote document
  */
-/* Copyright (C) 2007,2008,2018 Olly Betts
+/* Copyright (C) 2007,2008,2018,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -42,28 +42,22 @@ RemoteTermList::accumulate_stats(Xapian::Internal::ExpandStats& stats) const
 {
     // Used for query expansion with remote databases.  FIXME: Rework that and
     // drop this?
-    Assert(!at_end());
-    stats.accumulate(current_wdf, doclen, current_termfreq, db_size);
-}
-
-string
-RemoteTermList::get_termname() const
-{
-    Assert(!at_end());
-    return current_term;
+    Assert(!data.empty());
+    stats.accumulate(shard_index,
+		     current_wdf, doclen, current_termfreq, db_size);
 }
 
 Xapian::termcount
 RemoteTermList::get_wdf() const
 {
-    Assert(!at_end());
+    Assert(!data.empty());
     return current_wdf;
 }
 
 Xapian::doccount
 RemoteTermList::get_termfreq() const
 {
-    Assert(!at_end());
+    Assert(!data.empty());
     return current_termfreq;
 }
 
@@ -75,8 +69,7 @@ RemoteTermList::next()
     }
     const char* p_end = data.data() + data.size();
     if (p == p_end) {
-	data.resize(0);
-	return NULL;
+	return this;
     }
     current_term.resize(size_t(static_cast<unsigned char>(*p++)));
     if (!unpack_string_append(&p, p_end, current_term) ||
@@ -88,21 +81,17 @@ RemoteTermList::next()
 }
 
 TermList*
-RemoteTermList::skip_to(const std::string& term)
+RemoteTermList::skip_to(std::string_view term)
 {
     if (!p) {
-	RemoteTermList::next();
+	if (RemoteTermList::next())
+	    return this;
     }
-    while (!RemoteTermList::at_end() && current_term < term) {
-	RemoteTermList::next();
+    while (current_term < term) {
+	if (RemoteTermList::next())
+	    return this;
     }
     return NULL;
-}
-
-bool
-RemoteTermList::at_end() const
-{
-    return data.empty();
 }
 
 Xapian::termcount

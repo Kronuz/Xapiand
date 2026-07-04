@@ -1,4 +1,4 @@
-/** @file honey_alldocspostlist.h
+/** @file
  * @brief A PostList which iterates over all documents in a HoneyDatabase.
  */
 /* Copyright (C) 2006,2007,2008,2009,2017,2018 Olly Betts
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_HONEY_ALLDOCSPOSTLIST_H
@@ -26,7 +26,7 @@
 # error config.h must be included first in each C++ source file
 #endif
 
-#include "xapian/api/leafpostlist.h"
+#include "xapian/backends/leafpostlist.h"
 #include "xapian/backends/honey/honey_defs.h"
 #include "xapian/common/pack.h"
 #include "xapian/common/wordaccess.h"
@@ -88,8 +88,8 @@ docid_from_key(const std::string& key)
 }
 
 class DocLenChunkReader {
-    unsigned const char *p;
-    unsigned const char *end;
+    unsigned const char* p = nullptr;
+    unsigned const char* end;
 
     Xapian::docid did;
 
@@ -101,7 +101,7 @@ class DocLenChunkReader {
 
   public:
     /// Create a DocLenChunkReader which is already at_end().
-    DocLenChunkReader() : p(NULL) { }
+    DocLenChunkReader() { }
 
     /// Update to use the chunk currently pointed to by @a cursor.
     bool update(HoneyCursor* cursor);
@@ -146,17 +146,10 @@ class HoneyAllDocsPostList : public LeafPostList {
 
     Honey::DocLenChunkReader reader;
 
-    /// The number of documents in the database.
-    Xapian::doccount doccount;
-
   public:
-    HoneyAllDocsPostList(const HoneyDatabase* db_, Xapian::doccount doccount_);
+    HoneyAllDocsPostList(const HoneyDatabase* db_, Xapian::doccount doccount);
 
     ~HoneyAllDocsPostList();
-
-    Xapian::doccount get_termfreq() const;
-
-    Xapian::termcount get_doclength() const;
 
     Xapian::docid get_docid() const;
 
@@ -169,6 +162,8 @@ class HoneyAllDocsPostList : public LeafPostList {
     PostList* skip_to(Xapian::docid did, double w_min);
 
     PostList* check(Xapian::docid did, double w_min, bool& valid);
+
+    Xapian::termcount get_wdf_upper_bound() const;
 
     std::string get_description() const;
 };

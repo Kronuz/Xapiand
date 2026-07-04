@@ -1,4 +1,4 @@
-/** @file glass_values.cc
+/** @file
  * @brief GlassValueManager class
  */
 /* Copyright (C) 2008,2009,2010,2011,2012,2016,2017 Olly Betts
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -156,9 +156,9 @@ GlassValueManager::get_chunk_containing_did(Xapian::valueno slot,
 					    string &chunk) const
 {
     LOGCALL(DB, Xapian::docid, "GlassValueManager::get_chunk_containing_did", slot | did | chunk);
-    if (!cursor.get())
+    if (!cursor)
 	cursor.reset(postlist_table->cursor_get());
-    if (!cursor.get()) RETURN(0);
+    if (!cursor) RETURN(0);
 
     bool exact = cursor->find_entry(make_valuechunk_key(slot, did));
     if (!exact) {
@@ -387,7 +387,8 @@ GlassValueManager::add_document(Xapian::docid did, const Xapian::Document &doc,
 
 	add_value(did, slot, value);
 	if (termlist_table->is_open()) {
-	    pack_uint(slots_used, slot - prev_slot - 1);
+	    // prev_slot starts as Xapian::valueno(-1).
+	    pack_uint(slots_used, slot - UNSIGNED_OVERFLOW_OK(prev_slot + 1));
 	    prev_slot = slot;
 	}
 	++it;
@@ -421,7 +422,8 @@ GlassValueManager::delete_document(Xapian::docid did,
 	if (!unpack_uint(&p, end, &slot)) {
 	    throw Xapian::DatabaseCorruptError("Value slot encoding corrupt");
 	}
-	slot += prev_slot + 1;
+	// prev_slot starts as Xapian::valueno(-1).
+	slot += UNSIGNED_OVERFLOW_OK(prev_slot + 1);
 	prev_slot = slot;
 
 	std::pair<map<Xapian::valueno, ValueStats>::iterator, bool> i;
@@ -518,7 +520,8 @@ GlassValueManager::get_all_values(map<Xapian::valueno, string> & values,
 	if (!unpack_uint(&p, end, &slot)) {
 	    throw Xapian::DatabaseCorruptError("Value slot encoding corrupt");
 	}
-	slot += prev_slot + 1;
+	// prev_slot starts as Xapian::valueno(-1).
+	slot += UNSIGNED_OVERFLOW_OK(prev_slot + 1);
 	prev_slot = slot;
 	values.insert(make_pair(slot, get_value(did, slot)));
     }

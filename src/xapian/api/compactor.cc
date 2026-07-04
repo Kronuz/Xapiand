@@ -1,7 +1,7 @@
-/** @file compactor.cc
+/** @file
  * @brief Compact a database, or merge and compact several.
  */
-/* Copyright (C) 2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2015,2016,2017,2018 Olly Betts
+/* Copyright (C) 2003-2024 Olly Betts
  * Copyright (C) 2008 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -15,9 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -26,6 +25,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <string_view>
 #include <vector>
 
 #include <cerrno>
@@ -39,8 +39,8 @@
 
 #include "xapian/backends/backends.h"
 #include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/postlist.h"
 #include "xapian/common/debuglog.h"
-#include "xapian/api/leafpostlist.h"
 #include "xapian/common/omassert.h"
 #include "xapian/common/filetests.h"
 #include "xapian/common/fileutils.h"
@@ -74,7 +74,7 @@ class CmpByFirstUsed {
     CmpByFirstUsed(const vector<pair<Xapian::docid, Xapian::docid>>& ur)
 	: used_ranges(ur) { }
 
-    bool operator()(size_t a, size_t b) const {
+    bool operator()(Xapian::doccount a, Xapian::doccount b) const {
 	return used_ranges[a].first < used_ranges[b].first;
     }
 };
@@ -123,7 +123,7 @@ backend_mismatch(const Xapian::Database::Internal* db, int backend1,
 namespace Xapian {
 
 void
-Database::compact_(const string * output_ptr, int fd, unsigned flags,
+Database::compact_(const string_view* output_ptr, int fd, unsigned flags,
 		   int block_size,
 		   Xapian::Compactor * compactor) const
 {
@@ -213,11 +213,13 @@ Database::compact_(const string * output_ptr, int fd, unsigned flags,
 		//
 		// tot_off could wrap here, but it's unsigned, so that's
 		// OK.
-		tot_off -= (first - 1);
+		UNSIGNED_OVERFLOW_OK(tot_off -= (first - 1));
 	    }
 
 #ifdef XAPIAN_ASSERTIONS
-	    PostList* pl = shard->open_post_list(string());
+	    PostList* pl = shard->open_post_list({});
+	    // We don't do this for an empty shard.
+	    Assert(pl);
 	    pl->next();
 	    // This test should never fail, since shard->get_doccount() is
 	    // non-zero!
@@ -235,7 +237,7 @@ Database::compact_(const string * output_ptr, int fd, unsigned flags,
 
 	offset.push_back(tot_off);
 	if (renumber)
-	    tot_off += last;
+	    UNSIGNED_OVERFLOW_OK(tot_off += last);
 	else if (last_docid < shard->get_lastdocid())
 	    last_docid = shard->get_lastdocid();
 	used_ranges.push_back(make_pair(first, last));
@@ -248,9 +250,9 @@ Database::compact_(const string * output_ptr, int fd, unsigned flags,
 	// We want to process the sources in ascending order of first
 	// docid.  So we create a vector "order" with ascending integers
 	// and then sort so the indirected order is right.
-	vector<size_t> order;
+	vector<Xapian::doccount> order;
 	order.reserve(n_shards);
-	for (size_t i = 0; i < n_shards; ++i)
+	for (Xapian::doccount i = 0; i < n_shards; ++i)
 	    order.push_back(i);
 
 	sort(order.begin(), order.end(), CmpByFirstUsed(used_ranges));
@@ -263,8 +265,8 @@ Database::compact_(const string * output_ptr, int fd, unsigned flags,
 	used_ranges_.reserve(n_shards);
 
 	Xapian::docid last_start = 0, last_end = 0;
-	for (size_t j = 0; j != order.size(); ++j) {
-	    size_t n = order[j];
+	for (Xapian::doccount j = 0; j != order.size(); ++j) {
+	    Xapian::doccount n = order[j];
 
 	    internals_.push_back(internals[n]);
 	    used_ranges_.push_back(used_ranges[n]);

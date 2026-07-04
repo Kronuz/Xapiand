@@ -1,8 +1,8 @@
-/** @file glass_table.h
+/** @file
  * @brief Btree implementation
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
- * Copyright 2002,2003,2004,2005,2006,2007,2008,2009,2010,2012,2013,2014,2015,2016 Olly Betts
+ * Copyright 2002-2025 Olly Betts
  * Copyright 2008 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -16,9 +16,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_GLASS_TABLE_H
@@ -41,6 +40,7 @@
 
 #include <algorithm>
 #include <string>
+#include <string_view>
 
 namespace Glass {
 
@@ -114,7 +114,10 @@ inline int DIR_END(const uint8_t * b) { return unaligned_read2(b + 9); }
 const int DIR_START = 11;
 
 inline void SET_REVISION(uint8_t * b, uint4 rev) { aligned_write4(b, rev); }
-inline void SET_LEVEL(uint8_t * b, int x) { AssertRel(x,<,256); b[4] = x; }
+inline void SET_LEVEL(uint8_t* b, int x) {
+    AssertRel(x,<,256);
+    b[4] = uint8_t(x);
+}
 inline void SET_MAX_FREE(uint8_t * b, int x) { unaligned_write2(b + 5, x); }
 inline void SET_TOTAL_FREE(uint8_t * b, int x) { unaligned_write2(b + 7, x); }
 inline void SET_DIR_END(uint8_t * b, int x) { unaligned_write2(b + 9, x); }
@@ -149,7 +152,7 @@ class Key {
 	return p[0];
     }
     char operator[](size_t i) const {
-	AssertRel(i,<,(size_t)length());
+	AssertRel(i,<,size_t(length()));
 	return p[i + K1];
     }
 };
@@ -172,6 +175,10 @@ template<class T> class LeafItem_base {
     /* LeafItem from block address and offset to item pointer */
     LeafItem_base(T p_, int c) : p(p_ + getD(p_, c)) { }
     explicit LeafItem_base(T p_) : p(p_) { }
+
+    void init(T p_, int c) { p = p_ + getD(p_, c); }
+    void init(T p_) { p = p_; }
+
     T get_address() const { return p; }
     /** SIZE in diagram above. */
     int size() const {
@@ -218,7 +225,7 @@ class LeafItem_wr : public LeafItem_base<uint8_t *> {
     void set_key_len(int x) {
 	AssertRel(x, >=, 0);
 	AssertRel(x, <=, GLASS_BTREE_MAX_KEY_LEN);
-	p[I2] = x;
+	p[I2] = uint8_t(x);
     }
     void setI(int x) { unaligned_write2(p, x); }
     static void setX(uint8_t * q, int c, int x) { unaligned_write2(q + c, x); }
@@ -239,8 +246,8 @@ class LeafItem_wr : public LeafItem_base<uint8_t *> {
 	if (rare(I &~ ITEM_SIZE_MASK)) throw Xapian::DatabaseError("item too large!");
 	setI(I);
     }
-    void form_key(const std::string & key_) {
-	std::string::size_type key_len = key_.length();
+    void form_key(std::string_view key_) {
+	auto key_len = key_.length();
 	if (key_len > GLASS_BTREE_MAX_KEY_LEN) {
 	    // We check term length when a term is added to a document but
 	    // glass doubles zero bytes, so this can still happen for terms
@@ -253,12 +260,13 @@ class LeafItem_wr : public LeafItem_base<uint8_t *> {
 	}
 
 	set_key_len(key_len);
-	std::memmove(p + I2 + K1, key_.data(), key_len);
 	*p |= I_FIRST_BIT;
+	if (key_len)
+	    std::memmove(p + I2 + K1, key_.data(), key_len);
     }
     // FIXME passing cd here is icky
     void set_tag(int cd, const char *start, int len, bool compressed, int i, int m) {
-	std::memmove(p + cd, start, len);
+	if (len) std::memmove(p + cd, start, len);
 	set_size(cd + len);
 	if (compressed) *p |= I_COMPRESSED_BIT;
 	if (i == m) *p |= I_LAST_BIT;
@@ -341,7 +349,7 @@ class BItem_wr : public BItem_base<uint8_t *> {
     void set_key_len(int x) {
 	AssertRel(x, >=, 0);
 	AssertRel(x, <, GLASS_BTREE_MAX_KEY_LEN);
-	p[BYTES_PER_BLOCK_NUMBER] = x;
+	p[BYTES_PER_BLOCK_NUMBER] = uint8_t(x);
     }
     static void setX(uint8_t * q, int c, int x) { unaligned_write2(q + c, x); }
   public:
@@ -394,11 +402,6 @@ class BItem_wr : public BItem_base<uint8_t *> {
 	unaligned_write2(q + c, x);
     }
 };
-
-// Allow for BTREE_CURSOR_LEVELS levels in the B-tree.
-// With 10, overflow is practically impossible
-// FIXME: but we want it to be completely impossible...
-const int BTREE_CURSOR_LEVELS = 10;
 
 }
 
@@ -463,7 +466,7 @@ class GlassTable {
      *  @param lazy		If true, don't create the table until it's
      *			needed.
      */
-    GlassTable(const char * tablename_, const std::string & path_,
+    GlassTable(const char* tablename_, std::string_view path_,
 	       bool readonly_, bool lazy = false);
 
     GlassTable(const char * tablename_, int fd, off_t offset_,
@@ -483,7 +486,7 @@ class GlassTable {
      */
     void close(bool permanent = false);
 
-    bool readahead_key(const string &key) const;
+    bool readahead_key(std::string_view key) const;
 
     /** Determine whether the btree exists on disk.
      */
@@ -563,7 +566,7 @@ class GlassTable {
      *  @return true if key is found in table,
      *          false if key is not found in table.
      */
-    bool get_exact_entry(const std::string & key, std::string & tag) const;
+    bool get_exact_entry(std::string_view key, std::string& tag) const;
 
     /** Check if a key exists in the Btree.
      *
@@ -576,7 +579,7 @@ class GlassTable {
      *  @return true if key is found in table,
      *          false if key is not found in table.
      */
-    bool key_exists(const std::string &key) const;
+    bool key_exists(std::string_view key) const;
 
     /** Read the tag value for the key pointed to by cursor C_.
      *
@@ -606,8 +609,8 @@ class GlassTable {
      *		for example because it is being opaquely copied
      *		(default: false).
      */
-    void add(const std::string& key,
-	     std::string tag,
+    void add(std::string_view key,
+	     std::string_view tag,
 	     bool already_compressed = false);
 
     /** Delete an entry from the table.
@@ -625,9 +628,11 @@ class GlassTable {
      *
      *  @return true if an entry was removed; false if it did not exist.
      */
-    bool del(const std::string &key);
+    bool del(std::string_view key);
 
     int get_flags() const { return flags; }
+
+    void set_flags(int new_flags) { flags = new_flags; }
 
     /** Create a new empty btree structure on disk and open it at the
      *  initial revision.
@@ -741,7 +746,7 @@ class GlassTable {
     void write_block(uint4 n, const uint8_t *p,
 		     bool appending = false) const;
     [[noreturn]]
-    void set_overwritten() const;
+    void throw_overwritten() const;
     void block_to_cursor(Glass::Cursor *C_, int j, uint4 n) const;
     void alter();
     void compact(uint8_t *p);
@@ -758,7 +763,7 @@ class GlassTable {
     int add_kt(bool found);
     void read_root();
     void split_root(uint4 split_n);
-    void form_key(const std::string & key) const;
+    void form_key(std::string_view key) const;
 
     /// The name of the table (used when writing changesets).
     const char * tablename;
@@ -887,7 +892,7 @@ class GlassTable {
      */
     static uint4 block_given_by(const uint8_t * p, int c);
 
-    mutable Glass::Cursor C[Glass::BTREE_CURSOR_LEVELS];
+    mutable Glass::Cursor C[GLASS_BTREE_CURSOR_LEVELS];
 
     /** Buffer used when splitting a block.
      *

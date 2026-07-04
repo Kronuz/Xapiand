@@ -1,7 +1,7 @@
-/** @file postingsource.h
+/** @file
  *  @brief External sources of posting information
  */
-/* Copyright (C) 2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2019 Olly Betts
+/* Copyright (C) 2007-2026 Olly Betts
  * Copyright (C) 2008,2009 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or modify
@@ -15,15 +15,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_POSTINGSOURCE_H
 #define XAPIAN_INCLUDED_POSTINGSOURCE_H
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-# error "Never use <xapian/postingsource.h> directly; include <xapian.h> instead."
+# error Never use <xapian/postingsource.h> directly; include <xapian.h> instead.
 #endif
 
 #include "xapian/attributes.h"
@@ -59,7 +59,7 @@ class XAPIAN_VISIBILITY_DEFAULT PostingSource
 
   public:
     /// Allow subclasses to be instantiated.
-    XAPIAN_NOTHROW(PostingSource()) { }
+    PostingSource() noexcept { }
 
     /** @private @internal Set pointer to flag to clear on maxweight changes.
      *
@@ -130,7 +130,7 @@ class XAPIAN_VISIBILITY_DEFAULT PostingSource
     }
 
     /// Return the currently set upper bound on what get_weight() can return.
-    double XAPIAN_NOTHROW(get_maxweight() const) { return max_weight_; }
+    double get_maxweight() const noexcept { return max_weight_; }
 
     /** Return the weight contribution for the current document.
      *
@@ -363,13 +363,13 @@ class XAPIAN_VISIBILITY_DEFAULT PostingSource
      *  so you must override either this method or init().  In new code,
      *  override this method in preference.
      *
-     *  @since Added in Xapian 1.5.0.
+     *  @since Added in Xapian 2.0.0.
      */
     virtual void reset(const Database& db, Xapian::doccount shard_index);
 
     /** Older method which did the same job as reset().
      *
-     *  Prior to 1.5.0, instead of reset() there was a method called init()
+     *  Prior to 2.0.0, instead of reset() there was a method called init()
      *  taking one parameter.  The default implementation of reset() calls
      *  init() to allow existing subclasses to continue to work.
      *
@@ -391,7 +391,7 @@ class XAPIAN_VISIBILITY_DEFAULT PostingSource
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated PostingSource
+     *  You can transfer ownership of a dynamically allocated PostingSource
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -403,7 +403,7 @@ class XAPIAN_VISIBILITY_DEFAULT PostingSource
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated PostingSource
+     *  You can transfer ownership of a dynamically allocated PostingSource
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -445,7 +445,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
      *
      *  @param slot_ The value slot to read values from.
      */
-    explicit XAPIAN_NOTHROW(ValuePostingSource(Xapian::valueno slot_))
+    explicit ValuePostingSource(Xapian::valueno slot_) noexcept
 	: slot(slot_) {}
 
     Xapian::doccount get_termfreq_min() const;
@@ -460,23 +460,23 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
 
     Xapian::docid get_docid() const;
 
-    void init(const Database & db_);
+    void reset(const Database& db_, Xapian::doccount shard_index);
 
     /** The database we're reading values from.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     Xapian::Database get_database() const { return db; }
 
     /** The slot we're reading values from.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     Xapian::valueno get_slot() const { return slot; }
 
     /** Read current value.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     std::string get_value() const { return *value_it; }
 
@@ -484,7 +484,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
      *
      *  Calls to at_end() will return true after calling this method.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     void done() {
 	value_it = db.valuestream_end(slot);
@@ -493,7 +493,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
 
     /** Flag indicating if we've started (true if we have).
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     bool get_started() const { return started; }
 
@@ -502,7 +502,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
      *  Subclasses should set this if they are overriding the next(), skip_to()
      *  or check() methods to return fewer documents.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     void set_termfreq_min(Xapian::doccount termfreq_min_) {
 	termfreq_min = termfreq_min_;
@@ -513,7 +513,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
      *  Subclasses should set this if they are overriding the next(), skip_to()
      *  or check() methods.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     void set_termfreq_est(Xapian::doccount termfreq_est_) {
 	termfreq_est = termfreq_est_;
@@ -524,7 +524,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValuePostingSource : public PostingSource {
      *  Subclasses should set this if they are overriding the next(), skip_to()
      *  or check() methods.
      *
-     *  Added in 1.2.23 and 1.3.5.
+     *  @since Added in 1.2.23 and 1.3.5.
      */
     void set_termfreq_max(Xapian::doccount termfreq_max_) {
 	termfreq_max = termfreq_max_;
@@ -566,7 +566,7 @@ class XAPIAN_VISIBILITY_DEFAULT ValueWeightPostingSource
     std::string name() const;
     std::string serialise() const;
     ValueWeightPostingSource * unserialise(const std::string &serialised) const;
-    void init(const Database & db_);
+    void reset(const Database& db_, Xapian::doccount shard_index);
 
     std::string get_description() const;
 };
@@ -578,18 +578,17 @@ class XAPIAN_VISIBILITY_DEFAULT ValueWeightPostingSource
  *  weight contribution to a query based on the values stored in a slot.  The
  *  values in the slot must be serialised as by @a sortable_serialise().
  *
- *  However, this posting source is additionally given a range of document IDs,
- *  within which the weight is known to be decreasing.  ie, for all documents
- *  with ids A and B within this range (including the endpoints), where A is
- *  less than B, the weight of A is less than or equal to the weight of B.
- *  This can allow the posting source to skip to the end of the range quickly
- *  if insufficient weight is left in the posting source for a particular
- *  source.
+ *  However, this posting source is additionally given an inclusive range of
+ *  document IDs within which the weight is known to be decreasing, so if
+ *  documents in this range have IDs A and B and B > A then weight of B <=
+ *  weight of A.  This can allow the posting source to skip to the end of the
+ *  range quickly if insufficient weight is left in the posting source for a
+ *  particular query to match.
  *
  *  By default, the range is assumed to cover all document IDs.
  *
- *  The ordering property can be arranged at index time, or by sorting an
- *  indexed database to produce a new, sorted, database.
+ *  The ordering property would typically be arranged at index time by
+ *  controlling the order that documents are indexed in.
  */
 class XAPIAN_VISIBILITY_DEFAULT DecreasingValueWeightPostingSource
 	: public Xapian::ValueWeightPostingSource {
@@ -628,18 +627,19 @@ class XAPIAN_VISIBILITY_DEFAULT DecreasingValueWeightPostingSource
 				       Xapian::docid range_start_ = 0,
 				       Xapian::docid range_end_ = 0);
 
-    double get_weight() const;
-    DecreasingValueWeightPostingSource * clone() const;
-    std::string name() const;
-    std::string serialise() const;
-    DecreasingValueWeightPostingSource * unserialise(const std::string &serialised) const;
-    void init(const Xapian::Database & db_);
+    double get_weight() const override;
+    DecreasingValueWeightPostingSource* clone() const override;
+    std::string name() const override;
+    std::string serialise() const override;
+    DecreasingValueWeightPostingSource*
+	unserialise(const std::string& serialised) const override;
+    void reset(const Database& db_, Xapian::doccount shard_index) override;
 
-    void next(double min_wt);
-    void skip_to(Xapian::docid min_docid, double min_wt);
-    bool check(Xapian::docid min_docid, double min_wt);
+    void next(double min_wt) override;
+    void skip_to(Xapian::docid min_docid, double min_wt) override;
+    bool check(Xapian::docid min_docid, double min_wt) override;
 
-    std::string get_description() const;
+    std::string get_description() const override;
 };
 
 
@@ -685,21 +685,26 @@ class XAPIAN_VISIBILITY_DEFAULT ValueMapPostingSource
      */
     void set_default_weight(double wt);
 
-    double get_weight() const;
-    ValueMapPostingSource * clone() const;
-    std::string name() const;
-    std::string serialise() const;
-    ValueMapPostingSource * unserialise(const std::string &serialised) const;
-    void init(const Database & db_);
+    double get_weight() const override;
+    ValueMapPostingSource* clone() const override;
+    std::string name() const override;
+    std::string serialise() const override;
+    ValueMapPostingSource*
+	unserialise(const std::string& serialised) const override;
+    void reset(const Database& db_, Xapian::doccount shard_index) override;
 
-    std::string get_description() const;
+    std::string get_description() const override;
 };
 
 
 /** A posting source which returns a fixed weight for all documents.
  *
  *  This returns entries for all documents in the given database, with a fixed
- *  weight (specified by a parameter to the constructor).
+ *  weight (specified by a parameter to the constructor).  This can be used to
+ *  boost a sub-query by OP_AND-ing a FixedWeightPostingSource with that
+ *  sub-query - this OP_AND will match the same documents as the sub-query
+ *  does, but documents matching the subquery will get the specified extra
+ *  weight contribution.
  */
 class XAPIAN_VISIBILITY_DEFAULT FixedWeightPostingSource : public PostingSource {
     /// The database we're reading documents from.
@@ -724,27 +729,28 @@ class XAPIAN_VISIBILITY_DEFAULT FixedWeightPostingSource : public PostingSource 
      */
     explicit FixedWeightPostingSource(double wt);
 
-    Xapian::doccount get_termfreq_min() const;
-    Xapian::doccount get_termfreq_est() const;
-    Xapian::doccount get_termfreq_max() const;
+    Xapian::doccount get_termfreq_min() const override;
+    Xapian::doccount get_termfreq_est() const override;
+    Xapian::doccount get_termfreq_max() const override;
 
-    double get_weight() const;
+    double get_weight() const override;
 
-    void next(double min_wt);
-    void skip_to(Xapian::docid min_docid, double min_wt);
-    bool check(Xapian::docid min_docid, double min_wt);
+    void next(double min_wt) override;
+    void skip_to(Xapian::docid min_docid, double min_wt) override;
+    bool check(Xapian::docid min_docid, double min_wt) override;
 
-    bool at_end() const;
+    bool at_end() const override;
 
-    Xapian::docid get_docid() const;
+    Xapian::docid get_docid() const override;
 
-    FixedWeightPostingSource * clone() const;
-    std::string name() const;
-    std::string serialise() const;
-    FixedWeightPostingSource * unserialise(const std::string &serialised) const;
-    void init(const Database & db_);
+    FixedWeightPostingSource* clone() const override;
+    std::string name() const override;
+    std::string serialise() const override;
+    FixedWeightPostingSource*
+	unserialise(const std::string& serialised) const override;
+    void reset(const Database& db_, Xapian::doccount shard_index) override;
 
-    std::string get_description() const;
+    std::string get_description() const override;
 };
 
 }

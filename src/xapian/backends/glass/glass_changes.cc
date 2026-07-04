@@ -1,7 +1,7 @@
-/** @file glass_changes.cc
+/** @file
  * @brief Glass changesets
  */
-/* Copyright 2014,2016 Olly Betts
+/* Copyright 2014,2016,2020 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,9 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -168,7 +167,7 @@ GlassChanges::commit(glass_revision_number_t new_rev, int flags)
 void
 GlassChanges::check(const string & changes_file)
 {
-    FD fd(posixy_open(changes_file.c_str(), O_RDONLY | O_CLOEXEC, 0666));
+    FD fd(posixy_open(changes_file.c_str(), O_RDONLY | O_CLOEXEC));
     if (fd < 0) {
 	string message = "Couldn't open changeset ";
 	message += changes_file;
@@ -248,13 +247,17 @@ GlassChanges::check(const string & changes_file)
 	uint4 block_number;
 	if (!unpack_uint(&p, end, &block_number))
 	    throw Xapian::DatabaseError("Changes file - bad block number");
+
+	// Parse information from the start of the block.
+	//
 	// Although the revision number is aligned within the block, the block
 	// data may not be aligned to a word boundary here.
 	uint4 block_rev = unaligned_read4(reinterpret_cast<const uint8_t*>(p));
 	(void)block_rev; // FIXME: Sanity check value.
-	p += 4;
-	unsigned level = static_cast<unsigned char>(*p++);
+	unsigned level = static_cast<unsigned char>(p[4]);
 	(void)level; // FIXME: Sanity check value.
+
+	// Skip over the block content.
 	if (block_size <= unsigned(end - p)) {
 	    p += block_size;
 	} else {

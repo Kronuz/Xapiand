@@ -1,9 +1,9 @@
-/** @file glass_postlist.h
+/** @file
  * @brief Postlists in glass databases
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
  * Copyright 2002 Ananova Ltd
- * Copyright 2002,2003,2004,2005,2007,2008,2009,2011,2013,2014,2015,2017 Olly Betts
+ * Copyright 2002-2024 Olly Betts
  * Copyright 2007,2009 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -17,9 +17,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_GLASS_POSTLIST_H
@@ -27,17 +26,16 @@
 
 #include "xapian/database.h"
 
+#include "xapian/backends/leafpostlist.h"
 #include "xapian/backends/glass/glass_defs.h"
 #include "xapian/backends/glass/glass_inverter.h"
 #include "xapian/backends/glass/glass_positionlist.h"
-#include "xapian/api/leafpostlist.h"
 #include "xapian/common/omassert.h"
 
 #include <memory>
 #include <map>
 #include <string>
-
-using namespace std;
+#include <string_view>
 
 class GlassCursor;
 class GlassDatabase;
@@ -49,96 +47,6 @@ namespace Glass {
 }
 
 using Glass::RootInfo;
-
-class GlassPostList;
-
-class GlassPostListTable : public GlassTable {
-    /// PostList for looking up document lengths.
-    mutable unique_ptr<GlassPostList> doclen_pl;
-
-  public:
-    /** Create a new table object.
-     *
-     *  This does not create the table on disk - the create() method must
-     *  be called before the table is created on disk
-     *
-     *  This also does not open the table - the open() method must be
-     *  called before use is made of the table.
-     *
-     *  @param path_          - Path at which the table is stored.
-     *  @param readonly_      - whether to open the table for read only
-     *                          access.
-     */
-    GlassPostListTable(const string & path_, bool readonly_)
-	: GlassTable("postlist", path_ + "/postlist.", readonly_),
-	  doclen_pl()
-    { }
-
-    GlassPostListTable(int fd, off_t offset_, bool readonly_)
-	: GlassTable("postlist", fd, offset_, readonly_),
-	  doclen_pl()
-    { }
-
-    void open(int flags_, const RootInfo & root_info,
-	      glass_revision_number_t rev) {
-	doclen_pl.reset(0);
-	GlassTable::open(flags_, root_info, rev);
-    }
-
-    /// Merge changes for a term.
-    void merge_changes(const string& term,
-		       const Inverter::PostingChanges& changes);
-
-    /// Merge document length changes.
-    void merge_doclen_changes(const map<Xapian::docid,
-					Xapian::termcount>& doclens);
-
-    Xapian::docid get_chunk(const string& tname,
-			    Xapian::docid did, bool adding,
-			    Glass::PostlistChunkReader** from,
-			    Glass::PostlistChunkWriter** to);
-
-    /// Compose a key from a termname and docid.
-    static string make_key(const string& term, Xapian::docid did) {
-	return pack_glass_postlist_key(term, did);
-    }
-
-    /// Compose a key from a termname.
-    static string make_key(const string & term) {
-	return pack_glass_postlist_key(term);
-    }
-
-    bool term_exists(const string & term) const {
-	return key_exists(make_key(term));
-    }
-
-    /** Returns frequencies for a term.
-     *
-     *  @param term		The term to get frequencies for
-     *  @param termfreq_ptr	Point to return number of docs indexed by @a
-     *			term (or NULL not to return)
-     *  @param collfreq_ptr	Point to return number of occurrences of @a
-     *			term in the database (or NULL not to return)
-     *  @param wdfub_ptr	Point to return an upper bound on the wdf
-     *			of @a term in the database (or NULL not to
-     *			return)
-     */
-    void get_freqs(const std::string & term,
-		   Xapian::doccount * termfreq_ptr,
-		   Xapian::termcount * collfreq_ptr,
-		   Xapian::termcount * wdfub_ptr = NULL) const;
-
-    /** Returns the length of document @a did. */
-    Xapian::termcount get_doclength(Xapian::docid did,
-				    Xapian::Internal::intrusive_ptr<const GlassDatabase> db) const;
-
-    /** Check if document @a did exists. */
-    bool document_exists(Xapian::docid did,
-			 Xapian::Internal::intrusive_ptr<const GlassDatabase> db) const;
-
-    void get_used_docid_range(Xapian::docid & first,
-			      Xapian::docid & last) const;
-};
 
 /** A postlist in a glass database.
  */
@@ -162,7 +70,7 @@ class GlassPostList : public LeafPostList {
     bool is_at_end;
 
     /// Cursor pointing to current chunk of postlist.
-    unique_ptr<GlassCursor> cursor;
+    std::unique_ptr<GlassCursor> cursor;
 
     /// The first document id in this chunk.
     Xapian::docid first_did_in_chunk;
@@ -182,8 +90,8 @@ class GlassPostList : public LeafPostList {
     /// The wdf of the current document.
     Xapian::termcount wdf;
 
-    /// The number of entries in the posting list.
-    Xapian::doccount number_of_entries;
+    /// Upper bound on wdf for this postlist.
+    Xapian::termcount wdf_upper_bound;
 
     /// Copying is not allowed.
     GlassPostList(const GlassPostList &);
@@ -237,7 +145,7 @@ class GlassPostList : public LeafPostList {
     bool move_forward_in_chunk_to_at_least(Xapian::docid desired_did);
 
     GlassPostList(Xapian::Internal::intrusive_ptr<const GlassDatabase> this_db_,
-		  const string & term,
+		  std::string_view term,
 		  GlassCursor * cursor_);
 
     void init();
@@ -245,26 +153,21 @@ class GlassPostList : public LeafPostList {
   public:
     /// Default constructor.
     GlassPostList(Xapian::Internal::intrusive_ptr<const GlassDatabase> this_db_,
-		  const string & term,
+		  std::string_view term,
 		  bool keep_reference);
 
     /// Destructor.
     ~GlassPostList();
 
-    LeafPostList * open_nearby_postlist(const std::string & term_,
-					bool need_read_pos) const;
+    bool open_nearby_postlist(std::string_view term_,
+			      bool need_read_pos,
+			      LeafPostList*& pl) const;
 
     /** Used for looking up doclens.
      *
      *  @return true if docid @a desired_did has a document length.
      */
     bool jump_to(Xapian::docid desired_did);
-
-    /** Returns number of docs indexed by this term.
-     *
-     *  This is the length of the postlist.
-     */
-    Xapian::doccount get_termfreq() const { return number_of_entries; }
 
     /// Returns the current docid.
     Xapian::docid get_docid() const { Assert(have_started); return did; }
@@ -291,16 +194,107 @@ class GlassPostList : public LeafPostList {
     /// Return true if and only if we're off the end of the list.
     bool at_end() const { return is_at_end; }
 
+    Xapian::termcount get_wdf_upper_bound() const;
+
+    void get_docid_range(Xapian::docid& first, Xapian::docid& last) const;
+
     /// Get a description of the document.
     std::string get_description() const;
 
-    /// Read the number of entries and the collection frequency.
-    static void read_number_of_entries(const char ** posptr,
-				       const char * end,
-				       Xapian::doccount * number_of_entries_ptr,
-				       Xapian::termcount * collection_freq_ptr);
+    /// Read the term frequency and collection frequency.
+    static void read_freqs(const char** posptr,
+			   const char* end,
+			   Xapian::doccount* number_of_entries_ptr,
+			   Xapian::termcount* collection_freq_ptr);
 };
 
+class GlassPostListTable : public GlassTable {
+    /// PostList for looking up document lengths.
+    mutable std::unique_ptr<GlassPostList> doclen_pl;
+
+  public:
+    /** Create a new table object.
+     *
+     *  This does not create the table on disk - the create() method must
+     *  be called before the table is created on disk
+     *
+     *  This also does not open the table - the open() method must be
+     *  called before use is made of the table.
+     *
+     *  @param path_          - Path at which the table is stored.
+     *  @param readonly_      - whether to open the table for read only
+     *                          access.
+     */
+    GlassPostListTable(const std::string& path_, bool readonly_)
+	: GlassTable("postlist", path_ + "/postlist.", readonly_),
+	  doclen_pl()
+    { }
+
+    GlassPostListTable(int fd, off_t offset_, bool readonly_)
+	: GlassTable("postlist", fd, offset_, readonly_),
+	  doclen_pl()
+    { }
+
+    void open(int flags_, const RootInfo & root_info,
+	      glass_revision_number_t rev) {
+	doclen_pl.reset(0);
+	GlassTable::open(flags_, root_info, rev);
+    }
+
+    /// Merge changes for a term.
+    void merge_changes(std::string_view term,
+		       const Inverter::PostingChanges& changes);
+
+    /// Merge document length changes.
+    void merge_doclen_changes(const std::map<Xapian::docid,
+					Xapian::termcount>& doclens);
+
+    Xapian::docid get_chunk(std::string_view tname,
+			    Xapian::docid did, bool adding,
+			    Glass::PostlistChunkReader** from,
+			    Glass::PostlistChunkWriter** to);
+
+    /// Compose a key from a termname and docid.
+    static std::string make_key(std::string_view term, Xapian::docid did) {
+	return pack_glass_postlist_key(term, did);
+    }
+
+    /// Compose a key from a termname.
+    static std::string make_key(std::string_view term) {
+	return pack_glass_postlist_key(term);
+    }
+
+    bool term_exists(std::string_view term) const {
+	return key_exists(make_key(term));
+    }
+
+    /** Returns frequencies for a term.
+     *
+     *  @param term		The term to get frequencies for
+     *  @param termfreq_ptr	Point to return number of docs indexed by @a
+     *			term (or NULL not to return)
+     *  @param collfreq_ptr	Point to return number of occurrences of @a
+     *			term in the database (or NULL not to return)
+     *  @param wdfub_ptr	Point to return an upper bound on the wdf
+     *			of @a term in the database (or NULL not to
+     *			return)
+     */
+    void get_freqs(std::string_view term,
+		   Xapian::doccount* termfreq_ptr,
+		   Xapian::termcount* collfreq_ptr,
+		   Xapian::termcount* wdfub_ptr = NULL) const;
+
+    /** Returns the length of document @a did. */
+    Xapian::termcount get_doclength(Xapian::docid did,
+				    Xapian::Internal::intrusive_ptr<const GlassDatabase> db) const;
+
+    /** Check if document @a did exists. */
+    bool document_exists(Xapian::docid did,
+			 Xapian::Internal::intrusive_ptr<const GlassDatabase> db) const;
+
+    void get_used_docid_range(Xapian::docid & first,
+			      Xapian::docid & last) const;
+};
 #ifdef DISABLE_GPL_LIBXAPIAN
 # error GPL source we cannot relicense included in libxapian
 #endif

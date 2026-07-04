@@ -1,7 +1,7 @@
-/** @file min_non_zero.h
+/** @file
  * @brief Return the smaller of two numbers which isn't zero.
  */
-/* Copyright (C) 2018 Olly Betts
+/* Copyright (C) 2018,2023 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,19 +26,22 @@
 #define XAPIAN_INCLUDED_MIN_NON_ZERO_H
 
 #include <algorithm>
+#include <type_traits>
+
+#include "xapian/common/negate_unsigned.h"
 
 /** Return the smaller of two unsigned integers which isn't zero.
  *
  *  If both a and b are zero, returns zero.
  */
 template<typename T>
-constexpr typename std::enable_if<std::is_unsigned<T>::value, T>::type
+constexpr typename std::enable_if_t<std::is_unsigned_v<T>, T>
 min_non_zero(const T& a, const T& b)
 {
     // To achieve the effect we want, we find the *maximum* after negating each
     // of the values (which for an unsigned type leaves 0 alone but flips the
     // order of all other values), then negate the answer.
-    return -std::max(-a, -b);
+    return negate_unsigned(std::max(negate_unsigned(a), negate_unsigned(b)));
 }
 
 #endif // XAPIAN_INCLUDED_MIN_NON_ZERO_H

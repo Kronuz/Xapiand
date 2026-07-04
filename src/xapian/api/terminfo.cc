@@ -1,4 +1,4 @@
-/** @file terminfo.cc
+/** @file
  * @brief Metadata for a term in a document
  */
 /* Copyright 2017,2018 Olly Betts
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -25,6 +25,7 @@
 #include "xapian/common/omassert.h"
 
 #include <algorithm>
+#include <limits>
 
 using namespace std;
 
@@ -85,7 +86,7 @@ TermInfo::add_position(Xapian::termcount wdf_inc, Xapian::termpos termpos)
     // Add unless termpos is already in the list.
     if (i == positions.cend() || *i != termpos) {
 	auto new_split = positions.size();
-	if (sizeof(split) < sizeof(Xapian::termpos)) {
+	if constexpr(sizeof(split) < sizeof(Xapian::termpos)) {
 	    if (rare(new_split > numeric_limits<decltype(split)>::max())) {
 		// The split point would be beyond the size of the type used to
 		// hold it, which is really unlikely if that type is 32-bit.

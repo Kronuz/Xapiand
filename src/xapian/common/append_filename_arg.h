@@ -1,4 +1,4 @@
-/** @file append_filename_arg.h
+/** @file
  *  @brief Append filename argument to a command string with suitable escaping
  */
 /* Copyright (C) 2003,2004,2007,2012,2019 Olly Betts
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_APPEND_FILENAME_ARG_H
@@ -38,17 +38,17 @@ append_filename_argument(std::string& cmd,
 	++prefix;
     cmd += prefix;
 
-    for (std::string::const_iterator i = arg.begin(); i != arg.end(); ++i) {
-	if (*i == '/') {
+    for (char ch : arg) {
+	if (ch == '/') {
 	    // Convert Unix path separators to backslashes.  C library
 	    // functions understand "/" in paths, but we are going to
 	    // call commands like "xcopy" or "rd" which don't.
 	    cmd += '\\';
-	} else if (*i < 32 || std::strchr("<>\"|*?", *i)) {
+	} else if (ch < 32 || std::strchr("<>\"|*?", ch)) {
 	    // Check for illegal characters in filename.
 	    return false;
 	} else {
-	    cmd += *i;
+	    cmd += ch;
 	}
     }
     cmd += '"';
@@ -65,8 +65,8 @@ append_filename_argument(std::string& cmd,
 	++prefix;
     cmd += prefix;
 
-    for (std::string::const_iterator i = arg.begin(); i != arg.end(); ++i) {
-	if (*i == '\'') {
+    for (char ch : arg) {
+	if (ch == '\'') {
 	    // Wrapping the whole argument in single quotes works for
 	    // everything except a single quote - for that we drop out of
 	    // single quotes, then use a backslash-escaped single quote, then
@@ -74,7 +74,7 @@ append_filename_argument(std::string& cmd,
 	    cmd += "'\\''";
 	    continue;
 	}
-	cmd += *i;
+	cmd += ch;
     }
     cmd += '\'';
 #endif

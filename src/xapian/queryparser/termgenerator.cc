@@ -1,7 +1,7 @@
-/** @file termgenerator.cc
+/** @file
  * @brief TermGenerator class implementation
  */
-/* Copyright (C) 2007,2012 Olly Betts
+/* Copyright (C) 2007,2012,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -27,6 +27,8 @@
 #include "xapian/queryparser/termgenerator_internal.h"
 
 #include "xapian/common/str.h"
+
+#include <string_view>
 
 using namespace std;
 using namespace Xapian;
@@ -105,7 +107,7 @@ TermGenerator::set_max_word_length(unsigned max_word_length)
 void
 TermGenerator::index_text(const Xapian::Utf8Iterator & itor,
 			  Xapian::termcount weight,
-			  const string & prefix)
+			  string_view prefix)
 {
     internal->index_text(itor, weight, prefix, true);
 }
@@ -113,7 +115,7 @@ TermGenerator::index_text(const Xapian::Utf8Iterator & itor,
 void
 TermGenerator::index_text_without_positions(const Xapian::Utf8Iterator & itor,
 					    Xapian::termcount weight,
-					    const string & prefix)
+					    string_view prefix)
 {
     internal->index_text(itor, weight, prefix, false);
 }
@@ -136,12 +138,18 @@ TermGenerator::set_termpos(Xapian::termpos termpos)
     internal->cur_pos = termpos;
 }
 
+void
+TermGenerator::set_termpos_limit(Xapian::termpos termpos_limit)
+{
+    internal->pos_limit = termpos_limit;
+}
+
 string
 TermGenerator::get_description() const
 {
     string s("Xapian::TermGenerator(stem=");
     s += internal->stemmer.get_description();
-    if (internal->stopper.get()) {
+    if (internal->stopper) {
 	s += ", stopper set";
     }
     s += ", doc=";

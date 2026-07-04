@@ -1,7 +1,7 @@
-/** @file remote_alltermslist.cc
+/** @file
  * @brief Iterate all terms in a remote database.
  */
-/* Copyright (C) 2007,2008,2018 Olly Betts
+/* Copyright (C) 2007,2008,2018,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -36,12 +36,6 @@ RemoteAllTermsList::get_approx_size() const
     return 0;
 }
 
-string
-RemoteAllTermsList::get_termname() const
-{
-    return current_term;
-}
-
 Xapian::doccount
 RemoteAllTermsList::get_termfreq() const
 {
@@ -56,8 +50,7 @@ RemoteAllTermsList::next()
     }
     const char* p_end = data.data() + data.size();
     if (p == p_end) {
-	data.resize(0);
-	return NULL;
+	return this;
     }
     current_term.resize(size_t(static_cast<unsigned char>(*p++)));
     if (!unpack_string_append(&p, p_end, current_term) ||
@@ -68,19 +61,15 @@ RemoteAllTermsList::next()
 }
 
 TermList*
-RemoteAllTermsList::skip_to(const std::string& term)
+RemoteAllTermsList::skip_to(std::string_view term)
 {
     if (!p) {
-	RemoteAllTermsList::next();
+	if (RemoteAllTermsList::next())
+	    return this;
     }
-    while (!RemoteAllTermsList::at_end() && current_term < term) {
-	RemoteAllTermsList::next();
+    while (current_term < term) {
+	if (RemoteAllTermsList::next())
+	    return this;
     }
     return NULL;
-}
-
-bool
-RemoteAllTermsList::at_end() const
-{
-    return data.empty();
 }

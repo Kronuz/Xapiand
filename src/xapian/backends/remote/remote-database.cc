@@ -1,7 +1,7 @@
-/** @file remote-database.cc
+/** @file
  *  @brief Remote backend database class
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2017,2018,2019 Olly Betts
+/* Copyright (C) 2006-2024 Olly Betts
  * Copyright (C) 2007,2009,2010 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -24,9 +24,11 @@
 #include "xapian/backends/remote/remote-database.h"
 
 #include <signal.h>
+#include "xapian/common/safesyssocket.h" // For MSG_NOSIGNAL.
 
 #include "xapian/api/msetinternal.h"
 #include "xapian/api/smallvector.h"
+#include "xapian/backends/contiguousalldocspostlist.h"
 #include "xapian/backends/inmemory/inmemory_positionlist.h"
 #include "xapian/backends/remote/net_postlist.h"
 #include "xapian/backends/remote/remote-document.h"
@@ -36,7 +38,7 @@
 #include "xapian/net/serialise-error.h"
 #include "xapian/common/pack.h"
 #include "xapian/backends/remote/remote_alltermslist.h"
-#include "xapian/backends/remote/remote_metadatatermlist.h"
+#include "xapian/backends/remote/remote_keylist.h"
 #include "xapian/backends/remote/remote_termlist.h"
 #include "xapian/common/serialise-double.h"
 #include "xapian/common/str.h"
@@ -46,6 +48,7 @@
 #include <cerrno>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "xapian/constants.h"
@@ -54,6 +57,23 @@
 
 using namespace std;
 using Xapian::Internal::intrusive_ptr;
+
+/// Return true if further replies should be expected.
+static inline bool
+is_intermediate_reply(int reply_code)
+{
+    return reply_code == REPLY_DOCDATA ||
+	   reply_code == REPLY_VALUE ||
+	   reply_code == REPLY_TERMLISTHEADER ||
+	   reply_code == REPLY_POSTLISTHEADER;
+}
+
+[[noreturn]]
+static void
+throw_invalid_operation(const char* message)
+{
+    throw Xapian::InvalidOperationError(message);
+}
 
 [[noreturn]]
 static void
@@ -70,37 +90,37 @@ throw_connection_closed_unexpectedly()
     throw Xapian::NetworkError("Connection closed unexpectedly");
 }
 
-RemoteDatabase::RemoteDatabase(int fd, double timeout_,
-			       const string & context_, bool writable_,
-			       int flags_, const string & dir)
-    : Xapian::Database::Internal(writable_ ?
+RemoteDatabase::RemoteDatabase(pair<int, string> fd_and_context,
+			       double timeout_,
+			       bool writable,
+			       int flags)
+    : Xapian::Database::Internal(writable ?
 				 TRANSACTION_NONE :
 				 TRANSACTION_READONLY),
-      db_dir(dir),
-      writable(writable_),
-      flags(flags_),
-      link(fd, fd, context_),
-      context(context_),
+      link(fd_and_context.first, fd_and_context.first, fd_and_context.second),
+      cached_stats_valid(),
       mru_valstats(),
       mru_slot(Xapian::BAD_VALUENO),
       timeout(timeout_)
 {
-#ifndef __WIN32__
-    // It's simplest to just ignore SIGPIPE.  We'll still know if the
-    // connection dies because we'll get EPIPE back from write().
-    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-	throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
-    }
-#endif
-
     update_stats(MSG_MAX);
+
+    if (writable) {
+	if (flags & Xapian::DB_RETRY_LOCK) {
+	    string message;
+	    pack_uint_last(message, unsigned(flags & Xapian::DB_RETRY_LOCK));
+	    update_stats(MSG_WRITEACCESS, message);
+	} else {
+	    update_stats(MSG_WRITEACCESS);
+	}
+    }
 }
 
 Xapian::termcount
 RemoteDatabase::positionlist_count(Xapian::docid did,
-				   const std::string& term) const
+				   std::string_view term) const
 {
-    if (!has_positional_info)
+    if (cached_stats_valid && !has_positional_info)
 	return 0;
 
     string message;
@@ -113,7 +133,8 @@ RemoteDatabase::positionlist_count(Xapian::docid did,
     const char * p_end = p + message.size();
     Xapian::termcount count;
     if (!unpack_uint_last(&p, p_end, &count)) {
-	throw Xapian::NetworkError("Bad REPLY_POSITIONLISTCOUNT", context);
+	throw Xapian::NetworkError("Bad REPLY_POSITIONLISTCOUNT",
+				   link.get_context());
     }
     return count;
 }
@@ -121,18 +142,18 @@ RemoteDatabase::positionlist_count(Xapian::docid did,
 void
 RemoteDatabase::keep_alive()
 {
-    send_message(MSG_KEEPALIVE, string());
+    send_message(MSG_KEEPALIVE, {});
     string message;
     get_message(message, REPLY_DONE);
 }
 
 TermList*
-RemoteDatabase::open_metadata_keylist(const std::string& prefix) const
+RemoteDatabase::open_metadata_keylist(std::string_view prefix) const
 {
     send_message(MSG_METADATAKEYLIST, prefix);
     string message;
     get_message(message, REPLY_METADATAKEYLIST);
-    return new RemoteMetadataTermList(prefix, std::move(message));
+    return new RemoteKeyList(prefix, std::move(message));
 }
 
 TermList *
@@ -141,7 +162,7 @@ RemoteDatabase::open_term_list(Xapian::docid did) const
     Assert(did);
 
     // Ensure that total_length and doccount are up-to-date.
-    update_stats();
+    if (!cached_stats_valid) update_stats();
 
     string message;
     pack_uint_last(message, did);
@@ -154,7 +175,8 @@ RemoteDatabase::open_term_list(Xapian::docid did) const
     Xapian::termcount num_entries;
     if (!unpack_uint(&p, p_end, &doclen) ||
 	!unpack_uint_last(&p, p_end, &num_entries)) {
-	throw Xapian::NetworkError("Bad REPLY_TERMLISTHEADER", context);
+	throw Xapian::NetworkError("Bad REPLY_TERMLISTHEADER",
+				   link.get_context());
     }
     get_message(message, REPLY_TERMLIST);
     return new RemoteTermList(num_entries, doclen, doccount, this, did,
@@ -168,7 +190,7 @@ RemoteDatabase::open_term_list_direct(Xapian::docid did) const
 }
 
 TermList*
-RemoteDatabase::open_allterms(const string& prefix) const
+RemoteDatabase::open_allterms(string_view prefix) const
 {
     send_message(MSG_ALLTERMS, prefix);
     string message;
@@ -176,15 +198,19 @@ RemoteDatabase::open_allterms(const string& prefix) const
     return new RemoteAllTermsList(prefix, std::move(message));
 }
 
-PostList *
-RemoteDatabase::open_post_list(const string& term) const
+PostList*
+RemoteDatabase::open_post_list(string_view term) const
 {
-    return RemoteDatabase::open_leaf_post_list(term, false);
-}
+    if (term.empty()) {
+	if (!cached_stats_valid) update_stats();
+	if (rare(doccount == 0))
+	    return nullptr;
+	if (doccount == lastdocid) {
+	    // The used docid range is exactly 1 to doccount inclusive.
+	    return new ContiguousAllDocsPostList(doccount);
+	}
+    }
 
-LeafPostList *
-RemoteDatabase::open_leaf_post_list(const string& term, bool) const
-{
     send_message(MSG_POSTLIST, term);
 
     string message;
@@ -205,17 +231,28 @@ RemoteDatabase::open_leaf_post_list(const string& term, bool) const
 			       std::move(message));
 }
 
-PositionList *
-RemoteDatabase::open_position_list(Xapian::docid did, const string &term) const
+LeafPostList*
+RemoteDatabase::open_leaf_post_list(string_view, bool) const
+{
+    // This method is only called during the match, and remote shards are
+    // handled by running the match on the remote.
+    Assert(false);
+    return nullptr;
+}
+
+PositionList*
+RemoteDatabase::open_position_list(Xapian::docid did, string_view term) const
 {
     string message;
     pack_uint(message, did);
     message += term;
     send_message(MSG_POSITIONLIST, message);
 
-    Xapian::VecCOW<Xapian::termpos> positions;
-
     get_message(message, REPLY_POSITIONLIST);
+    if (message.empty())
+	return nullptr;
+
+    Xapian::VecCOW<Xapian::termpos> positions;
     Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
     const char* p = message.data();
     const char* p_end = p + message.size();
@@ -224,7 +261,7 @@ RemoteDatabase::open_position_list(Xapian::docid did, const string &term) const
 	if (!unpack_uint(&p, p_end, &inc)) {
 	    unpack_throw_serialisation_error(p);
 	}
-	lastpos += inc + 1;
+	UNSIGNED_OVERFLOW_OK(lastpos += inc + 1);
 	positions.push_back(lastpos);
     }
 
@@ -234,7 +271,7 @@ RemoteDatabase::open_position_list(Xapian::docid did, const string &term) const
 bool
 RemoteDatabase::has_positions() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return has_positional_info;
 }
 
@@ -314,8 +351,8 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	return false;
     }
 
-    if (message.size() < 2) {
-	throw_handshake_failed(context);
+    if (message.size() < 3) {
+	throw_handshake_failed(link.get_context());
     }
     const char *p = message.c_str();
     const char *p_end = p + message.size();
@@ -331,6 +368,8 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	    errmsg += "s ";
 	    errmsg += str(protocol_major);
 	    errmsg += ".0 to ";
+	} else {
+	    errmsg += ' ';
 	}
 	errmsg += str(protocol_major);
 	errmsg += '.';
@@ -340,47 +379,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	    STRINGIZE(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION)
 	    "."
 	    STRINGIZE(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
-	throw Xapian::NetworkError(errmsg, context);
-    }
-
-    if (p == p_end) {
-	message.clear();
-	pack_uint(message, unsigned(flags));
-	pack_string(message, db_dir);
-
-	if (writable) {
-	    send_message(MSG_WRITEACCESS, message);
-	} else {
-	    send_message(MSG_READACCESS, message);
-	}
-
-	get_message(message, REPLY_UPDATE);
-	if (message.size() < 3) {
-	    throw Xapian::NetworkError("Database was not selected", context);
-	}
-
-	p = message.c_str();
-	p_end = p + message.size();
-
-	p += 2;  // The protocol versions where already checked.
-    } else if (msg_code == MSG_MAX && writable) {
-	if (flags) {
-	    message.clear();
-	    pack_uint(message, unsigned(flags));
-	    send_message(MSG_WRITEACCESS, message);
-	} else {
-	    send_message(MSG_WRITEACCESS, string());
-	}
-
-	get_message(message, REPLY_UPDATE);
-	if (message.size() < 3) {
-	    throw Xapian::NetworkError("Database was not selected", context);
-	}
-
-	p = message.c_str();
-	p_end = p + message.size();
-
-	p += 2;  // The protocol versions where already checked.
+	throw Xapian::NetworkError(errmsg, link.get_context());
     }
 
     if (!unpack_uint(&p, p_end, &doccount) ||
@@ -388,44 +387,45 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	!unpack_uint(&p, p_end, &doclen_lbound) ||
 	!unpack_uint(&p, p_end, &doclen_ubound) ||
 	!unpack_bool(&p, p_end, &has_positional_info) ||
-	!unpack_uint(&p, p_end, &total_length) ||
-	!unpack_uint(&p, p_end, &revision)) {
-	throw Xapian::NetworkError("Bad stats update message received", context);
+	!unpack_uint(&p, p_end, &total_length)) {
+	throw Xapian::NetworkError("Bad stats update message received",
+				   link.get_context());
     }
     lastdocid += doccount;
     doclen_ubound += doclen_lbound;
     uuid.assign(p, p_end);
+    cached_stats_valid = true;
     return true;
 }
 
 Xapian::doccount
 RemoteDatabase::get_doccount() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return doccount;
 }
 
 Xapian::docid
 RemoteDatabase::get_lastdocid() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return lastdocid;
 }
 
 Xapian::totallength
 RemoteDatabase::get_total_length() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return total_length;
 }
 
 bool
-RemoteDatabase::term_exists(const string & tname) const
+RemoteDatabase::term_exists(string_view term) const
 {
-    if (tname.empty()) {
+    if (term.empty()) {
 	return get_doccount() != 0;
     }
-    send_message(MSG_TERMEXISTS, tname);
+    send_message(MSG_TERMEXISTS, term);
     string message;
     reply_type type = get_message(message,
 				  REPLY_TERMEXISTS,
@@ -434,15 +434,15 @@ RemoteDatabase::term_exists(const string & tname) const
 }
 
 void
-RemoteDatabase::get_freqs(const string & term,
-			  Xapian::doccount * termfreq_ptr,
-			  Xapian::termcount * collfreq_ptr) const
+RemoteDatabase::get_freqs(string_view term,
+			  Xapian::doccount* termfreq_ptr,
+			  Xapian::termcount* collfreq_ptr) const
 {
     Assert(!term.empty());
     string message;
     if (termfreq_ptr && collfreq_ptr) {
-	    send_message(MSG_FREQS, term);
-	    get_message(message, REPLY_FREQS);
+	send_message(MSG_FREQS, term);
+	get_message(message, REPLY_FREQS);
 	const char* p = message.data();
 	const char* p_end = p + message.size();
 	if (unpack_uint(&p, p_end, termfreq_ptr) &&
@@ -450,8 +450,8 @@ RemoteDatabase::get_freqs(const string & term,
 	    return;
 	}
     } else if (termfreq_ptr) {
-	    send_message(MSG_TERMFREQ, term);
-	    get_message(message, REPLY_TERMFREQ);
+	send_message(MSG_TERMFREQ, term);
+	get_message(message, REPLY_TERMFREQ);
 	const char* p = message.data();
 	const char* p_end = p + message.size();
 	if (unpack_uint_last(&p, p_end, termfreq_ptr)) {
@@ -464,13 +464,13 @@ RemoteDatabase::get_freqs(const string & term,
 	const char* p_end = p + message.size();
 	if (unpack_uint_last(&p, p_end, collfreq_ptr)) {
 	    return;
-    }
+	}
     } else {
 	Assert(false);
 	return;
     }
     throw Xapian::NetworkError("Bad REPLY_FREQS/REPLY_TERMFREQ/REPLY_COLLFREQ",
-			       context);
+			       link.get_context());
 }
 
 void
@@ -479,17 +479,17 @@ RemoteDatabase::read_value_stats(Xapian::valueno slot) const
     if (mru_slot == slot)
 	return;
 
-	string message;
+    string message;
     pack_uint_last(message, slot);
     send_message(MSG_VALUESTATS, message);
 
-	get_message(message, REPLY_VALUESTATS);
+    get_message(message, REPLY_VALUESTATS);
     const char* p = message.data();
     const char* p_end = p + message.size();
-	mru_slot = slot;
+    mru_slot = slot;
     if (!unpack_uint(&p, p_end, &mru_valstats.freq) ||
 	!unpack_string(&p, p_end, mru_valstats.lower_bound)) {
-	throw Xapian::NetworkError("Bad REPLY_VALUESTATS", context);
+	throw Xapian::NetworkError("Bad REPLY_VALUESTATS", link.get_context());
     }
     mru_valstats.upper_bound.assign(p, p_end);
 }
@@ -528,7 +528,7 @@ RemoteDatabase::get_doclength_upper_bound() const
 }
 
 Xapian::termcount
-RemoteDatabase::get_wdf_upper_bound(const string &) const
+RemoteDatabase::get_wdf_upper_bound(string_view) const
 {
     // The default implementation returns get_collection_freq(), but we
     // don't want the overhead of a remote message and reply per query
@@ -550,7 +550,7 @@ RemoteDatabase::get_doclength(Xapian::docid did) const
     const char* p_end = p + message.size();
     Xapian::termcount doclen;
     if (!unpack_uint_last(&p, p_end, &doclen)) {
-	throw Xapian::NetworkError("Bad REPLY_DOCLENGTH", context);
+	throw Xapian::NetworkError("Bad REPLY_DOCLENGTH", link.get_context());
     }
     return doclen;
 }
@@ -568,9 +568,27 @@ RemoteDatabase::get_unique_terms(Xapian::docid did) const
     const char* p_end = p + message.size();
     Xapian::termcount doclen;
     if (!unpack_uint_last(&p, p_end, &doclen)) {
-	throw Xapian::NetworkError("Bad REPLY_DOCLENGTH", context);
+	throw Xapian::NetworkError("Bad REPLY_DOCLENGTH", link.get_context());
     }
     return doclen;
+}
+
+Xapian::termcount
+RemoteDatabase::get_wdfdocmax(Xapian::docid did) const
+{
+    Assert(did != 0);
+    string message;
+    pack_uint_last(message, did);
+    send_message(MSG_WDFDOCMAX, message);
+
+    get_message(message, REPLY_WDFDOCMAX);
+    const char* p = message.c_str();
+    const char* p_end = p + message.size();
+    Xapian::termcount wdfdocmax;
+    if (!unpack_uint_last(&p, p_end, &wdfdocmax)) {
+	throw Xapian::NetworkError("Bad REPLY_WDFDOCMAX", link.get_context());
+    }
+    return wdfdocmax;
 }
 
 reply_type
@@ -580,17 +598,20 @@ RemoteDatabase::get_message(string &result,
 {
     double end_time = RealTime::end_time(timeout);
     int type = link.get_message(result, end_time);
+    if (pending_reply && !is_intermediate_reply(type)) {
+	pending_reply = false;
+    }
     if (type < 0)
 	throw_connection_closed_unexpectedly();
     if (rare(type) >= REPLY_MAX) {
 	if (required_type == REPLY_UPDATE)
-	    throw_handshake_failed(context);
+	    throw_handshake_failed(link.get_context());
 	string errmsg("Invalid reply type ");
 	errmsg += str(type);
 	throw Xapian::NetworkError(errmsg);
     }
     if (type == REPLY_EXCEPTION) {
-	unserialise_error(result, "REMOTE:", context);
+	unserialise_error(result, "REMOTE:", link.get_context());
     }
     if (type != required_type && type != required_type2) {
 	string errmsg("Expecting reply type ");
@@ -608,21 +629,40 @@ RemoteDatabase::get_message(string &result,
 }
 
 void
-RemoteDatabase::send_message(message_type type, const string &message) const
+RemoteDatabase::send_message(message_type type, string_view message) const
 {
     double end_time = RealTime::end_time(timeout);
+    while (pending_reply) {
+	string dummy;
+	int reply_code = link.get_message(dummy, end_time);
+	if (reply_code < 0)
+	    throw_connection_closed_unexpectedly();
+	if (!is_intermediate_reply(reply_code)) {
+	    pending_reply = false;
+	}
+    }
     link.send_message(static_cast<unsigned char>(type), message, end_time);
+    pending_reply = true;
 }
 
 void
 RemoteDatabase::do_close()
 {
-    // The dtor hasn't really been called!  FIXME: This works, but means any
-    // exceptions from end_transaction()/commit() are swallowed, which is
-    // not entirely desirable.
-    dtor_called();
-
     if (!is_read_only()) {
+	try {
+	    if (transaction_active()) {
+		end_transaction(false);
+	    } else {
+		commit();
+	    }
+	} catch (...) {
+	    try {
+		link.do_close();
+	    } catch (...) {
+	    }
+	    throw;
+	}
+
 	// If we're writable, send a shutdown message to the server and wait
 	// for it to close its end of the connection so we know that changes
 	// have been written and flushed, and the database write lock released.
@@ -634,8 +674,7 @@ RemoteDatabase::do_close()
 }
 
 void
-RemoteDatabase::set_query(const std::string& query_id,
-			  const Xapian::Query& query,
+RemoteDatabase::set_query(const Xapian::Query& query,
 			  Xapian::termcount qlen,
 			  Xapian::valueno collapse_key,
 			  Xapian::doccount collapse_max,
@@ -647,13 +686,9 @@ RemoteDatabase::set_query(const std::string& query_id,
 			  int percent_threshold, double weight_threshold,
 			  const Xapian::Weight& wtscheme,
 			  const Xapian::RSet &omrset,
-			  const vector<opt_ptr_spy>& matchspies,
-			  const Xapian::KeyMaker* sorter,
-			  bool full_db_has_positions) const
+			  const vector<opt_ptr_spy>& matchspies) const
 {
     string message;
-    pack_string(message, query_id);
-
     pack_string(message, query.serialise());
 
     // Serialise assorted Enquire settings.
@@ -666,7 +701,6 @@ RemoteDatabase::set_query(const std::string& query_id,
 	pack_uint(message, sort_key);
     }
     pack_bool(message, sort_value_forward);
-    pack_bool(message, full_db_has_positions);
     message += serialise_double(time_limit);
     message += char(percent_threshold);
     message += serialise_double(weight_threshold);
@@ -676,15 +710,6 @@ RemoteDatabase::set_query(const std::string& query_id,
     pack_string(message, wtscheme.serialise());
 
     pack_string(message, serialise_rset(omrset));
-
-    if (sorter != NULL) {
-	const string& name = sorter->name();
-	if (name.empty()) {
-	    throw Xapian::UnimplementedError("KeyMaker subclass not suitable for use with remote searches - name() method returned empty string");
-	}
-	pack_string(message, name);
-	pack_string(message, sorter->serialise());
-    }
 
     for (auto i : matchspies) {
 	const string& name = i->name();
@@ -699,25 +724,37 @@ RemoteDatabase::set_query(const std::string& query_id,
 }
 
 void
-RemoteDatabase::get_remote_stats(Xapian::Weight::Internal& out) const
+RemoteDatabase::accumulate_remote_stats(Xapian::Weight::Internal& total) const
 {
     string message;
     get_message(message, REPLY_STATS);
-    unserialise_stats(message, out);
+    const char* p = message.data();
+    Xapian::Weight::Internal remote_stats;
+    unserialise_stats(p, p + message.size(), remote_stats);
+    total += remote_stats;
 }
 
 void
-RemoteDatabase::send_global_stats(const std::string& query_id,
-				  Xapian::doccount first,
+RemoteDatabase::send_global_stats(Xapian::doccount first,
 				  Xapian::doccount maxitems,
 				  Xapian::doccount check_at_least,
+				  const Xapian::KeyMaker* sorter,
 				  const Xapian::Weight::Internal &stats) const
 {
     string message;
-    pack_string(message, query_id);
     pack_uint(message, first);
     pack_uint(message, maxitems);
     pack_uint(message, check_at_least);
+    if (!sorter) {
+	pack_string_empty(message);
+    } else {
+	const string& name = sorter->name();
+	if (name.empty()) {
+	    throw_invalid_operation("sorter reported empty name");
+	}
+	pack_string(message, name);
+	pack_string(message, sorter->serialise());
+    }
     message += serialise_stats(stats);
     send_message(MSG_GETMSET, message);
 }
@@ -745,27 +782,38 @@ RemoteDatabase::get_mset(const vector<opt_ptr_spy>& matchspies) const
 void
 RemoteDatabase::commit()
 {
-    send_message(MSG_COMMIT, string());
+    if (!uncommitted_changes) return;
+
+    send_message(MSG_COMMIT, {});
 
     // We need to wait for a response to ensure documents have been committed.
     string message;
     get_message(message, REPLY_DONE);
+
+    uncommitted_changes = false;
 }
 
 void
 RemoteDatabase::cancel()
 {
+    if (!uncommitted_changes) return;
+
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
-    send_message(MSG_CANCEL, string());
+    send_message(MSG_CANCEL, {});
     string dummy;
     get_message(dummy, REPLY_DONE);
+
+    uncommitted_changes = false;
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 RemoteDatabase::add_document(const Xapian::Document & doc)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
+    uncommitted_changes = true;
 
     send_message(MSG_ADDDOCUMENT, serialise_document(doc));
 
@@ -774,19 +822,19 @@ RemoteDatabase::add_document(const Xapian::Document & doc)
 
     const char* p = message.data();
     const char* p_end = p + message.size();
-    Xapian::DocumentInfo info;
-    if (!unpack_uint(&p, p_end, &info.did) ||
-	!unpack_uint(&p, p_end, &info.version)) {
+    Xapian::docid did;
+    if (!unpack_uint_last(&p, p_end, &did)) {
 	unpack_throw_serialisation_error(p);
     }
-    info.term = std::string(p, p_end);
-    return info;
+    return did;
 }
 
 void
 RemoteDatabase::delete_document(Xapian::docid did)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
+    uncommitted_changes = true;
 
     string message;
     pack_uint_last(message, did);
@@ -796,20 +844,24 @@ RemoteDatabase::delete_document(Xapian::docid did)
 }
 
 void
-RemoteDatabase::delete_document(const std::string & unique_term)
+RemoteDatabase::delete_document(std::string_view unique_term)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
+    uncommitted_changes = true;
 
     send_message(MSG_DELETEDOCUMENTTERM, unique_term);
     string dummy;
     get_message(dummy, REPLY_DONE);
 }
 
-Xapian::DocumentInfo
+void
 RemoteDatabase::replace_document(Xapian::docid did,
 				 const Xapian::Document & doc)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
+    uncommitted_changes = true;
 
     string message;
     pack_uint(message, did);
@@ -817,24 +869,16 @@ RemoteDatabase::replace_document(Xapian::docid did,
 
     send_message(MSG_REPLACEDOCUMENT, message);
 
-    get_message(message, REPLY_ADDDOCUMENT);
-
-    const char* p = message.data();
-    const char* p_end = p + message.size();
-    Xapian::DocumentInfo info;
-    if (!unpack_uint(&p, p_end, &info.did) ||
-	!unpack_uint(&p, p_end, &info.version)) {
-	unpack_throw_serialisation_error(p);
-    }
-    info.term = std::string(p, p_end);
-    return info;
+    get_message(message, REPLY_DONE);
 }
 
-Xapian::DocumentInfo
-RemoteDatabase::replace_document(const std::string & unique_term,
+Xapian::docid
+RemoteDatabase::replace_document(std::string_view unique_term,
 				 const Xapian::Document & doc)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
+    uncommitted_changes = true;
 
     string message;
     pack_string(message, unique_term);
@@ -846,22 +890,11 @@ RemoteDatabase::replace_document(const std::string & unique_term,
 
     const char* p = message.data();
     const char* p_end = p + message.size();
-    Xapian::DocumentInfo info;
-    if (!unpack_uint(&p, p_end, &info.did) ||
-	!unpack_uint(&p, p_end, &info.version)) {
+    Xapian::docid did;
+    if (!unpack_uint_last(&p, p_end, &did)) {
 	unpack_throw_serialisation_error(p);
     }
-    info.term = std::string(p, p_end);
-    return info;
-}
-
-
-Xapian::rev
-RemoteDatabase::get_revision() const
-{
-    // Ensure that revision is up-to-date.
-    update_stats();
-    return revision;
+    return did;
 }
 
 string
@@ -871,7 +904,7 @@ RemoteDatabase::get_uuid() const
 }
 
 string
-RemoteDatabase::get_metadata(const string & key) const
+RemoteDatabase::get_metadata(string_view key) const
 {
     send_message(MSG_GETMETADATA, key);
     string metadata;
@@ -880,8 +913,10 @@ RemoteDatabase::get_metadata(const string & key) const
 }
 
 void
-RemoteDatabase::set_metadata(const string & key, const string & value)
+RemoteDatabase::set_metadata(string_view key, string_view value)
 {
+    uncommitted_changes = true;
+
     string message;
     pack_string(message, key);
     message += value;
@@ -891,9 +926,21 @@ RemoteDatabase::set_metadata(const string & key, const string & value)
 }
 
 void
-RemoteDatabase::add_spelling(const string & word,
+RemoteDatabase::request_document(Xapian::docid did) const
+{
+    string message;
+    pack_uint(message, did);
+    send_message(MSG_REQUESTDOCUMENT, message);
+
+    get_message(message, REPLY_DONE);
+}
+
+void
+RemoteDatabase::add_spelling(string_view word,
 			     Xapian::termcount freqinc) const
 {
+    uncommitted_changes = true;
+
     string message;
     pack_uint(message, freqinc);
     message += word;
@@ -903,9 +950,11 @@ RemoteDatabase::add_spelling(const string & word,
 }
 
 Xapian::termcount
-RemoteDatabase::remove_spelling(const string & word,
+RemoteDatabase::remove_spelling(string_view word,
 				Xapian::termcount freqdec) const
 {
+    uncommitted_changes = true;
+
     string message;
     pack_uint(message, freqdec);
     message += word;
@@ -916,9 +965,62 @@ RemoteDatabase::remove_spelling(const string & word,
     const char * p_end = p + message.size();
     Xapian::termcount result;
     if (!unpack_uint_last(&p, p_end, &result)) {
-	throw Xapian::NetworkError("Bad REPLY_REMOVESPELLING", context);
+	throw Xapian::NetworkError("Bad REPLY_REMOVESPELLING",
+				   link.get_context());
     }
     return result;
+}
+
+TermList*
+RemoteDatabase::open_synonym_termlist(string_view word) const
+{
+    string message;
+    send_message(MSG_SYNONYMTERMLIST, word);
+    get_message(message, REPLY_SYNONYMTERMLIST);
+    return new RemoteKeyList({}, std::move(message));
+}
+
+TermList*
+RemoteDatabase::open_synonym_keylist(string_view prefix) const
+{
+    string message;
+    send_message(MSG_SYNONYMKEYLIST, prefix);
+    get_message(message, REPLY_SYNONYMKEYLIST);
+    return new RemoteKeyList({}, std::move(message));
+}
+
+void
+RemoteDatabase::add_synonym(string_view word, string_view synonym) const
+{
+    uncommitted_changes = true;
+
+    string message;
+    pack_string(message, word);
+    message += synonym;
+    send_message(MSG_ADDSYNONYM, message);
+    get_message(message, REPLY_DONE);
+}
+
+void
+RemoteDatabase::remove_synonym(string_view word, string_view synonym) const
+{
+    uncommitted_changes = true;
+
+    string message;
+    pack_string(message, word);
+    message += synonym;
+    send_message(MSG_REMOVESYNONYM, message);
+    get_message(message, REPLY_DONE);
+}
+
+void
+RemoteDatabase::clear_synonyms(string_view word) const
+{
+    uncommitted_changes = true;
+
+    string message;
+    send_message(MSG_CLEARSYNONYMS, word);
+    get_message(message, REPLY_DONE);
 }
 
 bool
@@ -928,10 +1030,29 @@ RemoteDatabase::locked() const
 }
 
 string
+RemoteDatabase::reconstruct_text(Xapian::docid did,
+				 size_t length,
+				 string_view prefix,
+				 Xapian::termpos start_pos,
+				 Xapian::termpos end_pos) const
+{
+    string message;
+    pack_uint(message, did);
+    pack_uint(message, length);
+    pack_uint(message, start_pos);
+    pack_uint(message, end_pos);
+    message += prefix;
+    send_message(MSG_RECONSTRUCTTEXT, message);
+
+    get_message(message, REPLY_RECONSTRUCTTEXT);
+    return message;
+}
+
+string
 RemoteDatabase::get_description() const
 {
     string desc = "Remote(context=";
-    desc += context;
+    desc += link.get_context();
     desc += ')';
     return desc;
 }

@@ -1,7 +1,7 @@
-/** @file postingsource.cc
+/** @file
  * @brief External sources of posting information
  */
-/* Copyright (C) 2008,2009,2010,2011,2012,2015,2016,2017,2019 Olly Betts
+/* Copyright (C) 2008-2024 Olly Betts
  * Copyright (C) 2008,2009 Lemur Consulting Ltd
  * Copyright (C) 2010 Richard Boulton
  *
@@ -16,8 +16,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -201,20 +201,14 @@ ValuePostingSource::get_docid() const
 }
 
 void
-ValuePostingSource::init(const Database & db_)
+ValuePostingSource::reset(const Database& db_, Xapian::doccount)
 {
     db = db_;
     started = false;
     set_maxweight(DBL_MAX);
-    try {
-	termfreq_max = db.get_value_freq(slot);
-	termfreq_est = termfreq_max;
-	termfreq_min = termfreq_max;
-    } catch (const Xapian::UnimplementedError &) {
-	termfreq_max = db.get_doccount();
-	termfreq_est = termfreq_max / 2;
-	termfreq_min = 0;
-    }
+    termfreq_max = db.get_value_freq(slot);
+    termfreq_est = termfreq_max;
+    termfreq_min = termfreq_max;
 }
 
 string
@@ -275,18 +269,12 @@ ValueWeightPostingSource::unserialise(const string &s) const
 }
 
 void
-ValueWeightPostingSource::init(const Database & db_)
+ValueWeightPostingSource::reset(const Database& db_,
+				Xapian::doccount shard_index)
 {
-    ValuePostingSource::init(db_);
+    ValuePostingSource::reset(db_, shard_index);
 
-    string upper_bound;
-    try {
-	upper_bound = get_database().get_value_upper_bound(get_slot());
-    } catch (const Xapian::UnimplementedError &) {
-	// ValuePostingSource::init() set the maxweight to DBL_MAX.
-	return;
-    }
-
+    string upper_bound = get_database().get_value_upper_bound(get_slot());
     if (upper_bound.empty()) {
 	// This should only happen if there are no entries, in which case the
 	// maxweight is 0.
@@ -401,9 +389,9 @@ ValueMapPostingSource::unserialise(const string &s) const
 }
 
 void
-ValueMapPostingSource::init(const Database & db_)
+ValueMapPostingSource::reset(const Database& db_, Xapian::doccount shard_index)
 {
-    ValuePostingSource::init(db_);
+    ValuePostingSource::reset(db_, shard_index);
     set_maxweight(max(max_weight_in_map, default_weight));
 }
 
@@ -453,12 +441,12 @@ FixedWeightPostingSource::next(double min_wt)
 {
     if (!started) {
 	started = true;
-	it = db.postlist_begin(string());
+	it = db.postlist_begin(string_view());
     } else {
 	++it;
     }
 
-    if (it == db.postlist_end(string())) return;
+    if (it == db.postlist_end(string_view())) return;
 
     if (check_docid) {
 	it.skip_to(check_docid + 1);
@@ -466,7 +454,7 @@ FixedWeightPostingSource::next(double min_wt)
     }
 
     if (min_wt > get_maxweight()) {
-	it = db.postlist_end(string());
+	it = db.postlist_end(string_view());
     }
 }
 
@@ -475,9 +463,9 @@ FixedWeightPostingSource::skip_to(Xapian::docid min_docid, double min_wt)
 {
     if (!started) {
 	started = true;
-	it = db.postlist_begin(string());
+	it = db.postlist_begin(string_view());
 
-	if (it == db.postlist_end(string())) return;
+	if (it == db.postlist_end(string_view())) return;
     }
 
     if (check_docid) {
@@ -487,7 +475,7 @@ FixedWeightPostingSource::skip_to(Xapian::docid min_docid, double min_wt)
     }
 
     if (min_wt > get_maxweight()) {
-	it = db.postlist_end(string());
+	it = db.postlist_end(string_view());
 	return;
     }
     it.skip_to(min_docid);
@@ -506,7 +494,7 @@ bool
 FixedWeightPostingSource::at_end() const
 {
     if (check_docid != 0) return false;
-    return started && it == db.postlist_end(string());
+    return started && it == db.postlist_end(string_view());
 }
 
 Xapian::docid
@@ -547,7 +535,7 @@ FixedWeightPostingSource::unserialise(const string &s) const
 }
 
 void
-FixedWeightPostingSource::init(const Xapian::Database & db_)
+FixedWeightPostingSource::reset(const Xapian::Database& db_, Xapian::doccount)
 {
     db = db_;
     termfreq = db_.get_doccount();

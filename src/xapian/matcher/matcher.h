@@ -1,7 +1,7 @@
-/** @file matcher.h
+/** @file
  * @brief Matcher class
  */
-/* Copyright (C) 2017,2018 Olly Betts
+/* Copyright (C) 2017,2018,2019 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_MATCHER_H
@@ -31,7 +31,6 @@
 #include "xapian/weight/weightinternal.h"
 
 #include "xapian/database.h"
-#include "xapian/query.h"
 
 #include <memory>
 #include <vector>
@@ -40,16 +39,14 @@ namespace Xapian {
     class KeyMaker;
     class MatchDecider;
     class MSet;
+    class Query;
     class Weight;
 }
 
 class Matcher {
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
-    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
 
     Xapian::Database db;
-
-    Xapian::Query query;
 
     /** LocalSubMatch objects for local databases.
      *
@@ -64,26 +61,31 @@ class Matcher {
      *  Unlike @a locals, this *only* contains entries for remote shards, and
      *  each RemoteSubMatch object knows its shard index.
      *
-     *  If poll() isn't available so that select() has to be used to
-     *  wait for fds to become ready to read, objects with an fd < FD_SETSIZE
-     *  come first, and those with an fd >= FD_SETSIZE are put at the end with
-     *  @a first_oversize recording the partition point.
+     *  If poll() isn't available then select() has to be used to wait for fds
+     *  to become ready to read, which imposes some limitations:
+     *
+     *  * Generally select() only works for fds < FD_SETSIZE
+     *  * On Microsoft Windows, select() only works for sockets and FD_SETSIZE
+     *    has a different meaning - it's the maximum number of sockets which
+     *    we can select() on at once.
+     *
+     *  To work within these limitations, we order the objects in the vector
+     *  so the ones we can select() on all come before the ones we can't
+     *  select() on.
+     *
+     *  The partition point is recorded in @a first_nonselectable.
      */
     std::vector<std::unique_ptr<RemoteSubMatch>> remotes;
 
 # ifndef HAVE_POLL
-    /** Partition point in @a remotes for fds < FD_SETSIZE.
+    /** Partition point in @a remotes.
      *
-     *  remotes[i]->get_read_fd() < FD_SETSIZE for i < first_oversize,
-     *  remotes[i]->get_read_fd() >= FD_SETSIZE for i >= first_oversize.
+     *  We call select() on remotes[i]->get_read_fd() for all i <
+     *  first_nonselectable.  See doc comment for remotes for more details.
      */
-    std::size_t first_oversize;
+    std::size_t first_nonselectable;
 # endif
 #endif
-
-    std::string query_id;
-
-    bool full_db_has_positions;
 
     Matcher(const Matcher&) = delete;
 
@@ -114,18 +116,11 @@ class Matcher {
     /** Constructor.
      *
      *  @param db_		Database to search
-     *  @param full_db_has_positions_	Does the full database has positions?
      *  @param query		Query object
-     */
-    Matcher(const Xapian::Database& db_);
-
-    /** Constructor.
-     *
      *  @param query_length	Query length
      *  @param rset		Relevance set (NULL for none)
      *  @param stats		Object to collate stats into
      *  @param wtscheme		Weight object to use as factory
-     *  @param sorter		KeyMaker for sort keys (NULL for none)
      *  @param have_mdecider	MatchDecider specified?
      *  @param collapse_key	value slot to collapse on (Xapian::BAD_VALUENO
      *				which means no collapsing)
@@ -141,27 +136,23 @@ class Matcher {
      *				check_at_least (0.0 means don't).
      *  @param matchspies	MatchSpy objects to use
      */
-    void prepare_mset(const std::string& query_id_,
-			  bool full_db_has_positions_,
-		      const Xapian::Query& query,
-		      Xapian::termcount query_length,
-		      const Xapian::RSet* rset,
-		      Xapian::Weight::Internal& stats,
-		      const Xapian::Weight& wtscheme,
-		      bool have_mdecider,
-		      const Xapian::KeyMaker* sorter,
-		      Xapian::valueno collapse_key,
-		      Xapian::doccount collapse_max,
-		      int percent_threshold,
-		      double weight_threshold,
-		      Xapian::Enquire::docid_order order,
-		      Xapian::valueno sort_key,
-		      Xapian::Enquire::Internal::sort_setting sort_by,
-		      bool sort_val_reverse,
-		      double time_limit,
-		      const std::vector<opt_ptr_spy>& matchspies);
-
-    void set_database(const Xapian::Database& db_);
+    Matcher(const Xapian::Database& db_,
+	    const Xapian::Query& query,
+	    Xapian::termcount query_length,
+	    const Xapian::RSet* rset,
+	    Xapian::Weight::Internal& stats,
+	    const Xapian::Weight& wtscheme,
+	    bool have_mdecider,
+	    Xapian::valueno collapse_key,
+	    Xapian::doccount collapse_max,
+	    int percent_threshold,
+	    double weight_threshold,
+	    Xapian::Enquire::docid_order order,
+	    Xapian::valueno sort_key,
+	    Xapian::Enquire::Internal::sort_setting sort_by,
+	    bool sort_val_reverse,
+	    double time_limit,
+	    const std::vector<opt_ptr_spy>& matchspies);
 
     /** Run the match and produce an MSet object.
      *
@@ -216,17 +207,6 @@ class Matcher {
 			  bool sort_val_reverse,
 			  double time_limit,
 			  const std::vector<opt_ptr_spy>& matchspies);
-
-    Xapian::MSet merge_mset(
-	const std::vector<Xapian::MSet>& msets,
-	Xapian::doccount first,
-	Xapian::doccount maxitems,
-	Xapian::doccount collapse_max,
-	int percent_threshold,
-	Xapian::Enquire::docid_order order,
-	Xapian::Enquire::Internal::sort_setting sort_by,
-	bool sort_val_reverse
-    );
 };
 
 #endif // XAPIAN_INCLUDED_MATCHER_H

@@ -1,7 +1,7 @@
-/** @file query.cc
+/** @file
  * @brief Xapian::Query API class
  */
-/* Copyright (C) 2011,2012,2013,2015,2016,2017,2018 Olly Betts
+/* Copyright (C) 2011,2012,2013,2015,2016,2017,2018,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -24,6 +24,7 @@
 #include "xapian/api/queryinternal.h"
 
 #include <algorithm>
+#include <string_view>
 
 #include "xapian/common/debuglog.h"
 #include "xapian/common/omassert.h"
@@ -35,12 +36,11 @@ using namespace std;
 
 namespace Xapian {
 
-// Extra () are needed to resolve ambiguity with method declaration.
-const Query Query::MatchAll((string()));
+const Query Query::MatchAll(string_view{});
 
 const Query Query::MatchNothing;
 
-Query::Query(const string & term, Xapian::termcount wqf, Xapian::termpos pos)
+Query::Query(string_view term, Xapian::termcount wqf, Xapian::termpos pos)
     : internal(new Xapian::Internal::QueryTerm(term, wqf, pos))
 {
     LOGCALL_CTOR(API, "Query", term | wqf | pos);
@@ -68,7 +68,7 @@ Query::Query(op op_, const Xapian::Query & subquery, double factor)
 	throw Xapian::InvalidArgumentError("op must be OP_SCALE_WEIGHT");
     // If the subquery is MatchNothing then generate Query() which matches
     // nothing.
-    if (!subquery.internal.get()) return;
+    if (!subquery.internal) return;
     switch (subquery.internal->get_type()) {
 	case OP_VALUE_RANGE:
 	case OP_VALUE_GE:
@@ -83,7 +83,7 @@ Query::Query(op op_, const Xapian::Query & subquery, double factor)
     internal = new Xapian::Internal::QueryScaleWeight(factor, subquery);
 }
 
-Query::Query(op op_, Xapian::valueno slot, const std::string & limit)
+Query::Query(op op_, Xapian::valueno slot, std::string_view limit)
 {
     LOGCALL_CTOR(API, "Query", op_ | slot | limit);
 
@@ -100,7 +100,7 @@ Query::Query(op op_, Xapian::valueno slot, const std::string & limit)
 }
 
 Query::Query(op op_, Xapian::valueno slot,
-	     const std::string & begin, const std::string & end)
+	     std::string_view begin, std::string_view end)
 {
     LOGCALL_CTOR(API, "Query", op_ | slot | begin | end);
 
@@ -115,7 +115,7 @@ Query::Query(op op_, Xapian::valueno slot,
 }
 
 Query::Query(op op_,
-	     const std::string & pattern,
+	     std::string_view pattern,
 	     Xapian::termcount max_expansion,
 	     int flags,
 	     op combiner)
@@ -173,7 +173,7 @@ Query::Query(op op_,
 }
 
 Query::Query(op op_,
-	     const std::string& pattern,
+	     std::string_view pattern,
 	     Xapian::termcount max_expansion,
 	     int flags,
 	     op combiner,
@@ -197,7 +197,7 @@ Query::Query(op op_,
 const TermIterator
 Query::get_terms_begin() const
 {
-    if (!internal.get())
+    if (!internal)
 	return TermIterator();
 
     vector<pair<Xapian::termpos, string>> terms;
@@ -222,7 +222,7 @@ Query::get_terms_begin() const
 const TermIterator
 Query::get_unique_terms_begin() const
 {
-    if (!internal.get())
+    if (!internal)
 	return TermIterator();
 
     vector<pair<Xapian::termpos, string>> terms;
@@ -247,22 +247,22 @@ Query::get_unique_terms_begin() const
 }
 
 Xapian::termcount
-Query::get_length() const XAPIAN_NOEXCEPT
+Query::get_length() const noexcept
 {
-    return (internal.get() ? internal->get_length() : 0);
+    return (internal ? internal->get_length() : 0);
 }
 
 string
 Query::serialise() const
 {
     string result;
-    if (internal.get())
+    if (internal)
 	internal->serialise(result);
     return result;
 }
 
 const Query
-Query::unserialise(const string & s, const Registry & reg)
+Query::unserialise(string_view s, const Registry& reg)
 {
     const char * p = s.data();
     const char * end = p + s.size();
@@ -272,17 +272,17 @@ Query::unserialise(const string & s, const Registry & reg)
 }
 
 Xapian::Query::op
-Query::get_type() const XAPIAN_NOEXCEPT
+Query::get_type() const noexcept
 {
-    if (!internal.get())
+    if (!internal)
 	return Xapian::Query::LEAF_MATCH_NOTHING;
     return internal->get_type();
 }
 
 size_t
-Query::get_num_subqueries() const XAPIAN_NOEXCEPT
+Query::get_num_subqueries() const noexcept
 {
-    return internal.get() ? internal->get_num_subqueries() : 0;
+    return internal ? internal->get_num_subqueries() : 0;
 }
 
 const Query
@@ -307,7 +307,7 @@ string
 Query::get_description() const
 {
     string desc = "Query(";
-    if (internal.get())
+    if (internal)
 	desc += internal->get_description();
     desc += ")";
     return desc;

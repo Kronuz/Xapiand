@@ -1,7 +1,7 @@
-/** @file queryparser.h
+/** @file
  * @brief parsing a user query string to build a Xapian::Query object
  */
-/* Copyright (C) 2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018 Olly Betts
+/* Copyright (C) 2005-2026 Olly Betts
  * Copyright (C) 2010 Adam Sjøgren
  *
  * This program is free software; you can redistribute it and/or
@@ -15,16 +15,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_QUERYPARSER_H
 #define XAPIAN_INCLUDED_QUERYPARSER_H
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-# error "Never use <xapian/queryparser.h> directly; include <xapian.h> instead."
+# error Never use <xapian/queryparser.h> directly; include <xapian.h> instead.
 #endif
 
 #include "xapian/attributes.h"
@@ -34,6 +33,7 @@
 #include "xapian/visibility.h"
 
 #include <string>
+#include <string_view>
 #include <unordered_set>
 
 namespace Xapian {
@@ -41,7 +41,11 @@ namespace Xapian {
 class Database;
 class Stem;
 
-/// Base class for stop-word decision functor.
+/** Abstract base class for stop-word decision functor.
+ *
+ *  If you just want to use an existing stopword list, see
+ *  Xapian::SimpleStopper.
+ */
 class XAPIAN_VISIBILITY_DEFAULT Stopper
     : public Xapian::Internal::opt_intrusive_base {
     /// Don't allow assignment.
@@ -68,7 +72,7 @@ class XAPIAN_VISIBILITY_DEFAULT Stopper
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated Stopper
+     *  You can transfer ownership of a dynamically allocated Stopper
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -80,7 +84,7 @@ class XAPIAN_VISIBILITY_DEFAULT Stopper
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated Stopper
+     *  You can transfer ownership of a dynamically allocated Stopper
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -101,12 +105,16 @@ class XAPIAN_VISIBILITY_DEFAULT SimpleStopper : public Stopper {
 
     /** Initialise from a pair of iterators.
      *
-     * Xapian includes stop list files for many languages. You can initialise from a file like that:
-     * @code
-     * ifstream words("stopwords/english/stop.txt");
-     * Xapian::SimplerStopper stopper(istream_iterator<string>(words), istream_iterator<string>());
-     * @endcode
+     *  Xapian includes stopword list files for many languages.  You can
+     *  initialise from a file like so:
+     *  @code
+     *  std::ifstream words("stopwords/english/stop.txt");
+     *  Xapian::SimplerStopper stopper(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
+     *  @endcode
      *
+     *  In bindings for other languages it isn't possible to pass a C++
+     *  iterator pair, so instead this constructor is wrapped to allow
+     *  passing a filename.
      */
     template<class Iterator>
     SimpleStopper(Iterator begin, Iterator end) : stop_words(begin, end) { }
@@ -174,13 +182,15 @@ class XAPIAN_VISIBILITY_DEFAULT RangeProcessor
      *			 * Xapian::RP_SUFFIX - require @a str_ as a suffix
      *			   instead of a prefix.
      *			 * Xapian::RP_REPEATED - optionally allow @a str_
-     *			   on both ends of the range - e.g. $1..$10 or
-     *			   5m..50m.  By default a prefix is only checked for on
-     *			   the start (e.g. date:1/1/1980..31/12/1989), and a
-     *			   suffix only on the end (e.g. 2..12kg).
+     *			   on both ends of the range, or only on the non-empty
+     *			   end - e.g. `$1..$10`, `..$10`, `5m..50m`, or `5m..`.
+     *			   By default a prefix is only checked for on
+     *			   the start (e.g. `date:1/1/1980..31/12/1989` or
+     *			   `date:..31/12/1989`), and a suffix only on the end
+     *			   (e.g. `2..12kg` or `2..kg`).
      */
     explicit RangeProcessor(Xapian::valueno slot_,
-			    const std::string& str_ = std::string(),
+			    std::string_view str_ = {},
 			    unsigned flags_ = 0)
 	: slot(slot_), str(str_), flags(flags_) { }
 
@@ -214,7 +224,7 @@ class XAPIAN_VISIBILITY_DEFAULT RangeProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated RangeProcessor
+     *  You can transfer ownership of a dynamically allocated RangeProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -226,7 +236,7 @@ class XAPIAN_VISIBILITY_DEFAULT RangeProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated RangeProcessor
+     *  You can transfer ownership of a dynamically allocated RangeProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -261,15 +271,16 @@ class XAPIAN_VISIBILITY_DEFAULT DateRangeProcessor : public RangeProcessor {
     explicit DateRangeProcessor(Xapian::valueno slot_,
 				unsigned flags_ = 0,
 				int epoch_year_ = 1970)
-	: RangeProcessor(slot_, std::string(), flags_),
+	: RangeProcessor(slot_, {}, flags_),
 	  epoch_year(epoch_year_) { }
 
     /** Constructor.
      *
      *  @param slot_	The value slot number to query.
      *
-     *  @param str_	A string to look for to recognise values as belonging
-     *			to this date range.
+     *  @param str_	A prefix or suffix string to look for to recognise
+     *			values as belonging to this date range (@a flags_
+     *			determines whether this is a prefix or suffix).
      *
      *  @param flags_	Zero or more of the following flags, combined with
      *			bitwise-or:
@@ -294,32 +305,48 @@ class XAPIAN_VISIBILITY_DEFAULT DateRangeProcessor : public RangeProcessor {
      *  if prefix_ is false, the second value in a range must end with str_
      *  (and the first value may optionally end with str_).
      *
-     *  If str_ is empty, the Xapian::RP_SUFFIX and Xapian::RP_REPEATED are
-     *  irrelevant, and no special strings are required at the start or end of
-     *  the strings defining the range.
-     *
-     *  The remainder of both strings defining the endpoints must be valid
-     *  dates.
-     *
-     *  For example, if str_ is "created:", Xapian::RP_SUFFIX is not specified,
-     *  and the range processor has been added to the queryparser, the
-     *  queryparser will accept "created:1/1/2000..31/12/2001".
+     *  If str_ is empty then no prefix or suffix is checked for (and
+     *  Xapian::RP_SUFFIX and Xapian::RP_REPEATED are irrelevant) - anything
+     *  which looks like a date range will be processed.
      */
-    DateRangeProcessor(Xapian::valueno slot_, const std::string &str_,
+    DateRangeProcessor(Xapian::valueno slot_, std::string_view str_,
 		       unsigned flags_ = 0, int epoch_year_ = 1970)
 	: RangeProcessor(slot_, str_, flags_),
 	  epoch_year(epoch_year_) { }
 
     /** Check for a valid date range.
      *
-     *  If any specified prefix is present, and the range looks like a
-     *  date range, the dates are converted to the format YYYYMMDD and
-     *  combined into a value range query.
-     *
      *  @param begin	The start of the range as specified in the query string
      *			by the user.
      *  @param end	The end of the range as specified in the query string
      *			by the user.
+     *
+     *  If a prefix or suffix was specified at construction time, that must
+     *  be present on @a begin and/or @a end (taking @a Xapian::RP_SUFFIX and
+     *  @a Xapian::RP_REPEATED into account).
+     *
+     *  Then if the range looks like a date range, the dates are converted to
+     *  the format YYYYMMDD and combined into a value range query.
+     *
+     *  Most numeric date formats are recognised:
+     *
+     *  * YYYYMMDD - e.g. `20251225..20260214`
+     *  * YYYY-MM-DD (ISO) - e.g. `2025-12-25..2026-02-14`
+     *  * month/day/year (US) - e.g. `12/25/2025..2/14/2026`
+     *  * day/month/year (much of the world) - e.g. `25/12/2025..14/2/2026`
+     *
+     *  The delimiter can be `-`, `/` or `.` for any of the delimited formats,
+     *  but must be the same within a single date.
+     *
+     *  Some dates are unfortunately ambiguous and could be in either of
+     *  the last two formats - for example `2/3/2025` could be March 2nd or
+     *  February 3rd.  The range start is assumed to be before the range
+     *  end which can resolve some ambiguous cases, but otherwise
+     *  day/month/year is assumed unless flag @a Xapian::RP_DATE_PREFER_MDY
+     *  was specified.
+     *
+     *  Two digit years can be used with the last two formats - constructor
+     *  parameter @a epoch_year_ determines how these are interpreted.
      */
     Xapian::Query operator()(const std::string& begin, const std::string& end);
 };
@@ -372,7 +399,7 @@ class XAPIAN_VISIBILITY_DEFAULT NumberRangeProcessor : public RangeProcessor {
      *  valid ranges.
      */
     NumberRangeProcessor(Xapian::valueno slot_,
-			 const std::string &str_ = std::string(),
+			 std::string_view str_ = {},
 			 unsigned flags_ = 0)
 	: RangeProcessor(slot_, str_, flags_) { }
 
@@ -397,6 +424,8 @@ class XAPIAN_VISIBILITY_DEFAULT NumberRangeProcessor : public RangeProcessor {
  *  Xapian::sortable_serialise() which turns numbers into strings which
  *  will sort in the same order as the numbers (the same values can be
  *  used to implement a numeric sort).
+ *
+ *  @since Added in Xapian 2.0.0.
  */
 class XAPIAN_VISIBILITY_DEFAULT UnitRangeProcessor : public RangeProcessor {
   public:
@@ -415,7 +444,7 @@ class XAPIAN_VISIBILITY_DEFAULT UnitRangeProcessor : public RangeProcessor {
      *  accept "size:3K..10K" as a valid range.
      */
     UnitRangeProcessor(Xapian::valueno slot_,
-		       const std::string &str_ = std::string())
+		       std::string_view str_ = {})
 	: RangeProcessor(slot_, str_) { }
 
     /** Check for a valid byte value range.
@@ -460,7 +489,7 @@ class XAPIAN_VISIBILITY_DEFAULT FieldProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated FieldProcessor
+     *  You can transfer ownership of a dynamically allocated FieldProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -472,7 +501,7 @@ class XAPIAN_VISIBILITY_DEFAULT FieldProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated FieldProcessor
+     *  You can transfer ownership of a dynamically allocated FieldProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -489,7 +518,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
     /// Class representing the queryparser internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, QueryParser> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /// Enum of feature flags.
     typedef enum {
@@ -581,30 +610,52 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 */
 	FLAG_AUTO_MULTIWORD_SYNONYMS = 1024,
 
-	/** Enable generation of n-grams from CJK text.
+	/** Generate n-grams for scripts without explicit word breaks.
 	 *
-	 *  With this enabled, spans of CJK characters are split into unigrams
+	 *  Spans of characters in such scripts are split into unigrams
 	 *  and bigrams, with the unigrams carrying positional information.
-	 *  Non-CJK characters are split into words as normal.
+	 *  Text in other scripts is split into words as normal.
 	 *
-	 *  The corresponding option needs to have been used at index time.
+	 *  The TermGenerator::FLAG_NGRAMS flag needs to have been used at
+	 *  index time.
 	 *
-	 *  Flag added in Xapian 1.3.4 and 1.2.22.  This mode can be
-	 *  enabled in 1.2.8 and later by setting environment variable
-	 *  XAPIAN_CJK_NGRAM to a non-empty value (but doing so was deprecated
-	 *  in 1.4.11).
+	 *  This mode can also be enabled in 1.2.8 and later by setting
+	 *  environment variable XAPIAN_CJK_NGRAM to a non-empty value (but
+	 *  doing so was deprecated in 1.4.11).
+	 *
+	 *  In 1.4.x this feature was specific to CJK (Chinese, Japanese and
+	 *  Korean), but in 2.0.0 it's been extended to other languages.  To
+	 *  reflect this change the new and preferred name is FLAG_NGRAMS,
+	 *  which was added as an alias for forward compatibility in Xapian
+	 *  1.4.23.  Use FLAG_CJK_NGRAM instead if you aim to support Xapian
+	 *  &lt; 1.4.23.
+	 *
+	 *  @since Added in Xapian 1.4.23.
 	 */
-	FLAG_CJK_NGRAM = 2048,
+	FLAG_NGRAMS = 2048,
 
-	/** Enable generation of words from CJK text.
+	/** Generate n-grams for scripts without explicit word breaks.
 	 *
-	 *  With this enabled, spans of CJK characters are split into CJK
-	 *  words using text boundary heuristics. Non-CJK characters are
-	 *  split into words as normal.
+	 *  Old name - use FLAG_NGRAMS instead unless you aim to support Xapian
+	 *  &lt; 1.4.23.
 	 *
-	 *  The corresponding option needs to have been used at index time.
+	 *  @since Added in Xapian 1.3.4 and 1.2.22.
 	 */
-	FLAG_CJK_WORDS = 4096,
+	FLAG_CJK_NGRAM = FLAG_NGRAMS,
+
+	/** Find word breaks for text in scripts without explicit word breaks.
+	 *
+	 *  With this option enabled, spans of text written in such scripts are
+	 *  split into words using ICU (which uses heuristics and/or
+	 *  dictionaries to do so).  Text in other scripts is split into words
+	 *  as normal.
+	 *
+	 *  The TermGenerator::FLAG_WORD_BREAKS flag needs to have been used at
+	 *  index time.
+	 *
+	 *  @since Added in Xapian 2.0.0.
+	 */
+	FLAG_WORD_BREAKS = 4096,
 
 	/** Support extended wildcard '*'.
 	 *
@@ -617,7 +668,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 *
 	 *  FLAG_WILDCARD is ignored if this flag is specified.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	FLAG_WILDCARD_MULTI = 8192,
 
@@ -632,7 +683,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 *
 	 *  FLAG_WILDCARD is ignored if this flag is specified.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	FLAG_WILDCARD_SINGLE = 16384,
 
@@ -643,7 +694,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 *
 	 *  FLAG_WILDCARD is ignored if this flag is specified.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	FLAG_WILDCARD_GLOB = FLAG_WILDCARD_MULTI | FLAG_WILDCARD_SINGLE,
 
@@ -655,16 +706,80 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 *  foo~ uses edit distance of 2
 	 *  since~0.2 uses edit distance of length("since") * 0.2 = 5 * 0.2 = 1
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
 	FLAG_FUZZY = 32768,
+
+	/** Accumulate unstem and stoplist results.
+	 *
+	 *  By default, the unstem and stoplist data is reset by a call to
+	 *  parse_query(), which makes sense if you use the same QueryParser
+	 *  object to parse a series of independent queries.
+	 *
+	 *  If you're using the same QueryParser object to parse several
+	 *  fields on the same query form, you may want to have the unstem
+	 *  and stoplist data combined for all of them, in which case you
+	 *  can use this flag to prevent this data from being reset.
+	 *
+	 *  @since Added in Xapian 1.4.18.
+	 */
+	FLAG_ACCUMULATE = 65536,
+
+	/** Produce a query which doesn't use positional information.
+	 *
+	 *  With this flag enabled, no positional information will be used
+	 *  and any query operations which would use it are replaced by
+	 *  the nearest equivalent which doesn't (so phrase searches, NEAR
+	 *  and ADJ will result in OP_AND).
+	 *
+	 *  @since Added in Xapian 1.4.19.
+	 */
+	FLAG_NO_POSITIONS = 0x20000,
+
+	/** Turn off special handling of capitalised words.
+	 *
+	 *  By default capitalising a word prevents it from being considered
+	 *  for stemming.  This only has any effect when both stemmed and
+	 *  non-stemmed terms are available (i.e. when stem_strategy is the
+	 *  default STEM_SOME or STEM_SOME_FULL_POS), and since Xapian 2.0.0 it
+	 *  is only done for languages where it is helpful.
+	 *
+	 *  This attempts to limit problems which stemming can cause with
+	 *  proper names.  For example, the English stemmer conflates `Tony`
+	 *  with `Toni` and `Keats` with `Keating`, which can lead to unwanted
+	 *  matches with irrelevant documents.
+	 *
+	 *  One downside is it prevents stemming of words that aren't proper
+	 *  nouns but are capitalised for other reasons (e.g. in a title or
+	 *  at the start of a sentence).
+	 *
+	 *  Another is that proper nouns can be inflected in some languages.
+	 *  In English some can be pluralised ("How many Tonys do you know?"),
+	 *  and in some languages proper nouns can take an -s suffix to
+	 *  indicate the genitive case (e.g. "Köpenhamns" in Swedish is
+	 *  like "Copenhagen's" in English).
+	 *
+	 *  If inflection is limited to plurals and genitive-s, the benefits
+	 *  of this special handling still seem to outweigh the downsides.
+	 *  However for languages with more extensive inflection of proper
+	 *  nouns it seems too problematic so (since Xapian 2.0.0) we don't
+	 *  enable it for such languages.  It's also off for German where all
+	 *  nouns are capitalised (not just proper nouns).
+	 *
+	 *  This special handling is also only useful in languages where proper
+	 *  nouns are capitalised (so for example, it's not useful for
+	 *  languages written in alphabets without upper case).
+	 *
+	 *  @since FLAG_NO_PROPER_NOUN_HEURISTIC was added in Xapian 2.0.0.
+	 */
+	FLAG_NO_PROPER_NOUN_HEURISTIC = 0x40000,
 
 	/** The default flags.
 	 *
 	 *  Used if you don't explicitly pass any to @a parse_query().
 	 *  The default flags are FLAG_PHRASE|FLAG_BOOLEAN|FLAG_LOVEHATE.
 	 *
-	 *  Added in Xapian 1.0.11.
+	 *  @since Added in Xapian 1.0.11.
 	 */
 	FLAG_DEFAULT = FLAG_PHRASE|FLAG_BOOLEAN|FLAG_LOVEHATE
     } feature_flag;
@@ -673,6 +788,12 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
     typedef enum {
 	STEM_NONE, STEM_SOME, STEM_ALL, STEM_ALL_Z, STEM_SOME_FULL_POS
     } stem_strategy;
+
+    /** Stopper strategies, for use with set_stopper_strategy().
+     *
+     *  @since Added in Xapian 2.0.0.
+     */
+    typedef enum { STOP_NONE, STOP_ALL, STOP_STEMMED } stop_strategy;
 
     /// Copy constructor.
     QueryParser(const QueryParser & o);
@@ -737,6 +858,31 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *			stopwords).
      */
     void set_stopper(const Stopper *stop = NULL);
+
+    /** Set the stopper strategy.
+     *
+     *  This method controls how the stopper is used.
+     *
+     *  You need to also call @a set_stopper() for this to have any effect.
+     *
+     *  @param strategy The strategy to use - possible values are:
+     *   - STOP_NONE:     Don't use the stopper.
+     *   - STOP_ALL:      If a word is identified as a stop word, skip it
+     *                    completely.  This makes some queries less useful
+     *                    (e.g. `"to be or not to be that is the question"`
+     *                    would become a search for just `question` if the
+     *                    other words were all stopwords).  If you index
+     *                    with `STOP_ALL` you should use it when parsing
+     *                    queries too.
+     *   - STOP_STEMMED:  If a word is identified as a stop word, assume it
+     *                    was still indexed unstemmed and don't treat it as
+     *                    a stopword in contexts where we would use the
+     *                    unstemmed form (for example, phrase searches, ADJ,
+     *                    NEAR).  (This is the default mode).
+     *
+     *  @since Added in Xapian 2.0.0.
+     */
+    void set_stopper_strategy(stop_strategy strategy);
 
     /** Set the default operator.
      *
@@ -810,7 +956,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *  expand for partial matching (see @a FLAG_PARTIAL).  In this case
      *  a shorter word at the end of the query simply result in no partial
      *  matching.  The default minimum length for this case is 2 (since
-     *  1.5.0 - in earlier versions it was effectively 0).
+     *  2.0.0 - in earlier versions it was effectively 0).
      *
      *  @param min_prefix_len	Minimum length of fixed initial portion in
      *			        Unicode characters.
@@ -819,7 +965,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *				the limit for both wildcards and partial
      *				terms).
      *
-     *  Added in Xapian 1.5.0.
+     *  @since Added in Xapian 2.0.0.
      */
     void set_min_wildcard_prefix(unsigned min_prefix_len,
 				 unsigned flags = FLAG_WILDCARD|FLAG_PARTIAL);
@@ -847,9 +993,9 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *		   @li Syntax: &lt;expression&gt; OR &lt;expression&gt;
      *		   @li Syntax: &lt;expression&gt; XOR &lt;expression&gt;
      */
-    Query parse_query(const std::string &query_string,
+    Query parse_query(std::string_view query_string,
 		      unsigned flags = FLAG_DEFAULT,
-		      const std::string &default_prefix = std::string());
+		      std::string_view default_prefix = {});
 
     /** Add a free-text field term prefix.
      *
@@ -887,14 +1033,19 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *  In 1.0.3 and earlier, subsequent calls to this method with the same
      *  value of @a field had no effect.
      *
-     *  @param field   The user visible field name
-     *  @param prefix  The term prefix to map this to
+     *  @param field   The user visible field name.  Currently this needs to
+     *		       consist of characters for which
+     *		       Xapian::Unicode::is_wordchar() is true (approximately
+     *		       alphanumerics plus connector punctuation such as `_`).
+     *		       Since 1.4.26 it can optionally end in a `:` for
+     *		       consistency with how range prefixes are specified.
+     *  @param prefix  The term prefix to map this to.
      */
-    void add_prefix(const std::string& field, const std::string& prefix);
+    void add_prefix(std::string_view field, std::string_view prefix);
 
     /** Register a FieldProcessor.
      */
-    void add_prefix(const std::string& field, Xapian::FieldProcessor * proc);
+    void add_prefix(std::string_view field, Xapian::FieldProcessor* proc);
 
     /** Add a boolean term prefix allowing the user to restrict a
      *  search with a boolean filter specified in the free text query.
@@ -938,7 +1089,13 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *  In 1.0.3 and earlier, subsequent calls to this method with the same
      *  value of @a field had no effect.
      *
-     *  @param field   The user visible field name
+     *  @param field   The user visible field name, which may not be empty
+     *		       for a boolean filter.  Currently this needs to
+     *		       consist of characters for which
+     *		       Xapian::Unicode::is_wordchar() is true (approximately
+     *		       alphanumerics plus connector punctuation such as `_`).
+     *		       Since 1.4.26 it can optionally end in a `:` for
+     *		       consistency with how range prefixes are specified.
      *  @param prefix  The term prefix to map this to
      *  @param grouping	Controls how multiple filters are combined - filters
      *			with the same grouping value are combined with OP_OR,
@@ -949,7 +1106,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *			document can have multiple terms with this prefix).
      *			[default: NULL]
      */
-    void add_boolean_prefix(const std::string &field, const std::string &prefix,
+    void add_boolean_prefix(std::string_view field, std::string_view prefix,
 			    const std::string* grouping = NULL);
 
     /** Add a boolean term prefix allowing the user to restrict a
@@ -958,7 +1115,13 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *  This is an older version of this method - use the version with
      *  the `grouping` parameter in preference to this one.
      *
-     *  @param field   The user visible field name
+     *  @param field   The user visible field name, which may not be empty
+     *		       for a boolean filter.  Currently this needs to
+     *		       consist of characters for which
+     *		       Xapian::Unicode::is_wordchar() is true (approximately
+     *		       alphanumerics plus connector punctuation such as `_`).
+     *		       Since 1.4.26 it can optionally end in a `:` for
+     *		       consistency with how range prefixes are specified.
      *  @param prefix  The term prefix to map this to
      *  @param exclusive Controls how multiple filters are combined.  If
      *			true then @a prefix is used as the `grouping` value,
@@ -968,7 +1131,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *			each filter (this is sometimes useful when each
      *			document can have multiple terms with this prefix).
      */
-    void add_boolean_prefix(const std::string &field, const std::string &prefix,
+    void add_boolean_prefix(std::string_view field, std::string_view prefix,
 			    bool exclusive) {
 	if (exclusive) {
 	    add_boolean_prefix(field, prefix);
@@ -980,7 +1143,8 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 
     /** Register a FieldProcessor for a boolean prefix.
      */
-    void add_boolean_prefix(const std::string &field, Xapian::FieldProcessor *proc,
+    void add_boolean_prefix(std::string_view field,
+			    Xapian::FieldProcessor* proc,
 			    const std::string* grouping = NULL);
 
     /** Register a FieldProcessor for a boolean prefix.
@@ -988,7 +1152,8 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *  This is an older version of this method - use the version with
      *  the `grouping` parameter in preference to this one.
      */
-    void add_boolean_prefix(const std::string &field, Xapian::FieldProcessor *proc,
+    void add_boolean_prefix(std::string_view field,
+			    Xapian::FieldProcessor* proc,
 			    bool exclusive) {
 	if (exclusive) {
 	    add_boolean_prefix(field, proc);
@@ -1002,15 +1167,15 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
     TermIterator stoplist_begin() const;
 
     /// End iterator over terms omitted from the query as stopwords.
-    TermIterator XAPIAN_NOTHROW(stoplist_end() const) {
+    TermIterator stoplist_end() const noexcept {
 	return TermIterator();
     }
 
     /// Begin iterator over unstemmed forms of the given stemmed query term.
-    TermIterator unstem_begin(const std::string &term) const;
+    TermIterator unstem_begin(std::string_view term) const;
 
     /// End iterator over unstemmed forms of the given stemmed query term.
-    TermIterator XAPIAN_NOTHROW(unstem_end(const std::string &) const) {
+    TermIterator unstem_end(std::string_view) const noexcept {
 	return TermIterator();
     }
 
@@ -1033,7 +1198,7 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 
 /// @private @internal Helper for sortable_serialise().
 XAPIAN_VISIBILITY_DEFAULT
-size_t XAPIAN_NOTHROW(sortable_serialise_(double value, char * buf));
+size_t sortable_serialise_(double value, char* buf) noexcept;
 
 /** Convert a floating point number to a string, preserving sort order.
  *
@@ -1081,7 +1246,7 @@ inline std::string sortable_serialise(double value) {
  *  @param serialised	The serialised string to decode.
  */
 XAPIAN_VISIBILITY_DEFAULT
-double XAPIAN_NOTHROW(sortable_unserialise(const std::string & serialised));
+double sortable_unserialise(std::string_view serialised) noexcept;
 
 }
 

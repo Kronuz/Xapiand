@@ -1,7 +1,7 @@
-/** @file serialise.cc
+/** @file
  * @brief functions to convert Xapian objects to strings and back
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2014,2015,2017 Olly Betts
+/* Copyright (C) 2006-2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -30,11 +30,11 @@
 #include "xapian/common/pack.h"
 #include "xapian/net/serialise.h"
 #include "xapian/common/serialise-double.h"
+#include "xapian/common/stringutils.h"
 #include "xapian/weight/weightinternal.h"
 
-#include <memory>
-#include <set>
 #include <string>
+#include <string_view>
 
 using namespace std;
 
@@ -46,47 +46,89 @@ serialise_stats(const Xapian::Weight::Internal &stats)
     pack_uint(result, stats.total_length);
     pack_uint(result, stats.collection_size);
     pack_uint(result, stats.rset_size);
-    pack_uint(result, stats.total_term_count);
+    pack_uint(result, stats.db_doclength_lower_bound);
+    pack_uint(result, stats.db_doclength_upper_bound -
+		      stats.db_doclength_lower_bound);
+    pack_uint(result, stats.db_unique_terms_lower_bound);
+    pack_uint(result, stats.db_unique_terms_upper_bound -
+		      stats.db_unique_terms_lower_bound);
     pack_bool(result, stats.have_max_part);
 
     pack_uint(result, stats.termfreqs.size());
-    map<string, TermFreqs>::const_iterator i;
-    for (i = stats.termfreqs.begin(); i != stats.termfreqs.end(); ++i) {
-	pack_string(result, i->first);
-	pack_uint(result, i->second.termfreq);
+    string_view prev_term;
+    for (auto&& i : stats.termfreqs) {
+	const string& term = i.first;
+	// We reduce the size of the encoding by reusing any prefix which is in
+	// common with the previous term.  This is much more compact if there
+	// are a lot of terms, especially if they share a prefix such as an
+	// OP_WILDCARD which expands to a lot of terms.
+	size_t reuse = common_prefix_length(prev_term, term, 255);
+	size_t append = term.size() - reuse;
+	if (reuse == prev_term.size() && usual(term.size() <= 255)) {
+	    // Reuse the whole of the previous term.  In this case we store the
+	    // new length for the reuse count, which is longer than a valid
+	    // reuse count.  This saves a byte (or two if the new term is
+	    // >= 128 bytes long).
+	    AssertRel(term.size(), >, reuse);
+	    result += char(term.size());
+	} else {
+	    result += char(reuse);
+	    pack_uint(result, append);
+	}
+	result.append(term.data() + reuse, append);
+	pack_uint(result, i.second.termfreq);
 	if (stats.rset_size != 0)
-	    pack_uint(result, i->second.reltermfreq);
-	pack_uint(result, i->second.collfreq);
+	    pack_uint(result, i.second.reltermfreq);
+	pack_uint(result, i.second.collfreq);
 	if (stats.have_max_part)
-	    result += serialise_double(i->second.max_part);
+	    result += serialise_double(i.second.max_part);
+	prev_term = term;
     }
 
     return result;
 }
 
 void
-unserialise_stats(const string &s, Xapian::Weight::Internal & stat)
+unserialise_stats(const char* p, const char* p_end,
+		  Xapian::Weight::Internal& stat)
 {
-    const char * p = s.data();
-    const char * p_end = p + s.size();
-
     size_t n;
     if (!unpack_uint(&p, p_end, &stat.total_length) ||
 	!unpack_uint(&p, p_end, &stat.collection_size) ||
 	!unpack_uint(&p, p_end, &stat.rset_size) ||
-	!unpack_uint(&p, p_end, &stat.total_term_count) ||
+	!unpack_uint(&p, p_end, &stat.db_doclength_lower_bound) ||
+	!unpack_uint(&p, p_end, &stat.db_doclength_upper_bound) ||
+	!unpack_uint(&p, p_end, &stat.db_unique_terms_lower_bound) ||
+	!unpack_uint(&p, p_end, &stat.db_unique_terms_upper_bound) ||
 	!unpack_bool(&p, p_end, &stat.have_max_part) ||
 	!unpack_uint(&p, p_end, &n)) {
 	unpack_throw_serialisation_error(p);
     }
+    stat.db_doclength_upper_bound += stat.db_doclength_lower_bound;
+    stat.db_unique_terms_upper_bound += stat.db_unique_terms_lower_bound;
 
     string term;
-    while (n--) {
+    for ( ; n; --n) {
 	Xapian::doccount termfreq;
 	Xapian::doccount reltermfreq = 0;
 	Xapian::termcount collfreq;
-	if (!unpack_string(&p, p_end, term) ||
-	    !unpack_uint(&p, p_end, &termfreq) ||
+	if (p == p_end) {
+	    unpack_throw_serialisation_error(p);
+	}
+	size_t reuse = static_cast<unsigned char>(*p++);
+	size_t append;
+	if (reuse <= term.size()) {
+	    term.resize(reuse);
+	    if (!unpack_uint(&p, p_end, &append) ||
+		size_t(p_end - p) < append) {
+		unpack_throw_serialisation_error(p);
+	    }
+	} else {
+	    append = reuse - term.size();
+	}
+	term.append(p, append);
+	p += append;
+	if (!unpack_uint(&p, p_end, &termfreq) ||
 	    (stat.rset_size != 0 && !unpack_uint(&p, p_end, &reltermfreq)) ||
 	    !unpack_uint(&p, p_end, &collfreq)) {
 	    unpack_throw_serialisation_error(p);
@@ -106,7 +148,7 @@ string
 serialise_rset(const Xapian::RSet &rset)
 {
     string result;
-    if (rset.internal.get()) {
+    if (rset.internal) {
 	Xapian::docid lastdid = 0;
 	for (Xapian::docid did : rset.internal->docs) {
 	    pack_uint(result, did - lastdid - 1);
@@ -178,7 +220,7 @@ serialise_document(const Xapian::Document &doc)
 }
 
 Xapian::Document
-unserialise_document(const string &s)
+unserialise_document(string_view s)
 {
     Xapian::Document doc;
     const char * p = s.data();
@@ -189,7 +231,7 @@ unserialise_document(const string &s)
 	unpack_throw_serialisation_error(p);
     }
     string value;
-    while (n_values--) {
+    for ( ; n_values; --n_values) {
 	Xapian::valueno slot;
 	if (!unpack_uint(&p, p_end, &slot) ||
 	    !unpack_string(&p, p_end, value)) {
@@ -203,7 +245,7 @@ unserialise_document(const string &s)
 	unpack_throw_serialisation_error(p);
     }
     string term;
-    while (n_terms--) {
+    for ( ; n_terms; --n_terms) {
 	Xapian::termcount wdf;
 	if (!unpack_string(&p, p_end, term) ||
 	    !unpack_uint(&p, p_end, &wdf)) {
@@ -217,7 +259,7 @@ unserialise_document(const string &s)
 	    unpack_throw_serialisation_error(p);
 	}
 	Xapian::termpos pos = 0;
-	while (n_pos--) {
+	for ( ; n_pos; --n_pos) {
 	    Xapian::termpos inc;
 	    if (!unpack_uint(&p, p_end, &inc)) {
 		unpack_throw_serialisation_error(p);
@@ -227,6 +269,6 @@ unserialise_document(const string &s)
 	}
     }
 
-    doc.set_data(string(p, p_end - p));
+    doc.set_data(string_view(p, p_end - p));
     return doc;
 }

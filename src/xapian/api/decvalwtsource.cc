@@ -1,8 +1,8 @@
-/** @file decvalwtsource.cc
+/** @file
  * @brief A posting source which returns decreasing weights from a value.
  */
 /* Copyright (C) 2009 Lemur Consulting Ltd
- * Copyright (C) 2011,2012,2015,2016 Olly Betts
+ * Copyright (C) 2011,2012,2015,2016,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
 #include "xapian/postingsource.h"
-#include "xapian/error.h"
 #include "xapian/common/pack.h"
-#include "xapian/common/serialise-double.h"
-#include <cmath>
 
 using namespace Xapian;
 
@@ -80,8 +77,10 @@ DecreasingValueWeightPostingSource::unserialise(const std::string &s) const {
 }
 
 void
-DecreasingValueWeightPostingSource::init(const Xapian::Database & db_) {
-    Xapian::ValueWeightPostingSource::init(db_);
+DecreasingValueWeightPostingSource::reset(const Xapian::Database& db_,
+					  Xapian::doccount shard_index)
+{
+    Xapian::ValueWeightPostingSource::reset(db_, shard_index);
     if (range_end == 0 || get_database().get_doccount() <= range_end)
 	items_at_end = false;
     else

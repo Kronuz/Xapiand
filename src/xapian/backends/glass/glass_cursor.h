@@ -1,8 +1,8 @@
-/** @file glass_cursor.h
+/** @file
  * @brief Interface to Btree cursors
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
- * Copyright 2002,2003,2004,2006,2007,2008,2009,2010,2012,2013,2014,2016 Olly Betts
+ * Copyright 2002-2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,9 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_GLASS_CURSOR_H
@@ -31,6 +30,8 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <string_view>
+
 using std::string;
 
 #define BLK_UNUSED uint4(-1)
@@ -247,7 +248,7 @@ class GlassCursor {
      *  Calling next() after this moves the cursor to the first entry.
      */
     void rewind() {
-	(void)find_entry_ge(string());
+	(void)find_entry_ge({});
     }
 
     /** Read the tag from the table and store it in current_tag.
@@ -322,7 +323,7 @@ class GlassCursor {
      *  @return true if the exact key was found in the table, false
      *          otherwise.
      */
-    bool find_entry_ge(const string &key);
+    bool find_entry_ge(std::string_view key);
 
     /** Set the cursor to be off the end of the table.
      */

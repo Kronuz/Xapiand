@@ -1,7 +1,8 @@
-/** @file  mset.h
+/** @file
  *  @brief Class representing a list of search results
  */
-/* Copyright (C) 2015,2016,2017,2019 Olly Betts
+/* Copyright (C) 2015,2016,2017,2019,2023,2024,2026 Olly Betts
+ * Copyright (C) 2018 Uppinder Chugh
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,20 +15,20 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_MSET_H
 #define XAPIAN_INCLUDED_MSET_H
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-# error "Never use <xapian/mset.h> directly; include <xapian.h> instead."
+# error Never use <xapian/mset.h> directly; include <xapian.h> instead.
 #endif
 
 #include <iterator>
 #include <string>
+#include <string_view>
 
 #include "xapian/attributes.h"
 #include "xapian/document.h"
@@ -39,7 +40,6 @@
 
 namespace Xapian {
 
-class Database;
 class MSetIterator;
 
 /// Class representing a list of search results.
@@ -60,14 +60,24 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
      *
      *  @param i	MSet index to update
      *  @param wt	new weight to assign to the document at index @a i
+     *
+     *  @since Added in Xapian 2.0.0.
      */
     void set_item_weight(Xapian::doccount i, double wt);
+
+#if 0 // FIXME: Need work before release.
+    /// Helper for diversify() method.
+    void diversify_(Xapian::doccount k,
+		    Xapian::doccount r,
+		    double factor1,
+		    double factor2);
+#endif
 
   public:
     /// Class representing the MSet internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, MSet> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Copying is allowed.
      *
@@ -100,8 +110,6 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /// Destructor.
     ~MSet();
 
-    void set_database(const Database& db) const;
-
     /** Assigns new weights and updates MSet.
      *
      *  Dereferencing the Iterator should return a double.
@@ -115,6 +123,8 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
      *  @exception Xapian::InvalidArgument is thrown if the total number of
      *		   elements in the input doesn't match the total number of
      *		   documents in MSet.
+     *
+     *  @since Added in Xapian 2.0.0.
      */
     template<typename Iterator>
     void replace_weights(Iterator first, Iterator last)
@@ -141,62 +151,131 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /** Sorts the list of documents in MSet according to their weights.
      *
      *  Use after calling MSet::replace_weights.
+     *
+     *  This invalidates any MSetIterator objects active on this MSet.
+     *
+     *  @since Added in Xapian 2.0.0.
      */
     void sort_by_relevance();
 
+#if 0 // FIXME: Need work before release.
+    /** Reorder MSet entries to diversify results.
+     *
+     *  The algorithm used is C²GLS-MPT as described in the paper: Scalable and
+     *  Efficient Web Search Result Diversification, Naini et al. 2016
+     *
+     *  @param  k	The number of MSet entries to make more diverse
+     *  @param  r	Number of documents from each cluster used for
+     *  		building topC
+     *  @param  lambda	Trade-off between relevance of top-k diversified
+     *  		document set and its similarity to the rest of the
+     *  		documents in the document match set.  Must be in
+     *  		the range [0,1] with 0 meaning no weighting to
+     *  		relevance of the diversified document set and 1
+     *  		allowing for full weighting to relevance of the
+     *  		diversified document set.
+     *  @param  b	Parameter for MPT, normally in the range [1,10]
+     *  @param  sigma_sqr	Parameter for MPT, normally in the range
+     *	  			[1e-6,1]
+     */
+    void diversify(Xapian::doccount k,
+		   Xapian::doccount r,
+		   double lambda = 0.5,
+		   double b = 5.0,
+		   double sigma_sqr = 1e-3) {
+	// Inline the argument value checks and the calculation of the scale
+	// factor for score_2 so the compiler can optimise in the case where
+	// some or all parameter values are compile-time constants.
+	if (r == 0)
+	    throw InvalidArgumentError("r must be > 0");
+	if (lambda < 0.0 || lambda > 1.0)
+	    throw InvalidArgumentError("lambda must be between 0 and 1");
+	if (k > 1)
+	    diversify_(k, r, lambda, (1.0 - lambda) * b * sigma_sqr * 2.0);
+    }
+#endif
+
     /** Convert a weight to a percentage.
      *
-     *  The matching document with the highest weight will get 100% if it
-     *  matches all the weighted query terms, and proportionally less if it
-     *  only matches some, and other weights are scaled by the same factor.
+     *  If the weighting scheme gives everything zero weight (like
+     *  Xapian::BoolWeight does) then all results will score 100%.
      *
-     *  Documents with a non-zero score will always score at least 1%.
+     *  Otherwise the percentage is calculated as a linear scaling of the
+     *  relevance weight, with the scale factor determined by the matching
+     *  document with the highest weight.  This result scores 100% if it
+     *  matches all the weighted query terms, and proportionally less if it
+     *  only matches some.
+     *
+     *  The returned percentage is an integer.  If the calculated percentage
+     *  before rounding is non-zero but less than 1% it is rounded up to 1%
+     *  so that a result scoring 0% means it has zero weight.
+     *
+     *  Similarly, percentages over 99% but less than 100% are always rounded
+     *  down, so a result scoring 100% means it matches all weighted query
+     *  terms.
      *
      *  Note that these generally aren't percentages of anything meaningful
-     *  (unless you use a custom weighting formula where they are!)
+     *  (unless you use a custom weighting formula where they are!) but like
+     *  the weights they are based on, higher values should indicate
+     *  more relevant results.
      */
     int convert_to_percent(double weight) const;
 
-    void unshard_docids(Xapian::doccount shard, Xapian::doccount n_shards);
-
     /** Convert the weight of the current iterator position to a percentage.
      *
-     *  The matching document with the highest weight will get 100% if it
-     *  matches all the weighted query terms, and proportionally less if it
-     *  only matches some, and other weights are scaled by the same factor.
+     *  If the weighting scheme gives everything zero weight (like
+     *  Xapian::BoolWeight does) then all results will score 100%.
      *
-     *  Documents with a non-zero score will always score at least 1%.
+     *  Otherwise the percentage is calculated as a linear scaling of the
+     *  relevance weight, with the scale factor determined by the matching
+     *  document with the highest weight.  This result scores 100% if it
+     *  matches all the weighted query terms, and proportionally less if it
+     *  only matches some.
+     *
+     *  The returned percentage is an integer.  If the calculated percentage
+     *  before rounding is non-zero but less than 1% it is rounded up to 1%
+     *  so that a result scoring 0% means it has zero weight.
+     *
+     *  Similarly, percentages over 99% but less than 100% are always rounded
+     *  down, so a result scoring 100% means it matches all weighted query
+     *  terms.
      *
      *  Note that these generally aren't percentages of anything meaningful
-     *  (unless you use a custom weighting formula where they are!)
+     *  (unless you use a custom weighting formula where they are!) but like
+     *  the weights they are based on, higher values should indicate
+     *  more relevant results.
      */
     int convert_to_percent(const MSetIterator & it) const;
 
     /** Get the termfreq of a term.
      *
-     *  @return The number of documents @a term occurs in.
+     *  @return The number of documents which @a term occurs in.  This
+     *		considers all documents in the database being searched, so
+     *		gives the same answer as <code>db.get_termfreq(term)</code>
+     *		(but is more efficient for query terms as it returns a
+     *		value cached during the search.)
      *
-     *  Since 1.5.0, this method returns 0 if called on an MSet which is
+     *  Since 2.0.0, this method returns 0 if called on an MSet which is
      *  not associated with a database (which is consistent with
      *  Database::get_termfreq() returning 0 when called on a Database
      *  with no sub-databases); in earlier versions,
      *  Xapian::InvalidOperationError was thrown in this case.
      */
-    Xapian::doccount get_termfreq(const std::string & term) const;
+    Xapian::doccount get_termfreq(std::string_view term) const;
 
     /** Get the term weight of a term.
      *
      *  @return	The maximum weight that @a term could have contributed to a
      *		document.
      *
-     *  Since 1.5.0, this method returns 0.0 if called on an MSet which is
+     *  Since 2.0.0, this method returns 0.0 if called on an MSet which is
      *  not associated with a database, or with a term which wasn't present
      *  in the query (since in both cases the term contributes no weight to any
      *  matching documents); in earlier versions, Xapian::InvalidOperationError
      *  was thrown for the first case, and Xapian::InvalidArgumentError for the
      *  second.
      */
-    double get_termweight(const std::string & term) const;
+    double get_termweight(std::string_view term) const;
 
     /** Rank of first item in this MSet.
      *
@@ -258,36 +337,54 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 	 */
 	SNIPPET_EMPTY_WITHOUT_MATCH = 4,
 
-	/** Enable generation of n-grams from CJK text.
+	/** Generate n-grams for scripts without explicit word breaks.
 	 *
-	 *  This option highlights CJK searches made using the QueryParser
-	 *  FLAG_CJK_NGRAM flag.  Non-CJK characters are split into words as
-	 *  normal.
+         *  Text in other scripts is split into words as normal.
+         *
+	 *  Enable this option to highlight search results for queries parsed
+         *  with the QueryParser::FLAG_NGRAMS flag.
 	 *
-	 *  The TermGenerator FLAG_CJK_NGRAM flag needs to have been used at
+	 *  The TermGenerator::FLAG_NGRAMS flag needs to have been used at
 	 *  index time.
 	 *
 	 *  This mode can also be enabled by setting environment variable
 	 *  XAPIAN_CJK_NGRAM to a non-empty value (but doing so was deprecated
 	 *  in 1.4.11).
 	 *
+         *  In 1.4.x this feature was specific to CJK (Chinese, Japanese and
+         *  Korean), but in 2.0.0 it's been extended to other languages.  To
+         *  reflect this change the new and preferred name is SNIPPET_NGRAMS,
+         *  which was added as an alias for forward compatibility in Xapian
+         *  1.4.23.  Use SNIPPET_CJK_NGRAM instead if you aim to support Xapian
+         *  &lt; 1.4.23.
+         *
+	 *  @since Added in Xapian 1.4.23.
+	 */
+	SNIPPET_NGRAMS = 2048,
+
+	/** Generate n-grams for scripts without explicit word breaks.
+	 *
+	 *  Old name - use SNIPPET_NGRAMS instead unless you aim to support
+	 *  Xapian &lt; 1.4.23.
+         *
 	 *  @since Added in Xapian 1.4.11.
 	 */
-	SNIPPET_CJK_NGRAM = 2048,
+	SNIPPET_CJK_NGRAM = SNIPPET_NGRAMS,
 
-	/** Enable generation of words from CJK text.
+	/** Find word breaks for text in scripts without explicit word breaks.
 	 *
-	 *  This option highlights CJK searches made using the QueryParser
-	 *  FLAG_CJK_WORDS flag.  Spans of CJK characters are split into CJK
-	 *  words using text boundary heuristics.  Non-CJK characters are
-	 *  split into words as normal.
+	 *  Enable this option to highlight search results for queries parsed
+         *  with the QueryParser::FLAG_WORD_BREAKS flag.  Spans of text
+         *  written in such scripts are split into words using ICU (which uses
+         *  heuristics and/or dictionaries to do so).  Text in other scripts is
+         *  split into words as normal.
 	 *
-	 *  The TermGenerator FLAG_CJK_WORDS flag needs to have been used at
+	 *  The TermGenerator::FLAG_WORD_BREAKS flag needs to have been used at
 	 *  index time.
 	 *
-	 *  @since Added in Xapian 1.5.0.
+	 *  @since Added in Xapian 2.0.0.
 	 */
-	SNIPPET_CJK_WORDS = 4096
+	SNIPPET_WORD_BREAKS = 4096
     };
 
     /** Generate a snippet.
@@ -317,15 +414,15 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
      *
      *  And @a flags contains flags controlling behaviour.
      *
-     *  Added in 1.3.5.
+     *  @since Added in 1.3.5.
      */
-    std::string snippet(const std::string & text,
+    std::string snippet(std::string_view text,
 			size_t length = 500,
 			const Xapian::Stem & stemmer = Xapian::Stem(),
 			unsigned flags = SNIPPET_BACKGROUND_MODEL|SNIPPET_EXHAUSTIVE,
-			const std::string & hi_start = "<b>",
-			const std::string & hi_end = "</b>",
-			const std::string & omit = "...") const;
+			std::string_view hi_start = "<b>",
+			std::string_view hi_end = "</b>",
+			std::string_view omit = "...") const;
 
     /** Prefetch hint a range of items.
      *
@@ -384,23 +481,6 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /** Return iterator pointing to the last object in this MSet. */
     MSetIterator back() const;
 
-    /** Serialise MSet into a string.
-     */
-    std::string serialise() const;
-
-    /** Unserialise an MSet from a string produced by serialise().
-      */
-    static MSet unserialise(const std::string &s);
-
-
-    /** Serialise MSet internal stats into a string.
-     */
-    std::string serialise_stats() const;
-
-    /** Unserialise an MSet from a string produced by serialise_stats().
-      */
-    static MSet unserialise_stats(const std::string &s);
-
     /// Return a string describing this object.
     std::string get_description() const;
 
@@ -431,9 +511,9 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /// @private
     typedef const value_type * const_pointer;
     /// @private
-    typedef value_type & reference;
+    typedef value_type reference;
     /// @private
-    typedef const value_type & const_reference;
+    typedef const value_type const_reference;
     // @}
     //
     /** @private @internal MSet is what the C++ STL calls a container.
@@ -515,13 +595,13 @@ class XAPIAN_VISIBILITY_DEFAULT MSetIterator {
     /// @private
     typedef std::random_access_iterator_tag iterator_category;
     /// @private
-    typedef std::string value_type;
+    typedef Xapian::docid value_type;
     /// @private
     typedef Xapian::termcount_diff difference_type;
     /// @private
-    typedef std::string * pointer;
+    typedef value_type* pointer;
     /// @private
-    typedef std::string & reference;
+    typedef value_type reference;
     // @}
 
     /// Move the iterator forwards by n positions.
@@ -606,14 +686,27 @@ class XAPIAN_VISIBILITY_DEFAULT MSetIterator {
 
     /** Convert the weight of the current iterator position to a percentage.
      *
-     *  The matching document with the highest weight will get 100% if it
-     *  matches all the weighted query terms, and proportionally less if it
-     *  only matches some, and other weights are scaled by the same factor.
+     *  If the weighting scheme gives everything zero weight (like
+     *  Xapian::BoolWeight does) then all results will score 100%.
      *
-     *  Documents with a non-zero score will always score at least 1%.
+     *  Otherwise the percentage is calculated as a linear scaling of the
+     *  relevance weight, with the scale factor determined by the matching
+     *  document with the highest weight.  This result scores 100% if it
+     *  matches all the weighted query terms, and proportionally less if it
+     *  only matches some.
+     *
+     *  The returned percentage is an integer.  If the calculated percentage
+     *  before rounding is non-zero but less than 1% it is rounded up to 1%
+     *  so that a result scoring 0% means it has zero weight.
+     *
+     *  Similarly, percentages over 99% but less than 100% are always rounded
+     *  down, so a result scoring 100% means it matches all weighted query
+     *  terms.
      *
      *  Note that these generally aren't percentages of anything meaningful
-     *  (unless you use a custom weighting formula where they are!)
+     *  (unless you use a custom weighting formula where they are!) but like
+     *  the weights they are based on, higher values should indicate
+     *  more relevant results.
      */
     int get_percent() const {
 	return mset.convert_to_percent(get_weight());
@@ -623,62 +716,44 @@ class XAPIAN_VISIBILITY_DEFAULT MSetIterator {
     std::string get_description() const;
 };
 
-bool
-XAPIAN_NOTHROW(operator==(const MSetIterator &a, const MSetIterator &b));
-
 /// Equality test for MSetIterator objects.
 inline bool
-operator==(const MSetIterator &a, const MSetIterator &b) XAPIAN_NOEXCEPT
+operator==(const MSetIterator& a, const MSetIterator& b) noexcept
 {
     return a.off_from_end == b.off_from_end;
 }
 
-inline bool
-XAPIAN_NOTHROW(operator!=(const MSetIterator &a, const MSetIterator &b));
-
 /// Inequality test for MSetIterator objects.
 inline bool
-operator!=(const MSetIterator &a, const MSetIterator &b) XAPIAN_NOEXCEPT
+operator!=(const MSetIterator& a, const MSetIterator& b) noexcept
 {
     return !(a == b);
 }
 
-bool
-XAPIAN_NOTHROW(operator<(const MSetIterator &a, const MSetIterator &b));
-
 /// Inequality test for MSetIterator objects.
 inline bool
-operator<(const MSetIterator &a, const MSetIterator &b) XAPIAN_NOEXCEPT
+operator<(const MSetIterator& a, const MSetIterator& b) noexcept
 {
     return a.off_from_end > b.off_from_end;
 }
 
-inline bool
-XAPIAN_NOTHROW(operator>(const MSetIterator &a, const MSetIterator &b));
-
 /// Inequality test for MSetIterator objects.
 inline bool
-operator>(const MSetIterator &a, const MSetIterator &b) XAPIAN_NOEXCEPT
+operator>(const MSetIterator& a, const MSetIterator& b) noexcept
 {
     return b < a;
 }
 
-inline bool
-XAPIAN_NOTHROW(operator>=(const MSetIterator &a, const MSetIterator &b));
-
 /// Inequality test for MSetIterator objects.
 inline bool
-operator>=(const MSetIterator &a, const MSetIterator &b) XAPIAN_NOEXCEPT
+operator>=(const MSetIterator& a, const MSetIterator& b) noexcept
 {
     return !(a < b);
 }
 
-inline bool
-XAPIAN_NOTHROW(operator<=(const MSetIterator &a, const MSetIterator &b));
-
 /// Inequality test for MSetIterator objects.
 inline bool
-operator<=(const MSetIterator &a, const MSetIterator &b) XAPIAN_NOEXCEPT
+operator<=(const MSetIterator& a, const MSetIterator& b) noexcept
 {
     return !(b < a);
 }

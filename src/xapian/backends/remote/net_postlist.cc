@@ -1,4 +1,4 @@
-/** @file net_postlist.cc
+/** @file
  *  @brief Postlists for remote databases
  */
 /* Copyright (C) 2007 Lemur Consulting Ltd
@@ -15,24 +15,19 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
 #include "xapian/backends/remote/net_postlist.h"
+
+#include "xapian/common/omassert.h"
 #include "xapian/common/pack.h"
 #include "xapian/unicode/description_append.h"
 
 using namespace std;
-
-Xapian::doccount
-NetworkPostList::get_termfreq() const
-{
-    return termfreq;
-}
 
 Xapian::docid
 NetworkPostList::get_docid() const
@@ -44,13 +39,6 @@ Xapian::termcount
 NetworkPostList::get_wdf() const
 {
     return lastwdf;
-}
-
-PositionList *
-NetworkPostList::read_position_list()
-{
-    lastposlist = db->open_position_list(lastdocid, term);
-    return lastposlist.get();
 }
 
 PositionList *
@@ -97,6 +85,16 @@ bool
 NetworkPostList::at_end() const
 {
     return (pos == NULL && started);
+}
+
+Xapian::termcount
+NetworkPostList::get_wdf_upper_bound() const
+{
+    // This is only called when setting weights on PostList objects before
+    // a match, which shouldn't happen to NetworkPostList objects (as remote
+    // matching happens like a local match on the server).
+    Assert(false);
+    return 0;
 }
 
 string

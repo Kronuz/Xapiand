@@ -1,7 +1,7 @@
-/** @file enquireinternal.h
+/** @file
  * @brief Xapian::Enquire internals
  */
-/* Copyright 2017 Olly Betts
+/* Copyright 2017,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,15 +14,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_ENQUIREINTERNAL_H
 #define XAPIAN_INCLUDED_ENQUIREINTERNAL_H
 
 #include "xapian/backends/databaseinternal.h"
-#include "xapian/weight/weightinternal.h"
 #include "xapian/constants.h"
 #include "xapian/database.h"
 #include "xapian/enquire.h"
@@ -36,12 +35,11 @@
 #include <string>
 #include <vector>
 
-class Matcher;
-
 namespace Xapian {
 
 class ESet;
 class RSet;
+class Weight;
 
 class Enquire::Internal : public Xapian::Internal::intrusive_base {
     friend class Enquire;
@@ -51,7 +49,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     typedef enum { REL, VAL, VAL_REL, REL_VAL, DOCID } sort_setting;
 
   private:
-    mutable Xapian::Database db;
+    Xapian::Database db;
 
     Xapian::Query query;
 
@@ -81,40 +79,19 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
 
     double time_limit = 0.0;
 
-    enum { EXPAND_TRAD, EXPAND_BO1 } eweight = EXPAND_TRAD;
+    enum { EXPAND_PROB, EXPAND_BO1 } eweight = EXPAND_PROB;
 
     double expand_k = 1.0;
-
-    mutable std::unique_ptr<Xapian::MSet> prepared_mset;
-    mutable std::unique_ptr<::Matcher> match;
 
   public:
     explicit
     Internal(const Database& db_);
-
-    void set_database(const Database& db_) const;
-
-    const MSet& prepare_mset(const std::string& query_id, bool full_db_has_positions, const RSet *rset, const MatchDecider *mdecider) const;
-
-    const MSet& get_prepared_mset() const;
-
-    void clear_prepared_mset() const;
-
-    void set_prepared_mset(const MSet& mset) const;
-
-    void add_prepared_mset(const MSet& mset) const;
 
     MSet get_mset(doccount first,
 		  doccount maxitems,
 		  doccount checkatleast,
 		  const RSet* rset,
 		  const MatchDecider* mdecider) const;
-
-    MSet merge_mset(
-	const std::vector<Xapian::MSet>& msets,
-	Xapian::doccount docs,
-	Xapian::doccount first,
-	Xapian::doccount maxitems) const;
 
     TermIterator get_matching_terms_begin(docid did) const;
 
@@ -124,7 +101,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
 		  const ExpandDecider* edecider_,
 		  double min_weight) const;
 
-    doccount get_termfreq(const std::string& term) const {
+    doccount get_termfreq(std::string_view term) const {
 	return db.get_termfreq(term);
     }
 

@@ -1,4 +1,4 @@
-/** @file nearpostlist.cc
+/** @file
  * @brief Return docs containing terms within a specified window.
  */
 /* Copyright (C) 2006,2007,2009,2010,2011,2014,2015,2017,2018 Olly Betts
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -35,17 +35,23 @@
 using namespace std;
 
 NearPostList::NearPostList(PostList *source_,
+			   EstimateOp* estimate_op_,
 			   Xapian::termpos window_,
 			   const vector<PostList*>::const_iterator &terms_begin,
 			   const vector<PostList*>::const_iterator &terms_end,
 			   PostListTree* pltree_)
-    : SelectPostList(source_, pltree_),
+    : SelectPostList(source_, estimate_op_, pltree_),
       window(window_),
       terms(terms_begin, terms_end)
 {
     size_t n = terms.size();
     Assert(n > 1);
     poslists = new PositionList*[n];
+
+    // It's hard to estimate how many times the postlist will match as it
+    // depends a lot on the terms and window, but usually it will occur
+    // significantly less often than the individual terms.
+    termfreq = pl->get_termfreq() / 2;
 }
 
 NearPostList::~NearPostList()
@@ -79,8 +85,10 @@ NearPostList::test_doc()
     sort(terms.begin(), terms.end(), TermCmp());
 
     poslists[0] = terms[0]->read_position_list();
-    if (!poslists[0]->next())
+    if (!poslists[0]->next()) {
+	++rejected;
 	RETURN(false);
+    }
 
     Xapian::termpos last = poslists[0]->get_position();
     PositionList ** end = poslists + 1;
@@ -94,10 +102,10 @@ NearPostList::test_doc()
 		    terms[end - poslists]->read_position_list();
 		if (last < window) {
 		    if (!posl->next())
-			RETURN(false);
+			goto reject;
 		} else {
 		    if (!posl->skip_to(last - window + 1))
-			RETURN(false);
+			goto reject;
 		}
 		Xapian::termpos pos = posl->get_position();
 		if (pos > last) last = pos;
@@ -120,7 +128,7 @@ NearPostList::test_doc()
 	    while (true) {
 		if (poslists[0]->get_position() == pos) {
 		    if (!poslists[0]->next())
-			RETURN(false);
+			goto reject;
 		    Xapian::termpos newpos = poslists[0]->get_position();
 		    if (newpos - end[-1]->get_position() >= window) {
 			// No longer fits in the window.
@@ -134,6 +142,7 @@ NearPostList::test_doc()
 		Heap::pop(poslists, i, Cmp());
 		if (--i == poslists) {
 		    Assert(pos - end[-1]->get_position() < window);
+		    ++accepted;
 		    RETURN(true);
 		}
 	    }
@@ -146,7 +155,8 @@ NearPostList::test_doc()
 	last = max(last, poslists[0]->get_position());
 	Heap::replace(poslists, end, Cmp());
     }
-
+reject:
+    ++rejected;
     RETURN(false);
 }
 
@@ -198,28 +208,6 @@ NearPostList::get_wdf() const
 	wdf = min(wdf, (*i)->get_wdf());
     }
     return wdf;
-}
-
-Xapian::doccount
-NearPostList::get_termfreq_est() const
-{
-    // It's hard to estimate how many times the postlist will match as it
-    // depends a lot on the terms and window, but usually it will occur
-    // significantly less often than the individual terms.
-    return pl->get_termfreq_est() / 2;
-}
-
-TermFreqs
-NearPostList::get_termfreq_est_using_stats(
-	const Xapian::Weight::Internal & stats) const
-{
-    LOGCALL(MATCH, TermFreqs, "NearPostList::get_termfreq_est_using_stats", stats);
-    // No idea how to estimate this - do the same as get_termfreq_est() for
-    // now.
-    TermFreqs result(pl->get_termfreq_est_using_stats(stats));
-    result.termfreq /= 2;
-    result.reltermfreq /= 2;
-    RETURN(result);
 }
 
 string

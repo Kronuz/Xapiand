@@ -1,9 +1,10 @@
-/** @file cluster.h
+/** @file
  *  @brief Cluster API
  */
 /* Copyright (C) 2010 Richard Boulton
  * Copyright (C) 2016 Richhiey Thomas
  * Copyright (C) 2018 Uppinder Chugh
+ * Copyright (C) 2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,16 +17,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_CLUSTER_H
 #define XAPIAN_INCLUDED_CLUSTER_H
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-#error "Never use <xapian/cluster.h> directly; include <xapian.h> instead."
+#error Never use <xapian/cluster.h> directly; include <xapian.h> instead.
 #endif
 
 #include "xapian/attributes.h"
@@ -34,13 +34,17 @@
 #include "xapian/types.h"
 #include "xapian/visibility.h"
 
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace Xapian {
 
-/// Stopper subclass which checks for both stemmed and unstemmed stopwords
+/** Stopper subclass which checks for both stemmed and unstemmed stopwords.
+ *
+ *  This is intended for use with Xapian::Cluster.
+ */
 class XAPIAN_VISIBILITY_DEFAULT StemStopper : public Xapian::Stopper {
   public:
     /// Stemming strategies
@@ -55,14 +59,14 @@ class XAPIAN_VISIBILITY_DEFAULT StemStopper : public Xapian::Stopper {
      */
     explicit StemStopper(const Xapian::Stem &stemmer, stem_strategy strategy = STEM_SOME);
 
-    std::string get_description() const;
+    std::string get_description() const override;
 
-    bool operator()(const std::string & term) const {
+    bool operator()(const std::string& term) const override {
 	return stop_words.find(term) != stop_words.end();
     }
 
     /// Add a single stop word and its stemmed equivalent
-    void add(const std::string &term);
+    void add(std::string_view term);
 
   private:
     stem_strategy stem_action;
@@ -76,7 +80,7 @@ class XAPIAN_VISIBILITY_DEFAULT DocumentSet {
   public:
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, DocumentSet> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Copying is allowed.  The internals are reference counted, so
      *  copying is cheap.
@@ -112,9 +116,6 @@ class XAPIAN_VISIBILITY_DEFAULT DocumentSet {
 
     /// Return the size of the DocumentSet
     Xapian::doccount size() const;
-
-    /// Return the Document in the DocumentSet at index i
-    Xapian::Document& operator[](Xapian::doccount i);
 
     /// Return the Document in the DocumentSet at index i
     const Xapian::Document& operator[](Xapian::doccount i) const;
@@ -157,7 +158,7 @@ class XAPIAN_VISIBILITY_DEFAULT FreqSource
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated FreqSource
+     *  You can transfer ownership of a dynamically allocated FreqSource
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -169,7 +170,7 @@ class XAPIAN_VISIBILITY_DEFAULT FreqSource
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated FreqSource
+     *  You can transfer ownership of a dynamically allocated FreqSource
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -178,17 +179,6 @@ class XAPIAN_VISIBILITY_DEFAULT FreqSource
 	opt_intrusive_base::release();
 	return this;
     }
-};
-
-/** A class for dummy frequency source for construction of termlists
- *  This returns 1 as the term frequency for any term
- */
-class XAPIAN_VISIBILITY_DEFAULT DummyFreqSource : public FreqSource {
-  public:
-    /// Return the value 1 as a dummy term frequency
-    doccount get_termfreq(const std::string &) const;
-
-    doccount get_doccount() const;
 };
 
 /** A class for construction of termlists which store the terms for a
@@ -224,9 +214,9 @@ class XAPIAN_VISIBILITY_DEFAULT TermListGroup : public FreqSource {
      *
      *  @param tname	The term for which to return the term frequency
      */
-    doccount get_termfreq(const std::string &tname) const;
+    doccount get_termfreq(const std::string& tname) const override;
 
-    doccount get_doccount() const;
+    doccount get_doccount() const override;
 };
 
 /** Abstract class representing a point in the VSM
@@ -240,7 +230,7 @@ class XAPIAN_VISIBILITY_DEFAULT PointType
     std::unordered_map<std::string, double> weights;
 
     /// Store the squared magnitude of the PointType
-    double magnitude;
+    double magnitude = 0.0;
 
     /** Set the weight 'weight' to the mapping of a term
      *
@@ -249,17 +239,19 @@ class XAPIAN_VISIBILITY_DEFAULT PointType
      *  @param weight	The weight to which the mapping of the
      *			term is to be set
      */
-    void set_weight(const std::string &term, double weight);
+    void set_weight(std::string_view term, double weight) {
+	weights[std::string(term)] = weight;
+    }
 
   public:
     /// Default constructor
-    PointType() : magnitude(0.0) {}
+    PointType() {}
 
     /// Return a TermIterator to the beginning of the termlist
     TermIterator termlist_begin() const;
 
     /// Return a TermIterator to the end of the termlist
-    TermIterator XAPIAN_NOTHROW(termlist_end() const) {
+    TermIterator termlist_end() const noexcept {
 	return TermIterator(NULL);
     }
 
@@ -268,13 +260,18 @@ class XAPIAN_VISIBILITY_DEFAULT PointType
      *
      *  @param term	Term which is to be searched
      */
-    bool contains(const std::string &term) const;
+    bool contains(std::string_view term) const {
+	return weights.find(std::string(term)) != weights.end();
+    }
 
     /** Return the TF-IDF weight associated with a certain term
      *
      *  @param term	Term for which TF-IDF weight is returned
      */
-    double get_weight(const std::string &term) const;
+    double get_weight(std::string_view term) const {
+	auto it = weights.find(std::string(term));
+	return (it == weights.end()) ? 0.0 : it->second;
+    }
 
     /** Add the weight 'weight' to the mapping of a term
      *
@@ -282,17 +279,19 @@ class XAPIAN_VISIBILITY_DEFAULT PointType
      *  @param weight	Weight which has to be added to the existing
      *			mapping of the term
      */
-    void add_weight(const std::string &term, double weight);
+    void add_weight(std::string_view term, double weight) {
+	weights[std::string(term)] += weight;
+    }
 
     /// Return the pre-computed squared magnitude
-    double get_magnitude() const;
+    double get_magnitude() const { return magnitude; }
 
     /// Return the size of the termlist
-    Xapian::termcount termlist_size() const;
+    Xapian::termcount termlist_size() const { return weights.size(); }
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated PointType
+     *  You can transfer ownership of a dynamically allocated PointType
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -304,7 +303,7 @@ class XAPIAN_VISIBILITY_DEFAULT PointType
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated PointType
+     *  You can transfer ownership of a dynamically allocated PointType
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -326,16 +325,16 @@ class XAPIAN_VISIBILITY_DEFAULT Point : public PointType {
     /** Constructor
      *  Initialise the point with terms and corresponding TF-IDF weights
      *
-     *  @param tlg		TermListGroup object which provides the term
+     *  @param freqsource	FreqSource object which provides the term
      *				frequencies.  It is used for TF-IDF weight
      *				calculations
      *  @param document		The Document object over which the Point object
      *				will be initialised
      */
-    Point(const TermListGroup &tlg, const Document &document);
+    Point(const FreqSource& freqsource, const Document& document);
 
     /// Returns the document corresponding to this Point
-    Document get_document() const;
+    Document get_document() const { return document; }
 };
 
 /** Class to represent cluster centroids in the vector space
@@ -343,7 +342,7 @@ class XAPIAN_VISIBILITY_DEFAULT Point : public PointType {
 class XAPIAN_VISIBILITY_DEFAULT Centroid : public PointType {
   public:
     /// Default constructor
-    Centroid();
+    Centroid() { }
 
     /** Constructor with Point argument
      *
@@ -362,10 +361,7 @@ class XAPIAN_VISIBILITY_DEFAULT Centroid : public PointType {
     void divide(double cluster_size);
 
     /// Clear the terms and corresponding values of the centroid
-    void clear();
-
-    /// Recalculate the magnitude of the centroid
-    void recalc_magnitude();
+    void clear() { weights.clear(); }
 };
 
 /** Class to represents a Cluster which contains Points and Centroid
@@ -375,7 +371,7 @@ class XAPIAN_VISIBILITY_DEFAULT Cluster {
   public:
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, Cluster> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Copying is allowed.  The internals are reference counted, so
      *  copying is cheap.
@@ -430,9 +426,6 @@ class XAPIAN_VISIBILITY_DEFAULT Cluster {
     void clear();
 
     /// Return the point at the given index in the cluster
-    Point& operator[](Xapian::doccount i);
-
-    /// Return the point at the given index in the cluster
     const Point& operator[](Xapian::doccount i) const;
 
     /// Return the documents that are contained within the cluster
@@ -460,7 +453,7 @@ class XAPIAN_VISIBILITY_DEFAULT ClusterSet {
   public:
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, ClusterSet> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Copying is allowed.  The internals are reference counted, so
      *  copying is cheap.
@@ -513,9 +506,6 @@ class XAPIAN_VISIBILITY_DEFAULT ClusterSet {
     Xapian::doccount size() const;
 
     /// Return the cluster at index 'i'
-    Cluster& operator[](Xapian::doccount i);
-
-    /// Return the cluster at index 'i'
     const Cluster& operator[](Xapian::doccount i) const;
 
     /// Clear all the clusters in the ClusterSet
@@ -550,10 +540,10 @@ class XAPIAN_VISIBILITY_DEFAULT CosineDistance : public Similarity {
     /** Calculates and returns the cosine similarity using the
      *  formula  cos(theta) = a.b/(|a|*|b|)
      */
-    double similarity(const PointType &a, const PointType &b) const;
+    double similarity(const PointType& a, const PointType& b) const override;
 
     /// Return a string describing this object
-    std::string get_description() const;
+    std::string get_description() const override;
 };
 
 /** Class representing an abstract class for a clusterer to be implemented
@@ -577,7 +567,7 @@ class XAPIAN_VISIBILITY_DEFAULT Clusterer
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated Clusterer
+     *  You can transfer ownership of a dynamically allocated Clusterer
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -589,7 +579,7 @@ class XAPIAN_VISIBILITY_DEFAULT Clusterer
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated Clusterer
+     *  You can transfer ownership of a dynamically allocated Clusterer
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -649,7 +639,7 @@ class XAPIAN_VISIBILITY_DEFAULT KMeans : public Clusterer {
      *  @param mset    MSet object containing the documents that are to
      *                 be clustered
      */
-    ClusterSet cluster(const MSet &mset);
+    ClusterSet cluster(const MSet &mset) override;
 
     /** Set the Xapian::Stopper object to be used for identifying stopwords.
      *
@@ -658,10 +648,10 @@ class XAPIAN_VISIBILITY_DEFAULT KMeans : public Clusterer {
      *  @param stop	The Stopper object to set (default NULL, which means no
      *			stopwords)
      */
-    void set_stopper(const Xapian::Stopper *stop = NULL);
+    void set_stopper(const Xapian::Stopper* stop = NULL) { stopper = stop; }
 
     /// Return a string describing this object
-    std::string get_description() const;
+    std::string get_description() const override;
 };
 
 /** LCD clusterer:
@@ -685,10 +675,10 @@ class XAPIAN_VISIBILITY_DEFAULT LCDClusterer : public Clusterer {
      *  @param mset    MSet object containing the documents that are to
      *                 be clustered
      */
-    ClusterSet cluster(const MSet &mset);
+    ClusterSet cluster(const MSet &mset) override;
 
     /// Return a string describing this object
-    std::string get_description() const;
+    std::string get_description() const override;
 };
 }
 #endif // XAPIAN_INCLUDED_CLUSTER_H

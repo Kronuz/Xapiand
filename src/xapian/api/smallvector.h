@@ -1,7 +1,7 @@
-/** @file smallvector.h
+/** @file
  * @brief Custom vector implementations using small vector optimisation
  */
-/* Copyright (C) 2012,2013,2014,2017,2018,2019 Olly Betts
+/* Copyright (C) 2012-2026 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -38,6 +38,8 @@ namespace Xapian {
 
 /** Suitable for "simple" type T.
  *
+ *  T needs to be trivially copyable.
+ *
  *  If sizeof(T) > 2 * sizeof(T*) this isn't going to work, and it's not very
  *  useful when sizeof(T) == 2 * sizeof(T*) as you can only store a single
  *  element inline.
@@ -45,24 +47,21 @@ namespace Xapian {
  *  Offers optional Copy-On-Write functionality - if COW is true, then copying
  *  a Vec with external data only makes a copy of that data if you attempt
  *  to modify it.  Current COW is only supported for integral types T.
+ *
+ *  Offers optional unique pointer handling - if UNIQUEPTR is true it acts in
+ *  a similar way to std::vector<std::unique_ptr<T>>.
  */
 template<typename T,
 	 bool COW = false,
-	 typename = typename std::enable_if<
-	     (COW ?
-	      std::is_integral<T>::value :
-#ifdef HAVE_STD_IS_TRIVIALLY_COPYABLE
-	      std::is_trivially_copyable<T>::value
-#else
-	      // std::is_trivially_copyable<T> is C++11, but for example GCC
-	      // didn't support it until version 6.  Assume "true" if it's not
-	      // available - we'll have to rely on newer compiler versions to
-	      // catch attempts to use unsuitable types here.
-	      true
-#endif
-	      )>::type>
+	 bool UNIQUEPTR = false,
+	 typename = typename std::enable_if_t<
+	     (std::is_trivially_copyable_v<T> &&
+	      (!(COW && UNIQUEPTR)) &&
+	      (!UNIQUEPTR || std::is_pointer_v<T>) &&
+	      (!COW || std::is_integral_v<T>))>>
 class Vec {
-    std::size_t c;
+    // This gives capacity() if c > INTERNAL_CAPACITY, or size() otherwise.
+    std::size_t c = 0;
 
     static constexpr std::size_t INTERNAL_CAPACITY = 2 * sizeof(T*) / sizeof(T);
 
@@ -74,6 +73,7 @@ class Vec {
 	} p;
     } u;
 
+    // Only useful if !UNIQUEPTR, but can't be accessed without copy().
     struct Vec_to_copy {
 	const Vec& ref;
 	explicit Vec_to_copy(const Vec& o) : ref(o) {}
@@ -86,11 +86,15 @@ class Vec {
 
     typedef T* iterator;
 
-    Vec() : c(0) { }
+    Vec() { }
 
     // Prevent inadvertent copying.
     Vec(const Vec&) = delete;
 
+    // Allow moving.
+//    Vec(const Vec&&) = default;
+
+    // Only useful if !UNIQUEPTR, but can't be accessed without copy().
     Vec(const Vec_to_copy& o) {
 	do_copy_from(o.ref);
     }
@@ -98,27 +102,29 @@ class Vec {
     // Prevent inadvertent copying.
     void operator=(const Vec&) = delete;
 
+    // Only useful if !UNIQUEPTR, but can't be accessed without copy().
     void operator=(const Vec_to_copy& o) {
 	clear();
 	do_copy_from(o.ref);
     }
 
-    Vec_to_copy copy() const {
+    template<bool ENABLE = !UNIQUEPTR>
+    auto copy() const -> typename std::enable_if_t<ENABLE, Vec_to_copy> {
 	return Vec_to_copy(*this);
     }
 
     Vec(Vec&& o) noexcept : Vec() {
-	std::memcpy(&u, &o.u, sizeof(u));
 	std::swap(c, o.c);
+	if (c) u = o.u;
     }
 
     void operator=(Vec&& o) {
 	clear();
-	u = o.u;
 	std::swap(c, o.c);
+	if (c) u = o.u;
     }
 
-    explicit Vec(size_type n) : c(0) {
+    explicit Vec(size_type n) {
 	reserve(n);
     }
 
@@ -164,15 +170,19 @@ class Vec {
 	// FIXME: This is a bit eager - non-const begin() is often invoked when
 	// no modification is needed, but doing it lazily is a bit tricky as
 	// the pointer will change when we COW.
-	if (COW && is_external() && u.p.b[-1] > 0) {
-	    do_cow();
+	if constexpr(COW) {
+	    if (is_external() && u.p.b[-1] > 0) {
+		do_cow();
+	    }
 	}
 	return is_external() ? u.p.b : u.v;
     }
 
     iterator end() {
-	if (COW && is_external() && u.p.b[-1] > 0) {
-	    do_cow();
+	if constexpr(COW) {
+	    if (is_external() && u.p.b[-1] > 0) {
+		do_cow();
+	    }
 	}
 	return is_external() ? u.p.e : u.v + c;
     }
@@ -183,8 +193,10 @@ class Vec {
 	    do_reserve(cap * 2);
 	}
 	if (c >= INTERNAL_CAPACITY) {
-	    if (COW && u.p.b[-1] > 0)
-		do_cow();
+	    if constexpr(COW) {
+		if (u.p.b[-1] > 0)
+		    do_cow();
+	    }
 	    *(u.p.e++) = elt;
 	} else {
 	    u.v[c++] = elt;
@@ -193,6 +205,11 @@ class Vec {
 
     void pop_back() {
 	if (is_external()) {
+	    if constexpr(COW) {
+		if (u.p.b[-1] > 0) {
+		    do_cow();
+		}
+	    }
 	    --u.p.e;
 	} else {
 	    --c;
@@ -200,12 +217,26 @@ class Vec {
     }
 
     void clear() {
+	if constexpr(UNIQUEPTR) {
+	    for (const_iterator i = begin(); i != end(); ++i)
+		delete *i;
+	}
 	if (is_external())
 	    do_free();
 	c = 0;
     }
 
     void erase(const_iterator it) {
+	if constexpr(COW) {
+	    if (is_external() && u.p.b[-1] > 0) {
+		auto i = it - u.p.b;
+		do_cow();
+		it = u.p.b + i;
+	    }
+	}
+	if constexpr(UNIQUEPTR) {
+	    delete *it;
+	}
 	T* p = const_cast<T*>(it);
 	std::memmove(p, p + 1, (end() - it - 1) * sizeof(T));
 	if (is_external()) {
@@ -218,6 +249,18 @@ class Vec {
     void erase(const_iterator b, const_iterator e) {
 	auto n_erased = e - b;
 	if (n_erased == 0) return;
+	if constexpr(COW) {
+	    if (is_external() && u.p.b[-1] > 0) {
+		auto i = b - u.p.b;
+		do_cow();
+		b = u.p.b + i;
+		e = b + n_erased;
+	    }
+	}
+	if constexpr(UNIQUEPTR) {
+	    for (const_iterator i = b; i != e; ++i)
+		delete *i;
+	}
 	std::memmove(const_cast<T*>(b), const_cast<T*>(e),
 		     (end() - e) * sizeof(T));
 	if (is_external()) {
@@ -228,12 +271,50 @@ class Vec {
     }
 
     void insert(const_iterator pos, const T& elt) {
-	push_back(T());
-	T* p = const_cast<T*>(end());
-	while (--p != pos) {
-	    *p = p[-1];
+	// Optimised to reduce copying when we need to reallocate.
+	T* blk = nullptr;
+	auto cap = capacity();
+	auto n = size();
+	if (n == cap || (COW && is_external() && u.p.b[-1] > 0)) {
+	    if (n == cap) {
+		cap *= 2;
+		// Logic error or size_t wrapping.
+		if (rare(COW ? cap < c : cap <= c))
+		    throw std::bad_alloc();
+	    }
+	    blk = new T[cap + COW];
+	    if constexpr(COW)
+		*blk++ = 0;
 	}
-	*(const_cast<T*>(pos)) = elt;
+
+	auto b = cbegin();
+	auto e = cend();
+	T* db;
+	if (blk) {
+	    // Copy elements before the insertion point to the new block.
+	    std::copy(b, pos, blk);
+	    db = blk;
+	} else {
+	    db = (is_external() ? u.p.b : u.v);
+	}
+	// Copy elements after the insertion point.
+	std::copy_backward(pos, e, db + n + 1);
+
+	// Insert the new element.
+	db[pos - b] = elt;
+
+	if (blk) {
+	    if (is_external()) {
+		do_free();
+	    }
+	    u.p.b = blk;
+	    u.p.e = blk + n + 1;
+	    c = cap;
+	} else if (is_external()) {
+	    ++u.p.e;
+	} else {
+	    ++c;
+	}
     }
 
     const T& operator[](size_type idx) const {
@@ -241,8 +322,10 @@ class Vec {
     }
 
     T& operator[](size_type idx) {
-	if (COW && is_external() && u.p.b[-1] > 0) {
-	    do_cow();
+	if constexpr(COW) {
+	    if (is_external() && u.p.b[-1] > 0) {
+		do_cow();
+	    }
 	}
 	return const_cast<T&>(begin()[idx]);
     }
@@ -255,12 +338,25 @@ class Vec {
 	return end()[-1];
     }
 
+    // Like `v[idx].release()` for `std::vector<std::unique_ptr<T>> v`.
+    template<bool ENABLE = !UNIQUEPTR>
+    T release_at(size_type idx)
+    {
+	T r = nullptr;
+	std::swap(r, begin()[idx]);
+	return r;
+    }
+
   protected:
     void do_free() {
-	if (!COW || u.p.b[-1] == 0)
-	    delete [] (u.p.b - COW);
-	else
-	    --u.p.b[-1];
+	if constexpr(COW) {
+	    if (u.p.b[-1] > 0)
+		--u.p.b[-1];
+	    else
+		delete [] (u.p.b - 1);
+	} else {
+	    delete [] u.p.b;
+	}
     }
 
     void do_reserve(size_type n) {
@@ -268,7 +364,7 @@ class Vec {
 	if (rare(COW ? n < c : n <= c))
 	    throw std::bad_alloc();
 	T* blk = new T[n + COW];
-	if (COW)
+	if constexpr(COW)
 	    *blk++ = 0;
 	if (is_external()) {
 	    u.p.e = std::copy(u.p.b, u.p.e, blk);
@@ -289,18 +385,16 @@ class Vec {
     }
 
     void do_copy_from(const Vec& o) {
+	c = o.c;
 	if (!o.is_external()) {
+	    if (c) u = o.u;
+	} else if constexpr(COW) {
 	    u = o.u;
-	    c = o.c;
-	} else if (COW) {
-	    u = o.u;
-	    c = o.c;
 	    ++u.p.b[-1];
 	} else {
-	    T* blk = new T[o.c];
+	    T* blk = new T[c];
 	    u.p.e = std::copy(o.u.p.b, o.u.p.e, blk);
 	    u.p.b = blk;
-	    c = o.c;
 	}
     }
 
@@ -313,15 +407,18 @@ class Vec {
 template<typename T>
 using VecCOW = Vec<T, true>;
 
+template<typename T>
+using VecUniquePtr = Vec<T*, false, true>;
+
 class SmallVector_ {
-    std::size_t c;
+    std::size_t c = 0;
 
     static constexpr std::size_t INTERNAL_CAPACITY = 2;
 
     void * p[INTERNAL_CAPACITY];
 
   public:
-    SmallVector_() : c(0) { }
+    SmallVector_() { }
 
     // Prevent inadvertent copying.
     SmallVector_(const SmallVector_&) = delete;
@@ -334,7 +431,7 @@ class SmallVector_ {
 	std::swap(c, o.c);
     }
 
-    explicit SmallVector_(std::size_t n) : c(0) {
+    explicit SmallVector_(std::size_t n) {
 	reserve(n);
     }
 
@@ -509,9 +606,11 @@ class SmallVector : public SmallVectorI<typename T::Internal> {
 
 	bool operator!=(const const_iterator& o) const { return !(*this == o); }
 
-	const_iterator operator+(int n) { return const_iterator(ptr + n); }
+	template<typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
+	const_iterator operator+(I n) { return const_iterator(ptr + n); }
 
-	const_iterator operator-(int n) { return const_iterator(ptr - n); }
+	template<typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
+	const_iterator operator-(I n) { return const_iterator(ptr - n); }
     };
 
     // Create an empty SmallVector.

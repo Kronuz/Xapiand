@@ -1,4 +1,4 @@
-/** @file orpositionlist.h
+/** @file
  * @brief Merge two PositionList objects using an OR operation.
  */
 /* Copyright (C) 2007,2010,2017 Olly Betts
@@ -14,15 +14,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_ORPOSITIONLIST_H
 #define XAPIAN_INCLUDED_ORPOSITIONLIST_H
 
 #include "xapian/backends/positionlist.h"
-#include "xapian/api/postlist.h"
+#include "xapian/backends/postlist.h"
 
 #include "xapian/error.h"
 #include <algorithm>

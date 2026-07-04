@@ -1,7 +1,7 @@
-/** @file matchspy.cc
+/** @file
  * @brief MatchSpy implementation.
  */
-/* Copyright (C) 2007,2008,2009,2010,2011,2012,2013,2014,2015,2018 Olly Betts
+/* Copyright (C) 2007-2024 Olly Betts
  * Copyright (C) 2007,2009 Lemur Consulting Ltd
  * Copyright (C) 2010 Richard Boulton
  *
@@ -16,8 +16,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -31,6 +31,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "xapian/common/debuglog.h"
@@ -40,9 +41,6 @@
 #include "xapian/common/stringutils.h"
 #include "xapian/common/str.h"
 #include "xapian/api/termlist.h"
-
-#include <cfloat>
-#include <cmath>
 
 using namespace std;
 using namespace Xapian;
@@ -91,7 +89,7 @@ static void unsupported_method() {
 }
 
 /// A termlist iterator over the contents of a ValueCountMatchSpy
-class ValueCountTermList : public TermList {
+class ValueCountTermList final : public TermList {
   private:
     map<string, Xapian::doccount>::const_iterator it;
     bool started;
@@ -105,15 +103,9 @@ class ValueCountTermList : public TermList {
 	started = false;
     }
 
-    string get_termname() const {
-	Assert(started);
-	Assert(!at_end());
-	return it->first;
-    }
-
     Xapian::doccount get_termfreq() const {
 	Assert(started);
-	Assert(!at_end());
+	Assert(it != spy->values.end());
 	return it->second;
     }
 
@@ -121,32 +113,32 @@ class ValueCountTermList : public TermList {
 	if (!started) {
 	    started = true;
 	} else {
-	    Assert(!at_end());
+	    Assert(it != spy->values.end());
 	    ++it;
 	}
+	if (it == spy->values.end()) {
+	    return this;
+	}
+	current_term = it->first;
 	return NULL;
     }
 
-    TermList * skip_to(const string & term) {
+    TermList* skip_to(string_view term) {
 	while (it != spy->values.end() && it->first < term) {
 	    ++it;
 	}
 	started = true;
+	if (it == spy->values.end()) {
+	    return this;
+	}
+	current_term = it->first;
 	return NULL;
     }
 
-    bool at_end() const {
-	Assert(started);
-	return it == spy->values.end();
-    }
-
-    Xapian::termcount get_approx_size() const { unsupported_method(); return 0; }
-    Xapian::termcount get_wdf() const { unsupported_method(); return 0; }
-    PositionList* positionlist_begin() const {
-	unsupported_method();
-	return NULL;
-    }
-    Xapian::termcount positionlist_count() const { unsupported_method(); return 0; }
+    Xapian::termcount get_approx_size() const { unsupported_method(); }
+    Xapian::termcount get_wdf() const { unsupported_method(); }
+    PositionList* positionlist_begin() const { unsupported_method(); }
+    Xapian::termcount positionlist_count() const { unsupported_method(); }
 };
 
 /** A string with a corresponding frequency.
@@ -187,7 +179,7 @@ class StringAndFreqCmpByFreq {
 };
 
 /// A termlist iterator over a vector of StringAndFrequency objects.
-class StringAndFreqTermList : public TermList {
+class StringAndFreqTermList final : public TermList {
   private:
     vector<StringAndFrequency>::const_iterator it;
     bool started;
@@ -202,15 +194,9 @@ class StringAndFreqTermList : public TermList {
 	started = false;
     }
 
-    string get_termname() const {
-	Assert(started);
-	Assert(!at_end());
-	return it->get_string();
-    }
-
     Xapian::doccount get_termfreq() const {
 	Assert(started);
-	Assert(!at_end());
+	Assert(it != values.end());
 	return it->get_frequency();
     }
 
@@ -218,32 +204,31 @@ class StringAndFreqTermList : public TermList {
 	if (!started) {
 	    started = true;
 	} else {
-	    Assert(!at_end());
+	    Assert(it != values.end());
 	    ++it;
 	}
+	if (it == values.end()) {
+	    return this;
+	}
+	current_term = it->get_string();
 	return NULL;
     }
 
-    TermList * skip_to(const string & term) {
+    TermList* skip_to(string_view term) {
 	while (it != values.end() && it->get_string() < term) {
 	    ++it;
 	}
 	started = true;
+	if (it != values.end()) {
+	    current_term = it->get_string();
+	}
 	return NULL;
     }
 
-    bool at_end() const {
-	Assert(started);
-	return it == values.end();
-    }
-
-    Xapian::termcount get_approx_size() const { unsupported_method(); return 0; }
-    Xapian::termcount get_wdf() const { unsupported_method(); return 0; }
-    PositionList* positionlist_begin() const {
-	unsupported_method();
-	return NULL;
-    }
-    Xapian::termcount positionlist_count() const { unsupported_method(); return 0; }
+    Xapian::termcount get_approx_size() const { unsupported_method(); }
+    Xapian::termcount get_wdf() const { unsupported_method(); }
+    PositionList* positionlist_begin() const { unsupported_method(); }
+    Xapian::termcount positionlist_count() const { unsupported_method(); }
 };
 
 /** Get the most frequent items from a map from string to frequency.
@@ -306,7 +291,7 @@ get_most_frequent_items(vector<StringAndFrequency> & result,
 
 void
 ValueCountMatchSpy::operator()(const Document &doc, double) {
-    Assert(internal.get());
+    Assert(internal);
     ++(internal->total);
     string val(doc.get_value(internal->slot));
     if (!val.empty()) ++(internal->values[val]);
@@ -315,15 +300,15 @@ ValueCountMatchSpy::operator()(const Document &doc, double) {
 TermIterator
 ValueCountMatchSpy::values_begin() const
 {
-    Assert(internal.get());
+    Assert(internal);
     return Xapian::TermIterator(new ValueCountTermList(internal.get()));
 }
 
 TermIterator
 ValueCountMatchSpy::top_values_begin(size_t maxvalues) const
 {
-    Assert(internal.get());
-    unique_ptr<StringAndFreqTermList> termlist(nullptr);
+    Assert(internal);
+    unique_ptr<StringAndFreqTermList> termlist;
     if (usual(maxvalues > 0)) {
 	termlist.reset(new StringAndFreqTermList);
 	get_most_frequent_items(termlist->values, internal->values, maxvalues);
@@ -334,7 +319,7 @@ ValueCountMatchSpy::top_values_begin(size_t maxvalues) const
 
 MatchSpy *
 ValueCountMatchSpy::clone() const {
-    Assert(internal.get());
+    Assert(internal);
     return new ValueCountMatchSpy(internal->slot);
 }
 
@@ -345,7 +330,7 @@ ValueCountMatchSpy::name() const {
 
 string
 ValueCountMatchSpy::serialise() const {
-    Assert(internal.get());
+    Assert(internal);
     string result;
     pack_uint_last(result, internal->slot);
     return result;
@@ -368,7 +353,7 @@ ValueCountMatchSpy::unserialise(const string & s, const Registry &) const
 string
 ValueCountMatchSpy::serialise_results() const {
     LOGCALL(REMOTE, string, "ValueCountMatchSpy::serialise_results", NO_ARGS);
-    Assert(internal.get());
+    Assert(internal);
     string result;
     pack_uint(result, internal->total);
     for (auto&& item : internal->values) {
@@ -381,7 +366,7 @@ ValueCountMatchSpy::serialise_results() const {
 void
 ValueCountMatchSpy::merge_results(const string & s) {
     LOGCALL_VOID(REMOTE, "ValueCountMatchSpy::merge_results", s);
-    Assert(internal.get());
+    Assert(internal);
     const char * p = s.data();
     const char * end = p + s.size();
 
@@ -405,7 +390,7 @@ ValueCountMatchSpy::merge_results(const string & s) {
 string
 ValueCountMatchSpy::get_description() const {
     string d = "ValueCountMatchSpy(";
-    if (internal.get()) {
+    if (internal) {
 	d += str(internal->total);
 	d += " docs seen, looking in ";
 	d += str(internal->values.size());

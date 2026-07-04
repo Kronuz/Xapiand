@@ -1,8 +1,8 @@
-/** @file posixy_wrapper.h
+/** @file
  * @brief Provides wrappers with POSIXy semantics.
  */
 /* Copyright 2007 Lemur Consulting Ltd
- * Copyright 2007,2012,2014,2018 Olly Betts
+ * Copyright 2007,2012,2014,2018,2025 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,15 +15,17 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_POSIXY_WRAPPER_H
 #define XAPIAN_INCLUDED_POSIXY_WRAPPER_H
 
 #ifdef __WIN32__
+/** Call GetLastError() and set errno appropriately. */
+int posixy_set_errno_from_getlasterror();
+
 /** Version of open() which allows the file to be unlinked while open. */
 int posixy_open(const char *filename, int flags);
 

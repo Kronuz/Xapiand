@@ -1,7 +1,7 @@
-/** @file honey_table.cc
+/** @file
  * @brief HoneyTable class
  */
-/* Copyright (C) 2017,2018 Olly Betts
+/* Copyright (C) 2017,2018,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -71,7 +71,7 @@ HoneyTable::open(int flags_, const RootInfo& root_info, honey_revision_number_t)
 }
 
 void
-HoneyTable::add(const std::string& key,
+HoneyTable::add(std::string_view key,
 		const char* val,
 		size_t val_size,
 		bool compressed)
@@ -111,7 +111,7 @@ HoneyTable::add(const std::string& key,
 #elif defined SSTINDEX_SKIPLIST
     // Handled below.
 #else
-# error "SSTINDEX type not specified"
+# error SSTINDEX type not specified
 #endif
 
     store.write(static_cast<unsigned char>(reuse));
@@ -128,7 +128,7 @@ HoneyTable::add(const std::string& key,
     // Encode "compressed?" flag in bottom bit.
     // FIXME: Don't do this if a table is uncompressed?  That saves a byte
     // for each item where the extra bit pushes the length up by a byte.
-    size_t val_size_enc = (val_size << 1) | compressed;
+    size_t val_size_enc = (val_size << 1) | size_t{compressed};
     std::string val_len;
     pack_uint(val_len, val_size_enc);
     // FIXME: pass together so we can potentially writev() both?
@@ -163,7 +163,8 @@ HoneyTable::read_key(std::string& key,
     {
 	string desc;
 	description_append(desc, key);
-	cerr << "HoneyTable::read_key(" << desc << ", ...) for path=" << path << endl;
+	cerr << "HoneyTable::read_key(" << desc << ", ...) for path=" << path
+	     << endl;
     }
 #endif
     if (!read_only) {
@@ -205,7 +206,7 @@ HoneyTable::read_key(std::string& key,
     int r;
     {
 	// FIXME: rework to take advantage of buffering that's happening anyway?
-	char * p = buf;
+	char* p = buf;
 	for (int i = 0; i < 8; ++i) {
 	    int ch2 = store.read();
 	    if (ch2 == EOF) {
@@ -243,7 +244,7 @@ HoneyTable::read_val(std::string& val, size_t val_size) const
 }
 
 bool
-HoneyTable::get_exact_entry(const std::string& key, std::string* tag) const
+HoneyTable::get_exact_entry(std::string_view key, std::string* tag) const
 {
     if (!read_only) std::abort();
     if (rare(!store.is_open())) {
@@ -290,7 +291,8 @@ HoneyTable::get_exact_entry(const std::string& key, std::string* tag) const
 		store.read(kkey, SSTINDEX_BINARY_CHOP_KEY_SIZE);
 		kkey_len = 4;
 		while (kkey_len > 0 && kkey[kkey_len - 1] == '\0') --kkey_len;
-		int r = key.compare(0, SSTINDEX_BINARY_CHOP_KEY_SIZE, kkey, kkey_len);
+		int r = key.compare(0, SSTINDEX_BINARY_CHOP_KEY_SIZE,
+				    kkey, kkey_len);
 		if (r < 0) {
 		    j = k;
 		} else {
@@ -317,7 +319,7 @@ HoneyTable::get_exact_entry(const std::string& key, std::string* tag) const
 	    // current index pos?
 	    // off_t pos = store.get_pos();
 	    string index_key, prev_index_key;
-	    make_unsigned<off_t>::type ptr = 0;
+	    make_unsigned_t<off_t> ptr = 0;
 	    int cmp0 = 1;
 	    while (true) {
 		int reuse = store.read();
@@ -371,7 +373,7 @@ HoneyTable::get_exact_entry(const std::string& key, std::string* tag) const
 		int r;
 		{
 		    // FIXME: rework to take advantage of buffering that's happening anyway?
-		    char * p = buf;
+		    char* p = buf;
 		    for (int i = 0; i < 8; ++i) {
 			int ch2 = store.read();
 			if (ch2 == EOF) {

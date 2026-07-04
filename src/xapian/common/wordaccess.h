@@ -1,4 +1,4 @@
-/** @file wordaccess.h
+/** @file
  * @brief functions for reading and writing different width words
  */
 /* Copyright (C) 2016,2018,2019 Olly Betts
@@ -95,10 +95,10 @@ template<typename T, typename UINT>
 inline void
 do_aligned_write(unsigned char * ptr, T value)
 {
-    if (std::is_signed<T>::value) {
+    if (std::is_signed_v<T>) {
 	AssertRel(value, >=, 0);
     }
-    if (sizeof(T) > sizeof(UINT)) {
+    if constexpr(sizeof(T) > sizeof(UINT)) {
 	AssertEq(value, T(UINT(value)));
     }
     UINT v = UINT(value);
@@ -124,10 +124,10 @@ template<typename T, typename UINT>
 inline void
 do_unaligned_write(unsigned char * ptr, T value)
 {
-    if (std::is_signed<T>::value) {
+    if (std::is_signed_v<T>) {
 	AssertRel(value, >=, 0);
     }
-    if (sizeof(T) > sizeof(UINT)) {
+    if constexpr(sizeof(T) > sizeof(UINT)) {
 	AssertEq(value, T(UINT(value)));
     }
     UINT v = UINT(value);

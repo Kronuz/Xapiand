@@ -1,7 +1,7 @@
-/** @file compactor.h
+/** @file
  * @brief Compact a database, or merge and compact several.
  */
-/* Copyright (C) 2003,2004,2005,2006,2007,2008,2009,2010,2011,2013,2014,2015,2018 Olly Betts
+/* Copyright (C) 2003-2026 Betts
  * Copyright (C) 2008 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -15,16 +15,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_COMPACTOR_H
 #define XAPIAN_INCLUDED_COMPACTOR_H
 
 #if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
-# error "Never use <xapian/compactor.h> directly; include <xapian.h> instead."
+# error Never use <xapian/compactor.h> directly; include <xapian.h> instead.
 #endif
 
 #include "xapian/constants.h"
@@ -46,7 +45,10 @@ class XAPIAN_VISIBILITY_DEFAULT Compactor {
 	/** Split items whenever it saves space (the default). */
 	FULL = 1,
 	/** Allow oversize items to save more space (not recommended if you
-	 *  ever plan to update the compacted database). */
+	 *  ever plan to update the compacted database).
+	 *
+	 *  @since 1.4.31 Has the same effect as FULL.
+	 */
 	FULLER = 2
     } compaction_level;
 

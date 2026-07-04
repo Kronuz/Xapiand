@@ -1,8 +1,8 @@
-/** @file editdistance.h
+/** @file
  * @brief Edit distance calculation algorithm.
  */
 /* Copyright (C) 2003 Richard Boulton
- * Copyright (C) 2007,2008,2017,2019 Olly Betts
+ * Copyright (C) 2007,2008,2017,2019,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_EDITDISTANCE_H
@@ -50,29 +50,55 @@ class EditDistanceCalculator {
     /// Target in UTF-32.
     std::vector<unsigned> target;
 
+    size_t target_bytes;
+
     /// Current candidate in UTF-32.
     mutable std::vector<unsigned> utf32;
 
     mutable int* array = nullptr;
 
-    // We sum the character frequency histogram absolute differences to compute
-    // a lower bound on the edit distance.  Rather than counting each Unicode
-    // code point uniquely, we use an array with VEC_SIZE elements and tally
-    // code points modulo VEC_SIZE which can only reduce the bound we
-    // calculate.
-    //
-    // There will be a trade-off between how good the bound is and how large
-    // and array is used (a larger array takes more time to clear and sum
-    // over).  The value 64 is somewhat arbitrary - it works as well as 128 for
-    // the testsuite but that may not reflect real world performance.
-    // FIXME: profile and tune.
-    static constexpr int VEC_SIZE = 64;
-
-    /** Frequency histogram for target sequence.
+    /** The type to use for the occurrence bitmaps.
      *
-     *  Note: C++ will default initialise all remaining elements.
+     *  There will be a trade-off between how good the bound is and how many
+     *  bits we use.  We currently use an unsigned long long, which is
+     *  typically 64 bits and seems to work pretty well (it makes sense it
+     *  does for English, as each letter maps to a different bit).
+     *
+     *  At least on x86-64 and English, a 32-bit type seems to give an
+     *  identical cycle count to a 64-bit type when profiled with cachegrind,
+     *  but a 64-bit type is likely to work better for languages which have
+     *  more than 32 commonly-used word characters.
+     *
+     *  FIXME: Profile other architectures and languages.
      */
-    int target_freqs[VEC_SIZE] = { 0 };
+    typedef unsigned long long freqs_bitmap;
+
+    /** Occurrence bitmap for target sequence.
+     *
+     *  We set the bit corresponding to each codepoint in the word and then
+     *  xor the bitmaps for the target and candidate and count the bits to
+     *  compute a lower bound on the edit distance.
+     *
+     *  Rather than flagging each Unicode code point uniquely, we reduce the
+     *  code points modulo the number of available bits which can only reduce
+     *  the bound we calculate.
+     */
+    freqs_bitmap target_freqs = 0;
+
+    /** Second occurrence bitmap for target sequence.
+     *
+     *  We set the bit corresponding to each codepoint in the word which
+     *  we see a second time, which enables us to calculate a tighter edit
+     *  distance lower bound when there's more than one occurence of a
+     *  character in the target and/or candidate word.
+     *
+     *  Rather than flagging each Unicode code point uniquely, we reduce the
+     *  code points modulo the number of available bits which can only reduce
+     *  the bound we calculate.
+     */
+    freqs_bitmap target_freqs2 = 0;
+
+    static constexpr unsigned FREQS_MASK = sizeof(freqs_bitmap) * 8 - 1;
 
     /** Calculate edit distance.
      *
@@ -86,12 +112,15 @@ class EditDistanceCalculator {
      *  @param target_	Target string to calculate edit distances to.
      */
     explicit
-    EditDistanceCalculator(const std::string& target_) {
+    EditDistanceCalculator(std::string_view target_)
+	: target_bytes(target_.size()) {
 	using Xapian::Utf8Iterator;
 	for (Utf8Iterator it(target_); it != Utf8Iterator(); ++it) {
 	    unsigned ch = *it;
 	    target.push_back(ch);
-	    ++target_freqs[ch % VEC_SIZE];
+	    auto bit = freqs_bitmap(1) << (ch & FREQS_MASK);
+	    target_freqs2 |= (target_freqs & bit);
+	    target_freqs |= bit;
 	}
     }
 
@@ -114,18 +143,32 @@ class EditDistanceCalculator {
      *  @return The edit distance between candidate and the target.
      */
     int operator()(const std::string& candidate, int max_distance) const {
-	// There's no point considering a word where the difference in length
-	// is greater than the smallest number of edits we've found so far.
-	//
-	// First check based on the encoded UTF-8 length of the candidate.
+	// We have the UTF-32 target in target.
+	size_t target_utf32_len = target.size();
+
+	// We can quickly rule out some candidates just by comparing
+	// lengths since each edit can change the number of UTF-32 characters
+	// by at most 1.  But first we check the encoded UTF-8 length of the
+	// candidate since we can do that without having to convert it to
+	// UTF-32.
+
 	// Each Unicode codepoint is 1-4 bytes in UTF-8 and one word in UTF-32,
-	// so the number of UTF-32 characters in candidate must be >= int(bytes
-	// + 3 / 4) and <= bytes.
-	if (target.size() > candidate.size() + max_distance) {
+	// so the number of UTF-32 characters in candidate must be <= the number
+	// of bytes of UTF-8.
+	if (target_utf32_len > candidate.size() + max_distance) {
 	    // Candidate too short.
 	    return INT_MAX;
 	}
-	if (target.size() + max_distance < candidate.size() * 3 / 4) {
+
+	// Each edit can change the number of UTF-8 bytes by up to 4 (addition
+	// or deletion of any character which needs 4 bytes in UTF-8), which
+	// gives us an alternative lower bound (which is sometimes tighter and
+	// sometimes not) and the tightest upper bound.
+	if (target_bytes > candidate.size() + 4 * max_distance) {
+	    // Candidate too short.
+	    return INT_MAX;
+	}
+	if (target_bytes + 4 * max_distance < candidate.size()) {
 	    // Candidate too long.
 	    return INT_MAX;
 	}
@@ -134,7 +177,7 @@ class EditDistanceCalculator {
 	utf32.assign(Xapian::Utf8Iterator(candidate), Xapian::Utf8Iterator());
 
 	// Check a cheap length-based lower bound based on UTF-32 lengths.
-	int lb = std::abs(int(utf32.size()) - int(target.size()));
+	int lb = std::abs(int(utf32.size()) - int(target_utf32_len));
 	if (lb > max_distance) {
 	    return lb;
 	}

@@ -1,7 +1,7 @@
-/** @file vectortermlist.h
+/** @file
  * @brief A vector-like container of terms which can be iterated.
  */
-/* Copyright (C) 2011,2012,2017 Olly Betts
+/* Copyright (C) 2011,2012,2017,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_VECTORTERMLIST_H
@@ -45,9 +45,6 @@ class VectorTermList : public TermList {
     /// The number of terms in the list.
     Xapian::termcount num_terms;
 
-    /// The current term.
-    std::string current_term;
-
   public:
     template<typename I>
     VectorTermList(I begin, I end) : num_terms(0)
@@ -76,17 +73,13 @@ class VectorTermList : public TermList {
 
     Xapian::termcount get_approx_size() const;
 
-    std::string get_termname() const;
-
     Xapian::termcount get_wdf() const;
 
     Xapian::doccount get_termfreq() const;
 
     TermList * next();
 
-    TermList * skip_to(const std::string &);
-
-    bool at_end() const;
+    TermList* skip_to(std::string_view);
 
     Xapian::termcount positionlist_count() const;
 

@@ -1,7 +1,7 @@
-/** @file databaseinternal.cc
+/** @file
  * @brief Virtual base class for Database internals
  */
-/* Copyright 2003,2004,2006,2007,2008,2009,2011,2014,2015,2017 Olly Betts
+/* Copyright 2003-2024 Olly Betts
  * Copyright 2008 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -15,22 +15,27 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
 
 #include "xapian/backends/databaseinternal.h"
 
-#include "xapian/api/leafpostlist.h"
+#include "xapian/api/termlist.h"
+#include "xapian/common/heap.h"
 #include "xapian/common/omassert.h"
+#include "xapian/backends/postlist.h"
 #include "xapian/backends/slowvaluelist.h"
+#include "xapian/common/stringutils.h"
 #include "xapian/error.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 
 using namespace std;
 using Xapian::Internal::intrusive_ptr;
@@ -63,7 +68,7 @@ Database::Internal::readahead_for_query(const Xapian::Query &) const
 Xapian::termcount
 Database::Internal::get_unique_terms_lower_bound() const
 {
-    return 1;
+    return get_doclength_upper_bound() ? 1 : 0;
 }
 
 Xapian::termcount
@@ -164,7 +169,7 @@ Database::Internal::end_transaction(bool do_commit)
     }
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 Database::Internal::add_document(const Xapian::Document &)
 {
     // Writable databases should override this method, but this can get called
@@ -183,7 +188,7 @@ Database::Internal::delete_document(Xapian::docid)
 }
 
 void
-Database::Internal::delete_document(const string& unique_term)
+Database::Internal::delete_document(string_view unique_term)
 {
     // Default implementation - overridden for remote and sharded databases.
 
@@ -195,6 +200,10 @@ Database::Internal::delete_document(const string& unique_term)
     }
 
     unique_ptr<PostList> pl(open_post_list(unique_term));
+    if (!pl) {
+	// unique_term doesn't index any documents.
+	return;
+    }
 
     // We want this operation to be atomic if possible, so if we aren't in a
     // transaction and the backend supports transactions, temporarily enter an
@@ -213,7 +222,7 @@ Database::Internal::delete_document(const string& unique_term)
     state = old_state;
 }
 
-Xapian::DocumentInfo
+void
 Database::Internal::replace_document(Xapian::docid, const Xapian::Document &)
 {
     // Writable databases should override this method, but this can get called
@@ -222,9 +231,9 @@ Database::Internal::replace_document(Xapian::docid, const Xapian::Document &)
 		      "read-only shard");
 }
 
-Xapian::DocumentInfo
-Database::Internal::replace_document(const string & unique_term,
-				     const Xapian::Document & document)
+Xapian::docid
+Database::Internal::replace_document(string_view unique_term,
+				     const Xapian::Document& document)
 {
     // Default implementation - overridden for remote and sharded databases.
 
@@ -236,15 +245,11 @@ Database::Internal::replace_document(const string & unique_term,
     }
 
     unique_ptr<PostList> pl(open_post_list(unique_term));
-    pl->next();
-    if (pl->at_end()) {
-	auto info = add_document(document);
-	info.term = unique_term;
-	return info;
+    if (!pl || (pl->next(), pl->at_end())) {
+	// unique_term doesn't index any documents.
+	return add_document(document);
     }
-    Xapian::DocumentInfo info;
-    info.did = pl->get_docid();
-    info.term = unique_term;
+    Xapian::docid did = pl->get_docid();
 
     // We want this operation to be atomic if possible, so if we aren't in a
     // transaction and the backend supports transactions, temporarily enter an
@@ -253,7 +258,7 @@ Database::Internal::replace_document(const string & unique_term,
     if (state != TRANSACTION_UNIMPLEMENTED)
 	state = TRANSACTION_UNFLUSHED;
     try {
-	replace_document(info.did, document);
+	replace_document(did, document);
 	while (pl->next(), !pl->at_end()) {
 	    delete_document(pl->get_docid());
 	}
@@ -262,7 +267,7 @@ Database::Internal::replace_document(const string & unique_term,
 	throw;
     }
     state = old_state;
-    return info;
+    return did;
 }
 
 ValueList *
@@ -272,7 +277,7 @@ Database::Internal::open_value_list(Xapian::valueno slot) const
 }
 
 TermList *
-Database::Internal::open_spelling_termlist(const string &) const
+Database::Internal::open_spelling_termlist(string_view) const
 {
     // Only implemented for some database backends - others will just not
     // suggest spelling corrections (or not contribute to them in a multiple
@@ -290,7 +295,7 @@ Database::Internal::open_spelling_wordlist() const
 }
 
 Xapian::doccount
-Database::Internal::get_spelling_frequency(const string &) const
+Database::Internal::get_spelling_frequency(string_view) const
 {
     // Only implemented for some database backends - others will just not
     // suggest spelling corrections (or not contribute to them in a multiple
@@ -299,19 +304,19 @@ Database::Internal::get_spelling_frequency(const string &) const
 }
 
 void
-Database::Internal::add_spelling(const string &, Xapian::termcount) const
+Database::Internal::add_spelling(string_view, Xapian::termcount) const
 {
     throw Xapian::UnimplementedError("This backend doesn't implement spelling correction");
 }
 
 Xapian::termcount
-Database::Internal::remove_spelling(const string &, Xapian::termcount) const
+Database::Internal::remove_spelling(string_view, Xapian::termcount) const
 {
     throw Xapian::UnimplementedError("This backend doesn't implement spelling correction");
 }
 
 TermList *
-Database::Internal::open_synonym_termlist(const string &) const
+Database::Internal::open_synonym_termlist(string_view) const
 {
     // Only implemented for some database backends - others will just not
     // expand synonyms (or not contribute to them in a multiple database
@@ -320,7 +325,7 @@ Database::Internal::open_synonym_termlist(const string &) const
 }
 
 TermList *
-Database::Internal::open_synonym_keylist(const string &) const
+Database::Internal::open_synonym_keylist(string_view) const
 {
     // Only implemented for some database backends - others will just not
     // expand synonyms (or not contribute to them in a multiple database
@@ -329,31 +334,31 @@ Database::Internal::open_synonym_keylist(const string &) const
 }
 
 void
-Database::Internal::add_synonym(const string &, const string &) const
+Database::Internal::add_synonym(string_view, string_view) const
 {
     throw Xapian::UnimplementedError("This backend doesn't implement synonyms");
 }
 
 void
-Database::Internal::remove_synonym(const string &, const string &) const
+Database::Internal::remove_synonym(string_view, string_view) const
 {
     throw Xapian::UnimplementedError("This backend doesn't implement synonyms");
 }
 
 void
-Database::Internal::clear_synonyms(const string &) const
+Database::Internal::clear_synonyms(string_view) const
 {
     throw Xapian::UnimplementedError("This backend doesn't implement synonyms");
 }
 
 string
-Database::Internal::get_metadata(const string &) const
+Database::Internal::get_metadata(string_view) const
 {
     return string();
 }
 
 TermList*
-Database::Internal::open_metadata_keylist(const string&) const
+Database::Internal::open_metadata_keylist(string_view) const
 {
     // Only implemented for some database backends - others will simply report
     // there being no metadata keys.
@@ -361,7 +366,7 @@ Database::Internal::open_metadata_keylist(const string&) const
 }
 
 void
-Database::Internal::set_metadata(const string&, const string&)
+Database::Internal::set_metadata(string_view, string_view)
 {
     throw Xapian::UnimplementedError("This backend doesn't implement metadata");
 }
@@ -381,7 +386,8 @@ Database::Internal::request_document(Xapian::docid) const
 }
 
 void
-Database::Internal::write_changesets_to_fd(int, const string&, bool, ReplicationInfo*)
+Database::Internal::write_changesets_to_fd(int, string_view, bool,
+					   ReplicationInfo*)
 {
     throw Xapian::UnimplementedError("This backend doesn't provide changesets");
 }
@@ -415,6 +421,159 @@ bool
 Database::Internal::locked() const
 {
     return false;
+}
+
+Database::Internal*
+Database::Internal::update_lock(int flags)
+{
+    if (flags == Xapian::DB_READONLY_) return this;
+    throw Xapian::DatabaseLockError("Not possible to lock for writing");
+}
+
+namespace {
+    class Pos {
+	Xapian::termpos pos;
+
+	PositionList* p;
+
+	string term;
+
+      public:
+	Pos(string&& term_, PositionList* p_)
+	    : p(p_), term(term_) {
+	    pos = p->get_position();
+	}
+
+	~Pos() { delete p; }
+
+	Xapian::termpos get_pos() const { return pos; }
+
+	const string& get_term() const { return term; }
+
+	bool next() {
+	    if (!p->next()) {
+		return false;
+	    }
+	    pos = p->get_position();
+	    return true;
+	}
+    };
+}
+
+static void
+reconstruct_open_poslists(TermList* termlist,
+			  Xapian::termpos start_pos,
+			  Xapian::termpos end_pos,
+			  string_view end,
+			  vector<unique_ptr<Pos>>& heap,
+			  size_t prefix_size = 0)
+{
+    constexpr Xapian::termpos LAST_POS = Xapian::termpos(-1);
+    do {
+	const string& term = termlist->get_termname();
+	if (!end.empty() && term >= end) {
+	    break;
+	}
+	PositionList* poslist = termlist->positionlist_begin();
+	if (poslist &&
+	    (start_pos ? poslist->skip_to(start_pos) : poslist->next()) &&
+	    (end_pos == LAST_POS || poslist->get_position() <= end_pos)) {
+	    heap.emplace_back(new Pos(term.substr(prefix_size), poslist));
+	} else {
+	    delete poslist;
+	}
+    } while (termlist->next() == NULL);
+}
+
+string
+Database::Internal::reconstruct_text(Xapian::docid did,
+				     size_t length,
+				     std::string_view prefix,
+				     Xapian::termpos start_pos,
+				     Xapian::termpos end_pos) const
+{
+    if (end_pos == 0) {
+	// Set to largest possible value.
+	end_pos = numeric_limits<decltype(end_pos)>::max();
+    }
+
+    if (length == 0) {
+	// Set to largest possible value.
+	length = numeric_limits<decltype(length)>::max();
+    }
+
+    struct PosCmp {
+	bool operator()(const unique_ptr<Pos>& a, const unique_ptr<Pos>& b) {
+	    if (a->get_pos() != b->get_pos()) {
+		return a->get_pos() > b->get_pos();
+	    }
+	    return a->get_term() > b->get_term();
+	}
+    };
+
+    vector<unique_ptr<Pos>> heap;
+
+    unique_ptr<TermList> termlist(open_term_list_direct(did));
+    if (usual(termlist)) {
+	if (prefix.empty()) {
+	    if (termlist->next() == NULL) {
+		reconstruct_open_poslists(termlist.get(), start_pos, end_pos,
+					  "A", heap);
+		if (termlist->skip_to("[") == NULL) {
+		    reconstruct_open_poslists(termlist.get(),
+					      start_pos, end_pos,
+					      prefix, heap);
+		}
+	    }
+	} else {
+	    if (termlist->skip_to(prefix) == NULL) {
+		// Calculate the first possible term without the specified
+		// prefix.
+		string term_ub{prefix};
+		size_t i = term_ub.find_last_not_of('\xff');
+		term_ub.resize(i + 1);
+		if (i != string::npos) {
+		    term_ub[i] = (unsigned char)term_ub[i] + 1;
+		}
+		reconstruct_open_poslists(termlist.get(), start_pos, end_pos,
+					  term_ub, heap, prefix.size());
+	    }
+	}
+
+	Heap::make(heap.begin(), heap.end(), PosCmp());
+    }
+
+    string result;
+
+    Xapian::termpos old_pos = UNSIGNED_OVERFLOW_OK(start_pos - 1);
+    while (!heap.empty()) {
+	Pos* tip = heap.front().get();
+	Xapian::termpos pos = tip->get_pos();
+	if (pos > end_pos) break;
+
+	Xapian::termpos delta = UNSIGNED_OVERFLOW_OK(pos - old_pos);
+	// Ignore additional terms at the same position.
+	if (delta) {
+	    if (usual(!result.empty())) {
+		// Insert newline for gap in used positions.
+		result += (delta == 1 ? ' ' : '\n');
+	    }
+	    result += tip->get_term();
+	}
+
+	if (result.size() >= length) break;
+
+	old_pos = pos;
+
+	if (tip->next()) {
+	    Heap::replace(heap.begin(), heap.end(), PosCmp());
+	} else {
+	    Heap::pop(heap.begin(), heap.end(), PosCmp());
+	    heap.resize(heap.size() - 1);
+	}
+    }
+
+    return result;
 }
 
 }

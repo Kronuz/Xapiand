@@ -1,4 +1,4 @@
-/** @file honey_values.h
+/** @file
  * @brief HoneyValueManager class
  */
 /* Copyright (C) 2008,2009,2011,2018 Olly Betts
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_HONEY_VALUES_H
@@ -50,7 +50,7 @@ make_valuechunk_key(Xapian::valueno slot, Xapian::docid last_did)
 }
 
 inline Xapian::docid
-docid_from_key(Xapian::valueno required_slot, const std::string & key)
+docid_from_key(Xapian::valueno required_slot, const std::string& key)
 {
     const char* p = key.data();
     const char* end = p + key.length();
@@ -123,7 +123,7 @@ class HoneyValueManager {
      *  Set to Xapian::BAD_VALUENO if no value statistics are currently
      *  cached.
      */
-    mutable Xapian::valueno mru_slot;
+    mutable Xapian::valueno mru_slot = Xapian::BAD_VALUENO;
 
     /** The most recently used value statistics. */
     mutable ValueStats mru_valstats;
@@ -139,7 +139,7 @@ class HoneyValueManager {
     mutable std::unique_ptr<HoneyCursor> cursor;
 
     void add_value(Xapian::docid did, Xapian::valueno slot,
-		   const std::string & val);
+		   const std::string& val);
 
     void remove_value(Xapian::docid did, Xapian::valueno slot);
 
@@ -149,19 +149,18 @@ class HoneyValueManager {
      */
     Xapian::docid get_chunk_containing_did(Xapian::valueno slot,
 					   Xapian::docid did,
-					   std::string &chunk) const;
+					   std::string& chunk) const;
 
     /** Get the statistics for value slot @a slot. */
     void get_value_stats(Xapian::valueno slot) const;
 
-    void get_value_stats(Xapian::valueno slot, ValueStats & stats) const;
+    void get_value_stats(Xapian::valueno slot, ValueStats& stats) const;
 
   public:
     /** Create a new HoneyValueManager object. */
     HoneyValueManager(HoneyPostListTable& postlist_table_,
 		      HoneyTermListTable& termlist_table_)
-	: mru_slot(Xapian::BAD_VALUENO),
-	  postlist_table(postlist_table_),
+	: postlist_table(postlist_table_),
 	  termlist_table(termlist_table_) { }
 
     // Merge in batched-up changes.
@@ -179,7 +178,7 @@ class HoneyValueManager {
 
     std::string get_value(Xapian::docid did, Xapian::valueno slot) const;
 
-    void get_all_values(std::map<Xapian::valueno, std::string> & values,
+    void get_all_values(std::map<Xapian::valueno, std::string>& values,
 			Xapian::docid did) const;
 
     Xapian::doccount get_value_freq(Xapian::valueno slot) const {
@@ -225,8 +224,8 @@ class HoneyValueManager {
 namespace Honey {
 
 class ValueChunkReader {
-    const char *p;
-    const char *end;
+    const char* p;
+    const char* end;
 
     Xapian::docid did;
 
@@ -236,17 +235,17 @@ class ValueChunkReader {
     /// Create a ValueChunkReader which is already at_end().
     ValueChunkReader() : p(NULL) { }
 
-    ValueChunkReader(const char * p_, size_t len, Xapian::docid last_did) {
+    ValueChunkReader(const char* p_, size_t len, Xapian::docid last_did) {
 	assign(p_, len, last_did);
     }
 
-    void assign(const char * p_, size_t len, Xapian::docid last_did);
+    void assign(const char* p_, size_t len, Xapian::docid last_did);
 
     bool at_end() const { return p == NULL; }
 
     Xapian::docid get_docid() const { return did; }
 
-    const std::string & get_value() const { return value; }
+    const std::string& get_value() const { return value; }
 
     void next();
 

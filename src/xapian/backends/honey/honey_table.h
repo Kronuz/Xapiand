@@ -1,7 +1,7 @@
-/** @file honey_table.h
+/** @file
  * @brief HoneyTable class
  */
-/* Copyright (C) 2017,2018 Olly Betts
+/* Copyright (C) 2017,2018,2023,2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_HONEY_TABLE_H
@@ -38,6 +38,7 @@
 #include "xapian/error.h"
 
 #include <algorithm>
+#include <string_view>
 #if 0
 #include <iostream> // FIXME
 #endif
@@ -90,8 +91,16 @@ class BufferedFileCommon {
 class BufferedFile {
     BufferedFileCommon* common = nullptr;
 
+    /** Offset in file.
+     *
+     *  When reading, this is the offset of the end of any buffered data.
+     *
+     *  When writing, this is the offset of the start of any buffered data.
+     */
     mutable off_t pos = 0;
     bool read_only = true;
+
+    /** Index into @a buf where buffered data ends. */
     mutable size_t buf_end = 0;
     mutable char buf[4096];
 
@@ -149,11 +158,10 @@ class BufferedFile {
 	read_only = read_only_;
 	int fd;
 	if (read_only) {
-	    // FIXME: add new io_open_stream_rd() etc?
-	    fd = io_open_block_rd(path);
+	    fd = io_open_stream_rd(path);
 	} else {
 	    // FIXME: Always create anew for now...
-	    fd = io_open_block_wr(path, true);
+	    fd = io_open_stream_wr(path, true);
 	}
 	if (fd < 0) return false;
 	common = new BufferedFileCommon(fd, 0);
@@ -165,14 +173,22 @@ class BufferedFile {
     }
 
     void set_pos(off_t pos_) {
-	if (!read_only) flush();
-	if (false && pos_ >= pos) { // FIXME: need to take buf_end into account
-	    skip(pos_ - pos);
+	if (buf_end == 0) {
+	    // No buffered data to flush or try to salvage.
+	} else if (!read_only) {
+	    flush();
 	} else {
-	    // FIXME: salvage some of the buffer if we can?
-	    buf_end = 0;
-	    pos = pos_;
+	    // Keep any buffered data we can.
+	    size_t delta = size_t(pos_ - (pos - buf_end));
+	    // Since delta is an unsigned type, `>` also checks for a
+	    // "negative" delta.
+	    if (delta > buf_end) {
+		buf_end = 0;
+	    } else {
+		buf_end -= delta;
+	    }
 	}
+	pos = pos_;
     }
 
     void skip(size_t delta) const {
@@ -350,7 +366,7 @@ class SSTIndex {
 #elif defined SSTINDEX_SKIPLIST
 	data.assign(1, '\x02');
 #else
-# error "SSTINDEX type not specified"
+# error SSTINDEX type not specified
 #endif
     }
 
@@ -360,7 +376,8 @@ class SSTIndex {
 #endif
     }
 
-    void maybe_add_entry(const std::string& key, off_t ptr) {
+    void maybe_add_entry(std::string_view key, off_t ptr) {
+	Assert(!key.empty());
 #ifdef SSTINDEX_ARRAY
 	unsigned char initial = key[0];
 	if (!pointers) {
@@ -419,7 +436,8 @@ class SSTIndex {
 	{
 	    std::string esc;
 	    description_append(esc, last_index_key);
-	    std::cout << "Adding «" << esc << "» -> file offset " << ptr << std::endl;
+	    std::cout << "Adding «" << esc << "» -> file offset " << ptr
+		      << std::endl;
 	}
 #endif
 	data += last_index_key;
@@ -437,14 +455,14 @@ class SSTIndex {
 	data += char(reuse);
 	data += char(key.size() - reuse);
 	data.append(key, reuse, key.size() - reuse);
-	pack_uint(data, static_cast<std::make_unsigned<off_t>::type>(ptr));
+	pack_uint(data, static_cast<std::make_unsigned_t<off_t>>(ptr));
 
 	block = cur_block;
 	// FIXME: deal with parent_index...
 
 	last_index_key = key;
 #else
-# error "SSTINDEX type not specified"
+# error SSTINDEX type not specified
 #endif
     }
 
@@ -512,7 +530,7 @@ skip_adding_upper_bound:
 #elif defined SSTINDEX_SKIPLIST
 	// Already built in data.
 #else
-# error "SSTINDEX type not specified"
+# error SSTINDEX type not specified
 #endif
 
 	store.write(data.data(), data.size());
@@ -557,7 +575,7 @@ class HoneyTable {
      */
     off_t offset = 0;
 
-    bool get_exact_entry(const std::string& key, std::string* tag) const;
+    bool get_exact_entry(std::string_view key, std::string* tag) const;
 
     bool read_key(std::string& key, size_t& val_size, bool& compressed) const;
 
@@ -611,13 +629,13 @@ class HoneyTable {
 
     const std::string& get_path() const { return path; }
 
-    void add(const std::string& key,
+    void add(std::string_view key,
 	     const char* val,
 	     size_t val_size,
 	     bool compressed = false);
 
-    void add(const std::string& key,
-	     const std::string& val,
+    void add(std::string_view key,
+	     std::string_view val,
 	     bool compressed = false) {
 	add(key, val.data(), val.size(), compressed);
     }
@@ -642,7 +660,7 @@ class HoneyTable {
 	return num_entries == 0;
     }
 
-    bool get_exact_entry(const std::string& key, std::string& tag) const {
+    bool get_exact_entry(std::string_view key, std::string& tag) const {
 	return get_exact_entry(key, &tag);
     }
 

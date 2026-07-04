@@ -1,4 +1,4 @@
-/** @file honey_values.cc
+/** @file
  * @brief HoneyValueManager class
  */
 /* Copyright (C) 2008,2009,2010,2011,2012,2016,2017,2018 Olly Betts
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -48,7 +48,7 @@ using namespace std;
 //  * values named instead of numbered?
 
 void
-ValueChunkReader::assign(const char * p_, size_t len, Xapian::docid last_did)
+ValueChunkReader::assign(const char* p_, size_t len, Xapian::docid last_did)
 {
     p = p_;
     end = p_ + len;
@@ -118,7 +118,7 @@ ValueChunkReader::skip_to(Xapian::docid target)
 
 void
 HoneyValueManager::add_value(Xapian::docid did, Xapian::valueno slot,
-			     const string & val)
+			     const string& val)
 {
     auto i = changes.find(slot);
     if (i == changes.end()) {
@@ -140,12 +140,12 @@ HoneyValueManager::remove_value(Xapian::docid did, Xapian::valueno slot)
 Xapian::docid
 HoneyValueManager::get_chunk_containing_did(Xapian::valueno slot,
 					    Xapian::docid did,
-					    string &chunk) const
+					    string& chunk) const
 {
     LOGCALL(DB, Xapian::docid, "HoneyValueManager::get_chunk_containing_did", slot | did | chunk);
-    if (!cursor.get())
+    if (!cursor)
 	cursor.reset(postlist_table.cursor_get());
-    if (!cursor.get()) RETURN(0);
+    if (!cursor) RETURN(0);
 
     bool exact = cursor->find_entry_ge(make_valuechunk_key(slot, did));
     if (!exact) {
@@ -184,7 +184,7 @@ class ValueUpdater {
 
     Xapian::docid last_allowed_did;
 
-    void append_to_stream(Xapian::docid did, const string & value) {
+    void append_to_stream(Xapian::docid did, const string& value) {
 	Assert(did);
 	if (!tag.empty()) {
 	    AssertRel(did,>,prev_did);
@@ -221,7 +221,7 @@ class ValueUpdater {
 	write_tag();
     }
 
-    void update(Xapian::docid did, const string & value) {
+    void update(Xapian::docid did, const string& value) {
 	if (last_allowed_did && did > last_allowed_did) {
 	    // The next change needs to go in a later existing chunk than the
 	    // one we're currently updating, so we copy over the rest of the
@@ -266,7 +266,7 @@ class ValueUpdater {
 		reader.assign(ctag.data(), ctag.size(), last_did);
 	    }
 	    if (cursor->next()) {
-		const string & key = cursor->current_key;
+		const string& key = cursor->current_key;
 		Xapian::docid next_last_did = docid_from_key(slot, key);
 		if (next_last_did) {
 		    cursor->read_tag();
@@ -316,8 +316,8 @@ HoneyValueManager::merge_changes()
 }
 
 string
-HoneyValueManager::add_document(Xapian::docid did, const Xapian::Document &doc,
-				map<Xapian::valueno, ValueStats> &val_stats)
+HoneyValueManager::add_document(Xapian::docid did, const Xapian::Document& doc,
+				map<Xapian::valueno, ValueStats>& val_stats)
 {
     Xapian::ValueIterator it = doc.values_begin();
     if (it == doc.values_end()) {
@@ -394,7 +394,7 @@ HoneyValueManager::delete_document(Xapian::docid did,
 				   map<Xapian::valueno, ValueStats>& val_stats)
 {
     Assert(termlist_table.is_open());
-    map<Xapian::docid, string>::iterator it = slots.find(did);
+    auto it = slots.find(did);
     string s;
     if (it != slots.end()) {
 	swap(s, it->second);
@@ -430,7 +430,7 @@ HoneyValueManager::delete_document(Xapian::docid did,
 	Xapian::valueno slot = first_slot;
 	while (slot != last_slot) {
 	    auto i = val_stats.insert(make_pair(slot, ValueStats()));
-	    ValueStats & stats = i.first->second;
+	    ValueStats& stats = i.first->second;
 	    if (i.second) {
 		// There were no statistics stored already, so read them.
 		get_value_stats(slot, stats);
@@ -454,7 +454,7 @@ HoneyValueManager::delete_document(Xapian::docid did,
 	{
 	    // FIXME: share code with above
 	    auto i = val_stats.insert(make_pair(slot, ValueStats()));
-	    ValueStats & stats = i.first->second;
+	    ValueStats& stats = i.first->second;
 	    if (i.second) {
 		// There were no statistics stored already, so read them.
 		get_value_stats(slot, stats);
@@ -474,7 +474,7 @@ HoneyValueManager::delete_document(Xapian::docid did,
 
 string
 HoneyValueManager::replace_document(Xapian::docid did,
-				    const Xapian::Document &doc,
+				    const Xapian::Document& doc,
 				    map<Xapian::valueno, ValueStats>& val_stats)
 {
     if (doc.get_docid() == did) {
@@ -520,7 +520,7 @@ HoneyValueManager::get_value(Xapian::docid did, Xapian::valueno slot) const
 }
 
 void
-HoneyValueManager::get_all_values(map<Xapian::valueno, string> & values,
+HoneyValueManager::get_all_values(map<Xapian::valueno, string>& values,
 				  Xapian::docid did) const
 {
     Assert(values.empty());
@@ -600,8 +600,8 @@ HoneyValueManager::get_value_stats(Xapian::valueno slot,
 
     string tag;
     if (postlist_table.get_exact_entry(Honey::make_valuestats_key(slot), tag)) {
-	const char * pos = tag.data();
-	const char * end = pos + tag.size();
+	const char* pos = tag.data();
+	const char* end = pos + tag.size();
 
 	if (!unpack_uint(&pos, end, &(stats.freq))) {
 	    if (pos == 0) {
@@ -634,10 +634,9 @@ void
 HoneyValueManager::set_value_stats(map<Xapian::valueno, ValueStats>& val_stats)
 {
     LOGCALL_VOID(DB, "HoneyValueManager::set_value_stats", val_stats);
-    map<Xapian::valueno, ValueStats>::const_iterator i;
-    for (i = val_stats.begin(); i != val_stats.end(); ++i) {
-	string key = Honey::make_valuestats_key(i->first);
-	const ValueStats & stats = i->second;
+    for (auto&& i : val_stats) {
+	string key = Honey::make_valuestats_key(i.first);
+	const ValueStats& stats = i.second;
 	if (stats.freq != 0) {
 	    postlist_table.add(key, encode_valuestats(stats.freq,
 						      stats.lower_bound,

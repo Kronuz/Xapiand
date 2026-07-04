@@ -1,4 +1,4 @@
-/** @file uuids.h
+/** @file
  * @brief Class for handling UUIDs
  */
 /* Copyright 2008 Lemur Consulting Ltd
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_UUIDS_H
@@ -41,14 +41,14 @@ class Uuid {
 
     void parse(const std::string& in) { return parse(in.data()); }
 
-    // Not currently used.
+    // Not currently used outside unittest.cc.
     void clear() {
 	std::memset(uuid_data, 0, BINARY_SIZE);
     }
 
-    // Not currently used.
+    // Not currently used outside unittest.cc.
     bool is_null() const {
-	for (char ch : uuid_data) {
+	for (auto ch : uuid_data) {
 	    if (ch)
 		return false;
 	}

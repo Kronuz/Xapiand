@@ -1,8 +1,8 @@
-/** @file glass_cursor.cc
+/** @file
  * @brief Btree cursor implementation
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
- * Copyright 2002,2003,2004,2005,2006,2007,2008,2009,2010,2012,2013,2015,2016 Olly Betts
+ * Copyright 2002-2024 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,9 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -30,21 +29,22 @@
 #include "xapian/common/debuglog.h"
 #include "xapian/common/omassert.h"
 
+#include <string_view>
+
 using namespace Glass;
+using namespace std;
 
 #ifdef XAPIAN_DEBUG_LOG
 static string
-hex_display_encode(const string & input)
+hex_display_encode(string_view input)
 {
-    const char * table = "0123456789abcdef";
+    const char* table = "0123456789abcdef";
     string result;
-    for (string::const_iterator i = input.begin(); i != input.end(); ++i) {
-	unsigned char val = *i;
+    for (unsigned char val : input) {
 	result += "\\x";
-	result += table[val / 16];
-	result += table[val % 16];
+	result += table[val >> 4];
+	result += table[val & 0x0f];
     }
-
     return result;
 }
 #endif
@@ -116,7 +116,7 @@ GlassCursor::next()
     }
     if (tag_status == UNREAD || tag_status == UNREAD_ON_LAST_CHUNK) {
 	while (true) {
-	    if (! B->next(C, 0)) {
+	    if (!B->next(C, 0)) {
 		is_positioned = false;
 		break;
 	    }
@@ -175,7 +175,7 @@ GlassCursor::find_entry(const string &key)
 	    // It would be nice to be lazy about this too, but we need to
 	    // be on an actual entry in order to read the key.
 	    C[0].c = DIR_START;
-	    if (! B->prev(C, 0)) {
+	    if (!B->prev(C, 0)) {
 		tag_status = UNREAD;
 	    }
 	}
@@ -199,7 +199,7 @@ GlassCursor::find_entry_lt(const string &key)
     Assert(!is_after_end);
     Assert(is_positioned);
 
-    if (! B->prev(C, 0)) {
+    if (!B->prev(C, 0)) {
 	is_positioned = false;
 	return;
     }
@@ -230,12 +230,14 @@ GlassCursor::find_exact(const string &key)
     }
     current_key = key;
     B->read_tag(C, &current_tag, false);
+    tag_status = UNCOMPRESSED;
+    is_positioned = true;
 
     RETURN(true);
 }
 
 bool
-GlassCursor::find_entry_ge(const string &key)
+GlassCursor::find_entry_ge(string_view key)
 {
     LOGCALL(DB, bool, "GlassCursor::find_entry_ge", key);
     if (B->cursor_version != version) {
@@ -261,7 +263,7 @@ GlassCursor::find_entry_ge(const string &key)
     if (found) {
 	current_key = key;
     } else {
-	if (! B->next(C, 0)) {
+	if (!B->next(C, 0)) {
 	    is_after_end = true;
 	    is_positioned = false;
 	    RETURN(false);
@@ -291,7 +293,7 @@ GlassCursor::read_tag(bool keep_compressed)
     if (tag_status == UNREAD_ON_LAST_CHUNK) {
 	// Back up to first chunk of this tag.
 	while (!LeafItem(C[0].get_p(), C[0].c).first_component()) {
-	    if (! B->prev(C, 0)) {
+	    if (!B->prev(C, 0)) {
 		is_positioned = false;
 		throw Xapian::DatabaseCorruptError("find_entry failed to find any entry at all!");
 	    }

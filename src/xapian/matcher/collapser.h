@@ -1,4 +1,4 @@
-/** @file collapser.h
+/** @file
  * @brief Collapse documents with the same collapse key during the match.
  */
 /* Copyright (C) 2009,2011,2017 Olly Betts
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_COLLAPSER_H
@@ -24,7 +24,6 @@
 #include "xapian/backends/documentinternal.h"
 #include "xapian/matcher/msetcmp.h"
 #include "xapian/common/omassert.h"
-#include "xapian/api/postlist.h"
 #include "xapian/api/result.h"
 
 #include <unordered_map>
@@ -56,16 +55,16 @@ class CollapseData {
     std::vector<std::pair<Xapian::doccount, Xapian::docid>> items;
 
     /// The highest weight of a document we've rejected.
-    double next_best_weight;
+    double next_best_weight = 0.0;
 
     /// The number of documents we've rejected.
-    Xapian::doccount collapse_count;
+    Xapian::doccount collapse_count = 0;
 
   public:
     /// Construct with the given item.
     CollapseData(Xapian::doccount item, Xapian::docid did)
-	: items(1, { item, did }), next_best_weight(0), collapse_count(0) {
-    }
+	: items(1, { item, did })
+    { }
 
     /** Check a new result with this collapse key value.
      *
@@ -112,6 +111,9 @@ class CollapseData {
      *  @param to  	The new item (index into results).
      */
     void result_has_moved(Xapian::doccount from, Xapian::doccount to) {
+	// Yes, this *is* a linear search, but only through up to collapse_max
+	// items and we expect collapse_max to be very small (it's the maximum
+	// number of items to keep for each collapse key value).
 	for (auto&& item : items) {
 	    if (item.first == from) {
 		item.first = to;
@@ -219,7 +221,7 @@ class Collapser {
      *  @param to  		The new item (index into results).
      */
     void result_has_moved(Xapian::doccount from, Xapian::doccount to) {
-	const string& collapse_key = results[to].get_collapse_key();
+	const std::string& collapse_key = results[to].get_collapse_key();
 	if (collapse_key.empty()) {
 	    return;
 	}
@@ -337,7 +339,7 @@ class CollapserLite {
 	// information stored in table.
 	Xapian::doccount todo = entry_count;
 	for (Result& result : results) {
-	    const string& key = result.get_collapse_key();
+	    const std::string& key = result.get_collapse_key();
 	    if (key.empty())
 		continue;
 

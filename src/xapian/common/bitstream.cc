@@ -1,4 +1,4 @@
-/** @file bitstream.cc
+/** @file
  * @brief Classes to encode/decode a bitstream.
  */
 /* Copyright (C) 2004,2005,2006,2008,2013,2014,2016,2017,2018 Olly Betts
@@ -14,9 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -28,12 +27,11 @@
 #include "xapian/common/omassert.h"
 #include "xapian/common/pack.h"
 
-#include <cmath>
-#include <vector>
-
 using namespace std;
 
-// Highly optimised fls() implementation.
+// Find the position of the most significant set bit counting from 1 with
+// 0 being returned if no bits are set (similar to how ffs() reports the least
+// significant set bit).
 template<typename T>
 static inline int
 highest_order_bit(T mask)
@@ -41,7 +39,8 @@ highest_order_bit(T mask)
 #ifdef HAVE_DO_CLZ
     return mask ? sizeof(T) * 8 - do_clz(mask) : 0;
 #else
-    static const unsigned char flstab[256] = {
+    // Table of results for 8 bit inputs.
+    static const unsigned char hob_tab[256] = {
 	0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
 	5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 	6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -61,7 +60,7 @@ highest_order_bit(T mask)
     };
 
     int result = 0;
-    if (sizeof(T) > 4) {
+    if constexpr(sizeof(T) > 4) {
 	if (mask >= 0x100000000ul) {
 	    mask >>= 32;
 	    result += 32;
@@ -75,7 +74,7 @@ highest_order_bit(T mask)
 	mask >>= 8;
 	result += 8;
     }
-    return result + flstab[mask];
+    return result + hob_tab[mask];
 #endif
 }
 
@@ -94,7 +93,11 @@ BitWriter::encode(Xapian::termpos value, Xapian::termpos outof)
 {
     Assert(value < outof);
     unsigned bits = highest_order_bit(outof - Xapian::termpos(1));
-    const Xapian::termpos spare = safe_shl(Xapian::termpos(1), bits) - outof;
+    // If the top bit of (outof - Xapian::termpos(1)) is set then
+    // the shift will shift the bit out and give zero and the
+    // subtraction will result in an unsigned overflow.
+    const Xapian::termpos spare =
+	UNSIGNED_OVERFLOW_OK(safe_shl(Xapian::termpos(1), bits) - outof);
     if (spare) {
 	/* If we have spare values, we can use one fewer bit to encode some
 	 * values.  We shorten the values in the middle of the range, as
@@ -152,7 +155,8 @@ BitWriter::encode(Xapian::termpos value, Xapian::termpos outof)
 }
 
 void
-BitWriter::encode_interpolative(const Xapian::VecCOW<Xapian::termpos> &pos, int j, int k)
+BitWriter::encode_interpolative(const Xapian::VecCOW<Xapian::termpos>& pos,
+				int j, int k)
 {
     // "Interpolative code" - for an algorithm description, see "Managing
     // Gigabytes" - pages 126-127 in the second edition.  You can probably
@@ -176,7 +180,11 @@ BitReader::decode(Xapian::termpos outof, bool force)
     (void)force;
     Assert(force == di_current.is_initialized());
     Xapian::termpos bits = highest_order_bit(outof - Xapian::termpos(1));
-    const Xapian::termpos spare = safe_shl(Xapian::termpos(1), bits) - outof;
+    // If the top bit of (outof - Xapian::termpos(1)) is set then
+    // the shift will shift the bit out and give zero and the
+    // subtraction will result in an unsigned overflow.
+    const Xapian::termpos spare =
+	UNSIGNED_OVERFLOW_OK(safe_shl(Xapian::termpos(1), bits) - outof);
     const Xapian::termpos mid_start = (outof - spare) / 2;
     Xapian::termpos pos;
     if (spare) {

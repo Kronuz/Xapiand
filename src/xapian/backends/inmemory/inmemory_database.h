@@ -1,9 +1,9 @@
-/** @file inmemory_database.h
+/** @file
  * @brief C++ class definition for inmemory database access
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
  * Copyright 2002 Ananova Ltd
- * Copyright 2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2014,2015 Olly Betts
+ * Copyright 2002-2024 Olly Betts
  * Copyright 2006,2009 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -17,29 +17,27 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 #define XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 
-#include "xapian/api/leafpostlist.h"
 #include "xapian/api/smallvector.h"
 #include "xapian/api/termlist.h"
 #include "xapian/backends/backends.h"
 #include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/leafpostlist.h"
 #include "xapian/backends/valuestats.h"
-#include <map>
-#include <vector>
 #include <algorithm>
+#include <map>
+#include <string_view>
+#include <vector>
 #include "xapian/document.h"
 #include "xapian/backends/inmemory/inmemory_positionlist.h"
 #include "xapian/common/internaltypes.h"
 #include "xapian/common/omassert.h"
-
-using namespace std;
 
 // Class representing a posting (a term/doc pair, and
 // all the relevant positional information, is a single posting)
@@ -50,37 +48,25 @@ class InMemoryPosting {
     Xapian::VecCOW<Xapian::termpos> positions; // Sorted vector of positions
     Xapian::termcount wdf;
 
-    // Merge two postings (same term/doc pair, new positional info)
-    void merge(const InMemoryPosting & post) {
-	Assert(did == post.did);
-
-	positions.reserve(positions.size() + post.positions.size());
-	for (auto&& pos : post.positions) {
-	    positions.push_back(pos);
-	}
-	inplace_merge(positions.begin(),
-		      positions.begin() + post.positions.size(),
-		      positions.end());
+    // Add new position entry preserving sorted order.
+    void add_position(Xapian::termpos pos) {
+	auto p = std::lower_bound(positions.begin(), positions.end(), pos);
+	Assert(p == positions.end() || *p != pos);
+	positions.insert(p, pos);
     }
 };
 
 class InMemoryTermEntry {
   public:
-    string tname;
+    std::string tname;
     Xapian::VecCOW<Xapian::termpos> positions; // Sorted vector of positions
     Xapian::termcount wdf;
 
-    // Merge two postings (same term/doc pair, new positional info)
-    void merge(const InMemoryTermEntry & post) {
-	Assert(tname == post.tname);
-
-	positions.reserve(positions.size() + post.positions.size());
-	for (auto&& pos : post.positions) {
-	    positions.push_back(pos);
-	}
-	inplace_merge(positions.begin(),
-		      positions.begin() + post.positions.size(),
-		      positions.end());
+    // Add new position entry preserving sorted order.
+    void add_position(Xapian::termpos pos) {
+	auto p = std::lower_bound(positions.begin(), positions.end(), pos);
+	Assert(p == positions.end() || *p != pos);
+	positions.insert(p, pos);
     }
 };
 
@@ -108,14 +94,17 @@ class InMemoryTermEntryLessThan {
 class InMemoryTerm {
   public:
     // Sorted list of documents indexing this term.
-    vector<InMemoryPosting> docs;
+    std::vector<InMemoryPosting> docs;
 
     Xapian::termcount term_freq;
     Xapian::termcount collection_freq;
 
     InMemoryTerm() : term_freq(0), collection_freq(0) {}
 
-    void add_posting(InMemoryPosting&& post);
+    void add_posting(Xapian::docid did,
+		     Xapian::termcount wdf,
+		     Xapian::termpos position,
+		     bool use_position);
 };
 
 /// Class representing a document and the terms indexing it.
@@ -123,7 +112,7 @@ class InMemoryDoc {
   public:
     bool is_valid;
     // Sorted list of terms indexing this document.
-    vector<InMemoryTermEntry> terms;
+    std::vector<InMemoryTermEntry> terms;
 
     /* Initialise invalid by default, so that resizing the termlist array
      * doesn't create valid documents. */
@@ -132,7 +121,10 @@ class InMemoryDoc {
     // Initialise specifying validity.
     explicit InMemoryDoc(bool is_valid_) : is_valid(is_valid_) {}
 
-    void add_posting(InMemoryTermEntry&& post);
+    void add_posting(const std::string& tname,
+		     Xapian::termcount wdf,
+		     Xapian::termpos position,
+		     bool use_position);
 };
 
 class InMemoryDatabase;
@@ -143,9 +135,8 @@ class InMemoryPostList : public LeafPostList {
     friend class InMemoryDatabase;
 
   private:
-    vector<InMemoryPosting>::const_iterator pos;
-    vector<InMemoryPosting>::const_iterator end;
-    Xapian::doccount termfreq;
+    std::vector<InMemoryPosting>::const_iterator pos;
+    std::vector<InMemoryPosting>::const_iterator end;
     bool started;
 
     /** List of positions of the current term.
@@ -155,13 +146,15 @@ class InMemoryPostList : public LeafPostList {
 
     Xapian::Internal::intrusive_ptr<const InMemoryDatabase> db;
 
-    InMemoryPostList(Xapian::Internal::intrusive_ptr<const InMemoryDatabase> db,
-		     const InMemoryTerm & imterm, const std::string & term_);
-  public:
-    Xapian::doccount get_termfreq() const;
+    Xapian::termcount wdf_upper_bound;
 
+    InMemoryPostList(const InMemoryDatabase* db,
+		     const InMemoryTerm& imterm, std::string_view term_);
+  public:
     Xapian::docid get_docid() const;     // Gets current docid
     Xapian::termcount get_wdf() const;	   // Within Document Frequency
+    // Max wdf of terms in current document
+    Xapian::termcount get_wdfdocmax() const;
     PositionList * read_position_list();
     PositionList * open_position_list() const;
 
@@ -173,7 +166,11 @@ class InMemoryPostList : public LeafPostList {
     // True if we're off the end of the list.
     bool at_end() const;
 
-    string get_description() const;
+    Xapian::termcount get_wdf_upper_bound() const;
+
+    void get_docid_range(Xapian::docid& first, Xapian::docid& last) const;
+
+    std::string get_description() const;
 };
 
 /** A PostList over all docs in an inmemory database.
@@ -186,11 +183,9 @@ class InMemoryAllDocsPostList : public LeafPostList {
 
     Xapian::Internal::intrusive_ptr<const InMemoryDatabase> db;
 
-    InMemoryAllDocsPostList(Xapian::Internal::intrusive_ptr<const InMemoryDatabase> db);
+    InMemoryAllDocsPostList(const InMemoryDatabase* db);
 
   public:
-    Xapian::doccount get_termfreq() const;
-
     Xapian::docid get_docid() const;     // Gets current docid
     Xapian::termcount get_doclength() const; // Length of current document
     // number of terms in current document
@@ -207,7 +202,9 @@ class InMemoryAllDocsPostList : public LeafPostList {
     // True if we're off the end of the list
     bool at_end() const;
 
-    string get_description() const;
+    Xapian::termcount get_wdf_upper_bound() const;
+
+    std::string get_description() const;
 };
 
 // Term List
@@ -215,8 +212,8 @@ class InMemoryTermList : public TermList {
     friend class InMemoryDatabase;
 
   private:
-    vector<InMemoryTermEntry>::const_iterator pos;
-    vector<InMemoryTermEntry>::const_iterator end;
+    std::vector<InMemoryTermEntry>::const_iterator pos;
+    std::vector<InMemoryTermEntry>::const_iterator end;
     Xapian::termcount terms;
     bool started;
 
@@ -235,13 +232,11 @@ class InMemoryTermList : public TermList {
     /// Collate weighting information for the current term.
     void accumulate_stats(Xapian::Internal::ExpandStats & stats) const;
 
-    string get_termname() const;
     // Number of occurrences of term in current doc
     Xapian::termcount get_wdf() const;
     Xapian::doccount get_termfreq() const;  // Number of docs indexed by term
     TermList * next();
-    TermList * skip_to(const std::string & term);
-    bool at_end() const;
+    TermList* skip_to(std::string_view term);
     Xapian::termcount positionlist_count() const;
     PositionList* positionlist_begin() const;
 };
@@ -256,15 +251,15 @@ class InMemoryDatabase : public Xapian::Database::Internal {
     friend class InMemoryAllDocsPostList;
     friend class InMemoryDocument;
 
-    map<string, InMemoryTerm> postlists;
-    vector<InMemoryDoc> termlists;
-    vector<std::string> doclists;
-    vector<std::map<Xapian::valueno, string>> valuelists;
+    std::map<std::string, InMemoryTerm, std::less<>> postlists;
+    std::vector<InMemoryDoc> termlists;
+    std::vector<std::string> doclists;
+    std::vector<std::map<Xapian::valueno, std::string>> valuelists;
     std::map<Xapian::valueno, ValueStats> valuestats;
 
-    vector<Xapian::termcount> doclengths;
+    std::vector<Xapian::termcount> doclengths;
 
-    std::map<string, string> metadata;
+    std::map<std::string, std::string, std::less<>> metadata;
 
     Xapian::doccount totdocs;
 
@@ -279,18 +274,18 @@ class InMemoryDatabase : public Xapian::Database::Internal {
     InMemoryDatabase& operator=(const InMemoryDatabase &);
     InMemoryDatabase(const InMemoryDatabase &);
 
-    void make_term(const string & tname);
+    void make_term(const std::string& tname);
 
     bool doc_exists(Xapian::docid did) const;
-    Xapian::docid make_doc(const string & docdata);
+    Xapian::docid make_doc(const std::string& docdata);
 
     /* The common parts of add_doc and replace_doc */
     void finish_add_doc(Xapian::docid did, const Xapian::Document& document);
     void add_values(Xapian::docid did,
-		    const map<Xapian::valueno, string>& values_);
+		    const std::map<Xapian::valueno, std::string>& values_);
 
-    void make_posting(InMemoryDoc * doc,
-		      const string & tname,
+    void make_posting(InMemoryDoc* doc,
+		      const std::string& tname,
 		      Xapian::docid did,
 		      Xapian::termpos position,
 		      Xapian::termcount wdf,
@@ -302,7 +297,7 @@ class InMemoryDatabase : public Xapian::Database::Internal {
     void commit();
     void cancel();
 
-    Xapian::DocumentInfo add_document(const Xapian::Document & document);
+    Xapian::docid add_document(const Xapian::Document & document);
     // Stop the default implementation of delete_document(term) and
     // replace_document(term) from being hidden.  This isn't really
     // a problem as we only try to call them through the base class
@@ -311,8 +306,7 @@ class InMemoryDatabase : public Xapian::Database::Internal {
     using Xapian::Database::Internal::delete_document;
     using Xapian::Database::Internal::replace_document;
     void delete_document(Xapian::docid did);
-    Xapian::DocumentInfo replace_document(Xapian::docid did,
-					  const Xapian::Document & document);
+    void replace_document(Xapian::docid did, const Xapian::Document & document);
     //@}
 
   public:
@@ -335,44 +329,51 @@ class InMemoryDatabase : public Xapian::Database::Internal {
     Xapian::totallength get_total_length() const;
     Xapian::termcount get_doclength(Xapian::docid did) const;
     Xapian::termcount get_unique_terms(Xapian::docid did) const;
+    Xapian::termcount get_wdfdocmax(Xapian::docid did) const;
 
-    void get_freqs(const string & term,
-		   Xapian::doccount * termfreq_ptr,
-		   Xapian::termcount * collfreq_ptr) const;
+    void get_freqs(std::string_view term,
+		   Xapian::doccount* termfreq_ptr,
+		   Xapian::termcount* collfreq_ptr) const;
     Xapian::doccount get_value_freq(Xapian::valueno slot) const;
     std::string get_value_lower_bound(Xapian::valueno slot) const;
     std::string get_value_upper_bound(Xapian::valueno slot) const;
     Xapian::termcount get_doclength_lower_bound() const;
     Xapian::termcount get_doclength_upper_bound() const;
-    Xapian::termcount get_wdf_upper_bound(const std::string& term) const;
-    bool term_exists(const string & tname) const;
+    Xapian::termcount get_wdf_upper_bound(std::string_view term) const;
+    bool term_exists(std::string_view term) const;
     bool has_positions() const;
 
-    PostList * open_post_list(const string & tname) const;
-    LeafPostList* open_leaf_post_list(const string& term,
+    PostList* open_post_list(std::string_view tname) const;
+    LeafPostList* open_leaf_post_list(std::string_view term,
 				      bool need_read_pos) const;
     TermList * open_term_list(Xapian::docid did) const;
     TermList * open_term_list_direct(Xapian::docid did) const;
     Xapian::Document::Internal* open_document(Xapian::docid did,
 					      bool lazy) const;
 
-    std::string get_metadata(const std::string & key) const;
-    TermList * open_metadata_keylist(const std::string &prefix) const;
-    void set_metadata(const std::string & key, const std::string & value);
+    std::string get_metadata(std::string_view key) const;
+    TermList* open_metadata_keylist(std::string_view prefix) const;
+    void set_metadata(std::string_view key, std::string_view value);
 
     Xapian::termcount positionlist_count(Xapian::docid did,
-					 const string & tname) const;
-    PositionList * open_position_list(Xapian::docid did,
-				      const string & tname) const;
-    TermList * open_allterms(const string & prefix) const;
+					 std::string_view tname) const;
+    PositionList* open_position_list(Xapian::docid did,
+				     std::string_view tname) const;
+    TermList* open_allterms(std::string_view prefix) const;
 
     [[noreturn]]
     static void throw_database_closed();
 
-    int get_backend_info(string * path) const {
-	if (path) *path = string();
+    int get_backend_info(std::string* path) const {
+	if (path) *path = std::string();
 	return BACKEND_INMEMORY;
     }
+
+    void get_used_docid_range(Xapian::docid& first, Xapian::docid& last) const;
+
+    bool locked() const { return !closed; }
+
+    Xapian::Database::Internal* update_lock(int flags);
 
     std::string get_description() const;
 };

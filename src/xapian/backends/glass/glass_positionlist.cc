@@ -1,4 +1,4 @@
-/** @file glass_positionlist.cc
+/** @file
  * @brief A position list in a glass database.
  */
 /* Copyright (C) 2004,2005,2006,2008,2009,2010,2013,2017,2019 Olly Betts
@@ -14,9 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -52,7 +51,7 @@ GlassPositionListTable::pack(string & s,
 }
 
 Xapian::termcount
-GlassPositionListTable::positionlist_count(const string& data) const
+GlassPositionListTable::positionlist_count(string_view data) const
 {
     LOGCALL(DB, Xapian::termcount, "GlassPositionListTable::positionlist_count", data);
 
@@ -78,7 +77,7 @@ GlassPositionListTable::positionlist_count(const string& data) const
 
 Xapian::termcount
 GlassPositionListTable::positionlist_count(Xapian::docid did,
-					   const string & term) const
+					   string_view term) const
 {
     LOGCALL(DB, Xapian::termcount, "GlassPositionListTable::positionlist_count", did | term);
 
@@ -93,7 +92,7 @@ GlassPositionListTable::positionlist_count(Xapian::docid did,
 ///////////////////////////////////////////////////////////////////////////
 
 void
-GlassBasePositionList::set_data(const string& data)
+GlassBasePositionList::set_data(string_view data)
 {
     LOGCALL_VOID(DB, "GlassBasePositionList::set_data", data);
 
@@ -197,20 +196,6 @@ GlassPositionList::GlassPositionList(string&& data)
     set_data(pos_data);
 }
 
-GlassPositionList::GlassPositionList(const GlassTable* table,
-				     Xapian::docid did,
-				     const string& term)
-{
-    LOGCALL_CTOR(DB, "GlassPositionList", table | did | term);
-
-    if (!table->get_exact_entry(GlassPositionListTable::make_key(did, term),
-				pos_data)) {
-	pos_data.clear();
-    }
-
-    set_data(pos_data);
-}
-
 void
 GlassRePositionList::assign_data(string&& data)
 {
@@ -226,7 +211,7 @@ GlassRePositionList::assign_data(string&& data)
 
 void
 GlassRePositionList::read_data(Xapian::docid did,
-			       const string& term)
+			       string_view term)
 {
     LOGCALL_VOID(DB, "GlassRePositionList::read_data", did | term);
 

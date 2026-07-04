@@ -1,7 +1,7 @@
-/** @file valuerangeproc.cc
+/** @file
  * @brief Standard RangeProcessor subclass implementations
  */
-/* Copyright (C) 2007,2008,2009,2010,2012,2016,2018 Olly Betts
+/* Copyright (C) 2007-2026 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -23,7 +23,11 @@
 #include "xapian/queryparser.h"
 
 #include <cerrno>
-#include <cstdlib> // For atoi().
+#ifdef HAVE_STD_FROM_CHARS_DOUBLE
+# include <charconv>
+#else
+# include <cstdlib> // For strtod().
+#endif
 
 #include <string>
 #include "xapian/common/stringutils.h"
@@ -40,22 +44,28 @@ decode_xxy(const string & s, int & x1, int &x2, int &y)
 	return true;
     }
     if (s.size() < 5 || s.size() > 10) return false;
-    size_t i = s.find_first_not_of("0123456789");
-    if (i < 1 || i > 2 || !(s[i] == '/' || s[i] == '-' || s[i] == '.'))
-	return false;
-    size_t j = s.find_first_not_of("0123456789", i + 1);
-    if (j - (i + 1) < 1 || j - (i + 1) > 2 ||
-	!(s[j] == '/' || s[j] == '-' || s[j] == '.'))
-	return false;
-    if (s.size() - j > 4 + 1) return false;
-    if (s.find_first_not_of("0123456789", j + 1) != string::npos)
-	return false;
-    x1 = atoi(s.c_str());
+    const char* p = s.c_str();
+    if (!C_isdigit(*p)) return false;
+    x1 = *p++ - '0';
+    if (C_isdigit(*p)) {
+	x1 = x1 * 10 + (*p++ - '0');
+    }
     if (x1 < 1 || x1 > 31) return false;
-    x2 = atoi(s.c_str() + i + 1);
+    char sep = *p++;
+    if (sep != '/' && sep != '-' && sep != '.') return false;
+    if (!C_isdigit(*p)) return false;
+    x2 = *p++ - '0';
+    if (C_isdigit(*p)) {
+	x2 = x2 * 10 + (*p++ - '0');
+    }
     if (x2 < 1 || x2 > 31) return false;
-    y = atoi(s.c_str() + j + 1);
-    return true;
+    if (*p++ != sep) return false;
+    if (s.size() - (p - s.c_str()) > 4) return false;
+    y = *p++ - '0';
+    while (C_isdigit(*p)) {
+	y = y * 10 + (*p++ - '0');
+    }
+    return size_t(p - s.c_str()) == s.size();
 }
 
 // We just use this to decide if an ambiguous aa/bb/cc date could be a
@@ -121,7 +131,19 @@ RangeProcessor::check_range(const string& b, const string& e)
     bool prefix = !(flags & Xapian::RP_SUFFIX);
     bool repeated = (flags & Xapian::RP_REPEATED);
 
-    if (prefix) {
+    if (repeated && prefix && b.empty()) {
+	// Handle empty start and prefix on end, e.g.: ..$20
+	if (!startswith(e, str)) {
+	    goto not_our_range;
+	}
+	off_e = str.size();
+    } else if (repeated && !prefix && e.empty()) {
+	// Handle empty end and suffix on start, e.g.: 20kg..
+	if (!endswith(b, str)) {
+	    goto not_our_range;
+	}
+	len_b = b.size() - str.size();
+    } else if (prefix) {
 	// If there's a prefix, require it on the start of the range.
 	if (!startswith(b, str)) {
 	    // Prefix not given.
@@ -243,6 +265,15 @@ NumberRangeProcessor::operator()(const string& b, const string& e)
     double num_b, num_e;
 
     if (!b.empty()) {
+#ifdef HAVE_STD_FROM_CHARS_DOUBLE
+	const char* startptr = b.data();
+	const char* endptr = startptr + b.size();
+	const auto& r = from_chars(startptr, endptr, num_b);
+	if (r.ec != std::errc() || r.ptr != endptr) {
+	    // Invalid characters in string || overflow or underflow.
+	    goto not_our_range;
+	}
+#else
 	errno = 0;
 	const char * startptr = b.c_str();
 	char * endptr;
@@ -251,12 +282,22 @@ NumberRangeProcessor::operator()(const string& b, const string& e)
 	    // Invalid characters in string || overflow or underflow.
 	    goto not_our_range;
 	}
+#endif
     } else {
 	// Silence GCC warning.
 	num_b = 0.0;
     }
 
     if (!e.empty()) {
+#ifdef HAVE_STD_FROM_CHARS_DOUBLE
+	const char* startptr = e.data();
+	const char* endptr = startptr + e.size();
+	const auto& r = from_chars(startptr, endptr, num_e);
+	if (r.ec != std::errc() || r.ptr != endptr) {
+	    // Invalid characters in string || overflow or underflow.
+	    goto not_our_range;
+	}
+#else
 	errno = 0;
 	const char * startptr = e.c_str();
 	char * endptr;
@@ -265,6 +306,7 @@ NumberRangeProcessor::operator()(const string& b, const string& e)
 	    // Invalid characters in string || overflow or underflow.
 	    goto not_our_range;
 	}
+#endif
     } else {
 	// Silence GCC warning.
 	num_e = 0.0;
@@ -308,6 +350,16 @@ UnitRangeProcessor::operator()(const string& b, const string& e)
     bool b_has_unit = false;
 
     if (!b.empty()) {
+#ifdef HAVE_STD_FROM_CHARS_DOUBLE
+	const char* startptr = b.data();
+	const char* endptr = startptr + b.size();
+	const auto& r = from_chars(startptr, endptr, num_b);
+	if (r.ec != std::errc()) {
+	    // Invalid characters in string || overflow or underflow.
+	    goto not_our_range;
+	}
+	endptr = r.ptr;
+#else
 	errno = 0;
 	const char * startptr = b.c_str();
 	char * endptr;
@@ -317,6 +369,7 @@ UnitRangeProcessor::operator()(const string& b, const string& e)
 	    // overflow or underflow
 	    goto not_our_range;
 	}
+#endif
 
 	// For lower range having a unit, e.g. 100K..
 	if (endptr == startptr + b.size() - 1) {
@@ -334,6 +387,16 @@ UnitRangeProcessor::operator()(const string& b, const string& e)
     }
 
     if (!e.empty()) {
+#ifdef HAVE_STD_FROM_CHARS_DOUBLE
+	const char* startptr = e.data();
+	const char* endptr = startptr + e.size();
+	const auto& r = from_chars(startptr, endptr, num_e);
+	if (r.ec != std::errc()) {
+	    // Invalid characters in string || overflow or underflow.
+	    goto not_our_range;
+	}
+	endptr = r.ptr;
+#else
 	errno = 0;
 	const char * startptr = e.c_str();
 	char * endptr;
@@ -343,6 +406,7 @@ UnitRangeProcessor::operator()(const string& b, const string& e)
 	    // overflow or underflow
 	    goto not_our_range;
 	}
+#endif
 
 	// For upper range having a unit, e.g. ..100K
 	if (endptr == startptr + e.size() - 1) {

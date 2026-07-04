@@ -1,7 +1,7 @@
-/** @file databasehelpers.h
+/** @file
  * @brief Helper functions for database handling
  */
-/* Copyright 2002-2019 Olly Betts
+/* Copyright 2002-2024 Olly Betts
  * Copyright 2008 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -15,24 +15,39 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
- * USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_DATABASEHELPERS_H
 #define XAPIAN_INCLUDED_DATABASEHELPERS_H
 
 #include <cerrno>
-#include <cstdlib>
 #include <fstream>
 #include <string>
+#include <string_view>
 
 #include "xapian/common/fileutils.h"
+#include "xapian/common/parseint.h"
 #include "xapian/common/safesysstat.h"
 #include "xapian/common/safeunistd.h"
 #include "xapian/common/str.h"
 #include "xapian/error.h"
+
+/** Probe if a file descriptor is a single-file database.
+ *
+ *  This function looks for a single-file database at the current file offset
+ *  of @a fd, restoring the file offset afterwards.
+ *
+ *  @param fd      The file descriptor to check
+ *
+ *  @return  A BACKEND_* constant from backends.h:
+ *           * BACKEND_UNKNOWN : unknown (could be a stub file)
+ *           * BACKEND_GLASS : glass single file
+ *           * BACKEND_HONEY : honey single file
+ */
+int
+test_if_single_file_db(int fd);
 
 /** Probe if a path is a single-file database.
  *
@@ -62,7 +77,7 @@ template<typename A1,
 	 typename A5,
 	 typename A6>
 void
-read_stub_file(const std::string& file,
+read_stub_file(std::string_view file,
 	       A1 action_auto,
 	       A2 action_glass,
 	       A3 action_honey,
@@ -77,7 +92,7 @@ read_stub_file(const std::string& file,
     //
     // Any paths specified in stub database files which are relative will be
     // considered to be relative to the directory containing the stub database.
-    std::ifstream stub(file.c_str());
+    std::ifstream stub(std::string{file});
     if (!stub) {
 	std::string msg = "Couldn't open stub database file: ";
 	msg += file;
@@ -128,16 +143,15 @@ read_stub_file(const std::string& file,
 	    if (line[0] == ':') {
 		// prog
 		// FIXME: timeouts
-		// Is it a security risk?
 		space = line.find(' ');
 		std::string args;
-		if (space != std::string::npos) {
-		    args.assign(line, space + 1, std::string::npos);
-		    line.assign(line, 1, space - 1);
-		} else {
-		    line.erase(0, 1);
+		if (space == std::string::npos) {
+		    action_remote_prog(std::string_view(line).substr(1),
+				       std::string_view());
+		    continue;
 		}
-		action_remote_prog(line, args);
+		action_remote_prog(std::string_view(&line[1], space - 1),
+				   std::string_view(line).substr(space + 1));
 		continue;
 	    }
 	    std::string::size_type colon = line.rfind(':');
@@ -148,14 +162,16 @@ read_stub_file(const std::string& file,
 		// port number is required, so just leave that case to the
 		// error handling further below.
 		if (!(line[0] == '[' && line.back() == ']')) {
-		    unsigned int port = std::atoi(line.c_str() + colon + 1);
-		    line.erase(colon);
-		    if (line[0] == '[' && line.back() == ']') {
-			line.erase(line.size() - 1, 1);
-			line.erase(0, 1);
+		    unsigned int port;
+		    if (parse_unsigned(line.c_str() + colon + 1, port)) {
+			std::string_view host{line};
+			host = host.substr(0, colon);
+			if (host[0] == '[' && host.back() == ']') {
+			    host = host.substr(1, host.size() - 2);
+			}
+			action_remote_tcp(host, port);
+			continue;
 		    }
-		    action_remote_tcp(line, port);
-		    continue;
 		}
 	    }
 #else
@@ -190,7 +206,7 @@ read_stub_file(const std::string& file,
 	// arrange for it to be read as a stub database via infelicities in
 	// an application which uses Xapian.  The line number is enough
 	// information to identify the problem line.
-	std::string msg = file;
+	std::string msg{file};
 	msg += ':';
 	msg += str(line_no);
 	msg += ": Bad line";

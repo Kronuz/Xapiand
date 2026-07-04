@@ -1,4 +1,4 @@
-/** @file terminfo.h
+/** @file
  * @brief Metadata for a term in a document
  */
 /* Copyright 2017,2018,2019 Olly Betts
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_TERMINFO_H
@@ -23,8 +23,6 @@
 
 #include "xapian/api/smallvector.h"
 #include "xapian/types.h"
-
-using namespace std;
 
 /// Metadata for a term in a document
 class TermInfo {

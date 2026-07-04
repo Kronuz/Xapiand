@@ -1,4 +1,4 @@
-/** @file parseint.h
+/** @file
  * @brief Parse signed and unsigned type from string and check for trailing characters.
  */
 /* Copyright (C) 2019 Olly Betts
@@ -15,12 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 #ifndef XAPIAN_INCLUDED_PARSEINT_H
 #define XAPIAN_INCLUDED_PARSEINT_H
 
+#include "xapian/common/negate_unsigned.h"
 #include "xapian/common/overflow.h"
 #include <limits>
 
@@ -31,7 +32,7 @@ bool parse_unsigned(const char* p, T& res)
     do {
 	unsigned char digit = *p - '0';
 	if (digit > 9 ||
-	    mul_overflows(res, (unsigned int)10, res) ||
+	    mul_overflows(res, unsigned(10), res) ||
 	    add_overflows(res, digit, res)) {
 	    return false;
 	}
@@ -42,12 +43,12 @@ bool parse_unsigned(const char* p, T& res)
 template<typename T>
 bool parse_signed(const char* p, T& res)
 {
-    typedef typename std::make_unsigned<T>::type unsigned_type;
+    typedef typename std::make_unsigned_t<T> unsigned_type;
     unsigned_type temp = 0;
     if (*p == '-' && parse_unsigned(++p, temp) &&
 	// casting the min signed value to unsigned gives us its absolute value.
 	temp <= unsigned_type(std::numeric_limits<T>::min())) {
-	res = -temp;
+	res = negate_unsigned(temp);
 	return true;
     } else if (parse_unsigned(p, temp) &&
 	       temp <= unsigned_type(std::numeric_limits<T>::max())) {

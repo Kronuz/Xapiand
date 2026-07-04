@@ -24,17 +24,17 @@
 #define XAPIAN_ENABLE_VISIBILITY
 
 /// The version of Xapian as a C string literal.
-#define XAPIAN_VERSION "1.5.0"
+#define XAPIAN_VERSION "2.0.0"
 
 /** The major component of the Xapian version.
  * E.g. for Xapian 1.0.14 this would be: 1
  */
-#define XAPIAN_MAJOR_VERSION 1
+#define XAPIAN_MAJOR_VERSION 2
 
 /** The minor component of the Xapian version.
  * E.g. for Xapian 1.0.14 this would be: 0
  */
-#define XAPIAN_MINOR_VERSION 5
+#define XAPIAN_MINOR_VERSION 0
 
 /** The revision component of the Xapian version.
  * E.g. for Xapian 1.0.14 this would be: 14

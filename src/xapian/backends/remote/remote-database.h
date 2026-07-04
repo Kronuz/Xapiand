@@ -1,7 +1,7 @@
-/** @file remote-database.h
+/** @file
  *  @brief RemoteDatabase is the baseclass for remote database implementations.
  */
-/* Copyright (C) 2006,2007,2009,2010,2011,2014,2015,2017 Olly Betts
+/* Copyright (C) 2006-2024 Olly Betts
  * Copyright (C) 2007,2009,2010 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -15,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * along with this program; if not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef XAPIAN_INCLUDED_REMOTE_DATABASE_H
@@ -29,6 +29,8 @@
 #include "xapian/net/remoteconnection.h"
 #include "xapian/backends/valuestats.h"
 #include "xapian/weight.h"
+
+#include <utility>
 
 namespace Xapian {
     class RSet;
@@ -48,15 +50,6 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     /// Don't allow copying.
     RemoteDatabase(const RemoteDatabase &);
-
-    // Directory to store databases in.
-    const std::string db_dir;
-
-    // The database is writable.
-    const bool writable;
-
-    // Bitwise-or of Xapian::DB_* flags.
-    const int flags;
 
     /// The object which does the I/O.
     mutable OwnedRemoteConnection link;
@@ -79,14 +72,20 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// Has positional information?
     mutable bool has_positional_info;
 
-    /// The revision of the remote database.
-    mutable Xapian::rev revision;
+    /** Are we currently expecting a reply?
+     *
+     *  Our caller might send a message but then an exception (from another
+     *  shard or locally) might cause it not to try to read the reply before
+     *  sending another message.  This flag allows us to detect that situation
+     *  and discard the unwanted reply rather than trying to read it as the
+     *  response to the new message.
+     */
+    mutable bool pending_reply = false;
 
     /// The UUID of the remote database.
     mutable std::string uuid;
 
-    /// The context to return with any error messages
-    std::string context;
+    mutable bool cached_stats_valid;
 
     /** The most recently used value statistics. */
     mutable ValueStats mru_valstats;
@@ -97,6 +96,14 @@ class RemoteDatabase : public Xapian::Database::Internal {
      */
     mutable Xapian::valueno mru_slot;
 
+    /** True if there are (or may be) uncommitted changes.
+     *
+     *  Used to optimise away commit()/cancel() calls.  These can be explicit,
+     *  but also can happen implicitly when the WritableDatabase destructor is
+     *  called.
+     */
+    mutable bool uncommitted_changes = false;
+
     bool update_stats(message_type msg_code = MSG_UPDATE,
 		      const std::string & body = std::string()) const;
 
@@ -105,19 +112,24 @@ class RemoteDatabase : public Xapian::Database::Internal {
      *  can't be created - a derived class must be instantiated which
      *  has code in the constructor to open the socket.
      *
-     *  @param fd	The file descriptor for the connection to the server.
+     *  @param fd_and_context
+     *			A std::pair containing the file descriptor for the
+     *			connection to the server and a context string to
+     *			return with any error messages.  (These are passed
+     *			together so the caller can return them from a
+     *			single helper function easily).
      *  @param timeout_ The timeout used with the network operations.
      *			Generally a Xapian::NetworkTimeoutError exception will
      *			be thrown if the remote end doesn't respond for this
      *			length of time (in seconds).  A timeout of 0 means that
      *			operations will never timeout.
-     *  @param context_ The context to return with any error messages.
-     *  @param writable	Is this a WritableDatabase?
-     *  @param flags	Xapian::DB_RETRY_LOCK or Bitwise-or of Xapian::DB_* constants.
-     *  @param dir      Database directory index to open.
+     *	@param writable	Is this a WritableDatabase?
+     *	@param flags	Xapian::DB_RETRY_LOCK or 0.
      */
-    RemoteDatabase(int fd, double timeout_, const std::string& context_,
-		   bool writable, int flags, const std::string& dir);
+    RemoteDatabase(std::pair<int, std::string> fd_and_context,
+		   double timeout_,
+		   bool writable,
+		   int flags);
 
     /// Receive a message from the server.
     reply_type get_message(std::string& message,
@@ -135,7 +147,7 @@ class RemoteDatabase : public Xapian::Database::Internal {
     }
 
     /// Send a message to the server.
-    void send_message(message_type type, const std::string& data) const;
+    void send_message(message_type type, std::string_view data) const;
 
     /// Close the socket
     void do_close();
@@ -151,14 +163,12 @@ class RemoteDatabase : public Xapian::Database::Internal {
      *  Extra method for RemoteDatabase.
      */
     Xapian::termcount positionlist_count(Xapian::docid did,
-					 const std::string& term) const;
+					 std::string_view term) const;
 
     /// Send a keep-alive message.
     void keep_alive();
 
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
-
-    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
 
     /** Set the query
      *
@@ -179,10 +189,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
      * @param wtscheme			Weighting scheme.
      * @param omrset			The rset.
      * @param matchspies                The matchspies to use.
-     * @param full_db_has_positions	Does the full DB have positions?
      */
-    void set_query(const std::string& query_id,
-		   const Xapian::Query& query,
+    void set_query(const Xapian::Query& query,
 		   Xapian::termcount qlen,
 		   Xapian::valueno collapse_key,
 		   Xapian::doccount collapse_max,
@@ -194,9 +202,7 @@ class RemoteDatabase : public Xapian::Database::Internal {
 		   int percent_threshold, double weight_threshold,
 		   const Xapian::Weight& wtscheme,
 		   const Xapian::RSet &omrset,
-		   const std::vector<opt_ptr_spy>& matchspies,
-		   const Xapian::KeyMaker* sorter,
-		   bool full_db_has_positions) const;
+		   const std::vector<opt_ptr_spy>& matchspies) const;
 
     /** Get the underlying fd this remote connection reads from.
      *
@@ -207,21 +213,21 @@ class RemoteDatabase : public Xapian::Database::Internal {
 	return link.get_read_fd();
     }
 
-    /// Get the stats from the remote server.
-    void get_remote_stats(Xapian::Weight::Internal& out) const;
+    /// Accumulate stats from the remote server.
+    void accumulate_remote_stats(Xapian::Weight::Internal& total) const;
 
     /// Send the global stats to the remote server.
-    void send_global_stats(const std::string& query_id,
-			   Xapian::doccount first,
+    void send_global_stats(Xapian::doccount first,
 			   Xapian::doccount maxitems,
 			   Xapian::doccount check_at_least,
+			   const Xapian::KeyMaker* sorter,
 			   const Xapian::Weight::Internal &stats) const;
 
     /// Get the MSet from the remote server.
     Xapian::MSet get_mset(const std::vector<opt_ptr_spy>& matchspies) const;
 
     /// Get remote metadata key list.
-    TermList * open_metadata_keylist(const std::string & prefix) const;
+    TermList* open_metadata_keylist(std::string_view prefix) const;
 
     /// Get remote termlist.
     TermList * open_term_list(Xapian::docid did) const;
@@ -229,7 +235,7 @@ class RemoteDatabase : public Xapian::Database::Internal {
     TermList * open_term_list_direct(Xapian::docid did) const;
 
     /// Iterate all terms.
-    TermList * open_allterms(const std::string& prefix) const;
+    TermList* open_allterms(std::string_view prefix) const;
 
     bool has_positions() const;
 
@@ -237,14 +243,14 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     void close();
 
-    PostList* open_post_list(const std::string& term) const;
+    PostList* open_post_list(std::string_view term) const;
 
-    LeafPostList* open_leaf_post_list(const std::string& term, bool) const;
+    LeafPostList* open_leaf_post_list(std::string_view term, bool) const;
 
     Xapian::doccount read_post_list(const std::string& term, NetworkPostList & pl) const;
 
-    PositionList * open_position_list(Xapian::docid did,
-				      const std::string& tname) const;
+    PositionList* open_position_list(Xapian::docid did,
+				     std::string_view tname) const;
 
     /// Get a remote document.
     Xapian::Document::Internal * open_document(Xapian::docid did, bool lazy) const;
@@ -259,13 +265,14 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     Xapian::termcount get_doclength(Xapian::docid did) const;
     Xapian::termcount get_unique_terms(Xapian::docid did) const;
+    Xapian::termcount get_wdfdocmax(Xapian::docid did) const;
 
     /// Check if term exists.
-    bool term_exists(const std::string& tname) const;
+    bool term_exists(std::string_view term) const;
 
-    void get_freqs(const std::string& term,
-		   Xapian::doccount * termfreq_ptr,
-		   Xapian::termcount * collfreq_ptr) const;
+    void get_freqs(std::string_view term,
+		   Xapian::doccount* termfreq_ptr,
+		   Xapian::termcount* collfreq_ptr) const;
 
     /// Read the value statistics for a value from a remote database.
     void read_value_stats(Xapian::valueno slot) const;
@@ -275,41 +282,57 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     Xapian::termcount get_doclength_lower_bound() const;
     Xapian::termcount get_doclength_upper_bound() const;
-    Xapian::termcount get_wdf_upper_bound(const std::string& term) const;
+    Xapian::termcount get_wdf_upper_bound(std::string_view term) const;
 
     void commit();
 
     void cancel();
 
-    Xapian::DocumentInfo add_document(const Xapian::Document & doc);
+    Xapian::docid add_document(const Xapian::Document & doc);
 
     void delete_document(Xapian::docid did);
-    void delete_document(const std::string & unique_term);
+    void delete_document(std::string_view unique_term);
 
-    Xapian::DocumentInfo replace_document(Xapian::docid did,
-					  const Xapian::Document & doc);
-    Xapian::DocumentInfo replace_document(const std::string & unique_term,
-					  const Xapian::Document & document);
-
-    Xapian::rev get_revision() const;
+    void replace_document(Xapian::docid did, const Xapian::Document & doc);
+    Xapian::docid replace_document(std::string_view unique_term,
+				   const Xapian::Document& document);
 
     std::string get_uuid() const;
 
-    std::string get_metadata(const std::string& key) const;
+    std::string get_metadata(std::string_view key) const;
 
-    void set_metadata(const std::string& key, const std::string& value);
+    void set_metadata(std::string_view key, std::string_view value);
 
-    void add_spelling(const std::string& word, Xapian::termcount freqinc) const;
+    void request_document(Xapian::docid did) const;
 
-    Xapian::termcount remove_spelling(const std::string& word,
+    void add_spelling(std::string_view word, Xapian::termcount freqinc) const;
+
+    TermList* open_synonym_termlist(std::string_view term) const;
+
+    TermList* open_synonym_keylist(std::string_view prefix) const;
+
+    void add_synonym(std::string_view word, std::string_view synonym) const;
+
+    void remove_synonym(std::string_view word,
+			std::string_view synonym) const;
+
+    void clear_synonyms(std::string_view word) const;
+
+    Xapian::termcount remove_spelling(std::string_view word,
 				      Xapian::termcount freqdec) const;
 
     int get_backend_info(std::string* path) const {
-	if (path) *path = context;
+	if (path) *path = link.get_context();
 	return BACKEND_REMOTE;
     }
 
     bool locked() const;
+
+    std::string reconstruct_text(Xapian::docid did,
+				 size_t length,
+				 std::string_view prefix,
+				 Xapian::termpos start_pos,
+				 Xapian::termpos end_pos) const;
 
     std::string get_description() const;
 };
