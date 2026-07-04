@@ -270,7 +270,7 @@ def _load_remote_enum(enum_name, prefix):
     None if the header can't be found (e.g. the script was copied out of the repo,
     in which case the hard-coded fallback below is used)."""
     header = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          '..', '..', 'src', 'xapian', 'net', 'remoteprotocol.h')
+                          '..', 'src', 'xapian', 'net', 'remoteprotocol.h')
     try:
         with open(header) as f:
             src = f.read()

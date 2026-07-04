@@ -12,11 +12,25 @@ if [ -z "$endpoint" ]; then
 fi
 
 json_escape() {
-	python -c 'import sys, json; json.dump(sys.stdin.read(), sys.stdout)'
+	python3 -c 'import sys, json; json.dump(sys.stdin.read(), sys.stdout)'
+}
+
+# Emit a random "fortune". Use the fortune(6) program when it's installed;
+# otherwise fall back to a small built-in corpus so this runs anywhere.
+gen_fortune() {
+	if command -v fortune >/dev/null 2>&1; then
+		fortune
+		return
+	fi
+	awk 'BEGIN {
+		srand();
+		n = split("The best way to predict the future is to invent it.|Simplicity is the ultimate sophistication.|Premature optimization is the root of all evil.|Talk is cheap. Show me the code.|First, solve the problem. Then, write the code.|Make it work, make it right, make it fast.|It works on my machine.|The cloud is just another computer somewhere.|Weeks of coding can save you hours of planning.|Fortune favours the bold.", a, "|");
+		print a[int(rand()*n)+1];
+	}'
 }
 
 for id in $(seq "$start" "$end"); do
-	message="$(fortune | json_escape)"
+	message="$(gen_fortune | json_escape)"
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : $message}"
 	curl -s -H "Content-Type: application/json" -XPUT "$endpoint/$id$query" -d "$data" "$@"
 done

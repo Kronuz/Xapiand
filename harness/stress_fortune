@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+stress_fortune -- a sustained soak/stress driver for Xapiand.
+
+Unlike harness/loadtest.py (a short, *measured* benchmark), this hammers a node
+with concurrent writes+reads across many databases for a long time and reports
+what broke.  It's the "does it stay up and stay correct under load" net, not a
+throughput number.
+
+Lineage: this is the modern, dependency-free rewrite of the original
+contrib/bin/stress_fortune (Dubalu, 2018-2019), which needed `requests`, the
+xapiand-py client and the `fortune(6)` program.  This version uses only the
+Python standard library and a small built-in corpus, so it runs anywhere.
+
+Each worker loops: PUT a random "fortune" document into one of N databases, then
+GET it back and verify the field round-trips.  It prints one compact status char
+per op so you can watch it live, and a summary (ops, errors by kind, rate) at the
+end.
+
+  put ok  -> ' '     get ok (verified) -> '.'
+  4xx/5xx -> digit    mismatch -> '!'    timeout -> 't'/'T'    conn error -> 'c'/'C'
+
+Usage:
+  harness/stress_fortune --target localhost:8880 --workers 50 --databases 20 \
+      --duration 30 --commit
+  harness/stress_fortune --ops 100000 --workers 200            # op-count instead of time
+"""
+import argparse
+import http.client
+import json
+import random
+import sys
+import threading
+import time
+
+CORPUS = [
+    "The best way to predict the future is to invent it.",
+    "Simplicity is the ultimate sophistication.",
+    "Premature optimization is the root of all evil.",
+    "There are only two hard things in computer science: cache invalidation and naming things.",
+    "Programs must be written for people to read, and only incidentally for machines to execute.",
+    "Talk is cheap. Show me the code.",
+    "First, solve the problem. Then, write the code.",
+    "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+    "Fortune favours the bold, but abandons the timid.",
+    "A distributed system is one where a machine you didn't know existed can render your own unusable.",
+    "Weeks of coding can save you hours of planning.",
+    "It works on my machine.",
+    "The cloud is just someone else's computer.",
+    "Make it work, make it right, make it fast.",
+    "In theory there is no difference between theory and practice. In practice there is.",
+]
+
+_lock = threading.Lock()
+_stop = threading.Event()
+counts = {"put": 0, "get": 0, "verified": 0, "mismatch": 0, "err": 0}
+err_kinds = {}
+
+
+def bump(key, n=1):
+    with _lock:
+        counts[key] += n
+
+
+def note_err(ch, kind):
+    with _lock:
+        counts["err"] += 1
+        err_kinds[kind] = err_kinds.get(kind, 0) + 1
+    sys.stderr.write(ch)
+    sys.stderr.flush()
+
+
+def tick(ch):
+    sys.stderr.write(ch)
+    sys.stderr.flush()
+
+
+def request(target, method, path, body=None, timeout=30):
+    conn = http.client.HTTPConnection(target, timeout=timeout)
+    try:
+        headers = {"Content-Type": "application/json"} if body is not None else {}
+        conn.request(method, path, body=body, headers=headers)
+        r = conn.getresponse()
+        data = r.read()
+        return r.status, data
+    finally:
+        conn.close()
+
+
+def worker(wid, args):
+    rnd = random.Random(wid * 7919 + 1)
+    commit = "?commit=true" if args.commit else ""
+    while not _stop.is_set():
+        if args.ops and counts["put"] >= args.ops:
+            break
+        db = "stress_{}".format(rnd.randrange(args.databases))
+        # Namespace the doc id by worker so no two workers ever touch the same
+        # document -- otherwise a concurrent write to the same (db, id) races the
+        # read-back and reports a bogus "mismatch".  Keep it numeric (worker w owns
+        # the id band [w*docs_per_db, (w+1)*docs_per_db)) so it's a valid id and the
+        # "n" field stays integer-typed in the schema.
+        doc_id = wid * args.docs_per_db + rnd.randrange(args.docs_per_db)
+        text = rnd.choice(CORPUS)
+        body = json.dumps({"worker": wid, "fortune": text, "n": doc_id}).encode()
+        # PUT
+        try:
+            st, _ = request(args.target, "PUT", "/{}/{}{}".format(db, doc_id, commit), body)
+            bump("put")
+            if st >= 400:
+                note_err(str(st % 10), "put_http_{}".format(st))
+                continue
+            tick(" ")
+        except (TimeoutError, OSError) as e:
+            note_err("t" if isinstance(e, TimeoutError) else "c", type(e).__name__)
+            continue
+        # GET back + verify (only meaningful when committed synchronously)
+        if not args.commit:
+            continue
+        try:
+            st, data = request(args.target, "GET", "/{}/{}".format(db, doc_id))
+            bump("get")
+            if st == 404:
+                tick(".")  # eventually-consistent read miss; not an error
+                continue
+            if st >= 400:
+                note_err(str(st % 10), "get_http_{}".format(st))
+                continue
+            got = json.loads(data)
+            if got.get("fortune") == text:
+                bump("verified")
+                tick(".")
+            else:
+                bump("mismatch")
+                note_err("!", "mismatch")
+        except (TimeoutError, OSError) as e:
+            note_err("T" if isinstance(e, TimeoutError) else "C", type(e).__name__)
+        except (ValueError, KeyError) as e:
+            note_err("x", type(e).__name__)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Sustained soak/stress driver for Xapiand.")
+    ap.add_argument("--target", default="localhost:8880")
+    ap.add_argument("--workers", type=int, default=50)
+    ap.add_argument("--databases", type=int, default=20)
+    ap.add_argument("--docs-per-db", type=int, default=1000)
+    ap.add_argument("--duration", type=float, default=0, help="seconds to run (0 = use --ops)")
+    ap.add_argument("--ops", type=int, default=0, help="stop after this many PUTs (0 = use --duration)")
+    ap.add_argument("--commit", action="store_true", help="commit=true on writes + verify reads")
+    args = ap.parse_args()
+    if not args.duration and not args.ops:
+        args.duration = 30
+
+    print("stress: target={} workers={} databases={} {}".format(
+        args.target, args.workers, args.databases,
+        "duration={}s".format(args.duration) if args.duration else "ops={}".format(args.ops)),
+        file=sys.stderr)
+
+    t0 = time.time()
+    threads = [threading.Thread(target=worker, args=(w, args)) for w in range(args.workers)]
+    for t in threads:
+        t.start()
+    try:
+        if args.duration:
+            time.sleep(args.duration)
+            _stop.set()
+        while any(t.is_alive() for t in threads):
+            for t in threads:
+                t.join(timeout=0.2)
+    except KeyboardInterrupt:
+        _stop.set()
+    for t in threads:
+        t.join()
+    dt = time.time() - t0
+
+    sys.stderr.write("\n")
+    print("\n=== stress summary ===")
+    print("  elapsed:    {:.1f}s".format(dt))
+    print("  puts:       {} ({:.0f}/s)".format(counts["put"], counts["put"] / dt if dt else 0))
+    print("  gets:       {}  verified: {}  mismatch: {}".format(counts["get"], counts["verified"], counts["mismatch"]))
+    print("  errors:     {}".format(counts["err"]))
+    for kind, n in sorted(err_kinds.items(), key=lambda kv: -kv[1]):
+        print("    {:<24} {}".format(kind, n))
+    # Non-zero exit if anything actually failed (mismatches or hard errors; 404 read
+    # misses and eventual consistency are not counted as errors).
+    bad = counts["mismatch"] + counts["err"]
+    print("=== VERDICT: {} ===".format("GREEN (no failures)" if bad == 0 else "RED ({} failures)".format(bad)))
+    sys.exit(0 if bad == 0 else 1)
+
+
+if __name__ == "__main__":
+    main()
