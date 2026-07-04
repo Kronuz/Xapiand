@@ -59,7 +59,12 @@ namespace Remote {
  *				Xapian::NetworkTimeoutError is thrown.  A
  *				timeout of 0 means don't timeout.  (Default is
  *				10000ms, which is 10 seconds).
+ * @param flags		bitwise-or of Xapian::DB_* constants.
+ * @param dir		database directory index to open.
  */
+XAPIAN_VISIBILITY_DEFAULT
+Database open(std::string_view host, unsigned int port, unsigned timeout, unsigned connect_timeout, int flags, const std::string &dir);
+
 XAPIAN_VISIBILITY_DEFAULT
 Database open(std::string_view host,
 	      unsigned int port,
@@ -83,8 +88,12 @@ Database open(std::string_view host,
  *				Xapian::NetworkTimeoutError is thrown.  A
  *				timeout of 0 means don't timeout.  (Default is
  *				10000ms, which is 10 seconds).
- * @param flags		Xapian::DB_RETRY_LOCK or 0.
+ * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
+ * @param dir		database directory index to open.
  */
+XAPIAN_VISIBILITY_DEFAULT
+WritableDatabase open_writable(std::string_view host, unsigned int port, unsigned timeout, unsigned connect_timeout, int flags, const std::string &dir);
+
 XAPIAN_VISIBILITY_DEFAULT
 WritableDatabase open_writable(std::string_view host,
 			       unsigned int port,
@@ -105,7 +114,12 @@ WritableDatabase open_writable(std::string_view host,
  *			then Xapian::NetworkTimeoutError is thrown.  A timeout
  *			of 0 means don't timeout.  (Default is 10000ms, which
  *			is 10 seconds).
+ * @param flags		bitwise-or of Xapian::DB_* constants.
+ * @param dir		database directory index to open.
  */
+XAPIAN_VISIBILITY_DEFAULT
+Database open(std::string_view program, std::string_view args, unsigned timeout, int flags, const std::string &dir);
+
 XAPIAN_VISIBILITY_DEFAULT
 Database open(std::string_view program,
 	      std::string_view args,
@@ -123,8 +137,12 @@ Database open(std::string_view program,
  *			for any individual operation on the remote database
  *			then Xapian::NetworkTimeoutError is thrown.  (Default
  *			is 0, which means don't timeout).
- * @param flags		Xapian::DB_RETRY_LOCK or 0.
+ * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
+ * @param dir		database directory index to open.
  */
+XAPIAN_VISIBILITY_DEFAULT
+WritableDatabase open_writable(std::string_view program, std::string_view args, unsigned timeout, int flags, const std::string &dir);
+
 XAPIAN_VISIBILITY_DEFAULT
 WritableDatabase open_writable(std::string_view program,
 			       std::string_view args,

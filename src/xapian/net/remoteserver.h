@@ -69,6 +69,8 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
     /// The registry, which allows unserialisation of user subclasses.
     Xapian::Registry reg;
 
+    std::vector<std::string> dbpaths;
+
     /// Accept a message from the client.
     XAPIAN_VISIBILITY_INTERNAL
     message_type get_message(double timeout, std::string & result,
@@ -237,6 +239,13 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
     // clear synonyms for a term
     XAPIAN_VISIBILITY_INTERNAL
     void msg_clearsynonyms(const std::string& message);
+
+    // select an active database for read access
+    XAPIAN_VISIBILITY_INTERNAL
+    void msg_readaccess(const std::string & message);
+
+    XAPIAN_VISIBILITY_INTERNAL
+    void select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags);
 
   public:
     /** Construct a RemoteServer.

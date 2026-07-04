@@ -110,6 +110,7 @@ enum message_type {
     MSG_REMOVESYNONYM,		// Remove a synonym
     MSG_CLEARSYNONYMS,		// Clear synonyms for a term
     MSG_REQUESTDOCUMENT,        // Request a document (pre-read hint)
+    MSG_READACCESS,             // Select currently active read access
     MSG_MAX
 };
 
