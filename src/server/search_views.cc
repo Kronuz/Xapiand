@@ -2760,11 +2760,23 @@ Request::Request() :
 	closing(false),
 	begins(std::chrono::steady_clock::now())
 {
+	// Count this as an in-flight HTTP request so a graceful shutdown waits for it
+	// to finish (ready_to_end_http() == !http_clients). Mirrors remote_clients /
+	// replication_clients; the HTTP counter was left unwired by the reactor
+	// migration, so a single SIGINT/SIGTERM no longer drained active requests.
+	if (auto manager = XapiandManager::manager()) {
+		++manager->http_clients;
+	}
 }
 
 
 Request::~Request() noexcept
 {
+	// Balance the in-flight count taken in the constructor (see there).
+	if (auto manager = XapiandManager::manager()) {
+		manager->http_clients.fetch_sub(1);
+	}
+
 	try {
 		auto indexer_ = indexer.load();
 		if (indexer_) {
