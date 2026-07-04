@@ -123,10 +123,10 @@ pm.test("Restore values are valid", function() {
 When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
 
 More information about `RESTORE` method can be found in the
-[Backups]({{ '/docs/reference-guide/backups' | relative_url }}) section.
+[Backups]({{ '/docs/reference-guide/indices/backups' | relative_url }}) section.
 
 After having loaded the dataset, you can then use the
-[Info API]({{ '/docs/reference-guide/info' | relative_url }}) to get
+[Info API]({{ '/docs/reference-guide/indices/info-api' | relative_url }}) to get
 information about the new index:
 
 {% capture req %}
@@ -582,5 +582,5 @@ And the response (partially shown):
 ```
 
 There are many other aggregations capabilities that we won't go into detail here.
-The [Aggregations Reference Guide]({{ '/docs/reference-guide/aggregations' | relative_url }})
+The [Aggregations Reference Guide]({{ '/docs/reference-guide/search/aggregations' | relative_url }})
 is a great starting point if you want to do further experimentation.

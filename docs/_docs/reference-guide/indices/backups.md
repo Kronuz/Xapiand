@@ -126,7 +126,7 @@ also possible to set a new schema for the new index and then restore the
 documents to that index:
 
 Create a new schema for the new database; in this example we'll create a
-[foreign schema]({{ '/docs/reference-guide/schema#foreign' | relative_url }})
+[foreign schema]({{ '/docs/reference-guide/schemas/foreign-schemas' | relative_url }})
 to reindex the dumped documents:
 
 {% capture req %}
