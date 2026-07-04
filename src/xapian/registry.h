@@ -38,6 +38,7 @@ class LatLongMetric;
 class MatchSpy;
 class PostingSource;
 class Weight;
+class KeyMaker;
 
 /** Registry for user subclasses.
  *
@@ -48,12 +49,9 @@ class XAPIAN_VISIBILITY_DEFAULT Registry {
   public:
     /// Class holding details of the registry.
     class Internal;
-
-  private:
     /// @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, Registry> internal;
 
-  public:
     /** Copy constructor.
      *
      *  The internals are reference counted, so copying is cheap.
@@ -152,31 +150,23 @@ class XAPIAN_VISIBILITY_DEFAULT Registry {
     const Xapian::LatLongMetric*
 	    get_lat_long_metric(std::string_view name) const;
 
-    /** Register a user-defined KeyMaker subclass.
+    /** Register a user-defined key maker class.
      *
-     *  @param keymaker	The KeyMaker subclass to register.  The clean up of
-     *		        this object is handled via Xapian's optional reference
-     *		        counting.  The simplest way to do so is to allocate it
-     *		        with <code>new</code> and call <code>release()</code>
-     *		        on it before passing it to this method to tell Xapian
-     *		        to manage its lifetime.  The alternative approach is
-     *		        for the caller to ensure the KeyMaker object remains
-     *		        valid for the lifetime of the Registry object.
-     *
-     *  @since Added in Xapian 2.0.0.
+     *  @param source	The key maker to register.
      */
-    void register_key_maker(Xapian::KeyMaker* keymaker);
+    void register_key_maker(const Xapian::KeyMaker &source);
 
-    /** Get a KeyMaker given a name.
+    /** Get a key maker given a name.
      *
-     *  @param name	The name of the KeyMaker to find.
+     *  @param name	The name of the key maker to find.
      *  @return		An object with the requested name, or NULL if the
-     *			KeyMaker could not be found.  The returned
-     *			object must <b>not</b> be deleted by the caller.
-     *
-     *  @since Added in Xapian 2.0.0.
+     *			key maker could not be found.  The returned
+     *			object is owned by the registry and so must not be
+     *			deleted by the caller.
      */
-    const Xapian::KeyMaker* get_key_maker(std::string_view name) const;
+    const Xapian::KeyMaker *
+	    get_key_maker(const std::string & name) const;
+
 };
 
 }

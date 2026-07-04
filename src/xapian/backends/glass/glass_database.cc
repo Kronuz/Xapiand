@@ -64,6 +64,9 @@
 
 #include "xapian/common/safesysstat.h"
 #include <sys/types.h>
+#include <string.h>
+#include <limits.h>
+#include <errno.h>
 
 #include <algorithm>
 #include <cerrno>
@@ -74,6 +77,32 @@
 using namespace std;
 using namespace Xapian;
 using Xapian::Internal::intrusive_ptr;
+
+int mkdir_p(const char *path, mode_t mode)
+{
+    char tmp[PATH_MAX];
+    errno = 0;
+    if (strlen(path) > sizeof(tmp) - 1) {
+	errno = ENAMETOOLONG;
+	return -1;
+    }
+    strcpy(tmp, path);
+    for (char *p = tmp + 1; *p; ++p) {
+	if (*p == '/') {
+	    *p = '\0';
+	    if (mkdir(tmp, mode) != 0) {
+		if (errno != EEXIST)
+		    return -1;
+	    }
+	    *p = '/';
+	}
+    }
+    if (mkdir(tmp, mode) != 0) {
+	if (errno != EEXIST)
+	    return -1;
+    }
+    return 0;
+}
 
 // The maximum safe term length is determined by the postlist.  There we
 // store the term using pack_string_preserving_sort() which takes the
@@ -133,7 +162,7 @@ GlassDatabase::GlassDatabase(string_view glass_dir, int flags,
     if (action != Xapian::DB_OPEN && !database_exists()) {
 	// Create the directory for the database, if it doesn't exist
 	// already.
-	if (mkdir(db_dir.c_str(), 0755) < 0) {
+	if (mkdir_p(db_dir.c_str(), 0755) < 0) {
 	    int mkdir_errno = errno;
 	    if (mkdir_errno != EEXIST || !dir_exists(db_dir)) {
 		throw Xapian::DatabaseCreateError(db_dir + ": mkdir failed",
@@ -1069,21 +1098,11 @@ GlassWritableDatabase::GlassWritableDatabase(string_view dir, int flags,
 					     int block_size)
 	: GlassDatabase(dir, flags, block_size),
 	  change_count(0),
-	  flush_threshold(0),
+	  flush_threshold(100000),
 	  modify_shortcut_document(NULL),
 	  modify_shortcut_docid(0)
 {
     LOGCALL_CTOR(DB, "GlassWritableDatabase", dir | flags | block_size);
-
-    const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-    if (p && *p) {
-	if (!parse_unsigned(p, flush_threshold)) {
-	    throw Xapian::InvalidArgumentError("XAPIAN_FLUSH_THRESHOLD must "
-					       "be a non-negative integer");
-	}
-    }
-    if (flush_threshold == 0)
-	flush_threshold = 10000;
 }
 
 GlassWritableDatabase::~GlassWritableDatabase()
@@ -1149,10 +1168,10 @@ GlassWritableDatabase::apply()
     GlassDatabase::apply();
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 GlassWritableDatabase::add_document(const Xapian::Document & document)
 {
-    LOGCALL(DB, Xapian::docid, "GlassWritableDatabase::add_document", document);
+    LOGCALL(DB, Xapian::DocumentInfo, "GlassWritableDatabase::add_document", document);
     // Make sure the docid counter doesn't overflow.
     if (version_file.get_last_docid() == GLASS_MAX_DOCID)
 	throw Xapian::DatabaseError("Run out of docids - you'll have to use copydatabase to eliminate any gaps before you can add more documents");
@@ -1274,11 +1293,11 @@ GlassWritableDatabase::delete_document(Xapian::docid did)
     check_flush_threshold();
 }
 
-void
+Xapian::DocumentInfo
 GlassWritableDatabase::replace_document(Xapian::docid did,
 					const Xapian::Document & document)
 {
-    LOGCALL_VOID(DB, "GlassWritableDatabase::replace_document", did | document);
+    LOGCALL(DB, Xapian::DocumentInfo, "GlassWritableDatabase::replace_document", did | document);
     Assert(did != 0);
 
     try {
@@ -1286,16 +1305,14 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
 	    version_file.set_last_docid(did);
 	    // If this docid is above the highwatermark, then we can't be
 	    // replacing an existing document.
-	    (void)add_document_(did, document);
-	    return;
+	    return add_document_(did, document);
 	}
 
 	if (!termlist_table.is_open()) {
 	    // We can replace an *unused* docid <= last_docid too.
 	    intrusive_ptr<const GlassDatabase> ptrtothis(this);
 	    if (!postlist_table.document_exists(did, ptrtothis)) {
-		(void)add_document_(did, document);
-		return;
+		return add_document_(did, document);
 	    }
 	    throw_termlist_table_close_exception();
 	}
@@ -1311,7 +1328,7 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
 		// in the document.
 		if (!document.internal->modified()) {
 		    // If the document is unchanged, we've nothing to do.
-		    return;
+		    return modify_shortcut_docid;
 		}
 		modifying = true;
 		LOGLINE(DB, "Detected potential document modification shortcut.");
@@ -1333,8 +1350,7 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
 	    intrusive_ptr<const GlassWritableDatabase> ptrtothis(this);
 	    GlassTermList termlist(ptrtothis, did, false);
 	    if (termlist.not_present()) {
-		(void)add_document_(did, document);
-		return;
+		return add_document_(did, document);
 	    }
 
 	    Xapian::TermIterator term = document.termlist_begin();
@@ -1434,6 +1450,8 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
     }
 
     check_flush_threshold();
+
+    return did;
 }
 
 Xapian::Document::Internal *

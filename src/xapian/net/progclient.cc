@@ -47,16 +47,44 @@
 
 using namespace std;
 
+<<<<<<< ours
+ProgClient::ProgClient(const string &progname, const string &args,
+		       double timeout_, bool writable, int flags, const string &dir)
+	: RemoteDatabase(run_program(progname, args
+||||||| base
+ProgClient::ProgClient(const string &progname, const string &args,
+		       double timeout_, bool writable, int flags)
+	: RemoteDatabase(run_program(progname, args
+=======
 pair<int, string>
 ProgClient::run_program(string_view progname, string_view args,
+>>>>>>> theirs
 #ifndef __WIN32__
 			pid_t& child
 #else
 			HANDLE& child
 #endif
+<<<<<<< ours
+	),
+			 timeout_, get_progcontext(progname, args), writable,
+			 flags, dir)
+||||||| base
+	),
+			 timeout_, get_progcontext(progname, args), writable,
+			 flags)
+=======
 			)
+>>>>>>> theirs
 {
+<<<<<<< ours
+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | flags | dir);
+}
+||||||| base
+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | flags);
+}
+=======
     LOGCALL_STATIC(DB, RETURN_TYPE(pair<int, string>), "ProgClient::run_program", progname | args | Literal("[&child]"));
+>>>>>>> theirs
 
     string context{"remote:prog("};
     context += progname;

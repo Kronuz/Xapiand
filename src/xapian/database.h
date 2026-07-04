@@ -44,6 +44,15 @@
 
 namespace Xapian {
 
+struct DocumentInfo {
+    Xapian::docid did;
+    Xapian::rev version;
+    std::string term;
+
+    DocumentInfo() : did(0), version(0) { }
+    DocumentInfo(Xapian::docid did) : did(did), version(0) { }
+};
+
 class Compactor;
 class Document;
 class WritableDatabase;
@@ -94,7 +103,7 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
     /// Class representing the Database internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, Database> internal;
 
     /** Add shards from another Database.
      *
@@ -117,6 +126,8 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
      *  @since Xapian 1.4.12
      */
     size_t size() const;
+
+    unsigned refs() const;
 
     /** Construct a Database containing no shards.
      *
@@ -1223,7 +1234,7 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
      *
      *  @return The document ID allocated to the document.
      */
-    Xapian::docid add_document(const Xapian::Document& doc);
+    Xapian::DocumentInfo add_document(const Xapian::Document& doc);
 
     /** Delete a document from the database.
      *
@@ -1278,7 +1289,8 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
      *  @param did      The document ID of the document to be replaced.
      *  @param document The new document.
      */
-    void replace_document(Xapian::docid did, const Xapian::Document& document);
+    Xapian::DocumentInfo replace_document(Xapian::docid did,
+					  const Xapian::Document& document);
 
     /** Replace any documents matching a term.
      *
@@ -1308,8 +1320,8 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
      *		     Previously automatic commits could happen during the
      *		     batch.
      */
-    Xapian::docid replace_document(std::string_view unique_term,
-				   const Xapian::Document& document);
+    Xapian::DocumentInfo replace_document(std::string_view unique_term,
+					  const Xapian::Document& document);
 
     /** Add a word to the spelling dictionary.
      *

@@ -40,6 +40,7 @@
 
 namespace Xapian {
 
+class Database;
 class MSetIterator;
 
 /// Class representing a list of search results.
@@ -77,7 +78,7 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /// Class representing the MSet internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, MSet> internal;
 
     /** Copying is allowed.
      *
@@ -109,6 +110,8 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 
     /// Destructor.
     ~MSet();
+
+    void set_database(const Database& db) const;
 
     /** Assigns new weights and updates MSet.
      *
@@ -220,6 +223,8 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
      *  more relevant results.
      */
     int convert_to_percent(double weight) const;
+
+    void unshard_docids(Xapian::doccount shard, Xapian::doccount n_shards);
 
     /** Convert the weight of the current iterator position to a percentage.
      *
@@ -480,6 +485,23 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 
     /** Return iterator pointing to the last object in this MSet. */
     MSetIterator back() const;
+
+    /** Serialise MSet into a string.
+     */
+    std::string serialise() const;
+
+    /** Unserialise an MSet from a string produced by serialise().
+      */
+    static MSet unserialise(const std::string &s);
+
+
+    /** Serialise MSet internal stats into a string.
+     */
+    std::string serialise_stats() const;
+
+    /** Unserialise an MSet from a string produced by serialise_stats().
+      */
+    static MSet unserialise_stats(const std::string &s);
 
     /// Return a string describing this object.
     std::string get_description() const;

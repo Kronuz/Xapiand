@@ -136,6 +136,17 @@ class XAPIAN_VISIBILITY_DEFAULT KeyMaker
 	opt_intrusive_base::release();
 	return this;
     }
+
+    /** Clone the key maker.
+     *
+     *  The clone should inherit the configuration of the parent, but need not
+     *  inherit the state.
+     *
+     *  If you don't want to support the remote backend in your key maker, you
+     *  can use the default implementation which simply throws
+     *  Xapian::UnimplementedError.
+     */
+    virtual KeyMaker * clone() const;
 };
 
 /** KeyMaker subclass which combines several values.

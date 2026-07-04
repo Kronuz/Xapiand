@@ -44,6 +44,13 @@ throw_unimplemented(const char* message)
     throw Xapian::UnimplementedError(message);
 }
 
+KeyMaker *
+KeyMaker::clone() const
+{
+    throw_unimplemented("KeyMaker subclass not suitable for use with remote "
+			"searches - clone() method not implemented");
+}
+
 string
 KeyMaker::name() const
 {

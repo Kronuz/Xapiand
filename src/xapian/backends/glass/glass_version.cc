@@ -406,7 +406,7 @@ const size_t COMPRESS_MIN = 18;
 
 static const uint4 compress_min_tab[] = {
     0, // POSTLIST
-    COMPRESS_MIN, // DOCDATA
+    0, // DOCDATA
     COMPRESS_MIN, // TERMLIST
     0, // POSITION
     COMPRESS_MIN, // SPELLING

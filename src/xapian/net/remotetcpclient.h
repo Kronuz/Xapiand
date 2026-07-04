@@ -76,9 +76,9 @@ class RemoteTcpClient : SOCKET_INITIALIZER_MIXIN public RemoteDatabase {
      */
     RemoteTcpClient(std::string_view hostname, int port,
 		    double timeout_, double timeout_connect, bool writable,
-		    int flags)
+		    int flags, const std::string & dir)
 	: RemoteDatabase(open_socket(hostname, port, timeout_connect),
-			 timeout_, writable, flags) { }
+			 timeout_, writable, flags, dir) { }
 
     /** Destructor. */
     ~RemoteTcpClient();

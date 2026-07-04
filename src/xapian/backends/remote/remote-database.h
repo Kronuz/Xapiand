@@ -51,6 +51,15 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// Don't allow copying.
     RemoteDatabase(const RemoteDatabase &);
 
+    // Directory to store databases in.
+    const std::string db_dir;
+
+    // The database is writable.
+    const bool writable;
+
+    // Bitwise-or of Xapian::DB_* flags.
+    const int flags;
+
     /// The object which does the I/O.
     mutable OwnedRemoteConnection link;
 
@@ -72,6 +81,9 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// Has positional information?
     mutable bool has_positional_info;
 
+    /// The revision of the remote database.
+    mutable Xapian::rev revision;
+
     /** Are we currently expecting a reply?
      *
      *  Our caller might send a message but then an exception (from another
@@ -82,10 +94,13 @@ class RemoteDatabase : public Xapian::Database::Internal {
      */
     mutable bool pending_reply = false;
 
+
     /// The UUID of the remote database.
     mutable std::string uuid;
 
-    mutable bool cached_stats_valid;
+    /// The context to return with any error messages
+    std::string context;
+
 
     /** The most recently used value statistics. */
     mutable ValueStats mru_valstats;
@@ -123,13 +138,16 @@ class RemoteDatabase : public Xapian::Database::Internal {
      *			be thrown if the remote end doesn't respond for this
      *			length of time (in seconds).  A timeout of 0 means that
      *			operations will never timeout.
-     *	@param writable	Is this a WritableDatabase?
-     *	@param flags	Xapian::DB_RETRY_LOCK or 0.
+     *  @param context_ The context to return with any error messages.
+     *  @param writable	Is this a WritableDatabase?
+     *  @param flags	Xapian::DB_RETRY_LOCK or Bitwise-or of Xapian::DB_* constants.
+     *  @param dir      Database directory index to open.
      */
     RemoteDatabase(std::pair<int, std::string> fd_and_context,
 		   double timeout_,
 		   bool writable,
-		   int flags);
+		   int flags,
+		   const std::string& dir);
 
     /// Receive a message from the server.
     reply_type get_message(std::string& message,
@@ -170,6 +188,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
 
+    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
+
     /** Set the query
      *
      * @param query			The query.
@@ -190,7 +210,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
      * @param omrset			The rset.
      * @param matchspies                The matchspies to use.
      */
-    void set_query(const Xapian::Query& query,
+    void set_query(const std::string& query_id,
+		   const Xapian::Query& query,
 		   Xapian::termcount qlen,
 		   Xapian::valueno collapse_key,
 		   Xapian::doccount collapse_max,
@@ -202,7 +223,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
 		   int percent_threshold, double weight_threshold,
 		   const Xapian::Weight& wtscheme,
 		   const Xapian::RSet &omrset,
-		   const std::vector<opt_ptr_spy>& matchspies) const;
+		   const std::vector<opt_ptr_spy>& matchspies,
+		   const Xapian::KeyMaker* sorter) const;
 
     /** Get the underlying fd this remote connection reads from.
      *
@@ -217,7 +239,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
     void accumulate_remote_stats(Xapian::Weight::Internal& total) const;
 
     /// Send the global stats to the remote server.
-    void send_global_stats(Xapian::doccount first,
+    void send_global_stats(const std::string& query_id,
+			   Xapian::doccount first,
 			   Xapian::doccount maxitems,
 			   Xapian::doccount check_at_least,
 			   const Xapian::KeyMaker* sorter,
@@ -288,14 +311,17 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     void cancel();
 
-    Xapian::docid add_document(const Xapian::Document & doc);
+    Xapian::DocumentInfo add_document(const Xapian::Document & doc);
 
     void delete_document(Xapian::docid did);
     void delete_document(std::string_view unique_term);
 
-    void replace_document(Xapian::docid did, const Xapian::Document & doc);
-    Xapian::docid replace_document(std::string_view unique_term,
-				   const Xapian::Document& document);
+    Xapian::DocumentInfo replace_document(Xapian::docid did,
+					  const Xapian::Document & doc);
+    Xapian::DocumentInfo replace_document(std::string_view unique_term,
+					  const Xapian::Document& document);
+
+    Xapian::rev get_revision() const;
 
     std::string get_uuid() const;
 

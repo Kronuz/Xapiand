@@ -121,16 +121,17 @@ class EmptyDatabase : public Xapian::Database::Internal {
     // the transaction would start successfully whereas it's better to fail
     // early.
 
-    Xapian::docid add_document(const Xapian::Document& doc);
+    Xapian::DocumentInfo add_document(const Xapian::Document& doc);
 
     void delete_document(Xapian::docid did);
 
     void delete_document(std::string_view term);
 
-    void replace_document(Xapian::docid did, const Xapian::Document& doc);
+    Xapian::DocumentInfo replace_document(Xapian::docid did,
+					  const Xapian::Document& doc);
 
-    Xapian::docid replace_document(std::string_view term,
-				   const Xapian::Document& doc);
+    Xapian::DocumentInfo replace_document(std::string_view term,
+					  const Xapian::Document& doc);
 
     void add_spelling(std::string_view word, Xapian::termcount freqinc) const;
 

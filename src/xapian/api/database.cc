@@ -107,6 +107,12 @@ Database::size() const
     return internal->size();
 }
 
+unsigned
+Database::refs() const
+{
+    return internal->_refs;
+}
+
 void
 Database::add_database_(const Database& o, bool read_only)
 {
@@ -557,7 +563,7 @@ WritableDatabase::end_transaction_(bool do_commit)
     internal->end_transaction(do_commit);
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 WritableDatabase::add_document(const Document& doc)
 {
     return internal->add_document(doc);
@@ -578,16 +584,16 @@ WritableDatabase::delete_document(string_view term)
     internal->delete_document(term);
 }
 
-void
+Xapian::DocumentInfo
 WritableDatabase::replace_document(Xapian::docid did, const Document& doc)
 {
     if (rare(did == 0))
 	docid_zero_invalid();
 
-    internal->replace_document(did, doc);
+    return internal->replace_document(did, doc);
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 WritableDatabase::replace_document(string_view term, const Document& doc)
 {
     if (term.empty())

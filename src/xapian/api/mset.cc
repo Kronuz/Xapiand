@@ -28,6 +28,7 @@
 
 #include "xapian/backends/documentinternal.h"
 #include "xapian/net/serialise.h"
+#include "xapian/matcher/matcher.h"
 #include "xapian/matcher/msetcmp.h"
 #include "xapian/common/omassert.h"
 #include "xapian/common/pack.h"
@@ -265,6 +266,17 @@ MSet::diversify_(Xapian::doccount k,
 #endif
 
 void
+MSet::set_database(const Database& db) const
+{
+    if (internal->stats.get() != NULL) {
+	internal->stats->db = db;
+    }
+    if (internal->enquire.get() != NULL) {
+	internal->enquire->set_database(db);
+    }
+}
+
+void
 MSet::sort_by_relevance()
 {
     std::sort(internal->items.begin(), internal->items.end(),
@@ -275,6 +287,13 @@ int
 MSet::convert_to_percent(double weight) const
 {
     return internal->convert_to_percent(weight);
+}
+
+void
+MSet::unshard_docids(Xapian::doccount shard,
+		     Xapian::doccount n_shards)
+{
+    return internal->unshard_docids(shard, n_shards);
 }
 
 Xapian::doccount
@@ -391,9 +410,71 @@ MSet::snippet(std::string_view text,
 }
 
 std::string
+MSet::serialise() const
+{
+    return internal->serialise();
+}
+
+MSet
+MSet::unserialise(const std::string &s)
+{
+    MSet mset;
+    mset.internal->unserialise(s.data(), s.data() + s.size());
+    return mset;
+}
+
+std::string
+MSet::serialise_stats() const
+{
+    return internal->serialise_stats();
+}
+
+MSet
+MSet::unserialise_stats(const std::string &s)
+{
+    MSet mset;
+    mset.internal->unserialise_stats(s);
+    return mset;
+}
+
+std::string
 MSet::get_description() const
 {
     return internal->get_description();
+}
+
+MSet::Internal::Internal()
+{
+}
+
+MSet::Internal::Internal(Xapian::doccount first_,
+	    Xapian::doccount matches_upper_bound_,
+	    Xapian::doccount matches_lower_bound_,
+	    Xapian::doccount matches_estimated_,
+	    Xapian::doccount uncollapsed_upper_bound_,
+	    Xapian::doccount uncollapsed_lower_bound_,
+	    Xapian::doccount uncollapsed_estimated_,
+	    double max_possible_,
+	    double max_attained_,
+	    std::vector<Result>&& items_,
+	    double percent_scale_factor_)
+    : items(std::move(items_)),
+      matches_lower_bound(matches_lower_bound_),
+      matches_estimated(matches_estimated_),
+      matches_upper_bound(matches_upper_bound_),
+      uncollapsed_lower_bound(uncollapsed_lower_bound_),
+      uncollapsed_estimated(uncollapsed_estimated_),
+      uncollapsed_upper_bound(uncollapsed_upper_bound_),
+      first(first_),
+      max_possible(max_possible_),
+      max_attained(max_attained_),
+      percent_scale_factor(percent_scale_factor_)
+{
+}
+
+void
+MSet::Internal::set_enquire(const Xapian::Enquire::Internal* enquire_) {
+    enquire = enquire_;
 }
 
 Document
@@ -547,7 +628,7 @@ MSet::Internal::serialise() const
     }
 
     if (stats)
-	result += serialise_stats(*stats);
+	result += ::serialise_stats(*stats);
 
     return result;
 }
@@ -592,6 +673,19 @@ MSet::Internal::unserialise(const char * p, const char * p_end)
 	stats.reset(new Xapian::Weight::Internal());
 	unserialise_stats(p, p_end, *stats);
     }
+}
+
+string
+MSet::Internal::serialise_stats() const
+{
+    return ::serialise_stats(*stats);
+}
+
+void
+MSet::Internal::unserialise_stats(const string& serialised)
+{
+    stats.reset(new Xapian::Weight::Internal());
+    ::unserialise_stats(serialised, *stats);
 }
 
 string

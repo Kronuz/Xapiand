@@ -189,6 +189,17 @@ Database::Database(string_view path, int flags)
 
     string filename{path};
     struct stat statbuf;
+<<<<<<< ours
+    if (stat(path.c_str(), &statbuf) == -1) {
+	if (errno == ENOENT) {
+	    throw DatabaseNotFoundError("Couldn't stat '" + path + "'", errno);
+	} else {
+	    throw DatabaseOpeningError("Couldn't stat '" + path + "'", errno);
+	}
+||||||| base
+    if (stat(path.c_str(), &statbuf) == -1) {
+	throw DatabaseOpeningError("Couldn't stat '" + path + "'", errno);
+=======
     if (stat(filename.c_str(), &statbuf) == -1) {
 	if (errno == ENOENT) {
 	    throw DatabaseNotFoundError("Couldn't stat '" + filename + "'",
@@ -197,6 +208,7 @@ Database::Database(string_view path, int flags)
 	    throw DatabaseOpeningError("Couldn't stat '" + filename + "'",
 				       errno);
 	}
+>>>>>>> theirs
     }
 
     if (S_ISREG(statbuf.st_mode)) {
@@ -285,16 +297,10 @@ Database::Database(string_view path, int flags)
     throw DatabaseNotFoundError("Couldn't detect type of database");
 }
 
-/** Helper factory function.
- *
- *  This allows us to initialise Database::internal via the constructor's
- *  initialiser list, which we want to be able to do as Database::internal
- *  is an intrusive_ptr_nonnull, so we can't set it to NULL in the initialiser
- *  list and then fill it in later in the constructor body.
- */
-static Database::Internal*
-database_factory(int fd, int flags)
+Database::Database(int fd, int flags)
 {
+    LOGCALL_CTOR(API, "Database", fd|flags);
+
     if (rare(fd < 0))
 	throw InvalidArgumentError("fd < 0", EBADF);
 
@@ -313,23 +319,23 @@ database_factory(int fd, int flags)
     switch (type) {
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	case DB_BACKEND_GLASS:
+<<<<<<< ours
+	    internal = new GlassDatabase(fd);
+||||||| base
+	    return new GlassDatabase(fd);
+=======
 	    return new GlassDatabase(fd);
 #endif
 #ifdef XAPIAN_HAS_HONEY_BACKEND
 	case DB_BACKEND_HONEY:
 	    return new HoneyDatabase(fd);
 #endif
+>>>>>>> theirs
     }
 #endif
 
     (void)::close(fd);
     throw DatabaseOpeningError("Couldn't detect type of database fd");
-}
-
-Database::Database(int fd, int flags)
-    : internal(database_factory(fd, flags))
-{
-    LOGCALL_CTOR(API, "Database", fd|flags);
 }
 
 #if defined XAPIAN_HAS_GLASS_BACKEND

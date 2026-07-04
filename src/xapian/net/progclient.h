@@ -86,11 +86,13 @@ class ProgClient : public RemoteDatabase {
 	       std::string_view args,
 	       double timeout_,
 	       bool writable,
-	       int flags)
+	       int flags,
+	       const std::string &dir)
 	: RemoteDatabase(run_program(progname, args, child),
 			 timeout_,
 			 writable,
-			 flags)
+			 flags,
+			 dir)
     {}
 
     /** Destructor. */
