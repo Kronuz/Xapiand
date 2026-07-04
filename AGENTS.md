@@ -76,6 +76,10 @@ Requirements: `python3` (the script was ported from Python 2), `newman`
 `docs/assets/` (`twitter.msgpack` is currently missing — generate or skip that one).
 Run it before and after a de-vendor to prove Xapiand still works end-to-end.
 
+This is one of several test layers. For the full picture — unit tests, the functional
+E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and the
+`harness/run_all.sh` one-shot runner — see [TESTING.md](TESTING.md).
+
 ## Conventions you'll see everywhere
 
 - **Logging macros `L_*`.** Logging is pervasive (~2,790 call sites). Most

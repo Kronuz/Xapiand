@@ -1,0 +1,232 @@
+# Testing & Stressing Xapiand
+
+How to test **and** stress every layer of Xapiand, what each layer proves, and how
+to run it. The tools live in `harness/`; one command runs them all:
+
+```sh
+harness/run_all.sh                 # smoke + e2e + cluster + load + stress + bench
+harness/run_all.sh smoke cluster   # just a subset
+```
+
+Everything here drives the built binary (`build/bin/xapiand`) over its real HTTP /
+binary ports. There is no mocking: a "green" run means the actual server did the
+work. Build first:
+
+```sh
+(cd build && cmake .. && make xapiand -j4)
+```
+
+---
+
+## The layers at a glance
+
+| Layer | Tool | What it proves | Needs |
+| --- | --- | --- | --- |
+| **smoke** | `run_all.sh smoke` | a single node indexes and searches at all | nothing |
+| **unit** | `ctest` | C++ units (parsers, serialise, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
+| **functional E2E** | `e2e_check.sh` | the whole documented HTTP API still behaves (vs a baseline) | a baseline report + `newman` |
+| **remote / cluster** | `cluster_check.sh` | discovery, the Remote protocol, replication, distributed search | a multicast-capable interface |
+| **protocol sniff** | `proxy --xapian` | *see* the MSG_/REPLY_ wire between two nodes | two nodes |
+| **load** | `index_fortune` | bulk indexing of many docs | nothing (falls back if no `fortune(6)`) |
+| **stress / soak** | `stress_fortune` | correctness under sustained concurrency | nothing |
+| **benchmark** | `loadtest.py` / `es_loadtest.py` | index throughput + query QPS/latency (vs Elasticsearch) | a dataset (bundled) |
+
+The single-node HTTP E2E is the workhorse for correctness; the **cluster** layer is
+the only one that exercises Discovery / Remote / Replication, so it's the net for
+anything touching the distributed data plane. See `docs/_docs/benchmarks.md` for
+recorded benchmark results.
+
+---
+
+## smoke
+
+The cheapest sanity check: boot one `--solo` node, `PUT` a document with
+`?commit=true`, search for a term in it, expect one hit. No baseline, no
+dependencies. `run_all.sh` runs it first so a broken binary fails fast.
+
+```sh
+harness/run_all.sh smoke
+```
+
+---
+
+## Unit tests (ctest)
+
+C++ unit tests live in `tests/` (active) and `oldtests/` (a large legacy GTest
+suite: `boolparser`, `compressor`, `serialise`, `wal`, `query`, `geospatial`,
+`msgpack`, `url_parser`, ...). They're only built when you configure with
+`-DBUILD_TESTS=ON`, which needs GoogleTest:
+
+```sh
+cmake -S . -B build -DBUILD_TESTS=ON      # (GTest must be findable)
+cmake --build build --target check         # builds + runs via ctest
+# or, after building:
+(cd build && ctest --output-on-failure)
+```
+
+`run_all.sh unit` runs `ctest` and **skips** (doesn't fail) if no tests are
+configured, telling you to reconfigure. The `oldtests/` suite is wired but marked
+legacy in `CMakeLists.txt`; re-enable modules there as they're brought current.
+
+---
+
+## Functional E2E (the docs are the test suite)
+
+Xapiand's documentation (`docs/_docs/*.md`, `docs/tests/*.md`) is a runnable HTTP
+test suite: `docs_to_postman.py` turns the fenced request/response blocks into a
+Postman collection, and `newman` runs it against a live node. This is the primary
+correctness net for the API surface (schemas, query DSL, ranges, restore, ...).
+
+```sh
+# capture our node's report and diff it against the saved baseline
+harness/e2e_check.sh
+```
+
+"Green" is **parity with the baseline**, not 100% pass: the doc suite carries a set
+of pre-existing aspirational failures that fail on both our build and the baseline.
+`e2e_check.sh` compares two ways — assertion outcomes (`e2e_diff.py`) and response
+bodies (`bodydiff.py`) — and expects only a few volatile fields (auto-ids, node
+runtime info, Prometheus counters) to differ.
+
+The baseline report (`harness/results/e2e_base_7bd295b.json`, gitignored, ~61 MB)
+is captured once from a reference binary:
+
+```sh
+harness/e2e_capture.sh ../xapiand-master-bench/build/bin/xapiand \
+    harness/results/e2e_base_7bd295b.json
+```
+
+`run_all.sh e2e` **skips** if the baseline is missing.
+
+---
+
+## Remote / cluster E2E
+
+`cluster_check.sh` spins an N-node cluster (default 2) on localhost and asserts the
+three things the `--solo` E2E can never reach:
+
+1. **Discovery** — every node converges on the full membership and one leader.
+2. **Remote / replication** — a write on node1 is readable from the other nodes
+   (shards distributed across nodes, reached over the Remote protocol / replicated).
+3. **Distributed search** — a query on one node gathers hits across every node's
+   shards (the two-phase remote match).
+
+```sh
+harness/cluster_check.sh          # 2 nodes
+harness/cluster_check.sh 3        # 3 nodes
+```
+
+Gotchas (documented in the script): the nodes share one multicast discovery port
+but need their own http / xapian(remote) / replica TCP ports; a fresh cluster is
+slow to settle (~8 s/node, and the first write is slower while shards are created);
+and multicast needs a multicast-capable interface up. Offline with no interface,
+discovery can't rendezvous — that's an environment limit, not a bug.
+
+### The Remote protocol 1:1 invariant
+
+The client (`src/xapian/backends/remote/`) and the Xapiand server
+(`src/server/remote_protocol_views.{h,cc}`) speak the same binary protocol, so their
+message/reply tables **must** stay 1:1 with the vendored definition. Three files
+must agree:
+
+- `src/xapian/net/remoteprotocol.h` — the authoritative `message_type` / `reply_type`
+  enums (protocol v47).
+- `src/server/remote_protocol_views.h` — Xapiand's `RemoteMessageType` /
+  `RemoteReplyType`; ordinals must match the above exactly or messages misroute.
+- `harness/proxy` — the sniffer; it **auto-parses** `remoteprotocol.h` at runtime, so
+  it can't drift.
+
+The protocol **version** is deliberately separate. `remote_protocol_views.h` hand-
+maintains `XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION` as an honest assertion of the layout
+this server actually implements — it is **not** re-derived from the vendored header.
+A mismatch then fails loud at the handshake (`Server supports protocol version N -
+client is using M`) instead of silently misparsing a field that moved. Bump it only
+after the layout has actually been reconciled to the new version.
+
+### Sniffing the wire (proxy)
+
+`harness/proxy` is a colorizing port-forward that decodes the binary Remote protocol.
+Put it between two nodes and point one at it to watch the `MSG_*` / `REPLY_*` exchange
+(prepare → `REPLY_STATS`, finalise → `REPLY_RESULTS`, etc.):
+
+```sh
+# node A serves its binary/remote port on :9880; sniff by listening on :8860
+harness/proxy --xapian 8860 localhost:9880
+# then point node B's Remote database at :8860 instead of :9880
+```
+
+Related low-level probes: `discovery_sniff.py` (decode the multicast Discovery
+gossip), `graceful_shutdown_check.sh` and `signal_check.sh` (signal handling /
+clean shutdown).
+
+---
+
+## Load — `index_fortune`
+
+A quick functional bulk-load: `PUT` a range of documents built from random
+"fortunes" (uses `fortune(6)` if installed, otherwise a small built-in corpus, so it
+runs anywhere).
+
+```sh
+harness/index_fortune 'http://localhost:8880/fortune?commit=true' 1 1000
+```
+
+Good for populating an index fast and eyeballing write behaviour; not a measured
+benchmark.
+
+---
+
+## Stress / soak — `stress_fortune`
+
+Sustained concurrency with read-back verification: N workers loop `PUT` a document
+into one of M databases, then `GET` it back and check the field round-trips. It
+prints one status char per op so you can watch it live, and a summary (ops, errors
+by kind, rate) at the end. Unlike the benchmark, this is the "does it stay up and
+stay correct under load" net.
+
+```sh
+harness/stress_fortune --target localhost:8880 --workers 50 --databases 20 \
+    --duration 30 --commit
+harness/stress_fortune --ops 100000 --workers 200          # op-count instead of time
+```
+
+Methodology note: each worker owns a disjoint id band (`worker*docs_per_db + i`), so
+no two workers ever touch the same document — otherwise a concurrent write would race
+the read-back and report a bogus mismatch. A non-zero exit means real failures
+(hard errors or a verified value that didn't round-trip); eventually-consistent 404
+read misses are not counted as errors. This is the dependency-free rewrite of the
+original `contrib/bin/stress_fortune`.
+
+---
+
+## Benchmarks
+
+`loadtest.py` bulk-loads a dataset (the bundled `accounts` set, replicated) and then
+hammers a fixed query mix from many threads, reporting index docs/s and query
+QPS/latency percentiles:
+
+```sh
+harness/loadtest.py --target localhost:8880 --dataset docs/assets/accounts.ndjson \
+    --replicate 20 --concurrency 16 --duration 5 --trials 2 --datadir /tmp/xap_bench
+```
+
+`es_loadtest.py` runs the same query mix against Elasticsearch for a side-by-side
+(different substrate — read the caveats in `docs/_docs/benchmarks.md`). `perfdiff.py`
+diffs two `loadtest.py` result JSONs.
+
+---
+
+## The unified runner
+
+`harness/run_all.sh` orchestrates the layers above (it doesn't reimplement them),
+starting each on its own fresh data dir, and prints one pass / fail / skip summary.
+Layers whose prerequisites are missing (a baseline, the oracle binary, GTest) are
+**skipped**, not failed, with a note on how to enable them.
+
+```sh
+harness/run_all.sh                 # default: smoke e2e cluster load stress bench
+harness/run_all.sh smoke stress    # a subset
+BIN=/path/to/xapiand harness/run_all.sh
+```
+
+Exit code is 0 (GREEN) only if no layer failed.
