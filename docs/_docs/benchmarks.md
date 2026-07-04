@@ -73,6 +73,35 @@ query path itself is search/IO-bound, so it is CPU headroom rather than a wall.
 **Xapiand vs Elasticsearch.** On this workload Xapiand is dramatically more compact
 on disk and serves queries faster at lower latency; index throughput is a wash.
 
+## Xapian 2.0.0 upgrade
+
+This branch also carries the vendored Xapian fork forward from the 1.5.0-dev
+snapshot to the **2.0.0** release (rebuilt as clean per-feature patches on top of
+pristine 2.0.0). To isolate what the engine upgrade alone costs or buys, both
+builds were measured back-to-back in the same session, same machine, same
+`loadtest.py` invocation (20k docs, concurrency 16, 6s, three trials); `origin/master`
+here is the 1.5.0 oracle binary described above.
+
+| Metric | This branch (Xapian 2.0.0) | `origin/master` (Xapian 1.5.0) | Δ |
+| --- | ---: | ---: | ---: |
+| Index throughput | ~11,500 docs/s | ~10,600 docs/s | **+8%** |
+| On-disk size (20k docs) | **3.41 MB** | 3.68 MB | **−7%** |
+| Query throughput (warm) | ~12,330 qps | ~12,670 qps | −2.7% |
+| Query latency p50 | 1.21 ms | 1.19 ms | +0.02 ms |
+| Query latency p95 | 2.30 ms | 2.18 ms | +0.12 ms |
+| Query latency p99 | 2.97 ms | 2.73 ms | +0.24 ms |
+
+The upgrade **indexes ~8% faster and stores ~7% smaller** on this data. Query
+throughput is within ~3% and lands a hair behind, but that gap is not the engine:
+it is the reactor request path's offload thread-hop (every DB-touching request hops
+to the reactor pool so a slow query cannot stall co-located connections), a
+deliberate un-stallability trade that predates this upgrade and shows up exactly on
+a low-concurrency fast-query bench. Correctness held: the full end-to-end suite runs
+green against the 1.5.0 oracle with **zero regressions**, and 2.0.0's improved
+stemming and stopword handling actually fixed five assertions that fail on
+`origin/master` (default-operator matching, query-time stopword filtering, a
+complex-object info case, and a typed-content selector).
+
 ## Environment and caveats
 
 This is a smoke test, and the two engines were not on equal footing:
