@@ -288,14 +288,15 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     void cancel();
 
-    Xapian::docid add_document(const Xapian::Document & doc);
+    Xapian::DocumentInfo add_document(const Xapian::Document & doc);
 
     void delete_document(Xapian::docid did);
     void delete_document(std::string_view unique_term);
 
-    void replace_document(Xapian::docid did, const Xapian::Document & doc);
-    Xapian::docid replace_document(std::string_view unique_term,
-				   const Xapian::Document& document);
+    Xapian::DocumentInfo replace_document(Xapian::docid did,
+					  const Xapian::Document & doc);
+    Xapian::DocumentInfo replace_document(std::string_view unique_term,
+					  const Xapian::Document& document);
 
     std::string get_uuid() const;
 

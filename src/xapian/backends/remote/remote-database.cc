@@ -808,7 +808,7 @@ RemoteDatabase::cancel()
     uncommitted_changes = false;
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 RemoteDatabase::add_document(const Xapian::Document & doc)
 {
     cached_stats_valid = false;
@@ -822,11 +822,13 @@ RemoteDatabase::add_document(const Xapian::Document & doc)
 
     const char* p = message.data();
     const char* p_end = p + message.size();
-    Xapian::docid did;
-    if (!unpack_uint_last(&p, p_end, &did)) {
+    Xapian::DocumentInfo info;
+    if (!unpack_uint(&p, p_end, &info.did) ||
+	!unpack_uint(&p, p_end, &info.version)) {
 	unpack_throw_serialisation_error(p);
     }
-    return did;
+    info.term = std::string(p, p_end);
+    return info;
 }
 
 void
@@ -855,7 +857,7 @@ RemoteDatabase::delete_document(std::string_view unique_term)
     get_message(dummy, REPLY_DONE);
 }
 
-void
+Xapian::DocumentInfo
 RemoteDatabase::replace_document(Xapian::docid did,
 				 const Xapian::Document & doc)
 {
@@ -869,10 +871,20 @@ RemoteDatabase::replace_document(Xapian::docid did,
 
     send_message(MSG_REPLACEDOCUMENT, message);
 
-    get_message(message, REPLY_DONE);
+    get_message(message, REPLY_ADDDOCUMENT);
+
+    const char* p = message.data();
+    const char* p_end = p + message.size();
+    Xapian::DocumentInfo info;
+    if (!unpack_uint(&p, p_end, &info.did) ||
+	!unpack_uint(&p, p_end, &info.version)) {
+	unpack_throw_serialisation_error(p);
+    }
+    info.term = std::string(p, p_end);
+    return info;
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 RemoteDatabase::replace_document(std::string_view unique_term,
 				 const Xapian::Document & doc)
 {
@@ -890,11 +902,13 @@ RemoteDatabase::replace_document(std::string_view unique_term,
 
     const char* p = message.data();
     const char* p_end = p + message.size();
-    Xapian::docid did;
-    if (!unpack_uint_last(&p, p_end, &did)) {
+    Xapian::DocumentInfo info;
+    if (!unpack_uint(&p, p_end, &info.did) ||
+	!unpack_uint(&p, p_end, &info.version)) {
 	unpack_throw_serialisation_error(p);
     }
-    return did;
+    info.term = std::string(p, p_end);
+    return info;
 }
 
 string

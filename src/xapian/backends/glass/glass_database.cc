@@ -1178,10 +1178,10 @@ GlassWritableDatabase::apply()
     GlassDatabase::apply();
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 GlassWritableDatabase::add_document(const Xapian::Document & document)
 {
-    LOGCALL(DB, Xapian::docid, "GlassWritableDatabase::add_document", document);
+    LOGCALL(DB, Xapian::DocumentInfo, "GlassWritableDatabase::add_document", document);
     // Make sure the docid counter doesn't overflow.
     if (version_file.get_last_docid() == GLASS_MAX_DOCID)
 	throw Xapian::DatabaseError("Run out of docids - you'll have to use copydatabase to eliminate any gaps before you can add more documents");
@@ -1303,11 +1303,11 @@ GlassWritableDatabase::delete_document(Xapian::docid did)
     check_flush_threshold();
 }
 
-void
+Xapian::DocumentInfo
 GlassWritableDatabase::replace_document(Xapian::docid did,
 					const Xapian::Document & document)
 {
-    LOGCALL_VOID(DB, "GlassWritableDatabase::replace_document", did | document);
+    LOGCALL(DB, Xapian::DocumentInfo, "GlassWritableDatabase::replace_document", did | document);
     Assert(did != 0);
 
     try {
@@ -1315,16 +1315,14 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
 	    version_file.set_last_docid(did);
 	    // If this docid is above the highwatermark, then we can't be
 	    // replacing an existing document.
-	    (void)add_document_(did, document);
-	    return;
+	    return add_document_(did, document);
 	}
 
 	if (!termlist_table.is_open()) {
 	    // We can replace an *unused* docid <= last_docid too.
 	    intrusive_ptr<const GlassDatabase> ptrtothis(this);
 	    if (!postlist_table.document_exists(did, ptrtothis)) {
-		(void)add_document_(did, document);
-		return;
+		return add_document_(did, document);
 	    }
 	    throw_termlist_table_close_exception();
 	}
@@ -1340,7 +1338,7 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
 		// in the document.
 		if (!document.internal->modified()) {
 		    // If the document is unchanged, we've nothing to do.
-		    return;
+		    return modify_shortcut_docid;
 		}
 		modifying = true;
 		LOGLINE(DB, "Detected potential document modification shortcut.");
@@ -1362,8 +1360,7 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
 	    intrusive_ptr<const GlassWritableDatabase> ptrtothis(this);
 	    GlassTermList termlist(ptrtothis, did, false);
 	    if (termlist.not_present()) {
-		(void)add_document_(did, document);
-		return;
+		return add_document_(did, document);
 	    }
 
 	    Xapian::TermIterator term = document.termlist_begin();
@@ -1463,6 +1460,8 @@ GlassWritableDatabase::replace_document(Xapian::docid did,
     }
 
     check_flush_threshold();
+
+    return did;
 }
 
 Xapian::Document::Internal *
