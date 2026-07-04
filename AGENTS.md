@@ -21,6 +21,12 @@ Everything else under `src/` is Xapiand's own. When grepping for a bug or a
 feature, scope to the own-code subsystems unless you're tracing a call *into*
 Xapian.
 
+`src/xapian/` is special: it's a *fork* (pristine upstream snapshot + a small
+stack of our patches), not a plain read-only bundle. Before upgrading the
+vendored Xapian, reconciling our patches, or touching anything under it, read
+[XAPIAN_FORK.md](XAPIAN_FORK.md) — the fork model, why each patch exists, and
+the upgrade procedure.
+
 ## Where things live
 
 | You're touching… | Start in |
