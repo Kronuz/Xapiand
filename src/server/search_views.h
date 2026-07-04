@@ -83,7 +83,7 @@ ENUM_CLASS(RequestMode, int,
 
 // Xapiand's per-request working state -- now the typed EXTENSION of the library's
 // http::Request (http::RequestExtension), not a parallel request object: the
-// http::HttpConnection builds one via SearchApplication::create_extension() and it
+// http::HttpConnection builds one via SearchService::create_extension() and it
 // lives on the http::Request for the request's life. It carries only search-side
 // state (the decoded body, resolved endpoints, tokenized URL, content negotiation,
 // timings); the HTTP facts (method string, path, query, headers, body, version,
@@ -96,7 +96,7 @@ class Request : public http::RequestExtension {
 public:
 	using Mode = RequestMode;
 
-	// The library request this state extends (set in SearchApplication::handle); the
+	// The library request this state extends (set in SearchService::handle); the
 	// source of truth for every HTTP fact, so nothing here duplicates it.
 	const http::Request* http_req = nullptr;
 
@@ -112,7 +112,7 @@ public:
 	std::atomic<http_status> response_status;
 	size_t response_size;
 
-	// The ResponseWriter this request is served through (set by SearchApplication::handle
+	// The ResponseWriter this request is served through (set by SearchService::handle
 	// from the http::HttpConnection). The response path emits through it. (Leg 2 stage 3c.)
 	http::ResponseWriter* response_writer = nullptr;
 	view_function view;

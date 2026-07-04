@@ -20,11 +20,11 @@
  * THE SOFTWARE.
  */
 
-#include "search_application.h"
+#include "search_service.h"
 
 
 bool
-SearchApplication::should_offload(const http::Request& request) const
+SearchService::should_offload(const http::Request& request) const
 {
 	// Match the legacy HttpClient exactly: it ran every request that dispatched to a
 	// view on the http_client_pool (i.e. offloaded it), and handled only the view-less

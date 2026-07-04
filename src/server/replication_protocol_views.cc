@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "replication_protocol_client.h"
+#include "replication_protocol_views.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -204,7 +204,7 @@ struct SocketWriter {
 };
 
 
-ReplicationProtocolClient::ReplicationProtocolClient(bool cluster_database_)
+ReplicationProtocolViews::ReplicationProtocolViews(bool cluster_database_)
 	:
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
@@ -231,7 +231,7 @@ ReplicationProtocolClient::ReplicationProtocolClient(bool cluster_database_)
 }
 
 
-ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
+ReplicationProtocolViews::~ReplicationProtocolViews() noexcept
 {
 	try {
 		reset();
@@ -263,7 +263,7 @@ ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 
 
 std::pair<int, std::string>
-ReplicationProtocolClient::new_temp_file()
+ReplicationProtocolViews::new_temp_file()
 {
 	// Create (+ track, for the destructor's cleanup) a temp file to stream an incoming
 	// FILE_FOLLOWS file into. Ported verbatim from the classic on_read FILE_FOLLOWS path.
@@ -293,7 +293,7 @@ ReplicationProtocolClient::new_temp_file()
 
 
 void
-ReplicationProtocolClient::reset()
+ReplicationProtocolViews::reset()
 {
 	wal.reset();
 
@@ -320,9 +320,9 @@ ReplicationProtocolClient::reset()
 
 
 bool
-ReplicationProtocolClient::init_replication_protocol(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
+ReplicationProtocolViews::init_replication_protocol(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
-	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("ReplicationProtocolViews::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	// Get fast write lock for replication or retry later
 	try {
@@ -366,9 +366,9 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 
 
 void
-ReplicationProtocolClient::send_message(ReplicationMessageType type, const std::string& message)
+ReplicationProtocolViews::send_message(ReplicationMessageType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", enum_name(type));
+	L_CALL("ReplicationProtocolViews::send_message({}, <message>)", enum_name(type));
 
 	L_REPLICA_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
 
@@ -377,9 +377,9 @@ ReplicationProtocolClient::send_message(ReplicationMessageType type, const std::
 
 
 void
-ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::string& message)
+ReplicationProtocolViews::send_message(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", enum_name(type));
+	L_CALL("ReplicationProtocolViews::send_message({}, <message>)", enum_name(type));
 
 	L_REPLICA_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
 
@@ -388,9 +388,9 @@ ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::st
 
 
 void
-ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
+ReplicationProtocolViews::send_file(ReplicationReplyType type, int fd)
 {
-	L_CALL("ReplicationProtocolClient::send_file({}, <fd>)", enum_name(type));
+	L_CALL("ReplicationProtocolViews::send_file({}, <fd>)", enum_name(type));
 
 	L_REPLICA_PROTO("<< send_file ({}): {}", enum_name(type), fd);
 
@@ -399,12 +399,12 @@ ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
 
 
 void
-ReplicationProtocolClient::replication_server(ReplicationMessageType type, const std::string& message)
+ReplicationProtocolViews::replication_server(ReplicationMessageType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::replication_server({}, <message>)", enum_name(type));
+	L_CALL("ReplicationProtocolViews::replication_server({}, <message>)", enum_name(type));
 
-	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {{type:{}}}", enum_name(type));
-	L_OBJ_END("ReplicationProtocolClient::replication_server:END {{type:{}}}", enum_name(type));
+	L_OBJ_BEGIN("ReplicationProtocolViews::replication_server:BEGIN {{type:{}}}", enum_name(type));
+	L_OBJ_END("ReplicationProtocolViews::replication_server:END {{type:{}}}", enum_name(type));
 
 	L_DEBUG("{} ({}) -> {}", enum_name(type), strings::from_bytes(message.size()), repr(endpoint.to_string()));
 
@@ -458,9 +458,9 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 
 
 void
-ReplicationProtocolClient::msg_get_changesets(const std::string& message)
+ReplicationProtocolViews::msg_get_changesets(const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::msg_get_changesets(<message>)");
+	L_CALL("ReplicationProtocolViews::msg_get_changesets(<message>)");
 
 	L_REPLICATION("GET_CHANGESETS");
 
@@ -652,9 +652,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 
 void
-ReplicationProtocolClient::msg_set_revision(const std::string& message)
+ReplicationProtocolViews::msg_set_revision(const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::msg_set_revision(<message>)");
+	L_CALL("ReplicationProtocolViews::msg_set_revision(<message>)");
 
 	L_REPLICATION("SET_REVISION");
 
@@ -688,12 +688,12 @@ ReplicationProtocolClient::msg_set_revision(const std::string& message)
 
 
 void
-ReplicationProtocolClient::replication_client(ReplicationReplyType type, const std::string& message)
+ReplicationProtocolViews::replication_client(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::replication_client({}, <message>)", enum_name(type));
+	L_CALL("ReplicationProtocolViews::replication_client({}, <message>)", enum_name(type));
 
-	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {{type:{}}}", enum_name(type));
-	L_OBJ_END("ReplicationProtocolClient::replication_client:END {{type:{}}}", enum_name(type));
+	L_OBJ_BEGIN("ReplicationProtocolViews::replication_client:BEGIN {{type:{}}}", enum_name(type));
+	L_OBJ_END("ReplicationProtocolViews::replication_client:END {{type:{}}}", enum_name(type));
 
 	L_DEBUG("{} ({}) -> {}", enum_name(type), strings::from_bytes(message.size()), repr(endpoint.to_string()));
 
@@ -758,7 +758,7 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 
 
 void
-ReplicationProtocolClient::reply_welcome(const std::string&)
+ReplicationProtocolViews::reply_welcome(const std::string&)
 {
 	std::string message;
 
@@ -775,16 +775,16 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 
 
 void
-ReplicationProtocolClient::reply_exception(const std::string& message)
+ReplicationProtocolViews::reply_exception(const std::string& message)
 {
 	unserialise_error(message, "REPLICATION:", "");
 }
 
 
 void
-ReplicationProtocolClient::reply_end_of_changes(const std::string&)
+ReplicationProtocolViews::reply_end_of_changes(const std::string&)
 {
-	L_CALL("ReplicationProtocolClient::reply_end_of_changes(<message>)");
+	L_CALL("ReplicationProtocolViews::reply_end_of_changes(<message>)");
 
 	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
@@ -857,9 +857,9 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 
 
 void
-ReplicationProtocolClient::reply_fail(const std::string& msg)
+ReplicationProtocolViews::reply_fail(const std::string& msg)
 {
-	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
+	L_CALL("ReplicationProtocolViews::reply_fail(<message>)");
 
 	assert(lk_shard_ptr);
 	L_REPLICATION("FAIL: {}", repr((*lk_shard_ptr)->endpoint.path));
@@ -876,9 +876,9 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 
 
 void
-ReplicationProtocolClient::reply_db_header(const std::string& message)
+ReplicationProtocolViews::reply_db_header(const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::reply_db_header(<message>)");
+	L_CALL("ReplicationProtocolViews::reply_db_header(<message>)");
 
 	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
@@ -910,9 +910,9 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 
 
 void
-ReplicationProtocolClient::reply_db_filename(const std::string& filename)
+ReplicationProtocolViews::reply_db_filename(const std::string& filename)
 {
-	L_CALL("ReplicationProtocolClient::reply_db_filename(<filename>)");
+	L_CALL("ReplicationProtocolViews::reply_db_filename(<filename>)");
 
 	assert(lk_shard_ptr);
 
@@ -925,9 +925,9 @@ ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 
 
 void
-ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
+ReplicationProtocolViews::reply_db_filedata(const std::string& tmp_file)
 {
-	L_CALL("ReplicationProtocolClient::reply_db_filedata(<tmp_file>)");
+	L_CALL("ReplicationProtocolViews::reply_db_filedata(<tmp_file>)");
 
 	assert(lk_shard_ptr);
 
@@ -944,9 +944,9 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 
 
 void
-ReplicationProtocolClient::reply_db_footer(const std::string& message)
+ReplicationProtocolViews::reply_db_footer(const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::reply_db_footer(<message>)");
+	L_CALL("ReplicationProtocolViews::reply_db_footer(<message>)");
 
 	assert(lk_shard_ptr);
 
@@ -966,9 +966,9 @@ ReplicationProtocolClient::reply_db_footer(const std::string& message)
 
 
 void
-ReplicationProtocolClient::reply_changeset(const std::string& line)
+ReplicationProtocolViews::reply_changeset(const std::string& line)
 {
-	L_CALL("ReplicationProtocolClient::reply_changeset(<line>)");
+	L_CALL("ReplicationProtocolViews::reply_changeset(<line>)");
 
 	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
@@ -1001,9 +1001,9 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 
 
 void
-ReplicationProtocolClient::reply_done(const std::string&)
+ReplicationProtocolViews::reply_done(const std::string&)
 {
-	L_CALL("ReplicationProtocolClient::reply_done(<message>)");
+	L_CALL("ReplicationProtocolViews::reply_done(<message>)");
 
 	reset();
 	close();
@@ -1013,9 +1013,9 @@ ReplicationProtocolClient::reply_done(const std::string&)
 
 
 void
-ReplicationProtocolClient::send_message(char type_as_char, const std::string &message)
+ReplicationProtocolViews::send_message(char type_as_char, const std::string &message)
 {
-	L_CALL("ReplicationProtocolClient::send_message(<type_as_char>, <message>)");
+	L_CALL("ReplicationProtocolViews::send_message(<type_as_char>, <message>)");
 
 #ifdef SAVE_LAST_MESSAGES
 	last_message_sent.store(type_as_char, std::memory_order_relaxed);
@@ -1031,9 +1031,9 @@ ReplicationProtocolClient::send_message(char type_as_char, const std::string &me
 
 
 void
-ReplicationProtocolClient::send_file(char type_as_char, int fd)
+ReplicationProtocolViews::send_file(char type_as_char, int fd)
 {
-	L_CALL("ReplicationProtocolClient::send_file(<type_as_char>, <fd>)");
+	L_CALL("ReplicationProtocolViews::send_file(<type_as_char>, <fd>)");
 
 	std::string buf;
 	buf += FILE_FOLLOWS;
@@ -1049,9 +1049,9 @@ ReplicationProtocolClient::send_file(char type_as_char, int fd)
 
 
 std::string
-ReplicationProtocolClient::__repr__() const
+ReplicationProtocolViews::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<ReplicationProtocolClient {{ fd:{} }}{}>",
+	return strings::format(STEEL_BLUE + "<ReplicationProtocolViews {{ fd:{} }}{}>",
 		sock_fd_,
 		closing_ ? " " + ORANGE + "(closing)" + STEEL_BLUE : "");
 }

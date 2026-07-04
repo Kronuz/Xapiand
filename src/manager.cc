@@ -77,7 +77,7 @@
 #include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
 #include "server/remote_protocol_service.h"         // remote::RemoteProtocolService (the Asio transport)
 #include "server/replication_protocol_service.h"    // replication::ReplicationProtocolService (the Asio transport)
-#include "server/search_application.h"           // for SearchApplication (the HttpHandler)
+#include "server/search_service.h"           // for SearchService (the HttpHandler)
 #include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
 #include "storage.h"                             // for Storage
 #include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
@@ -171,12 +171,12 @@ struct XapiandManager::Reactors {
 	}
 };
 
-// The Xapiand search API served over the Asio transport. SearchApplication is a
+// The Xapiand search API served over the Asio transport. SearchService is a
 // stateless http::HttpHandler (its handle() builds all per-request state locally),
 // so one shared instance is safe across every reactor thread. The transport owns the
 // offload pool (blocking, Xapian-bound work runs off the reactor) and the response
 // transforms, so no bespoke dispatcher/response wiring survives here.
-static SearchApplication search_app;
+static SearchService search_service;
 
 // The response transforms the transport applies to the buffered response: compress to
 // the codec the client advertised. Xapiand no longer encodes responses itself; it just
@@ -974,7 +974,7 @@ XapiandManager::make_servers()
 		std::size_t workers = opts.num_http_clients > 0
 			? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_http_clients) + reactors - 1) / reactors)
 			: 1;
-		http_service = std::make_unique<http::HttpAsioService>(search_app, reactors, workers, 1000);
+		http_service = std::make_unique<http::HttpAsioService>(search_service, reactors, workers, 1000);
 		http::AsioBindOptions bind_options;
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;

@@ -30,7 +30,7 @@
 
 // Xapiand's search engine as ONE http::HttpHandler (Leg 2, architecture B).
 //
-// SearchApplication owns everything application-specific: the request dispatch that
+// SearchService owns everything application-specific: the request dispatch that
 // HttpClient::prepare() did (now a declarative route table over the generic radix
 // router, http::MethodRouter, plus a small classifier for Xapiand's ":command" URL
 // sub-syntax), the ~28 *_view endpoints, and the MsgPack content-negotiation /
@@ -40,10 +40,10 @@
 // value-semantic seam handle(Request, ResponseWriter).
 //
 // STATUS: LIVE (Leg 2 stage 3c-6). HttpServer creates http::HttpConnection bound to a
-// shared stateless SearchApplication; the legacy HttpClient is gone. handle() rebuilds
+// shared stateless SearchService; the legacy HttpClient is gone. handle() rebuilds
 // an application Request from the library's http::Request, runs the route table's
 // selected view, and emits the response through the library ResponseWriter.
-class SearchApplication : public http::HttpHandler {
+class SearchService : public http::HttpHandler {
 public:
 	void handle(const http::Request& request, http::ResponseWriter& response) override;
 

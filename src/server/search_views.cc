@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "search_request.h"
+#include "search_views.h"
 
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
@@ -56,7 +56,7 @@
 #include "http_accept.h"                    // for http::AcceptCache (content negotiation)
 #include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
 #include "http_router.h"                    // for http::MethodRouter (Leg 2 stage 3c-6)
-#include "search_application.h"             // for SearchApplication (Leg 2 stage 3c)
+#include "search_service.h"             // for SearchService (Leg 2 stage 3c)
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
 #include "logger.h"                         // for Logging
@@ -112,7 +112,7 @@ static const std::string eol("\r\n");
 
 
 // Content negotiation helpers, lifted off HttpClient `this` so the forthcoming
-// SearchApplication can negotiate without an HttpClient (Leg 2 stage 2a). They use
+// SearchService can negotiate without an HttpClient (Leg 2 stage 2a). They use
 // only `request` (content negotiation caches live in the framework now), so they are file-scope free
 // functions; forward-declared here because the views below call them before their
 // definitions (and they call one another out of order).
@@ -133,7 +133,7 @@ static query_field_t query_field_maker(Request& request, int flags);
 // The DB-bound prep helpers lifted off HttpClient `this` (Leg 2 stage 3a). They
 // touch only their `request` argument plus the manager/DB singletons -- never any
 // HttpClient/connection state -- so they are file-scope free functions, the seam
-// the forthcoming SearchApplication shares. Forward-declared here because the views
+// the forthcoming SearchService shares. Forward-declared here because the views
 // above call them before their definitions.
 static MsgPack node_obj();
 static MsgPack retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
@@ -151,7 +151,7 @@ static void write_http_response(Request& request, enum http_status status, const
 // bodies use only their `request` argument + the file-scope helpers above +
 // the manager/DB singletons -- no HttpClient/connection state -- so they are
 // free functions, dispatched through a plain function pointer (Request::view is
-// now `void(*)(Request&)`). This is what SearchApplication::handle() will call.
+// now `void(*)(Request&)`). This is what SearchService::handle() will call.
 // Forward-declared here because prepare() takes their address before their defs.
 static void metrics_view(Request& request);
 static void info_view(Request& request);
@@ -379,7 +379,7 @@ emit_response(Request& request, enum http_status status, int mode, const std::st
 // The per-header processing lifted out of on_header_value (Leg 2 stage 3c): fills
 // request state (accept / accept-encoding via the LRU caches, content-type, the
 // Expect flag, and the method-override verbs) from one header name/value. A free
-// function so SearchApplication::handle() can replay it over http::Request.headers
+// function so SearchService::handle() can replay it over http::Request.headers
 // exactly as the parser callback does. An invalid method override sets
 // request.parser.http_errno (the same object on_header_value already writes).
 static void
@@ -1488,7 +1488,7 @@ delete_database_view(Request& request)
 
 // Administrative verbs. These do no per-database query work and (like the OPTIONS /
 // OPEN / CLOSE verbs) run inline on the reactor rather than the worker pool -- see
-// SearchApplication::should_offload. Their admin_commands + root-URL preconditions,
+// SearchService::should_offload. Their admin_commands + root-URL preconditions,
 // which prepare()'s switch enforced before dispatch, are checked here at the view.
 static void
 flush_view(Request& request)
@@ -2639,7 +2639,7 @@ get_acceptable_type(Request& request, const T& ct)
 
 // Content negotiation: render a MsgPack object as the bytes + content-type for a
 // negotiated ct_type. Pure (no client state) -- a file-scope free function so the
-// forthcoming SearchApplication can format responses without an HttpClient. (Leg 2
+// forthcoming SearchService can format responses without an HttpClient. (Leg 2
 // stage 1: extracting the shared response helpers off HttpClient `this`.)
 static std::pair<std::string, std::string>
 serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
@@ -2995,8 +2995,8 @@ Request::next_object(MsgPack& obj)
 
 
 // ---------------------------------------------------------------------------
-// SearchApplication (Leg 2 stage 3c): Xapiand's search engine as one
-// http::HttpHandler. Defined here (not in search_application.cc) because it
+// SearchService (Leg 2 stage 3c): Xapiand's search engine as one
+// http::HttpHandler. Defined here (not in search_service.cc) because it
 // drives the file-scope request pipeline above -- process_header, url_resolve,
 // dispatch_request, the *_view functions, emit_response -- all internal to this
 // translation unit. When http::HttpConnection serves a request it calls handle();
@@ -3023,7 +3023,7 @@ method_from_string(std::string_view m)
 
 
 std::unique_ptr<http::RequestExtension>
-SearchApplication::create_extension(const http::Request& /*hreq*/)
+SearchService::create_extension(const http::Request& /*hreq*/)
 {
 	// Allocate Xapiand's per-request state as the http::Request's extension. It is
 	// populated in handle() (which runs guarded by the connection's error backstop),
@@ -3034,7 +3034,7 @@ SearchApplication::create_extension(const http::Request& /*hreq*/)
 
 
 bool
-SearchApplication::wants_body_stream(const http::Request& hreq)
+SearchService::wants_body_stream(const http::Request& hreq)
 {
 	// Stream a whole-database RESTORE with a bulk body (NDJSON / MsgPack, no doc id): the
 	// library runs handle() on a worker and feeds the body through Request::body_reader,
@@ -3051,7 +3051,7 @@ SearchApplication::wants_body_stream(const http::Request& hreq)
 
 
 void
-SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& response)
+SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();   // the extension create_extension() built
 	request.http_req = &hreq;                 // the source of truth for every HTTP fact
@@ -3095,7 +3095,7 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 
 	// Dispatch, then feed the body (if not streamed) and run the selected view.
 	// Xapian/ClientError exceptions propagate to the connection, which calls
-	// SearchApplication::on_error() -- the app's error-to-status mapping.
+	// SearchService::on_error() -- the app's error-to-status mapping.
 	if (dispatch_request(request) == 0 && request.view != nullptr) {
 		// A FULL request reads its body straight from http_req (via body_view() /
 		// decoded_body()) -- no copy. A buffered streamed request (a whole-DB RESTORE
@@ -3124,7 +3124,7 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 // Datetime / Cartesian to the right status, then write_status_response emits it -- the
 // same mapping handled_errors did on the legacy path.
 void
-SearchApplication::on_error(std::exception_ptr error, const http::Request& hreq, http::ResponseWriter& response)
+SearchService::on_error(std::exception_ptr error, const http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();
 

@@ -37,8 +37,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-// replication_protocol_client.h pulls NO libev, so no EV_ERROR clash with the Asio headers.
-#include "replication_protocol_client.h"      // ReplicationProtocolClient, types, FILE_FOLLOWS
+// replication_protocol_views.h pulls NO libev, so no EV_ERROR clash with the Asio headers.
+#include "replication_protocol_views.h"      // ReplicationProtocolViews, types, FILE_FOLLOWS
 #include "endpoint.h"                          // for Endpoint (trigger args)
 #include "length.h"                            // for unserialise_length_and_check (framing)
 
@@ -94,7 +94,7 @@ struct SocketAbortable : reactor::Abortable {
 // FILE_FOLLOWS (0xfd) is `[0xfd][real_type]` + a flume-framed file, streamed into a temp file;
 // type_out is the real type and body_out is the temp-file path (matching the classic on_read).
 inline asio::awaitable<bool> read_message(asio::ip::tcp::socket& socket, std::string& buffered,
-                                          ReplicationProtocolClient& client, char& type_out, std::string& body_out) {
+                                          ReplicationProtocolViews& client, char& type_out, std::string& body_out) {
 	using asio::use_awaitable;
 	char tmp[64 * 1024];
 
@@ -168,7 +168,7 @@ inline asio::awaitable<bool> read_message(asio::ip::tcp::socket& socket, std::st
 // Drive one connection's message loop: read a request, dispatch it (offloaded to the pool),
 // until EOF or a handler asked to close. `is_server` picks replication_server vs client.
 inline asio::awaitable<void> run_loop(asio::ip::tcp::socket& socket, reactor::Reactor* reactor,
-                                      ReplicationProtocolClient& client, bool is_server) {
+                                      ReplicationProtocolViews& client, bool is_server) {
 	using asio::use_awaitable;
 	std::string buffered;
 	for (;;) {
@@ -203,7 +203,7 @@ inline asio::awaitable<void> serve_replication_connection(asio::ip::tcp::socket 
 		asio::error_code opt_ec;
 		socket.set_option(asio::ip::tcp::no_delay(true), opt_ec);
 
-		ReplicationProtocolClient client;
+		ReplicationProtocolViews client;
 		client.set_socket_fd(socket.native_handle());
 		auto ab = std::make_shared<SocketAbortable>(socket.native_handle());
 		reactor->track(ab);
@@ -231,7 +231,7 @@ inline asio::awaitable<void> connect_and_replicate(reactor::Reactor* reactor, st
                                                    Endpoint src_endpoint, Endpoint dst_endpoint, bool cluster_database) {
 	using asio::use_awaitable;
 	try {
-		auto client = std::make_unique<ReplicationProtocolClient>(cluster_database);
+		auto client = std::make_unique<ReplicationProtocolViews>(cluster_database);
 
 		bool ok = false;
 		co_await asio::co_spawn(reactor->pool() != nullptr ? reactor->pool()->get_executor() : co_await asio::this_coro::executor,

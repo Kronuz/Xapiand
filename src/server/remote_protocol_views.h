@@ -134,7 +134,7 @@ struct RemoteProtocolPendingQuery {
 // replies to reply_buffer_, which the Asio connection coroutine (remote_protocol_service.h)
 // drains and writes. No libev / Worker / thread pool -- the coroutine owns the socket and the
 // reactor pool runs the blocking dispatch.
-class RemoteProtocolClient {
+class RemoteProtocolViews {
 	int flags;
 	Endpoint endpoint;
 
@@ -202,12 +202,12 @@ class RemoteProtocolClient {
 	void msg_shutdown(const std::string& message);
 
 	// No copy constructor
-	RemoteProtocolClient(const RemoteProtocolClient&) = delete;
-	RemoteProtocolClient& operator=(const RemoteProtocolClient&) = delete;
+	RemoteProtocolViews(const RemoteProtocolViews&) = delete;
+	RemoteProtocolViews& operator=(const RemoteProtocolViews&) = delete;
 
 public:
-	explicit RemoteProtocolClient(bool cluster_database_ = false);
-	~RemoteProtocolClient() noexcept;
+	explicit RemoteProtocolViews(bool cluster_database_ = false);
+	~RemoteProtocolViews() noexcept;
 
 	// The initial greeting (REPLY_UPDATE) the server sends as soon as a connection opens.
 	void greeting() { msg_update(std::string()); }

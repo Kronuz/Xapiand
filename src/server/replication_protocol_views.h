@@ -84,7 +84,7 @@ class lock_shard;
 // pool. Two roles, driven by the coroutine (replication_protocol_service.h): an accepted inbound
 // connection (server: greet, answer MSG_GET_CHANGESETS/MSG_SET_REVISION) and an outbound
 // connection (client: fetch changesets from a primary).
-class ReplicationProtocolClient {
+class ReplicationProtocolViews {
 #ifdef SAVE_LAST_MESSAGES
 	std::atomic_char last_message_received;
 	std::atomic_char last_message_sent;
@@ -116,8 +116,8 @@ class ReplicationProtocolClient {
 	void close() noexcept { closing_ = true; }
 
 	// No copy constructor
-	ReplicationProtocolClient(const ReplicationProtocolClient&) = delete;
-	ReplicationProtocolClient& operator=(const ReplicationProtocolClient&) = delete;
+	ReplicationProtocolViews(const ReplicationProtocolViews&) = delete;
+	ReplicationProtocolViews& operator=(const ReplicationProtocolViews&) = delete;
 
 public:
 	std::unique_ptr<lock_shard> lk_shard_ptr;
@@ -135,8 +135,8 @@ public:
 	size_t changesets;
 	std::shared_ptr<Logging> log;
 
-	explicit ReplicationProtocolClient(bool cluster_database_ = false);
-	~ReplicationProtocolClient() noexcept;
+	explicit ReplicationProtocolViews(bool cluster_database_ = false);
+	~ReplicationProtocolViews() noexcept;
 
 	void reset();
 

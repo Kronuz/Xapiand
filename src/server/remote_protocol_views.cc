@@ -18,7 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include "remote_protocol_client.h"
+#include "remote_protocol_views.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -47,7 +47,7 @@
 #include "multivalue/geospatialrange.h"       // for GeoSpatialRange
 #include "multivalue/range.h"                 // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"              // for Multi_MultiValueKeyMaker
-#include "server/remote_protocol_client.h"    // for RemoteProtocolClient
+#include "server/remote_protocol_views.h"    // for RemoteProtocolViews
 #include "xapian/common/pack.h"               // for pack_* unpack_*
 #include "xapian/common/serialise-double.h"   // for unserialise_double
 #include "xapian/net/serialise-error.h"       // for serialise_error
@@ -96,7 +96,7 @@ static std::mutex pending_queries_mtx;
 static lru::aging_lru<std::string, RemoteProtocolPendingQuery> pending_queries(0, 600s);
 
 
-RemoteProtocolClient::RemoteProtocolClient(bool cluster_database_)
+RemoteProtocolViews::RemoteProtocolViews(bool cluster_database_)
 	: flags(0),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
@@ -126,7 +126,7 @@ RemoteProtocolClient::RemoteProtocolClient(bool cluster_database_)
 }
 
 
-RemoteProtocolClient::~RemoteProtocolClient() noexcept
+RemoteProtocolViews::~RemoteProtocolViews() noexcept
 {
 	try {
 		if (auto manager = XapiandManager::manager()) {
@@ -155,7 +155,7 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 
 
 std::pair<int, std::string>
-RemoteProtocolClient::new_temp_file()
+RemoteProtocolViews::new_temp_file()
 {
 	// Create (and track, for the destructor's cleanup) a temp file to stream an incoming
 	// FILE_FOLLOWS file into. Ported verbatim from the classic on_read FILE_FOLLOWS path.
@@ -185,9 +185,9 @@ RemoteProtocolClient::new_temp_file()
 
 
 void
-RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& message)
+RemoteProtocolViews::send_message(RemoteReplyType type, const std::string& message)
 {
-	L_CALL("RemoteProtocolClient::send_message({}, <message>)", enum_name(type));
+	L_CALL("RemoteProtocolViews::send_message({}, <message>)", enum_name(type));
 
 	L_BINARY_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
 
@@ -196,12 +196,12 @@ RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& mess
 
 
 void
-RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &message)
+RemoteProtocolViews::remote_server(RemoteMessageType type, const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::remote_server({}, <message>)", enum_name(type));
+	L_CALL("RemoteProtocolViews::remote_server({}, <message>)", enum_name(type));
 
-	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", enum_name(type));
-	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", enum_name(type));
+	L_OBJ_BEGIN("RemoteProtocolViews::remote_server:BEGIN {{type:{}}}", enum_name(type));
+	L_OBJ_END("RemoteProtocolViews::remote_server:END {{type:{}}}", enum_name(type));
 
 	L_DEBUG("{} ({}) -> {}", enum_name(type), strings::from_bytes(message.size()), repr(endpoint.to_string()));
 
@@ -343,9 +343,9 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 
 
 void
-RemoteProtocolClient::msg_allterms(const std::string &message)
+RemoteProtocolViews::msg_allterms(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_allterms(<message>)");
+	L_CALL("RemoteProtocolViews::msg_allterms(<message>)");
 
 	std::string prev = message;
 
@@ -374,9 +374,9 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_termlist(const std::string &message)
+RemoteProtocolViews::msg_termlist(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_termlist(<message>)");
+	L_CALL("RemoteProtocolViews::msg_termlist(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -422,9 +422,9 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_positionlist(const std::string &message)
+RemoteProtocolViews::msg_positionlist(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_positionlist(<message>)");
+	L_CALL("RemoteProtocolViews::msg_positionlist(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -455,9 +455,9 @@ RemoteProtocolClient::msg_positionlist(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_positionlistcount(const std::string &message)
+RemoteProtocolViews::msg_positionlistcount(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_positionlistcount(<message>)");
+	L_CALL("RemoteProtocolViews::msg_positionlistcount(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -490,9 +490,9 @@ RemoteProtocolClient::msg_positionlistcount(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_postlist(const std::string &message)
+RemoteProtocolViews::msg_postlist(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_postlist(<message>)");
+	L_CALL("RemoteProtocolViews::msg_postlist(<message>)");
 
 	std::string reply;
 	const std::string& term = message;
@@ -524,9 +524,9 @@ RemoteProtocolClient::msg_postlist(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_readaccess(const std::string &message)
+RemoteProtocolViews::msg_readaccess(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_readaccess(<message>)");
+	L_CALL("RemoteProtocolViews::msg_readaccess(<message>)");
 
 	flags = 0;
 	const char *p = message.c_str();
@@ -559,9 +559,9 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_writeaccess(const std::string & message)
+RemoteProtocolViews::msg_writeaccess(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_writeaccess(<message>)");
+	L_CALL("RemoteProtocolViews::msg_writeaccess(<message>)");
 
 	flags = 0;
 	const char *p = message.c_str();
@@ -594,9 +594,9 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_reopen(const std::string & message)
+RemoteProtocolViews::msg_reopen(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_reopen(<message>)");
+	L_CALL("RemoteProtocolViews::msg_reopen(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
 
@@ -613,9 +613,9 @@ RemoteProtocolClient::msg_reopen(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_update(const std::string &)
+RemoteProtocolViews::msg_update(const std::string &)
 {
-	L_CALL("RemoteProtocolClient::msg_update(<message>)");
+	L_CALL("RemoteProtocolViews::msg_update(<message>)");
 
 	static const char protocol[2] = {
 		char(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION),
@@ -645,9 +645,9 @@ RemoteProtocolClient::msg_update(const std::string &)
 
 
 void
-RemoteProtocolClient::msg_query(const std::string &message_in)
+RemoteProtocolViews::msg_query(const std::string &message_in)
 {
-	L_CALL("RemoteProtocolClient::msg_query(<message>)");
+	L_CALL("RemoteProtocolViews::msg_query(<message>)");
 
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
@@ -881,9 +881,9 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 
 void
-RemoteProtocolClient::msg_getmset(const std::string & message)
+RemoteProtocolViews::msg_getmset(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_getmset(<message>)");
+	L_CALL("RemoteProtocolViews::msg_getmset(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
@@ -939,9 +939,9 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_document(const std::string &message)
+RemoteProtocolViews::msg_document(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_document(<message>)");
+	L_CALL("RemoteProtocolViews::msg_document(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -972,9 +972,9 @@ RemoteProtocolClient::msg_document(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_keepalive(const std::string &)
+RemoteProtocolViews::msg_keepalive(const std::string &)
 {
-	L_CALL("RemoteProtocolClient::msg_keepalive(<message>)");
+	L_CALL("RemoteProtocolViews::msg_keepalive(<message>)");
 
 	{
 		lock_shard lk_shard(endpoint, flags);
@@ -989,9 +989,9 @@ RemoteProtocolClient::msg_keepalive(const std::string &)
 
 
 void
-RemoteProtocolClient::msg_termexists(const std::string &term)
+RemoteProtocolViews::msg_termexists(const std::string &term)
 {
-	L_CALL("RemoteProtocolClient::msg_termexists(<term>)");
+	L_CALL("RemoteProtocolViews::msg_termexists(<term>)");
 
 	bool term_exists;
 	{
@@ -1007,9 +1007,9 @@ RemoteProtocolClient::msg_termexists(const std::string &term)
 
 
 void
-RemoteProtocolClient::msg_collfreq(const std::string &term)
+RemoteProtocolViews::msg_collfreq(const std::string &term)
 {
-	L_CALL("RemoteProtocolClient::msg_collfreq(<term>)");
+	L_CALL("RemoteProtocolViews::msg_collfreq(<term>)");
 
 	Xapian::termcount collection_freq;
 	{
@@ -1026,9 +1026,9 @@ RemoteProtocolClient::msg_collfreq(const std::string &term)
 
 
 void
-RemoteProtocolClient::msg_termfreq(const std::string &term)
+RemoteProtocolViews::msg_termfreq(const std::string &term)
 {
-	L_CALL("RemoteProtocolClient::msg_termfreq(<term>)");
+	L_CALL("RemoteProtocolViews::msg_termfreq(<term>)");
 
 	Xapian::doccount termfreq;
 	{
@@ -1045,9 +1045,9 @@ RemoteProtocolClient::msg_termfreq(const std::string &term)
 
 
 void
-RemoteProtocolClient::msg_freqs(const std::string &term)
+RemoteProtocolViews::msg_freqs(const std::string &term)
 {
-	L_CALL("RemoteProtocolClient::msg_freqs(<term>)");
+	L_CALL("RemoteProtocolViews::msg_freqs(<term>)");
 
 	Xapian::doccount termfreq;
 	Xapian::termcount collection_freq;
@@ -1067,9 +1067,9 @@ RemoteProtocolClient::msg_freqs(const std::string &term)
 
 
 void
-RemoteProtocolClient::msg_valuestats(const std::string & message)
+RemoteProtocolViews::msg_valuestats(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_valuestats(<message>)");
+	L_CALL("RemoteProtocolViews::msg_valuestats(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1100,9 +1100,9 @@ RemoteProtocolClient::msg_valuestats(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_doclength(const std::string &message)
+RemoteProtocolViews::msg_doclength(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_doclength(<message>)");
+	L_CALL("RemoteProtocolViews::msg_doclength(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1127,9 +1127,9 @@ RemoteProtocolClient::msg_doclength(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_uniqueterms(const std::string &message)
+RemoteProtocolViews::msg_uniqueterms(const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::msg_uniqueterms(<message>)");
+	L_CALL("RemoteProtocolViews::msg_uniqueterms(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1154,9 +1154,9 @@ RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 
 
 void
-RemoteProtocolClient::msg_commit(const std::string &)
+RemoteProtocolViews::msg_commit(const std::string &)
 {
-	L_CALL("RemoteProtocolClient::msg_commit(<message>)");
+	L_CALL("RemoteProtocolViews::msg_commit(<message>)");
 
 	{
 		lock_shard lk_shard(endpoint, flags);
@@ -1169,9 +1169,9 @@ RemoteProtocolClient::msg_commit(const std::string &)
 
 
 void
-RemoteProtocolClient::msg_cancel(const std::string &)
+RemoteProtocolViews::msg_cancel(const std::string &)
 {
-	L_CALL("RemoteProtocolClient::msg_cancel(<message>)");
+	L_CALL("RemoteProtocolViews::msg_cancel(<message>)");
 
 	{
 		lock_shard lk_shard(endpoint, flags);
@@ -1187,9 +1187,9 @@ RemoteProtocolClient::msg_cancel(const std::string &)
 
 
 void
-RemoteProtocolClient::msg_adddocument(const std::string & message)
+RemoteProtocolViews::msg_adddocument(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_adddocument(<message>)");
+	L_CALL("RemoteProtocolViews::msg_adddocument(<message>)");
 
 	auto document = Xapian::Document::unserialise(message);
 
@@ -1209,9 +1209,9 @@ RemoteProtocolClient::msg_adddocument(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_deletedocument(const std::string & message)
+RemoteProtocolViews::msg_deletedocument(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_deletedocument(<message>)");
+	L_CALL("RemoteProtocolViews::msg_deletedocument(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1232,9 +1232,9 @@ RemoteProtocolClient::msg_deletedocument(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
+RemoteProtocolViews::msg_deletedocumentterm(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_deletedocumentterm(<message>)");
+	L_CALL("RemoteProtocolViews::msg_deletedocumentterm(<message>)");
 
 	{
 		lock_shard lk_shard(endpoint, flags);
@@ -1247,9 +1247,9 @@ RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_replacedocument(const std::string & message)
+RemoteProtocolViews::msg_replacedocument(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_replacedocument(<message>)");
+	L_CALL("RemoteProtocolViews::msg_replacedocument(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1277,9 +1277,9 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
+RemoteProtocolViews::msg_replacedocumentterm(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_replacedocumentterm(<message>)");
+	L_CALL("RemoteProtocolViews::msg_replacedocumentterm(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1307,9 +1307,9 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_getmetadata(const std::string & message)
+RemoteProtocolViews::msg_getmetadata(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_getmetadata(<message>)");
+	L_CALL("RemoteProtocolViews::msg_getmetadata(<message>)");
 
 	std::string value;
 	{
@@ -1323,9 +1323,9 @@ RemoteProtocolClient::msg_getmetadata(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
+RemoteProtocolViews::msg_metadatakeylist(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_metadatakeylist(<message>)");
+	L_CALL("RemoteProtocolViews::msg_metadatakeylist(<message>)");
 
 	std::string reply;
 	{
@@ -1353,9 +1353,9 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_setmetadata(const std::string & message)
+RemoteProtocolViews::msg_setmetadata(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_setmetadata(<message>)");
+	L_CALL("RemoteProtocolViews::msg_setmetadata(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1377,9 +1377,9 @@ RemoteProtocolClient::msg_setmetadata(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_addspelling(const std::string & message)
+RemoteProtocolViews::msg_addspelling(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_addspelling(<message>)");
+	L_CALL("RemoteProtocolViews::msg_addspelling(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1400,9 +1400,9 @@ RemoteProtocolClient::msg_addspelling(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_removespelling(const std::string & message)
+RemoteProtocolViews::msg_removespelling(const std::string & message)
 {
-	L_CALL("RemoteProtocolClient::msg_removespelling(<message>)");
+	L_CALL("RemoteProtocolViews::msg_removespelling(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1426,9 +1426,9 @@ RemoteProtocolClient::msg_removespelling(const std::string & message)
 
 
 void
-RemoteProtocolClient::msg_shutdown(const std::string &)
+RemoteProtocolViews::msg_shutdown(const std::string &)
 {
-	L_CALL("RemoteProtocolClient::msg_shutdown(<message>)");
+	L_CALL("RemoteProtocolViews::msg_shutdown(<message>)");
 
 	destroy();
 	detach();
@@ -1436,9 +1436,9 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 
 
 void
-RemoteProtocolClient::send_message(char type_as_char, const std::string &message)
+RemoteProtocolViews::send_message(char type_as_char, const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::send_message(<type_as_char>, <message>)");
+	L_CALL("RemoteProtocolViews::send_message(<type_as_char>, <message>)");
 
 #ifdef SAVE_LAST_MESSAGES
 	last_message_sent.store(type_as_char, std::memory_order_relaxed);
@@ -1453,9 +1453,9 @@ RemoteProtocolClient::send_message(char type_as_char, const std::string &message
 
 
 std::string
-RemoteProtocolClient::__repr__() const
+RemoteProtocolViews::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<RemoteProtocolClient {{ endpoint:{} }}{}>",
+	return strings::format(STEEL_BLUE + "<RemoteProtocolViews {{ endpoint:{} }}{}>",
 		repr(endpoint.to_string()),
 		closing_ ? " " + ORANGE + "(closing)" + STEEL_BLUE : "");
 }

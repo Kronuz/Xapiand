@@ -25,7 +25,7 @@
 // (a reactor::Session): the server greets, then for each framed request it runs the blocking
 // Xapian dispatch on the reactor's offload pool (the coroutine suspends, the reactor stays
 // free) and writes the framed replies. This replaces the libev BaseClient FSM + the
-// ThreadPool<RemoteProtocolClient> runner: the protocol logic (RemoteProtocolClient's msg_*
+// ThreadPool<RemoteProtocolViews> runner: the protocol logic (RemoteProtocolViews's msg_*
 // handlers) is unchanged; only the I/O core moved from ev::io + a write_queue to a coroutine
 // + a reply buffer.
 
@@ -35,9 +35,9 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-// remote_protocol_client.h pulls NO libev (verified), so there is no EV_ERROR clash with the
+// remote_protocol_views.h pulls NO libev (verified), so there is no EV_ERROR clash with the
 // Asio headers below; include it first anyway to keep the app types ahead of the runtime.
-#include "remote_protocol_client.h"           // RemoteProtocolClient, RemoteMessageType, FILE_FOLLOWS
+#include "remote_protocol_views.h"           // RemoteProtocolViews, RemoteMessageType, FILE_FOLLOWS
 #include "xapian/common/pack.h"               // for unpack_uint (message length framing)
 
 #include <asio.hpp>
@@ -82,7 +82,7 @@ inline asio::awaitable<void> write_all(asio::ip::tcp::socket& socket, std::strin
 // into a temp file; type_out is the real type and body_out is the temp-file path (matching the
 // classic on_read behavior). `buffered` carries bytes read past one message to the next call.
 inline asio::awaitable<bool> read_message(asio::ip::tcp::socket& socket, std::string& buffered,
-                                          RemoteProtocolClient& client, char& type_out, std::string& body_out) {
+                                          RemoteProtocolViews& client, char& type_out, std::string& body_out) {
 	using asio::use_awaitable;
 	char tmp[64 * 1024];
 
@@ -163,7 +163,7 @@ inline asio::awaitable<void> serve_remote_connection(asio::ip::tcp::socket socke
 		asio::error_code opt_ec;
 		socket.set_option(asio::ip::tcp::no_delay(true), opt_ec);
 
-		RemoteProtocolClient client;
+		RemoteProtocolViews client;
 
 		// The server greets first (REPLY_UPDATE), like the classic INIT_REMOTE -> msg_update("").
 		client.greeting();
