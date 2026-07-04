@@ -21,7 +21,7 @@
  */
 
 // The Asio transport for Xapiand's replication protocol -- the counterpart to
-// remote_protocol_asio.h, on the same Kronuz/reactor runtime. Two roles, one coroutine each:
+// remote_protocol_service.h, on the same Kronuz/reactor runtime. Two roles, one coroutine each:
 //   * serve_replication_connection -- an ACCEPTED inbound connection (server): greet, then
 //     answer MSG_GET_CHANGESETS/MSG_SET_REVISION (streaming changesets + whole DB files).
 //   * connect_and_replicate -- an OUTBOUND connection (client): connect to a primary, then
@@ -265,16 +265,16 @@ inline asio::awaitable<void> connect_and_replicate(reactor::Reactor* reactor, st
 // The replication service over a reactor::TcpServer (the inbound/server side) plus an outbound
 // spawner (trigger_replication). A thin adapter, like http::HttpAsioService, except it also
 // initiates connections.
-class ReplicationProtocolAsioService {
+class ReplicationProtocolService {
 public:
-	ReplicationProtocolAsioService(std::size_t reactors, std::size_t workers, std::size_t queue_limit)
+	ReplicationProtocolService(std::size_t reactors, std::size_t workers, std::size_t queue_limit)
 		: server_(reactors, workers, static_cast<int>(queue_limit),
 		          [](asio::ip::tcp::socket socket, reactor::Reactor& r) -> asio::awaitable<void> {
 			          return detail::serve_replication_connection(std::move(socket), &r);
 		          }) {}
 
-	ReplicationProtocolAsioService(const ReplicationProtocolAsioService&) = delete;
-	ReplicationProtocolAsioService& operator=(const ReplicationProtocolAsioService&) = delete;
+	ReplicationProtocolService(const ReplicationProtocolService&) = delete;
+	ReplicationProtocolService& operator=(const ReplicationProtocolService&) = delete;
 
 	void set_bind_options(const reactor::BindOptions& options) { server_.set_bind_options(options); }
 	void start(unsigned short port) { server_.start(port); }

@@ -75,8 +75,8 @@
 #include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
 #include "reactor.h"                             // Kronuz/reactor: reactor::Reactor (the control-plane loop)
 #include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
-#include "server/remote_protocol_asio.h"         // remote::RemoteProtocolAsioService (the Asio transport)
-#include "server/replication_protocol_asio.h"    // replication::ReplicationProtocolAsioService (the Asio transport)
+#include "server/remote_protocol_service.h"         // remote::RemoteProtocolService (the Asio transport)
+#include "server/replication_protocol_service.h"    // replication::ReplicationProtocolService (the Asio transport)
 #include "server/search_application.h"           // for SearchApplication (the HttpHandler)
 #include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
 #include "storage.h"                             // for Storage
@@ -993,7 +993,7 @@ XapiandManager::make_servers()
 			std::size_t workers = opts.num_remote_clients > 0
 				? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_remote_clients) + reactors - 1) / reactors)
 				: 1;
-			remote_service = std::make_unique<remote::RemoteProtocolAsioService>(reactors, workers, 1000);
+			remote_service = std::make_unique<remote::RemoteProtocolService>(reactors, workers, 1000);
 			reactor::BindOptions bind_options;
 			bind_options.address = opts.bind_address;
 			bind_options.reuse_port = reuse_ports;
@@ -1008,7 +1008,7 @@ XapiandManager::make_servers()
 			std::size_t workers = opts.num_replication_clients > 0
 				? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_replication_clients) + reactors - 1) / reactors)
 				: 1;
-			replication_service = std::make_unique<replication::ReplicationProtocolAsioService>(reactors, workers, 1000);
+			replication_service = std::make_unique<replication::ReplicationProtocolService>(reactors, workers, 1000);
 			reactor::BindOptions bind_options;
 			bind_options.address = opts.bind_address;
 			bind_options.reuse_port = reuse_ports;

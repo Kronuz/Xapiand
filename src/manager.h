@@ -47,8 +47,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 class Discovery;
-namespace remote { class RemoteProtocolAsioService; }
-namespace replication { class ReplicationProtocolAsioService; }
+namespace remote { class RemoteProtocolService; }
+namespace replication { class ReplicationProtocolService; }
 #endif
 
 class DocMatcher;
@@ -133,9 +133,9 @@ public:
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
 #ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<remote::RemoteProtocolAsioService> remote_service;
+	std::unique_ptr<remote::RemoteProtocolService> remote_service;
 	int remote_port = 0;
-	std::unique_ptr<replication::ReplicationProtocolAsioService> replication_service;
+	std::unique_ptr<replication::ReplicationProtocolService> replication_service;
 	int replication_port = 0;
 	std::shared_ptr<Discovery> discovery;
 #endif

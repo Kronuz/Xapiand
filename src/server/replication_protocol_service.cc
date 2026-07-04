@@ -25,7 +25,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 // IMPORTANT: libev (via these Xapiand headers) must be included BEFORE the Asio-pulling
-// replication_protocol_asio.h (EV_ERROR enum vs macro clash). The outbound trigger's decision
+// replication_protocol_service.h (EV_ERROR enum vs macro clash). The outbound trigger's decision
 // logic (node resolution, shard locks, stalled-DB removal) is verbatim from the classic
 // ReplicationProtocolServer::trigger_replication.
 #include <cassert>                          // for assert
@@ -43,7 +43,7 @@
 #include "random.hh"                        // for random_int
 #include "repr.hh"                          // for repr
 
-#include "server/replication_protocol_asio.h"   // the service + connect_and_replicate (Asio)
+#include "server/replication_protocol_service.h"   // the service + connect_and_replicate (Asio)
 
 #include <asio.hpp>
 
@@ -56,9 +56,9 @@ void cluster_database_replication_failed() {
 
 
 void
-ReplicationProtocolAsioService::trigger_replication(const TriggerReplicationArgs& args)
+ReplicationProtocolService::trigger_replication(const TriggerReplicationArgs& args)
 {
-	L_CALL("ReplicationProtocolAsioService::trigger_replication({{src_endpoint:{}, dst_endpoint:{}}})", args.src_endpoint.to_string(), args.dst_endpoint.to_string());
+	L_CALL("ReplicationProtocolService::trigger_replication({{src_endpoint:{}, dst_endpoint:{}}})", args.src_endpoint.to_string(), args.dst_endpoint.to_string());
 
 	if (args.src_endpoint.is_local()) {
 		assert(!args.cluster_database);

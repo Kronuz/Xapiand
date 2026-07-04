@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "mime_types.hh"
+#include "mime_types.h"
 
 #include <cstdlib>                                // for getenv
 #include <fstream>                                // for std::ifstream

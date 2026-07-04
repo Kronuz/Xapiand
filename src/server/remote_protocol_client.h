@@ -131,7 +131,7 @@ struct RemoteProtocolPendingQuery {
 
 // The per-connection Xapian binary remote-backend protocol handler. Transport-agnostic: it
 // consumes one request via remote_server() (the blocking Xapian work) and appends its framed
-// replies to reply_buffer_, which the Asio connection coroutine (remote_protocol_asio.h)
+// replies to reply_buffer_, which the Asio connection coroutine (remote_protocol_service.h)
 // drains and writes. No libev / Worker / thread pool -- the coroutine owns the socket and the
 // reactor pool runs the blocking dispatch.
 class RemoteProtocolClient {

@@ -62,7 +62,7 @@
 #include "logger.h"                         // for Logging
 #include "manager.h"                        // for XapiandManager
 #include "metrics.h"                        // for Metrics::metrics
-#include "mime_types.hh"                    // for mime_type
+#include "mime_types.h"                    // for mime_type
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node, Node::leader_node

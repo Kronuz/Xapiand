@@ -207,16 +207,16 @@ inline asio::awaitable<void> serve_remote_connection(asio::ip::tcp::socket socke
 // reactors on N threads (one port via SO_REUSEPORT or a portable shared acceptor), each with
 // a bounded offload pool for the blocking Xapian-bound dispatch. A thin adapter, like
 // http::HttpAsioService.
-class RemoteProtocolAsioService {
+class RemoteProtocolService {
 public:
-	RemoteProtocolAsioService(std::size_t reactors, std::size_t workers, std::size_t queue_limit)
+	RemoteProtocolService(std::size_t reactors, std::size_t workers, std::size_t queue_limit)
 		: server_(reactors, workers, static_cast<int>(queue_limit),
 		          [](asio::ip::tcp::socket socket, reactor::Reactor& r) -> asio::awaitable<void> {
 			          return detail::serve_remote_connection(std::move(socket), &r);
 		          }) {}
 
-	RemoteProtocolAsioService(const RemoteProtocolAsioService&) = delete;
-	RemoteProtocolAsioService& operator=(const RemoteProtocolAsioService&) = delete;
+	RemoteProtocolService(const RemoteProtocolService&) = delete;
+	RemoteProtocolService& operator=(const RemoteProtocolService&) = delete;
 
 	void set_bind_options(const reactor::BindOptions& options) { server_.set_bind_options(options); }
 

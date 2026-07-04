@@ -81,7 +81,7 @@ class lock_shard;
 // write framed replies + stream whole DB files DIRECTLY to the socket fd (send_file streams in
 // bounded memory via flume, blocking the reactor pool thread it runs on -- the coroutine is
 // suspended awaiting the offload, so nothing races the socket). No libev / Worker / thread
-// pool. Two roles, driven by the coroutine (replication_protocol_asio.h): an accepted inbound
+// pool. Two roles, driven by the coroutine (replication_protocol_service.h): an accepted inbound
 // connection (server: greet, answer MSG_GET_CHANGESETS/MSG_SET_REVISION) and an outbound
 // connection (client: fetch changesets from a primary).
 class ReplicationProtocolClient {
