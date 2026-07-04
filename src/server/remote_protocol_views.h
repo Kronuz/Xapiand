@@ -42,9 +42,19 @@
 #endif
 
 
-// The Xapian remote-backend protocol version (see the Xapian source for the full history).
-// 44: 1.5.0 pack_uint() now used; many other changes
-#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 44
+// The Xapian remote-backend protocol version THIS server implementation actually
+// speaks. This is deliberately a hand-maintained constant, NOT re-derived from the
+// vendored src/xapian/net/remoteprotocol.h: it is the honest assertion of what the
+// message/reply layout in remote_protocol_views.{h,cc} currently implements. Keeping
+// it independent means a client on a newer protocol gets a clean, loud
+// "Server supports protocol version N - client is using M" error at handshake, instead
+// of silently misparsing a body whose fields moved (the real failure mode when the
+// vendored Xapian is upgraded but this file isn't updated in lockstep). ONLY bump this
+// once the layout below has actually been reconciled to the new version.
+// 44: 1.5.0-era layout (query_id + full_db_has_positions extensions; sorter in MSG_QUERY)
+// 47: 2.0.0 layout (full_db_has_positions dropped; sorter moved to MSG_GETMSET) kept with
+//     our query_id split extension on both MSG_QUERY and MSG_GETMSET.
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 47
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
 
 #define FILE_FOLLOWS '\xfd'
@@ -85,8 +95,16 @@ ENUM_CLASS(RemoteMessageType, int,
 	MSG_METADATAKEYLIST,        // Iterator for metadata keys
 	MSG_FREQS,                  // Get termfreq and collfreq
 	MSG_UNIQUETERMS,            // Get number of unique terms in doc
+	MSG_WDFDOCMAX,              // Get the max_wdf in doc
 	MSG_POSITIONLISTCOUNT,      // Get PositionList length
-	MSG_READACCESS,             // Select current database
+	MSG_RECONSTRUCTTEXT,        // Reconstruct document text
+	MSG_SYNONYMTERMLIST,        // Get synonyms for a term
+	MSG_SYNONYMKEYLIST,         // Get terms with an entry in synonym table
+	MSG_ADDSYNONYM,             // Add a synonym
+	MSG_REMOVESYNONYM,          // Remove a synonym
+	MSG_CLEARSYNONYMS,          // Clear synonyms for a term
+	MSG_REQUESTDOCUMENT,        // Request a document (pre-read hint)
+	MSG_READACCESS,             // Select currently active read access
 	MSG_MAX
 )
 
@@ -115,9 +133,13 @@ ENUM_CLASS(RemoteReplyType, int,
 	REPLY_METADATAKEYLIST,      // Iterator for metadata keys
 	REPLY_FREQS,                // Get termfreq and collfreq
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
+	REPLY_WDFDOCMAX,            // Get the max_wdf in doc
 	REPLY_POSITIONLISTCOUNT,    // Get PositionList length
 	REPLY_REMOVESPELLING,       // Remove a spelling
 	REPLY_TERMLISTHEADER,	    // Header for get termlist
+	REPLY_RECONSTRUCTTEXT,      // Reconstruct document text
+	REPLY_SYNONYMTERMLIST,      // Get synonyms for a term
+	REPLY_SYNONYMKEYLIST,       // Get terms with an entry in synonym table
 	REPLY_MAX
 )
 
@@ -126,6 +148,11 @@ struct RemoteProtocolPendingQuery {
 	Xapian::rev revision;
 	std::unique_ptr<Xapian::Enquire> enquire;
 	std::vector<Xapian::MatchSpy*> matchspies;
+	// Sort mode carried from MSG_QUERY so a KeyMaker sorter arriving in MSG_GETMSET
+	// (2.0.0 moved the sorter to the finalise phase) can be applied with the right
+	// combinator.  0 == sort by relevance (no sorter needed).
+	int sort_by = 0;
+	bool sort_value_forward = true;
 };
 
 
@@ -187,6 +214,11 @@ class RemoteProtocolViews {
 	void msg_valuestats(const std::string& message);
 	void msg_doclength(const std::string& message);
 	void msg_uniqueterms(const std::string& message);
+	void msg_wdfdocmax(const std::string& message);
+	void msg_reconstructtext(const std::string& message);
+	void msg_synonymtermlist(const std::string& message);
+	void msg_synonymkeylist(const std::string& message);
+	void msg_requestdocument(const std::string& message);
 	void msg_commit(const std::string& message);
 	void msg_cancel(const std::string& message);
 	void msg_adddocument(const std::string& message);

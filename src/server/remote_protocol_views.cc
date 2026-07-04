@@ -52,6 +52,7 @@
 #include "xapian/common/serialise-double.h"   // for unserialise_double
 #include "xapian/net/serialise-error.h"       // for serialise_error
 #include "xapian/api/termlist.h"              // for TermIterator::Internal::get_approx_size
+#include "xapian/backends/databaseinternal.h"  // for Database::Internal::request_document
 
 
 // #undef L_DEBUG
@@ -301,8 +302,23 @@ RemoteProtocolViews::remote_server(RemoteMessageType type, const std::string &me
 			case RemoteMessageType::MSG_UNIQUETERMS:
 				msg_uniqueterms(message);
 				return;
+			case RemoteMessageType::MSG_WDFDOCMAX:
+				msg_wdfdocmax(message);
+				return;
 			case RemoteMessageType::MSG_POSITIONLISTCOUNT:
 				msg_positionlistcount(message);
+				return;
+			case RemoteMessageType::MSG_RECONSTRUCTTEXT:
+				msg_reconstructtext(message);
+				return;
+			case RemoteMessageType::MSG_SYNONYMTERMLIST:
+				msg_synonymtermlist(message);
+				return;
+			case RemoteMessageType::MSG_SYNONYMKEYLIST:
+				msg_synonymkeylist(message);
+				return;
+			case RemoteMessageType::MSG_REQUESTDOCUMENT:
+				msg_requestdocument(message);
 				return;
 			case RemoteMessageType::MSG_READACCESS:
 				msg_readaccess(message);
@@ -757,14 +773,6 @@ RemoteProtocolViews::msg_query(const std::string &message_in)
 	}
 
 	////////////////////////////////////////////////////////////////////////////
-	// Has positions
-
-	bool full_db_has_positions;
-	if (!unpack_bool(&p, p_end, &full_db_has_positions)) {
-		throw Xapian::NetworkError("bad message (full_db_has_positions)");
-	}
-
-	////////////////////////////////////////////////////////////////////////////
 	// Time limit
 
 	double time_limit = unserialise_double(&p, p_end);
@@ -867,15 +875,14 @@ RemoteProtocolViews::msg_query(const std::string &message_in)
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////////////
-	// full_db_has_positions was removed from the matcher in Xapian 2.0.0;
-	// it's still carried on the wire for protocol compatibility but no
-	// longer influences prepare_mset().  TODO: drop from the wire once the
-	// sender is updated in lockstep.
-	(void)full_db_has_positions;
 	auto prepared_mset = pending_query.enquire->prepare_mset(query_id, &rset, nullptr);
 	// Clear internal database, as it's going to be checked in.
 	pending_query.enquire->set_database(Xapian::Database{});
+
+	// Remember the sort mode so a KeyMaker sorter arriving in MSG_GETMSET (2.0.0
+	// moved the sorter to the finalise phase) can be applied with the right combinator.
+	pending_query.sort_by = static_cast<int>(sort_by);
+	pending_query.sort_value_forward = sort_value_forward;
 
 	{
 		std::lock_guard<std::mutex> lk(pending_queries_mtx);
@@ -901,11 +908,29 @@ RemoteProtocolViews::msg_getmset(const std::string & message)
 	Xapian::termcount first;
 	Xapian::termcount maxitems;
 	Xapian::termcount check_at_least;
+	std::string sorter_type;
 	if (!unpack_string(&p, p_end, query_id) ||
 		!unpack_uint(&p, p_end, &first) ||
 		!unpack_uint(&p, p_end, &maxitems) ||
-		!unpack_uint(&p, p_end, &check_at_least)) {
+		!unpack_uint(&p, p_end, &check_at_least) ||
+		!unpack_string(&p, p_end, sorter_type)) {
 		throw Xapian::NetworkError("Bad MSG_GETMSET");
+	}
+
+	// A KeyMaker sorter, if any, is sent here (2.0.0 moved it from MSG_QUERY to the
+	// finalise phase); it precedes the serialised stats on the wire, so it must be
+	// consumed even when unused or the stats below would misparse.
+	std::unique_ptr<Xapian::KeyMaker> sorter;
+	if (!sorter_type.empty()) {
+		const Xapian::KeyMaker* sorterclass = registry.get_key_maker(sorter_type);
+		if (sorterclass == nullptr) {
+			THROW(InvalidArgumentError, "Key maker {} not registered", sorter_type);
+		}
+		std::string serialised_sorter;
+		if (!unpack_string(&p, p_end, serialised_sorter)) {
+			throw Xapian::NetworkError("Bad MSG_GETMSET");
+		}
+		sorter.reset(sorterclass->unserialise(serialised_sorter, registry));
 	}
 
 	RemoteProtocolPendingQuery pending_query;
@@ -926,6 +951,24 @@ RemoteProtocolViews::msg_getmset(const std::string & message)
 	// Set internal database from checked out database.
 	pending_query.enquire->set_database(*db);
 
+	// Apply the KeyMaker sorter (if sent) with the sort combinator remembered from
+	// MSG_QUERY.  REL/DOCID never carry a sorter, so they need nothing here.
+	if (sorter) {
+		enum { REL, VAL, VAL_REL, REL_VAL, DOCID };
+		switch (pending_query.sort_by) {
+			case VAL:
+				pending_query.enquire->set_sort_by_key(sorter.release(), pending_query.sort_value_forward);
+				break;
+			case VAL_REL:
+				pending_query.enquire->set_sort_by_key_then_relevance(sorter.release(), pending_query.sort_value_forward);
+				break;
+			case REL_VAL:
+				pending_query.enquire->set_sort_by_relevance_then_key(sorter.release(), pending_query.sort_value_forward);
+				break;
+			default:
+				break;
+		}
+	}
 
 	pending_query.enquire->set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
 
@@ -1156,6 +1199,145 @@ RemoteProtocolViews::msg_uniqueterms(const std::string &message)
 	std::string reply;
 	pack_uint_last(reply, unique_terms);
 	send_message(RemoteReplyType::REPLY_UNIQUETERMS, reply);
+}
+
+
+void
+RemoteProtocolViews::msg_wdfdocmax(const std::string &message)
+{
+	L_CALL("RemoteProtocolViews::msg_wdfdocmax(<message>)");
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_WDFDOCMAX");
+	}
+
+	Xapian::termcount wdfdocmax;
+	{
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+
+		wdfdocmax = db->get_wdfdocmax(did);
+	}
+
+	std::string reply;
+	pack_uint_last(reply, wdfdocmax);
+	send_message(RemoteReplyType::REPLY_WDFDOCMAX, reply);
+}
+
+
+void
+RemoteProtocolViews::msg_reconstructtext(const std::string &message)
+{
+	L_CALL("RemoteProtocolViews::msg_reconstructtext(<message>)");
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Xapian::docid did;
+	size_t length;
+	Xapian::termpos start_pos, end_pos;
+	if (!unpack_uint(&p, p_end, &did) ||
+	    !unpack_uint(&p, p_end, &length) ||
+	    !unpack_uint(&p, p_end, &start_pos) ||
+	    !unpack_uint(&p, p_end, &end_pos)) {
+		throw Xapian::NetworkError("Bad MSG_RECONSTRUCTTEXT");
+	}
+
+	std::string text;
+	{
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+
+		text = db->reconstruct_text(did, length, std::string_view(p, p_end - p), start_pos, end_pos);
+	}
+
+	send_message(RemoteReplyType::REPLY_RECONSTRUCTTEXT, text);
+}
+
+
+void
+RemoteProtocolViews::msg_synonymtermlist(const std::string &message)
+{
+	L_CALL("RemoteProtocolViews::msg_synonymtermlist(<message>)");
+
+	std::string reply;
+	{
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+
+		std::string prev;
+		const Xapian::TermIterator end = db->synonyms_end(message);
+		for (Xapian::TermIterator t = db->synonyms_begin(message); t != end; ++t) {
+			if unlikely(prev.size() > 255) {
+				prev.resize(255);
+			}
+			const std::string& term = *t;
+			size_t reuse = common_prefix_length(prev, term);
+			reply.append(1, char(reuse));
+			pack_uint(reply, term.size() - reuse);
+			reply.append(term, reuse, std::string::npos);
+			prev = term;
+		}
+	}
+
+	send_message(RemoteReplyType::REPLY_SYNONYMTERMLIST, reply);
+}
+
+
+void
+RemoteProtocolViews::msg_synonymkeylist(const std::string &message)
+{
+	L_CALL("RemoteProtocolViews::msg_synonymkeylist(<message>)");
+
+	std::string reply;
+	{
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+
+		std::string prev;
+		const Xapian::TermIterator end = db->synonym_keys_end(message);
+		for (Xapian::TermIterator t = db->synonym_keys_begin(message); t != end; ++t) {
+			if unlikely(prev.size() > 255) {
+				prev.resize(255);
+			}
+			const std::string& term = *t;
+			size_t reuse = common_prefix_length(prev, term);
+			reply.append(1, char(reuse));
+			pack_uint(reply, term.size() - reuse);
+			reply.append(term, reuse, std::string::npos);
+			prev = term;
+		}
+	}
+
+	send_message(RemoteReplyType::REPLY_SYNONYMKEYLIST, reply);
+}
+
+
+void
+RemoteProtocolViews::msg_requestdocument(const std::string &message)
+{
+	L_CALL("RemoteProtocolViews::msg_requestdocument(<message>)");
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_REQUESTDOCUMENT");
+	}
+
+	{
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+
+		db->internal->request_document(did);
+	}
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 
