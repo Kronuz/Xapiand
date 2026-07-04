@@ -113,6 +113,18 @@ class XAPIAN_VISIBILITY_DEFAULT KeyMaker
     virtual KeyMaker* unserialise(const std::string& serialised,
 				  const Registry& context) const;
 
+    /** Clone this KeyMaker.
+     *
+     *  The clone should inherit the configuration of the parent, but need not
+     *  inherit any state.  Xapiand uses this to hand a private copy of a sort
+     *  key-maker to each shard matcher.
+     *
+     *  If you don't want to support cloning (e.g. remote searches) you can use
+     *  the default implementation, which throws Xapian::UnimplementedError.
+     *  The returned object is owned by the caller.
+     */
+    virtual KeyMaker* clone() const;
+
     /** Start reference counting this object.
      *
      *  You can transfer ownership of a dynamically allocated KeyMaker

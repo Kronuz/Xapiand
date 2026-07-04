@@ -65,6 +65,12 @@ KeyMaker::unserialise(const string&, const Registry&) const
 			"searches - unserialise() method not implemented");
 }
 
+KeyMaker*
+KeyMaker::clone() const
+{
+    throw_unimplemented("KeyMaker subclass does not implement clone()");
+}
+
 string
 MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 {
