@@ -60,6 +60,26 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Statistics are valid", function() {
+  var s = pm.response.json().aggregations.balance_stats;
+  pm.expect(s._count).to.equal(1000);
+  pm.expect(s._min).to.equal(7.99);
+  pm.expect(s._max).to.equal(12699.46);
+  pm.expect(s._sum).to.be.closeTo(2565033.04, 0.01);
+  pm.expect(s._avg).to.be.closeTo(2565.03304, 0.001);
+});
+```
+{% endcomment %}
+
 The above aggregation computes the balance statistics over all documents. The
 above will return the following:
 

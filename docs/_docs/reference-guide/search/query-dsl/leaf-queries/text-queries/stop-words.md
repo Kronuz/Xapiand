@@ -23,9 +23,27 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-We can look this individual document, the field personality do not include the
-entire phrase we look in the query that is because remove all the stop words
-and only use "days" for the query.
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Stop words are filtered from the query", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.total).to.equal(333);
+});
+```
+{% endcomment %}
+
+The stop words in the phrase (`these`, `are`, `and`) are removed before the
+query runs, and only the remaining content words (`days`, `few`, `far`,
+`between`) are searched. That is why documents match even though none of them
+contain the whole phrase.
 
 
 ## Searching of Stop Words

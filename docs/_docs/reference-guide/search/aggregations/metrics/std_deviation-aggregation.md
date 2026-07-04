@@ -51,6 +51,24 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Standard deviation is valid", function() {
+  var s = pm.response.json().aggregations.balance_std_deviation;
+  pm.expect(s._std_deviation).to.be.closeTo(1505.767, 0.01);
+  pm.expect(s._std_deviation_bounds._upper).to.be.closeTo(5576.567, 0.01);
+  pm.expect(s._std_deviation_bounds._lower).to.be.closeTo(-446.501, 0.01);
+});
+```
+{% endcomment %}
+
 The above aggregation computes the balance standard deviation over all
 documents. The above will return the following:
 
@@ -100,6 +118,18 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{% comment %}
+
+```js
+pm.test("Sigma 3 bounds are valid", function() {
+  var s = pm.response.json().aggregations.balance_std_deviation;
+  pm.expect(s._std_deviation).to.be.closeTo(1505.767, 0.01);
+  pm.expect(s._std_deviation_bounds._upper).to.be.closeTo(7082.335, 0.01);
+  pm.expect(s._std_deviation_bounds._lower).to.be.closeTo(-1952.268, 0.01);
+});
+```
+{% endcomment %}
 
 `_sigma` controls how many standard deviations +/- from the mean should be
 displayed and can be any non-negative double, meaning you can request

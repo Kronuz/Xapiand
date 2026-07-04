@@ -50,6 +50,22 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Variance is valid", function() {
+  var v = pm.response.json().aggregations.balance_variance;
+  pm.expect(v._variance).to.be.closeTo(2267334.773, 0.01);
+});
+```
+{% endcomment %}
+
 The above aggregation computes the balance variance over all documents. The
 above will return the following:
 
