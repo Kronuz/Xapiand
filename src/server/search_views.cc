@@ -295,6 +295,19 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 	request.response_status = status;
 	request.ends = std::chrono::steady_clock::now();
 
+	// Per-request HTTP latency summary, keyed by method + status. The legacy
+	// HttpClient recorded this on every response; the reactor/http migration dropped
+	// the observation (the family stayed declared but unfed), which upstream
+	// prometheus-cpp then surfaced as a missing metric family. Restore it here, the
+	// single per-request emission point.
+	Metrics::metrics()
+		.xapiand_http_requests_summary
+		.Add({
+			{"method", request.http_req != nullptr ? request.http_req->method : std::string()},
+			{"status", std::to_string(static_cast<int>(status))},
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
+		.Observe(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9);
+
 	writer.status(static_cast<int>(status));
 
 	writer.set_header("Server", Package::STRING);
