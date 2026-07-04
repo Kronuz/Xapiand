@@ -299,7 +299,7 @@ agreed primary per shard, the main defense against split-brain.
 **Data plane — asynchronous, pull-based replication.** When a node commits a
 local change it multicasts `DB_UPDATED` (debounced). Receivers that hold a
 replica schedule a pull after a random 0–3000 ms delay. The pull
-(`replication_protocol_client.cc`) is a one-way TCP changeset transfer: the replica
+(`replication_protocol_views.cc`) is a one-way TCP changeset transfer: the replica
 requests changesets from its current revision, and the source either streams WAL
 changesets or, if the replica is too far behind, ships a whole-database file copy — the
 glass files stream through [`flume`](https://github.com/Kronuz/flume) (framed,
@@ -310,7 +310,7 @@ followers**: a write is durable on the primary at commit, replicas converge
 later, there is no quorum write and no read-repair. That implies a real
 acknowledged-but-lost-write window if a primary crashes before any replica pulls
 (see Bugs). Writes to a non-primary node are forwarded to the primary over
-Xapian's remote-backend RPC (`remote_protocol_client.cc`).
+Xapian's remote-backend RPC (`remote_protocol_views.cc`).
 
 ### Search & query (`src/query_dsl.*`, `src/booleanParser/`, `src/aggregations/`)
 
@@ -493,7 +493,7 @@ included so each is checkable.
 
 - **Acknowledged-but-lost writes on primary failure** (by design). `msg_commit`
   returns `REPLY_DONE` after a *local* commit with no replica ack
-  (`remote_protocol_client.cc:1138`); replication is a debounced async pull
+  (`remote_protocol_views.cc:1138`); replication is a debounced async pull
   (`discovery.cc:1159`). A primary crash before any replica pulls loses the
   write. Worth stating plainly in operational docs.
 - **Unbounded request intake = remote DoS.** No cap on HTTP `Content-Length`
@@ -572,7 +572,7 @@ included so each is checkable.
   both be term-1 leaders until they discover each other. Name-gating mitigates;
   worth a partition test.
 - **Client teardown idle-check race**: `is_idle()` reads four sub-states without
-  one covering lock (`replication_protocol_client.cc:879`); the `share_this()`
+  one covering lock (`replication_protocol_views.cc:879`); the `share_this()`
   refcount prevents a hard UAF but a message can be dropped or a
   about-to-run client detached. Hold `runner_mutex` in the idle check.
 - **Scheduler "earliest wakeup" CAS** is a multi-step non-atomic update
