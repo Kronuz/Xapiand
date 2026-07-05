@@ -1,0 +1,83 @@
+name: CI
+
+# Build + test on Linux (native sanitizers), on every push to master and every PR.
+# Release packaging lives in release.yml (tag-triggered); this is the correctness gate.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CC: gcc-13
+  CXX: g++-13
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  build-test:
+    name: Build + unit + smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-13 cmake ninja-build pkg-config perl tcl \
+            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+      - name: Build (RelWithDebInfo, tests + asserts on)
+        run: |
+          set -eux
+          cmake -GNinja -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF \
+            -DASIO_INCLUDE_DIR=/usr/include
+          ninja -C build
+      - name: Unit tests (ctest)
+        run: ctest --test-dir build --output-on-failure
+      - name: Smoke + load
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
+
+  sanitizers:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    # Sanitizers find the bugs that matter most in a concurrent C++ engine
+    # (use-after-free/leaks under ASAN, data races under TSAN). Linux + gcc-13 has
+    # the native runtimes; macOS/Apple-clang hangs on these, so this is Linux-only.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: AddressSanitizer
+            cmake_flag: -DASAN=ON
+          - name: ThreadSanitizer
+            cmake_flag: -DTSAN=ON
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
+      TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-13 cmake ninja-build pkg-config perl tcl \
+            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+      - name: Build (${{ matrix.name }})
+        run: |
+          set -eux
+          cmake -GNinja -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            ${{ matrix.cmake_flag }} -DASSERTS=ON -DLTO=OFF \
+            -DASIO_INCLUDE_DIR=/usr/include
+          # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.
+          ninja -C build -j2
+      - name: Smoke + load under ${{ matrix.name }}
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
