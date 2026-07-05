@@ -133,7 +133,7 @@ When building sanitized versions of Xapiand, you'll need to
 Recent Apple Clang toolchains ship an Address/Thread Sanitizer runtime that can hang
 on startup on Apple silicon. Install it with `brew install llvm` and point the build
 at it, for example
-`CC=/opt/homebrew/opt/llvm/bin/clang CXX=/opt/homebrew/opt/llvm/bin/clang++ cmake -GNinja -DASAN=ON ..`,
+`CC=/opt/homebrew/opt/llvm/bin/clang` `CXX=/opt/homebrew/opt/llvm/bin/clang++` `cmake -GNinja -DASAN=ON ..`,
 then run the resulting binary with `DYLD_LIBRARY_PATH=/opt/homebrew/opt/llvm/lib`.
 
 
