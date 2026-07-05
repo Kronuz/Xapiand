@@ -4,7 +4,7 @@ redirect_from: /docs/
 ---
 
 This documentation aims to be a comprehensive guide to {{ site.name }}. We'll cover
-topics such as getting your site up and running, indexing and searching
+topics such as getting your server up and running, indexing and searching
 documents, customizing data schemas, deploying to various environments, and
 give you some advice on participating in the future development of {{ site.name }}
 itself.

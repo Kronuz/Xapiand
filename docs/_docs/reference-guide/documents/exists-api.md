@@ -3,7 +3,7 @@ title: Exists Document API
 short_title: Exists API
 ---
 
-The _Exists Index API_ allows to check for the existence of a document using
+The _Exists Document API_ allows to check for the existence of a document using
 `HEAD` method.
 
 For example:
@@ -16,8 +16,7 @@ HEAD /twitter/tweet/1
 {% endcapture %}
 {% include curl.html req=req %}
 
-The result of the above get operation is a `200 OK` HTTP response code with the
-no body.
+The result of the above operation is a `200 OK` HTTP response code with no body.
 
 {: .note .warning }
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).

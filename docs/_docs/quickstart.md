@@ -97,7 +97,7 @@ You can dig a little deeper in the [Data Manipulation]({{ '/docs/manipulation' |
 
 ## Searching
 
-Now, let's see if the information that was added by GETting it:
+Now, let's retrieve the information we just added by GETting it:
 
 {% capture req %}
 

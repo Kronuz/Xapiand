@@ -31,7 +31,7 @@ following body:
 ```
 
 The above result includes the `_id` and `_version` of the document we wish to
-retrieve, aditionally to the actual body of the document.
+retrieve, additionally to the actual body of the document.
 
 If the document is not found, it will return a `404 Not Found` HTTP response code.
 
