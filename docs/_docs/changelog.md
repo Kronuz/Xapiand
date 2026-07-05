@@ -16,6 +16,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [1.0.0-alpha.1] - 2026-07-04
+{: #v1-0-0-alpha-1 }
+
+First 1.0 milestone (alpha): a broad modernization of the engine, the runtime, and
+the build, on top of a de-vendored library tree. Six years and 151 commits after
+0.40.0. Benchmarked native-vs-native against Elasticsearch and against 0.40.0; see
+the [Benchmarks](/benchmarks/) page.
+
+### Changed
+- Migrated the vendored Xapian engine from the 1.5.0-dev snapshot to **2.0.0**
+  (rebuilt as clean per-feature patches on pristine 2.0.0).
+- Rebuilt the runtime on an **Asio-based reactor** and retired **libev** entirely:
+  the HTTP server, the Xapian remote-backend protocol, the replication protocol, and
+  the discovery/cluster plane (Bus + Raft) all run on the reactor now.
+- Broke the monolith into a **tree of standalone libraries** consumed via
+  FetchContent (msgpack, storage, traceback, logger, threadpool, scheduler,
+  datetime, io, fs, system, htm, soundex, and ~20 more), replacing the vendored
+  copies.
+- Moved to **C++20**: `fmt` → `std::format`, `tclap` → CLI11, and the ChaiScript
+  scripting engine → **Lua (sol2)**.
+- Distributed search now runs through **one native multi-database `Enquire`** that
+  overlaps the shard fan-out, replacing the serial shard-by-shard loop and the
+  hand-rolled MSet merge.
+- Data-store volumes are written with **Zstandard**.
+- Remote protocol synced to Xapian 2.0.0 (**v47**), as a non-blocking two-phase
+  match the reactor can hold.
+
+### Added
+- **Apple Silicon / AArch64** build support.
+- Native **multi-database overlapped shard fan-out** (see Changed) and a read-only
+  **remote-database stats cache** that eliminates the per-query `MSG_UPDATE` storm.
+- `--color=<mode>` log-color control and `--discovery-interface` selection.
+- `RESTORE` streams its request body concurrently (O(buffer) memory).
+- Content negotiation through the framework (`http::AcceptCache`).
+- A full **test + benchmark harness**: differential E2E capture/check, multi-node
+  cluster liveness checks, a load driver, a native Elasticsearch comparison, and a
+  Remote-protocol proxy/decoder.
+- Double Metaphone sort key.
+
+### Fixed
+- Distributed `query_id` made **unique per shard**, so shards co-located on one node
+  no longer collide in the process-global pending-query map.
+- A single **SIGINT drains in-flight HTTP requests** and shuts down the remote and
+  replication layers gracefully.
+- Data paths (stopwords, `mime.types`) resolve relative to the executable.
+- Restored relaxed-JSON parsing, the `xapiand_http_requests_summary` metric, and the
+  guarantee that an auto-generated `_id` is never left empty.
+
+### Removed
+- **libev**, entirely.
+- The vendored copies of ~30 libraries (now external Kronuz-family deps).
+- The hand-rolled per-shard fan-out and manual MSet merge, and Xapiand's bespoke
+  HTTP parser / `Request` / `Response` classes (now the `http::` library).
+
+
+---
 ## [0.40.0] - 2020-04-27
 {: #v0-40-0 }
 
