@@ -51,7 +51,6 @@ namespace remote { class RemoteProtocolService; }
 namespace replication { class ReplicationProtocolService; }
 #endif
 
-class DocMatcher;
 class DocPreparer;
 class DocIndexer;
 

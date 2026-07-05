@@ -1190,225 +1190,6 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 }
 
 
-DocMatcher::DocMatcher(
-	const std::string& query_id,
-	bool full_db_has_positions,
-	size_t shard_num,
-	const Endpoints& endpoints,
-	int flags,
-	const Xapian::Query query,
-	Xapian::MSet& mset,
-	Xapian::doccount first,
-	Xapian::doccount maxitems,
-	Xapian::doccount check_at_least,
-	Xapian::KeyMaker* sorter,
-	Xapian::valueno collapse_key,
-	Xapian::doccount collapse_max,
-	double percent_threshold,
-	double weight_threshold,
-	Xapian::Enquire::docid_order order,
-	AggregationMatchSpy* aggs,
-	const similar_field_t* nearest,
-	const Xapian::RSet& nearest_rset,
-	std::unique_ptr<Xapian::ExpandDecider>&& nearest_edecider,
-	const similar_field_t* fuzzy,
-	const Xapian::RSet& fuzzy_rset,
-	std::unique_ptr<Xapian::ExpandDecider>&& fuzzy_edecider,
-	const Xapian::Enquire& merger
-) :
-	doccount(0),
-	revision(0),
-	enquire(Xapian::Database()),
-	query_id(query_id),
-	full_db_has_positions(full_db_has_positions),
-	shard_num(shard_num),
-	endpoints(endpoints),
-	flags(flags),
-	query(query),
-	first(first),
-	maxitems(maxitems),
-	check_at_least(check_at_least),
-	sorter(sorter ? sorter->clone() : nullptr),
-	collapse_key(collapse_key),
-	collapse_max(collapse_max),
-	percent_threshold(percent_threshold),
-	weight_threshold(weight_threshold),
-	order(order),
-	aggs(aggs ? static_cast<AggregationMatchSpy*>(aggs->clone()) : nullptr),
-	nearest(nearest),
-	nearest_rset(nearest_rset),
-	nearest_edecider(std::move(nearest_edecider)),
-	fuzzy(fuzzy),
-	fuzzy_rset(fuzzy_rset),
-	fuzzy_edecider(std::move(fuzzy_edecider)),
-	merger(merger),
-	mset(mset)
-{
-}
-
-
-void
-DocMatcher::prepare_mset()
-{
-	L_CALL("DocMatcher::prepare_mset() {{endpoint:{}}}", endpoints[shard_num].to_string());
-
-	lock_shard lk_shard(endpoints[shard_num], flags);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			try {
-				auto final_query = query;
-				auto db = lk_shard->db();
-				enquire.set_database(*db);  // Set the database for Enquire
-				enquire.set_collapse_key(collapse_key, collapse_max);
-				enquire.set_cutoff(percent_threshold, weight_threshold);
-				enquire.set_docid_order(order);
-				if (aggs) {
-					enquire.add_matchspy(aggs);
-				}
-				if (sorter) {
-					enquire.set_sort_by_key_then_relevance(sorter.get(), false);
-				}
-				if (nearest) {
-					auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
-					final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
-				}
-				if (fuzzy) {
-					auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
-					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
-				}
-				enquire.set_query(final_query);
-				mset = enquire.prepare_mset(query_id, nullptr, nullptr);
-				revision = db->get_revision();
-				doccount += db->get_doccount();
-				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
-				mset.set_database(Xapian::Database{});  // Make mset release the database
-			} catch (...) {
-				enquire.set_database(Xapian::Database{}); // Make Enquire release the database
-				mset.set_database(Xapian::Database{});   // Make mset release the database
-				throw;
-			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_shard->do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_shard->do_close();
-			throw;
-		} catch (const QueryParserError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const QueryDslError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const Xapian::QueryParserError& exc) {
-			THROW(ClientError, exc.get_description());
-		}
-		lk_shard->reopen();
-	}
-}
-
-
-void
-DocMatcher::get_mset()
-{
-	L_CALL("DocMatcher::get_mset() {{endpoint:{}}}", endpoints[shard_num].to_string());
-
-	size_t n_shards = endpoints.size();
-
-	lock_shard lk_shard(endpoints[shard_num], flags);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			try {
-				auto db = lk_shard->db();
-				if (revision != db->get_revision()) {
-					throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
-				}
-				enquire.set_database(*db);  // Set the database for Enquire
-				enquire.set_prepared_mset(merger.get_prepared_mset());
-				mset = enquire.get_mset(first, maxitems, check_at_least);
-				mset.unshard_docids(shard_num, n_shards);
-				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
-				mset.set_database(Xapian::Database{});  // Make mset release the database
-			} catch (...) {
-				enquire.set_database(Xapian::Database{}); // Make Enquire release the database
-				mset.set_database(Xapian::Database{});   // Make mset release the database
-				throw;
-			}
-			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_shard->do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_shard->do_close();
-			throw;
-		} catch (const QueryParserError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const QueryDslError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const Xapian::QueryParserError& exc) {
-			THROW(ClientError, exc.get_description());
-		}
-		lk_shard->reopen();
-	}
-}
-
-
-bool
-DatabaseHandler::has_positions()
-{
-	L_CALL("DatabaseHandler::has_positions()");
-
-	assert(!endpoints.empty());
-	auto valid = endpoints.size();
-	std::exception_ptr eptr;
-	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
-		try {
-			auto db = lk_shard->db();
-			if (db->has_positions()) {
-				return true;
-			}
-		} catch (const Xapian::DatabaseOpeningError&) {
-			eptr = std::current_exception();
-			--valid;
-		} catch (const Xapian::NetworkTimeoutError&) {
-			eptr = std::current_exception();
-			--valid;
-		} catch (const Xapian::NetworkError&) {
-			eptr = std::current_exception();
-			--valid;
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_shard->do_close();
-			eptr = std::current_exception();
-			--valid;
-		} catch (const Xapian::DatabaseError&) {
-			lk_shard->do_close();
-			throw;
-		}
-	}
-	if (eptr && !valid) {
-		std::rethrow_exception(eptr);
-	}
-	return false;
-}
 
 
 Xapian::MSet
@@ -1434,121 +1215,119 @@ DatabaseHandler::get_mset(
 		return Xapian::MSet{};
 	}
 
-	bool full_db_has_positions = has_positions();
-
-	Xapian::doccount doccount = 0;
-	Xapian::Enquire merger(Xapian::Database{});
-
-	merger.set_collapse_key(collapse_key, collapse_max);
-	merger.set_cutoff(percent_threshold, weight_threshold);
-	merger.set_docid_order(order);
-	if (sorter) {
-		merger.set_sort_by_key_then_relevance(sorter, false);
-	}
-
 	Xapian::RSet nearest_rset;
+	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 	if (nearest) {
 		nearest_rset = get_rset(query, nearest->n_rset);
+		nearest_edecider = get_edecider(*nearest);
 	}
 
 	Xapian::RSet fuzzy_rset;
+	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (fuzzy) {
 		fuzzy_rset = get_rset(query, fuzzy->n_rset);
+		fuzzy_edecider = get_edecider(*fuzzy);
 	}
 
-	std::vector<std::shared_ptr<DocMatcher>> matchers;
-	std::vector<Xapian::MSet> msets;
-
-	std::mutex ready_mtx;
-
-	size_t n_shards = endpoints.size();
-
-	matchers.reserve(n_shards);
-	msets.reserve(n_shards);
-
-	// FIXME: Serialising/unserialising query shouldn't be necessary, but
-	//        Xapian is not cloning PostingSources when queries get copied?
-	auto serialised_query = query.serialise();
-	Xapian::Registry registry;
-	registry.register_posting_source(GeoSpatialRange{});
-	registry.register_posting_source(MultipleValueRange{});
-	registry.register_posting_source(MultipleValueGE{});
-	registry.register_posting_source(MultipleValueLE{});
-	registry.register_match_spy(AggregationMatchSpy{});
-	registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
-
+	// Distributed match, Xapian-native: feed every shard into ONE Enquire and let
+	// Xapian's matcher fan out and merge.  It sends every shard's MSG_QUERY up
+	// front, does local work, then collects replies with poll() -- so the remote
+	// shards' round trips overlap instead of running one-after-another -- and it
+	// merges the per-shard MSets and unshards the docids itself.  The two-phase
+	// (prepare_mset -> get_mset) keeps the remote *server* non-blocking; query_id
+	// correlates the two phases and is made per-shard-unique inside the matcher so
+	// co-located shards don't collide in the server's process-global pending map.
 	auto manager = XapiandManager::manager();
-
-	static std::atomic_size_t query_seq = 0;
 	auto local_node = Node::get_local_node();
+	static std::atomic_size_t query_seq = 0;
 
-	for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
-		// Configure nearest and fuzzy search:
-		std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
-		if (nearest) {
-			nearest_edecider = get_edecider(*nearest);
-		}
+	Xapian::MSet mset;
 
-		std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
-		if (fuzzy) {
-			fuzzy_edecider = get_edecider(*fuzzy);
-		}
+	auto shards = manager->database_pool->checkout(endpoints, flags);
+	try {
+		for (int t = DB_RETRIES; t >= 0; --t) {
+			try {
+				// Combine the shards into one database for a native distributed
+				// match.  A single shard is used directly (identical to the
+				// non-distributed path); a shard whose index doesn't exist is
+				// skipped (multi-index search over a missing one).
+				Xapian::Database db;
+				if (shards.size() == 1) {
+					try {
+						db = *shards[0]->db();
+					} catch (const Xapian::DatabaseNotFoundError&) {
+						break;  // nothing to search -> empty MSet
+					}
+				} else {
+					size_t valid = 0;
+					for (auto& shard : shards) {
+						try {
+							db.add_database(*shard->db());
+							++valid;
+						} catch (const Xapian::DatabaseNotFoundError&) { }
+					}
+					if (valid == 0) {
+						break;  // nothing to search -> empty MSet
+					}
+				}
 
-		// Add mset object to msets vector:
-		msets.push_back(Xapian::MSet());
+				Xapian::Enquire enquire(db);
+				enquire.set_collapse_key(collapse_key, collapse_max);
+				enquire.set_cutoff(percent_threshold, weight_threshold);
+				enquire.set_docid_order(order);
+				if (aggs) {
+					enquire.add_matchspy(aggs);
+				}
+				if (sorter) {
+					enquire.set_sort_by_key_then_relevance(sorter, false);
+				}
 
-		std::string query_id = strings::format("{}:{}", local_node->lower_name(), ++query_seq);
+				auto final_query = query;
+				if (nearest) {
+					auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
+					final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
+				}
+				if (fuzzy) {
+					auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
+					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
+				}
+				enquire.set_query(final_query);
 
-		// Create matcher object:
-		auto matcher = std::make_shared<DocMatcher>(
-			query_id,
-			full_db_has_positions,
-			shard_num,
-			endpoints,
-			flags,
-			Xapian::Query::unserialise(serialised_query, registry),  // FIXME: unserialise shouldn't be needed
-			msets.back(),
-			0,                 // We need to fetch the first "first" results too, as merging may
-			first + maxitems,  // push those down into the part of the merged MSet we care about.
-			check_at_least,
-			sorter,
-			collapse_key,
-			collapse_max,
-			percent_threshold,
-			weight_threshold,
-			order,
-			aggs,
-			nearest,
-			nearest_rset,
-			std::move(nearest_edecider),
-			fuzzy,
-			fuzzy_rset,
-			std::move(fuzzy_edecider),
-			merger
-		);
-		matchers.emplace_back(matcher);
-	}
-
-	for (auto& matcher : matchers) {
-		try {
-			matcher->prepare_mset();
-			merger.add_prepared_mset(matcher->mset);
-			doccount += matcher->doccount;
-		} catch (const Xapian::DatabaseNotFoundError& e) { /* In case a index doesn't exist in a multi index search (just skip it)*/ }
-	}
-
-	for (auto& matcher : matchers) {
-		try {
-			matcher->get_mset();
-			if (aggs) {
-				aggs->merge_results(*matcher->aggs);
+				std::string query_id = strings::format("{}:{}", local_node->lower_name(), ++query_seq);
+				enquire.prepare_mset(query_id, nullptr, nullptr);
+				mset = enquire.get_mset(first, maxitems, check_at_least);
+				mset.set_database(Xapian::Database{});  // release the shards held by the MSet
+				break;
+			} catch (const Xapian::DatabaseModifiedError&) {
+				if (t == 0) { throw; }
+			} catch (const Xapian::DatabaseOpeningError&) {
+				if (t == 0) { throw; }
+			} catch (const Xapian::NetworkTimeoutError&) {
+				if (t == 0) { throw; }
+			} catch (const Xapian::NetworkError&) {
+				if (t == 0) { throw; }
+			} catch (const Xapian::DatabaseClosedError&) {
+				if (t == 0) { throw; }
+			} catch (const QueryParserError& exc) {
+				THROW(ClientError, exc.what());
+			} catch (const SerialisationError& exc) {
+				THROW(ClientError, exc.what());
+			} catch (const QueryDslError& exc) {
+				THROW(ClientError, exc.what());
+			} catch (const Xapian::QueryParserError& exc) {
+				THROW(ClientError, exc.get_description());
 			}
-		} catch (const Xapian::DatabaseNotFoundError& e) { /* In case a index doesn't exist in a multi index search (just skip it) */ }
+			for (auto& shard : shards) {
+				shard->reopen();
+			}
+		}
+	} catch (...) {
+		manager->database_pool->checkin(shards);
+		throw;
 	}
+	manager->database_pool->checkin(shards);
 
-	auto merged_mset = merger.merge_mset(msets, doccount, first, maxitems);
-	merged_mset.set_database(Xapian::Database{});
-	return merged_mset;
+	return mset;
 
 }
 
