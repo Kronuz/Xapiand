@@ -2,16 +2,25 @@
 title: Benchmarks
 ---
 
-A single-node smoke comparison of Xapiand against Elasticsearch on the same
-dataset and the same query mix. The headline is the on-disk footprint: on this
-data Xapiand stores the same 15,000 documents in **3.6 MB against Elasticsearch's
-13.1 MB**, about **3.6x smaller**, while serving queries at a higher rate and
-lower tail latency.
+A single-host, native comparison of Xapiand against Elasticsearch on the same
+dataset and query mix, plus the internal before/after numbers for the work on this
+branch. Both engines run **natively on the same Apple-silicon machine** (no Docker,
+no VM), and shard count is held **equal** on both sides, so the cross-engine
+comparison is apples-to-apples.
 
-Read the numbers with the caveats below in mind. This is a quick, honest
-side-by-side to get a feel for the shape of things, not a controlled, tuned,
-production-scale benchmark. In particular the two engines did not run on the same
-substrate (see "Environment").
+The honest headline: on this workload native Xapiand and Elasticsearch are close.
+Query serving is a tie at one shard (~12k qps, ~1.2 ms p50 on both) and swings
+Xapiand's way as shards multiply (its local fan-out is cheaper than ES's);
+Elasticsearch indexes faster; on-disk footprint is within ~1.25x at one shard and
+too sensitive to background segment-merge state to call at higher shard counts.
+Xapiand's material wins are architectural and show up in the cluster section below,
+not in the single-node smoke numbers.
+
+An earlier version of this page claimed Xapiand was "~5x smaller on disk" and
+"~1.8x faster on queries." Both were artifacts: the ES side ran in Docker (paying a
+VM and loopback-network tax) and the two sides were compared at different shard
+counts (Xapiand's default 5 vs ES's default 1). Re-run natively and at equal shard
+count, those headlines do not hold. This page documents what does.
 
 ---
 
@@ -20,7 +29,7 @@ substrate (see "Environment").
 Both engines indexed the bundled `accounts` dataset (1,000 records of nested
 account objects: name, age, gender, balance, nested `contact` address, a text
 `personality` field, a geo point) replicated to **20,000 documents**, then served
-a fixed mix of seven queries at **concurrency 16 for 5 seconds, two trials**.
+a fixed mix of seven queries at **concurrency 16 for 5 seconds, three trials**.
 
 The query mix is the same on both sides, translated to each engine's query
 language:
@@ -33,74 +42,87 @@ language:
 - a boolean AND (`gender = male` AND `age` in 25..40)
 
 Xapiand is driven by `harness/loadtest.py`; Elasticsearch by
-`harness/es_loadtest.py`. Both replicate the dataset to the same count, bulk-load
-it, then hammer the query mix from 16 threads and report QPS and latency
-percentiles. Query numbers are from a warm run.
+`harness/es_loadtest.py` (`NUM_SHARDS=N` to match shard count). Both replicate the
+dataset to the same count, bulk-load it, then hammer the query mix from 16 threads
+and report QPS and latency percentiles. Query numbers are from a warm run.
 
-## Results
+Both engines run **natively** on the same Apple-silicon machine: Elasticsearch
+8.15.3 from the official aarch64 tarball (`discovery.type: single-node`, security
+off, 1 GB heap), no Docker. Every Xapiand build on this page is compiled **Release
++ LTO**, matching how Elasticsearch and the `origin/master` baseline are built (the
+`LTO` CMake option defaults on; leaving it off, as a fast dev build does, costs
+Xapiand ~10% and silently handicapped an earlier draft). The index is created with
+an explicit shard count on both sides so the two are compared at **equal shards**.
 
-| Metric | Xapiand (this branch) | Xapiand (`origin/master`) | Elasticsearch 8.15.3 |
+## Xapiand vs Elasticsearch (native, equal shards)
+
+Both engines native on the same machine, same 20k documents, measured at one shard
+and at five shards so the effect of sharding is visible on each side. Query numbers
+are the warm trials; on-disk is the settled footprint (actual bytes).
+
+| Metric | Xapiand 1-shard | ES 1-shard | Xapiand 5-shard | ES 5-shard |
+| --- | ---: | ---: | ---: | ---: |
+| Query throughput (warm) | ~12,270 qps | ~11,950 qps | ~11,700 qps | ~7,470 qps |
+| Query latency p50 | 1.20 ms | 1.27 ms | 1.26 ms | 1.98 ms |
+| Query latency p95 | 2.28 ms | 2.25 ms | 2.40 ms | 3.78 ms |
+| Index throughput | ~6,300 docs/s | ~17,000 docs/s | ~11,800 docs/s | ~24,000 docs/s |
+| On-disk (settled) | 13.7 MB | ~17 MB | 9.5 MB | 3.7–19 MB (see below) |
+
+**Query serving: a tie at one shard, Xapiand's at five.** At one shard the two are
+indistinguishable (~12k qps, ~1.2 ms p50). At five shards Xapiand holds ~11,700 qps
+while ES drops to ~7,470 at ~2 ms p50: a single-node ES still coordinates a
+per-shard query and merges the results, and that fan-out is more expensive than
+Xapiand's native multi-database merge (the same machinery the cluster section leans
+on). So Xapiand's query edge here is an *at-scale-of-shards* edge, not a raw
+single-shard-engine edge.
+
+**Indexing: Elasticsearch is faster.** Lucene's bulk path out-indexes Xapiand's
+`RESTORE` ingest at both shard counts (~17k vs ~6k docs/s at one shard, ~24k vs ~12k
+at five). The old page called index throughput "a wash"; that was the Docker tax on
+ES flattering Xapiand. Natively, ES indexes faster. (Both engines index *faster*
+with more shards, from write parallelism across shards.)
+
+**On-disk: within ~1.25x at one shard, unstable at five.** At one shard the
+footprint is steady and Xapiand is ~1.25x smaller (13.7 MB vs ES's ~17 MB, still
+~16.8 MB after a force-merge to one segment). At five shards ES's reported store
+swings between ~3.7 MB and ~19 MB across otherwise-identical runs, depending on how
+far background segment merging has progressed at the instant it is measured, so
+there is no honest five-shard number to quote; Xapiand's own five-shard footprint is
+a steady ~9.5 MB. The takeaway is not a footprint winner but that footprint on this
+duplicative dataset is dominated by shard count and merge state. The old "~5x
+smaller" was an artifact: an undercounted Xapiand 5-shard measurement (the harness
+read the index mid-flush; since fixed) compared against an ES 1-shard.
+
+## What this branch changed (vs origin/master)
+
+Beyond the cross-engine comparison, the more controlled number is Xapiand against
+its own past: this branch versus `origin/master` (upstream `0.40.0`, Xapian
+1.5.0-dev) with only the Apple-silicon build fix cherry-picked on top (commit
+`da3a9b97a`). Everything this branch did lands in the gap: the Xapian 1.5.0-dev →
+2.0.0 engine upgrade, the de-vendoring into a library tree, and the Asio reactor
+runtime. Both binaries are **Release + LTO**, default shard count, measured
+back-to-back on the same machine (20k docs, concurrency 16, 5s, three trials).
+
+| Metric | This branch (2.0.0, LTO) | `origin/master` (1.5.0, LTO) | Δ |
 | --- | ---: | ---: | ---: |
-| Index throughput | ~12,100 docs/s | ~10,200 docs/s | ~12,900 docs/s |
-| On-disk size (20k docs) | **3.47 MB** | 3.55 MB | 17.3 MB |
-| Query throughput | ~12,800 qps | ~13,000 qps | ~7,200 qps |
-| Query latency p50 | 1.17 ms | 1.16 ms | 1.94 ms |
-| Query latency p95 | 2.18 ms | 2.11 ms | 4.08 ms |
-| Query latency p99 | 2.75 ms | 2.65 ms | 5.83 ms |
+| Index throughput | ~11,870 docs/s | ~10,090 docs/s | **+17.7%** |
+| Query throughput (warm) | ~11,820 qps | ~10,590 qps | **+11.6%** |
+| Query latency p50 | 1.25 ms | 1.42 ms | **−12%** |
+| Query latency p95 | 2.36 ms | 2.45 ms | −3.5% |
+| Query latency p99 | 3.22 ms | 3.09 ms | +4.3% |
+| On-disk size (20k docs) | ~9.5 MB | ~9.5 MB | ~0% |
 
-The `origin/master` column is the upstream Xapiand exactly at `origin/master` with
-only the Apple-silicon build fix cherry-picked on top (commit `da3a9b97a`), so the
-two Xapiand columns isolate what the extraction/modernization work on this branch
-changed. Four things stand out.
-
-**On-disk footprint.** Xapiand's ~5x smaller index is the most defensible result
-here, because it does not depend on the runtime substrate (see below). It is the
-Zstandard-compressed storage doing its job on this fairly compressible, text-heavy
-data. Both Xapiand builds are within ~2% of each other.
-
-**Index throughput.** This branch bulk-loads ~19% faster than `origin/master`
-(~12,100 vs ~10,200 docs/s) and is now level with Elasticsearch. The write path
-genuinely improved with the modernization.
-
-**Query throughput and latency.** The two Xapiand builds are within a few percent
-(`origin/master` a hair ahead at p50), and both serve ~1.8x the QPS of
-Elasticsearch at roughly half the p50/p95/p99. Some of the gap to ES is real and
-some is the substrate (ES pays a virtualization and loopback-network tax that
-Xapiand does not; see Environment). The small residual query gap to `origin/master`
-is per-request overhead from the reactor-based request path; profiling shows the
-query path itself is search/IO-bound, so it is CPU headroom rather than a wall.
-
-**Xapiand vs Elasticsearch.** On this workload Xapiand is dramatically more compact
-on disk and serves queries faster at lower latency; index throughput is a wash.
-
-## Xapian 2.0.0 upgrade
-
-This branch also carries the vendored Xapian fork forward from the 1.5.0-dev
-snapshot to the **2.0.0** release (rebuilt as clean per-feature patches on top of
-pristine 2.0.0). To isolate what the engine upgrade alone costs or buys, both
-builds were measured back-to-back in the same session, same machine, same
-`loadtest.py` invocation (20k docs, concurrency 16, 6s, three trials); `origin/master`
-here is the 1.5.0 oracle binary described above.
-
-| Metric | This branch (Xapian 2.0.0) | `origin/master` (Xapian 1.5.0) | Δ |
-| --- | ---: | ---: | ---: |
-| Index throughput | ~11,500 docs/s | ~10,600 docs/s | **+8%** |
-| On-disk size (20k docs) | **3.41 MB** | 3.68 MB | **−7%** |
-| Query throughput (warm) | ~12,330 qps | ~12,670 qps | −2.7% |
-| Query latency p50 | 1.21 ms | 1.19 ms | +0.02 ms |
-| Query latency p95 | 2.30 ms | 2.18 ms | +0.12 ms |
-| Query latency p99 | 2.97 ms | 2.73 ms | +0.24 ms |
-
-The upgrade **indexes ~8% faster and stores ~7% smaller** on this data. Query
-throughput is within ~3% and lands a hair behind, but that gap is not the engine:
-it is the reactor request path's offload thread-hop (every DB-touching request hops
-to the reactor pool so a slow query cannot stall co-located connections), a
-deliberate un-stallability trade that predates this upgrade and shows up exactly on
-a low-concurrency fast-query bench. Correctness held: the full end-to-end suite runs
-green against the 1.5.0 oracle with **zero regressions**, and 2.0.0's improved
-stemming and stopword handling actually fixed five assertions that fail on
-`origin/master` (default-operator matching, query-time stopword filtering, a
-complex-object info case, and a typed-content selector).
+The modernization **indexes ~18% faster and serves ~12% more queries at ~12% lower
+p50**, with tail latency within noise and footprint unchanged. An earlier draft of
+this page reported query throughput slightly *behind* `origin/master` (−2.7%); that
+was not the engine but a build artifact. The dev build being measured had `LTO`
+off while the baseline (built with defaults) had it on, so the new code was racing
+with a hand tied behind its back. Rebuilt with LTO on both sides, the query gap
+inverts into a ~12% lead. Correctness held: the full end-to-end suite runs green
+against the 1.5.0 oracle with **zero regressions**, and 2.0.0's improved stemming
+and stopword handling actually fixed five assertions that fail on `origin/master`
+(default-operator matching, query-time stopword filtering, a complex-object info
+case, and a typed-content selector).
 
 ## Cluster: with vs without the Remote protocol
 
@@ -130,7 +152,15 @@ shard locally or over the Remote protocol:
 | **0** (default) | ~1,900 qps, p50 4.7 ms | ~3,400 qps, p50 3.7 ms | one home node; other nodes go remote |
 | **1** | ~11,600 qps, p50 1.1 ms | ~11,500 qps, p50 1.1 ms | every node holds a copy, reads locally |
 
-(Solo, for reference: ~10,500 qps, p50 1.4 ms.)
+(Solo, for reference: ~11,700 qps, p50 1.23 ms on the LTO build.)
+
+> **On these cluster numbers and LTO.** The forced-remote and fan-out figures in
+> this section were captured during development on a non-LTO build (fast to
+> rebuild). They are *A/B* results (before vs after a change, or serial vs
+> overlapped), and LTO shifts both sides together, so the ratios and the
+> conclusions hold; only the absolute qps would rise a few percent with LTO. The
+> headline solo and fully-replicated throughput above is confirmed on the LTO build
+> (~11,700 qps, p50 1.23 ms).
 
 **The cluster query path was never slow.** After the v47 remote protocol + two-phase
 reconciliation, a cluster forms, replicates, and returns correct distributed results
@@ -241,61 +271,87 @@ Xapian's.
 
 ## Environment and caveats
 
-This is a smoke test, and the two engines were not on equal footing:
+This is a smoke test. It is now apples-to-apples on the two things that most
+distorted the earlier version (substrate and shard count), but several caveats
+remain:
 
-- **Different substrate.** Xapiand ran natively on macOS (Apple silicon).
-  Elasticsearch ran in the official Docker image under a Linux VM (colima), so it
-  paid VM and virtual-network overhead that Xapiand did not. This flatters
-  Xapiand on the latency and QPS numbers and is the single biggest reason not to
-  read those as a controlled result. The on-disk size is unaffected by this.
-- **Small, single-node, single-shard.** 20,000 documents on one node with one
-  shard and no replicas. Nothing here says anything about multi-node scaling,
-  large corpora, or sharded fan-out, where the trade-offs differ.
-- **Default configuration.** Stock settings on both sides. No JVM heap tuning
-  beyond a 1 GB cap for Elasticsearch, no merge/refresh tuning, no Xapiand
-  tuning. Elasticsearch also does more work by default (per-field `.keyword`
-  multi-fields, its own analysis chain).
-- **Warmup.** Elasticsearch's first query trial was noticeably slower than later
-  ones (JVM warmup and cache fill); the reported query numbers are from a warm
-  run. Xapiand was steady from the first trial.
+- **Same substrate, at last.** Both engines run natively on the same Apple-silicon
+  machine; Elasticsearch is the official aarch64 build, not a Docker image under a
+  Linux VM. The earlier Docker setup made ES pay a VM and loopback-network tax on
+  every request and flattered Xapiand's latency and QPS. That tax is gone here, and
+  it is why the native ES numbers are so much more competitive than the old page's.
+- **Highly duplicative dataset.** The corpus is 1,000 distinct records replicated
+  20x. That compresses and caches far better than real data would, and it is the
+  main reason the on-disk numbers are both small and shard-count-sensitive. A
+  non-duplicative corpus would move all of these numbers.
+- **On-disk footprint is not robust here.** As measured, ES's five-shard store
+  swings several-fold between identical runs depending on background segment merging,
+  and Xapiand's harness once undercounted a sharded index by reading it mid-flush
+  (now fixed). Treat the one-shard footprint (steady, Xapiand ~1.25x smaller) as the
+  only defensible footprint result on this page.
+- **Small, single-host.** 20,000 documents on one machine. Nothing here speaks to
+  multi-node scaling or large corpora; the cluster section measures the distributed
+  data plane's *cost*, not a production throughput multiplier.
+- **Default configuration.** Stock settings on both sides (1 GB heap for ES, no
+  merge/refresh tuning, no Xapiand tuning). Elasticsearch also does more work by
+  default (per-field `.keyword` multi-fields, its own analysis chain).
+- **Build.** Every Xapiand binary here is Release + LTO, matching ES and the
+  baseline. Warm query numbers only (ES's first trial pays JVM warmup; Xapiand is
+  steady from the first).
 - **Feature surface.** The two are not feature-identical. This mix exercises the
   common ground (term, range, nested, boolean), not the full surface of either.
 
-The honest summary: on this data Xapiand is dramatically more compact on disk, and
-looks competitive-to-faster on query serving, but a fair query comparison needs
-both engines on the same native substrate and a larger, multi-node corpus before
-any multiplier should be quoted.
+The honest summary: natively and at equal shard count, Xapiand and Elasticsearch
+are close on this workload. Elasticsearch indexes faster; query serving is a tie at
+one shard and tilts Xapiand's way as shards multiply; on-disk footprint is
+inconclusive beyond a modest one-shard edge. Xapiand's material advantages are
+architectural (the compact single-shard index, the cheap native multi-database
+merge, and the cluster/Remote-protocol work below), not a single-node smoke-test
+multiplier. A larger, non-duplicative, multi-node corpus is needed before quoting
+any headline number.
 
 ## Reproducing
 
-Start a Xapiand node and run the driver:
+Build Xapiand **Release + LTO** (the `LTO` option defaults on, so a plain Release
+build already has it; a fast dev build that turned it off must turn it back on for
+benchmarking), then start a node at a chosen shard count and run the driver:
 
 ```sh
-# Xapiand (native) -- this branch, and origin/master + the arm64 build fix
-build/bin/xapiand --port 8880 --name benchnode --solo -D /tmp/xap_bench &
+# Xapiand (native), Release + LTO
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLTO=ON && cmake --build build --target xapiand -j
+build/bin/xapiand --port 8880 --name benchnode --solo --shards 1 -D /tmp/xap_bench &
 python3 harness/loadtest.py \
     --target localhost:8880 --dataset docs/assets/accounts.ndjson \
-    --replicate 20 --concurrency 16 --duration 5 --trials 2 \
+    --replicate 20 --concurrency 16 --duration 5 --trials 3 \
     --datadir /tmp/xap_bench --out harness/results/xapiand_bench.json
 ```
 
-For the `origin/master` column, build a second tree at `origin/master` with only
-the Apple-silicon build fix cherry-picked, and point the same driver at it:
+For the `origin/master` comparison, build a second tree at `origin/master` with only
+the Apple-silicon build fix cherry-picked, and point the same driver at it (default
+`Release` already implies LTO):
 
 ```sh
 git worktree add -b oldmaster-bench ../xapiand-oldmaster origin/master
 git -C ../xapiand-oldmaster cherry-pick da3a9b97a3bdb2a46eba011740698e5c8e4a7f8b
 cmake -S ../xapiand-oldmaster -B ../xapiand-oldmaster/build -DCMAKE_BUILD_TYPE=Release
-cmake --build ../xapiand-oldmaster/build --target xapiand -j4
+cmake --build ../xapiand-oldmaster/build --target xapiand -j
 ```
 
+Run Elasticsearch **natively** (not Docker), from the official aarch64 tarball, and
+point the ES driver at it (`NUM_SHARDS` matches Xapiand's `--shards`):
+
 ```sh
-# Elasticsearch (Docker)
-docker run -d --name es-bench -p 9200:9200 \
-    -e discovery.type=single-node -e xpack.security.enabled=false \
-    -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
-    docker.elastic.co/elasticsearch/elasticsearch:8.15.3
-python3 harness/es_loadtest.py
+# Elasticsearch (native)
+curl -sLO https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.15.3-darwin-aarch64.tar.gz
+tar xzf elasticsearch-8.15.3-darwin-aarch64.tar.gz
+cd elasticsearch-8.15.3
+printf 'discovery.type: single-node\nxpack.security.enabled: false\n' >> config/elasticsearch.yml
+ES_JAVA_OPTS="-Xms1g -Xmx1g" bin/elasticsearch &   # wait for a green /_cluster/health
+# back in the repo:
+NUM_SHARDS=1 REPLICATE=20 CONCURRENCY=16 DURATION=5 TRIALS=3 python3 harness/es_loadtest.py
 ```
+
+The two-node cluster numbers come from `harness/cluster_bench.sh` (see also
+`BIN=build/bin/xapiand harness/cluster_bench.sh` to point it at a specific build).
 
 <div style="min-height: 100px"></div>
