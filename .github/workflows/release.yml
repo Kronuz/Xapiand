@@ -97,8 +97,8 @@ jobs:
             --license MIT \
             --description "Xapiand: a RESTful search engine" \
             --url "https://github.com/Kronuz/Xapiand" \
-            --depend libicu --depend libuuid --depend zlib \
-            --depend libzstd --depend libcap \
+            --depends libicu --depends libuuid --depends zlib \
+            --depends libzstd --depends libcap \
             -C stage usr
           echo "rpm=$(ls xapiand-*.rpm | head -1)" >> "$GITHUB_OUTPUT"
 
@@ -152,8 +152,8 @@ jobs:
             --license MIT \
             --description "Xapiand: a RESTful search engine" \
             --url "https://github.com/Kronuz/Xapiand" \
-            --depend libicu74 --depend libuuid1 --depend zlib1g \
-            --depend libzstd1 --depend libcap2 \
+            --depends libicu74 --depends libuuid1 --depends zlib1g \
+            --depends libzstd1 --depends libcap2 \
             -C stage usr
           echo "deb=$(ls xapiand_*.deb | head -1)" >> "$GITHUB_OUTPUT"
 
