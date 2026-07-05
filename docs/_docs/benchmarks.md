@@ -202,6 +202,43 @@ Index throughput on a cluster is lower than solo (writes replicate and pay first
 shard creation across nodes), which is expected. These are measurements on a fresh cluster,
 no tuning; the point is to make the real cost visible, not to quote a production multiplier.
 
+### Parallel fan-out: one native Enquire instead of shard-by-shard
+
+The coordinator used to run a distributed search **shard by shard**: one
+single-database `Xapian::Enquire` per shard, driven by a serial loop that blocked on
+each shard's two-phase conversation before starting the next. So a `K`-shard search
+paid `K` prepare round-trips one after another, then `K` finalise round-trips one after
+another -- the fan-out latency was the *sum* over shards, not the max.
+
+That was a workaround. Xapian's own matcher already fans a multi-database search out
+efficiently: it sends every shard's `MSG_QUERY` up front, does local work, then collects
+replies with `poll()` in readiness order (and merges the per-shard MSets and unshards the
+docids itself). Xapiand had abandoned that native path years ago "because it will not work
+in cluster mode" -- the old remote server did the whole match in one blocking call the
+reactor can't hold, and the matcher's single `query_id` collided for shards co-located on
+one node. Both blockers are now gone (the server is a non-blocking two-phase, and the
+`query_id` is made per-shard-unique), so the search feeds every shard into **one** Enquire
+again and lets Xapian overlap them.
+
+Single-query latency, 2-node localhost cluster, `replicas=0` (forcing the Remote path):
+
+| shards | serial (old) | one Enquire (new) | speedup |
+| ---: | ---: | ---: | ---: |
+| 2 | 0.80 ms | 0.79 ms | ~1x |
+| 4 | 0.93 ms | 0.83 ms | 1.12x |
+| 8 | 1.13 ms | 0.87 ms | 1.30x |
+| 16 | 1.67 ms | 1.00 ms | **1.67x** |
+
+Serial latency climbs roughly linearly with shard count; the native match stays nearly
+flat. The gap widens with shard count, and with network RTT: on loopback each round trip
+is tens of microseconds, so this understates the win: on a real cluster with millisecond
+links the serial curve is `K` times steeper while the overlapped one barely moves, so it
+approaches a per-shard-count speedup. Correctness is unchanged (identical hits, count,
+sort, pagination against a solo node; identical aggregations once `check_at_least` is high
+enough to check every document; `cluster_check` green at 2 and 3 nodes; no stall under
+concurrency), and it deletes the hand-rolled fan-out and manual merge in favour of
+Xapian's.
+
 ## Environment and caveats
 
 This is a smoke test, and the two engines were not on equal footing:
