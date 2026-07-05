@@ -40,14 +40,6 @@
 using namespace std;
 
 bool
-is_ngram_enabled()
-{
-    const char * p;
-    static bool result = ((p = getenv("XAPIAN_CJK_NGRAM")) != NULL && *p);
-    return result;
-}
-
-bool
 is_unbroken_script(unsigned p)
 {
     // Array containing the last value in each range of codepoints which

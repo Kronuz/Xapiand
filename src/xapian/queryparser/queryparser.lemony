@@ -1102,7 +1102,7 @@ QueryParser::Internal::parse_query(string_view qs, unsigned flags,
     }
 #endif
     bool try_word_break =
-	(flags & (FLAG_NGRAMS|FLAG_WORD_BREAKS)) || is_ngram_enabled();
+	(flags & (FLAG_NGRAMS|FLAG_WORD_BREAKS));
 
     // Set ranges if we may have to handle ranges in the query.
     bool ranges = !rangeprocs.empty() && (qs.find("..") != string::npos);

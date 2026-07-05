@@ -53,14 +53,6 @@
 # endif
 #endif
 
-/** Should we use the n-gram code?
- *
- *  The first time this is called it reads the environment variable
- *  XAPIAN_CJK_NGRAM and returns true if it is set to a non-empty value.
- *  Subsequent calls cache and return the same value.
- */
-bool is_ngram_enabled();
-
 bool is_unbroken_script(unsigned codepoint);
 
 bool is_unbroken_wordchar(unsigned codepoint);

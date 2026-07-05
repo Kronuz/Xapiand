@@ -295,9 +295,6 @@ TermGenerator::Internal::index_text(Utf8Iterator itor, termcount wdf_inc,
     }
 #endif
     unsigned break_flags = flags & (FLAG_NGRAMS | FLAG_WORD_BREAKS);
-    if (break_flags == 0 && is_ngram_enabled()) {
-	break_flags = FLAG_NGRAMS;
-    }
 
     stop_strategy current_stop_mode;
     if (!stopper) {
@@ -846,9 +843,6 @@ MSet::Internal::snippet(string_view text,
 #endif
     auto SNIPPET_BREAK_MASK = MSet::SNIPPET_NGRAMS | MSet::SNIPPET_WORD_BREAKS;
     unsigned break_flags = flags & SNIPPET_BREAK_MASK;
-    if (break_flags == 0 && is_ngram_enabled()) {
-	break_flags = MSet::SNIPPET_NGRAMS;
-    }
 
     size_t term_start = 0;
     double min_tw = 0, max_tw = 0;
