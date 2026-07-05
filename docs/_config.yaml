@@ -99,3 +99,5 @@ exclude:
   - icomoon-selection.json
   - readme.md
   - CNAME
+  - vendor
+  - .bundle
