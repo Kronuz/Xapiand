@@ -27,7 +27,8 @@
 #include "msgpack.h"                              // for MsgPack
 #include "strings.hh"                             // for string::*
 #include "utype.hh"                               // for toUType
-#include "compressor_lz4.h"                       // for compress_lz4, decompress_lz4
+#include "compressor_lz4.h"                       // for decompress_lz4 (legacy docdata)
+#include "compressor_zstd.h"                      // for compress_zstd, decompress_zstd
 
 
 ct_type_t::ct_type_t(const std::string& first, const std::string& second) :
@@ -115,10 +116,12 @@ Locator::data(std::string_view new_data)
 {
 	size = new_data.size();
 	switch (type) {
-		case Type::compressed_inplace:
+		case Type::lz4_compressed_inplace:
+		case Type::zstd_compressed_inplace:
 			if (size >= 128) {
-				_raw_holder = compress_lz4(new_data);
+				_raw_holder = compress_zstd(new_data);
 				if (_raw_holder.size() < new_data.size()) {
+					type = Type::zstd_compressed_inplace;
 					raw = _raw_holder;
 					break;
 				}
@@ -128,10 +131,12 @@ Locator::data(std::string_view new_data)
 		case Type::inplace:
 			raw = new_data;
 			break;
-		case Type::compressed_stored:
+		case Type::lz4_compressed_stored:
+		case Type::zstd_compressed_stored:
 			if (size >= 128) {
-				_raw_holder = compress_lz4(new_data);
+				_raw_holder = compress_zstd(new_data);
 				if (_raw_holder.size() < new_data.size()) {
+					type = Type::zstd_compressed_stored;
 					raw = _raw_holder;
 					break;
 				}
@@ -150,10 +155,12 @@ Locator::data(std::string&& new_data)
 {
 	size = new_data.size();
 	switch (type) {
-		case Type::compressed_inplace:
+		case Type::lz4_compressed_inplace:
+		case Type::zstd_compressed_inplace:
 			if (size >= 128) {
-				_raw_holder = compress_lz4(new_data);
+				_raw_holder = compress_zstd(new_data);
 				if (_raw_holder.size() < new_data.size()) {
+					type = Type::zstd_compressed_inplace;
 					raw = _raw_holder;
 					break;
 				}
@@ -164,10 +171,12 @@ Locator::data(std::string&& new_data)
 			_raw_holder = std::move(new_data);
 			raw = _raw_holder;
 			break;
-		case Type::compressed_stored:
+		case Type::lz4_compressed_stored:
+		case Type::zstd_compressed_stored:
 			if (size >= 128) {
-				_raw_holder = compress_lz4(new_data);
+				_raw_holder = compress_zstd(new_data);
 				if (_raw_holder.size() < new_data.size()) {
+					type = Type::zstd_compressed_stored;
 					raw = _raw_holder;
 					break;
 				}
@@ -193,10 +202,16 @@ Locator::data() const
 		case Type::inplace:
 		case Type::stored:
 			return raw;
-		case Type::compressed_inplace:
-		case Type::compressed_stored:
+		case Type::lz4_compressed_inplace:
+		case Type::lz4_compressed_stored:
 			if (_raw_decompressed.empty() && !raw.empty()) {
 				_raw_decompressed = decompress_lz4(raw);
+			}
+			return _raw_decompressed;
+		case Type::zstd_compressed_inplace:
+		case Type::zstd_compressed_stored:
+			if (_raw_decompressed.empty() && !raw.empty()) {
+				_raw_decompressed = decompress_zstd(raw);
 			}
 			return _raw_decompressed;
 	}
@@ -214,12 +229,14 @@ Locator::unserialise(std::string_view locator_str)
 	locator.type = static_cast<Type>(*p++);
 	switch (locator.type) {
 		case Type::inplace:
-		case Type::compressed_inplace:
+		case Type::lz4_compressed_inplace:
+		case Type::zstd_compressed_inplace:
 			locator.raw = std::string_view(p, p_end - p);
 			locator.size = p_end - p;
 			break;
 		case Type::stored:
-		case Type::compressed_stored:
+		case Type::lz4_compressed_stored:
+		case Type::zstd_compressed_stored:
 			locator.volume = unserialise_length(&p, p_end);
 			locator.offset = unserialise_length(&p, p_end);
 			locator.size = unserialise_length(&p, p_end);
@@ -243,10 +260,12 @@ Locator::serialise() const
 	result.push_back(toUType(type));
 	switch (type) {
 		case Type::inplace:
-		case Type::compressed_inplace:
+		case Type::lz4_compressed_inplace:
+		case Type::zstd_compressed_inplace:
 			break;
 		case Type::stored:
-		case Type::compressed_stored:
+		case Type::lz4_compressed_stored:
+		case Type::zstd_compressed_stored:
 			result.append(serialise_length(volume));
 			result.append(serialise_length(offset));
 			result.append(serialise_length(size));

@@ -133,8 +133,10 @@ public:
 	enum class Type : uint8_t {
 		inplace,
 		stored,
-		compressed_inplace,
-		compressed_stored,
+		lz4_compressed_inplace,
+		lz4_compressed_stored,
+		zstd_compressed_inplace,
+		zstd_compressed_stored,
 	};
 
 	Type type;
@@ -149,7 +151,7 @@ public:
 
 	template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
 	Locator(C&& ct_type) :
-		type(Type::compressed_inplace),
+		type(Type::zstd_compressed_inplace),
 		ct_type(std::forward<C>(ct_type)),
 		volume(-1),
 		offset(0),

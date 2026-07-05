@@ -757,7 +757,8 @@ DatabaseHandler::_dump_document(Xapian::docid did, const Data& data) {
 	for (auto& locator : data) {
 		switch (locator.type) {
 			case Locator::Type::inplace:
-			case Locator::Type::compressed_inplace: {
+			case Locator::Type::lz4_compressed_inplace:
+			case Locator::Type::zstd_compressed_inplace: {
 				if (!locator.ct_type.empty()) {
 					obj[RESERVED_DATA].push_back(MsgPack({
 						{ "_content_type", locator.ct_type.to_string() },
@@ -768,7 +769,8 @@ DatabaseHandler::_dump_document(Xapian::docid did, const Data& data) {
 				break;
 			}
 			case Locator::Type::stored:
-			case Locator::Type::compressed_stored: {
+			case Locator::Type::lz4_compressed_stored:
+			case Locator::Type::zstd_compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
 				auto stored = storage_get_stored(locator, did);
 				obj[RESERVED_DATA].push_back(MsgPack({
@@ -1846,7 +1848,8 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 		for (auto& locator : data) {
 			switch (locator.type) {
 				case Locator::Type::inplace:
-				case Locator::Type::compressed_inplace:
+				case Locator::Type::lz4_compressed_inplace:
+				case Locator::Type::zstd_compressed_inplace:
 					if (locator.ct_type.empty()) {
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
@@ -1860,7 +1863,8 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 					}
 					break;
 				case Locator::Type::stored:
-				case Locator::Type::compressed_stored:
+				case Locator::Type::lz4_compressed_stored:
+				case Locator::Type::zstd_compressed_stored:
 					MsgPack locator_info = {
 						{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
 						{ RESPONSE_TYPE, "stored" },

@@ -1084,7 +1084,7 @@ Shard::storage_get_stored(const Locator& locator)
 {
 	L_CALL("Shard::storage_get_stored()");
 
-	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored);
+	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored);
 	assert(locator.volume != -1);
 
 	if (storage) {
@@ -1120,7 +1120,7 @@ Shard::storage_push_blobs(std::string&& doc_data)
 			if (locator.size == 0) {
 				data.erase(locator.ct_type);
 			}
-			if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
+			if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
 				if (!locator.raw.empty()) {
 					uint32_t offset;
 					while (true) {

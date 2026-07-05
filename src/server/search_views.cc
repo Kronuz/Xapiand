@@ -1882,7 +1882,7 @@ retrieve_document_view(Request& request)
 		auto ct_type = locator.ct_type;
 		request.response_blob = locator.data();
 #ifdef XAPIAND_DATA_STORAGE
-		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
+		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
 			if (request.response_blob.empty()) {
 				auto stored = db_handler.storage_get_stored(locator, did);
 				request.response_blob = unserialise_string_at(STORED_BLOB, stored);
