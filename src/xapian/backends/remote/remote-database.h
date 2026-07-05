@@ -94,6 +94,18 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// The revision of the remote database.
     mutable Xapian::rev revision;
 
+    /** True once the cached stats (doccount, lastdocid, doclen bounds,
+     *  total_length, has_positional_info, revision, uuid) have been fetched
+     *  from the server and are valid for the current (read-only) snapshot.
+     *
+     *  A read-only remote database is pinned to a revision until reopen(), so
+     *  its stats do not change under it; refetching them on every get_doccount()
+     *  / get_total_length() call (as the coordinator does per query to build
+     *  global match stats) is a wasted MSG_UPDATE round-trip.  Cache them and
+     *  only refetch on reopen().  Never cached for writable databases.
+     */
+    mutable bool stats_valid = false;
+
 
     /// The UUID of the remote database.
     mutable std::string uuid;

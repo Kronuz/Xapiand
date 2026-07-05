@@ -333,6 +333,15 @@ RemoteDatabase::open_document(Xapian::docid did, bool /*lazy*/) const
 bool
 RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 {
+    // For a read-only database the stats describe a pinned snapshot that only
+    // advances on reopen(), so a plain MSG_UPDATE refresh is redundant once the
+    // stats have been fetched.  Serve it from cache and skip the round-trip.
+    // (MSG_REOPEN / MSG_MAX always go to the server; writable databases never
+    // cache, since their own writes change the stats.)
+    if (msg_code == MSG_UPDATE && stats_valid && !writable) {
+	return true;
+    }
+
     // MSG_MAX signals that we're handling the opening greeting, which isn't in
     // response to an explicit message.
     if (msg_code != MSG_MAX)
@@ -340,7 +349,9 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 
     string message;
     if (!get_message_or_done(message, REPLY_UPDATE)) {
-	// The database was already open at the latest revision.
+	// The database was already open at the latest revision, so the cached
+	// stats are current.
+	stats_valid = true;
 	return false;
     }
 
@@ -428,6 +439,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
     lastdocid += doccount;
     doclen_ubound += doclen_lbound;
     uuid.assign(p, p_end);
+    stats_valid = true;
     return true;
 }
 
