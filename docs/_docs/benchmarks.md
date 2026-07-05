@@ -152,13 +152,51 @@ replicas that node isn't a designated holder and wouldn't receive updates, so se
 would be stale. Give the shard a real replica on that node (`num_replicas >= 1`, which
 you want for availability anyway) and the local-fallback serves it locally at solo speed.
 
-So there is no remote-path bug to fix here; the lever is replication, not the protocol.
-An earlier attempt to make the remote handle persist across queries *regressed* the
-common case, because tearing the handle down and re-running `reopen_readable()` is exactly
-what re-checks for and switches to a local copy once one exists. If the genuinely
-unavoidable case (more shards than replicas, so some node must always read some shard
-remotely) ever becomes hot, the two-phase round-trips and MsgPack (de)serialization are
-where that node's time goes, and *that* is the thing to optimize.
+Replication is the first lever (a node that holds the shard reads it locally at solo
+speed), but it is not the *only* one: forcing every read through the Remote protocol
+(`num_replicas = 0`, query a non-holder) exposes real per-query overhead worth cutting,
+and that is a portable win (it helps any deployment with more shards than replicas, where
+some node must always read some shard remotely).
+
+### Optimizing the forced-remote path
+
+Instrumenting the client's `send_message` on the forced-remote path (accounts, c=16)
+showed **~8.7 protocol round-trips per query**:
+
+| message | round-trips / query | what it is |
+| --- | ---: | --- |
+| `MSG_UPDATE` | ~4.3 | fetch global match stats (doccount, total_length, doclen bounds, ...) |
+| `MSG_DOCUMENT` | ~2.3 | fetch each result document's data |
+| `MSG_QUERY` | 1 | two-phase match, prepare |
+| `MSG_GETMSET` | 1 | two-phase match, finalize |
+| `MSG_REOPEN` | ~0 | (only on the pool's staleness window) |
+
+The `MSG_UPDATE` storm was pure waste. A read-only remote database is pinned to a
+revision until `reopen()`, so its stats can't change under it, yet every
+`get_doccount()` / `get_total_length()` the coordinator called to build global match
+stats did a fresh round-trip. Caching them (`stats_valid`, invalidated only by
+`reopen()`; writers never cache) collapsed **`MSG_UPDATE` from ~267,000 to 3 over a run**,
+cut round-trips to ~4.4/query, and lifted the forced-remote node from ~1,900 to ~2,460
+qps (p50 4.7 → 3.66 ms) and the other node from ~3,400 to ~5,200 qps (p50 3.7 → 2.37 ms),
+with distributed correctness unchanged (`cluster_check.sh` green, hit counts identical).
+This is a general Xapian-remote inefficiency, not Xapiand-specific, so it is a candidate
+to upstream.
+
+What is left is architectural: the two-phase `MSG_QUERY` + `MSG_GETMSET` (inherent to the
+non-blocking distributed match) and ~2.3 `MSG_DOCUMENT` per query (a separate round-trip
+per result document, fetched lazily during result rendering). The next lever is to stop
+paying a round-trip per document: pipeline or batch the per-hit fetches so the render
+loop's `N` documents cost ~1 round-trip instead of `N`. That is the bigger, still-portable
+win, but it threads a batch API across the handler -> shard -> remote layers and touches
+the connection's request/reply lockstep, so it wants a deliberate design pass.
+
+Two things this investigation ruled out. Reusing the remote handle across the pool's
+staleness window (instead of reconnecting) only trades a `Xapian::Remote::open` for an
+`MSG_REOPEN` round-trip, so it is qps-neutral. And the remote path does **not** deadlock:
+hammered at 48-way concurrency (single- and multi-shard) it sustains thousands of
+queries/second with no stall. Earlier apparent "hangs" were the measurement scaffolding
+(a shell `wait` on a backgrounded load plus `sample` suspending the process), not the
+server.
 
 Index throughput on a cluster is lower than solo (writes replicate and pay first-touch
 shard creation across nodes), which is expected. These are measurements on a fresh cluster,
