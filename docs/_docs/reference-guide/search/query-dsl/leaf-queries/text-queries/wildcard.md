@@ -11,8 +11,8 @@ slow wildcard queries, a wildcard term should not start with one of the
 wildcards `*` or `?`.
 
 This allows for prefix matches, matching any number of trailing characters, so,
-for instance, `"_partial": "wildc"` or `"wildc*"` would match _**wildc**ard_,
-_**wildc**arded_, _**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc.
+for instance, `"wildc*"` would match _**wildc**ard_, _**wildc**arded_,
+_**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc.
 
 {: .note .tip }
 This is a bit different from [Partial Query](../partial).

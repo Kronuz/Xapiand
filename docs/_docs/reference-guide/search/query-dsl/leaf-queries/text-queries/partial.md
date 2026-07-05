@@ -73,7 +73,7 @@ pm.test("partial query values are valid", function() {
 ```
 {% endcomment %}
 
-Using the suffix  `**` is equivalent to use `_partial`
+Using the suffix `**` is equivalent to using `_partial`
 
 {% capture req %}
 

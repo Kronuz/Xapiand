@@ -24,7 +24,7 @@ and stemmed and then joined with the `OR` operator to create a query.
 This query example will match with any document with the word "**_responsive_**"
 in the text field "**_personality_**" but will also match documents with the
 word "**_response_**" because "_responsive_" is reduced to "**_response_**" by
-the stemmig algorithm.
+the stemming algorithm.
 
 {% capture req %}
 
