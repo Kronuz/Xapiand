@@ -56,9 +56,10 @@ jobs:
       - name: Install build toolchain
         run: |
           set -eux
-          dnf -y install epel-release
+          dnf -y install dnf-plugins-core epel-release
+          dnf config-manager --set-enabled crb
           dnf -y install gcc-toolset-13 cmake ninja-build git perl tcl \
-            pkgconfig asio-devel libzstd-devel libicu-devel libuuid-devel \
+            pkgconf-pkg-config asio-devel libzstd-devel libicu-devel libuuid-devel \
             zlib-devel libcap-devel rpm-build ruby ruby-devel make
           gem install --no-document fpm
 
