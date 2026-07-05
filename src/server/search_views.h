@@ -25,6 +25,7 @@
 #include "config.h"                         // for XAPIAND_DATABASE_WAL
 
 #include <chrono>                           // for std::chrono, std::chrono::steady_clock, std::chrono::time_point
+#include <condition_variable>               // for std::condition_variable
 #include <deque>                            // for std::deque
 #include <memory>                           // for shared_ptr
 #include <mutex>                            // for std::mutex, std::lock_guard

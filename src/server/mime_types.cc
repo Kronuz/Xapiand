@@ -24,6 +24,7 @@
 
 #include <cstdlib>                                // for getenv
 #include <fstream>                                // for std::ifstream
+#include <iterator>                               // for std::istream_iterator
 #include <sstream>                                // for std::istringstream
 #include <unordered_map>                          // for std::unordered_map
 

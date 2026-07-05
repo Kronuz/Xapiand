@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstdint>          // for uint8_t
 #include <cstdio>           // for size_t
 #include <string>           // for string, allocator, operator+, basic_string
 #include <string_view>      // for std::string_view

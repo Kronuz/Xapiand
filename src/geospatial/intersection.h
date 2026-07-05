@@ -22,6 +22,9 @@
 
 #pragma once
 
+#include <memory>            // for std::shared_ptr
+#include <vector>            // for std::vector
+
 #include "geometry.h"
 
 

@@ -1796,6 +1796,8 @@ if (NOT FTIME_RETURNS_INT)
 endif ()
 
 check_cxx_source_compiles("
+	#define _GNU_SOURCE
+	#include <string.h>
 	int main() {
 		char buf[100];
 		char x = *strerror_r(0, buf, sizeof buf);

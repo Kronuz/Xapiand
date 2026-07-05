@@ -241,7 +241,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::vector<MsgPack> _results;
 	std::vector<std::unique_ptr<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>> ready_queues;
 
-	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
+	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::block_size> bulk;
 	size_t bulk_cnt;
 
 	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field);
