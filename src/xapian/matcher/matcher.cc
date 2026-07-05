@@ -223,7 +223,14 @@ Matcher::Matcher(const Xapian::Database& db_,
 		unimplemented("Xapian::MatchDecider not supported by the "
 			      "remote backend");
 	    }
-	    as_rem->set_query(query_id, query, query_length,
+	    // Make the query_id unique per remote shard.  It correlates the
+	    // MSG_QUERY (prepare) and MSG_GETMSET (finalise) phases in the server's
+	    // process-global pending_queries map; if two shards of this Enquire land
+	    // on the same node they must not share a key, so append the shard index.
+	    // start_match() below re-derives the same id from the submatch's shard.
+	    std::string shard_query_id =
+		query_id.empty() ? query_id : query_id + ":" + std::to_string(i);
+	    as_rem->set_query(shard_query_id, query, query_length,
 			      collapse_key, collapse_max,
 			      order, sort_key, sort_by, sort_val_reverse,
 			      time_limit,
@@ -611,7 +618,10 @@ Matcher::get_mset(Xapian::doccount first,
     if (locals.empty() && remotes.size() == 1) {
 	// Short cut for a single remote database.
 	Assert(remotes[0]);
-	remotes[0]->start_match(query_id, first, maxitems, check_at_least, sorter,
+	std::string shard_query_id = query_id.empty()
+	    ? query_id
+	    : query_id + ":" + std::to_string(remotes[0]->get_shard());
+	remotes[0]->start_match(shard_query_id, first, maxitems, check_at_least, sorter,
 				stats);
 	return remotes[0]->get_mset(matchspies);
     }
@@ -637,7 +647,10 @@ Matcher::get_mset(Xapian::doccount first,
 	    AssertRel(check_at_least, >=, first + maxitems);
 	    remote_maxitems = check_at_least;
 	}
-	submatch->start_match(query_id, 0, remote_maxitems, check_at_least, sorter,
+	std::string shard_query_id = query_id.empty()
+	    ? query_id
+	    : query_id + ":" + std::to_string(submatch->get_shard());
+	submatch->start_match(shard_query_id, 0, remote_maxitems, check_at_least, sorter,
 			      stats);
     }
 #endif
