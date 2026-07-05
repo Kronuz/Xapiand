@@ -109,37 +109,50 @@ process. A cluster is different: an index is sharded across nodes, so a search o
 the coordinator runs the two-phase Remote match against the other nodes' shards, and
 a write replicates. `harness/cluster_bench.sh` runs the *same* load
 (`accounts` x20k, concurrency 16) once solo and once on a 2-node localhost cluster,
-so the cost of the distributed data plane is explicit:
+so the cost of the distributed data plane is explicit.
 
-| Metric | Solo (no Remote) | 2-node cluster | Δ |
+> **A benchmark bug once made this look ~60x worse than it is.** `loadtest.py`'s index
+> phase wrote to per-trial index names (`{index}_t{tr}`) while its query phase queried
+> the bare `{index}` name, which **never existed**. A search against a missing index
+> still answers HTTP 200 with 0 hits, so the error count stayed at zero and hid it. On a
+> cluster that empty search still fans out to the (missing) shards, and each miss cost a
+> full remote handshake that ended in `DatabaseNotFoundError` ("Couldn't stat …"),
+> retried `DB_RETRIES` times. That is what produced the old "~215 qps / ~79 ms p50"
+> figure. `loadtest.py` now queries the populated index and aborts loudly if the probe
+> query returns no hits, so this can't recur.
+
+With that fixed, querying a *populated* index:
+
+| Metric | Solo (no Remote) | Cluster, shard-owner node | Cluster, remote node | 
 | --- | ---: | ---: | ---: |
-| Index throughput | ~11,400 docs/s | ~5,800 docs/s | **−49%** |
-| Query throughput | ~12,900 qps | ~215 qps | **−98%** |
-| Query p50 | 1.16 ms | 79 ms | ~68x |
-| Query p95 | 2.14 ms | 196 ms | ~91x |
-| Query p99 | 2.72 ms | 231 ms | ~85x |
+| Query throughput | ~10,500 qps | ~10,900 qps | ~3,700 qps |
+| Query p50 | 1.4 ms | 1.1 ms | 2.5 ms |
+| Query p95 | 2.6 ms | 2.0 ms | 5.3 ms |
 
-**Correctness is restored, performance is the next frontier.** After the v47 remote
-protocol + two-phase reconciliation, a cluster forms, replicates, and returns correct
-distributed results (`cluster_check.sh` is green). But the query path is currently
-**slow**: a single *uncontended* cross-node search is ~12 ms (vs ~1 ms solo), and
-under concurrency 16 the p50 degrades to ~79 ms, so it isn't just a fixed network hop,
-it also serializes under load. Three leads to chase, in order of suspicion:
+**The cluster query path was never slow.** After the v47 remote protocol + two-phase
+reconciliation, a cluster forms, replicates, and returns correct distributed results
+(`cluster_check.sh` is green), and a real distributed search costs about what solo does.
+A node that owns the queried shard serves it locally at solo speed. A single uncontended
+cross-node search is ~1.6 ms, not the ~12 ms the broken benchmark implied.
 
-1. **The two-phase round-trip.** Every search is MSG_QUERY -> REPLY_STATS ->
-   MSG_GETMSET -> REPLY_RESULTS across the socket; the ~12 ms uncontended floor is
-   already high for localhost and points at per-request overhead (possibly a shard
-   reopen / reconnect in the checkout path, `shard.cc`'s `Xapian::Remote::open`).
-2. **A global lock on the prepared-match table.** `remote_protocol_views.cc` guards
-   its shared `pending_queries` map with one process-wide mutex, taken on *every*
-   MSG_QUERY and MSG_GETMSET, so concurrent cross-node searches contend on it.
-3. **The reactor offload hop**, which the solo bench already showed as a small tax,
-   compounds here because every remote DB operation crosses it.
+**The one real gap left is remote-vs-local, and it's modest (~3x).** With the default
+`num_shards = 1, num_replicas = 0` a shard has a single home node. Query that node and
+you get ~10,900 qps; query the *other* node and it reaches the shard over the Remote
+protocol at ~3,700 qps. Notably both nodes hold a byte-identical copy of the shard on
+disk (same glass UUID), yet the non-owner still reads it remotely: the local-fallback in
+`Shard::reopen_readable()` (which would let a node serve a matching local replica
+directly) is bypassed here, so a node that *could* read locally pays the network instead.
+Closing that gap would bring the remote node up toward solo speed, but it is a
+correctness-sensitive change (serving a local replica trades read-your-writes freshness
+against the primary for speed) and wants a deliberate design pass, not a reflexive reuse
+of the handle. An earlier attempt to blindly reuse the remote connection *regressed* the
+common case, because tearing the handle down and re-running `reopen_readable()` is exactly
+what re-checks for and switches to the fast local copy.
 
-Index throughput halving is more expected (writes replicate and pay first-touch shard
-creation across nodes). These are measurements on a fresh cluster with default
-settings, no tuning; the point is to make the gap visible and give the optimization
-work a baseline, not to quote a production multiplier.
+Index throughput on a cluster is lower than solo (writes replicate and pay first-touch
+shard creation across nodes), which is expected. These are measurements on a fresh cluster
+with default settings, no tuning; the point is to make the real cost visible, not to quote
+a production multiplier.
 
 ## Environment and caveats
 

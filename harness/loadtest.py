@@ -21,6 +21,7 @@ import http.client
 import json
 import os
 import statistics
+import sys
 import time
 
 # Validated SEARCH bodies (against the accounts dataset). Mix of query types.
@@ -183,8 +184,30 @@ def main():
     result["index_trials"] = idx_trials
 
     trials = []
+    # Query the index actually populated by the index phase (trial 0's index).
+    # The index phase writes to per-trial names ({index}_t{tr}); querying the bare
+    # {index} name would hit a non-existent index (0 hits, and on a cluster a wasted
+    # remote fan-out to missing shards), so results must target a populated one.
+    query_index = f"{args.index}_t0"
+    # Sanity guard: the query workload is meaningless against an empty/missing index
+    # (a nonexistent index still answers SEARCH with HTTP 200 and 0 hits, so the
+    # error count alone will not catch it).  Probe once and fail loudly.
+    probe_conn = connect(args.target)
+    _label, probe_q = QUERY_MIX[0]
+    pstatus, pdata = request(probe_conn, "SEARCH", f"/{query_index}/",
+                             body=json.dumps(probe_q).encode(),
+                             headers={"Content-Type": "application/json"})
+    probe_conn.close()
+    try:
+        pcount = json.loads(pdata).get("count", 0)
+    except Exception:
+        pcount = 0
+    if pstatus != 200 or not pcount:
+        print(f"[query] ABORT: query index '{query_index}' returned status={pstatus} "
+              f"count={pcount} -- nothing to query (was it indexed?)", flush=True)
+        sys.exit(2)
     for tr in range(args.trials):
-        q = phase_query(args.target, args.index, args.concurrency, args.duration)
+        q = phase_query(args.target, query_index, args.concurrency, args.duration)
         trials.append(q)
         print(f"[query] trial {tr+1}/{args.trials}: {q['qps']} qps, "
               f"p50={q['latency_ms']['p50']}ms p95={q['latency_ms']['p95']}ms p99={q['latency_ms']['p99']}ms "
