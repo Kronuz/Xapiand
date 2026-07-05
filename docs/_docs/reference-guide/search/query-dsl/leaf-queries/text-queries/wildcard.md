@@ -36,6 +36,42 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{% comment %}
+---
+params: sort=_id
+---
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("wildcard query count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+});
+```
+
+```js
+pm.test("wildcard query size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+
+```js
+pm.test("wildcard query values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [77, 84, 120, 173, 234, 279, 280, 284, 289, 319];
+  for (var i = 0; i < expected.length; ++i) {
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
+  }
+});
+```
+{% endcomment %}
+
 A similar effect could be obtained by using the wildcard ("`*`") character
 as part of the query text:
 
@@ -52,3 +88,39 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{% comment %}
+---
+params: sort=_id
+---
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("wildcard suffix query count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+});
+```
+
+```js
+pm.test("wildcard suffix query size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+
+```js
+pm.test("wildcard suffix query values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [77, 84, 120, 173, 234, 279, 280, 284, 289, 319];
+  for (var i = 0; i < expected.length; ++i) {
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
+  }
+});
+```
+{% endcomment %}
