@@ -67,6 +67,25 @@ def dir_bytes(path):
     return total
 
 
+def dir_bytes_settled(path, max_wait=15.0, quiet=0.75):
+    # RESTORE ?commit returns before a *sharded* index has finished flushing every
+    # shard, so measuring immediately undercounts a multi-shard index (it catches
+    # the .__N shards mid-write). Poll until the byte count stops growing for
+    # `quiet` seconds -- that is the settled on-disk footprint.
+    deadline = time.perf_counter() + max_wait
+    last = dir_bytes(path)
+    stable_since = time.perf_counter()
+    while time.perf_counter() < deadline:
+        time.sleep(0.25)
+        cur = dir_bytes(path)
+        if cur != last:
+            last = cur
+            stable_since = time.perf_counter()
+        elif time.perf_counter() - stable_since >= quiet:
+            break
+    return last
+
+
 def phase_index(target, index, dataset, replicate, datadir):
     body, ndocs = build_bulk(dataset, replicate)
     conn = connect(target)
@@ -78,6 +97,9 @@ def phase_index(target, index, dataset, replicate, datadir):
     ok = status in (200, 201, 204)
     # Measure THIS index's own directory ({datadir}/{index}), not the cumulative
     # data dir -- otherwise leftover indexes from earlier runs inflate the number.
+    # Settle first: a sharded index is still flushing its .__N shards when RESTORE
+    # ?commit returns, so an eager measurement undercounts it (this once made a
+    # 5-shard index read ~3.4 MB when it settles at ~9.5 MB).
     index_dir = os.path.join(datadir, index) if datadir else None
     return {
         "docs": ndocs,
@@ -85,7 +107,7 @@ def phase_index(target, index, dataset, replicate, datadir):
         "docs_per_sec": round(ndocs / elapsed) if elapsed > 0 else 0,
         "restore_status": status,
         "ok": ok,
-        "disk_bytes": dir_bytes(index_dir) if index_dir and os.path.isdir(index_dir) else None,
+        "disk_bytes": dir_bytes_settled(index_dir) if index_dir and os.path.isdir(index_dir) else None,
     }
 
 

@@ -3,15 +3,16 @@
 # replicated to the same doc count, same concurrency/duration/trials, the same
 # 7-query mix translated to ES DSL. Measures index docs/s, on-disk bytes, and
 # query QPS + p50/p95/p99.
-import json, time, http.client, threading, statistics, sys
+import json, time, http.client, threading, statistics, sys, os
 
 ES = "localhost:9200"
 IDX = "accounts"
 DATASET = "docs/assets/accounts.ndjson"
-REPLICATE = 15
-CONCURRENCY = 16
-DURATION = 8
-TRIALS = 2
+REPLICATE = int(os.environ.get("REPLICATE", 20))
+CONCURRENCY = int(os.environ.get("CONCURRENCY", 16))
+DURATION = int(os.environ.get("DURATION", 5))
+TRIALS = int(os.environ.get("TRIALS", 3))
+NUM_SHARDS = int(os.environ.get("NUM_SHARDS", 1))
 
 def es(method, path, body=None, conn=None):
     c = conn or http.client.HTTPConnection(ES, timeout=60)
@@ -39,7 +40,7 @@ print(f"base docs: {len(base)}  replicate: {REPLICATE}  total: {len(base)*REPLIC
 
 # ---- fresh index ----
 es("DELETE", f"/{IDX}")
-es("PUT", f"/{IDX}", json.dumps({"settings": {"number_of_shards": 1, "number_of_replicas": 0}}))
+es("PUT", f"/{IDX}", json.dumps({"settings": {"number_of_shards": NUM_SHARDS, "number_of_replicas": 0}}))
 
 # ---- INDEX phase: bulk, replicated ----
 def build_bulk():
