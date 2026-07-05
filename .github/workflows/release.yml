@@ -58,10 +58,15 @@ jobs:
           set -eux
           dnf -y install dnf-plugins-core epel-release
           dnf config-manager --set-enabled crb
-          dnf -y install gcc-toolset-13 cmake ninja-build git perl tcl \
-            pkgconf-pkg-config asio-devel libzstd-devel libicu-devel libuuid-devel \
+          dnf -y install gcc-toolset-13 cmake ninja-build git perl tcl tar \
+            pkgconf-pkg-config libzstd-devel libicu-devel libuuid-devel \
             zlib-devel libcap-devel rpm-build ruby ruby-devel make
           gem install --no-document fpm
+          # Standalone Asio (header-only). EPEL's asio-devel predates the C++20
+          # coroutine API (co_spawn/awaitable/any_io_executor) the reactor needs;
+          # pin the same 1.28 line Ubuntu ships and the Docker image builds against.
+          curl -sL https://github.com/chriskohlhoff/asio/archive/refs/tags/asio-1-28-1.tar.gz \
+            | tar xz -C /opt
 
       - uses: actions/checkout@v4
 
@@ -76,7 +81,7 @@ jobs:
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DASIO_INCLUDE_DIR=/usr/include
+            -DASIO_INCLUDE_DIR=/opt/asio-asio-1-28-1/asio/include
           ninja -C build
           DESTDIR="$PWD/stage" ninja -C build install
 
@@ -93,6 +98,7 @@ jobs:
             --description "Xapiand: a RESTful search engine" \
             --url "https://github.com/Kronuz/Xapiand" \
             --depend libicu --depend libuuid --depend zlib \
+            --depend libzstd --depend libcap \
             -C stage usr
           echo "rpm=$(ls xapiand-*.rpm | head -1)" >> "$GITHUB_OUTPUT"
 
@@ -100,3 +106,58 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.pkg.outputs.rpm }}
+
+  deb:
+    name: Debian/Ubuntu DEB (amd64)
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc-13
+      CXX: g++-13
+    steps:
+      - name: Install build toolchain
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-13 cmake ninja-build pkg-config perl tcl \
+            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev \
+            ruby ruby-dev
+          sudo gem install --no-document fpm
+
+      - uses: actions/checkout@v4
+
+      - name: Derive version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and stage
+        run: |
+          set -eux
+          cmake -GNinja -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DASIO_INCLUDE_DIR=/usr/include
+          ninja -C build
+          DESTDIR="$PWD/stage" ninja -C build install
+
+      - name: Package DEB
+        id: pkg
+        run: |
+          set -eux
+          # Debian versions use '~' for pre-releases: 1.0.0~alpha.1 sorts before 1.0.0.
+          # This .deb links Ubuntu 24.04's library versions, so it targets 24.04+ / Debian 13+.
+          VER="${{ steps.version.outputs.version }}"
+          VER="${VER/-/\~}"
+          fpm -s dir -t deb -n xapiand -v "$VER" \
+            --license MIT \
+            --description "Xapiand: a RESTful search engine" \
+            --url "https://github.com/Kronuz/Xapiand" \
+            --depend libicu74 --depend libuuid1 --depend zlib1g \
+            --depend libzstd1 --depend libcap2 \
+            -C stage usr
+          echo "deb=$(ls xapiand_*.deb | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Attach DEB to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pkg.outputs.deb }}
