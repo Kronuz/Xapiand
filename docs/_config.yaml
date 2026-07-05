@@ -31,7 +31,7 @@ github_username:  Kronuz
 disqus_shortname: xapiand
 
 theme_color_light: "#c8e4a1"
-theme_color_dark: "#7aa83e"
+theme_color_dark: "#c8e4a1"
 theme_color_quickstart: "#689137"
 
 logo: "/img/logo-2x.png"
