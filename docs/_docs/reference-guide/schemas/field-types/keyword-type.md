@@ -7,9 +7,9 @@ A field to index structured content such as email addresses, hostnames, status c
 
 They are typically used for filtering (Find me all blog posts where status is published), for sorting, and for aggregations. Keyword fields are only searchable by their exact value.
 
-If you need to index full text content such as email bodies or product descriptions, it is likely that you should rather use a text field. By default every field in the document with text value is interpreted as type `text` so you must explicitly use `keyword` if you want a field not be `text`.
+If you need to index full text content such as email bodies or product descriptions, it is likely that you should rather use a text field. By default every field in the document with a text value is interpreted as type `text`, so you must explicitly use `keyword` if you want a field not to be `text`.
 
-If you are following the documentation examples you may notice that the field "employer" is indexed as `text` before but this time we index the field as `keyword`
+If you are following the documentation examples, note that fields with text values are indexed as `text` by default; here we explicitly index a field as `keyword` instead.
 
 
 {% capture req %}
@@ -29,7 +29,7 @@ UPDATE /bank/1
 
 {: .note .caution }
 **_Caution_**<br>
-Notice we are using the same index "bank" as before, if you already indexed at this index with previous examples you are going to get a error for change types for the field  "employer" from `text` to `keyword`
+Notice we are using the same "bank" index as before. If you already indexed into it with previous examples, changing an existing field's type (for example from `text` to `keyword`) will return an error.
 
 
 ## Parameters

@@ -40,7 +40,7 @@ UPDATE /bank/1
 When using strings, you can use any of the following and it gets interpreted
 as either `true` or `false`:
 
-* `"true"`, `"t"`, , `"1"` -> `true`
+* `"true"`, `"t"`, `"1"` -> `true`
 * `"false"`, `"f"`, `"0"` -> `false`
 
 
