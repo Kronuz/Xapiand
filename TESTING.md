@@ -143,21 +143,52 @@ A mismatch then fails loud at the handshake (`Server supports protocol version N
 client is using M`) instead of silently misparsing a field that moved. Bump it only
 after the layout has actually been reconciled to the new version.
 
-### Sniffing the wire (proxy)
+### Sniffing the wire (`harness/proxy`)
 
-`harness/proxy` is a colorizing port-forward that decodes the binary Remote protocol.
-Put it between two nodes and point one at it to watch the `MSG_*` / `REPLY_*` exchange
-(prepare → `REPLY_STATS`, finalise → `REPLY_RESULTS`, etc.):
+`harness/proxy` is a small, dependency-free (stdlib-only) colorizing man-in-the-middle:
+it listens on one TCP port, forwards every byte to a target `host:port`, and prints each
+frame in both directions (`-->` sent, `<--` received). With `--xapian` it *decodes* the
+binary Remote protocol as it passes, so you can watch the actual `MSG_*` / `REPLY_*`
+conversation between two nodes: the two-phase match (`MSG_QUERY` → `REPLY_STATS`,
+`MSG_GETMSET` → `REPLY_RESULTS`), per-document fetches (`MSG_DOCUMENT` → `REPLY_DOCDATA`),
+stats refreshes (`MSG_UPDATE`), reopens (`MSG_REOPEN`), and the handshake. It **auto-parses
+`src/xapian/net/remoteprotocol.h` at startup**, so its decode tables stay 1:1 with the C++
+wire protocol (v47) — there is no second copy to drift.
 
-```sh
-# node A serves its binary/remote port on :9880; sniff by listening on :8860
-harness/proxy --xapian 8860 localhost:9880
-# then point node B's Remote database at :8860 instead of :9880
+```
+usage: proxy [--xapian | --http] <listen_port> [<host>:]<target_port>
+             (no flag = raw byte forward, no decode)
 ```
 
-Related low-level probes: `discovery_sniff.py` (decode the multicast Discovery
-gossip), `graceful_shutdown_check.sh` and `signal_check.sh` (signal handling /
-clean shutdown).
+Modes: `--xapian` decodes the Remote protocol, `--http` decodes HTTP, and with no flag it
+is a plain forwarder (raw bytes, useful for anything else).
+
+**Worked example — watch one node query another's shards.** A node reaches a remote
+shard over the *other* node's Xapian/Remote port (`--xapian-port`, default `9880`). Put
+the proxy in front of that port and route the client node through it:
+
+```sh
+# 1. Server node holds the shards, Remote port on :9880 (queried by peers):
+build/bin/xapiand --name A --xapian-port 9880 --port 8880 \
+    --discovery-interface 127.0.0.1 -D /tmp/A &
+
+# 2. Sniff its Remote port: listen on :8861, forward to the real :9880
+harness/proxy --xapian 8861 localhost:9880
+
+# 3. Start the client node so the shard it must fetch from A resolves to :8861
+#    instead of :9880 (e.g. run A's advertised xapian-port as 8861, with the real
+#    server behind the proxy), then search the client node and watch the proxy:
+curl -s -XSEARCH localhost:8881/index/ -H 'Content-Type: application/json' \
+    -d '{"_query":{"_match_all":{}}}'
+```
+
+Each line the proxy prints is one framed message, e.g. `A --> client REPLY_STATS <bytes>`
+/ `client --> A MSG_GETMSET <query_id ...>`, so a broken or mismatched protocol shows up
+immediately as an unexpected type, a version mismatch in the opening handshake, or a
+conversation that stalls waiting for a reply that never comes. `Ctrl-C` stops it.
+
+Related low-level probes: `discovery_sniff.py` (decode the multicast Discovery gossip),
+`graceful_shutdown_check.sh` and `signal_check.sh` (signal handling / clean shutdown).
 
 ---
 
