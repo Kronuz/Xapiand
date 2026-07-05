@@ -121,38 +121,48 @@ so the cost of the distributed data plane is explicit.
 > figure. `loadtest.py` now queries the populated index and aborts loudly if the probe
 > query returns no hits, so this can't recur.
 
-With that fixed, querying a *populated* index:
+With that fixed, querying a *populated* index, the deciding factor turns out to be
+**replica placement** (`num_replicas`), because it dictates whether a node reads the
+shard locally or over the Remote protocol:
 
-| Metric | Solo (no Remote) | Cluster, shard-owner node | Cluster, remote node | 
-| --- | ---: | ---: | ---: |
-| Query throughput | ~10,500 qps | ~10,900 qps | ~3,700 qps |
-| Query p50 | 1.4 ms | 1.1 ms | 2.5 ms |
-| Query p95 | 2.6 ms | 2.0 ms | 5.3 ms |
+| `num_replicas` | node1 | node2 | reads |
+| --- | ---: | ---: | --- |
+| **0** (default) | ~1,900 qps, p50 4.7 ms | ~3,400 qps, p50 3.7 ms | one home node; other nodes go remote |
+| **1** | ~11,600 qps, p50 1.1 ms | ~11,500 qps, p50 1.1 ms | every node holds a copy, reads locally |
+
+(Solo, for reference: ~10,500 qps, p50 1.4 ms.)
 
 **The cluster query path was never slow.** After the v47 remote protocol + two-phase
 reconciliation, a cluster forms, replicates, and returns correct distributed results
-(`cluster_check.sh` is green), and a real distributed search costs about what solo does.
-A node that owns the queried shard serves it locally at solo speed. A single uncontended
-cross-node search is ~1.6 ms, not the ~12 ms the broken benchmark implied.
+(`cluster_check.sh` is green). With a replica on every node (`num_replicas = 1`) both
+nodes serve at **solo speed** (~11,500 qps, p50 1.1 ms). A single uncontended cross-node
+search is ~1.6 ms, not the ~12 ms the broken benchmark implied, and the remote path is
+healthy: on a populated index it does **not** reconnect per query (profiling shows a
+handful of `Xapian::Remote::open` frames, not the per-access churn the broken benchmark
+produced).
 
-**The one real gap left is remote-vs-local, and it's modest (~3x).** With the default
-`num_shards = 1, num_replicas = 0` a shard has a single home node. Query that node and
-you get ~10,900 qps; query the *other* node and it reaches the shard over the Remote
-protocol at ~3,700 qps. Notably both nodes hold a byte-identical copy of the shard on
-disk (same glass UUID), yet the non-owner still reads it remotely: the local-fallback in
-`Shard::reopen_readable()` (which would let a node serve a matching local replica
-directly) is bypassed here, so a node that *could* read locally pays the network instead.
-Closing that gap would bring the remote node up toward solo speed, but it is a
-correctness-sensitive change (serving a local replica trades read-your-writes freshness
-against the primary for speed) and wants a deliberate design pass, not a reflexive reuse
-of the handle. An earlier attempt to blindly reuse the remote connection *regressed* the
+**The 3-4x "penalty" is just an unreplicated shard.** With the default
+`num_shards = 1, num_replicas = 0` a shard has a single home node, so any query that
+lands elsewhere pays the remote two-phase match (serialize the query, one round-trip to
+prepare, one to fetch the mset, deserialize) instead of a local read: p50 rises from
+~1.1 ms to ~4 ms. It is `endpoint.is_local()` in `Shard::reopen_readable()` that decides
+this: the owner reads locally, a non-holder reads remotely. A node's *incidental*
+on-disk copy (left over even at 0 replicas) is deliberately **not** used, because at 0
+replicas that node isn't a designated holder and wouldn't receive updates, so serving it
+would be stale. Give the shard a real replica on that node (`num_replicas >= 1`, which
+you want for availability anyway) and the local-fallback serves it locally at solo speed.
+
+So there is no remote-path bug to fix here; the lever is replication, not the protocol.
+An earlier attempt to make the remote handle persist across queries *regressed* the
 common case, because tearing the handle down and re-running `reopen_readable()` is exactly
-what re-checks for and switches to the fast local copy.
+what re-checks for and switches to a local copy once one exists. If the genuinely
+unavoidable case (more shards than replicas, so some node must always read some shard
+remotely) ever becomes hot, the two-phase round-trips and MsgPack (de)serialization are
+where that node's time goes, and *that* is the thing to optimize.
 
 Index throughput on a cluster is lower than solo (writes replicate and pay first-touch
-shard creation across nodes), which is expected. These are measurements on a fresh cluster
-with default settings, no tuning; the point is to make the real cost visible, not to quote
-a production multiplier.
+shard creation across nodes), which is expected. These are measurements on a fresh cluster,
+no tuning; the point is to make the real cost visible, not to quote a production multiplier.
 
 ## Environment and caveats
 
