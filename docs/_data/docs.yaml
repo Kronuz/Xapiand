@@ -163,6 +163,7 @@
   docs:
     - url: installation
     - url: building
+    - url: upgrade
 
 - title: Miscellaneous
   docs:
