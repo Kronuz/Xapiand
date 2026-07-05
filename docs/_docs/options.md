@@ -46,5 +46,37 @@ feature and forces the user to specify a type for all new fields, making the
 request fail with `412 Precondition Failed` if the datatype is missing.
 
 
-{: .note .construction }
-_This section is a **work in progress**..._
+## Node and Data
+
+- `-D`, `--database` sets the path to the root of the node, where all index data
+  lives.
+- `--name` sets the node name; `--cluster` sets the cluster it joins.
+- `--port` sets the HTTP REST API port.
+- `-d`, `--detach` runs the process in the background.
+- `--solo` runs a single-node indexer with no replication or discovery, useful for
+  local development and tests.
+
+
+## Index Defaults
+
+New indices inherit these unless overridden per index (see
+[Data Replication]({{ '/docs/reference-guide/indices/replication' | relative_url }})):
+
+- `--shards` sets the default number of primary shards per index.
+- `--replicas` sets the default number of replicas per index.
+
+
+## Cluster and Networking
+
+- `--discovery-port`, `--discovery-group` and `--discovery-interface` control the
+  UDP multicast used to discover other nodes. Pin `--discovery-interface` (e.g. to
+  `127.0.0.1`) on a multi-homed or VPN host where the default interface can't
+  multicast.
+- `--replica-port` is the TCP port for the replication protocol.
+- `--primary-node` names the node holding the primary cluster database, and
+  `--database-stall-time` is how long to wait before a shard may be promoted to
+  primary.
+- `--writers` and `--wal-writer-cache-size` tune the
+  [WAL]({{ '/docs/reference-guide/wal' | relative_url }}) writer pool.
+
+For the complete, authoritative list, run `xapiand --help`.

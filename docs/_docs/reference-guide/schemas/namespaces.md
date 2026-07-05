@@ -32,6 +32,43 @@ UPDATE /bank/1
 The above example is the document being indexed, the parameter `_namespace`
 part enables the Namespace Queries functionality.
 
+Because the field is namespaced, every value in the tree stays searchable by its
+path. Querying the full path matches the exact value:
+
+{% capture req %}
+
+```json
+SEARCH /bank/
+
+{
+  "_query": {
+    "style.clothing.pants": "khakis"
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+By default every level of the path is also indexed on its own, so a shallower,
+partial path matches as well (this is the behaviour the next section controls):
+
+{% capture req %}
+
+```json
+SEARCH /bank/
+
+{
+  "_query": {
+    "style.clothing": "khakis"
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+See [Namespace Queries]({{ '/docs/reference-guide/search/query-dsl/leaf-queries/namespace-queries' | relative_url }})
+for the full set of ways to match namespaced paths.
+
 
 ## Partial Paths
 
