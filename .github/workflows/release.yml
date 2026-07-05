@@ -1,0 +1,101 @@
+name: Release
+
+# Build and publish release artifacts when a version tag is pushed.
+#   git tag v1.0.0-alpha.1 && git push origin v1.0.0-alpha.1
+#
+# Produces:
+#   * a multi-stage Docker image pushed to ghcr.io/kronuz/xapiand
+#   * an x86_64 RPM attached to the GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.*'
+
+permissions:
+  contents: write   # create releases and upload assets
+  packages: write   # push to ghcr.io
+
+jobs:
+  docker:
+    name: Docker image (ghcr.io)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/kronuz/xapiand:${{ steps.version.outputs.version }}
+            ghcr.io/kronuz/xapiand:latest
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  rpm:
+    name: Linux RPM (x86_64)
+    runs-on: ubuntu-latest
+    container: rockylinux:9
+    steps:
+      - name: Install build toolchain
+        run: |
+          set -eux
+          dnf -y install epel-release
+          dnf -y install gcc-toolset-13 cmake ninja-build git perl tcl \
+            pkgconfig asio-devel libzstd-devel libicu-devel libuuid-devel \
+            zlib-devel libcap-devel rpm-build ruby ruby-devel make
+          gem install --no-document fpm
+
+      - uses: actions/checkout@v4
+
+      - name: Derive version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and stage
+        run: |
+          set -eux
+          source /opt/rh/gcc-toolset-13/enable
+          cmake -GNinja -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DASIO_INCLUDE_DIR=/usr/include
+          ninja -C build
+          DESTDIR="$PWD/stage" ninja -C build install
+
+      - name: Package RPM
+        id: pkg
+        run: |
+          set -eux
+          # FPM's rpm version field rejects '-'; map 1.0.0-alpha.1 -> 1.0.0 + release alpha.1
+          RAW="${{ steps.version.outputs.version }}"
+          VER="${RAW%%-*}"
+          REL="${RAW#*-}"; [ "$REL" = "$RAW" ] && REL="1" || REL="${REL//-/.}"
+          fpm -s dir -t rpm -n xapiand -v "$VER" --iteration "$REL" \
+            --license MIT \
+            --description "Xapiand: a RESTful search engine" \
+            --url "https://github.com/Kronuz/Xapiand" \
+            --depend libicu --depend libuuid --depend zlib \
+            -C stage usr
+          echo "rpm=$(ls xapiand-*.rpm | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Attach RPM to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pkg.outputs.rpm }}

@@ -1,0 +1,12 @@
+# Keep the Docker build context small and the builder hermetic.
+.git
+build
+build-*
+**/_deps
+docs/_site
+docs/vendor
+docs/.bundle
+node_modules
+*.o
+*.a
+.DS_Store
