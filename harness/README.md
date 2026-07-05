@@ -75,14 +75,20 @@ python3 harness/loadtest.py --datadir <dir> --label ours     --out harness/resul
 python3 harness/perfdiff.py harness/results/baseline.json harness/results/ours.json
 ```
 
-## Baseline + current status (2026-06-30)
+## Baseline + current status (2026-07-05)
 
-Baseline build = `7bd295b` (earliest commit that builds on Apple Silicon; pristine
-`origin/master` does not — its toolchain modernization is entangled with
-de-vendoring). After the rapidjson fix, the de-vendored build is **green vs
-baseline**: 0 assertion regressions, 0 status diffs, and body divergences only in
-volatile fields. **Performance is at parity** (query QPS/latency and index
-throughput within noise; per-index on-disk identical).
+The e2e baseline was originally build `7bd295b` (earliest commit that builds on Apple
+Silicon; pristine `origin/master` does not — its toolchain modernization is entangled
+with de-vendoring), and the de-vendored + Xapian 2.0.0 migration was validated **green
+vs that oracle**: 0 assertion regressions, 0 status diffs, body divergences only in
+volatile fields, performance at parity.
+
+That migration has landed, so the baseline is now **refreshed to this project's own
+build at `23e1e4540`** (post native multi-db distributed match). `e2e_check.sh` diffs a
+fresh capture against it: assertion parity is GREEN, and the only body divergences are
+the genuinely run-to-run volatile fields (the POST auto-id and the `/:metrics`
+counters). The check is now a forward-looking regression net for the current
+architecture rather than a migration oracle.
 
 ## Known refinements
 

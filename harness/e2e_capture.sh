@@ -17,10 +17,15 @@
 #
 # Binaries (already built this program):
 #   ours     -> build/bin/xapiand                      (note: bin/, not build/xapiand)
-#   baseline -> ../xapiand-master-bench/build/bin/xapiand   (7bd295b, the oracle)
+#
+# The current e2e baseline is captured from THIS project's own build at 23e1e4540
+# (right after the Xapian 2.0.0 migration + native multi-db distributed match), so
+# the regression net now tracks the current architecture against itself. Earlier the
+# baseline was the pre-migration master oracle (7bd295b, in ../xapiand-master-bench),
+# which validated the migration and has served its purpose.
 #
 # Example:
-#   harness/e2e_capture.sh ../xapiand-master-bench/build/bin/xapiand harness/results/e2e_base_7bd295b.json
+#   harness/e2e_capture.sh build/bin/xapiand harness/results/e2e_base_23e1e4540.json
 #   harness/e2e_capture.sh build/bin/xapiand /tmp/ours.json
 set -u
 
