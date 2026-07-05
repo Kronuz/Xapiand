@@ -7,7 +7,7 @@ title: Building Xapian Library
 
 To build xapian from the sources, first you'll need to fork and clone the
 repository from [GitHub] or from [Kronuz Fork]. Once you have a local copy,
-procede with the [building process](#building-process).
+proceed with the [building process](#building-process).
 
 
 ### Requirements

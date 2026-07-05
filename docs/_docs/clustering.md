@@ -105,8 +105,7 @@ hardware failure.
 
 ## Add Failover
 
-Running a single node means that you have a single point of failure) there is
-no
+Running a single node means that you have a single point of failure: there is no
 redundancy. Fortunately, all we need to do to protect ourselves from data loss
 is to start another node.
 

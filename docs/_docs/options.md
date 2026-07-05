@@ -39,7 +39,7 @@ setting output to be "pretty" or by using a verbosity level higher or equal to 4
 
 ### Strict
 
-Schemas are normally automatically created by default, guessin the type of new
+Schemas are normally automatically created by default, guessing the type of new
 fields being indexed. The `--strict` option disables this
 [Dynamic Typing]({{ '/docs/reference-guide/schemas/dynamic-typing' | relative_url }})
 feature and forces the user to specify a type for all new fields, making the

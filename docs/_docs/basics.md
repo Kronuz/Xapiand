@@ -88,13 +88,12 @@ Sharding is important for two primary reasons:
   shards (potentially on multiple nodes) thus increasing performance/throughput.
 
 The mechanics of how a shard is distributed and also how its documents are
-aggregated back into search requests are completely managed by Xapiand and is
+aggregated back into search requests are completely managed by Xapiand and are
 transparent to you as the user.
 
 When you create an index, you can simply define the number of shards that you
-want. After the index is created, you can change the number of shards for an
-existing index, however this is not a trivial task and pre-planning for the
-correct number of shards is the optimal approach.
+want. The number of primary shards is fixed once the index is created, so
+pre-planning the correct number of shards ahead of time is the optimal approach.
 
 By default, each index in Xapiand is allocated 5 primary shards.
 
