@@ -11,7 +11,7 @@ we might make the process easier.
 ## Docker
 
 ```sh
-~ $ docker pull dubalu/xapiand:{{ site.version }}
+~ $ docker pull ghcr.io/kronuz/xapiand:{{ site.version }}
 ```
 
 ## Installation with Homebrew
@@ -41,9 +41,15 @@ There is a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/contrib/
 
 {:class="plat_linux"}
 
+RPM packages are attached to each [release]({{ site.repository }}/releases). Download
+the one matching your distribution and install it:
+
 ```sh
-Not yet available, build from sources.
+~ $ sudo rpm -i xapiand-{{ site.version }}-1.x86_64.rpm
 ```
+
+A statically-linked `x86_64` binary is also attached to every release for
+distributions without RPM.
 
 
 ## Building

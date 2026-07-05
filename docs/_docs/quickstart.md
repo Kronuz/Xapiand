@@ -15,7 +15,7 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 
 ```sh
 # Run from Docker with *very-very-very* verbose output:
-docker run -p 8880:8880 --rm dubalu/xapiand:{{ site.version }} -vvvv
+docker run -p 8880:8880 --rm ghcr.io/kronuz/xapiand:{{ site.version }} -vvvv
 ```
 
 ### Using Homebrew under macOS

@@ -61,7 +61,7 @@ spec:
     spec:
       containers:
         - name: xapiand
-          image: dubalu/xapiand:{{ site.version }}
+          image: ghcr.io/kronuz/xapiand:{{ site.version }}
           args:
             - "--cluster=xapiand"
             - "--name=$(POD_NAME)"

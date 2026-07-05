@@ -39,7 +39,7 @@ the [Benchmarks](/benchmarks/) page.
 - Distributed search now runs through **one native multi-database `Enquire`** that
   overlaps the shard fan-out, replacing the serial shard-by-shard loop and the
   hand-rolled MSet merge.
-- Data-store volumes are written with **Zstandard**.
+- Data-store volumes and inline document data are written with **Zstandard**.
 - Remote protocol synced to Xapian 2.0.0 (**v47**), as a non-blocking two-phase
   match the reactor can hold.
 
