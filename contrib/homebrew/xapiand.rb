@@ -13,7 +13,7 @@ class Xapiand < Formula
   desc "RESTful search engine"
   homepage "https://github.com/Kronuz/Xapiand"
   url "https://github.com/Kronuz/Xapiand/archive/refs/tags/v1.0.0-alpha.1.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "bf85efc4dbfe3a8520a23b6e929ec59150289b54a1708ed5f90ac50f81c6805a"
   license "MIT"
   head "https://github.com/Kronuz/Xapiand.git", branch: "master"
 
