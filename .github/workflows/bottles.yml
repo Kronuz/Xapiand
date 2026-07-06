@@ -1,13 +1,19 @@
 name: Bottles
 
-# Build Homebrew bottles (pre-compiled binaries) for macOS across the
-# arch x OS-version matrix, and attach them to the release. Trigger manually
-# against an existing tag (workflow_dispatch) while iterating, or automatically
-# on a version tag alongside the rest of the release.
+# Build Homebrew bottles (pre-compiled binaries) for macOS and merge them into
+# the tap so `brew install Kronuz/tap/xapiand` serves a pre-built binary.
 #
-# After the per-cell bottles are green, merge their JSONs into the formula's
-# `bottle do` block (brew bottle --merge) and commit it to the tap; that final
-# auto-merge/PR step is intentionally left as a follow-up.
+# Structure:
+#   - `bottle`       builds the arm64 cells (sonoma, sequoia). These are required
+#                    and gate the tap merge.
+#   - `bottle-intel` builds the x86_64 (Intel) cell on GitHub's deprecated,
+#                    heavily-oversubscribed macos-13 runners. It is best-effort:
+#                    it attaches its bottle to the release and uploads its JSON,
+#                    but it never gates the arm64 bottles or the tap merge.
+#   - `publish`      merges every bottle JSON that is available into the formula's
+#                    `bottle do` block and pushes it to Kronuz/homebrew-tap. It
+#                    depends only on `bottle`, so the tap updates in ~minutes; a
+#                    slow Intel bottle is folded in whenever it happens to be ready.
 
 on:
   workflow_dispatch:
@@ -27,76 +33,46 @@ jobs:
   bottle:
     name: Bottle (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # macos-13 (Intel) runs on GitHub's deprecated x86_64 runners, which are heavily
-    # oversubscribed and can take 30+ min (or stall) while the arm64 cells finish in
-    # ~6. Cap the wall time and let that cell be non-blocking so a slow/failed Intel
-    # build never gates the arm64 bottles or the tap-merge below.
-    timeout-minutes: ${{ matrix.timeout }}
-    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # macos-13 = x86_64 (Intel); macos-14/15 = arm64 (Apple Silicon).
-          - os: macos-13
-            experimental: true
-            timeout: 45
-          - os: macos-14
-            experimental: false
-            timeout: 30
-          - os: macos-15
-            experimental: false
-            timeout: 30
+        # arm64 (Apple Silicon): macos-14 = Sonoma, macos-15 = Sequoia. These are
+        # required and gate the tap merge below.
+        os: [macos-14, macos-15]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Build bottle
-        run: |
-          set -eux
-          TAP=kronuz/local
-          brew tap-new "$TAP" --no-git
-          cp contrib/homebrew/xapiand.rb "$(brew --repository "$TAP")/Formula/xapiand.rb"
-          brew install --build-bottle "$TAP/xapiand"
-          brew bottle --json --no-rebuild \
-            --root-url="https://github.com/${{ github.repository }}/releases/download/${TAG}" \
-            "$TAP/xapiand"
-          # Homebrew writes the file with a '--' separator, but the download URL in
-          # the bottle DSL uses a single '-'; rename so the uploaded asset matches.
-          for f in *--*.bottle.tar.gz; do mv "$f" "${f/--/-}"; done
-          ls -la ./*.bottle.tar.gz ./*.bottle.json
-
-      - name: Dump the full Homebrew build log on failure
-        if: failure()
-        run: |
-          # Homebrew only echoes the "Last 15 lines" to the console, which is
-          # almost always just warnings and hides the real compiler error. Print
-          # the complete build logs so CI shows what actually failed.
-          for f in ~/Library/Logs/Homebrew/xapiand/*.log; do
-            echo "::group::$f"
-            cat "$f" || true
-            echo "::endgroup::"
-          done
-
-      - name: Attach bottle to the release
-        uses: softprops/action-gh-release@v2
+      - uses: ./.github/actions/build-bottle
         with:
-          tag_name: ${{ env.TAG }}
-          files: ./*.bottle.tar.gz
+          tag: ${{ env.TAG }}
+          repository: ${{ github.repository }}
+          os: ${{ matrix.os }}
 
-      - name: Upload bottle JSON (for the DSL merge)
-        uses: actions/upload-artifact@v4
+  bottle-intel:
+    name: Bottle (macos-13, Intel — best effort)
+    runs-on: macos-13
+    # GitHub's x86_64 runners are deprecated and heavily oversubscribed; a build
+    # that takes ~6 min on arm64 can take 30+ min or stall here. Cap the wall time
+    # and never let this cell fail the workflow or gate the tap merge.
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-bottle
         with:
-          name: bottle-json-${{ matrix.os }}
-          path: ./*.bottle.json
+          tag: ${{ env.TAG }}
+          repository: ${{ github.repository }}
+          os: macos-13
 
   publish:
     name: Merge bottles into the tap
+    # Only the arm64 cells gate publishing, so the tap updates in minutes instead
+    # of waiting on the slow Intel runner. Whatever bottle JSONs exist at this point
+    # (always arm64; Intel if it finished in time) are folded into the formula.
     needs: bottle
     runs-on: macos-15
     # Requires a HOMEBREW_TAP_TOKEN secret (a fine-grained PAT with Contents:write on
     # Kronuz/homebrew-tap) -- the built-in GITHUB_TOKEN can't push to another repo.
-    # Run as long as the workflow wasn't cancelled: the Intel cell is non-blocking, so
-    # merge whatever bottle JSONs were produced (a missing Intel bottle just isn't added).
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     steps:
       - name: Collect the per-cell bottle JSONs
@@ -120,7 +96,7 @@ jobs:
           TAP_DIR="$(brew --repository)/Library/Taps/kronuz/homebrew-tap"
           mkdir -p "$(dirname "$TAP_DIR")"
           ln -sfn "$PWD/tap" "$TAP_DIR"
-          # Fold every cell's sha256 into the formula's `bottle do` block.
+          # Fold every available cell's sha256 into the formula's `bottle do` block.
           brew bottle --merge --write --no-commit json/*.bottle.json
 
       - name: Commit + push the updated formula
@@ -133,4 +109,3 @@ jobs:
             git commit -am "xapiand: bottles for ${TAG}"
             git push
           fi
-
