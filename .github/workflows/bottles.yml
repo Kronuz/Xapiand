@@ -61,3 +61,47 @@ jobs:
         with:
           name: bottle-json-${{ matrix.os }}
           path: ./*.bottle.json
+
+  publish:
+    name: Merge bottles into the tap
+    needs: bottle
+    runs-on: macos-15
+    # Requires a HOMEBREW_TAP_TOKEN secret (a fine-grained PAT with Contents:write on
+    # Kronuz/homebrew-tap) -- the built-in GITHUB_TOKEN can't push to another repo.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    steps:
+      - name: Collect the per-cell bottle JSONs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bottle-json-*
+          merge-multiple: true
+          path: json
+
+      - name: Check out the tap (with write token)
+        uses: actions/checkout@v4
+        with:
+          repository: Kronuz/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Merge the bottle DSL into the formula
+        run: |
+          set -eux
+          # Expose the checked-out tap to brew so it can resolve the formula.
+          TAP_DIR="$(brew --repository)/Library/Taps/kronuz/homebrew-tap"
+          mkdir -p "$(dirname "$TAP_DIR")"
+          ln -sfn "$PWD/tap" "$TAP_DIR"
+          # Fold every cell's sha256 into the formula's `bottle do` block.
+          brew bottle --merge --write --no-commit json/*.bottle.json
+
+      - name: Commit + push the updated formula
+        run: |
+          set -eux
+          cd tap
+          git config user.name "Germán Méndez Bravo"
+          git config user.email "german.mb@gmail.com"
+          if ! git diff --quiet; then
+            git commit -am "xapiand: bottles for ${TAG}"
+            git push
+          fi
+
