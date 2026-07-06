@@ -82,30 +82,24 @@ jobs:
           merge-multiple: true
           path: json
 
-      - name: Check out the tap (with write token)
-        uses: actions/checkout@v4
-        with:
-          repository: Kronuz/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: tap
-
-      - name: Merge the bottle DSL into the formula
+      - name: Merge the bottle DSL into the tap formula and push
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           set -eux
-          # Expose the checked-out tap to brew so it can resolve the formula.
-          TAP_DIR="$(brew --repository)/Library/Taps/kronuz/homebrew-tap"
-          mkdir -p "$(dirname "$TAP_DIR")"
-          ln -sfn "$PWD/tap" "$TAP_DIR"
-          # Fold every available cell's sha256 into the formula's `bottle do` block.
+          # Tap the formula repo properly (a real git clone brew trusts) rather than
+          # symlinking it -- brew refuses to load/modify a formula from a symlinked
+          # "untrusted" tap. brew bottle --merge then writes the `bottle do` block
+          # straight into the tapped Formula/xapiand.rb.
+          brew tap kronuz/tap https://github.com/Kronuz/homebrew-tap
           brew bottle --merge --write --no-commit json/*.bottle.json
-
-      - name: Commit + push the updated formula
-        run: |
-          set -eux
-          cd tap
+          # Commit + push from the tapped clone, authenticating with the PAT.
+          TAP_DIR="$(brew --repository kronuz/tap)"
+          cd "$TAP_DIR"
           git config user.name "Germán Méndez Bravo"
           git config user.email "german.mb@gmail.com"
+          git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/Kronuz/homebrew-tap.git"
           if ! git diff --quiet; then
             git commit -am "xapiand: bottles for ${TAG}"
-            git push
+            git push origin HEAD:master
           fi
