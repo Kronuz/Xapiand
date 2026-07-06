@@ -1,0 +1,63 @@
+name: FreeBSD package
+
+# Build Xapiand inside a real FreeBSD VM (vmactions runs it on the Linux runner)
+# and attach a FreeBSD package to the release. Unlike Homebrew, the VM has network,
+# so the FetchContent deps resolve exactly like the Linux/Docker builds.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build (e.g. v1.0.0-alpha.1)"
+        required: true
+        default: v1.0.0-alpha.1
+  push:
+    tags:
+      - 'v[0-9]+.*'
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  freebsd-pkg:
+    name: FreeBSD .pkg (amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build + package in a FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14.2"
+          usesh: true
+          envs: 'TAG'
+          prepare: |
+            pkg install -y cmake ninja git pkgconf perl5 tcl86 icu zstd asio \
+              e2fsprogs-libuuid ruby
+            gem install --no-document fpm
+          run: |
+            set -eux
+            cmake -G Ninja -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/usr/local \
+              -DASIO_INCLUDE_DIR=/usr/local/include
+            ninja -C build
+            DESTDIR="$PWD/stage" ninja -C build install
+            VER="${TAG#v}"
+            fpm -s dir -t freebsd -n xapiand -v "$VER" \
+              --license MIT \
+              --description "Xapiand: a RESTful search engine" \
+              --url "https://github.com/Kronuz/Xapiand" \
+              -C stage usr
+            ls -la ./*.txz ./*.pkg 2>/dev/null || true
+
+      - name: Attach FreeBSD package to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          files: |
+            ./*.txz
+            ./*.pkg

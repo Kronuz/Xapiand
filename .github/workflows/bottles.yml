@@ -16,15 +16,16 @@ on:
         description: "Release tag to bottle (e.g. v1.0.0-alpha.1)"
         required: true
         default: v1.0.0-alpha.1
-  push:
-    tags:
-      - 'v[0-9]+.*'
 
 permissions:
   contents: write
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # This formula intentionally fetches its Kronuz-family deps via FetchContent, which
+  # Homebrew's build sandbox forbids. Disable the sandbox so the build has network
+  # (acceptable for a personal tap; not homebrew-core policy).
+  HOMEBREW_NO_SANDBOX: "1"
 
 jobs:
   bottle:
