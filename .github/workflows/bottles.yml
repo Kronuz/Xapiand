@@ -22,10 +22,6 @@ permissions:
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  # This formula intentionally fetches its Kronuz-family deps via FetchContent, which
-  # Homebrew's build sandbox forbids. Disable the sandbox so the build has network
-  # (acceptable for a personal tap; not homebrew-core policy).
-  HOMEBREW_NO_SANDBOX: "1"
 
 jobs:
   bottle:
