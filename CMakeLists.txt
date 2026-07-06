@@ -2092,10 +2092,11 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list)
+		foreach (VAR_TEST fieldparser serialise_list endpoint)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
+				"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
 			)
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
