@@ -35,6 +35,8 @@ class Xapiand < Formula
     # HOMEBREW_NO_SANDBOX so the fetch has network. Fine for a personal tap.
     system "cmake", "-S", ".", "-B", "build", "-GNinja",
            "-DCMAKE_BUILD_TYPE=Release",
+           "-DCMAKE_CXX_STANDARD=20",
+           "-DCMAKE_CXX_STANDARD_REQUIRED=ON",
            "-DASIO_INCLUDE_DIR=#{Formula["asio"].opt_include}",
            "-DHOMEBREW_ALLOW_FETCHCONTENT=ON",
            *std_cmake_args
