@@ -16,6 +16,64 @@ PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\n(#+)\s*([^\n]+)|\n([a-z]+)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def docs_yaml_order():
+    """Absolute md paths in docs.yaml reading order (depth-first).
+
+    The E2E examples build on each other across documents (index a doc, then get
+    it, then update it, then delete it; queries assume a given /bank/ state). The
+    intended order is the sidebar order in docs/_data/docs.yaml, NOT the order the
+    filesystem happens to hand back: os.walk is unordered and differs by platform
+    (APFS vs ext4), which silently reordered dependent requests on CI and produced
+    arch-specific failures (a GET running before its PUT -> 404, a query seeing a
+    different /bank/ state -> wrong count). Ordering by docs.yaml makes the run
+    deterministic and correct everywhere.
+
+    Parsed without PyYAML (the CI runner's python3 may not have it): the sidebar is
+    a simple indent-based tree of `url:` nodes; relative urls resolve against their
+    ancestor `url:` segments, absolute `/docs/...` and `/tutorials/...` map to the
+    _docs / _tutorials trees. Returns [] if the file is absent (caller falls back)."""
+    yaml_path = os.path.join(BASE_DIR, 'docs', '_data', 'docs.yaml')
+    if not os.path.exists(yaml_path):
+        return []
+    docs_root = os.path.join(BASE_DIR, 'docs')
+    order = []
+    stack = []  # (indent, slug_segment_or_None)
+    for raw in open(yaml_path):
+        line = raw.rstrip('\n')
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        m = re.match(r'^(\s*)(?:-\s*)?url:\s*(\S+)', line)
+        if not m:
+            mt = re.match(r'^(\s*)(?:-\s*)?title:\s*', line)
+            if mt:  # section/anchor node: track indent for nesting, contributes no segment
+                indent = len(mt.group(1))
+                while stack and stack[-1][0] >= indent:
+                    stack.pop()
+                stack.append((indent, None))
+            continue
+        indent = len(m.group(1))
+        url = m.group(2).strip().strip('\'"')
+        while stack and stack[-1][0] >= indent:
+            stack.pop()
+        if url.startswith('/'):
+            parts = url.strip('/').split('/')
+            if parts and parts[0] == 'tutorials':
+                leaf = 'index' if parts[-1:] == ['home'] else parts[-1]
+                slug = '/'.join(parts[1:-1] + [leaf])
+                fp = os.path.join(docs_root, '_tutorials', slug + '.md')
+            else:  # /docs/... (or any other absolute) -> _docs tree
+                slug = '/'.join(parts[1:] if parts and parts[0] == 'docs' else parts)
+                fp = os.path.join(docs_root, '_docs', slug + '.md')
+            stack.append((indent, None))  # absolute path resets; no segment for children
+        else:
+            ancestors = [seg for _, seg in stack if seg]
+            slug = '/'.join(ancestors + [url])
+            fp = os.path.join(docs_root, '_docs', slug + '.md')
+            stack.append((indent, url))
+        order.append(os.path.abspath(fp))
+    return order
+
+
 def parse_filename(filename, index, all_tests):
     filename_path, _ = os.path.splitext(filename)
     data = open(filename).read()
@@ -35,7 +93,7 @@ def parse_filename(filename, index, all_tests):
     def process(m):
         groups = m.groups()
         # print(groups)
-        if groups[0] == 'json':
+        if groups[0] in ('json', 'rest', 'http'):
             # Flush:
             if context and 'request' in context:
                 all_tests.append(copy.deepcopy(context))
@@ -81,12 +139,20 @@ def parse_filename(filename, index, all_tests):
 
 
 def parse_directory(directory, index, all_tests):
+    # Collect every .md under the tree, then process in a DETERMINISTIC order:
+    # docs.yaml reading order first (so dependent examples run in the intended
+    # sequence), then anything not listed in the sidebar, alphabetically. This
+    # replaces the platform-dependent os.walk order (see docs_yaml_order()).
+    found = []
     for path, dirs, files in os.walk(directory):
         for f in files:
             if f.endswith('.md'):
-                # print(path, f)
-                filename = os.path.join(path, f)
-                parse_filename(filename, index, all_tests)
+                found.append(os.path.abspath(os.path.join(path, f)))
+    rank = {p: i for i, p in enumerate(docs_yaml_order())}
+    big = len(rank)
+    found.sort(key=lambda p: (rank.get(p, big), p))
+    for filename in found:
+        parse_filename(filename, index, all_tests)
 
 
 def main():
