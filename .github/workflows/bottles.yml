@@ -27,11 +27,26 @@ jobs:
   bottle:
     name: Bottle (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # macos-13 (Intel) runs on GitHub's deprecated x86_64 runners, which are heavily
+    # oversubscribed and can take 30+ min (or stall) while the arm64 cells finish in
+    # ~6. Cap the wall time and let that cell be non-blocking so a slow/failed Intel
+    # build never gates the arm64 bottles or the tap-merge below.
+    timeout-minutes: ${{ matrix.timeout }}
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        # macos-13 = x86_64 (Intel); macos-14/15 = arm64 (Apple Silicon).
-        os: [macos-13, macos-14, macos-15]
+        include:
+          # macos-13 = x86_64 (Intel); macos-14/15 = arm64 (Apple Silicon).
+          - os: macos-13
+            experimental: true
+            timeout: 45
+          - os: macos-14
+            experimental: false
+            timeout: 30
+          - os: macos-15
+            experimental: false
+            timeout: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -80,7 +95,9 @@ jobs:
     runs-on: macos-15
     # Requires a HOMEBREW_TAP_TOKEN secret (a fine-grained PAT with Contents:write on
     # Kronuz/homebrew-tap) -- the built-in GITHUB_TOKEN can't push to another repo.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    # Run as long as the workflow wasn't cancelled: the Intel cell is non-blocking, so
+    # merge whatever bottle JSONs were produced (a missing Intel bottle just isn't added).
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     steps:
       - name: Collect the per-cell bottle JSONs
         uses: actions/download-artifact@v4
