@@ -29,14 +29,14 @@ class Xapiand < Formula
     # icu4c is keg-only on Homebrew; point pkg-config (and thus CMake's ICU probe)
     # at it so the build finds ICU.
     ENV.prepend_path "PKG_CONFIG_PATH", Formula["icu4c"].opt_lib/"pkgconfig"
-    # Homebrew traps FetchContent (its offline-build policy). This formula fetches
-    # its Kronuz-family deps at configure time, so clear the trap; the bottles
-    # workflow disables the sandbox (HOMEBREW_NO_SANDBOX) to allow the network fetch.
-    ENV.delete "CMAKE_PROJECT_TOP_LEVEL_INCLUDES"
+    # This formula fetches its Kronuz-family deps via FetchContent, which Homebrew
+    # traps by default. HOMEBREW_ALLOW_FETCHCONTENT is Homebrew's sanctioned opt-out
+    # (the trap returns early when it's ON); the bottles workflow sets
+    # HOMEBREW_NO_SANDBOX so the fetch has network. Fine for a personal tap.
     system "cmake", "-S", ".", "-B", "build", "-GNinja",
            "-DCMAKE_BUILD_TYPE=Release",
            "-DASIO_INCLUDE_DIR=#{Formula["asio"].opt_include}",
-           "-DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=",
+           "-DHOMEBREW_ALLOW_FETCHCONTENT=ON",
            *std_cmake_args
     system "cmake", "--build", "build"
     system "cmake", "--install", "build"
