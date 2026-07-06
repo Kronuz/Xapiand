@@ -430,7 +430,13 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		readables_cond.notify_one();
 	}
 
-	assert(shard->refs() <= 1);
+	// No refs() assertion here. By this point checkin has already cleared the shard's
+	// _busy flag and notified a waiter (writable_cond / readables_cond above), so under
+	// a parallel restore -- which hands the same writable shard to several DocIndexer
+	// workers -- another writer can have re-checked-out this shard and taken a database
+	// reference before we get here. A post-release refs() count is therefore inherently
+	// racy (it was seen at 2-4 during a restore, all benign). Exclusive ownership is
+	// asserted at entry instead, which is the invariant that actually holds.
 
 	shard.reset();
 
