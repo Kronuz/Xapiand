@@ -85,12 +85,13 @@ jobs:
       - name: Merge the bottle DSL into the tap formula and push
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # brew bottle refuses to load a formula from a non-official ("untrusted")
+          # tap. We own kronuz/tap, so opt out of the trust requirement for this step.
+          HOMEBREW_NO_REQUIRE_TAP_TRUST: "1"
         run: |
           set -eux
-          # Tap the formula repo properly (a real git clone brew trusts) rather than
-          # symlinking it -- brew refuses to load/modify a formula from a symlinked
-          # "untrusted" tap. brew bottle --merge then writes the `bottle do` block
-          # straight into the tapped Formula/xapiand.rb.
+          # Tap the formula repo (a real git clone) so brew can resolve
+          # kronuz/tap/xapiand, then write the merged `bottle do` block into it.
           brew tap kronuz/tap https://github.com/Kronuz/homebrew-tap
           brew bottle --merge --write --no-commit json/*.bottle.json
           # Commit + push from the tapped clone, authenticating with the PAT.
