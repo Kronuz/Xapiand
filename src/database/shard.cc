@@ -191,7 +191,7 @@ DataHeaderV1::init(void* param, void* /*unused*/)
 	auto shard = static_cast<Shard*>(param);
 	assert(shard);
 
-	head.magic = STORAGE_V1_MAGIC;
+	head.magic = _LEGACY_STORAGE_MAGIC;
 	strncpy(head.uuid, shard->db()->get_uuid().c_str(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 }
@@ -200,7 +200,7 @@ DataHeaderV1::init(void* param, void* /*unused*/)
 void
 DataHeaderV1::validate(void* param, void* /*unused*/)
 {
-	if (head.magic != STORAGE_V1_MAGIC) {
+	if (head.magic != _LEGACY_STORAGE_MAGIC) {
 		THROW(StorageCorruptVolume, "Bad data storage header magic number");
 	}
 
