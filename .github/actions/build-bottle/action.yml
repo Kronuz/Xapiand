@@ -22,7 +22,12 @@ runs:
       shell: bash
       run: |
         set -eux
-        TAP=kronuz/local
+        # Build under the real tap name (kronuz/tap) so the bottle JSON records
+        # `kronuz/tap/xapiand` -- the same name the publish job resolves when it
+        # merges the DSL into the checked-out tap. A throwaway name here (e.g.
+        # kronuz/local) would make `brew bottle --merge` fail with "No available
+        # formula". The formula content still comes from contrib/ (source of truth).
+        TAP=kronuz/tap
         brew tap-new "$TAP" --no-git
         cp contrib/homebrew/xapiand.rb "$(brew --repository "$TAP")/Formula/xapiand.rb"
         brew install --build-bottle "$TAP/xapiand"
