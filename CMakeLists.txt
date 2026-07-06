@@ -1783,7 +1783,12 @@ check_cxx_source_compiles("
 		return 0;
 	}" HAVE__SYS_ERRLIST_AND__SYS_NERR)
 
-check_cxx_source_compiles("int main() { __builtin_exp10(0.0); return 0; }" HAVE___BUILTIN_EXP10)
+# Use a runtime argument, not a constant: clang accepts __builtin_exp10 and
+# constant-folds __builtin_exp10(0.0) away, so a constant probe links even where
+# the builtin lowers to a libm exp10 call that doesn't exist (FreeBSD's libm has
+# no exp10). A runtime argument forces the libcall, so this probe fails there and
+# exp10.h falls back to std::pow(10, x) instead of an unresolved exp10 at link.
+check_cxx_source_compiles("int main(int argc, char**) { return int(__builtin_exp10(double(argc))); }" HAVE___BUILTIN_EXP10)
 
 check_cxx_source_compiles("
 	#include <sys/timeb.h>
