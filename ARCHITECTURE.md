@@ -663,7 +663,7 @@ The tasteful bits, for anyone reading for pleasure:
 
 ## Licensing note
 
-Xapiand itself is MIT (Copyright © 2015–2019 Dubalu LLC). However, `src/xapian/`
+Xapiand itself is MIT (Copyright © 2015–2026 Dubalu LLC). However, `src/xapian/`
 is a fork of Xapian, which is **GPL**, and a few helpers were taken from it —
 notably `sortable_serialise.*`. The combined binary is effectively bound by the
 GPL. If you extract a component to reuse elsewhere, check its provenance first:

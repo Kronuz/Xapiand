@@ -14,7 +14,7 @@ Official site is at [https://kronuz.io/Xapiand](https://kronuz.io/Xapiand)
 
 ## What it is
 
-A single C++17 binary that gives you, out of the box:
+A single C++20 binary that gives you, out of the box:
 
 - A **RESTful HTTP API** over a schemaless document store (JSON or MessagePack in, JSON/MessagePack out).
 - **Full-text search**, built on a customized in-tree fork of [Xapian](https://xapian.org/).
@@ -95,7 +95,7 @@ plus the extracted `cuuid` condensed-UUID value type, the `msgpack` keystone
 
 ## License
 
-[MIT](LICENSE) — Copyright © 2015–2019 Dubalu LLC.
+[MIT](LICENSE) — Copyright © 2015–2026 Dubalu LLC.
 
 Note that the bundled Xapian fork under `src/xapian/` carries Xapian's own
 (GPL) license; see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note) before

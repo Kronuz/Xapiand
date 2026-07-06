@@ -6,7 +6,7 @@ permalink: /copyright/
 ---
 
 ## Xapiand
-Copyright &copy; 2015-2019 Dubalu LLC
+Copyright &copy; 2015-2026 Dubalu LLC
 
 All rights reserved. All materials in the Xapiand project, including source
 code, documentation, trademarks, service marks, trade names, trade dress,

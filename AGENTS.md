@@ -52,7 +52,7 @@ Entry point is `src/main.cc`; the process is orchestrated by
 mkdir build && cd build && cmake .. && make
 ```
 
-C++17, CMake ≥ 3.12. The feature toggles matter when reproducing behavior:
+C++20, CMake ≥ 3.12. The feature toggles matter when reproducing behavior:
 `CLUSTERING`, `DATABASE_WAL`, `DATA_STORAGE` (all ON), and `TRACEBACKS` /
 `ASSERTS` (ON in Debug builds). `TRACKED_MEM` swaps in an allocator that
 attributes memory to call sites. Tests/benchmarks are off by default
