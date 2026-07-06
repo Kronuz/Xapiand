@@ -19,6 +19,29 @@ import sys
 
 execs = json.load(open(sys.argv[1]))["run"]["executions"]
 
+
+def _url(req):
+    u = (req or {}).get("url")
+    if isinstance(u, str):
+        return u
+    if isinstance(u, dict):
+        path = "/" + "/".join(u.get("path") or [])
+        q = u.get("query") or []
+        qs = "&".join(f"{i.get('key')}={i.get('value')}" for i in q if i.get("key"))
+        return path + ("?" + qs if qs else "")
+    return "?"
+
+
+def _body(resp):
+    st = (resp or {}).get("stream")
+    if st and isinstance(st, dict) and "data" in st:
+        try:
+            return bytes(st["data"]).decode("utf-8", "replace")
+        except Exception:
+            return ""
+    return ""
+
+
 failing = []
 uncovered = []
 n_assert = n_pass = 0
@@ -32,7 +55,11 @@ for e in execs:
         n_assert += 1
         if x.get("error"):
             msg = (x.get("error") or {}).get("message", "")
-            failing.append((name, x.get("assertion", "?"), msg))
+            req = e.get("request") or {}
+            resp = e.get("response") or {}
+            failing.append((name, x.get("assertion", "?"), msg,
+                            f"{req.get('method', '?')} {_url(req)}",
+                            resp.get("code"), _body(resp)))
         else:
             n_pass += 1
 
@@ -41,10 +68,16 @@ print(f"requests={len(execs)}  assertions={n_assert} (pass {n_pass}, fail {len(f
 
 if failing:
     print(f"FAILING assertions (docs vs server disagree): {len(failing)}")
-    for name, a, msg in failing:
+    for name, a, msg, reqline, code, body in failing:
         print(f"   \u2717 {name}  ::  {a}")
         if msg:
-            print(f"       {msg[:200]}")
+            print(f"       error: {msg[:300]}")
+        print(f"       request: {reqline}")
+        print(f"       response: HTTP {code}")
+        if body:
+            snippet = body[:700].replace("\n", "\n       ")
+            print(f"       body: {snippet}")
+        print()
 if uncovered:
     print(f"\nUNCOVERED requests -- no assertion, generator default missing ({len(uncovered)}):")
     for name in uncovered[:25]:

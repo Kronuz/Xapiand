@@ -57,6 +57,18 @@ wait_http() {  # wait_http <port> <deadline_s>
 }
 
 # ---- layers -----------------------------------------------------------------
+# When a single-node layer fails, the node's own log holds the real cause -- a
+# sanitizer report (ASAN heap error, TSAN data race, LSan leak), an abort, or an
+# assertion. Surface it before the temp dir is wiped, so CI shows WHY instead of a
+# bare "❌ smoke".
+dump_node_log() {  # dump_node_log <node.log>
+	[ -f "$1" ] || return 0
+	echo "  --- $1: sanitizer / error scan ---"
+	grep -inE 'Sanitizer|ERROR:|SUMMARY:|heap-|use-after|data race|runtime error|detected memory leaks|leaked |abort|Aborted|Assertion|Killed' "$1" | head -30 | sed 's/^/    /'
+	echo "  --- $1: last 40 lines ---"
+	tail -40 "$1" | sed 's/^/    /'
+}
+
 # Stop a node started by a layer and WAIT for it to fully exit, so the next layer
 # can rebind the shared port without racing a dying node (which would answer 500s
 # / make the fresh node fail to bind).
@@ -76,8 +88,8 @@ run_smoke() {
 		[ "$n" = "1" ] && ok=0
 	fi
 	stop_node "$pid"
+	if [ "$ok" = 0 ]; then pass "smoke"; else fail "smoke"; dump_node_log "$dir/node.log"; fi
 	rm -rf "$dir"
-	[ "$ok" = 0 ] && pass "smoke" || fail "smoke"
 }
 
 run_unit() {
@@ -108,10 +120,11 @@ run_e2e() {
 		pass "e2e"
 	else
 		fail "e2e"
-		# Surface WHY: the failing assertions / uncovered requests (or a capture
-		# problem, e.g. the node never came up), so CI logs the cause instead of a
-		# bare "failed".
-		printf '%s\n' "$rep" | grep -E '✗|FAILING|UNCOVERED|NOT GREEN|requests=' | head -25
+		# Surface WHY: the full assertion report (failing assertions with their
+		# request line, HTTP status and response body -- so CI shows the actual
+		# docs-vs-server divergence, incl. arch-specific diffs), then any capture
+		# problem (e.g. the node never came up).
+		printf '%s\n' "$rep" | head -200
 		printf '%s\n' "$cap" | grep -iE 'node exited|EADDR|error|exception|Killed|Aborted|newman exit' | head -8
 	fi
 }
@@ -137,8 +150,9 @@ run_load() {
 		local n; n="$(curl -s "localhost:$PORT/loadtest/:info" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("doc_count",0))' 2>/dev/null)"
 		[ "${n:-0}" -ge 200 ] && ok=0 || echo "  (indexed ${n:-0}/200)"
 	fi
-	stop_node "$pid"; rm -rf "$dir"
-	[ "$ok" = 0 ] && pass "load" || fail "load"
+	stop_node "$pid"
+	if [ "$ok" = 0 ]; then pass "load"; else fail "load"; dump_node_log "$dir/node.log"; fi
+	rm -rf "$dir"
 }
 
 run_stress() {
@@ -151,8 +165,9 @@ run_stress() {
 		python3 "$HARNESS_DIR/stress_fortune" --target "localhost:$PORT" \
 			--workers 30 --databases 8 --duration 10 --commit 2>/dev/null && ok=0
 	fi
-	stop_node "$pid"; rm -rf "$dir"
-	[ "$ok" = 0 ] && pass "stress" || fail "stress"
+	stop_node "$pid"
+	if [ "$ok" = 0 ]; then pass "stress"; else fail "stress"; dump_node_log "$dir/node.log"; fi
+	rm -rf "$dir"
 }
 
 run_bench() {
@@ -167,8 +182,9 @@ run_bench() {
 			--concurrency 16 --duration 4 --trials 1 --datadir "$dir" \
 			--out "$dir/bench.json" && ok=0
 	fi
-	stop_node "$pid"; rm -rf "$dir"
-	[ "$ok" = 0 ] && pass "bench" || fail "bench"
+	stop_node "$pid"
+	if [ "$ok" = 0 ]; then pass "bench"; else fail "bench"; dump_node_log "$dir/node.log"; fi
+	rm -rf "$dir"
 }
 
 # ---- drive ------------------------------------------------------------------
