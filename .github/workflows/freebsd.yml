@@ -36,7 +36,7 @@ jobs:
           envs: 'TAG'
           prepare: |
             pkg install -y cmake ninja git pkgconf perl5 tcl86 icu zstd asio \
-              e2fsprogs-libuuid ruby
+              ruby
             gem install --no-document fpm
           run: |
             set -eux
