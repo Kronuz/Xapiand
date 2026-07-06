@@ -85,19 +85,29 @@ harness/e2e_check.sh
 
 "Green" is **parity with the baseline**, not 100% pass: the doc suite carries a set
 of pre-existing aspirational failures that fail on both our build and the baseline.
-`e2e_check.sh` compares two ways — assertion outcomes (`e2e_diff.py`) and response
-bodies (`bodydiff.py`) — and expects only a few volatile fields (auto-ids, node
-runtime info, Prometheus counters) to differ.
+`e2e_diff.py` matches requests by their doc-derived **name** (plus an occurrence
+counter), not by position, and reports only requests present in *both* reports as
+regressions/fixes; added or removed doc examples are listed separately and never
+cascade. (This is what fixed the recurring "stale baseline" noise: a single added
+request used to shift every request after it into spurious diffs.)
 
-The baseline report (`harness/results/e2e_base_7bd295b.json`, gitignored, ~61 MB)
-is captured once from a reference binary:
+The baseline (`harness/e2e_baseline.json`) is **committed** and small (~40 KB): it
+is a *distilled* report — per request just the failed-assertion set and the status
+code, no response bodies — so it is shared and reviewable in a git diff, unlike the
+60 MB raw newman reports (gitignored under `results/`, which drift per machine).
+Because matching is by name, adding/removing doc examples does **not** need a
+refresh; only a genuine behaviour change does. When you intentionally change
+documented behaviour and have verified the new responses, refresh it:
 
 ```sh
-harness/e2e_capture.sh ../xapiand-master-bench/build/bin/xapiand \
-    harness/results/e2e_base_7bd295b.json
+harness/e2e_baseline.sh                 # from the current build/bin/xapiand
+harness/e2e_baseline.sh /path/to/xapiand
+# then review the git diff of harness/e2e_baseline.json and commit it
 ```
 
-`run_all.sh e2e` **skips** if the baseline is missing.
+For the stricter, exploratory response-body diff (`bodydiff.py`), run
+`harness/e2e_check.sh` directly. `run_all.sh e2e` **skips** if the committed
+baseline is missing.
 
 ---
 
