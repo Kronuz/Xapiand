@@ -31,16 +31,20 @@ class Xapiand < Formula
     ENV.prepend_path "PKG_CONFIG_PATH", Formula["icu4c"].opt_lib/"pkgconfig"
     # This formula fetches its Kronuz-family deps via FetchContent, which Homebrew
     # traps by default. HOMEBREW_ALLOW_FETCHCONTENT is Homebrew's sanctioned opt-out
-    # (the trap returns early when it's ON); the bottles workflow sets
-    # HOMEBREW_NO_SANDBOX so the fetch has network. Fine for a personal tap.
+    # (the trap returns early when it's ON). Fine for a personal tap.
     system "cmake", "-S", ".", "-B", "build", "-GNinja",
            "-DCMAKE_BUILD_TYPE=Release",
            "-DCMAKE_CXX_STANDARD=20",
            "-DCMAKE_CXX_STANDARD_REQUIRED=ON",
+           "-DLTO=OFF",
            "-DASIO_INCLUDE_DIR=#{Formula["asio"].opt_include}",
            "-DHOMEBREW_ALLOW_FETCHCONTENT=ON",
            *std_cmake_args
-    system "cmake", "--build", "build"
+    # LTO is off for the bottle build: its per-TU bitcode makes the heavy TUs
+    # (search_views.cc) memory-hungry enough to OOM the smaller macOS runners and
+    # crawls on Intel. Bounding parallelism to Homebrew's job count is a further
+    # safety net without changing the produced binaries.
+    system "cmake", "--build", "build", "--parallel", ENV.make_jobs.to_s
     system "cmake", "--install", "build"
   end
 
