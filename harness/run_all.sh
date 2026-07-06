@@ -12,12 +12,13 @@
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
 #   e2e      doc-driven functional E2E vs the saved baseline (e2e_check.sh)
 #   cluster  2-node discovery + remote/replication + distributed search (cluster_check.sh)
+#   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
 #   load     quick functional bulk load (index_fortune)
 #   stress   short concurrent soak with read-back verification (stress_fortune)
 #   bench    index/query benchmark (loadtest.py)
 #
 # Usage:
-#   harness/run_all.sh                 # smoke + e2e + cluster + load + stress + bench
+#   harness/run_all.sh                 # smoke + e2e + cluster + recovery + load + stress + bench
 #   harness/run_all.sh smoke cluster   # just those two
 #   BIN=build/bin/xapiand harness/run_all.sh
 #
@@ -29,7 +30,7 @@ REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8899}"
 
-DEFAULT_LAYERS="smoke e2e cluster load stress bench"
+DEFAULT_LAYERS="smoke e2e cluster recovery load stress bench"
 LAYERS="${*:-$DEFAULT_LAYERS}"
 
 PASS=(); FAIL=(); SKIP=()
@@ -117,6 +118,11 @@ run_cluster() {
 	if BIN="$BIN" "$HARNESS_DIR/cluster_check.sh" 2; then pass "cluster"; else fail "cluster"; fi
 }
 
+run_recovery() {
+	echo "== [recovery] WAL crash recovery =="
+	if BIN="$BIN" "$HARNESS_DIR/wal_recovery_check.sh"; then pass "recovery"; else fail "recovery"; fi
+}
+
 run_load() {
 	echo "== [load] index_fortune bulk load =="
 	local dir; dir="$(mktemp -d /tmp/xa_load.XXXXXX)"
@@ -170,10 +176,11 @@ for layer in $LAYERS; do
 		unit)    run_unit    ;;
 		e2e)     run_e2e     ;;
 		cluster) run_cluster ;;
+		recovery) run_recovery ;;
 		load)    run_load    ;;
 		stress)  run_stress  ;;
 		bench)   run_bench   ;;
-		*) echo "unknown layer: $layer (valid: smoke unit e2e cluster load stress bench)"; exit 2 ;;
+		*) echo "unknown layer: $layer (valid: smoke unit e2e cluster recovery load stress bench)"; exit 2 ;;
 	esac
 done
 

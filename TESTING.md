@@ -4,7 +4,7 @@ How to test **and** stress every layer of Xapiand, what each layer proves, and h
 to run it. The tools live in `harness/`; one command runs them all:
 
 ```sh
-harness/run_all.sh                 # smoke + e2e + cluster + load + stress + bench
+harness/run_all.sh                 # smoke + e2e + cluster + recovery + load + stress + bench
 harness/run_all.sh smoke cluster   # just a subset
 ```
 
@@ -26,6 +26,7 @@ work. Build first:
 | **unit** | `ctest` | C++ units (parsers, serialise, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
 | **functional E2E** | `e2e_check.sh` | the whole documented HTTP API still behaves (vs a baseline) | a baseline report + `newman` |
 | **remote / cluster** | `cluster_check.sh` | discovery, the Remote protocol, replication, distributed search | a multicast-capable interface |
+| **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
 | **protocol sniff** | `proxy --xapian` | *see* the MSG_/REPLY_ wire between two nodes | two nodes |
 | **load** | `index_fortune` | bulk indexing of many docs | nothing (falls back if no `fortune(6)`) |
 | **stress / soak** | `stress_fortune` | correctness under sustained concurrency | nothing |
@@ -192,6 +193,34 @@ Related low-level probes: `discovery_sniff.py` (decode the multicast Discovery g
 
 ---
 
+## Recovery — `wal_recovery_check.sh`
+
+The durability net for the write-ahead log. Every write is appended to the per-database
+WAL as it happens, *before* the debounced glass commit (the timed committer only forces
+at ~8-10s, the count threshold at 100000). So a crash after some uncommitted writes must
+be recoverable: reopening the data dir replays the WAL and restores every one of them.
+
+The check makes that concrete: start a solo node, `PUT` N docs **without** `?commit=true`
+(they live only in the WAL), `kill -9` the node within ~1s (a hard crash, well before any
+timed commit), restart on the same data dir, and assert all N docs come back. It also
+greps the restart log for the replay line (`Read and execute operations WAL`) as positive
+proof the recovery went through the WAL rather than a lucky early commit.
+
+```sh
+harness/wal_recovery_check.sh            # 50 docs (default)
+NDOCS=500 harness/wal_recovery_check.sh  # more writes
+```
+
+This is the modern, real-architecture equivalent of the retired `oldtests/test_wal.cc`,
+which drove the long-gone 2019 `DatabaseQueue`/`Database` API by hand; here we exercise the
+actual HTTP → WAL → crash → open-time-replay path end to end. The storage engine underneath
+(`Kronuz/storage`, the append-only checksummed volume format the WAL is built on) has its
+own fault-injection suite (torn writes, truncation, bit rot, a corrupt size field, and the
+guarantee that records committed before any damage stay readable) — see that repo's
+`test/test.cc`.
+
+---
+
 ## Load — `index_fortune`
 
 A quick functional bulk-load: `PUT` a range of documents built from random
@@ -269,7 +298,7 @@ Layers whose prerequisites are missing (a baseline, the oracle binary, GTest) ar
 **skipped**, not failed, with a note on how to enable them.
 
 ```sh
-harness/run_all.sh                 # default: smoke e2e cluster load stress bench
+harness/run_all.sh                 # default: smoke e2e cluster recovery load stress bench
 harness/run_all.sh smoke stress    # a subset
 BIN=/path/to/xapiand harness/run_all.sh
 ```
