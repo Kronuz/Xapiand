@@ -2143,9 +2143,7 @@ if (BUILD_TESTS)
 				YAML_OBJ
 			)
 
-			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_TEST} PRIVATE
-				${GTEST_BOTH_LIBRARIES}
 				${CMAKE_THREAD_LIBS_INIT}
 				${UUID_LIBRARIES}
 				${M_LIBRARIES}
