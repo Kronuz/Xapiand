@@ -36,6 +36,7 @@ jobs:
           envs: 'TAG'
           prepare: |
             pkg install -y cmake ninja git pkgconf perl5 tcl86 icu zstd asio
+            ln -sf /usr/local/bin/tclsh8.6 /usr/local/bin/tclsh
           run: |
             set -eux
             cmake -G Ninja -B build \
@@ -44,12 +45,28 @@ jobs:
               -DASIO_INCLUDE_DIR=/usr/local/include
             ninja -C build
             DESTDIR="$PWD/stage" ninja -C build install
-            VER="${TAG#v}"
-            tar -C stage -czf "xapiand-${VER}-freebsd-amd64.tar.gz" .
-            ls -la ./*.tar.gz
+            # FreeBSD versions can't carry '-'; map 1.0.0-alpha.1 -> 1.0.0.alpha.1.
+            VER=$(echo "${TAG#v}" | tr '-' '.')
+            # Native FreeBSD package via pkg create -- no Ruby, no fpm.
+            {
+              echo 'name: xapiand'
+              echo "version: \"${VER}\""
+              echo 'origin: databases/xapiand'
+              echo 'comment: RESTful search engine'
+              echo 'desc: Xapiand is a RESTful search engine.'
+              echo 'maintainer: german.mb@gmail.com'
+              echo 'www: https://github.com/Kronuz/Xapiand'
+              echo 'prefix: /usr/local'
+              echo 'abi: "FreeBSD:14:amd64"'
+              echo 'licenselogic: single'
+              echo 'licenses: [MIT]'
+            } > +MANIFEST
+            ( cd stage && find usr/local \( -type f -o -type l \) | sed 's|^|/|' ) > plist
+            pkg create -M +MANIFEST -r "$PWD/stage" -p "$PWD/plist" -o "$PWD"
+            ls -la ./*.pkg
 
-      - name: Attach FreeBSD tarball to the release
+      - name: Attach FreeBSD package to the release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          files: ./*.tar.gz
+          files: ./*.pkg
