@@ -29,7 +29,7 @@
 // element is stored verbatim; two or more get a magic byte + length prefixes),
 // while the list itself yields std::string_view over the serialised buffer.
 
-#include "gtest/gtest.h"
+#include "test_harness.h"
 
 #include <iterator>
 #include <string>
@@ -38,7 +38,7 @@
 
 #include "serialise_list.h"
 
-TEST(SerialiseList, StringListRoundTrip) {
+static void test_StringListRoundTrip() {
 	const std::vector<std::string> values = {
 		"alpha", "beta", "gamma delta", "x", "a longer value with spaces"
 	};
@@ -47,43 +47,46 @@ TEST(SerialiseList, StringListRoundTrip) {
 
 	// Construct a StringList over the serialised buffer and iterate it.
 	StringList list(serialised);
-	ASSERT_EQ(list.size(), values.size());
+	REQUIRE_EQ(list.size(), values.size());
 	size_t i = 0;
 	for (const auto& sv : list) {
-		ASSERT_LT(i, values.size());
-		EXPECT_EQ(sv, values[i]);
+		CHECK_LT(i, values.size());
+		CHECK_EQ(sv, values[i]);
 		++i;
 	}
-	EXPECT_EQ(i, values.size());
+	CHECK_EQ(i, values.size());
 
 	// unserialise into a fresh container and compare element by element.
 	std::vector<std::string_view> restored;
 	StringList::unserialise(serialised, std::back_inserter(restored));
-	ASSERT_EQ(restored.size(), values.size());
+	REQUIRE_EQ(restored.size(), values.size());
 	for (size_t j = 0; j < restored.size(); ++j) {
-		EXPECT_EQ(restored[j], values[j]);
+		CHECK_EQ(restored[j], values[j]);
 	}
 }
 
-TEST(SerialiseList, StringListEmpty) {
+static void test_StringListEmpty() {
 	const std::vector<std::string> values;
 	const std::string serialised = StringList::serialise(values.begin(), values.end());
 
 	StringList list(serialised);
-	EXPECT_EQ(list.size(), 0u);
-	EXPECT_TRUE(list.begin() == list.end());
+	CHECK_EQ(list.size(), 0u);
+	CHECK(list.begin() == list.end());
 
 	std::vector<std::string_view> restored;
 	StringList::unserialise(serialised, std::back_inserter(restored));
-	EXPECT_TRUE(restored.empty());
+	CHECK(restored.empty());
 }
 
-TEST(SerialiseList, StringListSingleWithEmbeddedNul) {
+static void test_StringListSingleWithEmbeddedNul() {
 	const std::vector<std::string> values = { std::string("with\0nul and spaces", 19) };
 
 	const std::string serialised = StringList::serialise(values.begin(), values.end());
 	StringList list(serialised);
-	ASSERT_EQ(list.size(), 1u);
-	EXPECT_EQ(*list.begin(), values[0]);      // survives the embedded NUL
-	EXPECT_EQ((*list.begin()).size(), 19u);
+	REQUIRE_EQ(list.size(), 1u);
+	CHECK_EQ(*list.begin(), values[0]);      // survives the embedded NUL
+	CHECK_EQ((*list.begin()).size(), 19u);
 }
+
+
+TEST_MAIN(test_StringListRoundTrip,test_StringListEmpty,test_StringListSingleWithEmbeddedNul)

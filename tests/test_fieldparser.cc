@@ -27,80 +27,83 @@
 // into their field name, value, quote flavor, and range endpoints. Revived and
 // modernized from the retired oldtests fieldparser suite.
 
-#include "gtest/gtest.h"
+#include "test_harness.h"
 
 #include <string_view>
 
 #include "field_parser.h"
 
-TEST(FieldParser, FieldAndBareValue) {
+static void test_FieldAndBareValue() {
 	FieldParser fp("Color:Blue");
 	fp.parse();
-	EXPECT_EQ(fp.get_field_name(), std::string_view("Color"));
-	EXPECT_EQ(fp.get_value(), std::string_view("Blue"));
-	EXPECT_FALSE(fp.is_range());
-	EXPECT_FALSE(fp.is_single_quoted_value());
-	EXPECT_FALSE(fp.is_double_quoted_value());
+	CHECK_EQ(fp.get_field_name(), std::string_view("Color"));
+	CHECK_EQ(fp.get_value(), std::string_view("Blue"));
+	CHECK_FALSE(fp.is_range());
+	CHECK_FALSE(fp.is_single_quoted_value());
+	CHECK_FALSE(fp.is_double_quoted_value());
 }
 
-TEST(FieldParser, BareValueNoField) {
+static void test_BareValueNoField() {
 	FieldParser fp("green");
 	fp.parse();
-	EXPECT_TRUE(fp.get_field_name().empty());
-	EXPECT_EQ(fp.get_value(), std::string_view("green"));
-	EXPECT_FALSE(fp.is_range());
+	CHECK(fp.get_field_name().empty());
+	CHECK_EQ(fp.get_value(), std::string_view("green"));
+	CHECK_FALSE(fp.is_range());
 }
 
-TEST(FieldParser, DoubleQuotedValue) {
+static void test_DoubleQuotedValue() {
 	FieldParser fp("Color:\"dark blue\"");
 	fp.parse();
-	EXPECT_EQ(fp.get_field_name(), std::string_view("Color"));
-	EXPECT_TRUE(fp.is_double_quoted_value());
-	EXPECT_FALSE(fp.is_single_quoted_value());
-	EXPECT_EQ(fp.get_value(), std::string_view("dark blue"));   // quotes stripped
+	CHECK_EQ(fp.get_field_name(), std::string_view("Color"));
+	CHECK(fp.is_double_quoted_value());
+	CHECK_FALSE(fp.is_single_quoted_value());
+	CHECK_EQ(fp.get_value(), std::string_view("dark blue"));   // quotes stripped
 }
 
-TEST(FieldParser, SingleQuotedValue) {
+static void test_SingleQuotedValue() {
 	FieldParser fp("Color:'light blue'");
 	fp.parse();
-	EXPECT_EQ(fp.get_field_name(), std::string_view("Color"));
-	EXPECT_TRUE(fp.is_single_quoted_value());
-	EXPECT_FALSE(fp.is_double_quoted_value());
-	EXPECT_EQ(fp.get_value(), std::string_view("light blue"));
+	CHECK_EQ(fp.get_field_name(), std::string_view("Color"));
+	CHECK(fp.is_single_quoted_value());
+	CHECK_FALSE(fp.is_double_quoted_value());
+	CHECK_EQ(fp.get_value(), std::string_view("light blue"));
 }
 
-TEST(FieldParser, BracketRange) {
+static void test_BracketRange() {
 	FieldParser fp("[100,200]");
 	fp.parse();
-	EXPECT_TRUE(fp.get_field_name().empty());
-	EXPECT_TRUE(fp.is_range());
-	EXPECT_EQ(fp.range, FieldParser::Range::closed);
-	EXPECT_EQ(fp.get_start(), std::string_view("100"));
-	EXPECT_EQ(fp.get_end(), std::string_view("200"));
+	CHECK(fp.get_field_name().empty());
+	CHECK(fp.is_range());
+	CHECK_EQ(fp.range, FieldParser::Range::closed);
+	CHECK_EQ(fp.get_start(), std::string_view("100"));
+	CHECK_EQ(fp.get_end(), std::string_view("200"));
 }
 
-TEST(FieldParser, FieldWithBracketRange) {
+static void test_FieldWithBracketRange() {
 	FieldParser fp("Field:[a70d0d,ec500d]");
 	fp.parse();
-	EXPECT_EQ(fp.get_field_name(), std::string_view("Field"));
-	EXPECT_TRUE(fp.is_range());
-	EXPECT_EQ(fp.get_start(), std::string_view("a70d0d"));
-	EXPECT_EQ(fp.get_end(), std::string_view("ec500d"));
+	CHECK_EQ(fp.get_field_name(), std::string_view("Field"));
+	CHECK(fp.is_range());
+	CHECK_EQ(fp.get_start(), std::string_view("a70d0d"));
+	CHECK_EQ(fp.get_end(), std::string_view("ec500d"));
 }
 
-TEST(FieldParser, DotDotRange) {
+static void test_DotDotRange() {
 	FieldParser fp("Field:100..200");
 	fp.parse();
-	EXPECT_EQ(fp.get_field_name(), std::string_view("Field"));
-	EXPECT_TRUE(fp.is_range());
-	EXPECT_EQ(fp.get_start(), std::string_view("100"));
-	EXPECT_EQ(fp.get_end(), std::string_view("200"));
+	CHECK_EQ(fp.get_field_name(), std::string_view("Field"));
+	CHECK(fp.is_range());
+	CHECK_EQ(fp.get_start(), std::string_view("100"));
+	CHECK_EQ(fp.get_end(), std::string_view("200"));
 }
 
-TEST(FieldParser, QuotedRangeEndpoints) {
+static void test_QuotedRangeEndpoints() {
 	FieldParser fp("['initial range','end of range']");
 	fp.parse();
-	EXPECT_TRUE(fp.is_range());
-	EXPECT_EQ(fp.get_start(), std::string_view("initial range"));
-	EXPECT_EQ(fp.get_end(), std::string_view("end of range"));
+	CHECK(fp.is_range());
+	CHECK_EQ(fp.get_start(), std::string_view("initial range"));
+	CHECK_EQ(fp.get_end(), std::string_view("end of range"));
 }
+
+
+TEST_MAIN(test_FieldAndBareValue,test_BareValueNoField,test_DoubleQuotedValue,test_SingleQuotedValue,test_BracketRange,test_FieldWithBracketRange,test_DotDotRange,test_QuotedRangeEndpoints)

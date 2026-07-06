@@ -2078,23 +2078,13 @@ endif ()
 # -DBUILD_TESTS=ON flag when running cmake.
 
 if (BUILD_TESTS)
-	# GoogleTest via FetchContent -- no system dependency, provides gtest/gtest_main.
-	FetchContent_Declare(googletest
-		GIT_REPOSITORY https://github.com/google/googletest.git
-		GIT_TAG release-1.12.1)
-	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-	FetchContent_MakeAvailable(googletest)
-	set(GTEST_BOTH_LIBRARIES gtest gtest_main)
-	set(GTEST_INCLUDE_DIRS "")
-
-		# Pure unit tests that only need GoogleTest (no Xapiand code linked).
+		# Pure unit tests (no Xapiand code linked). They use the tiny header-only
+		# harness in tests/test_harness.h -- no GoogleTest, no FetchContent.
 		foreach (VAR_TEST string)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
 			)
-			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
-			target_link_libraries(${PROJECT_TEST} PRIVATE ${GTEST_BOTH_LIBRARIES})
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
@@ -2115,10 +2105,6 @@ if (BUILD_TESTS)
 				LZ4_OBJ
 				prometheus-cpp::core
 				YAML_OBJ
-			)
-			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
-			target_link_libraries(${PROJECT_TEST} PRIVATE
-				${GTEST_BOTH_LIBRARIES}
 				${CMAKE_THREAD_LIBS_INIT}
 				${UUID_LIBRARIES}
 				${M_LIBRARIES}

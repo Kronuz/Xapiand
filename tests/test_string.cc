@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2026 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +20,12 @@
  * THE SOFTWARE.
  */
 
-#include "gtest/gtest.h"
+#include "test_harness.h"
 
 #include <string>
 
-TEST(StringTest, Hello) {
-	EXPECT_EQ(std::string("Hello"), "Hello");
+static void test_hello() {
+	CHECK_EQ(std::string("Hello"), "Hello");
 }
+
+TEST_MAIN(test_hello)
