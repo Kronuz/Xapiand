@@ -1,6 +1,6 @@
 # Xapiand
 
-[![Build Status][travis-image]][travis-url]
+[![CI][ci-image]][ci-url]
 
 ## A RESTful Search Engine
 
@@ -101,5 +101,5 @@ Note that the bundled Xapian fork under `src/xapian/` carries Xapian's own
 (GPL) license; see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note) before
 reusing code from this tree.
 
-[travis-image]: https://travis-ci.org/Kronuz/Xapiand.svg
-[travis-url]: https://travis-ci.org/Kronuz/Xapiand
+[ci-image]: https://github.com/Kronuz/Xapiand/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/Kronuz/Xapiand/actions/workflows/ci.yml
