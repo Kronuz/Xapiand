@@ -48,7 +48,6 @@ option(CLANG_TIDY           "Enable Clang Tidy"                     OFF)
 option(CPPLINT              "Enable CppLint"                        OFF)
 
 option(BUILD_TESTS "Build all tests"                                OFF)
-option(BUILD_BENCHMARKS "Build all benchmarks"                      OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(CLUSTERING    "Enable remote clustering"                      ON)
@@ -2064,7 +2063,7 @@ message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAK
 #
 ########################################################################
 
-if (BUILD_TESTS OR BUILD_BENCHMARKS)
+if (BUILD_TESTS)
 	enable_testing()
 	add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 endif ()
@@ -2099,16 +2098,17 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
-	# The legacy oldtests/ suite (23 modules) predates a lot of the current code and
-	# doesn't all compile as-is; it's off by default.  Re-enable with
-	# -DBUILD_LEGACY_TESTS=ON and bring modules current one at a time.
+	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
+	# compile as-is; it's off by default.  The modules that became standalone Kronuz
+	# libraries (boolparser, msgpack, threadpool, url_parser, ...) were dropped since
+	# they're now tested in their own repos; what remains is Xapiand-specific and is a
+	# migration backlog for tests/.  Re-enable with -DBUILD_LEGACY_TESTS=ON and bring
+	# modules current one at a time.
 	if (BUILD_LEGACY_TESTS)
 		### OLD:
 		foreach (VAR_TEST
-			boolparser compressor endpoint fieldparser generate_terms geospatial
-			geospatial_query uuid hash lru msgpack patcher phonetic query queue
-			serialise serialise_list sort storage string_metric threadpool
-			url_parser wal
+			endpoint fieldparser generate_terms geospatial geospatial_query
+			patcher query serialise serialise_list sort wal
 		)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
@@ -2145,26 +2145,7 @@ endif ()
 
 # Benchmarking
 # ------------
-# You can skip this section if you aren't interested in benchmarking.
-#
-# The benchmarks are not built by default. To build them, set the
-# BUILD_BENCHMARKS option to ON. You can do it by specifying the
-# -DBUILD_BENCHMARKS=ON flag when running cmake.
+# Micro-benchmarks used to live in benchmarks/ (a single std::string-copy stub);
+# performance work now lives in harness/ (cluster_bench.sh, es_loadtest.py, the
+# e2e capture/diff tooling), which exercises the running server end to end.
 
-if (BUILD_BENCHMARKS)
-	find_package(GBenchmark)
-	if (NOT GBENCHMARK_FOUND)
-		message(WARNING "GBenchmark not found!")
-	else ()
-		foreach (VAR_BENCHMARK string)
-			set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
-			add_executable(${PROJECT_BENCHMARK}
-				"${PROJECT_SOURCE_DIR}/benchmarks/benchmark_${VAR_BENCHMARK}.cc"
-			)
-			target_include_directories(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_INCLUDE_DIRS})
-			target_link_libraries(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_LIBRARIES})
-			add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
-			add_dependencies(check "${PROJECT_BENCHMARK}")
-		endforeach ()
-	endif ()
-endif ()
