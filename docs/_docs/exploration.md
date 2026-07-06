@@ -318,6 +318,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Introducing the Query Language results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 The difference here is that instead of passing `q=*` in the URI, we `POST` a
 JSON-style query request body to the `SEARCH` method.
@@ -343,6 +360,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Introducing the Query Language results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(1);
+  pm.expect(jsonData.hits.length).to.equal(1);
+});
+```
+{% endcomment %}
+
 
 Note that if `limit` is not specified, it defaults to 10.
 
@@ -361,6 +395,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Introducing the Query Language results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 The `offset` parameter (`0`-based) specifies which document index to start from
 and the `limit` parameter specifies how many documents to return starting at the
@@ -443,6 +494,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Field Selector results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 ### Drill Selector
 
@@ -464,6 +532,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Drill Selector results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 
 ## Executing Filters
@@ -545,6 +630,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Executing Aggregations aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["group_by_state"]["Puerto Rico"]._doc_count).to.equal(21);
+  pm.expect(jsonData.aggregations["group_by_state"]["Pennsylvania"]._doc_count).to.equal(20);
+});
+```
+{% endcomment %}
+
 
 In SQL, the above aggregation is similar in concept to:
 

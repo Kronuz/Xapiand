@@ -48,6 +48,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Namespaces results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 By default every level of the path is also indexed on its own, so a shallower,
 partial path matches as well (this is the behaviour the next section controls):
@@ -65,6 +82,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Namespaces results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(0);
+  pm.expect(jsonData.hits.length).to.equal(0);
+});
+```
+{% endcomment %}
+
 
 See [Namespace Queries]({{ '/docs/reference-guide/search/query-dsl/leaf-queries/namespace-queries' | relative_url }})
 for the full set of ways to match namespaced paths.

@@ -114,6 +114,24 @@ GET /twitter/tweet/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Searching document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["user"]).to.equal("Kronuz");
+  pm.expect(jsonData["postDate"]).to.equal("2016-11-15T13:12:00");
+  pm.expect(jsonData["message"]).to.equal("Trying out Xapiand, so far, so good... so what!");
+});
+```
+{% endcomment %}
+
 
 {% capture req %}
 
@@ -122,6 +140,24 @@ GET /twitter/tweet/2
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Searching document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["user"]).to.equal("Kronuz");
+  pm.expect(jsonData["postDate"]).to.equal("2016-10-15T10:31:18");
+  pm.expect(jsonData["message"]).to.equal("Another tweet, will it be indexed?");
+});
+```
+{% endcomment %}
+
 
 Let's find all the tweets that Kronuz posted:
 
@@ -132,6 +168,23 @@ SEARCH /twitter/tweet/?q=user:Kronuz
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Searching results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(2);
+  pm.expect(jsonData.hits.length).to.equal(2);
+});
+```
+{% endcomment %}
+
 
 You can find out more in the [Data Exploration]({{ '/docs/exploration' | relative_url }})
 section.

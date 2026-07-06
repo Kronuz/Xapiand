@@ -14,6 +14,24 @@ GET /twitter/tweet/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Get Document API document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["user"]).to.equal("Kronuz");
+  pm.expect(jsonData["post_date"]).to.equal("2019-03-22T14:35:26");
+  pm.expect(jsonData["message"]).to.equal("Trying out Xapiand");
+});
+```
+{% endcomment %}
+
 
 The result of the above get operation is a `200 OK` HTTP response code with the
 following body:

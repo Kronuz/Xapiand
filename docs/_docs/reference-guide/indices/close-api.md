@@ -22,6 +22,11 @@ CLOSE /my_index/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 501
+---
+{% endcomment %}
 
 {% capture req %}
 
@@ -30,3 +35,8 @@ OPEN /my_index/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 501
+---
+{% endcomment %}

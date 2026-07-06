@@ -41,8 +41,13 @@ jobs:
           ninja -C build
       - name: Unit tests (ctest)
         run: ctest --test-dir build --output-on-failure
-      - name: Smoke + load
-        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install newman (for the doc-driven E2E)
+        run: npm install -g newman
+      - name: Smoke + E2E + load
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke e2e load
 
   sanitizers:
     name: ${{ matrix.name }}
@@ -79,5 +84,10 @@ jobs:
             -DASIO_INCLUDE_DIR=/usr/include
           # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.
           ninja -C build -j2
-      - name: Smoke + load under ${{ matrix.name }}
-        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install newman (for the doc-driven E2E)
+        run: npm install -g newman
+      - name: Smoke + E2E + load under ${{ matrix.name }}
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke e2e load

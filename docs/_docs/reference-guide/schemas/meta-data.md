@@ -42,3 +42,20 @@ GET /my_index/._schema._meta
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Schema Metadata document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["description"]).to.equal("Schema description here");
+  pm.expect(jsonData["class"]).to.equal("MyApp::User");
+});
+```
+{% endcomment %}
+

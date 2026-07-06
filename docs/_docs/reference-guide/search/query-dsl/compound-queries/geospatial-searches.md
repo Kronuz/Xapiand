@@ -103,6 +103,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Match Within results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(4);
+  pm.expect(jsonData.hits.length).to.equal(4);
+});
+```
+{% endcomment %}
+
 
 In the example above we are searching inside a circle with it's center is given
 by `_latitude`, `_longitude` and a `_radius` (see [Supported Distance Units]({{ '/docs/reference-guide/schemas/field-types/geospatial-type/#distance-units' | relative_url }})).

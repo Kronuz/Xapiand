@@ -65,6 +65,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Searching of Stop Words results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(0);
+  pm.expect(jsonData.hits.length).to.equal(0);
+});
+```
+{% endcomment %}
+
 
 The above example is equivalent to:
 
@@ -89,3 +106,8 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}

@@ -24,7 +24,7 @@ work. Build first:
 | --- | --- | --- | --- |
 | **smoke** | `run_all.sh smoke` | a single node indexes and searches at all | nothing |
 | **unit** | `ctest` | C++ units (parsers, serialise, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
-| **functional E2E** | `e2e_check.sh` | the whole documented HTTP API still behaves (vs a baseline) | a baseline report + `newman` |
+| **functional E2E** | `run_all.sh e2e` | the whole documented HTTP API still behaves (doc-embedded assertions) | `newman` |
 | **remote / cluster** | `cluster_check.sh` | discovery, the Remote protocol, replication, distributed search | a multicast-capable interface |
 | **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
 | **protocol sniff** | `proxy --xapian` | *see* the MSG_/REPLY_ wire between two nodes | two nodes |
@@ -79,35 +79,37 @@ Postman collection, and `newman` runs it against a live node. This is the primar
 correctness net for the API surface (schemas, query DSL, ranges, restore, ...).
 
 ```sh
-# capture our node's report and diff it against the saved baseline
-harness/e2e_check.sh
+harness/run_all.sh e2e          # boot a node, run the collection, check assertions
 ```
 
-"Green" is **parity with the baseline**, not 100% pass: the doc suite carries a set
-of pre-existing aspirational failures that fail on both our build and the baseline.
-`e2e_diff.py` matches requests by their doc-derived **name** (plus an occurrence
-counter), not by position, and reports only requests present in *both* reports as
-regressions/fixes; added or removed doc examples are listed separately and never
-cascade. (This is what fixed the recurring "stale baseline" noise: a single added
-request used to shift every request after it into spurious diffs.)
+**The docs are the spec, and each example carries its own expected result** — commented
+right next to the request (inside a `{% comment %}` block, so it never renders) as
+`pm.test(...)` assertions that check the meaningful thing that example demonstrates: a
+search asserts its `count` / `hits`, an aggregation asserts its bucket values or
+ordering, a `GET` asserts the retrieved fields, a write asserts its status. Any request
+that needs nothing more than "it worked" gets a default **synthesised by the generator**:
+`pm.response.to.be.success` (2xx), or a specific `pm.response.to.have.status(NNN)` when
+the block declares a `status: NNN` marker — used for the deliberate error/edge demos
+(unimplemented `CLOSE`/`OPEN` → 501, placeholder paths → 404, invalid-input → 400). So
+**every** request is verified, and the whole expected result lives in the `.md`.
 
-The baseline (`harness/e2e_baseline.json`) is **committed** and small (~40 KB): it
-is a *distilled* report — per request just the failed-assertion set and the status
-code, no response bodies — so it is shared and reviewable in a git diff, unlike the
-60 MB raw newman reports (gitignored under `results/`, which drift per machine).
-Because matching is by name, adding/removing doc examples does **not** need a
-refresh; only a genuine behaviour change does. When you intentionally change
-documented behaviour and have verified the new responses, refresh it:
+The gate (`e2e_assert.py`) is **GREEN only when every documented assertion passes and
+every request is covered** — no response-body baseline, no allowlist, no skipped tests.
+If a documented assertion fails, the docs and the server disagree, and that is a red
+build: fix the code, or fix the doc's stated expectation. Nothing is captured, distilled,
+drifted, or stored per machine, so the check runs anywhere — including CI — straight from
+the docs. The collection is regenerated from the docs on every run, so a doc or generator
+change can never be masked by a stale cached collection.
 
-```sh
-harness/e2e_baseline.sh                 # from the current build/bin/xapiand
-harness/e2e_baseline.sh /path/to/xapiand
-# then review the git diff of harness/e2e_baseline.json and commit it
-```
+When behaviour changes: update that example's assertion in its `.md` to the new expected
+result (a reviewable one-line diff, right where the request is). Compare floating-point
+results with `to.be.closeTo(value, delta)`, never exact `equal`, so the check stays
+portable across platforms.
 
-For the stricter, exploratory response-body diff (`bodydiff.py`), run
-`harness/e2e_check.sh` directly. `run_all.sh e2e` **skips** if the committed
-baseline is missing.
+For an on-demand **response-body** comparison between two builds (deeper than the
+assertions — catches serialization changes), capture a reference report from another
+binary and diff it with the optional explorers `e2e_check.sh` / `e2e_diff.py` /
+`bodydiff.py`. These are investigation aids, not the committed gate.
 
 ---
 

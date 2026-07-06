@@ -90,6 +90,23 @@ GET /blog/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Optimistic Concurrency Control document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["title"]).to.equal("My first blog entry");
+  pm.expect(jsonData["text"]).to.equal("Just trying this out...");
+});
+```
+{% endcomment %}
+
 
 The response body includes the same `_version` number of `1`:
 

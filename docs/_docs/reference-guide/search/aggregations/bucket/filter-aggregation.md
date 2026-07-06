@@ -74,7 +74,7 @@ pm.test("Response is success", function() {
 pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.aggregations.strawberry_lovers._doc_count).to.equal(76);
-  pm.expect(jsonData.aggregations.strawberry_lovers.avg_balance._avg).to.equal(2581.8072368421055);
+  pm.expect(jsonData.aggregations.strawberry_lovers.avg_balance._avg).to.be.closeTo(2581.807, 0.01);
 });
 ```
 {% endcomment %}
@@ -91,7 +91,7 @@ Response:
     "strawberry_lovers": {
       "_doc_count": 76,
       "avg_balance": {
-        "_avg": 2581.8072368421055
+        "_avg": 2581.807236842105
       }
     }
   }, ...

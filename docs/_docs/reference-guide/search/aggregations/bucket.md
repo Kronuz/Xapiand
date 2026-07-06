@@ -87,6 +87,24 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Ordering aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["fruits"].length).to.equal(20);
+  pm.expect(jsonData.aggregations["fruits"][0]._key).to.equal("nectarine");
+  pm.expect(jsonData.aggregations["fruits"][0]._doc_count).to.equal(25);
+});
+```
+{% endcomment %}
+
 
 
 Ordering the buckets alphabetically by their keys in an ascending manner:
@@ -112,6 +130,24 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Ordering aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["fruits"].length).to.equal(20);
+  pm.expect(jsonData.aggregations["fruits"][0]._key).to.equal("apple");
+  pm.expect(jsonData.aggregations["fruits"][0]._doc_count).to.equal(89);
+});
+```
+{% endcomment %}
+
 
 
 #### Ordering by Sub Aggregations
@@ -198,6 +234,25 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Ordering by Sub Aggregations aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["balance_by_state"].length).to.equal(59);
+  pm.expect(jsonData.aggregations["balance_by_state"][0]._key).to.equal("Wisconsin");
+  pm.expect(jsonData.aggregations["balance_by_state"][0]._doc_count).to.equal(18);
+  pm.expect(jsonData.aggregations["balance_by_state"][0]["balance_stats"]["_count"]).to.equal(18);
+});
+```
+{% endcomment %}
+
 
 
 #### Deep Ordering
@@ -252,6 +307,11 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}
 
 
 ### Limit
@@ -288,6 +348,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Response Format aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["balances"]["0"]._doc_count).to.equal(55);
+  pm.expect(jsonData.aggregations["balances"]["1000"]._doc_count).to.equal(329);
+});
+```
+{% endcomment %}
+
 
 Response:
 
@@ -356,6 +433,24 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Minimum Document Count aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["employers"].length).to.equal(2);
+  pm.expect(jsonData.aggregations["employers"][0]._key).to.equal("Zensure");
+  pm.expect(jsonData.aggregations["employers"][0]._doc_count).to.equal(5);
+});
+```
+{% endcomment %}
+
 
 The above aggregation would only return tags which have been found in 5 hits
 or more. Default value is 1.
@@ -423,6 +518,24 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Missing Value aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["gender"].length).to.equal(2);
+  pm.expect(jsonData.aggregations["gender"][0]._key).to.equal("male");
+  pm.expect(jsonData.aggregations["gender"][0]._doc_count).to.equal(494);
+});
+```
+{% endcomment %}
+
 
 Documents without a value in the `gender` field will fall into the same bucket
 as documents that have the value `"N/A"`.
@@ -470,6 +583,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Sub Aggregations aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations["balances_by_range"]["poor"]._doc_count).to.equal(384);
+  pm.expect(jsonData.aggregations["balances_by_range"]["average"]._doc_count).to.equal(580);
+});
+```
+{% endcomment %}
+
 
 Response:
 

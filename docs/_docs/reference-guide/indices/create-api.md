@@ -59,6 +59,11 @@ PUT /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}
 
 The default for `number_of_shards` is `5`, and the default for
 `number_of_replicas` is `1` (ie one replica for each primary shard), the above

@@ -11,18 +11,17 @@
 #     `kill -0 $pid` check below: we confirm OUR node is the one serving.)
 #   * --solo (no discovery/replication ports) + a FRESH data dir + a FIXED --name
 #     (so volatile node-identity does not diverge the bodydiff).
-#   * newman exits 1 because of the 73 pre-existing doc failures -- that is NORMAL;
-#     the report is still written. Compare with e2e_diff.py / bodydiff.py, not the
-#     exit code.
+#   * newman exits 1 if ANY assertion fails; in the green state every assertion passes,
+#     so exit 0 is expected. The report is written either way -- judge the run with
+#     e2e_assert.py (the gate), not the exit code.
 #
 # Binaries (already built this program):
 #   ours     -> build/bin/xapiand                      (note: bin/, not build/xapiand)
 #
-# The current e2e baseline is captured from THIS project's own build at 23e1e4540
-# (right after the Xapian 2.0.0 migration + native multi-db distributed match), so
-# the regression net now tracks the current architecture against itself. Earlier the
-# baseline was the pre-migration master oracle (7bd295b, in ../xapiand-master-bench),
-# which validated the migration and has served its purpose.
+# The captured report feeds the assertion-only gate (e2e_assert.py): the docs carry
+# their own pm.test assertions and the generator synthesises a default for any request
+# that lacks one, so the gate needs no response-body baseline. (e2e_check.sh can still
+# diff a report against a saved reference report for a deeper body comparison.)
 #
 # Example:
 #   harness/e2e_capture.sh build/bin/xapiand harness/results/e2e_base_23e1e4540.json
@@ -37,11 +36,10 @@ HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HARNESS_DIR")"
 COLL="${COLL:-/tmp/xe2e_collection.json}"
 
-# Generate the Postman collection once (regenerate if missing); reuse it for every
-# node so the inputs are identical across baseline and ours.
-if [ ! -f "$COLL" ]; then
-	python3 "$REPO/docs_to_postman.py" > "$COLL" || { echo "docs_to_postman.py failed"; exit 1; }
-fi
+# Regenerate the Postman collection every run from the docs. The doc-driven suite's
+# whole premise is that the docs are the single source of truth, so a stale cached
+# collection must never mask a doc or generator change. Cheap (<1s).
+python3 "$REPO/docs_to_postman.py" > "$COLL" || { echo "docs_to_postman.py failed"; exit 1; }
 echo "collection: $COLL ($(wc -c < "$COLL") bytes)"
 
 pkill -9 -f 'bin/xapiand' 2>/dev/null; sleep 1   # no squatter on :8880
@@ -61,7 +59,7 @@ done
 
 echo "node up (pid $pid); newman -> $OUT"
 newman run "$COLL" --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >/tmp/xe2e_newman.log 2>&1
-echo "newman exit $? (1 is normal: 73 pre-existing failures) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
+echo "newman exit $? (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
 
 kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
 exit 0   # a captured report is success; the killed node's wait-status is not our verdict

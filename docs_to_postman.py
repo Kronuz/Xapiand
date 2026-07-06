@@ -243,6 +243,20 @@ def main():
             item["name"] = description
         items.append(item)
         tests = test.get('tests')
+        if not tests:
+            # No explicit assertions in this doc block: synthesize a default so
+            # every request is verified at least at the status level (this is what
+            # makes the assertion-only e2e gate a complete regression net without a
+            # response-body baseline). A `status: NNN` marker -- harness metadata
+            # inside a {% comment %} block, invisible in the rendered docs -- pins a
+            # specific expected status for the deliberate error/edge demos
+            # (unimplemented CLOSE/OPEN -> 501, placeholder paths -> 404,
+            # invalid-input examples -> 400); everything else asserts 2xx success.
+            status = test.get('status')
+            if status:
+                tests = ['pm.test("Status is %d", function () {\n  pm.response.to.have.status(%d);\n});' % (int(status), int(status))]
+            else:
+                tests = ['pm.test("Response is success", function () {\n  pm.response.to.be.success;\n});']
         if tests:
             scripts = []
             item["event"] = [{
@@ -252,8 +266,8 @@ def main():
                     "exec": scripts,
                 }
             }]
-            for test in tests:
-                scripts.append(test)
+            for script in tests:
+                scripts.append(script)
         # print(test)
 
     json.dump(collection, sys.stdout, indent=2)

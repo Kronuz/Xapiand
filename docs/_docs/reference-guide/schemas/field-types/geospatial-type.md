@@ -176,6 +176,11 @@ UPDATE /bank/5
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}
 
 {: .note .caution }
 **_Caution_**<br>

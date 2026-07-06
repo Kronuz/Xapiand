@@ -70,6 +70,11 @@ INFO /some/resource/name
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 404
+---
+{% endcomment %}
 
 If your firewall rules don't support non-standard HTTP methods like `PATCH`,
 `UPDATE` or `DELETE`, for example, you have two options:
@@ -94,6 +99,11 @@ X-HTTP-Method-Override: INFO
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 404
+---
+{% endcomment %}
 
 {: .note .caution }
 The Method Override won't work with any other method other than `POST`, you'll
@@ -118,6 +128,11 @@ GET /some/resource/name:info
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 404
+---
+{% endcomment %}
 
 
 ---
@@ -151,6 +166,11 @@ DELETE /some/resource/name
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 404
+---
+{% endcomment %}
 
 Whilst the next example will delete the whole index `/some/resource/path/` with
 _all its documents_ in it as well:
@@ -162,6 +182,11 @@ DELETE /some/resource/path/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 501
+---
+{% endcomment %}
 
 {: .note .warning }
 **_Remember_**<br>

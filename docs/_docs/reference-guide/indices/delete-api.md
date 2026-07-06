@@ -17,6 +17,11 @@ DELETE /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 501
+---
+{% endcomment %}
 
 {: .note .warning }
 `DELETE /twitter/tweet/` is not the same as `DELETE /twitter/tweet`, the former will delete the

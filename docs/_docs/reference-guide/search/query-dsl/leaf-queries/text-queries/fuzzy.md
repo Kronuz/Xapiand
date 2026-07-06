@@ -27,6 +27,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Example results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 A similar effect could be obtained by using the tilde ("`~`") character
 followed optionally by the edit distance as part of the query text:
@@ -44,6 +61,23 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Example results", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+{% endcomment %}
+
 
 {: .note .info }
 Edit distance defaults to 2, so `"banna~"` and `"banna~2"` are equivalent.

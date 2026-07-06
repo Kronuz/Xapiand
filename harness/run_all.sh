@@ -4,13 +4,13 @@
 #
 # It orchestrates the per-layer harnesses (it does not reimplement them) and prints
 # a single pass/fail/skip summary.  Each layer is independent; a layer whose
-# prerequisites are missing (a baseline report, the oracle binary, GTest) is SKIPPED,
+# prerequisites are missing (newman, the oracle binary, GTest) is SKIPPED,
 # not failed, with a note on how to enable it.
 #
 # Layers (run in this order; select a subset by naming them as arguments):
 #   smoke    single-node index + search sanity (no prerequisites)          [always]
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
-#   e2e      doc-driven functional E2E vs the saved baseline (e2e_check.sh)
+#   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, needs newman)
 #   cluster  2-node discovery + remote/replication + distributed search (cluster_check.sh)
 #   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
 #   load     quick functional bulk load (index_fortune)
@@ -93,22 +93,16 @@ run_unit() {
 }
 
 run_e2e() {
-	echo "== [e2e] functional (vs baseline) =="
-	if [ ! -f "$HARNESS_DIR/e2e_baseline.json" ]; then
-		skip "e2e" "committed baseline harness/e2e_baseline.json missing; refresh with e2e_baseline.sh"
-		return
-	fi
-	# Pass signal is ASSERTION parity vs the committed, distilled baseline
-	# (e2e_baseline.json): no assertion regressed on a request that exists in both.
-	# e2e_diff.py matches requests by NAME (not position), so added/removed doc
-	# examples never cascade into false diffs. Body-level identity (bodydiff, in
-	# e2e_check.sh) is deliberately NOT the bar here -- on a branch that changes
-	# behaviour on purpose (e.g. Xapian 2.0.0's stemming) bodies legitimately differ
-	# while assertions still pass. When you intentionally change documented
-	# behaviour, refresh the baseline: harness/e2e_baseline.sh.
+	echo "== [e2e] functional (doc assertions) =="
+	# The docs ARE the spec: every request doc carries its own pm.test assertions,
+	# and the generator synthesises a default for any request that lacks one (2xx
+	# success, or the status pinned by a `status:` marker for the deliberate error
+	# demos). The gate (e2e_assert.py) is GREEN only when EVERY documented assertion
+	# passes and every request is covered -- no baseline, no allowlist, no skips. So
+	# this runs anywhere (incl. CI) straight from the docs.
 	local out="/tmp/xa_e2e_ours.json"
 	"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" >/dev/null 2>&1
-	if python3 "$HARNESS_DIR/e2e_diff.py" "$out" "$HARNESS_DIR/e2e_baseline.json" 2>/dev/null | grep -q '^GREEN'; then
+	if python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>/dev/null | grep -q '^GREEN'; then
 		pass "e2e"
 	else
 		fail "e2e"

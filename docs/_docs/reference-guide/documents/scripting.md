@@ -100,6 +100,11 @@ PUT /twitter/user/John
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}
 
 Instead, pass it in as a named parameter:
 
@@ -121,6 +126,11 @@ PUT /twitter/user/John
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}
 
 The first version has to be recompiled every time the multiplier changes. The
 second version is only compiled once.
@@ -180,4 +190,9 @@ PUT /twitter/user/John
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+{% comment %}
+---
+status: 400
+---
+{% endcomment %}
 
