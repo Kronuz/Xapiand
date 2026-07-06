@@ -1,5 +1,5 @@
 .\"
-.\" Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+.\" Copyright (c) 2015-2026 Dubalu LLC. All rights reserved.
 .\"
 .\" Permission is hereby granted, free of charge, to any person obtaining a copy
 .\" of this software and associated documentation files (the "Software"), to
@@ -19,9 +19,7 @@
 .\" FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 .\" IN THE SOFTWARE.
 .\"
-
-
-.Dd June 16, 2016
+.Dd July 6, 2026
 .Dt XAPIAND 8
 .Os
 .Sh NAME
@@ -29,128 +27,175 @@
 .Nd "RESTful search engine built on top of Xapian"
 .Sh SYNOPSIS
 .Nm
-.Op Fl Fl committers Ar committers
-.Op Fl Fl replicators Ar replicators
-.Op Fl Fl dbpool Ar size
-.Op Fl Fl workers Ar threads
-.Op Fl Fl use Ar select | poll | kqueue
-.Op Fl Fl gid Ar gid
-.Op Fl Fl uid Ar uid
-.Op Fl L | Fl Fl logfile Ar file
-.Op Fl P | Fl Fl pidfile Ar file
-.Op Fl Fl rgroup Ar group
-.Op Fl Fl raft Ar port
-.Op Fl Fl dgroup Ar group
-.Op Fl Fl discovery Ar port
-.Op Fl Fl xapian Ar port
-.Op Fl Fl http Ar port
-.Op Fl Fl name Ar node
+.Op Fl D Ar path
 .Op Fl Fl cluster Ar name
-.Op Fl D | Fl Fl database Ar path
+.Op Fl Fl name Ar node
+.Op Fl Fl port Ar port
+.Op Fl Fl bind-address Ar addr
 .Op Fl Fl solo
-.Op Fl Fl chert
-.Op Fl Fl verbosity Ar verbosity
-.Op Fl v | Fl Fl verbose
-.Op Fl d | Fl Fl detach
-.Op Fl Fl | Fl Fl ignore_rest
-.Op Fl Fl colors
-.Op Fl Fl no-colors
-.Op Fl Fl foreign
+.Op Fl d
 .Op Fl Fl strict
-.Op Fl Fl optimal
-.Op Fl Fl force
-.Op Fl Fl uuid Ar simple | compact | partition | encoded
-.Op Fl Fl version
-.Op Fl h | Fl Fl help
+.Op Fl L Ar file
+.Op Fl P Ar file
+.Op Fl Fl OPTIONS
+.Nm
+.Fl Fl dump Ar endpoint
+.Op Fl o Ar file
+.Nm
+.Fl Fl restore Ar endpoint
+.Op Fl i Ar file
 .Sh DESCRIPTION
 .Nm
-is a Highly Available Distributed RESTful Search and Storage Engine
-built for the cloud and with Data Locality. Built on top of Xapian.
+is a highly available, distributed, RESTful search and storage engine built for
+the cloud and with data locality, on top of a customized in-tree fork of Xapian.
+A single node exposes a schemaless document store and full-text search over a
+JSON / MessagePack REST API; several nodes sharing a
+.Fl Fl cluster
+name form a cluster that discovers its peers and replicates indexes.
 .Pp
-The following options are available:
-.Bl -tag -width ".Fl d Ar directives"
+Run with no arguments,
+.Nm
+starts a node in the foreground using the current directory as its data root and
+the default ports.  The most common options are documented below; run
+.Nm Fl Fl help
+for the exhaustive list, including the individual thread-pool and cache-size
+tuning knobs.
+.Ss General
+.Bl -tag -width ".Fl Fl database Ar path"
 .It Fl h , Fl Fl help
-Displays usage information and exits.
+Display usage information and exit.
 .It Fl Fl version
-Displays version information and exits.
-.It Fl Fl , Fl Fl ignore_rest
-Ignores the rest of the labeled arguments following this flag.
-.It Fl d , Fl Fl detach
-detach process. (run in background)
-.It Fl v, Fl Fl verbose
-Increase verbosity. (accepted multiple times)
-.It Fl Fl verbosity
-Set verbosity.
-.It Fl Fl chert
-Prefer Chert databases.
-.It Fl Fl solo
-Run solo indexer. (no replication or discovery)
+Display version information and exit.
 .It Fl D , Fl Fl database Ar path
-Path to the root of the node.
+Path to the root of the node (the data directory).
+.It Fl d , Fl Fl detach
+Detach and run in the background as a daemon.
+.It Fl Fl solo
+Run as a solo node: no discovery and no replication.
+.It Fl v , Fl Fl verbose
+Increase verbosity; may be given multiple times.
+.It Fl Fl verbosity Ar level
+Set the verbosity level explicitly.
+.It Fl Fl strict
+Require every field to declare its type (no type guessing).
+.It Fl Fl force
+Force using
+.Ar path
+as the root of the node even if it looks unsafe.
+.El
+.Ss Node and cluster
+.Bl -tag -width ".Fl Fl database Ar path"
 .It Fl Fl cluster Ar name
 Cluster name to join.
 .It Fl Fl name Ar node
-Node name.
-.It Fl Fl http Ar port
-TCP HTTP port number to listen on for REST API.
-.It Fl Fl xapian Ar port
-Xapian binary protocol TCP port number to listen on.
-.It Fl Fl discovery Ar port
-Discovery UDP port number to listen on.
-.It Fl Fl dgroup Ar group
-Discovery UDP group name.
-.It Fl Fl raft Ar port
-Raft UDP port number to listen on.
-.It Fl Fl rgroup Ar group
-Raft UDP group name.
-.It Fl P , Fl Fl pidfile Ar file
-Save PID in
-Ar file .
+Node name (defaults to a name derived from the host).
+.It Fl Fl primary-node Ar node
+Name of the primary node (the one holding the primary cluster database).
+.It Fl Fl replicas Ar n
+Default number of replicas per index.
+.It Fl Fl shards Ar n
+Default number of shards per index.
+.It Fl Fl uuid Ar mode ...
+UUID modes:
+.Ar vanilla , compact , encoded ,
+and
+.Ar partition
+(compact and/or encoded UUIDs and UUID index-path partitioning).
+.El
+.Ss Networking
+.Bl -tag -width ".Fl Fl database Ar path"
+.It Fl Fl port Ar port
+TCP port for the HTTP REST API.
+.It Fl Fl bind-address Ar addr
+Address to bind the listeners to.
+.It Fl Fl xapian-port Ar port
+TCP port for the Xapian binary (remote) protocol.
+.It Fl Fl replica-port Ar port
+TCP port for the replication protocol.
+.It Fl Fl discovery-port Ar port
+UDP port for cluster discovery.
+.It Fl Fl discovery-group Ar group
+Multicast group name for discovery.
+.It Fl Fl discovery-interface Ar addr
+Local interface address for discovery multicast (send + join); empty selects the
+default route.  Pin it (for example
+.Ar 127.0.0.1 )
+on a multi-homed or VPN host whose default interface cannot multicast.
+.El
+.Ss Logging, output and privileges
+.Bl -tag -width ".Fl Fl database Ar path"
 .It Fl L , Fl Fl logfile Ar file
-Save logs in
-Ar file .
+Write logs to
+.Ar file .
+.It Fl P , Fl Fl pidfile Ar file
+Write the process id to
+.Ar file .
+.It Fl Fl log Ar setting ...
+Enable logging settings:
+.Ar epoch , iso8601 , timeless , seconds , milliseconds , microseconds ,
+.Ar thread-names , locations ,
+and
+.Ar replicas .
+.It Fl Fl color Ar mode
+When to colorize console output:
+.Ar auto , always , never , truecolor , 256 ,
+or
+.Ar 16 .
+.It Fl Fl no-color
+Disable console colors (alias for
+.Fl Fl color Ar never ) .
+.It Fl Fl pretty , Fl Fl no-pretty
+Enable or disable pretty-printed results.
+.It Fl Fl comments , Fl Fl no-comments
+Enable or disable result comments.
+.It Fl Fl echo , Fl Fl no-echo
+Enable or disable echoing objects in results.
+.It Fl Fl human , Fl Fl no-human
+Enable or disable the result humanizer.
+.It Fl Fl admin-commands
+Enable administrative HTTP commands.
 .It Fl Fl uid Ar uid
-User ID.
+Drop privileges to this user id after startup.
 .It Fl Fl gid Ar gid
-Group ID.
-.It Fl Fl use Ar select | poll | kqueue
-Connection processing backend.
-.It Fl Fl workers Ar threads
-Number of worker servers.
-.It Fl Fl dbpool Ar size
-Maximum number of databases in database pool.
-.It Fl Fl replicators Ar replicators
-Number of replicators.
-.It Fl Fl committers Ar committers
-Number of committers.
-.It Fl Fl colors
-Enables colors on the console.
-.It Fl Fl no-colors
-Disables colors on the console.
-.It Fl Fl foreign
-Force foreign (shared) schemas for all indexes.
-.It Fl Fl strict
-Force the user to define the type for each field.
-.It Fl Fl optimal
-Minimal optimal indexing configuration.
-.It Fl Fl force
-Force using path as the root of the node.
-.It Fl Fl uuid Ar simple | compact | partition | encoded
-Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.
-.Sh FILES
+Drop privileges to this group id after startup.
+.El
+.Ss Dump and restore
+.Bl -tag -width ".Fl Fl database Ar path"
+.It Fl Fl dump Ar endpoint
+Dump
+.Ar endpoint
+to standard output (or to
+.Fl o Ar file ) .
+.It Fl o , Fl Fl out Ar file
+Output filename for
+.Fl Fl dump .
+.It Fl Fl restore Ar endpoint
+Restore
+.Ar endpoint
+from standard input (or from
+.Fl i Ar file ) .
+.It Fl i , Fl Fl in Ar file
+Input filename for
+.Fl Fl restore .
+.El
+.Pp
+Numerous additional options tune the thread pools (matchers, committers, bulk
+preparers and indexers, HTTP / remote / replication clients and servers, ...) and
+the pool and cache sizes (database pool, schema pool, resolver cache, ...); see
+.Nm Fl Fl help .
 .Sh EXIT STATUS
-Exit status is 0 on success, or 1 if the command fails.
+.Ex -std
 .Sh SEE ALSO
 Documentation at
-.Pa https://github.com/Kronuz/Xapiand/tree/master/docs
+.Pa https://github.com/Kronuz/Xapiand/tree/master/docs .
 .Pp
 For questions and technical support, please refer to
-.Pa https://github.com/Kronuz/Xapiand
-.Sh HISTORY
+.Pa https://github.com/Kronuz/Xapiand .
 .Sh AUTHORS
 .An -nosplit
-.An Germán Méndez Bravo (Kronuz)  german.mb@dubalu.com .
-.Pp
-.An José Madrigal Cárdenas (YosefMac) mac.yosef@gmail.com .
-.Pp
-.An José María Valencia Ramírez (JoseMariaVR) chema989@gmail.com .
+.An "Germán Méndez Bravo" Aq Mt german.mb@gmail.com
+(Kronuz),
+.An "José Madrigal Cárdenas" Aq Mt mac.yosef@gmail.com
+(YosefMac), and
+.An "José María Valencia Ramírez" Aq Mt chema989@gmail.com
+(JoseMariaVR).
