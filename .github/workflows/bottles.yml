@@ -1,0 +1,66 @@
+name: Bottles
+
+# Build Homebrew bottles (pre-compiled binaries) for macOS across the
+# arch x OS-version matrix, and attach them to the release. Trigger manually
+# against an existing tag (workflow_dispatch) while iterating, or automatically
+# on a version tag alongside the rest of the release.
+#
+# After the per-cell bottles are green, merge their JSONs into the formula's
+# `bottle do` block (brew bottle --merge) and commit it to the tap; that final
+# auto-merge/PR step is intentionally left as a follow-up.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to bottle (e.g. v1.0.0-alpha.1)"
+        required: true
+        default: v1.0.0-alpha.1
+  push:
+    tags:
+      - 'v[0-9]+.*'
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  bottle:
+    name: Bottle (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-13 = x86_64 (Intel); macos-14/15 = arm64 (Apple Silicon).
+        os: [macos-13, macos-14, macos-15]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build bottle
+        run: |
+          set -eux
+          TAP=kronuz/local
+          brew tap-new "$TAP" --no-git
+          cp contrib/homebrew/xapiand.rb "$(brew --repository "$TAP")/Formula/xapiand.rb"
+          brew install --build-bottle "$TAP/xapiand"
+          brew bottle --json --no-rebuild \
+            --root-url="https://github.com/${{ github.repository }}/releases/download/${TAG}" \
+            "$TAP/xapiand"
+          # Homebrew writes the file with a '--' separator, but the download URL in
+          # the bottle DSL uses a single '-'; rename so the uploaded asset matches.
+          for f in *--*.bottle.tar.gz; do mv "$f" "${f/--/-}"; done
+          ls -la ./*.bottle.tar.gz ./*.bottle.json
+
+      - name: Attach bottle to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          files: ./*.bottle.tar.gz
+
+      - name: Upload bottle JSON (for the DSL merge)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bottle-json-${{ matrix.os }}
+          path: ./*.bottle.json

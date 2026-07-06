@@ -26,6 +26,9 @@ class Xapiand < Formula
   depends_on "zstd"
 
   def install
+    # icu4c is keg-only on Homebrew; point pkg-config (and thus CMake's ICU probe)
+    # at it so the build finds ICU.
+    ENV.prepend_path "PKG_CONFIG_PATH", Formula["icu4c"].opt_lib/"pkgconfig"
     system "cmake", "-S", ".", "-B", "build", "-GNinja",
            "-DCMAKE_BUILD_TYPE=Release",
            "-DASIO_INCLUDE_DIR=#{Formula["asio"].opt_include}",
