@@ -50,6 +50,18 @@ jobs:
           for f in *--*.bottle.tar.gz; do mv "$f" "${f/--/-}"; done
           ls -la ./*.bottle.tar.gz ./*.bottle.json
 
+      - name: Dump the full Homebrew build log on failure
+        if: failure()
+        run: |
+          # Homebrew only echoes the "Last 15 lines" to the console, which is
+          # almost always just warnings and hides the real compiler error. Print
+          # the complete build logs so CI shows what actually failed.
+          for f in ~/Library/Logs/Homebrew/xapiand/*.log; do
+            echo "::group::$f"
+            cat "$f" || true
+            echo "::endgroup::"
+          done
+
       - name: Attach bottle to the release
         uses: softprops/action-gh-release@v2
         with:
