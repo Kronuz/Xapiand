@@ -52,9 +52,11 @@ jobs:
     name: Bottle (macos-13, Intel — best effort)
     runs-on: macos-13
     # GitHub's x86_64 runners are deprecated and heavily oversubscribed; a build
-    # that takes ~6 min on arm64 can take 30+ min or stall here. Cap the wall time
-    # and never let this cell fail the workflow or gate the tap merge.
-    timeout-minutes: 45
+    # that takes ~6 min on arm64 can take 30+ min here. This cell gates nothing
+    # (continue-on-error, and publish does not depend on it), so don't cap it
+    # early: let it run to GitHub's default per-job ceiling (~6h) and produce the
+    # x86_64 bottle whenever the runner finally gets to it. A timeout/failure here
+    # is harmless -- the arm64 bottles and the tap merge have already gone out.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
