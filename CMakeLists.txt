@@ -2106,6 +2106,7 @@ if (BUILD_TESTS)
 				LZ4_OBJ
 				prometheus-cpp::core
 				YAML_OBJ
+				$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 				${CMAKE_THREAD_LIBS_INIT}
 				${UUID_LIBRARIES}
 				${M_LIBRARIES}
@@ -2142,6 +2143,7 @@ if (BUILD_TESTS)
 				LZ4_OBJ
 				prometheus-cpp::core
 				YAML_OBJ
+				$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 			)
 
 			target_link_libraries(${PROJECT_TEST} PRIVATE
