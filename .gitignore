@@ -1,66 +1,59 @@
-.libs
-.deps
-.dirstamp
+# Build directories (out-of-source CMake builds: build/, build-asan/, ...)
+/*build*/
 
-# Automake stuff
-Makefile
-Makefile.in
-Makefile.mk
-/aclocal.m4
-/configure
-/version.h
-/version.h.in~
+# CMake in-source safety net (should live under build/, ignore anyway)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+/_deps/
+
+# Generated headers (CMake configures these from *.in)
 /config.h
-/config.h.in~
-/config.log
-/config.status
-/autom4te*.cache
-/stamp-h1
-/stamp-h.in
-/libtool
-/*build*
+/version.h
 
-# Xcode workspace
-/Xapiand.xcodeproj/xcuserdata
-/Xapiand.xcodeproj/project.xcworkspace
+# The built binary
+/xapiand
 
-# Xapian Databases
+# Xapian on-disk databases
 *.baseA
 *.baseB
 *.DB
 
-# Compiled Object files
-*.slo
-*.lo
+# Compiled artifacts
 *.o
 *.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
+*.a
+*.lib
 *.so
 *.dylib
 *.dll
-*.pyo
-*.pyc
-
-# Fortran module files
-*.mod
-
-# OS X
-.DS_Store
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
+*.gch
+*.pch
 *.exe
 *.out
 *.app
-/xapiand
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+
+# Editors / IDEs (personal config, not tracked)
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Caches / OS cruft
 .cache/
+.DS_Store
+
+# Vendored Xapian (src/xapian/) ships autotools build files; the CMake build
+# doesn't use them, and they were never tracked. Keep them out of git status.
+src/xapian/**/Makefile
+src/xapian/**/Makefile.in
+src/xapian/**/Makefile.mk
+src/xapian/**/Makefile.am
