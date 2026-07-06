@@ -50,21 +50,28 @@ class Shard;
 struct WalHeader;
 
 
-#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))  // ((1024 * 4) - 32) / 4 = 1016
+// v2 (dual-meta, crash-safe) WAL header. It begins with the engine-owned
+// StorageMetaHead (magic, txnid, high-water, whole-block checksum) -- which opts
+// WAL volumes into the crash-safe format -- followed by the WAL's own per-revision
+// index (revision, uuid, slot table). WAL_SLOTS is sized so the whole header is
+// exactly one block (the static_assert below guards it); the `- 4` accounts for
+// the alignment padding the compiler inserts before the 8-byte revision, since the
+// packed StorageMetaHead is 28 bytes.
+#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(StorageMetaHead) - 4 - sizeof(Xapian::rev) - 16) / sizeof(uint32_t))
 
 
 struct WalHeader {
-	struct StorageHeaderHead {
-		uint32_t offset;
-		Xapian::rev revision;
-		std::array<unsigned char, 16> uuid;
-	} head;
+	StorageMetaHead meta;
+
+	Xapian::rev revision;
+	std::array<unsigned char, 16> uuid;
 
 	uint32_t slot[WAL_SLOTS];
 
 	void init(void* param, void* args);
 	void validate(void* param, void* args);
 };
+static_assert(sizeof(WalHeader) == STORAGE_BLOCK_SIZE, "WalHeader must be exactly one block");
 
 
 #pragma pack(push, 1)
