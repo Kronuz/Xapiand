@@ -1,6 +1,6 @@
 #!/bin/sh
 endpoint="${1%%\?*}"
-query="${1:${#endpoint}}"
+query="${1#"$endpoint"}"
 start="${2:-1}"
 end="${3:-100}"
 shift 3
