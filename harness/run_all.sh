@@ -101,11 +101,18 @@ run_e2e() {
 	# passes and every request is covered -- no baseline, no allowlist, no skips. So
 	# this runs anywhere (incl. CI) straight from the docs.
 	local out="/tmp/xa_e2e_ours.json"
-	"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" >/dev/null 2>&1
-	if python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>/dev/null | grep -q '^GREEN'; then
+	local cap rep
+	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)"
+	rep="$(python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
+	if printf '%s\n' "$rep" | grep -q '^GREEN'; then
 		pass "e2e"
 	else
 		fail "e2e"
+		# Surface WHY: the failing assertions / uncovered requests (or a capture
+		# problem, e.g. the node never came up), so CI logs the cause instead of a
+		# bare "failed".
+		printf '%s\n' "$rep" | grep -E '✗|FAILING|UNCOVERED|NOT GREEN|requests=' | head -25
+		printf '%s\n' "$cap" | grep -iE 'node exited|EADDR|error|exception|Killed|Aborted|newman exit' | head -8
 	fi
 }
 
