@@ -2087,6 +2087,7 @@ if (BUILD_TESTS)
 	set(GTEST_BOTH_LIBRARIES gtest gtest_main)
 	set(GTEST_INCLUDE_DIRS "")
 
+		# Pure unit tests that only need GoogleTest (no Xapiand code linked).
 		foreach (VAR_TEST string)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
@@ -2094,6 +2095,36 @@ if (BUILD_TESTS)
 			)
 			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_TEST} PRIVATE ${GTEST_BOTH_LIBRARIES})
+			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
+			add_dependencies(check "${PROJECT_TEST}")
+		endforeach ()
+
+		# Unit tests that exercise Xapiand code: link the object libraries the way
+		# a real component does. Revived from oldtests/ one module at a time as they
+		# are brought current against today's API.
+		foreach (VAR_TEST fieldparser)
+			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+			add_executable(${PROJECT_TEST}
+				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
+			)
+			target_link_libraries(${PROJECT_TEST} PRIVATE
+				XAPIAND_PACKAGE_OBJ
+				XAPIAND_OBJ
+				XAPIAN_OBJ
+				BOOLEAN_PARSER_OBJ
+				LZ4_OBJ
+				prometheus-cpp::core
+				YAML_OBJ
+			)
+			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
+			target_link_libraries(${PROJECT_TEST} PRIVATE
+				${GTEST_BOTH_LIBRARIES}
+				${CMAKE_THREAD_LIBS_INIT}
+				${UUID_LIBRARIES}
+				${M_LIBRARIES}
+				${DL_LIBRARIES}
+				${ZLIB_LIBRARIES}
+			)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
@@ -2116,7 +2147,7 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
 				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
 			)
-			target_link_libraries(${PROJECT_TEST}
+			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ
 				XAPIAN_OBJ

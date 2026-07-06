@@ -112,7 +112,7 @@ public:
 	}
 
 	bool is_single_quoted_value(size_t l=0) const noexcept {
-		return l <= lvl && offs_double_quote[l] != 0;
+		return l <= lvl && offs_single_quote[l] != 0;
 	}
 
 	std::string_view get_double_quoted_value(size_t l=0) const {
