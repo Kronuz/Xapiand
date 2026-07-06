@@ -35,9 +35,7 @@ jobs:
           usesh: true
           envs: 'TAG'
           prepare: |
-            pkg install -y cmake ninja git pkgconf perl5 tcl86 icu zstd asio \
-              ruby
-            gem install --no-document fpm
+            pkg install -y cmake ninja git pkgconf perl5 tcl86 icu zstd asio
           run: |
             set -eux
             cmake -G Ninja -B build \
@@ -47,17 +45,11 @@ jobs:
             ninja -C build
             DESTDIR="$PWD/stage" ninja -C build install
             VER="${TAG#v}"
-            fpm -s dir -t freebsd -n xapiand -v "$VER" \
-              --license MIT \
-              --description "Xapiand: a RESTful search engine" \
-              --url "https://github.com/Kronuz/Xapiand" \
-              -C stage usr
-            ls -la ./*.txz ./*.pkg 2>/dev/null || true
+            tar -C stage -czf "xapiand-${VER}-freebsd-amd64.tar.gz" .
+            ls -la ./*.tar.gz
 
-      - name: Attach FreeBSD package to the release
+      - name: Attach FreeBSD tarball to the release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          files: |
-            ./*.txz
-            ./*.pkg
+          files: ./*.tar.gz
