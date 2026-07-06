@@ -99,14 +99,30 @@
  */
 #ifdef XAPIAND_DATA_STORAGE
 
-struct DataHeader {
+// The legacy v1 data-storage header: a single in-place header block. New volumes
+// are written in the crash-safe v2 format below; this type exists only so a v2
+// DataStorage can still READ pre-existing v1 volumes (read-only).
+struct DataHeaderV1 {
 	struct DataHeaderHead {
 		uint32_t magic;
 		uint32_t offset;  // required
 		char uuid[UUID_LENGTH];
 	} head;
 
-	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeaderV1::DataHeaderHead)) / sizeof(char)];
+
+	void init(void* param, void* args);
+	void validate(void* param, void* args);
+};
+
+
+// The v2 (dual-meta, crash-safe) data-storage header. It begins with the engine's
+// StorageMetaHead (magic, txnid, high-water, whole-block checksum) -- which is what
+// opts new volumes into the v2 format -- then the shard uuid, padded to a block.
+struct DataHeaderV2 {
+	StorageMetaHead meta;
+	char uuid[UUID_LENGTH];
+	char padding[STORAGE_BLOCK_SIZE - sizeof(StorageMetaHead) - UUID_LENGTH];
 
 	void init(void* param, void* args);
 	void validate(void* param, void* args);
@@ -157,7 +173,7 @@ struct DataBinFooter {
 #pragma pack(pop)
 
 
-class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
+class DataStorage : public Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1> {
 public:
 	int flags;
 
@@ -170,21 +186,21 @@ public:
 
 
 void
-DataHeader::init(void* param, void* /*unused*/)
+DataHeaderV1::init(void* param, void* /*unused*/)
 {
 	auto shard = static_cast<Shard*>(param);
 	assert(shard);
 
-	head.magic = STORAGE_MAGIC;
+	head.magic = STORAGE_V1_MAGIC;
 	strncpy(head.uuid, shard->db()->get_uuid().c_str(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 }
 
 
 void
-DataHeader::validate(void* param, void* /*unused*/)
+DataHeaderV1::validate(void* param, void* /*unused*/)
 {
-	if (head.magic != STORAGE_MAGIC) {
+	if (head.magic != STORAGE_V1_MAGIC) {
 		THROW(StorageCorruptVolume, "Bad data storage header magic number");
 	}
 
@@ -195,8 +211,33 @@ DataHeader::validate(void* param, void* /*unused*/)
 }
 
 
+void
+DataHeaderV2::init(void* param, void* /*unused*/)
+{
+	auto shard = static_cast<Shard*>(param);
+	assert(shard);
+
+	// The engine stamps meta (magic/txnid/high-water/checksum); we only carry the
+	// shard uuid so a foreign volume is rejected on open.
+	memset(uuid, 0, sizeof(uuid));
+	strncpy(uuid, shard->db()->get_uuid().c_str(), sizeof(uuid));
+}
+
+
+void
+DataHeaderV2::validate(void* param, void* /*unused*/)
+{
+	// The engine has already checked the meta magic + whole-block checksum; this
+	// is the shard-domain check.
+	auto shard = static_cast<Shard*>(param);
+	if (UUID(uuid) != UUID(shard->db()->get_uuid())) {
+		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
+	}
+}
+
+
 DataStorage::DataStorage(std::string_view base_path_, void* param_, int flags)
-	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_),
+	: Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1>(base_path_, param_),
 	  flags(flags)
 {
 }
@@ -205,7 +246,7 @@ DataStorage::DataStorage(std::string_view base_path_, void* param_, int flags)
 bool
 DataStorage::open(std::string_view relative_path)
 {
-	return Storage<DataHeader, DataBinHeader, DataBinFooter>::open(relative_path, flags);
+	return Storage<DataHeaderV2, DataBinHeader, DataBinFooter, STORAGE_DEFAULT_IO, DataHeaderV1>::open(relative_path, flags);
 }
 #endif  // XAPIAND_DATA_STORAGE
 
@@ -1132,6 +1173,12 @@ Shard::storage_push_blobs(std::string&& doc_data)
 							offset = writable_storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
 							break;
 						} catch (StorageEOF) {
+							++writable_storage->volume;
+							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
+						} catch (const StorageLegacyReadOnly&) {
+							// The latest volume is a legacy v1 volume (read-only).
+							// Start a fresh v2 volume above it for new writes; the
+							// old v1 volumes stay readable and age out over time.
 							++writable_storage->volume;
 							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 						}
