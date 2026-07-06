@@ -42,7 +42,19 @@ COLL="${COLL:-/tmp/xe2e_collection.json}"
 python3 "$REPO/docs_to_postman.py" > "$COLL" || { echo "docs_to_postman.py failed"; exit 1; }
 echo "collection: $COLL ($(wc -c < "$COLL") bytes)"
 
-pkill -9 -f 'bin/xapiand' 2>/dev/null; sleep 1   # no squatter on :8880
+# Free :8880 if a previous node is squatting, killing only the PID that holds the port.
+# Do NOT match by name (e.g. pkill -f 'bin/xapiand'): $BIN is an argument to THIS script,
+# so a name match also matches e2e_capture.sh's own command line and SIGKILLs itself --
+# which is exactly what killed the e2e step in CI on Linux (macOS pkill -f matched
+# differently, so it slipped through locally).
+squatter=""
+if command -v lsof >/dev/null 2>&1; then
+	squatter=$(lsof -ti tcp:8880 2>/dev/null || true)
+elif command -v fuser >/dev/null 2>&1; then
+	squatter=$(fuser 8880/tcp 2>/dev/null | tr -cd '0-9 ' || true)
+fi
+[ -n "$squatter" ] && kill -9 $squatter 2>/dev/null || true
+sleep 1
 rm -rf "$DATADIR"; mkdir -p "$DATADIR"
 "$BIN" --port 8880 --name benchnode --solo -D "$DATADIR" >/tmp/xe2e_node.log 2>&1 &
 pid=$!
