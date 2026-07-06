@@ -2102,7 +2102,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser)
+		foreach (VAR_TEST fieldparser serialise_list)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
