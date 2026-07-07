@@ -7,6 +7,7 @@ import kronuzLight from './src/styles/kronuz-light.json';
 import { sidebar } from './src/sidebar.mjs';
 import { restLangs } from './src/rest-lang.mjs';
 import remarkHints from './src/remark-hints.mjs';
+import remarkD2 from './src/remark-d2.mjs';
 
 // Xapiand documentation, on Astro + Starlight (Kronuz theme), a migration of the
 // former Jekyll site. Search is Starlight's built-in Pagefind (local, static, no
@@ -17,7 +18,9 @@ export default defineConfig({
   // The six Jekyll hint styles (tip/info/caution/warning/unimplemented/construction) are
   // rendered as custom `:::hint{.type}` asides; see src/remark-hints.mjs + custom.css.
   markdown: {
-    remarkPlugins: [remarkHints],
+    // remarkD2 turns ```d2 fences into themed (light+dark) diagrams at build time
+    // by shelling out to the d2 CLI (must be on PATH); see src/remark-d2.mjs.
+    remarkPlugins: [remarkHints, remarkD2],
   },
   // The Jekyll site served a /tutorials/ index; keep that URL working
   // (external/bookmarked links) by redirecting to its Astro equivalent.

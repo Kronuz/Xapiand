@@ -27,9 +27,16 @@ of [Xapian](https://xapian.org/) 2.0.0, built as part of the tree,
 and most of the remaining building blocks (MessagePack, the storage codecs, logging,
 the Asio-based reactor runtime, the [Lua](https://www.lua.org/)
 scripting engine via sol2, and more) are pulled in automatically at configure time
-through CMake's `FetchContent` from the standalone Kronuz libraries, so **a network
+through CMake's `FetchContent` from the [standalone Kronuz libraries](/Xapiand/architecture/dependencies), so **a network
 connection is required the first time you configure**. (Earlier releases embedded
 ChaiScript and a libev event loop; those are now Lua and the Asio reactor.)
+
+:::hint{.info}
+The Xapian fork is compiled automatically as part of the Xapiand build, so you
+**don't** need to build or install it yourself. If you want to compile the search
+library standalone (for example, to work on the search core in isolation), see
+[Building the Xapian Library](/Xapiand/building-xapian).
+:::
 
 The only external system dependencies you need to provide are:
 
@@ -50,7 +57,7 @@ to build:
 
 ```sh
 # Install the command line developer tools:
-~/ $ xcode-select --install
+xcode-select --install
 ```
 
 ##### 2. [Install Homebrew](https://docs.brew.sh/Installation)
@@ -58,10 +65,10 @@ to build:
 ##### 3. Install Requirements
 
 ```sh
-~/ $ brew install ninja
-~/ $ brew install pkg-config
-~/ $ brew install cmake
-~/ $ brew install icu
+brew install ninja
+brew install pkg-config
+brew install cmake
+brew install icu
 ```
 
 ---
@@ -73,22 +80,22 @@ First download and untar the Xapiand official distribution or clone the
 repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronuz/Xapiand.git)
 
 ```sh
-~/ $ git clone -b master --single-branch --depth 1 \
+git clone -b master --single-branch --depth 1 \
   "https://github.com/Kronuz/Xapiand.git"
 ```
 
 #### Prepare the Build
 
 ```sh
-~/ $ cd Xapiand
-~/Xapiand $ mkdir build
-~/Xapiand $ cd build
+cd Xapiand
+mkdir build
+cd build
 ```
 
 #### Configure the Build
 
 ```sh
-~/Xapiand/build $ cmake -GNinja ..
+cmake -GNinja ..
 ```
 
 :::hint{.info}
@@ -101,9 +108,9 @@ minutes; subsequent configures reuse them.
 #### Build, Test and Install
 
 ```sh
-~/Xapiand/build $ ninja
-~/Xapiand/build $ ninja check
-~/Xapiand/build $ ninja install
+ninja
+ninja check
+ninja install
 ```
 
 :::hint[CPU Usage]{.tip}
@@ -112,6 +119,35 @@ as `ninja`, by default, uses all available CPU cores; you can prevent this by
 telling ninja to use `<number of cores> - 1` jobs. Example, for a system with
 4 CPU cores: `ninja -j3`.
 :::
+
+---
+## Build Options
+
+The build is configured with CMake options, toggled at configure time with
+`-D<OPTION>=ON` / `-D<OPTION>=OFF`. The defaults produce an optimized, clustered
+release; you rarely need to change them for a normal build.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CMAKE_BUILD_TYPE` | `Release` | Build type (`Release`, `RelWithDebInfo`, `Debug`, …) |
+| `LTO` | `ON` | Link-Time Optimization |
+| `CLUSTERING` | `ON` | Remote clustering |
+| `DATABASE_WAL` | `ON` | Database write-ahead log (WAL) |
+| `DATA_STORAGE` | `ON` | Data storage volumes |
+| `TRACEBACKS` | `OFF` (`ON` in Debug) | Tracebacks in exceptions |
+| `ASSERTS` | `OFF` (`ON` in Debug) | Runtime assertions |
+| `TRACKED_MEM` | `OFF` | Allocator that attributes memory to call sites |
+| `BUILD_TESTS` | `OFF` | Build the test suite |
+| `ASAN` | `OFF` | AddressSanitizer (see [Sanitizers](#sanitizers)) |
+| `UBSAN` | `OFF` | UndefinedBehaviorSanitizer |
+| `MSAN` | `OFF` | MemorySanitizer |
+| `TSAN` | `OFF` | ThreadSanitizer |
+
+For example, a debug build with tracebacks and assertions:
+
+```sh
+cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DTRACEBACKS=ON -DASSERTS=ON ..
+```
 
 ---
 ## Sanitizers
@@ -134,7 +170,7 @@ For developing and debugging, generally you'd want to enable the
 so you'll have to **Configure the Build** using something like:
 
 ```sh
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON ..
+cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON ..
 ```
 
 ### UndefinedBehavior Sanitizer (ASAN + UBSAN)
@@ -145,7 +181,7 @@ exceptions and debugging symbols, so you'll have to **Configure the Build**
 using something like:
 
 ```sh
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON -DUBSAN=ON ..
+cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON -DUBSAN=ON ..
 ```
 
 ### Memory Sanitizer (MSAN)
@@ -155,7 +191,7 @@ symbols in release mode, so you'll have to **Configure the Build** using
 something like:
 
 ```sh
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DMSAN=ON ..
+cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DMSAN=ON ..
 ```
 
 ### Thread Sanitizer (TSAN)
@@ -165,5 +201,13 @@ symbols in release mode, so you'll have to **Configure the Build** using
 something like:
 
 ```sh
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DTSAN=ON ..
+cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DTSAN=ON ..
 ```
+
+---
+## See Also
+
+- [Architecture Overview](/Xapiand/architecture) — the layers and how a request flows through them.
+- [Dependencies](/Xapiand/architecture/dependencies) — every fetched library, with links and a transitive tree.
+- [Internals](/Xapiand/architecture/internals) — source layout, conventions, and load-bearing invariants.
+- [Building the Xapian Library](/Xapiand/building-xapian) — compiling the search core standalone.

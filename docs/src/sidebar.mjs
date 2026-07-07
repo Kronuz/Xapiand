@@ -434,6 +434,22 @@ export const sidebar = [
     ]
   },
   {
+    "label": "Architecture",
+    "collapsed": false,
+    "items": [
+      {
+        "label": "Overview",
+        "slug": "architecture"
+      },
+      {
+        "slug": "architecture/dependencies"
+      },
+      {
+        "slug": "architecture/internals"
+      }
+    ]
+  },
+  {
     "label": "Miscellaneous",
     "collapsed": false,
     "items": [

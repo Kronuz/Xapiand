@@ -1563,3 +1563,34 @@ starlight-toc a[href='#_top'] {
 	.kz-intro { font-size: 2.2rem; }
 	.kz-lede { font-size: 1.35rem; }
 }
+
+/* Theme-aware diagrams. We render D2 diagrams to two SVGs (a light and a dark
+   variant) and swap them by theme, the same trick as the logo. Both are
+   transparent-background so they float on the page. */
+figure.diagram {
+  margin: 1.75rem 0;
+  text-align: center;
+}
+@media (min-width: 50rem) {
+  figure.diagram {
+    margin: 1.75rem 4rem;
+  }
+}
+figure.diagram img {
+  display: block;
+  margin-inline: auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 88vh;
+}
+figure.diagram .diagram-dark {
+  display: none;
+}
+[data-theme='dark'] figure.diagram .diagram-light {
+  display: none;
+}
+[data-theme='dark'] figure.diagram .diagram-dark {
+  display: block;
+  margin-inline: auto;
+}
