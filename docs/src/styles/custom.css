@@ -1395,7 +1395,11 @@ a.kz-group-link:hover { color: var(--sl-color-text-accent); }
 .kz-hint > :first-child { margin-top: 0; }
 .kz-hint > :last-child { margin-bottom: 0; }
 .kz-hint a { color: #fff; text-decoration: underline; }
-.kz-hint code:not(:where(.expressive-code *)) { color: #fff; background: rgba(0, 0, 0, 0.25); }
+.kz-hint code:not(:where(.expressive-code *)) {
+	color: #fff;
+	background: rgba(0, 0, 0, 0.1);
+	border-radius: 4px;
+}
 .kz-hint-title { font-weight: 700; margin: 0 0 0.35rem; }
 /* The icon, positioned in the left gutter (Jekyll's .note:after). */
 .kz-hint::before {
