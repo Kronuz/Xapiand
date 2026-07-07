@@ -19,10 +19,9 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkHints],
   },
-  // The Jekyll site served a /docs/ landing and a /tutorials/ index; keep those URLs
-  // working (external/bookmarked links) by redirecting to their Astro equivalents.
+  // The Jekyll site served a /tutorials/ index; keep that URL working
+  // (external/bookmarked links) by redirecting to its Astro equivalent.
   redirects: {
-    '/docs': '/Xapiand/welcome',
     '/tutorials': '/Xapiand/tutorials/home',
   },
   integrations: [
