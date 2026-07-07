@@ -9,6 +9,7 @@ import { restLangs } from './src/rest-lang.mjs';
 import remarkHints from './src/remark-hints.mjs';
 import remarkD2 from './src/remark-d2.mjs';
 import { pluginRestCurl } from './src/ec-rest-curl.mjs';
+import rehypeExternalLinks from 'rehype-external-links';
 
 // Xapiand documentation, on Astro + Starlight (Kronuz theme), a migration of the
 // former Jekyll site. Search is Starlight's built-in Pagefind (local, static, no
@@ -22,6 +23,11 @@ export default defineConfig({
     // remarkD2 turns ```d2 fences into themed (light+dark) diagrams at build time
     // by shelling out to the d2 CLI (must be on PATH); see src/remark-d2.mjs.
     remarkPlugins: [remarkHints, remarkD2],
+    // Open external (http/https) links in a new tab; internal links are relative,
+    // so they're untouched and keep navigating in place.
+    rehypePlugins: [
+      [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'], protocols: ['http', 'https'] }],
+    ],
   },
   // The Jekyll site served a /tutorials/ index; keep that URL working
   // (external/bookmarked links) by redirecting to its Astro equivalent.

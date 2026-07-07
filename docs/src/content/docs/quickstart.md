@@ -85,6 +85,14 @@ Now, let's retrieve the information we just added by GETting it:
 GET /twitter/user/Kronuz
 ```
 
+<!-- e2e:begin
+```js
+pm.test("retrieved the indexed user", function () {
+  pm.expect(pm.response.json().name).to.eql("Germán Méndez Bravo");
+});
+```
+e2e:end -->
+
 ```rest
 GET /twitter/tweet/1
 ```

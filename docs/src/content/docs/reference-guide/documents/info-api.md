@@ -8,6 +8,14 @@ You can retrieve information about a given document ID using the `INFO` method:
 INFO /twitter/tweet/1
 ```
 
+<!-- e2e:begin
+```js
+pm.test("returns info for document 1", function () {
+  pm.expect(pm.response.json().docid).to.eql(1);
+});
+```
+e2e:end -->
+
 :::hint{.warning}
 `INFO /twitter/tweet/1` is not the same as `INFO /twitter/tweet/1/`, the
 former will retrieve information about document `1` inside index `/twitter/tweet/`

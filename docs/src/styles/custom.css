@@ -116,6 +116,10 @@ padding-block: clamp(0.5rem, calc(0.25rem + 2vmin), 2rem);
 font-size: var(--sl-text-h3);
 }
 
+code {
+	border-radius: 4px;
+}
+
 /* Theme-aware diagrams. We render D2 diagrams to two SVGs (a light and a dark
    variant) and swap them by theme, the same trick as the logo. Both are
    transparent-background so they float on the page. */
@@ -150,7 +154,7 @@ margin-inline: auto;
 width: -moz-fit-content;
 width: fit-content;
 max-width: 100%;
-margin-inline: auto;
+margin-inline: 0;
 }
 
 /* Blockquotes read as quoted voice: italic prose, but keep inline code upright
@@ -1398,7 +1402,6 @@ a.kz-group-link:hover { color: var(--sl-color-text-accent); }
 .kz-hint code:not(:where(.expressive-code *)) {
 	color: #fff;
 	background: rgba(0, 0, 0, 0.1);
-	border-radius: 4px;
 }
 .kz-hint-title { font-weight: 700; margin: 0 0 0.35rem; }
 /* The icon, positioned in the left gutter (Jekyll's .note:after). */

@@ -45,6 +45,13 @@ pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+
+```js
+pm.test("Values are valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits[0]['_id']).to.equal('doc');
+});
+```
 e2e:end -->
 
 #### Index text values
