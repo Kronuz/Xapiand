@@ -22,7 +22,7 @@ reversible.
   / Miscellaneous, deep nesting, top groups expanded).
 - **Content:** `scripts/convert-docs.mjs` converts `../docs/_docs` + `../docs/_tutorials`
   (108 pages), plus a splash home (`src/content/docs/index.mdx`).
-- **Embedded E2E tests survive:** a request's ` ```json ` block renders (Expressive Code);
+- **Embedded E2E tests survive:** a request's ` ```rest ` block renders (Expressive Code);
   the `pm.test` / `status:` / `params:` payload is wrapped in an `<!-- e2e:begin … e2e:end -->`
   HTML comment (hidden from render, preserved in source). `docs_to_postman.py` still
   extracts requests + assertions from the migrated `.md` unchanged.
@@ -41,7 +41,7 @@ npm run build     # build to dist/ (also builds the Pagefind index)
 
 - The converters are best-effort: a few Jekyll-isms (some `{: .note }` asides, edge
   Liquid) may need cleanup; `../docs/tests/` (test-only docs) is not migrated yet.
-- The request example renders as a plain ` ```json ` block; the real migration should add
+- The request example renders as a plain ` ```rest ` block; the real migration should add
   a small remark plugin to render it as the curl card (copy-as-curl button), replacing
   `_includes/curl.html`.
 - Two sidebar slugs (`reference-guide` overview, `tutorials/home`) are stubs.
