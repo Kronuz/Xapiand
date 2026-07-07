@@ -1413,7 +1413,7 @@ a.kz-group-link:hover { color: var(--sl-color-text-accent); }
 .kz-hint-tip { background-image: linear-gradient(#7e6d42, #5c4e35); }
 .kz-hint-tip::before { content: '⭐️'; color: #ffcc00; }
 .kz-hint-info { background-image: linear-gradient(#0389aa, #00617f); }
-.kz-hint-info::before { content: '✏️'; }
+.kz-hint-info::before { content: '📝'; }
 .kz-hint-caution { background-image: linear-gradient(#cd9239, #a27528); }
 .kz-hint-caution::before { content: '🪄'; }
 .kz-hint-warning { background-image: linear-gradient(#9e2812, #6f0d0d); }
