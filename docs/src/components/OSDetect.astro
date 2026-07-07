@@ -1,7 +1,7 @@
 ---
 // Landing-page quick-start OS auto-detect. Sets data-os on the .kz-os widget to the
-// visitor's platform (macOS -> brew, Linux/Windows -> docker) and wires the small
-// picker so it can be overridden. The markup defaults to data-os="linux" (the
+// visitor's platform (macOS -> brew, Linux/Windows -> docker); the matching command
+// shows and the others stay hidden. The markup defaults to data-os="linux" (the
 // universal docker command), which is also the no-JS / unknown-OS fallback.
 ---
 
@@ -9,13 +9,8 @@
 	(function () {
 		var el = document.querySelector(".kz-os");
 		if (!el) return;
-		var set = function (os) { el.setAttribute("data-os", os); };
 		var p = ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent || "").toLowerCase();
-		if (/mac|iphone|ipad|ipod/.test(p)) set("mac");
-		else if (/win/.test(p)) set("windows");
-		else set("linux");
-		el.querySelectorAll(".kz-os-pick button").forEach(function (b) {
-			b.addEventListener("click", function () { set(b.getAttribute("data-os")); });
-		});
+		var os = /mac|iphone|ipad|ipod/.test(p) ? "mac" : /win/.test(p) ? "windows" : "linux";
+		el.setAttribute("data-os", os);
 	})();
 </script>
