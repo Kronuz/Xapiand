@@ -8,6 +8,7 @@ import { sidebar } from './src/sidebar.mjs';
 import { restLangs } from './src/rest-lang.mjs';
 import remarkHints from './src/remark-hints.mjs';
 import remarkD2 from './src/remark-d2.mjs';
+import { pluginRestCurl } from './src/ec-rest-curl.mjs';
 
 // Xapiand documentation, on Astro + Starlight (Kronuz theme), a migration of the
 // former Jekyll site. Search is Starlight's built-in Pagefind (local, static, no
@@ -50,7 +51,7 @@ export default defineConfig({
       editLink: {
         baseUrl: 'https://github.com/Kronuz/Xapiand/edit/master/docs-astro/',
       },
-      expressiveCode: { themes: [kronuzDark, kronuzLight], shiki: { langs: restLangs } },
+      expressiveCode: { themes: [kronuzDark, kronuzLight], shiki: { langs: restLangs }, plugins: [pluginRestCurl()] },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Kronuz/Xapiand' },
       ],
@@ -69,6 +70,10 @@ export default defineConfig({
         Sidebar: './src/components/Sidebar.astro',
         // "On this page" leads with the page name, not a generic "Overview".
         TableOfContents: './src/components/TableOfContents.astro',
+        // Same fix for the mobile "On this page" dropdown.
+        MobileTableOfContents: './src/components/MobileTableOfContents.astro',
+        // Prev/next pager shows each destination's real title, not its "Overview" label.
+        Pagination: './src/components/Pagination.astro',
       },
     }),
   ],

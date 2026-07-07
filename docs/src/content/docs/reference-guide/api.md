@@ -174,14 +174,43 @@ requesting a method for the proper resource path.
 
 ---
 
-## JSON and MessagePack
+## JSON, MessagePack, and YAML
 
-The Xapiand API can process JSON objects or MessagePack objects.
+The Xapiand API can process JSON, MessagePack, or YAML objects. Choose the format
+with the request's `Content-Type` header (`application/json`,
+`application/x-msgpack`, or `application/x-yaml`); JSON is the default when no
+`Content-Type` is given.
 
 :::hint[MessagePack]{.tip}
 [MessagePack](https://msgpack.org) is more efficient and it
 is our internal representation of the data.
 :::
+
+### YAML
+
+You can also send documents as [YAML](https://yaml.org) by setting the
+`Content-Type` to `application/x-yaml`. Xapiand parses the body into the same
+internal object it would from the equivalent JSON:
+
+```rest
+PUT /twitter/user/Jane?commit
+Content-Type: application/x-yaml
+
+name: Jane
+age: 30
+city: Turin
+```
+
+```rest
+GET /twitter/user/Jane
+```
+
+```js
+pm.test("YAML document was indexed", function () {
+  pm.expect(pm.response.json().name).to.eql("Jane");
+  pm.expect(pm.response.json().city).to.eql("Turin");
+});
+```
 
 ### Deviations from JSON
 
