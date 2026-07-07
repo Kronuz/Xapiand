@@ -1,0 +1,24 @@
+---
+// Override of Starlight's TableOfContents: the "On this page" list leads with the page
+// name instead of a generic "Overview". (Reaches into Starlight internals by relative
+// path since components-internals isn't a package export -- fine for this prototype.)
+import TableOfContentsList from '../../node_modules/@astrojs/starlight/components-internals/TableOfContents/TableOfContentsList.astro';
+
+const { toc, entry } = Astro.locals.starlightRoute;
+const items = toc
+	? toc.items.map((it) => (it.slug === '_top' ? { ...it, text: entry.data.title } : it))
+	: [];
+---
+
+{
+	toc && (
+		<starlight-toc data-min-h={toc.minHeadingLevel} data-max-h={toc.maxHeadingLevel}>
+			<nav aria-labelledby="starlight__on-this-page">
+				<h2 id="starlight__on-this-page">{Astro.locals.t('tableOfContents.onThisPage')}</h2>
+				<TableOfContentsList toc={items} />
+			</nav>
+		</starlight-toc>
+	)
+}
+
+<script src="../../node_modules/@astrojs/starlight/components-internals/TableOfContents/starlight-toc.ts"></script>

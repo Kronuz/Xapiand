@@ -1,0 +1,51 @@
+---
+title: "Schema Metadata"
+---
+
+A Schema can have custom meta data associated with it. These are not used at all
+by Xapiand, but can be used to store application-specific metadata, such as the
+class that a document belongs to or schema descriptions.
+
+The `_meta` field can be updated on an existing type using the
+[Create Index API](/Xapiand/reference-guide/indices/create-api):
+
+```rest
+PUT /my_index/
+
+{
+  "_schema": {
+    "_meta": {
+      "description": "Schema description here",
+      "class": "MyApp::User",
+      "version": {
+        "min": "1.0",
+        "max": "1.3"
+      }
+    }
+  }
+}
+```
+
+This `_meta` info can be retrieved with the
+[Get Index API](/Xapiand/reference-guide/indices/get-api):
+
+```rest
+GET /my_index/._schema._meta
+```
+
+<!-- e2e:begin
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Schema Metadata document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["description"]).to.equal("Schema description here");
+  pm.expect(jsonData["class"]).to.equal("MyApp::User");
+});
+```
+e2e:end -->

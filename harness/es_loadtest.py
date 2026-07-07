@@ -7,7 +7,7 @@ import json, time, http.client, threading, statistics, sys, os
 
 ES = "localhost:9200"
 IDX = "accounts"
-DATASET = "docs/assets/accounts.ndjson"
+DATASET = "docs/public/assets/accounts.ndjson"
 REPLICATE = int(os.environ.get("REPLICATE", 20))
 CONCURRENCY = int(os.environ.get("CONCURRENCY", 16))
 DURATION = int(os.environ.get("DURATION", 5))

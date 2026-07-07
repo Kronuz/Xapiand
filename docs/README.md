@@ -1,53 +1,49 @@
-# Xapiand docs site
+# Xapiand docs on Astro + Starlight (migration prototype)
 
-This directory contains the code for the [Xapiand docs site](https://Kronuz.github.io/Xapiand).
+A prototype migration of the Jekyll `../docs/` site to **Astro + Starlight**, reusing
+the Kronuz theme from `KronuzBlog/Kronuz.github.io`. It is parallel to and independent
+of the existing Jekyll site (nothing in `../docs/` is touched), so it is fully
+reversible.
 
+## Why
 
-## Contributing
+- **Search is broken** in the Jekyll site: Algolia DocSearch pointed at the dead
+  `kronuz.io` domain, and the account is no longer reachable. Starlight ships
+  **Pagefind** (local, static, build-time search, no API key, no external service),
+  which replaces it for free.
+- Match the Starlight look/feel of the blog, keep all content, keep the full curated
+  sidebar, and keep the embedded E2E tests.
 
-For information about contributing, see the [Contributing page](https://Kronuz.github.io/Xapiand/contributing/).
+## What's proven here
 
+- **Builds:** `npm run build` → 196 pages, and a **Pagefind index** under `dist/pagefind/`.
+- **Full sidebar**, transformed 1:1 from `../docs/_data/docs.yaml` by
+  `scripts/gen-sidebar.mjs` (the four groups Getting Started / Reference Guide / Set up
+  / Miscellaneous, deep nesting, top groups expanded).
+- **Content:** `scripts/convert-docs.mjs` converts `../docs/_docs` + `../docs/_tutorials`
+  (108 pages), plus a splash home (`src/content/docs/index.mdx`).
+- **Embedded E2E tests survive:** a request's ` ```json ` block renders (Expressive Code);
+  the `pm.test` / `status:` / `params:` payload is wrapped in an `<!-- e2e:begin … e2e:end -->`
+  HTML comment (hidden from render, preserved in source). `docs_to_postman.py` still
+  extracts requests + assertions from the migrated `.md` unchanged.
 
-## Running locally
-
-The site is built with [Jekyll](https://jekyllrb.com/) through the `github-pages`
-gem — the same stack GitHub Pages uses to build it server-side (currently Jekyll
-3.10).
-
-**1. Use a modern Ruby.** macOS ships Ruby 2.6, which is too old for current
-Bundler (it needs Ruby ≥ 3.2, and the old pinned toolchain won't build on Apple
-silicon). Install a supported Ruby (3.1–3.3) and put it on your `PATH` — e.g. with
-Homebrew:
-
-```sh
-brew install ruby@3.3
-export PATH="/opt/homebrew/opt/ruby@3.3/bin:$PATH"   # add to ~/.zshrc to persist
-```
-
-**2. Install the gems** (from this `docs/` directory):
-
-```sh
-gem install bundler
-bundle config set --local path vendor/bundle   # keeps gems in docs/vendor (gitignored)
-bundle install
-```
-
-**3. Serve:**
+## Commands
 
 ```sh
-bundle exec jekyll serve --livereload --incremental
+npm install
+npm run sidebar   # regenerate src/sidebar.mjs from ../docs/_data/docs.yaml
+npm run convert   # regenerate src/content/docs from ../docs/_docs (+ tutorials)
+npm run dev       # preview at http://localhost:4321/Xapiand
+npm run build     # build to dist/ (also builds the Pagefind index)
 ```
 
-Open **<http://localhost:4000/Xapiand/>**. The `/Xapiand/` prefix comes from
-`baseurl` in `_config.yaml`, so the bare `http://localhost:4000/` returns 404 —
-that's expected. Pages reload automatically as you edit.
+## Known prototype gaps (not blockers)
 
-
-## Updating Font Awesome
-Only a handful of fonts are included in the include Font Awesome fonts. To add
-more, it's needed to modify `icomoon-selection.json` and regenerate the fonts:
-
-1. Go to <https://icomoon.io/app/>
-2. Choose Import Icons and load `icomoon-selection.json`
-3. Choose Generate Font → Download
-4. Copy the font files and adapt the CSS to the paths we use
+- The converters are best-effort: a few Jekyll-isms (some `{: .note }` asides, edge
+  Liquid) may need cleanup; `../docs/tests/` (test-only docs) is not migrated yet.
+- The request example renders as a plain ` ```json ` block; the real migration should add
+  a small remark plugin to render it as the curl card (copy-as-curl button), replacing
+  `_includes/curl.html`.
+- Two sidebar slugs (`reference-guide` overview, `tutorials/home`) are stubs.
+- Single-version for now; multi-version (v0.4.0 / v1.0.0) is a later phase
+  (`starlight-versions` plugin or per-version dirs).

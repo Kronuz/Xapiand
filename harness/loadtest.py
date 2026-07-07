@@ -12,7 +12,7 @@ Outputs a JSON result. Pair two results (baseline vs ours) with perfdiff.py to g
 an "improving / regressing / within-noise" verdict. Queries are validated against
 the accounts dataset; keep them returning hits so we time real work, not errors.
 
-  python3 loadtest.py --target localhost:8880 --dataset docs/assets/accounts.ndjson \
+  python3 loadtest.py --target localhost:8880 --dataset docs/public/assets/accounts.ndjson \
       --replicate 20 --concurrency 16 --duration 8 --trials 3 \
       --datadir /tmp/xapiand_x --out harness/results/run.json
 """
@@ -179,7 +179,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", default="localhost:8880")
     ap.add_argument("--index", default="bench_load")
-    ap.add_argument("--dataset", default="docs/assets/accounts.ndjson")
+    ap.add_argument("--dataset", default="docs/public/assets/accounts.ndjson")
     ap.add_argument("--replicate", type=int, default=20)
     ap.add_argument("--concurrency", type=int, default=16)
     ap.add_argument("--duration", type=int, default=8)

@@ -1,0 +1,80 @@
+---
+title: "Define Prefix"
+---
+
+## Index document with _prefix
+
+#### Index document with _prefix
+
+```rest
+PUT /test/define-prefix/doc
+
+{
+  "foo": {
+    "_type": "text",
+    "_value": "foo and bar",
+    "_index": "field_terms",
+    "_prefix": "bar."
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.expect(pm.response.code).to.satisfy(function(code) {
+    // Also compare with 400 in case the index with the document exist already
+    return code === 200 || code === 400;
+  });
+});
+```
+e2e:end -->
+
+####  Get schema with _prefix
+
+```rest
+GET /test/define-prefix/
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._schema.foo._prefix).to.equal('bar.');
+  pm.expect(jsonData._schema.foo._index).to.equal('field_terms');
+  pm.expect(jsonData._schema.foo._type).to.equal('text');
+  pm.expect(jsonData._schema.foo._ngram).to.equal(false);
+  pm.expect(jsonData._schema.foo._cjk_ngram).to.equal(false);
+  pm.expect(jsonData._schema.foo._cjk_words).to.equal(false);
+});
+```
+e2e:end -->
+
+#### Info document with _prefix
+
+```rest
+INFO /test/define-prefix/doc
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms).to.have.property('QKdoc');
+  pm.expect(jsonData.terms.bar).to.have.all.keys(['Sand', 'Sbar', 'Sfoo']);
+  pm.expect(jsonData.values).to.have.all.keys(['0', '1']);
+});
+```
+e2e:end -->

@@ -178,7 +178,7 @@ run_bench() {
 	local ok=1
 	if wait_http "$PORT" 30; then
 		python3 "$HARNESS_DIR/loadtest.py" --target "localhost:$PORT" \
-			--dataset "$REPO/docs/assets/accounts.ndjson" --replicate 10 \
+			--dataset "$REPO/docs/public/assets/accounts.ndjson" --replicate 10 \
 			--concurrency 16 --duration 4 --trials 1 --datadir "$dir" \
 			--out "$dir/bench.json" && ok=0
 	fi

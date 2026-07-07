@@ -1,0 +1,117 @@
+---
+// Override of Starlight's SiteTitle: the logo/title link (verbatim from the default),
+// plus a top-level nav (Docs / Help / About) like the old Jekyll header. Docs points at
+// the docs landing (/welcome) and is "current" on any docs page; Help and About are the
+// _docs pages of the same name. The nav hides on narrow screens (the sidebar covers
+// navigation there).
+import { logos } from 'virtual:starlight/user-images';
+import config from 'virtual:starlight/user-config';
+
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const path = Astro.url.pathname.replace(/\/$/, '');
+const nav = [
+	{ label: 'Docs', href: `${base}/welcome/` },
+	{ label: 'Help', href: `${base}/help/` },
+	{ label: 'About', href: `${base}/about/` },
+];
+const onHelp = path === `${base}/help`;
+const onAbout = path === `${base}/about`;
+const isCurrent = (label: string) => {
+	if (label === 'Help') return onHelp;
+	if (label === 'About') return onAbout;
+	// Docs: any content page that is not the home, Help or About.
+	return path !== base && path !== '' && !onHelp && !onAbout;
+};
+---
+
+<div class="kz-title-wrap sl-flex">
+	<a href={siteTitleHref} class="site-title sl-flex">
+		{
+			config.logo && logos.dark && (
+				<>
+					<img
+						class:list={{ 'light:sl-hidden print:hidden': !('src' in config.logo) }}
+						alt={config.logo.alt}
+						src={logos.dark.src}
+						width={logos.dark.width}
+						height={logos.dark.height}
+					/>
+					{!('src' in config.logo) && (
+						<img
+							class="dark:sl-hidden print:block"
+							alt={config.logo.alt}
+							src={logos.light?.src}
+							width={logos.light?.width}
+							height={logos.light?.height}
+						/>
+					)}
+				</>
+			)
+		}
+		<span class:list={{ 'sr-only': config.logo?.replacesTitle }} translate="no">
+			{siteTitle}
+		</span>
+	</a>
+
+	<nav class="kz-topnav" aria-label="Main">
+		{nav.map((n) => (
+			<a href={n.href} class:list={{ current: isCurrent(n.label) }}>
+				{n.label}
+			</a>
+		))}
+	</nav>
+</div>
+
+<style>
+	.kz-title-wrap {
+		align-items: center;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+	.site-title {
+		align-items: center;
+		gap: var(--sl-nav-gap);
+		font-size: var(--sl-text-h4);
+		font-weight: 600;
+		color: var(--sl-color-text-accent);
+		text-decoration: none;
+		white-space: nowrap;
+		min-width: 0;
+	}
+	.site-title span {
+		overflow: hidden;
+	}
+	.site-title img {
+		height: calc(var(--sl-nav-height) - 2 * var(--sl-nav-pad-y));
+		width: auto;
+		max-width: 100%;
+		object-fit: contain;
+		object-position: 0 50%;
+	}
+	.kz-topnav {
+		display: flex;
+		align-items: center;
+		gap: 1.25rem;
+		white-space: nowrap;
+	}
+	.kz-topnav a {
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+	}
+	.kz-topnav a:hover {
+		color: var(--sl-color-white);
+	}
+	.kz-topnav a.current {
+		color: var(--sl-color-text-accent);
+	}
+	/* Hide the inline nav where the header gets tight; the sidebar covers navigation. */
+	@media (max-width: 50rem) {
+		.kz-topnav {
+			display: none;
+		}
+	}
+</style>

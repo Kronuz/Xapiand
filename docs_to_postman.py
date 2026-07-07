@@ -11,67 +11,55 @@ import email.message
 import urllib.parse as urlparse
 
 
-PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\n(#+)\s*([^\n]+)|\n([a-z]+)\s*:\s*([^\n]+)', re.DOTALL)
+PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\n(#+)\s*([^\n]+)|\n([a-z]+)[ \t]*:[ \t]*([^\n]+)', re.DOTALL)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# The migrated docs site: the Astro content is the source of truth. Its pages carry
+# the E2E requests (```rest / ```http / ```json) and assertions (in <!-- e2e:begin -->
+# comments), and its sidebar encodes the reading order.
+CONTENT_DIR = os.path.join(BASE_DIR, 'docs', 'src', 'content', 'docs')
+SIDEBAR_PATH = os.path.join(BASE_DIR, 'docs', 'src', 'sidebar.mjs')
+ASSETS_DIR = os.path.join(BASE_DIR, 'docs', 'public', 'assets')
 
-def docs_yaml_order():
-    """Absolute md paths in docs.yaml reading order (depth-first).
 
-    The E2E examples build on each other across documents (index a doc, then get
-    it, then update it, then delete it; queries assume a given /bank/ state). The
-    intended order is the sidebar order in docs/_data/docs.yaml, NOT the order the
-    filesystem happens to hand back: os.walk is unordered and differs by platform
-    (APFS vs ext4), which silently reordered dependent requests on CI and produced
-    arch-specific failures (a GET running before its PUT -> 404, a query seeing a
-    different /bank/ state -> wrong count). Ordering by docs.yaml makes the run
-    deterministic and correct everywhere.
+def content_order():
+    """Absolute md paths in sidebar reading order (depth-first).
 
-    Parsed without PyYAML (the CI runner's python3 may not have it): the sidebar is
-    a simple indent-based tree of `url:` nodes; relative urls resolve against their
-    ancestor `url:` segments, absolute `/docs/...` and `/tutorials/...` map to the
-    _docs / _tutorials trees. Returns [] if the file is absent (caller falls back)."""
-    yaml_path = os.path.join(BASE_DIR, 'docs', '_data', 'docs.yaml')
-    if not os.path.exists(yaml_path):
+    The doc-driven E2E examples build on each other across pages (index a document,
+    then get it, update it, delete it; the /bank/ queries assume a dataset state), so
+    they must run in the order the docs are meant to be read. That order is the
+    committed Starlight sidebar (src/sidebar.mjs), which replaced the old Jekyll
+    docs.yaml when the site migrated to Astro. Paths are lower-cased for matching so
+    the case-insensitively-slugged test pages (tests/dataTypes/...) line up on
+    case-sensitive filesystems too. Returns [] if the sidebar is absent (caller then
+    falls back to a stable alphabetical order)."""
+    try:
+        txt = open(SIDEBAR_PATH).read()
+    except OSError:
         return []
-    docs_root = os.path.join(BASE_DIR, 'docs')
+    m = re.search(r'export\s+const\s+sidebar\s*=\s*(\[[\s\S]*\])\s*;', txt)
+    if not m:
+        return []
+    try:
+        data = json.loads(m.group(1))
+    except ValueError:
+        return []
     order = []
-    stack = []  # (indent, slug_segment_or_None)
-    for raw in open(yaml_path):
-        line = raw.rstrip('\n')
-        if not line.strip() or line.lstrip().startswith('#'):
-            continue
-        m = re.match(r'^(\s*)(?:-\s*)?url:\s*(\S+)', line)
-        if not m:
-            mt = re.match(r'^(\s*)(?:-\s*)?title:\s*', line)
-            if mt:  # section/anchor node: track indent for nesting, contributes no segment
-                indent = len(mt.group(1))
-                while stack and stack[-1][0] >= indent:
-                    stack.pop()
-                stack.append((indent, None))
-            continue
-        indent = len(m.group(1))
-        url = m.group(2).strip().strip('\'"')
-        while stack and stack[-1][0] >= indent:
-            stack.pop()
-        if url.startswith('/'):
-            parts = url.strip('/').split('/')
-            if parts and parts[0] == 'tutorials':
-                leaf = 'index' if parts[-1:] == ['home'] else parts[-1]
-                slug = '/'.join(parts[1:-1] + [leaf])
-                fp = os.path.join(docs_root, '_tutorials', slug + '.md')
-            else:  # /docs/... (or any other absolute) -> _docs tree
-                slug = '/'.join(parts[1:] if parts and parts[0] == 'docs' else parts)
-                fp = os.path.join(docs_root, '_docs', slug + '.md')
-            stack.append((indent, None))  # absolute path resets; no segment for children
-        else:
-            ancestors = [seg for _, seg in stack if seg]
-            slug = '/'.join(ancestors + [url])
-            fp = os.path.join(docs_root, '_docs', slug + '.md')
-            stack.append((indent, url))
-        order.append(os.path.abspath(fp))
-    return order
+
+    def walk(items):
+        for it in items:
+            slug = it.get('slug')
+            link = it.get('link')
+            if slug is not None:
+                order.append(slug)
+            elif link:
+                order.append(link.lstrip('/'))
+            if it.get('items'):
+                walk(it['items'])
+
+    walk(data)
+    return [os.path.abspath(os.path.join(CONTENT_DIR, s + '.md')).lower() for s in order]
 
 
 def parse_filename(filename, index, all_tests):
@@ -139,18 +127,20 @@ def parse_filename(filename, index, all_tests):
 
 
 def parse_directory(directory, index, all_tests):
-    # Collect every .md under the tree, then process in a DETERMINISTIC order:
-    # docs.yaml reading order first (so dependent examples run in the intended
-    # sequence), then anything not listed in the sidebar, alphabetically. This
-    # replaces the platform-dependent os.walk order (see docs_yaml_order()).
+    # Collect every .md under the tree, then process in a DETERMINISTIC order: the
+    # sidebar reading order first (so dependent examples run in the intended
+    # sequence), then anything not in the sidebar, alphabetically. This replaces the
+    # platform-dependent os.walk order (see content_order()).
     found = []
     for path, dirs, files in os.walk(directory):
         for f in files:
             if f.endswith('.md'):
                 found.append(os.path.abspath(os.path.join(path, f)))
-    rank = {p: i for i, p in enumerate(docs_yaml_order())}
+    rank = {p: i for i, p in enumerate(content_order())}
     big = len(rank)
-    found.sort(key=lambda p: (rank.get(p, big), p))
+    # Match case-insensitively: the sidebar slugs are lower-cased, the test pages sit
+    # at camelCase paths on disk (tests/dataTypes/...).
+    found.sort(key=lambda p: (rank.get(p.lower(), big), p))
     for filename in found:
         parse_filename(filename, index, all_tests)
 
@@ -167,8 +157,7 @@ def main():
                 else:
                     parse_filename(arg, index, all_tests)
     else:
-        directory = os.path.join(BASE_DIR, 'docs')
-        parse_directory(directory, index, all_tests)
+        parse_directory(CONTENT_DIR, index, all_tests)
 
     # print(json.dumps(all_tests, indent=4))
 
@@ -294,7 +283,7 @@ def main():
                 request["body"] = {
                     "mode": "file",
                     "file": {
-                        "src": os.path.join(BASE_DIR, 'docs', 'assets', body[1:])
+                        "src": os.path.join(ASSETS_DIR, body[1:])
                     }
                 }
             else:

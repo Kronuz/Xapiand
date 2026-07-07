@@ -1,0 +1,189 @@
+---
+/**
+ * Custom sidebar sublist (replaces Starlight's, which isn't overridable directly and
+ * whose group headers can't be links). Rendered entirely server-side -- no client DOM
+ * hoisting -- so it doesn't flake:
+ *   - A group whose first child is a marked "Overview" link renders its HEADER as that
+ *     link (clicking the group name opens its page); the redundant Overview row is
+ *     dropped. Groups with no page render a plain, non-link header.
+ *   - A separate chevron button is the ONLY toggle (the label just navigates).
+ *   - A group is expanded when it contains the current page (so it stays open + the
+ *     current item stays visible), or when it isn't collapsed by default.
+ *   - Active state comes from Starlight's own entry.isCurrent.
+ */
+const { sublist, nested } = Astro.props;
+
+function containsCurrent(entries) {
+	return entries.some((e) => (e.type === 'link' ? e.isCurrent : containsCurrent(e.entries)));
+}
+---
+
+<ul class:list={{ 'top-level': !nested }}>
+	{
+		sublist.map((entry) =>
+			entry.type === 'link' ? (
+				<li>
+					<a
+						href={entry.href}
+						aria-current={entry.isCurrent ? 'page' : undefined}
+						class:list={[{ large: !nested }, entry.attrs?.class]}
+					>
+						<span>{entry.label}</span>
+					</a>
+				</li>
+			) : (
+				(() => {
+					const first = entry.entries[0];
+					const overview =
+						first && first.type === 'link' && first.attrs && 'data-overview' in first.attrs
+							? first
+							: null;
+					const rest = overview ? entry.entries.slice(1) : entry.entries;
+					const open = containsCurrent(entry.entries) || !entry.collapsed;
+					return (
+						<li>
+							<div class="kz-group" data-open={open ? '' : undefined}>
+								<div class="kz-group-header">
+									{overview ? (
+										<a
+											class:list={['kz-group-label', { large: !nested }]}
+											href={overview.href}
+											aria-current={overview.isCurrent ? 'page' : undefined}
+										>
+											<span>{entry.label}</span>
+										</a>
+									) : (
+										<span class:list={['kz-group-label kz-static', { large: !nested }]}>
+											{entry.label}
+										</span>
+									)}
+									<button
+										class="kz-chevron"
+										type="button"
+										aria-expanded={open ? 'true' : 'false'}
+										aria-label={`Toggle ${entry.label}`}
+									>
+										<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+											<path
+												d="M9 6l6 6-6 6"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									</button>
+								</div>
+								<div class="kz-group-body">
+									<Astro.self sublist={rest} nested />
+								</div>
+							</div>
+						</li>
+					);
+				})()
+			)
+		)
+	}
+</ul>
+
+<style>
+	ul {
+		--sl-sidebar-item-padding-inline: 0.5rem;
+		list-style: none;
+		padding: 0;
+	}
+	li {
+		overflow-wrap: anywhere;
+	}
+	ul ul li {
+		margin-inline-start: var(--sl-sidebar-item-padding-inline);
+		border-inline-start: 1px solid var(--sl-color-hairline-light);
+		padding-inline-start: var(--sl-sidebar-item-padding-inline);
+	}
+	.large {
+		font-size: var(--sl-text-lg);
+		font-weight: 600;
+		color: var(--sl-color-white);
+	}
+	.top-level > li + li {
+		margin-top: 0.75rem;
+	}
+
+	a {
+		display: block;
+		border-radius: 0.25rem;
+		text-decoration: none;
+		color: var(--sl-color-gray-2);
+		padding: 0.3em var(--sl-sidebar-item-padding-inline);
+		line-height: 1.4;
+	}
+	a:hover,
+	a:focus {
+		color: var(--sl-color-white);
+	}
+	[aria-current='page'],
+	[aria-current='page']:hover,
+	[aria-current='page']:focus {
+		color: var(--sl-color-text-invert);
+		background-color: var(--sl-color-text-accent);
+	}
+
+	.kz-group-header {
+		display: flex;
+		align-items: center;
+	}
+	.kz-group-header > a,
+	.kz-group-header > .kz-group-label {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.kz-group-label.kz-static {
+		display: block;
+		padding: 0.3em var(--sl-sidebar-item-padding-inline);
+		line-height: 1.4;
+		cursor: default;
+	}
+	.kz-chevron {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--sl-color-gray-3);
+		cursor: pointer;
+		border-radius: 0.25rem;
+	}
+	.kz-chevron:hover {
+		color: var(--sl-color-white);
+		background-color: var(--sl-color-gray-6, rgba(128, 128, 128, 0.15));
+	}
+	.kz-chevron svg {
+		transition: transform 0.15s ease-in-out;
+	}
+	.kz-group[data-open] > .kz-group-header > .kz-chevron svg {
+		transform: rotate(90deg);
+	}
+	.kz-group-body {
+		display: none;
+	}
+	.kz-group[data-open] > .kz-group-body {
+		display: block;
+	}
+
+	@media (min-width: 50rem) {
+		.top-level > li + li {
+			margin-top: 0.5rem;
+		}
+		.large {
+			font-size: var(--sl-text-base);
+		}
+		a {
+			font-size: var(--sl-text-sm);
+		}
+	}
+</style>

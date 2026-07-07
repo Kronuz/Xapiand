@@ -1,0 +1,1551 @@
+/* Kronuz brand palette — greens pulled from the old Jekyll site
+   (theme_color_light #bfdd97, theme_color_dark #8fc44a, quickstart #689137). */
+
+:root {
+	--sl-color-accent-low: #d7eab9;
+	--sl-color-accent: #5d8a2c;
+	--sl-color-accent-high: #294012;
+}
+
+:root[data-theme='dark'] {
+	--sl-color-accent-low: #1d3007;
+	--sl-color-accent: #7aa83e;
+	--sl-color-accent-high: #c8e4a1;
+}
+
+/* Nudge Starlight's neutral ramp off its cool 224deg default. The dark surfaces
+   (page bg, elevated bg, borders) are neutral gray, anchored so the elevated
+   surface lands on the Kronuz editor bg #383838; the text grays keep a faint
+   warmth, mirroring the Kronuz UI (neutral surfaces, warmth in text/accents).
+   Green stays the accent. */
+:root {
+	--sl-color-white: hsl(22, 8%, 11%);
+	--sl-color-gray-1: hsl(22, 6%, 17%);
+	--sl-color-gray-2: hsl(20, 4%, 24%);
+	--sl-color-gray-3: hsl(20, 3%, 38%);
+	--sl-color-gray-4: hsl(20, 3%, 57%);
+	--sl-color-gray-5: hsl(28, 6%, 79%);
+	--sl-color-gray-6: hsl(32, 12%, 94%);
+	--sl-color-gray-7: hsl(32, 14%, 95%);
+	--sl-color-black: hsl(36, 22%, 99%);
+	/* sidebar + title bar match the (light) code-snippet background */
+	--sl-color-bg-sidebar: #faf8f5;
+	--sl-color-bg-nav: #faf8f5;
+	/* Snippet bar borrows Expressive Code's terminal-frame look: theme-adaptive
+	   title-bar background, faint traffic-light dots, and the frame drop shadow.
+	   Values mirror EC's --ec-frm-trmTtbBg / --ec-frm-trmTtbDotsFg /
+	   --ec-frm-frameBoxShdCssVal so the two stay visually in family. */
+	--snip-bar-bg: #dddddd;
+	--snip-dots: #333333;
+	--snip-shadow: 0.1rem 0.1rem 0.2rem #00000028;
+	--snip-dots-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2060%2016'%20preserveAspectRatio%3D'xMidYMid%20meet'%3E%3Ccircle%20cx%3D'8'%20cy%3D'8'%20r%3D'8'%2F%3E%3Ccircle%20cx%3D'30'%20cy%3D'8'%20r%3D'8'%2F%3E%3Ccircle%20cx%3D'52'%20cy%3D'8'%20r%3D'8'%2F%3E%3C%2Fsvg%3E");
+}
+:root[data-theme='dark'] {
+	--sl-color-white: hsl(24, 7%, 93%);
+	--sl-color-gray-1: hsl(22, 6%, 88%);
+	--sl-color-gray-2: hsl(20, 4%, 77%);
+	--sl-color-gray-3: hsl(20, 3%, 56%);
+	--sl-color-gray-4: hsl(20, 3%, 36%);
+	--sl-color-gray-5: hsl(0, 0%, 23%);
+	--sl-color-gray-6: hsl(0, 0%, 15%);
+	--sl-color-gray-7: hsl(0, 0%, 18%); /* link-card hover lift (was leaking the light near-white) */
+	--sl-color-black: hsl(0, 0%, 10%);
+	/* Chrome steps like the editor: sidebar = activity bar (#242424),
+	   nav + code-frame titlebar = editor sidebar (#2b2b2b), over the
+	   #383838 code-snippet surface. */
+	--sl-color-bg-sidebar: #242424;
+	--sl-color-bg-nav: #2b2b2b;
+	--ec-frm-trmTtbBg: #2b2b2b;
+	--snip-bar-bg: #2b2b2b;
+	--snip-dots: #cccccc;
+	--snip-shadow: 0.1rem 0.1rem 0.2rem #0000005b;
+}
+
+/* Bigger brand logo. Starlight derives the logo height from the nav height
+   (logo = --sl-nav-height - 2*--sl-nav-pad-y), so growing the nav bar enlarges
+   the logo while keeping it vertically centered and within the header (no
+   overflow/clipping). The header height and the content offset both read
+   --sl-nav-height, so they stay in sync. The source PNG (528x600, a single
+   downscale from the 1920x2180 master) has far more pixels than the ~56px
+   display height needs, so it stays crisp at 2x/3x Retina. */
+:root {
+--sl-nav-height: 4rem; /* mobile: 64px bar -> ~40px logo (was 56px bar) */
+}
+
+@media (min-width: 50em) {
+:root {
+--sl-nav-height: 5rem; /* desktop: 80px bar -> ~56px logo (was 64px/40px) */
+}
+}
+
+/* Splash feature cards. We use our OWN grid wrapper (.hero-cards) instead of
+   Starlight's <CardGrid> to avoid a FOUC: Starlight's .card-grid base+2-column
+   rules and our customCss land in different stylesheet chunks that load in a
+   different order, so overriding .card-grid flickered 2-up -> 3-up on load.
+   With our own class there is a single source of truth for the layout, so no
+   competing rule to flicker through. The <Card> children keep their own
+   styling (border colors, padding) from Starlight. */
+.hero-cards {
+	display: grid;
+	grid-template-columns: 1fr; /* mobile: stacked */
+	gap: 1rem;
+}
+
+.hero-cards > * {
+	margin-top: 0 !important; /* match Starlight's .card-grid > * reset */
+}
+
+@media (min-width: 50rem) {
+	.hero-cards {
+		grid-template-columns: 1fr 1fr 1fr; /* desktop: equal thirds */
+		gap: 1rem;
+	}
+}
+
+/* Tighten the gap between the hero and the cards. Starlight's desktop hero uses
+   padding-block: clamp(2.5rem, calc(1rem + 10vmin), 10rem); shrink it hard so the
+   splash (big logo + REPL + cards + footer) fits one screen without scrolling. */
+@media (min-width: 50rem) {
+.hero {
+padding-block: clamp(0.5rem, calc(0.25rem + 2vmin), 2rem);
+}
+}
+
+/* Larger feature-card titles (Starlight defaults to --sl-text-h4). */
+.card .title {
+font-size: var(--sl-text-h3);
+}
+
+/* Theme-aware diagrams. We render D2 diagrams to two SVGs (a light and a dark
+   variant) and swap them by theme, the same trick as the logo. Both are
+   transparent-background so they float on the page. */
+figure.diagram {
+margin: 1.75rem 0;
+text-align: center;
+}
+@media (min-width: 50rem) {
+figure.diagram {
+margin: 1.75rem 4rem;
+}
+}
+figure.diagram img {
+display: block;
+margin-inline: auto;
+width: auto;
+height: auto;
+max-width: 100%;
+max-height: 88vh;
+}
+figure.diagram .diagram-dark {
+display: none;
+}
+[data-theme='dark'] figure.diagram .diagram-light {
+display: none;
+}
+[data-theme='dark'] figure.diagram .diagram-dark {
+display: block;
+margin-inline: auto;
+}
+.sl-markdown-content table {
+width: -moz-fit-content;
+width: fit-content;
+max-width: 100%;
+margin-inline: auto;
+}
+
+/* Blockquotes read as quoted voice: italic prose, but keep inline code upright
+   so monospace doesn't slant. */
+.sl-markdown-content blockquote {
+font-style: italic;
+}
+.sl-markdown-content blockquote code {
+font-style: normal;
+}
+
+/* Landing REPL hero. The splash <h1> holds a small Python REPL (set:html);
+   kronuz.whoami() "answers" with a typed, rotating line that ends on the warm
+   Kronuz caret. Colors track the editor theme (keyword orange, string green,
+   warm caret), light vs dark. */
+:root {
+--kz-repl-prompt: #9a9690;
+--kz-repl-kw: #b46a2d;
+--kz-repl-str: #67871c;
+--kz-repl-caret: #b3611f;
+}
+:root[data-theme='dark'] {
+--kz-repl-prompt: #7a7775;
+--kz-repl-kw: #cc7833;
+--kz-repl-str: #a5c261;
+--kz-repl-caret: #d08040;
+}
+.kz-repl {
+display: block;
+max-width: 100%;
+font-family: var(--__sl-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+font-weight: 400;
+font-size: clamp(0.8rem, min(0.8rem + 1.1vw, calc((100vw - 2.5rem) / 26)), 1.5rem);
+line-height: 1.7;
+text-align: left;
+letter-spacing: 0;
+}
+.kz-line { display: block; white-space: nowrap; }
+/* The answer reserves the width + height of the longest answer (a hidden
+   sizer in the same font), so typing it out never reflows the hero, and it is
+   free to wrap on narrow screens without forcing the font tiny. */
+.kz-out { position: relative; display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; vertical-align: top; }
+.kz-sizer { visibility: hidden; padding-inline-end: 0.7ch; }
+.kz-answerwrap { position: absolute; inset-block-start: 0; inset-inline-start: 0; }
+.kz-prompt { color: var(--kz-repl-prompt); }
+.kz-kw { color: var(--kz-repl-kw); }
+.kz-str { color: var(--kz-repl-str); }
+.kz-out { min-height: 1.7em; }
+.kz-caret {
+display: inline-block;
+width: 0.55ch;
+height: 1.05em;
+margin-left: 0.08em;
+vertical-align: -0.16em;
+background: var(--kz-repl-caret);
+border-radius: 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+.kz-caret { animation: kz-blink 1.05s steps(1, end) infinite; }
+}
+@keyframes kz-blink { 50% { opacity: 0; } }
+
+/* Breathing room between the REPL hero and its tagline (kept modest so the
+   splash fits one screen). */
+.hero h1:has(.kz-repl) { margin-bottom: 0.85rem; }
+/* Tighten the hero's vertical rhythm (title / tagline / actions) on the splash. */
+.hero .stack { gap: clamp(0.9rem, calc(0.9rem + 0.4vw), 1.4rem); }
+
+/* Splash feature cards: compact padding, smaller titles, and tight paragraph
+   rhythm so three cards + the footer clear the fold under the big logo. Scoped
+   to .hero-cards so doc-page <Card>s keep their roomier sizing. */
+.hero-cards { margin-top: 0.5rem; }
+.hero-cards .card {
+padding: 0.95rem 1.2rem;
+}
+.hero-cards .card .title {
+font-size: var(--sl-text-h3);
+margin-bottom: 0.3rem;
+}
+.hero-cards .card p { margin-block: 0.3rem; }
+
+/* Site footer. We render our own single <footer> (src/components/Footer.astro)
+   inlining Starlight's edit-link / last-updated / pagination parts, so the
+   copyright + social bar live inside the same <footer>. Re-add the small bit of
+   layout the stock (scoped) footer styles used to provide. */
+.kz-footer {
+flex-direction: column;
+gap: 1.5rem;
+}
+.kz-footer .meta {
+gap: 0.75rem 3rem;
+justify-content: space-between;
+flex-wrap: wrap;
+margin-top: 3rem;
+font-size: var(--sl-text-sm);
+color: var(--sl-color-gray-3);
+}
+.kz-footer .meta > p:only-child { margin-inline-start: auto; }
+/* On pages with no edit link / last-updated / pagination (the splash, About),
+   those subsections render empty. Drop them so they take no vertical space and
+   the copyright + social bar sit directly under the content. Content-based, so
+   real blog-post pagination is untouched. */
+.kz-footer .meta:not(:has(a)):not(:has(time)),
+.kz-footer .pagination-links:not(:has(a)) { display: none; }
+
+/* Copyright + social bar, now the last child inside <footer>. */
+.kz-site-footer {
+padding-top: 1rem;
+border-top: 1px solid var(--sl-color-gray-5);
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 0.85rem;
+text-align: center;
+}
+.kz-copyright {
+margin: 0;
+font-size: var(--sl-text-sm);
+color: var(--sl-color-gray-3);
+}
+.kz-social {
+display: flex;
+gap: 1.15rem;
+}
+.kz-social-link {
+color: var(--sl-color-gray-3);
+display: inline-flex;
+transition: color 0.15s ease;
+}
+.kz-social-link:hover { color: var(--sl-color-white); }
+.kz-social-link svg { width: 1.25rem; height: 1.25rem; }
+
+/* Source-code snippet viewer (```snippet fences + /snippets/view/<file>/). */
+.snippet {
+	margin: 1.25rem 0;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.45rem;
+	overflow: hidden;
+	box-shadow: var(--snip-shadow);
+}
+/* Starlight's markdown content adds margin-top between adjacent block siblings
+   (:not(...) + :not(...)); neutralize it inside the figure so the code/summary
+   sits flush under the bar instead of leaving a gap. */
+.snippet > .snippet-code,
+.snippet > .snippet-details,
+.snippet-details > .snippet-code { margin-top: 0; }
+.snippet-bar {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.35rem 0.6rem;
+	background: var(--snip-bar-bg);
+	border-bottom: 1px solid var(--sl-color-gray-5);
+	font-size: 0.8rem;
+}
+/* Faint traffic-light dots on the left, matching Expressive Code's terminal
+   frame header (same 3-circle icon, theme dot color, and 0.15 opacity). */
+.snippet-bar::before {
+	content: "";
+	justify-self: start;
+	flex: 0 0 auto;
+	width: 2.1rem;
+	height: 0.56rem;
+	background-color: var(--snip-dots);
+	opacity: 0.15;
+	-webkit-mask-image: var(--snip-dots-icon);
+	-webkit-mask-repeat: no-repeat;
+	mask-image: var(--snip-dots-icon);
+	mask-repeat: no-repeat;
+}
+.snippet-title {
+	text-align: center;
+	font-family: var(--sl-font-mono, ui-monospace, monospace);
+	color: var(--sl-color-gray-2);
+}
+.snippet-actions { display: flex; justify-self: end; gap: 0.4rem; }
+.snippet-btn {
+	text-decoration: none;
+	padding: 0.05rem 0.5rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.3rem;
+	background: transparent;
+	color: var(--sl-color-text-accent);
+	font: inherit;
+	font-size: 0.75rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.snippet-btn:hover { background: var(--sl-color-gray-5); }
+.snippet-btn:focus:not(:focus-visible) { outline: none; }
+/* The collapsed snippet is a <details> inside markdown content, so Starlight
+   insets it (left border + inline padding) and adds a summary margin. Strip that
+   chrome so an opened collapse looks like a normal snippet, flush in the figure. */
+.snippet-details {
+	border-inline-start: 0;
+	padding-inline-start: 0;
+}
+.snippet-details > summary {
+	cursor: pointer;
+	margin: 0;
+	padding: 0.4rem 0.6rem;
+	color: var(--sl-color-gray-3);
+	font-size: 0.8rem;
+}
+.snippet-details > .snippet-code { padding: 0; }
+
+/* Round the code-block frame to match the snippet's corners (one source: the
+   frame's own --ec-brdRad). The editor tab (```lang title="...") then rounds only
+   its top-LEFT, flush with the frame corner; its top-right (and bottom) stay square
+   so the tab reads as part of the bar, not a floating pill. EC's default rounds
+   both top corners (var(--tab-border-radius) var(--tab-border-radius) 0 0). */
+.sl-markdown-content .expressive-code .frame {
+	--ec-brdRad: 0.45rem;
+}
+.sl-markdown-content .expressive-code .frame.has-title:not(.is-terminal) .title {
+	border-radius: var(--ec-brdRad) 0 0 0;
+}
+.snippet-code { overflow: auto; }
+.snippet-code pre.shiki {
+	margin: 0;
+	padding: 0.8rem 0.9rem;
+	border-radius: 0;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	/* Size to content so the highlighted background spans the full scroll
+	   width (otherwise horizontal scroll reveals the page/backdrop). */
+	min-width: 100%;
+	width: max-content;
+	box-sizing: border-box;
+}
+/* Line numbers, from the .line spans Shiki emits. */
+.snippet-code pre.shiki code {
+	counter-reset: sl-line;
+	/* Block container so the block .line rows below get a proper block formatting
+	   context (an inline <code> shouldn't wrap block children). */
+	display: block;
+	/* Collapse the inter-line newlines so the block .line rows below don't
+	   double-space; each .line restores `pre` for its own content. The newlines
+	   stay in the DOM text (Copy still reproduces them), they just don't render. */
+	white-space: normal;
+}
+/* Block rows so a highlighted line's background fills the full width, and blank
+   lines keep their height even when the gutter is hidden (?nolines). */
+.snippet-code pre.shiki .line {
+	display: block;
+	white-space: pre;
+	min-height: 1.5em;
+}
+.snippet-code pre.shiki .line::before {
+	counter-increment: sl-line;
+	content: counter(sl-line);
+	display: inline-block;
+	width: 3ch;
+	margin-right: 1.25rem;
+	text-align: right;
+	opacity: 0.35;
+	user-select: none;
+	-webkit-user-select: none;
+}
+/* Terminal captures still get line numbers; the standalone viewer can drop them
+   via ?nolines (an inline <head> script sets html.snippet-no-lines). */
+html.snippet-no-lines .snippet-code pre.shiki .line::before {
+	display: none;
+}
+/* Deep-linked lines (#L10, #L10-L20, or multiple #L10-L20,L30): a persistent
+   full-row band (slightly darker than the file background, per theme) plus an
+   accented gutter number. It survives clicks because it's a class, not a native
+   text selection. Token colors are untouched, so syntax/ANSI stays readable. */
+.snippet-code pre.shiki .line.is-highlit {
+	background-color: #ececec;
+}
+[data-theme='dark'] .snippet-code pre.shiki .line.is-highlit {
+	background-color: #3e3e2e;
+}
+.snippet-code pre.shiki .line.is-highlit::before {
+	opacity: 1;
+	color: var(--sl-color-text-accent);
+	font-weight: 700;
+}
+/* The actual text selection gets a distinct blue tint (the editor theme's
+   selection color), so a precise selection reads apart from the warm/gray line
+   band underneath it. */
+.snippet-code ::selection { background-color: #d3e1f7; }
+.snippet-code ::-moz-selection { background-color: #d3e1f7; }
+[data-theme='dark'] .snippet-code ::selection { background-color: #3b4a66; }
+[data-theme='dark'] .snippet-code ::-moz-selection { background-color: #3b4a66; }
+/* Snippet-project file menu: editor-style tabs to browse sibling files, shown
+   on the full-page view only when a project folder has more than one file. */
+.snippet-project {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	margin: 0 0 0.85rem;
+	font-family: var(--sl-font-mono, ui-monospace, monospace);
+	font-size: 0.85rem;
+}
+.snippet-tab {
+	text-decoration: none;
+	padding: 0.2rem 0.6rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.3rem;
+	background: var(--sl-color-gray-6);
+	color: var(--sl-color-text-accent);
+	white-space: nowrap;
+}
+.snippet-tab:hover { background: var(--sl-color-gray-5); }
+.snippet-tab[aria-current="page"] {
+	background: var(--sl-color-gray-5);
+	border-color: var(--sl-color-gray-4);
+	color: var(--sl-color-white);
+	font-weight: 600;
+}
+
+/* Shiki dual-theme: light by default, dark under [data-theme='dark']. */
+.snippet .shiki,
+.snippet .shiki span { color: var(--shiki-light); }
+.snippet .shiki { background-color: var(--shiki-light-bg) !important; }
+[data-theme='dark'] .snippet .shiki,
+[data-theme='dark'] .snippet .shiki span { color: var(--shiki-dark); }
+[data-theme='dark'] .snippet .shiki { background-color: var(--shiki-dark-bg) !important; }
+/* Honor Shiki's per-token weight (bold ANSI / bold syntax), per theme. */
+.snippet .shiki span { font-weight: var(--shiki-light-font-weight, inherit); }
+[data-theme='dark'] .snippet .shiki span { font-weight: var(--shiki-dark-font-weight, inherit); }
+
+/* Inline source link (<SnippetLink>) and its modal. */
+.snippet-link {
+	font-family: var(--sl-font-mono, ui-monospace, monospace);
+	font-size: 0.9em;
+	white-space: nowrap;
+	--snippet-link-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M10%209.5%208%2012l2%202.5'/%3E%3Cpath%20d='m14%209.5%202%202.5-2%202.5'/%3E%3Crect%20width='18'%20height='18'%20x='3'%20y='3'%20rx='2'/%3E%3C/svg%3E");
+}
+/* Affordance: a "code in a box" glyph hinting the link opens the source in a modal.
+   A CSS mask (not an <svg> element), so Starlight's content rule that forces
+   svg { display: block } can't break the inline flow. */
+.snippet-link::after {
+	content: "";
+	display: inline-block;
+	width: 0.9em;
+	height: 0.9em;
+	margin-left: 0.25em;
+	vertical-align: -0.12em;
+	background-color: currentColor;
+	opacity: 0.6;
+	-webkit-mask: var(--snippet-link-icon) no-repeat center / contain;
+	mask: var(--snippet-link-icon) no-repeat center / contain;
+}
+.snippet-dialog {
+	width: min(900px, 92vw);
+	max-height: 85vh;
+	margin: auto;
+	padding: 0;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.6rem;
+	background: var(--sl-color-bg);
+	color: var(--sl-color-text);
+	overflow: hidden;
+}
+.snippet-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.6);
+}
+.snippet-dialog .snippet {
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+}
+.snippet-dialog .snippet-bar {
+	position: sticky;
+	top: 0;
+}
+.snippet-dialog .snippet-code {
+	flex: 1;
+	overflow: auto;
+}
+.snippet-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.15rem 0.35rem;
+}
+.snippet-icon-btn .snippet-i {
+	width: 1.05em;
+	height: 1.05em;
+	display: block;
+}
+.snippet-copy { position: relative; }
+/* "Copied!" bubble, matching Expressive Code's success tooltip look. */
+.snippet-copy::after {
+	content: "Copied!";
+	position: absolute;
+	top: calc(100% + 0.5rem);
+	left: 50%;
+	transform: translateX(-50%) translateY(-0.25rem);
+	z-index: 99;
+	padding: 0.125rem 0.75rem;
+	border-radius: 0.2rem;
+	background-color: #008900;
+	color: #fff;
+	font-size: 0.72rem;
+	line-height: 1.5;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+.snippet-copy::before {
+	content: "";
+	position: absolute;
+	top: calc(100% + 0.16rem);
+	left: 50%;
+	transform: translateX(-50%);
+	border: 0.35rem solid transparent;
+	border-bottom-color: #008900;
+	z-index: 99;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease-in-out;
+}
+[data-theme='dark'] .snippet-copy::after { background-color: #098656; }
+[data-theme='dark'] .snippet-copy::before { border-bottom-color: #098656; }
+.snippet-copy.is-copied::after {
+	opacity: 1;
+	transform: translateX(-50%) translateY(0);
+}
+.snippet-copy.is-copied::before { opacity: 1; }
+
+/* Sidebar menu icons. Starlight's sidebar renders links as plain text, so we add
+   a leading icon via a CSS mask, reusing Starlight's own icon set (so they match
+   the top-nav icons exactly). The icon follows the link color (currentColor), so
+   it dims/highlights with the link, including the lit current page. Links opt in
+   with a data-icon="<name>" attr set in sidebar.mjs / Sidebar.astro. */
+a[data-icon] {
+display: flex;
+align-items: center;
+gap: 0.5em;
+}
+a[data-icon]::before {
+content: "";
+flex: 0 0 auto;
+width: 1.05em;
+height: 1.05em;
+background-color: currentColor;
+-webkit-mask: var(--kz-sb-ico) no-repeat center / contain;
+mask: var(--kz-sb-ico) no-repeat center / contain;
+}
+/* Project sub-nav links listed under "Projects" in the sidebar (no icon): indent so they
+   read as nested under the section, and a touch smaller for hierarchy. */
+a[data-subnav] {
+padding-inline-start: 1.55em;
+font-size: var(--sl-text-sm);
+}
+a[data-icon="information"]::before { --kz-sb-ico: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%22M12%2011a1%201%200%200%200-1%201v4a1%201%200%200%200%202%200v-4a1%201%200%200%200-1-1Zm.38-3.92a1%201%200%200%200-.76%200%201%201%200%200%200-.33.21%201.15%201.15%200%200%200-.21.33%201%201%200%200%200%20.21%201.09c.097.088.209.16.33.21A1%201%200%200%200%2013%208a1.05%201.05%200%200%200-.29-.71%201%201%200%200%200-.33-.21ZM12%202a10%2010%200%201%200%200%2020%2010%2010%200%200%200%200-20Zm0%2018a8%208%200%201%201%200-16.001A8%208%200%200%201%2012%2020Z%22%2F%3E%3C%2Fsvg%3E"); }
+a[data-icon="open-book"]::before { --kz-sb-ico: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%22M21.17%202.06A13.1%2013.1%200%200%200%2019%201.87a12.94%2012.94%200%200%200-7%202.05%2012.94%2012.94%200%200%200-7-2%2013.1%2013.1%200%200%200-2.17.19%201%201%200%200%200-.83%201v12a1%201%200%200%200%201.17%201%2010.9%2010.9%200%200%201%208.25%201.91l.12.07h.11a.91.91%200%200%200%20.7%200h.11l.12-.07A10.899%2010.899%200%200%201%2020.83%2016%201%201%200%200%200%2022%2015V3a1%201%200%200%200-.83-.94ZM11%2015.35a12.87%2012.87%200%200%200-6-1.48H4v-10c.333-.02.667-.02%201%200a10.86%2010.86%200%200%201%206%201.8v9.68Zm9-1.44h-1a12.87%2012.87%200%200%200-6%201.48V5.67a10.86%2010.86%200%200%201%206-1.8c.333-.02.667-.02%201%200v10.04Zm1.17%204.15a13.098%2013.098%200%200%200-2.17-.19%2012.94%2012.94%200%200%200-7%202.05%2012.94%2012.94%200%200%200-7-2.05c-.727.003-1.453.066-2.17.19A1%201%200%200%200%202%2019.21a1%201%200%200%200%201.17.79%2010.9%2010.9%200%200%201%208.25%201.91%201%201%200%200%200%201.16%200A10.9%2010.9%200%200%201%2020.83%2020a1%201%200%200%200%201.17-.79%201%201%200%200%200-.83-1.15Z%22%2F%3E%3C%2Fsvg%3E"); }
+a[data-icon="rss"]::before { --kz-sb-ico: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%22M2.88%2016.88a3%203%200%200%200%200%204.24%203%203%200%200%200%204.24%200%203%203%200%200%200-4.24-4.24Zm2.83%202.83a1%201%200%200%201-1.42-1.42%201%201%200%200%201%201.42%200%201%201%200%200%201%200%201.42ZM5%2012a1%201%200%200%200%200%202%205%205%200%200%201%205%205%201%201%200%200%200%202%200%207%207%200%200%200-7-7Zm0-4a1%201%200%200%200%200%202%209%209%200%200%201%209%209%201%201%200%200%200%202%200%2011.08%2011.08%200%200%200-3.22-7.78A11.08%2011.08%200%200%200%205%208Zm10.61.39A15.11%2015.11%200%200%200%205%204a1%201%200%200%200%200%202%2013%2013%200%200%201%2013%2013%201%201%200%200%200%202%200%2015.11%2015.11%200%200%200-4.39-10.61Z%22%2F%3E%3C%2Fsvg%3E"); }
+a[data-icon="rocket"]::before { --kz-sb-ico: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M1.44%208.855v-.001l3.527-3.516c.34-.344.802-.541%201.285-.548h6.649l.947-.947c3.07-3.07%206.207-3.072%207.62-2.868a1.821%201.821%200%200%201%201.557%201.557c.204%201.413.203%204.55-2.868%207.62l-.946.946v6.649a1.845%201.845%200%200%201-.549%201.286l-3.516%203.528a1.844%201.844%200%200%201-3.11-.944l-.858-4.275-4.52-4.52-2.31-.463-1.964-.394A1.847%201.847%200%200%201%20.98%2010.693a1.843%201.843%200%200%201%20.46-1.838Zm5.379%202.017-3.873-.776L6.32%206.733h4.638l-4.14%204.14Zm8.403-5.655c2.459-2.46%204.856-2.463%205.89-2.33.134%201.035.13%203.432-2.329%205.891l-6.71%206.71-3.561-3.56%206.71-6.711Zm-1.318%2015.837-.776-3.873%204.14-4.14v4.639l-3.364%203.374Z%22%20clip-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22M9.318%2018.345a.972.972%200%200%200-1.86-.561c-.482%201.435-1.687%202.204-2.934%202.619a8.22%208.22%200%200%201-1.23.302c.062-.365.157-.79.303-1.229.415-1.247%201.184-2.452%202.62-2.935a.971.971%200%201%200-.62-1.842c-.12.04-.236.084-.35.13-2.02.828-3.012%202.588-3.493%204.033a10.383%2010.383%200%200%200-.51%202.845l-.001.016v.063c0%20.536.434.972.97.972H2.24a7.21%207.21%200%200%200%20.878-.065c.527-.063%201.248-.19%202.02-.447%201.445-.48%203.205-1.472%204.033-3.494a5.828%205.828%200%200%200%20.147-.407Z%22%2F%3E%3C%2Fsvg%3E"); }
+
+/* "About me" hero action reads icon-first. Starlight renders an action's icon
+   trailing; the kz-icon-first marker (set via attrs.class on that action) flips
+   just this one, leaving others (e.g. "Read the blog →") with a trailing icon. */
+.sl-link-button.kz-icon-first { flex-direction: row-reverse; }
+
+/* About-page lede: the role-descriptor line under the title. Styled as a quiet
+   italic deck (muted, a touch larger) so it reads as a subtitle rather than a
+   second heading competing with the "About" title. */
+.about-lede {
+margin-top: 0.25rem;
+font-size: var(--sl-text-lg);
+font-style: italic;
+color: var(--sl-color-gray-3);
+}
+/* Keep emphasized text (e.g. a name) prominent and upright inside the muted
+   italic lede, so the deck recedes but the name still pops. Inert where the
+   lede has no <strong> (e.g. the internal About page). */
+.about-lede strong {
+color: var(--sl-color-white);
+font-style: normal;
+}
+/* The role line as a subtitle on its own line below the name, a touch smaller. */
+.about-lede .about-roles {
+display: block;
+margin-top: 0.25rem;
+font-size: var(--sl-text-base);
+}
+
+/* About page profile header: a banner with the portrait avatar overlapping its
+   bottom-left, above the lede (LinkedIn-style). The banner is German's own career
+   montage; the avatar is a circular crop. The ring uses the page background so it
+   reads on both themes, and the hero's bottom margin clears the avatar's overhang so
+   the lede starts below it. The avatar scales down on narrow screens. */
+.about-hero {
+position: relative;
+margin: 0 0 4rem;
+}
+.about-hero .about-banner {
+display: block;
+width: 100%;
+height: auto;
+aspect-ratio: 1400 / 350;
+object-fit: cover;
+border-radius: 0.6rem;
+}
+.about-hero .about-avatar {
+position: absolute;
+left: 1.25rem;
+bottom: -2.75rem;
+width: clamp(5.5rem, 18vw, 7.5rem);
+height: clamp(5.5rem, 18vw, 7.5rem);
+border-radius: 50%;
+object-fit: cover;
+border: 4px solid var(--sl-color-bg);
+box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+/* The KRONUZ banner on the About page: an animated ANSI block-art GIF (authentic CP437
+   half-block art rendered with ansilove), on a transparent background so it sits directly
+   on the page. Centered; scales down to fit on mobile; crisp blocky pixels (no smoothing). */
+.ansi-banner {
+display: flex;
+justify-content: center;
+margin: 1.75rem 0;
+}
+.ansi-banner img {
+width: 100%;
+max-width: 520px;
+height: auto;
+image-rendering: pixelated;
+}
+/* About page era logos: a small project logo floats beside its story beat (the game
+   engine, the search engine) and the text wraps around it; it becomes a centered block
+   on narrow screens. Transparent PNGs, so they read on both themes. */
+.sl-markdown-content img.about-era {
+float: right;
+width: clamp(9rem, 28vw, 15rem);
+height: auto;
+margin: 0.3rem 0 0.8rem 1.6rem;
+}
+.sl-markdown-content img.about-era.left {
+float: left;
+margin: 0.3rem 1.6rem 0.8rem 0;
+}
+.sl-markdown-content img.about-era.icon {
+width: clamp(6.5rem, 19vw, 9rem);
+}
+.sl-markdown-content img.about-era.shot {
+border-radius: 0.4rem;
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+@media (max-width: 44rem) {
+.sl-markdown-content img.about-era,
+.sl-markdown-content img.about-era.left {
+float: none;
+display: block;
+width: min(90%, 24rem);
+margin: 1.4rem auto;
+}
+.sl-markdown-content img.about-era.icon {
+width: min(48%, 11rem);
+}
+}
+/* Reusable decorative pull-quote. Drop class="pull-quote" on a <p> or <blockquote>
+   in any post: a memorable line set large, accent-green and centered, framed by two
+   big translucent quotation marks (open upper-left, close lower-right). The four
+   knobs to tune by eye are the font-size / offsets on ::before and ::after. */
+.sl-markdown-content .pull-quote {
+position: relative;
+clear: both;
+margin: 2rem auto 1.5rem;
+max-width: 34rem;
+padding: 1.4rem 2.6rem;
+text-align: center;
+font-size: var(--sl-text-h4);
+font-style: italic;
+line-height: 1.5;
+color: var(--sl-color-text-accent);
+}
+.sl-markdown-content .pull-quote::before,
+.sl-markdown-content .pull-quote::after {
+position: absolute;
+font-family: Georgia, "Times New Roman", serif;
+font-style: normal;
+line-height: 1;
+color: var(--sl-color-text-accent);
+opacity: 0.16;
+pointer-events: none;
+}
+.sl-markdown-content .pull-quote::before {
+content: "\201C"; /* opening curly double-quote, large, upper-left */
+top: -3.4rem;
+left: -1rem;
+font-size: 20rem;
+}
+.sl-markdown-content .pull-quote::after {
+content: "\201D"; /* closing curly double-quote, smaller, lower-right */
+bottom: -6rem;
+right: 0;
+font-size: 12rem;
+}
+/* Scale the (large) decorative marks down on narrow screens so they can't poke
+   past the viewport edge and trigger horizontal scroll. */
+@media (max-width: 44rem) {
+.sl-markdown-content .pull-quote::before {
+top: -2.2rem;
+font-size: 12rem;
+}
+.sl-markdown-content .pull-quote::after {
+bottom: -3.6rem;
+font-size: 8rem;
+}
+}
+/* Small inline tech logos sitting right before a tool's name in the prose. */
+.sl-markdown-content img.tech-logo {
+display: inline-block;
+height: 1.15em;
+width: auto;
+margin: 0 0.18em -0.18em 0;
+vertical-align: baseline;
+}
+
+/* Keep the header search box in a stable spot across pages. Starlight sizes the
+   first header column (site title) to the sidebar width on doc pages but ~0 on
+   the splash (no sidebar), so the search jumps rightward when you go from the
+   home page to a doc page. Pin every page to the splash layout: the title takes
+   its natural width and the search sits right after it. */
+@media (min-width: 50rem) {
+.header {
+grid-template-columns: auto 1fr auto;
+}
+}
+
+/* Unify the prev/next pagers. starlight-blog's chronological pagination at the foot
+   of each blog post renders as big Starlight LinkCards (title + large arrow, shadow).
+   Restyle those cards to match the custom series prev/next buttons defined in
+   MarkdownContent.astro (.series-foot-link): a compact bordered button with a small
+   uppercase "Previous"/"Next" label over an accent title, and an accent hover. This
+   targets the stable semantic classes from PrevNextLinks -> CardGrid -> LinkCard
+   (.pagination .sl-link-card / .stack / .title / .icon), not Astro's scoped hashes. */
+.pagination .sl-link-card {
+	gap: 0.5rem;
+	padding: 0.6rem 0.9rem;
+	border-color: var(--sl-color-gray-5);
+	border-radius: 0.5rem;
+	box-shadow: none;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+.pagination .sl-link-card:hover {
+	border-color: var(--sl-color-text-accent);
+	background: var(--sl-color-gray-6);
+}
+.pagination .sl-link-card .stack {
+	gap: 0.25rem;
+	min-width: 0;
+}
+/* Inject the directional label the native card's DOM doesn't carry, matching
+   .series-foot-dir. :has() drives prev vs next; the pseudo sits above the title. */
+.pagination .sl-link-card .stack::before {
+	font-size: var(--sl-text-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--sl-color-gray-3);
+	white-space: nowrap;
+}
+.pagination .sl-link-card:has(a[rel='prev']) .stack::before {
+	content: 'Previous';
+}
+.pagination .sl-link-card:has(a[rel='next']) .stack::before {
+	content: 'Next';
+}
+/* The series pager (the .series-pager nav) keeps its "in series" wording; the
+   chronological pager stays the plain "Previous"/"Next". Higher specificity than the
+   base labels above, so it wins for the series pager only. */
+.pagination.series-pager .sl-link-card:has(a[rel='prev']) .stack::before {
+	content: 'Previous in series';
+}
+.pagination.series-pager .sl-link-card:has(a[rel='next']) .stack::before {
+	content: 'Next in series';
+}
+/* In `npm run dev` the series pager may link a not-yet-published neighbor so the pager can
+   be previewed; grey that card like the stepper's is-pending item (muted title + label,
+   dashed border). LinkCard forwards our class onto its inner <a>, so target via :has().
+   Production never links an unpublished part, so this only appears under npm run dev. */
+.pagination.series-pager .sl-link-card:has(a.is-pending) {
+	border-style: dashed;
+}
+.pagination.series-pager .sl-link-card:has(a.is-pending) .title,
+.pagination.series-pager .sl-link-card:has(a.is-pending) .stack::before {
+	color: var(--sl-color-gray-4);
+}
+.pagination.series-pager .sl-link-card:has(a.is-pending):hover .title,
+.pagination.series-pager .sl-link-card:has(a.is-pending):hover .stack::before {
+	color: var(--sl-color-text-accent);
+}
+.pagination .sl-link-card:hover .stack::before {
+	color: var(--sl-color-text-accent);
+}
+/* Title matches .series-foot-title: smaller, semibold, accent. Kept to a single line
+   with an ellipsis so a long post title doesn't wrap the button to two rows (the
+   arrow + Previous/Next label already signal direction; the full title is one click
+   away). min-width:0 on the stack above lets the grid cell shrink for the ellipsis. */
+.pagination .sl-link-card .title {
+	display: block;
+	font-size: var(--sl-text-sm);
+	font-weight: 600;
+	color: var(--sl-color-text-accent);
+	line-height: 1.3;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* Shrink the oversized arrow down to a small, muted directional cue. */
+.pagination .sl-link-card .icon {
+	font-size: 1em;
+	color: var(--sl-color-gray-3);
+	align-self: center;
+}
+.pagination .sl-link-card:hover .icon {
+	color: var(--sl-color-text-accent);
+}
+
+/* Layout for .pagination, mirrored from starlight-blog's PrevNextLinks scoped CSS so
+   the series pager (which reuses .pagination + CardGrid + LinkCard but not that
+   component's scoped styles) lays out identically to the chronological pager: two
+   equal columns that stack on narrow widths, prev on the left with a flipped arrow,
+   next forced to the right column. Also makes a single button stay 50%, not full
+   width. These duplicate the native pager's own rules (same values), harmlessly. */
+.pagination {
+	container-type: inline-size;
+}
+.pagination .card-grid {
+	gap: 1rem;
+	grid-template-columns: 1fr;
+	grid-template-rows: 1fr 1fr;
+}
+.pagination .sl-link-card:has(a[rel='prev']) {
+	grid-template-columns: auto 1fr;
+}
+.pagination .sl-link-card:has(a[rel='prev']) span {
+	order: 2;
+}
+.pagination .sl-link-card:has(a[rel='prev']) svg {
+	transform: matrix(-1, 0, 0, 1, 0, 0);
+}
+.pagination .sl-link-card:has(a[rel='next']) span {
+	text-align: end;
+}
+@container (min-width: 30rem) {
+	.pagination .card-grid {
+		grid-template-columns: 1fr 1fr;
+		grid-template-rows: 1fr;
+	}
+	.pagination .sl-link-card:has(a[rel='next']) {
+		grid-column: 2;
+	}
+}
+
+/* (The dev-only "Edit source" link now lives in the PageTitle override, positioned by the
+   subtitle — see PageTitle.astro.) */
+
+/* Projects page (public blog): a responsive card grid. Each project is a bordered tile with
+   a small tech tag, a white name, an accent tagline, a muted description, and a row of pill
+   links; the whole card lifts and turns accent on hover. The "Also worth a look" row is a
+   set of small rounded chips. Styled outside .sl-markdown-content because the grid carries
+   `not-content` (so Starlight's prose styles don't fight these). */
+.projects-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+	gap: 1rem;
+	margin: 1.75rem 0 2rem;
+}
+.projects-grid .project-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.35rem;
+	margin: 0;
+	padding: 1.1rem 1.2rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.6rem;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.projects-grid .project-card:hover {
+	border-color: var(--sl-color-text-accent);
+	background: var(--sl-color-gray-6);
+}
+/* Project logo on an index card: a small mark in the top-right corner, so the tech tag and
+   name keep their left edge. Transparent PNGs, so they read on both themes. Cards without a
+   logo are unaffected. */
+.project-card.has-logo {
+	position: relative;
+}
+.project-card .project-card-logo {
+	position: absolute;
+	top: 1rem;
+	right: 1rem;
+	width: 2.4rem;
+	height: 2.4rem;
+	object-fit: contain;
+	opacity: 0.95;
+}
+.project-card.has-logo .project-card-meta {
+	padding-right: 3rem;
+}
+.project-tag {
+	font-size: var(--sl-text-2xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--sl-color-text-accent);
+	background: var(--sl-color-gray-6);
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 999px;
+	padding: 0.05rem 0.55rem;
+}
+.project-card .project-name {
+	margin: 0.15rem 0 0;
+	font-size: var(--sl-text-lg);
+	line-height: 1.2;
+}
+.project-card .project-name a {
+	color: var(--sl-color-white);
+	text-decoration: none;
+}
+.project-card .project-name a:hover {
+	color: var(--sl-color-text-accent);
+}
+.project-card .project-tagline {
+	margin: 0;
+	font-size: var(--sl-text-sm);
+	font-weight: 600;
+	color: var(--sl-color-text-accent);
+}
+.project-card .project-desc {
+	margin: 0;
+	flex: 1 1 auto;
+	font-size: var(--sl-text-sm);
+	color: var(--sl-color-gray-3);
+}
+.project-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+.project-card .project-links {
+	margin: 0.55rem 0 0;
+}
+.project-links a,
+.projects-more a {
+	font-size: var(--sl-text-xs);
+	color: var(--sl-color-gray-2);
+	text-decoration: none;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.4rem;
+	padding: 0.12rem 0.6rem;
+	transition: color 0.15s ease, border-color 0.15s ease;
+}
+.project-links a:hover,
+.projects-more a:hover {
+	color: var(--sl-color-text-accent);
+	border-color: var(--sl-color-text-accent);
+}
+/* "Also worth a look" — smaller, fully-rounded chips. */
+.projects-more {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin: 0.75rem 0 0;
+}
+.projects-more a {
+	border-radius: 999px;
+}
+
+/* Status / Featured badges. Our own vocabulary and colors on purpose: Starlight's <Badge>
+   variants are fixed semantic colors (note/tip/caution/danger/success/default) that don't
+   map to a project lifecycle and have no "featured", so a small custom pill is cleaner. */
+.project-badge {
+	font-size: var(--sl-text-2xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	line-height: 1.6;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	padding: 0.02rem 0.5rem;
+	white-space: nowrap;
+}
+.project-badge.is-proposed {
+	color: var(--sl-color-blue-high);
+	background: var(--sl-color-blue-low);
+}
+.project-badge.is-active {
+	color: var(--sl-color-purple-high);
+	background: var(--sl-color-purple-low);
+}
+.project-badge.is-blocked {
+	color: var(--sl-color-red-high);
+	background: var(--sl-color-red-low);
+}
+.project-badge.is-paused {
+	color: var(--sl-color-orange-high);
+	background: var(--sl-color-orange-low);
+}
+.project-badge.is-shipped,
+.project-badge.is-completed {
+	color: var(--sl-color-green-high);
+	background: var(--sl-color-green-low);
+}
+.project-badge.is-dead {
+	color: var(--sl-color-gray-2);
+	background: var(--sl-color-gray-6);
+}
+.project-badge.is-featured {
+	color: var(--sl-color-black);
+	background: var(--sl-color-text-accent);
+	border-color: var(--sl-color-text-accent);
+}
+/* Index card meta row: tech pill + badges on one line, above the name. */
+.project-card .project-card-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	margin: 0;
+}
+
+/* Project page header (the /projects/<slug>/ page): tech + status/featured badges, a
+   "Part N of M" series note, and the link pills. (The tagline renders as the page subtitle
+   via the PageTitle override, like blog posts.) */
+.sl-markdown-content .project-head {
+	margin: 0.75rem 0 1.5rem;
+}
+/* Project logo floated beside the page header, so the body text wraps around it; it becomes
+   a centered block on narrow screens. Transparent PNGs, so they read on both themes. */
+.sl-markdown-content .project-head-logo {
+	float: right;
+	width: clamp(4.5rem, 12vw, 6.5rem);
+	height: auto;
+	margin: 0 0 0.8rem 1.4rem;
+}
+@media (max-width: 44rem) {
+	.sl-markdown-content .project-head-logo {
+		float: none;
+		display: block;
+		width: 5rem;
+		margin: 0 0 0.8rem;
+	}
+}
+.project-head .project-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	margin: 0 0 0.5rem;
+}
+.project-head .project-series-note {
+	margin: 0 0 0.5rem;
+	font-size: var(--sl-text-2xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--sl-color-gray-3);
+}
+.project-head .project-links {
+	margin: 0;
+}
+/* "Related reading" block on a project page. */
+.project-related {
+	margin-top: 2rem;
+}
+.project-related .project-related-title {
+	margin: 0 0 0.5rem;
+	font-size: var(--sl-text-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--sl-color-gray-3);
+}
+
+/* Status roll-up chips on a multi-part project's index card: a count + group label, colored
+   by status group (matching the badges). Active=purple, Blocked=red, Proposed=blue,
+   Paused=orange, Done(shipped/completed)=green, Dead=gray. */
+.project-rollup {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.2rem;
+	font-size: var(--sl-text-2xs);
+	border-radius: 999px;
+	padding: 0.02rem 0.5rem;
+	white-space: nowrap;
+}
+.project-rollup.is-active {
+	color: var(--sl-color-purple-high);
+	background: var(--sl-color-purple-low);
+}
+.project-rollup.is-blocked {
+	color: var(--sl-color-red-high);
+	background: var(--sl-color-red-low);
+}
+.project-rollup.is-proposed {
+	color: var(--sl-color-blue-high);
+	background: var(--sl-color-blue-low);
+}
+.project-rollup.is-paused {
+	color: var(--sl-color-orange-high);
+	background: var(--sl-color-orange-low);
+}
+.project-rollup.is-done {
+	color: var(--sl-color-green-high);
+	background: var(--sl-color-green-low);
+}
+.project-rollup.is-dead {
+	color: var(--sl-color-gray-2);
+	background: var(--sl-color-gray-6);
+}
+
+/* Project page status board: the project's parts grouped into status columns, each a small
+   linked card. Lives in a `not-content` wrapper, so Starlight's prose styles (incl. the h2
+   column heads) don't apply and these own the look. */
+.project-board {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: 1rem;
+	margin: 2rem 0;
+}
+.project-board-col {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.6rem;
+	padding: 0.85rem 0.9rem;
+}
+.project-board-col-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	margin: 0 0 0.6rem;
+	padding: 0;
+	border: none;
+	font-size: var(--sl-text-xs);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.project-board-count {
+	font-size: var(--sl-text-2xs);
+	color: var(--sl-color-gray-3);
+}
+.project-board-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.project-board-card {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.4rem 0.55rem;
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.4rem;
+	text-decoration: none;
+	color: var(--sl-color-white);
+	font-size: var(--sl-text-sm);
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.project-board-card:hover {
+	border-color: var(--sl-color-text-accent);
+	background: var(--sl-color-gray-6);
+}
+.project-board-dot {
+	flex: 0 0 auto;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+}
+.project-board-col.is-active .project-board-col-head {
+	color: var(--sl-color-purple-high);
+}
+.project-board-dot.is-active {
+	background-color: var(--sl-color-purple-high);
+}
+.project-board-col.is-blocked .project-board-col-head {
+	color: var(--sl-color-red-high);
+}
+.project-board-dot.is-blocked {
+	background-color: var(--sl-color-red-high);
+}
+.project-board-col.is-proposed .project-board-col-head {
+	color: var(--sl-color-blue-high);
+}
+.project-board-dot.is-proposed {
+	background-color: var(--sl-color-blue-high);
+}
+.project-board-col.is-paused .project-board-col-head {
+	color: var(--sl-color-orange-high);
+}
+.project-board-dot.is-paused {
+	background-color: var(--sl-color-orange-high);
+}
+.project-board-col.is-done .project-board-col-head {
+	color: var(--sl-color-green-high);
+}
+.project-board-dot.is-done {
+	background-color: var(--sl-color-green-high);
+}
+.project-board-col.is-dead .project-board-col-head {
+	color: var(--sl-color-gray-2);
+}
+.project-board-dot.is-dead {
+	background-color: var(--sl-color-gray-3);
+}
+
+/* About / Projects (and any non-blog doc page) render Starlight's default
+   <Pagination> (.pagination-links) — a different DOM from the blog's LinkCard pager
+   above (plain <a> with an arrow + a "Previous/Next" line + a big white .link-title).
+   Restyle it to match the blog pager: a compact bordered button, a small uppercase
+   muted Previous/Next label over an accent title (single-line ellipsis), an accent
+   border + gray-6 hover, and the arrow shrunk to a muted directional cue. These
+   selectors are unlayered, so they win over Starlight's @layer starlight.core. */
+.pagination-links a {
+	gap: 0.5rem;
+	padding: 0.6rem 0.9rem;
+	border-color: var(--sl-color-gray-5);
+	border-radius: 0.5rem;
+	box-shadow: none;
+	color: var(--sl-color-gray-2);
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+.pagination-links a:hover {
+	border-color: var(--sl-color-text-accent);
+	background: var(--sl-color-gray-6);
+}
+/* The span carries the "Previous"/"Next" label as its first text line (before the
+   <br>): small, uppercase, muted, accent on hover. min-width:0 lets the title below
+   it shrink for the ellipsis. */
+.pagination-links a > span {
+	min-width: 0;
+	font-size: var(--sl-text-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	line-height: 1.3;
+	color: var(--sl-color-gray-3);
+}
+.pagination-links a:hover > span {
+	color: var(--sl-color-text-accent);
+}
+/* The page title: smaller, semibold, accent, single line with ellipsis — not the
+   default oversized 2xl white. text-transform:none so it isn't uppercased like the
+   label that sits above it. */
+.pagination-links a .link-title {
+	display: block;
+	font-size: var(--sl-text-sm);
+	font-weight: 600;
+	color: var(--sl-color-text-accent);
+	text-transform: none;
+	letter-spacing: normal;
+	line-height: 1.3;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* Shrink the oversized 1.5rem arrow to a small muted cue, accent on hover. */
+.pagination-links a svg {
+	font-size: 1em;
+	color: var(--sl-color-gray-3);
+}
+.pagination-links a:hover svg {
+	color: var(--sl-color-text-accent);
+}
+
+/* We render the chronological blog pager ourselves, below the article next to the
+   series pager (see MarkdownContent.astro / .post-pagers), so hide starlight-blog's
+   own copy in the post footer to avoid showing it twice. PostTags stay. */
+.post-footer .pagination {
+	display: none;
+}
+
+/* Blog post metadata: keep the Draft/Featured badges on the same line as the date
+   instead of a separate full-width row below it, and render them as compact pills.
+   Targets starlight-blog's Metadata.astro by class name (.metadata.not-content,
+   .dates, .authors, .badges), not its scoped hash, like the pager styles above.
+   `display`/`grid` need !important to beat the component's equal-specificity scoped
+   `.metadata { display:flex; flex-direction:column }`. */
+.metadata.not-content {
+	display: grid !important;
+	grid-template-columns: 1fr auto !important;
+	align-items: baseline;
+	column-gap: 0.75rem;
+	row-gap: 0.5rem;
+}
+.metadata.not-content .dates {
+	grid-column: 1;
+	grid-row: 1;
+}
+/* Badges share row 1 with the date (right-aligned into the empty space), so they
+   no longer cost a whole line. */
+.metadata.not-content .badges {
+	grid-column: 2;
+	grid-row: 1;
+	margin: 0;
+	justify-self: end;
+	align-self: center;
+	gap: 0.375rem;
+}
+.metadata.not-content .authors {
+	grid-column: 1 / -1;
+	grid-row: 2;
+}
+/* Smaller, rounder pills than the default medium badge, with a leading emoji
+   per kind (📝 draft, ⭐ featured) to match the post-category emojis. */
+.metadata.not-content .badges .sl-badge {
+	font-size: var(--sl-text-2xs, 0.6875rem);
+	line-height: 1.6;
+	padding: 0.0625rem 0.5rem;
+	border-radius: 999px;
+}
+.metadata.not-content .badges .sl-badge.caution::before {
+	content: "📝\00A0";
+}
+.metadata.not-content .badges .sl-badge.note::before {
+	content: "⭐\00A0";
+}
+
+/* Sidebar in-page anchor links (api "HTTP Methods", ...) highlighted on scroll by the
+   scroll-spy in astro.config head, matching Starlight's active-link treatment. */
+a[data-current-anchor] {
+	color: var(--sl-color-white);
+	font-weight: 600;
+}
+
+/* Group headers made clickable by the hoist script (astro.config head). */
+a.kz-group-link { color: inherit; text-decoration: none; }
+a.kz-group-link:hover { color: var(--sl-color-text-accent); }
+
+/* Hint asides -- the six Jekyll hint styles, each with its own colour + icon (rendered
+   from :::hint{.type} by src/remark-hints.mjs). Ported from the Jekyll screen.css. */
+.kz-hint {
+	position: relative;
+	margin: 1.5rem 0;
+	padding: 0.9rem 1.25rem 1rem 3.3rem;
+	border-radius: 0 6px 6px 0;
+	color: #eee;
+	background-color: #404040;
+	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+.kz-hint > :first-child { margin-top: 0; }
+.kz-hint > :last-child { margin-bottom: 0; }
+.kz-hint a { color: #fff; text-decoration: underline; }
+.kz-hint code:not(:where(.expressive-code *)) { color: #fff; background: rgba(0, 0, 0, 0.25); }
+.kz-hint-title { font-weight: 700; margin: 0 0 0.35rem; }
+/* The icon, positioned in the left gutter (Jekyll's .note:after). */
+.kz-hint::before {
+	position: absolute;
+	top: 0.8rem;
+	left: 0.8rem;
+	font-size: 2rem;
+	line-height: 1;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+.kz-hint-tip { background-image: linear-gradient(#7e6d42, #5c4e35); }
+.kz-hint-tip::before { content: '★'; color: #ffcc00; }
+.kz-hint-info { background-image: linear-gradient(#0389aa, #00617f); }
+.kz-hint-info::before { content: 'ⓘ'; }
+.kz-hint-caution { background-image: linear-gradient(#cd9239, #a27528); }
+.kz-hint-caution::before { content: '⚠'; }
+.kz-hint-warning { background-image: linear-gradient(#9e2812, #6f0d0d); }
+.kz-hint-warning::before { content: '‼'; }
+.kz-hint-unimplemented { background-image: linear-gradient(#4a4a4a, #383838); }
+.kz-hint-unimplemented::before { content: '🛠'; }
+.kz-hint-construction { background-image: linear-gradient(#4a4a4a, #383838); }
+.kz-hint-construction::before { content: '🚧'; }
+
+/* "On this page" leads with the page title (the #_top entry); make that first item
+   stand out (bold, larger) from the section links below it. */
+starlight-toc a[href='#_top'] {
+	font-weight: 600;
+	font-size: var(--sl-text-base);
+}
+
+/* Home splash -- a port of the Jekyll landing: Lato body + Montserrat display, a
+   full-bleed green quickstart bar with the terminal snippet on it, and a dark
+   footer. Kept scoped to .kz-home so the docs pages keep their own typography. */
+.kz-home {
+	font-family: Lato, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-weight: 300;
+	max-width: 60rem;
+	margin: 0 auto;
+	text-align: center;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+/* <em> is plain italic here (Jekyll gives it no colour or weight); undo the docs
+   theme's emphasis styling so it is not bold or green. */
+.kz-home em {
+	font-style: italic;
+	font-weight: inherit;
+	color: inherit;
+}
+.kz-intro {
+	font-weight: 300;
+	font-size: 3.2rem;
+	line-height: 1.1;
+	margin: 1.5rem 0 0.5rem;
+	color: var(--sl-color-white);
+}
+.kz-lede {
+	font-size: 1.75rem;
+	line-height: 1.3;
+	font-weight: 300;
+	margin: 0 auto 2.5rem;
+	max-width: 46rem;
+}
+.kz-features {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	align-items: start;
+	gap: 1.5rem 2.5rem;
+	margin: 2.5rem 0;
+	text-align: left;
+}
+.kz-feature h2 { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.5rem; }
+/* Starlight adds margin-top between adjacent block siblings in markdown content
+   (.sl-markdown-content :not(inline) + :not(inline)). Inside these multi-column
+   layouts that pushed every cell after the first down, so a row's first column sat
+   higher than the rest. Reset it for the direct children so each row's tops line up. */
+.kz-features > *,
+.kz-qs-inner > *,
+.kz-footer-inner > * { margin-top: 0; }
+.kz-feature p { margin: 0 0 0.6rem; font-size: 1.05rem; line-height: 1.45; color: var(--sl-color-gray-2); }
+.kz-feature a { color: var(--sl-color-text-accent); text-decoration: none; font-weight: 700; }
+.kz-feature a:hover { text-decoration: underline; }
+
+/* The green bar spans the whole viewport (side to side); an inner wrapper holds the
+   constrained golden-section grid (heading left, terminal right). */
+.kz-quickstart {
+	background-color: #689137;
+	color: #fff;
+	box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.4);
+	margin: 3.5rem 0;
+	padding: 2rem 0;
+	width: 100vw;
+	margin-left: calc(50% - 50vw);
+	margin-right: calc(50% - 50vw);
+}
+.kz-qs-inner {
+	display: grid;
+	grid-template-columns: 38.27% 61.73%;
+	gap: 2rem;
+	align-items: center;
+	max-width: 60rem;
+	margin: 0 auto;
+	padding: 0 1.5rem;
+	text-align: left;
+}
+.kz-qs-left h3 {
+	font-family: Lato, sans-serif;
+	font-weight: 700;
+	font-size: 1.7rem;
+	line-height: 1.2;
+	color: #fff;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+	margin: 0;
+	text-align: center;
+}
+.kz-qs-right .expressive-code { margin: -5em 0; font-size: 1rem; }
+.kz-qs-right .expressive-code pre { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+
+/* Full-bleed dark footer: copyright + "Website by Kronuz" (left), host credit
+   with the GitHub logo (right). */
+.kz-footer {
+	color: #c0c0c0;
+	font-size: 1rem;
+	width: 100vw;
+	margin: 3.5rem calc(50% - 50vw) -3rem;
+	padding: 1.5rem 0;
+	text-shadow: none;
+	border-top: 1px solid #282828;
+}
+.kz-footer-inner {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	max-width: 60rem;
+	margin: 0 auto;
+	padding: 0 1.5rem;
+	text-align: left;
+}
+.kz-footer p { margin: 0; }
+.kz-footer a { color: #c0c0c0; text-decoration: none; }
+.kz-footer a:hover { color: #fff; }
+.kz-footer img { vertical-align: middle; margin-left: 0.4rem; opacity: 0.8; transition: opacity 0.2s; }
+.kz-footer a:hover img { opacity: 1; }
+.kz-footer-right { text-align: right; }
+
+@media (max-width: 50rem) {
+	.kz-features { grid-template-columns: 1fr; }
+	.kz-qs-inner { grid-template-columns: 1fr; gap: 1rem; }
+	.kz-footer-inner { flex-direction: column; text-align: center; }
+	.kz-footer-right { text-align: center; }
+	.kz-intro { font-size: 2.2rem; }
+	.kz-lede { font-size: 1.35rem; }
+}

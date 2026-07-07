@@ -1,0 +1,57 @@
+---
+// Override of Starlight's PageTitle: render the page <h1> with the "Edit page" link
+// on the same line, right-aligned (like the Jekyll site's "Improve this page"). The
+// footer EditLink is overridden to render nothing, so the link lives only here.
+import { Icon } from '@astrojs/starlight/components';
+
+const route = Astro.locals.starlightRoute;
+const { editUrl } = route;
+const title = route.entry.data.title;
+// Splash/landing pages (the home) supply their own display heading, so don't
+// render the stock page <h1> (it would show a stray "Xapiand" title above the
+// custom hero content).
+const isSplash = route.entry.data.template === 'splash';
+---
+
+{
+	!isSplash && (
+		<div class="kz-page-head">
+			<h1 id="_top">{title}</h1>
+			{editUrl && (
+				<a class="kz-edit print:hidden" href={editUrl.href ?? editUrl} title="Edit this page on GitHub">
+					<Icon name="pencil" size="1em" />
+					<span>Edit page</span>
+				</a>
+			)}
+		</div>
+	)
+}
+
+<style>
+	.kz-page-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+	h1 {
+		margin-top: 1rem;
+		font-size: var(--sl-text-h1);
+		line-height: var(--sl-line-height-headings);
+		font-weight: 600;
+		color: var(--sl-color-white);
+	}
+	.kz-edit {
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.kz-edit:hover {
+		color: var(--sl-color-white);
+	}
+</style>

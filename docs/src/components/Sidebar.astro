@@ -1,0 +1,28 @@
+---
+import MobileMenuFooter from 'virtual:starlight/components/MobileMenuFooter';
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import SidebarSublist from './SidebarSublist.astro';
+
+const { sidebar } = Astro.locals.starlightRoute;
+---
+
+<SidebarPersister>
+	<SidebarSublist sublist={sidebar} />
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+	<MobileMenuFooter />
+</div>
+
+<script>
+	// The chevron button is the ONLY toggle; a group's label is a link that navigates.
+	document.addEventListener('click', (e) => {
+		const btn = (e.target as HTMLElement).closest('.kz-chevron');
+		if (!btn) return;
+		const group = btn.closest('.kz-group');
+		if (!group) return;
+		const open = group.hasAttribute('data-open');
+		group.toggleAttribute('data-open', !open);
+		btn.setAttribute('aria-expanded', String(!open));
+	});
+</script>

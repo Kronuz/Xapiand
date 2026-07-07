@@ -17,7 +17,7 @@ set -u
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
-DATASET="${DATASET:-$REPO/docs/assets/accounts.ndjson}"
+DATASET="${DATASET:-$REPO/docs/public/assets/accounts.ndjson}"
 REPLICATE="${REPLICATE:-20}"
 CONCURRENCY="${CONCURRENCY:-16}"
 DURATION="${DURATION:-5}"

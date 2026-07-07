@@ -1,7 +1,0 @@
-{%- assign post = site.docs | where: 'url', include.url | first -%}
-{%- unless post -%}
-	{%- assign post = site.tutorials | where: 'url', include.url | first -%}
-	{%- unless post -%}
-		{%- assign post = site.projects | where: 'url', include.url | first -%}
-	{%- endunless -%}
-{%- endunless -%}
