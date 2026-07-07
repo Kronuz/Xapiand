@@ -72,7 +72,7 @@ jobs:
           ninja -C build
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Install newman
         run: npm install -g newman
       - name: E2E
@@ -126,7 +126,7 @@ jobs:
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Install newman
         run: npm install -g newman
       - name: E2E under ${{ matrix.name }}
