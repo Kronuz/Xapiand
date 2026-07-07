@@ -24,23 +24,29 @@ be installed by using the following command:
 
 ## FreeBSD
 
-```sh
-Not yet available, build from sources.
-```
+A native FreeBSD package (`amd64`, built for FreeBSD 14) is attached to each
+[release](https://github.com/Kronuz/Xapiand/releases). Download it and install
+the local package file with:
 
-There is a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/contrib/freebsd/xapiand.shar) available.
+```sh
+~ $ pkg add ./xapiand-*.pkg
+```
 
 ## Linux
 
-RPM packages are attached to each [release](https://github.com/Kronuz/Xapiand/releases). Download
-the one matching your distribution and install it:
+RPM (`x86_64`, `aarch64`) and DEB (`amd64`, `arm64`) packages are attached to
+each [release](https://github.com/Kronuz/Xapiand/releases). Download the one
+matching your distribution and architecture and install it:
 
 ```sh
-~ $ sudo rpm -i xapiand-latest-1.x86_64.rpm
+# RPM-based (Fedora, RHEL, CentOS, ...):
+~ $ sudo rpm -i xapiand-*.x86_64.rpm
+
+# DEB-based (Debian 13+, Ubuntu 24.04+):
+~ $ sudo dpkg -i xapiand_*_amd64.deb
 ```
 
-A statically-linked `x86_64` binary is also attached to every release for
-distributions without RPM.
+A multi-arch [Docker image](#docker) is also available for any distribution.
 
 ## Building
 
