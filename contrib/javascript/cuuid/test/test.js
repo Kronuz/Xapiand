@@ -11,7 +11,7 @@
 var assert = require('assert');
 
 var UUID = require('../');
-var repr = require('../repr');
+var repr = require('../src/repr');
 
 uuids = [
 	// Full:
