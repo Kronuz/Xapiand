@@ -459,10 +459,7 @@ add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
 FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG main)
-FetchContent_GetProperties(threadpool)
-if(NOT threadpool_POPULATED)
-	FetchContent_Populate(threadpool)
-endif()
+FetchContent_MakeAvailable(threadpool)
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
 	THREADPOOL_TRACE_HEADER="xapiand_threadpool_trace.h"
@@ -476,10 +473,7 @@ add_compile_definitions(
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + colors.h.
 FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG main)  # track tip
-FetchContent_GetProperties(scheduler)
-if(NOT scheduler_POPULATED)
-	FetchContent_Populate(scheduler)
-endif()
+FetchContent_MakeAvailable(scheduler)
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 
@@ -490,10 +484,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
 FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG main)  # track tip
-FetchContent_GetProperties(logger)
-if(NOT logger_POPULATED)
-	FetchContent_Populate(logger)
-endif()
+FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
 # traceback: the crash-traceback toolkit (formatting box + signal-time all-thread
@@ -507,10 +498,7 @@ include_directories("${logger_SOURCE_DIR}")
 # the FetchContent include path. The logger's backtrace hook is wired to the
 # library's traceback() (atos file:line) in main.cc.
 FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/traceback.git GIT_TAG main)
-FetchContent_GetProperties(traceback)
-if(NOT traceback_POPULATED)
-	FetchContent_Populate(traceback)
-endif()
+FetchContent_MakeAvailable(traceback)
 include_directories("${traceback_SOURCE_DIR}")
 add_compile_definitions(TRACEBACK_HOOKS=1)
 
@@ -525,10 +513,7 @@ add_compile_definitions(TRACEBACK_HOOKS=1)
 # thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
 # handed to the WAL at construction; the data store stays on synchronous fsync.
 FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG main)
-FetchContent_GetProperties(storage)
-if(NOT storage_POPULATED)
-	FetchContent_Populate(storage)
-endif()
+FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
 	STORAGE_IO_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_io.h"
@@ -548,10 +533,7 @@ add_compile_definitions(
 # IO_RANDOM_ERRORS_HEADER restores the opts-driven fault injection under
 # XAPIAND_RANDOM_ERRORS. Standalone the library is dependency-free with no-op defaults.
 FetchContent_Declare(io GIT_REPOSITORY https://github.com/Kronuz/io.git GIT_TAG main)
-FetchContent_GetProperties(io)
-if(NOT io_POPULATED)
-	FetchContent_Populate(io)
-endif()
+FetchContent_MakeAvailable(io)
 include_directories("${io_SOURCE_DIR}")
 add_compile_definitions(
 	IO_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_trace.h"
@@ -564,10 +546,7 @@ add_compile_definitions(
 # CMake is not processed -- we Populate, not MakeAvailable). FS_TRACE_HEADER wires fs's
 # logging to Xapiand's real logger (+ error::name/description, repr).
 FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG main)
-FetchContent_GetProperties(fs)
-if(NOT fs_POPULATED)
-	FetchContent_Populate(fs)
-endif()
+FetchContent_MakeAvailable(fs)
 include_directories("${fs_SOURCE_DIR}")
 add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
 
@@ -577,10 +556,7 @@ add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_tr
 # is not processed -- Populate, not MakeAvailable). SYSTEM_TRACE_HEADER wires its logging to
 # Xapiand's real logger (+ error::name/description).
 FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG main)
-FetchContent_GetProperties(system)
-if(NOT system_POPULATED)
-	FetchContent_Populate(system)
-endif()
+FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
 add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_system_trace.h")
 
@@ -590,10 +566,7 @@ add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_s
 # back at Xapiand's logger, exception hierarchy, and Node registry. Its endian and
 # char-classify dependencies are populated below and are on XAPIAND_OBJ's include path.
 FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GIT_TAG main)
-FetchContent_GetProperties(cuuid)
-if(NOT cuuid_POPULATED)
-	FetchContent_Populate(cuuid)
-endif()
+FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
 	CUUID_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_trace.h"
@@ -609,10 +582,7 @@ add_compile_definitions(
 # still includes "exception.h" directly; src/ is first on the include path, so
 # Xapiand's wrapper wins here.
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG main)
-FetchContent_GetProperties(msgpack)
-if(NOT msgpack_POPULATED)
-	FetchContent_Populate(msgpack)
-endif()
+FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
 add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
 
@@ -626,10 +596,7 @@ FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG main)
 FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG main)
 foreach(dep static_string char_classify strict_stox hashes)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${static_string_SOURCE_DIR}"   # static_string.hh
@@ -645,10 +612,7 @@ include_directories(
 # to avoid the same-name collision, the way located-exception is wired. ansi_color.hh
 # and color_tools.hh are consumed directly from the library's dir on the path.
 FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG main)  # track tip
-FetchContent_GetProperties(term_color)
-if(NOT term_color_POPULATED)
-	FetchContent_Populate(term_color)
-endif()
+FetchContent_MakeAvailable(term_color)
 include_directories("${term_color_SOURCE_DIR}")
 add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colors.h")
 
@@ -664,10 +628,7 @@ FetchContent_Declare(times      GIT_REPOSITORY https://github.com/Kronuz/times.g
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG main)
 FetchContent_Declare(url_parser GIT_REPOSITORY https://github.com/Kronuz/url-parser.git GIT_TAG main)
 foreach(dep endian repr escape times strings url_parser)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${endian_SOURCE_DIR}"
@@ -689,10 +650,7 @@ FetchContent_Declare(math              GIT_REPOSITORY https://github.com/Kronuz/
 FetchContent_Declare(lazy              GIT_REPOSITORY https://github.com/Kronuz/lazy.git              GIT_TAG main)
 FetchContent_Declare(iterators         GIT_REPOSITORY https://github.com/Kronuz/iterators.git         GIT_TAG main)
 foreach(dep utype atomic_shared_ptr math lazy iterators)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${utype_SOURCE_DIR}"
@@ -721,10 +679,7 @@ add_compile_definitions(HAVE_CLOCK_GETTIME)
 # same-name "namegen.h" collision -- the c++/ dir is deliberately NOT put on the
 # include path, the way colors.h is wired for term-color.
 FetchContent_Declare(fantasyname GIT_REPOSITORY https://github.com/Kronuz/fantasyname.git GIT_TAG master)  # track tip
-FetchContent_GetProperties(fantasyname)
-if(NOT fantasyname_POPULATED)
-	FetchContent_Populate(fantasyname)
-endif()
+FetchContent_MakeAvailable(fantasyname)
 add_compile_definitions(FANTASYNAME_HEADER="${fantasyname_SOURCE_DIR}/c++/namegen.h")
 
 # enum-reflection: reflective ENUM_CLASS (enum <-> string, perfect-hash lookup),
@@ -736,10 +691,7 @@ add_compile_definitions(FANTASYNAME_HEADER="${fantasyname_SOURCE_DIR}/c++/namege
 FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG main)
 FetchContent_Declare(boolean_parser  GIT_REPOSITORY https://github.com/Kronuz/boolean-parser.git  GIT_TAG main)
 foreach(dep enum_reflection boolean_parser)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${enum_reflection_SOURCE_DIR}"   # enum.h
@@ -757,10 +709,7 @@ include_directories(
 # "logger way"), so we Populate + put the headers on the path here. This unifies
 # the parser with Kronuz/http, whose HttpConnection uses the same fork.
 FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-parser.git GIT_TAG main)
-FetchContent_GetProperties(http_parser)
-if(NOT http_parser_POPULATED)
-	FetchContent_Populate(http_parser)
-endif()
+FetchContent_MakeAvailable(http_parser)
 include_directories("${http_parser_SOURCE_DIR}")
 
 # http: the generic HTTP/1.1 application layer (Kronuz/http) -- the seam Xapiand's
@@ -770,10 +719,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG main)
-FetchContent_GetProperties(http_lib)
-if(NOT http_lib_POPULATED)
-	FetchContent_Populate(http_lib)
-endif()
+FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
 # reactor: the generic Asio server runtime (Kronuz/reactor) that Kronuz/http's transport
@@ -782,10 +728,7 @@ include_directories("${http_lib_SOURCE_DIR}")
 # one runtime. Header-only; needs only <asio.hpp> (provided below). Included here because
 # http_asio.h does #include "reactor.h".
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG main)
-FetchContent_GetProperties(reactor)
-if(NOT reactor_POPULATED)
-	FetchContent_Populate(reactor)
-endif()
+FetchContent_MakeAvailable(reactor)
 include_directories("${reactor_SOURCE_DIR}")
 
 # cluster: the UDP-multicast cluster substrate (Kronuz/cluster) -- cluster::Bus (transport)
@@ -793,10 +736,7 @@ include_directories("${reactor_SOURCE_DIR}")
 # Raft. Header-only; needs only reactor (above) + Asio (below). The membership gossip + the
 # Node registry + the join state machine stay app-side (fed to Raft via a RaftDelegate).
 FetchContent_Declare(cluster GIT_REPOSITORY https://github.com/Kronuz/cluster.git GIT_TAG main)
-FetchContent_GetProperties(cluster)
-if(NOT cluster_POPULATED)
-	FetchContent_Populate(cluster)
-endif()
+FetchContent_MakeAvailable(cluster)
 include_directories("${cluster_SOURCE_DIR}")
 
 # flume: the compressed, framed, integrity-checked file-transfer conduit (Kronuz/flume) --
@@ -804,10 +744,7 @@ include_directories("${cluster_SOURCE_DIR}")
 # ClientLZ4Compressor/Decompressor. Header-only; rides the compressors buffer-core (Zstd L6
 # by default -- ~48% fewer bytes than the classic LZ4 at line-rate).
 FetchContent_Declare(flume GIT_REPOSITORY https://github.com/Kronuz/flume.git GIT_TAG main)
-FetchContent_GetProperties(flume)
-if(NOT flume_POPULATED)
-	FetchContent_Populate(flume)
-endif()
+FetchContent_MakeAvailable(flume)
 include_directories("${flume_SOURCE_DIR}")
 
 # Asio (standalone, header-only): the runtime + transport substrate the HTTP path
@@ -826,10 +763,7 @@ add_definitions(-DASIO_STANDALONE)
 # that http_router.h binds into http::MethodRouter -- Xapiand's declarative route table
 # (Leg 2 stage 3c-6) is registered on it. Header-only, no deps.
 FetchContent_Declare(radix_router GIT_REPOSITORY https://github.com/Kronuz/radix-router.git GIT_TAG main)
-FetchContent_GetProperties(radix_router)
-if(NOT radix_router_POPULATED)
-	FetchContent_Populate(radix_router)
-endif()
+FetchContent_MakeAvailable(radix_router)
 include_directories("${radix_router_SOURCE_DIR}")
 
 # datetime: the pure ISO-8601 + date-math + time/timedelta string parser,
@@ -838,10 +772,7 @@ include_directories("${radix_router_SOURCE_DIR}")
 # Xapiand as src/datetime_msgpack.{h,cc}. datetime.cc uses strict_stox, already
 # on the path.
 FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG main)
-FetchContent_GetProperties(datetime)
-if(NOT datetime_POPULATED)
-	FetchContent_Populate(datetime)
-endif()
+FetchContent_MakeAvailable(datetime)
 include_directories("${datetime_SOURCE_DIR}")
 
 # More extracted utilities, consumed via FetchContent in place of the in-tree
@@ -859,10 +790,7 @@ FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/string
 FetchContent_Declare(allocators  GIT_REPOSITORY https://github.com/Kronuz/allocators.git  GIT_TAG main)
 FetchContent_Declare(cartesian   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git   GIT_TAG main)
 foreach(dep md5 sha256 random epoch nanosleep stringified allocators cartesian)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${md5_SOURCE_DIR}"           # md5.h
@@ -887,10 +815,7 @@ endif()
 FetchContent_Declare(queue        GIT_REPOSITORY https://github.com/Kronuz/queue.git        GIT_TAG main)
 FetchContent_Declare(bloom_filter GIT_REPOSITORY https://github.com/Kronuz/bloom-filter.git GIT_TAG main)
 foreach(dep queue bloom_filter)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${queue_SOURCE_DIR}"          # queue.h
@@ -903,10 +828,7 @@ include_directories(
 # (SerialisableSoundex), so it stays out of the library. Depends on strings
 # (already on the path); header-only, so it just goes on the include path.
 FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG main)
-FetchContent_GetProperties(soundex)
-if(NOT soundex_POPULATED)
-	FetchContent_Populate(soundex)
-endif()
+FetchContent_MakeAvailable(soundex)
 include_directories("${soundex_SOURCE_DIR}")
 
 # string-similarity: the pure string-metric algorithms (Levenshtein, Jaro,
@@ -924,10 +846,7 @@ include_directories("${soundex_SOURCE_DIR}")
 FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG main)
 FetchContent_Declare(double_metaphone  GIT_REPOSITORY https://github.com/Kronuz/double-metaphone.git  GIT_TAG main)
 foreach(dep string_similarity double_metaphone)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${string_similarity_SOURCE_DIR}"   # basic_string_metric.h, levenshtein.h, ..., phonetic_metric.h
@@ -944,10 +863,7 @@ include_directories(
 # dead in Xapiand (only a commented-out call). Depends on cartesian (already on the
 # path); compiled (htm.cc + constraint.cc into XAPIAND_OBJ).
 FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG main)
-FetchContent_GetProperties(htm)
-if(NOT htm_POPULATED)
-	FetchContent_Populate(htm)
-endif()
+FetchContent_MakeAvailable(htm)
 include_directories("${htm_SOURCE_DIR}")
 
 # compressors: the deflate (zlib) + lz4 buffer/file-streaming codecs. The *File
@@ -958,10 +874,7 @@ include_directories("${htm_SOURCE_DIR}")
 # path, zlib from the system. Xapiand uses deflate + lz4 only (no zstd), so only
 # those two .cc compile into XAPIAND_OBJ.
 FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG main)
-FetchContent_GetProperties(compressors)
-if(NOT compressors_POPULATED)
-	FetchContent_Populate(compressors)
-endif()
+FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
 
@@ -998,10 +911,7 @@ FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.
 # its sources populated, not its own CMake.
 FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1)
 foreach(dep rapidjson cppcodec cli11 lz4)
-	FetchContent_GetProperties(${dep})
-	if(NOT ${dep}_POPULATED)
-		FetchContent_Populate(${dep})
-	endif()
+	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${rapidjson_SOURCE_DIR}/include"   # rapidjson/...
@@ -1056,10 +966,7 @@ if(LUA)
 
 	# sol2: header-only C++ binding; use its headers directly.
 	FetchContent_Declare(sol2 GIT_REPOSITORY https://github.com/ThePhD/sol2.git GIT_TAG develop)
-	FetchContent_GetProperties(sol2)
-	if(NOT sol2_POPULATED)
-		FetchContent_Populate(sol2)
-	endif()
+	FetchContent_MakeAvailable(sol2)
 
 	include_directories(
 		"${lua_SOURCE_DIR}/src"
