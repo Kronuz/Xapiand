@@ -1387,7 +1387,7 @@ a.kz-group-link:hover { color: var(--sl-color-text-accent); }
 	position: relative;
 	margin: 1.5rem 0;
 	padding: 0.9rem 1.25rem 1rem 3.3rem;
-	border-radius: 0 6px 6px 0;
+	border-radius: 6px;
 	color: #eee;
 	background-color: #404040;
 	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
@@ -1407,13 +1407,13 @@ a.kz-group-link:hover { color: var(--sl-color-text-accent); }
 	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 .kz-hint-tip { background-image: linear-gradient(#7e6d42, #5c4e35); }
-.kz-hint-tip::before { content: '★'; color: #ffcc00; }
+.kz-hint-tip::before { content: '⭐️'; color: #ffcc00; }
 .kz-hint-info { background-image: linear-gradient(#0389aa, #00617f); }
-.kz-hint-info::before { content: 'ⓘ'; }
+.kz-hint-info::before { content: '✏️'; }
 .kz-hint-caution { background-image: linear-gradient(#cd9239, #a27528); }
-.kz-hint-caution::before { content: '⚠'; }
+.kz-hint-caution::before { content: '🪄'; }
 .kz-hint-warning { background-image: linear-gradient(#9e2812, #6f0d0d); }
-.kz-hint-warning::before { content: '‼'; }
+.kz-hint-warning::before { content: '⚠️'; }
 .kz-hint-unimplemented { background-image: linear-gradient(#4a4a4a, #383838); }
 .kz-hint-unimplemented::before { content: '🛠'; }
 .kz-hint-construction { background-image: linear-gradient(#4a4a4a, #383838); }
