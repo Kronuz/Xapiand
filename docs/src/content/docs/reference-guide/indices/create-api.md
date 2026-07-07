@@ -37,10 +37,11 @@ Indices can be paths (including `/` as part of the path).
 ## Settings
 
 Each index created can have specific settings associated with it, such can be
-defined in the body:
+defined in the body (these can only be set on a **new** index, so this example
+uses a fresh one):
 
 ```rest
-PUT /twitter/tweet/
+PUT /twitter/tweet_sharded/
 
 {
   "_settings": {
@@ -49,12 +50,6 @@ PUT /twitter/tweet/
   }
 }
 ```
-
-<!-- e2e:begin
----
-status: 400
----
-e2e:end -->
 
 The default for `number_of_shards` is `5`, and the default for
 `number_of_replicas` is `1` (ie one replica for each primary shard), the above

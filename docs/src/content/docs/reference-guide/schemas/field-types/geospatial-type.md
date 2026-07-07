@@ -140,23 +140,18 @@ format. The following shapes are allowed types:
 * MULTICHULL    - Finds documents inside the given vector of convexs hull.
 
 The following example indexes a point with _latitude_ of **41.50343** and
-_longitude_ of **-74.01042**.
+_longitude_ of **-74.01042** into a `location` field (the `checkin` field on the
+sample data already holds a point, and a geo field can only carry one shape):
 
 ```rest
 UPDATE /bank/5
 
 {
-  "checkin": {
+  "location": {
     "_ewkt": "POINT(-74.01042 41.50343)"
   }
 }
 ```
-
-<!-- e2e:begin
----
-status: 400
----
-e2e:end -->
 
 :::hint[Caution]{.caution}
 Notice that for points in EWKT expressions, the correct coordinate order is
