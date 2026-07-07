@@ -205,12 +205,14 @@ city: Turin
 GET /twitter/user/Jane
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("YAML document was indexed", function () {
   pm.expect(pm.response.json().name).to.eql("Jane");
   pm.expect(pm.response.json().city).to.eql("Turin");
 });
 ```
+e2e:end -->
 
 ### Deviations from JSON
 

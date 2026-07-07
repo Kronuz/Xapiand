@@ -36,11 +36,13 @@ The stored document now carries the derived field:
 GET /twitter/user/Ada
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("full_name was computed by the script", function () {
   pm.expect(pm.response.json().full_name).to.eql("Ada Lovelace");
 });
 ```
+e2e:end -->
 
 ## How to Use Scripts
 
@@ -114,11 +116,13 @@ PUT /twitter/user/Grace?commit
 GET /twitter/user/Grace
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("multiplied_field = 7 * 3", function () {
   pm.expect(pm.response.json().multiplied_field).to.eql(21);
 });
 ```
+e2e:end -->
 
 The body is compiled once; only the parameter changes between requests.
 
@@ -142,11 +146,13 @@ PUT /twitter/user/Alan?commit
 GET /twitter/user/Alan
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("email was normalized to lower case", function () {
   pm.expect(pm.response.json().email).to.eql("alan@example.com");
 });
 ```
+e2e:end -->
 
 ### Fill in a default
 
@@ -166,11 +172,13 @@ PUT /twitter/user/Edsger?commit
 GET /twitter/user/Edsger
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("default status was applied", function () {
   pm.expect(pm.response.json().status).to.eql("active");
 });
 ```
+e2e:end -->
 
 ### Maintain a counter
 
@@ -202,11 +210,13 @@ PUT /twitter/user/John?commit
 GET /twitter/user/John
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("serial was incremented", function () {
   pm.expect(pm.response.json().serial).to.eql(2);
 });
 ```
+e2e:end -->
 
 ## Foreign Scripts
 
@@ -215,7 +225,7 @@ _foreign scripts_. To use a foreign script, first create a document containing
 the script:
 
 ```rest
-PUT /path/to/my_scripts/multiplier
+PUT /path/to/my_scripts/multiplier?commit
 
 {
   "_recurse": false,
@@ -233,20 +243,21 @@ PUT /path/to/my_scripts/multiplier
 We place the script inside the `"script"` field and set `"_recurse": false` so
 `"script"` isn't recursed and analyzed as a regular field by the Schema.
 
-We then use the foreign script by specifying `_foreign` (the full index path, the
-document ID, and the selector). In the example, the index is `path/to/my_scripts`,
-the document ID is `multiplier`, and the selector is a
-[Drill Selector](/Xapiand/exploration#drill-selector) that gets the `"script"`
-field:
+We then use the foreign script by pointing `_foreign` at the script document (its
+full index path and document ID). Xapiand automatically reads that document's
+`"script"` field (the same convention as _foreign schemas_), so you don't add a
+selector yourself. Here the index is `path/to/my_scripts` and the document ID is
+`multiplier`. The `_params` passed at the call site override the script's own
+defaults, so `multiplier` is `3` rather than the stored `1`:
 
 ```rest
-PUT /twitter/user/Katherine
+PUT /twitter/user/Katherine?commit
 
 {
   "multiplied_field": 7,
   "_script": {
     "_type": "foreign/object",
-    "_foreign": "path/to/my_scripts/multiplier.script",
+    "_foreign": "path/to/my_scripts/multiplier",
     "_params": {
       "multiplier": 3
     }
@@ -254,8 +265,14 @@ PUT /twitter/user/Katherine
 }
 ```
 
+```rest
+GET /twitter/user/Katherine
+```
+
 <!-- e2e:begin
----
-status: 400
----
+```js
+pm.test("foreign script multiplied the field", function () {
+  pm.expect(pm.response.json().multiplied_field).to.eql(21);
+});
+```
 e2e:end -->
