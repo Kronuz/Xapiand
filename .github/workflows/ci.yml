@@ -84,6 +84,15 @@ jobs:
     # Sanitizers find the bugs that matter most in a concurrent C++ engine
     # (use-after-free/leaks under ASAN, data races under TSAN). Linux + gcc-13 has
     # the native runtimes; macOS/Apple-clang hangs on these, so this is Linux-only.
+    #
+    # Each job runs smoke + load AND the full doc-driven E2E under the sanitizer, so
+    # the whole documented HTTP API surface (aggregations, geo, schema ops,
+    # restore/dump, ...) is checked for memory errors and races -- not just the
+    # smoke/load paths. The build is ASSERTS-off on purpose: a known
+    # restore-write-path assertion aborts the E2E's "Load sample data" step under
+    # -DASSERTS=ON (tracked separately; the same reason the functional E2E job builds
+    # asserts-off), and assert coverage on smoke/load is already provided by the
+    # build-test job.
     strategy:
       fail-fast: false
       matrix:
@@ -109,9 +118,16 @@ jobs:
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            ${{ matrix.cmake_flag }} -DASSERTS=ON -DLTO=OFF \
+            ${{ matrix.cmake_flag }} -DLTO=OFF \
             -DASIO_INCLUDE_DIR=/usr/include
           # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.
           ninja -C build -j2
       - name: Smoke + load under ${{ matrix.name }}
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install newman
+        run: npm install -g newman
+      - name: E2E under ${{ matrix.name }}
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e
