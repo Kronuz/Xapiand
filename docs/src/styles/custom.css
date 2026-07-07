@@ -1470,7 +1470,7 @@ starlight-toc a[href='#_top'] {
 	margin: 2.5rem 0;
 	text-align: left;
 }
-.kz-feature h2 { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.5rem; }
+.kz-feature h2 { font-size: 2rem; font-weight: 700; margin: 0 0 0.5rem; }
 /* Starlight adds margin-top between adjacent block siblings in markdown content
    (.sl-markdown-content :not(inline) + :not(inline)). Inside these multi-column
    layouts that pushed every cell after the first down, so a row's first column sat
