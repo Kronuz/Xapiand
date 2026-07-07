@@ -35,6 +35,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
         working-directory: docs
+      - name: Install D2 (build-time diagram renderer)
+        # The architecture docs render ```d2 fences to SVG at build time by shelling
+        # out to the d2 CLI (see docs/src/renderD2.mjs). Without it, those pages build
+        # empty. The public runner has internet egress, so install it before building.
+        run: |
+          curl -fsSL https://d2lang.com/install.sh | sh -s --
+          d2 --version
       - name: Build site
         run: npm run build
         working-directory: docs
