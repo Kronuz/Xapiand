@@ -26,17 +26,16 @@ __all__ = ['UUID', 'uuid', 'uuid1', 'uuid3', 'uuid4', 'uuid5',
            'unserialise', 'encode', 'decode', 'encode_uuid', 'decode_uuid',
            'NAMESPACE_DNS', 'NAMESPACE_URL', 'NAMESPACE_OID', 'NAMESPACE_X500']
 
-import six
 import uuid as _uuid
 
 try:
     from . import base_x
-except ValueError:
+except ImportError:
     import base_x
 
 try:
     from .mertwis import MT19937
-except ValueError:
+except ImportError:
     from mertwis import MT19937
 
 
@@ -70,20 +69,20 @@ def unserialise(serialised):
 
 
 def encode(serialised, encoding='encoded'):
-    if isinstance(serialised, six.string_types):
+    if isinstance(serialised, bytes):
         if encoding == 'guid':
-            return b';'.join('{%s}' % u for u in unserialise(serialised))
+            return ';'.join('{%s}' % u for u in unserialise(serialised))
         elif encoding == 'urn':
-            return b'urn:uuid:' + ';'.join(unserialise(serialised))
+            return 'urn:uuid:' + ';'.join(str(u) for u in unserialise(serialised))
         elif encoding == 'encoded':
-            if ord(serialised[0]) != 1 and ((ord(serialised[-1]) & 1) or (len(serialised) >= 6 and ord(serialised[-6]) & 2)):
-                return b'~' + UUID.ENCODER.encode(serialised)
-        return b';'.join(unserialise(serialised))
+            if serialised[0] != 1 and ((serialised[-1] & 1) or (len(serialised) >= 6 and serialised[-6] & 2)):
+                return '~' + UUID.ENCODER.encode(serialised)
+        return ';'.join(str(u) for u in unserialise(serialised))
     raise ValueError("Invalid serialised UUID: %r" % serialised)
 
 
 def decode(encoded):
-    if isinstance(encoded, six.string_types):
+    if isinstance(encoded, str):
         if len(encoded) > 2:
             if encoded[0] == '{' and encoded[-1] == '}':
                 encoded = encoded[1:-1]
@@ -109,7 +108,7 @@ def decode_uuid(code):
     return UUID.unserialise(decode(code))
 
 
-class UUID(six.binary_type, _uuid.UUID):
+class UUID(_uuid.UUID):
     """
     Compact UUID
     Anonymous UUID is 00000000-0000-1000-8000-010000000000
@@ -177,19 +176,35 @@ class UUID(six.binary_type, _uuid.UUID):
     ]
 
     def __new__(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
-        try:
-            string = data if data is not None else hex
-            u = cls._uuid(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version, data=data)
-            self = six.binary_type.__new__(cls, u)
-            self.__dict__['int'] = u.int
-            return self
-        except Exception:
-            return six.binary_type.__new__(cls, string)
+        u = cls._uuid(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version, data=data)
+        self = object.__new__(cls)
+        object.__setattr__(self, 'int', u.int)
+        object.__setattr__(self, 'is_safe', getattr(u, 'is_safe', _uuid.SafeUUID.unknown))
+        return self
 
-    def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
-        if 'int' not in self.__dict__:
-            u = self._uuid(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version, data=data)
-            self.__dict__['int'] = u.int
+    def __init__(self, *args, **kwargs):
+        # All initialisation happens in __new__: uuid.UUID is immutable, so the int
+        # slot is set there. This override keeps uuid.UUID.__init__ from re-running
+        # and rejecting our extended argument set (e.g. data=...).
+        pass
+
+    def __eq__(self, other):
+        # This used to subclass str, so a UUID compared equal to its own canonical
+        # hex string; keep that so unserialise(...) == ['xxxxxxxx-...'] still holds.
+        if isinstance(other, _uuid.UUID):
+            return self.int == other.int
+        if isinstance(other, str):
+            return str(self) == other
+        return NotImplemented
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
+
+    def __hash__(self):
+        return hash(self.int)
 
     @classmethod
     def _uuid(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
@@ -197,9 +212,9 @@ class UUID(six.binary_type, _uuid.UUID):
             raise TypeError('need one of hex, bytes, bytes_le, fields, or int')
         if data is not None:
             num = 0
-            for d in data:
+            for d in bytearray(data):
                 num <<= 8
-                num |= ord(d)
+                num |= d
             node = ((num << 1) & 0xfe0000000000) | num & 0x00ffffffffff
             num >>= 47
             clock_seq_low = num & 0xff
@@ -219,7 +234,7 @@ class UUID(six.binary_type, _uuid.UUID):
             node |= 0x010000000000  # Multicast bit set
             fields = (time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node)
         elif hex is not None:
-            if isinstance(hex, six.string_types):
+            if isinstance(hex, str):
                 hex = cls._decode_uuid(hex, 1)
             if isinstance(hex, _uuid.UUID):
                 int, hex = hex.int, None
@@ -235,13 +250,13 @@ class UUID(six.binary_type, _uuid.UUID):
             size = len(serialised)
             if size < 2:
                 return False
-            byte0 = ord(serialised[0])
+            byte0 = serialised[0]
             if byte0 == 1:
                 length = 17
             else:
                 length = size
                 q = bool(byte0 & 0xf0)
-                for i in six.moves.range(13):
+                for i in range(13):
                     if cls.VL[i][q][0] == (byte0 & cls.VL[i][q][1]):
                         length = i + 4
                         break
@@ -272,23 +287,23 @@ class UUID(six.binary_type, _uuid.UUID):
     def _unserialise_condensed(cls, serialised):
         size = len(serialised)
         length = size
-        byte0 = ord(serialised[0])
+        byte0 = serialised[0]
         q = bool(byte0 & 0xf0)
-        for i in six.moves.range(13):
+        for i in range(13):
             if cls.VL[i][q][0] == (byte0 & cls.VL[i][q][1]):
                 length = i + 4
                 break
         if size < length:
             raise ValueError("Bad encoded uuid")
 
-        list_bytes_ = list(serialised[:length])
+        list_bytes_ = list(bytearray(serialised[:length]))
         byte0 &= ~cls.VL[i][q][1]
-        list_bytes_[0] = chr(byte0)
+        list_bytes_[0] = byte0
 
         meat = 0
         for s in list_bytes_:
             meat <<= 8
-            meat |= ord(s)
+            meat |= s
 
         compacted = meat & 1
         meat >>= cls.COMPACTED_BITS
@@ -333,7 +348,7 @@ class UUID(six.binary_type, _uuid.UUID):
         if serialised is None or len(serialised) < 2:
             raise ValueError("Bad encoded uuid %s" % repr(serialised))
 
-        if (serialised and ord(serialised[0]) == 1):
+        if (serialised and serialised[0] == 1):
             return cls._unserialise_full(serialised)
         else:
             return cls._unserialise_condensed(serialised)
@@ -357,8 +372,8 @@ class UUID(six.binary_type, _uuid.UUID):
 
     @classmethod
     def _serialise(cls, self):
-        variant = ord(self.bytes[8]) & 0xc0
-        version = ord(self.bytes[6]) >> 4
+        variant = self.bytes[8] & 0xc0
+        version = self.bytes[6] >> 4
         if variant == 0x80 and version == 1:
             node = self.node & cls.NODE_MASK
             clock = self.clock_seq & cls.CLOCK_MASK
@@ -407,14 +422,14 @@ class UUID(six.binary_type, _uuid.UUID):
                     serialised[-1] |= cls.VL[length][1][0]
             else:
                 serialised[-1] |= cls.VL[length][0][0]
-            serialised = ''.join(chr(c) for c in reversed(serialised))
+            serialised = bytes(bytearray(reversed(serialised)))
             if compacted_time:
                 compacted_time = ((compacted_time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
         else:
             compacted_node = None
             compacted_time = None
             compacted_clock = None
-            serialised = chr(0x01) + self.bytes
+            serialised = b'\x01' + self.bytes
         return serialised, compacted_node, compacted_time, compacted_clock
 
     @classmethod
@@ -475,9 +490,9 @@ class UUID(six.binary_type, _uuid.UUID):
             num |= ((self.node & 0xfe0000000000) >> 1) | (self.node & 0x00ffffffffff)
         data = []
         while num:
-            data.append(chr(num & 0xff))
+            data.append(num & 0xff)
             num >>= 8
-        return ''.join(reversed(data))
+        return bytes(bytearray(reversed(data)))
 
     def iscompact(self):
         if '_compacted_node' not in self.__dict__:
@@ -566,13 +581,13 @@ if __name__ == '__main__':
                 errors += 1
                 print("Error in serialise: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result_encoded, expected_encoded))
 
-            result_seriaised = repr(serialised)
+            result_seriaised = repr(serialised.decode('latin-1'))
             if result_seriaised != expected_serialised:
                 errors += 1
                 print("Error in serialise: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result_seriaised, expected_serialised))
         except ValueError as e:
             errors += 1
-            print(e.message)
+            print(e)
 
     if errors == 0:
         print("Pass all tests")

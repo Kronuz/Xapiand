@@ -59,7 +59,7 @@ class BaseX(object):
             sum_chk += idx
 
         sumsz = len(string)
-        sum_chk += sumsz + sumsz / self.base
+        sum_chk += sumsz + sumsz // self.base
 
         return string, sum_chk % self.base
 
@@ -69,7 +69,7 @@ class BaseX(object):
             raise TypeError("a bytes-like object is required, not '%s'" % type(v).__name__)
 
         p, acc = 1, 0
-        for c in map(ord, reversed(v)):
+        for c in reversed(bytearray(v)):
             acc += p * c
             p = p << 8
 
@@ -98,7 +98,7 @@ class BaseX(object):
             sum_chk += i
             sumsz += 1
 
-        sum_chk += sumsz + sumsz / self.base
+        sum_chk += sumsz + sumsz // self.base
 
         return decimal, sum_chk % self.base
 
@@ -128,7 +128,7 @@ class BaseX(object):
             result.append(acc & 0xff)
             acc >>= 8
 
-        return ''.join(map(chr, reversed(result)))
+        return bytes(bytearray(reversed(result)))
 
     def chksum(self, v):
         """Get checksum character for BaseX encoded string"""
