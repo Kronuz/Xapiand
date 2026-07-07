@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-const UUIDv1 = require('uuid/v1');
+const { v1: UUIDv1 } = require('uuid');
 const MersenneTwister = require('mersenne-twister');
 const op64 = require('./int64.js');
 const xor64 = op64.xor64;

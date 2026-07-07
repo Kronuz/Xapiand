@@ -14,7 +14,7 @@
   	},
   	"dependencies": {
 	    "mersenne-twister": "^1.1.0",
-	    "uuid": "^3.1.0"
+	    "uuid": "^11.1.1"
   	},
   	"devDependencies": {
     	"mocha": "3.1.2"
