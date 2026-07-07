@@ -4,6 +4,8 @@ description: Search and Storage Server
 template: splash
 ---
 
+import OSDetect from '../../components/OSDetect.astro';
+
 <div class="kz-home">
 
 <div class="kz-intro">Search and Storage Server</div>
@@ -33,11 +35,45 @@ template: splash
 <div class="kz-qs-left"><h3>Get up and running <em>in seconds</em>.</h3></div>
 <div class="kz-qs-right">
 
+<div class="kz-os" data-os="linux">
+
+<div class="kz-os-pick">
+<button type="button" data-os="mac">macOS</button>
+<button type="button" data-os="linux">Linux</button>
+<button type="button" data-os="windows">Windows</button>
+</div>
+
+<div class="kz-os-panel" data-os="mac">
+
 ```sh title="Quick-start Instructions"
 brew install Kronuz/tap/xapiand
 xapiand -vvvv
 # => Ready to Rock!
 ```
+
+</div>
+<div class="kz-os-panel" data-os="linux">
+
+```sh title="Quick-start Instructions"
+docker run -p 8880:8880 --rm \
+  ghcr.io/kronuz/xapiand:latest -vvvv
+# => Ready to Rock!
+```
+
+</div>
+<div class="kz-os-panel" data-os="windows">
+
+```sh title="Quick-start Instructions"
+docker run -p 8880:8880 --rm \
+  ghcr.io/kronuz/xapiand:latest -vvvv
+# => Ready to Rock!
+```
+
+</div>
+
+</div>
+
+<OSDetect />
 
 </div>
 </div>

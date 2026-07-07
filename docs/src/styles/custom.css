@@ -1514,8 +1514,40 @@ starlight-toc a[href='#_top'] {
 	margin: 0;
 	text-align: center;
 }
-.kz-qs-right .expressive-code { margin: -5em 0; font-size: 1rem; }
-.kz-qs-right .expressive-code pre { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+/* OS auto-detect quick-start: a small inline script sets data-os on .kz-os to the
+   visitor's platform (macOS -> brew, Linux/Windows -> docker); the matching panel
+   shows, the small picker lets them switch. The default (and no-JS fallback) is the
+   universal docker command. The whole widget floats over the green bar like the
+   lone terminal used to. */
+.kz-os { display: block; margin: -2em 0; }
+.kz-os .kz-os-panel { display: none; }
+.kz-os[data-os="mac"] .kz-os-panel[data-os="mac"],
+.kz-os[data-os="linux"] .kz-os-panel[data-os="linux"],
+.kz-os[data-os="windows"] .kz-os-panel[data-os="windows"] { display: block; }
+.kz-os-panel .expressive-code { margin: 0; font-size: 1rem; }
+.kz-os-panel .expressive-code pre { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+/* OS picker: small pills, white on the green bar, the active one filled. */
+.kz-os-pick { display: flex; gap: 0.3rem; margin-bottom: 0.6rem; }
+.kz-os-pick button {
+	background: rgba(255, 255, 255, 0.12);
+	color: rgba(255, 255, 255, 0.8);
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	border-radius: 0.35rem;
+	padding: 0.15rem 0.7rem;
+	font-family: inherit;
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+.kz-os-pick button:hover { color: #fff; background: rgba(255, 255, 255, 0.22); }
+.kz-os[data-os="mac"] .kz-os-pick [data-os="mac"],
+.kz-os[data-os="linux"] .kz-os-pick [data-os="linux"],
+.kz-os[data-os="windows"] .kz-os-pick [data-os="windows"] {
+	background: #fff;
+	color: #689137;
+	border-color: #fff;
+	font-weight: 700;
+}
 
 /* Full-bleed dark footer: copyright + "Website by Kronuz" (left), host credit
    with the GitHub logo (right). */
