@@ -36,8 +36,8 @@ else:
     text_type = str
     binary_type = bytes
     string_types = str, bytes
-    integer_types = int, long
-    integer_type = long
+    integer_types = (int,)
+    integer_type = int
     from urllib.parse import quote_plus, urlencode, urlparse, unquote
     map = map
     zip = zip
