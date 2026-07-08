@@ -2767,6 +2767,15 @@ Request::Request() :
 	if (auto manager = XapiandManager::manager()) {
 		++manager->http_clients;
 	}
+
+	// In-flight watchdog (recovered v0.4.0 behavior via L_TIMED_VAR): a scheduled
+	// WARNING that surfaces a slow or hung request *while it is still running* (before
+	// it completes), replaced by a "done" line if it fires. The handle lives on the
+	// request (log) so it spans the whole lifetime -- parse, queue, and handling -- and
+	// is cleared/completed in ~Request.
+	L_TIMED_VAR(log, std::chrono::seconds(10),
+		"Request taking too long...",
+		"Request took too long!");
 }
 
 
@@ -2788,7 +2797,11 @@ Request::~Request() noexcept
 
 	try {
 		if (log) {
-			log->clear();
+			// clean() (not clear()) completes the L_TIMED_VAR watchdog: it cancels the
+			// scheduled "taking too long" line silently if the request finished in time,
+			// or emits the "done" line ("Request took too long!") if the warning already
+			// fired. An external clear() would instead drop the "done" and cancel.
+			log->clean();
 			log.reset();
 		}
 	} catch (...) {

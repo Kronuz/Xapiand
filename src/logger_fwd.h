@@ -151,9 +151,22 @@ inline void print(std::string_view fmt, Args&&... args) {
 #undef L_DELAYED_N_UNLOG
 #define L_DELAYED_N_UNLOG(...) __log_delayed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
 
-// (5) Timing macros Xapiand keeps disabled by default (as the in-tree logger did).
-// The core ships a real L_TIMED; override it to a no-op to preserve behavior.
+// (5) Timing macros (recovered from the pre-extraction logger_fwd.h; the swap to the
+// extracted logger had no-op'd them). L_TIMED arms a "taking too long" delayed line
+// (LIGHT_PURPLE, WARNING) and pre-registers a "done" line (PURPLE) that fires only if
+// the timeout already did -- scoped to the enclosing block. L_TIMED_VAR stores the
+// delayed handle in `var` (e.g. a Request's shared_ptr<Logging> log) so the in-flight
+// "taking too long" watchdog spans the object's whole lifetime, not one scope; `var`
+// is cleared/completed when it is destroyed or re-armed (Request::~Request clears it).
 #undef L_TIMED
-#define L_TIMED(...) L_NOTHING()
-#define L_TIMED_VAR(...) L_NOTHING()
+#define L_TIMED(delay, format_timeout, format_done, ...) \
+	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, LIGHT_PURPLE, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, (format_done), ##__VA_ARGS__)
+#undef L_TIMED_VAR
+#define L_TIMED_VAR(var, delay, format_timeout, format_done, ...) do { \
+	if (var) { (var)->clear(); } \
+	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, LIGHT_PURPLE, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, (format_done), ##__VA_ARGS__); \
+	(var) = __log_timed.release(); \
+} while (0)
 #define L_DEBUG_NOW(name)
