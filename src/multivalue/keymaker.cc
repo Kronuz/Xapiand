@@ -24,7 +24,7 @@
 
 #include <utility>                                // for std::pair
 
-#include "exception.h"                            // for InvalidArgumentError, MSG_I...
+#include "xapiand_exception.h"                            // for InvalidArgumentError, MSG_I...
 #include "geospatial/ewkt.h"                      // for EWKT
 #include "length.h"                               // for serialise_length, unserialise_length
 #include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double

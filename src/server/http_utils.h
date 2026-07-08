@@ -26,7 +26,7 @@
 
 #include "cartesian.h"                            // for CartesianError
 #include "datetime.h"                             // for DatetimeError
-#include "exception.h"                            // for Exception
+#include "xapiand_exception.h"                            // for Exception
 #include "hashes.hh"                              // for hhl
 #include "log.h"                                  // for L_EXC
 #include "phf.hh"                                 // for phf::*

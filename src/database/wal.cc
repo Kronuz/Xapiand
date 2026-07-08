@@ -35,7 +35,7 @@
 #include "database/pool.h"          // for DatabasePool
 #include "database/shard.h"         // for Shard
 #include "database/utils.h"         // for read_uuid
-#include "exception.h"              // for THROW, Error
+#include "xapiand_exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description
 #include "fs.hh"                    // for exists, delete_files, normalize_path
 #include "io.hh"                    // for io::*

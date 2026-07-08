@@ -55,7 +55,7 @@
 #include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
 #include "error.hh"                             // for error:name, error::description
-#include "exception.h"                          // for SystemExit, Excep...
+#include "xapiand_exception.h"                          // for SystemExit, Excep...
 #include "hashes.hh"                             // for jump_consistent_hash
 #include "io.hh"                                 // for io::*
 #include "index_resolver_lru.h"                  // for IndexResolverLRU

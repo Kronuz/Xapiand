@@ -28,7 +28,7 @@
 #include <string_view>      // for std::string_view
 #include <type_traits>      // for forward
 
-#include "exception.h"      // for ClientError
+#include "xapiand_exception.h"      // for ClientError
 
 #define LVL_MAX 10
 

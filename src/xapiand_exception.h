@@ -25,10 +25,13 @@
 // The exception base (BaseException, Exception, Error, InvalidArgument,
 // OutOfRange, SystemExit) and the THROW/RETHROW macros now live in the standalone
 // located-exception library (github.com/Kronuz/located-exception), fetched via
-// CMake. Include it by its explicit path (set by CMake) rather than by name,
-// since this wrapper shares the name "exception.h" and lives in src/ alongside
-// the .cc files that include it.
-#include LOCATED_EXCEPTION_HEADER
+// CMake. This wrapper is named xapiand_exception.h (not exception.h) so it never
+// shadows the library's exception.h on the include path -- extracted deps compiled
+// into Xapiand (msgpack, compressors) do a bare #include "exception.h" for the base
+// and must resolve it to located-exception's, not to this wrapper (which adds
+// Xapiand-specific subclasses). Reaching the base is now a plain include off the
+// path (no absolute-path macro).
+#include "exception.h"
 
 #include <type_traits>       // for std::forward
 

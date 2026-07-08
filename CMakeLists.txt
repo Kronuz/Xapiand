@@ -454,16 +454,18 @@ include_directories(
 	"${stash_SOURCE_DIR}"
 	"${uinteger_t_SOURCE_DIR}"
 	"${base_x_SOURCE_DIR}"
+	"${located_exception_SOURCE_DIR}"
 )
 
-# located-exception ships exception.h + exception.cc. Xapiand keeps a thin
-# src/exception.h wrapper that includes the library header by its explicit path
-# (LOCATED_EXCEPTION_HEADER, to avoid the same-name collision that breaks
-# #include_next when the includer lives in src/) and re-adds the Xapiand-specific
-# subclasses (ClientError, etc.) the standalone library drops. The library's
-# exception.cc is compiled as part of Xapiand below (C++20, so it uses std::format
-# like the rest of the tree) rather than via the library's own target.
-add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR}/exception.h")
+# located-exception ships exception.h + exception.cc (the base: BaseException,
+# Exception, Error, ...). Xapiand keeps a thin src/xapiand_exception.h wrapper that
+# re-adds the Xapiand-specific subclasses (ClientError, etc.) the standalone library
+# drops. The wrapper is named xapiand_exception.h (not exception.h) so it never shadows
+# the library's exception.h: extracted deps compiled into Xapiand (msgpack, compressors)
+# do a bare #include "exception.h" for the base and must reach located-exception's, which
+# is why its dir is on the path above and no absolute-path macro is needed. The library's
+# exception.cc is compiled as part of Xapiand below (C++20, std::format) rather than via
+# the library's own target.
 
 # traceback (headers only, up front). Xapiand's trace adapters inject traceback.h into
 # the extracted libraries: threadpool -> xapiand_threadpool_trace.h -> traceback.h, and
@@ -608,7 +610,7 @@ add_compile_definitions(
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG main)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
-add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
+add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -919,7 +921,7 @@ include_directories("${htm_SOURCE_DIR}")
 FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG main)
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
-add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
+add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
 
 # zstd: the storage library's codec-in-header dispatch references the Zstandard
 # backend (compressor_zstd.{h,cc}), so zstd must be available now even though

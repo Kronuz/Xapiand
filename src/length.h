@@ -28,7 +28,7 @@
 #include <string>                                 // for string
 #include <string_view>                            // for std::string_view
 
-#include "exception.h"                            // for MSG_SerialisationError, SerialisationError
+#include "xapiand_exception.h"                            // for MSG_SerialisationError, SerialisationError
 #include "likely.h"                               // for likely, unlikely
 #include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 

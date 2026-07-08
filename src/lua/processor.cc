@@ -31,7 +31,7 @@
 
 #include "lua/exception.h"                        // for lua::ScriptSyntaxError
 #include "database/handler.h"                     // for DatabaseHandler
-#include "exception.h"                            // for ClientError, THROW
+#include "xapiand_exception.h"                            // for ClientError, THROW
 #include "log.h"                                  // for L_ERR, L_INFO
 #include "lru.h"                                  // for lru::lru
 #include "manager.h"                              // for XapiandManager::*

@@ -31,7 +31,7 @@
 #include "SyntacticException.h"     // for SyntacticException
 #include "cast.h"                                 // for Cast
 #include "database/utils.h"                       // for prefixed
-#include "exception.h"                            // for THROW, QueryDslError
+#include "xapiand_exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "hashes.hh"                              // for fnv1ah32

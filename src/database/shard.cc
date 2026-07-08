@@ -32,7 +32,7 @@
 #include "database/handler.h"     // for committer
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
-#include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
+#include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_CALL

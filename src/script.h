@@ -30,7 +30,7 @@
 #include <unordered_map>
 
 #include "database/schema.h"
-#include "exception.h"
+#include "xapiand_exception.h"
 
 
 class ScriptNotFoundError : public ClientError {

@@ -62,7 +62,7 @@
 #include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
 #include "error.hh"                               // for error::name, error::description
-#include "exception.h"                            // for SystemExit
+#include "xapiand_exception.h"                            // for SystemExit
 #include "fs.hh"                                  // for mkdirs
 #include "hashes.hh"                              // for fnv1ah32
 #include "io.hh"                                  // for io::dup2, io::open, io::close, io::write

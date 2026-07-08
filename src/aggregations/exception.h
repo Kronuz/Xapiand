@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "../exception.h"                   // for ClientError
+#include "../xapiand_exception.h"                   // for ClientError
 
 
 class AggregationError : public ClientError {
