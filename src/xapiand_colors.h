@@ -23,12 +23,17 @@
 #pragma once
 
 // The color palette now lives in the standalone term-color library
-// (github.com/Kronuz/term-color). It's included here by absolute path
-// (TERM_COLOR_PALETTE_HEADER, set in CMakeLists.txt) to avoid the same-name
-// collision with this wrapper. This wrapper re-adds Xapiand's colored-logging
-// shortcut macros (L_RED, L_STACKED_RED, L_UNINDENTED_RED, ...) that the library
-// deliberately leaves out, mapping each color onto log.h's L/L_UNINDENTED/L_STACKED.
-#include TERM_COLOR_PALETTE_HEADER   // the color palette (term-color)
+// (github.com/Kronuz/term-color), whose header is named colors.h. This wrapper is
+// deliberately named xapiand_colors.h (not colors.h) so it never shadows the
+// library's colors.h on the include path -- extracted deps compiled into Xapiand
+// (strings.cc, traceback.cc) do a bare #include "colors.h" for the palette and must
+// resolve it to term-color's, not to this Xapiand-only wrapper (which pulls in
+// log.h and would drag traceback.h onto their compile line). Because src/ no longer
+// holds a colors.h, this wrapper reaches the library's palette with a plain
+// #include "colors.h" (no absolute-path macro needed), then re-adds Xapiand's
+// colored-logging shortcut macros (L_RED, L_STACKED_RED, L_UNINDENTED_RED, ...) that
+// the library leaves out, mapping each color onto log.h's L / L_UNINDENTED / L_STACKED.
+#include "colors.h"                  // the color palette (term-color)
 #include "log.h"                     // for L, L_UNINDENTED, L_STACKED, LOG_NOTICE
 
 #pragma GCC diagnostic push

@@ -40,7 +40,7 @@
 #include "metrics.h"                              // for HandledSubAggregation
 #include "msgpack.h"                              // for MsgPack, object::object, ...
 #include "exception_xapian.h"                     // for AggregationError, MSG_Agg...
-#include "strings.hh"                             // for strings::format
+#include "xapiand_strings.hh"                             // for strings::format
 #include "hashes.hh"                              // for xxh64
 #include "xapian.h"                               // for Document, valueno
 

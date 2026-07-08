@@ -30,14 +30,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             g++-13 cmake ninja-build pkg-config perl tcl \
-            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
       - name: Build (RelWithDebInfo, tests + asserts on)
         run: |
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF \
-            -DASIO_INCLUDE_DIR=/usr/include
+            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
           ninja -C build
       - name: Unit tests (ctest)
         run: ctest --test-dir build --output-on-failure
@@ -62,13 +61,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             g++-13 cmake ninja-build pkg-config perl tcl \
-            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
       - name: Build (RelWithDebInfo, asserts off)
         run: |
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DLTO=OFF -DASIO_INCLUDE_DIR=/usr/include
+            -DLTO=OFF
           ninja -C build
       - uses: actions/setup-node@v4
         with:
@@ -112,14 +111,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             g++-13 cmake ninja-build pkg-config perl tcl \
-            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
       - name: Build (${{ matrix.name }})
         run: |
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            ${{ matrix.cmake_flag }} -DLTO=OFF \
-            -DASIO_INCLUDE_DIR=/usr/include
+            ${{ matrix.cmake_flag }} -DLTO=OFF
           # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.
           ninja -C build -j2
       - name: Smoke + load under ${{ matrix.name }}

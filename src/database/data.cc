@@ -25,7 +25,7 @@
 #include "exception_xapian.h"                     // for SerialisationError
 #include "length.h"                               // for serialise_length()
 #include "msgpack.h"                              // for MsgPack
-#include "strings.hh"                             // for string::*
+#include "xapiand_strings.hh"                             // for string::*
 #include "utype.hh"                               // for toUType
 #include "compressor_lz4.h"                       // for decompress_lz4 (legacy docdata)
 #include "compressor_zstd.h"                      // for compress_zstd, decompress_zstd

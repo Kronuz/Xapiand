@@ -33,7 +33,7 @@
 #include "logger.h"             // for Logging::tab_title, Logging::badge
 #include "opts.h"               // for opts::*
 #include "serialise.h"          // for Serialise
-#include "strings.hh"           // for strings::format, strings::lower
+#include "xapiand_strings.hh"           // for strings::format, strings::lower
 #include "xapian.h"             // for SerialisationError
 
 

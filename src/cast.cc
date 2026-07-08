@@ -25,7 +25,7 @@
 #include "database/schema.h"
 #include "exception_xapian.h"                     // for CastError
 #include "reserved/reserved.h"                    // for is_comment
-#include "strings.hh"                             // for strings::format
+#include "xapiand_strings.hh"                             // for strings::format
 
 
 MsgPack

@@ -30,7 +30,7 @@
 #include "node.h"                                 // for Node::
 #include "opts.h"                                 // for opts
 #include "serialise.h"                            // for UUIDRepr, Serialise
-#include "strings.hh"                             // for strings::format
+#include "xapiand_strings.hh"                             // for strings::format
 #include "exception_xapian.h"                     // for SerialisationError
 
 

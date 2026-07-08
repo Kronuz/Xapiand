@@ -26,7 +26,7 @@
 #include "exception.h"             // for AggregationError, MSG_AggregationE...
 #include "msgpack/object_fwd.hpp"  // for type_error
 #include "repr.hh"                 // for repr
-#include "strings.hh"              // for strings::startswith
+#include "xapiand_strings.hh"              // for strings::startswith
 #include "utype.hh"                // for toUType
 
 

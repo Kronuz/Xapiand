@@ -32,7 +32,7 @@
 #include "database/data.h"                        // for ct_type_t
 #include "hashes.hh"                              // for fnv1ah32
 #include "log.h"                                  // for L_WARNING_ONCE
-#include "strings.hh"                             // for strings::lower
+#include "xapiand_strings.hh"                             // for strings::lower
 
 
 std::unordered_map<std::string, ct_type_t>

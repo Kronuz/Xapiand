@@ -39,7 +39,7 @@
 #include "color_tools.hh"       // for color, hsv2rgb
 #include "epoch.hh"             // for epoch::now
 #include "net.hh"               // for inet_ntop
-#include "strings.hh"           // for strings::lower
+#include "xapiand_strings.hh"           // for strings::lower
 #include "stringified.hh"       // for stringified
 
 

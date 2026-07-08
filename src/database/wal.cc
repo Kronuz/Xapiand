@@ -47,7 +47,7 @@
 #include "repr.hh"                  // for repr
 #include "xapiand_fsyncher.h"       // for fsyncher (the WAL's injected async-fsync hook)
 #include "server/discovery.h"       // for db_updater
-#include "strings.hh"               // for strings::format
+#include "xapiand_strings.hh"               // for strings::format
 #include "utype.hh"                 // for toUType
 
 #define L_DATABASE_NOW(name)

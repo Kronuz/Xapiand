@@ -34,7 +34,7 @@
 
 #include "hashes.hh"                              // for fnv1ah32
 #include "package.h"                              // for Package::VERSION
-#include "strings.hh"                             // for strings::lower
+#include "xapiand_strings.hh"                             // for strings::lower
 
 #define XAPIAND_PID_FILE         "xapiand.pid"
 #define XAPIAND_LOG_FILE         "xapiand.log"

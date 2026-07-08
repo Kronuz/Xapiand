@@ -23,7 +23,7 @@
 #pragma once
 
 #include "config.h"          // for XAPIAN_LIB_BUILD
-#include "strings.hh"         // for strings::join
+#include "xapiand_strings.hh"         // for strings::join
 #include "xapian.h"           // for Xapian::*
 
 const int DB_CREATE_OR_OPEN             = Xapian::DB_CREATE_OR_OPEN;            // Create database if it doesn't already exist.

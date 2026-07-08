@@ -65,7 +65,7 @@
 #include "memory_stats.h"                        // for get_total_ram, get_total_virtual_memor...
 #include "metrics.h"                             // for Metrics::metrics
 #include "msgpack.h"                             // for MsgPack, object::object
-#include "namegen.h"                             // for name_generator
+#include "xapiand_namegen.h"                             // for name_generator
 #include "nanosleep.h"                           // for nanosleep
 #include "net.hh"                                // for inet_ntop
 #include "package.h"                             // for Package

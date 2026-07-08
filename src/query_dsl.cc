@@ -47,7 +47,7 @@
 #include "serialise.h"                            // for MsgPack, get_range_type...
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 #include "stopper.h"                              // for getStopper
-#include "strings.hh"                             // for strings::startswith
+#include "xapiand_strings.hh"                             // for strings::startswith
 
 #define L_QUERY L_NOTHING
 

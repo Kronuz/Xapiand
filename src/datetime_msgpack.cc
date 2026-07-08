@@ -31,7 +31,7 @@
 #include "reserved/types.h"                       // for RESERVED_TIME
 #include "reserved/datetime.h"                    // for RESERVED_
 #include "strict_stox.hh"                         // for strict_stoul
-#include "strings.hh"                             // for strings::format
+#include "xapiand_strings.hh"                             // for strings::format
 
 // NOTE on exceptions: the datetime library's DatetimeError / TimeError /
 // TimedeltaError now derive from std::runtime_error and take a single message

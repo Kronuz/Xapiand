@@ -76,7 +76,7 @@
 #include "reserved/schema.h"                // for RESERVED_SCHEMA
 #include "response.h"                       // for RESPONSE_*
 #include "serialise.h"                      // for Serialise::boolean
-#include "strings.hh"                       // for strings::from_delta
+#include "xapiand_strings.hh"                       // for strings::from_delta
 #include "system.hh"                        // for check_compiler, check_OS, check_architecture
 #include "xapian.h"                         // for Xapian::major_version, Xapian::minor_version
 

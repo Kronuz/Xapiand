@@ -33,7 +33,7 @@
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_FOREIGN, ...
 #include "serialise.h"                            // for KEYWORD_STR
 #include "server/discovery.h"                     // for schema_updater
-#include "strings.hh"                             // for strings::format, strings::replace
+#include "xapiand_strings.hh"                             // for strings::format, strings::replace
 #include "url_parser.h"                           // for urldecode
 
 #define L_SCHEMA L_NOTHING

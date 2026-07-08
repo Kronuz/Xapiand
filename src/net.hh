@@ -30,7 +30,7 @@
 #include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for io::setsockopt
 #include "log.h"                    // for L_ERR
-#include "strings.hh"               // for strings::format, strings::join
+#include "xapiand_strings.hh"               // for strings::format, strings::join
 
 
 inline std::string inet_ntop(const struct sockaddr_in& addr) {

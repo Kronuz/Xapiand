@@ -2,14 +2,15 @@
  * The fantasy name generator now lives in the standalone fork
  * github.com/Kronuz/fantasyname (German's C++ implementation, based on and
  * upstreamed to skeeto/fantasyname; Public Domain). This file is a thin Xapiand
- * wrapper: it pulls the library's NameGen::Generator (and towstring/tostring) in by
- * absolute path (FANTASYNAME_HEADER, set in CMakeLists.txt) to avoid the same-name
- * "namegen.h" collision with this wrapper, and re-adds Xapiand's name_generator().
+ * wrapper, named xapiand_namegen.h (not namegen.h) so it never shadows the library's
+ * namegen.h on the include path. It reaches the library's NameGen::Generator (and
+ * towstring/tostring) with a plain #include "namegen.h" off the path (no absolute-path
+ * macro) and re-adds Xapiand's name_generator().
  */
 
 #pragma once
 
-#include FANTASYNAME_HEADER   // NameGen::Generator + towstring/tostring (fork c++/namegen.h)
+#include "namegen.h"          // NameGen::Generator + towstring/tostring (fork c++/namegen.h)
 
 #include <strings.h>          // for strcasecmp
 #include <string>             // for std::string

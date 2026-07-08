@@ -56,7 +56,7 @@
 #include "serialise_list.h"                       // for StringList
 #include "split.h"                                // for Split
 #include "static_string.hh"                       // for static_string
-#include "strings.hh"                             // for strings::format, strings::inplace_lower
+#include "xapiand_strings.hh"                             // for strings::format, strings::inplace_lower
 
 #define L_SCHEMA L_NOTHING
 

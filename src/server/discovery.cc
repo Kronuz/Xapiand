@@ -39,7 +39,7 @@
 #include "index_resolver_lru.h"             // for IndexSettings
 #include "exception_xapian.h"               // for InvalidArgumentError
 #include "manager.h"                        // for XapiandManager, XapiandManager::State
-#include "namegen.h"                        // for name_generator
+#include "xapiand_namegen.h"                        // for name_generator
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
 #include "random.hh"                        // for random_int

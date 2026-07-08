@@ -418,6 +418,19 @@ link_libraries(
 # FETCHCONTENT_SOURCE_DIR_<NAME> (or populate FETCHCONTENT_BASE_DIR) to a local
 # checkout.
 include(FetchContent)
+# Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
+# before any of our libraries that transitively FetchContent them (msgpack pulls
+# rapidjson; logger / http_log pull cppcodec). FetchContent is first-declaration-wins
+# (the same reason uinteger_t is declared before base_x below), so these details --
+# crucially SOURCE_SUBDIR=do-not-configure -- govern the one shared copy and guarantee
+# their ancient CMakeLists never run. CMake 4.x rejects their pre-3.5
+# cmake_minimum_required outright (and rapidjson's would also build a bundled gtest),
+# so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
+# command line; skipping them removes that need entirely. They are populated and put
+# on the include path further below, where they are actually used.
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfect-hash.git GIT_TAG main)
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG main)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG main)
@@ -471,7 +484,7 @@ add_compile_definitions(
 # + threadpool (fetched above). Its random_time helper is provided by Xapiand's
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
-# the color palette onto Xapiand's log.h + colors.h.
+# the color palette onto Xapiand's log.h + xapiand_colors.h.
 FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG main)  # track tip
 FetchContent_MakeAvailable(scheduler)
 include_directories("${scheduler_SOURCE_DIR}")
@@ -480,7 +493,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # logger: the lock-free, cancellable, deferred logger extracted from Xapiand and
 # modernized (std::source_location, iTerm2, backpressure, pluggable hooks). Built
 # on the scheduler. We populate headers and compile its logger.cc into XAPIAND_OBJ
-# below; src/logger_fwd.h + log.h + colors.h adapt its macro surface, and main.cc
+# below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
 FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG main)  # track tip
@@ -607,14 +620,15 @@ include_directories(
 
 # term-color: compile-time ANSI color palette, extracted from Xapiand. The
 # library ships only the palette + escape machinery; Xapiand keeps a thin
-# src/colors.h wrapper that re-adds its colored-logging shortcut macros (L_RED,
-# ...). The wrapper pulls the palette by absolute path (TERM_COLOR_PALETTE_HEADER)
-# to avoid the same-name collision, the way located-exception is wired. ansi_color.hh
-# and color_tools.hh are consumed directly from the library's dir on the path.
+# src/xapiand_colors.h wrapper that re-adds its colored-logging shortcut macros
+# (L_RED, ...). The wrapper is named xapiand_colors.h (not colors.h) so it never
+# shadows the library's colors.h for the extracted deps compiled into Xapiand; with
+# no colliding src/colors.h, both the wrapper and those deps reach the palette with a
+# plain #include "colors.h" off the include path below -- no absolute-path macro.
+# ansi_color.hh and color_tools.hh are consumed directly from the library's dir too.
 FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG main)  # track tip
 FetchContent_MakeAvailable(term_color)
 include_directories("${term_color_SOURCE_DIR}")
-add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colors.h")
 
 # Six more utilities extracted from Xapiand into standalone repos: endian (header
 # only) and repr / escape / times / strings / url_parser (each a small .cc compiled
@@ -635,6 +649,7 @@ include_directories(
 	"${repr_SOURCE_DIR}"
 	"${escape_SOURCE_DIR}"
 	"${times_SOURCE_DIR}"
+	"${strings_SOURCE_DIR}"
 	"${url_parser_SOURCE_DIR}"
 )
 
@@ -660,13 +675,13 @@ include_directories(
 	"${iterators_SOURCE_DIR}"
 )
 
-# strings is special: Xapiand files historically obtained log.h transitively through
-# strings.hh (the extracted library correctly no longer pulls it). So strings_SOURCE_DIR
-# is deliberately NOT on the include path; Xapiand keeps a thin src/strings.hh wrapper
-# that re-adds log.h and chains to the real header by absolute path (STRINGS_HEADER),
-# the same trick as src/colors.h / src/namegen.h. strings.cc finds its own strings.hh
-# in its source dir (a quoted include searches there first).
-add_compile_definitions(STRINGS_HEADER="${strings_SOURCE_DIR}/strings.hh")
+# strings: Xapiand files historically obtained log.h transitively through strings.hh
+# (the extracted library correctly no longer pulls it). Rather than an absolute-path
+# macro, Xapiand keeps a thin wrapper named src/xapiand_strings.hh (not strings.hh, so
+# it never shadows the library's header for extracted deps compiled into Xapiand) that
+# re-adds log.h and reaches the real header with a plain #include "strings.hh" off the
+# path above. Xapiand's own sources include "xapiand_strings.hh"; strings.cc / other
+# extracted .cc get the library's strings.hh directly.
 # times.cc's Apple fallback redefines clock_gettime unless HAVE_CLOCK_GETTIME is
 # set. It is available on every Xapiand target platform (macOS 10.12+, Linux), and
 # the extracted times.h no longer pulls Xapiand's config.h.
@@ -674,13 +689,12 @@ add_compile_definitions(HAVE_CLOCK_GETTIME)
 
 # fantasyname: the C++ fantasy name generator (German's, upstreamed to and based on
 # skeeto/fantasyname). We compile its c++/namegen.cc into XAPIAND_OBJ below; Xapiand
-# keeps a thin src/namegen.h wrapper that re-adds its name_generator() helper. The
-# wrapper pulls the library header by absolute path (FANTASYNAME_HEADER) to avoid the
-# same-name "namegen.h" collision -- the c++/ dir is deliberately NOT put on the
-# include path, the way colors.h is wired for term-color.
+# keeps a thin src/xapiand_namegen.h wrapper (not namegen.h, so it never shadows the
+# library header) that re-adds its name_generator() helper and reaches the library
+# header with a plain #include "namegen.h" off the c++/ dir on the path below.
 FetchContent_Declare(fantasyname GIT_REPOSITORY https://github.com/Kronuz/fantasyname.git GIT_TAG master)  # track tip
 FetchContent_MakeAvailable(fantasyname)
-add_compile_definitions(FANTASYNAME_HEADER="${fantasyname_SOURCE_DIR}/c++/namegen.h")
+include_directories("${fantasyname_SOURCE_DIR}/c++")
 
 # enum-reflection: reflective ENUM_CLASS (enum <-> string, perfect-hash lookup),
 # extracted from Xapiand. Header-only; enum.h includes phf.hh + hashes.hh, which
@@ -764,10 +778,15 @@ include_directories("${flume_SOURCE_DIR}")
 # now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
 # co_spawn, N io_contexts share the listen port via SO_REUSEPORT. Header-only, so the
 # include path + ASIO_STANDALONE (no Boost) is all it needs; the coroutine support is
-# already covered by Xapiand's -std=c++20.
-set(ASIO_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "standalone Asio include dir")
-if(NOT EXISTS "${ASIO_INCLUDE_DIR}/asio.hpp")
-	message(FATAL_ERROR "standalone Asio not found at ${ASIO_INCLUDE_DIR}; set -DASIO_INCLUDE_DIR=<dir>")
+# already covered by Xapiand's -std=c++20. Fetched at a pinned tag rather than taken
+# from a system/brew prefix (the same dependency policy reactor/http follow, and the
+# value Xapiand sets here is what those libs reuse instead of re-fetching); set
+# ASIO_INCLUDE_DIR to reuse an existing checkout instead of fetching.
+set(ASIO_INCLUDE_DIR "" CACHE PATH "use an existing standalone Asio include dir instead of fetching")
+if(ASIO_INCLUDE_DIR STREQUAL "")
+	FetchContent_Declare(asio GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git GIT_TAG asio-1-36-0)
+	FetchContent_MakeAvailable(asio)
+	set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
 endif()
 include_directories("${ASIO_INCLUDE_DIR}")
 add_definitions(-DASIO_STANDALONE)
@@ -905,7 +924,7 @@ include_directories("${ZSTD_INCLUDE_DIR}")
 
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
-# stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
+# stash's hooks onto Xapiand's log.h + xapiand_colors.h. Applies only to Xapiand's own
 # targets (defined below), not the fetched libraries.
 add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
@@ -913,16 +932,22 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 ########################################################################
 # Vendored third-party header-only libraries, now pulled via FetchContent
 # instead of living under src/. We only need their headers, so populate the
-# sources and add them to the include path; their own CMakeLists are not run.
+# sources and add them to the include path; their own CMakeLists must NOT run
+# (rapidjson / cppcodec / cli11 still declare an ancient cmake_minimum_required
+# that CMake 4.x rejects outright, and rapidjson's would also build its bundled
+# gtest + examples). SOURCE_SUBDIR points each at a non-existent subdir so
+# FetchContent populates <dep>_SOURCE_DIR but skips add_subdirectory -- the same
+# idiom used for cppcodec/http_log above. This is why no -DCMAKE_POLICY_VERSION_MINIMUM
+# override is needed.
 # msgpack moved to Kronuz/msgpack above because Xapiand's forked exception.hpp
 # travels with that standalone library.
 ########################################################################
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0)
-FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2)
-FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2    SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
-# its sources populated, not its own CMake.
-FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1)
+# its sources populated, not its own CMake (its root has none anyway).
+FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1  SOURCE_SUBDIR do-not-configure)
 foreach(dep rapidjson cppcodec cli11 lz4)
 	FetchContent_MakeAvailable(${dep})
 endforeach()
@@ -1308,13 +1333,10 @@ list(APPEND XAPIAND_SRC_LIST "${http_parser_SOURCE_DIR}/http_parser.cc")
 # The extracted traceback toolkit's out-of-line implementation, in place of the
 # removed src/traceback.cc. Built with TRACEBACK_HOOKS (set above) so the
 # signal-time all-thread crash dumper compiles in. The library #includes "colors.h"
-# and aliases `#define DEBUG_COL DIM_GRAY` (term-color's name for rgb(105,105,105)).
-# In Xapiand's tree that include resolves to src/colors.h, which pulls in src/log.h
-# where DEBUG_COL is already #defined to the *same* rgb(105,105,105); the values are
-# identical, so silence the (value-equal) macro-redefinition warning for just this
-# one file rather than patching the published library or Xapiand's DEBUG_COL.
+# and aliases `#define DEBUG_COL DIM_GRAY`; that include resolves to term-color's
+# colors.h (Xapiand's wrapper is named xapiand_colors.h and no longer shadows it),
+# which is exactly the palette traceback.cc wants (STEEL_BLUE / RED / DIM_GRAY / ...).
 list(APPEND XAPIAND_SRC_LIST "${traceback_SOURCE_DIR}/traceback.cc")
-set_source_files_properties("${traceback_SOURCE_DIR}/traceback.cc" PROPERTIES COMPILE_OPTIONS "-Wno-macro-redefined")
 # The fantasy name generator's out-of-line implementation, in place of the removed
 # src/namegen.cc. It includes its own "namegen.h" (same dir), so c++/ does not need
 # to be on the include path; src/namegen.h reaches it via FANTASYNAME_HEADER.

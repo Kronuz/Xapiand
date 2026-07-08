@@ -57,7 +57,7 @@
 #include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
 #include "script.h"                         // for Script
-#include "strings.hh"                       // for strings::from_bytes
+#include "xapiand_strings.hh"                       // for strings::from_bytes
 #include "serialise.h"                      // for cast, serialise, type
 #include "server/http_utils.h"              // for catch_http_errors
 

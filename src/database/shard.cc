@@ -43,7 +43,7 @@
 #include "reserved/fields.h"      // for ID_FIELD_NAME
 #include "server/discovery.h"     // for db_updater
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
-#include "strings.hh"             // for strings::from_delta, strings::format
+#include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
 #ifdef XAPIAND_RANDOM_ERRORS
 #include "random.hh"                // for random_real

@@ -22,7 +22,7 @@
 #include "io.hh"                 // for io::unchecked_fsync, io::unchecked_full_fsync
 #include "logger.h"              // for L_DEBUG, L_WARNING
 #include "opts.h"                // for opts::*
-#include "strings.hh"            // for strings::from_delta
+#include "xapiand_strings.hh"            // for strings::from_delta
 #include "thread.hh"             // for ThreadPolicyType::fsynchers
 
 

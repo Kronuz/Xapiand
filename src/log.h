@@ -23,7 +23,7 @@
 #pragma once
 
 #include "logger_fwd.h"
-#include "colors.h"
+#include "xapiand_colors.h"
 
 #define LOG_COL NO_COLOR
 #define DEBUG_COL rgb(105, 105, 105)

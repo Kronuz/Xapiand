@@ -72,7 +72,7 @@
 #include "nanosleep.h"                            // for nanosleep
 #include "opts.h"                                 // for opts_t
 #include "package.h"                              // for Package::
-#include "strings.hh"                             // for strings::format, strings::center
+#include "xapiand_strings.hh"                             // for strings::format, strings::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
 #include "traceback.h"                            // for traceback::{backtrace, traceback, collect_callstack_sig_handler}
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
