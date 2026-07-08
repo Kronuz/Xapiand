@@ -22,20 +22,21 @@
 
 #include "package.h"
 #include "package_config.h"
+#include "package_hash.h"
 
 #ifndef PACKAGE_REVISION
 #define PACKAGE_REVISION ""
 #endif
 
-#ifndef PACKAGE_HASH
-#define PACKAGE_HASH ""
+#ifndef PACKAGE_GIT_HASH
+#define PACKAGE_GIT_HASH ""
 #endif
 
 std::string Package::STRING = PACKAGE_STRING;
 std::string Package::NAME = PACKAGE_NAME;
 std::string Package::VERSION = PACKAGE_VERSION;
 std::string Package::REVISION = PACKAGE_REVISION;
-std::string Package::HASH = PACKAGE_HASH;
+std::string Package::HASH = PACKAGE_GIT_HASH;
 std::string Package::URL = PACKAGE_URL;
 std::string Package::BUGREPORT = PACKAGE_BUGREPORT;
 std::string Package::TARNAME = PACKAGE_TARNAME;

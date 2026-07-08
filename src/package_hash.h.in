@@ -1,0 +1,9 @@
+/*--------------------------------------------------------------------------
+ * git-archive export-subst fallback for the short commit hash.
+ *
+ * In a git checkout this literally holds "$Format:%h$"; `git archive` rewrites
+ * it to the short hash when producing a tarball (see .gitattributes). The build
+ * only reads this as a *fallback* when there is no live .git to query — the
+ * generated src/package_hash.h is the source of truth. Do not edit by hand.
+ * --------------------------------------------------------------------------*/
+#define PACKAGE_ARCHIVE_HASH "$Format:%h$"

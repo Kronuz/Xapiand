@@ -1,0 +1,3 @@
+# Bake the short commit hash into source tarballs produced by `git archive`.
+# The build reads this only when no live .git is available (see GenPackageHash.cmake).
+src/package_hash.h.in export-subst

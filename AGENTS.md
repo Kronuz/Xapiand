@@ -103,6 +103,13 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   `sortable_serialise` (memcmp order == numeric order). If you change how a value
   is encoded, you change its sort/range semantics — tread carefully and keep the
   encoding monotonic.
+- **Splash banner font.** The ASCII wordmark in `banner()` (`src/main.cc`) is
+  figlet's **Standard** font (the default), *not* `slant` — `figlet apiand`
+  reproduces the letters after the "X" exactly. The "X" itself is hand-stylized
+  (the diamond `\ \/ /` … `/_/`), not figlet output, so don't regenerate the whole
+  word blind; keep the custom X and only the "apiand" tail is figlet. prism's
+  banner uses the same font, straight from `figlet prism` (all-lowercase, no custom
+  glyph needed).
 
 ## Load-bearing invariants (don't break these)
 

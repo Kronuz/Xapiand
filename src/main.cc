@@ -769,11 +769,11 @@ void banner() {
 			outer + " | " +       top + "`-_   _-´" + outer + " | "                         + rgb(192, 192, 192) + "  \\   // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 			outer + " | " +     inner + "`-_" + top + "`-´" + inner + "_-´" + outer + " | " + rgb(160, 160, 160) + "  /   \\ (_| | |_) | | (_| | | | | (_| |\n" +
 			outer + " | " +     inner + "`-_`-´_-´" + outer + " | "                         + rgb(128, 128, 128) + " / /\\__\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-			outer + "  `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + "{:^9}" + rgb(96, 96, 96) + "|_|" + rgb(0, 128, 0) + "{:>24}" + "\n" +
+			outer + "  `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + "{:^9}" + rgb(96, 96, 96) + "|_|" + rgb(0, 128, 0) + " {}" + "\n" +
 			outer + "     ``-´´  " + rgb(0, 128, 0) + "{:>42}" + "\n" +
 			                         rgb(0, 96, 0)  + "{:>54}" + "\n\n",
+			Package::HASH,
 			"v" + Package::VERSION,
-			"rev:" + Package::REVISION,
 			Package::BUGREPORT,
 			"Using " + strings::join(values, ", ", " and "));
 	}

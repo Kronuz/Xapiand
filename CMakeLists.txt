@@ -1528,6 +1528,32 @@ if (GIT_VERSION)
 	set (PACKAGE_VERSION "${GIT_VERSION}")
 endif ()
 
+# Fresh short commit hash for the banner (Package::HASH), resolved at *build*
+# time so it tracks commits without reconfiguring. The generated header is only
+# rewritten when the hash changes; tarball- and no-git-safe via the fallback
+# chain in GenPackageHash.cmake. XAPIAND_PACKAGE_OBJ (which compiles package.cc)
+# depends on it.
+add_custom_target(generate_package_hash
+	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/package_hash.h"
+	COMMAND ${CMAKE_COMMAND}
+		-D GIT_EXECUTABLE=${GIT_EXECUTABLE}
+		-D SRCDIR=${PROJECT_SOURCE_DIR}
+		-D SRC_IN=${PROJECT_SOURCE_DIR}/src/package_hash.h.in
+		-D DST=${PROJECT_BINARY_DIR}/src/package_hash.h
+		-P ${PROJECT_SOURCE_DIR}/cmake/Modules/GenPackageHash.cmake
+	COMMENT "Resolving git short hash for the banner"
+	VERBATIM)
+add_dependencies(XAPIAND_PACKAGE_OBJ generate_package_hash)
+
+# Seed it once at configure time so the header always exists (first clean build,
+# IDE indexers); the custom target above refreshes it on every subsequent build.
+execute_process(COMMAND ${CMAKE_COMMAND}
+	-D GIT_EXECUTABLE=${GIT_EXECUTABLE}
+	-D SRCDIR=${PROJECT_SOURCE_DIR}
+	-D SRC_IN=${PROJECT_SOURCE_DIR}/src/package_hash.h.in
+	-D DST=${PROJECT_BINARY_DIR}/src/package_hash.h
+	-P ${PROJECT_SOURCE_DIR}/cmake/Modules/GenPackageHash.cmake)
+
 
 ########################################################################
 # Compiler Flags
