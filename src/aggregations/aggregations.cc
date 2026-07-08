@@ -53,9 +53,14 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 {
 	assert(context.is_map());
 
+	// Every reserved aggregation word is in the phf, including the ones not implemented
+	// yet (cardinality, the geo_* / percentiles / date_* / *_range family, missing,
+	// scripted_metric): recognizing them lets the dispatch below fail with a clear
+	// "not implemented" error instead of silently producing no result, which is what
+	// happened while they were left out of the phf and hashed to an arbitrary slot.
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_AGGS_COUNT),
-		// hh(RESERVED_AGGS_CARDINALITY),
+		hh(RESERVED_AGGS_CARDINALITY),
 		hh(RESERVED_AGGS_SUM),
 		hh(RESERVED_AGGS_AVG),
 		hh(RESERVED_AGGS_MIN),
@@ -66,25 +71,25 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 		hh(RESERVED_AGGS_MODE),
 		hh(RESERVED_AGGS_STATS),
 		hh(RESERVED_AGGS_EXT_STATS),
-		// hh(RESERVED_AGGS_GEO_BOUNDS),
-		// hh(RESERVED_AGGS_GEO_CENTROID),
-		// hh(RESERVED_AGGS_PERCENTILES),
-		// hh(RESERVED_AGGS_PERCENTILES_RANK),
-		// hh(RESERVED_AGGS_SCRIPTED_METRIC),
+		hh(RESERVED_AGGS_GEO_BOUNDS),
+		hh(RESERVED_AGGS_GEO_CENTROID),
+		hh(RESERVED_AGGS_PERCENTILES),
+		hh(RESERVED_AGGS_PERCENTILES_RANK),
+		hh(RESERVED_AGGS_SCRIPTED_METRIC),
 		hh(RESERVED_AGGS_FILTER),
 		hh(RESERVED_AGGS_VALUES),
 		hh(RESERVED_AGGS_VALUE),
 		hh(RESERVED_AGGS_TERMS),
 		hh(RESERVED_AGGS_TERM),
-		// hh(RESERVED_AGGS_DATE_HISTOGRAM),
-		// hh(RESERVED_AGGS_DATE_RANGE),
-		// hh(RESERVED_AGGS_GEO_DISTANCE),
-		// hh(RESERVED_AGGS_GEO_TRIXELS),
+		hh(RESERVED_AGGS_DATE_HISTOGRAM),
+		hh(RESERVED_AGGS_DATE_RANGE),
+		hh(RESERVED_AGGS_GEO_DISTANCE),
+		hh(RESERVED_AGGS_GEO_TRIXELS),
 		hh(RESERVED_AGGS_HISTOGRAM),
-		// hh(RESERVED_AGGS_MISSING),
+		hh(RESERVED_AGGS_MISSING),
 		hh(RESERVED_AGGS_RANGE),
-		// hh(RESERVED_AGGS_IP_RANGE),
-		// hh(RESERVED_AGGS_GEO_IP),
+		hh(RESERVED_AGGS_IP_RANGE),
+		hh(RESERVED_AGGS_GEO_IP),
 	});
 
 	auto aggs_it = context.find(RESERVED_AGGS_AGGREGATIONS);
@@ -210,6 +215,24 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 							++it_sub_agg_type;
 							keep_looking_agg_type = true;
 							break;
+						// Reserved but not implemented yet (the commented add_metric /
+						// add_bucket blocks above show the intended class for each). They
+						// are in the phf, so they reach here and fail clearly rather than
+						// silently producing no result.
+						case _.fhh(RESERVED_AGGS_CARDINALITY):
+						case _.fhh(RESERVED_AGGS_GEO_BOUNDS):
+						case _.fhh(RESERVED_AGGS_GEO_CENTROID):
+						case _.fhh(RESERVED_AGGS_PERCENTILES):
+						case _.fhh(RESERVED_AGGS_PERCENTILES_RANK):
+						case _.fhh(RESERVED_AGGS_SCRIPTED_METRIC):
+						case _.fhh(RESERVED_AGGS_DATE_HISTOGRAM):
+						case _.fhh(RESERVED_AGGS_DATE_RANGE):
+						case _.fhh(RESERVED_AGGS_GEO_DISTANCE):
+						case _.fhh(RESERVED_AGGS_GEO_TRIXELS):
+						case _.fhh(RESERVED_AGGS_MISSING):
+						case _.fhh(RESERVED_AGGS_IP_RANGE):
+						case _.fhh(RESERVED_AGGS_GEO_IP):
+							THROW(AggregationError, "Aggregation {} is reserved but not implemented yet", repr(sub_agg_type));
 						default:
 							THROW(AggregationError, "Aggregation type {} is not valid for {}", repr(sub_agg_type), repr(sub_agg_name));
 					}
