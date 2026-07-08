@@ -473,6 +473,16 @@ add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR
 # prefix restores the "Xapiand:" thread-name prefix.
 FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG main)
 FetchContent_MakeAvailable(threadpool)
+# Xapiand compiles thread.cc into XAPIAND_OBJ (below, with the trace injection), so the
+# library's own STATIC `threadpool` target is collateral -- never linked. It must not be
+# built as part of `all`: under some CMake versions the directory-wide
+# THREADPOOL_TRACE_HEADER below reaches that target too, so its thread.cc pulls
+# xapiand_threadpool_trace.h -> traceback.h while traceback is not yet on its path,
+# breaking a full `ninja` build (CI) even though Xapiand itself builds fine. Keeping it
+# out of `all` also skips redundant work.
+if(TARGET threadpool)
+	set_target_properties(threadpool PROPERTIES EXCLUDE_FROM_ALL ON)
+endif()
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
 	THREADPOOL_TRACE_HEADER="xapiand_threadpool_trace.h"
