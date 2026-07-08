@@ -85,7 +85,7 @@
 // Codec for newly written data-store records. Zstandard gives ~2x LZ4's ratio at
 // LZ4-class write speed (see the storage library's bench). The codec id is stored
 // per record, so existing LZ4 volumes keep reading unchanged; only new writes use
-// this. Switch back to STORAGE_COMPRESS (LZ4) here to change it.
+// this. Switch back to STORAGE_COMPRESS_LZ4 here to change it.
 #define STORAGE_COMPRESS_MODE STORAGE_COMPRESS_ZSTD
 
 
