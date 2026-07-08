@@ -3166,3 +3166,36 @@ SearchService::on_error(std::exception_ptr error, const http::Request& hreq, htt
 		response.set_close();
 	}
 }
+
+
+// The options for the http_log::AccessLog middleware wrapping SearchService (see
+// search_service.h). The body prettifier decodes a JSON / YAML / MsgPack body back to
+// a MsgPack and renders it with DEFAULT_INDENTATION, reproducing what Request::to_text
+// / Response::to_text did before the Response class was removed. The previewable-type
+// set and per-status levels use http-log's Xapiand-faithful defaults.
+http_log::Options
+make_http_log_options()
+{
+	http_log::Options options;
+	options.prettify = [](std::string_view ct, std::string_view body) -> std::optional<std::string> {
+		try {
+			MsgPack decoded;
+			rapidjson::Document rdoc;
+			if (ct.find("json") != std::string_view::npos) {
+				json_load(rdoc, body);
+				decoded = MsgPack(rdoc);
+			} else if (ct.find("yaml") != std::string_view::npos) {
+				yaml_load(rdoc, body);
+				decoded = MsgPack(rdoc);
+			} else if (ct.find("msgpack") != std::string_view::npos) {
+				decoded = MsgPack::unserialise(body);
+			} else {
+				return std::nullopt;
+			}
+			return decoded.to_string(DEFAULT_INDENTATION);
+		} catch (...) {
+			return std::nullopt;
+		}
+	};
+	return options;
+}

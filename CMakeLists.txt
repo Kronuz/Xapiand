@@ -722,6 +722,19 @@ FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git 
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
+# http-log: the request/response logging middleware (Kronuz/http-log) that wraps the
+# search handler, recovering Xapiand's per-method/status colored, prettified-body
+# request/response logging (Request/Response::to_text). Header-only; SOURCE_SUBDIR
+# points at a non-existent dir so its CMakeLists (which re-fetches deps) is skipped --
+# Xapiand already has http, logger, term-color, strings, repr, and cppcodec on the
+# include path, which is all http_log.h needs.
+FetchContent_Declare(http_log
+  GIT_REPOSITORY https://github.com/Kronuz/http-log.git
+  GIT_TAG        main
+  SOURCE_SUBDIR  do-not-configure)
+FetchContent_MakeAvailable(http_log)
+include_directories("${http_log_SOURCE_DIR}")
+
 # reactor: the generic Asio server runtime (Kronuz/reactor) that Kronuz/http's transport
 # (http_asio.h) now rides on -- the shared-nothing reactor pool, accept/bind strategies,
 # offload gate, and graceful shutdown, extracted from http so other services can share

@@ -178,6 +178,14 @@ struct XapiandManager::Reactors {
 // transforms, so no bespoke dispatcher/response wiring survives here.
 static SearchService search_service;
 
+// The request/response logging middleware (Kronuz/http-log) wrapping the search
+// handler: it renders each request and response to the log with per-method / per-
+// status colors and prettified bodies, recovering what Request::to_text /
+// Response::to_text did before the decomposition removed them. It forwards the whole
+// HttpHandler seam to search_service, so the transport drives it transparently. One
+// shared instance, like search_service.
+static http_log::AccessLog logged_search_service(search_service, make_http_log_options());
+
 // The response transforms the transport applies to the buffered response: compress to
 // the codec the client advertised. Xapiand no longer encodes responses itself; it just
 // registers "deflate" (the library ships zstd + gzip) and lets the transport negotiate
@@ -974,7 +982,7 @@ XapiandManager::make_servers()
 		std::size_t workers = opts.num_http_clients > 0
 			? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_http_clients) + reactors - 1) / reactors)
 			: 1;
-		http_service = std::make_unique<http::HttpAsioService>(search_service, reactors, workers, 1000);
+		http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000);
 		http::AsioBindOptions bind_options;
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;

@@ -26,6 +26,7 @@
 
 #include "http_handler.h"                   // Kronuz/http: HttpHandler, ResponseWriter, BodySink
 #include "http_message.h"                   // Kronuz/http: Request, Response
+#include "http_log.h"                        // Kronuz/http-log: the request/response logging middleware
 
 
 // Xapiand's search engine as ONE http::HttpHandler (Leg 2, architecture B).
@@ -69,3 +70,12 @@ public:
 	// memory -- a multi-gigabyte dump is never held whole. Everything else buffers.
 	bool wants_body_stream(const http::Request& request) override;
 };
+
+
+// The options for the http_log::AccessLog middleware that wraps SearchService: the
+// body prettifier decodes a JSON / YAML / MsgPack body back to a MsgPack and renders
+// it indented (the same DEFAULT_INDENTATION Request::to_text used), so the log shows
+// the structured request/response bodies. The previewable-type set and the per-status
+// levels use http-log's Xapiand-faithful defaults. Defined in search_views.cc, where
+// the decoders live.
+http_log::Options make_http_log_options();
