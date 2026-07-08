@@ -465,6 +465,19 @@ include_directories(
 # like the rest of the tree) rather than via the library's own target.
 add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR}/exception.h")
 
+# traceback (headers only, up front). Xapiand's trace adapters inject traceback.h into
+# the extracted libraries: threadpool -> xapiand_threadpool_trace.h -> traceback.h, and
+# scheduler / logger, which pull threadpool.hh transitively. traceback proper is fetched
+# further down (its traceback.cc compiles into XAPIAND_OBJ), but its headers must be on
+# the include path BEFORE those libraries so their collateral targets can find traceback.h
+# in a full `ninja` build (CI builds every fetched target; Xapiand links none of them).
+# Populate the source now for headers only -- SOURCE_SUBDIR skips its CMake, so nothing is
+# built or re-fetched here, and traceback.h is self-contained (TRACEBACK_HOOKS is set
+# where traceback.cc is actually compiled, below).
+FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/traceback.git GIT_TAG main SOURCE_SUBDIR do-not-configure)
+FetchContent_MakeAvailable(traceback)
+include_directories("${traceback_SOURCE_DIR}")
+
 # threadpool: the thread pool + Thread primitive, extracted from Xapiand. Like
 # located-exception, we compile its one out-of-line file (thread.cc) as part of
 # Xapiand (below) so it picks up Xapiand's config.h and the trace injection,
@@ -473,16 +486,6 @@ add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR
 # prefix restores the "Xapiand:" thread-name prefix.
 FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG main)
 FetchContent_MakeAvailable(threadpool)
-# Xapiand compiles thread.cc into XAPIAND_OBJ (below, with the trace injection), so the
-# library's own STATIC `threadpool` target is collateral -- never linked. It must not be
-# built as part of `all`: under some CMake versions the directory-wide
-# THREADPOOL_TRACE_HEADER below reaches that target too, so its thread.cc pulls
-# xapiand_threadpool_trace.h -> traceback.h while traceback is not yet on its path,
-# breaking a full `ninja` build (CI) even though Xapiand itself builds fine. Keeping it
-# out of `all` also skips redundant work.
-if(TARGET threadpool)
-	set_target_properties(threadpool PROPERTIES EXCLUDE_FROM_ALL ON)
-endif()
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
 	THREADPOOL_TRACE_HEADER="xapiand_threadpool_trace.h"
@@ -515,14 +518,12 @@ include_directories("${logger_SOURCE_DIR}")
 # library puts everything in namespace traceback; the heavy dumper (thread
 # registry, SIGUSR2 stack-walk handler, dump_callstacks/snapshot, __cxa_throw +
 # allocator interposition) is gated behind TRACEBACK_HOOKS, which Xapiand turns on
-# below since it uses the dumper. Its one out-of-line file (traceback.cc) compiles
-# as part of Xapiand (the logger/htm way) so it picks up the same toolchain. The
-# library's deps (strings, errno-names, term-color, nanosleep) are all already on
-# the FetchContent include path. The logger's backtrace hook is wired to the
-# library's traceback() (atos file:line) in main.cc.
-FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/traceback.git GIT_TAG main)
-FetchContent_MakeAvailable(traceback)
-include_directories("${traceback_SOURCE_DIR}")
+# here since it uses the dumper. Its source is populated up front (headers only, see
+# above, so the trace-injected libraries can find traceback.h); its one out-of-line
+# file (traceback.cc) compiles as part of Xapiand (the logger/htm way) so it picks up
+# the same toolchain. The library's deps (strings, errno-names, term-color, nanosleep)
+# are all already on the FetchContent include path. The logger's backtrace hook is
+# wired to the library's traceback() (atos file:line) in main.cc.
 add_compile_definitions(TRACEBACK_HOOKS=1)
 
 # storage: the compressed append-only multi-volume blob store, extracted from
