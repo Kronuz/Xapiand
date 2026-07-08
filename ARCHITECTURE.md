@@ -661,6 +661,26 @@ The tasteful bits, for anyone reading for pleasure:
 
 ---
 
+## Removed features
+
+Capabilities that once existed and were deliberately removed. Recorded here so the
+history is discoverable and a feature can be revived from the exact commit if needed.
+
+- **ECMAScript / JavaScript scripting (V8).** Xapiand once embedded the V8 engine
+  (`src/v8pp/`, `v8pp::Processor`) so `_script` fields could run JavaScript on the
+  document hooks (`on_put` / `on_patch` / `on_delete` / `on_get` / `on_post`).
+  Removed in **`a03b46f6a`** ("ECMAScript (v8) support removed", 2019-02-27), which
+  deleted `src/v8pp/{convert,exception,v8pp,wrapper}.h`, `cmake/Modules/FindV8.cmake`,
+  and the V8 paths in `src/script.*`. Scripting continued through ChaiScript, which
+  was later swapped for **Lua** (sol2) in **`feecb9882`** ("swap ChaiScript scripting
+  engine for Lua"). Today scripting is Lua-only: a stored `_script` still executes on
+  document operations via `DatabaseHandler::call_script()` (`src/database/handler.cc`),
+  driven from `src/database/schema.cc`. To revive JavaScript, restore the `src/v8pp/`
+  tree and the `FindV8.cmake` from `a03b46f6a^` and re-add a V8 branch to `Script` /
+  the processor alongside Lua.
+
+---
+
 ## Licensing note
 
 Xapiand itself is MIT (Copyright © 2015–2026 Dubalu LLC). However, `src/xapian/`
