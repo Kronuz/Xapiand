@@ -33,7 +33,7 @@ Simple use-case:
 {'#docid': 42, '#shard': 2 '_id': 42, '_version': 1, 'any': 'data', 'timestamp': '2019-07-18T09:04:54.182665'}
 ```
 
-[Full documentation](https://kronuz.io/Xapiand/).
+[Full documentation](https://kronuz.github.io/Xapiand/).
 
 
 ## Features
