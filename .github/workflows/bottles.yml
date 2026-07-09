@@ -99,6 +99,7 @@ jobs:
     # Kronuz/homebrew-tap) -- the built-in GITHUB_TOKEN can't push to another repo.
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     steps:
+      - uses: actions/checkout@v4
       - name: Collect the per-cell bottle JSONs
         uses: actions/download-artifact@v4
         with:
@@ -115,8 +116,19 @@ jobs:
         run: |
           set -eux
           # Tap the formula repo (a real git clone) so brew can resolve
-          # kronuz/tap/xapiand, then write the merged `bottle do` block into it.
+          # kronuz/tap/xapiand.
           brew tap kronuz/tap https://github.com/Kronuz/homebrew-tap
+          FORMULA="$(brew --repository kronuz/tap)/Formula/xapiand.rb"
+          # Sync the tap's formula from contrib (the source of truth) and point it at
+          # the released tag -- the SAME rewrite the build used -- so the tap formula's
+          # version matches the bottles we built. Without this the tap keeps whatever
+          # url/version it had committed and brew derives the wrong bottle filename
+          # (which is how alpha.2 shipped bottles the tap thought were alpha.1).
+          cp contrib/homebrew/xapiand.rb "$FORMULA"
+          SRC_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
+          sed -i '' -E "s|^  url \".*\"|  url \"${SRC_URL}\"|; s|^  sha256 \"[0-9a-f]*\"|  sha256 \"${SRC_SHA}\"|" "$FORMULA"
+          # Merge the per-cell bottle DSL into that formula.
           brew bottle --merge --write --no-commit json/*.bottle.json
           # Commit + push from the tapped clone, authenticating with the PAT.
           TAP_DIR="$(brew --repository kronuz/tap)"
