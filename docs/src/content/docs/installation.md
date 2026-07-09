@@ -10,7 +10,7 @@ we might make the process easier.
 ## Docker
 
 ```sh
-~ $ docker pull ghcr.io/kronuz/xapiand:latest
+docker pull ghcr.io/kronuz/xapiand:latest
 ```
 
 ## Installation with Homebrew
@@ -19,7 +19,7 @@ Xapiand contains a formula for Homebrew (a package manager for OS X). It can
 be installed by using the following command:
 
 ```sh
-~ $ brew install Kronuz/tap/xapiand
+brew install Kronuz/tap/xapiand
 ```
 
 ## FreeBSD
@@ -29,7 +29,7 @@ A native FreeBSD package (`amd64`, built for FreeBSD 14) is attached to each
 the local package file with:
 
 ```sh
-~ $ pkg add ./xapiand-*.pkg
+pkg add ./xapiand-*.pkg
 ```
 
 ## Linux
@@ -40,10 +40,10 @@ matching your distribution and architecture and install it:
 
 ```sh
 # RPM-based (Fedora, RHEL, CentOS, ...):
-~ $ sudo rpm -i xapiand-*.x86_64.rpm
+sudo rpm -i xapiand-*.x86_64.rpm
 
 # DEB-based (Debian 13+, Ubuntu 24.04+):
-~ $ sudo dpkg -i xapiand_*_amd64.deb
+sudo dpkg -i xapiand_*_amd64.deb
 ```
 
 A multi-arch [Docker image](#docker) is also available for any distribution.

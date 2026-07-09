@@ -17,7 +17,7 @@ A dump of all documents in the `/twitter/tweet/` database can be saved by
 running the following command:
 
 ```sh
-~ $ xapiand --dump="twitter/tweet" --out="twitter.msgpack"
+xapiand --dump="twitter/tweet" --out="twitter.msgpack"
 ```
 
 ### Restore
@@ -25,7 +25,7 @@ running the following command:
 To restore for the dump in the file `twitter.msgpack`:
 
 ```sh
-~ $ xapiand --restore="twitter/tweet" --in="twitter.msgpack"
+xapiand --restore="twitter/tweet" --in="twitter.msgpack"
 ```
 
 :::hint[Warning!]{.warning}

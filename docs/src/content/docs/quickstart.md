@@ -21,10 +21,10 @@ docker run -p 8880:8880 --rm ghcr.io/kronuz/xapiand:latest -vvvv
 
 ```sh
 # Install with Homebrew:
-~ $ brew install Kronuz/tap/xapiand
+brew install Kronuz/tap/xapiand
 
 # Run in foreground with *very-very-very* verbose output:
-~ $ xapiand -vvvv
+xapiand -vvvv
 ```
 
 You can also check the [Installation](/Xapiand/installation)
