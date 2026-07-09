@@ -52,22 +52,34 @@ jobs:
           os: ${{ matrix.os }}
 
   bottle-intel:
-    name: Bottle (macos-13, Intel — best effort)
-    runs-on: macos-13
-    # GitHub's x86_64 runners are deprecated and heavily oversubscribed; a build
-    # that takes ~6 min on arm64 can take 30+ min here. This cell gates nothing
-    # (continue-on-error, and publish does not depend on it), so don't cap it
-    # early: let it run to GitHub's default per-job ceiling (~6h) and produce the
-    # x86_64 bottle whenever the runner finally gets to it. A timeout/failure here
-    # is harmless -- the arm64 bottles and the tap merge have already gone out.
+    name: Bottle (x86_64 via Rosetta on macos-14 — best effort)
+    runs-on: macos-14
+    # GitHub's real x86_64 runners (macos-13) are deprecated and can queue for many
+    # hours. Build the x86_64 bottle on an arm64 runner under Rosetta 2 instead: a
+    # second, x86_64 Homebrew at /usr/local pulls x86_64 dependency bottles and
+    # builds xapiand emulated in minutes. The bottle targets Sonoma (macOS 14, the
+    # oldest arm64 runner GitHub offers), not Ventura -- x86_64 users on macOS 14+
+    # get it, older ones build from source. Best-effort: it gates nothing
+    # (continue-on-error, and publish does not depend on it).
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Rosetta 2 and an x86_64 Homebrew
+        shell: bash
+        run: |
+          set -eux
+          softwareupdate --install-rosetta --agree-to-license
+          if [ ! -x /usr/local/bin/brew ]; then
+            curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o /tmp/brew-x86.sh
+            NONINTERACTIVE=1 arch -x86_64 /bin/bash /tmp/brew-x86.sh
+          fi
+          arch -x86_64 /usr/local/bin/brew --version
       - uses: ./.github/actions/build-bottle
         with:
           tag: ${{ env.TAG }}
           repository: ${{ github.repository }}
-          os: macos-13
+          os: macos-14-x86_64
+          brew: arch -x86_64 /usr/local/bin/brew
 
   publish:
     name: Merge bottles into the tap

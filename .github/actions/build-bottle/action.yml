@@ -14,6 +14,13 @@ inputs:
   os:
     description: "Runner OS label; names the uploaded JSON artifact (bottle-json-<os>)."
     required: true
+  brew:
+    description: >
+      The brew command to build with. Defaults to the host brew; pass
+      "arch -x86_64 /usr/local/bin/brew" to build an x86_64 bottle under Rosetta 2
+      on an arm64 runner.
+    required: false
+    default: brew
 
 runs:
   using: composite
@@ -22,16 +29,20 @@ runs:
       shell: bash
       run: |
         set -eux
+        # BREW is the host brew by default, or an emulated x86_64 brew (via Rosetta)
+        # when building the Intel bottle on an arm64 runner. Unquoted on use so
+        # "arch -x86_64 /usr/local/bin/brew" word-splits into the command + args.
+        BREW="${{ inputs.brew }}"
         # Build under the real tap name (kronuz/tap) so the bottle JSON records
         # `kronuz/tap/xapiand` -- the same name the publish job resolves when it
         # merges the DSL into the checked-out tap. A throwaway name here (e.g.
         # kronuz/local) would make `brew bottle --merge` fail with "No available
         # formula". The formula content still comes from contrib/ (source of truth).
         TAP=kronuz/tap
-        brew tap-new "$TAP" --no-git
-        cp contrib/homebrew/xapiand.rb "$(brew --repository "$TAP")/Formula/xapiand.rb"
-        brew install --build-bottle "$TAP/xapiand"
-        brew bottle --json --no-rebuild \
+        $BREW tap-new "$TAP" --no-git
+        cp contrib/homebrew/xapiand.rb "$($BREW --repository "$TAP")/Formula/xapiand.rb"
+        $BREW install --build-bottle "$TAP/xapiand"
+        $BREW bottle --json --no-rebuild \
           --root-url="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.tag }}" \
           "$TAP/xapiand"
         # Homebrew writes the file with a '--' separator, but the download URL in
