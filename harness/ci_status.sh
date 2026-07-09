@@ -35,7 +35,7 @@ case "$SHA" in
 	*)       LABEL="$REF ($SHORT)" ;;
 esac
 
-icon() { case "$1" in success) printf '✓';; failure|cancelled|timed_out) printf '✗';; *) [ "$2" = completed ] && printf '?' || printf '⏳';; esac; }
+icon() { case "$1" in success) printf '✅';; failure|cancelled|timed_out) printf '❌';; *) [ "$2" = completed ] && printf '❔' || printf '⏳';; esac; }
 
 echo "── CI status for ${LABEL} ──"
 echo
