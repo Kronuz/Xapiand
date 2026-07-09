@@ -52,16 +52,20 @@ jobs:
           os: ${{ matrix.os }}
 
   bottle-intel:
-    name: Bottle (x86_64 via Rosetta on macos-14 — best effort)
+    name: Bottle (x86_64 via Rosetta on macos-14)
     runs-on: macos-14
     # GitHub's real x86_64 runners (macos-13) are deprecated and can queue for many
-    # hours. Build the x86_64 bottle on an arm64 runner under Rosetta 2 instead: a
-    # second, x86_64 Homebrew at /usr/local pulls x86_64 dependency bottles and
-    # builds xapiand emulated in minutes. The bottle targets Sonoma (macOS 14, the
-    # oldest arm64 runner GitHub offers), not Ventura -- x86_64 users on macOS 14+
-    # get it, older ones build from source. Best-effort: it gates nothing
-    # (continue-on-error, and publish does not depend on it).
+    # hours, so build the x86_64 bottle on an arm64 runner under Rosetta 2 instead: a
+    # second, x86_64 Homebrew at /usr/local pulls x86_64 dependency bottles and builds
+    # xapiand emulated (~30 min). The bottle targets Sonoma (macOS 14, the oldest arm64
+    # runner GitHub offers), not Ventura -- x86_64 users on macOS 14+ get it, older
+    # ones build from source. publish WAITS for this cell so the tap carries the x86_64
+    # bottle; it stays continue-on-error so a Rosetta/emulation hiccup degrades the
+    # release to arm64-only bottles (the cell shows as failed but the run stays green)
+    # instead of blocking it, and timeout-minutes bounds how long publish can wait on a
+    # wedged build.
     continue-on-error: true
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - name: Set up Rosetta 2 and an x86_64 Homebrew
