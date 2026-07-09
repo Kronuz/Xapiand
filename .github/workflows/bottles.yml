@@ -83,10 +83,13 @@ jobs:
 
   publish:
     name: Merge bottles into the tap
-    # Only the arm64 cells gate publishing, so the tap updates in minutes instead
-    # of waiting on the slow Intel runner. Whatever bottle JSONs exist at this point
-    # (always arm64; Intel if it finished in time) are folded into the formula.
-    needs: bottle
+    # Wait for the arm64 cells AND the Rosetta x86_64 cell, then fold whatever bottle
+    # JSONs exist into the formula. Now that the Intel bottle builds under Rosetta in
+    # ~half an hour (not the old macos-13 24h queue) it is worth waiting for, so a
+    # release's tap update carries the x86_64 bottle too. bottle-intel is
+    # continue-on-error and this job's `!cancelled()` gate lets publishing proceed
+    # with just the arm64 bottles if the Intel cell ever fails or is skipped.
+    needs: [bottle, bottle-intel]
     runs-on: macos-15
     # Requires a HOMEBREW_TAP_TOKEN secret (a fine-grained PAT with Contents:write on
     # Kronuz/homebrew-tap) -- the built-in GITHUB_TOKEN can't push to another repo.
