@@ -4,16 +4,19 @@
 # tap repository the docs point at (github.com/Kronuz/homebrew-tap) as
 # Formula/xapiand.rb, so `brew install Kronuz/tap/xapiand` resolves.
 #
-# At release time, set `url` to the pushed tag's source tarball and fill `sha256`:
-#   curl -sL https://github.com/Kronuz/Xapiand/archive/refs/tags/v1.0.0-alpha.1.tar.gz | shasum -a 256
+# The url/sha256 below are the committed default, used for a local
+# `brew install ./contrib/homebrew/xapiand.rb`. At release time the bottling
+# workflow (.github/actions/build-bottle) rewrites both to the tag being built and
+# computes the source sha256 fresh, so a release's bottles always come from that
+# release's source. No manual bump needed.
 #
 # Pre-built bottles are a later step (brew test-bot / a bottling workflow); this
 # formula builds from source.
 class Xapiand < Formula
   desc "RESTful search engine"
   homepage "https://github.com/Kronuz/Xapiand"
-  url "https://github.com/Kronuz/Xapiand/archive/refs/tags/v1.0.0-alpha.1.tar.gz"
-  sha256 "bf85efc4dbfe3a8520a23b6e929ec59150289b54a1708ed5f90ac50f81c6805a"
+  url "https://github.com/Kronuz/Xapiand/archive/refs/tags/v1.0.0-alpha.2.tar.gz"
+  sha256 "5adaae3cc9cf6a5fe1d0f44c7f5328e655b77b0b84e777034874a4e6b01f7259"
   license "MIT"
   head "https://github.com/Kronuz/Xapiand.git", branch: "master"
 

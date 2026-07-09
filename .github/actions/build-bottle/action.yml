@@ -40,7 +40,17 @@ runs:
         # formula". The formula content still comes from contrib/ (source of truth).
         TAP=kronuz/tap
         $BREW tap-new "$TAP" --no-git
-        cp contrib/homebrew/xapiand.rb "$($BREW --repository "$TAP")/Formula/xapiand.rb"
+        FORMULA="$($BREW --repository "$TAP")/Formula/xapiand.rb"
+        cp contrib/homebrew/xapiand.rb "$FORMULA"
+        # Point the formula at the tag being released and compute its source
+        # tarball's sha256 fresh, so a release's bottle is built from THAT release's
+        # source (Homebrew derives the version from the url's tag). Replaces the old
+        # manual "bump url + sha256 at release time" step. The bare source `sha256`
+        # (two-space indent) is rewritten; any labeled bottle-block sha256 is not.
+        SRC_URL="https://github.com/${{ inputs.repository }}/archive/refs/tags/${{ inputs.tag }}.tar.gz"
+        SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
+        sed -i '' -E "s|^  url \".*\"|  url \"${SRC_URL}\"|; s|^  sha256 \"[0-9a-f]*\"|  sha256 \"${SRC_SHA}\"|" "$FORMULA"
+        grep -E '^  (url|sha256) ' "$FORMULA"
         $BREW install --build-bottle "$TAP/xapiand"
         $BREW bottle --json --no-rebuild \
           --root-url="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.tag }}" \
