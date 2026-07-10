@@ -93,8 +93,8 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 		THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
 	}
 	if (!context->insert(path).second) {
-		if (path == ".xapiand/indices") {
-			// Return initial schema for .xapiand/indices (chicken and egg problem)
+		if (path == ".xapiand/indexes") {
+			// Return initial schema for the reserved indexes database (chicken and egg problem)
 			return std::make_pair(0, MsgPack::MAP());
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
@@ -148,8 +148,8 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
 	}
 	if (!context->insert(path).second) {
-		if (path == ".xapiand/indices") {
-			// Ignore .xapiand/indices (chicken and egg problem)
+		if (path == ".xapiand/indexes") {
+			// Ignore the reserved indexes database (chicken and egg problem)
 			return std::make_pair(0, schema);
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
@@ -287,10 +287,10 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 			} else if (endpoints_path != ".xapiand/nodes") {
-				// Implement foreign schemas in .xapiand/indices by default:
+				// Implement foreign schemas in the reserved indexes database by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_FOREIGN, strings::format(".xapiand/indices/{}", strings::replace(endpoints_path, "/", "%2F")) },
+					{ RESERVED_FOREIGN, strings::format(".xapiand/indexes/{}", strings::replace(endpoints_path, "/", "%2F")) },
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));

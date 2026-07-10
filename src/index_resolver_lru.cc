@@ -244,7 +244,7 @@ save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_pl
 	L_CALL("save_shards(<shard>)");
 
 	if (shard.modified) {
-		Endpoint endpoint(".xapiand/indices");
+		Endpoint endpoint(".xapiand/indexes");
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 		assert(!endpoints.empty());
 		DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
@@ -291,7 +291,7 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 	} else if (index_settings.num_shards != 0) {
 		if (!index_settings.shards[0].nodes.empty()) {
 			if (index_settings.modified) {
-				Endpoint endpoint(".xapiand/indices");
+				Endpoint endpoint(".xapiand/indexes");
 				auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 				assert(!endpoints.empty());
 				DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
@@ -382,7 +382,7 @@ load_settings(const std::string& unsharded_normalized_path)
 	auto nodes = Node::nodes();
 	assert(!nodes.empty());
 
-	Endpoint endpoint(".xapiand/indices");
+	Endpoint endpoint(".xapiand/indexes");
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
@@ -545,7 +545,7 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		// Everything inside .xapiand has the primary shard inside
 		// the current leader and replicas everywhere.
 		if (settings) {
-			THROW(ClientError, "Cannot modify settings of cluster indices.");
+			THROW(ClientError, "Cannot modify settings of cluster indexes.");
 		}
 
 		// Primary databases in .xapiand are always in the master (or local, if master is unavailable)
@@ -561,15 +561,15 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 			}
 		}
 
-		if (normalized_path == ".xapiand/indices") {
-			// .xapiand/indices have the default number of shards
+		if (normalized_path == ".xapiand/indexes") {
+			// The reserved indexes database has the default number of shards
 			for (size_t i = 0; i < opts.num_shards; ++i) {
 				index_settings.shards.push_back(shard);
 			}
 			index_settings.num_shards = opts.num_shards;
 		} else {
 			// Everything else inside .xapiand has a single shard
-			// (.xapiand/nodes, .xapiand/indices/.__N, .xapiand/* etc.)
+			// (.xapiand/nodes, .xapiand/indexes/.__N, .xapiand/* etc.)
 			index_settings.shards.push_back(shard);
 			index_settings.num_shards = 1;
 		}

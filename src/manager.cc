@@ -889,8 +889,8 @@ XapiandManager::setup_node_async_cb()
 			_new_cluster = 2;
 			// Replicate cluster database from the leader
 			replication_service->trigger_replication({primary_endpoint, Endpoint{".xapiand/nodes"}, true});
-			// Request updates from indices database shards
-			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"}, true);
+			// Request updates from the reserved indexes database shards
+			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indexes"}, true);
 			assert(!endpoints.empty());
 			for (auto& endpoint : endpoints) {
 				Endpoint remote_endpoint{endpoint.path, primary_node};

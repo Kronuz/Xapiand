@@ -1312,11 +1312,11 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		}
 	}
 
-	// Get index settings (from .xapiand/indices)
+	// Get index settings (from the reserved indexes database)
 	MsgPack settings;
 	auto id = std::string(request.endpoints.size() == 1 ? request.endpoints[0].path : unsharded_path(request.endpoints[0].path).first);
 	request.endpoints = XapiandManager::resolve_index_endpoints(
-		Endpoint{".xapiand/indices"},
+		Endpoint{".xapiand/indexes"},
 		query_field.writable,
 		query_field.primary);
 
