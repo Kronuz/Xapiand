@@ -24,7 +24,6 @@ class Xapiand < Formula
   depends_on "ninja" => :build
   depends_on "pkg-config" => :build
   depends_on "tcl-tk" => :build
-  depends_on "asio"
   depends_on "icu4c"
   depends_on "zstd"
 
@@ -32,15 +31,16 @@ class Xapiand < Formula
     # icu4c is keg-only on Homebrew; point pkg-config (and thus CMake's ICU probe)
     # at it so the build finds ICU.
     ENV.prepend_path "PKG_CONFIG_PATH", Formula["icu4c"].opt_lib/"pkgconfig"
-    # This formula fetches its Kronuz-family deps via FetchContent, which Homebrew
-    # traps by default. HOMEBREW_ALLOW_FETCHCONTENT is Homebrew's sanctioned opt-out
-    # (the trap returns early when it's ON). Fine for a personal tap.
+    # This formula fetches its Kronuz-family deps (and standalone Asio) via
+    # FetchContent, which Homebrew traps by default. HOMEBREW_ALLOW_FETCHCONTENT is
+    # Homebrew's sanctioned opt-out (the trap returns early when it's ON). Fine for
+    # a personal tap, and it keeps the Asio version pinned by CMake (asio-1-36-0)
+    # rather than tracking whatever Homebrew ships.
     system "cmake", "-S", ".", "-B", "build", "-GNinja",
            "-DCMAKE_BUILD_TYPE=Release",
            "-DCMAKE_CXX_STANDARD=20",
            "-DCMAKE_CXX_STANDARD_REQUIRED=ON",
            "-DLTO=OFF",
-           "-DASIO_INCLUDE_DIR=#{Formula["asio"].opt_include}",
            "-DHOMEBREW_ALLOW_FETCHCONTENT=ON",
            *std_cmake_args
     # LTO is off for the bottle build: its per-TU bitcode makes the heavy TUs
