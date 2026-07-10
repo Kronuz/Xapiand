@@ -156,3 +156,25 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   `sortable_serialise` and anything under `src/xapian/` are GPL, the rest is MIT.
 - There's no substitute for flipping on the relevant `L_*` category and watching
   the logs; the instrumentation is already there.
+
+## Releasing & the changelog
+
+- The changelog is `docs/src/content/docs/changelog.md` ([Keep a
+  Changelog](https://keepachangelog.com/) + SemVer); the root `CHANGELOG` is a
+  symlink to it. It's a curated, user-facing summary — terse bullets grouped under
+  `Added` / `Changed` / `Fixed` / `Removed`, bold for key terms — not a commit dump.
+- **Keep `[Unreleased]` filled as you go.** When a change is worth telling a user
+  about, add its bullet to `[Unreleased]` in the same PR. Skip pure-internal churn
+  (CI plumbing, no-op refactors). This way cutting a release is nearly free and the
+  log never falls behind (it did once, alpha.2–4 were backfilled).
+- **Cutting `vX.Y.Z`:**
+  1. In the changelog, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add
+     a fresh empty `## [Unreleased]` above it.
+  2. Bump `PACKAGE_VERSION` in `CMakeLists.txt` to match (it's the fallback; the real
+     version comes from `git describe --tags`, so they must agree).
+  3. Commit, then tag on HEAD: `git tag vX.Y.Z` (lightweight is fine — the build uses
+     `git describe --tags`).
+  4. Push `master` then the tag. The tag push triggers Release / FreeBSD / Bottles.
+- The Homebrew formula (`contrib/homebrew/xapiand.rb`) is **head-only on purpose** —
+  never put a pinned `url`/`sha256` in it. The bottling workflow injects the released
+  tag's url + fresh source sha256 at build time, so there is nothing to bump there.
