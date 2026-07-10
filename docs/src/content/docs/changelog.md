@@ -11,6 +11,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [1.0.0-alpha.4] - 2026-07-09
+
+### Fixed
+- **ICU now links on Apple Silicon.** The Homebrew prefix was hardcoded to the Intel
+  path, so `find_package(ICU)` failed and ICU was silently compiled out of the arm64
+  build (and its bottle), losing Unicode word-boundary handling despite the formula
+  depending on `icu4c`.
+
+### Changed
+- The Homebrew formula is **head-only** and never goes stale: the bottling workflow
+  injects the released tag's url and a fresh source checksum instead of a pinned
+  default. **Asio** is fetched by the build rather than declared as a formula
+  dependency.
+
+### Removed
+- Stale contrib: the 2018 FreeBSD ports skeletons, the Django-Haystack backend, and
+  a broken example script.
+
+---
+## [1.0.0-alpha.3] - 2026-07-09
+
+### Changed
+- Renamed **"indices" to "indexes"** throughout: the reserved metadata database is
+  now `.xapiand/indexes`, and the reference guide follows. A clean break, with no
+  fallback to the old name.
+- The Python client (**xapiand-py**) was rewritten as a fully **async** (asyncio /
+  aiohttp) library and bumped to 1.0.0. There is no synchronous compatibility layer.
+
+---
+## [1.0.0-alpha.2] - 2026-07-08
+
+Second alpha: response-path efficiency, a crash-safe data store, a dependency-free
+test harness, and the full release/CI pipeline. The documentation site moved to
+Astro/Starlight.
+
+### Changed
+- **Zero-copy response logging**: the access log reads the response straight from the
+  writer's buffer instead of copying the body and headers a second time per request.
+  Requests and responses are logged through **Kronuz/http-log**.
+- The data store writes a **crash-safe v2 volume format** (still reads v1).
+- Documentation migrated from Jekyll to **Astro/Starlight**, with an Architecture
+  section, D2 diagrams, a rewritten Lua scripting guide, and OS auto-detection on the
+  quick-start.
+
+### Added
+- macOS **Homebrew bottles** (arm64 + x86_64 via Rosetta), **FreeBSD packages**,
+  multi-arch **Docker** images, and **RPM**/**DEB** packages, all built on tag push.
+- **ASAN + ThreadSanitizer** CI, with the doc-driven E2E run under both.
+- A request **watchdog** that flags requests taking too long, and
+  `harness/ci_status.sh` for one-glance CI status of a ref.
+- The splash banner shows the build's **git short-hash** and version.
+
+### Fixed
+- Aggregations **fail clearly** on reserved-but-unimplemented types instead of
+  silently returning nothing.
+- FreeBSD build fixes (`<utility>` include, `__builtin_exp10` lowering); the version
+  now derives from lightweight git tags.
+- Bumped the `cuuid` JS dependency to close a `uuid` advisory
+  (GHSA-w5hq-g745-h8pq).
+
+### Removed
+- **GoogleTest**: the unit tests run on a dependency-free harness and the legacy test
+  tree was pruned (many suites revived: serialise, endpoint, fieldparser, geospatial
+  HTM, and more).
+
+---
 ## [1.0.0-alpha.1] - 2026-07-04
 
 First 1.0 milestone (alpha): a broad modernization of the engine, the runtime, and
