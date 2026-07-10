@@ -119,15 +119,18 @@ jobs:
           # kronuz/tap/xapiand.
           brew tap kronuz/tap https://github.com/Kronuz/homebrew-tap
           FORMULA="$(brew --repository kronuz/tap)/Formula/xapiand.rb"
-          # Sync the tap's formula from contrib (the source of truth) and point it at
-          # the released tag -- the SAME rewrite the build used -- so the tap formula's
-          # version matches the bottles we built. Without this the tap keeps whatever
-          # url/version it had committed and brew derives the wrong bottle filename
-          # (which is how alpha.2 shipped bottles the tap thought were alpha.1).
+          # Sync the tap's formula from contrib (the source of truth) and inject the
+          # released tag as a stable url + fresh source sha256 -- the SAME transform
+          # the build used -- so the tap formula's version matches the bottles we
+          # built. Without this the tap keeps whatever it had committed and brew
+          # derives the wrong bottle filename (which is how alpha.2 once shipped
+          # bottles the tap thought were alpha.1). The committed formula is
+          # head-only, so this injects rather than rewrites; awk is idempotent and
+          # never touches labeled bottle-block sha256 lines.
           cp contrib/homebrew/xapiand.rb "$FORMULA"
           SRC_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
           SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
-          sed -i '' -E "s|^  url \".*\"|  url \"${SRC_URL}\"|; s|^  sha256 \"[0-9a-f]*\"|  sha256 \"${SRC_SHA}\"|" "$FORMULA"
+          awk -v u="$SRC_URL" -v s="$SRC_SHA" '/^  url /{next} /^  sha256 "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
           # Merge the per-cell bottle DSL into that formula.
           brew bottle --merge --write --no-commit json/*.bottle.json
           # Commit + push from the tapped clone, authenticating with the PAT.

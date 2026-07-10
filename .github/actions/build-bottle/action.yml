@@ -42,14 +42,16 @@ runs:
         $BREW tap-new "$TAP" --no-git
         FORMULA="$($BREW --repository "$TAP")/Formula/xapiand.rb"
         cp contrib/homebrew/xapiand.rb "$FORMULA"
-        # Point the formula at the tag being released and compute its source
-        # tarball's sha256 fresh, so a release's bottle is built from THAT release's
-        # source (Homebrew derives the version from the url's tag). Replaces the old
-        # manual "bump url + sha256 at release time" step. The bare source `sha256`
-        # (two-space indent) is rewritten; any labeled bottle-block sha256 is not.
+        # The committed formula is head-only; inject the released tag as a stable
+        # url + a fresh source sha256 so the bottle is built from THAT release's
+        # source (Homebrew derives the version from the url's tag). This replaces
+        # the old manual "bump url + sha256 at release time" step. awk is
+        # idempotent: it drops any bare source url/sha256 then re-adds them right
+        # after `homepage`; labeled bottle-block sha256 lines (not `^  sha256 "`)
+        # are never touched.
         SRC_URL="https://github.com/${{ inputs.repository }}/archive/refs/tags/${{ inputs.tag }}.tar.gz"
         SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
-        sed -i '' -E "s|^  url \".*\"|  url \"${SRC_URL}\"|; s|^  sha256 \"[0-9a-f]*\"|  sha256 \"${SRC_SHA}\"|" "$FORMULA"
+        awk -v u="$SRC_URL" -v s="$SRC_SHA" '/^  url /{next} /^  sha256 "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
         grep -E '^  (url|sha256) ' "$FORMULA"
         $BREW install --build-bottle "$TAP/xapiand"
         $BREW bottle --json --no-rebuild \
