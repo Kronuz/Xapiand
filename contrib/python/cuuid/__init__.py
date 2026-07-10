@@ -59,25 +59,56 @@ def xor_fold(num, bits):
     return folded
 
 
-def unserialise(serialised):
+def splitmix64(x):
+    # The cheap, deterministic 64-bit mixer the v6 codec uses to reconstruct a compacted
+    # node, in place of v1's per-call MT19937 construction.
+    x = (x + 0x9e3779b97f4a7c15) & 0xffffffffffffffff
+    x = ((x ^ (x >> 30)) * 0xbf58476d1ce4e5b9) & 0xffffffffffffffff
+    x = ((x ^ (x >> 27)) * 0x94d049bb133111eb) & 0xffffffffffffffff
+    return x ^ (x >> 31)
+
+
+def _expand_mt(seed):
+    # v1 node expander: two 32-bit MT19937 draws.
+    g = MT19937(seed & 0xffffffff)
+    node = g()
+    node <<= 32
+    node |= g()
+    return node
+
+
+def _expand_splitmix(seed):
+    # v6 node expander: one splitmix64 mix of the same 32-bit fnv seed.
+    return splitmix64(seed & 0xffffffff)
+
+
+# Decode codec: the condensed wire carries no version marker, so the caller picks which
+# codec reconstructs it. CODEC_V1 is the pure-legacy mode (matches Xapiand's --legacy-ids);
+# CODEC_V6 (the default, matching a default Xapiand node) reconstructs the node with
+# splitmix64 and renders UUIDv6. Encoding always dispatches by the value's version nibble.
+CODEC_V1 = 1
+CODEC_V6 = 6
+
+
+def unserialise(serialised, codec=CODEC_V6):
     uuids = []
     while serialised:
-        uuid, length = UUID._unserialise(serialised)
+        uuid, length = UUID._unserialise(serialised, codec)
         uuids.append(uuid)
         serialised = serialised[length:]
     return uuids
 
 
-def encode(serialised, encoding='encoded'):
+def encode(serialised, encoding='encoded', codec=CODEC_V6):
     if isinstance(serialised, bytes):
         if encoding == 'guid':
-            return ';'.join('{%s}' % u for u in unserialise(serialised))
+            return ';'.join('{%s}' % u for u in unserialise(serialised, codec))
         elif encoding == 'urn':
-            return 'urn:uuid:' + ';'.join(str(u) for u in unserialise(serialised))
+            return 'urn:uuid:' + ';'.join(str(u) for u in unserialise(serialised, codec))
         elif encoding == 'encoded':
             if serialised[0] != 1 and ((serialised[-1] & 1) or (len(serialised) >= 6 and serialised[-6] & 2)):
                 return '~' + UUID.ENCODER.encode(serialised)
-        return ';'.join(str(u) for u in unserialise(serialised))
+        return ';'.join(str(u) for u in unserialise(serialised, codec))
     raise ValueError("Invalid serialised UUID: %r" % serialised)
 
 
@@ -284,7 +315,7 @@ class UUID(_uuid.UUID):
         return u
 
     @classmethod
-    def _unserialise_condensed(cls, serialised):
+    def _unserialise_condensed(cls, serialised, codec=CODEC_V6):
         size = len(serialised)
         length = size
         byte0 = serialised[0]
@@ -308,13 +339,14 @@ class UUID(_uuid.UUID):
         compacted = meat & 1
         meat >>= cls.COMPACTED_BITS
 
+        expand = _expand_splitmix if codec == CODEC_V6 else _expand_mt
         if compacted:
             salt = meat & cls.SALT_MASK
             meat >>= cls.SALT_BITS
             clock = meat & cls.CLOCK_MASK
             meat >>= cls.CLOCK_BITS
             time = meat & cls.TIME_MASK
-            node = cls._calculate_node(time, clock, salt)
+            node = cls._calculate_node(time, clock, salt, expand)
         else:
             node = meat & cls.NODE_MASK
             meat >>= cls.NODE_BITS
@@ -327,6 +359,9 @@ class UUID(_uuid.UUID):
                 time = ((time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
             elif not (node & 0x010000000000):
                 time = (time + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+
+        if codec == CODEC_V6:
+            return cls(bytes=cls._to_v6_bytes(time, clock, node)), length
 
         time_low = time & 0xffffffff
         time_mid = (time >> 32) & 0xffff
@@ -344,93 +379,131 @@ class UUID(_uuid.UUID):
         return cls(bytes=serialised[1:17]), 17
 
     @classmethod
-    def _unserialise(cls, serialised):
+    def _unserialise(cls, serialised, codec=CODEC_V6):
         if serialised is None or len(serialised) < 2:
             raise ValueError("Bad encoded uuid %s" % repr(serialised))
 
         if (serialised and serialised[0] == 1):
             return cls._unserialise_full(serialised)
         else:
-            return cls._unserialise_condensed(serialised)
+            return cls._unserialise_condensed(serialised, codec)
 
     @classmethod
-    def _calculate_node(cls, time, clock, salt):
+    def _calculate_node(cls, time, clock, salt, expand=_expand_mt):
         if not time and not clock and not salt:
             return 0x010000000000
         seed = 0
         seed ^= fnv_1a(time)
         seed ^= fnv_1a(clock)
         seed ^= fnv_1a(salt)
-        g = MT19937(seed & 0xffffffff)
-        node = g()
-        node <<= 32
-        node |= g()
+        node = expand(seed)
         node &= cls.NODE_MASK & ~cls.SALT_MASK
         node |= salt
         node |= 0x010000000000  # set multicast bit
         return node
 
+    @staticmethod
+    def _to_v6_bytes(time, clock, node):
+        # (time, clock, node) -> RFC-9562 UUIDv6 canonical bytes (version 6, RFC-4122 variant).
+        time_high = (time >> 28) & 0xffffffff
+        time_mid = (time >> 12) & 0xffff
+        time_low = time & 0x0fff
+        b = bytearray(16)
+        b[0] = (time_high >> 24) & 0xff
+        b[1] = (time_high >> 16) & 0xff
+        b[2] = (time_high >> 8) & 0xff
+        b[3] = time_high & 0xff
+        b[4] = (time_mid >> 8) & 0xff
+        b[5] = time_mid & 0xff
+        b[6] = 0x60 | (time_low >> 8)  # version 6
+        b[7] = time_low & 0xff
+        b[8] = 0x80 | ((clock >> 8) & 0x3f)  # RFC-4122 variant + clock hi
+        b[9] = clock & 0xff
+        for i in range(6):
+            b[10 + i] = (node >> ((5 - i) * 8)) & 0xff
+        return bytes(b)
+
+    @staticmethod
+    def _from_v6_bytes(bts):
+        # Inverse of _to_v6_bytes.
+        time_high = (bts[0] << 24) | (bts[1] << 16) | (bts[2] << 8) | bts[3]
+        time_mid = (bts[4] << 8) | bts[5]
+        time_low = ((bts[6] & 0x0f) << 8) | bts[7]
+        time = (time_high << 28) | (time_mid << 12) | time_low
+        clock = ((bts[8] & 0x3f) << 8) | bts[9]
+        node = 0
+        for i in range(6):
+            node = (node << 8) | bts[10 + i]
+        return time, clock, node
+
+    @classmethod
+    def _condense(cls, time, clock, node, expand):
+        # (time, clock, node) -> condensed wire, shared by v1 (mt) and v6 (splitmix). Returns
+        # the wire plus the compacted (node, time, clock) that compact_crush needs.
+        time &= cls.TIME_MASK
+        node &= cls.NODE_MASK
+        clock &= cls.CLOCK_MASK
+        compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) if time else 0
+        compacted_time_clock = compacted_time & cls.CLOCK_MASK
+        compacted_time >>= cls.CLOCK_BITS
+        compacted_clock = clock ^ compacted_time_clock
+        if node & 0x010000000000:
+            salt = node & cls.SALT_MASK
+        else:
+            salt = fnv_1a(node)
+            salt = xor_fold(salt, cls.SALT_BITS)
+            salt = salt & cls.SALT_MASK
+        compacted_node = cls._calculate_node(compacted_time, compacted_clock, salt, expand)
+        compacted = node == compacted_node
+
+        if compacted:
+            meat = compacted_time
+            meat <<= cls.CLOCK_BITS
+            meat |= compacted_clock
+            meat <<= cls.SALT_BITS
+            meat |= salt
+            meat <<= cls.COMPACTED_BITS
+            meat |= 1
+        else:
+            if not (node & 0x010000000000):
+                if time:
+                    time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            meat = time
+            meat <<= cls.CLOCK_BITS
+            meat |= clock
+            meat <<= cls.NODE_BITS
+            meat |= node
+            meat <<= cls.COMPACTED_BITS
+
+        serialised = []
+        while meat or len(serialised) < 4:
+            serialised.append(meat & 0xff)
+            meat >>= 8
+        length = len(serialised) - 4
+        if serialised[-1] & cls.VL[length][0][1]:
+            if serialised[-1] & cls.VL[length][1][1]:
+                serialised.append(cls.VL[length + 1][0][0])
+            else:
+                serialised[-1] |= cls.VL[length][1][0]
+        else:
+            serialised[-1] |= cls.VL[length][0][0]
+        serialised = bytes(bytearray(reversed(serialised)))
+        if compacted_time:
+            compacted_time = ((compacted_time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+        return serialised, compacted_node, compacted_time, compacted_clock
+
     @classmethod
     def _serialise(cls, self):
+        # Encode-side dispatch by the version nibble: v1 uses the mt expander, v6 the splitmix
+        # expander with UUIDv6 field order; anything else falls back to the full 17-byte form.
         variant = self.bytes[8] & 0xc0
         version = self.bytes[6] >> 4
         if variant == 0x80 and version == 1:
-            node = self.node & cls.NODE_MASK
-            clock = self.clock_seq & cls.CLOCK_MASK
-            time = self.time & cls.TIME_MASK
-            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) if time else 0
-            compacted_time_clock = compacted_time & cls.CLOCK_MASK
-            compacted_time >>= cls.CLOCK_BITS
-            compacted_clock = clock ^ compacted_time_clock
-            if node & 0x010000000000:
-                salt = node & cls.SALT_MASK
-            else:
-                salt = fnv_1a(node)
-                salt = xor_fold(salt, cls.SALT_BITS)
-                salt = salt & cls.SALT_MASK
-            compacted_node = cls._calculate_node(compacted_time, compacted_clock, salt)
-            compacted = node == compacted_node
-
-            if compacted:
-                meat = compacted_time
-                meat <<= cls.CLOCK_BITS
-                meat |= compacted_clock
-                meat <<= cls.SALT_BITS
-                meat |= salt
-                meat <<= cls.COMPACTED_BITS
-                meat |= 1
-            else:
-                if not (node & 0x010000000000):
-                    if time:
-                        time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-                meat = time
-                meat <<= cls.CLOCK_BITS
-                meat |= clock
-                meat <<= cls.NODE_BITS
-                meat |= node
-                meat <<= cls.COMPACTED_BITS
-
-            serialised = []
-            while meat or len(serialised) < 4:
-                serialised.append(meat & 0xff)
-                meat >>= 8
-            length = len(serialised) - 4
-            if serialised[-1] & cls.VL[length][0][1]:
-                if serialised[-1] & cls.VL[length][1][1]:
-                    serialised.append(cls.VL[length + 1][0][0])
-                else:
-                    serialised[-1] |= cls.VL[length][1][0]
-            else:
-                serialised[-1] |= cls.VL[length][0][0]
-            serialised = bytes(bytearray(reversed(serialised)))
-            if compacted_time:
-                compacted_time = ((compacted_time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-        else:
-            compacted_node = None
-            compacted_time = None
-            compacted_clock = None
-            serialised = b'\x01' + self.bytes
-        return serialised, compacted_node, compacted_time, compacted_clock
+            return cls._condense(self.time, self.clock_seq, self.node, _expand_mt)
+        if variant == 0x80 and version == 6:
+            time, clock, node = cls._from_v6_bytes(self.bytes)
+            return cls._condense(time, clock, node, _expand_splitmix)
+        return b'\x01' + self.bytes, None, None, None
 
     @classmethod
     def new(cls, data=None, compacted=None):
@@ -442,8 +515,19 @@ class UUID(_uuid.UUID):
         return num
 
     @classmethod
-    def unserialise(cls, serialised):
-        uuid, length = cls._unserialise(serialised)
+    def new_v6(cls, compacted=True):
+        # Mint a version-6 id from the platform v1 clock: crush the node with splitmix64 and
+        # lay the fields out in UUIDv6 order. Matches Xapiand's default (v6) minting.
+        num = UUID(_uuid.uuid1())
+        time, clock, node = num.time, num.clock_seq, num.node
+        if compacted:
+            _, compacted_node, compacted_time, compacted_clock = cls._condense(time, clock, node, _expand_splitmix)
+            time, clock, node = compacted_time, compacted_clock, compacted_node
+        return cls(bytes=cls._to_v6_bytes(time, clock, node))
+
+    @classmethod
+    def unserialise(cls, serialised, codec=CODEC_V6):
+        uuid, length = cls._unserialise(serialised, codec)
         if length > len(serialised):
             raise ValueError("Invalid serialised uuid %s" % serialised)
         return uuid

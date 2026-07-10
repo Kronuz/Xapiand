@@ -109,6 +109,36 @@ const xor_fold = (num, bits) => {
     return folded;
 }
 
+// splitmix64: the cheap 64-bit mixer the v6 codec uses to reconstruct a compacted node,
+// in place of v1's per-call Mersenne Twister construction. Computed in BigInt for exact
+// 64-bit wraparound (the [high, low] mul64 loses a carry when both operands have high bits),
+// then returned as [high, low] 32-bit halves.
+const _MASK64 = (1n << 64n) - 1n;
+const splitmix64 = x => {
+    let v = (BigInt(x[0] >>> 0) << 32n) | BigInt(x[1] >>> 0);
+    v = (v + 0x9e3779b97f4a7c15n) & _MASK64;
+    v = ((v ^ (v >> 30n)) * 0xbf58476d1ce4e5b9n) & _MASK64;
+    v = ((v ^ (v >> 27n)) * 0x94d049bb133111ebn) & _MASK64;
+    v = (v ^ (v >> 31n)) & _MASK64;
+    return [Number(v >> 32n), Number(v & 0xffffffffn)];
+}
+
+// v1 node expander: two 32-bit Mersenne Twister draws.
+const _expand_mt = seed => {
+    const g = new MersenneTwister(seed[1]);
+    return [g.random_int(), g.random_int()];
+}
+
+// v6 node expander: one splitmix64 mix of the same 32-bit fnv seed.
+const _expand_splitmix = seed => splitmix64([0, seed[1] >>> 0]);
+
+// Decode codec: the condensed wire carries no version marker, so the caller picks which
+// codec reconstructs it. CODEC_V1 is the pure-legacy mode (Xapiand's --legacy-ids); CODEC_V6
+// (the default) reconstructs the node with splitmix64 and renders UUIDv6. Encoding always
+// dispatches by the value's version nibble.
+const CODEC_V1 = 1;
+const CODEC_V6 = 6;
+
 class UUID {
     constructor(uuid) {
         const bytes = UUIDtoBytes(uuid);
@@ -234,7 +264,7 @@ class UUID {
          return ((this.clock_seq_hi_variant & 0x3f) << 8 ) | this.clock_seq_low;
     }
 
-    static _calculate_node(time, clock, salt) {
+    static _calculate_node(time, clock, salt, expand) {
         if (!time[0] && !time[1] && !clock[0] && !clock[1] && !salt[0] && !salt[1]) {
             return [0x0100, 0x00000000];
         }
@@ -243,110 +273,172 @@ class UUID {
         seed = xor64(seed, fnv_1a(time));
         seed = xor64(seed, fnv_1a(clock));
         seed = xor64(seed, fnv_1a(salt));
-        const g = new MersenneTwister(seed[1]);
-        let node = [];
-        node[0] = g.random_int();
-        node[1] = g.random_int();
+        let node = expand(seed);
         node = and64(node, and64(NODE_MASK, [0xffffffff, ~SALT_MASK]));
         node = or64(node, salt);
         node = or64(node, [0x100, 0x00000000]);  // set multicast bit;
         return node;
     }
 
+    // (time, clock, node) -> RFC-9562 UUIDv6 canonical string (version 6, RFC-4122 variant).
+    // time is [high(28b), low(32b)] 60-bit; the timestamp moves to the front so it sorts.
+    static _v6_buff_from_args(time, clock, node) {
+        const th = time[0], tl = time[1];
+        const time_high = ((th << 4) | (tl >>> 28)) >>> 0;
+        const time_mid = (tl >>> 12) & 0xffff;
+        const time_low = tl & 0x0fff;
+        let i = 0;
+        let uuid_buff = [];
+        uuid_buff[i++] = time_high >>> 24 & 0xff;
+        uuid_buff[i++] = time_high >>> 16 & 0xff;
+        uuid_buff[i++] = time_high >>> 8 & 0xff;
+        uuid_buff[i++] = time_high & 0xff;
+        uuid_buff[i++] = time_mid >>> 8 & 0xff;
+        uuid_buff[i++] = time_mid & 0xff;
+        uuid_buff[i++] = 0x60 | (time_low >>> 8);  // version 6
+        uuid_buff[i++] = time_low & 0xff;
+        uuid_buff[i++] = 0x80 | ((clock[1] >>> 8) & 0x3f);  // variant + clock hi
+        uuid_buff[i++] = clock[1] & 0xff;
+        let n = node;
+        for (let j = 5; j >= 0; j--) {
+            uuid_buff[i + j] = n[1] & 0xff;
+            n = shr64(n, 8);
+        }
+        return bytesToUUID(uuid_buff);
+    }
+
+    // Inverse of _v6_buff_from_args, reading a v6 UUID's raw bytes.
+    static _from_v6_bytes(bytes) {
+        const time_high = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+        const time_mid = (bytes[4] << 8) | bytes[5];
+        const time_low = ((bytes[6] & 0x0f) << 8) | bytes[7];
+        const th = time_high >>> 4;
+        const tl = (((time_high & 0xf) << 28) | (time_mid << 12) | time_low) >>> 0;
+        const clock = [0, ((bytes[8] & 0x3f) << 8) | bytes[9]];
+        const node_high = ((bytes[10] << 8) | bytes[11]) & 0xffff;
+        const node_low = ((bytes[12] << 24) | (bytes[13] << 16) | (bytes[14] << 8) | bytes[15]) >>> 0;
+        return { time: [th, tl], clock, node: [node_high, node_low] };
+    }
+
+    // (time, clock, node) -> condensed wire, shared by v1 (mt) and v6 (splitmix). Returns the
+    // wire string plus the compacted (node, time, clock) that compact_crush needs. `time`,
+    // `node` are [high, low]; `clock` is [0, value].
+    static _condense(time, clock, node, expand) {
+        let compacted_time = [0, 0];
+        if (time[0] || time[1] ) {
+            compacted_time = and64(sub64(time, UUID_TIME_INITIAL), TIME_MASK);
+        }
+        const compacted_time_clock = and64(compacted_time, [0, CLOCK_MASK])
+        clock = [0, clock[1] & CLOCK_MASK];
+        compacted_time = shr64(compacted_time, CLOCK_BITS);
+        const compacted_clock = xor64(clock, compacted_time_clock);
+        const s = and64(node, [0x0100, 0x00000000]);
+        let salt;
+        if (s[1] || s[0]) {
+            salt = and64(node, [0x0, SALT_MASK]);
+        } else {
+            salt = fnv_1a(node);
+            salt = xor_fold(salt, SALT_BITS);
+            salt = and64(salt, [0x0, SALT_MASK]);
+        }
+        const compacted_node = UUID._calculate_node(compacted_time, compacted_clock, salt, expand);
+        const compacted = node[1] === compacted_node[1] && node[0] === compacted_node[0];
+
+        let compacted_time_out = [0, 0];
+        let meat_high;
+        let meat_low;
+        if (compacted) {
+            let clock_salt_cmp = compacted_clock[1];
+            clock_salt_cmp <<= SALT_BITS;
+            clock_salt_cmp |= salt[1];
+            clock_salt_cmp <<= COMPACTED_BITS;
+            clock_salt_cmp |= 1;
+            clock_salt_cmp &= 0x3fffff;
+
+            let m3 = 0, m2 = 0, m1 = compacted_time[0], m0 = compacted_time[1];
+            m2 <<= 22;
+            m2 |= (m1 >>> 10);
+            m1 <<= 22;
+            m1 |= (m0 >>> 10);
+            m0 <<= 22;
+            m0 |= clock_salt_cmp;
+
+            meat_high = [m3, m2];
+            meat_low = [m1, m0];
+        } else {
+            if (!s[1] && !s[0]) {
+                if (time[0] || time[1]) {
+                    time = and64(sub64(time, UUID_TIME_INITIAL), TIME_MASK);
+                }
+            }
+            meat_high = time;
+            meat_low = clock;
+            const node_bits = NODE_BITS / 2;
+            meat_low = shl64(shl64(meat_low, node_bits), node_bits); // shl64 shift only 32 bits less or equal
+            meat_low = or64(meat_low, node);
+            meat_low = shl64(meat_low, COMPACTED_BITS);
+            /* meat_low is 63 bits, we need mix with meat_high to make meat_low 64 bits */
+            meat_low[0] = (((meat_high[1] & 1) << 31) | (meat_low[0] & 0x7fffffff)) >>> 0;
+            meat_high = shr64(meat_high, 1);
+        }
+        // Re-expand the compacted timestamp for compact_crush (independent of which branch the
+        // wire took; the wire itself uses the shifted compacted_time above, not this value).
+        if (compacted_time[0] || compacted_time[1]) {
+            compacted_time_out = and64(add64(shl64(compacted_time, CLOCK_BITS), UUID_TIME_INITIAL), TIME_MASK);
+        }
+        let bytes_ = [];
+        while (meat_low[0] || meat_low[1] || bytes_.length < 4) {
+            bytes_.push(and64(meat_low, [0, 0xff])[1]);
+            meat_low = shr64(meat_low, 8);
+        }
+
+        while (meat_high[0] || meat_high[1] || bytes_.length < 4) {
+            bytes_.push(and64(meat_high, [0, 0xff])[1]);
+            meat_high = shr64(meat_high, 8);
+        }
+        const length = bytes_.length - 4;
+        const last = bytes_.length - 1;
+        if (bytes_[last] & VL[length][0][1]) {
+            if (bytes_[last] & VL[length][1][1]) {
+                bytes_.push(VL[length + 1][0][0]);
+            } else {
+                bytes_[last] |= VL[length][1][0];
+            }
+        } else {
+            bytes_[last] |= VL[length][0][0];
+        }
+        const serialised = bytes_.map(val => String.fromCharCode(val)).reverse().join('');
+        return { serialised, compacted_node, compacted_time: compacted_time_out, compacted_clock };
+    }
+
     serialise() {
+        // Encode-side dispatch by the version nibble: v1 uses the mt expander, v6 the splitmix
+        // expander with UUIDv6 field order; anything else falls back to the full 17-byte form.
         const version = this.bytes[6] >> 4;
         const variant = this.bytes[8] & 0xc0;
+        let time, clock, node, expand;
         if (variant === 0x80 && version === 1) {
-            const node = this.node;
-            let time = this.get_time();
-            let compacted_time = [0, 0];
-            if (time[0] || time[1] ) {
-                compacted_time = and64(sub64(time, UUID_TIME_INITIAL), TIME_MASK);
-            }
-            const compacted_time_clock = and64(compacted_time, [0, CLOCK_MASK])
-            const clock = [0, this.get_clock_seq() & CLOCK_MASK];
-            compacted_time = shr64(compacted_time, CLOCK_BITS);
-            this.compacted_clock = xor64(clock, compacted_time_clock);
-            const s = and64(node, [0x0100, 0x00000000]);
-            let salt;
-            if (s[1] || s[0]) {
-                salt = and64(node, [0x0, SALT_MASK]);
-            } else {
-                salt = fnv_1a(node);
-                salt = xor_fold(salt, SALT_BITS);
-                salt = and64(salt, [0x0, SALT_MASK]);
-            }
-            const compacted_node = UUID._calculate_node(compacted_time, this.compacted_clock, salt);
-            const compacted = node[1] === compacted_node[1] && node[0] === compacted_node[0];
-            this.compacted_node = compacted_node;
-
-            let meat_high;
-            let meat_low;
-            if (compacted) {
-                let clock_salt_cmp = this.compacted_clock[1];
-                clock_salt_cmp <<= SALT_BITS;
-                clock_salt_cmp |= salt[1];
-                clock_salt_cmp <<= COMPACTED_BITS;
-                clock_salt_cmp |= 1;
-                clock_salt_cmp &= 0x3fffff;
-
-                let m3 = 0, m2 = 0, m1 = compacted_time[0], m0 = compacted_time[1];
-                m2 <<= 22;
-                m2 |= (m1 >>> 10);
-                m1 <<= 22;
-                m1 |= (m0 >>> 10);
-                m0 <<= 22;
-                m0 |= clock_salt_cmp;
-
-                meat_high = [m3, m2];
-                meat_low = [m1, m0];
-
-                // set compacted_time
-                this.compacted_time = and64(add64(shl64(compacted_time, CLOCK_BITS), UUID_TIME_INITIAL), TIME_MASK);
-            } else {
-                if (!s[1] && !s[0]) {
-                    if (time[0] || time[1]) {
-                        time = and64(sub64(time, UUID_TIME_INITIAL), TIME_MASK);
-                    }
-                }
-                meat_high = time;
-                meat_low = clock;
-                const node_bits = NODE_BITS / 2;
-                meat_low = shl64(shl64(meat_low, node_bits), node_bits); // shl64 shift only 32 bits less or equal
-                meat_low = or64(meat_low, node);
-                meat_low = shl64(meat_low, COMPACTED_BITS);
-                /* meat_low is 63 bits, we need mix with meat_high to make meat_low 64 bits */
-                meat_low[0] = (((meat_high[1] & 1) << 31) | (meat_low[0] & 0x7fffffff)) >>> 0;
-                meat_high = shr64(meat_high, 1);
-            }
-            let bytes_ = [];
-            while (meat_low[0] || meat_low[1] || bytes_.length < 4) {
-                bytes_.push(and64(meat_low, [0, 0xff])[1]);
-                meat_low = shr64(meat_low, 8);
-            }
-
-            while (meat_high[0] || meat_high[1] || bytes_.length < 4) {
-                bytes_.push(and64(meat_high, [0, 0xff])[1]);
-                meat_high = shr64(meat_high, 8);
-            }
-            const length = bytes_.length - 4;
-            const last = bytes_.length - 1;
-            if (bytes_[last] & VL[length][0][1]) {
-                if (bytes_[last] & VL[length][1][1]) {
-                    bytes_.push(VL[length + 1][0][0]);
-                } else {
-                    bytes_[last] |= VL[length][1][0];
-                }
-            } else {
-                bytes_[last] |= VL[length][0][0];
-            }
-            return bytes_.map(val => String.fromCharCode(val)).reverse().join('');
+            time = this.get_time();
+            clock = [0, this.get_clock_seq()];
+            node = this.node;
+            expand = _expand_mt;
+        } else if (variant === 0x80 && version === 6) {
+            const f = UUID._from_v6_bytes(this.bytes);
+            time = f.time;
+            clock = f.clock;
+            node = f.node;
+            expand = _expand_splitmix;
         } else {
             this.compacted_node = [0, 0];
             this.compacted_time = [0, 0];
             this.compacted_clock = [0, 0];
             return String.fromCharCode(0x01) + this.bytes.map(val => String.fromCharCode(val)).join('');
         }
+        const r = UUID._condense(time, clock, node, expand);
+        this.compacted_node = r.compacted_node;
+        this.compacted_time = r.compacted_time;
+        this.compacted_clock = r.compacted_clock;
+        return r.serialised;
     }
 
     static _decode(encoded, count=undefined) {
@@ -360,7 +452,7 @@ class UUID {
         return u.serialise();
     }
 
-    static _unserialise_condensed(bytes_) {
+    static _unserialise_condensed(bytes_, codec=CODEC_V6) {
         const size = bytes_.length;
         let length = size;
         let byte0 = bytes_.charCodeAt(0);
@@ -447,7 +539,7 @@ class UUID {
             m1 = ((m2 & 0x1fffff) << bitrest) | m1 >>> bitshr;
             m0 = m << bitrest | m0 >>> bitshr;
             time = and64([m1, m0], TIME_MASK);
-            node = UUID._calculate_node(time, clock, salt);
+            node = UUID._calculate_node(time, clock, salt, codec === CODEC_V6 ? _expand_splitmix : _expand_mt);
         } else {
             node = and64([meat[2], meat[3]], NODE_MASK);
             /* shift right NODE bits */
@@ -484,11 +576,14 @@ class UUID {
                 }
             }
         }
+        if (codec === CODEC_V6) {
+            return [UUID._v6_buff_from_args(time, clock, node), length];
+        }
         return [UUID._uuid_buff_from_args(time, clock, node), length];
     }
 
-    static unserialise(serialised) {
-        const uuid = UUID._unserialise(serialised);
+    static unserialise(serialised, codec=CODEC_V6) {
+        const uuid = UUID._unserialise(serialised, codec);
         if (uuid[1] > serialised.length) {
             throw new ExceptionUUID("Invalid serialised uuid", serialised);
         }
@@ -503,7 +598,7 @@ class UUID {
         return [bytesToUUID(bytes_.slice(1, 17).split('').map(val => val.charCodeAt(0))), 17];
     }
 
-    static _unserialise(bytes_) {
+    static _unserialise(bytes_, codec=CODEC_V6) {
         if (bytes_ === undefined || bytes_.length < 2) {
             throw new ExceptionUUID("Bad encoded uuid");
         }
@@ -511,7 +606,7 @@ class UUID {
         if (bytes_.length && bytes_.charCodeAt(0) === 1) {
             return UUID._unserialise_full(bytes_);
         } else {
-            return UUID._unserialise_condensed(bytes_);
+            return UUID._unserialise_condensed(bytes_, codec);
         }
     }
 
@@ -704,6 +799,22 @@ class UUID {
         return _uuid;
     }
 
+    static new_v6(compacted=true) {
+        // Mint a version-6 id from the platform v1 clock: crush the node with splitmix64 and
+        // lay the fields out in UUIDv6 order. Matches Xapiand's default (v6) minting.
+        const u = new UUID(UUIDv1());
+        let time = u.get_time();
+        let clock = [0, u.get_clock_seq()];
+        let node = u.node;
+        if (compacted) {
+            const r = UUID._condense(time, clock, node, _expand_splitmix);
+            time = r.compacted_time;
+            clock = r.compacted_clock;
+            node = r.compacted_node;
+        }
+        return UUID._v6_buff_from_args(time, clock, node);
+    }
+
     data() {
         const version = this.get_version();
         const variant = this.clock_seq_hi_variant & 0x80;
@@ -759,30 +870,30 @@ class UUID {
     }
 }
 
-const unserialise = (bytes_) => {
+const unserialise = (bytes_, codec=CODEC_V6) => {
     let uuids = [];
     while (bytes_.length) {
-        uuid = UUID._unserialise(bytes_);
+        uuid = UUID._unserialise(bytes_, codec);
         uuids.push(uuid[0]);
         bytes_ = bytes_.slice(uuid[1]);
     }
     return uuids;
 }
 
-module.exports.encode = (serialised, rep='encoded') => {
+module.exports.encode = (serialised, rep='encoded', codec=CODEC_V6) => {
     const typ = toType(serialised);
     if (typ === 'string') {
         if (rep === 'guid') {
-            return unserialise(serialised).map(v => `{${v}}`).join(';');
+            return unserialise(serialised, codec).map(v => `{${v}}`).join(';');
         } else if (rep === 'urn') {
-            return 'urn:uuid:' + unserialise(serialised).join(';');
+            return 'urn:uuid:' + unserialise(serialised, codec).join(';');
         } else if (rep === 'encoded') {
             const last = serialised.length - 1;
             if (serialised[0].charCodeAt(0) != 1 && ((serialised[last].charCodeAt(0) & 1) || (serialised.length >= 6 && serialised[last-5].charCodeAt(0) & 2))) {
                 return '~' + bs59.b59encode(tobytes(serialised));
             }
         }
-        return unserialise(serialised).join(';');
+        return unserialise(serialised, codec).join(';');
     }
     throw new ExceptionUUID("Invalid serialised UUID: ", serialised);
 }
@@ -819,9 +930,11 @@ module.exports.encode_uuid = (uuid) => {
     return uuid.encode()
 }
 
-module.exports.decode_uuid = (code) => {
-    return UUID.unserialise(decode(code));
+module.exports.decode_uuid = (code, codec=CODEC_V6) => {
+    return UUID.unserialise(decode(code), codec);
 }
 
 module.exports.UUID = UUID;
 module.exports.unserialise = unserialise;
+module.exports.CODEC_V1 = CODEC_V1;
+module.exports.CODEC_V6 = CODEC_V6;
