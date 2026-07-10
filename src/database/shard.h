@@ -31,7 +31,7 @@
 #include <utility>                // for std::pair
 #include <vector>                 // for std::vector
 
-#include "uuid.hh"                  // for UUID, UUID_LENGTH
+#include "cuuid_v1.hh"                  // for UUID, UUID_LENGTH
 #include "database/flags.h"       // for DB_*
 #include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
 

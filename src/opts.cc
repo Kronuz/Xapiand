@@ -336,6 +336,11 @@ parseOptions(int argc, char** argv)
 		bool admin_commands = false;
 		app.add_flag("--admin-commands", admin_commands, "Enables administrative HTTP commands.");
 
+		bool legacy_ids = false;
+		app.add_flag("--legacy-ids", legacy_ids,
+			"Mint and decode UUIDs with the legacy v1 codec only (pure v1, no v6). "
+			"Use for a deployment that must stay byte-for-byte compatible with pre-1.0 ids.");
+
 		std::string color = "auto";
 		auto color_opt = app.add_option("--color", color,
 			"When to colorize console output: auto, always, never, truecolor, 256, 16.")
@@ -416,6 +421,8 @@ parseOptions(int argc, char** argv)
 		}
 
 		o.admin_commands = admin_commands;
+
+		o.legacy_ids = legacy_ids;
 
 		o.iterm2 = iterm2;
 

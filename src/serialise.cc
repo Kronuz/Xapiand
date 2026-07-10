@@ -29,7 +29,8 @@
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
 #include "chars.hh"                                   // for iskeyword
-#include "uuid.hh"                                  // for UUID
+#include "cuuid.hh"                                // for UUID, cuuid::serialise/unserialise dispatch
+#include "opts.h"                                   // for opts.legacy_ids (v1 vs v6 codec)
 #include "database/schema.h"                          // for FieldType, FieldType::keyword, Fiel...
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "xapiand_exception.h"                                // for SerialisationError, ...
@@ -639,7 +640,7 @@ Serialise::uuid(std::string_view field_value)
 			if (uuid_sz != 0u) {
 				if (uuid_sz == UUID_LENGTH) {
 					try {
-						serialised.append(UUID(uuid).serialise());
+					serialised.append(cuuid::serialise(UUID(uuid)));
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}
@@ -1180,11 +1181,12 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
 	std::vector<UUID> uuids;
+	const auto codec = opts.legacy_ids ? cuuid::Codec::v1 : cuuid::Codec::v6;
 	switch (repr) {
 #ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid:
 			// {00000000-0000-1000-8000-010000000000}
-			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
+			cuuid::unserialise(serialised_uuid, std::back_inserter(uuids), codec);
 			result.push_back('{');
 			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			result.push_back('}');
@@ -1193,7 +1195,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 #ifdef XAPIAND_UUID_URN
 		case UUIDRepr::urn:
 			// urn:uuid:00000000-0000-1000-8000-010000000000
-			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
+			cuuid::unserialise(serialised_uuid, std::back_inserter(uuids), codec);
 			result.append("urn:uuid:");
 			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
@@ -1217,7 +1219,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 		default:
 		case UUIDRepr::vanilla:
 			// 00000000-0000-1000-8000-010000000000
-			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
+			cuuid::unserialise(serialised_uuid, std::back_inserter(uuids), codec);
 			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
 	}

@@ -87,6 +87,7 @@ extern struct opts_t {
 	size_t num_replicas = 0;
 	int flush_threshold = 100000;
 	bool uuid_compact = false;
+	bool legacy_ids = false;  // pure v1-only codec (mint + decode); no v6
 	uint32_t uuid_repr = 0;
 	bool uuid_partition = false;
 	std::string dump_documents = "";

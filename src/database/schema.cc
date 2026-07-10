@@ -39,7 +39,7 @@
 
 #include "base_x.hh"                              // for Base64
 #include "cast.h"                                 // for Cast
-#include "uuid.hh"                                // for UUIDGenerator
+#include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialise
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
@@ -2711,7 +2711,12 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 {
 	L_CALL("Schema::index({}, {}, <db_handler>)", object.to_string(), document_id.to_string());
 
-	static UUIDGenerator generator;
+	// Mint ids with the v6 codec by default; --legacy-ids pins pure v1. Encode through the
+	// version-nibble dispatch so a v6 id gets its compact wire (UUID::serialise() alone would
+	// fall back to the full form for a version-6 value).
+	const auto mint = [](bool compact) {
+		return cuuid::serialise(cuuid::generate(opts.legacy_ids ? cuuid::Codec::v1 : cuuid::Codec::v6, compact));
+	};
 
 	L_INDEX(">>> Index schema {} from: " + DIM_GREY + "{}", document_id.to_string(), object.to_string());
 
@@ -2781,7 +2786,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					}
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
-						auto tmp_unprefixed_term_id = generator(opts.uuid_compact).serialise();
+						auto tmp_unprefixed_term_id = mint(opts.uuid_compact);
 						auto tmp_term_id = prefixed(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
@@ -2798,7 +2803,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						// while being created, a race that surfaced as an intermittent
 						// "Invalid UUID format: ''"), fall back to a valid generated UUID
 						// rather than leaving the id empty.
-						unprefixed_term_id = generator(opts.uuid_compact).serialise();
+						unprefixed_term_id = mint(opts.uuid_compact);
 						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					}
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
@@ -2847,7 +2852,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					}
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
-						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
+						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(mint(true));
 						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
 						auto tmp_term_id = prefixed(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
@@ -2864,7 +2869,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						// Same shard-placement fallback as the uuid branch: never leave the
 						// id empty when the loop cannot find a candidate on an active target
 						// shard (shards can be momentarily inactive while being created).
-						document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
+						document_id = Base64::rfc4648url_unpadded().encode(mint(true));
 						unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					}

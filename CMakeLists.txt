@@ -1387,10 +1387,13 @@ list(APPEND XAPIAND_SRC_LIST "${fs_SOURCE_DIR}/fs.cc")
 # Replace the removed src/system.cc + src/memory_stats.cc.
 list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/system.cc")
 list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/memory_stats.cc")
-# uuid.cc from Kronuz/cuuid, compiled here (not linked from the lib's static target)
-# so its trace/exception/node seams land in Xapiand via CUUID_*_HEADER above. Replaces
-# the removed src/cuuid/uuid.cc.
-list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/uuid.cc")
+# cuuid v1+v6 codecs from Kronuz/cuuid, compiled here (not linked from the lib's static
+# target) so their trace/exception/node seams land in Xapiand via CUUID_*_HEADER above.
+# cuuid_common holds the shared condenser; cuuid_v1 is the frozen v1 codec; cuuid_v6 is the
+# v6 codec (splitmix64 + UUIDv6 layout). Replaces the removed src/cuuid/uuid.cc.
+list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/cuuid_common.cc")
+list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/cuuid_v1.cc")
+list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/cuuid_v6.cc")
 # msgpack_patcher.cc from Kronuz/msgpack, compiled here so MSGPACK_EXCEPTION_HEADER
 # points at Xapiand's real exception hierarchy. Replaces the removed
 # src/msgpack_patcher.cc; the rest of the msgpack family is header-only.
