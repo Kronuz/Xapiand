@@ -7,7 +7,7 @@ by Xapiand, but can be used to store application-specific metadata, such as the
 class that a document belongs to or schema descriptions.
 
 The `_meta` field can be updated on an existing type using the
-[Create Index API](/Xapiand/reference-guide/indices/create-api):
+[Create Index API](/Xapiand/reference-guide/indexes/create-api):
 
 ```rest
 PUT /my_index/
@@ -27,7 +27,7 @@ PUT /my_index/
 ```
 
 This `_meta` info can be retrieved with the
-[Get Index API](/Xapiand/reference-guide/indices/get-api):
+[Get Index API](/Xapiand/reference-guide/indexes/get-api):
 
 ```rest
 GET /my_index/._schema._meta

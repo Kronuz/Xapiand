@@ -52,8 +52,8 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 
 ## Index Defaults
 
-New indices inherit these unless overridden per index (see
-[Data Replication](/Xapiand/reference-guide/indices/replication)):
+New indexes inherit these unless overridden per index (see
+[Data Replication](/Xapiand/reference-guide/indexes/replication)):
 
 - `--shards` sets the default number of primary shards per index.
 - `--replicas` sets the default number of replicas per index.

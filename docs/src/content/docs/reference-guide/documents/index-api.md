@@ -45,7 +45,7 @@ creates a dynamic schema for the index if one does not already exist. By
 default, new fields and objects will automatically be added to the schema
 definition if needed. Check out the [Schemas](/Xapiand/reference-guide/schemas)
 section for more information on schema definitions, and the
-[indices create API](/Xapiand/reference-guide/indices/create-api)
+[indexes create API](/Xapiand/reference-guide/indexes/create-api)
 for information about updating document schema manually.
 
 ## Automatic ID Generation

@@ -39,7 +39,7 @@ typing can be useful to get started, at some point you will want to specify
 your own explicit types.
 
 You can create field types when you create an index, and you can add fields to
-an existing index with the [Create Index API](/Xapiand/reference-guide/indices/create-api).
+an existing index with the [Create Index API](/Xapiand/reference-guide/indexes/create-api).
 
 You can read more about explicit types [here](explicit-types).
 
@@ -89,7 +89,7 @@ You can read more about namespaces [here](indexing-mode) and
 ## [Foreign Schemas](foreign-schemas)
 
 When explicitly used, Foreign Schemas can establish where the schema information
-will be stored. For example, when a set of indices all share the same schema
+will be stored. For example, when a set of indexes all share the same schema
 it'd be beneficial to have a single shared schema. This can be accomplished by
 setting the foreign schema of all such indexes to point to a document containing
 the schema.
@@ -106,7 +106,7 @@ and reindex your data into that index.
 :::hint[One Index, One Document Type]{.info}
 In Xapiand, one index can contain one document type. E.g. Instead of
 storing two document types in a single index, one should store tweets in the
-`tweets` index and users in the `users` index. Indices are completely
+`tweets` index and users in the `users` index. Indexes are completely
 independent of each other and so there will be no conflict of field types
-between indices.
+between indexes.
 :::

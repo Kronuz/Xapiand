@@ -599,8 +599,8 @@ Response:
 ## Mixing field types
 
 :::hint[Warning]{.warning}
-When aggregating on multiple indices the type of the aggregated field may not be
-the same in all indices. Some types are compatible with each other (positive
+When aggregating on multiple indexes the type of the aggregated field may not be
+the same in all indexes. Some types are compatible with each other (positive
 integer and float) but when the types are a mix of decimal and non-decimal
 number the terms aggregation will promote the non-decimal numbers to decimal
 numbers. This can result in a loss of precision in the bucket values.

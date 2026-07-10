@@ -4,9 +4,9 @@ title: "Foreign Schemas"
 
 Schema definition objects can be saved as either Metadata Schemas or Foreign
 Schemas; by default, they are saved as Foreign Schemas, using foreign objects
-that are stored inside the corresponding index in `.xapiand/indices`.
+that are stored inside the corresponding index in `.xapiand/indexes`.
 
-To place the Schema object in some other index other than `.xapiand/indices`,
+To place the Schema object in some other index other than `.xapiand/indexes`,
 you'd need to specify the object as foreign with an endpoint:
 
 ```rest

@@ -91,39 +91,39 @@ export const sidebar = [
         ]
       },
       {
-        "label": "Indices",
+        "label": "Indexes",
         "collapsed": true,
         "items": [
           {
             "label": "Overview",
-            "link": "/reference-guide/indices",
+            "link": "/reference-guide/indexes",
             "attrs": {
               "data-overview": ""
             }
           },
           {
-            "slug": "reference-guide/indices/replication"
+            "slug": "reference-guide/indexes/replication"
           },
           {
-            "slug": "reference-guide/indices/create-api"
+            "slug": "reference-guide/indexes/create-api"
           },
           {
-            "slug": "reference-guide/indices/get-api"
+            "slug": "reference-guide/indexes/get-api"
           },
           {
-            "slug": "reference-guide/indices/exists-api"
+            "slug": "reference-guide/indexes/exists-api"
           },
           {
-            "slug": "reference-guide/indices/info-api"
+            "slug": "reference-guide/indexes/info-api"
           },
           {
-            "slug": "reference-guide/indices/delete-api"
+            "slug": "reference-guide/indexes/delete-api"
           },
           {
-            "slug": "reference-guide/indices/close-api"
+            "slug": "reference-guide/indexes/close-api"
           },
           {
-            "slug": "reference-guide/indices/backups"
+            "slug": "reference-guide/indexes/backups"
           }
         ]
       },

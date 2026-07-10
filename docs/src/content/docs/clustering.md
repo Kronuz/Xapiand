@@ -38,7 +38,7 @@ transparently by Xapiand.
 
 ## An Empty Cluster
 
-If we start a single node, with no data and no indices, our cluster,
+If we start a single node, with no data and no indexes, our cluster,
 **a cluster with one empty node**, looks like this:
 
 ![A cluster with one empty node](/Xapiand/assets/cluster1.png)
@@ -72,7 +72,7 @@ The number of primary shards in an index is fixed at the time that an index is
 created, but the number of replica shards can be changed at any time.
 
 Let's create an index called blogs in our empty one-node cluster. By default,
-indices are assigned five primary shards, but for the purpose of this
+indexes are assigned five primary shards, but for the purpose of this
 demonstration, we'll assign just three primary shards and one replica (one
 replica of every primary shard):
 

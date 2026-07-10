@@ -54,7 +54,7 @@ PUT /test_replication/1?commit
 }
 ```
 
-The index's [`:info`](/Xapiand/reference-guide/indices)
+The index's [`:info`](/Xapiand/reference-guide/indexes)
 reports the shards the data was partitioned into and the document count:
 
 ```rest
@@ -87,7 +87,7 @@ e2e:end -->
 ## How replication works
 
 Replication runs over its own protocol, separate from the REST API and from the
-[Remote protocol](/Xapiand/reference-guide/indices) that
+[Remote protocol](/Xapiand/reference-guide/indexes) that
 serves distributed searches. It listens on its own TCP port (`--replica-port`) and
 is driven by a small pool of workers: `--replicators` trigger replication when a
 primary changes, while `--replication-servers` and `--replication-clients` carry

@@ -3,7 +3,7 @@ title: "Cluster"
 ---
 
 The most basic kind of information you can get is the cluster information
-from the root index and the [Indices API](/Xapiand/reference-guide/indices):
+from the root index and the [Indexes API](/Xapiand/reference-guide/indexes):
 
 ```rest
 GET /
@@ -29,7 +29,7 @@ The response contains:
 ## List Nodes
 
 You can explicitly list all nodes in the cluster by using the
-[Indices API](/Xapiand/reference-guide/indices) and
+[Indexes API](/Xapiand/reference-guide/indexes) and
 a [Drill Selector](/Xapiand/exploration#drill-selector):
 
 ```rest

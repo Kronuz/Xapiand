@@ -2,7 +2,7 @@
 title: "Exists Index API"
 ---
 
-The _Exists Index API_ is used to check if the index (indices) exists or not.
+The _Exists Index API_ is used to check if the index (indexes) exists or not.
 
 For example:
 

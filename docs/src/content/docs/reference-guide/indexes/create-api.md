@@ -32,7 +32,7 @@ list of limitations is:
 - Full path cannot be longer than 243 bytes (note it is bytes, so multi-byte
   characters will count towards that limit faster)
 
-Indices can be paths (including `/` as part of the path).
+Indexes can be paths (including `/` as part of the path).
 
 ## Settings
 
@@ -55,7 +55,7 @@ The default for `number_of_shards` is `5`, and the default for
 `number_of_replicas` is `1` (ie one replica for each primary shard), the above
 command creates an index with `3` shards and `2` replicas.
 
-:::hint[Only for New Indices]{.info}
+:::hint[Only for New Indexes]{.info}
 `number_of_shards` and `number_of_replicas` can be specified like this only
 for new indexes and any attempt to change the values during an update will
 result in a Bad Request error.
@@ -83,7 +83,7 @@ PUT /twitter/tweet/
 
 More information about Schemas can be found [here](/Xapiand/reference-guide/schemas).
 
-:::hint[Only for New Indices]{.info}
+:::hint[Only for New Indexes]{.info}
 Some configurations about schemas can be set only the first time a field is
 created (`_type`, for example) and any attempt to change the values during an
 update will result in a Bad Request error.

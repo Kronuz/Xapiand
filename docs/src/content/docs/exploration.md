@@ -119,10 +119,10 @@ When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
 :::
 
 More information about `RESTORE` method can be found in the
-[Backups](/Xapiand/reference-guide/indices/backups) section.
+[Backups](/Xapiand/reference-guide/indexes/backups) section.
 
 After having loaded the dataset, you can then use the
-[Info API](/Xapiand/reference-guide/indices/info-api) to get
+[Info API](/Xapiand/reference-guide/indexes/info-api) to get
 information about the new index:
 
 ```rest

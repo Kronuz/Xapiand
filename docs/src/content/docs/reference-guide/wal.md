@@ -21,7 +21,7 @@ yet made it into the database.
 ## The WAL and replication
 
 The same replayable history is what
-[data replication](/Xapiand/reference-guide/indices/replication)
+[data replication](/Xapiand/reference-guide/indexes/replication)
 is built on. Once a replica holds a copy of a shard at some revision, it stays in
 sync by replaying the primary's WAL entries recorded after that revision, rather
 than copying the whole database again. Only a brand-new or far-behind replica
