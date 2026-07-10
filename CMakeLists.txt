@@ -77,7 +77,26 @@ endforeach ()
 
 if (APPLE)
 	set (CMAKE_FIND_FRAMEWORK "LAST")
-	set (HOMEBREW_OPT_DIR "/usr/local/opt")
+	# Homebrew lives at /opt/homebrew on Apple Silicon and /usr/local on Intel.
+	# Detect its prefix (HOMEBREW_PREFIX env, then `brew --prefix`, then the two
+	# well-known paths) so HOMEBREW_OPT_DIR -- and thus ICU_ROOT below -- points at
+	# the real keg. A hardcoded /usr/local/opt silently disabled ICU on Apple
+	# Silicon (ICU_ROOT pointed at a nonexistent path, so find_package(ICU) failed
+	# and USE_ICU fell back to 0).
+	if (DEFINED ENV{HOMEBREW_PREFIX})
+		set (HOMEBREW_OPT_DIR "$ENV{HOMEBREW_PREFIX}/opt")
+	else ()
+		find_program (BREW_EXECUTABLE brew)
+		if (BREW_EXECUTABLE)
+			execute_process (COMMAND "${BREW_EXECUTABLE}" --prefix
+				OUTPUT_VARIABLE _brew_prefix OUTPUT_STRIP_TRAILING_WHITESPACE)
+			set (HOMEBREW_OPT_DIR "${_brew_prefix}/opt")
+		elseif (EXISTS "/opt/homebrew/opt")
+			set (HOMEBREW_OPT_DIR "/opt/homebrew/opt")
+		else ()
+			set (HOMEBREW_OPT_DIR "/usr/local/opt")
+		endif ()
+	endif ()
 	message(STATUS "HOMEBREW_OPT_DIR is ${HOMEBREW_OPT_DIR}")
 endif ()
 
