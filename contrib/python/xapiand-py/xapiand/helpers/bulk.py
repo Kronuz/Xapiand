@@ -16,14 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
+import asyncio
+import logging
 
 from ..exceptions import TransportError
-from ..compat import zip, Queue
 
 from .errors import BulkIndexError
-
-import logging
 
 
 logger = logging.getLogger('xapiand.helpers')
@@ -56,16 +54,16 @@ def chunk_objects(objects, chunk_size, max_chunk_bytes, serializer):
         yield bulk_objs, bulk_ser_objs
 
 
-def process_bulk_chunk(processor, bulk_objs, bulk_ser_objs,
-                       raise_on_exception=True, raise_on_error=True,
-                       *args, **kwargs):
+async def process_bulk_chunk(processor, bulk_objs, bulk_ser_objs,
+                             raise_on_exception=True, raise_on_error=True,
+                             *args, **kwargs):
     """
     Send a bulk request to xapiand and process the output.
     """
 
     try:
         # send the actual request
-        resp = processor(bulk_ser_objs, *args, **kwargs)
+        resp = await processor(bulk_ser_objs, *args, **kwargs)
     except TransportError as e:
         # default behavior - just propagate exception
         if raise_on_exception:
@@ -90,12 +88,14 @@ def process_bulk_chunk(processor, bulk_objs, bulk_ser_objs,
             raise BulkIndexError("%d document(s) failed to index." % len(exc_errors), exc_errors)
         else:
             status = e.status_code
+            results = []
             for err in exc_errors:
-                yield status, err
-            return
+                results.append((status, err))
+            return results
 
     # if raise on error is set, we need to collect errors per chunk before raising them
     errors = []
+    results = []
 
     # go through request-response pairs and detect failures
     for obj, item in zip(bulk_objs, resp['items']):
@@ -104,19 +104,21 @@ def process_bulk_chunk(processor, bulk_objs, bulk_ser_objs,
         item.update(obj)
         if 200 <= status < 300 or not raise_on_error:
             # if we are not just recording all errors to be able to raise
-            # them all at once, yield items individually
-            yield status, item
+            # them all at once, collect items individually
+            results.append((status, item))
         else:
             errors.append(item)
 
     if errors:
         raise BulkIndexError("%d document(s) failed to index." % len(errors), errors)
 
+    return results
 
-def streaming_bulk(processor, objects, serializer,
-                   chunk_size=500, max_chunk_bytes=100 * 1024 * 1024,
-                   raise_on_error=True, raise_on_exception=True, max_retries=0,
-                   initial_backoff=2, max_backoff=600, yield_ok=True, *args, **kwargs):
+
+async def streaming_bulk(processor, objects, serializer,
+                         chunk_size=500, max_chunk_bytes=100 * 1024 * 1024,
+                         raise_on_error=True, raise_on_exception=True, max_retries=0,
+                         initial_backoff=2, max_backoff=600, yield_ok=True, *args, **kwargs):
     """
     Streaming bulk consumes objects from the iterable passed in and yields
     results per object. For non-streaming usecases use
@@ -126,11 +128,11 @@ def streaming_bulk(processor, objects, serializer,
 
     If you specify ``max_retries`` it will also retry any documents that were
     rejected with a ``429`` status code. To do this it will wait (**by calling
-    time.sleep which will block**) for ``initial_backoff`` seconds and then,
-    every subsequent rejection for the same chunk, for double the time every
-    time up to ``max_backoff`` seconds.
+    asyncio.sleep**) for ``initial_backoff`` seconds and then, every subsequent
+    rejection for the same chunk, for double the time every time up to
+    ``max_backoff`` seconds.
 
-    :arg processor: function to process the objects chunks
+    :arg processor: coroutine function to process the objects chunks
     :arg objects: iterable containing the objects to be processed
     :arg serializer: serializer instance
     :arg chunk_size: number of docs in one chunk sent to the server (default: 500)
@@ -154,21 +156,18 @@ def streaming_bulk(processor, objects, serializer,
         for attempt in range(max_retries + 1):
             to_retry_objs, to_retry_ser_objs = [], []
             if attempt:
-                time.sleep(min(max_backoff, initial_backoff * 2**(attempt - 1)))
+                await asyncio.sleep(min(max_backoff, initial_backoff * 2**(attempt - 1)))
 
             try:
-                for obj, ser_obj, (status, info) in zip(
-                    bulk_objs,
-                    bulk_ser_objs,
-                    process_bulk_chunk(
-                        processor,
-                        bulk_objs, bulk_ser_objs,
-                        raise_on_exception,
-                        raise_on_error,
-                        *args, **kwargs
-                    )
-                ):
+                results = await process_bulk_chunk(
+                    processor,
+                    bulk_objs, bulk_ser_objs,
+                    raise_on_exception,
+                    raise_on_error,
+                    *args, **kwargs
+                )
 
+                for obj, ser_obj, (status, info) in zip(bulk_objs, bulk_ser_objs, results):
                     if 200 <= status < 300:
                         if yield_ok:
                             yield status, info
@@ -192,7 +191,7 @@ def streaming_bulk(processor, objects, serializer,
                 bulk_objs, bulk_ser_objs = to_retry_objs, to_retry_ser_objs
 
 
-def bulk(processor, objects, serializer, stats_only=False, *args, **kwargs):
+async def bulk(processor, objects, serializer, stats_only=False, *args, **kwargs):
     """
     Helper for the :meth:`~xapiand.Xapiand.bulk` api that provides
     a more human friendly interface - it consumes an iterator of objects and
@@ -209,7 +208,7 @@ def bulk(processor, objects, serializer, stats_only=False, *args, **kwargs):
     using the :func:`~xapiand.helpers.streaming_bulk` helper which will
     just return the errors and not store them in memory.
 
-    :arg processor: function to process the objects chunks
+    :arg processor: coroutine function to process the objects chunks
     :arg objects: iterable containing the objects to be processed
     :arg serializer: serializer instance
     :arg stats_only: if `True` only report number of successful/failed
@@ -227,7 +226,7 @@ def bulk(processor, objects, serializer, stats_only=False, *args, **kwargs):
 
     # make streaming_bulk yield successful results so we can count them
     kwargs['yield_ok'] = True
-    for status, item in streaming_bulk(processor, objects, serializer, *args, **kwargs):
+    async for status, item in streaming_bulk(processor, objects, serializer, *args, **kwargs):
         # go through request-response pairs and detect failures
         if 200 <= status < 300:
             success += 1
@@ -239,47 +238,45 @@ def bulk(processor, objects, serializer, stats_only=False, *args, **kwargs):
     return success, failed if stats_only else errors
 
 
-def parallel_bulk(processor, objects, serializer,
-                  chunk_size=500, max_chunk_bytes=100 * 1024 * 1024,
-                  thread_count=4, queue_size=4,
-                  *args, **kwargs):
+async def parallel_bulk(processor, objects, serializer,
+                        chunk_size=500, max_chunk_bytes=100 * 1024 * 1024,
+                        thread_count=4, queue_size=4,
+                        *args, **kwargs):
     """
-    Parallel version of the bulk helper run in multiple threads at once.
+    Parallel version of the bulk helper that runs ``thread_count`` chunk
+    requests concurrently on the event loop (the ``thread_count`` name is kept
+    for backwards compatibility; no OS threads are used).
 
-    :arg processor: function to process the objects chunks
+    This is an async generator; iterate it with ``async for``.
+
+    :arg processor: coroutine function to process the objects chunks
     :arg objects: iterable containing the objects to be processed
     :arg serializer: serializer instance
-    :arg thread_count: size of the threadpool to use for the bulk requests
+    :arg thread_count: maximum number of chunk requests to run concurrently
     :arg chunk_size: number of docs in one chunk sent to the server (default: 500)
     :arg max_chunk_bytes: the maximum size of the request in bytes (default: 100MB)
     :arg raise_on_error: raise ``BulkIndexError`` containing errors (as `.errors`)
         from the execution of the last chunk when some occur. By default we raise.
     :arg raise_on_exception: if ``False`` then don't propagate exceptions from
         call to ``bulk`` and just report the items that failed as failed.
-    :arg queue_size: size of the task queue between the main thread (producing
-        chunks to send) and the processing threads.
+    :arg queue_size: kept for backwards compatibility; unused.
     """
+    semaphore = asyncio.Semaphore(max(1, thread_count))
 
-    # Avoid importing multiprocessing unless parallel_bulk is used
-    # to avoid exceptions on restricted environments like App Engine
-    from multiprocessing.pool import ThreadPool
+    async def _run_chunk(bulk_objs, bulk_ser_objs):
+        async with semaphore:
+            return await process_bulk_chunk(processor, bulk_objs, bulk_ser_objs, *args, **kwargs)
 
-    class BlockingPool(ThreadPool):
-        def _setup_queues(self):
-            super(BlockingPool, self)._setup_queues()
-            self._inqueue = Queue(queue_size)
-            self._quick_put = self._inqueue.put
-
-    pool = BlockingPool(thread_count)
-
+    # Submit all chunks, bounded by the semaphore, and yield their results in order.
+    tasks = [
+        asyncio.ensure_future(_run_chunk(bulk_objs, bulk_ser_objs))
+        for bulk_objs, bulk_ser_objs in chunk_objects(objects, chunk_size, max_chunk_bytes, serializer)
+    ]
     try:
-        for result in pool.imap(
-            lambda bulk_chunk: list(process_bulk_chunk(processor, bulk_chunk[0], bulk_chunk[1], *args, **kwargs)),
-            chunk_objects(objects, chunk_size, max_chunk_bytes, serializer)
-        ):
-            for item in result:
+        for task in tasks:
+            for item in await task:
                 yield item
-
     finally:
-        pool.close()
-        pool.join()
+        for task in tasks:
+            if not task.done():
+                task.cancel()

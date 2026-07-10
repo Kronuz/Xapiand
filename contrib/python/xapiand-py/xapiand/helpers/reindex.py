@@ -25,12 +25,12 @@ import logging
 logger = logging.getLogger('xapiand.helpers')
 
 
-def scan(client, query=None, scroll='5m', raise_on_error=True,
-         preserve_order=False, size=1000, request_timeout=None, clear_scroll=True,
-         scroll_kwargs=None, **kwargs):
+async def scan(client, query=None, scroll='5m', raise_on_error=True,
+               preserve_order=False, size=1000, request_timeout=None, clear_scroll=True,
+               scroll_kwargs=None, **kwargs):
     """
     Simple abstraction on top of the
-    :meth:`~xapiand.Xapiand.scroll` api - a simple iterator that
+    :meth:`~xapiand.Xapiand.scroll` api - a simple async iterator that
     yields all hits as returned by underlining scroll requests.
 
     By default scan does not return results in any pre-determined order. To
@@ -60,11 +60,12 @@ def scan(client, query=None, scroll='5m', raise_on_error=True,
     Any additional keyword arguments will be passed to the initial
     :meth:`~xapiand.Xapiand.search` call::
 
-        scan(client,
+        async for hit in scan(client,
             query={"query": {"match": {"title": "python"}}},
             index="orders-*",
             doc_type="books"
-        )
+        ):
+            ...
 
     """
     scroll_kwargs = scroll_kwargs or {}
@@ -73,8 +74,8 @@ def scan(client, query=None, scroll='5m', raise_on_error=True,
         query = query.copy() if query else {}
         query["sort"] = "_doc"
     # initial search
-    resp = client.search(body=query, scroll=scroll, size=size,
-                         request_timeout=request_timeout, **kwargs)
+    resp = await client.search(body=query, scroll=scroll, size=size,
+                               request_timeout=request_timeout, **kwargs)
 
     scroll_id = resp.get('_scroll_id')
     if scroll_id is None:
@@ -87,9 +88,9 @@ def scan(client, query=None, scroll='5m', raise_on_error=True,
             if first_run:
                 first_run = False
             else:
-                resp = client.scroll(scroll_id, scroll=scroll,
-                                     request_timeout=request_timeout,
-                                     **scroll_kwargs)
+                resp = await client.scroll(scroll_id, scroll=scroll,
+                                           request_timeout=request_timeout,
+                                           **scroll_kwargs)
 
             for hit in resp['hits']['hits']:
                 yield hit
@@ -114,11 +115,11 @@ def scan(client, query=None, scroll='5m', raise_on_error=True,
                 break
     finally:
         if scroll_id and clear_scroll:
-            client.clear_scroll(body={'scroll_id': [scroll_id]}, ignore=(404, ))
+            await client.clear_scroll(body={'scroll_id': [scroll_id]}, ignore=(404, ))
 
 
-def reindex(client, source_index, target_index, query=None, target_client=None,
-            chunk_size=500, scroll='5m', scan_kwargs={}, bulk_kwargs={}):
+async def reindex(client, source_index, target_index, query=None, target_client=None,
+                  chunk_size=500, scroll='5m', scan_kwargs={}, bulk_kwargs={}):
     """
     Reindex all documents from one index that satisfy a given query
     to another, potentially (if `target_client` is specified) on a different cluster.
@@ -136,7 +137,7 @@ def reindex(client, source_index, target_index, query=None, target_client=None,
 
     :arg client: instance of :class:`~xapiand.Xapiand` to use (for
         read if `target_client` is specified as well)
-    :arg source_index: index (or list of indices) to read documents from
+    :arg source_index: index (or list of indexes) to read documents from
     :arg target_index: name of the index in the target cluster to populate
     :arg query: body for the :meth:`~xapiand.Xapiand.search` api
     :arg target_client: optional, is specified will be used for writing (thus
@@ -151,13 +152,15 @@ def reindex(client, source_index, target_index, query=None, target_client=None,
     """
     target_client = client if target_client is None else target_client
 
-    docs = scan(
-        client,
-        query=query,
-        index=source_index,
-        scroll=scroll,
-        **scan_kwargs
-    )
+    docs = [
+        doc async for doc in scan(
+            client,
+            query=query,
+            index=source_index,
+            scroll=scroll,
+            **scan_kwargs
+        )
+    ]
 
     def _change_doc_index(hits, index):
         for h in hits:
@@ -170,7 +173,7 @@ def reindex(client, source_index, target_index, query=None, target_client=None,
         'stats_only': True,
     }
     kwargs.update(bulk_kwargs)
-    return bulk(target_client,
-                _change_doc_index(docs, target_index),
-                chunk_size=chunk_size,
-                **kwargs)
+    return await bulk(target_client,
+                      _change_doc_index(docs, target_index),
+                      chunk_size=chunk_size,
+                      **kwargs)

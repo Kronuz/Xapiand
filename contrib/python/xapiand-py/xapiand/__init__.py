@@ -16,27 +16,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-
-VERSION = (0, 1, 4)
-__version__ = VERSION
-__versionstr__ = '.'.join(map(str, VERSION))
-
 import logging
-try:  # Python 2.7+
-    from logging import NullHandler
-except ImportError:
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-
-
-logger = logging.getLogger('xapiand')
-logger.addHandler(logging.NullHandler())
 
 from .client import Xapiand
 from .transport import Transport
 from .connection_pool import ConnectionPool, ConnectionSelector, RoundRobinSelector
 from .serializer import JSONSerializer
-from .connection import Connection, RequestsHttpConnection, Urllib3HttpConnection
+from .connection import Connection, AIOHttpConnection
 from .exceptions import NotFoundError, ConflictError, RequestError, AuthenticationException, AuthorizationException, TransportError
+
+VERSION = (1, 0, 0)
+__version__ = VERSION
+__versionstr__ = '.'.join(map(str, VERSION))
+
+logger = logging.getLogger('xapiand')
+logger.addHandler(logging.NullHandler())
+
+__all__ = [
+    'Xapiand',
+    'Transport',
+    'ConnectionPool',
+    'ConnectionSelector',
+    'RoundRobinSelector',
+    'JSONSerializer',
+    'Connection',
+    'AIOHttpConnection',
+    'NotFoundError',
+    'ConflictError',
+    'RequestError',
+    'AuthenticationException',
+    'AuthorizationException',
+    'TransportError',
+]

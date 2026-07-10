@@ -17,12 +17,11 @@
 # limitations under the License.
 
 from ..utils import NamespacedClient, query_params, make_url, SKIP_IN_PATH
-from ..exceptions import NotFoundError
 
 
 class DocumentsClient(NamespacedClient):
     @query_params('selector', 'commit', 'timeout')
-    def index(self, index, body, id=None, content_type=None, params=None):
+    async def index(self, index, body, id=None, content_type=None, params=None):
         """
         Adds or updates a document in a specific index, making it searchable.
 
@@ -38,12 +37,12 @@ class DocumentsClient(NamespacedClient):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
         method = 'POST' if id in SKIP_IN_PATH else 'PUT'
-        return self.transport.perform_request(method, make_url(index, id=id),
+        return await self.transport.perform_request(method, make_url(index, id=id),
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
     @query_params('selector', 'commit', 'timeout')
-    def update(self, index, id, body=None, content_type=None, params=None):
+    async def update(self, index, id, body=None, content_type=None, params=None):
         """
         Update a document based on a partial data provided.
 
@@ -56,12 +55,12 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('UPDATE', make_url(index, id=id),
+        return await self.transport.perform_request('UPDATE', make_url(index, id=id),
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
     @query_params('selector', 'commit', 'timeout')
-    def upsert(self, index, id, body=None, content_type=None, params=None):
+    async def upsert(self, index, id, body=None, content_type=None, params=None):
         """
         Update or create a document based on a partial data provided.
 
@@ -74,12 +73,12 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('UPSERT', make_url(index, id=id),
+        return await self.transport.perform_request('UPSERT', make_url(index, id=id),
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
     @query_params('selector', 'commit', 'timeout', 'upsert')
-    def patch(self, index, id, body=None, params=None):
+    async def patch(self, index, id, body=None, params=None):
         """
         Patch a document based on a sequence of operations to apply to a
         JSON document (see RFC 6902.)
@@ -93,11 +92,11 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('PATCH', make_url(index, id=id),
+        return await self.transport.perform_request('PATCH', make_url(index, id=id),
             params=params, body=body)
 
     @query_params('refresh', 'routing', 'timeout')
-    def exists(self, index, id, params=None):
+    async def exists(self, index, id, params=None):
         """
         Returns a boolean indicating whether or not given document exists in Xapiand.
 
@@ -110,11 +109,11 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('HEAD', make_url(index, id=id),
+        return await self.transport.perform_request('HEAD', make_url(index, id=id),
             params=params)
 
     @query_params('selector', 'refresh', 'timeout', 'volatile')
-    def get(self, index, id, accept=None, params=None):
+    async def get(self, index, id, accept=None, params=None):
         """
         Get a document from the index based on its id.
 
@@ -129,12 +128,12 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('GET', make_url(index, id=id),
+        return await self.transport.perform_request('GET', make_url(index, id=id),
             params=params,
             headers=accept and {'accept': accept})
 
     @query_params('timeout')
-    def delete(self, index, id, params=None):
+    async def delete(self, index, id, params=None):
         """
         Delete a document from a specific index based on its id.
 
@@ -145,11 +144,11 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('DELETE', make_url(index, id=id),
+        return await self.transport.perform_request('DELETE', make_url(index, id=id),
             params=params)
 
     @query_params()
-    def info(self, index, id=None, params=None):
+    async def info(self, index, id=None, params=None):
         """
         Returns information and statistics on an index or a particular document.
 
@@ -160,5 +159,5 @@ class DocumentsClient(NamespacedClient):
         for param in (index,):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('INFO', make_url(index, id=id),
+        return await self.transport.perform_request('INFO', make_url(index, id=id),
             params=params)

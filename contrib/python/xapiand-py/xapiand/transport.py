@@ -16,10 +16,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import time
 from itertools import chain
 
-from .connection import Urllib3HttpConnection
+from .connection import AIOHttpConnection
 from .connection_pool import ConnectionPool, DummyConnectionPool
 from .serializer import Deserializer, DEFAULT_SERIALIZERS, DEFAULT_SERIALIZER
 from .exceptions import ConnectionError, TransportError, SerializationError, ConnectionTimeout
@@ -48,7 +49,7 @@ class Transport(object):
 
     Main interface is the `perform_request` method.
     """
-    def __init__(self, hosts, connection_class=Urllib3HttpConnection,
+    def __init__(self, hosts, connection_class=AIOHttpConnection,
                  connection_pool_class=ConnectionPool, node_info_callback=get_node_info,
                  sniff_on_start=False, sniffer_timeout=None, sniff_timeout=.5,
                  sniff_on_connection_fail=False, serializer=DEFAULT_SERIALIZER, serializers=None,
@@ -133,8 +134,10 @@ class Transport(object):
         # callback to construct host dict from data in `GET /`
         self.node_info_callback = node_info_callback
 
-        if sniff_on_start:
-            self.sniff_hosts(True)
+        # initial sniffing (if requested) cannot run synchronously in an async
+        # transport; defer it to the first request instead.
+        self._sniff_on_start = sniff_on_start
+        self._initial_sniff_done = not sniff_on_start
 
     def add_connection(self, host):
         """
@@ -176,17 +179,20 @@ class Transport(object):
             # pass the hosts dicts to the connection pool to optionally extract parameters from
             self.connection_pool = self.connection_pool_class(connections, **self.kwargs)
 
-    def get_connection(self, **kwargs):
+    async def get_connection(self, **kwargs):
         """
         Retreive a :class:`~xapiand.Connection` instance from the
         :class:`~xapiand.ConnectionPool` instance.
         """
+        if not self._initial_sniff_done:
+            self._initial_sniff_done = True
+            await self.sniff_hosts(True)
         if self.sniffer_timeout:
             if time.time() >= self.last_sniff + self.sniffer_timeout:
-                self.sniff_hosts()
+                await self.sniff_hosts()
         return self.connection_pool.get_connection(**kwargs)
 
-    def _get_sniff_data(self, initial=False):
+    async def _get_sniff_data(self, initial=False):
         """
         Perform the request to get sniffins information. Returns a list of
         dictionaries (one per node) containing all the information from the
@@ -208,7 +214,7 @@ class Transport(object):
             for c in chain(self.connection_pool.connections, self.seed_connections):
                 try:
                     # use small timeout for the sniffing request, should be a fast api call
-                    _, headers, response = c.perform_request('GET', '/.nodes',
+                    _, headers, response = await c.perform_request('GET', '/.nodes',
                         timeout=self.sniff_timeout if not initial else None)
                     nodes = self.deserializer.loads(response, headers.get('content-type'))
                     break
@@ -238,7 +244,7 @@ class Transport(object):
             node_info['host'] = host
         return node_info
 
-    def sniff_hosts(self, initial=False):
+    async def sniff_hosts(self, initial=False):
         """
         Obtain a list of nodes from the cluster and create a new connection
         pool using the information retrieved.
@@ -248,7 +254,7 @@ class Transport(object):
         :arg initial: flag indicating if this is during startup
             (``sniff_on_start``), ignore the ``sniff_timeout`` if ``True``
         """
-        node_info = self._get_sniff_data(initial)
+        node_info = await self._get_sniff_data(initial)
 
         hosts = [self._get_node_info(n) for n in node_info]
         hosts.sort(key=lambda x: x['name'].lower())
@@ -262,7 +268,7 @@ class Transport(object):
 
         self.set_connections(hosts)
 
-    def mark_dead(self, connection):
+    async def mark_dead(self, connection):
         """
         Mark a connection as dead (failed) in the connection pool. If sniffing
         on failure is enabled this will initiate the sniffing process.
@@ -272,9 +278,9 @@ class Transport(object):
         # mark as dead even when sniffing to avoid hitting this host during the sniff process
         self.connection_pool.mark_dead(connection)
         if self.sniff_on_connection_fail:
-            self.sniff_hosts()
+            await self.sniff_hosts()
 
-    def perform_request(self, method, url, **kwargs):
+    async def perform_request(self, method, url, **kwargs):
         """
         Perform the actual request. Retrieve a connection from the connection
         pool, pass all the information to it's perform_request method and
@@ -323,10 +329,10 @@ class Transport(object):
                 ignore = (ignore, )
 
         for attempt in range(1, self.max_retries + 1):
-            connection = self.get_connection(method=method, path=url, headers=headers, params=params)
+            connection = await self.get_connection(method=method, path=url, headers=headers, params=params)
 
             try:
-                status, headers_response, data = connection.perform_request(
+                status, headers_response, data = await connection.perform_request(
                     method,
                     url,
                     params,
@@ -351,7 +357,7 @@ class Transport(object):
 
                 if retry:
                     # only mark as dead if we are retrying
-                    self.mark_dead(connection)
+                    await self.mark_dead(connection)
                     # raise exception on last retry
                     if attempt == self.max_retries:
                         raise
@@ -361,7 +367,7 @@ class Transport(object):
                 # add a delay before attempting the next retry
                 # 0, 1, 3, 7, etc...
                 delay = 2**attempt - 1
-                time.sleep(delay)
+                await asyncio.sleep(delay)
 
             else:
                 # connection didn't fail, confirm it's live status
@@ -372,8 +378,8 @@ class Transport(object):
 
                 return data
 
-    def close(self):
+    async def close(self):
         """
         Explicitly closes connections
         """
-        self.connection_pool.close()
+        await self.connection_pool.close()

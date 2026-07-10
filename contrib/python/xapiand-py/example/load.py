@@ -18,12 +18,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
-
 import os
 from datetime import datetime
 import logging
 import argparse
+import asyncio
 
 import subprocess
 
@@ -31,7 +30,7 @@ from xapiand import Xapiand
 from xapiand.exceptions import TransportError
 
 
-def create_git_index(client, index):
+async def create_git_index(client, index):
     # we will use user on several places
     user_mapping = {
         'name': {
@@ -72,7 +71,7 @@ def create_git_index(client, index):
 
     # create empty index
     try:
-        client.indices.create(
+        await client.indexes.create(
             index=index,
             body=create_index_body,
         )
@@ -143,7 +142,7 @@ def parse_commits(name):
         }
 
 
-def load_repo(client, path=None, index='git'):
+async def load_repo(client, path=None, index='git'):
     """
     Parse a git repository with all it's commits and load it into xapiand
     using `client`. If the index doesn't exist it will be created.
@@ -155,12 +154,12 @@ def load_repo(client, path=None, index='git'):
     os.chdir(path)
     repo_name = os.path.basename(path)
 
-    create_git_index(client, index)
+    await create_git_index(client, index)
 
     # we let the streaming bulk continuously process the commits as they come
     # in - since the `parse_commits` function is a generator this will avoid
     # loading all the commits into memory
-    for status, result in client.streaming_restore(
+    async for status, result in client.streaming_restore(
         index,
         parse_commits(repo_name),
         chunk_size=50,  # keep the batch sizes small for appearances only
@@ -188,6 +187,30 @@ UPDATES = [
     },
 ]
 
+async def main(args):
+    # instantiate Xapiand client, connects to localhost:8880 by default
+    client = Xapiand(args.host)
+    try:
+        # we load the repo and all commits
+        await load_repo(client, path=args.path)
+
+        # run the bulk operations
+        success, _ = await client.restore('git', UPDATES)
+        print('Performed %d actions' % success)
+
+        # we can now make docs visible for searching
+        await client.indexes.commit(index='git')
+
+        # now we can retrieve the documents
+        initial_commit = await client.get(index='git', id='f11a292ae017675f82840a677a32184dff07f3a8')
+        print('%s: %s' % (initial_commit['_id'], initial_commit['committed_date']))
+
+        # and now we can count the documents
+        print((await client.count(index='git'))['total'], 'documents in index')
+    finally:
+        await client.close()
+
+
 if __name__ == '__main__':
     # get trace logger and set level
     tracer = logging.getLogger('xapiand.trace')
@@ -208,22 +231,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # instantiate Xapiand client, connects to localhost:8880 by default
-    client = Xapiand(args.host)
-
-    # we load the repo and all commits
-    load_repo(client, path=args.path)
-
-    # run the bulk operations
-    success, _ = client.restore('git', UPDATES)
-    print('Performed %d actions' % success)
-
-    # we can now make docs visible for searching
-    client.indices.commit(index='git')
-
-    # now we can retrieve the documents
-    initial_commit = client.get(index='git', id='f11a292ae017675f82840a677a32184dff07f3a8')
-    print('%s: %s' % (initial_commit['_id'], initial_commit['committed_date']))
-
-    # and now we can count the documents
-    print(client.count(index='git')['total'], 'documents in index')
+    asyncio.run(main(args))

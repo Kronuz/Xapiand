@@ -256,12 +256,12 @@ class ConnectionPool(object):
         # only one connection, no need for a selector
         return connections[0]
 
-    def close(self):
+    async def close(self):
         """
         Explicitly closes connections
         """
         for conn in self.orig_connections:
-            conn.close()
+            await conn.close()
 
 
 class DummyConnectionPool(ConnectionPool):
@@ -277,11 +277,11 @@ class DummyConnectionPool(ConnectionPool):
     def get_connection(self, **kwargs):
         return self.connection
 
-    def close(self):
+    async def close(self):
         """
         Explicitly closes connections
         """
-        self.connection.close()
+        await self.connection.close()
 
     def _noop(self, *args, **kwargs):
         pass

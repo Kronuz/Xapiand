@@ -18,8 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
-
+import asyncio
 import logging
 from dateutil.parser import parse as parse_date
 
@@ -43,78 +42,86 @@ def print_hits(results):
     print()
 
 
-# get trace logger and set level
-tracer = logging.getLogger('xapiand.trace')
-tracer.setLevel(logging.INFO)
-tracer.addHandler(logging.FileHandler('/tmp/xapiand_trace.log'))
-# instantiate Xapiand client, connects to localhost:8880 by default
-client = Xapiand()
+async def main():
+    # instantiate Xapiand client, connects to localhost:8880 by default
+    client = Xapiand()
+    try:
+        print('Empty search:')
+        print_hits(await client.search(index='git'))
 
-print('Empty search:')
-print_hits(client.search(index='git'))
-
-print('Find commits that says "fix" without touching tests:')
-result = client.search(
-    index='git',
-    body={
-        '_query': {
-            '_and_not': [
-                {
-                    'description': 'version'
-                },
-                {
-                    'files': 'adjust'
-                }
-            ]
-        }
-    }
-)
-print_hits(result)
-
-print('Last 8 Commits for xapiand-py:')
-result = client.search(
-    index='git',
-    body={
-        '_query': {
-            'repository': 'xapiand-py'
-        },
-        '_sort': [
-            {
-                'committed_date': {
-                    '_order': 'desc'
+        print('Find commits that says "fix" without touching tests:')
+        result = await client.search(
+            index='git',
+            body={
+                '_query': {
+                    '_and_not': [
+                        {
+                            'description': 'version'
+                        },
+                        {
+                            'files': 'adjust'
+                        }
+                    ]
                 }
             }
-        ],
-        '_limit': 8
-    }
-)
-print_hits(result)
+        )
+        print_hits(result)
 
-print('Stats for top 10 committers:')
-result = client.search(
-    index='git',
-    body={
-        "_limit": 0,
-        "_check_at_least": 100000,
-        "_aggs": {
-            "committers": {
-                "_values": {
-                    "_field": "committer.email"
+        print('Last 8 Commits for xapiand-py:')
+        result = await client.search(
+            index='git',
+            body={
+                '_query': {
+                    'repository': 'xapiand-py'
                 },
+                '_sort': [
+                    {
+                        'committed_date': {
+                            '_order': 'desc'
+                        }
+                    }
+                ],
+                '_limit': 8
+            }
+        )
+        print_hits(result)
+
+        print('Stats for top 10 committers:')
+        result = await client.search(
+            index='git',
+            body={
+                "_limit": 0,
+                "_check_at_least": 100000,
                 "_aggs": {
-                    "line_stats": {
-                        "_stats": {
-                            "_field": "stats.lines"
+                    "committers": {
+                        "_values": {
+                            "_field": "committer.email"
+                        },
+                        "_aggs": {
+                            "line_stats": {
+                                "_stats": {
+                                    "_field": "stats.lines"
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-)
+        )
 
-print_search_stats(result)
-for committer in result['aggregations']['committers']:
-    print('%15s: %3d commits changing %6d lines' % (
-        committer['_key'], committer['_doc_count'], committer['line_stats']['_sum']))
-print('=' * 80)
+        print_search_stats(result)
+        for committer in result['aggregations']['committers']:
+            print('%15s: %3d commits changing %6d lines' % (
+                committer['_key'], committer['_doc_count'], committer['line_stats']['_sum']))
+        print('=' * 80)
+    finally:
+        await client.close()
+
+
+if __name__ == '__main__':
+    # get trace logger and set level
+    tracer = logging.getLogger('xapiand.trace')
+    tracer.setLevel(logging.INFO)
+    tracer.addHandler(logging.FileHandler('/tmp/xapiand_trace.log'))
+
+    asyncio.run(main())

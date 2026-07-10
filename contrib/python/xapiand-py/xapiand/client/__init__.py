@@ -16,14 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import unicode_literals
 import logging
 
 from ..transport import Transport
 from ..exceptions import NotFoundError
-from ..compat import string_types, urlparse, unquote
-from .indices import IndicesClient
+from .indexes import IndexesClient
 from .documents import DocumentsClient
+from urllib.parse import urlparse, unquote
 
 logger = logging.getLogger('xapiand')
 
@@ -38,13 +37,13 @@ def _normalize_hosts(hosts):
         return [{}]
 
     # passed in just one string
-    if isinstance(hosts, string_types):
+    if isinstance(hosts, str):
         hosts = [hosts]
 
     out = []
     # normalize hosts to dicts
     for host in hosts:
-        if isinstance(host, string_types):
+        if isinstance(host, str):
             if '://' not in host:
                 host = '//%s' % host
 
@@ -73,8 +72,8 @@ class Xapiand(object):
     Xapiand low-level client. Provides a straightforward mapping from
     Python to Xapiand RESTful endpoints.
 
-    The instance has attribute ``indices`` that provides access to instances of
-    :class:`~xapiand.client.IndicesClient`,
+    The instance has attribute ``indexes`` that provides access to instances of
+    :class:`~xapiand.client.IndexesClient`,
 
     This is the preferred (and only supported) way to get access to those
     classes and their methods.
@@ -145,7 +144,7 @@ class Xapiand(object):
             will be passed to the :class:`~xapiand.Connection` class as
             kwargs, or a string in the format of ``host[:port]`` which will be
             translated to a dictionary automatically.  If no value is given the
-            :class:`~xapiand.Urllib3HttpConnection` class defaults will be used.
+            :class:`~xapiand.AIOHttpConnection` class defaults will be used.
 
         :arg transport_class: :class:`~xapiand.Transport` subclass to use.
 
@@ -157,7 +156,7 @@ class Xapiand(object):
 
         # namespaced clients for compatibility with API names
         self.documents = DocumentsClient(self)
-        self.indices = IndicesClient(self)
+        self.indexes = IndexesClient(self)
 
         # Shortcuts
         self.index = self.documents.index
@@ -169,12 +168,12 @@ class Xapiand(object):
         self.delete = self.documents.delete
         self.info = self.documents.info
 
-        self.ping = self.indices.ping
-        self.count = self.indices.count
-        self.search = self.indices.search
-        self.streaming_restore = self.indices.streaming_restore
-        self.restore = self.indices.restore
-        self.parallel_restore = self.indices.parallel_restore
+        self.ping = self.indexes.ping
+        self.count = self.indexes.count
+        self.search = self.indexes.search
+        self.streaming_restore = self.indexes.streaming_restore
+        self.restore = self.indexes.restore
+        self.parallel_restore = self.indexes.parallel_restore
 
         self.DoesNotExist = NotFoundError
 
@@ -189,3 +188,15 @@ class Xapiand(object):
         except Exception:
             # probably operating on custom transport and connection_pool, ignore
             return super(Xapiand, self).__repr__()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close()
+
+    async def close(self):
+        """
+        Closes the Transport and all the underlying connections.
+        """
+        await self.transport.close()

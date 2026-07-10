@@ -21,20 +21,20 @@ from ..helpers import bulk, streaming_bulk, parallel_bulk
 from ..utils import NamespacedClient, query_params, make_url, SKIP_IN_PATH
 
 
-class IndicesClient(NamespacedClient):
+class IndexesClient(NamespacedClient):
     @query_params()
-    def ping(self, params=None):
+    async def ping(self, params=None):
         """
         Returns True if the cluster is up, False otherwise.
         """
         try:
-            return self.transport.perform_request('HEAD', '',
+            return await self.transport.perform_request('HEAD', '',
                 params=params)
         except TransportError:
             return False
 
     @query_params('timeout')
-    def create(self, index, body=None, params=None):
+    async def create(self, index, body=None, params=None):
         """
         Create an index in Xapiand.
 
@@ -42,24 +42,24 @@ class IndicesClient(NamespacedClient):
         :arg body: The configuration for the index (`_settings` and `_schema`)
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('UPDATE', make_url(index),
+        return await self.transport.perform_request('UPDATE', make_url(index),
             params=params, body=body)
 
     @query_params('timeout')
-    def commit(self, index=None, params=None):
+    async def commit(self, index=None, params=None):
         """
         Explicitly commit one or more index, making all operations performed
         since the last commit available for search.
 
         :arg index: A comma-separated list of index names; use `_all` or empty
-            string to perform the operation on all indices
+            string to perform the operation on all indexes
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('COMMIT', make_url(index),
+        return await self.transport.perform_request('COMMIT', make_url(index),
             params=params)
 
     @query_params('timeout')
-    def open(self, index, params=None):
+    async def open(self, index, params=None):
         """
         Open a closed index to make it available for search.
 
@@ -68,11 +68,11 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('OPEN', make_url(index),
+        return await self.transport.perform_request('OPEN', make_url(index),
             params=params)
 
     @query_params('timeout')
-    def close(self, index, params=None):
+    async def close(self, index, params=None):
         """
         Close an index to remove it's overhead from the cluster. Closed index
         is blocked for read/write operations.
@@ -82,11 +82,11 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('CLOSE', make_url(index),
+        return await self.transport.perform_request('CLOSE', make_url(index),
             params=params)
 
     @query_params('timeout')
-    def delete(self, index, params=None):
+    async def delete(self, index, params=None):
         """
         Delete an index in Xapiand
 
@@ -95,15 +95,15 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('DELETE', make_url(index),
+        return await self.transport.perform_request('DELETE', make_url(index),
             params=params)
 
     @query_params('q', 'query', 'refresh', 'timeout')
-    def count(self, index=None, body=None, headers=None, params=None):
+    async def count(self, index=None, body=None, headers=None, params=None):
         """
         Execute a query and get the number of matches for that query.
 
-        :arg index: A comma-separated list of indices to restrict the results
+        :arg index: A comma-separated list of indexes to restrict the results
         :arg body: A query to restrict the results specified with the Query DSL
             (optional)
         :arg q: Query in the query string syntax
@@ -111,16 +111,16 @@ class IndicesClient(NamespacedClient):
         """
         if not index:
             index = '*'
-        return self.transport.perform_request('COUNT', make_url(index),
+        return await self.transport.perform_request('COUNT', make_url(index),
             params=params, body=body)
 
     @query_params('q', 'query', 'offset', 'limit', 'check_at_least', 'sort', 'selector', 'refresh', 'timeout')
-    def search(self, index=None, body=None, params=None):
+    async def search(self, index=None, body=None, params=None):
         """
         Execute a search query and get back search hits that match the query.
 
         :arg index: A comma-separated list of index names to search; use `*`
-            or empty string to perform the operation on all indices
+            or empty string to perform the operation on all indexes
         :arg body: The search definition using the Query DSL (optional)
         :arg q: Query in the query string syntax
         :arg offset: Starting offset for response (default: 0)
@@ -130,16 +130,16 @@ class IndicesClient(NamespacedClient):
         """
         if not index:
             index = '*'
-        return self.transport.perform_request('SEARCH', make_url(index),
+        return await self.transport.perform_request('SEARCH', make_url(index),
             params=params, body=body)
 
-    def _restore(self, body, index, params=None):
+    async def _restore(self, body, index, params=None):
         for param in (index, body):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
 
         content_type, body = self.transport.serializer.nddumps(body)
-        return self.transport.perform_request('RESTORE', make_url(index),
+        return await self.transport.perform_request('RESTORE', make_url(index),
             params=params, body=body,
             headers={'content-type': content_type})
 
@@ -196,7 +196,7 @@ class IndicesClient(NamespacedClient):
         )
 
     @query_params('timeout')
-    def restore(self, index, body, stats_only=False, params=None, *args, **kwargs):
+    async def restore(self, index, body, stats_only=False, params=None, *args, **kwargs):
         """
         Perform many index operations in a single API call. It returns a tuple
         with summary information - number of successfully processed objects and
@@ -222,7 +222,7 @@ class IndicesClient(NamespacedClient):
         the operation, see :func:`~xapiand.helpers.streaming_bulk` for more
         accepted parameters.
         """
-        return bulk(
+        return await bulk(
             self._restore,
             body,
             self.transport.serializer,

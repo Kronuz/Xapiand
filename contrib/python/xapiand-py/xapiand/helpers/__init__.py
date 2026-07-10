@@ -19,3 +19,15 @@
 from .errors import BulkIndexError, ScanError
 from .bulk import streaming_bulk, bulk, parallel_bulk, chunk_objects, process_bulk_chunk
 from .reindex import scan, reindex
+
+__all__ = [
+    'BulkIndexError',
+    'ScanError',
+    'streaming_bulk',
+    'bulk',
+    'parallel_bulk',
+    'chunk_objects',
+    'process_bulk_chunk',
+    'scan',
+    'reindex',
+]

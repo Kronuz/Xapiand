@@ -37,7 +37,6 @@ except ImportError:
         msgpack = None
 
 from .exceptions import SerializationError, ImproperlyConfigured
-from .compat import text_type, binary_type
 from .collections import DictObject
 
 
@@ -62,9 +61,9 @@ class TextSerializer(Serializer):
         return serialized.decode('utf-8')
 
     def dumps(self, data):
-        if isinstance(data, binary_type):
+        if isinstance(data, bytes):
             return data
-        if isinstance(data, text_type):
+        if isinstance(data, str):
             return data.encode('utf-8')
         raise SerializationError("Cannot serialize %r into text." % data)
 
@@ -82,7 +81,7 @@ class MsgPackSerializer(Serializer):
             raise SerializationError(serialized, e)
 
     def dumps(self, data):
-        if isinstance(data, binary_type):
+        if isinstance(data, bytes):
             return data
         try:
             return msgpack.dumps(
@@ -106,7 +105,7 @@ class JSONSerializer(Serializer):
             raise SerializationError(serialized, e)
 
     def dumps(self, data):
-        if isinstance(data, binary_type):
+        if isinstance(data, bytes):
             return data
         try:
             return json.dumps(

@@ -16,12 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import unicode_literals
-
 import weakref
 from datetime import date, datetime
 from functools import wraps
-from ..compat import string_types, quote_plus, PY2
+from urllib.parse import quote_plus
 
 
 # parts of URL to be omitted
@@ -51,11 +49,8 @@ def _escape(value):
         return value
 
     # encode strings to utf-8
-    if isinstance(value, string_types):
-        if PY2 and isinstance(value, unicode):
-            return value.encode('utf-8')
-        if not PY2 and isinstance(value, str):
-            return value.encode('utf-8')
+    if isinstance(value, str):
+        return value.encode('utf-8')
 
     return str(value)
 

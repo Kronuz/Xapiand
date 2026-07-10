@@ -26,7 +26,7 @@
 # |_| |_|\__,_|___/_| |_|\___||___/
 #
 
-from ..compat import integer_types, integer_type
+
 
 
 def jump_consistent_hash(key, num_buckets):
@@ -36,7 +36,7 @@ def jump_consistent_hash(key, num_buckets):
     # [http://arxiv.org/pdf/1406.2294v1.pdf]
     if num_buckets < 1:
         raise ValueError("num_buckets must be a positive number")
-    if not isinstance(key, integer_types):
+    if not isinstance(key, int):
         # calculates FNV-1a 64 bit hash (skipping slashes)
         h = 14695981039346656037
         for c in key:
@@ -47,6 +47,6 @@ def jump_consistent_hash(key, num_buckets):
     while j < num_buckets:
         b = j
         key = (key * 2862933555777941757 + 1) & 0xffffffffffffffff
-        j = integer_type(float(b + 1) * (float(1 << 31) / float((key >> 33) + 1)))
+        j = int(float(b + 1) * (float(1 << 31) / float((key >> 33) + 1)))
     # b cannot exceed the range of num_buckets, see while condition
     return b
