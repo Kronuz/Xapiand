@@ -34,6 +34,15 @@ export default defineConfig({
   redirects: {
     '/tutorials': '/Xapiand/tutorials/home',
   },
+  // Let the Vite dev server accept requests coming through a tunnel (ngrok,
+  // Cloudflare Tunnel, etc). Vite 7 blocks unknown Host headers by default and
+  // replies "Blocked request. This host ... is not allowed"; `allowedHosts: true`
+  // turns that check off. Dev-server only -- it has no effect on the build.
+  vite: {
+    server: {
+      allowedHosts: true,
+    },
+  },
   integrations: [
     starlight({
       title: 'Xapiand',
