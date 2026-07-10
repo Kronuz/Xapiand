@@ -53,11 +53,28 @@ nothing, but once 1.0.0 indexes or updates a document, that document is no longe
 readable by 0.40.0. A binary rollback is therefore only safe if 1.0.0 never wrote;
 otherwise, restore from a backup taken before the upgrade.
 
-**Auto-generated compact ids look different (cosmetic).** The server-side generator
-for compact UUID identifiers had a salt bug fixed in 1.0.0, so the *encoded form* of
-ids that 1.0.0 generates for you differs from what 0.40.0 would have produced. This
-only affects new ids the server mints on your behalf; ids already stored in your
-data are read back exactly as written, and any id you supply yourself is unaffected.
+**Identifiers move to the v6 format.** 1.0.0 mints compact UUID identifiers in a new
+format, **cuuid v6**: a UUIDv6-based, splitmix64-reconstructed id that decodes about
+120x faster than the old v1 (no per-read Mersenne Twister) at the same wire size. Two
+consequences:
+
+- **New ids differ.** Ids the server generates for you in 1.0.0 are v6, so both their
+  encoded (`~…`) and canonical (`xxxxxxxx-…`) forms differ from what 0.40.0's v1
+  generator would have produced. Any id you supply yourself is stored as given.
+- **Old ids still resolve, but their canonical form may render differently.** Ids
+  already in your data are matched by their stored bytes, so lookups, links, and the
+  `~…` encoded form are unchanged. However, if you read an *old* id back through a
+  field-decoding representation (`vanilla`, `urn`, `guid`), 1.0.0 decodes it as v6 and
+  produces a different UUID string than 0.40.0 did. Deployments using the default
+  encoded (`~…`) representation see no difference; only the canonical reprs do, and
+  only for pre-existing ids.
+
+This is a deliberate breaking change for the major-version bump. If you need the exact
+old behavior, start Xapiand with **`--legacy-ids`**: it mints v1 and takes the v6 codec
+entirely out of the loop, so identifiers behave byte-for-byte as they did in 0.40.0.
+It is also the safe rollback if the new format causes any surprise. To make old ids
+render their original canonical form under the default mode, reindex the affected
+documents so their ids are re-minted as v6.
 
 ## Migrating a single node
 
