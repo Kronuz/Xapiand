@@ -570,10 +570,10 @@ class Schema {
 	using Field = std::pair<std::string, const MsgPack*>;
 	using Fields = std::deque<Field>;
 
-	bool _dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value);
-	bool _dispatch_feed_properties(uint32_t key, const MsgPack& value);
-	bool _dispatch_process_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
-	bool _dispatch_process_concrete_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
+	bool _dispatch_write_properties(uint64_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value);
+	bool _dispatch_feed_properties(uint64_t key, const MsgPack& value);
+	bool _dispatch_process_properties(uint64_t key, std::string_view prop_name, const MsgPack& value);
+	bool _dispatch_process_concrete_properties(uint64_t key, std::string_view prop_name, const MsgPack& value);
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;

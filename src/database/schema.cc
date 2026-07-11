@@ -1878,9 +1878,9 @@ repr_field(std::string_view name, std::string_view field_name)
 }
 
 
-bool has_dispatch_set_default_spc(uint32_t key);
-bool has_dispatch_process_properties(uint32_t key);
-bool has_dispatch_process_concrete_properties(uint32_t key);
+bool has_dispatch_set_default_spc(uint64_t key);
+bool has_dispatch_process_properties(uint64_t key);
+bool has_dispatch_process_concrete_properties(uint64_t key);
 
 
 required_spc_t::flags_t::flags_t()
@@ -6019,7 +6019,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 
 
 inline bool
-Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value)
+Schema::_dispatch_write_properties(uint64_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_write_properties({})", mut_properties.to_string());
 
@@ -6138,7 +6138,7 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 
 
 inline bool
-Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
+Schema::_dispatch_feed_properties(uint64_t key, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_feed_properties({})", value.to_string());
 
@@ -6312,7 +6312,7 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 
 
 inline bool
-has_dispatch_process_properties(uint32_t key)
+has_dispatch_process_properties(uint64_t key)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_NGRAM),
@@ -6336,7 +6336,7 @@ has_dispatch_process_properties(uint32_t key)
 }
 
 inline bool
-Schema::_dispatch_process_properties(uint32_t key, std::string_view prop_name, const MsgPack& value)
+Schema::_dispatch_process_properties(uint64_t key, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_process_properties({})", repr(prop_name));
 
@@ -6410,7 +6410,7 @@ Schema::_dispatch_process_properties(uint32_t key, std::string_view prop_name, c
 }
 
 inline bool
-has_dispatch_process_concrete_properties(uint32_t key)
+has_dispatch_process_concrete_properties(uint64_t key)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_META),
@@ -6485,7 +6485,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 }
 
 inline bool
-Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view prop_name, const MsgPack& value)
+Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_process_concrete_properties({})", repr(prop_name));
 
@@ -6811,7 +6811,7 @@ Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object
 
 
 inline bool
-has_dispatch_set_default_spc(uint32_t key)
+has_dispatch_set_default_spc(uint64_t key)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(ID_FIELD_NAME),
