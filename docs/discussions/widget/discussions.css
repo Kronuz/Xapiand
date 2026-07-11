@@ -1,0 +1,377 @@
+/* Blog discussions widget styles — GitHub/giscus comment timeline.
+   Colors alias the Kronuz/Starlight theme tokens (--sl-color-*), so the widget
+   follows the site palette and its light/dark toggle automatically. The fallbacks
+   apply only on the standalone /demo page, where Starlight tokens don't exist. */
+.gc {
+  --gc-bg: var(--sl-color-bg, #ffffff);
+  --gc-fg: var(--sl-color-text, #1f2328);
+  --gc-muted: var(--sl-color-gray-3, #656d76);
+  --gc-border: var(--sl-color-gray-5, #d0d7de);
+  --gc-header-bg: var(--sl-color-gray-6, #f6f8fa);
+  --gc-link: var(--sl-color-text-accent, #0969da);
+  --gc-accent: var(--sl-color-accent, #1f883d);
+  --gc-code-bg: var(--sl-color-gray-6, rgba(175, 184, 193, 0.2));
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: var(--gc-fg);
+  max-width: 100%;
+}
+/* Standalone /demo only (no Starlight tokens): honor the OS dark preference via
+   the fallbacks. On the blog the --sl-color-* tokens win and switch with the theme. */
+@media (prefers-color-scheme: dark) {
+  .gc:not([data-theme="light"]) {
+    --gc-bg: var(--sl-color-bg, #0d1117);
+    --gc-fg: var(--sl-color-text, #e6edf3);
+    --gc-muted: var(--sl-color-gray-3, #8b949e);
+    --gc-border: var(--sl-color-gray-5, #30363d);
+    --gc-header-bg: var(--sl-color-gray-6, #161b22);
+    --gc-link: var(--sl-color-text-accent, #2f81f7);
+    --gc-accent: var(--sl-color-accent, #3fb950);
+    --gc-code-bg: var(--sl-color-gray-6, rgba(110, 118, 129, 0.4));
+  }
+}
+
+.gc a { color: var(--gc-link); text-decoration: none; }
+.gc a:hover { text-decoration: underline; }
+
+.gc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; font-weight: 600;
+}
+.gc-count { font-size: 1rem; }
+
+/* one comment = avatar + bubble with a little arrow pointing at the avatar */
+.gc-comment { display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-start; }
+.gc-avatar { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; background: var(--gc-header-bg); }
+.gc-avatar-ph { display: inline-flex; align-items: center; justify-content: center; color: var(--gc-muted); }
+.gc-avatar-ph .gc-oct { width: 22px; height: 22px; }
+.gc-reply .gc-avatar { width: 30px; height: 30px; }
+.gc-bubble {
+  position: relative; flex: 1 1 auto; min-width: 0;
+  border: 1px solid var(--gc-border); border-radius: 6px; background: var(--gc-bg);
+}
+.gc-bubble::before, .gc-bubble::after {
+  content: ""; position: absolute; left: -8px; top: 11px; width: 0; height: 0;
+  border-style: solid; border-width: 8px 8px 8px 0;
+}
+.gc-bubble::before { border-color: transparent var(--gc-border) transparent transparent; }
+.gc-bubble::after { left: -7px; border-color: transparent var(--gc-header-bg) transparent transparent; }
+.gc-meta {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 16px; background: var(--gc-header-bg);
+  border-bottom: 1px solid var(--gc-border); border-radius: 6px 6px 0 0;
+  font-size: 0.85rem; color: var(--gc-muted);
+}
+.gc-author { font-weight: 600; color: var(--gc-fg); }
+.gc-handle { color: var(--gc-muted); }
+.gc-time:hover { color: var(--gc-link); }
+/* "edited" marker after the timestamp (set when a comment was changed after posting). */
+.gc-edited { color: var(--gc-muted); cursor: default; }
+.gc-edited::before { content: "·"; margin-right: 6px; }
+.gc-body { padding: 12px 16px; overflow-wrap: anywhere; }
+
+/* GitHub-flavoured markdown inside the body (bodyHTML is GitHub's own HTML) */
+.gc-body > *:first-child { margin-top: 0; }
+.gc-body > *:last-child { margin-bottom: 0; }
+.gc-body p, .gc-body ul, .gc-body ol, .gc-body pre, .gc-body blockquote { margin: 0 0 12px; }
+.gc-body ul, .gc-body ol { padding-left: 2em; }
+.gc-body code { background: var(--gc-code-bg); padding: 0.2em 0.4em; border-radius: 6px; font-size: 85%;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+.gc-body pre { background: var(--gc-header-bg); padding: 12px 16px; border-radius: 6px; overflow: auto; }
+.gc-body pre code { background: none; padding: 0; font-size: 90%; }
+.gc-body blockquote { padding: 0 1em; color: var(--gc-muted); border-left: 0.25em solid var(--gc-border); }
+.gc-body a { color: var(--gc-link); }
+
+.gc-reactions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; align-items: center; }
+/* Reaction count pills and the add-reaction button share one pill shape and a fixed
+   line-height, so the row height never jumps when a pill is added or removed. */
+.gc-reaction, .gc-react-add {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid var(--gc-border); border-radius: 100px; background: transparent;
+  padding: 1px 8px; font-size: 0.8rem; line-height: 16px; color: var(--gc-muted);
+}
+.gc-reaction { cursor: default; }
+.gc-reaction:not(:disabled), .gc-react-add { cursor: pointer; }
+/* Clear hover (border + tint) so it's obvious the pills are clickable. */
+.gc-reaction:not(:disabled):hover, .gc-react-add:hover {
+  border-color: var(--gc-link); color: var(--gc-fg); background: var(--gc-header-bg);
+}
+.gc-reaction.gc-reacted { border-color: var(--gc-link); color: var(--gc-link); background: var(--gc-header-bg); }
+.gc-react-add .gc-oct { width: 16px; height: 16px; display: block; }
+/* The add-reaction button only wraps the 16px Octicon, so pad it evenly (1px all
+   around) rather than the count pills' wider 1px 8px. */
+.gc-react-add { padding: 1px; }
+
+/* "Add reaction" picker (signed-in only). */
+.gc-react-add-wrap { position: relative; display: inline-flex; }
+.gc-react-pop {
+  position: absolute; bottom: 100%; left: 0; margin-bottom: 4px; z-index: 10;
+  display: flex; gap: 2px; padding: 4px;
+  background: var(--gc-bg); border: 1px solid var(--gc-border); border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+/* Class display rule beats the UA [hidden] rule, so hide explicitly. */
+.gc-react-pop[hidden] { display: none; }
+.gc-react-opt {
+  border: none; background: transparent; cursor: pointer;
+  font-size: 1rem; padding: 2px 5px; border-radius: 6px; line-height: 1;
+}
+.gc-react-opt:hover { background: var(--gc-header-bg); }
+
+.gc-replies { margin-left: 52px; padding-left: 0; }
+/* Replies nested inside a comment bubble: a flat divided list, no inner bubble
+   chrome (border/arrow/header), so the comment + replies + editor read as one card. */
+.gc-bubble .gc-replies { position: relative; margin-left: 0; border-top: 1px solid var(--gc-border); background: rgba(0, 0, 0, 0.2); }
+/* When replies are the last thing in the bubble (signed-out, or under a hidden
+   parent with no reply footer), round their bottom to the bubble's corners. */
+.gc-bubble > .gc-replies:last-child { border-radius: 0 0 6px 6px; }
+/* Continuous "thread" line down the centre of the reply avatars (avatars sit on top). */
+.gc-bubble .gc-replies::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 30px; width: 2px;
+  background: var(--gc-accent); z-index: 0;
+}
+.gc-bubble .gc-replies .gc-avatar { position: relative; z-index: 1; }
+.gc-bubble .gc-replies .gc-comment { margin: 0; padding: 12px 16px; }
+.gc-bubble .gc-replies .gc-comment + .gc-comment { border-top: 1px solid var(--gc-border); }
+.gc-bubble .gc-replies .gc-bubble { border: 0; border-radius: 0; background: transparent; }
+.gc-bubble .gc-replies .gc-bubble::before,
+.gc-bubble .gc-replies .gc-bubble::after { content: none; }
+.gc-bubble .gc-replies .gc-meta { background: transparent; border-bottom: 0; border-radius: 0; padding: 0 0 4px; }
+.gc-bubble .gc-replies .gc-body { padding: 0; }
+.gc-bubble .gc-replies .gc-reactions { padding: 8px 0 0; }
+.gc-bubble .gc-replies .gc-replies-more { padding: 4px 16px 0; }
+/* Reply editor as a footer inside the comment bubble. No footer padding, so the
+   expanded composer sits flush with the bubble (part of it, not a dialog inside it). */
+.gc-reply-footer { border-top: 1px solid var(--gc-border); }
+/* No avatar in reply mode, so the composer fills the footer flush. */
+.gc-reply-footer .gc-composer { margin: 0; }
+/* No side border; round the bottom to the bubble's radius and rely on the box's
+   overflow:hidden so the composer's grey header/actions don't leak past the
+   bubble's rounded bottom corners. */
+.gc-reply-footer .gc-compose-box { border: 0; border-radius: 0 0 6px 6px; }
+/* Cancel + Reply both sit on the right: |            [Cancel] [Reply]| */
+.gc-reply-footer .gc-compose-actions { justify-content: flex-end; gap: 8px; }
+/* Collapsed reply box: an inset one-line editor; expands flush on click. */
+.gc-reply-stub {
+  margin: 12px 16px; padding: 8px 12px;
+  border: 1px solid var(--gc-border); border-radius: 6px;
+  background: var(--gc-bg); color: var(--gc-muted); cursor: text; font-size: 0.9rem;
+}
+.gc-cancel { background: transparent; border: 0; color: var(--gc-muted); cursor: pointer; font: inherit; padding: 6px 12px; }
+.gc-cancel:hover { color: var(--gc-fg); }
+
+/* composer */
+.gc-composer { display: flex; gap: 12px; margin-top: 8px; align-items: flex-start; }
+.gc-compose-box { flex: 1 1 auto; border: 1px solid var(--gc-border); border-radius: 6px; overflow: hidden; }
+/* Padding around the editor/preview area so the framed boxes sit inset in the box.
+   Matches the gc-reply-stub margin (12px 16px) so the composers line up. */
+.gc-compose-body { padding: 12px 16px; }
+.gc-compose-box textarea {
+  display: block;
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 100px;
+  border: 1px solid var(--gc-border); border-radius: 6px;
+  padding: 12px 16px; background: var(--gc-bg); color: var(--gc-fg); font: inherit;
+}
+/* Rounded border that turns accent on focus — same look as the "Write a reply…" stub. */
+.gc-compose-box textarea:focus { outline: none; border-color: var(--gc-link); }
+.gc-compose-box textarea[hidden] { display: none; }
+.gc-textarea:disabled { background: var(--gc-bg); color: var(--gc-muted); cursor: not-allowed; resize: none; }
+/* The preview is rendered content, not an input — no border; keep box-sizing so its
+   held height matches the textarea when toggling Write/Preview. */
+.gc-compose-box .gc-preview { box-sizing: border-box; }
+.gc-compose-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: var(--gc-header-bg); border-top: 1px solid var(--gc-border);
+}
+.gc-hint { font-size: 0.8rem; color: var(--gc-muted); }
+.gc-submit {
+  background: var(--gc-accent); color: #fff; border: 0; border-radius: 6px;
+  padding: 6px 16px; font-weight: 600; cursor: pointer;
+}
+.gc-submit:disabled { opacity: 0.6; cursor: default; }
+/* Composer: Write|Preview tabs + markdown toolbar share one header row;
+   the toolbar (action-bar) is hidden when Preview is selected. */
+.gc-compose-head {
+  display: flex; align-items: flex-end; flex-wrap: wrap; gap: 6px;
+  padding: 6px 8px 0; background: var(--gc-header-bg);
+  border-bottom: 1px solid var(--gc-border);
+}
+.gc-tabs { display: flex; gap: 4px; }
+.gc-tab {
+  background: transparent; border: 1px solid transparent; border-bottom: none;
+  border-radius: 6px 6px 0 0; margin-bottom: -1px; padding: 6px 14px;
+  font: inherit; font-size: 0.85rem; color: var(--gc-muted); cursor: pointer;
+}
+.gc-tab:hover:not(.gc-tab-on):not(:disabled) { color: var(--gc-fg); }
+.gc-tab-on {
+  background: var(--gc-bg); border-color: var(--gc-border);
+  color: var(--gc-fg); font-weight: 600;
+}
+.gc-toolbar { display: flex; align-items: center; flex: 1; gap: 2px; align-self: center; margin-bottom: 3px; }
+.gc-toolbar[hidden] { display: none; }
+.gc-tool {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--gc-muted); cursor: pointer;
+}
+.gc-tool:hover { background: var(--gc-border); color: var(--gc-fg); }
+/* Keep the active Write tab solid even when disabled (signed out), so its color
+   stays flush with the textarea and the compose-head border doesn't show through. */
+.gc-tool:disabled, .gc-tab:disabled:not(.gc-tab-on) { opacity: 0.5; cursor: default; }
+.gc-tool:disabled:hover { background: transparent; color: var(--gc-muted); }
+.gc-tool-divider { width: 1px; height: 18px; margin: 0 4px; background: var(--gc-border); }
+/* GIF button: a text label rather than an icon, so make it auto-width + bold. */
+.gc-tool-gif { width: auto; padding: 0 7px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; }
+/* GIPHY picker popup (client-side): floats below the GIF button via position:fixed
+   (so the compose box's overflow:hidden can't clip it); JS sets left/top/width. */
+.gc-gif-wrap { position: relative; display: inline-flex; }
+.gc-gif {
+  position: fixed; z-index: 60; width: 320px;
+  border: 1px solid var(--gc-border); border-radius: 8px; padding: 8px;
+  background: var(--gc-bg); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.gc-gif[hidden] { display: none; }
+.gc-gif-search {
+  width: 100%; box-sizing: border-box; padding: 6px 10px; margin-bottom: 8px;
+  border: 1px solid var(--gc-border); border-radius: 6px; background: var(--gc-bg);
+  color: var(--gc-fg); font: inherit; font-size: 0.9rem;
+}
+.gc-gif-body { position: relative; }
+.gc-gif-body.gc-loading { min-height: 160px; }
+.gc-gif-grid { max-height: 260px; overflow-y: auto; }
+.gc-gif-cols { display: flex; gap: 6px; align-items: flex-start; }
+.gc-gif-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.gc-gif-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; border-radius: 6px;
+  background: var(--gc-bg);
+  background: color-mix(in srgb, var(--gc-bg) 70%, transparent);
+}
+.gc-gif-overlay[hidden] { display: none; }
+.gc-gif-msg { color: var(--gc-muted); font-size: 0.85rem; }
+.gc-spinner {
+  width: 26px; height: 26px; border: 3px solid var(--gc-border);
+  border-top-color: var(--gc-accent); border-radius: 50%;
+  animation: gc-spin 0.7s linear infinite;
+}
+.gc-spinner[hidden] { display: none; }
+@keyframes gc-spin { to { transform: rotate(360deg); } }
+.gc-gif-more { display: flex; justify-content: center; padding: 8px 0; }
+.gc-gif-more[hidden] { display: none; }
+.gc-spinner-sm { width: 18px; height: 18px; border-width: 2px; }
+.gc-gif-item { display: block; width: 100%; padding: 0; border: 0; border-radius: 6px; background: var(--gc-header-bg); cursor: pointer; overflow: hidden; line-height: 0; }
+.gc-gif-item img { width: 100%; height: auto; display: block; }
+.gc-gif-item:hover { outline: 2px solid var(--gc-accent); }
+.gc-gif-footer { margin-top: 6px; text-align: right; }
+.gc-gif-credit { font-size: 0.72rem; color: var(--gc-muted); text-decoration: none; }
+.gc-gif-credit:hover { text-decoration: underline; }
+/* GIFs/images in a posted comment: keep them from blowing out the bubble. */
+.gc-body img { max-width: 100%; max-height: 400px; height: auto; border-radius: 6px; }
+.gc-md-hint {
+  margin-left: auto; display: inline-flex; align-items: center; color: var(--gc-muted);
+}
+.gc-md-hint:hover { color: var(--gc-fg); }
+.gc-oct { display: block; }
+.gc-preview { box-sizing: border-box; min-height: 100px; background: var(--gc-bg); }
+.gc-muted { color: var(--gc-muted); }
+
+.gc-signin-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--gc-accent); color: #fff; border: 0;
+  border-radius: 6px; padding: 6px 16px; font-weight: 600; cursor: pointer;
+}
+.gc-signin-btn .gc-gh-mark { width: 16px; height: 16px; flex: none; }
+.gc-signin-btn:hover { filter: brightness(0.94); }
+.gc-empty { color: var(--gc-muted); padding: 8px 0 16px; }
+.gc-loadmore {
+  display: block; width: 100%; margin: 8px 0 4px; padding: 8px 16px;
+  background: transparent; color: var(--gc-link, #0969da);
+  border: 1px solid var(--gc-border); border-radius: 6px;
+  font-weight: 600; cursor: pointer;
+}
+.gc-loadmore:hover:not(:disabled) { background: var(--gc-border); }
+.gc-loadmore:disabled { opacity: 0.6; cursor: default; }
+.gc-replies-more {
+  display: inline-block; margin-top: 6px; font-size: 0.85rem;
+  color: var(--gc-link, #0969da); text-decoration: none;
+}
+.gc-replies-more:hover { text-decoration: underline; }
+
+/* Comment options (⋯) menu, pushed to the right edge of the meta row. */
+.gc-menu-wrap { position: relative; margin-left: auto; }
+.gc-menu-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--gc-muted); cursor: pointer;
+}
+.gc-menu-btn:hover { background: var(--gc-border); color: var(--gc-fg); }
+.gc-menu {
+  position: absolute; top: 100%; right: 0; margin-top: 4px; z-index: 20;
+  min-width: 176px; padding: 4px; background: var(--gc-bg);
+  border: 1px solid var(--gc-border); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+/* A class display rule beats the UA [hidden] rule, so hide explicitly. */
+.gc-menu[hidden] { display: none; }
+.gc-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--gc-fg); cursor: pointer;
+  font: inherit; font-size: 0.85rem; text-align: left;
+}
+.gc-menu-item:hover { background: var(--gc-header-bg); }
+.gc-menu-item .gc-oct { color: var(--gc-muted); flex: none; }
+.gc-menu-danger { color: var(--gc-danger, #cf222e); }
+.gc-menu-danger .gc-oct { color: var(--gc-danger, #cf222e); }
+.gc-menu-danger:hover { background: var(--gc-danger, #cf222e); color: #fff; }
+.gc-menu-danger:hover .gc-oct { color: #fff; }
+.gc-menu-sep { height: 1px; margin: 4px 0; background: var(--gc-border); }
+.gc-menu-label { padding: 6px 8px 2px; font-size: 0.75rem; color: var(--gc-muted); }
+/* While its menu is open, lift the comment above later siblings so the dropdown
+   (and any minimized-comment background) can't paint over it. */
+.gc-comment.gc-menu-open { position: relative; z-index: 50; }
+
+/* Inline edit composer: sit flush in the bubble where the body was — drop the outer
+   box border/rounding so it reads as part of the card (the inner textarea keeps its
+   frame), and group Cancel + Update on the right, like the reply composer. */
+.gc-composer-edit { margin: 0; }
+.gc-composer-edit .gc-compose-box { border: 0; border-radius: 0; }
+.gc-composer-edit .gc-compose-actions { justify-content: flex-end; gap: 8px; }
+
+/* Hidden (minimized) comment: the whole comment collapses to a muted bar with a
+   Show/Hide toggle; the body/reactions/replies live in .gc-hidden-content, revealed
+   on demand. A muted background (not opacity) avoids creating a stacking context
+   that would trap the options menu below later comments. */
+.gc-hidden-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; background: var(--gc-header-bg);
+  font-size: 0.85rem; color: var(--gc-muted); cursor: pointer;
+}
+/* The bar is top-rounded by default (revealed content or replies follow it); it's
+   fully rounded only when collapsed AND there are no replies below it. */
+.gc-hidden-bar { border-radius: 6px 6px 0 0; }
+.gc-bubble:has(.gc-hidden-content[hidden]):not(:has(.gc-replies)) .gc-hidden-bar { border-radius: 6px; }
+.gc-hidden-text { flex: 0 1 auto; }
+.gc-hidden-toggle {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: 0; padding: 2px 4px; cursor: pointer;
+  font: inherit; font-size: 0.85rem; color: inherit;
+}
+/* Nested (reply) hidden comment: flat — no bar background and tighter padding (the
+   reply row already provides spacing), and the toggle reads as muted label text
+   matching "This comment has been hidden." */
+.gc-bubble .gc-replies .gc-hidden-bar { background: transparent; padding: 8px 0; }
+.gc-bubble .gc-replies .gc-hidden-content { padding-top: 8px; }
+.gc-hidden-content { border-top: 1px solid var(--gc-border); }
+.gc-hidden-content[hidden] { display: none; }
+.gc-hidden-content .gc-meta { border-radius: 0; }
+
+/* Brief highlight when arriving via a "Copy link" URL (#<comment-id>). */
+.gc-target > .gc-bubble {
+  box-shadow: 0 0 0 2px var(--gc-accent);
+  transition: box-shadow 0.3s ease;
+}
+/* The bubble's tail (::before outline + ::after fill) is painted in front of the
+   ring and would otherwise look like it cuts through it. Tint the outline triangle
+   to the accent and nudge it 2px further left so it forms a 2px accent border around
+   the tail, continuous with the ring (the ::after fill is left unchanged). */
+.gc-target > .gc-bubble::before { border-right-color: var(--gc-accent); left: -10px; }

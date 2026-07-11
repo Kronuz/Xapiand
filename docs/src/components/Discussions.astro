@@ -1,0 +1,56 @@
+---
+/**
+ * Discussions.astro — reusable inline-comments widget (self-hosted, a giscus alternative).
+ *
+ * Renders the framework-agnostic widget in `discussions/widget/` and points it at the
+ * discussions backend, keyed by a per-page `term` (the post slug). The widget reads/writes
+ * through the backend, which stores comments in SQLite and renders Markdown with
+ * cmark-gfm (GitHub's renderer), so bodies match GitHub. See `discussions/README.md`.
+ *
+ * The backend base URL must be reachable from the reader's browser (the VM's HTTPS
+ * URL in production). The blog passes it via the `backend` prop, sourced from
+ * `site.config.json` (`discussions.backendUrl`). For local development, the
+ * `PUBLIC_DISCUSSIONS_BACKEND` env var overrides it; with neither, the widget falls
+ * back to same-origin (only useful for the backend's own `/demo` page).
+ */
+import '../../discussions/widget/discussions.css';
+import '../../discussions/widget/highlight.css';
+
+interface Props {
+  /** Stable per-page key (the post slug). The backend stores this page's comments under it. */
+  term?: string;
+  /** Post title, stored as page metadata with the thread. */
+  title?: string;
+  /** Post subtitle, stored as page metadata with the thread. */
+  subtitle?: string;
+  /** Canonical page URL, stored as page metadata with the thread. */
+  url?: string;
+  /** Backend base URL. The blog passes this from site.config.json; falls back to
+   *  the PUBLIC_DISCUSSIONS_BACKEND env var (local dev) or same-origin. */
+  backend?: string;
+  /** Login suffix to drop when displaying handles (cosmetic; e.g. "_LinkedIn"). */
+  stripSuffix?: string;
+  /** Public GIPHY key; when set, the composer shows a client-side GIF picker. */
+  giphyKey?: string;
+  /** Force a theme; omit to follow the site's light/dark. */
+  theme?: 'light' | 'dark';
+}
+
+const {
+  term,
+  title,
+  subtitle,
+  url,
+  backend = import.meta.env.PUBLIC_DISCUSSIONS_BACKEND ?? '',
+  stripSuffix = '',
+  giphyKey = '',
+  theme,
+} = Astro.props;
+---
+
+<section class="gc not-content" data-term={term} data-title={title} data-subtitle={subtitle} data-url={url} data-backend={backend} data-strip-suffix={stripSuffix} data-giphy-key={giphyKey} data-theme={theme}></section>
+
+<script>
+  // Side-effect import: the widget auto-mounts every `.gc[data-term]` on load.
+  import '../../discussions/widget/discussions.js';
+</script>

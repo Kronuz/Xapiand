@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>discussions — widget demo</title>
+  <link rel="stylesheet" href="discussions.css" />
+  <link rel="stylesheet" href="highlight.css" />
+  <style>
+    body { max-width: 760px; margin: 2rem auto; padding: 0 1rem;
+      font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .bar { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;
+      padding-bottom: 1rem; border-bottom: 1px solid #d0d7de; }
+    body[data-bg="dark"] { background: #0d1117; color: #e6edf3; }
+    body[data-bg="dark"] .bar { border-color: #30363d; }
+    input, button { font: inherit; }
+  </style>
+</head>
+<body data-bg="light">
+  <div class="bar">
+    <strong>discussions demo</strong>
+    <label>term <input id="term" type="text" value="demo/page" style="width:10em" /></label>
+    <button id="theme">Toggle dark</button>
+    <span style="color:#656d76">backend: <code id="be"></code></span>
+  </div>
+
+  <!-- The widget: one div, configured by data attributes. Backend left blank =
+       same origin (served by the backend at /demo, so the OAuth cookie works). -->
+  <div class="gc" data-backend="" data-term="demo/page"></div>
+
+  <script>
+    // Theme toggle drives both the demo page and the widget (data-theme).
+    const body = document.body, gc = document.querySelector(".gc"), be = document.getElementById("be");
+    be.textContent = gc.dataset.backend || "(same origin)";
+    document.getElementById("theme").onclick = () => {
+      const dark = body.dataset.bg !== "dark";
+      body.dataset.bg = dark ? "dark" : "light";
+      gc.dataset.theme = dark ? "dark" : "light";
+    };
+    // Re-point at a different discussion (page term) without editing the file.
+    document.getElementById("term").onchange = (e) => {
+      gc.dataset.term = e.target.value;
+      location.reload(); // simplest: re-mount
+    };
+  </script>
+  <script src="discussions.js"></script>
+</body>
+</html>
