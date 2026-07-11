@@ -450,7 +450,7 @@ include(FetchContent)
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfect-hash.git GIT_TAG main)
+FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG master)
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG main)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG main)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG main)
@@ -460,13 +460,13 @@ FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG main)
 # uinteger_t is declared before base_x so base_x's own FetchContent of it dedups
 # to this pinned copy.
-FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names stash uinteger_t base_x located_exception)
+FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names stash uinteger_t base_x located_exception)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
 # +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh"), so put their source dirs
 # on the global include path now that the vendored copies are gone.
 include_directories(
-	"${perfect_hash_SOURCE_DIR}"
+	"${constexpr_phf_SOURCE_DIR}"
 	"${split_SOURCE_DIR}"
 	"${lru_cache_SOURCE_DIR}"
 	"${errno_names_SOURCE_DIR}"
