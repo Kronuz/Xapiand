@@ -1480,7 +1480,7 @@ starlight-toc a[href='#_top'] {
    higher than the rest. Reset it for the direct children so each row's tops line up. */
 .kz-features > *,
 .kz-qs-inner > *,
-.kz-footer-inner > * { margin-top: 0; }
+.kz-home-footer-inner > * { margin-top: 0; }
 .kz-feature p { margin: 0 0 0.6rem; font-size: 1.05rem; line-height: 1.45; color: var(--sl-color-gray-2); }
 .kz-feature a { color: var(--sl-color-text-accent); text-decoration: none; font-weight: 700; }
 .kz-feature a:hover { text-decoration: underline; }
@@ -1531,8 +1531,10 @@ starlight-toc a[href='#_top'] {
 .kz-os-panel .expressive-code pre { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
 
 /* Full-bleed dark footer: copyright + "Website by Kronuz" (left), host credit
-   with the GitHub logo (right). */
-.kz-footer {
+   with the GitHub logo (right). Home-page only (own class so its full-bleed
+   width:100vw never leaks onto the site-wide <Footer> override, which also uses
+   a footer element). */
+.kz-home-footer {
 	color: #c0c0c0;
 	font-size: 1rem;
 	width: 100vw;
@@ -1541,7 +1543,7 @@ starlight-toc a[href='#_top'] {
 	text-shadow: none;
 	border-top: 1px solid #282828;
 }
-.kz-footer-inner {
+.kz-home-footer-inner {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -1551,18 +1553,18 @@ starlight-toc a[href='#_top'] {
 	padding: 0 1.5rem;
 	text-align: left;
 }
-.kz-footer p { margin: 0; }
-.kz-footer a { color: #c0c0c0; text-decoration: none; }
-.kz-footer a:hover { color: #fff; }
-.kz-footer img { vertical-align: middle; margin-left: 0.4rem; opacity: 0.8; transition: opacity 0.2s; }
-.kz-footer a:hover img { opacity: 1; }
-.kz-footer-right { text-align: right; }
+.kz-home-footer p { margin: 0; }
+.kz-home-footer a { color: #c0c0c0; text-decoration: none; }
+.kz-home-footer a:hover { color: #fff; }
+.kz-home-footer img { vertical-align: middle; margin-left: 0.4rem; opacity: 0.8; transition: opacity 0.2s; }
+.kz-home-footer a:hover img { opacity: 1; }
+.kz-home-footer-right { text-align: right; }
 
 @media (max-width: 50rem) {
 	.kz-features { grid-template-columns: 1fr; }
 	.kz-qs-inner { grid-template-columns: 1fr; gap: 1rem; }
-	.kz-footer-inner { flex-direction: column; text-align: center; }
-	.kz-footer-right { text-align: center; }
+	.kz-home-footer-inner { flex-direction: column; text-align: center; }
+	.kz-home-footer-right { text-align: center; }
 	.kz-intro { font-size: 2.2rem; }
 	.kz-lede { font-size: 1.35rem; }
 }

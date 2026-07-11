@@ -5,6 +5,9 @@
 import LastUpdated from 'virtual:starlight/components/LastUpdated';
 import Pagination from 'virtual:starlight/components/Pagination';
 
+// The splash/landing page (index.mdx) ships its own full-bleed footer with the
+// copyright, so suppress the site-wide copyright line there to avoid a double footer.
+const isSplash = Astro.locals.starlightRoute.entry.data.template === 'splash';
 const year = new Date().getFullYear();
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
@@ -15,11 +18,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 	</div>
 	<Pagination />
 
-	<div class="kz-site-footer">
-		<p class="kz-copyright">
-			<a href={`${base}/copyright/`}>Copyright &copy; {year} Dubalu LLC</a>. Released under the MIT License.
-		</p>
-	</div>
+	{!isSplash && (
+		<div class="kz-site-footer">
+			<p class="kz-copyright">
+				<a href={`${base}/copyright/`}>Copyright &copy; {year} Dubalu LLC</a>. Released under the MIT License.
+			</p>
+		</div>
+	)}
 </footer>
 
 <style>
