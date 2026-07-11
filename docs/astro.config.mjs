@@ -17,6 +17,7 @@ import { restLangs } from './src/plugins/rest-lang.mjs';
 import remarkHints from './src/plugins/remark-hints.mjs';
 import remarkD2 from './src/plugins/remark-d2.mjs';
 import { pluginRestCurl } from './src/plugins/ec-rest-curl.mjs';
+import { SITE_TITLE, SITE_DESCRIPTION, REPO_URL } from './src/consts';
 import rehypeExternalLinks from 'rehype-external-links';
 
 // Xapiand documentation, on Astro + Starlight (Kronuz theme), a migration of the
@@ -53,8 +54,8 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      title: 'Xapiand',
-      description: 'Search and Storage Server',
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
       logo: { src: './src/assets/logo.png', alt: 'Xapiand' },
       favicon: '/favicon.ico',
       customCss: ['./src/styles/custom.css'],
@@ -72,15 +73,18 @@ export default defineConfig({
       ],
       // "Edit this page" -> GitHub, like the Jekyll "Improve this page" link.
       editLink: {
-        baseUrl: 'https://github.com/Kronuz/Xapiand/edit/master/docs-astro/',
+        baseUrl: `${REPO_URL}/edit/master/docs-astro/`,
       },
       expressiveCode: { themes: [kronuzDark, kronuzLight], shiki: { langs: restLangs }, plugins: [pluginRestCurl()] },
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/Kronuz/Xapiand' },
+        { icon: 'github', label: 'GitHub', href: REPO_URL },
       ],
       // The full curated nav, transformed 1:1 from the Jekyll _data/docs.yaml by
       // scripts/gen-sidebar.mjs. Top groups start expanded (collapsed: false).
       sidebar,
+      // Relabel the "On this page" #_top entry to the page title (covers both the desktop
+      // and mobile TOC); replaces the former TableOfContents/MobileTableOfContents overrides.
+      routeMiddleware: './src/starlightRouteData.ts',
       components: {
         // Site title/logo, plus the top-level Docs / Help / About nav (Jekyll header).
         SiteTitle: './src/components/SiteTitle.astro',
@@ -94,10 +98,6 @@ export default defineConfig({
         // Server-rendered sidebar: clickable group headers, chevron-only toggle, groups
         // stay expanded when they contain the current page.
         Sidebar: './src/components/Sidebar.astro',
-        // "On this page" leads with the page name, not a generic "Overview".
-        TableOfContents: './src/components/TableOfContents.astro',
-        // Same fix for the mobile "On this page" dropdown.
-        MobileTableOfContents: './src/components/MobileTableOfContents.astro',
         // Prev/next pager shows each destination's real title, not its "Overview" label.
         Pagination: './src/components/Pagination.astro',
         // Page footer with a site-wide copyright line (like the blog), kept on every page.

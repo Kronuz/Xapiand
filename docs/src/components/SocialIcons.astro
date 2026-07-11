@@ -3,9 +3,10 @@
 // version pill and a live CI status badge, so every page shows which Xapiand release it
 // documents and whether that release's CI is green. Order matches [GitHub] vX [CI|status].
 import Default from '@astrojs/starlight/components/SocialIcons.astro';
+import { REPO_URL } from '../consts';
 
 const version = import.meta.env.PUBLIC_XAPIAND_VERSION;
-const repo = 'https://github.com/Kronuz/Xapiand';
+const repo = REPO_URL;
 ---
 
 <Default {...Astro.props} />
