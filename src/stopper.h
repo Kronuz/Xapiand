@@ -30,30 +30,34 @@
 #include <cstdint>                 // for std::uint32_t
 #include <memory>                  // for std::unique_ptr, std::make_unique
 
-#include "hashes.hh"               // for fnv1ah32
+#include "hashes.hh"               // for fnv1ah64
 #include "phf.hh"                  // for phf
 #include "xapian.h"                // for Xapian::Stopper
 
 
 // Same implementation as Xapian::SimpleStopper, only this uses perfect hashes
-// which is much faster ~ 5.24591s -> 0.861319s
+// which is much faster ~ 5.24591s -> 0.861319s. Membership is by hash only (no
+// string kept to verify against), so a hash collision would misclassify a term.
+// A 64-bit hash makes that astronomically unlikely: for ~1000 stop words the odds
+// of any given term colliding are ~1000/2^64 ~ 5e-17, versus ~1000/2^32 ~ 2e-7 at
+// 32-bit.
 template <std::size_t max_size = 1000>
 class SimpleStopper : public Xapian::Stopper {
-	phf::phf<std::uint32_t, max_size> stop_words;
+	phf::phf<std::uint64_t, max_size> stop_words;
 
 public:
 	SimpleStopper() { }
 
 	template <class Iterator>
 	SimpleStopper(Iterator begin, Iterator end) {
-		std::vector<std::uint32_t> result;
+		std::vector<std::uint64_t> result;
 		result.reserve(max_size);
-		std::transform(begin, end, std::back_inserter(result), fnv1ah32{});
+		std::transform(begin, end, std::back_inserter(result), fnv1ah64{});
 		stop_words.assign(result.data(), std::min(max_size, result.size()));
 	}
 
 	virtual bool operator()(const std::string& term) const {
-		return stop_words.count(hh(term));
+		return stop_words.count(fnv1ah64::hash(term));
 	}
 };
 
