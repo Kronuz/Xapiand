@@ -19,7 +19,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # the E2E requests (```rest / ```http / ```json) and assertions (in <!-- e2e:begin -->
 # comments), and its sidebar encodes the reading order.
 CONTENT_DIR = os.path.join(BASE_DIR, 'docs', 'src', 'content', 'docs')
-SIDEBAR_PATH = os.path.join(BASE_DIR, 'docs', 'src', 'sidebar.mjs')
+SIDEBAR_PATH = os.path.join(BASE_DIR, 'docs', 'src', 'lib', 'sidebar.mjs')
 ASSETS_DIR = os.path.join(BASE_DIR, 'docs', 'public', 'assets')
 
 
@@ -29,7 +29,7 @@ def content_order():
     The doc-driven E2E examples build on each other across pages (index a document,
     then get it, update it, delete it; the /bank/ queries assume a dataset state), so
     they must run in the order the docs are meant to be read. That order is the
-    committed Starlight sidebar (src/sidebar.mjs), which replaced the old Jekyll
+    committed Starlight sidebar (src/lib/sidebar.mjs), which replaced the old Jekyll
     docs.yaml when the site migrated to Astro. Paths are lower-cased for matching so
     the case-insensitively-slugged test pages (tests/dataTypes/...) line up on
     case-sensitive filesystems too. Returns [] if the sidebar is absent (caller then
