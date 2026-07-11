@@ -58,11 +58,17 @@ static void test_datetime_roundtrip() {
 }
 
 static void test_uuid_roundtrip() {
-	// A textual UUID serialises and unserialises back to the same textual UUID.
+	// A textual UUID serialises and unserialises back to the same textual UUID under the
+	// default (v6) codec: version-4 UUIDs keep their full 16 bytes, and version-6 UUIDs
+	// round-trip through the condensed wire. A version-1 UUID does NOT round-trip here: the
+	// condensed wire carries no version marker, so it decodes with the running codec (v6 by
+	// default) and renders as v6, the documented 1.0 id break (see docs/.../upgrade.md).
+	// --legacy-ids (the v1 codec) round-trips a v1 id exactly.
 	const char* uuids[] = {
-		"3c0f2be3-ff4f-40ab-b157-c51a81eff176",
-		"e47fcfdf-8db6-4469-a97f-57146dc41ced",
-		"00000000-0000-1000-8000-010000000000",
+		"3c0f2be3-ff4f-40ab-b157-c51a81eff176",   // v4, full form
+		"e47fcfdf-8db6-4469-a97f-57146dc41ced",   // v4, full form
+		"00000000-0000-6000-8000-010000000000",   // v6, condensed (the reserved nil-ish id)
+		"2280898d-9810-6800-88b4-038db356b8d1",   // v6, condensed + compacted
 	};
 	for (const auto* u : uuids) {
 		std::string serialised = Serialise::uuid(std::string_view(u));
