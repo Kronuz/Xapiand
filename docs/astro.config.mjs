@@ -12,11 +12,11 @@ process.env.PUBLIC_XAPIAND_VERSION = versionMatch ? versionMatch[1] : 'dev';
 
 import kronuzDark from './src/styles/kronuz-dark.json';
 import kronuzLight from './src/styles/kronuz-light.json';
-import { sidebar } from './src/sidebar.mjs';
-import { restLangs } from './src/rest-lang.mjs';
-import remarkHints from './src/remark-hints.mjs';
-import remarkD2 from './src/remark-d2.mjs';
-import { pluginRestCurl } from './src/ec-rest-curl.mjs';
+import { sidebar } from './src/lib/sidebar.mjs';
+import { restLangs } from './src/plugins/rest-lang.mjs';
+import remarkHints from './src/plugins/remark-hints.mjs';
+import remarkD2 from './src/plugins/remark-d2.mjs';
+import { pluginRestCurl } from './src/plugins/ec-rest-curl.mjs';
 import rehypeExternalLinks from 'rehype-external-links';
 
 // Xapiand documentation, on Astro + Starlight (Kronuz theme), a migration of the

@@ -8,10 +8,10 @@
 // button, and simply rewrites that button's `data-code` (newlines encoded as U+007F,
 // the same encoding the frames copy script decodes back to real newlines).
 
-const HOST = "http://localhost:8880";
+const DEFAULT_HOST = "http://localhost:8880";
 
 /** Turn a ```rest snippet body into a curl command string (real newlines). */
-export function restToCurl(code) {
+export function restToCurl(code, host = DEFAULT_HOST) {
 	const lines = code.split("\n");
 
 	let i = 0;
@@ -38,7 +38,7 @@ export function restToCurl(code) {
 	const body = lines.slice(i).join("\n").trim();
 	const hasContentType = headers.some(([k]) => k.toLowerCase() === "content-type");
 
-	const parts = [`curl -X ${method} '${HOST}${url}'`];
+	const parts = [`curl -X ${method} '${host}${url}'`];
 	for (const [k, v] of headers) parts.push(`-H '${k}: ${v}'`);
 	if (body && !hasContentType) parts.push(`-H 'Content-Type: application/json'`);
 	if (body) parts.push(`-d '${body.replace(/'/g, `'\\''`)}'`);
@@ -46,13 +46,16 @@ export function restToCurl(code) {
 	return parts.join(" \\\n  ");
 }
 
-export function pluginRestCurl() {
+// Per-site: pass `{ host }` to set the base URL used for the copied curl (defaults
+// to Xapiand's http://localhost:8880). Blogs that carry the goody but target a
+// different service can override it, e.g. pluginRestCurl({ host: 'https://api.example' }).
+export function pluginRestCurl({ host = DEFAULT_HOST } = {}) {
 	return {
 		name: "rest-curl",
 		hooks: {
 			postprocessRenderedBlock: ({ codeBlock, renderData }) => {
 				if (codeBlock.language !== "rest") return;
-				const curl = restToCurl(codeBlock.code);
+				const curl = restToCurl(codeBlock.code, host);
 				if (!curl) return;
 				const encoded = curl.replace(/\n/g, "\x7F");
 				const walk = (node) => {
