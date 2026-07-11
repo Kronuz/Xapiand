@@ -10,6 +10,12 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'
+      # The header version badge is read from PACKAGE_VERSION in the root CMakeLists.txt
+      # at build time, so a release (the `chore: cut vX` bump) must redeploy the docs or
+      # the badge goes stale. A bump-only commit touches nothing under docs/, hence this
+      # path. (A `tags: [v*]` trigger wouldn't help: push tags AND paths are AND-ed, so a
+      # bump-only tag push is filtered out by the docs/** path anyway.)
+      - 'CMakeLists.txt'
   workflow_dispatch:
 
 permissions:
