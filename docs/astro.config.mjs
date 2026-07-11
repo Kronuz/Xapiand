@@ -1,6 +1,14 @@
 // @ts-check
+import fs from 'node:fs';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+
+// The version badge in the header reflects the Xapiand release the docs are built from:
+// read PACKAGE_VERSION straight out of the root CMakeLists.txt (skip the ${GIT_VERSION}
+// fallback line) so it always matches the tag, with no second place to bump.
+const cmake = fs.readFileSync(new URL('../CMakeLists.txt', import.meta.url), 'utf8');
+const versionMatch = cmake.match(/set\s*\(\s*PACKAGE_VERSION\s+"([^"$]+)"\s*\)/);
+process.env.PUBLIC_XAPIAND_VERSION = versionMatch ? versionMatch[1] : 'dev';
 
 import kronuzDark from './src/styles/kronuz-dark.json';
 import kronuzLight from './src/styles/kronuz-light.json';
@@ -76,6 +84,9 @@ export default defineConfig({
       components: {
         // Site title/logo, plus the top-level Docs / Help / About nav (Jekyll header).
         SiteTitle: './src/components/SiteTitle.astro',
+        // Header social bar, plus a version pill (the built release) and a live CI badge,
+        // so the page always shows which Xapiand version it documents.
+        SocialIcons: './src/components/SocialIcons.astro',
         // Edit link moves onto the page-title line (right-aligned); the stock footer
         // edit link renders nothing.
         PageTitle: './src/components/PageTitle.astro',
@@ -89,6 +100,8 @@ export default defineConfig({
         MobileTableOfContents: './src/components/MobileTableOfContents.astro',
         // Prev/next pager shows each destination's real title, not its "Overview" label.
         Pagination: './src/components/Pagination.astro',
+        // Page footer with a site-wide copyright line (like the blog), kept on every page.
+        Footer: './src/components/Footer.astro',
       },
     }),
   ],

@@ -1,0 +1,58 @@
+---
+// Override of Starlight's page Footer: keep the default footer parts (last-updated and the
+// prev/next pager -- the edit link is moved to the page-title line by our EditLink override),
+// and add a site-wide copyright line so it shows on every page, the way the blog does.
+import LastUpdated from 'virtual:starlight/components/LastUpdated';
+import Pagination from 'virtual:starlight/components/Pagination';
+
+const year = new Date().getFullYear();
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<footer class="sl-flex kz-footer">
+	<div class="meta sl-flex">
+		<LastUpdated />
+	</div>
+	<Pagination />
+
+	<div class="kz-site-footer">
+		<p class="kz-copyright">
+			<a href={`${base}/copyright/`}>Copyright &copy; {year} Dubalu LLC</a>. Released under the MIT License.
+		</p>
+	</div>
+</footer>
+
+<style>
+	.kz-footer {
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+	.meta {
+		gap: 0.75rem 3rem;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		margin-top: 3rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+	.meta > :global(p:only-child) {
+		margin-inline-start: auto;
+	}
+	.kz-site-footer {
+		border-top: 1px solid var(--sl-color-hairline);
+		padding-top: 1.5rem;
+		text-align: center;
+	}
+	.kz-copyright {
+		margin: 0;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+	.kz-copyright a {
+		color: inherit;
+		text-decoration: none;
+	}
+	.kz-copyright a:hover {
+		color: var(--sl-color-text-accent);
+	}
+</style>

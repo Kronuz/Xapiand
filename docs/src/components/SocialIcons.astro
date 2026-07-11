@@ -1,0 +1,64 @@
+---
+// Override of Starlight's SocialIcons: the default social links (GitHub), followed by a
+// version pill and a live CI status badge, so every page shows which Xapiand release it
+// documents and whether that release's CI is green. Order matches [GitHub] vX [CI|status].
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+
+const version = import.meta.env.PUBLIC_XAPIAND_VERSION;
+const repo = 'https://github.com/Kronuz/Xapiand';
+---
+
+<Default {...Astro.props} />
+
+<a
+	class="kz-version-badge"
+	href={`${repo}/releases/tag/v${version}`}
+	rel="noopener noreferrer"
+	target="_blank"
+	title={`Xapiand v${version}`}
+>v{version}</a>
+
+<a
+	class="kz-ci-badge"
+	href={`${repo}/actions/workflows/ci.yml?query=branch%3Amaster`}
+	rel="noopener noreferrer"
+	target="_blank"
+	title="CI status"
+>
+	<img src={`${repo}/actions/workflows/ci.yml/badge.svg?branch=master`} alt="CI status" />
+</a>
+
+<style>
+	.kz-version-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.2rem 0.55rem;
+		border-radius: 999px;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		line-height: 1;
+		white-space: nowrap;
+		color: var(--sl-color-text-accent);
+		background: var(--sl-color-gray-6);
+		border: 1px solid var(--sl-color-gray-5);
+		text-decoration: none;
+	}
+	.kz-version-badge:hover {
+		color: var(--sl-color-white);
+		border-color: var(--sl-color-text-accent);
+	}
+	.kz-ci-badge {
+		display: inline-flex;
+		align-items: center;
+	}
+	.kz-ci-badge img {
+		display: block;
+		height: 20px;
+	}
+	/* The header gets tight on phones; keep the version, drop the wider CI image. */
+	@media (max-width: 50rem) {
+		.kz-ci-badge {
+			display: none;
+		}
+	}
+</style>
