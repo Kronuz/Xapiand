@@ -30,11 +30,14 @@ const isSplash = route.entry.data.template === 'splash';
 <style>
 	.kz-page-head {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 1rem;
 	}
 	h1 {
+		flex: 1 1 auto;
+		min-width: 0;
 		margin-top: 1rem;
 		font-size: var(--sl-text-h1);
 		line-height: var(--sl-line-height-headings);
