@@ -7,9 +7,9 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
+    "dev": "TZ=UTC astro dev",
+    "build": "TZ=UTC astro build",
+    "preview": "TZ=UTC astro preview",
     "astro": "astro"
   },
   "dependencies": {
