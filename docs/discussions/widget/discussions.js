@@ -64,6 +64,7 @@
     smiley: "M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm3.82 1.636a.75.75 0 0 1 1.038.175l.007.009c.103.118.22.222.35.31.264.178.683.37 1.285.37.602 0 1.02-.192 1.285-.371.13-.088.247-.192.35-.31l.007-.008a.75.75 0 0 1 1.222.87l-.022-.015c.02.013.021.015.021.015v.001l-.001.002-.002.003-.005.007-.014.019a2.066 2.066 0 0 1-.184.213c-.16.166-.338.316-.53.445-.63.418-1.37.638-2.127.629-.946 0-1.652-.308-2.126-.63a3.331 3.331 0 0 1-.715-.657l-.014-.02-.005-.006-.002-.003v-.002h-.001l.613-.432-.614.43a.75.75 0 0 1 .183-1.044ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM5 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm5.25 2.25.592.416a97.71 97.71 0 0 0-.592-.416Z",
     person: "M10.561 8.073a6.005 6.005 0 0 1 3.432 5.142.75.75 0 1 1-1.498.07 4.5 4.5 0 0 0-8.99 0 .75.75 0 0 1-1.498-.07 6.004 6.004 0 0 1 3.431-5.142 3.999 3.999 0 1 1 5.123 0ZM10.5 5a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z",
     kebab: "M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
+    x: "M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z",
     reply: "M6.78 1.97a.75.75 0 0 1 0 1.06L3.81 6h6.44A4.75 4.75 0 0 1 15 10.75v2.5a.75.75 0 0 1-1.5 0v-2.5a3.25 3.25 0 0 0-3.25-3.25H3.81l2.97 2.97a.749.749 0 0 1-.018 1.042.751.751 0 0 1-1.042.018L1.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z",
     copy: "M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Zm5-5C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z",
     pencil: "M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z",
@@ -806,8 +807,24 @@
     setTimeout(function () { target.classList.remove("gc-target"); }, 2400);
   }
 
+  // The session token (identity, HMAC-signed) lives in localStorage so sign-in works without
+  // a cross-site cookie, which mobile Safari blocks. It rides as an Authorization: Bearer
+  // header on every API call; the cross-site cookie stays a same-site/desktop fallback.
+  function gcToken(val) {
+    var key = "gc:token";
+    try {
+      if (arguments.length === 0) return localStorage.getItem(key) || "";
+      if (val == null) { localStorage.removeItem(key); return ""; }
+      localStorage.setItem(key, val); return val;
+    } catch (_) { return ""; }
+  }
+
   function api(cfg, path, opts) {
-    return fetch((cfg.backend || "") + path, Object.assign({ credentials: "include" }, opts || {}));
+    opts = opts || {};
+    var headers = Object.assign({}, opts.headers);
+    var tok = gcToken();
+    if (tok) headers["Authorization"] = "Bearer " + tok;
+    return fetch((cfg.backend || "") + path, Object.assign({ credentials: "include" }, opts, { headers: headers }));
   }
 
   async function fetchMe(cfg) {
@@ -835,8 +852,21 @@
   }
 
   function openLogin(cfg) {
-    const url = (cfg.backend || "") + "/auth/login?return=" + encodeURIComponent(location.href);
-    window.open(url, "gc-oauth", "width=600,height=720");
+    // Full-page redirect (not a popup): the OAuth callback returns here with the token in the
+    // URL fragment, which works on mobile where a popup's window.opener/postMessage do not.
+    location.href = (cfg.backend || "") + "/auth/login?return=" + encodeURIComponent(location.href);
+  }
+
+  // On load, pick up a token handed back by the OAuth redirect (#gc_token=...), stash it, and
+  // strip it from the URL so it isn't left in history or the address bar.
+  function absorbAuthToken() {
+    var h = location.hash || "";
+    var m = h.match(/[#&]gc_token=([^&]*)/);
+    if (!m) return;
+    gcToken(decodeURIComponent(m[1]));
+    var rest = h.replace(/[#&]gc_token=[^&]*/, "");
+    if (rest === "#") rest = "";
+    try { history.replaceState(null, "", location.pathname + location.search + rest); } catch (_) {}
   }
 
   function submitter(root, cfg, opts) {
@@ -885,7 +915,7 @@
   // reader's browser. Rating is forced to "g" (work-appropriate). cfg.giphyKey is a
   // public client key; the feature is only shown when it's set.
   function buildGifPicker(ta, cfg, anchor) {
-    const panel = el("div", "gc-gif"); panel.hidden = true;
+    const panel = el("div", "gc gc-gif"); panel.hidden = true;
     const search = el("input", "gc-gif-search");
     search.type = "search"; search.placeholder = "Search GIPHY…"; search.setAttribute("aria-label", "Search GIPHY");
     const body = el("div", "gc-gif-body");
@@ -899,7 +929,13 @@
     const credit = el("a", "gc-gif-credit", "Powered by GIPHY");
     credit.href = "https://giphy.com"; credit.target = "_blank"; credit.rel = "noopener";
     footer.appendChild(credit);
-    panel.append(search, body, footer);
+    const closeBtn = el("button", "gc-gif-close"); closeBtn.type = "button";
+    closeBtn.title = "Close"; closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.innerHTML = octicon("x");
+    closeBtn.addEventListener("click", () => close());
+    const gifHead = el("div", "gc-gif-head");
+    gifHead.append(search, closeBtn);
+    panel.append(gifHead, body, footer);
 
     // The overlay sits on top of the grid: a spinner while loading (old results stay
     // visible, dimmed, so nothing reflows), or a centered message for empty/error.
@@ -1049,6 +1085,13 @@
     // compose box's overflow:hidden), below the button by default, flipped above when
     // there isn't room. Closes on outside click, Esc, or after a pick.
     function position() {
+      // Mobile: the popup goes full-screen (see CSS). Clear the desktop inline
+      // positioning so the fixed-inset overlay takes over and nothing drifts as the
+      // toolbar reflows.
+      if (window.matchMedia("(max-width: 600px)").matches) {
+        panel.style.width = ""; panel.style.left = ""; panel.style.top = "";
+        return;
+      }
       const r = anchor.getBoundingClientRect();
       const W = 320;
       const left = Math.max(8, Math.min(r.right - W, window.innerWidth - W - 8));
@@ -1064,6 +1107,10 @@
     function onKey(e) { if (e.key === "Escape") { e.stopPropagation(); close(); ta.focus(); } }
     function onReflow() { position(); }
     function open() {
+      // Portal the panel to <body> so it escapes any nested stacking context (e.g. the
+      // "⋯" overflow dropdown, z-index:60) and its fixed/full-screen overlay sits above
+      // the site's fixed header (z-index:10) instead of behind it.
+      document.body.appendChild(panel);
       panel.hidden = false;
       position();
       search.value = ""; load(""); search.focus();
@@ -1120,58 +1167,110 @@
         : (signedIn ? "Add your comment here..." : "Sign in to comment."));
     if (opts.initialValue) ta.value = opts.initialValue;
 
+    // Auto-grow instead of a manual resize grip: the grip sits at the textarea's corner
+    // (mid-widget, above the footer), not at the focus-ring corner, which reads as off.
+    // Grow the textarea with its content up to a cap, then let it scroll.
+    const TA_MAX = 420;
+    function autoGrow() {
+      ta.style.height = "auto";
+      ta.style.height = Math.min(ta.scrollHeight, TA_MAX) + "px";
+    }
+    ta.addEventListener("input", autoGrow);
+    requestAnimationFrame(autoGrow);
+
     // Markdown toolbar (Write mode), grouped like GitHub's action-bar, on the
     // same row as the tabs (gc-compose-head). Disabled until the reader signs in.
+    // The first few tools stay inline everywhere; the rest live in an overflow group
+    // that renders inline on desktop (display:contents) but collapses behind a "⋯"
+    // (more) button on mobile, so the toolbar fits on the tabs' row instead of wrapping.
     const toolbar = el("div", "gc-toolbar");
-    toolbar.appendChild(el("span", "gc-tool-divider"));
-    const TOOL_GROUPS = [
-      [
-        ["heading", "### ", "", "Heading", "line"],
-        ["bold", "**", "**", "Bold"],
-        ["italic", "_", "_", "Italic"],
-        ["quote", "> ", "", "Quote", "line"],
-        ["code", "`", "`", "Code", "code"],
-        ["link", "[", "](url)", "Link", "link"],
-      ],
-      [
-        ["list-ordered", "1. ", "", "Numbered list", "line"],
-        ["list-unordered", "- ", "", "Unordered list", "line"],
-        ["tasklist", "- [ ] ", "", "Task list", "line"],
-      ],
-    ];
-    TOOL_GROUPS.forEach((group, gi) => {
-      if (gi > 0) toolbar.appendChild(el("span", "gc-tool-divider"));
-      for (const [icon, before, after, title, mode] of group) {
-        const b = el("button", "gc-tool"); b.type = "button"; b.title = title; b.tabIndex = -1;
-        b.innerHTML = octicon(icon);
-        b.disabled = !signedIn;
-        if (signedIn) {
-          // Keep focus/selection in the textarea so execCommand inserts undoably.
-          b.addEventListener("mousedown", (e) => e.preventDefault());
-          b.addEventListener("click", () => {
-            if (mode === "line") toggleLinePrefix(ta, before);
-            else if (mode === "code") applyCode(ta);
-            else if (mode === "link") applyLink(ta);
-            else toggleWrap(ta, before, after);
-          });
-        }
-        toolbar.appendChild(b);
+
+    // Build one formatting tool button (shared by the primary bar and the overflow group).
+    function makeTool(icon, before, after, title, mode) {
+      const b = el("button", "gc-tool"); b.type = "button"; b.title = title; b.tabIndex = -1;
+      b.innerHTML = octicon(icon);
+      b.disabled = !signedIn;
+      if (signedIn) {
+        // Keep focus/selection in the textarea so execCommand inserts undoably.
+        b.addEventListener("mousedown", (e) => e.preventDefault());
+        b.addEventListener("click", () => {
+          if (mode === "line") toggleLinePrefix(ta, before);
+          else if (mode === "code") applyCode(ta);
+          else if (mode === "link") applyLink(ta);
+          else toggleWrap(ta, before, after);
+          closeOverflow();
+        });
       }
-    });
+      return b;
+    }
+
+    // Primary tools: always inline. Overflow tools (+ the GIF button): inline on desktop,
+    // tucked behind the "⋯" on mobile. A `null` entry is a group divider.
+    const PRIMARY_TOOLS = [
+      ["heading", "### ", "", "Heading", "line"],
+      ["bold", "**", "**", "Bold"],
+      ["italic", "_", "_", "Italic"],
+      ["quote", "> ", "", "Quote", "line"],
+      ["code", "`", "`", "Code", "code"],
+    ];
+    const OVERFLOW_TOOLS = [
+      ["link", "[", "](url)", "Link", "link"],
+      null,
+      ["list-ordered", "1. ", "", "Numbered list", "line"],
+      ["list-unordered", "- ", "", "Unordered list", "line"],
+      ["tasklist", "- [ ] ", "", "Task list", "line"],
+    ];
+    for (const t of PRIMARY_TOOLS) toolbar.appendChild(makeTool(...t));
+
+    // The "⋯" more button (shown only on mobile, via CSS) toggles the overflow group.
+    const moreBtn = el("button", "gc-tool gc-tool-more"); moreBtn.type = "button";
+    moreBtn.title = "More"; moreBtn.tabIndex = -1; moreBtn.setAttribute("aria-label", "More formatting");
+    moreBtn.innerHTML = octicon("kebab");
+    moreBtn.disabled = !signedIn;
+    toolbar.appendChild(moreBtn);
+
+    const overflow = el("div", "gc-tool-overflow");
+    for (const t of OVERFLOW_TOOLS) {
+      overflow.appendChild(t ? makeTool(...t) : el("span", "gc-tool-divider"));
+    }
+
+    // Overflow open/close (mobile dropdown): closes on outside click, Esc, or after a tool.
+    let overflowOpen = false;
+    function closeOverflow() {
+      if (!overflowOpen) return;
+      overflowOpen = false; overflow.classList.remove("gc-open");
+      document.removeEventListener("mousedown", onOverflowDown, true);
+      document.removeEventListener("keydown", onOverflowKey, true);
+    }
+    function onOverflowDown(e) { if (!overflow.contains(e.target) && !moreBtn.contains(e.target)) closeOverflow(); }
+    function onOverflowKey(e) { if (e.key === "Escape") { e.stopPropagation(); closeOverflow(); ta.focus(); } }
+    if (signedIn) {
+      moreBtn.addEventListener("mousedown", (e) => e.preventDefault());
+      moreBtn.addEventListener("click", () => {
+        if (overflowOpen) { closeOverflow(); return; }
+        overflowOpen = true; overflow.classList.add("gc-open");
+        document.addEventListener("mousedown", onOverflowDown, true);
+        document.addEventListener("keydown", onOverflowKey, true);
+      });
+    }
+    toolbar.appendChild(overflow);
+
+    // Markdown-supported hint (a markdown-icon link). Placed in the actions footer,
+    // beside the "Signed in as…" / "Sign in…" text (built below), not in the toolbar.
     const mdHint = el("a", "gc-md-hint");
     mdHint.href = "https://docs.github.com/get-started/writing-on-github";
     mdHint.target = "_blank"; mdHint.rel = "noopener"; mdHint.title = "Markdown is supported";
     mdHint.innerHTML = octicon("markdown");
-    toolbar.appendChild(mdHint);
 
-    // Optional GIPHY picker (client-side; only when a key is configured). The button
-    // toggles a floating popup anchored to it (position:fixed, so it isn't clipped by
-    // the compose box's overflow:hidden). Button + popup share a wrapper for lifecycle.
+    // Optional GIPHY picker (client-side; only when a key is configured). The button lives
+    // in the overflow group (so it tucks into the "⋯" on mobile). Its popup floats off the
+    // button on desktop and goes full-screen on mobile (see buildGifPicker/position).
     let gifPanel = null;
     if (cfg.giphyKey) {
       const gifWrap = el("span", "gc-gif-wrap");
       const gifBtn = el("button", "gc-tool gc-tool-gif", "GIF");
       gifBtn.type = "button"; gifBtn.title = "Add a GIF"; gifBtn.tabIndex = -1;
+      // Shown whenever GIPHY is configured, disabled until signed in (like the other tools).
       gifBtn.disabled = !signedIn;
       gifWrap.appendChild(gifBtn);
       if (signedIn) {
@@ -1182,14 +1281,55 @@
           if (gifPanel.hidden) gifPanel.gcOpen(); else gifPanel.gcClose();
         });
       }
-      toolbar.insertBefore(gifWrap, mdHint);
+      // A divider separates the GIF button from the list group before it.
+      overflow.appendChild(el("span", "gc-tool-divider"));
+      overflow.appendChild(gifWrap);
     }
 
     // Preview pane (GitHub-rendered, reuses .gc-body so it matches a posted comment).
     const preview = el("div", "gc-preview gc-body");
     preview.hidden = true;
 
-    let lastText = null, lastHtml = "";  // browser-side preview cache
+    let lastText = null, lastHtml = "";     // browser-side preview cache
+    let pfInflight = null, pfText = null, pfSeq = 0;  // in-flight request (dedup + staleness)
+    let lastPrefetchAt = 0;
+
+    // Render `text` to preview HTML via the backend, caching the result and de-duplicating
+    // concurrent requests for the same text. Shared by the Preview tab and the on-intent
+    // prefetch below, so a hover-warmed cache makes clicking Preview instant. A monotonic
+    // seq guards against a slow older response clobbering a newer one.
+    function fetchPreview(text) {
+      if (text === lastText) return Promise.resolve(lastHtml);   // cache hit
+      if (pfInflight && pfText === text) return pfInflight;       // already fetching this text
+      const seq = ++pfSeq;
+      pfText = text;
+      const p = (async () => {
+        const r = await api(cfg, "/api/preview", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text }),
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const d = await r.json();
+        const html = (d.html && d.html.trim()) ? d.html : '<p class="gc-muted">Nothing to preview.</p>';
+        if (seq === pfSeq) { lastText = text; lastHtml = html; }  // only cache the latest request
+        return html;
+      })();
+      pfInflight = p;
+      p.then(() => {}, () => {}).then(() => { if (pfInflight === p) { pfInflight = null; pfText = null; } });
+      return p;
+    }
+
+    // Warm the cache on *intent* to preview (hovering/focusing the Preview tab), throttled, so
+    // the round-trip finishes before the click — without prefetching for the many users who
+    // just type and submit. Skips when empty or already cached; fetchPreview de-dupes the rest.
+    function prefetchPreview() {
+      const text = ta.value;
+      if (!text.trim() || text === lastText) return;
+      const now = Date.now();
+      if (now - lastPrefetchAt < 500) return;   // throttle repeated intent
+      lastPrefetchAt = now;
+      fetchPreview(text).catch(() => {});        // ignore errors here; showPreview surfaces them
+    }
 
     function showWrite() {
       writeTab.classList.add("gc-tab-on"); previewTab.classList.remove("gc-tab-on");
@@ -1202,18 +1342,10 @@
       toolbar.hidden = true; ta.hidden = true; preview.hidden = false;
       const text = ta.value;
       if (!text.trim()) { preview.innerHTML = '<p class="gc-muted">Nothing to preview.</p>'; return; }
-      if (text === lastText) { preview.innerHTML = lastHtml; return; }  // unchanged → reuse
+      if (text === lastText) { preview.innerHTML = lastHtml; return; }  // instant (often hover-warmed)
       preview.innerHTML = '<p class="gc-muted">Loading preview…</p>';
       try {
-        const r = await api(cfg, "/api/preview", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: text }),
-        });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const d = await r.json();
-        lastHtml = (d.html && d.html.trim()) ? d.html : '<p class="gc-muted">Nothing to preview.</p>';
-        lastText = text;
-        preview.innerHTML = lastHtml;
+        preview.innerHTML = await fetchPreview(text);
       } catch (e) {
         preview.innerHTML = '<p class="gc-muted">Preview failed (' + e.message + ").</p>";
       }
@@ -1226,6 +1358,11 @@
       // Enabled composer: tabs switch, toolbar formats, submit posts.
       writeTab.addEventListener("click", showWrite);
       previewTab.addEventListener("click", showPreview);
+      // Prefetch on intent to open Preview (hover / keyboard focus / touch), throttled, so the
+      // round-trip is already done by click time — only for users who actually reach for it.
+      previewTab.addEventListener("pointerenter", prefetchPreview);
+      previewTab.addEventListener("focus", prefetchPreview);
+      previewTab.addEventListener("touchstart", prefetchPreview, { passive: true });
       submit = el("button", "gc-submit", editMode ? "Update comment" : (replyMode ? "Reply" : "Comment"));
       const onSubmit = submitter(root, cfg, opts);
       submit.addEventListener("click", () => onSubmit(ta, submit));
@@ -1239,6 +1376,46 @@
         if (k === "b") { e.preventDefault(); toggleWrap(ta, "**", "**"); }
         else if (k === "i") { e.preventDefault(); toggleWrap(ta, "_", "_"); }
         else if (k === "k") { e.preventDefault(); applyLink(ta); }
+      });
+
+      // Smart Markdown Enter: continue a list / quote / task item on Enter (ordered lists
+      // auto-increment, task items continue unchecked); a second Enter on an empty item
+      // clears its marker and exits the list. execCommand keeps the native undo stack.
+      function listContinuation(line) {
+        let m;
+        if ((m = /^(\s*[-*+]\s+\[[ xX]\]\s+)(.*)$/.exec(line)))     // - [ ] task
+          return { next: m[1].replace(/\[[ xX]\]/, "[ ]"), empty: m[2] === "" };
+        if ((m = /^(\s*[-*+]\s+)(.*)$/.exec(line)))                 // - item
+          return { next: m[1], empty: m[2] === "" };
+        if ((m = /^(\s*)(\d+)([.)])(\s+)(.*)$/.exec(line)))         // 1. item
+          return { next: m[1] + (parseInt(m[2], 10) + 1) + m[3] + m[4], empty: m[5] === "" };
+        if ((m = /^(\s*>+ ?)(.*)$/.exec(line)))                     // > quote
+          return { next: m[1], empty: m[2] === "" };
+        return null;
+      }
+      ta.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+        const val = ta.value, s = ta.selectionStart;
+        if (s !== ta.selectionEnd) return;
+        const ls = val.lastIndexOf("\n", s - 1) + 1;
+        let le = val.indexOf("\n", s); if (le === -1) le = val.length;
+        const cont = listContinuation(val.slice(ls, le));
+        if (!cont) return;
+        e.preventDefault();
+        if (cont.empty) { ta.setSelectionRange(ls, le); document.execCommand("delete"); }
+        else document.execCommand("insertText", false, "\n" + cont.next);
+        autoGrow();
+      });
+
+      // Paste a bare URL over a selection → a Markdown link: [selection](url).
+      ta.addEventListener("paste", (e) => {
+        const s = ta.selectionStart, en = ta.selectionEnd;
+        if (s === en) return;
+        const url = ((e.clipboardData && e.clipboardData.getData("text")) || "").trim();
+        if (!url || /\s/.test(url) || !/^(https?:\/\/|www\.)\S+$/i.test(url)) return;
+        e.preventDefault();
+        document.execCommand("insertText", false, "[" + ta.value.slice(s, en) + "](" + url + ")");
+        autoGrow();
       });
       if (plain) {
         // Cancel discards the editor: confirm first if there are unsaved changes
@@ -1264,12 +1441,15 @@
         const out = el("a", null, "Sign out"); out.href = "#";
         out.addEventListener("click", async (e) => {
           e.preventDefault();
+          gcToken(null);
           await api(cfg, "/auth/logout", { method: "POST" }).catch(function () {});
           refresh(root, cfg);
         });
         hint.appendChild(document.createTextNode(" · "));
         hint.appendChild(out);
-        actions.append(hint, submit);
+        const leftIn = el("span", "gc-actions-left");
+        leftIn.append(mdHint, hint);
+        actions.append(leftIn, submit);
       }
     } else {
       // Signed out: the whole composer is shown but disabled, and the action
@@ -1281,7 +1461,9 @@
       submit = el("button", "gc-signin-btn"); submit.type = "button";
       submit.innerHTML = GITHUB_MARK_SVG + "<span>Sign in with GitHub</span>";
       submit.addEventListener("click", () => openLogin(cfg));
-      actions.append(hint, submit);
+      const leftOut = el("span", "gc-actions-left");
+      leftOut.append(mdHint, hint);
+      actions.append(leftOut, submit);
     }
 
     // Tabs + toolbar share one row; the toolbar is hidden in Preview (above).
@@ -1342,12 +1524,22 @@
         refresh(root, cfg).then(function () { if (cfg.term) load(root, cfg); });
       }
     });
+    // Mobile fallback: the OAuth flow often opens in a new tab where window.opener (and so
+    // the postMessage above) does not bridge back. When the reader returns to this tab, the
+    // session cookie is already set, so re-resolve auth on the way back in. Guarded on
+    // SIGNED_IN so a plain tab switch while signed in costs nothing.
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible" && !SIGNED_IN) {
+        refresh(root, cfg).then(function () { if (cfg.term) load(root, cfg); });
+      }
+    });
     // Re-focus when the hash changes to a comment on the current page (e.g. the
     // reader pasted a "Copy link" URL while already here).
     window.addEventListener("hashchange", function () { focusHashComment(root); });
   }
 
   function init() {
+    absorbAuthToken();
     document.querySelectorAll(".gc[data-term]").forEach(mount);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
