@@ -435,6 +435,26 @@ html.snippet-no-lines .snippet-code pre.shiki .line::before {
 	color: var(--sl-color-text-accent);
 	font-weight: 700;
 }
+/* Global text selection. Set an explicit background AND text color for both themes:
+   without this the browser default applies, which in dark mode paints a light box but
+   leaves the dim body text unchanged, so the selected text is barely readable. The
+   more-specific .snippet-code rules below keep their blue tint inside code. */
+::selection {
+	background-color: #c8e4a1;
+	color: #1d3007;
+}
+::-moz-selection {
+	background-color: #c8e4a1;
+	color: #1d3007;
+}
+[data-theme='dark'] ::selection {
+	background-color: #3d6b1e;
+	color: #e3f0cf;
+}
+[data-theme='dark'] ::-moz-selection {
+	background-color: #3d6b1e;
+	color: #e3f0cf;
+}
 /* The actual text selection gets a distinct blue tint (the editor theme's
    selection color), so a precise selection reads apart from the warm/gray line
    band underneath it. */
