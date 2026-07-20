@@ -1,4 +1,4 @@
-/* Blog discussions widget styles — GitHub/giscus comment timeline.
+/* Blog discussions widget styles for a threaded comment timeline.
    Colors alias the Kronuz/Starlight theme tokens (--sl-color-*), so the widget
    follows the site palette and its light/dark toggle automatically. The fallbacks
    apply only on the standalone /demo page, where Starlight tokens don't exist. */

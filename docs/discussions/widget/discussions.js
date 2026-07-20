@@ -1,5 +1,5 @@
 // Blog discussions widget — fetches a page's discussion (its comments) from our backend
-// and renders them in the GitHub/giscus timeline style. Comment bodies arrive as sanitized,
+// and renders them in a threaded timeline. Comment bodies arrive as sanitized,
 // server-rendered HTML, so the widget only owns the surrounding chrome.
 //
 // Readers sign in through the tenant's OAuth provider for identity; comments/replies/edits/reactions
@@ -911,7 +911,7 @@
 
   // Client-side GIPHY picker (no backend): an inline panel with a search box + a grid
   // of results. Picking one inserts a markdown image of the GIF at the caret, which
-  // cmark-gfm renders as <img> (https only). The GIF loads from GIPHY's CDN in the
+  // The server renders this as an <img> (https only). The GIF loads from GIPHY's CDN in the
   // reader's browser. Rating is forced to "g" (work-appropriate). cfg.giphyKey is a
   // public client key; the feature is only shown when it's set.
   function buildGifPicker(ta, cfg, anchor) {
@@ -1366,7 +1366,7 @@
       submit = el("button", "gc-submit", editMode ? "Update comment" : (replyMode ? "Reply" : "Comment"));
       const onSubmit = submitter(root, cfg, opts);
       submit.addEventListener("click", () => onSubmit(ta, submit));
-      // Keyboard shortcuts (GitHub/giscus): Cmd/Ctrl+Enter submits; +B/+I/+K format.
+      // Keyboard shortcuts: Cmd/Ctrl+Enter submits; +B/+I/+K format.
       ta.addEventListener("keydown", (e) => {
         const mod = e.metaKey || e.ctrlKey;
         if (!mod) return;
@@ -1429,7 +1429,7 @@
         };
         const cancel = el("button", "gc-cancel", "Cancel"); cancel.type = "button";
         cancel.addEventListener("click", doCancel);
-        // Esc in the textarea is the same as clicking Cancel (GitHub/giscus behavior).
+        // Esc in the textarea is the same as clicking Cancel.
         ta.addEventListener("keydown", (e) => {
           if (e.key === "Escape") { e.preventDefault(); doCancel(); }
         });

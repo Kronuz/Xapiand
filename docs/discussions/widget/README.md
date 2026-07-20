@@ -1,7 +1,7 @@
 # Discussions widget
 
 The front-end half of the self-hosted discussions system: a small, framework-free
-`discussions.css` + `discussions.js` that render a page's comments in the GitHub/giscus
+`discussions.css` + `discussions.js` that render a page's comments in a threaded
 timeline style and let a signed-in reader post. Comment bodies are server-rendered HTML
 (the backend renders and sanitizes Markdown), so only the chrome is styled here.
 
