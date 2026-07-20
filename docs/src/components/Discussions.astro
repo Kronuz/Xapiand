@@ -4,14 +4,11 @@
  *
  * Renders the framework-agnostic widget in `discussions/widget/` and points it at the
  * discussions backend, keyed by a per-page `term` (the post slug). The widget reads/writes
- * through the backend, which stores comments in SQLite and renders Markdown with
- * cmark-gfm (GitHub's renderer), so bodies match GitHub. See `discussions/README.md`.
+ * through the multi-tenant Worker, which stores comments in D1 and renders sanitized
+ * Markdown on the server. See `discussions/README.md`.
  *
- * The backend base URL must be reachable from the reader's browser (the VM's HTTPS
- * URL in production). The blog passes it via the `backend` prop, sourced from
- * `site.config.json` (`discussions.backendUrl`). For local development, the
- * `PUBLIC_DISCUSSIONS_BACKEND` env var overrides it; with neither, the widget falls
- * back to same-origin (only useful for the backend's own `/demo` page).
+ * The backend prop is the complete tenant base URL. PUBLIC_DISCUSSIONS_BACKEND supplies
+ * a convenient build-time default; with neither, the widget falls back to same-origin.
  */
 import '../../discussions/widget/discussions.css';
 import '../../discussions/widget/highlight.css';
@@ -25,10 +22,9 @@ interface Props {
   subtitle?: string;
   /** Canonical page URL, stored as page metadata with the thread. */
   url?: string;
-  /** Backend base URL. The blog passes this from site.config.json; falls back to
-   *  the PUBLIC_DISCUSSIONS_BACKEND env var (local dev) or same-origin. */
+  /** Complete tenant base URL; defaults to PUBLIC_DISCUSSIONS_BACKEND or same-origin. */
   backend?: string;
-  /** Login suffix to drop when displaying handles (cosmetic; e.g. "_LinkedIn"). */
+  /** Login suffix to drop when displaying handles (cosmetic; e.g. "_sso"). */
   stripSuffix?: string;
   /** Public GIPHY key; when set, the composer shows a client-side GIF picker. */
   giphyKey?: string;

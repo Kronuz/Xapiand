@@ -1,10 +1,10 @@
 // Blog discussions widget — fetches a page's discussion (its comments) from our backend
-// and renders them in the GitHub/giscus timeline style. Comment bodies are server-rendered,
-// sanitized HTML (bodyHTML) from cmark-gfm (GitHub's renderer), so they match GitHub exactly.
+// and renders them in the GitHub/giscus timeline style. Comment bodies arrive as sanitized,
+// server-rendered HTML, so the widget only owns the surrounding chrome.
 //
-// Readers sign in with GitHub (OAuth) for identity; comments/replies/edits/reactions
-// are stored by the backend (self-hosted SQLite). Signed-out readers see a read-only
-// timeline + a "Sign in with GitHub" button.
+// Readers sign in through the tenant's OAuth provider for identity; comments/replies/edits/reactions
+// are stored by the backend. Signed-out readers see a read-only timeline and the tenant's
+// sign-in button.
 (function () {
   // Official GitHub mark (Octocat), inlined so the sign-in button needs no asset.
   const GITHUB_MARK_SVG =
@@ -810,10 +810,10 @@
   // The session token (identity, HMAC-signed) lives in localStorage so sign-in works without
   // a cross-site cookie, which mobile Safari blocks. It rides as an Authorization: Bearer
   // header on every API call; the cross-site cookie stays a same-site/desktop fallback.
-  function gcToken(val) {
-    var key = "gc:token";
+  function gcToken(cfg, val) {
+    var key = "gc:token:" + (cfg.backend || "same-origin");
     try {
-      if (arguments.length === 0) return localStorage.getItem(key) || "";
+      if (arguments.length === 1) return localStorage.getItem(key) || "";
       if (val == null) { localStorage.removeItem(key); return ""; }
       localStorage.setItem(key, val); return val;
     } catch (_) { return ""; }
@@ -822,7 +822,7 @@
   function api(cfg, path, opts) {
     opts = opts || {};
     var headers = Object.assign({}, opts.headers);
-    var tok = gcToken();
+    var tok = gcToken(cfg);
     if (tok) headers["Authorization"] = "Bearer " + tok;
     return fetch((cfg.backend || "") + path, Object.assign({ credentials: "include" }, opts, { headers: headers }));
   }
@@ -837,17 +837,17 @@
     }
   }
 
-  // Server-driven per-tenant config (multi-tenant): the backend returns this blog's
-  // widget config for the request Origin, so a tenant only needs to point `data-backend`
-  // here and register its origin — no per-site config baking. Values provided via data
+  // Server-driven per-tenant config (multi-tenant): the tenant base URL selects this
+  // blog's widget config, and the backend also verifies the request Origin. Values provided via data
   // attributes win; we only fill what's missing, so a fully-configured blog never fetches.
   async function fetchConfig(cfg) {
     try {
-      const r = await api(cfg, "/api/config");
+      const r = await api(cfg, "/config");
       if (!r.ok) return;
       const c = await r.json();
-      if (!cfg.stripSuffix && c.stripSuffix) cfg.stripSuffix = c.stripSuffix;
-      if (!cfg.giphyKey && c.giphyKey) cfg.giphyKey = c.giphyKey;
+      const widget = c.widget || c;
+      if (!cfg.stripSuffix && widget.stripSuffix) cfg.stripSuffix = widget.stripSuffix;
+      if (!cfg.giphyKey && widget.giphyKey) cfg.giphyKey = widget.giphyKey;
     } catch (_) {}
   }
 
@@ -859,11 +859,11 @@
 
   // On load, pick up a token handed back by the OAuth redirect (#gc_token=...), stash it, and
   // strip it from the URL so it isn't left in history or the address bar.
-  function absorbAuthToken() {
+  function absorbAuthToken(cfg) {
     var h = location.hash || "";
     var m = h.match(/[#&]gc_token=([^&]*)/);
     if (!m) return;
-    gcToken(decodeURIComponent(m[1]));
+    gcToken(cfg, decodeURIComponent(m[1]));
     var rest = h.replace(/[#&]gc_token=[^&]*/, "");
     if (rest === "#") rest = "";
     try { history.replaceState(null, "", location.pathname + location.search + rest); } catch (_) {}
@@ -1441,7 +1441,7 @@
         const out = el("a", null, "Sign out"); out.href = "#";
         out.addEventListener("click", async (e) => {
           e.preventDefault();
-          gcToken(null);
+          gcToken(cfg, null);
           await api(cfg, "/auth/logout", { method: "POST" }).catch(function () {});
           refresh(root, cfg);
         });
@@ -1453,13 +1453,15 @@
       }
     } else {
       // Signed out: the whole composer is shown but disabled, and the action
-      // button becomes "Sign in with GitHub" (the only thing the reader can do).
+      // button becomes the tenant provider's sign-in action (the only thing the reader can do).
       ta.disabled = true;
       writeTab.disabled = true; previewTab.disabled = true;
       const hint = el("span", "gc-hint");
-      hint.textContent = "Sign in with GitHub to comment.";
+      const provider = me.oauthName || "OAuth";
+      hint.textContent = "Sign in with " + provider + " to comment.";
       submit = el("button", "gc-signin-btn"); submit.type = "button";
-      submit.innerHTML = GITHUB_MARK_SVG + "<span>Sign in with GitHub</span>";
+      if (provider === "GitHub") submit.innerHTML = GITHUB_MARK_SVG;
+      submit.appendChild(el("span", null, "Sign in with " + provider));
       submit.addEventListener("click", () => openLogin(cfg));
       const leftOut = el("span", "gc-actions-left");
       leftOut.append(mdHint, hint);
@@ -1507,6 +1509,7 @@
     };
     CFG = cfg;
     ROOT = root;
+    absorbAuthToken(cfg);
     root.innerHTML =
       '<div class="gc-header"><span class="gc-count">Comments</span></div>' +
       '<div class="gc-list"></div>';
@@ -1539,7 +1542,6 @@
   }
 
   function init() {
-    absorbAuthToken();
     document.querySelectorAll(".gc[data-term]").forEach(mount);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
