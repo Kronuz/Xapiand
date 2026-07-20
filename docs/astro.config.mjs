@@ -14,6 +14,7 @@ import kronuzDark from './src/styles/kronuz-dark.json';
 import kronuzLight from './src/styles/kronuz-light.json';
 import { sidebar } from './src/lib/sidebar.mjs';
 import { restLangs } from './src/plugins/rest-lang.mjs';
+import remarkAnsi from './src/plugins/remark-ansi.mjs';
 import remarkHints from './src/plugins/remark-hints.mjs';
 import remarkD2 from './src/plugins/remark-d2.mjs';
 import { pluginRestCurl } from './src/plugins/ec-rest-curl.mjs';
@@ -31,7 +32,7 @@ export default defineConfig({
   markdown: {
     // remarkD2 turns ```d2 fences into themed (light+dark) diagrams at build time
     // by shelling out to the d2 CLI (must be on PATH); see src/remark-d2.mjs.
-    remarkPlugins: [remarkHints, remarkD2],
+    remarkPlugins: [remarkAnsi, remarkHints, remarkD2],
     // Open external (http/https) links in a new tab; internal links are relative,
     // so they're untouched and keep navigating in place.
     rehypePlugins: [
