@@ -1,6 +1,6 @@
 /* Blog discussions widget styles for a threaded comment timeline.
-   Colors alias the Kronuz/Starlight theme tokens (--sl-color-*), so the widget
-   follows the site palette and its light/dark toggle automatically. The fallbacks
+   Colors alias Starlight theme tokens (--sl-color-*) when available, so the widget
+   follows the host palette and its light/dark toggle automatically. The fallbacks
    apply only on the standalone /demo page, where Starlight tokens don't exist. */
 .gc {
   --gc-bg: var(--sl-color-bg, #ffffff);
@@ -171,18 +171,18 @@
   border: 1px solid var(--gc-border); border-radius: 6px;
   padding: 12px 16px; background: var(--gc-bg); color: var(--gc-fg); font: inherit;
 }
-/* Rounded border that turns accent on focus — same look as the "Write a reply…" stub. */
+/* Rounded border that turns accent on focus, matching the "Write a reply…" stub. */
 .gc-compose-box textarea:focus { outline: none; border-color: var(--gc-link); }
 .gc-compose-box textarea[hidden] { display: none; }
 .gc-textarea:disabled { background: var(--gc-bg); color: var(--gc-muted); cursor: not-allowed; resize: none; }
-/* The preview is rendered content, not an input — no border; keep box-sizing so its
+/* The preview is rendered content, not an input. It has no border; keep box-sizing so its
    held height matches the textarea when toggling Write/Preview. */
 .gc-compose-box .gc-preview { box-sizing: border-box; }
 /* Top-level composer only: a flush layout. The tabs and textarea sit right against the
    widget border (no head/body padding), the textarea drops its own frame, and the whole
    box shows the focus ring when the textarea is active (instead of a border on the
    textarea itself). Scoped to `.gc > .gc-composer` so reply/edit composers keep their
-   framed textarea — their box has no border of its own to carry the focus ring. */
+   framed textarea because their box has no border of its own to carry the focus ring. */
 .gc > .gc-composer .gc-compose-head { padding: 0 8px 0 0; }
 .gc > .gc-composer .gc-compose-body { padding: 0; }
 .gc > .gc-composer .gc-compose-box textarea { border: 0; border-radius: 0; }
@@ -364,7 +364,7 @@
    (and any minimized-comment background) can't paint over it. */
 .gc-comment.gc-menu-open { position: relative; z-index: 50; }
 
-/* Inline edit composer: sit flush in the bubble where the body was — drop the outer
+/* Inline edit composer: sit flush in the bubble where the body was. Drop the outer
    box border/rounding so it reads as part of the card (the inner textarea keeps its
    frame), and group Cancel + Update on the right, like the reply composer. */
 .gc-composer-edit { margin: 0; }
@@ -390,7 +390,7 @@
   background: transparent; border: 0; padding: 2px 4px; cursor: pointer;
   font: inherit; font-size: 0.85rem; color: inherit;
 }
-/* Nested (reply) hidden comment: flat — no bar background and tighter padding (the
+/* Nested (reply) hidden comment: flat, with no bar background and tighter padding (the
    reply row already provides spacing), and the toggle reads as muted label text
    matching "This comment has been hidden." */
 .gc-bubble .gc-replies .gc-hidden-bar { background: transparent; padding: 8px 0; }
@@ -478,7 +478,7 @@
 }
 
 /* iOS/iPadOS Safari auto-zooms in when a focused field's font-size is < 16px, and won't
-   zoom back out on its own — it leaves the page horizontally scrolled and misaligned.
+   zoom back out on its own. It leaves the page horizontally scrolled and misaligned.
    Bump every text-entry control to 16px on touch devices so focusing never triggers the
    zoom. Scoped to touch (not a width breakpoint) so it also covers iPads, and leaves
    desktop density (14px) unchanged. */

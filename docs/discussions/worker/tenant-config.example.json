@@ -1,0 +1,36 @@
+{
+  "active": true,
+  "accessKey": "",
+  "site": {
+    "url": "https://blog.example.com",
+    "repo": "owner/blog",
+    "repoUrl": "https://github.com/owner/blog"
+  },
+  "origins": [
+    "https://blog.example.com",
+    "http://localhost:4321",
+    "http://127.0.0.1:4321"
+  ],
+  "oauth": {
+    "name": "GitHub",
+    "authorizeUrl": "https://github.com/login/oauth/authorize",
+    "tokenUrl": "https://github.com/login/oauth/access_token",
+    "userUrl": "https://api.github.com/user",
+    "clientId": "replace-me",
+    "clientSecret": "replace-me",
+    "scope": "read:user",
+    "clientAuthMethod": "client_secret_post",
+    "fields": {
+      "subject": "id",
+      "login": "login",
+      "name": "name",
+      "avatar": "avatar_url",
+      "profileUrl": "html_url"
+    }
+  },
+  "moderators": [{ "login": "owner" }],
+  "widget": { "stripSuffix": "", "giphyKey": "" },
+  "limits": { "maxBody": 65536, "sessionTtl": 604800 },
+  "notifications": { "kind": "", "webhookUrl": "", "telegramChat": "" },
+  "feed": { "enabled": false, "token": "" }
+}

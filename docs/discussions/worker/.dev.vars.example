@@ -1,0 +1,6 @@
+# Deployment-wide secrets only. Tenant OAuth, widget, feed, and notification settings are
+# submitted in the complete tenant configuration and encrypted in D1.
+SESSION_SECRET=dev-local-session-secret-change-me
+CONFIG_MASTER_KEY=dev-local-config-master-key-change-me
+SERVICE_ADMIN_TOKEN=dev-local-service-admin-token-change-me
+PUBLIC_BASE_URL=http://localhost:8787

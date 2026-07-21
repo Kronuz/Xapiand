@@ -1,8 +1,7 @@
-/* Comment code highlighting — Shiki dual-theme.
+/* Comment code highlighting with Shiki dual-theme output.
  *
- * Colors are emitted inline by the discussions Worker (Shiki, using the blog's own
- * kronuz-light / kronuz-dark themes, src/styles/kronuz-*.json), so comment code matches the
- * article code blocks exactly. This file only handles block layout and the light->dark
+ * Colors are emitted inline by the Discussions Worker using its bundled Shiki themes.
+ * This file only handles block layout and the light-to-dark
  * variable flip; there is no per-token color table here anymore (that lives in the Shiki
  * themes). Light is the default (inline colors); dark swaps each token to its --shiki-dark
  * variable under the site's [data-theme="dark"].
@@ -29,8 +28,7 @@
 }
 
 /* Dark mode: swap the block background and every token color to the dark variables Shiki
-   emits alongside the light ones (font style/weight are shared between the two Kronuz
-   themes, so only color + background need to flip). */
+   emits alongside the light ones, so only color and background need to flip. */
 [data-theme="dark"] .gc-body .shiki {
 	background-color: var(--shiki-dark-bg) !important;
 	color: var(--shiki-dark) !important;

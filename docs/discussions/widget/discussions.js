@@ -1,4 +1,4 @@
-// Blog discussions widget — fetches a page's discussion (its comments) from our backend
+// Blog discussions widget. Fetches a page's discussion and comments from its backend
 // and renders them in a threaded timeline. Comment bodies arrive as sanitized,
 // server-rendered HTML, so the widget only owns the surrounding chrome.
 //
@@ -269,7 +269,7 @@
 
   // Friendly handle for display: drop the configured login suffix (e.g. an EMU
   // "_Acme" → the bare handle). The FULL login stays the identity key
-  // everywhere (ownership/admin checks) — this only changes what's shown.
+  // everywhere for ownership and admin checks. This only changes what's shown.
   function displayHandle(login) {
     const suf = (CFG && CFG.stripSuffix) || "";
     if (suf && login && login.length > suf.length && login.endsWith(suf)) {
@@ -407,7 +407,7 @@
     function renderMain() {
       clear();
       // No quote-reply on a hidden comment, nor on a reply whose parent is hidden
-      // (the thread is read-only — there's no reply box to open).
+      // because the thread is read-only and has no reply box to open.
       const parentHidden = !!(ctx.topCtx && ctx.topCtx.comment && ctx.topCtx.comment.isMinimized);
       if (SIGNED_IN && !c.isMinimized && !parentHidden) {
         additem("reply", "Quote reply", function () {
@@ -603,7 +603,7 @@
     if (c.isMinimized) {
       // Collapse only the parent's own content (meta/body/reactions) behind the bar.
       // The ⋯ menu lives in the meta (like a normal comment), so it's revealed when
-      // you expand the comment. Replies stay visible below — hiding a comment
+      // you expand the comment. Replies stay visible below. Hiding a comment
       // shouldn't bury the thread that answered it. No reply footer, though: you
       // can't add a new reply to a hidden comment.
       meta.appendChild(menu);
@@ -1325,7 +1325,7 @@
     }
 
     // Warm the cache on *intent* to preview (hovering/focusing the Preview tab), throttled, so
-    // the round-trip finishes before the click — without prefetching for the many users who
+    // the round-trip finishes before the click, without prefetching for the many users who
     // just type and submit. Skips when empty or already cached; fetchPreview de-dupes the rest.
     function prefetchPreview() {
       const text = ta.value;
@@ -1364,7 +1364,7 @@
       writeTab.addEventListener("click", showWrite);
       previewTab.addEventListener("click", showPreview);
       // Prefetch on intent to open Preview (hover / keyboard focus / touch), throttled, so the
-      // round-trip is already done by click time — only for users who actually reach for it.
+      // round-trip is already done by click time, only for users who actually reach for it.
       previewTab.addEventListener("pointerenter", prefetchPreview);
       previewTab.addEventListener("focus", prefetchPreview);
       previewTab.addEventListener("touchstart", prefetchPreview, { passive: true });

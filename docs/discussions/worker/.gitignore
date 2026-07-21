@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+.dev.vars
+wrangler.toml
+dist/
+*.log
+tenant-config.*.json
+!tenant-config.example.json
+secrets.sh
+backups/

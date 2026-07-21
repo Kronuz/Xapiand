@@ -5,21 +5,20 @@ The front-end half of the self-hosted discussions system: a small, framework-fre
 timeline style and let a signed-in reader post. Comment bodies are server-rendered HTML
 (the backend renders and sanitizes Markdown), so only the chrome is styled here.
 
-`Kronuz.github.io`, `gmendezb-pages`, and `Xapiand/docs` carry these files and
-`src/components/Discussions.astro` byte-for-byte. They are consumed two ways:
+The widget can be consumed two ways:
 
 1. **Standalone** (`demo.html`) for isolated UI testing.
-2. **Astro component** (`src/components/Discussions.astro`) imports `discussions.css` and
-   `discussions.js` from here, so there's no copy to keep in sync.
+2. **Astro component** (`../astro/Discussions.astro`) imports `discussions.css` and
+   `discussions.js` directly from this directory.
 
 ## Files
 
-- `discussions.css` — the timeline styles (avatars, speech bubbles, markdown body, reaction
+- `discussions.css`: the timeline styles (avatars, speech bubbles, markdown body, reaction
   pills, replies, composer, sign-in button). Theme-aware: follows an ancestor
   `[data-theme="dark"]` (Starlight) and falls back to `prefers-color-scheme`.
-- `discussions.js` — an IIFE that auto-mounts every `.gc` element: fetches the backend,
+- `discussions.js`: an IIFE that auto-mounts every `.gc` element, fetches the backend,
   renders the thread, and wires the composer and tenant OAuth sign-in.
-- `demo.html` — standalone demo page (dark toggle + page-key field).
+- `demo.html`: standalone demo page (dark toggle + page-key field).
 
 ## Configuration (data attributes)
 
@@ -50,10 +49,10 @@ stable `data-term` (the page slug); the backend stores this page's discussion un
 
 ## Use in Astro
 
-`src/components/Discussions.astro` wraps this widget. Drop it into any page or post:
+`../astro/Discussions.astro` wraps this widget. Drop it into any page or post:
 
 ```mdx
-import Comments from '../../components/Discussions.astro';
+import Comments from '../discussions/astro/Discussions.astro';
 
 <Comments
   backend="https://comments.example/my-blog"
@@ -83,6 +82,6 @@ tenant URL.
 ## Theming
 
 The widget uses CSS custom properties (`--gc-bg`, `--gc-fg`, `--gc-border`, `--gc-link`,
-`--gc-accent`, and others) at the top of `discussions.css`. To match the Kronuz theme, override those
-variables with the site's tokens instead of editing rules. Keep `discussions.css` as the one
-source. Both the Astro component and the standalone demo read it.
+`--gc-accent`, and others) at the top of `discussions.css`. To match a host theme, override those
+variables with the site's tokens instead of editing rules. Both the Astro component and the
+standalone demo read the same stylesheet.

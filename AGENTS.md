@@ -21,6 +21,13 @@ Everything else under `src/` is Xapiand's own. When grepping for a bug or a
 feature, scope to the own-code subsystems unless you're tracing a call *into*
 Xapian.
 
+`docs/discussions/` is a vendored copy of the complete Kronuz Discussions package. Its
+tracked files must remain byte-identical with `~/code/KronuzBlog/Kronuz.github.io/discussions`
+and `~/code/KronuzBlog/gmendezb-pages/discussions`. It includes an Astro component, browser
+widget, Cloudflare Worker, D1 migrations, tests, and generic documentation. Xapiand does not
+currently mount the comments component. Make package changes in one source tree, synchronize
+the complete directory, and verify all three copies before committing.
+
 `src/xapian/` is special: it's a *fork* (pristine upstream snapshot + a small
 stack of our patches), not a plain read-only bundle. Before upgrading the
 vendored Xapian, reconciling our patches, or touching anything under it, read

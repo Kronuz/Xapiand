@@ -1,0 +1,20 @@
+{
+  "name": "@kronuz/discussions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted multi-tenant comments for Astro and static sites.",
+  "files": [
+    "astro",
+    "widget"
+  ],
+  "exports": {
+    "./astro": "./astro/Discussions.astro",
+    "./widget/discussions.css": "./widget/discussions.css",
+    "./widget/discussions.js": "./widget/discussions.js",
+    "./widget/highlight.css": "./widget/highlight.css"
+  },
+  "peerDependencies": {
+    "astro": ">=5"
+  }
+}
