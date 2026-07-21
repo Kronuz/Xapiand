@@ -32,6 +32,7 @@ stable `data-term` (the page slug); the backend stores this page's discussion un
      data-title="My Post"
      data-url="https://example.com/blog/my-post/"
      data-backend="https://comments.example/my-blog"
+     data-access-key=""
      data-strip-suffix="_Acme"
      data-theme="dark"></div>
 ```
@@ -42,6 +43,7 @@ stable `data-term` (the page slug); the backend stores this page's discussion un
 | `data-title` | no | Post title, stored as page metadata with the discussion. |
 | `data-url` | no | Canonical page URL, stored as page metadata with the discussion. |
 | `data-backend` | no | Tenant base URL, including its tenant path. |
+| `data-access-key` | no | Static capability required by a protected tenant. Empty means public. |
 | `data-strip-suffix` | no | Suffix dropped from displayed handles (e.g. `_Acme`); the full login stays the identity key. |
 | `data-giphy-key` | no | Public GIPHY key. When set, the composer shows a client-side GIF picker (the browser calls GIPHY directly; rating forced to `g`). Blank = no GIF button. |
 | `data-theme` | no | `light` / `dark` to force a theme; omit to follow the site. |
@@ -62,12 +64,17 @@ import Comments from '../../components/Discussions.astro';
 ```
 
 The site decides where its backend URL lives, then passes the tenant base URL through the
-`backend` prop. The shared wrapper also accepts `PUBLIC_DISCUSSIONS_BACKEND` as its default,
-which is useful for local development:
+`backend` prop. A protected site also passes its private build-time value through
+`accessKey`. The shared wrapper accepts `PUBLIC_DISCUSSIONS_BACKEND` and
+`PUBLIC_DISCUSSIONS_ACCESS_KEY` as defaults, which is useful for local development:
 
 ```bash
 PUBLIC_DISCUSSIONS_BACKEND="http://127.0.0.1:8787/my-blog" npm run dev
 ```
+
+The access key is embedded in the static page and is therefore visible to every reader who
+can load that page. It protects a private site's comments from public discovery and direct
+API access; it is not per-reader authorization.
 
 When a site mounts comments automatically, it should use a stable page slug for `term`.
 Two sites may use the same term safely because the backend scopes every discussion to its

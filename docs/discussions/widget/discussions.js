@@ -824,6 +824,7 @@
     var headers = Object.assign({}, opts.headers);
     var tok = gcToken(cfg);
     if (tok) headers["Authorization"] = "Bearer " + tok;
+    if (cfg.accessKey) headers["X-Discussions-Key"] = cfg.accessKey;
     return fetch((cfg.backend || "") + path, Object.assign({ credentials: "include" }, opts, { headers: headers }));
   }
 
@@ -851,10 +852,14 @@
     } catch (_) {}
   }
 
-  function openLogin(cfg) {
-    // Full-page redirect (not a popup): the OAuth callback returns here with the token in the
-    // URL fragment, which works on mobile where a popup's window.opener/postMessage do not.
-    location.href = (cfg.backend || "") + "/auth/login?return=" + encodeURIComponent(location.href);
+  async function openLogin(cfg) {
+    // Ask the Worker for the provider URL through fetch so a protected tenant can validate
+    // its access key without placing it in browser history, Worker URLs, or OAuth state.
+    const r = await api(cfg, "/auth/login?return=" + encodeURIComponent(location.href), { method: "POST" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const body = await r.json();
+    if (!body.url) throw new Error("missing authorization URL");
+    location.href = body.url;
   }
 
   // On load, pick up a token handed back by the OAuth redirect (#gc_token=...), stash it, and
@@ -1462,7 +1467,11 @@
       submit = el("button", "gc-signin-btn"); submit.type = "button";
       if (provider === "GitHub") submit.innerHTML = GITHUB_MARK_SVG;
       submit.appendChild(el("span", null, "Sign in with " + provider));
-      submit.addEventListener("click", () => openLogin(cfg));
+      submit.addEventListener("click", async () => {
+        submit.disabled = true;
+        try { await openLogin(cfg); }
+        catch (_) { submit.disabled = false; alert("Could not start sign-in."); }
+      });
       const leftOut = el("span", "gc-actions-left");
       leftOut.append(mdHint, hint);
       actions.append(leftOut, submit);
@@ -1495,6 +1504,8 @@
   async function mount(root) {
     const cfg = {
       backend: root.dataset.backend || window.GC_BACKEND || "",
+      // Optional static capability for a protected tenant. Empty means public.
+      accessKey: root.dataset.accessKey || window.GC_ACCESS_KEY || "",
       // A stable per-page key (the post slug); the backend stores this page's
       // comments under it.
       term: root.dataset.term || "",
