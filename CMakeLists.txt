@@ -815,6 +815,8 @@ include_directories("${reactor_SOURCE_DIR}")
 FetchContent_Declare(cluster GIT_REPOSITORY https://github.com/Kronuz/cluster.git GIT_TAG 36751be200dd34dc14a54c439bfc970de075e2f3)
 FetchContent_MakeAvailable(cluster)
 include_directories("${cluster_SOURCE_DIR}")
+# cluster's length.h includes <varint.hh>; cluster fetches varint itself (Kronuz/varint).
+include_directories("${varint_SOURCE_DIR}")
 
 # flume: the compressed, framed, integrity-checked file-transfer conduit (Kronuz/flume) --
 # the FILE_FOLLOWS codec for the Remote/Replication Asio migration, replacing the libev
@@ -1828,7 +1830,9 @@ if (NOT FTIME_RETURNS_INT)
 endif ()
 
 check_cxx_source_compiles("
+	#ifndef _GNU_SOURCE
 	#define _GNU_SOURCE
+	#endif
 	#include <string.h>
 	int main() {
 		char buf[100];
