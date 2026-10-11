@@ -26,9 +26,10 @@ by 16 concurrent clients. Query figures are the warm, steady-state numbers.
 
 **Memory.** This is the clearest difference. Xapiand holds the whole running index
 in **~470 MB** of resident memory; Elasticsearch needs **~1.4 GB** for the same
-data, roughly **3x more**. Xapiand memory-maps its storage and keeps a small
-private working set, so most of its memory is reclaimable page cache the operating
-system can reuse; the Java heap Elasticsearch commits is not.
+data, roughly **3x more**. Xapiand reads its storage with `pread` through the
+operating system's page cache and keeps a small private working set, so most of the
+memory its data occupies is reclaimable cache the operating system can reuse; the
+Java heap Elasticsearch commits is not.
 
 **Warm-up and stability.** Xapiand runs at full speed from the very first query.
 Elasticsearch's first pass is about **20% slower with roughly double the tail
