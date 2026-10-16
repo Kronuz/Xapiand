@@ -26,14 +26,15 @@ below.
 ## 🚀 Quick start
 
 ```sh
-curl -X PUT localhost:8880/twitter/tweet/1 -H 'Content-Type: application/json' \
+curl -X PUT 'localhost:8880/twitter/tweet/1?commit' -H 'Content-Type: application/json' \
   -d '{"user": "Kronuz", "postDate": "2016-11-15T13:12:00", "message": "Trying out Xapiand"}'
 
 curl localhost:8880/twitter/tweet/1                         # get it back
 curl -X SEARCH 'localhost:8880/twitter/tweet/?q=user:Kronuz'  # search for it
 ```
 
-The index is created on first write. The
+The index is created on first write. Writes become searchable at the next commit,
+about a second later; `?commit` waits for it. The
 [Quick-start](https://kronuz.github.io/Xapiand/quickstart/) continues with
 searches, aggregations, and geo queries.
 
