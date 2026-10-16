@@ -1,5 +1,9 @@
 # Extracting reusable libraries from Xapiand
 
+> **Historical.** This plan has been carried out: the components now live in their own
+> repositories, indexed at [Kronuz/cpp-libraries](https://github.com/Kronuz/cpp-libraries),
+> and Xapiand fetches them with CMake `FetchContent`.
+
 Xapiand is full of small, well-made components that have nothing to do with
 search and everything to do with "things you need when writing serious C++."
 Three are already out in their own repos — [base-x](https://github.com/Kronuz/base-x),

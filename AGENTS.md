@@ -5,17 +5,19 @@ Orientation for anyone (human or AI) making changes here. Read
 
 ## First, the big split: own code vs. vendored
 
-`src/` mixes Xapiand's own code with bundled third-party libraries. **Do not
-"fix" or refactor vendored code** — treat these as read-only dependencies:
+`src/` is Xapiand's own code plus two vendored trees. **Do not "fix" or refactor
+vendored code**; treat it as read-only:
 
 ```
-src/xapian/      Xapian fork (GPL) — the search core. Large; integration point only.
-src/msgpack/     msgpack-c                 src/fmt/        {fmt}
-src/rapidjson/   RapidJSON                 src/lz4/        LZ4
-src/ev/          libev                     src/tclap/      CLI parsing
-src/yaml/        libyaml
-src/cppcodec/    base-N codecs            src/chaiscript/ ChaiScript
+src/xapian/      Xapian fork (GPL): the search core. Large; integration point only.
+src/yaml/        libyaml, for the YAML bridge (src/y2j/).
 ```
+
+Everything else that used to be vendored (msgpack-c, fmt, RapidJSON, LZ4, libev, TCLAP,
+cppcodec, ChaiScript) and the utility code that grew here now come from the extracted
+`Kronuz/*` libraries via CMake `FetchContent`. A bug in one of those is fixed in its own
+repository, not here; `src/xapiand_*_trace.h` and friends are the seams that wire them
+to Xapiand's logging.
 
 Everything else under `src/` is Xapiand's own. When grepping for a bug or a
 feature, scope to the own-code subsystems unless you're tracing a call *into*
@@ -38,16 +40,17 @@ the upgrade procedure.
 
 | You're touching… | Start in |
 |---|---|
-| On-disk format, durability, volumes | `src/storage.h`, `src/database/{wal,data,shard}.{cc,h}` |
+| On-disk format, durability, volumes | `src/database/{wal,data,shard}.{cc,h}`; the volume engine is the [storage](https://github.com/Kronuz/storage) library (`src/xapiand_storage_*.h` wire it) |
 | Schema handling, field types | `src/database/schema*.{cc,h}`, `src/reserved/` |
-| HTTP API / request handling | `src/server/http*.{cc,h}`, `src/url_parser.*` |
-| The event loop / client lifecycle | `src/worker.{cc,h}`, `src/server/base_{client,server}.*` |
-| Clustering, discovery, replication | `src/server/discovery.*`, `src/server/replication_protocol*`, `src/manager.*`, `src/node.*` |
-| Query languages | `src/query_dsl.*` (JSON/MsgPack), `src/booleanParser/` (string) |
+| HTTP API / request handling | `src/server/search_{service,views}.*`, `src/server/http_utils.h`; transport is the [http](https://github.com/Kronuz/http) library |
+| The event loop / connections | the [reactor](https://github.com/Kronuz/reactor) library; `src/manager.*` owns the services |
+| Clustering, discovery, replication | `src/server/discovery.*`, `src/server/raft_delegate.h`, `src/server/{remote,replication}_protocol_*`, `src/manager.*`, `src/node.*`; bus and Raft come from [cluster](https://github.com/Kronuz/cluster) |
+| Query languages | `src/query_dsl.*` (JSON/MsgPack); the string parser is the [boolean-parser](https://github.com/Kronuz/boolean-parser) library |
 | Aggregations | `src/aggregations/` |
 | Geospatial | `src/geospatial/`, `src/multivalue/geospatialrange.*` |
 | Value encoding | `src/sortable_serialise.*`, `src/serialise*.{cc,h}`, `src/length.*` |
-| Logging | `src/logger.*`, `src/log.h` (category switches) |
+| Logging | `src/log.h` (category switches); the logger is the [logger](https://github.com/Kronuz/logger) library |
+| Scripting | `src/lua/`, `src/script.*` |
 | Small utilities | top-level `src/*.hh` / `*.h` (see the table in ARCHITECTURE.md) |
 
 Entry point is `src/main.cc`; the process is orchestrated by
@@ -94,14 +97,14 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   default and are switched on by editing the `#define`s near the top of
   `src/log.h`. To trace a subsystem, flip its category there and rebuild. Log
   arguments are evaluated lazily, so it's fine to pass expensive expressions.
-- **`Worker` + libev.** Anything that owns a socket or a timer is a `Worker`
-  (`src/worker.h`), living in a shared-pointer parent/children tree. Never call
-  another worker's methods across threads directly — use the async control
-  watchers (`shutdown`, `stop`, `destroy`, `detach`), which run on the owning
-  loop. Lifetime is by `shared_ptr`; clients keep themselves alive across the
-  loop→pool hand-off with `share_this()`.
+- **Services on the reactor.** There is no libev and no `Worker` tree any more.
+  `XapiandManager` runs a control-plane `reactor::Reactor`; the HTTP, remote, and
+  replication services run on the [reactor](https://github.com/Kronuz/reactor)
+  library's shared-nothing loops, with blocking work offloaded to its worker pool.
+  Never block a reactor thread.
 - **MsgPack as the universal value.** JSON, MessagePack, and internal objects are
-  all `MsgPack` (`src/msgpack.h`), a copy-on-write wrapper. Reserved keys are
+  all `MsgPack` (from the [msgpack](https://github.com/Kronuz/msgpack) library), a
+  copy-on-write wrapper. Reserved keys are
   `$`/`_`-prefixed (`src/reserved/`).
 - **Perfect-hash dispatch.** Reserved-word handling (query DSL, aggregations) is
   done with compile-time perfect-hash tables (`phf::make_phf`), not if-ladders.
@@ -122,33 +125,34 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
 
 - **Trixel ids encode the quadtree path 2 bits per level**, which is *why* a
   region is a contiguous integer range and why geo serialization is big-endian
-  (`src/geospatial/htm.cc`, `src/serialise.cc`). Any change to id construction or
+  (the [htm](https://github.com/Kronuz/htm) library, `src/serialise.cc`). Any change to id construction or
   endianness breaks geo indexing silently.
 - **One primary shard per logical shard, elected via Raft** (`discovery.cc`).
   Data replication is asynchronous and pull-based; do not assume a write is on
   any replica when it commits. If you touch the commit path, preserve the
   `DB_UPDATED` multicast that triggers replication.
 - **The storage write cursor lives in the volume header**; bins are 8-byte
-  aligned and a volume is capped near 34 GB. Don't write a bin without going
-  through `Storage::write`/`write_buffer` (the double-buffer alignment dance).
+  aligned and a volume is capped at 32 GiB. Don't write a bin without going
+  through the [storage](https://github.com/Kronuz/storage) library's
+  `Storage::write`/`write_buffer` (the double-buffer alignment dance).
 - **WAL replay must be idempotent w.r.t. revisions** (`wal.cc` checks
   `revision == db_revision`). Don't add WAL ops that can't be safely re-applied.
 
 ## Traps (things that have already bitten, per the code review)
 
 - The `Cartesian` in-place operators are buggy (`operator^=` corrupts, `operator*`
-  mutates) — prefer the free-function/out-of-place versions until fixed
-  (`cartesian.cc`). See ARCHITECTURE.md → Bugs.
-- Storage/WAL integrity checking is weaker than it looks: the default
-  header/footer validation is stubbed and the LZ4 digest is computed but never
-  verified. If you rely on corruption detection, wire it up first.
+  mutates) — prefer the free-function/out-of-place versions until the
+  [cartesian](https://github.com/Kronuz/cartesian) library fixes them.
+- Storage/WAL integrity checking is only as strong as the framing you give it: the
+  storage library checksums its v2 volume header and hands each record's XXH32 to
+  your footer type, but the reference footer stores none. Check what Xapiand's
+  footers verify before relying on corruption detection.
 - WAL durability is **async by default**; "it's in the WAL" is not "it's on
   disk" unless the shard is flagged synchronous.
-- Parsers (`query_dsl.cc::process`, `BooleanParser.cc::BuildTree`) recurse with
+- Parsers (`query_dsl.cc::process`, and `BuildTree` in the
+  [boolean-parser](https://github.com/Kronuz/boolean-parser) library) recurse with
   no depth cap — be careful adding nesting, and consider a guard if you're in
   there anyway.
-- `BaseClient` will `sig_exit` the whole process if `total_clients` underflows —
-  keep the ctor/dtor counting symmetric.
 
 ## Making changes well
 

@@ -1,5 +1,9 @@
 # The stash / scheduler / debouncer stack
 
+> **Historical.** This plan has been carried out: the components now live in their own
+> repositories, indexed at [Kronuz/cpp-libraries](https://github.com/Kronuz/cpp-libraries),
+> and Xapiand fetches them with CMake `FetchContent`.
+
 One small, lock-free data structure underpins a surprising amount of Xapiand:
 the logger's dedicated background thread, every debounced fsync and commit, and
 the replication triggers all ride the same scheduling engine. This document
