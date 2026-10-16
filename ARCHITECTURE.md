@@ -9,6 +9,12 @@ claim cites `file:line` so you can check it.
 > vendored core: the Xapian fork. Every other library, libyaml and Lua included,
 > arrives through CMake `FetchContent`. See [Code map](#code-map)
 > for the split.
+>
+> Xapian is on its way out. [strata](https://github.com/Kronuz/strata) is an MIT
+> engine built to replace it: an engine seam first routes every Xapian call through
+> an interface, strata then moves in behind that seam, and `src/xapian/` is removed
+> last ([plan](https://github.com/Kronuz/strata/blob/main/docs/PLAN.md)). With Xapian
+> gone, the name "Xapiand" no longer fits, so the project is renamed at that point.
 
 ---
 
