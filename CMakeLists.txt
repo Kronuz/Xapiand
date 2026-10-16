@@ -1056,7 +1056,14 @@ if(LUA)
 	FetchContent_Declare(sol2 GIT_REPOSITORY https://github.com/ThePhD/sol2.git GIT_TAG c1f95a773c6f8f4fde8ca3efe872e7286afe4444)  # v3.5.0-4
 	FetchContent_MakeAvailable(sol2)
 
-	include_directories(
+	# sol2 prefers <lua/lua.h> when it exists, and a system Lua (Homebrew's, say) can
+	# provide one; stage the fetched headers under lua/ and search them first.
+	set(LUA_STAGED_INCLUDE "${CMAKE_BINARY_DIR}/lua-include")
+	foreach(header lua.h luaconf.h lualib.h lauxlib.h lua.hpp)
+		configure_file("${lua_SOURCE_DIR}/src/${header}" "${LUA_STAGED_INCLUDE}/lua/${header}" COPYONLY)
+	endforeach()
+	include_directories(BEFORE
+		"${LUA_STAGED_INCLUDE}"
 		"${lua_SOURCE_DIR}/src"
 		"${sol2_SOURCE_DIR}/include"
 	)
