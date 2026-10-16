@@ -140,9 +140,6 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
 
 ## Traps (things that have already bitten, per the code review)
 
-- The `Cartesian` in-place operators are buggy (`operator^=` corrupts, `operator*`
-  mutates) — prefer the free-function/out-of-place versions until the
-  [cartesian](https://github.com/Kronuz/cartesian) library fixes them.
 - Storage/WAL integrity checking is only as strong as the framing you give it: the
   storage library checksums its v2 volume header and hands each record's XXH32 to
   your footer type, but the reference footer stores none. Check what Xapiand's

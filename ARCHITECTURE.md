@@ -536,14 +536,9 @@ included so each is checkable.
 
 **Geospatial math:**
 
-- **`Cartesian::operator^=` corrupts the vector** (`cartesian.cc:246-256`): it
-  writes `x` twice and never sets `z` (`x = z2;` should be `z = z2;`). Any
-  in-place cross product produces garbage. The out-of-place `operator^` is
-  correct, which is why it stayed latent — audit `^=` users.
-- **`Cartesian::operator*(double)` mutates `*this`** instead of returning a
-  scaled copy (`cartesian.cc:229`), while free-function `operator*` returns a
-  copy. For non-const `c`, `c * 2.0` silently scales `c`. Footgun + overload
-  ambiguity.
+- **Fixed in the cartesian library:** `Cartesian::operator^=` never set `z`, and the
+  member `operator*(double)` scaled `*this` in place. `^=` now matches `^`, and
+  scaling always returns a copy.
 - **`getTrixelName(uint64_t)` uses floating `log2`** to find the top bit
   (`htm.cc:604`); near powers of two it can be off by one and emit a malformed
   name. The codebase uses integer `clz` for the same job elsewhere
