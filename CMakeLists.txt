@@ -680,24 +680,22 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 FetchContent_MakeAvailable(term_color)
 include_directories("${term_color_SOURCE_DIR}")
 
-# Six more utilities extracted from Xapiand into standalone repos: endian (header
-# only) and repr / escape / times / strings / url_parser (each a small .cc compiled
+# Five more utilities extracted from Xapiand into standalone repos: endian (header
+# only) and repr / times / strings / url_parser (each a small .cc compiled
 # into XAPIAND_OBJ below, the logger way). Their headers go on the include path and
 # Xapiand's in-tree copies are dropped; they build on char-classify / split /
 # static-string / term-color (already on the path above) + repr.
 FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG cbab10b7e6112151b4deff78f7b2e38919989b7a)
 FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG 3d322148334e53b461736eaf3c98d5f17ffa885e)
-FetchContent_Declare(escape     GIT_REPOSITORY https://github.com/Kronuz/escape.git     GIT_TAG a8ad156c12e09009c8800ad4f07bbb85b3a23ee4)
 FetchContent_Declare(times      GIT_REPOSITORY https://github.com/Kronuz/times.git      GIT_TAG 30bf7404e644105daf0e4d9258c13884637233bb)
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 4e130759e298a7a348126b36b994095b668a04e1)
 FetchContent_Declare(url_parser GIT_REPOSITORY https://github.com/Kronuz/url-parser.git GIT_TAG 49438b1937bf5186286b7b1366653f2c466bde04)
-foreach(dep endian repr escape times strings url_parser)
+foreach(dep endian repr times strings url_parser)
 	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
 	"${endian_SOURCE_DIR}"
 	"${repr_SOURCE_DIR}"
-	"${escape_SOURCE_DIR}"
 	"${times_SOURCE_DIR}"
 	"${strings_SOURCE_DIR}"
 	"${url_parser_SOURCE_DIR}"
@@ -1433,10 +1431,9 @@ list(APPEND XAPIAND_SRC_LIST "${msgpack_SOURCE_DIR}/msgpack_patcher.cc")
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
 # (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
 # control plane, so none of its translation units (nor libev) are linked anymore.
-# The six just-extracted utilities' out-of-line implementations, in place of the
-# removed src/{repr,escape,times,strings,url_parser}.cc (endian is header-only).
+# The extracted utilities' out-of-line implementations, in place of the removed
+# src/{repr,times,strings,url_parser}.cc (endian is header-only).
 list(APPEND XAPIAND_SRC_LIST "${repr_SOURCE_DIR}/repr.cc")
-list(APPEND XAPIAND_SRC_LIST "${escape_SOURCE_DIR}/escape.cc")
 list(APPEND XAPIAND_SRC_LIST "${times_SOURCE_DIR}/times.cc")
 list(APPEND XAPIAND_SRC_LIST "${strings_SOURCE_DIR}/strings.cc")
 list(APPEND XAPIAND_SRC_LIST "${url_parser_SOURCE_DIR}/url_parser.cc")
