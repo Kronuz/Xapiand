@@ -146,10 +146,10 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   footers verify before relying on corruption detection.
 - WAL durability is **async by default**; "it's in the WAL" is not "it's on
   disk" unless the shard is flagged synchronous.
-- Parsers (`query_dsl.cc::process`, and `BuildTree` in the
-  [boolean-parser](https://github.com/Kronuz/boolean-parser) library) recurse with
-  no depth cap — be careful adding nesting, and consider a guard if you're in
-  there anyway.
+- `query_dsl.cc::process` recurses over the query object with no depth cap, so a
+  deeply nested query can exhaust the stack — be careful adding nesting, and
+  consider a guard if you're in there. (The boolean-parser library builds its tree
+  iteratively; Xapiand reads its RPN queue directly anyway.)
 
 ## Making changes well
 
