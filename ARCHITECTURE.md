@@ -6,8 +6,8 @@ found while reading the source. Written from a close read of the code; every
 claim cites `file:line` so you can check it.
 
 > This document describes Xapiand's *own* code. The `src/` tree still carries a
-> small vendored core, chiefly the Xapian fork and libyaml. Most former in-tree
-> libraries now arrive through CMake `FetchContent`. See [Code map](#code-map)
+> vendored core: the Xapian fork. Every other library, libyaml and Lua included,
+> arrives through CMake `FetchContent`. See [Code map](#code-map)
 > for the split.
 
 ---
@@ -24,7 +24,7 @@ bundles are pulled by CMake `FetchContent` instead of living under `src/`.
 | Path | What it is |
 |---|---|
 | `src/xapian/` | A heavily customized fork of the Xapian search library (the matcher, the glass/honey backends, the weighting schemes). GPL. |
-| `src/yaml/` | libyaml plus Xapiand's YAML bridge. |
+| `src/y2j/` | Xapiand's YAML-to-JSON bridge over libyaml (fetched by CMake). |
 
 > The old in-tree copies of `src/cuuid/`, `src/msgpack*`, `src/xchange/`,
 > `src/prometheus/`, `src/ev/`, `src/lz4/`, `src/rapidjson/`, `src/cppcodec/`,

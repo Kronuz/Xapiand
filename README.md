@@ -55,10 +55,9 @@ sane: one binary does something useful immediately, and still scales out across
 a cluster when you need it to.
 
 > **A note on scope.** This repository still vendors the customized Xapian fork
-> and libyaml bridge under `src/`. The old in-tree copies of cuuid, msgpack,
-> prometheus-cpp, libev, LZ4, RapidJSON, cppcodec, TCLAP, fmt, and ChaiScript are
-> gone; CMake now pulls the extracted `Kronuz/*` libraries and upstream
-> prometheus-cpp core with `FetchContent`. See [ARCHITECTURE.md](ARCHITECTURE.md)
+> under `src/`. The old in-tree copies of cuuid, msgpack, prometheus-cpp, libev,
+> LZ4, RapidJSON, cppcodec, TCLAP, fmt, ChaiScript, and libyaml are gone; CMake now
+> pulls the extracted `Kronuz/*` libraries and the upstream ones with `FetchContent`. See [ARCHITECTURE.md](ARCHITECTURE.md)
 > for the full map.
 
 ## 📚 Documentation

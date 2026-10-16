@@ -1031,11 +1031,6 @@ FetchContent_Declare(prometheus_cpp
 )
 FetchContent_MakeAvailable(prometheus_cpp)
 
-# (yaml/libyaml and libev stay vendored under src/: libyaml's build is wired into
-# Xapiand's generated config.h feature detection and its sources are entangled
-# with the vendored y2j wrapper in YAML_OBJ; libev likewise depends on Xapiand's
-# config.h feature macros and carries local warning-suppression pragmas. Neither
-# swaps cleanly to stock upstream without reworking that build glue.)
 
 
 ########################################################################
@@ -1315,11 +1310,20 @@ add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 # yaml library target
 ########################################################################
 
+# libyaml (MIT) at its 0.2.5 release, compiled in with the y2j bridge as Lua is: its
+# own CMake would add install and test rules. The version macros stand in for the
+# config.h that build generates.
+FetchContent_Declare(libyaml GIT_REPOSITORY https://github.com/yaml/libyaml.git GIT_TAG 0.2.5 SOURCE_SUBDIR do-not-configure)
+FetchContent_MakeAvailable(libyaml)
 file(GLOB YAML_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/yaml/*.c*" "${PROJECT_SOURCE_DIR}/src/yaml/*.h*"
+	"${libyaml_SOURCE_DIR}/src/*.c"
 	"${PROJECT_SOURCE_DIR}/src/y2j/*.c*" "${PROJECT_SOURCE_DIR}/src/y2j/*.h*"
 )
 add_library(YAML_OBJ OBJECT ${YAML_SRC_LIST})
+target_include_directories(YAML_OBJ PRIVATE "${libyaml_SOURCE_DIR}/include")
+target_compile_definitions(YAML_OBJ PRIVATE
+	YAML_DECLARE_STATIC
+	YAML_VERSION_MAJOR=0 YAML_VERSION_MINOR=2 YAML_VERSION_PATCH=5 YAML_VERSION_STRING="0.2.5")
 
 
 ########################################################################

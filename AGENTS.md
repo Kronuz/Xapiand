@@ -5,16 +5,15 @@ Orientation for anyone (human or AI) making changes here. Read
 
 ## First, the big split: own code vs. vendored
 
-`src/` is Xapiand's own code plus two vendored trees. **Do not "fix" or refactor
+`src/` is Xapiand's own code plus one vendored tree. **Do not "fix" or refactor
 vendored code**; treat it as read-only:
 
 ```
 src/xapian/      Xapian fork (GPL): the search core. Large; integration point only.
-src/yaml/        libyaml, for the YAML bridge (src/y2j/).
 ```
 
 Everything else that used to be vendored (msgpack-c, fmt, RapidJSON, LZ4, libev, TCLAP,
-cppcodec, ChaiScript) and the utility code that grew here now come from the extracted
+cppcodec, ChaiScript, libyaml) and the utility code that grew here now come from the extracted
 `Kronuz/*` libraries via CMake `FetchContent`. A bug in one of those is fixed in its own
 repository, not here; `src/xapiand_*_trace.h` and friends are the seams that wire them
 to Xapiand's logging.

@@ -1,5 +1,5 @@
 #include "y2j.h"
-#include "yaml/yaml.h"
+#include <yaml.h>             // libyaml, fetched by CMake
 #include "rapidjson/pointer.h"
 #include "rapidjson/stringbuffer.h"
 #include <cassert>
