@@ -15,11 +15,15 @@ the accounts dataset; keep them returning hits so we time real work, not errors.
   python3 loadtest.py --target localhost:8880 --dataset docs/public/assets/accounts.ndjson \
       --replicate 20 --concurrency 16 --duration 8 --trials 3 \
       --datadir /tmp/xapiand_x --out harness/results/run.json
+
+--ca CA.pem speaks HTTPS, trusting that CA (the target's host name must be in the
+certificate, as localhost is in tls_certs.sh's). tls_cost.py drives these phases for T4.
 """
 import argparse
 import http.client
 import json
 import os
+import ssl
 import statistics
 import sys
 import time
@@ -37,7 +41,18 @@ QUERY_MIX = [
 ]
 
 
+# Set by --ca (or a caller such as tls_cost.py): connections then speak HTTPS.
+TLS_CONTEXT = None
+
+
+def use_ca(ca):
+    global TLS_CONTEXT
+    TLS_CONTEXT = ssl.create_default_context(cafile=ca) if ca else None
+
+
 def connect(target):
+    if TLS_CONTEXT is not None:
+        return http.client.HTTPSConnection(target, timeout=30, context=TLS_CONTEXT)
     return http.client.HTTPConnection(target, timeout=30)
 
 
@@ -187,9 +202,12 @@ def main():
     ap.add_argument("--datadir", default=None)
     ap.add_argument("--label", default="")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--ca", default=None, help="HTTPS, trusting this CA certificate (PEM)")
     args = ap.parse_args()
+    use_ca(args.ca)
 
-    result = {"target": args.target, "label": args.label, "index": args.index}
+    result = {"target": args.target, "label": args.label, "index": args.index,
+              "scheme": "https" if args.ca else "http"}
     idx_trials = []
     for tr in range(args.trials):
         # fresh index per trial so each is a clean bulk load (-> a noise band)

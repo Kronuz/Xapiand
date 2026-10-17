@@ -140,6 +140,20 @@ python3 -I harness/tls_bounds.py build/bin/xapiand            # every case, exit
 ONLY=unread_reply python3 -I harness/tls_bounds.py build/bin/xapiand
 ```
 
+`tls_cost.py` (T4) is a measurement, not a check, and is not in any layer: run it only on
+a quiet host. Per trial and workload it starts a fresh node over HTTPS and one over plain
+HTTP, the order alternating by trial, and reads the server's CPU seconds before and after
+the measured phase (`/proc/<pid>/stat` on Linux, `ps -o cputime` on macOS). The workloads
+are a keep-alive SEARCH loop (`loadtest.py`'s phases; `loadtest.py --ca` speaks HTTPS), the
+docs E2E collection through newman 6, and a new connection per request, whose TLS rate per
+CPU second is full handshakes per second at one core. On Linux, `--server-cpus` and
+`--client-cpus` pin the two apart; macOS cannot pin.
+
+```sh
+python3 -I harness/tls_cost.py build/bin/xapiand --trials 5 --duration 30 --out cost.json   # quiet host only
+python3 -I harness/tls_cost.py build/bin/xapiand --trials 1 --duration 2 --replicate 1     # does it run
+```
+
 ---
 
 ## Remote / cluster E2E
