@@ -8,7 +8,7 @@
   - T3: `unread_reply` fixed, every case holds, in `run_all.sh tls`, documented (93cb512c2)
   - T4 preparation: `loadtest.py --ca`, `harness/tls_cost.py`, one short trial run (9f8c62b07)
   - e2e harness writes per-run files, so concurrent runs do not collide (801a055a4)
-- Doing: ASan+UBSan build at ~/.scratch/build/tls-gate-asan (Homebrew LLVM 23); then T1 TLS and T2 under it
+- Doing: ASan+UBSan build at ~/.scratch/build/tls-gate-asan (Apple clang); then T1 TLS and T2 under it
 - Next:
   1. T6/T7 rerun from the pinned reactor and http sources (~/.scratch/build/tls-gate-lib-{reactor,http})
   2. Gate report `docs/gates/transport-security-step1.md`
@@ -17,5 +17,9 @@
 - Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07)
 - Last verified: 2026-10-17, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
 - Library or build findings (not fixed here):
-  - With Homebrew LLVM on macOS, `UUID_INCLUDE_DIR` and `ZLIB_INCLUDE_DIR` resolve to the SDK's `usr/include` and go in as `-I`, ahead of libc++'s C wrappers, so Xapian TUs fail (`<cwchar> tried including <wchar.h>`). Local workaround: point both at directories holding only `uuid/` and `zlib.h`/`zconf.h` (worktree `.scratch/sdk-uuid`, `.scratch/sdk-zlib`). A fix would add them as `SYSTEM` includes or skip SDK paths.
-  - `src/tls.cc:50-51` uses `X509_cmp_current_time`, deprecated in this OpenSSL 3 (a warning only).
+  - Homebrew LLVM 23 does not build Xapiand on macOS: SDK `usr/include` as plain `-I` via `UUID_INCLUDE_DIR`/`ZLIB_INCLUDE_DIR` (CMakeLists), RapidJSON `document.h:319` const-member assignment (rapidjson library), `XXH_STATIC_LINKING_ONLY` redefined at `src/config.h:289` under -Werror (Xapiand). The sanitizer build uses Apple clang, whose ASan works on this x86_64 host.
+  - `X509_cmp_current_time` (deprecated in OpenSSL 3) replaced by `ASN1_TIME_cmp_time_t` in `src/tls.cc`.
+
+## Owner decision (2026-10-17, system review SYS-13)
+
+Accept a TLS key file at mode 0640 only when its group is the service's own group (as Detent does), so Kubernetes secrets mounted with `fsGroup` work; refuse any wider mode. Change `src/tls.cc` and T2's refusal case, and update `docs/design/transport-security.md` D1.6, before the gate report.
