@@ -31,6 +31,7 @@
 # Usage:
 #   harness/cluster_check.sh          # 2 nodes
 #   harness/cluster_check.sh 3        # 3 nodes
+#   FAILOVER=1 harness/cluster_check.sh 3   # and kill the leader: a new leader; it rejoins; writes resume
 #   BIN=build/bin/xapiand harness/cluster_check.sh 2
 set -u
 
@@ -59,7 +60,7 @@ cleanup() {
 	# give them a moment, then verify none of OUR pids survive
 	sleep 1
 	for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill -0 "$p" 2>/dev/null && kill -9 "$p" 2>/dev/null; done
-	rm -rf "$RUNDIR"
+	[ "${KEEP_RUNDIR:-0}" = "1" ] || rm -rf "$RUNDIR"
 }
 trap cleanup EXIT
 
@@ -92,6 +93,7 @@ launch_node() {
 	       --discovery-port "$DISCOVERY_PORT" \
 	       ${DISCOVERY_IFACE:+--discovery-interface "$DISCOVERY_IFACE"} \
 	       --name "$name" --primary-node node1 -D "$dir" \
+	       ${FAILOVER:+--database-stall-time 5} \
 	       >"$RUNDIR/node$i.log" 2>&1 &
 	PIDS[$i]=$!
 	echo "launched $name (pid ${PIDS[$i]}) http=$(http_port "$i") remote=$((REMOTE_BASE+i-1)) replica=$((REPLICA_BASE+i-1))"
@@ -187,6 +189,54 @@ sys.exit(0 if d.get('count',0)>=1 and any(h.get('n')==42 for h in d.get('hits',[
 done
 [ "$s" = 0 ] || echo "     node$N last search: $(echo "$last" | head -c 160)"
 check "$s" "SEARCH from node$N gathers the doc (count>=1, the hit present)"
+
+# --- 4. FAILOVER (FAILOVER=1, N >= 3): kill the leader; the survivors elect one; the
+# killed node rejoins, and a write through a survivor reads back from it. The nodes start with a 5 s
+# --database-stall-time, so the dead node's primary shards are promoted on their replicas
+# within the check's window (the default waits 300 s). ---
+if [ "${FAILOVER:-0}" = "1" ] && [ "$N" -ge 3 ]; then
+	echo "[4] failover: kill the leader"
+	leader="$(curl -s --max-time 5 "localhost:$HTTP_BASE/" | python3 -c "import sys,json;d=json.load(sys.stdin);print(next((n['name'] for n in d.get('nodes',[]) if n.get('leader')),''))" 2>/dev/null)"
+	li="${leader#node}"
+	if [ -z "$leader" ] || [ -z "${PIDS[$li]:-}" ]; then
+		check 1 "a leader to kill (got '${leader:-none}')"
+	else
+		kill -9 "${PIDS[$li]}" 2>/dev/null; PIDS[$li]=""
+		survivors=(); for i in $(seq 1 "$N"); do [ "$i" != "$li" ] && survivors+=("$i"); done
+		a="$(http_port "${survivors[0]}")"; b="$(http_port "${survivors[1]}")"
+		newleader=""
+		deadline=$(( $(date +%s) + 60 ))
+		while [ "$(date +%s)" -lt "$deadline" ]; do
+			newleader="$(curl -s --max-time 5 "localhost:$a/" | python3 -c "import sys,json
+d=json.load(sys.stdin); ls=[n['name'] for n in d.get('nodes',[]) if n.get('leader')]
+print(ls[0] if len(ls)==1 else '')" 2>/dev/null)"
+			[ -n "$newleader" ] && [ "$newleader" != "$leader" ] && break
+			newleader=""; sleep 1
+		done
+		check "$([ -n "$newleader" ] && echo 0 || echo 1)" "the survivors elect one new leader after $leader dies (got ${newleader:-none})"
+		# The dead node was the --primary-node, whose cluster database takes every write, so
+		# writes wait for it by design: restart it; it rejoins, one leader stays, writes resume.
+		launch_node "$li"
+		rejoined="$(wait_member "$(http_port "$li")" 90)" && rj=0 || rj=1
+		check "$rj" "$leader rejoins and sees all $N members"
+		leaders="$(curl -s --max-time 5 "localhost:$a/" | python3 -c "import sys,json;d=json.load(sys.stdin);print(sum(1 for n in d.get('nodes',[]) if n.get('leader')))" 2>/dev/null)"
+		check "$([ "$leaders" = "1" ] && echo 0 || echo 1)" "exactly one leader after $leader rejoins (got ${leaders:-none})"
+		put=""; deadline=$(( $(date +%s) + 90 ))
+		while [ "$(date +%s)" -lt "$deadline" ]; do
+			put="$(curl -s --max-time 30 -XPUT "localhost:$a/$INDEX/2" -H 'Content-Type: application/json' \
+				-d '{"title":"after failover","n":43}' -w '%{http_code}' -o /dev/null)"
+			{ [ "$put" = "200" ] || [ "$put" = "201" ] || [ "$put" = "204" ]; } && break
+			sleep 2
+		done
+		check "$({ [ "$put" = "200" ] || [ "$put" = "201" ] || [ "$put" = "204" ]; } && echo 0 || echo 1)" "PUT through node${survivors[0]} after $leader rejoins (http $put)"
+		r=1; deadline=$(( $(date +%s) + 90 ))
+		while [ "$(date +%s)" -lt "$deadline" ]; do
+			curl -s --max-time 45 "localhost:$(http_port "$li")/$INDEX/2" | grep -q '"n":43' && { r=0; break; }
+			sleep 2
+		done
+		check "$r" "GET it from the rejoined $leader"
+	fi
+fi
 
 echo
 if [ "$FAIL" -eq 0 ]; then
