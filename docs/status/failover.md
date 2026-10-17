@@ -5,7 +5,7 @@
   - 188e2d6ab cherry-pick of the FAILOVER harness from master (15596cf72)
   - 1c3013b94, 2a999f1f4 ledger and recorded root cause
   - 8a5bd916a Promote a replica when a shard's primary dies (src/server/primary_election.h, src/server/discovery.cc, src/index_resolver_lru.cc, tests/test_primary_election.cc)
-  - (this commit) Guard the discovery bus handler so an exception cannot end its receive loop (src/server/discovery.cc), not built yet
+  - c51da3e09 Guard the discovery bus handler so an exception cannot end its receive loop (src/server/discovery.cc), not built yet
 - Doing: waiting for the strict host hold to lift (`quiet check` exits 1: strata-trials until 01:17:22)
 - Next, once `quiet check` exits 0 (or 2: nice -n 19, at most 4 jobs):
   1. `cmake --build build` (the guard commit has never been compiled), then `(cd build && ctest --output-on-failure)`.
