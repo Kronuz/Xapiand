@@ -123,6 +123,23 @@ accept case that differs in one variable: an untrusted CA, plain HTTP to the TLS
 raw TLS 1.1 ClientHello, a static-RSA suite, a forced renegotiation, and startup with an
 expired, not-yet-valid, mismatched, or group-readable certificate or key.
 
+Last, the layer runs `tls_bounds.py` (T3, about 2.5 minutes of wall time), which starts
+its own solo nodes on port 18895 and times each bound of D1.3 from the client's side:
+65 connections stalled mid-handshake (the 65th refused at once, the 64 dropped at 5 s),
+the connection after `--tls-max-connections` refused and counted as `cap`, RSS per TLS
+connection, a cap above the open-files limit refused at startup, idle 75 s after the
+handshake and after a reply, a body stopped for 60 s, a client that stops reading its
+replies for 60 s (a writer thread pipelines requests until it blocks; the close is timed
+from its last write), headers trickled past 30 s, and a RESTORE streamed for 140 s that
+completes. Each bound may run up to 2.5 s late. The refusals it causes must show in
+`/:metrics` as `xapiand_tls_refused_connections{reason=...}`. `ONLY=unread_reply,...`
+runs just the named concurrent cases while iterating.
+
+```sh
+python3 -I harness/tls_bounds.py build/bin/xapiand            # every case, exits 0 when all hold
+ONLY=unread_reply python3 -I harness/tls_bounds.py build/bin/xapiand
+```
+
 ---
 
 ## Remote / cluster E2E

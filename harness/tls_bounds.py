@@ -9,12 +9,14 @@ HTTPS bounds (docs/design/transport-security.md, T3), against solo nodes it star
   5. a body that stops for 60 s, and a client that stops reading for 60 s: closed
   6. headers trickled past 30 s: closed
   7. a RESTORE body streamed for longer than 120 s: completes
-Cases 4 to 7 run at once. Exits 0 when every case holds.
+Cases 4 to 7 run at once. Exits 0 when every case holds. ONLY=name,... runs just those
+of cases 4 to 7 (by function name), for iterating on one.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import resource
 import shutil
 import socket
@@ -111,6 +113,14 @@ def closed_at(sock: socket.socket | ssl.SSLSocket, start: float, limit: float) -
     return None
 
 
+def refusals() -> dict[str, float]:
+    """The xapiand_tls_refused_connections counters from /:metrics, by reason."""
+    with urllib.request.urlopen(f"https://localhost:{PORT}/:metrics", context=context(), timeout=5) as r:
+        text = r.read().decode()
+    found = re.findall(r'^xapiand_tls_refused_connections\{[^}]*reason="(\w+)"[^}]*\} (\S+)$', text, re.M)
+    return {reason: float(value) for reason, value in found}
+
+
 def tls_connect() -> ssl.SSLSocket:
     raw = socket.create_connection(("127.0.0.1", PORT), timeout=10)
     return context().wrap_socket(raw, server_hostname="localhost")
@@ -141,6 +151,9 @@ def handshakes() -> None:
     late = [t for t in times if not near(t, 5)]
     report(not late, f"64 stalled handshakes dropped at 5 s (first {fmt(min(t or 99 for t in times))}, "
            f"last {fmt(max(t or 99 for t in times))}, {len(late)} outside 4 to {5 + SLACK} s)")
+    counts = refusals()
+    report(counts.get("handshakes", 0) >= 1 and counts.get("deadline", 0) >= 64,
+           f"metrics count them: handshakes {counts.get('handshakes', 0):.0f}, deadline {counts.get('deadline', 0):.0f}")
 
 
 def connections(node: Node) -> None:
@@ -156,12 +169,16 @@ def connections(node: Node) -> None:
         refused = t is not None
     except (ssl.SSLError, OSError):
         refused = True
-    report(refused and node.logged("--tls-max-connections reached"),
-           f"connection {CAP + 1} refused at --tls-max-connections {CAP}, logged")
+    time.sleep(1)  # the control-plane check reads reactor's rejected count every second
+    report(refused and node.logged("refused at accept: --tls-max-connections reached"),
+           f"connection {CAP + 1} refused at --tls-max-connections {CAP}, logged as cap")
     print(f"        RSS {base} KB idle, {at_cap} KB with {CAP} TLS connections: "
           f"{(at_cap - base) / CAP:.1f} KB per connection", flush=True)
     for s in held:
         s.close()
+    time.sleep(1)
+    cap = refusals().get("cap", 0)
+    report(cap >= 1, f"metrics count it: cap {cap:.0f}")
 
 
 def idle_after_handshake() -> None:
@@ -194,14 +211,32 @@ def stalled_body() -> None:
 
 
 def unread_reply() -> None:
+    # Pipelines requests and never reads: the server's replies fill the buffers, it stops
+    # reading, and this writer blocks. The close shows as a write error.
     s = tls_connect()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
-    request = b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"
-    s.sendall(request * 20000)  # far more reply than the socket buffers hold
-    start = time.monotonic()
-    time.sleep(70)
-    t = closed_at(s, start, 85)
-    report(t is not None and t < 80, f"a client not reading its replies for 60 s closed (EOF reached at {fmt(t)})")
+    s.settimeout(None)
+    request = b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n" * 16
+    progress = [time.monotonic()]
+    closed: list[float] = []
+
+    def writer() -> None:
+        try:
+            while True:
+                s.sendall(request)
+                progress[0] = time.monotonic()
+        except (ssl.SSLError, OSError):
+            closed.append(time.monotonic())
+
+    thread = threading.Thread(target=writer, daemon=True)
+    thread.start()
+    thread.join(150)
+    if not closed:
+        socket.socket.shutdown(s, socket.SHUT_RDWR)  # the raw socket, so the writer returns
+        report(False, "a client not reading its replies for 60 s closed (never)")
+        return
+    t = closed[0] - progress[0]
+    report(near(t, 60), f"a client not reading its replies for 60 s closed ({fmt(t)} after its last write)")
 
 
 def trickled_headers() -> None:
@@ -256,21 +291,26 @@ def main() -> int:
     subprocess.run([os.path.join(HERE, "tls_certs.sh"), os.path.join(WORK, "certs")], check=True, stdout=subprocess.DEVNULL)
     print(f"== [T3] TLS bounds on :{PORT}", flush=True)
 
-    node = Node("fdlimit", "--tls-max-connections", "1000", nofile=512)
-    node.proc.wait(30)
-    report(node.proc.returncode != 0 and node.logged("does not fit the open-files limit"),
-           "--tls-max-connections 1000 under 512 open files refused at startup")
+    only = [c for c in os.environ.get("ONLY", "").split(",") if c]
+    if not only:
+        node = Node("fdlimit", "--tls-max-connections", "1000", nofile=512)
+        node.proc.wait(30)
+        report(node.proc.returncode != 0 and node.logged("does not fit the open-files limit"),
+               "--tls-max-connections 1000 under 512 open files refused at startup")
 
     node = Node("bounds", "--tls-max-connections", str(CAP))
     try:
         if not node.ready():
             report(False, "node did not start")
             return 1
-        handshakes()
-        time.sleep(6)
-        connections(node)
-        time.sleep(2)
         cases = [idle_after_handshake, idle_after_reply, stalled_body, unread_reply, trickled_headers, slow_restore]
+        if only:
+            cases = [c for c in cases if c.__name__ in only]
+        else:
+            handshakes()
+            time.sleep(6)
+            connections(node)
+            time.sleep(2)
         threads = [threading.Thread(target=c) for c in cases]
         for t in threads:
             t.start()

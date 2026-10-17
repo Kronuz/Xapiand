@@ -11,7 +11,8 @@
 #   smoke    single-node index + search sanity (no prerequisites)          [always]
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
 #   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, needs newman)
-#   tls      the e2e suite over HTTPS (needs newman 6) and the TLS refusals (tls_check.sh)
+#   tls      the e2e suite over HTTPS (needs newman 6), the TLS refusals (tls_check.sh), and
+#            the TLS bounds (tls_bounds.py, about 2.5 minutes)
 #   cluster  2-node discovery + remote/replication + distributed search (cluster_check.sh)
 #   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
 #   load     quick functional bulk load (index_fortune)
@@ -131,7 +132,7 @@ run_e2e() {
 }
 
 run_tls() {
-	echo "== [tls] e2e over HTTPS, and the TLS refusals =="
+	echo "== [tls] e2e over HTTPS, the TLS refusals, and the TLS bounds =="
 	if ! "$BIN" --help 2>&1 | grep -q -- --tls-cert; then
 		skip "tls" "built without TLS -- reconfigure with -DTLS=ON (needs OpenSSL 3)"
 		return
@@ -151,6 +152,7 @@ run_tls() {
 	local ok=1
 	printf '%s\n' "$rep" | grep -q '^GREEN' || { ok=0; printf '%s\n' "$rep" | head -100; tail -5 "$dir/capture.log"; }
 	WORK="$dir/check" "$HARNESS_DIR/tls_check.sh" "$BIN" || ok=0
+	WORK="$dir/bounds" python3 -I "$HARNESS_DIR/tls_bounds.py" "$BIN" || ok=0
 	if [ "$ok" = 1 ]; then pass "tls"; rm -rf "$dir"; else fail "tls"; fi
 }
 
