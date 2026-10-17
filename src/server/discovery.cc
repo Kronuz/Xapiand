@@ -110,7 +110,12 @@ Discovery::Discovery(const char* group, unsigned int port)
 		opts.cluster_name,
 		toUType(Message::MAX),
 		[this](int wire_type, std::string_view content, const asio::ip::udp::endpoint& from) {
-			on_message(wire_type, content, from);
+			// An exception escaping here ends the bus receive loop and leaves this node deaf.
+			try {
+				on_message(wire_type, content, from);
+			} catch (...) {
+				L_EXC("ERROR: Dropping discovery message {}", enum_name(static_cast<Message>(wire_type)));
+			}
 		}),
 	  delegate_([this](cluster::RaftMessage msg, const std::string& payload) {
 		send_message(raft_to_wire(msg), payload);
