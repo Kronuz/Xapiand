@@ -11,6 +11,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [1.0.0-alpha.9] - 2026-10-17
+
+The last release on Xapian before the move to strata.
+
+### Fixed
+- **Builds no longer break when a library changes.** Every fetched library, including the
+  ones Xapiand's libraries fetch themselves, is pinned to a commit: each Kronuz library's
+  default branch as of 2026-09-18, the last green build, and sol2 to v3.5.0-4. Building
+  against moving `main` branches had broken Linux builds once cluster started depending
+  on varint.
+
+### Changed
+- **Docs site:** the complete Discussions package is vendored, the comment widget is
+  synced with its self-hosted Worker, dates render in UTC, and long titles wrap.
+
+---
+## [1.0.0-alpha.8] - 2026-07-11
+
+### Changed
+- **Faster reserved-word dispatch.** Perfect-hash dispatch uses constexpr-phf, and the
+  schema's dispatch key and the stop-word hash are 64-bit, matching the word-at-a-time
+  hash (18-51% faster than byte-at-a-time FNV on Xapiand's reserved names and field types).
+- **Docs site** redeploys on each release, so its version badge stays current.
+
+---
+## [1.0.0-alpha.7] - 2026-07-10
+
+### Fixed
+- **The docs E2E suite** finds the relocated sidebar again.
+
+---
+## [1.0.0-alpha.6] - 2026-07-10
+
+### Added
+- **Docs site:** the version and CI status in the header, and an opt-in Discussions
+  comments engine.
+
+---
+## [1.0.0-alpha.5] - 2026-07-10
+
+### Changed
+- **Document ids are UUIDv6 by default** (cuuid v6: timestamp-first, an 8-byte compact
+  wire form). Existing v1 ids still decode; see the upgrade notes.
+
+### Added
+- **`--legacy-ids`** mints v1 ids as before.
+- **The Python and JavaScript reference clients** understand v6 ids.
+
+---
 ## [1.0.0-alpha.4] - 2026-07-09
 
 ### Fixed
