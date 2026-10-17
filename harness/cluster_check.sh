@@ -31,7 +31,7 @@
 # Usage:
 #   harness/cluster_check.sh          # 2 nodes
 #   harness/cluster_check.sh 3        # 3 nodes
-#   FAILOVER=1 harness/cluster_check.sh 3   # and kill the leader: a new leader; it rejoins; writes resume
+#   FAILOVER=1 harness/cluster_check.sh 3   # and kill the leader: a new leader, writes resume, it rejoins
 #   BIN=build/bin/xapiand harness/cluster_check.sh 2
 set -u
 
@@ -50,6 +50,9 @@ DISCOVERY_PORT=58880    # SHARED across nodes (multicast rendezvous)
 # Set DISCOVERY_IFACE= (empty) to use the default route (cross-host clusters).
 DISCOVERY_IFACE="${DISCOVERY_IFACE:-127.0.0.1}"
 RUNDIR="${RUNDIR:-$REPO/build/xcluster_$$}"
+# The node pinned as holder of the primary cluster database; empty lets it follow the Raft
+# leader, as failover needs. FAILOVER=1 leaves it empty unless set.
+if [ "${FAILOVER:-0}" = "1" ]; then PRIMARY_NODE="${PRIMARY_NODE-}"; else PRIMARY_NODE="${PRIMARY_NODE-node1}"; fi
 INDEX="cluster_probe"
 
 if [ ! -x "$BIN" ]; then echo "missing binary: $BIN (build it or set BIN=...)"; exit 1; fi
@@ -92,7 +95,7 @@ launch_node() {
 	       --replica-port $((REPLICA_BASE + i - 1)) \
 	       --discovery-port "$DISCOVERY_PORT" \
 	       ${DISCOVERY_IFACE:+--discovery-interface "$DISCOVERY_IFACE"} \
-	       --name "$name" --primary-node node1 -D "$dir" \
+	       --name "$name" ${PRIMARY_NODE:+--primary-node "$PRIMARY_NODE"} -D "$dir" \
 	       ${FAILOVER:+--database-stall-time 5} \
 	       >"$RUNDIR/node$i.log" 2>&1 &
 	PIDS[$i]=$!
@@ -190,10 +193,12 @@ done
 [ "$s" = 0 ] || echo "     node$N last search: $(echo "$last" | head -c 160)"
 check "$s" "SEARCH from node$N gathers the doc (count>=1, the hit present)"
 
-# --- 4. FAILOVER (FAILOVER=1, N >= 3): kill the leader; the survivors elect one; the
-# killed node rejoins, and a write through a survivor reads back from it. The nodes start with a 5 s
+# --- 4. FAILOVER (FAILOVER=1, N >= 3): kill the leader. The survivors elect one new leader,
+# and writes through a survivor resume and read back from another, before the killed node
+# returns; then it rejoins under the one leader. Nodes start with a 5 s
 # --database-stall-time, so the dead node's primary shards are promoted on their replicas
-# within the check's window (the default waits 300 s). ---
+# within the check's window (the default waits 300 s); the primary cluster database follows
+# the leader unless PRIMARY_NODE pins it. ---
 if [ "${FAILOVER:-0}" = "1" ] && [ "$N" -ge 3 ]; then
 	echo "[4] failover: kill the leader"
 	leader="$(curl -s --max-time 5 "localhost:$HTTP_BASE/" | python3 -c "import sys,json;d=json.load(sys.stdin);print(next((n['name'] for n in d.get('nodes',[]) if n.get('leader')),''))" 2>/dev/null)"
@@ -201,40 +206,39 @@ if [ "${FAILOVER:-0}" = "1" ] && [ "$N" -ge 3 ]; then
 	if [ -z "$leader" ] || [ -z "${PIDS[$li]:-}" ]; then
 		check 1 "a leader to kill (got '${leader:-none}')"
 	else
+		t0=$(date +%s)
 		kill -9 "${PIDS[$li]}" 2>/dev/null; PIDS[$li]=""
 		survivors=(); for i in $(seq 1 "$N"); do [ "$i" != "$li" ] && survivors+=("$i"); done
 		a="$(http_port "${survivors[0]}")"; b="$(http_port "${survivors[1]}")"
 		newleader=""
-		deadline=$(( $(date +%s) + 60 ))
+		deadline=$(( t0 + 60 ))
 		while [ "$(date +%s)" -lt "$deadline" ]; do
 			newleader="$(curl -s --max-time 5 "localhost:$a/" | python3 -c "import sys,json
-d=json.load(sys.stdin); ls=[n['name'] for n in d.get('nodes',[]) if n.get('leader')]
+d=json.load(sys.stdin); ls=[n['name'] for n in d.get('nodes',[]) if n.get('leader') and n.get('name')!='$leader']
 print(ls[0] if len(ls)==1 else '')" 2>/dev/null)"
-			[ -n "$newleader" ] && [ "$newleader" != "$leader" ] && break
-			newleader=""; sleep 1
+			[ -n "$newleader" ] && break
+			sleep 1
 		done
-		check "$([ -n "$newleader" ] && echo 0 || echo 1)" "the survivors elect one new leader after $leader dies (got ${newleader:-none})"
-		# The dead node was the --primary-node, whose cluster database takes every write, so
-		# writes wait for it by design: restart it; it rejoins, one leader stays, writes resume.
-		launch_node "$li"
-		rejoined="$(wait_member "$(http_port "$li")" 90)" && rj=0 || rj=1
-		check "$rj" "$leader rejoins and sees all $N members"
-		leaders="$(curl -s --max-time 5 "localhost:$a/" | python3 -c "import sys,json;d=json.load(sys.stdin);print(sum(1 for n in d.get('nodes',[]) if n.get('leader')))" 2>/dev/null)"
-		check "$([ "$leaders" = "1" ] && echo 0 || echo 1)" "exactly one leader after $leader rejoins (got ${leaders:-none})"
-		put=""; deadline=$(( $(date +%s) + 90 ))
+		check "$([ -n "$newleader" ] && echo 0 || echo 1)" "the survivors elect one new leader after $leader dies (got ${newleader:-none} in $(( $(date +%s) - t0 )) s)"
+		put=""; deadline=$(( t0 + 120 ))
 		while [ "$(date +%s)" -lt "$deadline" ]; do
 			put="$(curl -s --max-time 30 -XPUT "localhost:$a/$INDEX/2" -H 'Content-Type: application/json' \
 				-d '{"title":"after failover","n":43}' -w '%{http_code}' -o /dev/null)"
 			{ [ "$put" = "200" ] || [ "$put" = "201" ] || [ "$put" = "204" ]; } && break
-			sleep 2
+			sleep 1
 		done
-		check "$({ [ "$put" = "200" ] || [ "$put" = "201" ] || [ "$put" = "204" ]; } && echo 0 || echo 1)" "PUT through node${survivors[0]} after $leader rejoins (http $put)"
+		check "$({ [ "$put" = "200" ] || [ "$put" = "201" ] || [ "$put" = "204" ]; } && echo 0 || echo 1)" "a write through node${survivors[0]} succeeds with $leader down (http $put, $(( $(date +%s) - t0 )) s after the kill)"
 		r=1; deadline=$(( $(date +%s) + 90 ))
 		while [ "$(date +%s)" -lt "$deadline" ]; do
-			curl -s --max-time 45 "localhost:$(http_port "$li")/$INDEX/2" | grep -q '"n":43' && { r=0; break; }
+			curl -s --max-time 45 "localhost:$b/$INDEX/2" | grep -q '"n":43' && { r=0; break; }
 			sleep 2
 		done
-		check "$r" "GET it from the rejoined $leader"
+		check "$r" "it reads back from node${survivors[1]} with $leader down"
+		launch_node "$li"
+		wait_member "$(http_port "$li")" 90 >/dev/null && rj=0 || rj=1
+		check "$rj" "$leader rejoins and sees all $N members"
+		leaders="$(curl -s --max-time 5 "localhost:$a/" | python3 -c "import sys,json;d=json.load(sys.stdin);print(sum(1 for n in d.get('nodes',[]) if n.get('leader')))" 2>/dev/null)"
+		check "$([ "$leaders" = "1" ] && echo 0 || echo 1)" "exactly one leader after $leader rejoins (got ${leaders:-none})"
 	fi
 fi
 
