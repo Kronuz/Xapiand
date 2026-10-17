@@ -114,12 +114,14 @@ run_e2e() {
 	# demos). The gate (e2e_assert.py) is GREEN only when EVERY documented assertion
 	# passes and every request is covered -- no baseline, no allowlist, no skips. So
 	# this runs anywhere (incl. CI) straight from the docs.
-	local out="/tmp/xa_e2e_ours.json"
+	local dir; dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_e2e.XXXXXX")"  # per run, so concurrent runs do not share files
+	local out="$dir/e2e.json"
 	local cap rep
-	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)"
+	cap="$(COLL="$dir/coll.json" "$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" "$dir/data" 2>&1)"
 	rep="$(python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
 	if printf '%s\n' "$rep" | grep -q '^GREEN'; then
 		pass "e2e"
+		rm -rf "$dir"
 	else
 		fail "e2e"
 		# Surface WHY: the full assertion report (failing assertions with their
@@ -128,6 +130,7 @@ run_e2e() {
 		# problem (e.g. the node never came up).
 		printf '%s\n' "$rep" | head -200
 		printf '%s\n' "$cap" | grep -iE 'node exited|EADDR|error|exception|Killed|Aborted|newman exit' | head -8
+		echo "  report and node log kept in $dir"
 	fi
 }
 
