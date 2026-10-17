@@ -22,7 +22,7 @@
 #   harness/run_all.sh smoke cluster   # just those two
 #   BIN=build/bin/xapiand harness/run_all.sh
 #
-# See TESTING.md for what each layer proves and how to (re)generate baselines.
+# See docs/dev/testing.md for what each layer proves and how to (re)generate baselines.
 set -u
 
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -97,7 +97,7 @@ run_unit() {
 	if [ ! -f "$REPO/build/CTestTestfile.cmake" ] && [ ! -d "$REPO/build/Testing" ]; then
 		# Tests are only wired when configured with -DBUILD_TESTS=ON (needs GTest).
 		if ! (cd "$REPO/build" && ctest -N >/dev/null 2>&1); then
-			skip "unit" "no tests configured -- reconfigure with -DBUILD_TESTS=ON (needs GTest); see TESTING.md"
+			skip "unit" "no tests configured -- reconfigure with -DBUILD_TESTS=ON (needs GTest); see docs/dev/testing.md"
 			return
 		fi
 	fi

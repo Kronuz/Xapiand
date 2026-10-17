@@ -18,7 +18,7 @@ The authoritative, always-current version of this lives in the repository's
 first rule of the tree: **don't refactor vendored code**. The search core,
 `src/xapian/`, is special. It's a *fork* (a pristine upstream snapshot plus a
 small stack of patches), not a plain bundle. Before touching anything under it,
-read [XAPIAN_FORK.md](https://github.com/Kronuz/Xapiand/blob/master/XAPIAN_FORK.md).
+read [xapian-fork.md](https://github.com/Kronuz/Xapiand/blob/master/docs/dev/xapian-fork.md).
 
 Most of the small utilities that used to live in `src/` have been extracted into
 standalone repositories and are pulled back in via `FetchContent` (see
@@ -107,5 +107,5 @@ These are not safe to "clean up". Each one is load-bearing:
   working guide, including known traps and gotchas.
 - [ARCHITECTURE.md](https://github.com/Kronuz/Xapiand/blob/master/ARCHITECTURE.md)
   — the C++ codebase deep-dive.
-- [XAPIAN_FORK.md](https://github.com/Kronuz/Xapiand/blob/master/XAPIAN_FORK.md)
+- [xapian-fork.md](https://github.com/Kronuz/Xapiand/blob/master/docs/dev/xapian-fork.md)
   — the fork model, why each patch exists, and the upgrade procedure.

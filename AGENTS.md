@@ -32,10 +32,15 @@ the complete directory, and verify all three copies before committing.
 `src/xapian/` is special: it's a *fork* (pristine upstream snapshot + a small
 stack of our patches), not a plain read-only bundle. Before upgrading the
 vendored Xapian, reconciling our patches, or touching anything under it, read
-[XAPIAN_FORK.md](XAPIAN_FORK.md) — the fork model, why each patch exists, and
+[xapian-fork.md](docs/dev/xapian-fork.md) — the fork model, why each patch exists, and
 the upgrade procedure.
 
 ## Where things live
+
+Documentation outside the root's README, AGENTS, and ARCHITECTURE goes under `docs/`:
+designs in `docs/design/`, their architect reviews in `docs/reviews/`, and developer guides
+(testing, the Xapian fork) in `docs/dev/`. The user-facing site is `docs/src/`, and only
+`docs/src/content/docs/` feeds the docs-as-E2E suite.
 
 | You're touching… | Start in |
 |---|---|
@@ -87,7 +92,7 @@ Run it before and after a de-vendor to prove Xapiand still works end-to-end.
 
 This is one of several test layers. For the full picture — unit tests, the functional
 E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and the
-`harness/run_all.sh` one-shot runner — see [TESTING.md](TESTING.md).
+`harness/run_all.sh` one-shot runner — see [testing.md](docs/dev/testing.md).
 
 ## Conventions you'll see everywhere
 

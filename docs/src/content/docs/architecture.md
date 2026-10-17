@@ -73,7 +73,7 @@ The [Xapian 2.0.0 fork](https://github.com/Kronuz/xapian) (`src/xapian/`) is the
 search engine: indexing, retrieval, query parsing, and aggregations (range,
 cardinality, geospatial, nested). It runs in-process as a library. See
 [Building the Xapian Library](/Xapiand/building-xapian) to compile it standalone,
-and the project's `XAPIAN_FORK.md` for the fork model and patch stack.
+and the project's `docs/dev/xapian-fork.md` for the fork model and patch stack.
 
 ## Where to Go Next
 

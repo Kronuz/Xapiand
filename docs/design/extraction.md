@@ -15,8 +15,8 @@ It's a complete inventory of the codebase's own (non-vendored) code, grouped int
 **extraction waves** by return-on-effort, with a concrete split-out plan for each
 piece, a suggested set of repos to create, and the licensing flags to carry. For
 the deep technical detail behind any entry, see
-[ARCHITECTURE.md](ARCHITECTURE.md); the scheduling stack has its own study in
-[SCHEDULER.md](SCHEDULER.md).
+[ARCHITECTURE.md](../../ARCHITECTURE.md); the scheduling stack has its own study in
+[scheduler.md](scheduler.md).
 
 ## How to read this
 
@@ -88,9 +88,9 @@ come along. Several are best shipped as a small dependency tree.
 
 | Proposed lib | Source | What it is | Diff | Value | Split plan |
 |---|---|---|---|---|---|
-| **stash** | `stash.h` | Lock-free hierarchical timer-wheel slot store (the crown jewel) | Easy | High | Stub trace macros; delete the vestigial `_Ring`/`_CurrentKey` params. See [SCHEDULER.md](SCHEDULER.md). |
+| **stash** | `stash.h` | Lock-free hierarchical timer-wheel slot store (the crown jewel) | Easy | High | Stub trace macros; delete the vestigial `_Ring`/`_CurrentKey` params. See [scheduler.md](scheduler.md). |
 | **thread-pool** | `thread.hh`, `threadpool.hh` | Blocking-queue thread pool + CRTP `Thread` (promise-based join) | Easy–Mod | Med | Delete `ThreadPolicyType`; deps `blocking_concurrent_queue.h` + `likely.h`; `strings::format`→`fmt`. |
-| **timer-scheduler** | `scheduler.h` (+ stash + thread-pool) | 24h multi-resolution timer wheel + thread; cancellable tasks; inline or pool dispatch | Mod | High | Build on **stash** + **thread-pool**; stub macros. See [SCHEDULER.md](SCHEDULER.md). |
+| **timer-scheduler** | `scheduler.h` (+ stash + thread-pool) | 24h multi-resolution timer wheel + thread; cancellable tasks; inline or pool dispatch | Mod | High | Build on **stash** + **thread-pool**; stub macros. See [scheduler.md](scheduler.md). |
 | **debouncer** | `debouncer.h` | Per-key throttle/debounce with randomized force-window | Easy* | High | Rides on **timer-scheduler**; vendor `callable_traits` + 3 `random` helpers. (*after the scheduler is out.) |
 | **posix-io** | `io.cc`, `io.hh` | EINTR-retry / partial-IO / fsync / fallocate wrappers + fault injection | Mod | High | Cut `log`/`error`/`exception`; gate or drop the `opts`-driven fault injection; `likely.h`→`[[likely]]`. SQLite-derived fallocate fallback is public-domain. |
 | **sysinfo** | `system.*` + `memory_stats.*` | Open/max fd counts, OS/arch probes, RAM/disk/swap/inode stats | Mod | Med–High | Drop the stray `STATE_*` defines in `system.cc`; carry `posix-io`; swap logging. |
@@ -132,7 +132,7 @@ Many entries above are tiny and should ship together. A sensible repo set:
 - **`term-color`** — the ANSI/color trio.
 - **`scheduler`** — `stash` + `thread-pool` + `timer-scheduler` + `debouncer` as
   one repo with internal layering (or `stash` standalone + `scheduler` depending
-  on it). See SCHEDULER.md.
+  on it). See scheduler.md.
 - **`sysutil`** — `posix-io` + `sysinfo` + `timeutil` + `alloc-kit` + `traceback`
   (the "systems-programming odds and ends" most projects re-implement).
 - **`msgpack-x`** — `msgpack-xchange` now; `msgpack-patch` later if MsgPack is lifted.
@@ -176,7 +176,7 @@ Domain glue or too-coupled / too-thin to package:
 1. **Wave 1 first** — they're nearly free and several (errno-names, located-exception,
    the msgpack adapters, perfect-hash) are immediately useful elsewhere.
 2. **`scheduler` next** — it's the highest-interest piece, and `stash` is the most
-   novel thing in the whole codebase. SCHEDULER.md is already its blueprint.
+   novel thing in the whole codebase. scheduler.md is already its blueprint.
 3. **`string-kit` and `term-color`** — high value, all Wave-1/2 effort.
 4. **`sysutil`** — bundles a lot of Wave-2/3 systems plumbing into one useful repo.
 5. **The heavies last** — `htm-geo`, `haystack-store`, `iso8601` reward the effort

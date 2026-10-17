@@ -452,7 +452,7 @@ Components worth lifting into their own libraries, in the spirit of base-x /
 uinteger_t / fantasyname. Difficulty is how much Xapiand coupling you'd have to
 cut; value is rough breadth of reuse. The table below is the highlights; for the
 **complete catalog with per-component split-out plans, extraction waves, and
-licensing notes**, see [EXTRACTION.md](EXTRACTION.md).
+licensing notes**, see [extraction.md](docs/design/extraction.md).
 
 | Component | File(s) | Difficulty | Value | Notes |
 |---|---|---|---|---|
@@ -469,9 +469,9 @@ licensing notes**, see [EXTRACTION.md](EXTRACTION.md).
 | **HTM geospatial** | `geospatial/`, `cartesian.*` | Moderate | High | Geometry → sortable integer ranges on a sphere, with full shape support. Cut `THROW`/`strings::format` and drop the ~940 lines of matplotlib debug writers (`htm.cc:838+`). Few OSS C++ HTM impls exist. |
 | **Haystack-style store** | `storage.h` (+ `compressor_lz4.*`) | Moderate | High | Single-file append-only blob store templated on format structs. Replace `opts.*` with constructor params and stub logging. |
 | **Retired libev reactor framework** | former `worker.*` / `Kronuz/server` | Retired | Low | The old Worker/BaseServer/TCP engine has been removed from Xapiand; current services ride `Kronuz/reactor` and keep protocol logic in the `*_views` layer. |
-| **Lock-free timer-wheel store** | `stash.h` | Easy | High | A novel CAS-based hierarchical slot store; near-zero deps once the trace macros are stubbed. The crown jewel of the scheduling stack. See [SCHEDULER.md](SCHEDULER.md). |
-| **Cancellable timer scheduler** | `scheduler.h` (+ `stash.h`) | Moderate | High | A 24-hour multi-resolution timer wheel + a thread that runs/dispatches due tasks; tasks are cancellable. Needs a thread/pool abstraction. See [SCHEDULER.md](SCHEDULER.md). |
-| **Per-key debouncer** | `debouncer.h` | Easy* | High | Throttle/debounce with a randomized force-window so a forever-touched key still fires. *Easy once the scheduler is extracted. See [SCHEDULER.md](SCHEDULER.md). |
+| **Lock-free timer-wheel store** | `stash.h` | Easy | High | A novel CAS-based hierarchical slot store; near-zero deps once the trace macros are stubbed. The crown jewel of the scheduling stack. See [scheduler.md](docs/design/scheduler.md). |
+| **Cancellable timer scheduler** | `scheduler.h` (+ `stash.h`) | Moderate | High | A 24-hour multi-resolution timer wheel + a thread that runs/dispatches due tasks; tasks are cancellable. Needs a thread/pool abstraction. See [scheduler.md](docs/design/scheduler.md). |
+| **Per-key debouncer** | `debouncer.h` | Easy* | High | Throttle/debounce with a randomized force-window so a forever-touched key still fires. *Easy once the scheduler is extracted. See [scheduler.md](docs/design/scheduler.md). |
 | **Thread pool** | `threadpool.hh`, `thread.hh` | Easy | Med | Blocking-queue pool + CRTP `Thread`. Drop the runtime-ignored `ThreadPolicyType`; depends on `blocking_concurrent_queue.h` + `likely.h`. |
 | **Lazy splitter** | `split.h` | Easy | High | One-pass `string_view` splitter, full-delimiter and find-first-of modes. |
 | **LZ4 streaming wrappers** | `compressor_lz4.*` | Easy | High | `LZ4BlockStreaming` + `compress_lz4`/`decompress_lz4`, ring-buffered file/data variants. (But: see the unused-digest bug.) |

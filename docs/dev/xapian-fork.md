@@ -1,8 +1,8 @@
-# XAPIAN_FORK.md — the vendored Xapian fork
+# The vendored Xapian fork
 
 The `src/xapian/` tree is **not pristine upstream Xapian**. It's a *fork*: a
 pristine snapshot of a tagged Xapian release, plus a small stack of deliberate
-patches that Xapiand needs. The root [AGENTS.md](AGENTS.md) tells you not to
+patches that Xapiand needs. The root [AGENTS.md](../../AGENTS.md) tells you not to
 casually refactor vendored code — that still holds. This file is the exception
 manual: what the fork is, why each patch exists, and how to move it to a new
 Xapian version without losing the patches.

@@ -69,10 +69,10 @@ a cluster when you need it to.
 - **[AGENTS.md](AGENTS.md)** — orientation for anyone (human or AI) working in
   this codebase: where things live, the conventions, the load-bearing
   invariants, and the traps.
-- **[TESTING.md](TESTING.md)** — the test layers, from unit tests to the docs-as-E2E
+- **[testing.md](docs/dev/testing.md)** — the test layers, from unit tests to the docs-as-E2E
   suite and cluster soak runs.
-- **[XAPIAN_FORK.md](XAPIAN_FORK.md)** — the vendored Xapian fork and its patch stack.
-- **[SCHEDULER.md](SCHEDULER.md)** and **[EXTRACTION.md](EXTRACTION.md)** — the
+- **[xapian-fork.md](docs/dev/xapian-fork.md)** — the vendored Xapian fork and its patch stack.
+- **[scheduler.md](docs/design/scheduler.md)** and **[extraction.md](docs/design/extraction.md)** — the
   (now completed) plans that split the scheduler stack and the rest of the utility
   code into the standalone [Kronuz libraries](https://github.com/Kronuz/cpp-libraries).
 
@@ -122,7 +122,7 @@ plus the extracted `cuuid` condensed-UUID value type, the `msgpack` keystone
 Issues and pull requests are welcome; see the
 [contributing guide](https://kronuz.github.io/Xapiand/contributing/) and
 [AGENTS.md](AGENTS.md). The documentation examples double as the end-to-end test
-suite ([TESTING.md](TESTING.md)).
+suite ([testing.md](docs/dev/testing.md)).
 
 ## 📄 License
 
