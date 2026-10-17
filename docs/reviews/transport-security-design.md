@@ -633,3 +633,212 @@ behavior is judged from the code, not exercised. The Xapian remote client was re
 its I/O layer; `remote_protocol_views.cc` and the Raft delegate were not read in full.
 Detent was read only for the cited documents. Whether the docs E2E is green today was not
 checked.
+
+## Re-check
+
+- Date: 2026-10-17.
+- Reviewed: revision 1 at d847e5f36 (`docs/design/transport-security.md`, 117 lines),
+  against this review as committed at 2aaec15a3. Xapiand source at d847e5f36, with its
+  pins (`CMakeLists.txt:450,783,805`); reactor 56783e5; http d3b3667 (only pins changed
+  since cf84df3).
+- Checked by: reading the cited code, plus new probes beside the earlier ones in
+  `.scratch/review-transport-security/probes/`: `max_clients_budget.py` (the
+  `max_clients` arithmetic of `adjustOpenFilesLimit`), `newman_tls_options.out` (this
+  Mac's newman), `openssl_no_ticket_doc.out` (OpenSSL 3.6.5's `SSL_OP_NO_TICKET` text).
+
+### Verdict
+
+**REJECT for step 1, on two small items: D1.3's request deadline cuts long requests and
+changes plain HTTP (TS-R18), and the plan omits the dependency step D1 needs (TS-R19).
+Everything else is closed, deferred and recorded, or a condition.**
+
+Narrowing step 1 to D1 is right, and the deferral is acceptable: step 1 now claims
+nothing between nodes (design:34), and every deferred decision carries its findings
+(design:88-97). D1.1, D1.2, D1.4, D1.6, and the new rows hold against the code with the
+conditions below. D1.3 does not: it misreads http's request deadline, and it applies new
+limits to plain HTTP that D1.1 says stay unchanged.
+
+### Status
+
+| ID | Status | Note |
+|---|---|---|
+| TS-R1 | Deferred and recorded (design:90); acceptable | Waits on strata replacing the raw-fd paths (design:84-86) |
+| TS-R2 | Deferred and recorded (design:90); acceptable | |
+| TS-R3 | Deferred; recorded narrower than the finding | design:91 carries "persisted incarnations" only; a restarted receiver also needs a freshness rule for first contact (condition 1) |
+| TS-R4 | Deferred and recorded (design:91); acceptable | |
+| TS-R5 to TS-R8 | Deferred and recorded (design:93); acceptable | |
+| TS-R9 | Deferred and recorded (design:95); acceptable | Step 1 scopes access control out (design:31-33) |
+| TS-R10 | Deferred and recorded (design:94); acceptable | Step 1 has no loopback rule |
+| TS-R11 | Closed for step 1 | No `--tls-ca` (design:44-46); http owns the bounds and has the six-argument constructor (`http/http_asio.h:826-833`, `http/http_asio_tls.h:85-96`); one listener replaces plain (design:42-44). Xapiand's pins lack both (TS-R19) |
+| TS-R12 | Deferred and recorded (design:96); acceptable | The restart rule (design:79-80) matches `http/http_asio_tls.h:92` |
+| TS-R13 | Deferred and recorded (design:90,92); acceptable | |
+| TS-R14 | Closed for step 1 (design:23-38) | Carried only as "what stays in clear" under D3 (design:91); the deferred design owes the full rewrite (condition 1). The cluster caveat is TS-R24 |
+| TS-R15 | Partially closed | T1 to T6 have procedures and accept/refuse pairs (design:101-108); some cases cannot fail as written (TS-R21) |
+| TS-R16 | Partially closed | TLS 1.2 restriction and the handshake residuals hold (design:59-60,67-73); remote and replication bounds deferred and recorded (design:97); the request deadline is wrong (TS-R18) and the ticket rule misstates TLS 1.3 (TS-R22) |
+| TS-R17 | Open | D1.4 changes `reactor::tls` for every consumer and calls it additive (design:72-73); coordination is unstated, and the deferred layering items are not in the table (TS-R22, condition 1) |
+
+### New findings
+
+#### TS-R18. D1.3's request deadline is an exchange deadline, and D1.3 applies it to plain HTTP (blocking)
+
+Evidence:
+
+- http sets the deadline at the top of each keep-alive iteration
+  (`http/http_asio.h:613-615`). It then bounds the wait for the next request's first byte
+  (`:619`), streamed body reads (`:653`), dispatch (`:725`), and the reply write
+  (`:707,769`). http's own doc says "buffered replies use the remaining budget"
+  (`http/docs/TRANSPORT.md:26`). The design says it bounds "only a request's own headers
+  and body" (design:63).
+- With a 60 s deadline, an idle keep-alive connection closes at 60 s, so the 75 s idle
+  timeout never fires and T3's "idle connections closed at 75 s" (design:105) fails
+  against the code.
+- A whole-database RESTORE streams bodies of any size
+  (`src/server/search_views.cc:3075-3087,694-695`), and the 60 s deadline cuts it.
+- A dump is built in memory and written as one reply
+  (`src/server/search_views.cc:1614-1638`). It, or any handler that runs past the
+  remaining budget, can lose its reply after its side effects happened, which invites a
+  client to retry a write that is not idempotent.
+- D1.3 applies "with or without TLS" (design:55), against "Without them nothing changes"
+  (design:44). Plain deployments gain the deadline and a connection cap.
+- The connection cap is `opts.max_clients` as `adjustOpenFilesLimit` leaves it
+  (`src/main.cc:441-456,486`). It goes negative when the open-files limit cannot be
+  raised (probe `max_clients_budget.out`: -3 at 256 files, -4 at 1,024, 291 at 2,048).
+  A zero cap means none (`reactor/reactor.h:365-367`), and a negative one wraps when
+  cast to `size_t`. `FDS_PER_CLIENT` 2 is a libev-era estimate ("KQUEUE + IPv4",
+  `src/main.cc:86`).
+
+Why it matters: as written, step 1 breaks every restore or dump that runs past 60 s, on
+every deployment, TLS or not, and T3 cannot pass.
+
+Required change:
+
+1. Apply the new bounds only when `--tls-cert` is given, or declare the plain-HTTP change
+   breaking in the changelog. Recommended: TLS only in step 1.
+2. Replace the absolute 60 s deadline with an idle timeout between requests and a header
+   deadline from a request's first byte to the end of its headers. Put no absolute
+   deadline on bodies and replies, or use a minimum-progress rule. Name these as http
+   additions (the deadline's start moves to the first byte) and test them in http.
+3. Define the connection cap as an explicit number with a floor, and warn or refuse to
+   start when the file budget cannot cover it.
+4. T3 gets one case per bound. Include a RESTORE body that streams longer than any
+   per-request bound, and pin `--max-clients` in the test.
+
+#### TS-R19. Xapiand does not pin the libraries D1 uses, and the plan has no dependency step (blocking)
+
+Evidence:
+
+- `CMakeLists.txt:450,805` pin reactor ef7ce3b, which lacks `reactor_tls.h` and
+  `connection_admission.h`. It is 14 commits before 56783e5.
+- `CMakeLists.txt:783` pins http 31a037c. It lacks `http_asio_tls.h`,
+  `TimedConnectionFactory`, the connection bound, and `set_request_timeout`. It is 17
+  commits behind HEAD, including 708f457, 9e3478c, 8ff1841, af36648, and 8f27b3c.
+- The local qualification override points reactor, http, and cluster at the sibling
+  checkouts (`.scratch/local-dependencies.cmake:39,41-42`). A local build sees code that
+  CI and releases do not.
+- OpenSSL appears nowhere in the build or packaging:
+  - CMake has no match.
+  - CI installs no OpenSSL package (`.github/workflows/ci.yml:31-33,112-114`).
+  - The Docker runtime stage lists none (`Dockerfile:52-59`).
+  - The Homebrew formula has no `depends_on` for it (`contrib/homebrew/xapiand.rb:23-28`).
+  - The FreeBSD job installs none (`.github/workflows/freebsd.yml:38`).
+
+Why it matters: "the one leg the libraries already carry" (design:20) holds at library
+HEAD, not at Xapiand's pins. The bump brings 31 commits (14 reactor, 17 http), among them
+deferred replies, owned streaming, connection admission, and accept recovery, before any
+TLS code. Making OpenSSL a dependency changes every package.
+
+Required change:
+
+1. A first step that bumps reactor and http and passes the existing layers in CI on the
+   new pins, plain, before any TLS code: smoke, unit, e2e, cluster, recovery.
+2. Name the OpenSSL 3 dependency.
+3. Say whether TLS is a CMake option, and its default.
+4. List each packaging change.
+
+#### TS-R20. D1.5 needs an http hook the design does not list (condition)
+
+`serve_tls_connection` returns silently on every failure path
+(`http/http_asio_tls.h:24,26-29,43-46,53,61-63`) and reports no reason. Only
+`set_idle_timeout()` is named as an http addition (design:63). T2's "logged with its
+reason" depends on this hook.
+
+Condition: name the http addition (a failure observer that carries the reason), test it in
+http, and rate-limit it in Xapiand.
+
+#### TS-R21. Some gate-row cases cannot fail as written (condition)
+
+- T2 and T6 refuse a static-RSA suite, but a server with an ECDSA certificate
+  (`reactor/test/tls_test.cc:43`) can never negotiate one, with or without D1.4. Use an
+  RSA certificate for the static-RSA case; the CBC case works with either key type.
+- T2's TLS 1.1 attempt can fail inside the client: OpenSSL 3 clients do not offer TLS
+  1.1 at the default security level. Lower the client's level, and assert the server's
+  logged reason (TS-R20).
+- T2's renegotiation case must force TLS 1.2.
+- T2 expects startup to fail on expired and not-yet-valid certificates. No decision says
+  so, and `reactor::tls::configure` checks no validity dates
+  (`reactor/reactor_tls.h:67-71`). Decide it in D1.1. Under D1.6's restart-only rule, an
+  expired certificate at restart takes the API down, so warn ahead of expiry.
+- T3's "the 65th waits or is refused": http refuses it (`http/http_asio_tls.h:43-46`).
+  Pin that outcome.
+- T1's readiness probe needs the CA, and the test certificate's SANs must cover
+  `localhost`.
+- T1's newman flag: this Mac's newman 4.5.0 has no `--ssl-extra-ca-certs`
+  (`newman_tls_options.out`), while CI installs the latest
+  (`.github/workflows/ci.yml:76,129`). Use `NODE_EXTRA_CA_CERTS`, or require a newman
+  version.
+- T4 must say where the server's CPU time comes from (`/proc/<pid>/stat`, `ps`, or a
+  server metric). Pinning the load generator needs `taskset` or `cpuset`; macOS has
+  neither.
+- T5: CI has no UBSan job (`.github/workflows/ci.yml:99-102`) and installs no OpenSSL
+  development package. Add both.
+- T6 also checks that no TLS 1.2 ticket is issued, and states TLS 1.3's behavior
+  (TS-R22).
+
+#### TS-R22. D1.4's ticket rule misstates TLS 1.3, and D1.4 is not additive (condition)
+
+- `SSL_OP_NO_TICKET` is a server-side option. Under TLS 1.3 it switches to stateful
+  tickets held in the server's session cache (`openssl_no_ticket_doc.out`, from OpenSSL
+  3.6.5's `SSL_CTX_set_options`). So "TLS 1.3 keeps OpenSSL's defaults" (design:71-72)
+  does not hold with that call. Name the calls (`SSL_OP_NO_TICKET`, plus
+  `SSL_CTX_set_num_tickets` if TLS 1.3 tickets go too) and their effect.
+- Restricting suites for every role removes options from consensus's transport and from
+  Detent (design:72-73). That is a behavior change, not an addition. Run consensus's TLS
+  tests and coordinate with Detent before landing it (TS-R17).
+
+#### TS-R23. The certificate and key load late, after the privilege drop (condition)
+
+The HTTP service, and so the key read, is built in `make_servers()` during node setup
+(`src/manager.cc:769,910`). That runs after `demote()` drops privileges
+(`src/main.cc:1091`) and after discovery starts. A key readable only by root fails, and a
+bad key surfaces after the node has begun joining.
+
+Condition: load and check the certificate and key before `demote()` and before discovery.
+Refuse a key file that group or others can read (`Detent/docs/RELAY.md:15`).
+
+#### TS-R24. Docs must say what HTTPS does not cover in a cluster (condition)
+
+A write or query that arrives over HTTPS still crosses to other nodes in clear. Writes
+forward to the primary over the remote protocol (`ARCHITECTURE.md:342-343`), and
+distributed search and replication run over plain TCP. Step 1's threat model scopes node
+traffic out (design:34), but users read docs, not designs.
+
+Condition: the user-facing docs and the changelog entry say this, so HTTPS on the API is
+not read as cluster security.
+
+### What approval needs
+
+1. TS-R18: D1.3 rewritten. Bounds apply only with TLS, or the change is declared
+   breaking; header and idle bounds replace the exchange deadline; the connection cap is
+   an explicit number; T3 matches.
+2. TS-R19: the dependency step and the OpenSSL and packaging decisions are in the design.
+
+### Conditions carried to the step-1 gate
+
+1. TS-R3, TS-R14, TS-R17: the deferred table also carries a freshness rule for first
+   contact after a receiver restart, the full threat-model rewrite, and the layering and
+   Detent-coordination items.
+2. TS-R20 to TS-R24 as stated above.
+
+Not run (re-check): no build, no tests, no TLS handshakes. http's request-deadline
+behavior is read from code, not exercised. newman was checked only on this Mac (4.5.0).
+Nothing under Detent was touched.
