@@ -668,3 +668,200 @@ command (pki:310) was not checked. The quorum model is a model of the cited cons
 not a run of Detent. The security review was read after this review's findings were written,
 and its probes were not rerun. The review wrote only this file and `.scratch/review-pki/`,
 plus one private claude.ai copy of an earlier draft, reported to the lead.
+
+## Re-check
+
+- Date: 2026-10-17.
+- Reviewed: `git log a37a511ae..design/pki`, three commits: revision 1 of
+  `docs/design/pki.md` at d05ed6bab (944 lines, with a "Changes from revision 0" table), and
+  the ledger at ea6344b89 and 5cbb7c6da (the lead's decisions on Q1 to Q9). Against them: the
+  system review's SYS-2, SYS-13, and SYS-15
+  (`strata/docs/reviews/system-2026-10-17.md:193-247, 543-559, 587-608`) and their records
+  (strata `docs/PLAN.md:26-29` at 5660f82; the TLS gate's ledger,
+  `docs/status/tls-gate.md:23-25` at 93bc2448e); Detent's
+  `docs/SHARED_LIBRARY_DECISIONS.md` at deae42d, read only.
+- Checked by: re-reading every file:line this re-check cites; two new probes beside the
+  others, `uri_constraint_clients.sh` (revision 1's URI-constrained CA against every client
+  on this host) and `leaf_size.out`; the earlier probes where cited. `quiet check` exited 1
+  throughout (the strata gate VM run's strict hold), so nothing was compiled.
+- Citations: in this section `pki:N` is line N of revision 1 at d05ed6bab, and `ledger:N` is
+  line N of `docs/status/pki.md` at 5cbb7c6da.
+
+### Verdict
+
+**APPROVE WITH CONDITIONS: revision 1 closes all seven blocking items and the substance of
+every condition; nothing blocks step 1. Eight new conditions, PKI-R19 to PKI-R26, are small
+and land with the code they touch.**
+
+What holds, and reproduces:
+
+- D7's Detent schedule (pki:536-548) matches `probes/trace_quorum.out` restart for restart,
+  and T6 runs it over consensus's own `validate_peer_identity` and `authenticated_voter`
+  (pki:752), a stronger check than the model.
+- Revision 1's URI-constrained CA works with every client on this host: OpenSSL 3.6.5 and
+  4.0.3, LibreSSL 3.3.6, macOS curl 8.7.1 on its default backend and with
+  `CURL_SSL_BACKEND=secure-transport`, and Python's `ssl` (OpenSSL 4.0.3) each accept a leaf
+  in the trust domain and refuse one forged for another, error 47, "permitted subtree
+  violation" (`probes/uri_constraint_clients.out`). T2's fallback (pki:748) is therefore
+  unlikely on macOS; Linux curl and newman remain T2's to check.
+- A leaf in revision 1's profile (empty subject, critical SAN with the SPIFFE URI, a DNS and
+  an IP name) is 491 bytes of DER, 656 base64 characters (`probes/leaf_size.out`), so D2's
+  "about 0.7 KiB" per index record (pki:250-253) holds.
+- No consumer reads a certificate's subject: no `X509_get_subject_name`, `NID_commonName`, or
+  `X509_NAME_get_text_by_NID` in reactor, http, consensus, cluster, Xapiand's `src/` outside
+  the fork, or Detent's `src/` (pki:131-133). The empty subject breaks nothing.
+- fantasyname's syllable tables at Xapiand's pin a87942a hold letters only (1,008 literals,
+  `c++/namegen.cc:31-193`), so every generated node name fits SPIFFE's alphabet (pki:427-429).
+- The other new citations hold: consensus's `transport/` headers are unchanged from fc66c0e
+  to ef30b4f; Detent's rows sit at `DEPENDENCY_UPGRADES.md:77, 79` at 488522d (pki:16-18);
+  `src/main.cc:1097` calls `tls_setup` and `:1105` `demote` (pki:719); `launch_node` is
+  `harness/cluster_check.sh:90-103` (pki:752); completion's barrier is `posix.h:443-453`
+  (pki:327); `io::full_fsync` is `io/io.hh:417-423` (pki:231).
+- The owner's decisions agree where they are recorded: SYS-2 (strata `PLAN.md:26-29` at
+  5660f82), SYS-13 ("only when its group is the service's own group", TLS gate ledger
+  `:23-25`), and Detent's shared decisions (`SHARED_LIBRARY_DECISIONS.md:18-25, 86-93`, which
+  read the group as the process's effective group, as D3 does, pki:344-346). The gate branch
+  still refuses every group bit (`src/tls.cc:34` on `tls/d1-gate`); the ledger's next step 4
+  (ledger:23-24) covers it.
+- "Where the reviews differ" (pki:679-707) states this review's positions as written. On Q7,
+  where it leaves the ruling to the re-checks (pki:913-915): for this review, SPIFFE's
+  alphabet with T13's vectors (pki:759) meets PKI-R1's canonical-form requirement.
+
+### Status
+
+| ID | Status | Evidence in revision 1 |
+|---|---|---|
+| PKI-R1 | Closed | SPIFFE identity with the role in the path (pki:409-420); one byte form: ASCII lowercasing through `chars::tolower`, SPIFFE's alphabet, no encoder (pki:423-429); caps tied to mechanisms (pki:430-433); byte comparison (pki:436-437); the URI advisory, peers on SPKI pins under SYS-2 (pki:92-98, 444-449); T13 (pki:759); Q7 decided (ledger:53) |
+| PKI-R2 | Closed | Restart orders and counts (pki:183-195); D7's schedule (pki:536-548); revocation by pin replacement (pki:112); Q3's options marked **Interface** (pki:837-858) and owned (pki:796); one SPKI per identity (pki:500) |
+| PKI-R3 | Closed | The owners table (pki:783-801); the two-anchor test in pki's suite (pki:794, 749); `Options` fields last and off (pki:593-596) |
+| PKI-R4 | Closed | Format 1: version line, grammar, reader refusals, a fixture per version (pki:273-320); each certificate kept whole, so issuer and SANs are read from it (pki:284-288); D8 recertifies from them, or `--rekey` (pki:561-567). Event kinds: PKI-R23 |
+| PKI-R5 | Closed | Empty subject, critical SAN (pki:403-404); `server` needs a DNS or IP name (pki:406); the reasons, with both reviews' probes (pki:451-460); T1 and T4 (pki:747, 750) |
+| PKI-R6 | Closed | The index is the one commit point; keys written before the rename that names them, derived files after; cleanup and `repair` under the lock; every CA key checked against its certificate (pki:322-335); T8 asserts the whole directory (pki:754). The temp file's sync on macOS: PKI-R21 |
+| PKI-R7 | Closed | `backup`, `restore`, `import`, and copy generations (pki:641-661); the compromised and lost authority (pki:568-574); T11 and T12 (pki:757-758) |
+| PKI-R8 | Closed | Consumer and cluster fixed at `init` (pki:416-418, 667); `request` and `sign` with name, SANs, life, `--expect-spki`, `--replace`, `--out`, and no secret before step 5 (pki:472-493); renewal by SPKI (pki:495-500); T4 (pki:750). Renewal from a Kubernetes Secret: PKI-R19 |
+| PKI-R9 | Closed | Steps per consumer (pki:527-535); `switch` with the fingerprint confirmation (pki:532); `abort` (pki:550-552); `--force` retires and prints (pki:534); `list --issuer` (pki:670); T6 (pki:752) |
+| PKI-R10 | Closed | The clock refusal, the printed issuance time, and a recorded `--accept-clock` (pki:506-510); T5 with `PKI_TEST_NOW` (pki:751) |
+| PKI-R11 | Closed | A distinct CA subject (pki:407); `pathlen:0`'s consequence and the URI constraint in generation 1 (pki:462-468); the date refusal names `rotate begin` (pki:465-466); RSA only with `--allow-rsa`, with reasons (pki:373-382) |
+| PKI-R12 | Closed | Detent's key files row (pki:110); completion's rule as integrity (pki:349-356); `DIR`'s checks (pki:337-339); one header with two policies, its home decided as `io` (pki:349-356; ledger:55); scrypt parameters and the reader's limit (pki:384-390); `F_FULLFSYNC` (pki:230-232, 325-327); local POSIX filesystems (pki:358-361); Detent's items owned (pki:801). Follow-ups: PKI-R21, PKI-R22 |
+| PKI-R13 | Closed | D9's reasons and the CRL design's requirements (pki:580-596). Its exposure sentence: PKI-R24 |
+| PKI-R14 | Closed | 1,000 nodes per authority, batch renewal, and the 100,000-node statement (pki:241-271) |
+| PKI-R15 | Closed | Option E (pki:147-151); Q1 option 4 (pki:816) |
+| PKI-R16 | Closed | T1's serial (pki:747; D5, pki:401); T2's dated and RSA leaves (pki:619-627); T4's owner case and concurrency (pki:750); T5's notAfter (pki:751); T6's harness (pki:752); T7's accept case (pki:753); T9's OpenSSL per job (pki:755); T10's SPKI bytes (pki:756); rows T11 to T14 (pki:757-760) |
+| PKI-R17 | Closed | D14's commands (pki:663-677); the docs page's contents (pki:631-637); LibreSSL's limit (pki:389-390); `OSSL_STORE` (pki:370-371) |
+| PKI-R18 | Partially closed | The review tier (pki:238-239, 777-781), Detent's fixture (pki:69-72), and flag 1 (pki:711-724) are fixed. The done criteria are still owed: the ledger has none (ledger:7-9), and the lead writes them before step 1 (pki:779-781) |
+
+Conditions from the first review: C1 to C4 and C6 to C10 are closed by the rows above. C5 is
+closed in the design; sending Detent's items is the lead's (ledger:19-22). C11 is carried as
+PKI-R18's done criteria.
+
+### New findings (all conditions)
+
+#### PKI-R19. A node whose key is a Kubernetes Secret cannot request its renewal
+
+D6 renews through `request --key` on the node (pki:515-516), and D3 refuses any key file
+that is a symlink or that the caller does not own (pki:340-347). A Secret mounts through
+`..data` links, and its files are root's (flag 1, pki:711-724), so a non-root pod's
+`request --key` refuses its own key. The index already vouches for a renewing key
+(`checked index`, pki:498), and the thief of a key can make a request as easily as its node,
+so a renewal request adds liveness, not security.
+
+Condition C12: renew from the stored certificate on the authority, as `recertify` does
+(pki:569-571), or give the docs page the copy step; and say that `request --key` runs as the
+key's owner.
+
+#### PKI-R20. D1's `io` linkage needs stating
+
+Xapiand compiles `io.cc` into its own objects with its trace and fault-injection seams, and
+never links `io::io` (`CMakeLists.txt:584-592, 1396-1400`); `io::io` is a static library
+(`io/CMakeLists.txt:23-26`). The bodies of `io.hh`'s inline functions depend on those seams
+(`RANDOM_ERRORS_IO_ERRNO_RETURN`, `io/io.hh:406-424`). So pki's translation units must see
+the same `IO_*` definitions, which a FetchContent declared after them gives, or a build with
+the seams active carries two definitions of one inline function; and pki must not add a
+second `io.cc` to Xapiand's link.
+
+Condition C13: D1 states both, and step 2's build checks one copy of `io`'s symbols in
+`xapiand`.
+
+#### PKI-R21. The temp index's sync is not named, and on macOS it decides durability
+
+D3 writes the temp index, "synced", then renames it (pki:322-325). macOS's `fsync` leaves
+data in the drive's cache, which is why completion syncs each file with `F_FULLFSYNC`
+(`completion/include/completion/posix.h:121-129`) and not only the directory. After a power
+cut the rename can survive without the data; the `end` digest then refuses the index
+(pki:314-320), and a power cut becomes a restore.
+
+Condition C14: the temp index is synced with `io::full_fsync` before the rename, and the
+design says so.
+
+#### PKI-R22. "A non-network type" on Linux has no list
+
+`fstatfs` must report "a non-network type on Linux" (pki:358-359). FUSE is both sshfs and a
+gocryptfs volume over a local disk, a plausible home for an offline authority.
+
+Condition C15: an allowlist of filesystem types (for example ext4, xfs, btrfs, zfs, f2fs) and
+a refusal that names the type found.
+
+#### PKI-R23. Format 1's event kinds are open, and one of them changes behavior
+
+`kind = word` (pki:310-311) admits any kind, yet a copy whose index ends with a `backup` event
+refuses every changing command (pki:646-647). A format-1 reader that meets an unknown kind
+cannot tell whether it matters.
+
+Condition C16: list format 1's event kinds and refuse others, so a new kind is a new format;
+state the backup rule exactly (the newer of the `backup` and `restore` events decides).
+
+#### PKI-R24. D9's exposure sentence contradicts the threat model
+
+D9 says a stolen key's leaf stays valid "up to 365 days, renewals included while the thief
+goes undetected" (pki:589-591). The threat model (pki:206) and Q5 (pki:878-881) say,
+correctly, that under same-key renewal the leaf's life bounds only the tail after a re-key or
+a decommission.
+
+Condition C17: one statement in D9: an undetected thief keeps working as long as the node's
+leaves renew; after a re-key or `retire`, for the rest of the old leaf's life, at most 365
+days.
+
+#### PKI-R25. `init` has no rule for a cluster outside the alphabet
+
+Xapiand's `--cluster` is free-form (`src/opts.cc:218-219`). The index admits a cluster of
+`[A-Za-z0-9._-]` only (pki:298), and the trust domain is its lowercase (pki:416-418), but
+neither D14's `init` (pki:667) nor T13 (pki:759) says what happens to `my cluster`.
+
+Condition C18: `init` refuses it with the rule, and T13 adds the case.
+
+#### PKI-R26. Text drift
+
+- The design still asks Q1 to Q9 (pki:803-944); the ledger records the lead's decision on
+  each (ledger:41-56).
+- pki:99 cites strata `PLAN.md:450` for the 100,000 nodes; at the cited 5660f82 that line is
+  `:445` (`:450` is b8438ad's).
+- The ledger's state still reads "ready for preliminary review" (ledger:6).
+
+Condition C19: each question records its decision, the citation names its commit, and the
+ledger's state follows.
+
+### New blocking items
+
+None.
+
+### Conditions
+
+1. C11 (PKI-R18): the done criteria in the ledger before step 1 starts.
+2. C12 (PKI-R19): a renewal path for a key held in a Kubernetes Secret, before step 2's docs
+   page.
+3. C13 (PKI-R20): `io`'s linkage stated in D1, and checked in step 2's build.
+4. C14 (PKI-R21): `io::full_fsync` on the temp index, before D3's code.
+5. C15 (PKI-R22): the Linux filesystem allowlist, before D3's code.
+6. C16 (PKI-R23): format 1's event kinds closed and the backup rule exact, before D3's code.
+7. C17 (PKI-R24): one exposure statement, in the next design edit.
+8. C18 (PKI-R25): `init`'s cluster rule and its T13 case, with D5's identity code.
+9. C19 (PKI-R26): the decisions, the citation, and the ledger's state, in the next design
+   edit.
+
+Not run (re-check): no build, compile, or test: the strict hold held throughout (`quiet
+check` exit 1). The new probes are openssl commands, macOS curl, Python's `ssl`, and one
+loopback `s_server`. Linux and FreeBSD clients, newman, and Go clients were not tested against
+the URI constraint; that stays in T2. No Kubernetes cluster: PKI-R19 rests on flag 1's
+reading of the kubelet. No fault injection or power cut: PKI-R21 is from the platforms'
+documented `fsync` behavior and completion's code. The security reviewer's re-check, if one
+exists, was not read. Detent was only read.
