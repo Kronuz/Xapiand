@@ -37,3 +37,19 @@
   488522d); SPIFFE's SPIFFE-ID.md and X509-SVID.md, RFC 9525, and Dogtag's packaging read on
   the web; `gh repo list Kronuz --limit 1000` (257 repositories). Nothing built or probed:
   the host is under a strict hold (strata-trials), and the design cites the reviews' probes.
+
+## Owner decisions on revision 1's open questions (2026-10-17)
+
+Made by the lead under the owner's standing permission for educated calls, each the
+recommendation both reviews share unless noted:
+
+- Q1: a new public `Kronuz/pki` repository, created when step 1's implementation starts.
+- Q2: `xapiand pki` as the command; `kronuz-pki` builds only in the library's CI, never packaged.
+- Q3: Detent's maintainer decides; proposed in `Detent/docs/SHARED_LIBRARY_DECISIONS.md`.
+- Q4: no revocation in step 1.
+- Q5: 365-day leaves with a `--max-days` cap and the exposure stated in days (the architect's
+  reasoning: renewal keeps the key, so a shorter life does not bound an undetected theft).
+- Q6: enrollment deferred to the peer transport design (`strata` branch `design/peer-transport`).
+- Q7: SPIFFE IDs.
+- Q8: reactor's CN fallback becomes an opt-in flag, off by default (additive; shared with Detent).
+- Q9: the shared file check lives in `io`; not blocking.
