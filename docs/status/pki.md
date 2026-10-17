@@ -53,3 +53,18 @@ recommendation both reviews share unless noted:
 - Q7: SPIFFE IDs.
 - Q8: reactor's CN fallback becomes an opt-in flag, off by default (additive; shared with Detent).
 - Q9: the shared file check lives in `io`; not blocking.
+
+## Done criteria for step 1 (set by the lead, C11; tick with evidence, never edit)
+
+- [ ] K1 T1, T4, T5, T10, T13 pass in the library's own suite (profile, refusals, clocks,
+  fingerprints, identity vectors).
+- [ ] K2 T2 and T3 pass: transport-security's T1 and T2 on pki certificates with the same
+  assertion counts, and reactor's `Peer` handshakes accept and refuse as T3 states.
+- [ ] K3 T6 and T7 pass on a 3-node HTTPS cluster (planned and emergency rotation), and T11 and
+  T12 (backup, restore, lost authority).
+- [ ] K4 T8 passes: every kill point leaves the directory whole, under umask 000 and 077.
+- [ ] K5 T9: CI green on Linux x86_64 and arm64, macOS, and FreeBSD, plus ASan+UBSan and TSan.
+- [ ] K6 T14: one CPU-hour of fuzzing per intake under a host hold, zero findings.
+- [ ] K7 Conditions PKI-R19 to R26 closed at file:line, and every condition of the security
+  re-check (`docs/reviews/pki-security.md`) closed.
+- [ ] K8 Code review and security review of the implementation (security tier) approve.
