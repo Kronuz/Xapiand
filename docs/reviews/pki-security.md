@@ -456,3 +456,183 @@ Kubernetes behavior is read from the kubelet's sources, not run in a cluster;
 consensus's `authenticated_voter` was not linked (its DER pin is `X509_digest`,
 `tls.h:12-19`, which the probe computes directly); Detent was read only in the cited
 documents and its test fixture; no listener was started and no handshake crossed a socket.
+
+## Re-check
+
+- Date: 2026-10-17.
+- Reviewed: `git log e67ec4875..design/pki`, five commits: a37a511ae (the architect's
+  preliminary review), d05ed6bab (revision 1 of `docs/design/pki.md`, 945 lines, with its
+  "Changes from revision 0" table), ea6344b89 and 5cbb7c6da (the ledger, with the lead's
+  decisions on Q1 to Q9), and af23d6bc0 (the architect's re-check, PKI-R19 to PKI-R26, read
+  and not repeated here). Against them: Detent's `docs/SHARED_LIBRARY_DECISIONS.md:27-45,
+  86-93` (SYS-2, SYS-13), read only; the TLS gate's ledger `docs/status/tls-gate.md` at
+  93bc2448e and `src/tls.cc` on `tls/d1-gate`; `char-classify/chars.hh:176-219`; SPIFFE's
+  `standards/SPIFFE-ID.md` and `standards/X509-SVID.md` at `main`.
+- Checked by: `rev1/profile_rev1.sh` under `.scratch/review-pki-security/`, which issues
+  revision 1's profile with the `openssl` CLI and checks it under OpenSSL 3.6.5 and 4.0.3
+  (`rev1/out-3.6.5/`, `rev1/out-4.0.3/`); one host check (`id`, `dscl`) for SR14. `quiet
+  check` exited 1 throughout (the strict hold), so nothing was compiled; the revision-0
+  compiled probes stand where cited.
+- Citations: `pki:N` is line N of revision 1 at d05ed6bab; `ledger:N` of
+  `docs/status/pki.md` at 5cbb7c6da; `arch:N` of `docs/reviews/pki-design.md` at af23d6bc0.
+
+### Verdict
+
+**APPROVE WITH CONDITIONS. Revision 1 closes SR1 to SR13: every medium finding has its fix
+in a decision and a gate row, and the profile that could not be fixed after issuance (SR1,
+SR2) is now right before any leaf exists. Nothing blocks step 1. Three new findings are
+small; one of them, SR15, sits on the recovery path D8 exists for and lands with D8's text
+before its code.**
+
+What holds, and reproduces (`rev1/profile_rev1.sh`, both versions):
+
+- Revision 1's leaf has an empty subject (`subject=`) and a critical SAN holding one SPIFFE
+  URI; a serial with bit 6 set encodes in 16 bytes (first bytes 0x60 and 0x76 in the two
+  runs). Every role passes `-x509_strict` with its purposes (`server`: sslserver only;
+  `peer`: both; `client`: sslclient only) and the CA passes `-x509_strict`.
+- A URI-only `peer` leaf is refused for a hostname equal to its node name (`-verify_hostname
+  n2`; the architect's `empty_subject.out` has the code, 62), while the `server` leaf
+  verifies for its DNS SAN and its IP SAN. SR1's fallback has nothing left to read.
+- Under the CA's `nameConstraints=critical,permitted;URI:c1`, a leaf the same CA signs for
+  `spiffe://c2/...` is refused with error 47, "permitted subtree violation"; a trust domain
+  with an underscore (`c_1`) passes `-x509_strict`.
+- `chars::tolower` maps every byte at or above 0x80 to itself (`char-classify/chars.hh:212-215`),
+  so "per byte and ASCII only" (`pki:423`) holds.
+- SPIFFE at `main` says what the design cites: the trust domain is lowercase `[a-z0-9._-]`
+  of at most 255 bytes, paths carry no percent-encoding and no `.` or `..` segments, an ID is
+  at most 2,048 bytes; an X.509-SVID has exactly one URI SAN, its SAN is critical when the
+  subject is omitted (§3.1), its EKU carries both `serverAuth` and `clientAuth` when present
+  (§4.4), and its keyUsage sets `digitalSignature` and never `keyCertSign` or `cRLSign`
+  (§4.3). Paths may hold uppercase (§2.2, §2.4); the lowercase rule is Xapiand's (SR17).
+- Detent's shared decisions define the SPKI pin as the SHA-256 of the SubjectPublicKeyInfo
+  (`SHARED_LIBRARY_DECISIONS.md:29-30`), the bytes D10 hashes (`pki:598-600`), and read
+  SYS-13's group as the process's effective group (`:88-90`), as D3 does (`pki:344-346`).
+- The TLS gate's ledger records SYS-13 (`docs/status/tls-gate.md` at 93bc2448e, "Owner
+  decision"); `src/tls.cc:34` on `tls/d1-gate` still refuses every group bit, which is that
+  workstream's open item (`pki:795`; `arch:723-725`).
+
+### Status
+
+| ID | Status | Evidence in revision 1 |
+|---|---|---|
+| SR1 | Closed for pki's leaves | Empty subject, critical SAN (`pki:403-404`); a `server` leaf needs a DNS or IP name (`pki:406`); the reasons, with both reviews' probes (`pki:451-460`); T1 refuses a hostname equal to the node name (`pki:747`). Reactor's own fallback is Q8 (`pki:917-930`), decided as an opt-in (`ledger:54`); the wording is SR17 |
+| SR2 | Closed | `/node/` for `server` and `peer`, `/client/` for `client` (`pki:413, 419-420`); uniqueness keyed on the path (`pki:420`); a check that reads the URI requires the path's role and the direction's EKU (`pki:444-449`); T3 (`pki:749`) |
+| SR3 | Closed | Every certificate is kept, so its SANs are (`pki:284-288`); `sign` warns on a name another identity holds (`pki:502-505`); `--max-days` (`pki:402`); the exposure in days (`pki:589-592`; its wording is the architect's PKI-R24); a cron check on every node (`pki:609-613`); the threat row (`pki:206`). Q5 decided at 365 days with the cap (`ledger:50-51`): my 90-day recommendation is recorded (`pki:885-886`) and the reasoning against it holds, since under same-key renewal a thief presents each renewed public leaf and the life bounds only the tail after a re-key or `retire` (`pki:878-880`) |
+| SR4 | Closed in the design | Flag 1 states `fsGroup`'s effect and the non-root recipe (`pki:711-724`); SYS-13's rule (`pki:340-347`); T2's 0640 and 0440 cases (`pki:748`); the docs page (`pki:636`). The code change is the TLS gate's (`pki:795`) |
+| SR5 | Closed | scrypt N = 2^14, r = 8, p = 1 and the reader's limit (`pki:384-390`); a 12-character minimum (`pki:390-391`); the passphrase file checked and refused inside `DIR` (`pki:340-347`); unprotected keys flagged (`pki:391-393`); `RLIMIT_CORE`, `PR_SET_DUMPABLE`, `mlock`, `OPENSSL_cleanse` (`pki:366-370`); T8 (`pki:754`). The rule's reach is SR14 |
+| SR6 | Closed | `sign --name` (`pki:477-478`); `--expect-spki` on a first issuance, carried apart from the request (`pki:497`); `request` prints the digest (`pki:474-475`); no secret before step 5 and the minimal parse (`pki:479-487`); T4's substituted request (`pki:750`) |
+| SR7 | Closed | `DIR` opened once and checked, every file through `openat` (`pki:337-339`); exclusive random temp names (`pki:322-325`); the lock from before the index is read (`pki:278`); a local POSIX filesystem (`pki:358-361`); T4's `DIR` cases (`pki:750`). The sync and the Linux list are the architect's PKI-R21 and PKI-R22 |
+| SR8 | Closed | `backup` and `restore` (`pki:641-661`); a compromised authority recovers on a fresh host (`pki:568-571`); the new bundle replaces the old (`pki:575-578`); kept identities recertified from stored certificates, or `--rekey` (`pki:561-567`); an overlap warning (`pki:553-555`); a planned rotation evicts nobody (`pki:556-557`); T11 and T12 (`pki:757-758`). The digest `recertify` checks against is SR15 |
+| SR9 | Closed | RSA only with `--allow-rsa`, which prints the forward-secrecy cost (`pki:373-382`); the threat row (`pki:215`) |
+| SR10 | Closed | The consumer and cluster fixed at `init`, no override (`pki:416-418, 667, 695-697`); a critical URI constraint, DNS and IP ones on request (`pki:407`); the bundle kept out of system stores (`pki:634-636`); T1's forged trust domain (`pki:747`), reproduced above with error 47 |
+| SR11 | Closed | SPIFFE IDs with one byte form (`pki:409-437`); ASCII lowercasing per byte (`pki:423-424`, the table confirmed); a verifier compares bytes (`pki:436-437`); T13 (`pki:759`); Q7 decided (`ledger:53`). The design asks whether SPIFFE meets SR11 (`pki:913-915`): it does, since nothing is encoded and T13 holds the validator to vectors |
+| SR12 | Closed | `i2d_X509_PUBKEY` (`pki:598-603`); serial bit 6 (`pki:401`); T5 never at notAfter (`pki:751`); T10 (`pki:756`). The design is right that the short serial rate is 1 in 256, not 1 in 128 (`pki:692-694`): DER keeps a zero first byte when the second byte's top bit is set |
+| SR13 | Closed | Row 1 scoped to the API and Detent's peers (`pki:204`); the client-leaf holder (`pki:205`), the writer of a consumer's files (`pki:210`), and both rotation windows (`pki:211-212`) added |
+
+Conditions C1 to C8 of the first review are closed by the rows above; C4's code is the TLS
+gate's.
+
+### New findings
+
+#### SR14. SYS-13's own-group rule reaches the authority's own secrets (low)
+
+Attacker: another local account in the operator's primary group on the authority host.
+
+Evidence: every key file pki reads, "the CA's, a node's under `request --key`, and a
+`--passphrase-file`", passes at 0640 when its group is the caller's own (`pki:340-347`);
+revision 0 refused any group bit on `ca.key` (revision 0 `:169-171`). SYS-13's reason is a
+service process reading a Secret under `fsGroup` (`pki:344-346`), which never applies to
+`ca.key` or a passphrase file, both of which pki writes at 0600 (`pki:347`). The caller's own
+group is often shared: macOS gives every standard user the primary group `staff`, gid 20
+(`id -g` on this host; `dscl . -list /Users PrimaryGroupID` lists one non-system user here,
+so this host is not exposed, and a Mac with several accounts is), and Linux distributions
+without user-private groups use `users`. T4 asserts that a passphrase file at 0640 with the
+caller's own group is accepted (`pki:750`). `backup` says "the keys stay encrypted"
+(`pki:645`), which an authority made with `--no-passphrase` does not satisfy.
+
+What they gain: with a 0640 passphrase file, the authority outright; with a 0640 `ca.key`,
+the offline guess SR5 prices.
+
+Fix: CA key files and `--passphrase-file` are accepted at 0600 only; SYS-13's 0640 applies to
+node keys under `request --key`, where the pod case lives; T4's accept case for the passphrase
+file flips to a refusal; `backup` prints when the copy holds unprotected keys.
+
+#### SR15. `recertify` can certify the intruder it exists to evict (medium)
+
+Attacker: a holder of the old authority key who also sits on the path the operator fetches a
+node's certificate from, which is the case D8's second bullet is written for.
+
+Evidence: after an authority compromise, each kept identity is "recertified with `pki
+recertify CERT...` from the certificate its node presents, each checked against that node's
+SPKI digest, never from the old host's index" (`pki:568-571`); T12 recertifies "each node from
+the certificate it presents" (`pki:758`). Where the digest comes from is unstated. `show FILE`
+prints a certificate's SPKI digest (`pki:669`), so an operator who runs it on the fetched
+certificate compares a value with itself. The attacker holds the old CA key and so can present,
+to any client fetching from the node's address, a certificate for the node's identity and
+names over the attacker's key; the old CA is still what the operator's tools trust at that
+moment. A first issuance needs `--expect-spki` carried apart from the request (`pki:497`);
+`recertify` has no such requirement in D8 or D14 (`pki:674`).
+
+What they gain: a leaf under the new generation for the attacker's key, with a kept identity;
+the recovery meant to end the compromise carries it forward.
+
+Fix: `recertify` takes `--expect-spki` per certificate, exactly as a first issuance does, and
+the digest comes from the node host (a `show` or `fingerprint` that accepts a key file and
+prints its SPKI digest, read on the node's console), never from the presented certificate;
+T12 adds a presented certificate whose key is not the node's, refused.
+
+#### SR16. A passphrase change leaves the key under the old passphrase on disk (low)
+
+Attacker: whoever learned the old passphrase, which is why the operator changed it.
+
+Evidence: `passphrase` "re-encrypts every live CA key under a new passphrase, as new files
+that one index commit names" (`pki:676`). The cleanup rule removes "temp files and the key
+files of generations the index retired" (`pki:330-332`); the superseded file belongs to a live
+generation, so it stays, and "a key file the index does not name stops every command until
+`pki repair` prints and removes it" (`pki:332-334`). So the command that retires a passphrase
+leaves the key encrypted under it until an operator runs `repair`, and blocks the authority
+until then. Every earlier `backup` holds that file too (`pki:643-645`).
+
+What they gain: the CA key, from the stale file or from any backup made before the change,
+with the passphrase they already hold.
+
+Fix: `passphrase` removes the superseded file after its commit, in the same command, and the
+cleanup rule covers an unnamed key file of a live generation whose named file exists and
+matches its certificate; `passphrase` prints that earlier backups hold the old file, so they
+are destroyed or made again; T8 and T11 add the case.
+
+#### SR17. Two statements that could be read two ways (low)
+
+- Q8's decision reads "reactor's CN fallback becomes an opt-in flag, off by default"
+  (`ledger:54`): taken literally, the fallback itself is off unless a consumer opts in, which
+  is D5's option 1 with a switch; the design's recommendation and the owners table make the
+  suppression the opt-in, with the default unchanged (`pki:923-924, 927-928, 798`). Security
+  prefers the first reading (RFC 9525 §1.3, and SR1's ask), and pki's leaves need neither;
+  the record must say which reactor change is meant before it is made.
+- `pki:424-425` cites `SPIFFE-ID.md` §2.1 and §2.2 for `[a-z0-9._-]`; §2.2 allows
+  `[a-zA-Z0-9._-]` and §2.4 makes paths case-sensitive. The lowercase rule is Xapiand's
+  (`src/node.h:141`), and it is right; attribute it, so no later edit "corrects" the alphabet
+  toward SPIFFE's and gives one node two identities.
+
+### Blocking items
+
+None.
+
+### Conditions
+
+1. C9 (SR15): `recertify --expect-spki` with the digest from the node host, and T12's refusal
+   case, in D8 and D14 before step 3's code.
+2. C10 (SR14): 0600 only for CA keys and passphrase files, the T4 case flipped, and `backup`'s
+   unprotected-key notice, with D3's checks in step 1.
+3. C11 (SR16): `passphrase` removes the superseded file in its own command and names the
+   backups that still hold it, with D14's code in step 3.
+4. C12 (SR17): Q8's decision stated unambiguously and the alphabet's rule attributed, in the
+   next design edit.
+
+Not run (re-check): no build, compile, or test; `quiet check` exited 1 throughout. The new
+probe is `openssl` only; the revision-0 compiled probes were not rerun against revision 1's
+profile (the empty subject changes no handshake they exercised). The error code of the
+URI-only leaf's hostname refusal is taken from the architect's `empty_subject.out`, not
+reproduced. SPIFFE's texts were read at `main`, not at a pinned commit. No Kubernetes cluster,
+no Linux or FreeBSD host, no Detent code beyond the cited documents. The architect's re-check
+was read for context and its probes were not rerun.
