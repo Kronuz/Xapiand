@@ -462,7 +462,23 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	)
+#ifdef XAPIAND_TLS
+	, xapiand_tls_refused_connections(
+		AddCounter(registry,
+			"xapiand_tls_refused_connections",
+			"HTTPS connections refused, by reason",
+			constant_labels)
+	),
+	xapiand_tls_certificate_expiry_seconds(
+		AddGauge(registry,
+			"xapiand_tls_certificate_expiry_seconds",
+			"Seconds until the HTTPS certificate expires",
+			constant_labels)
+		.Add({})
+	)
+#endif
 {
+
 	xapiand_running.Set(1);
 	xapiand_info.Set(1);
 }

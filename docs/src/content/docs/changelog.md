@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--port`, with forward-secret ciphers only, a connection cap (`--tls-max-connections`),
   and idle, header, and inactivity timeouts. Traffic between nodes still travels in clear,
   and the API still has no authentication; see [Options](/Xapiand/options).
+- **HTTPS metrics.** `/:metrics` counts refused TLS connections by reason
+  (`xapiand_tls_refused_connections`) and reports the certificate's seconds to expiry
+  (`xapiand_tls_certificate_expiry_seconds`); the expiry warning is also checked daily.
 
 ### Changed
 - **Builds need OpenSSL 3** by default, for the coming HTTPS support (`-DTLS=OFF` builds

@@ -76,10 +76,15 @@ New indexes inherit these unless overridden per index (see
 - `--tls-cert` and `--tls-key` (PEM files, given together) serve the REST API over TLS on
   `--port`, in place of plain HTTP. The key file must be readable by its owner only (mode
   `0600`); the certificate must be valid now, and Xapiand warns when it expires within 14
-  days. TLS 1.2 and 1.3 only, forward-secret ciphers only, no session resumption.
+  days, at startup and daily while running. TLS 1.2 and 1.3 only, forward-secret ciphers
+  only, no session resumption.
 - `--tls-max-connections` caps the TLS connections held at once (1024 by default; it must
   fit the open-files limit). Over TLS, a connection idle 75 seconds, headers not done in 30
   seconds, or a request or reply that moves no data for 60 seconds is closed.
+- `/:metrics` reports `xapiand_tls_refused_connections` by `reason` (`deadline`,
+  `handshakes`, `cap` and `connections` for the connection cap, `version`, `cipher`,
+  `certificate`, `protocol`, `other`) and `xapiand_tls_certificate_expiry_seconds`. Each
+  reason is logged at most once a minute.
 
 HTTPS protects traffic between clients and the node they talk to. It does not protect
 traffic between nodes: the remote and replication protocols and discovery still travel in

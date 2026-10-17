@@ -140,6 +140,7 @@ std::shared_ptr<XapiandManager> XapiandManager::_manager;
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
 	reactor::PeriodicTimer try_shutdown_timer;
+	reactor::PeriodicTimer tls_timer;            // HTTPS cap refusals and the daily expiry check
 	reactor::Signal setup_node_async;
 	reactor::Signal set_cluster_database_ready_async;
 	reactor::Signal dispatch_command_async;
@@ -152,6 +153,7 @@ struct XapiandManager::Reactors {
 	Reactors()
 		: reactor(0, 0),
 		  try_shutdown_timer(reactor.io().get_executor()),
+		  tls_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  set_cluster_database_ready_async(reactor.io().get_executor()),
 		  dispatch_command_async(reactor.io().get_executor()),
@@ -991,15 +993,15 @@ XapiandManager::make_servers()
 			// HTTPS (transport-security D1): http's handshake deadline and caps, the connection
 			// bound, and the idle, header, and inactivity timeouts, which plain HTTP leaves off.
 			auto failed = [](http::TlsFailure why) {
-				switch (why) {  // one call site per reason, so each is rate-limited on its own
-					case http::TlsFailure::deadline: L_WARNING_ONCE_PER_MINUTE("TLS handshake past its deadline"); break;
-					case http::TlsFailure::connections: L_WARNING_ONCE_PER_MINUTE("TLS connection refused: --tls-max-connections reached"); break;
-					case http::TlsFailure::handshakes: L_WARNING_ONCE_PER_MINUTE("TLS connection refused: too many handshakes in progress"); break;
-					case http::TlsFailure::version: L_WARNING_ONCE_PER_MINUTE("TLS handshake refused: protocol version"); break;
-					case http::TlsFailure::cipher: L_WARNING_ONCE_PER_MINUTE("TLS handshake refused: no shared cipher"); break;
-					case http::TlsFailure::certificate: L_WARNING_ONCE_PER_MINUTE("TLS handshake failed: the client refused the certificate"); break;
-					case http::TlsFailure::protocol: L_WARNING_ONCE_PER_MINUTE("TLS port received something other than TLS (plain HTTP?)"); break;
-					case http::TlsFailure::other: L_WARNING_ONCE_PER_MINUTE("TLS handshake failed"); break;
+				switch (why) {
+					case http::TlsFailure::deadline: tls_refused(TlsRefusal::deadline); break;
+					case http::TlsFailure::connections: tls_refused(TlsRefusal::connections); break;
+					case http::TlsFailure::handshakes: tls_refused(TlsRefusal::handshakes); break;
+					case http::TlsFailure::version: tls_refused(TlsRefusal::version); break;
+					case http::TlsFailure::cipher: tls_refused(TlsRefusal::cipher); break;
+					case http::TlsFailure::certificate: tls_refused(TlsRefusal::certificate); break;
+					case http::TlsFailure::protocol: tls_refused(TlsRefusal::protocol); break;
+					case http::TlsFailure::other: tls_refused(TlsRefusal::other); break;
 				}
 			};
 			const std::size_t bound = opts.tls_max_connections;
@@ -1118,6 +1120,15 @@ XapiandManager::set_cluster_database_ready_async_cb()
 
 	if (http_service) {
 		http_service->start(static_cast<unsigned short>(http_port));
+#ifdef XAPIAND_TLS
+		if (tls_context && _rx->tls_timer.repeat() == 0.0) {
+			// Runs on this control-plane loop: reads reactor's rejected count, no I/O.
+			_rx->tls_timer.set_callback([observer = http_service->connection_observer(), watch = TlsWatch{}]() mutable {
+				watch.tick(std::chrono::steady_clock::now(), observer ? observer->stats().rejected : 0);
+			});
+			_rx->tls_timer.start(1.0, 1.0);
+		}
+#endif
 	}
 
 #ifdef XAPIAND_CLUSTERING
@@ -1776,6 +1787,12 @@ XapiandManager::server_metrics_impl()
 	auto count = database_pool->count();
 	metrics.xapiand_endpoints.Set(count.first);
 	metrics.xapiand_databases.Set(count.second);
+
+#ifdef XAPIAND_TLS
+	if (tls_context) {
+		metrics.xapiand_tls_certificate_expiry_seconds.Set(static_cast<double>(tls_seconds_to_expiry()));
+	}
+#endif
 
 	return metrics.serialise();
 }

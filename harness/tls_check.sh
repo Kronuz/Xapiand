@@ -11,6 +11,9 @@
 #   5. a forced TLS 1.2 renegotiation (accept: the same connection without it)
 #   6. startup with an expired, a not-yet-valid, a mismatched, or a group-readable
 #      certificate or key, or --tls-cert alone (accept: a valid pair at mode 0600)
+#   7. a certificate expiring in 3 days warns at startup (accept: 30 days, no warning)
+# Each refusal of 1 to 4 is counted in /:metrics by reason (C5), and the certificate's
+# seconds to expiry is a metric (C6).
 # Exits 0 when every case holds.
 set -uo pipefail
 
@@ -57,6 +60,8 @@ fail() { echo "  FAIL  $*"; failures=$((failures + 1)); }
 	sign rsa rsa:2048 20260101000000Z 20991231000000Z
 	sign expired ec:<("$OPENSSL" ecparam -name prime256v1) 20200101000000Z 20200201000000Z
 	sign future ec:<("$OPENSSL" ecparam -name prime256v1) 20980101000000Z 20990101000000Z
+	sign soon ec:<("$OPENSSL" ecparam -name prime256v1) 20260101000000Z \
+		"$(python3 -I -c 'import datetime as d; print((d.datetime.now(d.timezone.utc) + d.timedelta(days=3)).strftime("%Y%m%d%H%M%SZ"))')"
 	cp ec/server.key readable.key && chmod 640 readable.key
 )
 
@@ -77,6 +82,10 @@ start() {  # start LOG FLAGS...: a solo node, ready when it answers HTTPS with a
 stop() { [ -n "$node_pid" ] && { kill "$node_pid" 2>/dev/null; wait "$node_pid" 2>/dev/null; node_pid=""; }; }
 trap stop EXIT
 logged() { sleep 1; grep -qF "$2" "$1"; }  # logged LOG TEXT
+metric() {  # metric NAME [REASON]: the value /:metrics reports, or empty
+	curl -s --max-time 5 --cacert "$WORK/ec/ca.pem" "https://localhost:$PORT/:metrics" |
+		awk -v name="$1" -v reason="${2:-}" '$1 ~ "^" name "({|$)" && (reason == "" || $1 ~ "reason=\"" reason "\"") { print $2; exit }'
+}
 
 # hello VERSION: sends a raw ClientHello (record 1.0, the given client_version, ECDHE-RSA
 # and ECDHE-ECDSA AES-GCM suites, no supported_versions) and prints the first reply record:
@@ -127,6 +136,19 @@ if [ "$r" != "alert 70" ]; then fail "raw TLS 1.1 hello: $r (want alert 70, prot
 elif logged "$WORK/ec.log" "refused: protocol version"; then pass "raw TLS 1.1 hello refused (alert 70), logged as version"
 else fail "raw TLS 1.1 hello: no version reason in the log"; fi
 
+# C5 and C6: the refusals above, counted by reason; the 30-day certificate, not warned.
+for reason in certificate protocol version; do
+	n=$(metric xapiand_tls_refused_connections "$reason")
+	[ "${n:-0}" -ge 1 ] 2>/dev/null && pass "metrics count the $reason refusal ($n)" || fail "metrics: $reason refusals '${n:-}'"
+done
+n=$(metric xapiand_tls_refused_connections cipher)
+[ "${n:-x}" = 0 ] && pass "metrics count no cipher refusal on this node" || fail "metrics: cipher refusals '${n:-}' (want 0)"
+left=$(metric xapiand_tls_certificate_expiry_seconds)
+if python3 -I -c "import sys; sys.exit(not 29 * 86400 < float(sys.argv[1]) <= 30 * 86400)" "${left:-0}"; then
+	pass "metrics report the certificate's seconds to expiry (${left})"
+else fail "metrics: seconds to expiry '${left:-}' (want 29 to 30 days)"; fi
+grep -qF "certificate expires in" "$WORK/ec.log" && fail "a 30-day certificate warned of expiry" || pass "a 30-day certificate: no expiry warning"
+
 # 5. Renegotiation: s_client renegotiates on a line holding just R.
 reneg() {  # reneg R|'': one TLS 1.2 connection, optionally renegotiating, then a request
 	{ sleep 1; [ -n "$1" ] && { echo R; sleep 1; }; printf 'GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'; sleep 2; } |
@@ -168,6 +190,18 @@ refuse "not-yet-valid certificate" "is not valid yet" --tls-cert "$WORK/future.p
 refuse "mismatched key" "TLS certificate or key" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/other/server.key"
 refuse "group-readable key" "make it mode 0600" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/readable.key"
 refuse "--tls-cert without --tls-key" "go together" --tls-cert "$WORK/ec/server.pem"
+
+# 7. Expiry within 14 days: starts, warns, and the metric shows under 3 days.
+if start "$WORK/soon.log" --tls-cert "$WORK/soon.pem" --tls-key "$WORK/soon.key"; then
+	left=$(metric xapiand_tls_certificate_expiry_seconds)
+	if ! logged "$WORK/soon.log" "The TLS certificate expires in 2 days"; then fail "a 3-day certificate: no expiry warning"
+	elif python3 -I -c "import sys; sys.exit(not 2 * 86400 < float(sys.argv[1]) <= 3 * 86400)" "${left:-0}"; then
+		pass "a 3-day certificate warns at startup; seconds to expiry ${left}"
+	else fail "a 3-day certificate: seconds to expiry '${left:-}'"; fi
+	stop
+else
+	fail "node with a 3-day certificate did not start: $(tail -3 "$WORK/soon.log")"
+fi
 
 [ "$failures" = 0 ] && { echo "tls_check: OK"; exit 0; }
 echo "tls_check: $failures failed"; exit 1

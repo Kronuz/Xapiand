@@ -134,4 +134,10 @@ public:
 	// databases:
 	prometheus::Gauge& xapiand_endpoints;
 	prometheus::Gauge& xapiand_databases;
+
+#ifdef XAPIAND_TLS
+	// HTTPS: refused connections, labelled by reason (tls.cc), and the certificate's expiry.
+	prometheus::Family<prometheus::Counter>& xapiand_tls_refused_connections;
+	prometheus::Gauge& xapiand_tls_certificate_expiry_seconds;
+#endif
 };
