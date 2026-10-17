@@ -30,3 +30,9 @@
   - 8a5bd916a: ctest 8/8 pass (new test_primary_election included); FAILOVER=1 cluster_check.sh 3 GREEN in 3 of 3 runs (new leader in 18, 13, 10 s; write through node2 at 24, 19, 17 s after the kill; reads back from node3; rejoin keeps one leader).
   - Fast-kill variant: RED on both the pre-fix and fixed binaries (the second defect).
   - Not yet run: the guard commit at all; cluster_check.sh 2 and 3 without FAILOVER; run_all.sh smoke load e2e.
+
+## Owner decision (2026-10-17, system review SYS-14)
+
+- Keep promoting the best live copy, even an empty one: availability wins, and the loss of writes only the dead primary held is documented.
+- Restore the database-UUID check the fix dropped: a copy votes only for a shard of the same database.
+- Before landing, the security reviewer reviews the vote path (a forged UDP vote must not replace a live copy's vote), and the code reviewer probes the old primary returning after a promotion.
