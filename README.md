@@ -78,8 +78,9 @@ a cluster when you need it to.
 
 ## 🛠️ Building
 
-Requires a C++20 compiler and CMake 3.16 or newer. Dependencies are fetched
-automatically at configure time via CMake `FetchContent` (see below).
+Requires a C++20 compiler, CMake 3.16 or newer, and OpenSSL 3 (unless `-DTLS=OFF`).
+Dependencies are fetched automatically at configure time via CMake `FetchContent` (see
+below).
 
 ```sh
 mkdir build && cd build
@@ -92,6 +93,7 @@ Notable CMake options (all default on unless noted):
 | Option | Default | What it does |
 |---|---|---|
 | `CLUSTERING` | ON | Remote clustering (discovery + replication). |
+| `TLS` | ON | HTTPS for the REST API; needs OpenSSL 3. |
 | `DATABASE_WAL` | ON | Per-shard write-ahead log. |
 | `DATA_STORAGE` | ON | Haystack-style document storage volumes. |
 | `TRACEBACKS` | OFF (ON in Debug) | Pretty backtraces + cross-thread stack dumps. |

@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Changed
+- **Builds need OpenSSL 3** by default, for the coming HTTPS support (`-DTLS=OFF` builds
+  without it). The packages depend on it: `libssl3t64`/`libssl3` for the `.deb`,
+  `openssl-libs` for the `.rpm`, `openssl@3` for Homebrew.
+- **Every library is pinned at its current release.** Each Kronuz library now pins its own
+  dependencies, so Xapiand no longer pins the libraries its libraries fetch.
+
 ### Fixed
 
 - Builds with `-DLUA=OFF` retain the declaration of the existing scripting-unavailable stub, so the database handler compiles without Lua.

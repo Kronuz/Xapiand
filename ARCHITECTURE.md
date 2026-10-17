@@ -217,8 +217,9 @@ Every dependency CMake pulls, grouped by role. Most `Kronuz/*` repositories trac
 - **Search, geography & language:** `boolean-parser`, `enum-reflection`, `soundex`,
   `double-metaphone`, `string-similarity`, `htm`, `cartesian`.
 - **Third-party fetched or found outside `src/`:** `asio` (standalone), `lz4`,
-  `zstd`, `rapidjson`, `cppcodec`, `CLI11`, `sol2`/`lua`, and upstream
-  `prometheus-cpp` v1.2.4 core.
+  `zstd`, `rapidjson`, `cppcodec`, `CLI11`, `sol2`/`lua`, upstream
+  `prometheus-cpp` v1.2.4 core, and the system's OpenSSL 3 (with `TLS`, for reactor's
+  TLS layer).
 
 Two guarantees make the graph maintainable: it is **acyclic and layered** (an arrow
 never points up a layer), and the leaf libraries are **dependency-free** (they build

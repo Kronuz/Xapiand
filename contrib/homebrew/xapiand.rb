@@ -25,6 +25,7 @@ class Xapiand < Formula
   depends_on "pkg-config" => :build
   depends_on "tcl-tk" => :build
   depends_on "icu4c"
+  depends_on "openssl@3"
   depends_on "zstd"
 
   def install

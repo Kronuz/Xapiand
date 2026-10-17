@@ -25,6 +25,7 @@ RUN set -ex \
     uuid-dev \
     zlib1g-dev \
     libcap-dev \
+    libssl-dev \
   && rm -rf /var/lib/apt/lists/*
 
 ENV CC=gcc-13 CXX=g++-13
@@ -57,6 +58,7 @@ RUN set -ex \
     zlib1g \
     libzstd1 \
     libcap2 \
+    libssl3t64 \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd -r xapiand \
   && useradd -r -g xapiand -d /var/db/xapiand -s /usr/sbin/nologin xapiand \

@@ -30,7 +30,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             g++-13 cmake ninja-build pkg-config perl tcl \
-            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Build (RelWithDebInfo, tests + asserts on)
         run: |
           set -eux
@@ -61,7 +61,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             g++-13 cmake ninja-build pkg-config perl tcl \
-            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Build (RelWithDebInfo, asserts off)
         run: |
           set -eux
@@ -111,7 +111,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             g++-13 cmake ninja-build pkg-config perl tcl \
-            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev
+            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Build (${{ matrix.name }})
         run: |
           set -eux
