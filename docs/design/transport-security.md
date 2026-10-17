@@ -1,134 +1,117 @@
 # Transport security
 
-Status: design, for architect review before any code. Step 1 is opt-in and changes nothing
-for existing deployments; step 2 makes it the default in a breaking release.
+Status: revision 1, for the architect's re-check. The first review
+(`docs/reviews/transport-security-design.md`) rejected revision 0, approving D1's
+direction. This revision narrows step 1 to D1 alone, HTTPS for the REST API, and defers
+every other decision to a later design written against strata's replication, with the
+review's findings carried as its requirements.
 
 ## Why
 
 Xapiand listens on every interface by default (`--bind-address` is empty), and none of its
-traffic is protected:
+traffic is protected. The REST API on TCP 8880 is plain HTTP with no authentication, the
+remote and replication protocols are plain TCP with no peer identity, and discovery is
+plain UDP multicast. Revision 0 tried to protect all three at once; the review showed
+that the node-to-node legs cannot be wrapped as designed (TS-R1: the remote client is
+the vendored Xapian `RemoteConnection` on raw fds, and replication writes whole database
+files to the socket fd), and that discovery's and enrollment's protocols needed more than
+a decision each (TS-R3 to TS-R8).
 
-| Traffic | Today | Exposure on a shared network |
-|---|---|---|
-| REST API, TCP 8880 | Plain HTTP, no authentication | Anyone who reaches the port reads, writes, and deletes every index |
-| Remote and replication protocols, TCP | Plain, no peer identity | Anyone who reaches a node reads its data, or poses as a node and serves it writes |
-| Discovery, UDP multicast `239.192.168.1` | Plain, no authentication | Anyone on the segment reads membership, or joins the cluster |
+The REST API is the one leg the libraries already carry: http's TLS connection factory
+over `reactor::tls`'s Server role. It is also the leg clients and operators touch.
 
-Detent, built on the same libraries, requires TLS on every non-loopback listener
-(`docs/AUTHORITY_TRANSPORT.md`, `docs/RELAY.md`): mutual TLS with pinned certificates
-between peers, and server-authenticated TLS plus credentials for clients. Xapiand adopts
-that rule (D6) once it can make the certificates itself (D5).
+## Threat model for step 1
 
-## Threat model
+In scope: a passive or active attacker on the network between a client and a node, who
+reads or tampers with REST traffic, or impersonates the node to a client that verifies
+its certificate.
 
-In scope:
+Out of scope for step 1, and why:
 
-1. A passive observer on the network between clients and nodes, or between nodes.
-2. An active attacker on that network: tampering, replaying, impersonating a node or a
-   client, joining the cluster through discovery.
-3. A host on the network that can reach any port.
+1. **Access control.** TLS protects traffic, not access: anyone who reaches the port can
+   still use the API. An API token (revision 0's D7) is deferred with its review findings
+   (TS-R9).
+2. **Traffic between nodes and discovery.** Deferred (D2 to D4 below).
+3. **Clients that do not verify the certificate.** They get confidentiality against a
+   passive observer only; the operator distributes the CA or uses a public certificate.
+4. **Denial of service** beyond the bounds stated in D1.3, which are residuals with
+   numbers, not protections.
 
-Out of scope here:
+## D1. HTTPS for the REST API
 
-1. A compromised node. Its certificate is revoked by rotating the cluster authority (D5).
-2. Authorization within the API: who may read or write which index. Step 2 adds an API
-   token (D7), and per-index permissions are a later design.
-3. Denial of service beyond what the existing connection caps and handshake deadlines
-   bound.
+**D1.1 Flags.** `--tls-cert FILE` and `--tls-key FILE` (PEM, given together, or startup
+fails) serve the API over TLS on `--port`, replacing plain HTTP there: one listener, one
+protocol. Without them nothing changes. There is no `--tls-ca` in step 1: no reactor role
+offers optional client verification (TS-R11), and client certificates have no use until
+an access model exists.
 
-## Decisions
+**D1.2 Mechanism.** `reactor::tls::configure(context, {cert, key, ""}, Role::Server)`
+(reactor `56783e5`: the Server role needs no authority), and the HTTP service built with
+http's six-argument constructor: `tls_connection_factory_timed(context, deadline,
+handshakes, connections)` and the same connection bound for the service
+(`http/http_asio.h:826-833`, `http/http_asio_tls.h:85-96`). The handshake deadline,
+handshake cap, and connection cap are http's.
 
-**D1. HTTPS for the REST API.** `--tls-cert FILE` and `--tls-key FILE` serve the API over
-TLS through http's `tls_connection_factory_timed` and `reactor::tls`'s Server role, which
-needs no authority (reactor `56783e5`). `--tls-ca FILE` also verifies client certificates,
-for mutual TLS from clients that have them. TLS 1.2 or later, no renegotiation, no early
-data, a 64 KiB certificate-list cap, bounded handshakes: reactor's settings, unchanged.
-The plain listener stays available only as D6 allows.
+**D1.3 Bounds**, applied to the HTTP service with or without TLS:
 
-**D2. Mutual TLS between nodes.** The remote and replication protocols run over
-`reactor::tls`'s Peer role: both ends present certificates signed by the cluster
-authority (`--cluster-tls-cert`, `--cluster-tls-key`, `--cluster-tls-ca`). After the
-chain, a node checks that the peer certificate's name is the node name discovery
-announced for that address, so one node's certificate cannot serve as another's. A node
-with cluster TLS refuses plain peers, and the reverse.
+| Bound | Value | Owner | Residual |
+|---|---|---|---|
+| Handshake deadline | 5 s | http | A peer holds a slot up to 5 s without completing |
+| Concurrent handshakes | 64 | http | About 13 stalled connections a second from one source hold every slot; no per-source limit |
+| Connections | `--max-clients` (`opts.max_clients`, computed in `src/main.cc` today and applied to no service) | http's admission | Idle authenticated connections hold slots until the idle timeout |
+| Request deadline | 60 s per request, headers and body (`set_request_timeout`) | http | A slow client holds one connection that long |
+| Idle keep-alive | 75 s between requests | An http addition: `set_idle_timeout()`, beside `set_request_timeout()`, which bounds only a request's own headers and body; tested in http's `asio_test` | — |
 
-**D3. Authenticated, encrypted discovery.** Discovery cannot use TLS: it is UDP multicast,
-and DTLS works only between two endpoints. The cluster library's `Bus` gains an optional
-key (`--cluster-key FILE`, 32 random bytes): each datagram is sealed with
-ChaCha20-Poly1305 through OpenSSL's EVP interface. The nonce is the sender's 64-bit
-incarnation (random at start) and a 32-bit counter; the associated data is the cluster
-name and the message type. A receiver drops datagrams that fail to open, and those whose
-counter is not above the last seen for that sender's incarnation, within a 1,024-entry
-window per sender. Without the key, a node cannot join, read membership, or replay an
-announcement. The change lives in cluster's `Bus`, so Detent's legacy UDP profile can use
-it too.
+A TLS context's memory per connection at the cap is measured in T3, not assumed.
 
-**D4. Mixed clusters are refused.** Every protection is all-or-nothing per cluster: a node
-configured with D2 or D3 rejects peers without them, and logs why. A mixed cluster would
-run partly in plain text and look healthy.
+**D1.4 TLS settings**, in `reactor::tls::configure` for every role: TLS 1.2 or later,
+no renegotiation, no early data, a 64 KiB certificate-list cap (already there), plus:
+TLS 1.2 restricted to ECDHE key exchange with AEAD ciphers (OpenSSL's default list
+includes four static-RSA suites without forward secrecy, TS-R16), and TLS 1.2 session
+tickets disabled, so a ticket key never outlives the context it encrypts. TLS 1.3 keeps
+OpenSSL's defaults. This is a reactor change, additive for every consumer: Detent's
+contexts get the same restriction.
 
-**D5. Certificates made on first start** (step 2; the `reactor::pki` helper, optional,
-behind reactor's OpenSSL dependency):
+**D1.5 Logging.** A failed handshake is counted per reason (version, cipher, certificate,
+deadline, cap) and logged at most once a minute per reason, so a scan cannot flood the
+log.
 
-1. **First node.** It creates a cluster authority (an ECDSA P-256 key and a self-signed CA
-   certificate, ten years) and its own node certificate, in `<data>/.tls/` at mode 0600,
-   and prints the authority's SHA-256 fingerprint.
-2. **Enrollment.** `xapiand --enroll` on an existing node prints a one-time token: a random
-   128-bit secret and the authority's fingerprint, valid for 30 minutes. The node keeps
-   only the secret's hash and refuses it after one use.
-3. **Joining.** A new node started with `--enrollment-token` connects to the node that
-   issued it over TLS, checks the presented authority against the token's fingerprint
-   before sending anything, and sends a certificate request with the secret. It receives
-   its signed certificate and the discovery key. The authority's key never leaves the node
-   that holds it.
-4. **Lifetime.** Node certificates last 90 days and renew automatically at two thirds of
-   their life, over the same mutual-TLS channel. A compromised node is answered by
-   rotating the authority: the cluster runs both old and new for one renewal period, then
-   drops the old one. No revocation list.
-5. **Bring your own.** With D1/D2's flags given, nothing is generated.
+**D1.6 Certificate changes need a restart in step 1.** http's factory holds one context
+for its life (TS-R12); reload without restart arrives with the factory change it needs.
 
-The helper stays small: key generation, CA and leaf signing, request verification, and
-token issue and redemption, over OpenSSL's documented calls. It is reviewed as security
-code before Detent may adopt it.
+## Deferred
 
-**D6. TLS required off loopback** (step 2, Detent's rule). A listener bound to a loopback
-address may be plain. Any other listener requires TLS, unless the operator passes
-`--plaintext` (REST API) or `--insecure-cluster` (between nodes and discovery), each
-logged as a warning at every start. With D5, the default start of a node needs no flags:
-it generates what it needs.
+Each of these returns as its own design, written against strata's replication and
+discovery once strata replaces Xapian's remote and replication protocols, which removes
+TS-R1's raw-fd paths. The review's findings are its requirements.
 
-**D7. An API token** (step 2). D6 protects traffic, not access: anyone who reaches the
-API can still use it. A node generates an API token at first start (printed once, stored
-hashed) and requires it as `Authorization: Bearer` on every request from a non-loopback
-client; clients with a certificate signed by the cluster authority are accepted without
-it. Per-index permissions are later work.
+| Decision (revision 0) | Requirements carried |
+|---|---|
+| D2 Mutual TLS between nodes | TS-R1 (every I/O path), TS-R2 (the dialer checks the node it meant, one SAN profile, unique issuance), TS-R13 |
+| D3 Authenticated discovery | TS-R3 (replay across receiver restarts: persisted incarnations), TS-R4 (version in the AD, refusal of plain frames, one nonce sequence across sending threads, size and flood rules), TS-R14 (what stays in clear) |
+| D4 Refusing mixed clusters | TS-R13: no half-secured mode |
+| D5 Generated certificates | TS-R5 (eviction, key ids), TS-R6 (no split on first start or upgrade), TS-R7 (the enrollment protocol), TS-R8 (escrow and recovery of the authority) |
+| D6 TLS off loopback | TS-R10 (classify by every listener's real address, discovery included) |
+| D7 An API token | TS-R9 (no loopback exemption; token format, storage, constant-time comparison) |
+| D8 Reload without restart | TS-R12 (a factory that swaps contexts, trust bundles, revoked sessions) |
+| Other TCP services' bounds | TS-R16: idle and request timeouts and per-listener caps for the remote and replication services |
 
-**D8. Certificate reload without restart.** `SIGHUP` reloads `--tls-cert` and `--tls-key`
-into a new context for new connections; existing connections keep theirs. Renewal under
-D5 uses the same path.
-
-## Steps
-
-1. **Opt-in** (a minor release): D1, D2, D3, D4, D8. Off unless their flags are given;
-   existing deployments are unchanged.
-2. **Secure by default** (a release marked breaking in the changelog): D5, D6, D7.
-
-## Gate rows
+## Gate rows for step 1
 
 | Row | Target | Procedure |
 |---|---|---|
-| T1 REST API over TLS | The docs E2E suite passes over `https://`, every assertion | `harness/run_all.sh e2e` against a node with `--tls-cert`/`--tls-key` |
-| T2 Refusals | A client without the CA, a plain client to a TLS listener, a wrong-name peer, a peer from another authority, a datagram under the wrong key, a replayed datagram, and a mixed cluster: each refused and logged | A multi-node harness case per refusal |
-| T3 Cluster | Three nodes with D2 and D3: discovery, replication, failover, and the cluster checks all pass | `harness/cluster_check.sh` with cluster TLS and the key |
-| T4 Enrollment | A token works once, expires at 30 minutes, fails with a wrong fingerprint, and never moves the authority key | Unit tests for `reactor::pki`; a three-node join from tokens |
-| T5 Cost | Query and indexing throughput over TLS within 5% of plain for the gate's workloads, handshakes excluded; handshake rate stated | The load layer, plain against TLS, interleaved |
-| T6 Sanitizers | T1 to T4 clean under ASan and TSan | CI's sanitizer jobs |
+| T1 The API over TLS | The docs E2E suite passes over `https://`, every assertion, with the same counts as over plain HTTP | `harness/e2e_capture.sh` gains `XAPIAND_FLAGS` (passed to the node), `SCHEME` (readiness probe and collection base URL), and `CA` (newman's `--ssl-extra-ca-certs`); `docs_to_postman.py` takes the base URL from the environment. Run plain and TLS from one build. |
+| T2 Refusals, each beside an accept case that differs in one variable | Refused and logged with its reason: a client not trusting the CA (accepted: one that does); plain HTTP to the TLS port (accepted: HTTPS); TLS 1.1 (accepted: 1.2 ECDHE-AEAD); a static-RSA TLS 1.2 suite (accepted: ECDHE); a renegotiation attempt; an expired and a not-yet-valid server certificate at startup (startup fails; accepted: valid); `--tls-cert` without `--tls-key` (startup fails) | A harness script with `openssl s_client` and `curl`, asserting each outcome and the log line |
+| T3 Bounds | 65 connections stalled mid-handshake: the 65th waits or is refused, and the 64 are dropped at 5 s; idle connections closed at 75 s; at `max_clients` connections, the next is refused; RSS per TLS connection at the cap stated | A harness script with raw sockets and `openssl s_client`, timing with an injectable clock where the library allows, wall time otherwise |
+| T4 Cost | Server CPU seconds per 1,000 requests, TLS against plain, within 5% for the docs E2E mix and for a keep-alive search loop, interleaved, five trials, spread stated; handshakes per second at one core stated | `harness/loadtest.py` gains HTTPS (a CA option) and is run from a separate process pinned away from the server's cores; CPU from the server's `getrusage` |
+| T5 Sanitizers | T1 and T2 clean under ASan, UBSan, and TSan | CI's sanitizer jobs run the e2e layer today; T1's TLS variant joins them, and T2 runs in the same jobs |
+| T6 reactor's TLS 1.2 restriction | A static-RSA suite and a CBC suite refused, ECDHE-AEAD accepted, for every role; existing contexts unchanged otherwise | `reactor/test/tls_test.cc` over a memory BIO pair |
 
-## Open questions
+## Answers to the review's open questions
 
-1. Should the API token be per user from the start, rather than one per cluster?
-2. Should D2 pin peers' leaf fingerprints, as Detent does, in addition to the name check?
-   With D5's renewals, a pin set changes every 60 days, so a name bound to the authority
-   seems the better fit.
-3. Where should `--enroll` run when the authority's node is down: should the authority's
-   key be replicated to a second node, at the cost of D5's "never leaves" rule?
+1. Per-user tokens: not in step 1 (D7 is deferred). The deferred D7 starts from the
+   review's answer: a cluster-wide token set with ids, rotated by add-then-remove.
+2. Leaf pins: no; the deferred D2 binds authority, cluster, and node name in the SAN, with
+   uniqueness at issuance, as the review answers.
+3. Authority down: the deferred D5 starts from escrow and restore, with an offline root
+   and online issuing intermediates as an option, never an automatic copy.
