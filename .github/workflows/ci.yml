@@ -73,9 +73,9 @@ jobs:
         with:
           node-version: 24
       - name: Install newman
-        run: npm install -g newman
-      - name: E2E
-        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e
+        run: npm install -g newman@6
+      - name: E2E, plain and over HTTPS
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e tls
 
   sanitizers:
     name: ${{ matrix.name }}
@@ -96,13 +96,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: AddressSanitizer
-            cmake_flag: -DASAN=ON
+          - name: AddressSanitizer + UBSan
+            cmake_flag: -DASAN=ON -DUBSAN=ON
           - name: ThreadSanitizer
             cmake_flag: -DTSAN=ON
     env:
       ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v4
       - name: Install build deps
@@ -126,6 +127,6 @@ jobs:
         with:
           node-version: 24
       - name: Install newman
-        run: npm install -g newman
-      - name: E2E under ${{ matrix.name }}
-        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e
+        run: npm install -g newman@6
+      - name: E2E, plain and over HTTPS, under ${{ matrix.name }}
+        run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e tls

@@ -146,6 +146,8 @@ def parse_directory(directory, index, all_tests):
 
 
 def main():
+    # XAPIAND_URL sets the scheme and authority every request goes to.
+    base = urlparse.urlsplit(os.environ.get('XAPIAND_URL', 'http://localhost:8880'))
     index = {}
     all_tests = []
 
@@ -170,7 +172,7 @@ def main():
         "variable": [
             {
                 "key": "domain",
-                "value": "localhost:8880",
+                "value": base.netloc,
                 "type": "string"
             }
         ],
@@ -264,6 +266,7 @@ def main():
                         "value": item,
                     })
         url = {
+            "protocol": base.scheme,
             "host": [
                 "{{domain}}"
             ],

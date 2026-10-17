@@ -11,6 +11,7 @@
 #   smoke    single-node index + search sanity (no prerequisites)          [always]
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
 #   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, needs newman)
+#   tls      the e2e suite over HTTPS (needs newman 6) and the TLS refusals (tls_check.sh)
 #   cluster  2-node discovery + remote/replication + distributed search (cluster_check.sh)
 #   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
 #   load     quick functional bulk load (index_fortune)
@@ -18,7 +19,7 @@
 #   bench    index/query benchmark (loadtest.py)
 #
 # Usage:
-#   harness/run_all.sh                 # smoke + e2e + cluster + recovery + load + stress + bench
+#   harness/run_all.sh                 # smoke + e2e + tls + cluster + recovery + load + stress + bench
 #   harness/run_all.sh smoke cluster   # just those two
 #   BIN=build/bin/xapiand harness/run_all.sh
 #
@@ -30,7 +31,7 @@ REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8899}"
 
-DEFAULT_LAYERS="smoke e2e cluster recovery load stress bench"
+DEFAULT_LAYERS="smoke e2e tls cluster recovery load stress bench"
 LAYERS="${*:-$DEFAULT_LAYERS}"
 
 PASS=(); FAIL=(); SKIP=()
@@ -129,6 +130,30 @@ run_e2e() {
 	fi
 }
 
+run_tls() {
+	echo "== [tls] e2e over HTTPS, and the TLS refusals =="
+	if ! "$BIN" --help 2>&1 | grep -q -- --tls-cert; then
+		skip "tls" "built without TLS -- reconfigure with -DTLS=ON (needs OpenSSL 3)"
+		return
+	fi
+	local nv; nv="$(newman --version 2>/dev/null | cut -d. -f1)"
+	if [ "${nv:-0}" -lt 6 ]; then
+		skip "tls" "needs newman 6 or later (--ssl-extra-ca-certs)"
+		return
+	fi
+	local dir; dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_tls.XXXXXX")"
+	"$HARNESS_DIR/tls_certs.sh" "$dir/certs" > /dev/null
+	local out="$dir/e2e.json" rep
+	PORT=18880 COLL="$dir/coll.json" SCHEME=https CA="$dir/certs/ca.pem" \
+		XAPIAND_FLAGS="--tls-cert $dir/certs/server.pem --tls-key $dir/certs/server.key" \
+		"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" "$dir/data" > "$dir/capture.log" 2>&1
+	rep="$(python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
+	local ok=1
+	printf '%s\n' "$rep" | grep -q '^GREEN' || { ok=0; printf '%s\n' "$rep" | head -100; tail -5 "$dir/capture.log"; }
+	WORK="$dir/check" "$HARNESS_DIR/tls_check.sh" "$BIN" || ok=0
+	if [ "$ok" = 1 ]; then pass "tls"; rm -rf "$dir"; else fail "tls"; fi
+}
+
 run_cluster() {
 	echo "== [cluster] 2-node remote/replication/distributed-search =="
 	if BIN="$BIN" "$HARNESS_DIR/cluster_check.sh" 2; then pass "cluster"; else fail "cluster"; fi
@@ -194,12 +219,13 @@ for layer in $LAYERS; do
 		smoke)   run_smoke   ;;
 		unit)    run_unit    ;;
 		e2e)     run_e2e     ;;
+		tls)     run_tls     ;;
 		cluster) run_cluster ;;
 		recovery) run_recovery ;;
 		load)    run_load    ;;
 		stress)  run_stress  ;;
 		bench)   run_bench   ;;
-		*) echo "unknown layer: $layer (valid: smoke unit e2e cluster recovery load stress bench)"; exit 2 ;;
+		*) echo "unknown layer: $layer (valid: smoke unit e2e tls cluster recovery load stress bench)"; exit 2 ;;
 	esac
 done
 

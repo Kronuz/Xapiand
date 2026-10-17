@@ -23,6 +23,10 @@
 # that lacks one, so the gate needs no response-body baseline. (e2e_check.sh can still
 # diff a report against a saved reference report for a deeper body comparison.)
 #
+# XAPIAND_FLAGS adds node flags (--tls-cert/--tls-key); SCHEME=https probes and runs the
+# collection over TLS, trusting CA (newman 6 or later, for --ssl-extra-ca-certs). PORT
+# moves the node off :8880.
+#
 # Example:
 #   harness/e2e_capture.sh build/bin/xapiand harness/results/e2e_base_23e1e4540.json
 #   harness/e2e_capture.sh build/bin/xapiand /tmp/ours.json
@@ -35,11 +39,24 @@ DATADIR="${3:-/tmp/xe2e_$$}"
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HARNESS_DIR")"
 COLL="${COLL:-/tmp/xe2e_collection.json}"
+SCHEME="${SCHEME:-http}"
+PORT="${PORT:-8880}"
+CA="${CA:-}"
+read -r -a node_flags <<< "${XAPIAND_FLAGS:-}"
+probe_ca=()
+newman_ca=()
+if [ "$SCHEME" = https ]; then
+	[ -n "$CA" ] || { echo "SCHEME=https needs CA"; exit 1; }
+	major=$(newman --version 2>/dev/null | cut -d. -f1)
+	[ "${major:-0}" -ge 6 ] || { echo "SCHEME=https needs newman 6 or later (found $(newman --version 2>/dev/null))"; exit 1; }
+	probe_ca=(--cacert "$CA")
+	newman_ca=(--ssl-extra-ca-certs "$CA")
+fi
 
 # Regenerate the Postman collection every run from the docs. The doc-driven suite's
 # whole premise is that the docs are the single source of truth, so a stale cached
 # collection must never mask a doc or generator change. Cheap (<1s).
-python3 "$REPO/docs_to_postman.py" > "$COLL" || { echo "docs_to_postman.py failed"; exit 1; }
+XAPIAND_URL="$SCHEME://localhost:$PORT" python3 "$REPO/docs_to_postman.py" > "$COLL" || { echo "docs_to_postman.py failed"; exit 1; }
 echo "collection: $COLL ($(wc -c < "$COLL") bytes)"
 
 # Free :8880 if a previous node is squatting, killing only the PID that holds the port.
@@ -49,14 +66,14 @@ echo "collection: $COLL ($(wc -c < "$COLL") bytes)"
 # differently, so it slipped through locally).
 squatter=""
 if command -v lsof >/dev/null 2>&1; then
-	squatter=$(lsof -ti tcp:8880 2>/dev/null || true)
+	squatter=$(lsof -ti tcp:$PORT 2>/dev/null || true)
 elif command -v fuser >/dev/null 2>&1; then
-	squatter=$(fuser 8880/tcp 2>/dev/null | tr -cd '0-9 ' || true)
+	squatter=$(fuser "$PORT"/tcp 2>/dev/null | tr -cd '0-9 ' || true)
 fi
 [ -n "$squatter" ] && kill -9 $squatter 2>/dev/null || true
 sleep 1
 rm -rf "$DATADIR"; mkdir -p "$DATADIR"
-"$BIN" --port 8880 --name benchnode --solo -D "$DATADIR" >/tmp/xe2e_node.log 2>&1 &
+"$BIN" --port "$PORT" --name benchnode --solo -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >/tmp/xe2e_node.log 2>&1 &
 pid=$!
 
 for _ in $(seq 1 120); do
@@ -65,12 +82,12 @@ for _ in $(seq 1 120); do
 		grep -iE 'error|exception|bind' /tmp/xe2e_node.log | head -3
 		exit 1
 	fi
-	[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 localhost:8880/ 2>/dev/null)" = "200" ] && break
+	[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 ${probe_ca[@]+"${probe_ca[@]}"} "$SCHEME://localhost:$PORT/" 2>/dev/null)" = "200" ] && break
 	sleep 0.5
 done
 
 echo "node up (pid $pid); newman -> $OUT"
-newman run "$COLL" --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >/tmp/xe2e_newman.log 2>&1
+newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >/tmp/xe2e_newman.log 2>&1
 echo "newman exit $? (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
 
 kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null

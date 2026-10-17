@@ -25,6 +25,7 @@ work. Build first:
 | **smoke** | `run_all.sh smoke` | a single node indexes and searches at all | nothing |
 | **unit** | `ctest` | C++ units (parsers, serialise, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
 | **functional E2E** | `run_all.sh e2e` | the whole documented HTTP API still behaves (doc-embedded assertions) | `newman` |
+| **TLS** | `run_all.sh tls` | the E2E suite over HTTPS, and every TLS refusal names its reason (`tls_check.sh`) | a `-DTLS=ON` build, `newman` 6 |
 | **remote / cluster** | `cluster_check.sh` | discovery, the Remote protocol, replication, distributed search | a multicast-capable interface |
 | **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
 | **protocol sniff** | `proxy --xapian` | *see* the MSG_/REPLY_ wire between two nodes | two nodes |
@@ -110,6 +111,17 @@ For an on-demand **response-body** comparison between two builds (deeper than th
 assertions — catches serialization changes), capture a reference report from another
 binary and diff it with the optional explorers `e2e_check.sh` / `e2e_diff.py` /
 `bodydiff.py`. These are investigation aids, not the committed gate.
+
+### Over HTTPS
+
+`run_all.sh tls` runs the same collection over `https://` against a node started with a
+throwaway CA and certificate (`tls_certs.sh`), and must report the same assertion count as
+over plain HTTP. `e2e_capture.sh` takes `SCHEME`, `CA` (newman's `--ssl-extra-ca-certs`,
+newman 6 or later), `XAPIAND_FLAGS`, and `PORT`; `docs_to_postman.py` takes the base URL
+from `XAPIAND_URL`. The layer then runs `tls_check.sh`, which pairs each refusal with an
+accept case that differs in one variable: an untrusted CA, plain HTTP to the TLS port, a
+raw TLS 1.1 ClientHello, a static-RSA suite, a forced renegotiation, and startup with an
+expired, not-yet-valid, mismatched, or group-readable certificate or key.
 
 ---
 
