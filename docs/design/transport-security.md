@@ -1,6 +1,7 @@
 # Transport security
 
-Status: revision 2, for the architect's second re-check. The review
+Status: revision 3, approved with conditions for step 1 (second re-check); this revision
+folds the conditions C1 to C8 (TS-R25 to TS-R32) into the decisions and rows below. The review
 (`docs/reviews/transport-security-design.md`) rejected revision 0 and re-checked revision 1:
 revision 1 narrowed step 1 to HTTPS for the REST API; this revision answers the re-check's
 TS-R18 (D1.3's deadline) and TS-R19 (the dependency step), and its conditions TS-R20 to
@@ -76,8 +77,9 @@ http's.
 |---|---|---|---|
 | Handshake deadline | 5 s | http | A peer holds a slot up to 5 s without completing |
 | Concurrent handshakes | 64 | http | About 13 stalled connections a second from one source hold every slot; no per-source limit |
-| Connections | `--tls-max-connections`, default 1,024 (a number, never derived from `max_clients`, which goes negative when the file limit cannot be raised) | http's admission | Connections idle up to the idle timeout hold slots |
-| Idle between requests | 75 s, from the end of a reply to the first byte of the next request | An http addition, `set_idle_timeout()` | — |
+| Connections | `--tls-max-connections`, default 1,024 (a number, never derived from `max_clients`, which goes negative when the file limit cannot be raised); startup fails when it exceeds the open-files limit less 64 (C4) | http's admission | Connections idle up to the idle timeout hold slots |
+| Idle between requests | 75 s, from the end of the handshake or of a reply to the first byte of the next request (C4) | An http addition, `set_idle_timeout()` | — |
+| Inactivity within a request | 60 s without a byte read of a body or written of a reply (C4) | An http addition, `set_inactivity_timeout()` | A body or reply that moves at least one byte a minute holds a connection; 1,024 such connections from one host take every slot, as with plain HTTP today |
 | Request headers | 30 s, from the request's first byte to the end of its headers | An http addition, `set_header_timeout()` | A client trickling headers holds a connection that long |
 
 No deadline bounds a request body, dispatch, or the reply: a RESTORE of any size, a dump,
@@ -87,24 +89,28 @@ whole exchange from before the request's first byte (`http/http_asio.h:613-619, 
 
 **D1.4 TLS settings.** reactor's `Options` gains `strict = false`, which Xapiand sets. With
 it, a context restricts TLS 1.2 to ECDHE key exchange with AEAD ciphers (OpenSSL's default
-list includes four static-RSA suites without forward secrecy, TS-R16) and issues no session
+list includes four static-RSA suites without forward secrecy, TS-R16), issues no session
 tickets in either version (`SSL_OP_NO_TICKET` and `SSL_CTX_set_num_tickets(ctx, 0)`: with
-the first alone, TLS 1.3 tickets become stateful, TS-R22). A reconnecting client does a full
-handshake; T4 measures that cost. Without `strict`, contexts are unchanged, so consensus's and
+the first alone, TLS 1.3 tickets become stateful, TS-R22), and turns off the server's
+session-ID cache (`SSL_SESS_CACHE_OFF`), so TLS 1.2 clients cannot resume either (C7). A
+reconnecting client does a full handshake in both versions; T4 measures that cost. Without `strict`, contexts are unchanged, so consensus's and
 Detent's are not affected; adopting `strict` there is their decision, after their TLS tests
-(proposed in Detent's ledger).
+(proposed in Detent's ledger, `docs/DEPENDENCY_UPGRADES.md`, maintainer proposals).
 
 **D1.5 Handshake-failure logging** (TS-R20). http's TLS factory returns silently on every
 failure path; it gains an optional callback `on_handshake_failure(reason)`, with reasons
-version, cipher, certificate, deadline, and cap. Xapiand counts each reason and logs at most
+version, cipher, certificate, protocol (not TLS at all, such as plain HTTP), and deadline
+(C5). Connections refused at the cap never reach the factory: reactor refuses them at accept
+(`reactor/reactor.h:289`), and Xapiand reports reactor's `rejected` counter as the cap reason. Xapiand counts each reason and logs at most
 once a minute per reason.
 
-**D1.6 The key, before anything else** (TS-R23). Xapiand loads and checks the certificate
-and key in `setup()`, before `demote()` (`src/main.cc:1091`) and before discovery starts,
-and keeps the context for `make_servers()`. Startup fails when the key file is readable by
+**D1.6 The key, before anything else** (TS-R23, C6). Xapiand builds the TLS context in
+`main()`, before `demote()` (`src/main.cc:1091`) and so before `server()`, `setup()`, and
+discovery, and keeps it for `make_servers()`. Startup fails when the key file is readable by
 group or others, when the key does not match the certificate (reactor checks this), or when
 the certificate is not yet valid or has expired (checked by Xapiand from the certificate's
-notBefore and notAfter). A certificate within 14 days of expiry logs a warning at startup.
+notBefore and notAfter). A certificate within 14 days of expiry logs a warning, checked at startup and daily
+after, and its seconds to expiry are a metric (C6).
 
 **D1.7 Certificate changes need a restart** in step 1: http's factory holds one context for
 its life (TS-R12).
@@ -131,12 +137,12 @@ remove TS-R1's raw-fd paths. The review's findings are its requirements.
 
 | Row | Target | Procedure |
 |---|---|---|
-| T0 Dependencies | Step 0's build passes every existing CI job unchanged; a configure checks out every Kronuz library at its pinned commit | CI on the step-0 commit; the configure's checkout check |
-| T1 The API over TLS | The docs E2E suite passes over `https://`, every assertion, with the same assertion count as over plain HTTP | `harness/e2e_capture.sh` gains `XAPIAND_FLAGS` (passed to the node), `SCHEME` (readiness probe and collection base URL), and `CA` (newman's `--ssl-extra-ca-certs`, so newman 6 or later, which the harness checks); `docs_to_postman.py` takes the base URL from the environment. Plain and TLS from one build. |
-| T2 Refusals, each beside an accept case differing in one variable, each asserting the server's logged reason | A client not trusting the CA (accepted: one that does); plain HTTP to the TLS port (accepted: HTTPS); a TLS 1.1 ClientHello sent by a raw-socket client, so the refusal is the server's (accepted: TLS 1.2); a static-RSA TLS 1.2 suite against an RSA certificate (accepted: ECDHE-RSA-AES128-GCM); a renegotiation attempt; startup with an expired, a not-yet-valid, a mismatched, and a group-readable key or certificate (each fails, naming the reason; accepted: valid, mode 0600); `--tls-cert` without `--tls-key` | A harness script with `openssl s_client`, `curl`, and a raw-socket ClientHello |
-| T3 Bounds | 65 connections stalled mid-handshake: the 65th refused, the 64 dropped at 5 s; a connection idle 75 s after a reply closed; headers trickled past 30 s closed; a body streamed for longer than 120 s (a RESTORE) completes; at `--tls-max-connections`, the next connection refused; RSS per TLS connection at the cap stated | A harness script with raw sockets and `openssl s_client`, wall time |
-| T4 Cost | Server CPU seconds per 1,000 requests, TLS against plain, within 5% for a keep-alive search loop and the docs E2E mix, interleaved, five trials, spread stated; full handshakes per second at one core stated | `harness/loadtest.py` gains HTTPS (a CA option), run from a separate process pinned away from the server's cores; CPU from the server's `getrusage` |
-| T5 Sanitizers | T1 and T2 clean under ASan, UBSan, and TSan | CI's sanitizer jobs, which run e2e today, gain `libssl-dev`, T1's TLS variant, and T2; the ASan job adds `-fsanitize=undefined` |
+| T0 Dependencies | Step 0's build passes every existing CI job unchanged; a configure checks out every Kronuz library at its pinned commit, and every library's consumers pin the same commit of it (C2); the cluster checks with 2 and 3 nodes, WAL recovery, graceful shutdown, and signals pass on Linux and macOS without the local override, against a list of each behavior-changing commit range in the moved libraries and the check covering it (C1); the Docker image, the FreeBSD package, and the Homebrew bottle build without publishing, each stating the OpenSSL it links (C3) | CI on the step-0 commit; the configure's checkout check and `pin_consistency.py`; `harness/run_all.sh cluster recovery` on both platforms; the release workflows run with publishing off |
+| T1 The API over TLS | The docs E2E suite passes over `https://`, every assertion, with the same assertion count as over plain HTTP | `harness/e2e_capture.sh` gains `XAPIAND_FLAGS` (passed to the node), `SCHEME` (the readiness probe and the collection base URL; the probe passes `--cacert`), and `CA` (newman's `--ssl-extra-ca-certs`, so newman 6 or later, which the harness checks), with a test certificate whose SAN covers `localhost` and `127.0.0.1` (C8); `docs_to_postman.py` takes the base URL from the environment. Plain and TLS from one build. |
+| T2 Refusals, each beside an accept case differing in one variable, each asserting the server's logged reason | A client not trusting the CA (accepted: one that does); plain HTTP to the TLS port, logged as protocol (accepted: HTTPS); a TLS 1.1 ClientHello sent by a raw-socket client, so the refusal is the server's (accepted: TLS 1.2); a static-RSA TLS 1.2 suite against an RSA certificate (accepted: ECDHE-RSA-AES128-GCM); a renegotiation attempt over TLS 1.2, forced (C8); startup with an expired, a not-yet-valid, a mismatched, and a group-readable key or certificate (each fails, naming the reason; accepted: valid, mode 0600); `--tls-cert` without `--tls-key` | A harness script with `openssl s_client`, `curl`, and a raw-socket ClientHello |
+| T3 Bounds | 65 connections stalled mid-handshake: the 65th refused, the 64 dropped at 5 s; a connection idle 75 s after its handshake, and one 75 s after a reply, closed; a body that stops for 60 s, and a client that stops reading a reply for 60 s, closed; `--tls-max-connections` above the open-files limit refused at startup; headers trickled past 30 s closed; a body streamed for longer than 120 s (a RESTORE) completes; at `--tls-max-connections`, the next connection refused; RSS per TLS connection at the cap stated | A harness script with raw sockets and `openssl s_client`, wall time |
+| T4 Cost | Server CPU seconds per 1,000 requests, TLS against plain, within 5% for a keep-alive search loop and the docs E2E mix, interleaved, five trials, spread stated; full handshakes per second at one core stated | `harness/loadtest.py` gains HTTPS (a CA option), run from a separate process pinned away from the server's cores; the server's CPU seconds read from `/proc/<pid>/stat` on Linux and `ps -o cputime` on macOS before and after each trial (C8) |
+| T5 Sanitizers | T1 and T2 clean under ASan, UBSan, and TSan | CI's sanitizer jobs, which run e2e today, gain `libssl-dev`, T1's TLS variant, and T2; the ASan job adds UBSan with `UBSAN_OPTIONS=halt_on_error=1`, so a report fails the job (C8) |
 | T6 reactor's `strict` option | With `strict`: a static-RSA and a CBC TLS 1.2 suite refused, ECDHE-AEAD accepted, no tickets in TLS 1.2 or 1.3; without it, the negotiated suites and tickets unchanged | `reactor/test/tls_test.cc` over a memory BIO pair, with an RSA and an ECDSA certificate |
 | T7 The http additions | `set_idle_timeout`, `set_header_timeout`, and `on_handshake_failure` each fire at their bound and reason, and change nothing when unset | http's `asio_test` |
 
