@@ -842,3 +842,196 @@ not read as cluster security.
 Not run (re-check): no build, no tests, no TLS handshakes. http's request-deadline
 behavior is read from code, not exercised. newman was checked only on this Mac (4.5.0).
 Nothing under Detent was touched.
+
+## Second re-check
+
+- Date: 2026-10-17.
+- Reviewed: revision 2 at 08e1a331a (`docs/design/transport-security.md`, 150 lines),
+  against the re-check committed at 862a8473b. Xapiand source and `CMakeLists.txt` at
+  08e1a331a. The working tree also carries an uncommitted `CMakeLists.txt` change that
+  starts step 0 (58 insertions, 76 deletions). This review rules on the design, and that
+  change is evidence for T0 at the gate.
+- Checked by: reading the cited code, plus new probes in
+  `.scratch/review-transport-security/probes/`: `pin_drift.py` (each Xapiand pin against
+  the sibling checkout's HEAD) and `pin_consistency.py` (whether consumers of one library
+  pin the same commit), each with its `.out`.
+
+### Verdict
+
+**APPROVE WITH CONDITIONS for step 1. Nothing blocks. TS-R18 is closed and TS-R19's
+remainder is a condition (TS-R25 to TS-R27). C1 to C3 must hold before step 0 lands on
+`master`; the rest hold at the step-1 gate.**
+
+D1's decisions now hold against the code: bounds only with TLS, no exchange deadline,
+an explicit connection cap, an opt-in `strict`, a failure hook, and the key checked
+before the privilege drop. What remains are verification scope and precision, each
+stated below as a checkable condition.
+
+### Status
+
+| ID | Status | Note |
+|---|---|---|
+| TS-R1, TS-R2, TS-R4 to TS-R10, TS-R12, TS-R13 | Deferred and recorded (design:117-128); acceptable | Unchanged from the re-check |
+| TS-R3 | Deferred and recorded in full (design:120); acceptable | Persisted incarnations plus a freshness rule for first contact |
+| TS-R11 | Closed | Unchanged |
+| TS-R14 | Closed for step 1 (design:21-38); the full rewrite is deferred and recorded (design:126) | |
+| TS-R15 | Closed for step 1's rows, except TS-R32's leftovers | |
+| TS-R16 | Closed for HTTP (design:73-95); other services deferred and recorded (design:128) | Residual gaps in TS-R28 |
+| TS-R17 | Closed for step 1: `strict` is opt-in, so no other consumer changes (design:93-95); the rest is deferred and recorded (design:127) | The Detent ledger claim, TS-R31 |
+| TS-R18 | Closed | Bounds only with TLS (design:62-63,73); idle and header bounds as http additions, no exchange deadline (design:80-86); `--tls-max-connections` (design:79); a long RESTORE in T3 (design:137). Gaps in TS-R28 |
+| TS-R19 | Partially closed | The dependency step, OpenSSL 3, the `TLS` option, and packaging are named (design:40-57). The verification is narrower than required and the change much larger than stated (TS-R25 to TS-R27) |
+| TS-R20 | Closed (design:97-100) | Reason taxonomy, TS-R29 |
+| TS-R21 | Closed for the listed cases (design:136-141) | Leftovers in TS-R32 |
+| TS-R22 | Closed (design:88-95): `SSL_OP_NO_TICKET` plus `SSL_CTX_set_num_tickets(ctx, 0)` removes tickets in both versions | Resumption statement, TS-R31 |
+| TS-R23 | Closed in intent (design:102-107) | The named function runs after `demote()` (TS-R30) |
+| TS-R24 | Closed (design:31-33) | The docs and changelog text are checked at the gate |
+| Re-check condition 1 | Closed (design:120,126,127) | |
+
+### New findings (all conditions)
+
+#### TS-R25. Step 0 moves 58 libraries and 402 commits, and T0 runs no multi-node test
+
+- `pin_drift.out`: 58 of 59 pinned Kronuz libraries move, 402 commits in all. cluster
+  alone moves 80. Its range changes Raft election and commit rules: 510e120, 5b2a141,
+  1697e56, 6f6fcc3, 7c7dd86, 23407e8 ("Require an affirmative voting majority", "Require
+  verified data replication before legacy Raft commitment").
+- Other ranges change behavior too: msgpack d094091 (integer equality across types),
+  cuuid 0163d7c and a7dd5e3 (id generation), compressors 7a6cc22 (bounded zstd
+  decompression).
+- T0 runs "every existing CI job" (design:134). CI runs no multi-node, recovery, or
+  shutdown layer, and runs on Linux only (`.github/workflows/ci.yml`). The re-check's
+  TS-R19 asked for cluster and recovery explicitly.
+
+Condition C1, before step 0 lands:
+1. Run `harness/cluster_check.sh` with 2 and 3 nodes, `wal_recovery_check.sh`,
+   `graceful_shutdown_check.sh`, and `signal_check.sh` on the step-0 commit, on Linux and
+   macOS, without `.scratch/local-dependencies.cmake`.
+2. List each behavior-changing range with the check that covers it.
+3. T0's target names all of these.
+
+#### TS-R26. Removing the transitive pins exposes a disagreement
+
+Without `CMakeLists.txt:443-456`, FetchContent's first declaration decides `static-string`
+(`pin_consistency.out`):
+- hashes 32c4991 pins 95745f4 (`hashes/CMakeLists.txt:14-15`).
+- strings b42d3c4 and term-color 534e309 pin eb1efcb, four commits later.
+
+T0's checkout check fails until hashes moves.
+
+logger and http-log track cppcodec `master` when built alone
+(`logger/CMakeLists.txt:35-41`, `http-log/CMakeLists.txt:41-47`). Xapiand's `v0.2`
+declaration must stay ahead of them.
+
+Condition C2, before the pins are removed: resolve every disagreement in the lagging
+library, never by declaration order.
+
+#### TS-R27. Step 0's packaging is not built by the CI it cites
+
+- `release.yml` (Docker), `freebsd.yml`, and `bottles.yml` run only on version tags or a
+  dispatch with a tag, and they publish. `ci.yml` builds only on Ubuntu.
+- So "CI on the step-0 commit" (design:134) builds no Docker image, no FreeBSD package,
+  no Homebrew bottle, and nothing on macOS.
+- On macOS, CMake must find a keg-only `openssl@3`, and this Mac also has `openssl@4`.
+- On `ubuntu:24.04` the runtime package is `libssl3t64` (the 64-bit `time_t` rename).
+
+Condition C3, before step 0 lands:
+1. Build each package without publishing: `docker build`, `brew install
+   --build-from-source --HEAD`, and the FreeBSD VM build without its release step.
+2. State which OpenSSL each platform links.
+3. Name the Ubuntu runtime package that actually installs.
+
+#### TS-R28. D1.3 leaves the first request unbounded and omits two residuals
+
+- The idle timeout runs from the end of a reply, and the header deadline from a
+  request's first byte (design:80-81). Nothing bounds the time between the handshake's
+  end and the first request. A client that completes the handshake and sends nothing
+  holds a slot indefinitely.
+- With no body or reply bound (design:83-84), a body trickled one byte a minute, or a
+  reader that stops reading, holds a connection with no limit. The connection row's
+  residual (design:79) does not say so. 1,024 such connections from one host hold every
+  slot.
+- `--tls-max-connections` is not checked against the open-files budget, which
+  `adjustOpenFilesLimit` computes for `max_clients` only (`src/main.cc:441-456`).
+
+Condition C4:
+1. The idle timeout also runs from the handshake's end, with a T3 case.
+2. State the body and reader residuals with numbers, or add inactivity timeouts (no
+   progress in N seconds) that leave a progressing RESTORE alone.
+3. Warn at startup when the file limit cannot cover the cap.
+
+#### TS-R29. D1.5's reasons miss two refusal paths
+
+- Plain HTTP to the TLS port, or any non-TLS input, fits none of version, cipher,
+  certificate, deadline, and cap. T2's plain-HTTP case cannot assert its reason.
+- The connection cap never reaches the factory: when the service admission is full,
+  reactor drops the socket at accept (`reactor/reactor.h:289`). With one bound passed to
+  both (design:68-69), the hook never reports a connection-cap refusal.
+
+Condition C5:
+1. Add a `protocol` reason.
+2. Report connection-cap refusals from reactor's `connection_stats().rejected`, or through
+   the hook.
+
+#### TS-R30. D1.6 names a function that runs after `demote()`
+
+- `setup()` runs inside `server()`, after `demote()`: `src/main.cc:1091` demotes, `:1105`
+  calls `server()`, and `:807` calls `setup()`. So "in `setup()`, before `demote()`"
+  (design:102-103) cannot hold.
+- The 14-day expiry warning runs only at startup (design:107), so a node already running
+  inside the window never warns.
+
+Condition C6:
+1. Build the context in `main()` before `src/main.cc:1091`, after `detach()` (`:1001`).
+2. Check expiry daily, and expose days-to-expiry as a metric.
+
+#### TS-R31. D1.4's resumption statement and the Detent ledger
+
+- "A reconnecting client does a full handshake" (design:92-93) holds for TLS 1.3 only.
+  TLS 1.2 clients still resume by session ID through OpenSSL's server session cache,
+  which is on by default.
+- "(proposed in Detent's ledger)" (design:95): Detent's maintainer-proposals table at
+  8412624 (`Detent/docs/DEPENDENCY_UPGRADES.md:56-57`, read-only) lists the CA-less
+  Server role and generated certificates, not `strict`.
+
+Condition C7:
+1. Under `strict`, disable the session cache
+   (`SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF)`), or state the session-ID
+   resumption window. T6 checks whichever is chosen.
+2. Record `strict` in Detent's ledger through Detent's own agent.
+
+#### TS-R32. Gate-row leftovers
+
+- T5's `-fsanitize=undefined` recovers by default, so undefined behavior prints and the
+  job still passes. CI sets only ASan and TSan options (`.github/workflows/ci.yml:104-105`).
+  Use `-DUBSAN=ON`, which adds `-fno-sanitize-recover=all`
+  (`cmake/Modules/FindSanitizers.cmake:79-82`), or set `UBSAN_OPTIONS=halt_on_error=1`.
+- T2's renegotiation case forces TLS 1.2.
+- T1's readiness probe uses the CA, and the test certificate covers `localhost`.
+- T4 says how the harness reads the server's CPU time: "the server's `getrusage`"
+  (design:138) is not reachable from the load process.
+
+Condition C8: each item holds in the gate's evidence.
+
+### Conditions
+
+1. C1 (TS-R25), before step 0 lands: the multi-node, recovery, shutdown, and signal
+   layers pass on the step-0 commit, on Linux and macOS, without the local override.
+   Behavior-changing ranges are listed with their checks.
+2. C2 (TS-R26), before the transitive pins go: every pin disagreement in Xapiand's graph
+   is resolved in the lagging library.
+3. C3 (TS-R27), before step 0 lands: Docker, Homebrew, and FreeBSD packages build without
+   publishing, and each platform's OpenSSL is stated.
+4. C4 (TS-R28): an idle bound after the handshake; the body and reader residuals stated
+   or bounded by inactivity; the cap checked against the file limit.
+5. C5 (TS-R29): a `protocol` reason, and connection-cap refusals reported.
+6. C6 (TS-R30): the context built before `demote()`; expiry checked daily, with a metric.
+7. C7 (TS-R31): the TLS 1.2 session cache decided and tested; `strict` recorded with
+   Detent.
+8. C8 (TS-R32): UBSan fails on undefined behavior; renegotiation over TLS 1.2; T1's CA
+   and SAN; T4's CPU source.
+9. TS-R24: the user docs and the changelog entry say node traffic stays in clear.
+
+Not run (second re-check): no build, configure, or test. The pin drift and consistency
+are measured against local sibling checkouts, which match their `origin` heads where
+checked. newman 6's `--ssl-extra-ca-certs` was not run (this Mac has 4.5.0). Detent was
+only read, in the one file cited.
