@@ -411,6 +411,7 @@ this schema.
 | `/:tenant/config` returns `404` | tenant spelling, `active`, access key, encrypted config lengths |
 | tenant config returns `500` after a secret change | `CONFIG_MASTER_KEY` continuity, Worker logs |
 | OAuth provider rejects callback | exact OAuth App callback, tenant `oauth.callbackUrl`, Worker base URL |
+| identity lookup fails with `upstream 403` | provider IP-gates the authenticated userinfo call (e.g. enterprise IP allow list); set that tenant's `oauth.identitySource` to `app-token` |
 | browser reports CORS failure | exact scheme and host in tenant `origins`, including localhost alias |
 | login succeeds but API returns `401` | tenant path consistency, tenant-scoped cookie, session-secret continuity |
 | comments appear on the wrong page | widget term, tenant backend URL, discussion and comment tenant IDs |

@@ -86,6 +86,7 @@ For GitHub, OAuth Apps are under **Settings**, **Developer settings**, **OAuth A
   "userUrl": "https://api.github.com/user",
   "scope": "read:user",
   "clientAuthMethod": "client_secret_post",
+  "identitySource": "userinfo",
   "fields": {
     "subject": "id",
     "login": "login",
@@ -99,6 +100,15 @@ For GitHub, OAuth Apps are under **Settings**, **Developer settings**, **OAuth A
 Other OAuth 2.0 providers work when their token response contains an access token and their
 user endpoint returns JSON fields that can be selected by the configured field paths. Each
 tenant may use a different provider or OAuth client.
+
+The optional `identitySource` selects how the signed-in user is resolved after the token
+exchange. The default `userinfo` calls `userUrl` with the user's access token. `app-token`
+instead calls the OAuth app's token-introspection endpoint (for GitHub,
+`POST /applications/{client_id}/token` at the `userUrl` origin) with the app's client
+credentials and reads the returned `user`. Use `app-token` when the userinfo endpoint is
+unreachable from the Worker, for example when an enterprise IP allow list blocks the Worker's
+egress IP on the authenticated `userUrl` call: the app-credential introspection call is
+authenticated as the app, not the user, so it is not IP-gated.
 
 ## 4. Complete the tenant document
 

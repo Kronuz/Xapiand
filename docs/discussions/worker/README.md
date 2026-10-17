@@ -39,6 +39,13 @@ The complete configuration is AES-GCM encrypted in D1 with `CONFIG_MASTER_KEY`. 
 `GET` returns a strict projection and never exposes OAuth credentials, webhook URLs, feed
 tokens, moderators, or origins. See `tenant-config.example.json` for every option.
 
+Each tenant's `oauth.identitySource` selects how the signed-in user is resolved: the default
+`userinfo` reads the provider's `userUrl` with the user token, while `app-token` uses the
+OAuth app's token-introspection endpoint with the app credentials. The latter is for
+providers that block the Worker's IP on the authenticated userinfo call (for example an
+enterprise IP allow list), because the introspection call is authenticated as the app and is
+not IP-gated.
+
 Only deployment-wide infrastructure stays outside tenant configuration:
 
 | binding | purpose |

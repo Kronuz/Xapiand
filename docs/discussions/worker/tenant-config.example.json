@@ -20,6 +20,7 @@
     "clientSecret": "replace-me",
     "scope": "read:user",
     "clientAuthMethod": "client_secret_post",
+    "identitySource": "userinfo",
     "fields": {
       "subject": "id",
       "login": "login",

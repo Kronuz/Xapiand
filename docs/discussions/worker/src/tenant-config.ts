@@ -15,6 +15,7 @@ export interface TenantConfig {
     clientSecret: string;
     scope: string;
     clientAuthMethod: "client_secret_post" | "client_secret_basic";
+    identitySource: "userinfo" | "app-token";
     fields: { subject: string; login: string; name: string; avatar: string; profileUrl: string };
   };
   moderators: Array<{ subject?: string; login: string }>;
@@ -115,6 +116,10 @@ export function validateTenantConfig(input: unknown, env: Env): TenantConfig {
   if (authMethod !== "client_secret_post" && authMethod !== "client_secret_basic") {
     throw new HttpError(400, "oauth.clientAuthMethod is invalid");
   }
+  const identitySource = oauth.identitySource === undefined ? "userinfo" : string(oauth.identitySource, "oauth.identitySource");
+  if (identitySource !== "userinfo" && identitySource !== "app-token") {
+    throw new HttpError(400, "oauth.identitySource is invalid");
+  }
   const maxBodyCeiling = Number(env.REQUEST_MAX_BYTES || 1_048_576);
   return {
     active: root.active,
@@ -134,6 +139,7 @@ export function validateTenantConfig(input: unknown, env: Env): TenantConfig {
       clientSecret: string(oauth.clientSecret, "oauth.clientSecret", false),
       scope: string(oauth.scope, "oauth.scope"),
       clientAuthMethod: authMethod,
+      identitySource,
       fields: {
         subject: string(fields.subject, "oauth.fields.subject", false),
         login: string(fields.login, "oauth.fields.login", false),
