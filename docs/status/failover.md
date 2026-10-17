@@ -1,9 +1,15 @@
 # failover
 - Branch / worktree: fix/failover at /Users/kronuz/code/Kronuz/Xapiand-wt/failover
-- State: investigating
-- Done: cherry-picked the FAILOVER harness from master (15596cf72)
-- Doing: Release build (ASSERTS, tests) into build/; reading discovery/manager/node code
-- Next: 1. Reproduce with FAILOVER=1 cluster_check.sh 3 and keep logs. 2. Find the 503 path. 3. Record cause. 4. Fix. 5. Election timing. 6. Verify all checks.
+- State: fixing
+- Done: cherry-picked the FAILOVER harness from master (188e2d6ab = 15596cf72); ledger (1c3013b94); Release build (ASSERTS, tests) in build/; reproduced 4 times (election 11-25 s, PUT 503 for 120 s)
+- Doing: fixing the shard primary election in src/server/discovery.cc (_ASYNC_elect_primary, _ASYNC_elect_primary_response)
+- Next: 1. Fix the tally, the stale voter map, and the missing-copy vote. 2. FAILOVER=1 cluster_check.sh 3. 3. cluster_check.sh 2 and 3. 4. run_all.sh smoke load e2e. 5. ctest. 6. Ledger to ready to land.
 - Blocked on: nothing
-- Findings: (pending)
-- Last verified: (nothing yet)
+- Findings:
+  - Symptom: survivors log `PUT /cluster_probe/2: DatabaseNotAvailableError: Endpoint node is inactive` (src/database/shard.cc:329) every second for 120 s. Doc 2 routes to shard cluster_probe/.__3, whose primary is the killed node1 and whose only replica is node2 (5 shards, 1 replica: every shard has exactly 2 copies). No `Primary shard ... moved` line ever appears: the shard is never promoted.
+  - The 503 path: resolve_index_endpoints (src/index_resolver_lru.cc:828) finds the shard's first node inactive, rebuilds, and update_primary (src/index_resolver_lru.cc:216-226) waits --database-stall-time then dispatches ELECT_PRIMARY every 5 s. The write still goes to the dead primary, so the shard open throws DatabaseNotAvailableError, mapped to 503 (src/server/http_utils.h:66).
+  - Cause 1 (deterministic): the leader's tally in Discovery::_ASYNC_elect_primary_response requires `Node::quorum(total_nodes, voters.size())` and `Node::quorum(total_nodes, ok_nodes)` over ALL copies of the shard, the dead primary included (src/server/discovery.cc:762, :790). With 1 replica that is 2 of 2 votes, so a shard whose primary died can never be promoted. Instrumented run: leader node3 logs `voters cluster_probe/.__3 = 1 of 2` every round, never elects.
+  - Cause 2: the leader keeps each voter in _ASYNC_elected_primaries (600 s TTL) and ignores a repeat vote (`if (emplaced.second)`, src/server/discovery.cc:758); only the dispatching node clears its own map (:808). So a round after the first never re-tallies on the leader.
+  - Cause 3: a live shard member without a local copy never answers (the open's `catch (...) { }`, src/server/discovery.cc:701, leaves uuid empty). Replicas are pulled 0-3 s after DB_UPDATED, so a primary killed right after a shard was created leaves survivors without the copy; run3 logged `No glass database found at path 'cluster_probe/.__3'` on node2 and the shard had no voter at all.
+  - Election timing (14-16 s): configured, not a defect. src/server/discovery.cc:77-81 sets heartbeat 1 s and an election timeout uniform in [10 s, 30 s] (10 s = NODE_LIFESPAN, src/node.h:47); the first of two followers fires at 10 + 20/3 = 16.7 s on average, observed 11-25 s. Shortening it is an owner decision (it couples to NODE_LIFESPAN liveness).
+- Last verified: 2026-10-17 FAILOVER=1 cluster_check.sh 3 on bb4981558 + harness: RED (new leader in 16 s, PUT 503 at 120 s), reproduced in 4 runs.
