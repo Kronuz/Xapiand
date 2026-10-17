@@ -2112,7 +2112,7 @@ endif ()
 if (BUILD_TESTS)
 		# Pure unit tests (no Xapiand code linked). They use the tiny header-only
 		# harness in tests/test_harness.h -- no GoogleTest, no FetchContent.
-		foreach (VAR_TEST string)
+		foreach (VAR_TEST string primary_election)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"

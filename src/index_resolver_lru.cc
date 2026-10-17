@@ -22,6 +22,9 @@
 
 #include "index_resolver_lru.h"
 
+#include <algorithm>               // for std::find_if
+#include <iterator>                // for std::next
+
 #include "database/flags.h"       // for  DB_*
 #include "database/handler.h"     // for DatabaseHandler
 #include "database/utils.h"       // for UNKNOWN_REVISION
@@ -202,6 +205,14 @@ update_primary(const std::string& unsharded_normalized_path, IndexSettings& inde
 		}
 		if (it != it_b && it != it_e) {
 			if (primary_node) {
+				// Promote the elected copy, not merely the first live one.
+				auto elected = std::find_if(std::next(it_b), it_e, [&](const std::string& name) {
+					auto node = Node::get_node(name);
+					return node && !node->empty() && *node == *primary_node && node->is_active();
+				});
+				if (elected != it_e) {
+					it = elected;
+				}
 				auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
 				auto from_node = Node::get_node(*it_b);
 				auto to_node = Node::get_node(*it);

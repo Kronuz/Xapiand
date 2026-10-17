@@ -42,6 +42,7 @@
 #include "xapiand_namegen.h"                        // for name_generator
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
+#include "server/primary_election.h"        // for primary_election::elect
 #include "random.hh"                        // for random_int
 #include "repr.hh"                          // for repr
 #include "utype.hh"                         // for toUType
@@ -680,9 +681,10 @@ Discovery::_ASYNC_elect_primary(const std::string& message)
 	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{} }}",
 		node->to_string(), repr(normalized_path));
 
-	std::string uuid;
-	Xapian::rev revision;
-	size_t total_nodes;
+	bool member = false;
+	std::string uuid;  // empty: this member has no local copy yet
+	Xapian::rev revision = 0;
+	size_t total_nodes = 0;
 
 	auto index_settings = XapiandManager::resolve_index_settings(normalized_path);
 	assert(index_settings.shards.size() == 1);
@@ -698,13 +700,17 @@ Discovery::_ASYNC_elect_primary(const std::string& message)
 					auto db = shard->db();
 					uuid = db->get_uuid();
 					revision = db->get_revision();
+					member = !uuid.empty();
+				} catch (const Xapian::DatabaseNotFoundError&) {
+					// The replica was never pulled: vote as an empty copy.
+					member = true;
 				} catch (...) { }
 				break;
 			}
 		}
 	}
 
-	if (!uuid.empty()) {
+	if (member) {
 		std::string response;
 		response.append(serialise_string(normalized_path));
 		response.append(serialise_string(uuid));
@@ -748,55 +754,50 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 	auto uuid = unserialise_string(&p, p_end);
 	Xapian::rev revision = unserialise_length(&p, p_end);
 	auto eligible = unserialise_bool(&p, p_end);
-	size_t total_nodes = unserialise_length(&p, p_end);
+	[[maybe_unused]] size_t total_nodes = unserialise_length(&p, p_end);
 
 	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{}, uuid:{}, revision:{}, total_nodes:{} }}",
 		node->to_string(), repr(normalized_path), repr(uuid), revision, total_nodes);
 
+	// A repeat vote (a later round) replaces the earlier one and re-tallies.
 	auto& voters = _ASYNC_elected_primaries[normalized_path];
-	auto emplaced = voters.emplace(node->lower_name(), PrimaryShardVoter{});
-	if (emplaced.second) {
-		emplaced.first->second.uuid = uuid;
-		emplaced.first->second.revision = revision;
-		emplaced.first->second.eligible = eligible;
-		if (Node::quorum(total_nodes, voters.size())) {
-			auto nodes = IndexResolverLRU::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
-			assert(nodes.size() == 1);
-			if (nodes.size() == 1) {
-				Xapian::rev max_revision = 0;
-				std::shared_ptr<const Node> elected_node;
-				const auto& shards = nodes[0];
-				total_nodes = shards.size();
-				size_t ok_nodes = 0;
-				assert(total_nodes);
-				if (shards[0]->is_active()) {
-					// Shard's primary is active, abort election!
-					_ASYNC_elected_primaries.erase(normalized_path);
-				} else {
-					for (const auto& shard_node : shards) {
-						if (shard_node->is_active()) {
-							auto it = voters.find(shard_node->lower_name());
-							if (it != voters.end()) {
-								++ok_nodes;
-								if (it->second.eligible) {
-									if (!elected_node || (it->second.uuid == uuid && it->second.revision > max_revision)) {
-										max_revision = it->second.revision;
-										elected_node = shard_node;
-									}
-								}
-							}
-						}
-					}
-					if (Node::quorum(total_nodes, ok_nodes)) {
-						_ASYNC_elected_primaries.erase(normalized_path);
-						if (elected_node) {
-							L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
-							XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
-						}
-					}
-				}
+	voters[node->lower_name()] = PrimaryShardVoter{std::string(uuid), revision, eligible};
+
+	auto nodes = IndexResolverLRU::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
+	assert(nodes.size() == 1);
+	if (nodes.size() != 1 || nodes[0].empty()) {
+		return;
+	}
+	const auto& shard_nodes = nodes[0];
+	if (shard_nodes[0] && shard_nodes[0]->is_active()) {
+		// Shard's primary is active, abort election!
+		_ASYNC_elected_primaries.erase(normalized_path);
+		return;
+	}
+
+	std::vector<primary_election::Copy> copies;
+	copies.reserve(shard_nodes.size());
+	for (const auto& shard_node : shard_nodes) {
+		primary_election::Copy copy;
+		if (shard_node && !shard_node->empty()) {
+			copy.active = shard_node->is_active();
+			auto it = voters.find(shard_node->lower_name());
+			if (it != voters.end()) {
+				copy.voted = true;
+				copy.eligible = it->second.eligible;
+				copy.exists = !it->second.uuid.empty();
+				copy.revision = it->second.revision;
 			}
 		}
+		copies.push_back(copy);
+	}
+
+	auto elected = primary_election::elect(copies);
+	if (elected >= 0) {
+		_ASYNC_elected_primaries.erase(normalized_path);
+		auto elected_node = shard_nodes[elected];
+		L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
+		XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
 	}
 }
 
