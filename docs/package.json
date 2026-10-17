@@ -13,10 +13,11 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.3",
     "@astrojs/starlight": "^0.41.3",
     "astro": "^7.0.6",
     "js-yaml": "^4.1.0",
     "rehype-external-links": "^3.0.0",
-    "sharp": "^0.34.3"
+    "sharp": "^0.35.5"
   }
 }
