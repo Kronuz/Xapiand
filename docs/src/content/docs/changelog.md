@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Added
+- **HTTPS for the REST API.** `--tls-cert` and `--tls-key` serve the API over TLS on
+  `--port`, with forward-secret ciphers only, a connection cap (`--tls-max-connections`),
+  and idle, header, and inactivity timeouts. Traffic between nodes still travels in clear,
+  and the API still has no authentication; see [Options](/Xapiand/options).
+
 ### Changed
 - **Builds need OpenSSL 3** by default, for the coming HTTPS support (`-DTLS=OFF` builds
   without it). The packages depend on it: `libssl3t64`/`libssl3` for the `.deb`,

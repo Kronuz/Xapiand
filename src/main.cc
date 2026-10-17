@@ -75,6 +75,7 @@
 #include "xapiand_strings.hh"                             // for strings::format, strings::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
 #include "traceback.h"                            // for traceback::{backtrace, traceback, collect_callstack_sig_handler}
+#include "tls.h"                                  // for tls_setup
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
@@ -1087,6 +1088,19 @@ int main(int argc, char **argv) {
 		Logging::hooks.backtrace = []() -> std::string {
 			return traceback::traceback(nullptr, nullptr, 0);
 		};
+
+#ifdef XAPIAND_TLS
+		// HTTPS: the key is read and checked while the process can still read it, before
+		// demote() and before any service or discovery starts (transport-security D1.6).
+		if (!opts.tls_cert.empty()) {
+			try {
+				tls_setup(opts.tls_cert, opts.tls_key, opts.tls_max_connections);
+			} catch (const std::exception& exc) {
+				L_CRIT("Cannot serve HTTPS: {}", exc.what());
+				throw SystemExit(EX_CONFIG);
+			}
+		}
+#endif
 
 		demote(opts.uid.c_str(), opts.gid.c_str());
 

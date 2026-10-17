@@ -73,6 +73,10 @@
 #include "serialise.h"                           // for KEYWORD_STR
 #include "serialise_list.h"                      // for StringList
 #include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
+#ifdef XAPIAND_TLS
+#include "http_asio_tls.h"                       // Kronuz/http: the TLS connection factory
+#include "tls.h"                                 // for tls_context
+#endif
 #include "reactor.h"                             // Kronuz/reactor: reactor::Reactor (the control-plane loop)
 #include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
 #include "server/remote_protocol_service.h"         // remote::RemoteProtocolService (the Asio transport)
@@ -982,6 +986,30 @@ XapiandManager::make_servers()
 		std::size_t workers = opts.num_http_clients > 0
 			? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_http_clients) + reactors - 1) / reactors)
 			: 1;
+#ifdef XAPIAND_TLS
+		if (tls_context) {
+			// HTTPS (transport-security D1): http's handshake deadline and caps, the connection
+			// bound, and the idle, header, and inactivity timeouts, which plain HTTP leaves off.
+			auto failed = [](http::TlsFailure why) {
+				switch (why) {  // one call site per reason, so each is rate-limited on its own
+					case http::TlsFailure::deadline: L_WARNING_ONCE_PER_MINUTE("TLS handshake past its deadline"); break;
+					case http::TlsFailure::connections: L_WARNING_ONCE_PER_MINUTE("TLS connection refused: --tls-max-connections reached"); break;
+					case http::TlsFailure::handshakes: L_WARNING_ONCE_PER_MINUTE("TLS connection refused: too many handshakes in progress"); break;
+					case http::TlsFailure::version: L_WARNING_ONCE_PER_MINUTE("TLS handshake refused: protocol version"); break;
+					case http::TlsFailure::cipher: L_WARNING_ONCE_PER_MINUTE("TLS handshake refused: no shared cipher"); break;
+					case http::TlsFailure::certificate: L_WARNING_ONCE_PER_MINUTE("TLS handshake failed: the client refused the certificate"); break;
+					case http::TlsFailure::protocol: L_WARNING_ONCE_PER_MINUTE("TLS port received something other than TLS (plain HTTP?)"); break;
+					case http::TlsFailure::other: L_WARNING_ONCE_PER_MINUTE("TLS handshake failed"); break;
+				}
+			};
+			const std::size_t bound = opts.tls_max_connections;
+			http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000,
+				http::tls_connection_factory_timed(tls_context, std::chrono::seconds(5), 64, bound, failed), bound);
+			http_service->set_idle_timeout(std::chrono::seconds(75));
+			http_service->set_header_timeout(std::chrono::seconds(30));
+			http_service->set_inactivity_timeout(std::chrono::seconds(60));
+		} else
+#endif
 		http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000);
 		http::AsioBindOptions bind_options;
 		bind_options.address = opts.bind_address;

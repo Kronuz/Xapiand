@@ -49,6 +49,9 @@ extern struct opts_t {
 	std::string cluster_name = XAPIAND_CLUSTER_NAME;
 	std::string node_name = "";
 	std::string bind_address = "";
+	// HTTPS for the REST API (docs/design/transport-security.md D1): both or neither.
+	std::string tls_cert, tls_key;
+	std::size_t tls_max_connections = 1024;
 	unsigned int http_port = XAPIAND_HTTP_SERVERPORT;
 	unsigned int remote_port = XAPIAND_REMOTE_SERVERPORT;
 	unsigned int replication_port = XAPIAND_REPLICATION_SERVERPORT;

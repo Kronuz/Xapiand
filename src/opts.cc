@@ -305,6 +305,14 @@ parseOptions(int argc, char** argv)
 		std::string bind_address;
 		app.add_option("--bind-address", bind_address, "Bind address to listen to.");
 
+		std::string tls_cert, tls_key;
+		std::size_t tls_max_connections = 1024;
+#ifdef XAPIAND_TLS
+		app.add_option("--tls-cert", tls_cert, "Serve the HTTP API over TLS with this PEM certificate chain (with --tls-key).");
+		app.add_option("--tls-key", tls_key, "The PEM private key for --tls-cert; refused when readable by group or others.");
+		app.add_option("--tls-max-connections", tls_max_connections, "Most TLS connections held at once (default 1024).");
+#endif
+
 		bool iterm2 = false;
 		app.add_flag("--iterm2", iterm2, "Set marks, tabs, title, badges and growl.");
 
@@ -470,6 +478,9 @@ parseOptions(int argc, char** argv)
 		}
 		o.http_port = http_port;
 		o.bind_address = bind_address;
+		o.tls_cert = tls_cert;
+		o.tls_key = tls_key;
+		o.tls_max_connections = tls_max_connections;
 		o.node_name = node_name;
 #ifdef XAPIAND_CLUSTERING
 		o.primary_node = primary_node;
@@ -578,6 +589,9 @@ parseOptions(int argc, char** argv)
 			std::fprintf(stderr, "Error: %s\n", msg);
 			std::exit(EX_USAGE);
 		};
+		if (tls_cert.empty() != tls_key.empty()) {
+			usage_error("Option invalid: --tls-cert and --tls-key go together");
+		}
 		if ((!o.dump_documents.empty()) && !o.restore_documents.empty()) {
 			usage_error("Cannot dump and restore at the same time");
 		} else if (!o.dump_documents.empty() || !o.restore_documents.empty()) {
