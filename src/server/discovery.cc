@@ -790,7 +790,7 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 			if (it != voters.end()) {
 				copy.voted = true;
 				copy.eligible = it->second.eligible;
-				copy.exists = !it->second.uuid.empty();
+				copy.uuid = it->second.uuid;
 				copy.revision = it->second.revision;
 			}
 		}

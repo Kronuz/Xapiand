@@ -1,12 +1,13 @@
 # failover
 - Branch / worktree: fix/failover at /Users/kronuz/code/Kronuz/Xapiand-wt/failover
-- State: fixing (the election fix is verified; the bus-handler guard is committed but not yet built; host under a strict hold until about 01:17)
+- State: fixing (the tip builds, ctest 8/8; the database-UUID check of SYS-14 is restored; ASan+UBSan build and the failover matrix running under the light hold)
 - Done:
   - 188e2d6ab cherry-pick of the FAILOVER harness from master (15596cf72)
   - 1c3013b94, 2a999f1f4 ledger and recorded root cause
   - 8a5bd916a Promote a replica when a shard's primary dies (src/server/primary_election.h, src/server/discovery.cc, src/index_resolver_lru.cc, tests/test_primary_election.cc)
-  - c51da3e09 Guard the discovery bus handler so an exception cannot end its receive loop (src/server/discovery.cc), not built yet
-- Doing: waiting for the strict host hold to lift (`quiet check` exits 1: strata-trials until 01:17:22)
+  - c51da3e09 Guard the discovery bus handler so an exception cannot end its receive loop (src/server/discovery.cc); built at d95ca45b3, Release, ctest 8/8
+  - (next commit) Restore the database-UUID check (SYS-14): the shard's database is the UUID most live copies hold, a tie to shard order; a copy of another database is never promoted, revisions compare only within the shard's database; an empty copy stays promotable. 5 new tests (22 checks); mutants without the filter (6 fail) or counting dead copies (1 fails) are caught.
+- Doing: ASan+UBSan build (build-asan, Homebrew LLVM 23), then the failover matrix
 - Next, once `quiet check` exits 0 (or 2: nice -n 19, at most 4 jobs):
   1. `cmake --build build` (the guard commit has never been compiled), then `(cd build && ctest --output-on-failure)`.
   2. `FAILOVER=1 BIN=build/bin/xapiand harness/cluster_check.sh 3`.
