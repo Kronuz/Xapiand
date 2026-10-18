@@ -3,7 +3,7 @@
 Draft for the lead. The gate evidence for step 1 (`docs/design/transport-security.md`, D1,
 rows T1 to T7) and for the conditions C1 to C8 of the second re-check
 (`docs/reviews/transport-security-design.md`), on branch `tls/d1-gate`. D1 itself is
-bb4981558; the owner's key-file ruling (SYS-13) is 3b6b3ee15. Each row names the build
+bb4981558; the owner's key-file ruling (SYS-13) is 3b6b3ee15, and the lead's ruling on its group 66ddc8cce. Each row names the build
 behind its result. A row passes only with a run at the gate's commit, so every result
 below that predates 3b6b3ee15 is owed a rerun, and the rows that need a running server
 stay "Not run" until the host frees.
@@ -105,7 +105,7 @@ $BUILD/bin/xapiand_test_tls
    through `tls_setup()`; no test starts a node as root, so `demotion()`'s lookups are
    exercised only as `demote()`'s were.
 
-Not run: every row at a commit carrying 227a1434f and 3b6b3ee15 and the run-as change; T2's SYS-13 cases;
+Not run: every row at a commit carrying 227a1434f, 3b6b3ee15, and 66ddc8cce; T2's SYS-13 cases;
 `test_tls`; T4's measurement (the lead's, on a quiet host); T5 entirely (the local ASan
 build is unfinished, TSan not started, and no CI run exists for the branch); T6 and T7;
 anything on Linux; C1 on Linux; C3's package builds; the cluster layers over HTTPS (step 1
