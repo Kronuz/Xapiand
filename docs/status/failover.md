@@ -28,10 +28,21 @@
   - Election timing (14-16 s): configured, not a defect. src/server/discovery.cc sets heartbeat 1 s and an election timeout uniform in [10 s, 30 s] (10 s = NODE_LIFESPAN, src/node.h:47); the first of two followers fires at 10 + 20/3 = 16.7 s on average, observed 10-25 s. Shortening it is an owner decision, coupled to NODE_LIFESPAN liveness.
   - UUID check, a reviewable choice: no record of a shard's database UUID exists (IndexSettings and the Raft state carry none), so the reference comes from the votes; the old code compared against whichever voter answered last. A tie between databases goes to shard order; refusing to elect on a tie is the alternative, at the cost of availability, which SYS-14 ranks first.
   - Reactor seam: Xapiand's L_EXC is async and keeps the std::current_exception() pointer, which owns the exception object, so reactor's contract item 4 (no later reads of datagram views) holds unless an exception type stores a view into the datagram; Xapiand's own exceptions own their strings. Without the app catch the log line reads `ERROR: UDP datagram handler died with an unhandled exception: NetworkError: connect failed (...)`, losing only the message-type name.
-  - UBSan, pre-existing and not this branch's: RapidJSON v1.1.0 (CMakeLists.txt:460, :993; unchanged on this branch) applies an offset to a null pointer in internal/stack.h:117 on the first JSON write of an error response (SearchService::on_error -> write_status_response -> MsgPack::to_string). A solo ASan+UBSan node aborts on one GET to a missing index. CI's sanitizer job runs ASan and TSan, not UBSan, so CI never sees it. The build uses -fno-sanitize-recover=all, so a runtime suppression cannot skip it; the final local ASan tree excludes pointer-overflow at compile time.
+  - UBSan, pre-existing and not this branch's: RapidJSON v1.1.0 (CMakeLists.txt:460, :993; unchanged on this branch) applies an offset to a null pointer in internal/stack.h:117 on the first JSON write of an error response (SearchService::on_error -> write_status_response -> MsgPack::to_string). A solo ASan+UBSan node aborts on one GET to a missing index. CI's sanitizer job runs ASan and TSan, not UBSan, so CI never sees it. The build uses -fno-sanitize-recover=all, so a runtime suppression cannot skip it, and Xapiand's CMakeLists overwrites the per-config flags while the sanitizer module appends -fsanitize=undefined after CMAKE_CXX_FLAGS, so a -fno-sanitize flag there is undone; the final local ASan tree passes `-fsanitize-ignorelist=.scratch/ubsan-ignore.txt` (`[pointer-overflow]` / `fun:*rapidjson*`), which skips that one check in RapidJSON's functions only (verified on a ten-line RapidJSON repro: reported without it, clean with it).
   - Apple clang on x86_64 runs ASan here (the arm64 hang in memory/kronuz-cpp-build-tooling.md does not apply); Homebrew LLVM 23 does not build Xapiand's pins (RapidJSON v1.1.0's GenericStringRef::operator=, and XXH_STATIC_LINKING_ONLY redefined under -Werror), and needs CMAKE_OSX_SYSROOT set or it puts the SDK's usr/include ahead of libc++. LeakSanitizer is unsupported on macOS x86_64 (drop detect_leaks).
   - Also seen, not fixed: after rejoin, the restarted node lacks replicas it never pulled (cluster_probe/.__1, .__4 on node1) until the next DB_UPDATED for them.
 - Last verified (2026-10-17):
+  - 4f378a51c, Release (Apple clang 17), nice 19; .scratch/final.sh, logs in .scratch/final/ (summary.txt). ctest 8/8.
+
+    | Case | Pass | New leader (s) | Write resumes (s after kill) |
+    |---|---|---|---|
+    | `FAILOVER=1 harness/cluster_check.sh 3` | 3/3 | 14, 28, 24 | 21, 43, 30 |
+    | `FAILOVER=1 .scratch/failover_fast_kill.sh 3` | 3/3 | 12, 16, 12 | 19, 23, 18 |
+    | `harness/cluster_check.sh 2` | 1/1 | | |
+    | `harness/cluster_check.sh 3` | 1/1 | | |
+    | `harness/run_all.sh smoke load e2e` | 1/1 (3 layers GREEN) | | |
+
+    The 43 s write resume is the slowest seen in 23 failover-type runs on this branch (it follows a 28 s election); the check allows 120 s.
   - C1 A/B at dbbbec642 (reactor 1c37def), fast-kill case `FAILOVER=1 .scratch/failover_fast_kill.sh 3`, interleaved, Release, nice 19; .scratch/c1.sh, logs in .scratch/c1/ (summary.txt). "catch" is dbbbec642; "nocatch" is dbbbec642 with c51da3e09's catch removed, the source of 4f378a51c:
 
     | Variant | Pass | New leader (s) | Write resumes (s after kill) | App catch / reactor catch per run |
