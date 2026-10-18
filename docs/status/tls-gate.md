@@ -1,7 +1,7 @@
 # tls-gate
 - Design: docs/design/transport-security.md at 668757f02; reviews: docs/reviews/transport-security-design.md (APPROVE WITH CONDITIONS, rev 3)
 - Branch / worktree: tls/d1-gate at /Users/kronuz/code/Kronuz/Xapiand-wt/tls-gate
-- State: implementing; the code for step 1 and SYS-13 is written, and every row waits for a build at the branch's head (strict host hold)
+- State: implementing; every row run at the branch's head except T4 (the lead's) and T5's UBSan half (blocked on the lead)
 - Done:
   - D1 implemented (bb4981558); T1 and T2 in `run_all.sh tls` and CI (7e8cccb7d)
   - C5 and C6: refusals counted by reason with reactor's `rejected` as `cap`, metrics, daily expiry check, `test_tls` (069ae1ebc)
@@ -13,15 +13,17 @@
   - SYS-13: `tls_key_mode_refusal()`, `test_tls` cases, T2 cases, D1.6, the T2 row, the options page, testing.md (3b6b3ee15)
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
   - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
+  - Results at afbf3c33d folded into the gate report: Release, ASan, ASan+UBSan, TSan, T6, T7 (this commit)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
-- Doing: ASan-only build (~/.scratch/build/tls-gate-asan-only) for T1/T2; then T6 and T7
+- Doing: nothing; waiting on the lead for T5's UBSan half
+- ASan at afbf3c33d (~/.scratch/build/tls-gate-asan-only, no report): `test_tls` 59 checks; plain e2e GREEN; T1 over HTTPS 335 requests, 570 assertions, 0 failed; T2 24 of 24; T3 12 of 13, the unread reply at 65.0 s
+- T6: `reactor_tls_test` at e19afd9, exit 0; T7: `timeouts_test` and `tls_asio_test` at http dc3be77, exit 0 (`.scratch/head/libs/`)
 - TSan at afbf3c33d (Apple clang 17, ~/.scratch/build/tls-gate-tsan, `halt_on_error=1`, reports to `.scratch/head/tsan/reports/`, none written): `test_tls` 59 checks; plain e2e GREEN; T1 over HTTPS 335 requests, 570 assertions, 0 failed; T2 24 of 24; T3 12 of 13, the unread reply closed 63.2 s after the client's last write against a 62.5 s allowance (Release: 60.2 s). The case times from the client's last write, so a server still writing replies after it would read late; unverified, recorded for the report
-- Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
-  1. Release build at the branch's head; `xapiand_test_tls` and ctest; then `PORT=18881 harness/run_all.sh smoke e2e tls` with `OUT=` for T3; fold results into the gate report
-  2. Finish the ASan+UBSan build (~/.scratch/build/tls-gate-asan) and run T1 and T2 under it; TSan build and the same
-  3. T6 and T7 from the pinned reactor and http sources (~/.scratch/build/tls-gate-lib-{reactor,http})
-  4. CI: the branch has no remote, so no CI runs; the lead decides whether it is pushed or opened as a PR (CI triggers on master, pull requests, and dispatch)
-  5. Ledger to "in review" once the rows above hold
+- Next:
+  1. T5's UBSan half once the lead picks a path for the RapidJSON report (gate report finding 6): rebuild and rerun `e2e tls` under ASan+UBSan
+  2. If the lead wants T3's unread-reply case fixed (finding 7): time the close from a server-side reference
+  3. Linux and CI when the owner allows a push or PR (CI triggers on master, pull requests, and dispatch)
+  4. Ledger to "in review" when the lead says the rows hold
 - Blocked on:
   - T5's UBSan half (the lead's call; C8 made UBSan fatal): under Apple clang 17's `-fsanitize=undefined -fno-sanitize-recover=all` (~/.scratch/build/tls-gate-asan at afbf3c33d), every node aborts on its first error response: `rapidjson/internal/stack.h:117` `Stack::Reserve` computes `stackTop_ + sizeof(T) * count` with `stackTop_` null ("applying non-zero offset 16 to null pointer"), reached from `SearchService::on_error` (`search_views.cc:3171`) → `write_status_response` → `MsgPack::to_string` → `Writer::StartObject`. Pre-existing to step 1: RapidJSON is Tencent's 1.1.0 (f54b0e47), the path has no TLS frame, and the plain node without `--tls-cert` aborts the same way (four reports, all this site, `.scratch/head/asan/reports/`). `test_tls` is clean under it (59 checks). Options: (1) fix `Reserve` in the RapidJSON the build pins (upstream later guards the null stack), recommended, the root cause; (2) build UBSan with `-fsanitize-recover=pointer-overflow` and suppress only `pointer-overflow:rapidjson/internal/stack.h` at runtime, keeping every other check fatal. CI's gcc UBSan may not flag null-plus-offset, so CI's green there would not show the same; not verified
   - Pushing: Xapiand stays local until the owner says
