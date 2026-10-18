@@ -457,7 +457,9 @@ include(FetchContent)
 # so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
 # command line; skipping them removes that need entirely. They are populated and put
 # on the include path further below, where they are actually used.
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+# rapidjson at 16872af8, the first commit past v1.1.0 whose Stack::Reserve does no pointer
+# arithmetic on a null stack (UBSan's "non-zero offset to null pointer" from v1.1.0).
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 16872af88915176f49e389defb167f899e2c230a SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 1a035230c03982a822637f7c741656bd688bd9e3)
