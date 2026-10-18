@@ -6,8 +6,8 @@
   - 1c3013b94, 2a999f1f4 ledger and recorded root cause
   - 8a5bd916a Promote a replica when a shard's primary dies (src/server/primary_election.h, src/server/discovery.cc, src/index_resolver_lru.cc, tests/test_primary_election.cc)
   - c51da3e09 Guard the discovery bus handler so an exception cannot end its receive loop (src/server/discovery.cc); built at d95ca45b3, Release, ctest 8/8
-  - (next commit) Restore the database-UUID check (SYS-14): the shard's database is the UUID most live copies hold, a tie to shard order; a copy of another database is never promoted, revisions compare only within the shard's database; an empty copy stays promotable. 5 new tests (22 checks); mutants without the filter (6 fail) or counting dead copies (1 fails) are caught.
-- Doing: ASan+UBSan build (build-asan, Homebrew LLVM 23), then the failover matrix
+  - 7af210738 Restore the database-UUID check (SYS-14): the shard's database is the UUID most live copies hold, a tie to shard order; a copy of another database is never promoted, revisions compare only within the shard's database; an empty copy stays promotable. 5 new tests (22 checks); mutants without the filter (6 fail) or counting dead copies (1 fails) are caught.
+- Doing: C1 of the reactor review (lead, 2026-10-17): pin reactor 1c37def, the src/xapiand_reactor_trace.h seam, and the fast-kill case with and without c51da3e09's catch
 - Next, once `quiet check` exits 0 (or 2: nice -n 19, at most 4 jobs):
   1. `cmake --build build` (the guard commit has never been compiled), then `(cd build && ctest --output-on-failure)`.
   2. `FAILOVER=1 BIN=build/bin/xapiand harness/cluster_check.sh 3`.
@@ -27,6 +27,18 @@
   - Election timing (14-16 s): configured, not a defect. src/server/discovery.cc sets heartbeat 1 s and an election timeout uniform in [10 s, 30 s] (10 s = NODE_LIFESPAN, src/node.h:47); the first of two followers fires at 10 + 20/3 = 16.7 s on average, observed 10-25 s. Shortening it is an owner decision, coupled to NODE_LIFESPAN liveness.
   - Also seen, not fixed: after rejoin, the restarted node lacks replicas it never pulled (cluster_probe/.__1, .__4 on node1) until the next DB_UPDATED for them.
 - Last verified (2026-10-17):
+  - 7af210738, Release (Apple clang 17, x86_64), every run at nice 19 under the light hold; logs and kept rundirs in .scratch/matrix/ (summary.txt):
+
+    | Case | Command | Pass | New leader (s) | Write resumes (s after kill) |
+    |---|---|---|---|---|
+    | failover3 | `FAILOVER=1 harness/cluster_check.sh 3` | 5/5 | 12, 16, 10, 17, 22 | 20, 23, 17, 23, 28 |
+    | fastkill3 | `FAILOVER=1 .scratch/failover_fast_kill.sh 3` | 5/5 | 21, 22, 13, 17, 26 | 28, 28, 19, 24, 33 |
+    | plain2 | `harness/cluster_check.sh 2` | 3/3 | | |
+    | plain3 | `harness/cluster_check.sh 3` | 3/3 | | |
+    | run_all | `harness/run_all.sh smoke load e2e` | 1/1 (3 layers GREEN) | | |
+
+  - Fast-kill was RED on the pre-fix and 8a5bd916a binaries; it is GREEN with c51da3e09. Every fast-kill run logs the guard 4 times on the survivors, each `Dropping discovery message DB_UPDATED: NetworkError: connect failed (... :9880) (Connection refused)`, the predicted cause; failover3 never logs it.
+  - ctest 8/8 (test_primary_election: 22 checks).
   - Before the fix: FAILOVER=1 cluster_check.sh 3 RED in 4 runs (leader in 11-25 s, PUT 503 at 120 s).
   - 8a5bd916a: ctest 8/8 pass (new test_primary_election included); FAILOVER=1 cluster_check.sh 3 GREEN in 3 of 3 runs (new leader in 18, 13, 10 s; write through node2 at 24, 19, 17 s after the kill; reads back from node3; rejoin keeps one leader).
   - Fast-kill variant: RED on both the pre-fix and fixed binaries (the second defect).
