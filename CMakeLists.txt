@@ -766,6 +766,18 @@ FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-p
 FetchContent_MakeAvailable(http_parser)
 include_directories("${http_parser_SOURCE_DIR}")
 
+# reactor: the generic Asio server runtime (Kronuz/reactor) that Kronuz/http's transport
+# (http_asio.h) now rides on -- the shared-nothing reactor pool, accept/bind strategies,
+# offload gate, and graceful shutdown, extracted from http so other services can share
+# one runtime. Header-only; needs only <asio.hpp> (provided below). Declared before http
+# and cluster, which pin their own reactor: the first declaration wins.
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 1c37deff6ddcaeef261270ed767fb09c17a2b656)
+FetchContent_MakeAvailable(reactor)
+include_directories("${reactor_SOURCE_DIR}")
+# REACTOR_TRACE_HEADER reports a throwing UDP handler through Xapiand's L_EXC; set
+# target-wide, since reactor_udp.h's inline receive loop must see one definition.
+add_compile_definitions(REACTOR_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_reactor_trace.h")
+
 # http: the generic HTTP/1.1 application layer (Kronuz/http) -- the seam Xapiand's
 # search collapses onto (Leg 2, architecture B: SearchApplication : http::HttpHandler).
 # Header-only. The seam headers it needs first (http_handler.h / http_message.h) are
@@ -788,15 +800,6 @@ FetchContent_Declare(http_log
   SOURCE_SUBDIR  do-not-configure)
 FetchContent_MakeAvailable(http_log)
 include_directories("${http_log_SOURCE_DIR}")
-
-# reactor: the generic Asio server runtime (Kronuz/reactor) that Kronuz/http's transport
-# (http_asio.h) now rides on -- the shared-nothing reactor pool, accept/bind strategies,
-# offload gate, and graceful shutdown, extracted from http so other services can share
-# one runtime. Header-only; needs only <asio.hpp> (provided below). Included here because
-# http_asio.h does #include "reactor.h".
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG e19afd966d5cf18e377649398096be66fb40e800)
-FetchContent_MakeAvailable(reactor)
-include_directories("${reactor_SOURCE_DIR}")
 
 # cluster: the UDP-multicast cluster substrate (Kronuz/cluster) -- cluster::Bus (transport)
 # + cluster::Raft (consensus) that Discovery rides on, replacing the libev UDP + the in-tree
