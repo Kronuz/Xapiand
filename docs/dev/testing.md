@@ -121,7 +121,9 @@ newman 6 or later), `XAPIAND_FLAGS`, and `PORT`; `docs_to_postman.py` takes the 
 from `XAPIAND_URL`. The layer then runs `tls_check.sh`, which pairs each refusal with an
 accept case that differs in one variable: an untrusted CA, plain HTTP to the TLS port, a
 raw TLS 1.1 ClientHello, a static-RSA suite, a forced renegotiation, and startup with an
-expired, not-yet-valid, mismatched, or group-readable certificate or key.
+expired, not-yet-valid, or mismatched certificate or key, or a key at 0640 with another
+group (skipped when the user has no second group), at 0660, or at 0644, beside a key at 0640
+with the node's own group, which starts (SYS-13).
 
 Last, the layer runs `tls_bounds.py` (T3, about 2.5 minutes of wall time), which starts
 its own solo nodes on port 18895 and times each bound of D1.3 from the client's side:

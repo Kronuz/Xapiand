@@ -14,7 +14,8 @@
   2. Gate report `docs/gates/transport-security-step1.md`
   3. Ledger to "ready to land"
 - Blocked on: nothing
-- Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07)
+- Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07), SYS-13 (this step)
+- SYS-13 as built: `tls_key_mode_refusal(mode, group, egid)` refuses any bit outside 0640 (owner execute and set-id bits included, as PKI's D3 rule reads), and group read unless the file's group is `getegid()` at the check. `tls_setup()` runs before `demote()`, so a node started as root checks against root's group, not `--gid`'s; the ruling's "effective group" is applied as written, and the lead may want it confirmed for the root-start case. Unit test: the mode table and the file path (0640 own group starts, 0660 refused, another group refused when the user has one). T2: 0640 own group starts beside 0640 another group (skipped without a second group), 0660, and 0644
 - Last verified: 2026-10-17, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
 - Library or build findings (not fixed here):
   - Homebrew LLVM 23 does not build Xapiand on macOS: SDK `usr/include` as plain `-I` via `UUID_INCLUDE_DIR`/`ZLIB_INCLUDE_DIR` (CMakeLists), RapidJSON `document.h:319` const-member assignment (rapidjson library), `XXH_STATIC_LINKING_ONLY` redefined at `src/config.h:289` under -Werror (Xapiand). The sanitizer build uses Apple clang, whose ASan works on this x86_64 host.

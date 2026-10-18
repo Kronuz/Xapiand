@@ -9,8 +9,9 @@
 #   3. a raw TLS 1.1 ClientHello (accept: the same hello at TLS 1.2)
 #   4. a static-RSA TLS 1.2 suite on an RSA certificate (accept: ECDHE-RSA-AES128-GCM)
 #   5. a forced TLS 1.2 renegotiation (accept: the same connection without it)
-#   6. startup with an expired, a not-yet-valid, a mismatched, or a group-readable
-#      certificate or key, or --tls-cert alone (accept: a valid pair at mode 0600)
+#   6. startup with an expired, a not-yet-valid, or a mismatched certificate or key, a key
+#      at 0640 with a group other than the node's, at 0660, or at 0644, or --tls-cert alone
+#      (accept: a valid pair at mode 0600, and its key at 0640 with the node's group, SYS-13)
 #   7. a certificate expiring in 3 days warns at startup (accept: 30 days, no warning)
 # Each refusal of 1 to 4 is counted in /:metrics by reason (C5), and the certificate's
 # seconds to expiry is a metric (C6).
@@ -62,7 +63,9 @@ fail() { echo "  FAIL  $*"; failures=$((failures + 1)); }
 	sign future ec:<("$OPENSSL" ecparam -name prime256v1) 20980101000000Z 20990101000000Z
 	sign soon ec:<("$OPENSSL" ecparam -name prime256v1) 20260101000000Z \
 		"$(python3 -I -c 'import datetime as d; print((d.datetime.now(d.timezone.utc) + d.timedelta(days=3)).strftime("%Y%m%d%H%M%SZ"))')"
-	cp ec/server.key readable.key && chmod 640 readable.key
+	for m in 640 660 644; do cp ec/server.key "key$m.key" && chgrp "$(id -g)" "key$m.key" && chmod "$m" "key$m.key"; done
+	other=$(id -G | tr ' ' '\n' | grep -vx "$(id -g)" | head -1)  # a second group, when the user has one
+	if [ -n "$other" ]; then cp ec/server.key other.key && chgrp "$other" other.key && chmod 640 other.key; fi
 )
 
 node_pid=""
@@ -188,7 +191,16 @@ refuse() {  # refuse WHAT TEXT FLAGS...
 refuse "expired certificate" "has expired" --tls-cert "$WORK/expired.pem" --tls-key "$WORK/expired.key"
 refuse "not-yet-valid certificate" "is not valid yet" --tls-cert "$WORK/future.pem" --tls-key "$WORK/future.key"
 refuse "mismatched key" "TLS certificate or key" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/other/server.key"
-refuse "group-readable key" "make it mode 0600" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/readable.key"
+# Key modes (SYS-13): 0640 starts with the node's own group; each refusal differs from it in one variable.
+if start "$WORK/key640.log" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/key640.key"; then
+	pass "startup with the key at 0640 and the node's own group"
+else fail "key at 0640 with the node's own group did not start: $(tail -3 "$WORK/key640.log")"; fi
+stop
+if [ -f "$WORK/other.key" ]; then
+	refuse "key at 0640 with another group" "other than the process's effective group" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/other.key"
+else echo "  SKIP  key at 0640 with another group: the user has no second group (the unit test covers the rule)"; fi
+refuse "group-writable key (0660)" "has mode bits outside 0640" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/key660.key"
+refuse "world-readable key (0644)" "is accessible by others" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/key644.key"
 refuse "--tls-cert without --tls-key" "go together" --tls-cert "$WORK/ec/server.pem"
 
 # 7. Expiry within 14 days: starts, warns, and the metric shows under 3 days.

@@ -12,6 +12,7 @@
 #include <cstdint>      // for std::uint64_t
 #include <memory>       // for std::shared_ptr
 #include <string>       // for std::string
+#include <sys/types.h>  // for mode_t, gid_t
 
 #include <asio/ssl.hpp>
 
@@ -19,11 +20,15 @@
 // when the API serves plain HTTP.
 extern std::shared_ptr<asio::ssl::context> tls_context;
 
+// Why a key file of this mode and group is refused, or nullptr (SYS-13): no bit outside
+// 0640, and group read only when the file's group is `egid`.
+const char* tls_key_mode_refusal(mode_t mode, gid_t group, gid_t egid);
+
 // Builds tls_context from --tls-cert and --tls-key (reactor's Server role, strict), after
-// checking that the key file is readable by its owner only, that the key matches the
-// certificate, that the certificate is valid now, and that --tls-max-connections fits the
-// open-files limit. Throws std::runtime_error naming the reason; warns within 14 days of
-// expiry.
+// checking the key file's mode (tls_key_mode_refusal against the effective group), that
+// the key matches the certificate, that the certificate is valid now, and that
+// --tls-max-connections fits the open-files limit. Throws std::runtime_error naming the
+// reason; warns within 14 days of expiry.
 void tls_setup(const std::string& cert, const std::string& key, std::size_t max_connections);
 
 // Seconds until the certificate expires (negative once expired), for the daily check.

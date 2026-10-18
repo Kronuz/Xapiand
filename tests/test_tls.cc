@@ -1,6 +1,6 @@
 /*
  * HTTPS (transport-security D1.5, D1.6): refusal counting, reactor's cap refusals, the
- * daily expiry check, and the expiry the context reports.
+ * daily expiry check, the expiry the context reports, and the key-file modes (SYS-13).
  */
 
 #include "test_harness.h"
@@ -9,9 +9,12 @@
 
 #include <chrono>
 #include <cstdio>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <vector>
 
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -54,6 +57,9 @@ std::string make_pair(const std::string& name, long from, long to, mode_t mode =
 }
 
 std::string key_of(const std::string& cert) { return cert.substr(0, cert.size() - 4) + ".key"; }
+
+// Sets the key's group (its owner may give it any group it belongs to).
+void set_group(const std::string& cert, gid_t group) { CHECK_EQ(::chown(key_of(cert).c_str(), uid_t(-1), group), 0); }
 
 bool refused(const std::string& cert, const std::string& reason) {
 	try {
@@ -121,7 +127,48 @@ static void test_expiry_seconds() {
 static void test_setup_refusals() {
 	CHECK(refused(make_pair("expired", -2 * 86400, -86400), "has expired"));
 	CHECK(refused(make_pair("future", 86400, 2 * 86400), "is not valid yet"));
-	CHECK(refused(make_pair("readable", -3600, 86400, 0640), "make it mode 0600"));
+	CHECK(refused(make_pair("readable", -3600, 86400, 0644), "make it mode 0600"));
+}
+
+static void test_key_mode_rule() {
+	const gid_t own = 20, other = 21;
+	auto refusal = [&](mode_t mode, gid_t group) {
+		const char* why = tls_key_mode_refusal(mode, group, own);
+		return std::string(why ? why : "");
+	};
+	for (mode_t mode : std::initializer_list<mode_t>{0600, 0400, 0640, 0440, 0040}) {
+		CHECK_EQ(refusal(mode, own), "");
+	}
+	CHECK_EQ(refusal(0600, other), "");  // no group bit, so the group does not matter
+	CHECK_EQ(refusal(0640, other), "is readable by a group other than the process's effective group");
+	CHECK_EQ(refusal(0440, other), "is readable by a group other than the process's effective group");
+	for (mode_t mode : std::initializer_list<mode_t>{0660, 0650, 0620, 0610, 0700, 0740, 04600, 02640, 01600}) {
+		CHECK_EQ(refusal(mode, own), "has mode bits outside 0640");
+	}
+	for (mode_t mode : std::initializer_list<mode_t>{0644, 0604, 0602, 0601, 0666}) {
+		CHECK_EQ(refusal(mode, own), "is accessible by others");
+	}
+	CHECK_EQ(refusal(S_IFREG | 0640, own), "");  // the file type bits from stat() are ignored
+}
+
+static void test_setup_key_modes() {
+	const auto own = make_pair("own_group", -3600, 86400, 0640);
+	set_group(own, ::getegid());
+	CHECK(!refused(own, ""));  // 0640 with the effective group starts
+	const auto writable = make_pair("group_writable", -3600, 86400, 0660);
+	set_group(writable, ::getegid());
+	CHECK(refused(writable, "has mode bits outside 0640"));
+	// Another group needs one this user belongs to besides its effective one.
+	std::vector<gid_t> groups(std::size_t(::getgroups(0, nullptr)));
+	groups.resize(std::size_t(::getgroups(int(groups.size()), groups.data())));
+	for (gid_t group : groups) {
+		if (group == ::getegid()) { continue; }
+		const auto foreign = make_pair("other_group", -3600, 86400, 0640);
+		set_group(foreign, group);
+		CHECK(refused(foreign, "other than the process's effective group"));
+		return;
+	}
+	std::fprintf(stderr, "  (no second group: the other-group file case is covered by test_key_mode_rule only)\n");
 }
 
 TEST_MAIN(
@@ -129,7 +176,9 @@ TEST_MAIN(
 	test_watch_counts_rejected_as_cap,
 	test_watch_checks_expiry_daily,
 	test_expiry_seconds,
-	test_setup_refusals
+	test_setup_refusals,
+	test_key_mode_rule,
+	test_setup_key_modes
 )
 
 #else
