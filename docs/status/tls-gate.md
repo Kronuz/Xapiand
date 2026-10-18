@@ -14,7 +14,8 @@
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
   - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
-- Doing: TSan build and its T1/T2 run; then an ASan-only build for T1/T2; then T6 and T7 (light hold `lead-builds`: nice 19, 4 jobs)
+- Doing: ASan-only build (~/.scratch/build/tls-gate-asan-only) for T1/T2; then T6 and T7
+- TSan at afbf3c33d (Apple clang 17, ~/.scratch/build/tls-gate-tsan, `halt_on_error=1`, reports to `.scratch/head/tsan/reports/`, none written): `test_tls` 59 checks; plain e2e GREEN; T1 over HTTPS 335 requests, 570 assertions, 0 failed; T2 24 of 24; T3 12 of 13, the unread reply closed 63.2 s after the client's last write against a 62.5 s allowance (Release: 60.2 s). The case times from the client's last write, so a server still writing replies after it would read late; unverified, recorded for the report
 - Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
   1. Release build at the branch's head; `xapiand_test_tls` and ctest; then `PORT=18881 harness/run_all.sh smoke e2e tls` with `OUT=` for T3; fold results into the gate report
   2. Finish the ASan+UBSan build (~/.scratch/build/tls-gate-asan) and run T1 and T2 under it; TSan build and the same
