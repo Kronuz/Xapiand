@@ -135,7 +135,8 @@ replies for 60 s (a writer thread pipelines requests until it blocks; the close 
 from its last write), headers trickled past 30 s, and a RESTORE streamed for 140 s that
 completes. Each bound may run up to 2.5 s late. The refusals it causes must show in
 `/:metrics` as `xapiand_tls_refused_connections{reason=...}`. `ONLY=unread_reply,...`
-runs just the named concurrent cases while iterating.
+runs just the named cases while iterating, and `OUT=FILE` writes one JSON record per row
+(case, bound, measured, unit, pass), the raw file a gate report cites.
 
 ```sh
 python3 -I harness/tls_bounds.py build/bin/xapiand            # every case, exits 0 when all hold

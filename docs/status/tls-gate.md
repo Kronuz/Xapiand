@@ -6,6 +6,7 @@
   - D1 implemented (bb4981558); T1 and T2 in `run_all.sh tls` and CI (7e8cccb7d)
   - C5 and C6: refusals counted by reason with reactor's `rejected` as `cap`, metrics, daily expiry check, `test_tls` (069ae1ebc)
   - T3: `unread_reply` fixed, every case holds, in `run_all.sh tls`, documented (93cb512c2)
+  - T3 per-row evidence: `OUT=FILE` writes one JSON record per row (case, bound, measured, unit, pass), RSS per connection included; `ONLY` selects every case; the 64-handshake summary no longer reads a 0.0 s close as missing; the fd-limit node runs under `ulimit -n` instead of `preexec_fn` beside threads (this step)
   - T4 preparation: `loadtest.py --ca`, `harness/tls_cost.py`, one short trial run (9f8c62b07)
   - e2e harness writes per-run files, so concurrent runs do not collide (801a055a4)
 - Doing: SYS-13 in `src/tls.cc` with its unit test and T2 cases; then T3's per-row output and the step-1 gate report. No compile or test this session: a strict host hold (`strata-trials`, until 07:04 on 2026-10-18)
