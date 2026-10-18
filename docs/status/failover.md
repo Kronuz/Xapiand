@@ -1,6 +1,6 @@
 # failover
 - Branch / worktree: fix/failover at /Users/kronuz/code/Kronuz/Xapiand-wt/failover
-- State: ready for review (code review, and the security review of the vote path per SYS-14); final ASan+UBSan cluster runs in progress
+- State: ready for review: the code review, and the security review of the vote path that SYS-14 requires before landing. Local builds are the validation (the branch is not pushed, so CI has not run).
 - Done:
   - 188e2d6ab cherry-pick of the FAILOVER harness from master (15596cf72)
   - 1c3013b94, 2a999f1f4 ledger and recorded root cause
@@ -10,12 +10,14 @@
   - 971419646 ledger: the failover matrix at 7af210738
   - dbbbec642 Pin reactor 1c37def and wire its L_EXC seam (reactor review C1): src/xapiand_reactor_trace.h maps reactor's L_EXC onto Xapiand's real async L_EXC, set target-wide with REACTOR_TRACE_HEADER; the reactor declaration moves ahead of http's, whose CMake pins reactor e19afd9 and would otherwise win (first FetchContent declaration wins), so the old position left Xapiand's own pin unused.
   - 4f378a51c Drop the bus-handler catch (C1): the fast-kill case passes without it (table below).
-- Doing: final ASan+UBSan build (pointer-overflow excluded, see Findings) and the failover cases on it
+  - 62435df4b, d89f0930e, aa9ebf9ef and this commit: ledger (C1 A/B, final runs, ASan).
+- Doing: nothing; waiting on the reviews.
 - Next:
   1. Code review of the branch; the reviewer probes the old primary returning after a promotion and two copies with different UUIDs (SYS-14).
   2. Security review of the vote path before landing (SYS-14): a forged ELECT_PRIMARY_RESPONSE over unauthenticated UDP (TS-R13) can replace a live copy's vote in any round, since a repeat vote now replaces the earlier one; with the UUID check, a forged vote can also shift which database counts as the majority.
   3. c51da3e09's catch is gone (4f378a51c) now that Xapiand pins the fixed reactor; nothing else of the stopgap remains.
-  4. For the lead to route, not this branch: db_updated still does blocking remote I/O on the bus thread (resolve_index_settings to the dead leader), which AGENTS.md forbids on a reactor thread; it is why DB_UPDATED throws in the fast-kill case. RapidJSON v1.1.0's UBSan report (Findings).
+  4. The fast-kill variant is untracked (.scratch/failover_fast_kill.sh: cluster_check.sh with sections 2 and 3 cut and a fixed HARNESS_DIR); a reviewer in another worktree needs it copied, or the lead may want it in the harness (say, a FAST_KILL=1 switch in cluster_check.sh), since it is the only case that exercises the deaf-bus defect.
+  5. For the lead to route, not this branch: db_updated still does blocking remote I/O on the bus thread (resolve_index_settings to the dead leader), which AGENTS.md forbids on a reactor thread; it is why DB_UPDATED throws in the fast-kill case. RapidJSON v1.1.0's UBSan report (Findings).
 - Blocked on: nothing. Owner decisions are recorded under "Owner decision".
 - Findings:
   - Symptom: survivors log `PUT /cluster_probe/2: DatabaseNotAvailableError: Endpoint node is inactive` (src/database/shard.cc:329) every second for 120 s; no shard is ever promoted. A write to an index needs every shard's primary, so one shard with a dead primary (cluster_probe/.__3, primary node1, only replica node2: 5 shards, 1 replica, 2 copies each) 503s the whole index.
@@ -43,6 +45,7 @@
     | `harness/run_all.sh smoke load e2e` | 1/1 (3 layers GREEN) | | |
 
     The 43 s write resume is the slowest of the 26 Release failover and fast-kill runs on this branch (it follows a 28 s election); the check allows 120 s.
+  - 4f378a51c, ASan+UBSan (Apple clang 17, RelWithDebInfo, LTO off, `-fsanitize-ignorelist=.scratch/ubsan-ignore.txt`; ASAN_OPTIONS=halt_on_error=1:abort_on_error=1, UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1): ctest 8/8; `FAILOVER=1 .scratch/failover_fast_kill.sh 3` 3/3 (leader 12, 29, 13 s; write 19, 35, 19 s), each with 4 reactor catches of the DB_UPDATED NetworkError and no sanitizer report; `FAILOVER=1 harness/cluster_check.sh 3` 2/2 (leader 13, 18 s; write 19, 24 s); `harness/run_all.sh smoke load e2e` GREEN. Logs in .scratch/final/ (asan2-*).
   - C1 A/B at dbbbec642 (reactor 1c37def), fast-kill case `FAILOVER=1 .scratch/failover_fast_kill.sh 3`, interleaved, Release, nice 19; .scratch/c1.sh, logs in .scratch/c1/ (summary.txt). "catch" is dbbbec642; "nocatch" is dbbbec642 with c51da3e09's catch removed, the source of 4f378a51c:
 
     | Variant | Pass | New leader (s) | Write resumes (s after kill) | App catch / reactor catch per run |
