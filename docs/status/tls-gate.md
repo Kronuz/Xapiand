@@ -6,13 +6,13 @@
   - D1 implemented (bb4981558); T1 and T2 in `run_all.sh tls` and CI (7e8cccb7d)
   - C5 and C6: refusals counted by reason with reactor's `rejected` as `cap`, metrics, daily expiry check, `test_tls` (069ae1ebc)
   - T3: `unread_reply` fixed, every case holds, in `run_all.sh tls`, documented (93cb512c2)
-  - T3 per-row evidence: `OUT=FILE` writes one JSON record per row (case, bound, measured, unit, pass), RSS per connection included; `ONLY` selects every case; the 64-handshake summary no longer reads a 0.0 s close as missing; the fd-limit node runs under `ulimit -n` instead of `preexec_fn` beside threads (this step)
+  - T3 per-row evidence: `OUT=FILE` writes one JSON record per row (case, bound, measured, unit, pass), RSS per connection included; `ONLY` selects every case; the 64-handshake summary no longer reads a 0.0 s close as missing; the fd-limit node runs under `ulimit -n` instead of `preexec_fn` beside threads (76023c31e)
   - T4 preparation: `loadtest.py --ca`, `harness/tls_cost.py`, one short trial run (9f8c62b07)
   - e2e harness writes per-run files, so concurrent runs do not collide (801a055a4)
   - Validity check on `ASN1_TIME_cmp_time_t`, failing closed on its error return (227a1434f)
   - SYS-13: `tls_key_mode_refusal()`, `test_tls` cases, T2 cases, D1.6, the T2 row, the options page, testing.md (3b6b3ee15)
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
-  - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, this commit)
+  - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
 - Doing: nothing; waiting for the host (strict hold `strata-trials`, until 07:04 on 2026-10-18)
 - Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
   1. Release build at the branch's head; `xapiand_test_tls` and ctest; then `PORT=18881 harness/run_all.sh smoke e2e tls` with `OUT=` for T3; fold results into the gate report
@@ -21,7 +21,7 @@
   4. CI: the branch has no remote, so no CI runs; the lead decides whether it is pushed or opened as a PR (CI triggers on master, pull requests, and dispatch)
   5. Ledger to "in review" once the rows above hold
 - Blocked on: the host for every compile and run (strict hold); the lead for pushing, since `tls/d1-gate` has no remote tracking branch
-- Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07), SYS-13 (this step)
+- Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07), SYS-13 (3b6b3ee15)
 - SYS-13 as built: `tls_key_mode_refusal(mode, group, egid)` refuses any bit outside 0640 (owner execute and set-id bits included, as PKI's D3 rule reads), and group read unless the file's group is `getegid()` at the check. `tls_setup()` runs before `demote()`, so a node started as root checks against root's group, not `--gid`'s; the ruling's "effective group" is applied as written, and the lead may want it confirmed for the root-start case. Unit test: the mode table and the file path (0640 own group starts, 0660 refused, another group refused when the user has one). T2: 0640 own group starts beside 0640 another group (skipped without a second group), 0660, and 0644
 - Last verified: 2026-10-17, before 227a1434f, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
 - Library or build findings (not fixed here):
