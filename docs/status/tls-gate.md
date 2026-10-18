@@ -8,7 +8,7 @@
   - T3: `unread_reply` fixed, every case holds, in `run_all.sh tls`, documented (93cb512c2)
   - T4 preparation: `loadtest.py --ca`, `harness/tls_cost.py`, one short trial run (9f8c62b07)
   - e2e harness writes per-run files, so concurrent runs do not collide (801a055a4)
-- Doing: ASan+UBSan build at ~/.scratch/build/tls-gate-asan (Apple clang); then T1 TLS and T2 under it
+- Doing: SYS-13 in `src/tls.cc` with its unit test and T2 cases; then T3's per-row output and the step-1 gate report. No compile or test this session: a strict host hold (`strata-trials`, until 07:04 on 2026-10-18)
 - Next:
   1. T6/T7 rerun from the pinned reactor and http sources (~/.scratch/build/tls-gate-lib-{reactor,http})
   2. Gate report `docs/gates/transport-security-step1.md`
@@ -18,7 +18,7 @@
 - Last verified: 2026-10-17, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
 - Library or build findings (not fixed here):
   - Homebrew LLVM 23 does not build Xapiand on macOS: SDK `usr/include` as plain `-I` via `UUID_INCLUDE_DIR`/`ZLIB_INCLUDE_DIR` (CMakeLists), RapidJSON `document.h:319` const-member assignment (rapidjson library), `XXH_STATIC_LINKING_ONLY` redefined at `src/config.h:289` under -Werror (Xapiand). The sanitizer build uses Apple clang, whose ASan works on this x86_64 host.
-  - `X509_cmp_current_time` (deprecated in OpenSSL 3) replaced by `ASN1_TIME_cmp_time_t` in `src/tls.cc`.
+  - `X509_cmp_current_time` (deprecated in OpenSSL 3) replaced by `ASN1_TIME_cmp_time_t` in `src/tls.cc`; its error return (-2) now fails startup instead of reading as expired. Not compiled yet: both local builds predate it (Release object 11:21, the edit 11:54; the ASan build stopped at 384/520 before `tls.cc`).
 
 ## Owner decision (2026-10-17, system review SYS-13)
 

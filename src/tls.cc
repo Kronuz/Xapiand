@@ -7,6 +7,7 @@
 #ifdef XAPIAND_TLS
 
 #include <array>              // for std::array
+#include <ctime>              // for std::time
 #include <stdexcept>          // for std::runtime_error
 #include <sys/resource.h>     // for getrlimit, RLIMIT_NOFILE
 #include <sys/stat.h>         // for stat
@@ -47,8 +48,11 @@ void tls_setup(const std::string& cert, const std::string& key, std::size_t max_
 	}
 	X509* x = presented(*context);
 	if (!x) { throw std::runtime_error("--tls-cert " + cert + " holds no certificate"); }
-	if (X509_cmp_current_time(X509_get0_notBefore(x)) > 0) { throw std::runtime_error("--tls-cert " + cert + " is not valid yet"); }
-	if (X509_cmp_current_time(X509_get0_notAfter(x)) < 0) { throw std::runtime_error("--tls-cert " + cert + " has expired"); }
+	const std::time_t now = std::time(nullptr);
+	const int from = ASN1_TIME_cmp_time_t(X509_get0_notBefore(x), now), until = ASN1_TIME_cmp_time_t(X509_get0_notAfter(x), now);
+	if (from == -2 || until == -2) { throw std::runtime_error("--tls-cert " + cert + " has an unreadable validity period"); }  // -2: error
+	if (from > 0) { throw std::runtime_error("--tls-cert " + cert + " is not valid yet"); }
+	if (until < 0) { throw std::runtime_error("--tls-cert " + cert + " has expired"); }
 	tls_context = std::move(context);
 	tls_check_expiry();
 }
