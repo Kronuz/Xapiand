@@ -14,7 +14,7 @@
   - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
   - Finding 7, per the lead's ruling: `unread_reply` times the close from the server's last byte read or written, seen in its socket's queues (f119ffe1e)
   - Finding 6, per the lead's ruling: rapidjson pinned at 16872af8, the earliest commit without the null-pointer arithmetic, reason beside the pin (e857e12f4)
-  - Step-1 gate report: drafted (443bf0429), results at afbf3c33d (1b409212a), results at e857e12f4 with findings 6 to 8 resolved or noted (this commit)
+  - Step-1 gate report: drafted (443bf0429), results at afbf3c33d (1b409212a), results at e857e12f4 with findings 6 to 8 resolved or noted (9d2881b5e)
 - Doing: nothing
 - Next:
   1. The code review and the security review the tier asks for (the lead launches them)
