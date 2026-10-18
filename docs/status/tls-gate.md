@@ -14,7 +14,7 @@
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
   - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
-- Doing: nothing; waiting for the host (strict hold `strata-trials`, until 07:04 on 2026-10-18)
+- Doing: ASan+UBSan build, then TSan, each with T1 and T2; then T6 and T7 (light hold `lead-builds`: nice 19, 4 jobs)
 - Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
   1. Release build at the branch's head; `xapiand_test_tls` and ctest; then `PORT=18881 harness/run_all.sh smoke e2e tls` with `OUT=` for T3; fold results into the gate report
   2. Finish the ASan+UBSan build (~/.scratch/build/tls-gate-asan) and run T1 and T2 under it; TSan build and the same
@@ -30,7 +30,7 @@
 SYS-13 means the group the node will run as: a root start must not accept a key owned by root's group. Check against the `--gid` group when one is given, resolved as `demote()` resolves it, otherwise `getegid()`; keep `tls_key_mode_refusal()` pure by passing the target gid; test a root start with `--gid`; commit locally, do not push.
 
 Applied: `demotion()`, split out of `demote()`, resolves the identity once; `main()` passes its gid (or `getegid()` when not root) to `tls_setup()`, then `demote()`s to the same identity. Two cases follow `demote()` rather than the ruling's literal formula, for the lead to confirm or overrule: a root start without `--gid` checks the `--uid` user's group (what `demote()` switches to; `getegid()` there is root's, which the ruling excludes), and a non-root start with `--gid` checks `getegid()` (`demote()` ignores `--gid` unless root). Gate report finding 5.
-- Last verified: 2026-10-17, before 227a1434f, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
+- Last verified: 2026-10-17 at afbf3c33d (code as 66ddc8cce), Release build ~/.scratch/build/tls-gate-rel: no warnings from `src/tls.*`, `src/main.cc`, `tests/test_tls.cc`; `xapiand_test_tls` 59 checks; ctest 8/8; `PORT=18881 OUT=.scratch/head/t3.json harness/run_all.sh smoke e2e tls` GREEN (T2 24 cases, SYS-13's included; T3 13 cases); T1 alone 335 requests and 570 assertions plain and HTTPS, 0 failed (`.scratch/head/`). Before that, at a build predating 227a1434f, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
 - Library or build findings (not fixed here):
   - Homebrew LLVM 23 does not build Xapiand on macOS: SDK `usr/include` as plain `-I` via `UUID_INCLUDE_DIR`/`ZLIB_INCLUDE_DIR` (CMakeLists), RapidJSON `document.h:319` const-member assignment (rapidjson library), `XXH_STATIC_LINKING_ONLY` redefined at `src/config.h:289` under -Werror (Xapiand). The sanitizer build uses Apple clang, whose ASan works on this x86_64 host.
   - Reactor's T6 test covers `strict` with an RSA certificate only and checks tickets as settings; http's T7 tests miss the `version` and `cipher` reasons and the unset-callback case (gate report findings 3 and 4)
