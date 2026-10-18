@@ -34,20 +34,39 @@ from collections.abc import Callable
 BIN = sys.argv[1]
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 18895
 HERE = os.path.dirname(os.path.abspath(__file__))
-WORK = os.environ.get("WORK") or os.path.join(os.path.dirname(HERE), ".scratch", "tls_bounds")
+WORK = os.environ.get("WORK") or os.path.join(
+    os.path.dirname(HERE), ".scratch", "tls_bounds"
+)
 CAP = 200  # --tls-max-connections for case 2
-SLACK = 2.5  # seconds a bound may run late: timer granularity and the client's own polling
+SLACK = (
+    2.5  # seconds a bound may run late: timer granularity and the client's own polling
+)
 
 failures: list[str] = []
 rows: list[dict[str, object]] = []
 lock = threading.Lock()
 
 
-def report(ok: bool, what: str, case: str, bound: float | None = None, measured: float | None = None,
-           unit: str = "s") -> None:
+def report(
+    ok: bool,
+    what: str,
+    case: str,
+    bound: float | None = None,
+    measured: float | None = None,
+    unit: str = "s",
+) -> None:
     with lock:
         print(("  PASS  " if ok else "  FAIL  ") + what, flush=True)
-        rows.append({"case": case, "what": what, "bound": bound, "measured": measured, "unit": unit, "pass": ok})
+        rows.append(
+            {
+                "case": case,
+                "what": what,
+                "bound": bound,
+                "measured": measured,
+                "unit": unit,
+                "pass": ok,
+            }
+        )
         if not ok:
             failures.append(what)
 
@@ -65,11 +84,33 @@ class Node:
         os.makedirs(data)
         self.log = os.path.join(WORK, name + ".log")
         certs = os.path.join(WORK, "certs")
-        tls = ["--tls-cert", os.path.join(certs, "server.pem"), "--tls-key", os.path.join(certs, "server.key")]
+        tls = [
+            "--tls-cert",
+            os.path.join(certs, "server.pem"),
+            "--tls-key",
+            os.path.join(certs, "server.key"),
+        ]
 
-        command = [BIN, "--port", str(PORT), "--name", name, "--solo", "-D", data, *tls, *flags]
+        command = [
+            BIN,
+            "--port",
+            str(PORT),
+            "--name",
+            name,
+            "--solo",
+            "-D",
+            data,
+            *tls,
+            *flags,
+        ]
         if nofile:  # the shell sets the limit, so no preexec_fn runs beside threads
-            command = ["/bin/sh", "-c", f'ulimit -n {nofile} && exec "$@"', "sh", *command]
+            command = [
+                "/bin/sh",
+                "-c",
+                f'ulimit -n {nofile} && exec "$@"',
+                "sh",
+                *command,
+            ]
         with open(self.log, "w") as out:
             self.proc = subprocess.Popen(command, stdout=out, stderr=subprocess.STDOUT)
 
@@ -78,16 +119,22 @@ class Node:
             if self.proc.poll() is not None:
                 return False
             url = f"https://localhost:{PORT}/"
-            with contextlib.suppress(OSError, http.client.HTTPException), urllib.request.urlopen(
-                url, context=context(), timeout=2
-            ) as r:  # an error means not up yet
+            with (
+                contextlib.suppress(OSError, http.client.HTTPException),
+                urllib.request.urlopen(url, context=context(), timeout=2) as r,
+            ):  # an error means not up yet
                 if r.status == 200:
                     return True
             time.sleep(0.5)
         return False
 
     def rss_kb(self) -> int:
-        out = subprocess.run(["ps", "-o", "rss=", "-p", str(self.proc.pid)], capture_output=True, text=True, check=False)
+        out = subprocess.run(
+            ["ps", "-o", "rss=", "-p", str(self.proc.pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         return int(out.stdout.strip() or 0)
 
     def logged(self, text: str) -> bool:
@@ -103,7 +150,9 @@ class Node:
             self.proc.kill()
 
 
-def closed_at(sock: socket.socket | ssl.SSLSocket, start: float, limit: float) -> float | None:
+def closed_at(
+    sock: socket.socket | ssl.SSLSocket, start: float, limit: float
+) -> float | None:
     """Reads until EOF or a reset; returns the seconds from start, or None past limit."""
     sock.settimeout(1)
     while time.monotonic() - start < limit:
@@ -119,9 +168,15 @@ def closed_at(sock: socket.socket | ssl.SSLSocket, start: float, limit: float) -
 
 def refusals() -> dict[str, float]:
     """The xapiand_tls_refused_connections counters from /:metrics, by reason."""
-    with urllib.request.urlopen(f"https://localhost:{PORT}/:metrics", context=context(), timeout=5) as r:
+    with urllib.request.urlopen(
+        f"https://localhost:{PORT}/:metrics", context=context(), timeout=5
+    ) as r:
         text = r.read().decode()
-    found = re.findall(r'^xapiand_tls_refused_connections\{[^}]*reason="(\w+)"[^}]*\} (\S+)$', text, re.MULTILINE)
+    found = re.findall(
+        r'^xapiand_tls_refused_connections\{[^}]*reason="(\w+)"[^}]*\} (\S+)$',
+        text,
+        re.MULTILINE,
+    )
     return {reason: float(value) for reason, value in found}
 
 
@@ -150,17 +205,34 @@ def handshakes() -> None:
     extra = socket.create_connection(("127.0.0.1", PORT), timeout=10)
     extra.sendall(b"\x16\x03\x01\x00")
     t = closed_at(extra, time.monotonic(), 4)
-    report(t is not None and t < 1, f"65th stalled handshake refused at once ({fmt(t)})", "handshake_cap", 0, t)
+    report(
+        t is not None and t < 1,
+        f"65th stalled handshake refused at once ({fmt(t)})",
+        "handshake_cap",
+        0,
+        t,
+    )
     times = [closed_at(s, start, 12) for s in stalled]
     late = [t for t in times if not near(t, 5)]
     done = [t for t in times if t is not None]
     first, last = (min(done), max(done)) if len(done) == len(times) else (None, None)
-    report(not late, f"64 stalled handshakes dropped at 5 s (first {fmt(first)}, last {fmt(last)}, "
-           f"{len(late)} outside 4 to {5 + SLACK} s)", "handshake_deadline", 5, last)
+    report(
+        not late,
+        f"64 stalled handshakes dropped at 5 s (first {fmt(first)}, last {fmt(last)}, "
+        f"{len(late)} outside 4 to {5 + SLACK} s)",
+        "handshake_deadline",
+        5,
+        last,
+    )
     counts = refusals()
-    report(counts.get("handshakes", 0) >= 1 and counts.get("deadline", 0) >= 64,
-           f"metrics count them: handshakes {counts.get('handshakes', 0):.0f}, deadline {counts.get('deadline', 0):.0f}",
-           "handshake_metrics", 64, counts.get("deadline", 0), "refusals")
+    report(
+        counts.get("handshakes", 0) >= 1 and counts.get("deadline", 0) >= 64,
+        f"metrics count them: handshakes {counts.get('handshakes', 0):.0f}, deadline {counts.get('deadline', 0):.0f}",
+        "handshake_metrics",
+        64,
+        counts.get("deadline", 0),
+        "refusals",
+    )
 
 
 def connections(node: Node) -> None:
@@ -177,25 +249,54 @@ def connections(node: Node) -> None:
     except (ssl.SSLError, OSError):
         refused = True
     time.sleep(1)  # the control-plane check reads reactor's rejected count every second
-    report(refused and node.logged("refused at accept: --tls-max-connections reached"),
-           f"connection {CAP + 1} refused at --tls-max-connections {CAP}, logged as cap", "connection_cap", CAP,
-           CAP if refused else None, "connections")
+    report(
+        refused and node.logged("refused at accept: --tls-max-connections reached"),
+        f"connection {CAP + 1} refused at --tls-max-connections {CAP}, logged as cap",
+        "connection_cap",
+        CAP,
+        CAP if refused else None,
+        "connections",
+    )
     per = (at_cap - base) / CAP
-    print(f"        RSS {base} KB idle, {at_cap} KB with {CAP} TLS connections: {per:.1f} KB per connection", flush=True)
+    print(
+        f"        RSS {base} KB idle, {at_cap} KB with {CAP} TLS connections: {per:.1f} KB per connection",
+        flush=True,
+    )
     with lock:
-        rows.append({"case": "rss_per_connection", "what": f"RSS {base} KB idle, {at_cap} KB with {CAP}",
-                     "bound": None, "measured": round(per, 1), "unit": "KB", "pass": None})
+        rows.append(
+            {
+                "case": "rss_per_connection",
+                "what": f"RSS {base} KB idle, {at_cap} KB with {CAP}",
+                "bound": None,
+                "measured": round(per, 1),
+                "unit": "KB",
+                "pass": None,
+            }
+        )
     for s in held:
         s.close()
     time.sleep(1)
     cap = refusals().get("cap", 0)
-    report(cap >= 1, f"metrics count it: cap {cap:.0f}", "connection_cap_metric", 1, cap, "refusals")
+    report(
+        cap >= 1,
+        f"metrics count it: cap {cap:.0f}",
+        "connection_cap_metric",
+        1,
+        cap,
+        "refusals",
+    )
 
 
 def idle_after_handshake() -> None:
     s = tls_connect()
     t = closed_at(s, time.monotonic(), 90)
-    report(near(t, 75), f"idle after the handshake closed at 75 s ({fmt(t)})", "idle_after_handshake", 75, t)
+    report(
+        near(t, 75),
+        f"idle after the handshake closed at 75 s ({fmt(t)})",
+        "idle_after_handshake",
+        75,
+        t,
+    )
 
 
 def idle_after_reply() -> None:
@@ -206,19 +307,35 @@ def idle_after_reply() -> None:
     while b"\r\n\r\n" not in got:
         got += s.recv(65536)
     head, _, body = got.partition(b"\r\n\r\n")
-    length = int(next(line.split(b":")[1] for line in head.split(b"\r\n") if line.lower().startswith(b"content-length")))
+    length = int(
+        next(
+            line.split(b":")[1]
+            for line in head.split(b"\r\n")
+            if line.lower().startswith(b"content-length")
+        )
+    )
     while len(body) < length:
         body += s.recv(65536)
     t = closed_at(s, time.monotonic(), 90)
-    report(near(t, 75), f"idle after a reply closed at 75 s ({fmt(t)})", "idle_after_reply", 75, t)
+    report(
+        near(t, 75),
+        f"idle after a reply closed at 75 s ({fmt(t)})",
+        "idle_after_reply",
+        75,
+        t,
+    )
 
 
 def stalled_body() -> None:
     s = tls_connect()
-    s.sendall(b"PUT /bounds/1 HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n"
-              b"Content-Length: 1000\r\n\r\n{\"a\":")
+    s.sendall(
+        b"PUT /bounds/1 HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n"
+        b'Content-Length: 1000\r\n\r\n{"a":'
+    )
     t = closed_at(s, time.monotonic(), 75)
-    report(near(t, 60), f"a body stopped for 60 s closed ({fmt(t)})", "stalled_body", 60, t)
+    report(
+        near(t, 60), f"a body stopped for 60 s closed ({fmt(t)})", "stalled_body", 60, t
+    )
 
 
 def unread_reply() -> None:
@@ -243,12 +360,24 @@ def unread_reply() -> None:
     thread.start()
     thread.join(150)
     if not closed:
-        socket.socket.shutdown(s, socket.SHUT_RDWR)  # the raw socket, so the writer returns
-        report(False, "a client not reading its replies for 60 s closed (never)", "unread_reply", 60)
+        socket.socket.shutdown(
+            s, socket.SHUT_RDWR
+        )  # the raw socket, so the writer returns
+        report(
+            False,
+            "a client not reading its replies for 60 s closed (never)",
+            "unread_reply",
+            60,
+        )
         return
     t = closed[0] - progress[0]
-    report(near(t, 60), f"a client not reading its replies for 60 s closed ({fmt(t)} after its last write)",
-           "unread_reply", 60, t)
+    report(
+        near(t, 60),
+        f"a client not reading its replies for 60 s closed ({fmt(t)} after its last write)",
+        "unread_reply",
+        60,
+        t,
+    )
 
 
 def trickled_headers() -> None:
@@ -269,15 +398,23 @@ def trickled_headers() -> None:
             t = time.monotonic() - start
             break
         time.sleep(2)
-    report(near(t, 30), f"headers trickled past 30 s closed ({fmt(t)})", "trickled_headers", 30, t)
+    report(
+        near(t, 30),
+        f"headers trickled past 30 s closed ({fmt(t)})",
+        "trickled_headers",
+        30,
+        t,
+    )
 
 
 def slow_restore() -> None:
     lines = [b'{"_id": %d, "n": %d}\n' % (i, i) for i in range(14)]
     body = b"".join(lines)
     s = tls_connect()
-    s.sendall(b"RESTORE /bounds_restore/ HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/x-ndjson\r\n"
-              b"Content-Length: %d\r\n\r\n" % len(body))
+    s.sendall(
+        b"RESTORE /bounds_restore/ HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/x-ndjson\r\n"
+        b"Content-Length: %d\r\n\r\n" % len(body)
+    )
     start = time.monotonic()
     for line in lines:
         s.sendall(line)
@@ -294,14 +431,23 @@ def slow_restore() -> None:
         pass
     status = reply.split(b"\r\n", 1)[0].decode(errors="replace")
     took = time.monotonic() - start
-    report(took > 120 and " 2" in status[:13], f"a RESTORE streamed for {took:.0f} s completes ({status or 'no reply'})",
-           "slow_restore", 120, took)
+    report(
+        took > 120 and " 2" in status[:13],
+        f"a RESTORE streamed for {took:.0f} s completes ({status or 'no reply'})",
+        "slow_restore",
+        120,
+        took,
+    )
 
 
 def main() -> int:
     shutil.rmtree(WORK, ignore_errors=True)
     os.makedirs(WORK)
-    subprocess.run([os.path.join(HERE, "tls_certs.sh"), os.path.join(WORK, "certs")], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(
+        [os.path.join(HERE, "tls_certs.sh"), os.path.join(WORK, "certs")],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
     print(f"== [T3] TLS bounds on :{PORT}", flush=True)
 
     only = [c for c in os.environ.get("ONLY", "").split(",") if c]
@@ -315,8 +461,15 @@ def main() -> int:
         out = os.environ.get("OUT")
         if out:
             with open(out, "w") as f:
-                json.dump({"port": PORT, "cap": CAP, "slack": SLACK, "rows": rows}, f, indent=2)
-    print("tls_bounds: OK" if not failures else f"tls_bounds: {len(failures)} failed", flush=True)
+                json.dump(
+                    {"port": PORT, "cap": CAP, "slack": SLACK, "rows": rows},
+                    f,
+                    indent=2,
+                )
+    print(
+        "tls_bounds: OK" if not failures else f"tls_bounds: {len(failures)} failed",
+        flush=True,
+    )
     return 1 if failures else 0
 
 
@@ -326,9 +479,15 @@ def fdlimit() -> None:
         node.proc.wait(30)
     except subprocess.TimeoutExpired:
         node.stop()
-    report(node.proc.returncode not in (None, 0) and node.logged("does not fit the open-files limit"),
-           "--tls-max-connections 1000 under 512 open files refused at startup", "fd_limit", 512 - 64, 1000,
-           "connections")
+    report(
+        node.proc.returncode not in (None, 0)
+        and node.logged("does not fit the open-files limit"),
+        "--tls-max-connections 1000 under 512 open files refused at startup",
+        "fd_limit",
+        512 - 64,
+        1000,
+        "connections",
+    )
 
 
 def run(wanted: Callable[[str], bool]) -> None:
@@ -345,7 +504,14 @@ def run(wanted: Callable[[str], bool]) -> None:
         if wanted("connections"):
             connections(node)
             time.sleep(2)
-        cases = [idle_after_handshake, idle_after_reply, stalled_body, unread_reply, trickled_headers, slow_restore]
+        cases = [
+            idle_after_handshake,
+            idle_after_reply,
+            stalled_body,
+            unread_reply,
+            trickled_headers,
+            slow_restore,
+        ]
         threads = [threading.Thread(target=c) for c in cases if wanted(c.__name__)]
         for t in threads:
             t.start()
