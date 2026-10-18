@@ -13,7 +13,7 @@
   - SYS-13: `tls_key_mode_refusal()`, `test_tls` cases, T2 cases, D1.6, the T2 row, the options page, testing.md (3b6b3ee15)
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
   - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
-  - Results at afbf3c33d folded into the gate report: Release, ASan, ASan+UBSan, TSan, T6, T7 (this commit)
+  - Results at afbf3c33d folded into the gate report: Release, ASan, ASan+UBSan, TSan, T6, T7 (1b409212a)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
 - Doing: nothing; waiting on the lead for T5's UBSan half
 - ASan at afbf3c33d (~/.scratch/build/tls-gate-asan-only, no report): `test_tls` 59 checks; plain e2e GREEN; T1 over HTTPS 335 requests, 570 assertions, 0 failed; T2 24 of 24; T3 12 of 13, the unread reply at 65.0 s
