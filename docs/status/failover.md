@@ -42,7 +42,7 @@
     | `harness/cluster_check.sh 3` | 1/1 | | |
     | `harness/run_all.sh smoke load e2e` | 1/1 (3 layers GREEN) | | |
 
-    The 43 s write resume is the slowest seen in 23 failover-type runs on this branch (it follows a 28 s election); the check allows 120 s.
+    The 43 s write resume is the slowest of the 26 Release failover and fast-kill runs on this branch (it follows a 28 s election); the check allows 120 s.
   - C1 A/B at dbbbec642 (reactor 1c37def), fast-kill case `FAILOVER=1 .scratch/failover_fast_kill.sh 3`, interleaved, Release, nice 19; .scratch/c1.sh, logs in .scratch/c1/ (summary.txt). "catch" is dbbbec642; "nocatch" is dbbbec642 with c51da3e09's catch removed, the source of 4f378a51c:
 
     | Variant | Pass | New leader (s) | Write resumes (s after kill) | App catch / reactor catch per run |
