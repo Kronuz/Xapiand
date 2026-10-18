@@ -21,15 +21,15 @@
 extern std::shared_ptr<asio::ssl::context> tls_context;
 
 // Why a key file of this mode and group is refused, or nullptr (SYS-13): no bit outside
-// 0640, and group read only when the file's group is `egid`.
-const char* tls_key_mode_refusal(mode_t mode, gid_t group, gid_t egid);
+// 0640, and group read only when the file's group is `runs_as`, the group the node runs as.
+const char* tls_key_mode_refusal(mode_t mode, gid_t group, gid_t runs_as);
 
 // Builds tls_context from --tls-cert and --tls-key (reactor's Server role, strict), after
-// checking the key file's mode (tls_key_mode_refusal against the effective group), that
-// the key matches the certificate, that the certificate is valid now, and that
-// --tls-max-connections fits the open-files limit. Throws std::runtime_error naming the
-// reason; warns within 14 days of expiry.
-void tls_setup(const std::string& cert, const std::string& key, std::size_t max_connections);
+// checking the key file's mode (tls_key_mode_refusal against `runs_as`: the group demote()
+// switches to, or the effective group), that the key matches the certificate, that the
+// certificate is valid now, and that --tls-max-connections fits the open-files limit.
+// Throws std::runtime_error naming the reason; warns within 14 days of expiry.
+void tls_setup(const std::string& cert, const std::string& key, std::size_t max_connections, gid_t runs_as);
 
 // Seconds until the certificate expires (negative once expired), for the daily check.
 long tls_seconds_to_expiry();

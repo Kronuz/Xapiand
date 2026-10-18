@@ -32,6 +32,7 @@
 #include <grp.h>                                  // for getgrgid, group, getgrnam, gid_t
 #include <limits.h>                               // for PATH_MAX
 #include <memory>                                 // for std::make_unique
+#include <optional>                               // for std::optional
 #include <pwd.h>                                  // for passwd, getpwnam, getpwuid
 #include <signal.h>                               // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
 #include <sys/resource.h>                         // for rlimit
@@ -488,8 +489,16 @@ void adjustOpenFilesLimit()
 }
 
 
-void demote(const char* username, const char* group) {
-	// lose root privileges if we have them
+// The identity demote() switches a root process to.
+struct Demotion {
+	uid_t uid;
+	gid_t gid;
+	std::string username, group;
+};
+
+// Whether demote() switches identity and to whom: --uid, and --gid or that user's group.
+// Empty when the process is not root; exits naming a user or group it cannot find.
+std::optional<Demotion> demotion(const char* username, const char* group) {
 	uid_t uid = getuid();
 
 	if (
@@ -540,6 +549,19 @@ void demote(const char* username, const char* group) {
 			}
 			group = gr->gr_name;
 		}
+		return Demotion{uid, gid, username, group};
+	}
+	return std::nullopt;
+}
+
+
+void demote(const std::optional<Demotion>& to) {
+	// lose root privileges if we have them
+	if (to) {
+		const uid_t uid = to->uid;
+		const gid_t gid = to->gid;
+		const char* username = to->username.c_str();
+		const char* group = to->group.c_str();
 
 		#ifdef HAVE_SYS_PRCTL_H
 		#ifdef HAVE_SYS_CAPABILITY_H
@@ -1089,12 +1111,15 @@ int main(int argc, char **argv) {
 			return traceback::traceback(nullptr, nullptr, 0);
 		};
 
+		const auto runs_as = demotion(opts.uid.c_str(), opts.gid.c_str());
+
 #ifdef XAPIAND_TLS
 		// HTTPS: the key is read and checked while the process can still read it, before
-		// demote() and before any service or discovery starts (transport-security D1.6).
+		// demote() and before any service or discovery starts (transport-security D1.6),
+		// against the group the node runs as (SYS-13).
 		if (!opts.tls_cert.empty()) {
 			try {
-				tls_setup(opts.tls_cert, opts.tls_key, opts.tls_max_connections);
+				tls_setup(opts.tls_cert, opts.tls_key, opts.tls_max_connections, runs_as ? runs_as->gid : getegid());
 			} catch (const std::exception& exc) {
 				L_CRIT("Cannot serve HTTPS: {}", exc.what());
 				throw SystemExit(EX_CONFIG);
@@ -1102,7 +1127,7 @@ int main(int argc, char **argv) {
 		}
 #endif
 
-		demote(opts.uid.c_str(), opts.gid.c_str());
+		demote(runs_as);
 
 		if (opts.strict) {
 			default_spc.flags.strict = true;

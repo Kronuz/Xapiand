@@ -75,8 +75,9 @@ New indexes inherit these unless overridden per index (see
 
 - `--tls-cert` and `--tls-key` (PEM files, given together) serve the REST API over TLS on
   `--port`, in place of plain HTTP. The key file must be mode `0600` or stricter, or `0640`
-  when its group is the one Xapiand starts with (as a Kubernetes secret mounted with
-  `fsGroup` is); the certificate must be valid now, and Xapiand warns when it expires within 14
+  when its group is the one Xapiand runs as (as a Kubernetes secret mounted with `fsGroup`
+  is): started as root, the `--gid` group or the `--uid` user's group; otherwise its own.
+  The certificate must be valid now, and Xapiand warns when it expires within 14
   days, at startup and daily while running. TLS 1.2 and 1.3 only, forward-secret ciphers
   only, no session resumption.
 - `--tls-max-connections` caps the TLS connections held at once (1024 by default; it must

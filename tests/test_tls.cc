@@ -1,6 +1,7 @@
 /*
  * HTTPS (transport-security D1.5, D1.6): refusal counting, reactor's cap refusals, the
- * daily expiry check, the expiry the context reports, and the key-file modes (SYS-13).
+ * daily expiry check, the expiry the context reports, and the key-file modes against the
+ * group the node runs as (SYS-13).
  */
 
 #include "test_harness.h"
@@ -10,6 +11,7 @@
 #include <chrono>
 #include <cstdio>
 #include <initializer_list>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <sys/stat.h>
@@ -61,9 +63,20 @@ std::string key_of(const std::string& cert) { return cert.substr(0, cert.size() 
 // Sets the key's group (its owner may give it any group it belongs to).
 void set_group(const std::string& cert, gid_t group) { CHECK_EQ(::chown(key_of(cert).c_str(), uid_t(-1), group), 0); }
 
-bool refused(const std::string& cert, const std::string& reason) {
+// A group this user belongs to besides its effective one, or nullopt.
+std::optional<gid_t> second_group() {
+	std::vector<gid_t> groups(std::size_t(::getgroups(0, nullptr)));
+	groups.resize(std::size_t(::getgroups(int(groups.size()), groups.data())));
+	for (gid_t group : groups) {
+		if (group != ::getegid()) { return group; }
+	}
+	return std::nullopt;
+}
+
+// Whether tls_setup() refuses, naming `reason`; the node runs as `runs_as`.
+bool refused(const std::string& cert, const std::string& reason, gid_t runs_as = ::getegid()) {
 	try {
-		tls_setup(cert, key_of(cert), 64);
+		tls_setup(cert, key_of(cert), 64, runs_as);
 	} catch (const std::runtime_error& e) {
 		return std::string(e.what()).find(reason) != std::string::npos;
 	}
@@ -114,13 +127,13 @@ static void test_watch_checks_expiry_daily() {
 
 static void test_expiry_seconds() {
 	const auto soon = make_pair("soon", -3600, 3 * 86400);
-	tls_setup(soon, key_of(soon), 64);
+	tls_setup(soon, key_of(soon), 64, ::getegid());
 	const long left = tls_seconds_to_expiry();
 	CHECK_GT(left, 3 * 86400 - 60);
 	CHECK_LE(left, 3 * 86400);
 	CHECK_LT(tls_check_expiry(), 14 * 86400);  // inside the warning window
 	const auto later = make_pair("later", -3600, 30 * 86400);
-	tls_setup(later, key_of(later), 64);
+	tls_setup(later, key_of(later), 64, ::getegid());
 	CHECK_GT(tls_check_expiry(), 29 * 86400);
 }
 
@@ -140,8 +153,8 @@ static void test_key_mode_rule() {
 		CHECK_EQ(refusal(mode, own), "");
 	}
 	CHECK_EQ(refusal(0600, other), "");  // no group bit, so the group does not matter
-	CHECK_EQ(refusal(0640, other), "is readable by a group other than the process's effective group");
-	CHECK_EQ(refusal(0440, other), "is readable by a group other than the process's effective group");
+	CHECK_EQ(refusal(0640, other), "is readable by a group other than the one the node runs as");
+	CHECK_EQ(refusal(0440, other), "is readable by a group other than the one the node runs as");
 	for (mode_t mode : std::initializer_list<mode_t>{0660, 0650, 0620, 0610, 0700, 0740, 04600, 02640, 01600}) {
 		CHECK_EQ(refusal(mode, own), "has mode bits outside 0640");
 	}
@@ -158,17 +171,38 @@ static void test_setup_key_modes() {
 	const auto writable = make_pair("group_writable", -3600, 86400, 0660);
 	set_group(writable, ::getegid());
 	CHECK(refused(writable, "has mode bits outside 0640"));
-	// Another group needs one this user belongs to besides its effective one.
-	std::vector<gid_t> groups(std::size_t(::getgroups(0, nullptr)));
-	groups.resize(std::size_t(::getgroups(int(groups.size()), groups.data())));
-	for (gid_t group : groups) {
-		if (group == ::getegid()) { continue; }
+	if (const auto group = second_group()) {
 		const auto foreign = make_pair("other_group", -3600, 86400, 0640);
-		set_group(foreign, group);
-		CHECK(refused(foreign, "other than the process's effective group"));
-		return;
+		set_group(foreign, *group);
+		CHECK(refused(foreign, "other than the one the node runs as"));
+	} else {
+		std::fprintf(stderr, "  (no second group: the other-group file case is covered by test_key_mode_rule only)\n");
 	}
-	std::fprintf(stderr, "  (no second group: the other-group file case is covered by test_key_mode_rule only)\n");
+}
+
+// A root start with --gid: the key is checked against the --gid group, not the group the
+// process starts with, so a key at 0640 with root's group is refused (SYS-13).
+static void test_root_start_with_gid() {
+	const gid_t root = 0, target = 1001;
+	CHECK(tls_key_mode_refusal(0640, root, target) != nullptr);
+	CHECK(tls_key_mode_refusal(0440, root, target) != nullptr);
+	CHECK(tls_key_mode_refusal(0640, target, target) == nullptr);
+	CHECK(tls_key_mode_refusal(0600, root, target) == nullptr);
+	// The same through tls_setup(): the key carries the starting group, the node runs as another.
+	const gid_t starting = ::getegid(), runs_as = starting + 1;
+	const auto start_group = make_pair("start_group", -3600, 86400, 0640);
+	set_group(start_group, starting);
+	CHECK(refused(start_group, "other than the one the node runs as", runs_as));
+	CHECK(refused(start_group, "0640 with group " + std::to_string(runs_as), runs_as));
+	CHECK(!refused(start_group, "", starting));  // the same key passes when the node keeps that group
+	// The key carrying the --gid group passes, given a second group to set it to.
+	if (const auto group = second_group()) {
+		const auto gid_group = make_pair("gid_group", -3600, 86400, 0640);
+		set_group(gid_group, *group);
+		CHECK(!refused(gid_group, "", *group));
+	} else {
+		std::fprintf(stderr, "  (no second group: the --gid-group file case is covered by the rule checks only)\n");
+	}
 }
 
 TEST_MAIN(
@@ -178,7 +212,8 @@ TEST_MAIN(
 	test_expiry_seconds,
 	test_setup_refusals,
 	test_key_mode_rule,
-	test_setup_key_modes
+	test_setup_key_modes,
+	test_root_start_with_gid
 )
 
 #else

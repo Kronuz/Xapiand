@@ -197,7 +197,7 @@ if start "$WORK/key640.log" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/ke
 else fail "key at 0640 with the node's own group did not start: $(tail -3 "$WORK/key640.log")"; fi
 stop
 if [ -f "$WORK/other.key" ]; then
-	refuse "key at 0640 with another group" "other than the process's effective group" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/other.key"
+	refuse "key at 0640 with another group" "other than the one the node runs as" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/other.key"
 else echo "  SKIP  key at 0640 with another group: the user has no second group (the unit test covers the rule)"; fi
 refuse "group-writable key (0660)" "has mode bits outside 0640" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/key660.key"
 refuse "world-readable key (0644)" "is accessible by others" --tls-cert "$WORK/ec/server.pem" --tls-key "$WORK/key644.key"

@@ -69,7 +69,7 @@ $BUILD/bin/xapiand_test_tls
 | C6 | The context built before `demote()`; expiry checked daily, with a metric | Built (069ae1ebc): `tls_setup()` after `detach()` and before `demote()`; a control-plane timer re-checks expiry every 24 hours; `xapiand_tls_certificate_expiry_seconds`. Ran before 227a1434f in T2 case 7 | `src/main.cc:1002, 1097, 1105`; `src/tls.cc` (`tls_check_expiry`, `TlsWatch::tick`); `src/manager.cc:1124-1130, 1793`; `tests/test_tls.cc` (daily schedule) |
 | C7 | TLS 1.2 session cache decided and tested; `strict` recorded with Detent | Decided and recorded: `SSL_SESS_CACHE_OFF` under `strict`; Detent's ledger lists the option. Its test is T6's, not run | reactor `reactor_tls.h:70-75`, `test/tls_test.cc:162`; Detent `docs/DEPENDENCY_UPGRADES.md:57` at 68ab6c6 (line 77 at its head) |
 | C8 | UBSan fails on undefined behavior; renegotiation over TLS 1.2; T1's CA and SAN; T4's CPU source | In place: `-DUBSAN=ON` adds `-fno-sanitize-recover=all` and CI sets `halt_on_error=1`; `s_client -tls1_2` forces 1.2; the probe uses `--cacert` and newman `--ssl-extra-ca-certs`; the certificate's SAN is `localhost` and `127.0.0.1`; CPU from `/proc/<pid>/stat` and `ps -o cputime`. The UBSan path has not run (T5) | `.github/workflows/ci.yml:100, 106`; `harness/tls_check.sh:158`; `harness/e2e_capture.sh:48-54`; `harness/tls_certs.sh:18`; `harness/tls_cost.py:44-59` |
-| SYS-13 | A key at 0640 accepted only with the process's effective group; wider modes refused | Built (3b6b3ee15), not compiled or run: `tls_key_mode_refusal()` with its unit test, T2's cases, D1.6, the T2 row, and the options page | `src/tls.cc` (`tls_key_mode_refusal`, `tls_setup`); `tests/test_tls.cc` (`test_key_mode_rule`, `test_setup_key_modes`); `harness/tls_check.sh` case 6 |
+| SYS-13 | A key at 0640 accepted only with the group the node runs as; wider modes refused | Built (3b6b3ee15; the run-as group per the lead's ruling, SYS13-GID), not compiled or run: `tls_key_mode_refusal()` with its unit tests, `demotion()` shared with `demote()`, T2's cases, D1.6, the T2 row, and the options page | `src/tls.cc` (`tls_key_mode_refusal`, `tls_setup`); `src/main.cc` (`demotion`, `demote`, the `tls_setup` call); `tests/test_tls.cc` (`test_key_mode_rule`, `test_setup_key_modes`, `test_root_start_with_gid`); `harness/tls_check.sh` case 6 |
 | TS-R24 | The user docs and the changelog say node traffic stays in clear | Pass | `docs/src/content/docs/options.md:89-92`; `docs/src/content/docs/changelog.md:14-17` |
 
 ## Findings
@@ -92,11 +92,20 @@ $BUILD/bin/xapiand_test_tls
    `deadline`, but not for `version` or `cipher`, and do not check that nothing fires
    without a callback. T2 covers `version` and `cipher` through Xapiand's callback end to
    end. The rest is http's to add.
-5. SYS-13 is applied as written: the group is `getegid()` when `tls_setup()` runs, which is
-   before `demote()`. A node started as root therefore accepts 0640 with root's group, not
-   `--gid`'s. Not a blocker; recorded for the lead.
+5. SYS-13's group, ruled by the lead under the owner's standing permission (2026-10-17):
+   the group the node will run as, so a root start never accepts a key owned by root's
+   group. Built as `demotion()`, split out of `demote()`, which resolves the identity once;
+   `main()` passes its gid to `tls_setup()` and then demotes to the same identity, so the
+   check and the switch cannot disagree. Where the ruling's literal wording ("`--gid` when
+   given, otherwise `getegid()`") and `demote()`'s resolution differ, the code follows
+   `demote()`, which is what the node runs as: a root start without `--gid` checks the
+   `--uid` user's group (`getegid()` there is root's), and a non-root start checks
+   `getegid()` even when `--gid` is given (`demote()` ignores `--gid` unless root). The lead
+   may overrule either. `test_root_start_with_gid` covers the root start at the rule and
+   through `tls_setup()`; no test starts a node as root, so `demotion()`'s lookups are
+   exercised only as `demote()`'s were.
 
-Not run: every row at a commit carrying 227a1434f and 3b6b3ee15; T2's SYS-13 cases;
+Not run: every row at a commit carrying 227a1434f and 3b6b3ee15 and the run-as change; T2's SYS-13 cases;
 `test_tls`; T4's measurement (the lead's, on a quiet host); T5 entirely (the local ASan
 build is unfinished, TSan not started, and no CI run exists for the branch); T6 and T7;
 anything on Linux; C1 on Linux; C3's package builds; the cluster layers over HTTPS (step 1

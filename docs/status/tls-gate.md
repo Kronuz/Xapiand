@@ -12,6 +12,7 @@
   - Validity check on `ASN1_TIME_cmp_time_t`, failing closed on its error return (227a1434f)
   - SYS-13: `tls_key_mode_refusal()`, `test_tls` cases, T2 cases, D1.6, the T2 row, the options page, testing.md (3b6b3ee15)
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
+  - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (SYS13-RUNAS)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
 - Doing: nothing; waiting for the host (strict hold `strata-trials`, until 07:04 on 2026-10-18)
 - Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
@@ -22,7 +23,13 @@
   5. Ledger to "in review" once the rows above hold
 - Blocked on: the host for every compile and run (strict hold); the lead for pushing, since `tls/d1-gate` has no remote tracking branch
 - Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07), SYS-13 (3b6b3ee15)
-- SYS-13 as built: `tls_key_mode_refusal(mode, group, egid)` refuses any bit outside 0640 (owner execute and set-id bits included, as PKI's D3 rule reads), and group read unless the file's group is `getegid()` at the check. `tls_setup()` runs before `demote()`, so a node started as root checks against root's group, not `--gid`'s; the ruling's "effective group" is applied as written, and the lead may want it confirmed for the root-start case. Unit test: the mode table and the file path (0640 own group starts, 0660 refused, another group refused when the user has one). T2: 0640 own group starts beside 0640 another group (skipped without a second group), 0660, and 0644
+- SYS-13 as built: `tls_key_mode_refusal(mode, group, runs_as)` refuses any bit outside 0640 (owner execute and set-id bits included, as PKI's D3 rule reads), and group read unless the file's group is `runs_as`. Unit tests: the mode table, the file path (0640 own group starts, 0660 refused, another group refused when the user has one), and a root start with `--gid`. T2: 0640 own group starts beside 0640 another group (skipped without a second group), 0660, and 0644
+
+## Lead's ruling (2026-10-17, SYS-13, under the owner's standing permission)
+
+SYS-13 means the group the node will run as: a root start must not accept a key owned by root's group. Check against the `--gid` group when one is given, resolved as `demote()` resolves it, otherwise `getegid()`; keep `tls_key_mode_refusal()` pure by passing the target gid; test a root start with `--gid`; commit locally, do not push.
+
+Applied: `demotion()`, split out of `demote()`, resolves the identity once; `main()` passes its gid (or `getegid()` when not root) to `tls_setup()`, then `demote()`s to the same identity. Two cases follow `demote()` rather than the ruling's literal formula, for the lead to confirm or overrule: a root start without `--gid` checks the `--uid` user's group (what `demote()` switches to; `getegid()` there is root's, which the ruling excludes), and a non-root start with `--gid` checks `getegid()` (`demote()` ignores `--gid` unless root). Gate report finding 5.
 - Last verified: 2026-10-17, before 227a1434f, Release build ~/.scratch/build/tls-gate-rel: `PORT=18881 harness/run_all.sh smoke e2e tls` GREEN (T1 335 requests, 570 assertions plain and HTTPS; T2 22 cases; T3 13 cases); ctest 8/8
 - Library or build findings (not fixed here):
   - Homebrew LLVM 23 does not build Xapiand on macOS: SDK `usr/include` as plain `-I` via `UUID_INCLUDE_DIR`/`ZLIB_INCLUDE_DIR` (CMakeLists), RapidJSON `document.h:319` const-member assignment (rapidjson library), `XXH_STATIC_LINKING_ONLY` redefined at `src/config.h:289` under -Werror (Xapiand). The sanitizer build uses Apple clang, whose ASan works on this x86_64 host.

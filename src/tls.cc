@@ -11,7 +11,6 @@
 #include <stdexcept>          // for std::runtime_error
 #include <sys/resource.h>     // for getrlimit, RLIMIT_NOFILE
 #include <sys/stat.h>         // for stat
-#include <unistd.h>           // for getegid
 
 #include <openssl/x509.h>
 
@@ -30,19 +29,18 @@ X509* presented(const asio::ssl::context& context) {
 
 }  // namespace
 
-const char* tls_key_mode_refusal(mode_t mode, gid_t group, gid_t egid) {
+const char* tls_key_mode_refusal(mode_t mode, gid_t group, gid_t runs_as) {
 	if (mode & S_IRWXO) { return "is accessible by others"; }
 	if (mode & 07777 & ~mode_t(0640)) { return "has mode bits outside 0640"; }
-	if ((mode & S_IRGRP) && group != egid) { return "is readable by a group other than the process's effective group"; }
+	if ((mode & S_IRGRP) && group != runs_as) { return "is readable by a group other than the one the node runs as"; }
 	return nullptr;
 }
 
-void tls_setup(const std::string& cert, const std::string& key, std::size_t max_connections) {
+void tls_setup(const std::string& cert, const std::string& key, std::size_t max_connections, gid_t runs_as) {
 	struct stat st;
 	if (::stat(key.c_str(), &st) != 0) { throw std::runtime_error("cannot read --tls-key " + key); }
-	const gid_t egid = ::getegid();
-	if (const char* why = tls_key_mode_refusal(st.st_mode, st.st_gid, egid)) {
-		throw std::runtime_error("--tls-key " + key + " " + why + "; make it mode 0600, or 0640 with group " + std::to_string(egid));
+	if (const char* why = tls_key_mode_refusal(st.st_mode, st.st_gid, runs_as)) {
+		throw std::runtime_error("--tls-key " + key + " " + why + "; make it mode 0600, or 0640 with group " + std::to_string(runs_as));
 	}
 	struct rlimit files;
 	if (::getrlimit(RLIMIT_NOFILE, &files) == 0 && files.rlim_cur != RLIM_INFINITY && max_connections + 64 > files.rlim_cur) {
