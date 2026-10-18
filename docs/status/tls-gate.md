@@ -14,14 +14,16 @@
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
   - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
-- Doing: ASan+UBSan build, then TSan, each with T1 and T2; then T6 and T7 (light hold `lead-builds`: nice 19, 4 jobs)
+- Doing: TSan build and its T1/T2 run; then an ASan-only build for T1/T2; then T6 and T7 (light hold `lead-builds`: nice 19, 4 jobs)
 - Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
   1. Release build at the branch's head; `xapiand_test_tls` and ctest; then `PORT=18881 harness/run_all.sh smoke e2e tls` with `OUT=` for T3; fold results into the gate report
   2. Finish the ASan+UBSan build (~/.scratch/build/tls-gate-asan) and run T1 and T2 under it; TSan build and the same
   3. T6 and T7 from the pinned reactor and http sources (~/.scratch/build/tls-gate-lib-{reactor,http})
   4. CI: the branch has no remote, so no CI runs; the lead decides whether it is pushed or opened as a PR (CI triggers on master, pull requests, and dispatch)
   5. Ledger to "in review" once the rows above hold
-- Blocked on: the host for every compile and run (strict hold); the lead for pushing, since `tls/d1-gate` has no remote tracking branch
+- Blocked on:
+  - T5's UBSan half (the lead's call; C8 made UBSan fatal): under Apple clang 17's `-fsanitize=undefined -fno-sanitize-recover=all` (~/.scratch/build/tls-gate-asan at afbf3c33d), every node aborts on its first error response: `rapidjson/internal/stack.h:117` `Stack::Reserve` computes `stackTop_ + sizeof(T) * count` with `stackTop_` null ("applying non-zero offset 16 to null pointer"), reached from `SearchService::on_error` (`search_views.cc:3171`) → `write_status_response` → `MsgPack::to_string` → `Writer::StartObject`. Pre-existing to step 1: RapidJSON is Tencent's 1.1.0 (f54b0e47), the path has no TLS frame, and the plain node without `--tls-cert` aborts the same way (four reports, all this site, `.scratch/head/asan/reports/`). `test_tls` is clean under it (59 checks). Options: (1) fix `Reserve` in the RapidJSON the build pins (upstream later guards the null stack), recommended, the root cause; (2) build UBSan with `-fsanitize-recover=pointer-overflow` and suppress only `pointer-overflow:rapidjson/internal/stack.h` at runtime, keeping every other check fatal. CI's gcc UBSan may not flag null-plus-offset, so CI's green there would not show the same; not verified
+  - Pushing: Xapiand stays local until the owner says
 - Findings folded in: C5 (069ae1ebc), C6 (069ae1ebc), C8 T4 CPU source (9f8c62b07), SYS-13 (3b6b3ee15)
 - SYS-13 as built: `tls_key_mode_refusal(mode, group, runs_as)` refuses any bit outside 0640 (owner execute and set-id bits included, as PKI's D3 rule reads), and group read unless the file's group is `runs_as`. Unit tests: the mode table, the file path (0640 own group starts, 0660 refused, another group refused when the user has one), and a root start with `--gid`. T2: 0640 own group starts beside 0640 another group (skipped without a second group), 0660, and 0644
 
