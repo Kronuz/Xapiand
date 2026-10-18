@@ -12,7 +12,7 @@
   - Validity check on `ASN1_TIME_cmp_time_t`, failing closed on its error return (227a1434f)
   - SYS-13: `tls_key_mode_refusal()`, `test_tls` cases, T2 cases, D1.6, the T2 row, the options page, testing.md (3b6b3ee15)
   - T3 per-row JSON (`OUT=`), `ONLY` over every case (76023c31e); Ruff format (df0c511f3)
-  - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (SYS13-RUNAS)
+  - SYS-13's run-as group per the lead's ruling: `demotion()`, `tls_setup(..., runs_as)`, `test_root_start_with_gid`, D1.6, options (66ddc8cce)
   - Step-1 gate report drafted, each row's status stated from saved evidence (`docs/gates/transport-security-step1.md`, 443bf0429)
 - Doing: nothing; waiting for the host (strict hold `strata-trials`, until 07:04 on 2026-10-18)
 - Next (after `quiet check` clears, at nice 19 and 4 jobs under a light hold):
