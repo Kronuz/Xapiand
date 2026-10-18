@@ -17,6 +17,7 @@ OUT=FILE writes one JSON record per row checked: case, bound, measured, unit, pa
 from __future__ import annotations
 
 import contextlib
+import fcntl
 import http.client
 import json
 import os
@@ -24,8 +25,10 @@ import re
 import shutil
 import socket
 import ssl
+import struct
 import subprocess
 import sys
+import termios
 import threading
 import time
 import urllib.request
@@ -54,6 +57,7 @@ def report(
     bound: float | None = None,
     measured: float | None = None,
     unit: str = "s",
+    extra: dict[str, object] | None = None,
 ) -> None:
     with lock:
         print(("  PASS  " if ok else "  FAIL  ") + what, flush=True)
@@ -65,6 +69,7 @@ def report(
                 "measured": measured,
                 "unit": unit,
                 "pass": ok,
+                **(extra or {}),
             }
         )
         if not ok:
@@ -338,26 +343,73 @@ def stalled_body() -> None:
     )
 
 
+def server_queues(client_port: int) -> tuple[int, int] | None:
+    """The server end's (Recv-Q, Send-Q) while the connection from client_port is open."""
+    darwin = sys.platform == "darwin"
+    command = ["netstat", "-an", "-p", "tcp"] if darwin else ["ss", "-tnH"]
+    out = subprocess.run(command, capture_output=True, text=True, check=False).stdout
+    sep = "." if darwin else ":"
+    local, peer = f"127.0.0.1{sep}{PORT}", f"127.0.0.1{sep}{client_port}"
+    for line in out.splitlines():
+        f = line.split()
+        if darwin and len(f) >= 6 and f[3:6] == [local, peer, "ESTABLISHED"]:
+            return int(f[1]), int(f[2])
+        if not darwin and len(f) >= 5 and f[0] == "ESTAB" and f[3:5] == [local, peer]:
+            return int(f[1]), int(f[2])
+    return None
+
+
+def unread_bytes(sock: socket.socket) -> int:
+    """Bytes the kernel holds for this socket that it has not read."""
+    return struct.unpack(
+        "i", fcntl.ioctl(sock.fileno(), termios.FIONREAD, b"\0\0\0\0")
+    )[0]
+
+
 def unread_reply() -> None:
     # Pipelines requests and never reads: the server's replies fill the buffers, it stops
-    # reading, and this writer blocks. The close shows as a write error.
+    # reading, and this writer blocks. The close shows as a write error. The bound counts
+    # from the server's last byte read or written, seen in its socket's queues; the
+    # client's last write and last arrival are recorded beside it.
     s = tls_connect()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
     s.settimeout(None)
+    client_port = s.getsockname()[1]
     request = b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n" * 16
-    progress = [time.monotonic()]
+    wrote, moved, arrived = [time.monotonic()], [0.0], [0.0]
     closed: list[float] = []
+    changes: list[tuple[float, int, int]] = []
 
     def writer() -> None:
         try:
             while True:
                 s.sendall(request)
-                progress[0] = time.monotonic()
+                wrote[0] = time.monotonic()
         except (ssl.SSLError, OSError):
             closed.append(time.monotonic())
 
+    def sampler() -> None:
+        queues, held = None, -1
+        while not closed:
+            now = time.monotonic()
+            q = server_queues(client_port)
+            if q is not None and q != queues:
+                # The server read (Recv-Q fell) or wrote (Send-Q rose); the peer's
+                # zero-window probes raise Recv-Q and the kernel's sends lower Send-Q.
+                if queues is None or q[0] < queues[0] or q[1] > queues[1]:
+                    moved[0] = now
+                    changes.append((now, *q))
+                queues = q
+            with contextlib.suppress(OSError):
+                n = unread_bytes(s)
+                if n != held:
+                    arrived[0], held = now, n
+            time.sleep(0.2)
+
     thread = threading.Thread(target=writer, daemon=True)
+    watch = threading.Thread(target=sampler, daemon=True)
     thread.start()
+    watch.start()
     thread.join(150)
     if not closed:
         socket.socket.shutdown(
@@ -370,13 +422,33 @@ def unread_reply() -> None:
             60,
         )
         return
-    t = closed[0] - progress[0]
+    watch.join(5)
+    extra = {
+        "after_client_write": closed[0] - wrote[0],
+        "after_last_arrival": closed[0] - arrived[0] if arrived[0] else None,
+        "server_changes": [
+            [round(closed[0] - at, 2), r, w] for at, r, w in changes[-8:]
+        ],
+    }
+    if not moved[0]:
+        report(
+            False,
+            "a client not reading its replies: the server's queues were never seen",
+            "unread_reply",
+            60,
+            None,
+            extra=extra,
+        )
+        return
+    t = closed[0] - moved[0]
     report(
         near(t, 60),
-        f"a client not reading its replies for 60 s closed ({fmt(t)} after its last write)",
+        f"a client not reading its replies for 60 s closed ({fmt(t)} after the server's last read or write; "
+        f"{fmt(extra['after_client_write'])} after the client's last write)",
         "unread_reply",
         60,
         t,
+        extra=extra,
     )
 
 
