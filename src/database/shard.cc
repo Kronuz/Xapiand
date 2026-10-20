@@ -30,6 +30,7 @@
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
 #include "database/handler.h"     // for committer
+#include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -743,8 +744,19 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 		shard->is_local() &&            // Autocommit only local databases
 		shard->is_autocommit_active()   // Data RESTORE doesn't do autocommit
 	) {
-		// Auto commit only on modified writable databases
-		committer()->debounce(shard->endpoint, std::weak_ptr<Shard>(shard));
+		// Auto commit only on modified writable databases. If the committer
+		// refuses (shutting down, or out of memory), commit now, in place: the
+		// caller (checkin) still holds the shard, so committer_commit would wait
+		// on itself checking it out again.
+		debounce_or_run(*committer(), [&](const std::weak_ptr<Shard>&) {
+			try {
+				shard->commit();
+			} catch (const Exception& exc) {
+				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_message());
+			} catch (const Xapian::Error& exc) {
+				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_description());
+			}
+		}, shard->endpoint, std::weak_ptr<Shard>(shard));
 	}
 }
 

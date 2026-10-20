@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Autocommits and WAL fsyncs requested during shutdown are no longer dropped.** When the
+  committer or the fsync pool has already stopped (or cannot allocate), the commit or fsync
+  runs right away on the calling thread.
 - Builds with `-DLUA=OFF` retain the declaration of the existing scripting-unavailable stub, so the database handler compiles without Lua.
 
 ---
