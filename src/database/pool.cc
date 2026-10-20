@@ -401,6 +401,12 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 			database_pool.checkin_clears_cond.notify_all();
 		} else {
 			Shard::autocommit(shard);
+			if (shard->is_closed()) {
+				// A failed in-place autocommit closes the shard: drop it, as above.
+				std::lock_guard<std::mutex> lk(mtx);
+				writable.reset();
+				database_pool.checkin_clears_cond.notify_all();
+			}
 		}
 #if XAPIAND_DATABASE_WAL
 		// Delete WAL during checking of a restore

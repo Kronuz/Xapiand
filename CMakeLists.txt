@@ -464,7 +464,7 @@ FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/cons
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG aa9857a0383664e67cf2263108c656b36fa8b863)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 70b9663acea98b9f94c098d2152bae2de87afc81)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG 73b74938b3a455423cdf4c0039372dc1fe3b71c7)
-FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG a080a1ed77879155bba288bfa30548c3f16d1832)  # track tip
+FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG 351ef2e0fb69c3648eb1e33439ced4a50443200b)  # track tip
 FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG 5837d5307a33ac9835b909b5931be6efefb0bc5b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 310c409fd728e9ab5d90db31b5cc91a2d5ccc421)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 1d20a4468c2574a8b1d03dfc93622c833e5ce3dd)
@@ -529,7 +529,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + xapiand_colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 5319dc5f58465e5999ad978230205532ab652aaf)  # track tip
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 2cbea95b0bbfee638b73f36ae11ab4e4fb6f4cd5)  # track tip
 FetchContent_MakeAvailable(scheduler)
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
@@ -540,7 +540,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 2c2a2645bb8c8907fac82a5da479f41112f26c55)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 90094b54820645ff5078a93bb3880052f441b889)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 

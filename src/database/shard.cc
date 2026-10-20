@@ -755,6 +755,11 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_message());
 			} catch (const Xapian::Error& exc) {
 				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_description());
+			} catch (const std::exception& exc) {
+				// Runs inside checkin, which is noexcept: nothing may escape.
+				L_ERR("Autocommit of {} falied: {}", repr(shard->to_string()), exc.what());
+			} catch (...) {
+				L_ERR("Autocommit of {} falied: unknown exception", repr(shard->to_string()));
 			}
 		}, shard->endpoint, std::weak_ptr<Shard>(shard));
 	}
