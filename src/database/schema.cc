@@ -1687,8 +1687,8 @@ _get_stem_language(std::string_view str_stem_language)
 			return hy;
 		}
 		case _.fhhl("basque"): {
-			static const std::pair<bool, const std::string> ue{ true,  "ue" };
-			return ue;
+			static const std::pair<bool, const std::string> eu{ true,  "eu" };
+			return eu;
 		}
 		case _.fhhl("eu"): {
 			static const std::pair<bool, const std::string> eu{ true,  "eu" };
