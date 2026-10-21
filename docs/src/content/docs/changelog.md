@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A retried write no longer fails with a spurious version conflict.** After a failed write,
+  the retry compared its own freshly assigned version against the stored one and returned 409.
 - **German stop words now apply.** A duplicate entry in the German list made the stopper fail
   to build, so the first German text write failed and later ones skipped stop words.
 - **Basque text fields work.** The `basque` language mapped to the unknown code `ue`, so
