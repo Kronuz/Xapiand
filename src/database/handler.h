@@ -39,6 +39,8 @@
 #include "database/flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
+#include "engine/document.h"                 // for engine::Document
+#include "engine/types.h"                    // for engine::WriteResult
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
@@ -63,7 +65,7 @@ struct similar_field_t;
 
 Xapian::docid to_docid(std::string_view document_id);
 
-using DocumentInfo = std::pair<Xapian::DocumentInfo, MsgPack>;
+using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
 class DatabaseHandler {
 	friend class Document;
@@ -84,7 +86,7 @@ class DatabaseHandler {
 
 	std::unique_ptr<MsgPack> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
+	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
 	DocumentInfo index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
@@ -108,7 +110,7 @@ public:
 
 	MsgPack check();
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
+	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
 	DocumentInfo index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 	DocumentInfo patch(const MsgPack& document_id, Xapian::rev document_ver, bool create, const MsgPack& patches, bool commit);
@@ -141,7 +143,7 @@ public:
 	std::string dump_documents(int fd);
 	std::string restore_documents(int fd);
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj, size_t idx);
+	std::tuple<std::string, engine::Document, MsgPack> prepare_document(MsgPack& obj, size_t idx);
 
 	std::string get_prefixed_term_id(const MsgPack& document_id);
 
@@ -161,10 +163,10 @@ public:
 	void delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
 	void delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
 
-	Xapian::DocumentInfo add_document(Xapian::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	Xapian::DocumentInfo replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	Xapian::DocumentInfo replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	Xapian::DocumentInfo replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	engine::WriteResult add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	engine::WriteResult replace_document(Xapian::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	engine::WriteResult replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 
 	MsgPack get_document_info(std::string_view document_id, bool raw_data, bool human);
 	MsgPack get_database_info();
@@ -239,7 +241,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	std::mutex _results_mtx;
 	std::vector<MsgPack> _results;
-	std::vector<std::unique_ptr<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>> ready_queues;
+	std::vector<std::unique_ptr<BlockingConcurrentQueue<std::tuple<std::string, engine::Document, MsgPack, size_t>>>> ready_queues;
 
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::block_size> bulk;
 	size_t bulk_cnt;

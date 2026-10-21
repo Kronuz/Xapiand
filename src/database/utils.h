@@ -32,29 +32,29 @@
 #include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
 #include "database/data.h"         // for ct_type_t, Data
-#include "xapian.h"                // for valueno
+#include "engine/types.h"          // for engine::valueno, engine::rev, engine::doccount
 
 
 constexpr char DB_OFFSPRING_UNION  = '.';
 constexpr double DB_VERSION_SCHEMA = 2.0;
 
-constexpr Xapian::valueno DB_SLOT_RESERVED        = 20; // Reserved slots by special data
-constexpr Xapian::valueno DB_SLOT_ID              = 0;  // Slot for document ID
-constexpr Xapian::valueno DB_SLOT_VERSION         = 1;  // Slot for version checks
-constexpr Xapian::valueno DB_SLOT_SHARDS          = 2;  // Temporary slot for number of shards
-constexpr Xapian::valueno DB_SLOT_USER_VALUE_1    = 5;  // Slot for user values
-constexpr Xapian::valueno DB_SLOT_USER_VALUE_2    = 6;  // Slot for user values
-constexpr Xapian::valueno DB_SLOT_USER_VALUE_3    = 7;  // Slot for user values
-constexpr Xapian::valueno DB_SLOT_USER_VALUE_4    = 8;  // Slot for user values
-constexpr Xapian::valueno DB_SLOT_ROOT            = 9;  // Slot for root
-constexpr Xapian::valueno DB_SLOT_NUMERIC         = 10; // Slot for saving global float/integer/positive values
-constexpr Xapian::valueno DB_SLOT_DATE            = 11; // Slot for saving global date values
-constexpr Xapian::valueno DB_SLOT_GEO             = 12; // Slot for saving global geo values
-constexpr Xapian::valueno DB_SLOT_STRING          = 13; // Slot for saving global string/text values.
-constexpr Xapian::valueno DB_SLOT_BOOLEAN         = 14; // Slot for saving global boolean values.
-constexpr Xapian::valueno DB_SLOT_UUID            = 15; // Slot for saving global uuid values.
-constexpr Xapian::valueno DB_SLOT_TIME            = 16; // Slot for saving global time values.
-constexpr Xapian::valueno DB_SLOT_TIMEDELTA       = 17; // Slot for saving global timedelta values.
+constexpr engine::valueno DB_SLOT_RESERVED        = 20; // Reserved slots by special data
+constexpr engine::valueno DB_SLOT_ID              = 0;  // Slot for document ID
+constexpr engine::valueno DB_SLOT_VERSION         = 1;  // Slot for version checks
+constexpr engine::valueno DB_SLOT_SHARDS          = 2;  // Temporary slot for number of shards
+constexpr engine::valueno DB_SLOT_USER_VALUE_1    = 5;  // Slot for user values
+constexpr engine::valueno DB_SLOT_USER_VALUE_2    = 6;  // Slot for user values
+constexpr engine::valueno DB_SLOT_USER_VALUE_3    = 7;  // Slot for user values
+constexpr engine::valueno DB_SLOT_USER_VALUE_4    = 8;  // Slot for user values
+constexpr engine::valueno DB_SLOT_ROOT            = 9;  // Slot for root
+constexpr engine::valueno DB_SLOT_NUMERIC         = 10; // Slot for saving global float/integer/positive values
+constexpr engine::valueno DB_SLOT_DATE            = 11; // Slot for saving global date values
+constexpr engine::valueno DB_SLOT_GEO             = 12; // Slot for saving global geo values
+constexpr engine::valueno DB_SLOT_STRING          = 13; // Slot for saving global string/text values.
+constexpr engine::valueno DB_SLOT_BOOLEAN         = 14; // Slot for saving global boolean values.
+constexpr engine::valueno DB_SLOT_UUID            = 15; // Slot for saving global uuid values.
+constexpr engine::valueno DB_SLOT_TIME            = 16; // Slot for saving global time values.
+constexpr engine::valueno DB_SLOT_TIMEDELTA       = 17; // Slot for saving global timedelta values.
 
 
 // Default prefixes
@@ -65,7 +65,7 @@ constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[]    = "C";
 constexpr const char DOCUMENT_DB_MASTER[]         = "M";
 constexpr const char DOCUMENT_DB_SLAVE[]          = "S";
 
-constexpr const Xapian::rev UNKNOWN_REVISION = std::numeric_limits<Xapian::rev>::max();
+constexpr const engine::rev UNKNOWN_REVISION = std::numeric_limits<engine::rev>::max();
 
 
 enum class FieldType : uint8_t;
@@ -84,10 +84,10 @@ struct similar_field_t {
 
 
 struct query_field_t {
-	Xapian::rev version = UNKNOWN_REVISION;
-	Xapian::doccount offset = 0;
-	Xapian::doccount limit = std::numeric_limits<Xapian::doccount>::max();
-	Xapian::doccount check_at_least = 0;
+	engine::rev version = UNKNOWN_REVISION;
+	engine::doccount offset = 0;
+	engine::doccount limit = std::numeric_limits<engine::doccount>::max();
+	engine::doccount check_at_least = 0;
 	bool writable = false;
 	bool primary = false;
 	bool spelling = true;
@@ -97,7 +97,7 @@ struct query_field_t {
 	bool is_fuzzy = false;
 	bool is_nearest = false;
 	std::string collapse;
-	Xapian::doccount collapse_max = 1;
+	engine::doccount collapse_max = 1;
 	std::vector<std::string> query;
 	std::vector<std::string> sort;
 	similar_field_t fuzzy;
@@ -125,7 +125,7 @@ inline std::pair<std::string_view, bool> unsharded_path(std::string_view path) {
 
 
 std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type);
-Xapian::valueno get_slot(std::string_view field_prefix, char field_type);
+engine::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(std::string_view field_name);
 std::string normalize_uuid(std::string_view uuid);

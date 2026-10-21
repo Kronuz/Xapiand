@@ -42,7 +42,8 @@
 #include "lru.h"                            // for lru::lru
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
-#include "xapian.h"                         // for Xapian::docid, Xapian::termcount, Xapian::Document
+#include "engine/document.h"                // for engine::Document
+#include "xapian.h"                         // for Xapian::docid, Xapian::rev
 
 
 class MsgPack;
@@ -266,7 +267,7 @@ class DatabaseWALWriterTask {
 	UUID uuid;
 	Xapian::rev revision;
 
-	Xapian::Document doc;
+	engine::Document doc;
 	std::string key;
 	std::string term_word_val;
 	Xapian::termcount freq;
@@ -351,7 +352,7 @@ public:
 	std::size_t running_size();
 
 	void write_commit(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, bool send_update);
-	void write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, Xapian::Document&& doc);
+	void write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, engine::Document&& doc);
 	void write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did);
 	void write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val);
 	void write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc);

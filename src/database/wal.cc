@@ -285,7 +285,7 @@ DatabaseWAL::to_string_document(std::string_view serialised_document, bool unser
 		return MsgPack(serialised_document);
 	}
 
-	auto doc = Xapian::Document::unserialise(std::string(serialised_document));
+	auto doc = engine::Document::unserialise(serialised_document);
 
 	auto data = Data(doc.get_data());
 	auto main_locator = data.get("");
@@ -555,7 +555,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			document = std::string(p, p_end - p);
-			_shard->replace_document(did, Xapian::Document::unserialise(document), false, wal_, false);
+			_shard->replace_document(did, engine::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -1180,7 +1180,7 @@ DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const
 
 
 void
-DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, engine::Document&& doc)
 {
 	L_CALL("DatabaseWALWriter::write_replace_document({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 

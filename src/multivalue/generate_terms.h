@@ -31,6 +31,7 @@
 
 #include "analysis.hh"                            // for analysis::stop_strategy, analysis::stem_strategy
 #include "database/utils.h"                       // for prefixed
+#include "engine/document.h"                       // for engine::Document
 #include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
 #include "serialise.h"                            // for serialise
 #include "xapian.h"                               // for Query, Query::op::OP_OR, Query::op::OP_AND
@@ -58,28 +59,28 @@ namespace GenerateTerms {
 	 * Add generated terms by accuracy for field or global values in doc.
 	 */
 
-	void integer(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, int64_t value);
-	void positive(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, uint64_t value);
-	void datetime(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm);
-	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const std::vector<range_t>& ranges);
+	void integer(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, int64_t value);
+	void positive(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, uint64_t value);
+	void datetime(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm);
+	void geo(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const std::vector<range_t>& ranges);
 
 
 	/*
 	 * Add generated terms by accuracy for field and global values in doc.
 	 */
 
-	void integer(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
+	void integer(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, int64_t value);
-	void positive(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
+	void positive(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, uint64_t value);
-	void datetime(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
+	void datetime(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, const Datetime::tm_t& tm);
-	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
+	void geo(engine::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, const std::vector<range_t>& ranges);
 
-	void text(Xapian::Document& doc,
+	void text(engine::Document& doc,
 		const std::string& prefix, const std::string& value,
-		bool positions, Xapian::termcount weight,
+		bool positions, engine::termcount weight,
 		bool cjk_ngram, bool cjk_words,
 		const std::string& language, const std::string& stem_language,
 		analysis::stop_strategy stop_strategy,

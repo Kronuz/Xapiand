@@ -33,6 +33,7 @@
 #include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
+#include "exception_xapian.h"                     // for DocVersionConflictError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION
@@ -331,16 +332,16 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 }
 
 
-std::tuple<std::string, Xapian::Document, MsgPack>
+std::tuple<std::string, engine::Document, MsgPack>
 DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t seq)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, <data>, <seq>)", repr(document_id.to_string()), obj.to_string());
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+	std::tuple<std::string, engine::Document, MsgPack> prepared;
 
 	if (document_ver != UNKNOWN_REVISION && !data.version.empty()) {
 		if (document_ver != sortable_unserialise(data.version)) {
-			throw Xapian::DocVersionConflictError("Version mismatch!");
+			THROW(DocVersionConflictError, "Version mismatch!");
 		}
 	}
 
@@ -380,7 +381,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 }
 
 
-std::tuple<std::string, Xapian::Document, MsgPack>
+std::tuple<std::string, engine::Document, MsgPack>
 DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second);
@@ -425,7 +426,7 @@ DatabaseHandler::index(Xapian::docid did, const MsgPack& document_id, Xapian::re
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
 
-	Xapian::DocumentInfo info;
+	engine::WriteResult info;
 	if (did) {
 		assert(term_id != "QN\x80");
 		info = replace_document(did, std::move(doc), commit);
@@ -487,8 +488,8 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
 	}
 }
@@ -543,8 +544,8 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, boo
 			}
 			inject_data(data, obj);
 			return index(did, document_id, document_ver, obj, data, commit);
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
 	}
 }
@@ -625,8 +626,8 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 			}
 
 			return index(did, document_id, document_ver, obj, data, commit);
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
 	}
 }
@@ -974,7 +975,7 @@ DatabaseHandler::restore_documents(int fd)
 }
 
 
-std::tuple<std::string, Xapian::Document, MsgPack>
+std::tuple<std::string, engine::Document, MsgPack>
 DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 {
 	L_CALL("DatabaseHandler::prepare_document(<body>, <seq>)");
@@ -1685,8 +1686,8 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 }
 
 
-Xapian::DocumentInfo
-DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, bool version)
+engine::WriteResult
+DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
 
@@ -1723,8 +1724,8 @@ DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, boo
 }
 
 
-Xapian::DocumentInfo
-DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit, bool wal, bool version)
+engine::WriteResult
+DatabaseHandler::replace_document(Xapian::docid did, engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
 
@@ -1740,8 +1741,8 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 }
 
 
-Xapian::DocumentInfo
-DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit, bool wal, bool version)
+engine::WriteResult
+DatabaseHandler::replace_document_term(const std::string& term, engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
 
@@ -1799,8 +1800,8 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 }
 
 
-Xapian::DocumentInfo
-DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit, bool wal, bool version)
+engine::WriteResult
+DatabaseHandler::replace_document(std::string_view document_id, engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>)", repr(document_id));
 
@@ -2151,7 +2152,7 @@ DocPreparer::operator()()
 		if unlikely(!indexer->ready_queues[random_int(0, indexer->indexers - 1)]->enqueue(
 			std::make_tuple(
 				std::string{},
-				Xapian::Document{},
+				engine::Document{},
 				MsgPack{
 					{ RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
 					{ RESPONSE_TYPE, http_status_str(http_errors.error_code) },
@@ -2197,7 +2198,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 				indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
 				ready_queues.reserve(indexers);
 				for (int i = 0; i < indexers; ++i) {
-					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
+					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, engine::Document, MsgPack, size_t>>>());
 					manager->doc_indexer_pool->enqueue(shared_from_this());
 				}
 			}
@@ -2245,7 +2246,7 @@ DocIndexer::operator()()
 
 		bool ready_ = false;
 		while (!finished.load(std::memory_order_acquire)) {
-			std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
+			std::tuple<std::string, engine::Document, MsgPack, size_t> prepared;
 			auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
 			if unlikely(!ready_) {
@@ -2354,7 +2355,7 @@ DocIndexer::wait(double timeout)
 				indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
 				ready_queues.reserve(indexers);
 				for (int i = 0; i < indexers; ++i) {
-					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
+					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, engine::Document, MsgPack, size_t>>>());
 					manager->doc_indexer_pool->enqueue(shared_from_this());
 				}
 			}
@@ -2379,7 +2380,7 @@ DocIndexer::wait(double timeout)
 	// Flag as ready and wake up indexers which could have missed the "ready" check.
 	ready.store(true, std::memory_order_release);
 	for (auto& ready_queue : ready_queues) {
-		ready_queue->enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
+		ready_queue->enqueue(std::make_tuple(std::string{}, engine::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
 	}
 
 	std::mutex cond_mtx;
@@ -2420,7 +2421,7 @@ DocIndexer::finish()
 
 	finished.store(true, std::memory_order_release);
 	for (auto& ready_queue : ready_queues) {
-		ready_queue->enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
+		ready_queue->enqueue(std::make_tuple(std::string{}, engine::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
 	}
 }
 

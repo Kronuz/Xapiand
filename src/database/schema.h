@@ -38,6 +38,7 @@
 
 #include "analysis.hh"                            // for analysis::stem_strategy, analysis::stop_strategy
 #include "database/utils.h"
+#include "engine/document.h"                       // for engine::Document
 #include "enum.h"                                 // for ENUM_CLASS
 #include "htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
@@ -375,7 +376,7 @@ struct required_spc_t {
 
 	std::array<FieldType, SPC_TOTAL_TYPES> sep_types; // foreign/object/array/index_type
 	prefix_t prefix;
-	Xapian::valueno slot;
+	engine::valueno slot;
 	flags_t flags;
 
 	// For GEO, DATE, DATETIME, TIME, TIMEDELTA and Numeric types.
@@ -397,7 +398,7 @@ struct required_spc_t {
 	// Methods:
 
 	required_spc_t();
-	required_spc_t(Xapian::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix);
+	required_spc_t(engine::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix);
 	required_spc_t(const required_spc_t& o);
 	required_spc_t(required_spc_t&& o) noexcept;
 
@@ -473,13 +474,13 @@ struct required_spc_t {
 struct index_spc_t {
 	FieldType type;
 	std::string prefix;
-	Xapian::valueno slot;
+	engine::valueno slot;
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 
 	template <typename S=std::string, typename Uint64Vector=std::vector<uint64_t>, typename StringVector=std::vector<std::string>, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value &&
 		std::is_same<std::vector<uint64_t>, std::decay_t<Uint64Vector>>::value && std::is_same<std::vector<std::string>, std::decay_t<StringVector>>::value>>
-	explicit index_spc_t(FieldType type, S&& prefix = S{}, Xapian::valueno slot = Xapian::BAD_VALUENO, Uint64Vector&& accuracy = Uint64Vector(), StringVector&& acc_prefix = StringVector())
+	explicit index_spc_t(FieldType type, S&& prefix = S{}, engine::valueno slot = engine::BAD_VALUENO, Uint64Vector&& accuracy = Uint64Vector(), StringVector&& acc_prefix = StringVector())
 		: type(type),
 		  prefix(std::forward<S>(prefix)),
 		  slot(slot),
@@ -494,8 +495,8 @@ struct index_spc_t {
 struct specification_t : required_spc_t {
 	// Reserved values.
 	prefix_t local_prefix;
-	std::vector<Xapian::termpos> position;
-	std::vector<Xapian::termcount> weight;
+	std::vector<engine::termpos> position;
+	std::vector<engine::termcount> weight;
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
 
@@ -533,7 +534,7 @@ struct specification_t : required_spc_t {
 	// Methods:
 
 	specification_t();
-	specification_t(Xapian::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
+	specification_t(engine::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
 	specification_t(const specification_t& o);
 	specification_t(specification_t&& o) noexcept;
 
@@ -555,7 +556,7 @@ extern specification_t default_spc;
 extern const std::string NAMESPACE_PREFIX_ID_FIELD_NAME;
 
 
-using dispatch_index = void (*)(Xapian::Document&, std::string&&, const specification_t&, size_t);
+using dispatch_index = void (*)(engine::Document&, std::string&&, const specification_t&, size_t);
 
 
 class DatabaseHandler;
@@ -580,7 +581,7 @@ class Schema {
 	std::unique_ptr<MsgPack> mut_schema;
 	std::string origin;
 
-	std::unordered_map<Xapian::valueno, std::set<std::string>> map_values;
+	std::unordered_map<engine::valueno, std::set<std::string>> map_values;
 	specification_t specification;
 
 	/*
@@ -651,14 +652,14 @@ class Schema {
 
 	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack* object = nullptr, Fields* fields = nullptr);
 
-	void index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
-	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
-	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
+	void index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, engine::Document& doc, const std::string& name);
+	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, engine::Document& doc, const std::string& name);
+	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, engine::Document& doc, const std::string& name);
 
-	void index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields);
-	void index_inner_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object);
+	void index_fields(const MsgPack*& properties, engine::Document& doc, MsgPack*& data, const Fields& fields);
+	void index_inner_object(const MsgPack*& properties, engine::Document& doc, MsgPack*& data, const MsgPack& object);
 
-	void index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos = 0);
+	void index_item_value(engine::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos = 0);
 
 	/*
 	 * Main functions to update objects and arrays
@@ -729,17 +730,17 @@ class Schema {
 	/*
 	 * Function to index paths namespace in doc.
 	 */
-	void index_partial_paths(Xapian::Document& doc);
+	void index_partial_paths(engine::Document& doc);
 
 	/*
 	 * Auxiliar functions for index fields in doc.
 	 */
 
-	void index_item(Xapian::Document& doc, const MsgPack& item, size_t pos);
+	void index_item(engine::Document& doc, const MsgPack& item, size_t pos);
 	void store_item(const MsgPack& value, MsgPack& data);
 
 
-	static void index_term(Xapian::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos);
+	static void index_term(engine::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos);
 	static void merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> ranges, std::vector<Cartesian> centroids);
 
 	/*
@@ -1012,7 +1013,7 @@ public:
 	/*
 	 * Function to index object in doc.
 	 */
-	std::tuple<std::string, Xapian::Document, MsgPack> index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq = 0);
+	std::tuple<std::string, engine::Document, MsgPack> index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq = 0);
 
 	/*
 	 * Function to update the schema according to obj_schema.

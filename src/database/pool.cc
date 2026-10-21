@@ -26,6 +26,7 @@
 #include <cassert>                // for assert
 
 #include "database/flags.h"       // for readable_flags
+#include "engine/xapian/errors.h" // for engine::xapian::NotAvailable, Opening
 #include "database/shard.h"       // for Shard
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
@@ -159,7 +160,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			throw Xapian::DatabaseNotAvailableError("Shard is not available");
+			throw engine::xapian::NotAvailable("Shard is not available");
 		}
 		if (!is_locked()) {
 			if (!writable) {
@@ -189,7 +190,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					throw Xapian::DatabaseNotAvailableError("Shard is not available");
+					throw engine::xapian::NotAvailable("Shard is not available");
 				}
 			} else {
 				while (!writable_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -199,7 +200,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				throw Xapian::DatabaseNotAvailableError("Shard is not available");
+				throw engine::xapian::NotAvailable("Shard is not available");
 			}
 		}
 	} while (true);
@@ -216,7 +217,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			throw Xapian::DatabaseNotAvailableError("Shard is not available");
+			throw engine::xapian::NotAvailable("Shard is not available");
 		}
 		if (!is_locked()) {
 			if (readables_available > 0) {
@@ -293,7 +294,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					throw Xapian::DatabaseNotAvailableError("Shard is not available");
+					throw engine::xapian::NotAvailable("Shard is not available");
 				}
 			} else {
 				while (!readables_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -303,7 +304,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				throw Xapian::DatabaseNotAvailableError("Shard is not available");
+				throw engine::xapian::NotAvailable("Shard is not available");
 			}
 		}
 	} while (true);
@@ -826,12 +827,12 @@ DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
 	if (timeout > 0.0) {
 		auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
 		if (!shard->endpoint.lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
-			throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock shard");
+			throw engine::xapian::NotAvailable("Cannot grant exclusive lock shard");
 		}
 	} else {
 		while (!shard->endpoint.lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
 			if (shard->endpoint.is_finished()) {
-				throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock shard");
+				throw engine::xapian::NotAvailable("Cannot grant exclusive lock shard");
 			}
 		}
 	}
@@ -943,18 +944,18 @@ DatabasePool::spawn(const Endpoint& endpoint)
 	if (!endpoint.is_local()) {
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
-			throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
+			throw engine::xapian::NotAvailable("Endpoint node is invalid");
 		}
 		if (!node->is_active()) {
-			throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
+			throw engine::xapian::NotAvailable("Endpoint node is inactive");
 		}
 		auto port = node->remote_port;
 		if (port == 0) {
-			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
+			throw engine::xapian::NotAvailable("Endpoint node without a valid port");
 		}
 		auto& host = node->host();
 		if (host.empty()) {
-			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
 		}
 	}
 
@@ -1020,7 +1021,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 
 	if (endpoints.empty()) {
 		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
-		throw Xapian::DatabaseOpeningError("Cannot checkout empty database");
+		throw engine::xapian::Opening("Cannot checkout empty database");
 	}
 
 	std::vector<std::shared_ptr<Shard>> shards;
