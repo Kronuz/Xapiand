@@ -35,6 +35,7 @@
 #include "math.hh"                          // for modulus
 #include "reversed.hh"                            // for reversed
 #include "snowball.hh"                           // for snowball::stemmer
+#include "snowball_stem.h"                       // for makeStem
 #include "stopper.h"                              // for getStopWords, getStopper
 #include "utype.hh"                               // for toUType
 
@@ -540,7 +541,7 @@ text_word_breaks(Xapian::Document& doc,
 		term_generator.set_stopper_strategy(xapian_stop_strategy(stop_strategy));
 	}
 	if (!stem_language.empty()) {
-		term_generator.set_stemmer(Xapian::Stem(stem_language));
+		term_generator.set_stemmer(makeStem(stem_language));
 		term_generator.set_stemming_strategy(xapian_stem_strategy(stem_strategy));
 	}
 	if (positions) {

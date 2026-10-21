@@ -46,6 +46,7 @@
 #include "reserved/types.h"                       // for RESERVED_POSITIVE,...
 #include "serialise.h"                            // for MsgPack, get_range_type...
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
+#include "snowball_stem.h"                       // for makeStem
 #include "stopper.h"                              // for getStopper
 #include "xapiand_strings.hh"                             // for strings::startswith
 
@@ -855,7 +856,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 						// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
 					}
 					if (!field_spc.stem_language.empty()) {
-						parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
+						parser.set_stemmer(makeStem(field_spc.stem_language));
 						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 					}
 			}
