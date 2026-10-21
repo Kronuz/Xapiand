@@ -20,11 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Builds need OpenSSL 3** by default, for the coming HTTPS support (`-DTLS=OFF` builds
   without it). The packages depend on it: `libssl3t64`/`libssl3` for the `.deb`,
   `openssl-libs` for the `.rpm`, `openssl@3` for Homebrew.
+- **Text is analyzed by the Kronuz `analysis` and `snowball` libraries** instead of Xapian's
+  term generator, with the same terms. The newer Snowball stemmers also drop the apostrophe
+  suffix of Danish, Italian, and Norwegian words (`it's` now stems to `it`); `cjk_words`
+  still uses Xapian's.
 - **Every library is pinned at its current release.** Each Kronuz library now pins its own
   dependencies, so Xapiand no longer pins the libraries its libraries fetch.
 
 ### Fixed
 
+- **German stop words now apply.** A duplicate entry in the German list made the stopper fail
+  to build, so the first German text write failed and later ones skipped stop words.
 - **Autocommits and WAL fsyncs requested during shutdown are no longer dropped.** When the
   committer or the fsync pool has already stopped (or cannot allocate), the commit or fsync
   runs right away on the calling thread.

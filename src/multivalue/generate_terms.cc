@@ -23,6 +23,7 @@
 #include "generate_terms.h"
 
 #include <set>                                    // for std::set
+#include <stdexcept>                              // for std::invalid_argument
 #include <unordered_set>                          // for std::unordered_set
 #include <unordered_map>                          // for std::unordered_map
 #include <vector>                                 // for std::vector
@@ -33,7 +34,8 @@
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "math.hh"                          // for modulus
 #include "reversed.hh"                            // for reversed
-#include "stopper.h"                              // for getStopper
+#include "snowball.hh"                           // for snowball::stemmer
+#include "stopper.h"                              // for getStopWords, getStopper
 #include "utype.hh"                               // for toUType
 
 // #undef L_DEBUG
@@ -492,40 +494,115 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 }
 
 
-void
-GenerateTerms::text(Xapian::Document& doc,
+#ifdef USE_ICU
+// Word-break segmentation (cjk_words) is Xapian's only; analysis has no equivalent.
+static Xapian::TermGenerator::stop_strategy
+xapian_stop_strategy(analysis::stop_strategy strategy)
+{
+	switch (strategy) {
+		case analysis::stop_strategy::none: return Xapian::TermGenerator::STOP_NONE;
+		case analysis::stop_strategy::all: return Xapian::TermGenerator::STOP_ALL;
+		case analysis::stop_strategy::stemmed: return Xapian::TermGenerator::STOP_STEMMED;
+	}
+	return Xapian::TermGenerator::STOP_STEMMED;
+}
+
+
+static Xapian::TermGenerator::stem_strategy
+xapian_stem_strategy(analysis::stem_strategy strategy)
+{
+	switch (strategy) {
+		case analysis::stem_strategy::none: return Xapian::TermGenerator::STEM_NONE;
+		case analysis::stem_strategy::some: return Xapian::TermGenerator::STEM_SOME;
+		case analysis::stem_strategy::all: return Xapian::TermGenerator::STEM_ALL;
+		case analysis::stem_strategy::all_z: return Xapian::TermGenerator::STEM_ALL_Z;
+	}
+	return Xapian::TermGenerator::STEM_SOME;
+}
+
+
+static void
+text_word_breaks(Xapian::Document& doc,
 	const std::string& prefix, const std::string& value,
-	bool positions, Xapian::termcount weight,
-	bool cjk_ngram, bool cjk_words,
+	bool positions, Xapian::termcount weight, bool cjk_ngram,
 	const std::string& language, const std::string& stem_language,
-	Xapian::TermGenerator::stop_strategy stop_strategy,
-	Xapian::TermGenerator::stem_strategy stem_strategy)
+	analysis::stop_strategy stop_strategy, analysis::stem_strategy stem_strategy)
 {
 	Xapian::TermGenerator term_generator;
-	Xapian::TermGenerator::flags flags = 0;
+	Xapian::TermGenerator::flags flags = Xapian::TermGenerator::FLAG_WORD_BREAKS;
 	if (cjk_ngram) {
 		flags |= Xapian::TermGenerator::FLAG_CJK_NGRAM;
 	}
-#ifdef USE_ICU
-	if (cjk_words) {
-		flags |= Xapian::TermGenerator::FLAG_WORD_BREAKS;
-	}
-#endif
 	term_generator.set_flags(flags);
 	term_generator.set_document(doc);
 	if (!language.empty()) {
 		term_generator.set_stopper(getStopper(language).get());
-		term_generator.set_stopper_strategy(stop_strategy);
+		term_generator.set_stopper_strategy(xapian_stop_strategy(stop_strategy));
 	}
 	if (!stem_language.empty()) {
 		term_generator.set_stemmer(Xapian::Stem(stem_language));
-		term_generator.set_stemming_strategy(stem_strategy);
+		term_generator.set_stemming_strategy(xapian_stem_strategy(stem_strategy));
 	}
 	if (positions) {
 		term_generator.index_text(value, weight, prefix);
 	} else {
 		term_generator.index_text_without_positions(value, weight, prefix);
 	}
+}
+#endif
+
+
+// One stemmer per language and thread: a snowball::stemmer is not thread-safe.
+static snowball::stemmer&
+getStemmer(const std::string& stem_language)
+{
+	thread_local std::unordered_map<std::string, snowball::stemmer> stemmers;
+	auto it = stemmers.find(stem_language);
+	if (it == stemmers.end()) {
+		try {
+			it = stemmers.emplace(stem_language, snowball::stemmer(stem_language)).first;
+		} catch (const std::invalid_argument&) {
+			throw Xapian::InvalidArgumentError("Language code " + stem_language + " unknown");
+		}
+	}
+	return it->second;
+}
+
+
+void
+GenerateTerms::text(Xapian::Document& doc,
+	const std::string& prefix, const std::string& value,
+	bool positions, Xapian::termcount weight,
+	bool cjk_ngram, bool cjk_words,
+	const std::string& language, const std::string& stem_language,
+	analysis::stop_strategy stop_strategy,
+	analysis::stem_strategy stem_strategy)
+{
+#ifdef USE_ICU
+	if (cjk_words) {
+		text_word_breaks(doc, prefix, value, positions, weight, cjk_ngram, language, stem_language, stop_strategy, stem_strategy);
+		return;
+	}
+#else
+	static_cast<void>(cjk_words);
+#endif
+	analysis::term_generator term_generator;
+	term_generator.cjk_ngram = cjk_ngram;
+	if (!language.empty()) {
+		term_generator.stop_words = getStopWords(language);
+		term_generator.stop = stop_strategy;
+	}
+	if (!stem_language.empty()) {
+		term_generator.stemmer = &getStemmer(stem_language);
+		term_generator.stem = stem_strategy;
+	}
+	term_generator.index_text(value, [&doc](std::string_view term, std::uint32_t wdf, std::uint32_t pos) {
+		if (pos != 0) {
+			doc.add_posting(std::string(term), pos, wdf);
+		} else {
+			doc.add_term(std::string(term), wdf);
+		}
+	}, {.wdf_inc = weight, .prefix = prefix, .positions = positions});
 }
 
 

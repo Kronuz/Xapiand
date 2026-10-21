@@ -29,6 +29,7 @@
 #include <type_traits>                            // for decay_t, enable_if_t, is_integral
 #include <vector>                                 // for vector, allocator
 
+#include "analysis.hh"                            // for analysis::stop_strategy, analysis::stem_strategy
 #include "database/utils.h"                       // for prefixed
 #include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
 #include "serialise.h"                            // for serialise
@@ -81,8 +82,8 @@ namespace GenerateTerms {
 		bool positions, Xapian::termcount weight,
 		bool cjk_ngram, bool cjk_words,
 		const std::string& language, const std::string& stem_language,
-		Xapian::TermGenerator::stop_strategy stop_strategy,
-		Xapian::TermGenerator::stem_strategy stem_strategy);
+		analysis::stop_strategy stop_strategy,
+		analysis::stem_strategy stem_strategy);
 
 	/*
 	 * Generate terms for numerical ranges.

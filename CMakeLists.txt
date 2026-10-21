@@ -715,6 +715,16 @@ include_directories(
 	"${iterators_SOURCE_DIR}"
 )
 
+# analysis: Xapian-exact text analysis (words, case folding, Z-prefixed stems, stop words,
+# CJK n-grams, wdf, positions) behind GenerateTerms::text, with the snowball stemmers and
+# the unicode tables it builds on. Header-only analysis; snowball is a small static C
+# library. Pinned on the commits analysis itself pins. Xapian's own snowball compiler
+# target is named snowball_compiler so the library can own the name snowball.
+FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG c93026cedf9124421886d449528dd6edb16e5ed3)
+FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 570a0b78fc2967f9ec6a0ec005547d20fcf32b61)
+FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG a0825b1a376754d4718ac6dd89b7b31c6dd96738)
+FetchContent_MakeAvailable(unicode snowball analysis)
+
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
 # (the extracted library correctly no longer pulls it). Rather than an absolute-path
 # macro, Xapiand keeps a thin wrapper named src/xapiand_strings.hh (not strings.hh, so
@@ -1119,8 +1129,8 @@ file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/languages/algorithms")
 file(GLOB SNOWBALL_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/xapian/languages/compiler/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/languages/compiler/*.h*"
 )
-add_executable(snowball EXCLUDE_FROM_ALL ${SNOWBALL_SRC_LIST})
-set_target_properties(snowball PROPERTIES COMPILE_FLAGS "-DDISABLE_CSHARP -DDISABLE_GO -DDISABLE_JAVA -DDISABLE_JS -DDISABLE_PASCAL -DDISABLE_PYTHON -DDISABLE_RUST")
+add_executable(snowball_compiler EXCLUDE_FROM_ALL ${SNOWBALL_SRC_LIST})
+set_target_properties(snowball_compiler PROPERTIES OUTPUT_NAME snowball COMPILE_FLAGS "-DDISABLE_CSHARP -DDISABLE_GO -DDISABLE_JAVA -DDISABLE_JS -DDISABLE_PASCAL -DDISABLE_PYTHON -DDISABLE_RUST")
 
 file(GLOB LANGUAGES_SBL_LIST CONFIGURE_DEPENDS
 	"${PROJECT_SOURCE_DIR}/src/xapian/languages/algorithms/*.sbl"
@@ -1155,12 +1165,12 @@ foreach (language_sbl ${LANGUAGES_SBL_LIST})
 	# to the include path above.
 	add_custom_command(
 		OUTPUT "${language}.cc" "${language}.h"
-		COMMAND snowball ${language_sbl} -o ${language} -c++ -u
+		COMMAND snowball_compiler ${language_sbl} -o ${language} -c++ -u
 			-p "Xapian::StemImplementation"
 			-P "Xapian::Internal::Snowball"
 			-cheader "config.h"
 			-hheader "xapian/stem.h"
-		DEPENDS snowball ${language_sbl}
+		DEPENDS snowball_compiler ${language_sbl}
 	)
 	list(APPEND LANGUAGES_SRC_LIST "${language}.cc" "${language}.h")
 	# collate-sbl reads each algorithm's "// Alias:" line via "$srcdir/$_", so it
@@ -1466,6 +1476,7 @@ if (TLS)
 	target_compile_definitions(XAPIAND_OBJ PUBLIC XAPIAND_TLS=1)
 endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
+	analysis::analysis
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
 	${ZSTD_LIBRARY}

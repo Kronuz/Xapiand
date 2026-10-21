@@ -36,6 +36,7 @@
 #include <utility>                                // for std::pair
 #include <vector>                                 // for std::vector
 
+#include "analysis.hh"                            // for analysis::stem_strategy, analysis::stop_strategy
 #include "database/utils.h"
 #include "enum.h"                                 // for ENUM_CLASS
 #include "htm.h"                       // for range_t, GeoSpatial
@@ -221,30 +222,30 @@ ENUM_CLASS(FieldType, uint8_t,
 )
 
 
-inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
+inline constexpr analysis::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
 	switch (stop_strategy) {
 		case StopStrategy::stop_none:
-			return Xapian::TermGenerator::STOP_NONE;
+			return analysis::stop_strategy::none;
 		case StopStrategy::stop_all:
-			return Xapian::TermGenerator::STOP_ALL;
+			return analysis::stop_strategy::all;
 		case StopStrategy::stop_stemmed:
-			return Xapian::TermGenerator::STOP_STEMMED;
+			return analysis::stop_strategy::stemmed;
 		default:
 			THROW(Error, "Schema is corrupt: invalid stop strategy");
 	}
 }
 
 
-inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) {
+inline constexpr analysis::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::stem_none:
-			return Xapian::TermGenerator::STEM_NONE;
+			return analysis::stem_strategy::none;
 		case StemStrategy::stem_some:
-			return Xapian::TermGenerator::STEM_SOME;
+			return analysis::stem_strategy::some;
 		case StemStrategy::stem_all:
-			return Xapian::TermGenerator::STEM_ALL;
+			return analysis::stem_strategy::all;
 		case StemStrategy::stem_all_z:
-			return Xapian::TermGenerator::STEM_ALL_Z;
+			return analysis::stem_strategy::all_z;
 		default:
 			THROW(Error, "Schema is corrupt: invalid stem strategy");
 	}
