@@ -42,6 +42,9 @@ still exists for reads; E2E and WAL recovery unchanged.
   (generated id, node port, build revision, metrics).
 - Text analysis differential (`terms_diff.py`, `vocab_diff.py`): output byte-identical to the X1 final.
 - `wal_recovery_check.sh`: PASS (50/50 recovered). `cluster_check.sh 2` and `3`: GREEN.
+- ASan+UBSan build (`-fsanitize=address,undefined`): unit test 840/840, `wal_recovery_check` PASS, E2E 576/576
+  GREEN and `e2e_diff` GREEN. The node log has 6 UBSan lines, all in third-party code (`lz4.c` zero offset
+  to null, `rapidjson` stack.h null offset); none in `src/engine`, schema, shard, WAL or handler.
 - Mutants, each caught: empty value kept (231 of 840 checks fail), first-position wdf (326), word-break
   merge drops positions (1), classify order (2), version value dropped in `to_xapian` (E2E: 17
   assertions regress, NOT GREEN).
