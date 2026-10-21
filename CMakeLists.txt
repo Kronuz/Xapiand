@@ -725,6 +725,13 @@ FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.
 FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG a0825b1a376754d4718ac6dd89b7b31c6dd96738)
 FetchContent_MakeAvailable(unicode snowball analysis)
 
+# task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
+# that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only; the Asio binding
+# is not used here.
+set(TASK_ASIO OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG aa447e726c617c5c10a569409ecf8e024b88750f)
+FetchContent_MakeAvailable(task)
+
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
 # (the extracted library correctly no longer pulls it). Rather than an absolute-path
 # macro, Xapiand keeps a thin wrapper named src/xapiand_strings.hh (not strings.hh, so
@@ -1479,6 +1486,7 @@ if (TLS)
 endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
+	task::task
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
 	${ZSTD_LIBRARY}
@@ -2137,7 +2145,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_shard)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"

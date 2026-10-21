@@ -46,9 +46,6 @@ Xapian::DocumentInfo to_xapian(const WriteResult& result);
 // The kind of failure the exception being handled reports. Call only inside a catch block.
 errc classify_current() noexcept;
 
-// The engine error for the exception being handled. Call only inside a catch block.
-Error translate_current();
-
 // A lazy view over a Xapian document.
 std::unique_ptr<DocView> make_view(Xapian::Document doc);
 

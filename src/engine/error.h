@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include <stdexcept>               // for std::runtime_error
 #include <string>                  // for std::string
+#include <utility>                 // for std::move
 
 namespace engine {
 
@@ -39,12 +39,13 @@ enum class errc {
 	doc_not_found,     // no such document
 	version_conflict,  // an expected document version did not match
 	corrupt,           // the stored data failed its integrity checks
+	database,          // any other failure of the shard itself: close it
 	invalid,           // the caller passed something the engine rejects
 	internal,          // anything else
 };
 
-constexpr const char* to_string(errc code) noexcept {
-	switch (code) {
+constexpr const char* to_string(errc kind) noexcept {
+	switch (kind) {
 		case errc::reopen: return "reopen";
 		case errc::opening: return "opening";
 		case errc::closed: return "closed";
@@ -55,18 +56,30 @@ constexpr const char* to_string(errc code) noexcept {
 		case errc::doc_not_found: return "doc_not_found";
 		case errc::version_conflict: return "version_conflict";
 		case errc::corrupt: return "corrupt";
+		case errc::database: return "database";
 		case errc::invalid: return "invalid";
 		case errc::internal: return "internal";
 	}
 	return "internal";
 }
 
-// Every failure an engine raises, whatever its implementation threw.
-class Error : public std::runtime_error {
+// Every failure an engine raises, whatever its implementation threw. It is deliberately not a
+// std::exception: it is a mixin that Xapiand's own exception types also derive from (alongside
+// ClientError, which is one), and a second std::exception base would make a catch of
+// std::exception ambiguous and silently miss them.
+class Error {
 public:
-	Error(errc code_, const std::string& message) : std::runtime_error(message), code(code_) { }
+	Error(errc kind_, std::string reason) : kind(kind_), reason_(std::move(reason)) { }
+	virtual ~Error() = default;
 
-	errc code;
+	const std::string& reason() const noexcept {
+		return reason_;
+	}
+
+	errc kind;
+
+private:
+	std::string reason_;
 };
 
 }  // namespace engine

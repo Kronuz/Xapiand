@@ -22,14 +22,15 @@
 
 #pragma once
 
+#include "engine/error.h"                                // for engine::Error, engine::errc
 #include "xapiand_exception.h"                            // for ClientError
 #include "xapian.h"                               // for DocNotFoundError, InternalError, InvalidArgument, ...
 
 
-class DocVersionConflictError : public ClientError, public Xapian::DocVersionConflictError {
+class DocVersionConflictError : public ClientError, public Xapian::DocVersionConflictError, public engine::Error {
 public:
 	template<typename... Args>
-	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocVersionConflictError(message) { }
+	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocVersionConflictError(message), engine::Error(engine::errc::version_conflict, message) { }
 };
 
 
@@ -47,31 +48,31 @@ public:
 };
 
 
-class NetworkError : public ClientError, public Xapian::NetworkError {
+class NetworkError : public ClientError, public Xapian::NetworkError, public engine::Error {
 public:
 	template<typename... Args>
-	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(message) { }
+	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(message), engine::Error(engine::errc::network, message) { }
 };
 
 
-class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError {
+class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError, public engine::Error {
 public:
 	template<typename... Args>
-	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message) { }
+	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message), engine::Error(engine::errc::invalid, message) { }
 };
 
 
-class InvalidOperationError : public ClientError, public Xapian::InvalidOperationError {
+class InvalidOperationError : public ClientError, public Xapian::InvalidOperationError, public engine::Error {
 public:
 	template<typename... Args>
-	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError(message) { }
+	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError(message), engine::Error(engine::errc::invalid, message) { }
 };
 
 
-class QueryParserError : public ClientError, public Xapian::QueryParserError {
+class QueryParserError : public ClientError, public Xapian::QueryParserError, public engine::Error {
 public:
 	template<typename... Args>
-	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError(message) { }
+	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError(message), engine::Error(engine::errc::invalid, message) { }
 };
 
 

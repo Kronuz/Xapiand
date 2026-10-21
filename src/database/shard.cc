@@ -24,6 +24,7 @@
 
 #include <algorithm>              // for std::move
 #include <cassert>                // for assert
+#include <optional>                // for std::optional
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
 #include "database/data.h"        // for Locator
@@ -34,6 +35,7 @@
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
 #include "engine/xapian/convert.h"  // for engine::xapian::to_xapian, from_xapian
+#include "engine/xapian/errors.h"   // for engine::xapian::NotAvailable, Closed, Opening, DatabaseFailure
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
 #include "length.h"               // for serialise_string
@@ -76,11 +78,94 @@
 
 #define DATA_STORAGE_PATH "docdata."
 
-#ifdef XAPIAND_DATABASE_WAL
-#define XAPIAN_DB_SYNC_MODE  Xapian::DB_NO_SYNC
-#else
-#define XAPIAN_DB_SYNC_MODE  0
-#endif
+
+// The numbering of a document whose id is new: which shard it lands in, out of how many.
+struct NumericId {
+	size_t shard_num;
+	size_t n_shards;
+};
+
+
+// The version a write requires, as its document asks for it in the version slot.
+static inline std::optional<engine::rev>
+expected_version(const engine::Document& doc)
+{
+	auto serialised = doc.get_value(DB_SLOT_VERSION);
+	if (serialised.empty()) {
+		return std::nullopt;
+	}
+	return static_cast<engine::rev>(sortable_unserialise(serialised));
+}
+
+
+// Completes a document the engine is about to write: embeds its numeric id (when it is new)
+// and its new version in the stored data, and clears the shards slot.
+static void
+finalise_write(engine::Document& doc, engine::WriteResult& info, const std::optional<NumericId>& numeric)
+{
+	bool data_modified = false;
+	Data data(doc.get_data());
+	auto data_obj = data.get_obj();
+	if (numeric) {
+		auto did = static_cast<double>((info.did - 1) * numeric->n_shards + numeric->shard_num + 1);  // unshard number and shard docid to docid in multi-db
+		auto did_serialised = sortable_serialise(did);
+		info.term = "QN" + did_serialised;
+		doc.add_boolean_term(info.term);
+		doc.add_value(DB_SLOT_ID, did_serialised);
+		// Set id inside serialized object:
+		auto it = data_obj.find(ID_FIELD_NAME);
+		if (it != data_obj.end()) {
+			auto& value = it.value();
+			switch (value.get_type()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+					value = static_cast<uint64_t>(did);
+					break;
+				case MsgPack::Type::NEGATIVE_INTEGER:
+					value = static_cast<int64_t>(did);
+					break;
+				case MsgPack::Type::FLOAT:
+					value = static_cast<double>(did);
+					break;
+				default:
+					break;
+			}
+			data_modified = true;
+		}
+	}
+	auto it = data_obj.find(VERSION_FIELD_NAME);
+	if (it != data_obj.end()) {
+		auto& value = it.value();
+		value = info.version;
+		data_modified = true;
+	}
+	doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
+	if (data_modified) {
+		data.set_obj(data_obj);
+		data.flush();
+		doc.set_data(data.serialise());
+	}
+}
+
+
+// The shard could not be opened (yet), or does not exist, or cannot serve now.
+static inline bool
+is_opening_failure(engine::errc kind)
+{
+	return kind == engine::errc::opening || kind == engine::errc::not_found || kind == engine::errc::not_available;
+}
+
+
+// A failure a reopen may recover from by trying again.
+static inline bool
+is_stale_failure(engine::errc kind)
+{
+	return is_opening_failure(kind) ||
+		kind == engine::errc::reopen ||
+		kind == engine::errc::corrupt ||
+		kind == engine::errc::timeout ||
+		kind == engine::errc::network ||
+		kind == engine::errc::closed;
+}
 
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
 
@@ -305,71 +390,63 @@ Shard::reopen_writable()
 	bool created = false;
 
 	if (is_closed()) {
-		throw Xapian::DatabaseClosedError("Database has been closed");
+		throw engine::xapian::Closed("Database has been closed");
 	}
 
 	reset();
 
-	auto new_database = std::make_unique<Xapian::WritableDatabase>();
+	std::unique_ptr<engine::xapian::Shard> new_database;
 
 	assert(!endpoint.empty());
 	bool local = false;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
 		if (is_replica()) {
-			throw Xapian::DatabaseNotAvailableError("Endpoint must be local for replicas");
+			throw engine::xapian::NotAvailable("Endpoint must be local for replicas");
 		}
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
 			L_DEBUG("Writable endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
+			throw engine::xapian::NotAvailable("Endpoint node is invalid");
 		}
 		if (!node->is_active()) {
 			L_DEBUG("Writable endpoint {} ({}) is inactive.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
+			throw engine::xapian::NotAvailable("Endpoint node is inactive");
 		}
 		auto port = node->remote_port;
 		if (port == 0) {
 			L_DEBUG("Writable endpoint {} ({}) node without a valid port.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
+			throw engine::xapian::NotAvailable("Endpoint node without a valid port");
 		}
 		auto& host = node->host();
 		if (host.empty()) {
 			L_DEBUG("Writable endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
 		}
-		*new_database = Xapian::Remote::open_writable(host, port, 10000, 10000, flags, endpoint.path);
+		new_database = task::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, true));
 		// Writable remote databases do not have a local database fallback.
 	}
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
 		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		try {
-			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
-		} catch (const Xapian::DatabaseNotFoundError&) {
-			if (!has_db_create_or_open(flags)) {
-				throw;
-			}
-			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
-			created = true;
-		}
+		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
+		auto opened = task::sync_wait(engine::xapian::open_local(endpoint.path, true, has_db_create_or_open(flags)));
+		new_database = std::move(opened.shard);
+		created = opened.created;
 		local = true;
 	}
 
 	_local.store(local, std::memory_order_relaxed);
 	if (local) {
-		reopen_revision = new_database->get_revision();
+		reopen_revision = new_database->revision();
 		endpoint.set_revision(reopen_revision);
 	}
 
 	if (is_transactional()) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(new_database.get());
-		wdb->begin_transaction(transactional() == Transaction::flushed);
+		task::sync_wait(new_database->begin_transaction(transactional() == Transaction::flushed));
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -382,7 +459,7 @@ Shard::reopen_writable()
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	database = std::move(new_database);
+	engine_shard = std::move(new_database);
 	reopen_time = std::chrono::steady_clock::now();
 
 #ifdef XAPIAND_DATABASE_WAL
@@ -418,42 +495,42 @@ Shard::reopen_readable()
 	bool created = false;
 
 	if (is_closed()) {
-		throw Xapian::DatabaseClosedError("Database has been closed");
+		throw engine::xapian::Closed("Database has been closed");
 	}
 
 	reset();
 
-	auto new_database = std::make_unique<Xapian::Database>();
+	std::unique_ptr<engine::xapian::Shard> new_database;
 
 	assert(!endpoint.empty());
 	bool local = false;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
 		if (is_replica()) {
-			throw Xapian::DatabaseNotAvailableError("Endpoint must be local for replicas");
+			throw engine::xapian::NotAvailable("Endpoint must be local for replicas");
 		}
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
 			L_DEBUG("Endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
+			throw engine::xapian::NotAvailable("Endpoint node is invalid");
 		}
 		if (!node->is_active()) {
 			L_DEBUG("Endpoint {} ({}) is inactive.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
+			throw engine::xapian::NotAvailable("Endpoint node is inactive");
 		}
 		auto port = node->remote_port;
 		if (port == 0) {
 			L_DEBUG("Endpoint {} ({}) node without a valid port.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
+			throw engine::xapian::NotAvailable("Endpoint node without a valid port");
 		}
 		auto& host = node->host();
 		if (host.empty()) {
 			L_DEBUG("Endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
-			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
 		}
-		*new_database = Xapian::Remote::open(host, port, 10000, 10000, flags, endpoint.path);
+		new_database = task::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, false));
 		// Check for a local database fallback:
 		auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
 		if (index_settings.shards.size() == 1) {
@@ -468,20 +545,21 @@ Shard::reopen_readable()
 			}
 			if (fallback) {
 				try {
-					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-					Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-					if (tmp.get_uuid() == new_database->get_uuid()) {
+					RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
+					auto same = task::sync_wait(engine::xapian::open_local_if_same(*new_database, endpoint.path));
+					if (same) {
 						L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
 						// Handle remote endpoint and figure out if the endpoint is a local database
-						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-						*new_database = tmp;
+						RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
+						new_database = std::move(same);
 						local = true;
 					} else {
 						_incomplete.store(true, std::memory_order_relaxed);
 					}
-				} catch (const Xapian::DatabaseNotFoundError&) {
-					_incomplete.store(true, std::memory_order_relaxed);
-				} catch (const Xapian::DatabaseOpeningError&) {
+				} catch (const engine::Error& error) {
+					if (!is_opening_failure(error.kind)) {
+						throw;
+					}
 					_incomplete.store(true, std::memory_order_relaxed);
 				}
 				if (has_db_trigger_replication(flags)) {
@@ -499,26 +577,16 @@ Shard::reopen_readable()
 #endif  // XAPIAND_CLUSTERING
 	{
 		L_DATABASE("Opening local shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		try {
-			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-		} catch (const Xapian::DatabaseNotFoundError&) {
-			if (!has_db_create_or_open(flags))  {
-				throw;
-			}
-			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE);
-			created = true;
-
-			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-		}
+		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
+		auto opened = task::sync_wait(engine::xapian::open_local(endpoint.path, false, has_db_create_or_open(flags)));
+		new_database = std::move(opened.shard);
+		created = opened.created;
 		local = true;
 	}
 
 	_local.store(local, std::memory_order_relaxed);
 	if (local) {
-		reopen_revision = new_database->get_revision();
+		reopen_revision = new_database->revision();
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -530,12 +598,40 @@ Shard::reopen_readable()
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	database = std::move(new_database);
+	engine_shard = std::move(new_database);
 	reopen_time = std::chrono::steady_clock::now();
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
 
 	return created;
+}
+
+
+void
+Shard::retry_or_throw(const engine::Error& error, int t, bool commit_)
+{
+	// Called from a catch block: closes the shard as the failure demands, and rethrows it
+	// when it is final or not a failure of the shard.
+	switch (error.kind) {
+		case engine::errc::opening:
+		case engine::errc::not_found:
+		case engine::errc::not_available:
+		case engine::errc::timeout:
+		case engine::errc::network:
+			if (t == 0) { do_close(commit_); throw; }
+			return;
+		case engine::errc::closed:
+			do_close(commit_);
+			if (t == 0) { throw; }
+			return;
+		case engine::errc::reopen:
+		case engine::errc::corrupt:
+		case engine::errc::database:
+			do_close(commit_);
+			throw;
+		default:
+			throw;
+	}
 }
 
 
@@ -547,19 +643,17 @@ Shard::reopen()
 	L_DATABASE_WRAP_BEGIN("Shard::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::reopen:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	if (database) {
+	if (engine_shard) {
 		if (!is_incomplete()) {
 			// Try to reopen
 			for (int t = DB_RETRIES; t >= 0; --t) {
 				try {
-					bool ret = database->reopen();
+					bool ret = task::sync_wait(engine_shard->reopen());
 					return ret;
-				} catch (const Xapian::DatabaseModifiedError&) {
-				} catch (const Xapian::DatabaseCorruptError&) {
-				} catch (const Xapian::DatabaseOpeningError&) {
-				} catch (const Xapian::NetworkTimeoutError&) {
-				} catch (const Xapian::NetworkError&) {
-				} catch (const Xapian::DatabaseClosedError&) {
+				} catch (const engine::Error& error) {
+					if (!is_stale_failure(error.kind)) {
+						throw;
+					}
 				}
 			}
 		}
@@ -574,29 +668,35 @@ Shard::reopen()
 			} else {
 				reopen_readable();
 			}
-		} catch (const Xapian::DatabaseNotFoundError&) {
-			reset();
-			throw;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { reset(); throw; }
-		} catch (const Xapian::DatabaseCorruptError&) {
-			if (t == 0) { reset(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { reset(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { reset(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { reset(); throw; }
-		} catch (const Xapian::DatabaseError&) {
-			reset();
-			if (t == 0) { throw; }
+		} catch (const engine::Error& error) {
+			switch (error.kind) {
+				case engine::errc::not_found:
+					reset();
+					throw;
+				case engine::errc::reopen:
+				case engine::errc::corrupt:
+				case engine::errc::opening:
+				case engine::errc::not_available:
+				case engine::errc::timeout:
+				case engine::errc::network:
+					if (t == 0) { reset(); throw; }
+					break;
+				case engine::errc::closed:
+				case engine::errc::database:
+					reset();
+					if (t == 0) { throw; }
+					break;
+				default:
+					reset();
+					throw;
+			}
 		} catch (...) {
 			reset();
 			throw;
 		}
 	}
 
-	assert(database);
+	assert(engine_shard);
 	L_DATABASE("Reopening shard: {}", __repr__());
 	return true;
 }
@@ -608,14 +708,14 @@ Shard::db()
 	L_CALL("Shard::db()");
 
 	if (is_closed()) {
-		throw Xapian::DatabaseClosedError("Database has been closed");
+		throw engine::xapian::Closed("Database has been closed");
 	}
 
-	if (!database) {
+	if (!engine_shard) {
 		reopen();
 	}
 
-	return database.get();
+	return engine_shard->database();
 }
 
 
@@ -624,8 +724,8 @@ Shard::refs() const
 {
     L_CALL("Shard::refs()");
 
-    if (database) {
-        return database->refs();
+    if (engine_shard) {
+        return engine_shard->refs();
     }
     return 0;
 }
@@ -644,7 +744,7 @@ Shard::reset() noexcept
 	L_CALL("Shard::reset()");
 
 	try {
-		database.reset();
+		engine_shard.reset();
 	} catch(...) {}
 	reopen_revision = 0;
 	_local.store(false, std::memory_order_relaxed);
@@ -665,11 +765,11 @@ Shard::reset() noexcept
 void
 Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)
 {
-	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, transaction_ == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions, repr(to_string()), database ? "<database>" : "null", is_modified(), is_closed());
+	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, transaction_ == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions, repr(to_string()), engine_shard ? "<database>" : "null", is_modified(), is_closed());
 
 	if (
 		commit_ &&
-		database &&
+		engine_shard &&
 		!is_transactional() &&
 		!is_closed() &&
 		is_modified() &&
@@ -688,9 +788,9 @@ Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw
 		}
 	}
 
-	if (database) {
+	if (engine_shard) {
 		try {
-			database.reset();
+			engine_shard.reset();
 		} catch (...) {
 			if (throw_exceptions) {
 				throw;
@@ -737,7 +837,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 	L_CALL("Shard::autocommit({})", shard ? shard->__repr__() : "null");
 
 	if (
-		shard->database &&              // Autocommit only if there is a database
+		shard->engine_shard &&          // Autocommit only if there is a database
 		!shard->is_transactional() &&   // Autocommit only if there's no transaction active (like during replication)
 		!shard->is_closed() &&          // Autocommit only if database is not closed
 		shard->is_modified() &&         // Autocommit only modified databases
@@ -782,18 +882,19 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 		return false;
 	}
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::commit:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Committing shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
@@ -801,21 +902,15 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
-			auto prior_revision = wdb->get_revision();
+			auto prior_revision = wdb->revision();
 			auto transaction = transactional();
-			if (transaction == Transaction::flushed) {
-				wdb->commit_transaction();
-				wdb->begin_transaction(true);
-			} else if (transaction == Transaction::unflushed) {
-				wdb->commit_transaction();
-				wdb->commit();
-				wdb->begin_transaction(false);
-			} else {
-				wdb->commit();
-			}
+			task::sync_wait(wdb->commit(
+				transaction == Transaction::flushed ? engine::Transaction::flushed :
+				transaction == Transaction::unflushed ? engine::Transaction::unflushed :
+				engine::Transaction::none));
 			_modified.store(false, std::memory_order_relaxed);
 			if (local) {
-				auto current_revision = wdb->get_revision();
+				auto current_revision = wdb->revision();
 				if (prior_revision == current_revision) {
 					L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(endpoint.to_string()));
 					return false;
@@ -828,7 +923,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 					XapiandManager::manager(true)->wal_writer->write_commit(
 						is_synchronous_wal(),
 						endpoint.path,
@@ -846,21 +941,12 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(false); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(false); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(false); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close(false);
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close(false);
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t, false);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -876,10 +962,10 @@ Shard::begin_transaction(bool flushed)
 	assert(is_write_active());
 
 	if (!is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
-		wdb->begin_transaction(flushed);
+		db();
+		task::sync_wait(engine_shard->begin_transaction(flushed));
 		_transaction.store(flushed ? Transaction::flushed : Transaction::unflushed, std::memory_order_relaxed);
 	}
 }
@@ -894,10 +980,10 @@ Shard::commit_transaction()
 	assert(is_write_active());
 
 	if (is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
-		wdb->commit_transaction();
+		db();
+		task::sync_wait(engine_shard->commit_transaction());
 		_transaction.store(Transaction::none, std::memory_order_relaxed);
 	}
 }
@@ -912,83 +998,54 @@ Shard::cancel_transaction()
 	assert(is_write_active());
 
 	if (is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
-		wdb->cancel_transaction();
+		db();
+		task::sync_wait(engine_shard->cancel_transaction());
 		_transaction.store(Transaction::none);
 	}
 }
 
 
 void
-Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool version_)
+Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
 {
 	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
 
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::delete_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
-	Xapian::rev version = UNKNOWN_REVISION;  // TODO: Implement version check (version should have required version)
-
-	std::string ver;
-	if (version_) {
-		ver = version == UNKNOWN_REVISION ? std::string() : sortable_serialise(version);
-	}
+	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Deleting document {} in shard {} {{ try:{} }}", shard_did, repr(endpoint.to_string()), DB_RETRIES - t);
 
 		try {
 			auto local = is_local();
-			if (local) {
-				if (!ver.empty()) {
-					auto ver_prefix = "V" + serialise_length(shard_did);
-					auto ver_prefix_size = ver_prefix.size();
-					auto vit = wdb->allterms_begin(ver_prefix);
-					auto vit_e = wdb->allterms_end(ver_prefix);
-					if (vit == vit_e) {
-						if (ver != "\x80") {  // "\x80" = sortable_serialise(0)
-							throw Xapian::DocVersionConflictError("Version mismatch!");
-						}
-					}
-					for (; vit != vit_e; ++vit) {
-						std::string current_term = *vit;
-						std::string_view current_ver(current_term);
-						current_ver.remove_prefix(ver_prefix_size);
-						if (!current_ver.empty()) {
-							if (ver != current_ver) {
-								// Throw error about wrong version!
-								throw Xapian::DocVersionConflictError("Version mismatch!");
-							}
-							break;
-						}
-					}
-				}
-			}
-			wdb->delete_document(shard_did);
+			task::sync_wait(wdb->erase(shard_did, local, expected));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 					XapiandManager::manager(true)->wal_writer->write_delete_document(
 						is_synchronous_wal(),
 						endpoint.path,
@@ -999,21 +1056,12 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1024,33 +1072,29 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 
 
 void
-Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bool version_)
+Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[maybe_unused]] bool version_)
 {
 	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::delete_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 	Xapian::docid shard_did = 0;
-	Xapian::rev version = UNKNOWN_REVISION;  // TODO: Implement version check (version should have required version)
-
-	std::string ver;
-	if (version_) {
-		ver = version == UNKNOWN_REVISION ? std::string() : sortable_serialise(version);
-	}
+	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Deleting document {} in shard {{ try:{} }}", repr(term), repr(endpoint.to_string()), DB_RETRIES - t);
@@ -1058,51 +1102,16 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 
 		try {
 			auto local = is_local();
-			if (local) {
-				auto it = wdb->postlist_begin(term);
-				if (it == wdb->postlist_end(term)) {
-					throw Xapian::DocNotFoundError("Document not found");
-				} else {
-					shard_did = *it;
-					if (!ver.empty()) {
-						auto ver_prefix = "V" + serialise_length(shard_did);
-						auto ver_prefix_size = ver_prefix.size();
-						auto vit = wdb->allterms_begin(ver_prefix);
-						auto vit_e = wdb->allterms_end(ver_prefix);
-						if (vit == vit_e) {
-							if (ver != "\x80") {  // "\x80" = sortable_serialise(0)
-								throw Xapian::DocVersionConflictError("Version mismatch!");
-							}
-						}
-						for (; vit != vit_e; ++vit) {
-							std::string current_term = *vit;
-							std::string_view current_ver(current_term);
-							current_ver.remove_prefix(ver_prefix_size);
-							if (!current_ver.empty()) {
-								if (ver != current_ver) {
-									// Throw error about wrong version!
-									throw Xapian::DocVersionConflictError("Version mismatch!");
-								}
-								break;
-							}
-						}
-					}
-				}
-			}
-			if (shard_did) {
-				wdb->delete_document(shard_did);
-			} else {
-				wdb->delete_document(term);
-			}
+			shard_did = task::sync_wait(wdb->erase_by_key(term, local, expected));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 					XapiandManager::manager(true)->wal_writer->write_delete_document(
 						is_synchronous_wal(),
 						endpoint.path,
@@ -1113,21 +1122,12 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1233,18 +1233,19 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::add_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::add_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 #ifdef XAPIAND_DATA_STORAGE
 	auto pushed = storage_push_blobs(doc.get_data());
@@ -1255,59 +1256,30 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 	engine::WriteResult info;
 
-	std::string ver;
+	engine::WriteArgs args;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, {}); };
 	if (version_) {
-		ver = doc.get_value(DB_SLOT_VERSION);
+		args.expected_version = expected_version(doc);
 	} else {
 		doc.add_value(DB_SLOT_VERSION, "");
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Adding new document to shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
-		info.version = 0;
-		info.did = 0;
 
 		try {
-			auto local = is_local();
-			if (local) {
-				if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
-					throw Xapian::DocVersionConflictError("Version mismatch!");
-				}
-				bool data_modified = false;
-				Data data(doc.get_data());
-				auto data_obj = data.get_obj();
-				info.did = wdb->get_lastdocid() + 1;
-				auto ver_prefix = "V" + serialise_length(info.did);
-				ver = sortable_serialise(++info.version);
-				auto it = data_obj.find(VERSION_FIELD_NAME);
-				if (it != data_obj.end()) {
-					auto& value = it.value();
-					value = info.version;
-					data_modified = true;
-				}
-				doc.add_boolean_term(ver_prefix + ver);
-				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
-				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
-				if (data_modified) {
-					data.set_obj(data_obj);
-					data.flush();
-					doc.set_data(data.serialise());
-				}
-
-				assert(info.did);
-				wdb->replace_document(info.did, engine::xapian::to_xapian(doc));
-			} else {
-				info = engine::xapian::from_xapian(wdb->add_document(engine::xapian::to_xapian(doc)));
-			}
+			args.local = is_local();
+			const auto local = args.local;
+			info = task::sync_wait(wdb->add(doc, args));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 #ifdef XAPIAND_DATA_STORAGE
 					if (!pushed.second.empty()) {
 						doc.set_data(pushed.second);  // restore data with blobs
@@ -1324,21 +1296,12 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::add_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1379,18 +1342,19 @@ Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool co
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::replace_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 #ifdef XAPIAND_DATA_STORAGE
 	auto pushed = storage_push_blobs(doc.get_data());
@@ -1402,73 +1366,30 @@ Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool co
 	engine::WriteResult info;
 	info.did = shard_did;
 
-	std::string ver;
+	engine::WriteArgs args;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
 	if (version_) {
-		ver = doc.get_value(DB_SLOT_VERSION);
+		args.expected_version = expected_version(doc);
 	} else {
 		doc.add_value(DB_SLOT_VERSION, "");
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Replacing document {} in shard {} {{ try:{} }}", info.did, repr(endpoint.to_string()), DB_RETRIES - t);
-		info.version = 0;
 
 		try {
-			auto local = is_local();
-			if (local) {
-				bool data_modified = false;
-				Data data(doc.get_data());
-				auto data_obj = data.get_obj();
-				auto ver_prefix = "V" + serialise_length(info.did);
-				auto ver_prefix_size = ver_prefix.size();
-				auto vit = wdb->allterms_begin(ver_prefix);
-				auto vit_e = wdb->allterms_end(ver_prefix);
-				if (vit == vit_e) {
-					if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
-						throw Xapian::DocVersionConflictError("Version mismatch!");
-					}
-				}
-				for (; vit != vit_e; ++vit) {
-					std::string current_term = *vit;
-					std::string_view current_ver(current_term);
-					current_ver.remove_prefix(ver_prefix_size);
-					if (!current_ver.empty()) {
-						if (!ver.empty() && ver != current_ver) {
-							// Throw error about wrong version!
-							throw Xapian::DocVersionConflictError("Version mismatch!");
-						}
-						info.version = sortable_unserialise(current_ver);
-						break;
-					}
-				}
-				ver = sortable_serialise(++info.version);
-				auto it = data_obj.find(VERSION_FIELD_NAME);
-				if (it != data_obj.end()) {
-					auto& value = it.value();
-					value = info.version;
-					data_modified = true;
-				}
-				doc.add_boolean_term(ver_prefix + ver);
-				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
-				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
-				if (data_modified) {
-					data.set_obj(data_obj);
-					data.flush();
-					doc.set_data(data.serialise());
-				}
-				wdb->replace_document(info.did, engine::xapian::to_xapian(doc));
-			} else {
-				info = engine::xapian::from_xapian(wdb->replace_document(info.did, engine::xapian::to_xapian(doc)));
-			}
+			args.local = is_local();
+			const auto local = args.local;
+			info = task::sync_wait(wdb->replace(shard_did, doc, args));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 #ifdef XAPIAND_DATA_STORAGE
 					if (!pushed.second.empty()) {
 						doc.set_data(pushed.second);  // restore data with blobs
@@ -1485,21 +1406,12 @@ Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool co
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1519,18 +1431,19 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::replace_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 #ifdef XAPIAND_DATA_STORAGE
 	auto pushed = storage_push_blobs(doc.get_data());
@@ -1541,9 +1454,9 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 
 	engine::WriteResult info;
 
-	std::string ver;
+	engine::WriteArgs args;
 	if (version_) {
-		ver = doc.get_value(DB_SLOT_VERSION);
+		args.expected_version = expected_version(doc);
 	} else {
 		doc.add_value(DB_SLOT_VERSION, "");
 	}
@@ -1552,145 +1465,42 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Replacing document {} in shard {} {{ try:{} }}", repr(term), repr(endpoint.to_string()), DB_RETRIES - t);
-		info.version = 0;
-		info.did = 0;
+		info = engine::WriteResult{};
 		info.term = term;
 
 		try {
-			auto local = is_local();
-			if (local) {
-				bool data_modified = false;
-				Data data(doc.get_data());
-				auto data_obj = data.get_obj();
-				std::string ver_prefix;
+			args.local = is_local();
+			const auto local = args.local;
+			args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+			if (!local) {
+				info = task::sync_wait(wdb->replace_by_key(term, doc, args));
+			} else if (term[0] == 'Q' && term[1] == 'N') {
 				assert(term.size() > 2);
-				if (term[0] == 'Q' && term[1] == 'N') {
-					const char *p = n_shards_ser.data();
-					const char *p_end = p + n_shards_ser.size();
-					size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-					size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-					auto did_serialised = term.substr(2);
-					auto did = sortable_unserialise(did_serialised);
-					if (did == 0u) {
-						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
-							throw Xapian::DocVersionConflictError("Version mismatch!");
-						}
-						info.did = wdb->get_lastdocid() + 1;
-						did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-						ver_prefix = "V" + serialise_length(info.did);
-						did_serialised = sortable_serialise(did);
-						info.term = "QN" + did_serialised;
-						doc.add_boolean_term(info.term);
-						doc.add_value(DB_SLOT_ID, did_serialised);
-						// Set id inside serialized object:
-						auto it = data_obj.find(ID_FIELD_NAME);
-						if (it != data_obj.end()) {
-							auto& value = it.value();
-							switch (value.get_type()) {
-								case MsgPack::Type::POSITIVE_INTEGER:
-									value = static_cast<uint64_t>(did);
-									break;
-								case MsgPack::Type::NEGATIVE_INTEGER:
-									value = static_cast<int64_t>(did);
-									break;
-								case MsgPack::Type::FLOAT:
-									value = static_cast<double>(did);
-									break;
-								default:
-									break;
-							}
-							data_modified = true;
-						}
-					} else {
-						info.did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-						ver_prefix = "V" + serialise_length(info.did);
-						auto ver_prefix_size = ver_prefix.size();
-						auto vit = wdb->allterms_begin(ver_prefix);
-						auto vit_e = wdb->allterms_end(ver_prefix);
-						if (vit == vit_e) {
-							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
-								throw Xapian::DocVersionConflictError("Version mismatch!");
-							}
-						}
-						for (; vit != vit_e; ++vit) {
-							std::string current_term = *vit;
-							std::string_view current_ver(current_term);
-							current_ver.remove_prefix(ver_prefix_size);
-							if (!current_ver.empty()) {
-								if (!ver.empty() && ver != current_ver) {
-									// Throw error about wrong version!
-									throw Xapian::DocVersionConflictError("Version mismatch!");
-								}
-								info.version = sortable_unserialise(current_ver);
-								break;
-							}
-						}
-					}
+				const char *p = n_shards_ser.data();
+				const char *p_end = p + n_shards_ser.size();
+				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
+				auto did = sortable_unserialise(term.substr(2));
+				if (did == 0u) {
+					// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
+					args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
+					info = task::sync_wait(wdb->add(doc, args));
 				} else {
-					auto it = wdb->postlist_begin(term);
-					auto it_e = wdb->postlist_end(term);
-					if (it == it_e) {
-						info.did = wdb->get_lastdocid() + 1;
-						ver_prefix = "V" + serialise_length(info.did);
-						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
-							throw Xapian::DocVersionConflictError("Version mismatch!");
-						}
-					} else {
-						info.did = *it;
-						ver_prefix = "V" + serialise_length(info.did);
-						auto ver_prefix_size = ver_prefix.size();
-						auto vit = wdb->allterms_begin(ver_prefix);
-						auto vit_e = wdb->allterms_end(ver_prefix);
-						if (vit == vit_e) {
-							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
-								throw Xapian::DocVersionConflictError("Version mismatch!");
-							}
-						}
-						for (; vit != vit_e; ++vit) {
-							std::string current_term = *vit;
-							std::string_view current_ver(current_term);
-							current_ver.remove_prefix(ver_prefix_size);
-							if (!current_ver.empty()) {
-								if (!ver.empty() && ver != current_ver) {
-									// Throw error about wrong version!
-									throw Xapian::DocVersionConflictError("Version mismatch!");
-								}
-								info.version = sortable_unserialise(current_ver);
-								break;
-							}
-						}
-					}
+					info = task::sync_wait(wdb->replace((did - 1) / n_shards + 1, doc, args));  // docid in the multi-db to the docid in the shard
+					info.term = term;
 				}
-				ver = sortable_serialise(++info.version);
-				auto it = data_obj.find(VERSION_FIELD_NAME);
-				if (it != data_obj.end()) {
-					auto& value = it.value();
-					value = info.version;
-					data_modified = true;
-				}
-				doc.add_boolean_term(ver_prefix + ver);
-				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
-				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
-				if (data_modified) {
-					data.set_obj(data_obj);
-					data.flush();
-					doc.set_data(data.serialise());
-				}
-
-				assert(info.did);
-				wdb->replace_document(info.did, engine::xapian::to_xapian(doc));
 			} else {
-				info = engine::xapian::from_xapian(wdb->replace_document(term, engine::xapian::to_xapian(doc)));
+				info = task::sync_wait(wdb->replace_by_key(term, doc, args));
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 #ifdef XAPIAND_DATA_STORAGE
 					if (!pushed.second.empty()) {
 						doc.set_data(pushed.second);  // restore data with blobs
@@ -1707,21 +1517,12 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1741,32 +1542,33 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::add_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto local = is_local();
-			wdb->add_spelling(word, freqinc);
+			task::sync_wait(wdb->add_spelling(word, freqinc));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 					XapiandManager::manager(true)->wal_writer->write_add_spelling(
 						is_synchronous_wal(),
 						endpoint.path,
@@ -1778,21 +1580,12 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1810,34 +1603,35 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::remove_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 	Xapian::termcount result = 0;
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto local = is_local();
-			result = wdb->remove_spelling(word, freqdec);
+			result = task::sync_wait(wdb->remove_spelling(word, freqdec));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 					XapiandManager::manager(true)->wal_writer->write_remove_spelling(
 						is_synchronous_wal(),
 						endpoint.path,
@@ -1849,21 +1643,12 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1882,7 +1667,7 @@ Shard::get_docid_term(const std::string& term)
 
 	Xapian::docid did = 0;
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_docid_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -1928,7 +1713,7 @@ Shard::get_document(Xapian::docid shard_did, unsigned doc_flags)
 
 	Xapian::Document doc;
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -1970,7 +1755,7 @@ Shard::get_metadata(const std::string& key)
 
 	std::string value;
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -2027,7 +1812,7 @@ Shard::get_metadata_keys()
 
 	std::vector<std::string> values;
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_metadata_keys:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_metadata_keys:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -2078,32 +1863,33 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::set_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!Node::quorum()) {
-		throw Xapian::DatabaseNotAvailableError("Cluster has no quorum");
+		throw engine::xapian::NotAvailable("Cluster has no quorum");
 	}
 #endif
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	db();
+	auto* wdb = engine_shard.get();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto local = is_local();
-			wdb->set_metadata(key, value);
+			task::sync_wait(wdb->set_metadata(key, value));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = wdb->get_revision();
+				auto prior_revision = wdb->revision();
 				if (!is_replica()) {
 					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->get_uuid();
+					auto uuid = wdb->uuid();
 					XapiandManager::manager(true)->wal_writer->write_set_metadata(
 						is_synchronous_wal(),
 						endpoint.path,
@@ -2115,21 +1901,12 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 #endif
 			}
 			break;
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_or_throw(error, t);
 		}
 		reopen();
-		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		db();
+		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 

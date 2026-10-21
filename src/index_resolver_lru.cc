@@ -21,6 +21,7 @@
  */
 
 #include "index_resolver_lru.h"
+#include "engine/error.h"                              // for engine::Error, engine::errc
 
 #include "database/flags.h"       // for  DB_*
 #include "database/handler.h"     // for DatabaseHandler
@@ -854,8 +855,8 @@ IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writabl
 			if (!rebuild) {
 				return endpoints;
 			}
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0) { throw; }
 		}
 	}
 }

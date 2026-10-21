@@ -22,6 +22,8 @@
 
 #include "engine/xapian/convert.h"
 
+#include "engine/xapian/errors.h"      // for the Failure types
+
 #include <type_traits>             // for std::is_same_v, std::is_unsigned_v
 
 #include "database/flags.h"        // for DB_CREATE_OR_OPEN, DB_CREATE, ...
@@ -149,24 +151,47 @@ classify_current() noexcept
 		return errc::invalid;
 	} catch (const Xapian::QueryParserError&) {
 		return errc::invalid;
+	} catch (const Xapian::DatabaseError&) {
+		return errc::database;
 	} catch (...) {
 		return errc::internal;
 	}
 }
 
 
-Error
-translate_current()
+void
+rethrow_translated()
 {
-	const auto code = classify_current();
 	try {
 		throw;
-	} catch (const Xapian::Error& error) {
-		return Error(code, error.get_description());
-	} catch (const std::exception& error) {
-		return Error(code, error.what());
-	} catch (...) {
-		return Error(code, "unknown error");
+	} catch (const Error&) {
+		throw;
+	} catch (const Xapian::DatabaseNotFoundError& e) {
+		throw NotFound(e);
+	} catch (const Xapian::DatabaseNotAvailableError& e) {
+		throw NotAvailable(e);
+	} catch (const Xapian::DatabaseModifiedError& e) {
+		throw Reopen(e);
+	} catch (const Xapian::DatabaseCorruptError& e) {
+		throw Corrupt(e);
+	} catch (const Xapian::DatabaseOpeningError& e) {
+		throw Opening(e);
+	} catch (const Xapian::DatabaseClosedError& e) {
+		throw Closed(e);
+	} catch (const Xapian::NetworkTimeoutError& e) {
+		throw Timeout(e);
+	} catch (const Xapian::NetworkError& e) {
+		throw Network(e);
+	} catch (const Xapian::DocNotFoundError& e) {
+		throw DocNotFound(e);
+	} catch (const Xapian::DocVersionConflictError& e) {
+		throw VersionConflict(e);
+	} catch (const Xapian::InvalidArgumentError& e) {
+		throw InvalidArgument(e);
+	} catch (const Xapian::InvalidOperationError& e) {
+		throw InvalidOperation(e);
+	} catch (const Xapian::DatabaseError& e) {
+		throw DatabaseFailure(e);
 	}
 }
 

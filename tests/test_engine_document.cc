@@ -33,6 +33,7 @@
 
 #include "config.h"
 #include "engine/xapian/convert.h"
+#include "engine/xapian/errors.h"
 #include "multivalue/generate_terms.h"
 #include "xapian.h"
 
@@ -164,17 +165,67 @@ static void test_classify() {
 	CHECK_TRUE(classified(Xapian::InvalidArgumentError("x")) == errc::invalid);
 	CHECK_TRUE(classified(Xapian::InvalidOperationError("x")) == errc::invalid);
 	CHECK_TRUE(classified(Xapian::QueryParserError("x")) == errc::invalid);
-	CHECK_TRUE(classified(Xapian::DatabaseError("x")) == errc::internal);
+	CHECK_TRUE(classified(Xapian::DatabaseError("x")) == errc::database);
 	CHECK_TRUE(classified(Xapian::InternalError("x")) == errc::internal);
 	CHECK_TRUE(classified(std::runtime_error("x")) == errc::internal);
 
+	CHECK_TRUE(classified(Xapian::DatabaseLockError("x")) == errc::database);
+}
+
+template<typename E>
+static void translate(const E& error) {
 	try {
-		throw Xapian::DocNotFoundError("no such doc");
+		throw error;
 	} catch (...) {
-		auto error = engine::xapian::translate_current();
-		CHECK_TRUE(error.code == errc::doc_not_found);
-		CHECK_TRUE(std::string(error.what()).find("no such doc") != std::string::npos);
+		engine::xapian::rethrow_translated();
 	}
+}
+
+static void test_translation() {
+	using engine::errc;
+
+	// A Xapian failure comes out as an engine error of its kind that is still the Xapian exception.
+	bool as_engine = false;
+	try {
+		translate(Xapian::DocNotFoundError("no such doc"));
+	} catch (const engine::Error& error) {
+		as_engine = error.kind == errc::doc_not_found && error.reason().find("no such doc") != std::string::npos;
+	}
+	CHECK_TRUE(as_engine);
+
+	bool as_xapian = false;
+	try {
+		translate(Xapian::DatabaseNotFoundError("gone"));
+	} catch (const Xapian::DatabaseOpeningError&) {  // a not-found is an opening failure
+		as_xapian = true;
+	}
+	CHECK_TRUE(as_xapian);
+
+	// Any other database failure is a database error.
+	errc kind = errc::internal;
+	try {
+		translate(Xapian::DatabaseLockError("locked"));
+	} catch (const engine::Error& error) {
+		kind = error.kind;
+	}
+	CHECK_TRUE(kind == errc::database);
+
+	// An engine error passes through unchanged, and what is not Xapian's is not touched.
+	bool unchanged = false;
+	try {
+		translate(engine::xapian::Network("net"));
+	} catch (const engine::xapian::Network&) {
+		unchanged = true;
+	}
+	CHECK_TRUE(unchanged);
+
+	bool foreign = false;
+	try {
+		translate(std::runtime_error("other"));
+	} catch (const std::runtime_error&) {
+		foreign = true;
+	}
+	CHECK_TRUE(foreign);
 }
 
 static void test_view() {
@@ -225,7 +276,7 @@ static void test_word_breaks() {
 #endif
 
 #ifdef USE_ICU
-TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_view, test_word_breaks)
+TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_translation, test_view, test_word_breaks)
 #else
-TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_view)
+TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_translation, test_view)
 #endif

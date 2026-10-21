@@ -34,7 +34,9 @@
 #include "cuuid_v1.hh"                  // for UUID, UUID_LENGTH
 #include "database/flags.h"       // for DB_*
 #include "engine/document.h"      // for engine::Document
+#include "engine/error.h"         // for engine::Error
 #include "engine/types.h"         // for engine::WriteResult
+#include "engine/xapian/shard.h"   // for engine::xapian::Shard
 #include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 
@@ -75,7 +77,7 @@ private:
 	std::atomic<bool> _incomplete;
 	std::atomic<Transaction> _transaction;
 
-	std::unique_ptr<Xapian::Database> database;
+	std::unique_ptr<engine::xapian::Shard> engine_shard;
 
 #ifdef XAPIAND_DATA_STORAGE
 	std::unique_ptr<DataStorage> writable_storage;
@@ -88,6 +90,8 @@ private:
 	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
 	void storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
+
+	void retry_or_throw(const engine::Error& error, int t, bool commit_ = true);
 
 	bool reopen_writable();
 	bool reopen_readable();

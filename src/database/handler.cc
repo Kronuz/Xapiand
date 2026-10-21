@@ -33,6 +33,7 @@
 #include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
+#include "exception_xapian.h"                     // for DocVersionConflictError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION
@@ -340,7 +341,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 	if (document_ver != UNKNOWN_REVISION && !data.version.empty()) {
 		if (document_ver != sortable_unserialise(data.version)) {
-			throw Xapian::DocVersionConflictError("Version mismatch!");
+			THROW(DocVersionConflictError, "Version mismatch!");
 		}
 	}
 
@@ -487,8 +488,8 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
 	}
 }
@@ -543,8 +544,8 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, boo
 			}
 			inject_data(data, obj);
 			return index(did, document_id, document_ver, obj, data, commit);
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
 	}
 }
@@ -625,8 +626,8 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 			}
 
 			return index(did, document_id, document_ver, obj, data, commit);
-		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
 	}
 }
