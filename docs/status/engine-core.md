@@ -119,6 +119,24 @@ still exists for reads; E2E and WAL recovery unchanged.
 4. The ten raw `throw Xapian::DocNotFoundError` sites (handler.cc, shard.cc, search_views.cc) move to a
    `DocNotFound` wrapper with the kind, then their catches move to `doc_not_found`.
 
+## Owed after review (docs/reviews/engine-core.md, 2026-10-21)
+
+- CR1: FLUSH's inline view (DatabasePool::cleanup, pool.cc:476) and the control plane's
+  setup_node_async_cb (manager.cc:767-835) call sync_wait on reactor threads, as master blocked
+  them. Before XAPIAND_ENGINE_OFFLOAD_THREADS defaults on or 7c starts: move that work off the
+  reactor and assert sync_wait never runs on a reactor thread.
+- CR2: `Offload` is a second hand-written pool. Lead's ruling against D13: replace it with
+  Kronuz/threadpool behind a task::scheduler; reset set_offload on every shutdown path; bound the
+  variable. Until CR1 and CR2 close, XAPIAND_ENGINE_OFFLOAD_THREADS stays off.
+- CR3 (correction): a translated DatabaseVersionError, DatabaseLockError or DatabaseCreateError is
+  no longer caught by its own Xapian type; no current catch site names them.
+- CR4 (correction): the retry rule and the nine ladders have no test; the review's ladder_probe.cc
+  is the evidence for now.
+- CR9: XAPIAND_ENGINE_OFFLOAD_THREADS (default 0, off) enables the engine's offload pool.
+- CR8 (pre-existing on master, separate fix): a use-after-free in DatabasePool::cleanup under
+  concurrent FLUSH, a lost wake-up in ShardEndpoint::checkin (pool.cc:422-423), and Shard::reopen
+  looping 11 times on success.
+
 ## Blocked on
 
 Nothing.
