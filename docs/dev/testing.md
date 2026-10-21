@@ -112,6 +112,19 @@ assertions — catches serialization changes), capture a reference report from a
 binary and diff it with the optional explorers `e2e_check.sh` / `e2e_diff.py` /
 `bodydiff.py`. These are investigation aids, not the committed gate.
 
+### Text analysis differential
+
+The doc suite barely touches text analysis, so `harness/terms_diff.py` and `harness/vocab_diff.py`
+index a mixed corpus under about 130 analysis configurations (language, stem and stop strategies,
+positions, weight, CJK n-grams) and each language's Snowball sample vocabulary, then dump every
+document's `INFO` terms (wdf and positions). Run each against two builds on separate data dirs
+and diff the two JSON files; any difference in a term, wdf, or position is a change in analysis.
+
+```sh
+python3 harness/terms_diff.py 8891 base-terms.json               # node on :8891
+python3 harness/vocab_diff.py 8891 base-vocab.json ~/code/Kronuz/snowball/test/vectors
+```
+
 ### Over HTTPS
 
 `run_all.sh tls` runs the same collection over `https://` against a node started with a

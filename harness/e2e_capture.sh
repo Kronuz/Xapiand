@@ -34,11 +34,12 @@ set -u
 
 BIN="${1:?usage: e2e_capture.sh BINARY OUT.json [DATADIR]}"
 OUT="${2:?usage: e2e_capture.sh BINARY OUT.json [DATADIR]}"
-DATADIR="${3:-/tmp/xe2e_$$}"
+TMPD="${E2E_TMP:-/tmp}"
+DATADIR="${3:-$TMPD/xe2e_$$}"
 
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HARNESS_DIR")"
-COLL="${COLL:-/tmp/xe2e_collection.json}"
+COLL="${COLL:-$TMPD/xe2e_collection.json}"
 SCHEME="${SCHEME:-http}"
 PORT="${PORT:-8880}"
 CA="${CA:-}"
@@ -73,13 +74,13 @@ fi
 [ -n "$squatter" ] && kill -9 $squatter 2>/dev/null || true
 sleep 1
 rm -rf "$DATADIR"; mkdir -p "$DATADIR"
-"$BIN" --port "$PORT" --name benchnode --solo -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >/tmp/xe2e_node.log 2>&1 &
+"$BIN" --port "$PORT" --name benchnode --solo -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >$TMPD/xe2e_node.log 2>&1 &
 pid=$!
 
 for _ in $(seq 1 120); do
 	if ! kill -0 "$pid" 2>/dev/null; then
 		echo "node exited before ready (EADDRINUSE / leftover node on :8880?):"
-		grep -iE 'error|exception|bind' /tmp/xe2e_node.log | head -3
+		grep -iE 'error|exception|bind' $TMPD/xe2e_node.log | head -3
 		exit 1
 	fi
 	[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 ${probe_ca[@]+"${probe_ca[@]}"} "$SCHEME://localhost:$PORT/" 2>/dev/null)" = "200" ] && break
@@ -87,7 +88,7 @@ for _ in $(seq 1 120); do
 done
 
 echo "node up (pid $pid); newman -> $OUT"
-newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >/tmp/xe2e_newman.log 2>&1
+newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >$TMPD/xe2e_newman.log 2>&1
 echo "newman exit $? (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
 
 kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
