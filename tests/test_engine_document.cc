@@ -31,7 +31,9 @@
 #include <string>
 #include <vector>
 
+#include "config.h"
 #include "engine/xapian/convert.h"
+#include "multivalue/generate_terms.h"
 #include "xapian.h"
 
 namespace {
@@ -198,4 +200,32 @@ static void test_view() {
 	CHECK_EQ(seen[1], "Atwo:1");
 }
 
+#ifdef USE_ICU
+// The word-break path runs Xapian's term generator on a Xapian document and merges the result.
+static void test_word_breaks() {
+	const std::string text = "Hello world, hello 我爱北京天安门 and 東京都";
+	for (bool positions : {true, false}) {
+		engine::Document doc;
+		GenerateTerms::text(doc, "Zt", text, positions, 3, false, true, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none);
+
+		Xapian::Document xdoc;
+		Xapian::TermGenerator generator;
+		generator.set_flags(Xapian::TermGenerator::FLAG_WORD_BREAKS);
+		generator.set_document(xdoc);
+		if (positions) {
+			generator.index_text(text, 3, "Zt");
+		} else {
+			generator.index_text_without_positions(text, 3, "Zt");
+		}
+
+		CHECK_FALSE(doc.terms().empty());
+		CHECK_TRUE(same(doc, engine::xapian::from_xapian(xdoc)));
+	}
+}
+#endif
+
+#ifdef USE_ICU
+TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_view, test_word_breaks)
+#else
 TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_view)
+#endif
