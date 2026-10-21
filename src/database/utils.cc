@@ -56,12 +56,12 @@ std::string prefixed(std::string_view term, std::string_view field_prefix, char 
 }
 
 
-Xapian::valueno get_slot(std::string_view field_prefix, char field_type)
+engine::valueno get_slot(std::string_view field_prefix, char field_type)
 {
-	auto slot = static_cast<Xapian::valueno>(xxh32::hash(field_prefix, field_type));
+	auto slot = static_cast<engine::valueno>(xxh32::hash(field_prefix, field_type));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
-	} else if (slot == Xapian::BAD_VALUENO) {
+	} else if (slot == engine::BAD_VALUENO) {
 		slot = 0xfffffffe;
 	}
 	return slot;

@@ -33,6 +33,7 @@
 #include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
+#include "engine/xapian/convert.h"  // for engine::xapian::to_xapian, from_xapian
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
 #include "length.h"               // for serialise_string
@@ -1224,8 +1225,8 @@ Shard::storage_commit()
 #endif  // XAPIAND_DATA_STORAGE
 
 
-Xapian::DocumentInfo
-Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
+engine::WriteResult
+Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
 
@@ -1252,7 +1253,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	Xapian::DocumentInfo info;
+	engine::WriteResult info;
 
 	std::string ver;
 	if (version_) {
@@ -1294,9 +1295,9 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 				}
 
 				assert(info.did);
-				wdb->replace_document(info.did, doc);
+				wdb->replace_document(info.did, engine::xapian::to_xapian(doc));
 			} else {
-				info = wdb->add_document(doc);
+				info = engine::xapian::from_xapian(wdb->add_document(engine::xapian::to_xapian(doc)));
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
@@ -1350,7 +1351,28 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 
 
 Xapian::DocumentInfo
+Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
+{
+	return engine::xapian::to_xapian(add_document(engine::xapian::from_xapian(doc), commit_, wal_, version_));
+}
+
+
+Xapian::DocumentInfo
 Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
+{
+	return engine::xapian::to_xapian(replace_document(shard_did, engine::xapian::from_xapian(doc), commit_, wal_, version_));
+}
+
+
+Xapian::DocumentInfo
+Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
+{
+	return engine::xapian::to_xapian(replace_document_term(term, engine::xapian::from_xapian(doc), commit_, wal_, version_));
+}
+
+
+engine::WriteResult
+Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
@@ -1377,7 +1399,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	Xapian::DocumentInfo info;
+	engine::WriteResult info;
 	info.did = shard_did;
 
 	std::string ver;
@@ -1434,9 +1456,9 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 					data.flush();
 					doc.set_data(data.serialise());
 				}
-				wdb->replace_document(info.did, doc);
+				wdb->replace_document(info.did, engine::xapian::to_xapian(doc));
 			} else {
-				info = wdb->replace_document(info.did, doc);
+				info = engine::xapian::from_xapian(wdb->replace_document(info.did, engine::xapian::to_xapian(doc)));
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
@@ -1489,8 +1511,8 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 }
 
 
-Xapian::DocumentInfo
-Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
+engine::WriteResult
+Shard::replace_document_term(const std::string& term, engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
 
@@ -1517,7 +1539,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	Xapian::DocumentInfo info;
+	engine::WriteResult info;
 
 	std::string ver;
 	if (version_) {
@@ -1656,9 +1678,9 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 				}
 
 				assert(info.did);
-				wdb->replace_document(info.did, doc);
+				wdb->replace_document(info.did, engine::xapian::to_xapian(doc));
 			} else {
-				info = wdb->replace_document(term, doc);
+				info = engine::xapian::from_xapian(wdb->replace_document(term, engine::xapian::to_xapian(doc)));
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {

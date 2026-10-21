@@ -22,14 +22,16 @@
 
 #pragma once
 
-#include "config.h"          // for XAPIAN_LIB_BUILD
-#include "xapiand_strings.hh"         // for strings::join
-#include "xapian.h"           // for Xapian::*
+#include <string>                 // for std::string
+#include <vector>                 // for std::vector
 
-const int DB_CREATE_OR_OPEN             = Xapian::DB_CREATE_OR_OPEN;            // Create database if it doesn't already exist.
-const int DB_CREATE_OR_OVERWRITE        = Xapian::DB_CREATE_OR_OVERWRITE;       // Create database if it doesn't already exist, or overwrite if it does.
-const int DB_CREATE                     = Xapian::DB_CREATE;                    // Create a new database.
-const int DB_OPEN                       = Xapian::DB_OPEN;                      // Open an existing database.
+#include "engine/types.h"          // for engine::DB_*
+#include "xapiand_strings.hh"      // for strings::join
+
+const int DB_CREATE_OR_OPEN             = engine::DB_CREATE_OR_OPEN;            // Create database if it doesn't already exist.
+const int DB_CREATE_OR_OVERWRITE        = engine::DB_CREATE_OR_OVERWRITE;       // Create database if it doesn't already exist, or overwrite if it does.
+const int DB_CREATE                     = engine::DB_CREATE;                    // Create a new database.
+const int DB_OPEN                       = engine::DB_OPEN;                      // Open an existing database.
 
 const int DB_WRITABLE                   = 0x00010000;  // Opens as writable.
 const int DB_RESTORE                    = 0x00020000;  // Flag database as being restored
@@ -40,26 +42,26 @@ const int DB_DISABLE_WRITES             = 0x00200000;  // Disable write operatio
 const int DB_SYNCHRONOUS_WAL            = 0x00400000;  // Using synchronous WAL
 const int DB_TRIGGER_REPLICATION        = 0x00800000;  // Allow trigger replication
 
-const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a Xapian::Database or Document
+const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a shard or document
 
 
 inline bool has_db_create_or_open(int flags) {
-	int action = flags & Xapian::DB_ACTION_MASK_;
+	int action = flags & engine::DB_ACTION_MASK;
 	return action == DB_CREATE_OR_OPEN;
 }
 
 inline bool has_db_create_or_overwrite(int flags) {
-	int action = flags & Xapian::DB_ACTION_MASK_;
+	int action = flags & engine::DB_ACTION_MASK;
 	return action == DB_CREATE_OR_OVERWRITE;
 }
 
 inline bool has_db_create(int flags) {
-	int action = flags & Xapian::DB_ACTION_MASK_;
+	int action = flags & engine::DB_ACTION_MASK;
 	return action == DB_CREATE;
 }
 
 inline bool has_db_open(int flags) {
-	int action = flags & Xapian::DB_ACTION_MASK_;
+	int action = flags & engine::DB_ACTION_MASK;
 	return action == DB_OPEN;
 }
 

@@ -1943,13 +1943,13 @@ required_spc_t::prefix_t::operator()() const noexcept
 
 required_spc_t::required_spc_t()
 	: sep_types({{ FieldType::empty, FieldType::empty, FieldType::empty }}),
-	  slot(Xapian::BAD_VALUENO),
+	  slot(engine::BAD_VALUENO),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  error(DEFAULT_GEO_ERROR) { }
 
 
-required_spc_t::required_spc_t(Xapian::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix)
+required_spc_t::required_spc_t(engine::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix)
 	: sep_types({{ FieldType::empty, FieldType::empty, type }}),
 	  slot(slot),
 	  accuracy(std::move(accuracy)),
@@ -2141,7 +2141,7 @@ specification_t::specification_t()
 	  index_uuid_field(DEFAULT_INDEX_UUID_FIELD) { }
 
 
-specification_t::specification_t(Xapian::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
+specification_t::specification_t(engine::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
 	: required_spc_t(slot, type, accuracy, acc_prefix),
 	  position({ 0 }),
 	  weight({ 1 }),
@@ -2706,7 +2706,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
  * |_____|_____|_____|_____|_____|_____|_____|_____|
  */
 
-std::tuple<std::string, Xapian::Document, MsgPack>
+std::tuple<std::string, engine::Document, MsgPack>
 Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq)
 {
 	L_CALL("Schema::index({}, {}, <db_handler>)", object.to_string(), document_id.to_string());
@@ -2768,7 +2768,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					} else {
 						shard_num = random_int(0, n_shards - 1);
 						// Get the least used shard:
-						auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+						auto min_doccount = std::numeric_limits<engine::doccount>::max();
 						for (size_t n = 0; n < n_shards; ++n) {
 							auto& endpoint = db_handler.endpoints[n];
 							if (endpoint.is_active()) {
@@ -2834,7 +2834,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					} else {
 						shard_num = random_int(0, n_shards - 1);
 						// Get the least used shard:
-						auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+						auto min_doccount = std::numeric_limits<engine::doccount>::max();
 						for (size_t n = 0; n < n_shards; ++n) {
 							auto& endpoint = db_handler.endpoints[n];
 							if (endpoint.is_active()) {
@@ -2972,7 +2972,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			version_field = &fields.back();
 		}
 
-		Xapian::Document doc;
+		engine::Document doc;
 		MsgPack data_obj;
 
 		auto data_ptr = &data_obj;
@@ -3165,9 +3165,9 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 
 void
-Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, engine::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_new_object({}, {}, {}, <Xapian::Document>, {})", parent_properties->to_string(), object.to_string(), repr(parent_data->to_string()), repr(name));
+	L_CALL("Schema::index_new_object({}, {}, {}, <engine::Document>, {})", parent_properties->to_string(), object.to_string(), repr(parent_data->to_string()), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -3228,9 +3228,9 @@ Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& objec
 
 
 void
-Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, engine::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_object({}, {}, <MsgPack*>, <Xapian::Document>, {})", parent_properties->to_string(), object.to_string(), repr(name));
+	L_CALL("Schema::index_object({}, {}, <MsgPack*>, <engine::Document>, {})", parent_properties->to_string(), object.to_string(), repr(name));
 
 	switch (object.get_type()) {
 		case MsgPack::Type::NIL:
@@ -3326,9 +3326,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 
 void
-Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, engine::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", parent_properties->to_string(), array.to_string(), repr(name));
+	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <engine::Document>, {})", parent_properties->to_string(), array.to_string(), repr(name));
 
 	set_type_to_array();  // this has to be done first
 
@@ -3429,7 +3429,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 
 
 void
-Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields)
+Schema::index_fields(const MsgPack*& properties, engine::Document& doc, MsgPack*& data, const Fields& fields)
 {
 	L_CALL("Schema::index_fields({}, <doc>, {}, <Fields>)", properties->to_string(), data->to_string());
 
@@ -3470,7 +3470,7 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 
 
 void
-Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object)
+Schema::index_inner_object(const MsgPack*& properties, engine::Document& doc, MsgPack*& data, const MsgPack& object)
 {
 	L_CALL("Schema::index_inner_object({}, <doc>, {}, <object>)", properties->to_string(), data->to_string());
 
@@ -3510,7 +3510,7 @@ Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, Ms
 
 
 void
-Schema::index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos)
+Schema::index_item_value(engine::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos)
 {
 	L_CALL("Schema::index_item_value(<doc>, {}, {}, {})", data->to_string(), item_value.to_string(), pos);
 
@@ -4834,7 +4834,7 @@ Schema::validate_required_namespace_data()
 		if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 			// Write RESERVED_SLOT in properties (if it has values).
 			if (!specification.flags.is_namespace) {
-				if (specification.slot == Xapian::BAD_VALUENO) {
+				if (specification.slot == engine::BAD_VALUENO) {
 					specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 				}
 			}
@@ -5049,7 +5049,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 			// Write RESERVED_SLOT in properties (if it has values).
 			if (!specification.flags.is_namespace) {
-				if (specification.slot == Xapian::BAD_VALUENO) {
+				if (specification.slot == engine::BAD_VALUENO) {
 					specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 				}
 				mut_properties[RESERVED_SLOT] = specification.slot;
@@ -5270,9 +5270,9 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 
 
 void
-Schema::index_partial_paths(Xapian::Document& doc)
+Schema::index_partial_paths(engine::Document& doc)
 {
-	L_CALL("Schema::index_partial_paths(<Xapian::Document>)");
+	L_CALL("Schema::index_partial_paths(<engine::Document>)");
 
 	if (specification.flags.partial_paths) {
 		if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -5286,7 +5286,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 
 
 inline void
-Schema::index_term(Xapian::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos)
+Schema::index_term(engine::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos)
 {
 	L_CALL("Schema::index_term(<doc>, {}, <field_spc>, {})", repr(term), pos);
 
@@ -5314,7 +5314,7 @@ Schema::index_term(Xapian::Document& doc, std::string_view term, const specifica
 
 
 inline void
-Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
+Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 {
 	L_CALL("Schema::index_item(<doc>, <item>, {})", pos);
 
@@ -6931,14 +6931,14 @@ Schema::feed_weight(const MsgPack& prop_obj)
 		specification.weight.clear();
 		for (const auto& prop_item_obj : prop_obj) {
 			if (prop_item_obj.is_number()) {
-				specification.weight.push_back(static_cast<Xapian::termpos>(prop_item_obj.u64()));
+				specification.weight.push_back(static_cast<engine::termpos>(prop_item_obj.u64()));
 			} else {
 				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
 	} else if (prop_obj.is_number()) {
 		specification.weight.clear();
-		specification.weight.push_back(static_cast<Xapian::termpos>(prop_obj.u64()));
+		specification.weight.push_back(static_cast<engine::termpos>(prop_obj.u64()));
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -6954,14 +6954,14 @@ Schema::feed_position(const MsgPack& prop_obj)
 		specification.position.clear();
 		for (const auto& prop_item_obj : prop_obj) {
 			if (prop_item_obj.is_number()) {
-				specification.position.push_back(static_cast<Xapian::termpos>(prop_item_obj.u64()));
+				specification.position.push_back(static_cast<engine::termpos>(prop_item_obj.u64()));
 			} else {
 				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
 	} else if (prop_obj.is_number()) {
 		specification.position.clear();
-		specification.position.push_back(static_cast<Xapian::termpos>(prop_obj.u64()));
+		specification.position.push_back(static_cast<engine::termpos>(prop_obj.u64()));
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_POSITION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -7199,7 +7199,7 @@ Schema::feed_slot(const MsgPack& prop_obj)
 	L_CALL("Schema::feed_slot({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_number()) {
-		specification.slot = static_cast<Xapian::valueno>(prop_obj.u64());
+		specification.slot = static_cast<engine::valueno>(prop_obj.u64());
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_SLOT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -7998,8 +7998,8 @@ Schema::process_slot(std::string_view prop_name, const MsgPack& prop_obj)
 	L_CALL("Schema::process_slot({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_number()) {
-		auto slot = static_cast<Xapian::valueno>(prop_obj.u64());
-		if (slot == Xapian::BAD_VALUENO) {
+		auto slot = static_cast<engine::valueno>(prop_obj.u64());
+		if (slot == engine::BAD_VALUENO) {
 			THROW(ClientError, "{} invalid slot ({} not supported)", repr(prop_name), slot);
 		}
 		specification.slot = slot;
@@ -8521,7 +8521,7 @@ Schema::consistency_slot(std::string_view prop_name, const MsgPack& prop_obj)
 	L_CALL("Schema::consistency_slot({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_number()) {
-		auto slot = static_cast<Xapian::valueno>(prop_obj.u64());
+		auto slot = static_cast<engine::valueno>(prop_obj.u64());
 		if (specification.slot != slot) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.slot, slot, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
@@ -9375,7 +9375,7 @@ _get_data_id(required_spc_t& spc_id, const MsgPack& id_properties)
 	}
 	auto id_slot_it = id_properties.find(RESERVED_SLOT);
 	if (id_slot_it != id_it_e) {
-		spc_id.slot = static_cast<Xapian::valueno>(id_slot_it.value().u64());
+		spc_id.slot = static_cast<engine::valueno>(id_slot_it.value().u64());
 	}
 	auto id_prefix_it = id_properties.find(RESERVED_PREFIX);
 	if (id_slot_it != id_it_e) {
@@ -9515,7 +9515,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 	} else {
 		auto slot_it = properties.find(RESERVED_SLOT);
 		if (slot_it != it_e) {
-			res.slot = static_cast<Xapian::valueno>(slot_it.value().u64());
+			res.slot = static_cast<engine::valueno>(slot_it.value().u64());
 		}
 	}
 
@@ -9525,7 +9525,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 		} else {
 			auto slot_it = properties.find(RESERVED_SLOT);
 			if (slot_it != it_e) {
-				res.slot = static_cast<Xapian::valueno>(slot_it.value().u64());
+				res.slot = static_cast<engine::valueno>(slot_it.value().u64());
 			}
 		}
 
@@ -9716,7 +9716,7 @@ Schema::get_slot_field(std::string_view field_name) const
 	} else {
 		auto slot_it = properties.find(RESERVED_SLOT);
 		if (slot_it != it_e) {
-			res.slot = static_cast<Xapian::valueno>(slot_it.value().u64());
+			res.slot = static_cast<engine::valueno>(slot_it.value().u64());
 		}
 	}
 

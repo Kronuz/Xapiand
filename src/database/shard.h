@@ -33,6 +33,8 @@
 
 #include "cuuid_v1.hh"                  // for UUID, UUID_LENGTH
 #include "database/flags.h"       // for DB_*
+#include "engine/document.h"      // for engine::Document
+#include "engine/types.h"         // for engine::WriteResult
 #include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 
@@ -181,6 +183,11 @@ public:
 	void delete_document(Xapian::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
+	engine::WriteResult add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	engine::WriteResult replace_document(Xapian::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+
+	// The Xapian remote server's entry points: it speaks Xapian's document and result types.
 	Xapian::DocumentInfo add_document(Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	Xapian::DocumentInfo replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	Xapian::DocumentInfo replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
