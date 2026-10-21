@@ -20,10 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Builds need OpenSSL 3** by default, for the coming HTTPS support (`-DTLS=OFF` builds
   without it). The packages depend on it: `libssl3t64`/`libssl3` for the `.deb`,
   `openssl-libs` for the `.rpm`, `openssl@3` for Homebrew.
-- **Text is analyzed by the Kronuz `analysis` and `snowball` libraries** instead of Xapian's
-  term generator, with the same terms. The newer Snowball stemmers also drop the apostrophe
-  suffix of Danish, Italian, and Norwegian words (`it's` now stems to `it`); `cjk_words`
-  still uses Xapian's.
+- **Index-time text analysis uses the Kronuz `analysis` and `snowball` libraries** instead of
+  Xapian's term generator, with the same terms, and queries stem with the same Snowball
+  stemmers. The newer Danish, Italian, and Norwegian stemmers drop apostrophe suffixes
+  (`it's` now stems to `it`, `all'art` to `art`), so documents indexed before this change
+  need reindexing to match such words. `cjk_words` still uses Xapian's term generator.
 - **Every library is pinned at its current release.** Each Kronuz library now pins its own
   dependencies, so Xapiand no longer pins the libraries its libraries fetch.
 
@@ -31,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **German stop words now apply.** A duplicate entry in the German list made the stopper fail
   to build, so the first German text write failed and later ones skipped stop words.
+- **Basque text fields work.** The `basque` language mapped to the unknown code `ue`, so
+  every write to such a field failed with a 500; it now maps to `eu`.
 - **Autocommits and WAL fsyncs requested during shutdown are no longer dropped.** When the
   committer or the fsync pool has already stopped (or cannot allocate), the commit or fsync
   runs right away on the calling thread.
