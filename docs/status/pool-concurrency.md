@@ -93,8 +93,9 @@ restores. Logs in `.scratch/test_pool-M*.log`.
 - Root cause 2: `ShardEndpoint::checkin` stores `_busy = false` (and `++readables_available`)
   and notifies without `mtx` (`pool.cc:422-423`, `436-438`), so a waiter between its predicate
   check and its wait misses it. `DatabasePool::unlock` has the same shape (`pool.cc:303-304`).
-  Fix: both update and notify under the endpoint `mtx`. Notifying under `mtx` also keeps the
-  endpoint alive until checkin is done with it (cleanup needs `mtx` to see the shard as free).
+  Fix: both update and notify under the endpoint `mtx`. (Correction, CR1: this keeps the
+  endpoint alive only on the keep path and for readables. The writable drop path took `mtx` twice,
+  so cleanup could evict the endpoint between the sections; fixed in the CR1 commit below.)
 - Root cause 3: `Shard::reopen` (`shard.cc:663-690`) has no `break` after a successful
   `reopen_writable()`/`reopen_readable()`, so it reopens `DB_RETRIES + 1` = 11 times. Fix: `break`.
 - Fix v2 (`28f6b88ff`, `df87f4e1c`; `.scratch/verify-fix2.out`): `test_pool` OK (10 checks),
@@ -125,3 +126,34 @@ restores. Logs in `.scratch/test_pool-M*.log`.
   timeout, fix 0 of 30, M8 7 of 30. No ASan report in any.
 - TSan rerun with the new tests: 3 runs, 0 warnings, 12 checks.
 - No server left running; `build-asan` and `build-tsan` kept for the reviewer (rebuildable).
+
+### 2026-10-26, review fixes (`docs/reviews/pool-concurrency-code.md`)
+
+- CR1: the writable drop path of `ShardEndpoint::checkin` computes `drop` first (including the
+  post-autocommit `is_closed()`), then does `writable.reset()`, `_busy = false` and `notify_one()`
+  in one `mtx` section. Test `test_checkin_drop_races_cleanup` (2 threads close and check in a
+  writable, 3 in `cleanup`, 5 s). Revert check: with the old `checkin` and the new test,
+  `test_pool` aborts 3 of 3 runs (`mutex lock failed: Invalid argument`); with the fix it passes.
+- CR2: `test_clear_keeps_shared_{writable,readable}` (probe_clear_shared). Mutant MB (clear drops
+  the writable while shared): the writable test fails; unmutated, both pass.
+- Still not unit-testable (needs a seam in `clear()` between unlock and relock): M8/MA, MD, ME.
+  Hammer only.
+
+## Follow-ups (from the review, not fixed here)
+
+- CR3: `use_count() == 1` does not exclude `weak_ptr<Shard>::lock()` (the committer, `shard.cc`
+  autocommit debounce, `handler.cc:2913`). Fix: capture the `Endpoint` by value in the debounce (or
+  take a `ReferencedShardEndpoint` first) and destroy the dropped writable right after relocking;
+  correct the comment at `pool.cc` "nobody can copy a busy slot's pointer". Same as the unfixed
+  committer problem above.
+- CR4: `ShardEndpoint::finish()` notifies without `mtx` (shutdown lost wake-up; copy endpoints out
+  of the pool mutex before locking them); `checkin_clears_cond.notify_all()` is called without the
+  pool mutex that `DatabasePool::join` waits on.
+- CR5: record for the owner: `cleanup_mtx` is held across `clear()`'s commits, so a FLUSH on a
+  reactor thread waits for a periodic cleanup (adds to engine-core CR1); the pool mutex then
+  endpoint mutex order in `cleanup`/`finish` is inverted by a waiter predicate calling
+  `database_pool.is_locked` (pre-existing, needs an exclusive lock in flight).
+- CR6: `DatabasePool::clear()` at shutdown deletes endpoints a caller references: take
+  `cleanup_mtx` outside the pool mutex and skip `lru::clear()` while any `refs != 0`.
+- M8 seam: a test hook in `ShardEndpoint::clear()` between `lk.unlock()` and `lk.lock()` would
+  let a unit test pin MA/M8, MD and ME.

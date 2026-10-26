@@ -50,6 +50,7 @@ struct PoolTestAccess {
 	static std::condition_variable& writable_cond(ShardEndpoint& endpoint) { return endpoint.writable_cond; }
 	static std::condition_variable& readables_cond(ShardEndpoint& endpoint) { return endpoint.readables_cond; }
 	static void set_local(Shard& shard) { shard._local = true; }  // as if opened locally
+	static void close(Shard& shard) { shard._closed.store(true); }  // as if closed by a failed commit
 };
 
 namespace {
@@ -212,6 +213,62 @@ void clear_wakes_waiters(int flags) {
 void test_clear_wakes_writable_waiters() { clear_wakes_waiters(DB_WRITABLE | DB_CREATE_OR_OPEN); }
 void test_clear_wakes_readable_waiters() { clear_wakes_waiters(DB_OPEN); }
 
+// Closed writables checked in while cleanups evict their idle endpoint: checkin must not touch
+// the endpoint after dropping the writable (a destroyed mutex aborts the process).
+void test_checkin_drop_races_cleanup() {
+	DatabasePool pool(8, 2);
+	std::atomic_bool stop{false};
+	std::atomic_long checkins{0};
+	std::vector<std::thread> threads;
+	for (int t = 0; t < 2; ++t) {
+		threads.emplace_back([&, t] {
+			while (!stop) {
+				auto shard = pool.checkout(Endpoint("pool_test_drop_" + std::to_string(t)), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
+				A::close(*shard);
+				pool.checkin(shard);
+				++checkins;
+			}
+		});
+	}
+	for (int t = 0; t < 3; ++t) {
+		threads.emplace_back([&] {
+			while (!stop) {
+				pool.cleanup(true, false);
+			}
+		});
+	}
+	std::this_thread::sleep_for(5s);
+	stop = true;
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	CHECK_GT(checkins.load(), 0);
+}
+
+// clear() keeps a shard that something else still references (a committer's weak_ptr lock), and
+// frees it once that reference is gone.
+void clear_keeps_shared_shard(int flags) {
+	DatabasePool pool(8, 2);
+	const Endpoint endpoint("pool_test_clear_shared");
+	auto shard = pool.checkout(endpoint, flags, 1.0);
+	ShardEndpoint& shard_endpoint = shard->endpoint;
+	std::shared_ptr<Shard> extra = shard;
+	pool.checkin(shard);
+	auto cleared = shard_endpoint.clear();
+	CHECK_EQ(cleared.first + cleared.second, 1u);
+	CHECK_FALSE(extra->is_busy());
+	auto again = pool.checkout(endpoint, flags, 1.0);
+	CHECK_TRUE(again.get() == extra.get());
+	pool.checkin(again);
+	again.reset();
+	extra.reset();
+	cleared = shard_endpoint.clear();
+	CHECK_EQ(cleared.first + cleared.second, 0u);
+}
+
+void test_clear_keeps_shared_writable() { clear_keeps_shared_shard(DB_WRITABLE | DB_CREATE_OR_OPEN); }
+void test_clear_keeps_shared_readable() { clear_keeps_shared_shard(DB_OPEN); }
+
 }  // namespace
 
-TEST_MAIN(test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters)
+TEST_MAIN(test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)

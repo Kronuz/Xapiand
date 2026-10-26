@@ -396,18 +396,11 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 	}
 
 	if (shard->is_writable()) {
-		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
-			std::lock_guard<std::mutex> lk(mtx);
-			writable.reset();
-			database_pool.checkin_clears_cond.notify_all();
-		} else {
+		bool drop = is_finished() || database_pool.notify_lockable(*this) || shard->is_closed();
+		if (!drop) {
 			Shard::autocommit(shard);
-			if (shard->is_closed()) {
-				// A failed in-place autocommit closes the shard: drop it, as above.
-				std::lock_guard<std::mutex> lk(mtx);
-				writable.reset();
-				database_pool.checkin_clears_cond.notify_all();
-			}
+			// A failed in-place autocommit closes the shard: drop it.
+			drop = shard->is_closed();
 		}
 #if XAPIAND_DATABASE_WAL
 		// Delete WAL during checking of a restore
@@ -419,8 +412,13 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		}
 #endif
 		L_SHARD_LOG_TIMED_CLEAR();
-		// Under mtx, so a waiter between its predicate check and its wait cannot miss this.
+		// One section: the drop, the release and the wake-up. A second lock after the drop
+		// could find the endpoint evicted.
 		std::lock_guard<std::mutex> lk(mtx);
+		if (drop) {
+			writable.reset();
+			database_pool.checkin_clears_cond.notify_all();
+		}
 		shard->_busy.store(false);
 		writable_cond.notify_one();
 	} else {
