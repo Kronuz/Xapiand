@@ -1499,10 +1499,9 @@ delete_database_view(Request& request)
 }
 
 
-// Administrative verbs. These do no per-database query work and (like the OPTIONS /
-// OPEN / CLOSE verbs) run inline on the reactor rather than the worker pool -- see
-// SearchService::should_offload. Their admin_commands + root-URL preconditions,
-// which prepare()'s switch enforced before dispatch, are checked here at the view.
+// Administrative verbs. FLUSH closes and commits every open writable, so it runs on the
+// offload pool; QUIT only signals and runs inline (SearchService::should_offload). Their
+// admin_commands + root-URL preconditions are checked here at the view.
 static void
 flush_view(Request& request)
 {
