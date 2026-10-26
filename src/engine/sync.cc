@@ -29,6 +29,8 @@
 #include <mutex>                   // for std::mutex, std::lock_guard
 #include <set>                     // for std::set
 
+#include <execinfo.h>              // for backtrace, backtrace_symbols_fd
+
 #include "log.h"                   // for L_ERR
 #include "reactor.h"               // for reactor::inside_run
 
@@ -53,6 +55,8 @@ check_may_block(const char* site) noexcept
 	const char* where = on_loop ? "a reactor loop" : "a task scheduler's thread";
 #ifndef NDEBUG
 	std::fprintf(stderr, "%s blocks on database work on %s\n", site, where);
+	void* frames[64];
+	backtrace_symbols_fd(frames, backtrace(frames, 64), 2);
 	std::abort();
 #else
 	static std::mutex mutex;
