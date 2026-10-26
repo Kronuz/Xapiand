@@ -789,6 +789,8 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
+# reactor is declared before http and cluster so this pin wins over theirs (first declaration wins).
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG d381e4db5882285053056140dfe140ccb01fc295)  # feat/on-reactor-marker; lead repins after landing
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG dc3be77028d13aca66d20648d498301c9d745968)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
@@ -811,7 +813,6 @@ include_directories("${http_log_SOURCE_DIR}")
 # offload gate, and graceful shutdown, extracted from http so other services can share
 # one runtime. Header-only; needs only <asio.hpp> (provided below). Included here because
 # http_asio.h does #include "reactor.h".
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG e19afd966d5cf18e377649398096be66fb40e800)
 FetchContent_MakeAvailable(reactor)
 include_directories("${reactor_SOURCE_DIR}")
 
@@ -2145,7 +2146,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_shard pool)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_shard pool blocking_guard)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"

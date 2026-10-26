@@ -26,6 +26,7 @@
 #include <cassert>                // for assert
 
 #include "database/flags.h"       // for readable_flags
+#include "engine/sync.h"          // for engine::check_may_block
 #include "engine/xapian/errors.h" // for engine::xapian::NotAvailable, Opening
 #include "database/shard.h"       // for Shard
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -985,6 +986,8 @@ DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std:
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoint.to_string()), readable_flags(flags), timeout);
 
+	engine::check_may_block("DatabasePool::checkout");
+
 	auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
 	assert(shard);
 
@@ -1007,6 +1010,8 @@ std::vector<std::shared_ptr<Shard>>
 DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoints.to_string()), readable_flags(flags), timeout);
+
+	engine::check_may_block("DatabasePool::checkout");
 
 	if (endpoints.empty()) {
 		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
@@ -1087,6 +1092,8 @@ void
 DatabasePool::cleanup(bool immediate, bool notify)
 {
 	L_CALL("DatabasePool::cleanup()");
+
+	engine::check_may_block("DatabasePool::cleanup");
 
 	std::lock_guard<std::mutex> cleanup_lk(cleanup_mtx);
 
