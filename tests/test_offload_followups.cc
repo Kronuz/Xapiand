@@ -106,10 +106,10 @@ static void test_touch_sender_ignores_local() {
 }
 
 
-// Under a flood of commands a job queued behind the drain runs after at most drain_batch of them.
+// Under a flood of commands a job queued behind the drain runs after at most 64 of them.
 static void test_drain_yields_to_queued_job() {
 	ConcurrentQueue<int> commands;
-	constexpr std::size_t flood = engine::drain_batch * 10;
+	constexpr std::size_t flood = 1000;
 	for (std::size_t i = 0; i < flood; ++i) {
 		commands.enqueue(static_cast<int>(i));
 	}
@@ -118,17 +118,19 @@ static void test_drain_yields_to_queued_job() {
 	std::atomic<std::size_t> handled{0};
 	std::atomic<bool> stop_flooding{false};
 	std::size_t handled_at_job = 0;
-	std::promise<void> job_ran;
+	std::promise<void> job_ran, drained;
 
 	std::function<void()> drain = [&] {
 		auto more = engine::drain_bounded<int>(commands, engine::drain_batch, [&](int) { ++handled; });
 		if (more) {
 			asio::post(*r.pool(), drain);
+		} else {
+			drained.set_value();
 		}
 	};
 
 	std::thread flooder([&] {
-		while (!stop_flooding) {
+		for (std::size_t i = 0; i < flood && !stop_flooding; ++i) {
 			commands.enqueue(0);
 			std::this_thread::yield();
 		}
@@ -145,8 +147,10 @@ static void test_drain_yields_to_queued_job() {
 	job_ran.get_future().get();
 	stop_flooding = true;
 	flooder.join();
+	drained.get_future().get();
 
-	CHECK_LE(handled_at_job, engine::drain_batch);
+	CHECK_LE(engine::drain_batch, 64u);
+	CHECK_LE(handled_at_job, 64u);
 	CHECK_GT(handled_at_job, 0u);
 }
 
