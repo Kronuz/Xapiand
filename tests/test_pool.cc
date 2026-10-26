@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2026 Dubalu LLC
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+// Concurrency tests for DatabasePool and ShardEndpoint: wake-ups on checkin and unlock, and
+// concurrent cleanup. Shards here are never opened, so no database is touched.
+
+#include "test_harness.h"
+
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "database/flags.h"
+#include "database/pool.h"
+#include "database/shard.h"
+#include "engine/xapian/errors.h"
+
+using namespace std::chrono_literals;
+
+struct PoolTestAccess {
+	static std::mutex& mtx(ShardEndpoint& endpoint) { return endpoint.mtx; }
+	static std::mutex& mtx(DatabasePool& pool) { return pool.mtx; }
+	static std::atomic_int& locks(DatabasePool& pool) { return pool.locks; }
+	static std::condition_variable& writable_cond(ShardEndpoint& endpoint) { return endpoint.writable_cond; }
+	static std::condition_variable& readables_cond(ShardEndpoint& endpoint) { return endpoint.readables_cond; }
+};
+
+namespace {
+
+using A = PoolTestAccess;
+
+// Plays a waiter that has just found the shard unavailable under the endpoint mutex and is about to
+// block, while `release` (on another thread) makes it available. `release` first stops on the pool
+// mutex, past its own endpoint-mutex sections, so the waiter can take the endpoint mutex at the
+// racy point. The waiter must still be woken.
+bool woken_after(DatabasePool& pool, ShardEndpoint& endpoint, std::condition_variable& cond, const std::function<void()>& release) {
+	std::atomic_bool returned{false};
+	std::unique_lock<std::mutex> pool_lk(A::mtx(pool));
+	std::thread releaser([&] {
+		release();
+		returned = true;
+	});
+	std::this_thread::sleep_for(200ms);  // releaser is now blocked on the pool mutex
+	std::unique_lock<std::mutex> lk(A::mtx(endpoint));
+	pool_lk.unlock();
+	for (int i = 0; i < 50 && !returned; ++i) {
+		std::this_thread::sleep_for(10ms);
+	}
+	bool woken = cond.wait_for(lk, 2s) == std::cv_status::no_timeout;
+	lk.unlock();
+	releaser.join();
+	return woken;
+}
+
+void test_checkin_wakes_writable_waiter() {
+	DatabasePool pool(16, 4);
+	auto shard = pool.checkout(Endpoint("pool_test_writable"), DB_WRITABLE | DB_CREATE_OR_OPEN, 1.0);
+	REQUIRE(shard);
+	auto& endpoint = shard->endpoint;
+	A::locks(pool) += 1;  // makes checkin's notify_lockable take the pool mutex
+	CHECK_TRUE(woken_after(pool, endpoint, A::writable_cond(endpoint), [&] { pool.checkin(shard); }));
+	A::locks(pool) -= 1;
+}
+
+void test_checkin_wakes_readable_waiter() {
+	DatabasePool pool(16, 1);
+	auto shard = pool.checkout(Endpoint("pool_test_readable"), DB_OPEN, 1.0);
+	REQUIRE(shard);
+	auto& endpoint = shard->endpoint;
+	A::locks(pool) += 1;
+	CHECK_TRUE(woken_after(pool, endpoint, A::readables_cond(endpoint), [&] { pool.checkin(shard); }));
+	A::locks(pool) -= 1;
+}
+
+void test_unlock_wakes_readable_waiter() {
+	DatabasePool pool(16, 1);
+	auto shard = pool.checkout(Endpoint("pool_test_unlock"), DB_WRITABLE | DB_CREATE_OR_OPEN, 1.0);
+	REQUIRE(shard);
+	auto& endpoint = shard->endpoint;
+	pool.lock(shard, 1.0);
+	CHECK_TRUE(endpoint.is_locked());
+	CHECK_TRUE(woken_after(pool, endpoint, A::readables_cond(endpoint), [&] { pool.unlock(shard); }));
+	CHECK_FALSE(endpoint.is_locked());
+	pool.checkin(shard);
+}
+
+// Many threads running cleanup at once (concurrent FLUSH) while endpoints come and go; under ASan
+// this is a heap-use-after-free in the LRU walk unless cleanups are serialised.
+void test_concurrent_cleanup() {
+	DatabasePool pool(8, 2);
+	std::atomic_bool stop{false};
+	std::atomic_int checkouts{0};
+	std::vector<std::thread> threads;
+	for (int t = 0; t < 2; ++t) {
+		threads.emplace_back([&, t] {
+			for (int i = 0; !stop; ++i) {
+				auto shard = pool.checkout(Endpoint("pool_test_cleanup_" + std::to_string((t * 7 + i) % 64)), DB_OPEN, 1.0);
+				pool.checkin(shard);
+				++checkouts;
+			}
+		});
+	}
+	for (int t = 0; t < 4; ++t) {
+		threads.emplace_back([&] {
+			while (!stop) {
+				pool.cleanup(true, false);
+			}
+		});
+	}
+	std::this_thread::sleep_for(3s);
+	stop = true;
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	CHECK_GT(checkouts.load(), 0);
+}
+
+}  // namespace
+
+TEST_MAIN(test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup)
