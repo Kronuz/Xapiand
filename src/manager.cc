@@ -53,6 +53,7 @@
 #include "database/schemas_lru.h"                // for SchemasLRU
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
+#include "engine/drain.h"                        // for engine::drain_bounded
 #include "epoch.hh"                              // for epoch::now
 #include "error.hh"                             // for error:name, error::description
 #include "xapiand_exception.h"                          // for SystemExit, Excep...
@@ -1571,9 +1572,11 @@ XapiandManager::dispatch_command_async_cb()
 	// The commands open shards (new_leader, the election's lock_shard), so they run on the
 	// control plane's worker, in order.
 	control_offload([this] {
-		std::pair<Command, std::string> command;
-		while (dispatch_command_args.try_dequeue(command)) {
+		auto more = engine::drain_bounded<std::pair<Command, std::string>>(dispatch_command_args, engine::drain_batch, [this](const auto& command) {
 			_dispatch_command(command.first, command.second);
+		});
+		if (more) {
+			dispatch_command_async_cb();
 		}
 	});
 }

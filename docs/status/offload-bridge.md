@@ -3,7 +3,7 @@
 Branch `fix/offload-bridge` from Xapiand master `2726fd225` (local only, never pushed). Ruling:
 `docs/reviews/engine-offload-architect.md`, conditions C1 to C6 (C7 is step 7c). Reactor marker:
 Kronuz/reactor `feat/on-reactor-marker` `d381e4d` (pushed; the lead lands it). `CMakeLists.txt` pins
-reactor at `d381e4d` while developing; the lead repins after landing reactor.
+reactor at `d381e4d` (on reactor main; `fix/offload-followups` repins to `0c04d0d`).
 
 ## State
 
@@ -38,15 +38,14 @@ is outside this branch):
   teardown (GPL destructor, not read or touched here); the checkin guard catches it at runtime if
   it ever blocks. The `RemoteProtocolViews` local in `serve_remote_connection`
   (`remote_protocol_service.h`) could take the same hop.
-- CR2 follow-up (not done): `Node::touch_node(remote_node, false)` in `db_updated` now runs when the
+- CR2 follow-up (done in `fix/offload-followups`, `docs/status/offload-followups.md`): `Node::touch_node(remote_node, false)` in `db_updated` now runs when the
   control worker reaches it, so a long `setup_node` or `load_nodes` ahead of it delays `last_seen`
   (compared with `stalled` in `index_resolver_lru.cc`); and `dispatch_command_async_cb` drains
   with `while (try_dequeue)` in one job, so a sustained DB_UPDATED rate can starve a queued
   shutdown readiness job. Refresh liveness on the loop at message time; bound the drain.
 - CR4 closed in Kronuz/reactor `test/udp-inside-run` (`udp_test` checks the handler sees
   `reactor::inside_run()`).
-- CR5 is the lead's: repin to the landed reactor SHA (reactor main is `d381e4d`, so the pin is
-  already on main and the "lead repins" comment can go).
+- CR5: reactor pinned to main `0c04d0d`, comment removed (`fix/offload-followups`).
 - CR6: the build was reconfigured so the binary's embedded `git:` matches the head.
 
 ## Done criteria
@@ -161,10 +160,10 @@ failure), restored it passes (0), ASan+UBSan.
 
 ## Next
 
-- Lead: land Kronuz/reactor `test/udp-inside-run`; reactor main already holds `d381e4d`, so the pin
-  stands and the "lead repins" comment in `CMakeLists.txt` can go; write C1's text (with the remote
-  residual) into D13.
-- Follow-ups: CR2 (above); the same `release_on_pool` hop for `serve_remote_connection`
+- Lead: apply the "D13 as amended (C1)" text above, remote residual included, to D13 in strata
+  (`xapiand-on-strata.md:224-235`; in this repo D13 appears only in reviews and ledgers, so the text
+  lives here). CR2 and the reactor repin are in `fix/offload-followups`.
+- Follow-ups: the same `release_on_pool` hop for `serve_remote_connection`
   (`remote_protocol_service.h`, not the GPL file) if the remote teardown ever blocks; the prometheus
   ASan report.
 - Code review of this branch; the two new sites above are worth the architect's eye (DB_UPDATED now
