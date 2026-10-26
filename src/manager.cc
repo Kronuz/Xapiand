@@ -626,27 +626,35 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 	L_CALL("XapiandManager::shutdown_impl({}, {})", asap, now);
 
 	if (asap) {
-		if (!ready_to_end_http()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
-		} else if (database_pool->is_pending()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Waiting for replicators...", "Continuing shutdown process!");
-		} else if (!ready_to_end_remote()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Remote Protocol is busy...", "Continuing shutdown process!");
-		} else if (!ready_to_end_replication()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Replication Protocol is busy...", "Continuing shutdown process!");
-		} else {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
-		}
-
 		_rx->try_shutdown_timer.set_repeat(5.0);
 		_rx->try_shutdown_timer.again();
 		L_EV("Configured try shutdown timer (5.0)");
 
-		if (now != 0 || ready_to_end(true)) {
+		if (now != 0) {
 			// No Worker tree to stop/destroy/detach anymore -- the manager is the sole
 			// remaining runner, so shutting down is exactly "break the control-plane loop".
 			break_loop();
 		}
+
+		// The readiness checks resolve index settings for pending shards, a database read, so
+		// they run on the control plane's worker; break_loop() is thread-safe.
+		control_offload([this, now] {
+			if (!ready_to_end_http()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
+			} else if (database_pool->is_pending()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Waiting for replicators...", "Continuing shutdown process!");
+			} else if (!ready_to_end_remote()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Remote Protocol is busy...", "Continuing shutdown process!");
+			} else if (!ready_to_end_replication()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Replication Protocol is busy...", "Continuing shutdown process!");
+			} else {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
+			}
+
+			if (now == 0 && ready_to_end(true)) {
+				break_loop();
+			}
+		});
 	}
 }
 
