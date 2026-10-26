@@ -21,8 +21,8 @@
  */
 
 
-// The blocking guard (engine::check_may_block): engine::sync_wait and DatabasePool's checkout and
-// cleanup refuse to run inside a reactor loop's run() or on a task scheduler's thread, and run on
+// The blocking guard (engine::check_may_block): engine::sync_wait and DatabasePool's checkout,
+// checkin and cleanup refuse to run inside a reactor loop's run() or on a task scheduler's thread, and run on
 // a reactor's offload pool, on the loop's thread after run() returns, and on a plain thread.
 
 #include "test_harness.h"
@@ -31,6 +31,8 @@
 #include <cstdio>
 #include <functional>
 #include <future>
+#include <memory>
+#include <vector>
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -38,6 +40,7 @@
 #include "database/flags.h"
 #include "database/pool.h"
 #include "database/shard.h"
+#include "engine/release.h"
 #include "engine/sync.h"
 #include "reactor.h"
 #include "task.hh"
@@ -81,6 +84,36 @@ void checkout_and_checkin() {
 	pool.checkin(shard);
 }
 
+// Checks in on the calling thread a shard that was checked out off the loop.
+void checkin_only(bool vector_overload) {
+	DatabasePool pool(8, 1);
+	auto shard = pool.checkout(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN, 0.5);
+	on_loop([&] {
+		if (vector_overload) {
+			std::vector<std::shared_ptr<Shard>> shards{shard};
+			shard.reset();
+			pool.checkin(shards);
+		} else {
+			pool.checkin(shard);
+		}
+	});
+}
+
+// An object whose destructor does database work.
+struct Teardown {
+	~Teardown() { engine::check_may_block("Teardown"); }
+};
+
+void destroy_on_loop() {
+	on_loop([] { Teardown t; });
+}
+
+void release_on_loop_via_pool() {
+	reactor::Reactor r(1, 8);
+	asio::co_spawn(r.io(), engine::release_on_pool(&r, std::make_unique<Teardown>()), asio::detached);
+	r.run();
+}
+
 void cleanup() {
 	DatabasePool pool(8, 1);
 	pool.cleanup(true, false);
@@ -97,6 +130,9 @@ static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires([] { on_loop(wait_answer); }));
 	CHECK_TRUE(guard_fires([] { on_loop(checkout_and_checkin); }));
 	CHECK_TRUE(guard_fires([] { on_loop(cleanup); }));
+	CHECK_TRUE(guard_fires([] { checkin_only(false); }));
+	CHECK_TRUE(guard_fires([] { checkin_only(true); }));
+	CHECK_TRUE(guard_fires(destroy_on_loop));
 }
 
 static void test_fires_on_scheduler_thread() {
@@ -109,6 +145,7 @@ static void test_fires_on_scheduler_thread() {
 
 static void test_quiet_off_loop() {
 	CHECK_FALSE(guard_fires(wait_answer));
+	CHECK_FALSE(guard_fires(release_on_loop_via_pool));
 	CHECK_FALSE(guard_fires([] {
 		on_loop([] { });
 		checkout_and_checkin();  // the loop's thread, after run() returns

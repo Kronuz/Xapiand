@@ -1000,6 +1000,8 @@ DatabasePool::checkin(std::shared_ptr<Shard>& shard)
 {
 	L_CALL("DatabasePool::checkin({})", shard ? shard->__repr__() : "null");
 
+	engine::check_may_block("DatabasePool::checkin");
+
 	assert(shard);
 	shard->endpoint.checkin(shard);
 	shard.reset();
@@ -1039,6 +1041,8 @@ void
 DatabasePool::checkin(std::vector<std::shared_ptr<Shard>>& shards)
 {
 	L_CALL("DatabasePool::checkin(<shards>)");
+
+	engine::check_may_block("DatabasePool::checkin");
 
 	for (auto& shard : shards) {
 		if (shard) {

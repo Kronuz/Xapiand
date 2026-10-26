@@ -22,6 +22,31 @@ is outside this branch):
 > the engine call runs inline on it. A coroutine caller on a reactor `co_await`s the task and never
 > `sync_wait`s (from 7c). No thread waits, by `sync_wait` or otherwise, on a pool it is a thread of.
 > Xapiand enforces it with `engine::check_may_block` (`src/engine/sync.h`).
+>
+> Residual: a remote-protocol connection's teardown (`~RemoteProtocolViews`, destroyed on the
+> loop when `serve_remote_connection` ends) is not moved to the pool, so it is not covered by the
+> rule today. `DatabasePool::checkin` carries the guard, so a teardown that checks a shard in on a
+> loop aborts in Debug and is counted and logged in Release.
+
+## Review conditions (code review, `docs/reviews/offload-bridge-code.md`)
+
+- CR1 closed for replication: `ReplicationProtocolViews` is destroyed on the serving reactor's
+  pool (`engine::release_on_pool`, `src/engine/release.h`) at the end of
+  `serve_replication_connection` and `connect_and_replicate`, on every exit. Both
+  `DatabasePool::checkin` overloads call `engine::check_may_block`. Residual: the remote protocol's
+  teardown (GPL destructor, not read or touched here); the checkin guard catches it at runtime if
+  it ever blocks. The `RemoteProtocolViews` local in `serve_remote_connection`
+  (`remote_protocol_service.h`) could take the same hop.
+- CR2 follow-up (not done): `Node::touch_node(remote_node, false)` in `db_updated` now runs when the
+  control worker reaches it, so a long `setup_node` or `load_nodes` ahead of it delays `last_seen`
+  (compared with `stalled` in `index_resolver_lru.cc`); and `dispatch_command_async_cb` drains
+  with `while (try_dequeue)` in one job, so a sustained DB_UPDATED rate can starve a queued
+  shutdown readiness job. Refresh liveness on the loop at message time; bound the drain.
+- CR4 closed in Kronuz/reactor `test/udp-inside-run` (`udp_test` checks the handler sees
+  `reactor::inside_run()`).
+- CR5 is the lead's: repin to the landed reactor SHA (reactor main is `d381e4d`, so the pin is
+  already on main and the "lead repins" comment can go).
+- CR6: the build was reconfigured so the binary's embedded `git:` matches the head.
 
 ## Done criteria
 
