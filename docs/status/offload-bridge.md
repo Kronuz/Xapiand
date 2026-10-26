@@ -7,8 +7,9 @@ reactor at `d381e4d` while developing; the lead repins after landing reactor.
 
 ## State
 
-C1 to C6 done and verified (Debug ASan build, guard armed, Apple clang 17, macOS x86_64). Ready for
-code review. Two database sites on reactor loops beyond the ruling's list were found by the guard and
+C1 to C6 done and verified (Debug ASan build, guard armed, Apple clang 17, macOS x86_64). Code
+review (`docs/reviews/offload-bridge-code.md`, approve with conditions) folded in below: CR1, CR4,
+CR6 done, CR2 recorded as a follow-up, CR5 is the lead's. Two database sites on reactor loops beyond the ruling's list were found by the guard and
 fixed under C5 (shutdown readiness, DB_UPDATED on the bus loop). Not run: Linux, FreeBSD, timing.
 
 ## D13 as amended (C1)
@@ -90,6 +91,11 @@ Xapiand `fix/offload-bridge` (local):
 - `e0f6c895f` C2 backtrace on a guard abort.
 - `4d98274ec` C5 shutdown readiness checks on the worker.
 - `0191530a2` C5 DB_UPDATED dispatched to the worker.
+- `27a9dc463` CR1 replication views destroyed on the pool; `DatabasePool::checkin` guarded.
+
+Kronuz/reactor `test/udp-inside-run` (pushed, from main `d381e4d`): `0c04d0d` CR4, `udp_test` checks
+the handler sees `reactor::inside_run()`; with `UdpServer` back on `io().run()` that check fails (1
+failure), restored it passes (0), ASan+UBSan.
 
 ## Log
 
@@ -129,10 +135,38 @@ Xapiand `fix/offload-bridge` (local):
   the pool-concurrency ledger were not needed): `.scratch/build-tsan`, 3 runs each of `test_pool` and
   `test_blocking_guard`, 0 warnings.
 
+### 2026-10-26, review follow-up (CR1, CR4, CR6)
+
+- Build: same `.scratch/build-asan`, reconfigured (CR6): the binary prints `git:27a9dc463`, the CR1
+  commit; the head after it differs only in this ledger.
+- Unit tests (ASan): `blocking_guard` 12 checks (was 8), `pool` 21, OK. TSan (`.scratch/build-tsan`),
+  3 runs each of `test_pool` and `test_blocking_guard`: 0 warnings.
+- Mutants on `test_blocking_guard`: dropping the checkin guard fails 2 checks (both overloads);
+  `release_on_pool` destroying inline fails 1.
+- Revert check for the move (`.scratch/repl_drop.sh`: node1 holds a 60-doc index, node2 joins and
+  replicates, node1 is `kill -9`ed while the replication connection is up): with
+  `replication_protocol_service.h` back at the pre-CR1 text, node2 aborts in `DatabasePool::checkin`
+  from `lock_shard::unlock` from `~ReplicationProtocolViews` on a loop (6 report lines per run, all
+  three rounds); with the move, two rounds dropped the connection: 0 guard hits, 0 ASan.
+- Guard armed (checkin included): docs E2E GREEN/GREEN, 0 ASan, 0 guard hits;
+  `FAILOVER=1 harness/cluster_check.sh 3`: 0 guard hits, 0 ASan, only the two known failover 503
+  checks fail (pre-existing, same as the pool-fix binary per the review).
+- `uafhunt.sh` 10 rounds twice and `stallcount.sh 0 _ 5`: node alive, 0 ASan, 0 timeouts, 0 guard
+  hits, with `detect_container_overflow=0`. With it on, `uafhunt.sh` aborts at round 8 in prometheus-cpp
+  `CKMSQuantiles::insertBatch` (`Summary::Observe`, called from `emit_via_writer`): a libc++
+  container-overflow report in the metrics library. The pre-CR1 sources (service header and
+  `pool.cc` at `c5c004740`) built in the same tree abort identically twice, so it is not from CR1;
+  it did not show in the earlier 10-round runs and its cause is not run down (the pool-fix binary
+  runs 10 clean rounds). Worth its own ticket.
+
 ## Next
 
-- Lead: land Kronuz/reactor `feat/on-reactor-marker` (`d381e4d`), repin Xapiand's reactor (the
-  declaration now sits before `http_lib`), write C1's text into D13.
+- Lead: land Kronuz/reactor `test/udp-inside-run`; reactor main already holds `d381e4d`, so the pin
+  stands and the "lead repins" comment in `CMakeLists.txt` can go; write C1's text (with the remote
+  residual) into D13.
+- Follow-ups: CR2 (above); the same `release_on_pool` hop for `serve_remote_connection`
+  (`remote_protocol_service.h`, not the GPL file) if the remote teardown ever blocks; the prometheus
+  ASan report.
 - Code review of this branch; the two new sites above are worth the architect's eye (DB_UPDATED now
   queues behind elections on the one worker).
 - C7 at 7c.
