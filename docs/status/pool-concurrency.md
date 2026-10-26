@@ -6,18 +6,55 @@ review before the lead merges. Commits stay local.
 
 ## State
 
-- State: in progress (fixes written, verifying).
-- Next: verify fix v2 (pool test, UAF hunt, reopen count), revert checks, TSan, docs E2E.
-- Blocked on: nothing.
+- State: in review (code reviewer, concurrency tier). Commits are local, not pushed.
+- Commits: `cd5f7b44e` tests, `28f6b88ff` pool fixes (CR8 1, 2), `df87f4e1c` reopen (CR8 3),
+  `b8a286309` changelog and ledger, `041187739` clear() wake-up tests, plus this ledger update.
+- Next: code review; then the lead merges.
+- Blocked on: nothing. Scope note for the lead: fixing item 1 exposed `ShardEndpoint::clear()`
+  bugs (below) that crash the same FLUSH repro, so clear() was reworked too; CR8 asked for a
+  designer or pool owner on checkout and cleanup concurrency, so the reviewer should weigh that.
 
 ## Done criteria
 
-- [ ] K1 Each bug reproduced on master (command and output), root cause with file:line.
-- [ ] K2 Each fix has a test or repro that fails before and passes after (revert check).
-- [ ] K3 UAF repro clean under ASan for 3x the iterations it took on master; lost wake-up has a
-  deterministic or stress test; reopen succeeds in one pass.
-- [ ] K4 TSan (Homebrew LLVM) on the pool tests; docs E2E passes as on master.
-- [ ] K5 Changelog bullet under `[Unreleased]` if user-visible.
+- [x] K1 Reproduced on master (below, 2026-10-25): UAF in round 1 of `uafhunt.sh` (4 of 4 runs)
+  and in `test_concurrent_cleanup`; lost wake-ups by three deterministic tests and the hammer
+  (6 of 30 rounds with a timeout); reopen by lldb counts (11 opens per reopen). Root causes with
+  file:line in the log.
+- [x] K2 Each fix has a failing-before test; revert checks and mutants in the table below.
+- [x] K3 UAF hunt clean for 30 rounds (master: round 1, so 30 times); lost wake-up: deterministic
+  tests plus hammer 0 of 30 rounds (master 6 of 30); reopen opens once (lldb 11 vs 121 writable
+  opens for the same run).
+- [x] K4 TSan (Homebrew LLVM 22): `test_pool` 3 runs, 0 warnings, 12 checks; docs E2E GREEN on
+  master and fix, 0 ASan reports.
+- [x] K5 Two bullets under `[Unreleased]` / Fixed.
+
+## Revert checks and mutants
+
+`.scratch/mutrun.sh` applies each mutant (`.scratch/mutants.py`), rebuilds `test_pool`, runs it,
+restores. Logs in `.scratch/test_pool-M*.log`.
+
+| Mutant | Breaks | Caught by |
+|---|---|---|
+| M1 | no `cleanup_mtx` | `test_concurrent_cleanup`: ASan heap-use-after-free |
+| M2 | checkin writable releases outside `mtx` | `test_checkin_wakes_writable_waiter` FAIL |
+| M3 | checkin readable releases outside `mtx` | `test_checkin_wakes_readable_waiter` FAIL |
+| M4 | unlock notifies outside `mtx` | `test_unlock_wakes_readable_waiter` FAIL |
+| M5 | master's `clear()` | `test_concurrent_cleanup`: ASan heap-use-after-free `pool.cc:437` (checkin on an evicted endpoint) |
+| M6 | predicate dereferences a null `writable` | `test_concurrent_cleanup`: UBSan null dereference |
+| M7 | clear leaves the readable it holds counted | `test_clear_wakes_readable_waiters`: hung (watchdog) |
+| M8 | clear does not wake writable waiters | not by the unit test (clear's window is too short on an unopened shard); hammer 7 of 30 rounds with a timeout (fix 0 of 30) |
+| M9 | no `break` in `Shard::reopen` | lldb: 121 writable and 286 readable opens (fix 11 and 25) |
+
+## Found, not fixed (pre-existing, for the reviewer or owner)
+
+- `DatabasePool::clear()` (shutdown, via `join`) clears the LRU without checking `refs`, so an
+  endpoint a concurrent caller still references is deleted. Shutdown only.
+- A writable that checkin drops (`writable.reset()` when closed, finished or lockable) can stay
+  alive with the committer, which then reads `shard->endpoint` after the endpoint may have been
+  evicted (`committer_commit`, `handler.cc:2913`). Not reproduced.
+- Toolchain: Homebrew LLVM 22 and 23 do not build Xapiand as is (SDK include dirs from
+  `UUID_INCLUDE_DIR`/`ZLIB_INCLUDE_DIR`, the pinned RapidJSON's const assignment, and
+  `XXH_STATIC_LINKING_ONLY` redefined under `-Werror`); details in the log.
 
 ## Log
 
@@ -78,3 +115,13 @@ review before the lead merges. Commits stay local.
   assigns a const member (patched in `build-tsan/_deps` only); `config.h:289` redefines
   `XXH_STATIC_LINKING_ONLY` under `-Werror` (`-Wno-macro-redefined`). Toolchain findings, not
   fixed here.
+
+### 2026-10-26
+
+- Mutants M1 to M9 (table above). M7 and M8 were missed by the first tests; added
+  `test_clear_wakes_{writable,readable}_waiters` (`041187739`), which catch M7; M8 is caught by the
+  hammer only.
+- Hammer (`stallcount.sh 0 8997 30`, ASan binaries, pool off): master 6 of 30 rounds with a 20 s
+  timeout, fix 0 of 30, M8 7 of 30. No ASan report in any.
+- TSan rerun with the new tests: 3 runs, 0 warnings, 12 checks.
+- No server left running; `build-asan` and `build-tsan` kept for the reviewer (rebuildable).
