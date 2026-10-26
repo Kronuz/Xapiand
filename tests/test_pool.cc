@@ -28,6 +28,8 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -149,6 +151,67 @@ void test_concurrent_cleanup() {
 	CHECK_EQ(timeouts.load(), 0);
 }
 
+// A waiter blocked on a busy shard while clear() takes that shard right after its checkin: clear
+// must wake the waiter when it releases or drops the shard, and must not leave the shard it holds
+// counted as available (a reader at the limit then spins holding the mutex and clear hangs).
+void clear_wakes_waiters(int flags) {
+	std::atomic_bool done{false};
+	std::thread watchdog([&] {
+		for (int i = 0; i < 600 && !done; ++i) {
+			std::this_thread::sleep_for(100ms);
+		}
+		if (!done) {
+			std::fprintf(stderr, "  FAIL clear_wakes_waiters(%d): hung\n", flags);
+			std::_Exit(1);
+		}
+	});
+	DatabasePool pool(8, 1);
+	const Endpoint endpoint("pool_test_clear");
+	std::atomic_bool stop{false};
+	std::atomic_int timeouts{0};
+	auto first = pool.checkout(endpoint, flags, 0.5);
+	ShardEndpoint& shard_endpoint = first->endpoint;  // stays in the pool: nothing evicts here
+	pool.checkin(first);
+	std::thread cleaner([&] {
+		while (!stop) {
+			shard_endpoint.clear();
+		}
+	});
+	for (int i = 0; i < 300; ++i) {
+		std::shared_ptr<Shard> shard;
+		try {
+			shard = pool.checkout(endpoint, flags, 0.5);
+		} catch (const engine::xapian::NotAvailable&) {
+			++timeouts;
+			continue;
+		}
+		std::atomic_bool started{false};
+		std::thread waiter([&] {
+			started = true;
+			try {
+				auto other = pool.checkout(endpoint, flags, 0.5);
+				pool.checkin(other);
+			} catch (const engine::xapian::NotAvailable&) {
+				++timeouts;
+			}
+		});
+		while (!started) {
+			std::this_thread::yield();
+		}
+		std::this_thread::sleep_for(1ms);  // the waiter is (most likely) blocked on the busy shard
+		pool.checkin(shard);
+		waiter.join();
+	}
+	stop = true;
+	cleaner.join();
+	done = true;
+	watchdog.join();
+	CHECK_EQ(timeouts.load(), 0);
+}
+
+void test_clear_wakes_writable_waiters() { clear_wakes_waiters(DB_WRITABLE | DB_CREATE_OR_OPEN); }
+void test_clear_wakes_readable_waiters() { clear_wakes_waiters(DB_OPEN); }
+
 }  // namespace
 
-TEST_MAIN(test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup)
+TEST_MAIN(test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters)
