@@ -47,6 +47,7 @@ struct PoolTestAccess {
 	static std::atomic_int& locks(DatabasePool& pool) { return pool.locks; }
 	static std::condition_variable& writable_cond(ShardEndpoint& endpoint) { return endpoint.writable_cond; }
 	static std::condition_variable& readables_cond(ShardEndpoint& endpoint) { return endpoint.readables_cond; }
+	static void set_local(Shard& shard) { shard._local = true; }  // as if opened locally
 };
 
 namespace {
@@ -101,6 +102,7 @@ void test_unlock_wakes_readable_waiter() {
 	auto shard = pool.checkout(Endpoint("pool_test_unlock"), DB_WRITABLE | DB_CREATE_OR_OPEN, 1.0);
 	REQUIRE(shard);
 	auto& endpoint = shard->endpoint;
+	A::set_local(*shard);
 	pool.lock(shard, 1.0);
 	CHECK_TRUE(endpoint.is_locked());
 	CHECK_TRUE(woken_after(pool, endpoint, A::readables_cond(endpoint), [&] { pool.unlock(shard); }));
@@ -108,19 +110,26 @@ void test_unlock_wakes_readable_waiter() {
 	pool.checkin(shard);
 }
 
-// Many threads running cleanup at once (concurrent FLUSH) while endpoints come and go; under ASan
-// this is a heap-use-after-free in the LRU walk unless cleanups are serialised.
+// Cleanups running at once (concurrent FLUSH) while readers and writers check shards in and out
+// of the same endpoints: no use-after-free in the LRU walk, no checkout of a slot that cleanup is
+// clearing, and no waiter left asleep (a lost wake-up shows as a timeout).
 void test_concurrent_cleanup() {
 	DatabasePool pool(8, 2);
 	std::atomic_bool stop{false};
 	std::atomic_int checkouts{0};
+	std::atomic_int timeouts{0};
 	std::vector<std::thread> threads;
-	for (int t = 0; t < 2; ++t) {
+	for (int t = 0; t < 4; ++t) {
 		threads.emplace_back([&, t] {
+			int flags = t < 2 ? DB_OPEN : DB_WRITABLE | DB_CREATE_OR_OPEN;
 			for (int i = 0; !stop; ++i) {
-				auto shard = pool.checkout(Endpoint("pool_test_cleanup_" + std::to_string((t * 7 + i) % 64)), DB_OPEN, 1.0);
-				pool.checkin(shard);
-				++checkouts;
+				try {
+					auto shard = pool.checkout(Endpoint("pool_test_cleanup_" + std::to_string((t * 7 + i) % 16)), flags, 5.0);
+					pool.checkin(shard);
+					++checkouts;
+				} catch (const engine::xapian::NotAvailable&) {
+					++timeouts;
+				}
 			}
 		});
 	}
@@ -137,6 +146,7 @@ void test_concurrent_cleanup() {
 		thread.join();
 	}
 	CHECK_GT(checkouts.load(), 0);
+	CHECK_EQ(timeouts.load(), 0);
 }
 
 }  // namespace

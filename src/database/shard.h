@@ -58,6 +58,7 @@ class Shard {
 	friend class DatabasePool;
 	friend class DatabaseWAL;
 	friend class lock_shard;
+	friend struct PoolTestAccess;  // tests/test_pool.cc
 
 public:
 	enum class Transaction : uint8_t {

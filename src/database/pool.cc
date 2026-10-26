@@ -181,7 +181,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 			}
 		}
 		auto wait_pred = [&]() {
-			return is_finished() || (!writable->is_busy() && !is_locked() && !database_pool.is_locked(*this));
+			return is_finished() || ((!writable || !writable->is_busy()) && !is_locked() && !database_pool.is_locked(*this));
 		};
 		if (timeout) {
 			if (timeout > 0.0) {
@@ -419,11 +419,15 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		}
 #endif
 		L_SHARD_LOG_TIMED_CLEAR();
+		// Under mtx, so a waiter between its predicate check and its wait cannot miss this.
+		std::lock_guard<std::mutex> lk(mtx);
 		shard->_busy.store(false);
 		writable_cond.notify_one();
 	} else {
-		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
-			std::lock_guard<std::mutex> lk(mtx);
+		bool drop = is_finished() || database_pool.notify_lockable(*this) || shard->is_closed();
+		L_SHARD_LOG_TIMED_CLEAR();
+		std::lock_guard<std::mutex> lk(mtx);
+		if (drop) {
 			auto it = std::find(readables.begin(), readables.end(), shard);
 			if (it != readables.end()) {
 				readables.erase(it);
@@ -432,7 +436,6 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			++readables_available;
 		}
-		L_SHARD_LOG_TIMED_CLEAR();
 		shard->_busy.store(false);
 		readables_cond.notify_one();
 	}
@@ -469,29 +472,22 @@ ShardEndpoint::clear()
 
 	std::unique_lock<std::mutex> lk(mtx);
 
+	// A shard taken here stays in its slot, busy, until it is dropped or released, so no checkout
+	// can fill or reuse the slot meanwhile. Under mtx and busy, nobody else can copy the slot's
+	// pointer, so use_count() == 1 means the slot holds the last reference.
+	std::vector<std::shared_ptr<Shard>> dropped;  // deleted outside mtx
 	if (writable) {
 		if (!writable->_busy.exchange(true)) {
 			lk.unlock();
 			// First try closing internal shard:
 			writable->do_close(true, writable->is_closed(), writable->transactional(), false);
 			lk.lock();
-			auto shared_writable = writable;
-			std::weak_ptr<Shard> weak_writable = shared_writable;
-			writable.reset();
-			lk.unlock();
-			try {
-				// If it's the last one, reset() will delete the shard object:
-				shared_writable.reset();
-			} catch (...) {
-				L_WARNING("WARNING: Writable shard deletion failed: {}", to_string());
-			}
-			lk.lock();
-			if ((shared_writable = weak_writable.lock())) {
-				// It wasn't the last one,
-				// add it back:
-				writable = shared_writable;
+			if (writable.use_count() == 1) {
+				dropped.push_back(std::move(writable));
+			} else {
 				writable->_busy.store(false);
 			}
+			writable_cond.notify_all();
 		}
 	}
 
@@ -502,32 +498,20 @@ ShardEndpoint::clear()
 				--readables_available;
 				it = readables.erase(it);
 			} else if (!readable->_busy.exchange(true)) {
+				--readables_available;
 				lk.unlock();
 				// First try closing internal shard:
 				readable->do_close(true, readable->is_closed(), readable->transactional(), false);
 				lk.lock();
-				auto shared_readable = readable;
-				std::weak_ptr<Shard> weak_readable = shared_readable;
-				readable.reset();
-				lk.unlock();
-				try {
-					// If it's the last one, reset() will delete the shard object:
-					shared_readable.reset();
-				} catch (...) {
-					L_WARNING("WARNING: Readable shard deletion failed: {}", to_string());
-				}
-				lk.lock();
-				if ((shared_readable = weak_readable.lock())) {
-					// It wasn't the last one,
-					// add it back:
-					readable = shared_readable;
-					readable->_busy.store(false);
-					++it;
-				} else {
-					// It was the last one,
-					// erase it:
-					--readables_available;
+				if (readable.use_count() == 1) {
+					dropped.push_back(std::move(readable));
 					it = readables.erase(it);
+					readables_cond.notify_all();
+				} else {
+					readable->_busy.store(false);
+					++readables_available;
+					readables_cond.notify_all();
+					++it;
 				}
 			} else {
 				++it;
@@ -535,7 +519,10 @@ ShardEndpoint::clear()
 		}
 	}
 
-	return std::make_pair(writable ? 1 : 0, readables.size());
+	auto count = std::make_pair<size_t, size_t>(writable ? 1 : 0, readables.size());
+	lk.unlock();
+	dropped.clear();
+	return count;
 }
 
 
@@ -860,7 +847,11 @@ DatabasePool::unlock(const std::shared_ptr<Shard>& shard)
 	--locks;
 
 	auto referenced_database_endpoint = get(shard->endpoint);
-	referenced_database_endpoint->readables_cond.notify_all();
+	{
+		// Orders the unlock with the waiters' predicate checks.
+		std::lock_guard<std::mutex> lk(referenced_database_endpoint->mtx);
+		referenced_database_endpoint->readables_cond.notify_all();
+	}
 	referenced_database_endpoint.reset();
 }
 
@@ -1098,6 +1089,8 @@ void
 DatabasePool::cleanup(bool immediate, bool notify)
 {
 	L_CALL("DatabasePool::cleanup()");
+
+	std::lock_guard<std::mutex> cleanup_lk(cleanup_mtx);
 
 	auto now = std::chrono::steady_clock::now();
 

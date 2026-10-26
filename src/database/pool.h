@@ -154,6 +154,7 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	friend struct PoolTestAccess;  // tests/test_pool.cc
 
 	mutable std::mutex mtx;
+	std::mutex cleanup_mtx;  // one cleanup at a time: its LRU walk drops mtx mid-walk
 
 	std::atomic_int locks;
 
