@@ -87,3 +87,32 @@ Mutants I built (compiled `pool.cc` copies linked into `xapiand_test_pool`, ASan
 ## Not run
 
 TSan on the server binary and on my probes; the pool-on (`XAPIAND_ENGINE_OFFLOAD_THREADS`) hammer; the docs E2E (contributor reports GREEN, not re-run); the contributor's mutants M1-M9 (only my own MA-MF run; M8 equals MA); master comparison of CR1 (reasoned from the code: master's unlocked notify is silent); the cluster/remote paths; Linux and FreeBSD (no CI; `pthread_mutex_lock` on a destroyed mutex may not fail there, so CR1 is silent UB rather than an abort); a probe for `finish()`/`join` lost wake-ups (CR4) and for the committer window (CR3); anything under `src/xapian/` and the GPL files (not read).
+
+## Re-check (2026-10-26)
+
+Scope: CR1 and CR2 against fix commit a3890d79f (on 0ca4e013e). Diff read: `git diff 0ca4e013e a3890d79f` (`src/database/pool.cc`, `tests/test_pool.cc`, `docs/status/pool-concurrency.md`). Artifacts in `.scratch/review/recheck/`.
+
+### CR1: CLOSED
+
+1. `src/database/pool.cc:399-404` computes `drop` first (`is_finished() || notify_lockable(*this) || is_closed()`, then `drop = shard->is_closed()` after `Shard::autocommit`); the WAL delete stays before the lock (`:405-413`); `:417-424` is one `lock_guard` section doing `if (drop) { writable.reset(); checkin_clears_cond.notify_all(); }`, `_busy.store(false)`, `writable_cond.notify_one()`. Nothing in `checkin` locks `mtx` after that section (what follows is `shard.reset()` and the local `pending_callbacks.call()`, `:447-449`). The function is textually the reviewer's `pool_fixed.cc` plus comments (`diff` shows only comment lines).
+2. No new double-lock or lock-order change. `mtx` is taken twice in `checkin` on the writable path: the callbacks swap (`:394-396`, released), then the one section (`:417`). `is_finished()` and `notify_lockable(*this)` still run with `mtx` released, as on 0ca4e013e. `checkin_clears_cond.notify_all()` is still under `mtx` and takes no pool mutex. The readable branch is untouched. One ordering change: on a dropping restore shard `delete_wal` now runs before `writable.reset()` (the slot still holds the shard, `_busy` still set); benign, and what the reviewer's fixed copy did.
+3. `probe_drop` (`recheck/probe_drop_fixed`, linked against the fixed `pool.cc.o`): `drop_window.lldb`'s breakpoint at `pool.cc:423` no longer marks a gap (it now sits inside the single section; running `cleanup` there would self-deadlock on `mtx`), so I ran the same script at the two points where the endpoint is exposed: `:417` (decision made, section not yet entered) and `:447` (`shard.reset()`, after the section). Both: `cleanup(true,false)` returns, `checkin returned`, exit 0, no abort (`recheck/lldb_fixed.log`). At `:417` the writable slot still holds the shard, so the endpoint is not evictable; the gap is gone.
+4. `probe_drop_stress` (`recheck/probe_drop_stress_fixed`, 10 s, 3 runs): survived 522630, 487367 and 486161 checkins, rc 0 each. Control, same source linked against the old object (`../probe_drop_stress`, branch before the fix): `mutex lock failed: Invalid argument`, abort, rc 134 (`recheck/stress_fixed.log`).
+5. Revert check: `recheck/pool_oldcheckin.cc` (= `git show 0ca4e013e:src/database/pool.cc`, only `checkin` differs from the fix) linked with the fix's `test_pool.cc.o`: `libc++abi: terminating due to uncaught exception of type std::__1::system_error: mutex lock failed: Invalid argument`, rc 134 (`recheck/run_oldcheckin.log`). With the fix: ASan `xapiand_test_pool` 21 checks passed; TSan build 21 checks passed, 0 warnings. `test_checkin_drop_races_cleanup` (`tests/test_pool.cc:216-247`) is the stress shape (2 writers closing and checking in on their own endpoints, 3 `cleanup(true,false)` threads, 5 s) and the only new test that can reach the path. Test cost: 5 s of wall time.
+
+### CR2: CLOSED
+
+1. `test_clear_keeps_shared_writable` and `test_clear_keeps_shared_readable` exist (`tests/test_pool.cc:269-270`, helper `:250-267`, both registered in `TEST_MAIN`). They are the `probe_clear_shared` sequence: checkout, extra `shared_ptr`, checkin, `clear()` returns 1 kept, shard not busy, next checkout returns the same shard, `clear()` returns 0 after the extra reference and the shard are released.
+2. Mutants built from the fixed `pool.cc` (`recheck/pool_MBw.cc`: `clear()` writable drop condition `use_count() == 1` replaced by `true`; `recheck/pool_MBr.cc`: the same for the readable condition), linked with the fix's test object, ASan flags:
+   - MBw: 3 of 21 checks FAILED (`test_pool.cc:258`, `:259`, `:261`), rc 1.
+   - MBr: 3 of 21 checks FAILED (same lines), rc 1. This is the variant the contributor did not run. Each mutant fails exactly one test's three checks (not six), so each test kills its own mutant independently.
+   - Unmutated fix: 21 passed.
+3. Still unpinned, as the review said (no seam): MA, MD, ME (`clear()` wake-ups). Not part of the condition.
+
+### New findings
+
+None from the diff. One line outside the scope, for the lead (not verified, pre-existing): `checkin` still ends with `shard.reset()` (`pool.cc:447`) after the endpoint is evictable; on a dropped open shard `~Shard` runs `do_close` there, which I did not trace for uses of `shard->endpoint` (the existing CR3 caveat about who owns the endpoint's lifetime across a dropped shard's destructor).
+
+### Not run
+
+Server binary under ASan/TSan and the hammer (`stallcount.sh`, `uafhunt.sh`) against the fix; the docs E2E; pool-on hammer; TSan builds of the probes and of the mutants; the old-checkin revert check was done by object swap (old `pool.cc` copy linked into `test_pool`), not by editing the worktree; Linux and FreeBSD; `clear()` mutants MA, MD, ME; CR3 to CR5 and the notes (not in scope). Nothing under `src/xapian/` or the GPL files was read.

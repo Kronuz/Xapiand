@@ -157,3 +157,14 @@ restores. Logs in `.scratch/test_pool-M*.log`.
   `cleanup_mtx` outside the pool mutex and skip `lru::clear()` while any `refs != 0`.
 - M8 seam: a test hook in `ShardEndpoint::clear()` between `lk.unlock()` and `lk.lock()` would
   let a unit test pin MA/M8, MD and ME.
+
+### 2026-10-26 (lead)
+
+- Re-check: CR1 and CR2 CLOSED (`docs/reviews/pool-concurrency-code.md`, "Re-check").
+- Follow-up CR7 (lead, from the re-check's note): in `checkin`'s drop path the local `shard.reset()`
+  (`src/database/pool.cc:447`) can drop the last reference after the endpoint is evictable, and
+  `~Shard` runs `do_close` on a `Shard` that holds `ShardEndpoint&`. Pre-existing ordering; the
+  only endpoint use seen in `do_close` is its `L_CALL` (off by default); its callees are untraced.
+  Needs a probe before it is ruled out.
+- Merged into local master.
+
