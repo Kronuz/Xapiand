@@ -446,6 +446,15 @@ link_libraries(
 # release tag once the libraries cut releases. For offline/hermetic builds, set
 # FETCHCONTENT_SOURCE_DIR_<NAME> (or populate FETCHCONTENT_BASE_DIR) to a local
 # checkout.
+########################################################################
+# Check for sanitizers (before FetchContent so fetched libraries are instrumented too)
+########################################################################
+
+if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
+	find_package(Sanitizers QUIET)
+endif ()
+
+
 include(FetchContent)
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
@@ -2045,15 +2054,6 @@ configure_file(
 	"${PROJECT_SOURCE_DIR}/config.h.in"
 	"${PROJECT_BINARY_DIR}/src/config.h"
 	@ONLY)
-
-
-########################################################################
-# Check for sanitizers
-########################################################################
-
-if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
-	find_package(Sanitizers QUIET)
-endif ()
 
 
 ########################################################################
