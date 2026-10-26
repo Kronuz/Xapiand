@@ -60,3 +60,21 @@ review before the lead merges. Commits stay local.
   endpoint alive until checkin is done with it (cleanup needs `mtx` to see the shard as free).
 - Root cause 3: `Shard::reopen` (`shard.cc:663-690`) has no `break` after a successful
   `reopen_writable()`/`reopen_readable()`, so it reopens `DB_RETRIES + 1` = 11 times. Fix: `break`.
+- Fix v2 (`28f6b88ff`, `df87f4e1c`; `.scratch/verify-fix2.out`): `test_pool` OK (10 checks),
+  `uafhunt.sh build-asan/bin/xapiand 8994 30`: 30 rounds, node alive, 0 ASan reports (master hit
+  in round 1 of 4 runs of 4, so 30 rounds is 30 times the master count).
+- Reopen counts (`.scratch/reopenlldb.sh`, lldb auto-continue breakpoints, one PUT with commit
+  and one GET on a fresh node, then SIGTERM): master `reopen_writable` 121 and
+  `reopen_readable` 286 hits; fix 11 and 25. Before shutdown (first master run): 11 and 22, that
+  is 11 opens per reopen. `.scratch/reopencount.sh` (WAL replay lines) was no proof: the replay
+  line prints only when the WAL has ops past the revision, and both binaries print one per WAL.
+- Docs E2E (`.scratch/e2e.sh`: `harness/e2e_capture.sh`, newman 6, `e2e_assert.py`,
+  `e2e_diff.py` against the X1 final capture), ASan binaries: master GREEN/GREEN, fix GREEN/GREEN,
+  0 ASan reports in each.
+- Changelog: two bullets under `[Unreleased]` / Fixed.
+- TSan build (`build-tsan`): Homebrew LLVM 23 and 22 do not build Xapiand as is. Libc++ rejects
+  `-I<SDK>/usr/include`, which `UUID_INCLUDE_DIR` and `ZLIB_INCLUDE_DIR` resolve to (worked
+  around with `.scratch/sdkinc/` symlinks); the pinned RapidJSON's `GenericStringRef::operator=`
+  assigns a const member (patched in `build-tsan/_deps` only); `config.h:289` redefines
+  `XXH_STATIC_LINKING_ONLY` under `-Werror` (`-Wno-macro-redefined`). Toolchain findings, not
+  fixed here.

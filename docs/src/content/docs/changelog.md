@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A retried write no longer fails with a spurious version conflict.** After a failed write,
   the retry compared its own freshly assigned version against the stored one and returned 409.
+- **Concurrent `FLUSH` requests no longer crash the node,** and a request no longer waits for a
+  free shard until its timeout when the shard was released or flushed while it waited.
+- **Opening a shard opens it once.** Every open repeated itself eleven times, replaying the WAL
+  each time.
 - **German stop words now apply.** A duplicate entry in the German list made the stopper fail
   to build, so the first German text write failed and later ones skipped stop words.
 - **Basque text fields work.** The `basque` language mapped to the unknown code `ue`, so
