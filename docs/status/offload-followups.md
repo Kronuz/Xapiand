@@ -5,7 +5,7 @@ Branch `fix/offload-followups` from Xapiand master `55316114d` (local only, neve
 
 ## State
 
-In progress.
+CR2a, CR2b and the CR5 leftovers done and verified (Debug ASan, Apple clang 17, macOS x86_64). Not run: Linux, FreeBSD, timing.
 
 ## Plan and design
 
@@ -24,7 +24,24 @@ In progress.
 
 ## Done
 
+- Code and ledger: `f7486b7ff`; drain test made independent of the batch size: next commit.
+- Tests (`tests/test_offload_followups.cc`, 14 checks, ASan): `last_seen` advances during a held
+  control-worker job (`Node::touch_sender` on the loop); a job queued behind a 1000-command flood
+  runs after at most 64 commands; `drain_bounded` contract.
+- Mutants (`.scratch/revert_checks.sh`, output in `.scratch/revert_checks.out`): `touch_sender`
+  without the touch: 2 checks fail; `drain_batch` 1e9: 2 fail; `drain_bounded` never reporting more:
+  1 fails. All sources restored.
+- ASan unit tests, fresh `.scratch/build-asan`: `blocking_guard` 14, `pool` 21, `engine_shard` 52,
+  `engine_document` 844, `endpoint` 16, all OK. The reactor `0c04d0d` pin builds.
+- `harness/cluster_check.sh 2` and `3` on the ASan binary: GREEN (discovery, cross-node read,
+  distributed search; an ASan report would kill a node).
+- Limit: `Discovery::on_message` is not linkable in the unit tests, so the wiring (touch before
+  dispatch) is covered by reading and the cluster runs, not by a revert check; the unit test covers
+  `Node::touch_sender`.
+
 ## Next
+
+Code review of this branch; the lead merges.
 
 ## Blocked on
 
