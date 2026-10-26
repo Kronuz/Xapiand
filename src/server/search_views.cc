@@ -1655,6 +1655,21 @@ restore_database_view(Request& request)
 
 	auto indexer = request.indexer.load();
 
+	// Finishes and drops the request's indexer here, on the worker, on every exit, so its last
+	// reference (and the commit in ~DocIndexer) never falls on the reactor in ~Request.
+	struct DropIndexer {
+		Request& request;
+		~DropIndexer() {
+			try {
+				if (auto held = request.indexer.exchange(nullptr)) {
+					held->finish();
+				}
+			} catch (...) {
+				L_EXC("Unhandled exception finishing the restore indexer");
+			}
+		}
+	} drop_indexer{request};
+
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
 		MsgPack obj;
 		while (request.next_object(obj)) {
