@@ -22,7 +22,7 @@
 
 #include "engine/xapian/shard.h"
 
-#include <chrono>                  // for std::chrono
+#include <coroutine>               // for std::coroutine_handle
 #include <optional>                // for std::optional
 #include <string_view>             // for std::string_view
 #include <type_traits>             // for std::invoke_result_t
@@ -39,14 +39,12 @@ namespace engine::xapian {
 
 namespace {
 
-std::atomic<Offload*> offload_pool{nullptr};
-
-// Moves the awaiting task onto the offload pool, when there is one.
+// Moves the awaiting task onto `on`, when there is one.
 struct Hop {
-	Offload* pool = offload_pool.load(std::memory_order_acquire);
+	task::scheduler_ref on;
 
-	bool await_ready() const noexcept { return pool == nullptr; }
-	void await_suspend(std::coroutine_handle<> handle) const { pool->post(handle); }
+	bool await_ready() const noexcept { return !on; }
+	void await_suspend(std::coroutine_handle<> handle) const { on.post(handle); }
 	void await_resume() const noexcept { }
 };
 
@@ -66,72 +64,6 @@ stamp(Document& doc, const WriteResult& info)
 }
 
 }  // namespace
-
-
-Offload::Offload(unsigned threads)
-{
-	for (unsigned i = 0; i < (threads ? threads : 1); ++i) {
-		threads_.emplace_back([this] { run(); });
-	}
-}
-
-
-Offload::~Offload()
-{
-	{
-		std::lock_guard lock(mutex_);
-		stopping_ = true;
-	}
-	wake_.notify_all();
-	for (auto& thread : threads_) {
-		thread.join();
-	}
-}
-
-
-void
-Offload::post(std::coroutine_handle<> handle)
-{
-	{
-		std::lock_guard lock(mutex_);
-		queue_.push_back(handle);
-	}
-	wake_.notify_one();
-}
-
-
-std::uint64_t
-Offload::now() const noexcept
-{
-	return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
-}
-
-
-void
-Offload::run()
-{
-	while (true) {
-		std::coroutine_handle<> handle;
-		{
-			std::unique_lock lock(mutex_);
-			wake_.wait(lock, [this] { return stopping_ || !queue_.empty(); });
-			if (queue_.empty()) {
-				return;  // stopping, and nothing left to run
-			}
-			handle = queue_.front();
-			queue_.pop_front();
-		}
-		task::running_on scope(task::scheduler_ref::of(*this));
-		handle.resume();
-	}
-}
-
-
-void
-set_offload(Offload* pool) noexcept
-{
-	offload_pool.store(pool, std::memory_order_release);
-}
 
 
 Xapian::WritableDatabase&
@@ -171,7 +103,7 @@ Shard::check_version(const std::optional<rev>& expected, const std::optional<rev
 task::task<WriteResult>
 Shard::add(Document& doc, WriteArgs args)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		WriteResult info;
@@ -196,7 +128,7 @@ Shard::add(Document& doc, WriteArgs args)
 task::task<WriteResult>
 Shard::replace(docid did, Document& doc, WriteArgs args)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		WriteResult info;
@@ -222,7 +154,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 task::task<WriteResult>
 Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		WriteResult info;
@@ -255,7 +187,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 task::task<void>
 Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		if (local && expected_version) {
@@ -272,7 +204,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 task::task<docid>
 Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		if (!local) {
@@ -298,7 +230,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 task::task<void>
 Shard::commit(Transaction transaction)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		if (transaction == Transaction::flushed) {
@@ -321,7 +253,7 @@ Shard::commit(Transaction transaction)
 task::task<void>
 Shard::begin_transaction(bool flushed)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		writable().begin_transaction(flushed);
 		co_return;
@@ -334,7 +266,7 @@ Shard::begin_transaction(bool flushed)
 task::task<void>
 Shard::commit_transaction()
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		writable().commit_transaction();
 		co_return;
@@ -347,7 +279,7 @@ Shard::commit_transaction()
 task::task<void>
 Shard::cancel_transaction()
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		writable().cancel_transaction();
 		co_return;
@@ -360,7 +292,7 @@ Shard::cancel_transaction()
 task::task<void>
 Shard::set_metadata(const std::string& key, const std::string& value)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		writable().set_metadata(key, value);
 		co_return;
@@ -373,7 +305,7 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 task::task<void>
 Shard::add_spelling(const std::string& word, termcount increment)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		writable().add_spelling(word, increment);
 		co_return;
@@ -386,7 +318,7 @@ Shard::add_spelling(const std::string& word, termcount increment)
 task::task<termcount>
 Shard::remove_spelling(const std::string& word, termcount decrement)
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		co_return writable().remove_spelling(word, decrement);
 	} catch (...) {
@@ -398,7 +330,7 @@ Shard::remove_spelling(const std::string& word, termcount decrement)
 task::task<bool>
 Shard::reopen()
 {
-	co_await Hop{};
+	co_await Hop{on_};
 	try {
 		co_return database_->reopen();
 	} catch (...) {
@@ -437,9 +369,9 @@ Shard::refs() const
 
 
 task::task<Opened>
-open_local(const std::string& path, bool writable, bool create_missing)
+open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on)
 {
-	co_await Hop{};
+	co_await Hop{on};
 	try {
 		Opened opened;
 		if (writable) {
@@ -449,24 +381,24 @@ open_local(const std::string& path, bool writable, bool create_missing)
 			constexpr int sync_mode = 0;
 #endif
 			try {
-				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::WritableDatabase>(path, Xapian::DB_OPEN | Xapian::DB_RETRY_LOCK | sync_mode));
+				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::WritableDatabase>(path, Xapian::DB_OPEN | Xapian::DB_RETRY_LOCK | sync_mode), on);
 			} catch (const Xapian::DatabaseNotFoundError&) {
 				if (!create_missing) {
 					throw;
 				}
-				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::WritableDatabase>(path, Xapian::DB_CREATE | Xapian::DB_RETRY_LOCK | sync_mode));
+				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::WritableDatabase>(path, Xapian::DB_CREATE | Xapian::DB_RETRY_LOCK | sync_mode), on);
 				opened.created = true;
 			}
 		} else {
 			try {
-				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::Database>(path, Xapian::DB_OPEN));
+				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::Database>(path, Xapian::DB_OPEN), on);
 			} catch (const Xapian::DatabaseNotFoundError&) {
 				if (!create_missing) {
 					throw;
 				}
 				Xapian::WritableDatabase(path, Xapian::DB_CREATE);
 				opened.created = true;
-				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::Database>(path, Xapian::DB_OPEN));
+				opened.shard = std::make_unique<Shard>(std::make_unique<Xapian::Database>(path, Xapian::DB_OPEN), on);
 			}
 		}
 		co_return opened;
@@ -477,14 +409,14 @@ open_local(const std::string& path, bool writable, bool create_missing)
 
 
 task::task<std::unique_ptr<Shard>>
-open_remote(const std::string& host, unsigned port, int flags, const std::string& path, bool writable)
+open_remote(const std::string& host, unsigned port, int flags, const std::string& path, bool writable, task::scheduler_ref on)
 {
-	co_await Hop{};
+	co_await Hop{on};
 	try {
 		if (writable) {
-			co_return std::make_unique<Shard>(std::make_unique<Xapian::WritableDatabase>(Xapian::Remote::open_writable(host, port, 10000, 10000, flags, path)));
+			co_return std::make_unique<Shard>(std::make_unique<Xapian::WritableDatabase>(Xapian::Remote::open_writable(host, port, 10000, 10000, flags, path)), on);
 		}
-		co_return std::make_unique<Shard>(std::make_unique<Xapian::Database>(Xapian::Remote::open(host, port, 10000, 10000, flags, path)));
+		co_return std::make_unique<Shard>(std::make_unique<Xapian::Database>(Xapian::Remote::open(host, port, 10000, 10000, flags, path)), on);
 	} catch (...) {
 		rethrow_translated();
 	}
@@ -492,15 +424,15 @@ open_remote(const std::string& host, unsigned port, int flags, const std::string
 
 
 task::task<std::unique_ptr<Shard>>
-open_local_if_same(const Shard& remote, const std::string& path)
+open_local_if_same(const Shard& remote, const std::string& path, task::scheduler_ref on)
 {
-	co_await Hop{};
+	co_await Hop{on};
 	try {
 		auto local = std::make_unique<Xapian::Database>(path, Xapian::DB_OPEN);
 		if (local->get_uuid() != remote.database()->get_uuid()) {
 			co_return nullptr;
 		}
-		co_return std::make_unique<Shard>(std::move(local));
+		co_return std::make_unique<Shard>(std::move(local), on);
 	} catch (...) {
 		rethrow_translated();
 	}

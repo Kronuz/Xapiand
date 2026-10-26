@@ -131,8 +131,9 @@ static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(
 std::shared_ptr<XapiandManager> XapiandManager::_manager;
 
 // The manager's Asio control-plane state, kept out of manager.h (which stays Asio-free).
-// One inline reactor (0 offload workers -- every control-plane callback runs on the loop
-// thread, exactly as the ev watchers did). The ev::timer/ev::async watchers become a
+// One reactor whose single offload worker runs the control plane's database work (node
+// setup, the dispatched commands) in arrival order; the loop keeps the state changes and
+// never blocks on a database. The ev::timer/ev::async watchers become a
 // PeriodicTimer + three Signals. The signal wake is deliberately NOT a reactor::Signal
 // (its send() does asio::post -> heap alloc + lock, which is NOT async-signal-safe): it is
 // a self-pipe (sig_pipe), written from the POSIX signal handler with a bare write() -- the
@@ -150,7 +151,7 @@ struct XapiandManager::Reactors {
 	char sig_drain[64];
 
 	Reactors()
-		: reactor(0, 0),
+		: reactor(1, 0),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  set_cluster_database_ready_async(reactor.io().get_executor()),
@@ -445,7 +446,7 @@ XapiandManager::run_loop()
 	arm_signal_reader();
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
-	_rx->reactor.io().run();
+	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
 	_running_loop.store(false, std::memory_order_release);
 }
 
@@ -457,6 +458,31 @@ XapiandManager::break_loop()
 
 	// io_context::stop() is thread-safe and makes a running run() return ASAP.
 	_rx->reactor.io().stop();
+}
+
+
+void
+XapiandManager::control_offload(std::function<void()> work, std::function<void()> then)
+{
+	// One worker: the database parts run in arrival order. An exception from work is
+	// rethrown on the loop, out of run_loop(), as when it ran there.
+	auto& rx = _rx->reactor;
+	asio::post(*rx.pool(), [&rx, work = std::move(work), then = std::move(then)]() mutable {
+		std::exception_ptr error;
+		try {
+			work();
+		} catch (...) {
+			error = std::current_exception();
+		}
+		asio::post(rx.io(), [error, then = std::move(then)] {
+			if (error) {
+				std::rethrow_exception(error);
+			}
+			if (then) {
+				then();
+			}
+		});
+	});
 }
 
 
@@ -600,27 +626,35 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 	L_CALL("XapiandManager::shutdown_impl({}, {})", asap, now);
 
 	if (asap) {
-		if (!ready_to_end_http()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
-		} else if (database_pool->is_pending()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Waiting for replicators...", "Continuing shutdown process!");
-		} else if (!ready_to_end_remote()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Remote Protocol is busy...", "Continuing shutdown process!");
-		} else if (!ready_to_end_replication()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Replication Protocol is busy...", "Continuing shutdown process!");
-		} else {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
-		}
-
 		_rx->try_shutdown_timer.set_repeat(5.0);
 		_rx->try_shutdown_timer.again();
 		L_EV("Configured try shutdown timer (5.0)");
 
-		if (now != 0 || ready_to_end(true)) {
+		if (now != 0) {
 			// No Worker tree to stop/destroy/detach anymore -- the manager is the sole
 			// remaining runner, so shutting down is exactly "break the control-plane loop".
 			break_loop();
 		}
+
+		// The readiness checks resolve index settings for pending shards, a database read, so
+		// they run on the control plane's worker; break_loop() is thread-safe.
+		control_offload([this, now] {
+			if (!ready_to_end_http()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
+			} else if (database_pool->is_pending()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Waiting for replicators...", "Continuing shutdown process!");
+			} else if (!ready_to_end_remote()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Remote Protocol is busy...", "Continuing shutdown process!");
+			} else if (!ready_to_end_replication()) {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Replication Protocol is busy...", "Continuing shutdown process!");
+			} else {
+				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
+			}
+
+			if (now == 0 && ready_to_end(true)) {
+				break_loop();
+			}
+		});
 	}
 }
 
@@ -775,138 +809,154 @@ XapiandManager::setup_node_async_cb()
 	// Once all threads have started, get a callstacks snapshot:
 	traceback::callstacks_snapshot();
 
-	std::shared_ptr<const Node> local_node;
-	std::shared_ptr<const Node> primary_node;
-	Endpoint primary_endpoint;
+	// The database part (find or create this node's document, the leader's load_nodes, the
+	// endpoints to replicate) runs on the control plane's worker; the loop then starts
+	// replication and the ready state.
+	struct Setup {
+		std::shared_ptr<const Node> local_node;
+		std::shared_ptr<const Node> primary_node;
+		Endpoint primary_endpoint;
+		Endpoints replicate;
+	};
+	auto setup = std::make_shared<Setup>();
 
-	_new_cluster = 0;
-	bool found = false;
+	control_offload([this, setup] {
+		auto& local_node = setup->local_node;
+		auto& primary_node = setup->primary_node;
+		auto& primary_endpoint = setup->primary_endpoint;
 
-	for (int t = 10; !found && t >= 0; --t) {
-		nanosleep(100000000);  // sleep for 100 miliseconds
-		local_node = Node::get_local_node();
-		primary_node = Node::get_primary_node();
-		primary_endpoint = Endpoint{".xapiand/nodes", primary_node};
+		_new_cluster = 0;
+		bool found = false;
 
-		try {
-			DatabaseHandler db_handler(Endpoints{primary_endpoint});
-			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-#ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					auto mset = db_handler.get_mset();
-					const auto m_e = mset.end();
-					for (auto m = mset.begin(); m != m_e; ++m) {
-						auto did = *m;
-						auto document = db_handler.get_document(did);
-						if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
-							found = true;
-						}
-						auto obj = document.get_obj();
-						node_added(obj["name"].str());
-					}
-				} else
-#endif
-				{
-					db_handler.get_document(local_node->lower_name());
-					found = true;
-				}
-			}
-		} catch (const Xapian::DatabaseNotAvailableError&) {
-			if (t == 0) {
-				if (!primary_node->is_active()) {
-					L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
-				}
-				throw;
-			}
-			continue;
-		} catch (const Xapian::DocNotFoundError&) {
-		} catch (const Xapian::DatabaseNotFoundError&) { }
+		for (int t = 10; !found && t >= 0; --t) {
+			nanosleep(100000000);  // sleep for 100 miliseconds
+			local_node = Node::get_local_node();
+			primary_node = Node::get_primary_node();
+			primary_endpoint = Endpoint{".xapiand/nodes", primary_node};
 
-		if (!found) {
 			try {
-				DatabaseHandler db_handler(Endpoints{primary_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
-				MsgPack obj({
-					{ ID_FIELD_NAME, {
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-					{ "name", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-						{ RESERVED_VALUE, local_node->name() },
-					} },
-				});
-				db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, true, obj, false, msgpack_type);
-				_new_cluster = 1;
+				DatabaseHandler db_handler(Endpoints{primary_endpoint});
+				if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 #ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					add_node(local_node->name());
-
-					if (Node::is_superset(local_node, primary_node)) {
-						L_INFO("Cluster database doesn't exist. Generating database...");
-					} else {
-						if (!primary_node || primary_node->empty()) {
-							throw Xapian::NetworkError("Endpoint node is invalid");
+					if (!opts.solo) {
+						auto mset = db_handler.get_mset();
+						const auto m_e = mset.end();
+						for (auto m = mset.begin(); m != m_e; ++m) {
+							auto did = *m;
+							auto document = db_handler.get_document(did);
+							if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
+								found = true;
+							}
+							auto obj = document.get_obj();
+							node_added(obj["name"].str());
 						}
-						if (!primary_node->is_active()) {
-							throw Xapian::NetworkError("Endpoint node is inactive");
-						}
-						auto port = primary_node->remote_port;
-						if (port == 0) {
-							throw Xapian::NetworkError("Endpoint node without a valid port");
-						}
-						auto& host = primary_node->host();
-						if (host.empty()) {
-							throw Xapian::NetworkError("Endpoint node without a valid host");
-						}
+					} else
+#endif
+					{
+						db_handler.get_document(local_node->lower_name());
+						found = true;
 					}
 				}
+			} catch (const Xapian::DatabaseNotAvailableError&) {
+				if (t == 0) {
+					if (!primary_node->is_active()) {
+						L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
+					}
+					throw;
+				}
+				continue;
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) { }
+
+			if (!found) {
+				try {
+					DatabaseHandler db_handler(Endpoints{primary_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
+					MsgPack obj({
+						{ ID_FIELD_NAME, {
+							{ RESERVED_TYPE,  KEYWORD_STR },
+						} },
+						{ "name", {
+							{ RESERVED_INDEX, "none" },
+							{ RESERVED_TYPE,  KEYWORD_STR },
+							{ RESERVED_VALUE, local_node->name() },
+						} },
+					});
+					db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, true, obj, false, msgpack_type);
+					_new_cluster = 1;
+#ifdef XAPIAND_CLUSTERING
+					if (!opts.solo) {
+						add_node(local_node->name());
+
+						if (Node::is_superset(local_node, primary_node)) {
+							L_INFO("Cluster database doesn't exist. Generating database...");
+						} else {
+							if (!primary_node || primary_node->empty()) {
+								throw Xapian::NetworkError("Endpoint node is invalid");
+							}
+							if (!primary_node->is_active()) {
+								throw Xapian::NetworkError("Endpoint node is inactive");
+							}
+							auto port = primary_node->remote_port;
+							if (port == 0) {
+								throw Xapian::NetworkError("Endpoint node without a valid port");
+							}
+							auto& host = primary_node->host();
+							if (host.empty()) {
+								throw Xapian::NetworkError("Endpoint node without a valid host");
+							}
+						}
+					}
 #endif
-				break;
-			} catch (...) {
-				if (t == 0) { throw; }
+					break;
+				} catch (...) {
+					if (t == 0) { throw; }
+				}
 			}
 		}
-	}
 
-	// Set node as ready!
-	node_name = set_node_name(local_node->name());
-	if (strings::lower(node_name) != local_node->lower_name()) {
-		auto local_node_copy = std::make_unique<Node>(*local_node);
-		local_node_copy->name(node_name);
-		Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
-		local_node = Node::get_local_node();
-	}
-
-	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
+		// Set node as ready!
+		node_name = set_node_name(local_node->name());
+		if (strings::lower(node_name) != local_node->lower_name()) {
+			auto local_node_copy = std::make_unique<Node>(*local_node);
+			local_node_copy->name(node_name);
+			Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
+			local_node = Node::get_local_node();
+		}
 
 #ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		auto leader_node = Node::get_leader_node();
-		if (local_node->is_leader()) {
-			// The local node is the leader
-			load_nodes();
+		if (!opts.solo) {
+			if (local_node->is_leader()) {
+				// The local node is the leader
+				load_nodes();
+			}
+			if (!Node::is_superset(local_node, primary_node)) {
+				// The reserved indexes database shards to request updates for
+				setup->replicate = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indexes"}, true);
+				assert(!setup->replicate.empty());
+			}
 		}
-		if (Node::is_superset(local_node, primary_node)) {
-			set_cluster_database_ready_impl();
-		} else {
+#endif
+	}, [this, setup] {
+		auto& primary_node = setup->primary_node;
+
+		Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
+
+#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo && !Node::is_superset(setup->local_node, primary_node)) {
 			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", primary_node->col().ansi(), primary_node->to_string());
 			_new_cluster = 2;
 			// Replicate cluster database from the leader
-			replication_service->trigger_replication({primary_endpoint, Endpoint{".xapiand/nodes"}, true});
-			// Request updates from the reserved indexes database shards
-			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indexes"}, true);
-			assert(!endpoints.empty());
-			for (auto& endpoint : endpoints) {
+			replication_service->trigger_replication({setup->primary_endpoint, Endpoint{".xapiand/nodes"}, true});
+			for (auto& endpoint : setup->replicate) {
 				Endpoint remote_endpoint{endpoint.path, primary_node};
 				Endpoint local_endpoint{endpoint.path};
 				replication_service->trigger_replication({remote_endpoint, local_endpoint, false});
 			}
+			return;
 		}
-	} else
 #endif
-	{
 		set_cluster_database_ready_impl();
-	}
+	});
 }
 
 
@@ -1167,6 +1217,13 @@ XapiandManager::join()
 
 	if (!database_pool) {
 		return;  // already joined!
+	}
+
+	// The control plane's worker: the loop has stopped (break_loop), so drop what is queued
+	// and wait for the running database part before the database pool finishes.
+	if (auto* worker = _rx->reactor.pool()) {
+		worker->stop();
+		worker->join();
 	}
 
 	// This method should finish and wait for all objects and threads to finish
@@ -1511,10 +1568,14 @@ XapiandManager::dispatch_command_async_cb()
 {
 	L_CALL("XapiandManager::dispatch_command_async_cb()");
 
-	std::pair<Command, std::string> command;
-	while (dispatch_command_args.try_dequeue(command)) {
-		_dispatch_command(command.first, command.second);
-	}
+	// The commands open shards (new_leader, the election's lock_shard), so they run on the
+	// control plane's worker, in order.
+	control_offload([this] {
+		std::pair<Command, std::string> command;
+		while (dispatch_command_args.try_dequeue(command)) {
+			_dispatch_command(command.first, command.second);
+		}
+	});
 }
 
 
@@ -1554,6 +1615,9 @@ XapiandManager::_dispatch_command(Command command, [[maybe_unused]] const std::s
 			break;
 		case Command::ASYNC_ELECT_PRIMARY_RESPONSE:
 			discovery->_ASYNC_elect_primary_response(data);
+			break;
+		case Command::ASYNC_DB_UPDATED:
+			discovery->_ASYNC_db_updated(data);
 			break;
 #endif
 		default:

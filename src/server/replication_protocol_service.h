@@ -41,6 +41,7 @@
 #include "replication_protocol_views.h"      // ReplicationProtocolViews, types, FILE_FOLLOWS
 #include "endpoint.h"                          // for Endpoint (trigger args)
 #include "length.h"                            // for unserialise_length_and_check (framing)
+#include "engine/release.h"                    // for engine::release_on_pool
 
 #include <asio.hpp>
 
@@ -199,24 +200,29 @@ inline asio::awaitable<void> run_loop(asio::ip::tcp::socket& socket, reactor::Re
 
 // Inbound (server): an accepted connection. Greet REPLY_WELCOME, then answer requests.
 inline asio::awaitable<void> serve_replication_connection(asio::ip::tcp::socket socket, reactor::Reactor* reactor) {
+	// Destroyed on the pool at the end: its teardown closes and checks in shards.
+	std::unique_ptr<ReplicationProtocolViews> client;
 	try {
 		asio::error_code opt_ec;
 		socket.set_option(asio::ip::tcp::no_delay(true), opt_ec);
 
-		ReplicationProtocolViews client;
-		client.set_socket_fd(socket.native_handle());
+		client = std::make_unique<ReplicationProtocolViews>();
+		client->set_socket_fd(socket.native_handle());
 		auto ab = std::make_shared<SocketAbortable>(socket.native_handle());
 		reactor->track(ab);
 
-		client.greeting();   // REPLY_WELCOME (a small blocking write on a fresh connection)
-		if (!client.closing()) {
-			co_await run_loop(socket, reactor, client, /*is_server=*/true);
+		client->greeting();   // REPLY_WELCOME (a small blocking write on a fresh connection)
+		if (!client->closing()) {
+			co_await run_loop(socket, reactor, *client, /*is_server=*/true);
 		}
 	} catch (const std::exception&) {
 		// hangup / read-write error -- drop the connection.
 	}
 	asio::error_code ec;
 	socket.shutdown(asio::ip::tcp::socket::shutdown_send, ec);
+	// A stopped server cancels the session; without this the hop throws and the views die on the loop.
+	co_await asio::this_coro::throw_if_cancelled(false);
+	try { co_await engine::release_on_pool(reactor, std::move(client)); } catch (const std::exception&) { }
 }
 
 }  // namespace detail
@@ -230,8 +236,10 @@ namespace detail {
 inline asio::awaitable<void> connect_and_replicate(reactor::Reactor* reactor, std::string host, int port,
                                                    Endpoint src_endpoint, Endpoint dst_endpoint, bool cluster_database) {
 	using asio::use_awaitable;
+	// Destroyed on the pool at the end: its teardown closes and checks in shards.
+	std::unique_ptr<ReplicationProtocolViews> client;
 	try {
-		auto client = std::make_unique<ReplicationProtocolViews>(cluster_database);
+		client = std::make_unique<ReplicationProtocolViews>(cluster_database);
 
 		bool ok = false;
 		co_await asio::co_spawn(reactor->pool() != nullptr ? reactor->pool()->get_executor() : co_await asio::this_coro::executor,
@@ -241,22 +249,23 @@ inline asio::awaitable<void> connect_and_replicate(reactor::Reactor* reactor, st
 			}, use_awaitable);
 		if (!ok) {
 			if (cluster_database) { cluster_database_replication_failed(); }
-			co_return;   // deferred / failed; a retry was scheduled inside.
+			// deferred / failed; a retry was scheduled inside.
+		} else {
+			auto ex = co_await asio::this_coro::executor;
+			asio::ip::tcp::socket socket(ex, asio::ip::tcp::v4(), client->socket_fd());
+			auto ab = std::make_shared<SocketAbortable>(socket.native_handle());
+			reactor->track(ab);
+
+			// No greeting: the client receives REPLY_WELCOME first (reply_welcome sends the request).
+			co_await run_loop(socket, reactor, *client, /*is_server=*/false);
+
+			asio::error_code ec;
+			socket.shutdown(asio::ip::tcp::socket::shutdown_send, ec);
 		}
-
-		auto ex = co_await asio::this_coro::executor;
-		asio::ip::tcp::socket socket(ex, asio::ip::tcp::v4(), client->socket_fd());
-		auto ab = std::make_shared<SocketAbortable>(socket.native_handle());
-		reactor->track(ab);
-
-		// No greeting: the client receives REPLY_WELCOME first (reply_welcome sends the request).
-		co_await run_loop(socket, reactor, *client, /*is_server=*/false);
-
-		asio::error_code ec;
-		socket.shutdown(asio::ip::tcp::socket::shutdown_send, ec);
 	} catch (const std::exception&) {
 		// connect / read-write error -- give up this transfer (a retry may be scheduled).
 	}
+	try { co_await engine::release_on_pool(reactor, std::move(client)); } catch (const std::exception&) { }
 }
 
 }  // namespace detail

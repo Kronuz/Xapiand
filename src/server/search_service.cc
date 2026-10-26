@@ -26,17 +26,11 @@
 bool
 SearchService::should_offload(const http::Request& request) const
 {
-	// Match the legacy HttpClient exactly: it ran every request that dispatched to a
-	// view on the http_client_pool (i.e. offloaded it), and handled only the view-less
-	// methods inline -- OPTIONS, QUIT, OPEN, CLOSE, whose responses are trivial and
-	// non-blocking (written directly by the dispatch, no database work). Everything
-	// else can touch a database (search, the CRUD verbs, dump/restore, metrics/info),
-	// so it offloads to the worker pool -- the un-stallable model, the same set the
-	// old runner offloaded. (One offload per request: the handler runs once on a
-	// worker; any further pool use inside a view -- e.g. DocIndexer for bulk indexing
-	// -- is the same pipeline the old runner had, not a second HTTP-level offload.)
+	// Only the view-less methods (OPTIONS, QUIT, OPEN, CLOSE) run inline: they do no database
+	// work. Everything else, FLUSH included (it closes and commits every open writable), runs
+	// once on the reactor's offload pool; no reactor loop blocks on database work.
 	const std::string& m = request.method;
-	if (m == "OPTIONS" || m == "QUIT" || m == "FLUSH" || m == "OPEN" || m == "CLOSE") {
+	if (m == "OPTIONS" || m == "QUIT" || m == "OPEN" || m == "CLOSE") {
 		return false;
 	}
 	return true;

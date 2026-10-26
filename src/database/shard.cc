@@ -34,6 +34,7 @@
 #include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
+#include "engine/sync.h"            // for engine::sync_wait
 #include "engine/xapian/convert.h"  // for engine::xapian::to_xapian, from_xapian
 #include "engine/xapian/errors.h"   // for engine::xapian::NotAvailable, Closed, Opening, DatabaseFailure
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -425,7 +426,7 @@ Shard::reopen_writable()
 			L_DEBUG("Writable endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
 			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
 		}
-		new_database = task::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, true));
+		new_database = engine::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, true));
 		// Writable remote databases do not have a local database fallback.
 	}
 	else
@@ -433,7 +434,7 @@ Shard::reopen_writable()
 	{
 		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		auto opened = task::sync_wait(engine::xapian::open_local(endpoint.path, true, has_db_create_or_open(flags)));
+		auto opened = engine::sync_wait(engine::xapian::open_local(endpoint.path, true, has_db_create_or_open(flags)));
 		new_database = std::move(opened.shard);
 		created = opened.created;
 		local = true;
@@ -446,7 +447,7 @@ Shard::reopen_writable()
 	}
 
 	if (is_transactional()) {
-		task::sync_wait(new_database->begin_transaction(transactional() == Transaction::flushed));
+		engine::sync_wait(new_database->begin_transaction(transactional() == Transaction::flushed));
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -530,7 +531,7 @@ Shard::reopen_readable()
 			L_DEBUG("Endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
 			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
 		}
-		new_database = task::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, false));
+		new_database = engine::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, false));
 		// Check for a local database fallback:
 		auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
 		if (index_settings.shards.size() == 1) {
@@ -546,7 +547,7 @@ Shard::reopen_readable()
 			if (fallback) {
 				try {
 					RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-					auto same = task::sync_wait(engine::xapian::open_local_if_same(*new_database, endpoint.path));
+					auto same = engine::sync_wait(engine::xapian::open_local_if_same(*new_database, endpoint.path));
 					if (same) {
 						L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
 						// Handle remote endpoint and figure out if the endpoint is a local database
@@ -578,7 +579,7 @@ Shard::reopen_readable()
 	{
 		L_DATABASE("Opening local shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		auto opened = task::sync_wait(engine::xapian::open_local(endpoint.path, false, has_db_create_or_open(flags)));
+		auto opened = engine::sync_wait(engine::xapian::open_local(endpoint.path, false, has_db_create_or_open(flags)));
 		new_database = std::move(opened.shard);
 		created = opened.created;
 		local = true;
@@ -648,7 +649,7 @@ Shard::reopen()
 			// Try to reopen
 			for (int t = DB_RETRIES; t >= 0; --t) {
 				try {
-					bool ret = task::sync_wait(engine_shard->reopen());
+					bool ret = engine::sync_wait(engine_shard->reopen());
 					return ret;
 				} catch (const engine::Error& error) {
 					if (!is_stale_failure(error.kind)) {
@@ -905,7 +906,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #endif  // XAPIAND_DATA_STORAGE
 			auto prior_revision = wdb->revision();
 			auto transaction = transactional();
-			task::sync_wait(wdb->commit(
+			engine::sync_wait(wdb->commit(
 				transaction == Transaction::flushed ? engine::Transaction::flushed :
 				transaction == Transaction::unflushed ? engine::Transaction::unflushed :
 				engine::Transaction::none));
@@ -966,7 +967,7 @@ Shard::begin_transaction(bool flushed)
 		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 		db();
-		task::sync_wait(engine_shard->begin_transaction(flushed));
+		engine::sync_wait(engine_shard->begin_transaction(flushed));
 		_transaction.store(flushed ? Transaction::flushed : Transaction::unflushed, std::memory_order_relaxed);
 	}
 }
@@ -984,7 +985,7 @@ Shard::commit_transaction()
 		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 		db();
-		task::sync_wait(engine_shard->commit_transaction());
+		engine::sync_wait(engine_shard->commit_transaction());
 		_transaction.store(Transaction::none, std::memory_order_relaxed);
 	}
 }
@@ -1002,7 +1003,7 @@ Shard::cancel_transaction()
 		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
 		db();
-		task::sync_wait(engine_shard->cancel_transaction());
+		engine::sync_wait(engine_shard->cancel_transaction());
 		_transaction.store(Transaction::none);
 	}
 }
@@ -1037,7 +1038,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, [[maybe
 
 		try {
 			auto local = is_local();
-			task::sync_wait(wdb->erase(shard_did, local, expected));
+			engine::sync_wait(wdb->erase(shard_did, local, expected));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
@@ -1103,7 +1104,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 
 		try {
 			auto local = is_local();
-			shard_did = task::sync_wait(wdb->erase_by_key(term, local, expected));
+			shard_did = engine::sync_wait(wdb->erase_by_key(term, local, expected));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
@@ -1271,7 +1272,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 		try {
 			args.local = is_local();
 			const auto local = args.local;
-			info = task::sync_wait(wdb->add(doc, args));
+			info = engine::sync_wait(wdb->add(doc, args));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
@@ -1381,7 +1382,7 @@ Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool co
 		try {
 			args.local = is_local();
 			const auto local = args.local;
-			info = task::sync_wait(wdb->replace(shard_did, doc, args));
+			info = engine::sync_wait(wdb->replace(shard_did, doc, args));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
@@ -1474,7 +1475,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 			const auto local = args.local;
 			args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
 			if (!local) {
-				info = task::sync_wait(wdb->replace_by_key(term, doc, args));
+				info = engine::sync_wait(wdb->replace_by_key(term, doc, args));
 			} else if (term[0] == 'Q' && term[1] == 'N') {
 				assert(term.size() > 2);
 				const char *p = n_shards_ser.data();
@@ -1485,13 +1486,13 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 				if (did == 0u) {
 					// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
 					args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
-					info = task::sync_wait(wdb->add(doc, args));
+					info = engine::sync_wait(wdb->add(doc, args));
 				} else {
-					info = task::sync_wait(wdb->replace((did - 1) / n_shards + 1, doc, args));  // docid in the multi-db to the docid in the shard
+					info = engine::sync_wait(wdb->replace((did - 1) / n_shards + 1, doc, args));  // docid in the multi-db to the docid in the shard
 					info.term = term;
 				}
 			} else {
-				info = task::sync_wait(wdb->replace_by_key(term, doc, args));
+				info = engine::sync_wait(wdb->replace_by_key(term, doc, args));
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
@@ -1560,7 +1561,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto local = is_local();
-			task::sync_wait(wdb->add_spelling(word, freqinc));
+			engine::sync_wait(wdb->add_spelling(word, freqinc));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
@@ -1623,7 +1624,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto local = is_local();
-			result = task::sync_wait(wdb->remove_spelling(word, freqdec));
+			result = engine::sync_wait(wdb->remove_spelling(word, freqdec));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
@@ -1881,7 +1882,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto local = is_local();
-			task::sync_wait(wdb->set_metadata(key, value));
+			engine::sync_wait(wdb->set_metadata(key, value));
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();

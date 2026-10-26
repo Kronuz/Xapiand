@@ -1499,10 +1499,9 @@ delete_database_view(Request& request)
 }
 
 
-// Administrative verbs. These do no per-database query work and (like the OPTIONS /
-// OPEN / CLOSE verbs) run inline on the reactor rather than the worker pool -- see
-// SearchService::should_offload. Their admin_commands + root-URL preconditions,
-// which prepare()'s switch enforced before dispatch, are checked here at the view.
+// Administrative verbs. FLUSH closes and commits every open writable, so it runs on the
+// offload pool; QUIT only signals and runs inline (SearchService::should_offload). Their
+// admin_commands + root-URL preconditions are checked here at the view.
 static void
 flush_view(Request& request)
 {
@@ -1655,6 +1654,21 @@ restore_database_view(Request& request)
 	L_CALL("restore_database_view()");
 
 	auto indexer = request.indexer.load();
+
+	// Finishes and drops the request's indexer here, on the worker, on every exit, so its last
+	// reference (and the commit in ~DocIndexer) never falls on the reactor in ~Request.
+	struct DropIndexer {
+		Request& request;
+		~DropIndexer() {
+			try {
+				if (auto held = request.indexer.exchange(nullptr)) {
+					held->finish();
+				}
+			} catch (...) {
+				L_EXC("Unhandled exception finishing the restore indexer");
+			}
+		}
+	} drop_indexer{request};
 
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
 		MsgPack obj;

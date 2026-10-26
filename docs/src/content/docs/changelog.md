@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A retried write no longer fails with a spurious version conflict.** After a failed write,
   the retry compared its own freshly assigned version against the stored one and returned 409.
+- **`FLUSH` no longer stalls other connections.** It commits every open index, and it now does
+  so on a worker instead of the connection loop that every client on that loop waits behind.
 - **Concurrent `FLUSH` requests no longer crash the node,** and a request no longer waits for a
   free shard until its timeout when the shard was released or flushed while it waited.
 - **Opening a shard opens it once.** Every open repeated itself eleven times, replaying the WAL

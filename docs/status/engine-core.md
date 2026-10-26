@@ -115,24 +115,24 @@ still exists for reads; E2E and WAL recovery unchanged.
    manager.cc, lua, http_utils.h) and `catch_http_errors` move to kinds. Until then they keep catching the
    Xapian types, which every engine failure still is.
 2. Callers that become coroutines (7c) drop their `sync_wait` one site at a time.
-3. Decide the offload default (see above) from the lead's measurements.
+3. The offload default is decided: no second pool (C6); from 7c a reactor coroutine hops to its
+   reactor's `pool()` (C7).
 4. The ten raw `throw Xapian::DocNotFoundError` sites (handler.cc, shard.cc, search_views.cc) move to a
    `DocNotFound` wrapper with the kind, then their catches move to `doc_not_found`.
 
 ## Owed after review (docs/reviews/engine-core.md, 2026-10-21)
 
-- CR1: FLUSH's inline view (DatabasePool::cleanup, pool.cc:476) and the control plane's
-  setup_node_async_cb (manager.cc:767-835) call sync_wait on reactor threads, as master blocked
-  them. Before XAPIAND_ENGINE_OFFLOAD_THREADS defaults on or 7c starts: move that work off the
-  reactor and assert sync_wait never runs on a reactor thread.
-- CR2: `Offload` is a second hand-written pool. Lead's ruling against D13: replace it with
-  Kronuz/threadpool behind a task::scheduler; reset set_offload on every shutdown path; bound the
-  variable. Until CR1 and CR2 close, XAPIAND_ENGINE_OFFLOAD_THREADS stays off.
+- CR1, CR2: superseded by the architect's ruling `docs/reviews/engine-offload-architect.md` (EO1
+  to EO5, C1 to C7), implemented on `fix/offload-bridge` (`docs/status/offload-bridge.md`): no
+  reactor loop blocks on database work (FLUSH offloaded, the restore indexer dropped on its worker,
+  the control plane's database work on its reactor's one worker), one `engine::sync_wait` bridge
+  guarded with `DatabasePool` checkout and cleanup, and `Offload`, `set_offload` and
+  `XAPIAND_ENGINE_OFFLOAD_THREADS` removed (the threadpool replacement is withdrawn: EO5). `Hop`
+  takes a caller-chosen `task::scheduler_ref`, empty meaning inline; a hop exists only from 7c (C7).
 - CR3 (correction): a translated DatabaseVersionError, DatabaseLockError or DatabaseCreateError is
   no longer caught by its own Xapian type; no current catch site names them.
 - CR4 (correction): the retry rule and the nine ladders have no test; the review's ladder_probe.cc
   is the evidence for now.
-- CR9: XAPIAND_ENGINE_OFFLOAD_THREADS (default 0, off) enables the engine's offload pool.
 - CR8 (pre-existing on master, separate fix): a use-after-free in DatabasePool::cleanup under
   concurrent FLUSH, a lost wake-up in ShardEndpoint::checkin (pool.cc:422-423), and Shard::reopen
   looping 11 times on success.

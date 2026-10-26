@@ -26,6 +26,7 @@
 #include <cassert>                // for assert
 
 #include "database/flags.h"       // for readable_flags
+#include "engine/sync.h"          // for engine::check_may_block
 #include "engine/xapian/errors.h" // for engine::xapian::NotAvailable, Opening
 #include "database/shard.h"       // for Shard
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -985,6 +986,8 @@ DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std:
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoint.to_string()), readable_flags(flags), timeout);
 
+	engine::check_may_block("DatabasePool::checkout");
+
 	auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
 	assert(shard);
 
@@ -997,6 +1000,8 @@ DatabasePool::checkin(std::shared_ptr<Shard>& shard)
 {
 	L_CALL("DatabasePool::checkin({})", shard ? shard->__repr__() : "null");
 
+	engine::check_may_block("DatabasePool::checkin");
+
 	assert(shard);
 	shard->endpoint.checkin(shard);
 	shard.reset();
@@ -1007,6 +1012,8 @@ std::vector<std::shared_ptr<Shard>>
 DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoints.to_string()), readable_flags(flags), timeout);
+
+	engine::check_may_block("DatabasePool::checkout");
 
 	if (endpoints.empty()) {
 		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
@@ -1034,6 +1041,8 @@ void
 DatabasePool::checkin(std::vector<std::shared_ptr<Shard>>& shards)
 {
 	L_CALL("DatabasePool::checkin(<shards>)");
+
+	engine::check_may_block("DatabasePool::checkin");
 
 	for (auto& shard : shards) {
 		if (shard) {
@@ -1087,6 +1096,8 @@ void
 DatabasePool::cleanup(bool immediate, bool notify)
 {
 	L_CALL("DatabasePool::cleanup()");
+
+	engine::check_may_block("DatabasePool::cleanup");
 
 	std::lock_guard<std::mutex> cleanup_lk(cleanup_mtx);
 

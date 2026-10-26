@@ -22,16 +22,8 @@
 
 #pragma once
 
-#include <atomic>                  // for std::atomic
-#include <condition_variable>      // for std::condition_variable
-#include <coroutine>               // for std::coroutine_handle
-#include <cstdint>                 // for std::uint64_t
-#include <deque>                   // for std::deque
 #include <memory>                  // for std::unique_ptr
-#include <mutex>                   // for std::mutex
 #include <string>                  // for std::string
-#include <thread>                  // for std::thread
-#include <vector>                  // for std::vector
 
 #include "engine/shard.h"          // for Shard
 #include "xapian.h"                // for Xapian::Database
@@ -39,37 +31,12 @@
 
 namespace engine::xapian {
 
-// A pool of threads for the blocking Xapian calls. When one is set, each task hops onto it before
-// calling Xapian, so a caller that is a coroutine never blocks its own thread. A caller that
-// waits with sync_wait must not be one of its threads. It models task::scheduler.
-class Offload {
-public:
-	explicit Offload(unsigned threads);
-	Offload(const Offload&) = delete;
-	Offload& operator=(const Offload&) = delete;
-	~Offload();
-
-	void post(std::coroutine_handle<> handle);
-	std::uint64_t now() const noexcept;
-
-private:
-	void run();
-
-	std::mutex mutex_;
-	std::condition_variable wake_;
-	std::deque<std::coroutine_handle<>> queue_;
-	std::vector<std::thread> threads_;
-	bool stopping_ = false;
-};
-
-// Sets the pool the blocking calls hop onto; null (the default) runs each call on the thread that
-// awaits it. The pool must outlive every shard operation.
-void set_offload(Offload* pool) noexcept;
-
 // The Xapian implementation of the engine shard, over a Xapian database it owns.
 class Shard final : public engine::Shard {
 public:
-	explicit Shard(std::unique_ptr<Xapian::Database> database) : database_(std::move(database)) { }
+	// Each call hops onto `on` before calling Xapian; empty (the default) runs it on the thread
+	// that awaits it. A caller that sync_waits must not be one of on's threads.
+	explicit Shard(std::unique_ptr<Xapian::Database> database, task::scheduler_ref on = {}) : database_(std::move(database)), on_(on) { }
 
 	// The database itself, for the code that has not moved to the seam yet (reads, X4).
 	Xapian::Database* database() const noexcept {
@@ -99,6 +66,7 @@ private:
 	void check_version(const std::optional<rev>& expected, const std::optional<rev>& stored) const;
 
 	std::unique_ptr<Xapian::Database> database_;
+	task::scheduler_ref on_;
 };
 
 struct Opened {
@@ -106,13 +74,15 @@ struct Opened {
 	bool created = false;
 };
 
+// The openers hop onto `on` as Shard's calls do, and the shard they open keeps it.
+
 // Opens (or, when create_missing, creates) a local shard.
-task::task<Opened> open_local(const std::string& path, bool writable, bool create_missing);
+task::task<Opened> open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on = {});
 
 // Opens a shard served by another node.
-task::task<std::unique_ptr<Shard>> open_remote(const std::string& host, unsigned port, int flags, const std::string& path, bool writable);
+task::task<std::unique_ptr<Shard>> open_remote(const std::string& host, unsigned port, int flags, const std::string& path, bool writable, task::scheduler_ref on = {});
 
 // Opens the local shard at path when it has the same uuid as the remote one; null when it differs.
-task::task<std::unique_ptr<Shard>> open_local_if_same(const Shard& remote, const std::string& path);
+task::task<std::unique_ptr<Shard>> open_local_if_same(const Shard& remote, const std::string& path, task::scheduler_ref on = {});
 
 }  // namespace engine::xapian

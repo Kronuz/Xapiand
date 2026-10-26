@@ -61,7 +61,6 @@
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
-#include "engine/xapian/shard.h"                  // for engine::xapian::Offload
 #include "error.hh"                               // for error::name, error::description
 #include "xapiand_exception.h"                            // for SystemExit
 #include "fs.hh"                                  // for mkdirs
@@ -807,15 +806,6 @@ void server(std::chrono::steady_clock::time_point process_start) {
 	nanosleep(100000000);  // sleep for 100 milliseconds
 
 	setup();
-
-	// XAPIAND_ENGINE_OFFLOAD_THREADS=N runs the engine's blocking calls on a pool of N threads.
-	std::unique_ptr<engine::xapian::Offload> engine_offload;
-	if (const char* threads = std::getenv("XAPIAND_ENGINE_OFFLOAD_THREADS")) {
-		if (auto n = std::atoi(threads); n > 0) {
-			engine_offload = std::make_unique<engine::xapian::Offload>(static_cast<unsigned>(n));
-			engine::xapian::set_offload(engine_offload.get());
-		}
-	}
 
 	auto& manager = XapiandManager::make(process_start);
 	manager->run();
