@@ -1616,6 +1616,9 @@ XapiandManager::_dispatch_command(Command command, [[maybe_unused]] const std::s
 		case Command::ASYNC_ELECT_PRIMARY_RESPONSE:
 			discovery->_ASYNC_elect_primary_response(data);
 			break;
+		case Command::ASYNC_DB_UPDATED:
+			discovery->_ASYNC_db_updated(data);
+			break;
 #endif
 		default:
 			break;

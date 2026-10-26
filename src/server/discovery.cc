@@ -288,7 +288,8 @@ Discovery::on_message(int wire_type, std::string_view content, [[maybe_unused]] 
 			raft_.on_message(cluster::RaftMessage::ADD_COMMAND, content);
 			return;
 		case Message::DB_UPDATED:
-			db_updated(type, message);
+			// Resolves the index settings, a database read: off the bus loop, like the ones below.
+			XapiandManager::dispatch_command(XapiandManager::Command::ASYNC_DB_UPDATED, message);
 			return;
 		case Message::SCHEMA_UPDATED:
 			schema_updated(type, message);
@@ -612,6 +613,13 @@ Discovery::index_settings_updated([[maybe_unused]] Message type, const std::stri
 
 	XapiandManager::invalidate_settings(uri);
 }
+
+void
+Discovery::_ASYNC_db_updated(const std::string& message)
+{
+	db_updated(Message::DB_UPDATED, message);
+}
+
 
 void
 Discovery::_ASYNC_primary_updated(const std::string& message)

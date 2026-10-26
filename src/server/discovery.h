@@ -177,6 +177,7 @@ public:
 
 	// Messages executed asynchronously from MAIN thread
 	void _ASYNC_primary_updated(const std::string& message);
+	void _ASYNC_db_updated(const std::string& message);
 	void _ASYNC_elect_primary(const std::string& message);
 	void _ASYNC_elect_primary_response(const std::string& message);
 	void _ASYNC_elect_primary_send(const std::string& normalized_path);
