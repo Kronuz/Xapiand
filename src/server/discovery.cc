@@ -288,8 +288,11 @@ Discovery::on_message(int wire_type, std::string_view content, [[maybe_unused]] 
 			raft_.on_message(cluster::RaftMessage::ADD_COMMAND, content);
 			return;
 		case Message::DB_UPDATED:
-			// Resolves the index settings, a database read: off the bus loop, like the ones below.
-			XapiandManager::dispatch_command(XapiandManager::Command::ASYNC_DB_UPDATED, message);
+			// Liveness is refreshed here, at message time; resolving the index settings is
+			// a database read, so it runs off the bus loop, like the ones below.
+			if (XapiandManager::get_state() == XapiandManager::State::READY && Node::touch_sender(message)) {
+				XapiandManager::dispatch_command(XapiandManager::Command::ASYNC_DB_UPDATED, message);
+			}
 			return;
 		case Message::SCHEMA_UPDATED:
 			schema_updated(type, message);
@@ -517,7 +520,8 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 	auto path = std::string_view(p, p_end - p);
 	L_DISCOVERY(">>> DB_UPDATED [from {}]: {}", remote_node.to_string(), repr(path));
 
-	auto node = Node::touch_node(remote_node, false).first;
+	// on_message already refreshed the sender's liveness.
+	auto node = Node::get_node(remote_node.name());
 	if (node) {
 		Endpoint local_endpoint(path);
 		if (local_endpoint.empty()) {

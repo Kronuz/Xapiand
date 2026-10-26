@@ -415,6 +415,22 @@ Node::touch_node(const Node& node, bool activate, bool touch)
 }
 
 
+std::shared_ptr<const Node>
+Node::touch_sender(std::string_view message)
+{
+	L_CALL("Node::touch_sender(<message>)");
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto sender = Node::unserialise(&p, p_end);
+	if (Node::is_superset(Node::get_local_node(), sender)) {
+		return nullptr;
+	}
+	return Node::touch_node(sender, false).first;
+}
+
+
 void
 Node::drop_node(std::string_view _node_name)
 {

@@ -389,6 +389,10 @@ public:
 	static void drop_node(std::string_view node_name);
 	static void reset();
 
+	// Refreshes the liveness of the node that opens a bus message (a serialised Node
+	// first). Null when it is the local node or conflicts with an active one.
+	static std::shared_ptr<const Node> touch_sender(std::string_view message);
+
 	static std::vector<std::shared_ptr<const Node>> nodes();
 
 	static std::string dump_nodes(int level = 1);
