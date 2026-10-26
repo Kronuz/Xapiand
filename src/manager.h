@@ -26,6 +26,7 @@
 
 #include <cassert>                            // for assert
 #include <chrono>                             // for std::chrono
+#include <functional>                         // for std::function
 #include <atomic>                             // for std::atomic, std::atomic_int
 #include <memory>                             // for std::unique_ptr, std::shared_ptr
 #include <mutex>                              // for std::mutex
@@ -181,6 +182,8 @@ private:
 
 	void run_loop();
 	void break_loop();
+	// Runs work on the control plane's offload worker, then `then` on the loop.
+	void control_offload(std::function<void()> work, std::function<void()> then = {});
 	void arm_signal_reader();
 
 	void try_shutdown_timer_cb();
