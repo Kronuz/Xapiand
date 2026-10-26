@@ -220,6 +220,8 @@ inline asio::awaitable<void> serve_replication_connection(asio::ip::tcp::socket 
 	}
 	asio::error_code ec;
 	socket.shutdown(asio::ip::tcp::socket::shutdown_send, ec);
+	// A stopped server cancels the session; without this the hop throws and the views die on the loop.
+	co_await asio::this_coro::throw_if_cancelled(false);
 	try { co_await engine::release_on_pool(reactor, std::move(client)); } catch (const std::exception&) { }
 }
 

@@ -27,6 +27,7 @@
 
 #include "test_harness.h"
 
+#include <chrono>
 #include <csignal>
 #include <cstdio>
 #include <functional>
@@ -114,6 +115,24 @@ void release_on_loop_via_pool() {
 	r.run();
 }
 
+// Releases from a session whose cancellation slot fired, as TcpServer::stop() leaves one.
+void release_after_cancel(bool keep_hop) {
+	reactor::Reactor r(1, 8);
+	asio::cancellation_signal stop;
+	auto session = [&r, keep_hop]() -> asio::awaitable<void> {
+		auto t = std::make_unique<Teardown>();
+		asio::steady_timer wait(co_await asio::this_coro::executor, std::chrono::hours(1));
+		try { co_await wait.async_wait(asio::use_awaitable); } catch (const std::exception&) { }
+		if (keep_hop) {
+			co_await asio::this_coro::throw_if_cancelled(false);
+		}
+		try { co_await engine::release_on_pool(&r, std::move(t)); } catch (const std::exception&) { }
+	};
+	asio::co_spawn(r.io(), session(), asio::bind_cancellation_slot(stop.slot(), asio::detached));
+	asio::post(r.io(), [&] { stop.emit(asio::cancellation_type::all); });
+	r.run();
+}
+
 void cleanup() {
 	DatabasePool pool(8, 1);
 	pool.cleanup(true, false);
@@ -133,6 +152,7 @@ static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires([] { checkin_only(false); }));
 	CHECK_TRUE(guard_fires([] { checkin_only(true); }));
 	CHECK_TRUE(guard_fires(destroy_on_loop));
+	CHECK_TRUE(guard_fires([] { release_after_cancel(false); }));
 }
 
 static void test_fires_on_scheduler_thread() {
@@ -146,6 +166,7 @@ static void test_fires_on_scheduler_thread() {
 static void test_quiet_off_loop() {
 	CHECK_FALSE(guard_fires(wait_answer));
 	CHECK_FALSE(guard_fires(release_on_loop_via_pool));
+	CHECK_FALSE(guard_fires([] { release_after_cancel(true); }));
 	CHECK_FALSE(guard_fires([] {
 		on_loop([] { });
 		checkout_and_checkin();  // the loop's thread, after run() returns
