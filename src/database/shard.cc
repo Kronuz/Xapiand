@@ -668,6 +668,7 @@ Shard::reopen()
 			} else {
 				reopen_readable();
 			}
+			break;
 		} catch (const engine::Error& error) {
 			switch (error.kind) {
 				case engine::errc::not_found:
