@@ -174,3 +174,81 @@ Linux and FreeBSD; TSan (the contributor ran it on the pool tests and `test_bloc
 a Release build of the guard's count-and-log branch; a mid-transfer replication drop (CR1's runtime proof); the docs E2E, `hammer.sh`,
 `uafhunt.sh`, `dump_restore_loop.sh` and a Xapiand rebuild (the contributor's evidence taken as given for the binary I checked for currency);
 Detent's use of reactor; any timing; the GPL files; the remote protocol destructor (`~RemoteProtocolViews`).
+
+## Re-check (2026-10-26)
+
+Scope: CR1, CR4, CR6 on `fix/offload-bridge` (code head `27a9dc463`, branch head `89de84a29` differs only in `docs/status/offload-bridge.md`) and
+Kronuz/reactor `test/udp-inside-run` (`0c04d0d`). Probes and outputs in `.scratch/review/recheck/` (Xapiand worktree) and
+`.scratch/recheck/` (reactor worktree). No tracked file was edited; `git status` is clean in the Xapiand worktree.
+Reverts were done out of tree: `recheck/mkvariant.sh` compiles `manager.cc`, `replication_protocol_service.cc` (and `pool.cc`) against copies of the
+`c5c004740` text and relinks `xapiand-rev` / `xapiand-pre` from the build-asan objects (a first attempt to overwrite the header in place was refused).
+
+### CR1: PARTIAL
+
+Closed for the normal-end and error exits, open for the cancellation exit the brief names.
+
+Closed parts:
+- Guards: `src/database/pool.cc:1003` (`checkin(shared_ptr<Shard>&)`) and `:1045` (`checkin(vector<...>&)`) call `engine::check_may_block("DatabasePool::checkin")`.
+  `xapiand_test_blocking_guard` (existing ASan binary) prints `OK: 12 checks passed`.
+- Move: `replication_protocol_service.h:223` (serve) and `:266` (connect_and_replicate) hand the `unique_ptr` to `engine::release_on_pool` after the
+  try/catch, so normal end, EOF, hangup and error all reach it. Lifetime across the hop: `release.h:48-53` runs `object.reset()` in a job on
+  `reactor->pool()` while the posting coroutine is suspended holding `object`; nothing else holds the views (`SocketAbortable` keeps only the fd; the
+  `~ReplicationProtocolViews` at `replication_protocol_views.cc:234` does not touch the fd; in `connect_and_replicate` the socket is destroyed before
+  the release, as before). `socket.shutdown` now runs before the views are destroyed instead of after; harmless.
+- Revert check, `recheck/repl_drop.sh` (the contributor's script, scratch path moved), 3 rounds each, same host and ports:
+  - `xapiand-fix` (current binary): `guard hits node2=0 node1=0; ASan=0` in all rounds (replication connection seen and node1 killed in 2 of 3).
+  - `xapiand-rev` (service header at `c5c004740`, `pool.cc` guard kept): `guard hits node2=6` in all 3 rounds, abort stack
+    `check_may_block` <- `DatabasePool::checkin(shared_ptr<Shard>&)` <- `lock_shard::unlock` <- `~ReplicationProtocolViews` (`rd-rev-1/node2.log`).
+    Note the reverted binary aborts even on rounds where the netstat probe missed the connection, so a normal end triggers it too.
+- Remote residual: recorded in `docs/status/offload-bridge.md:27-30` (D13 text) and `:37-40` (ledger). I did not read the remote file.
+
+Open part (cancellation): `release_on_pool` does not run its pool hop when the session coroutine has been cancelled. Asio's
+`await_transform` (`asio/impl/awaitable.hpp:174-179`) throws `operation_aborted` at the `co_await engine::release_on_pool(...)` itself when the
+coroutine's cancellation state is set and `throw_if_cancelled` is true (the default). The unstarted `release_on_pool` frame is then destroyed
+during unwinding with the `unique_ptr` parameter still owning the views, so the destructor runs inline on the loop, and the surrounding
+`catch (const std::exception&)` (`:223`) swallows the exception. Inbound sessions get a cancellation slot from `reactor::launch_session`
+(`reactor.h:217`) and `TcpServer::stop()` -> `abort_all()` -> `SessionControl::abort()` emits `cancellation_type::all` into it (`reactor.h:199`), so
+this is every inbound replication connection that is still open when the server stops. The outbound `connect_and_replicate` is spawned with
+`asio::detached` (`replication_protocol_service.cc:223`), has no slot, and is not affected.
+Probe `recheck/release_cancel_probe.cc` (real `reactor::TcpServer`, real `engine/release.h`, a session shaped like `serve_replication_connection`,
+a stand-in whose destructor records `reactor::inside_run()`): normal EOF -> destroyed on the pool; `server.stop()` with the connection open ->
+destroyed on the loop (`dtor ran on a loop thread: YES`). With `co_await asio::this_coro::throw_if_cancelled(false);` placed before the
+`release_on_pool` call (`release_cancel_probe_fixed.cc`) both cases destroy on the pool. The call has to be at the call site: setting it inside
+`release_on_pool` is too late because the throw is in the caller's `await_transform`.
+Runtime on the real binary not shown: `recheck/repl_term.sh` (SIGTERM the primary mid-replication, fix binary, 3 rounds) saw the connection each time
+but node1 was still in "Waiting for replicators" / "Remote Protocol is busy" at the 20 s mark, never reaching the session cancellation; 0 guard hits
+and 0 ASan. Whether the serving side's views hold a shard to check in (so that the guard would fire) was not established; the loop-side
+destruction itself is shown by the probe. Ask: call `throw_if_cancelled(false)` before the release in `serve_replication_connection` (and in
+`connect_and_replicate` for symmetry), or say in the ledger that the hop is skipped on cancellation; add a case to the blocking-guard test or a
+reactor-level check for it.
+
+### CR4: CLOSED
+
+`test/udp_test.cc` (`0c04d0d`): the unicast handler stores `reactor::inside_run()` and `check(marked.load(), "[M] the handler runs inside_run()")`
+follows the `got >= 1` wait (the store precedes `got.fetch_add`, so the read is ordered). ASan+UBSan, Xapiand's Asio, `.scratch/recheck/`:
+`udp_good` (as is) `PASS (0 failures)`; `udp_mut` (`reactor_udp.h` line 147 changed to `reactor_.io().run()` in a copy of the headers)
+`FAIL (1 failures)`: `FAIL: [M] the handler runs inside_run()`.
+
+### CR6: CLOSED
+
+`strings .scratch/build-asan/bin/xapiand`: `Xapiand v1.0.0-alpha.9 (rev:20261026172707) (git:27a9dc463)`. `27a9dc463` is the last commit that touches
+`src/` (`git diff --stat 27a9dc463 HEAD` is `docs/status/offload-bridge.md` only), the binary (10:32:28) is newer than the sources it contains
+(10:31:40), and it carries the new guard string (`DatabasePool::checkin`; the pre-CR1 build has none). `.scratch/xapiand-head` is byte-identical to it.
+
+### uafhunt caveat: confirmed
+
+`recheck/uafhunt.sh` (the contributor's script, 10 rounds requested, default ASAN_OPTIONS so container-overflow is on), one run each, in parallel
+on different ports: pre-CR1 build (`xapiand-pre`: service header and `pool.cc` at `c5c004740`) and the fix build both stop at `rounds=8` with
+`ERROR: AddressSanitizer: container-overflow` and the same stack tail `prometheus::detail::CKMSQuantiles::insertBatch()` (`ckms_quantiles.cc:122`)
+<- `prometheus::Summary::Observe` <- `emit_via_writer`. It is not this branch's. Cause not chased.
+
+### New findings
+
+None from the fix. One note outside scope: `recheck/repl_term.sh` shows a primary with an active replication connection takes more than 20 s to
+shut down on SIGTERM ("Waiting for replicators"); not examined.
+
+### Not run
+
+Linux and FreeBSD; TSan; the docs E2E, `cluster_check.sh`, `hammer.sh` (the ledger's runs taken as given); the mutants on `test_blocking_guard`
+(only the unmutated 12-check run); a Release build; the remote protocol and its destructor; a real-binary proof of the cancellation path
+(a graceful stop reaching an open inbound replication session); the reactor's full ctest (only `udp_test`).
