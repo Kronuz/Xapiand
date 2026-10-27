@@ -8,7 +8,9 @@ X2 and X3 (`docs/status/engine-core.md`, `docs/status/engine-query.md`).
 
 X4a (reads) and X4b (search) are merged on master. X4c (kinds and types; the seam closes) is built and proven on
 `phase0.5/engine-search-c`: commits Xapiand:b28875f07, Xapiand:94c212d24, Xapiand:01d8b6ccb and the proof commit
-that holds this text. `remote_protocol_views.cc` was not opened or edited; the lead's task for X4c is only to land it.
+that holds this text. The code review (`docs/reviews/engine-search-x4c-code.md`, APPROVE WITH CONDITIONS) is folded in at
+Xapiand:84e7e00f9 (C1, C2, N1, N5; see "X4c code review" below). `remote_protocol_views.cc` was not opened or edited; the
+lead's task for X4c is only to land it.
 
 ## GPL boundary
 
@@ -383,9 +385,9 @@ the write guard; D2 as proposed except the floor items below.
   `src/engine/xapian/xapian.h`; `Xapian::major_version()` is `engine::xapian::version()`; `serialise-double.h` is
   `engine::serialise_double`; word-break text (`TermGenerator`), `Stopper` and `Stem` live in `src/engine/xapian/{text,
   stopper,snowball_stem}`; `src/stopper.*` keeps only the MIT stop-word list.
-- `exception_xapian.h`: `DocVersionConflictError`, `InvalidArgumentError`, `QueryParserError` are `ClientError` plus
-  `engine::Error` (no Xapian base); `CastError` is a `ClientError`. `SerialisationError` and `NetworkError` keep their
-  Xapian base (see floor).
+- `exception_xapian.h`: `DocVersionConflictError` and `QueryParserError` are `ClientError` plus `engine::Error` (no Xapian
+  base); `CastError` is a `ClientError`. `SerialisationError`, `NetworkError` and `InvalidArgumentError` keep their Xapian
+  base (see floor).
 - New: `tests/test_engine_error.cc` (243 checks), `test_failure_policy` in `tests/test_pool.cc`, `harness/seam_allowlist.txt`
   (7 files, 156 lines, from 38 files, 622 lines).
 
@@ -407,9 +409,9 @@ ladder needs fault injection (`XAPIAND_RANDOM_ERRORS`, off in this build), which
 serialises any `Xapian::Error` it catches to the peer with the GPL `serialise_error`, so its four catches and its include
 stay (its `NotAvailable` catch and its two throws moved). Also kept: `shard.cc` 6 and `shard.h` 4 (the remote server calls
 `add_document`, `replace_document` and `replace_document_term` with `Xapian::Document`; I found it only when the build broke,
-by match-only tokens), and `exception_xapian.h` 9 (`SerialisationError` and `NetworkError` stay Xapian-derived: the remote
-and replication servers catch `Xapian::Error` to answer a malformed message and the remote server throws and catches
-`NetworkError`). No `xapian.h` include line in the remote .cc needed a change (it reaches the header through
+by match-only tokens), and `exception_xapian.h` 11 (`SerialisationError`, `NetworkError` and `InvalidArgumentError` stay
+Xapian-derived: the remote and replication servers catch `Xapian::Error` to answer a malformed message and the remote server
+throws `NetworkError` x5 and `InvalidArgumentError` x7; the first cut dropped the last one, review C2). No `xapian.h` include line in the remote .cc needed a change (it reaches the header through
 `remote_protocol_views.h`), so there is no script for the lead.
 
 ### Changes in behaviour
@@ -420,9 +422,10 @@ and replication servers catch `Xapian::Error` to answer a malformed message and 
 3. Raw `engine::Error` throws that were Xapian types carry the reason as the 500 text (`manager.h`, `lock.h`, manager.cc's
    endpoint checks, search_views' "Endpoint node not available"); the `NetworkError` mixin and the stem-language error keep
    the old description. Unreachable from a request today (an unknown stem language is a 400 in the schema).
-4. `syntax` maps to HTTP 500 with the description when it is not also a `ClientError`, as the raw `QueryParserError` did
-   (the plan said 400; `prepare` runs outside the match ladder, so a text parse error never reached the ladder's 400).
-   The ladder still turns a `syntax` from `search` into a `ClientError`.
+4. `syntax` maps to HTTP 400 `Bad Request: <description>` in `catch_http_errors` (review C1). The raw `QueryParserError` of
+   a text query answered 500 before (`prepare` runs outside the match ladder, so it never reached the ladder's 400); 10 of
+   242 malformed bodies in the reviewer's probe change from 500 to 400 and nothing else does. The ladder still turns a
+   `syntax` from `search` into a `ClientError`.
 
 ## Proof (X4c)
 
@@ -456,6 +459,42 @@ description (no `Xapian::` token, same output); queryparser work on `phase0.5/qu
 For the other developer (queryparser): I did not touch the Text node, `query_dsl`, or CMake except adding
 `engine_error` to the unit-test list. `query.cc` still includes `snowball_stem.h` and `stopper.h`, which now resolve to
 `src/engine/xapian/` (same directory); `src/stopper.h` keeps only `getStopWords`.
+
+## X4c code review (C1, C2, N1, N5)
+
+Xapiand:84e7e00f9. Builds ASan+UBSan, `.scratch/build-asan`, `quiet light`, -j4. Probes copied from the review worktree
+(`.scratch/x4c/p1_syntax.py`, `p2_remote.py`, run by `probes_fix.sh`); mutants in `.scratch/x4c/mutants7.py`
+(`mutants7.out`).
+
+1. C1: `catch_http_errors` answers `errc::syntax` 400 with the description (`syntax400.patch`). The `QueryParser` row of
+   `test_engine_error` expects `Bad Request: QueryParserError: Syntax: bad` (the case table takes per-row expected values).
+   Corpus row `{"title": {"_and": "foo AND"}}` added to `qdiff.py` (13th query, 3 answers: sorted, `check_at_least`, plain):
+   500 on the baseline binary, 400 on the branch. The four corpora (qdiff now 2,010 answers, qnf 104, qread 911, qsim 265)
+   are byte-identical to the baseline except those 3 answers. The reviewer's probe: 242 answers, exactly 10 differ, all
+   500 to 400, base had 10 x 500.
+2. C2: `InvalidArgumentError` has its Xapian base and initialiser back. `test_engine_error` has `static_assert(is_base_of_v<
+   Xapian::Error, T>)` for `InvalidArgumentError`, `NetworkError`, `SerialisationError` (the three Xapiand types the remote
+   and replication servers throw or serialise; found from the MIT side and from `git grep -o` tokens on the remote file:
+   `THROW(InvalidArgumentError` 7, `THROW(NetworkError` 5, and `length.h` throws `SerialisationError`) and for
+   `engine::xapian::InvalidArgument` (the replication views' throw). The raw-socket probe `p2_remote.py` answers byte for
+   byte as the baseline (`diff p2-base.out p2-fix.out` empty). `seam_allowlist.txt`: `exception_xapian.h` 11.
+3. N1: `engine::xapian::Shard` is not `final`, so `test_pool` stands in an engine whose `find_key` fails
+   (`test_get_docid_term_policy`: corrupt closes and throws, invalid throws and stays open, a stale snapshot reopens and
+   retries, an exhausted one closes). The two `writes=true` fan-outs need `XapiandManager` (`lock_shard`), so
+   `test_fan_out_call_sites` pins them in `handler.cc`: `set_metadata` and `commit` call `collect_failure(..., true)` and
+   only the two read fan-outs call it with `false`. That one is a source check, not a behaviour test.
+4. N5: `test_failure_policy` removes `pool_test_policy/` before and after.
+5. Reverts and mutants (each rebuilt, judged by the unit test): set_metadata `writes` true to false: caught
+   (`test_pool` 392/393); commit `writes` true to false: caught; `get_docid_term` without `retry_read`: caught
+   (`test_pool` 358/360); C1 revert (syntax arm off): caught (`test_engine_error` MISMATCH QueryParser old 400 new 500);
+   C2 revert (Xapian base dropped): does not compile (`static_assert` in `test_engine_error.cc`); N5 revert leaves
+   `pool_test_policy` in the cwd, the fix does not.
+6. Unit tests 18 of 18 under ASan+UBSan (`test_pool` 109 checks).
+7. `cluster_range.sh 2`: GREEN, 30 checks, 0 failures; the 12 saved bodies are identical to the X4c run (`cl3-x4c` vs `cl3-x4cfix`).
+
+Follow-ups left as they were: N2 (`invalid` in the metadata ladders also covers `InvalidOperation`), N3
+(`unserialise_double` on malformed bytes), N4 (log text for a raw Xapian error), N6 (`invalid` is one kind for a caller's
+mistake and an internal breach; for the architect).
 
 ## Next
 
