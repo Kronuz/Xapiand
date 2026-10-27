@@ -101,6 +101,9 @@ catch_http_errors(Func&& func)
 				if (const auto* client_error = dynamic_cast<const ClientError*>(&exc)) {
 					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
 					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + client_error->what();
+				} else if (exc.kind == engine::errc::syntax) {
+					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.description();
 				} else {
 					http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 					http_errors.error = exc.description();

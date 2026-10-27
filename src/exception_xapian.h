@@ -61,10 +61,10 @@ public:
 };
 
 
-class InvalidArgumentError : public ClientError, public engine::Error {
+class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError, public engine::Error {
 public:
 	template<typename... Args>
-	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::invalid, message) { }
+	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message), engine::Error(engine::errc::invalid, message) { }
 };
 
 

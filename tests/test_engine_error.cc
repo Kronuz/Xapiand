@@ -32,6 +32,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "cartesian.h"
@@ -296,10 +297,19 @@ struct OldQueryParser : ClientError, Xapian::QueryParserError {
 	explicit OldQueryParser(const std::string& m) : ClientError(__func__, __FILE__, __LINE__, "ClientError", m), Xapian::QueryParserError(message) { }
 };
 
+// The remote and replication servers answer any Xapian::Error with an error reply and keep the
+// connection; a type they throw or serialise that loses the base closes the connection instead.
+static_assert(std::is_base_of_v<Xapian::Error, InvalidArgumentError>);
+static_assert(std::is_base_of_v<Xapian::Error, NetworkError>);
+static_assert(std::is_base_of_v<Xapian::Error, SerialisationError>);
+static_assert(std::is_base_of_v<Xapian::Error, engine::xapian::InvalidArgument>);
+
 struct Case {
 	std::string name;
 	std::function<void()> raw;        // what the old code saw
 	std::function<void()> engine_;    // what the new code sees (empty: the same as raw, translated)
+	int expect_code = 0;              // nonzero: the new answer is this instead of the old one
+	std::string expect_error;
 };
 
 void test_http_answers_unchanged() {
@@ -325,6 +335,9 @@ void test_http_answers_unchanged() {
 	xapian_case("InvalidArgument", [] { throw Xapian::InvalidArgumentError("arg"); });
 	xapian_case("InvalidOperation", [] { throw Xapian::InvalidOperationError("op"); });
 	xapian_case("QueryParser", [] { throw Xapian::QueryParserError("Syntax: bad"); });
+	// A syntax error from the query parser answers 400 (it was 500).
+	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;
+	cases.back().expect_error = "Bad Request: QueryParserError: Syntax: bad";
 	xapian_case("RangeError", [] { throw Xapian::RangeError("range"); });
 	xapian_case("Internal", [] { throw Xapian::InternalError("internal"); });
 	xapian_case("Serialisation", [] { throw Xapian::SerialisationError("serial"); });
@@ -354,6 +367,10 @@ void test_http_answers_unchanged() {
 			}
 			return 0;
 		});
+		if (c.expect_code != 0) {
+			old_answer.error_code = static_cast<http_status>(c.expect_code);
+			old_answer.error = c.expect_error;
+		}
 		if (old_answer.error_code != new_answer.error_code || old_answer.error != new_answer.error) {
 			std::printf("MISMATCH %s: old %d '%s' new %d '%s'\n", c.name.c_str(), static_cast<int>(old_answer.error_code), old_answer.error.c_str(), static_cast<int>(new_answer.error_code), new_answer.error.c_str());
 		}

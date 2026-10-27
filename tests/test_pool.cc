@@ -30,7 +30,10 @@
 #include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <functional>
+#include <sstream>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -40,6 +43,8 @@
 #include "database/pool.h"
 #include "database/shard.h"
 #include "engine/xapian/errors.h"
+#include "engine/xapian/shard.h"
+#include "engine/xapian/xapian.h"
 
 using namespace std::chrono_literals;
 
@@ -52,6 +57,7 @@ struct PoolTestAccess {
 	static void set_local(Shard& shard) { shard._local = true; }  // as if opened locally
 	static void close(Shard& shard) { shard._closed.store(true); }  // as if closed by a failed commit
 	static bool open(Shard& shard) { return shard.engine_shard != nullptr; }
+	static void replace_engine(Shard& shard, std::unique_ptr<engine::xapian::Shard> engine) { shard.engine_shard = std::move(engine); }
 };
 
 namespace {
@@ -299,6 +305,98 @@ Outcome retry_outcome(engine::errc kind, int t) {
 	return outcome;
 }
 
+// An engine whose find_key fails `fail_times` times with `kind` and then finds document 7.
+class FailingEngine : public engine::xapian::Shard {
+public:
+	FailingEngine(engine::errc kind, int fail_times) : engine::xapian::Shard(nullptr), kind(kind), fail_times(fail_times) { }
+	task::task<engine::docid> find_key(const std::string&) override {
+		++calls;
+		if (calls <= fail_times) {
+			throw engine::Error(kind, "x");
+		}
+		co_return 7;
+	}
+	task::task<bool> reopen() override { co_return true; }
+	unsigned refs() const override { return 0; }
+	engine::errc kind;
+	int fail_times;
+	int calls = 0;
+};
+
+struct FindOutcome {
+	bool threw = false;
+	bool closed = false;
+	engine::docid did = 0;
+	int calls = 0;
+};
+
+FindOutcome find_outcome(engine::errc kind, int fail_times) {
+	DatabasePool pool(8, 1);
+	auto shard = pool.checkout(Endpoint("pool_test_find"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
+	shard->engine();  // opens the database
+	auto engine = std::make_unique<FailingEngine>(kind, fail_times);
+	auto* fake = engine.get();
+	A::replace_engine(*shard, std::move(engine));
+	FindOutcome outcome;
+	try {
+		outcome.did = shard->get_docid_term("key");
+	} catch (const engine::Error&) {
+		outcome.threw = true;
+	}
+	outcome.closed = !A::open(*shard);
+	outcome.calls = fake && A::open(*shard) ? fake->calls : -1;
+	pool.checkin(shard);
+	return outcome;
+}
+
+// Shard::get_docid_term runs the failure policy: a fatal kind closes the shard and throws, a
+// kind that is not retried throws and leaves it open, a stale snapshot reopens and retries.
+void test_get_docid_term_policy() {
+	std::filesystem::remove_all("pool_test_find");
+	using engine::errc;
+	auto corrupt = find_outcome(errc::corrupt, 99);
+	CHECK_TRUE(corrupt.threw && corrupt.closed);
+	auto invalid = find_outcome(errc::invalid, 99);
+	CHECK_TRUE(invalid.threw && !invalid.closed && invalid.calls == 1);
+	auto retried = find_outcome(errc::reopen, 1);
+	CHECK_TRUE(!retried.threw && !retried.closed && retried.did == 7 && retried.calls == 2);
+	auto exhausted = find_outcome(errc::reopen, 99);
+	CHECK_TRUE(exhausted.threw && exhausted.closed);
+	std::filesystem::remove_all("pool_test_find");
+}
+
+std::string handler_source() {
+	std::ifstream in(std::filesystem::path(__FILE__).parent_path().parent_path() / "src/database/handler.cc");
+	std::stringstream all;
+	all << in.rdbuf();
+	return all.str();
+}
+
+// The body of the function that starts at `signature` in handler.cc.
+std::string handler_body(const std::string& text, const std::string& signature) {
+	auto start = text.find(signature);
+	if (start == std::string::npos) { return {}; }
+	return text.substr(start, text.find("\n}\n", start) - start);
+}
+
+// DatabaseHandler needs the manager, so the fan-out call sites are pinned in the source: the
+// write fan-outs treat a stale snapshot as final (writes true); only the two read fan-outs collect it.
+void test_fan_out_call_sites() {
+	const std::string write = "collect_failure(error, eptr, valid, true)";
+	const std::string read = "collect_failure(error, eptr, valid, false)";
+	const auto text = handler_source();
+	CHECK_TRUE(!text.empty());
+	for (const char* signature : {"DatabaseHandler::set_metadata(const std::string& key, const std::string& value", "DatabaseHandler::commit(bool wal)"}) {
+		auto body = handler_body(text, signature);
+		CHECK_TRUE(!body.empty());
+		CHECK_TRUE(body.find(write) != std::string::npos);
+		CHECK_TRUE(body.find(read) == std::string::npos);
+	}
+	size_t reads = 0;
+	for (auto at = text.find(read); at != std::string::npos; at = text.find(read, at + 1)) { ++reads; }
+	CHECK_EQ(reads, size_t(2));
+}
+
 Outcome collect_outcome(engine::errc kind, bool writes) {
 	DatabasePool pool(8, 1);
 	auto shard = pool.checkout(Endpoint("pool_test_policy"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
@@ -323,6 +421,7 @@ Outcome collect_outcome(engine::errc kind, bool writes) {
 }
 
 void test_failure_policy() {
+	std::filesystem::remove_all("pool_test_policy");
 	using engine::errc;
 	for (auto kind : {errc::reopen, errc::opening, errc::not_found, errc::not_available, errc::timeout, errc::network}) {
 		auto more = retry_outcome(kind, 1);
@@ -363,8 +462,9 @@ void test_failure_policy() {
 		auto invalid = collect_outcome(errc::invalid, writes);
 		CHECK_TRUE(invalid.threw && !invalid.closed && !invalid.collected);
 	}
+	std::filesystem::remove_all("pool_test_policy");
 }
 
 }  // namespace
 
-TEST_MAIN(test_failure_policy, test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
+TEST_MAIN(test_failure_policy, test_get_docid_term_policy, test_fan_out_call_sites, test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
