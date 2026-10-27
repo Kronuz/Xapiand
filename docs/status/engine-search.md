@@ -93,7 +93,8 @@ All six criteria ticked; evidence in "Proof (X4a)".
   and views, schema.cc, handler add_document).
 - `harness/seam_check.sh` with `harness/seam_allowlist.txt` (per-file line ceiling, shrink-only, `--update`),
   first step of the `ci.yml` build job.
-- `tests/test_engine_read.cc` (591 checks).
+- `tests/test_engine_read.cc` (657 checks), with `engine::xapian::live_views()` counting the `DocView`s alive
+  (criterion 6; review C1).
 
 ## Proof (X4a)
 
@@ -121,7 +122,12 @@ Builds: ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`, x86_64, `.scratch/build-asan` (
    (`.scratch/mutants4i.py`, judged by the read corpus): 6 of 6 caught (doc_del, value slot, positions,
    get_docid_term, get_metadata, dump start). The first run of the corpus missed doc_del (no 1-shard index)
    and get_metadata (no readable metadata); the 1-shard index and the key listing were added and both caught.
-8. `seam_check.sh`: exits 0 on the tree; a new file naming `Xapian::` exits 1; a listed file gaining a line
+8. Live view counter (review C1): `test_views_do_not_leak` expects 0 live views after every `find_key`,
+   `get` (found and missing), a full scan (1 inside the sink), a scan cut by a throwing sink and resumed (the
+   dump retry), and a view that outlives its shard. Mutants (`.scratch/c1-mutants.sh`): `view.release()` in
+   `scan` fails 6 checks (the old 591 passed it); a leaked extra view in `get` fails 33. 16 of 16 unit tests
+   under ASan+UBSan after the change.
+9. `seam_check.sh`: exits 0 on the tree; a new file naming `Xapian::` exits 1; a listed file gaining a line
    exits 1; shrinking asks for `--update`.
 9. Seam metric (files / lines naming `Xapian::` or a Xapian header outside `src/xapian` and
    `src/engine/xapian`): master 38 / 704, X4a 38 / 701. `->db()` sites outside the remote server: 30 to 2

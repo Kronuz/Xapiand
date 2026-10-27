@@ -24,6 +24,7 @@
 
 #include "engine/xapian/errors.h"      // for the Failure types
 
+#include <atomic>                // for std::atomic
 #include <type_traits>             // for std::is_same_v, std::is_unsigned_v
 
 #include "database/flags.h"        // for DB_CREATE_OR_OPEN, DB_CREATE, ...
@@ -200,7 +201,18 @@ namespace {
 
 class XapianDocView final : public DocView {
 public:
-	explicit XapianDocView(Xapian::Document doc) : doc_(std::move(doc)) { }
+	explicit XapianDocView(Xapian::Document doc) : doc_(std::move(doc)) {
+		live.fetch_add(1, std::memory_order_relaxed);
+	}
+
+	~XapianDocView() override {
+		live.fetch_sub(1, std::memory_order_relaxed);
+	}
+
+	XapianDocView(const XapianDocView&) = delete;
+	XapianDocView& operator=(const XapianDocView&) = delete;
+
+	static inline std::atomic<std::size_t> live{0};
 
 	docid did() const override {
 		return doc_.get_docid();
@@ -274,6 +286,13 @@ std::unique_ptr<DocView>
 make_view(Xapian::Document doc)
 {
 	return std::make_unique<XapianDocView>(std::move(doc));
+}
+
+
+std::size_t
+live_views() noexcept
+{
+	return XapianDocView::live.load(std::memory_order_relaxed);
 }
 
 

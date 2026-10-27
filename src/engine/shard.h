@@ -74,7 +74,7 @@ struct Stats {
 	bool has_positions = false;
 };
 
-// Called for each document of a scan.
+// Called for each document of a scan; the view and its strings are valid only during the call.
 using ScanSink = std::function<void(const DocView&)>;
 
 // One shard of an index: the write, read and lifecycle slice. Every operation that can block on I/O
@@ -129,6 +129,7 @@ public:
 
 	// The implementation behind the seam, for the code that speaks its protocol (the Xapian
 	// remote server and replication). Raises std::bad_cast when the shard is another engine's.
+	// Hold nothing it returns (or `engine()`'s shard) across a reopen, close or checkin.
 	template <typename T>
 	T& native() {
 		return dynamic_cast<T&>(*this);

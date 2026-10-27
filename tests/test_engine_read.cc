@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "engine/sync.h"
+#include "engine/xapian/convert.h"
 #include "engine/xapian/errors.h"
 #include "engine/xapian/shard.h"
 #include "xapian.h"
@@ -180,6 +181,70 @@ void test_view_outlives_shard() {
 	CHECK_EQ(joined, want);
 }
 
+// Every view an engine read makes is destroyed: none alive after get, scan (also a scan cut short by
+// a throwing sink and resumed, as the dump retry does) and find_key.
+void test_views_do_not_leak() {
+	auto shard = build(path_of("engine_read_live.db"));
+	CHECK_EQ(engine::xapian::live_views(), 0u);
+
+	// the counter sees a view that is held, and the release of it
+	auto held = engine::sync_wait(shard->get(1));
+	CHECK_EQ(engine::xapian::live_views(), 1u);
+	held.reset();
+	CHECK_EQ(engine::xapian::live_views(), 0u);
+
+	for (int i = 1; i <= kDocs; ++i) {
+		const bool erased = i % 4 == 0;
+		CHECK_EQ(engine::sync_wait(shard->find_key("Q" + std::to_string(i))), erased ? 0u : static_cast<engine::docid>(i));
+		if (!erased) {
+			{ auto view = engine::sync_wait(shard->get(static_cast<engine::docid>(i))); view->data(); }
+		} else {
+			CHECK_TRUE(kind_of([&] { engine::sync_wait(shard->get(static_cast<engine::docid>(i))); }) == engine::errc::doc_not_found);
+		}
+		CHECK_EQ(engine::xapian::live_views(), 0u);
+	}
+
+	// a full scan, with one view alive inside the sink and none after it
+	size_t inside = 0, seen = 0;
+	engine::sync_wait(shard->scan(1, [&](const engine::DocView&) {
+		++seen;
+		inside = engine::xapian::live_views();
+	}));
+	CHECK_EQ(seen, static_cast<size_t>(kDocs - kDocs / 4));
+	CHECK_EQ(inside, 1u);
+	CHECK_EQ(engine::xapian::live_views(), 0u);
+
+	// the retry path: a sink that throws mid-scan, then the scan resumed from the last id
+	engine::docid last = 0;
+	int count = 0;
+	bool thrown = false;
+	try {
+		engine::sync_wait(shard->scan(1, [&](const engine::DocView& doc) {
+			last = doc.did();
+			if (++count == 3) {
+				throw std::runtime_error("stop");
+			}
+		}));
+	} catch (const std::runtime_error&) {
+		thrown = true;
+	}
+	CHECK_TRUE(thrown);
+	CHECK_EQ(engine::xapian::live_views(), 0u);
+	size_t resumed = 0;
+	engine::sync_wait(shard->scan(last, [&](const engine::DocView&) { ++resumed; }));
+	CHECK_EQ(resumed, static_cast<size_t>(kDocs - kDocs / 4) - 2);
+	CHECK_EQ(engine::xapian::live_views(), 0u);
+
+	// a view that outlives its shard is still counted until it goes
+	{
+		auto own = build(path_of("engine_read_live_own.db"));
+		held = engine::sync_wait(own->get(2));
+	}
+	CHECK_EQ(engine::xapian::live_views(), 1u);
+	held.reset();
+	CHECK_EQ(engine::xapian::live_views(), 0u);
+}
+
 void test_scan() {
 	auto shard = build(path_of("engine_read_scan.db"));
 	auto* db = shard->database();
@@ -274,4 +339,4 @@ void test_native() {
 
 }  // namespace
 
-TEST_MAIN(test_stats, test_find_key_and_get, test_view_outlives_shard, test_scan, test_metadata, test_check, test_native)
+TEST_MAIN(test_stats, test_find_key_and_get, test_view_outlives_shard, test_views_do_not_leak, test_scan, test_metadata, test_check, test_native)

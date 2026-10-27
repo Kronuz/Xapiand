@@ -170,6 +170,7 @@ public:
 	bool reopen();
 
 	// The engine shard, opened (or reopened) if need be; raises when the shard is closed.
+	// Valid until the next reopen, close or checkin: hold neither it nor a `native<T>()` across one.
 	engine::Shard& engine();
 
 	// For the Xapian remote server and the code not yet moved to the seam (X4b removes it).

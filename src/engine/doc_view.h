@@ -41,7 +41,7 @@ using ValueSink = std::function<void(valueno slot, std::string_view value)>;
 
 // One term of a document with what the info endpoints report about it.
 struct TermDetail {
-	std::string_view term;
+	std::string_view term;                 // valid only during the sink call; copy it to keep it
 	termcount wdf = 0;
 	std::optional<doccount> termfreq;  // empty when the document is not tied to a database
 	std::vector<termpos> positions;    // empty when the term has none

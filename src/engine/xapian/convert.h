@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstddef>                // for std::size_t
 #include <memory>                  // for std::unique_ptr
 
 #include "engine/doc_view.h"       // for DocView
@@ -48,5 +49,8 @@ errc classify_current() noexcept;
 
 // A lazy view over a Xapian document.
 std::unique_ptr<DocView> make_view(Xapian::Document doc);
+
+// The views made and not yet destroyed, for the tests that check ownership.
+std::size_t live_views() noexcept;
 
 }  // namespace engine::xapian
