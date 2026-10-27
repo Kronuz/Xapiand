@@ -737,8 +737,14 @@ include_directories(
 # target is named snowball_compiler so the library can own the name snowball.
 FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG c93026cedf9124421886d449528dd6edb16e5ed3)
 FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 570a0b78fc2967f9ec6a0ec005547d20fcf32b61)
-FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG a0825b1a376754d4718ac6dd89b7b31c6dd96738)
+FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG 991ff3349d7e7d834b331c4b406139e76c76b24e)
 FetchContent_MakeAvailable(unicode snowball analysis)
+
+# queryparser: the query-string parser the engine seam's text node will use. It pins analysis
+# itself; the pin above is declared first and wins. The A/B build (XAPIAND_QP_AB) compares its
+# tree with Xapian's parser on every text query; XAPIAND_QUERYPARSER=1 runs on its tree.
+FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG 4e14ccdf41c4554e224da4f514affaccb766fff9)
+FetchContent_MakeAvailable(queryparser)
 
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
 # that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only; the Asio binding
@@ -1383,6 +1389,12 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/server/*.c*" "${PROJECT_SOURCE_DIR}/src/server/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/utils/*.c*" "${PROJECT_SOURCE_DIR}/src/utils/*.h*"
 )
+if (XAPIAND_QP_AB)
+	set_source_files_properties(
+		"${PROJECT_SOURCE_DIR}/src/engine/xapian/query.cc"
+		"${PROJECT_SOURCE_DIR}/src/engine/xapian/text_parser.cc"
+		PROPERTIES COMPILE_DEFINITIONS XAPIAND_QP_AB=1)
+endif ()
 list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/main.cc"
 "${PROJECT_SOURCE_DIR}/src/package.cc"
@@ -1502,6 +1514,7 @@ if (TLS)
 endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
+	queryparser::queryparser
 	task::task
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
