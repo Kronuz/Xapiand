@@ -122,8 +122,8 @@ RemoteProtocolViews::RemoteProtocolViews(bool cluster_database_)
 	engine::xapian::register_posting_source(registry, MultipleValueRange{});
 	engine::xapian::register_posting_source(registry, MultipleValueGE{});
 	engine::xapian::register_posting_source(registry, MultipleValueLE{});
-	registry.register_match_spy(AggregationMatchSpy{});
-	registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
+	engine::xapian::register_match_spy(registry, AggregationMatchSpy{});
+	engine::xapian::register_key_maker(registry, Multi_MultiValueKeyMaker{});
 
 	L_CONN("New Remote Protocol Client, {} client(s) of a total of {} connected.", manager ? manager->remote_clients.load() : 0, manager ? manager->total_clients.load() : 0);
 }

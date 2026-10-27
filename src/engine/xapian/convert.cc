@@ -220,12 +220,16 @@ public:
 	}
 
 	void terms(std::string_view prefix, const TermSink& sink) const override {
+		// A termlist is sorted, so the terms with a prefix are contiguous.
 		const auto end = doc_.termlist_end();
-		for (auto it = doc_.termlist_begin(); it != end; ++it) {
+		auto it = doc_.termlist_begin();
+		it.skip_to(std::string(prefix));
+		for (; it != end; ++it) {
 			auto name = *it;
-			if (name.compare(0, prefix.size(), prefix) == 0) {
-				sink(name, it.get_wdf());
+			if (name.compare(0, prefix.size(), prefix) != 0) {
+				break;
 			}
+			sink(name, it.get_wdf());
 		}
 	}
 

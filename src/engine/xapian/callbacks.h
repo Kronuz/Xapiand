@@ -113,7 +113,7 @@ register_posting_source(Xapian::Registry& registry, const engine::PostingSource&
 inline void
 register_key_maker(Xapian::Registry& registry, const engine::KeyMaker& prototype)
 {
-	registry.register_key_maker(new KeyMakerAdapter(prototype.clone()));
+	registry.register_key_maker((new KeyMakerAdapter(prototype.clone()))->release());
 }
 
 inline void

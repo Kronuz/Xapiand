@@ -85,10 +85,10 @@ ValuesHandler::ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>&
 
 
 std::vector<std::string>
-ValuesHandler::values(const Xapian::Document& doc) const
+ValuesHandler::values(const engine::DocView& doc) const
 {
 	std::vector<std::string> values;
-	auto doc_value = doc.get_value(_slot);
+	auto doc_value = doc.value(_slot);
 	for (const auto& value : StringList(doc_value)) {
 		values.push_back(std::string(value));
 	}
@@ -118,22 +118,14 @@ TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& s
 
 
 std::vector<std::string>
-TermsHandler::values(const Xapian::Document& doc) const
+TermsHandler::values(const engine::DocView& doc) const
 {
 	std::vector<std::string> values;
 
-	auto it = doc.termlist_begin();
-	it.skip_to(_prefix);
-	auto it_e = doc.termlist_end();
-	for (; it != it_e; ++it) {
-		const auto& term = *it;
-		if (strings::startswith(term, _prefix)) {
-			if (term.size() > _prefix.size() + 1) {
-				values.push_back(term.substr(_prefix.size() + 1));
-			}
-		} else {
-			break;
+	doc.terms(_prefix, [&](std::string_view term, engine::termcount) {
+		if (term.size() > _prefix.size() + 1) {
+			values.emplace_back(term.substr(_prefix.size() + 1));
 		}
-	}
+	});
 	return values;
 }

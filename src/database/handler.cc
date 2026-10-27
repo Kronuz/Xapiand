@@ -45,11 +45,11 @@
 #include "log.h"                            // for L_CALL
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
-#include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "multivalue/geospatialrange.h"     // for GeoSpatialRange
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
+#include "engine/xapian/callbacks.h"           // for KeyMakerAdapter, MatchSpyAdapter
 #include "engine/xapian/query.h"              // for engine::xapian::to_xapian
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
@@ -713,12 +713,21 @@ DatabaseHandler::get_rset(const engine::Query& query, Xapian::doccount maxitems)
 {
 	L_CALL("DatabaseHandler::get_rset(...)");
 
+	return get_rset(engine::xapian::to_xapian(query), maxitems);
+}
+
+
+Xapian::RSet
+DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
+{
+	L_CALL("DatabaseHandler::get_rset(<xapian query>)");
+
 	// Xapian::RSet only keeps a set of Xapian::docid internally,
 	// so it's thread safe across database checkouts.
 
 	Xapian::RSet rset;
 
-	auto mset = get_mset(query, 0, maxitems);
+	auto mset = match(query, 0, maxitems, 0, nullptr, Xapian::BAD_VALUENO, 0, 0, 0, Xapian::Enquire::ASCENDING, nullptr, nullptr, nullptr);
 	const auto m_e = mset.end();
 	for (auto m = mset.begin(); m != m_e; ++m) {
 		auto did = *m;
@@ -1068,7 +1077,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 
 
 std::tuple<Xapian::MSet, MsgPack, engine::Query>
-DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs)
+DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, engine::MatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
@@ -1202,21 +1211,43 @@ DatabaseHandler::get_mset(
 	Xapian::doccount first,
 	Xapian::doccount maxitems,
 	Xapian::doccount check_at_least,
-	Xapian::KeyMaker* sorter,
+	const engine::KeyMaker* sorter,
 	Xapian::valueno collapse_key,
 	Xapian::doccount collapse_max,
 	double percent_threshold,
 	double weight_threshold,
 	Xapian::Enquire::docid_order order,
-	AggregationMatchSpy* aggs,
+	engine::MatchSpy* aggs,
 	const similar_field_t* fuzzy,
 	const similar_field_t* nearest
 	)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
 
-	// The text of the query is read here, before any database is checked out.
-	const auto xapian_query = engine::xapian::to_xapian(query);
+	// The text of the query is read here, once, before any database is checked out.
+	return match(engine::xapian::to_xapian(query), first, maxitems, check_at_least, sorter, collapse_key, collapse_max, percent_threshold, weight_threshold, order, aggs, fuzzy, nearest);
+}
+
+
+Xapian::MSet
+DatabaseHandler::match(
+	const Xapian::Query& xapian_query,
+	Xapian::doccount first,
+	Xapian::doccount maxitems,
+	Xapian::doccount check_at_least,
+	const engine::KeyMaker* sorter,
+	Xapian::valueno collapse_key,
+	Xapian::doccount collapse_max,
+	double percent_threshold,
+	double weight_threshold,
+	Xapian::Enquire::docid_order order,
+	engine::MatchSpy* aggs,
+	const similar_field_t* fuzzy,
+	const similar_field_t* nearest
+	)
+{
+	L_CALL("DatabaseHandler::match({}, {}, {}, {})", xapian_query.get_description(), first, maxitems, check_at_least);
+
 	if (xapian_query.empty()) {
 		return Xapian::MSet{};
 	}
@@ -1224,15 +1255,25 @@ DatabaseHandler::get_mset(
 	Xapian::RSet nearest_rset;
 	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 	if (nearest) {
-		nearest_rset = get_rset(query, nearest->n_rset);
+		nearest_rset = get_rset(xapian_query, nearest->n_rset);
 		nearest_edecider = get_edecider(*nearest);
 	}
 
 	Xapian::RSet fuzzy_rset;
 	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (fuzzy) {
-		fuzzy_rset = get_rset(query, fuzzy->n_rset);
+		fuzzy_rset = get_rset(xapian_query, fuzzy->n_rset);
 		fuzzy_edecider = get_edecider(*fuzzy);
+	}
+
+	// The callbacks reach Xapian through adapters that borrow them for this call.
+	std::unique_ptr<engine::xapian::KeyMakerAdapter> sorter_adapter;
+	if (sorter) {
+		sorter_adapter = std::make_unique<engine::xapian::KeyMakerAdapter>(*sorter);
+	}
+	std::unique_ptr<engine::xapian::MatchSpyAdapter> spy_adapter;
+	if (aggs) {
+		spy_adapter = std::make_unique<engine::xapian::MatchSpyAdapter>(*aggs);
 	}
 
 	// Distributed match, Xapian-native: feed every shard into ONE Enquire and let
@@ -1281,11 +1322,11 @@ DatabaseHandler::get_mset(
 				enquire.set_collapse_key(collapse_key, collapse_max);
 				enquire.set_cutoff(percent_threshold, weight_threshold);
 				enquire.set_docid_order(order);
-				if (aggs) {
-					enquire.add_matchspy(aggs);
+				if (spy_adapter) {
+					enquire.add_matchspy(spy_adapter.get());
 				}
-				if (sorter) {
-					enquire.set_sort_by_key_then_relevance(sorter, false);
+				if (sorter_adapter) {
+					enquire.set_sort_by_key_then_relevance(sorter_adapter.get(), false);
 				}
 
 				auto final_query = xapian_query;

@@ -291,14 +291,28 @@ namespace Unserialise {
 		return sortable_unserialise(serialised_float);
 	}
 
+	// Bytes that are not a serialised number can decode out of range: saturate (NaN is 0).
+	inline std::int64_t clamp_int64(long double v) noexcept {
+		if (v != v) return 0;
+		if (v <= -9223372036854775808.0L) return INT64_MIN;
+		if (v >= 9223372036854775808.0L) return INT64_MAX;
+		return static_cast<std::int64_t>(v);
+	}
+
+	inline std::uint64_t clamp_uint64(long double v) noexcept {
+		if (!(v > 0)) return 0;
+		if (v >= 18446744073709551616.0L) return UINT64_MAX;
+		return static_cast<std::uint64_t>(v);
+	}
+
 	// Unserialise a serialised integer.
 	inline std::int64_t integer(std::string_view serialised_integer) {
-		return sortable_unserialise(serialised_integer);
+		return clamp_int64(sortable_unserialise(serialised_integer));
 	}
 
 	// Unserialise a serialised positive.
 	inline std::uint64_t positive(std::string_view serialised_positive) {
-		return sortable_unserialise(serialised_positive);
+		return clamp_uint64(sortable_unserialise(serialised_positive));
 	}
 
 	// Unserialise a serialised boolean.

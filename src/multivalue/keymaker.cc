@@ -26,8 +26,28 @@
 
 #include "xapiand_exception.h"                            // for InvalidArgumentError, MSG_I...
 #include "geospatial/ewkt.h"                      // for EWKT
+#include "engine/error.h"                       // for Error, errc
 #include "length.h"                               // for serialise_length, unserialise_length
-#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
+#include "engine/codec.h"                       // for serialise_double, unserialise_double
+
+
+namespace {
+
+// Saturating difference and absolute value, so a distance of 2^63 or more
+// sorts as the farthest instead of wrapping to a negative key.
+inline int64_t isub(int64_t a, int64_t b) noexcept {
+	int64_t r;
+	if (__builtin_sub_overflow(a, b, &r)) {
+		return b > 0 ? INT64_MIN : INT64_MAX;
+	}
+	return r;
+}
+
+inline int64_t iabs(int64_t v) noexcept {
+	return v >= 0 ? v : (v == INT64_MIN ? INT64_MAX : -v);
+}
+
+}  // namespace
 
 
 std::string
@@ -65,9 +85,9 @@ SerialiseKey::unserialise(const char** p, const char* p_end)
 
 
 std::string
-SerialiseKey::findSmallest(const Xapian::Document& doc) const
+SerialiseKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_STR_CMPVALUE;
 	}
@@ -79,9 +99,9 @@ SerialiseKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-SerialiseKey::findBiggest(const Xapian::Document& doc) const
+SerialiseKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_STR_CMPVALUE;
 	}
@@ -97,7 +117,7 @@ FloatKey::serialise() const
 {
 	std::string serialised;
 	serialised += BaseKey::serialise();
-	serialised += serialise_double(_ref_val);
+	serialised += engine::serialise_double(_ref_val);
 	serialised += serialise_string(_ser_ref_val);
 	return serialised;
 }
@@ -107,15 +127,15 @@ void
 FloatKey::unserialise(const char** p, const char* p_end)
 {
 	BaseKey::unserialise(p, p_end);
-	_ref_val = unserialise_double(p, p_end);
+	_ref_val = engine::unserialise_double(p, p_end);
 	_ser_ref_val = unserialise_string(p, p_end);
 }
 
 
 std::string
-FloatKey::findSmallest(const Xapian::Document& doc) const
+FloatKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -150,9 +170,9 @@ FloatKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-FloatKey::findBiggest(const Xapian::Document& doc) const
+FloatKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -200,9 +220,9 @@ IntegerKey::unserialise(const char** p, const char* p_end)
 
 
 std::string
-IntegerKey::findSmallest(const Xapian::Document& doc) const
+IntegerKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -210,17 +230,17 @@ IntegerKey::findSmallest(const Xapian::Document& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
+		return Serialise::integer(iabs(isub(Unserialise::integer(values.front()), _ref_val)));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::integer(Unserialise::integer(*it) - _ref_val);
+		return Serialise::integer(isub(Unserialise::integer(*it), _ref_val));
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::integer(_ref_val - Unserialise::integer(*last));
+		return Serialise::integer(isub(_ref_val, Unserialise::integer(*last)));
 	}
 
 	auto it_p = it++;
@@ -230,16 +250,16 @@ IntegerKey::findSmallest(const Xapian::Document& doc) const
 		return SERIALISED_ZERO;
 	}
 
-	int64_t distance1 = _ref_val - Unserialise::integer(*it_p);
-	int64_t distance2 = Unserialise::integer(*it) - _ref_val;
+	int64_t distance1 = isub(_ref_val, Unserialise::integer(*it_p));
+	int64_t distance2 = isub(Unserialise::integer(*it), _ref_val);
 	return Serialise::integer(distance1 < distance2 ? distance1 : distance2);
 }
 
 
 std::string
-IntegerKey::findBiggest(const Xapian::Document& doc) const
+IntegerKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -247,21 +267,21 @@ IntegerKey::findBiggest(const Xapian::Document& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
+		return Serialise::integer(iabs(isub(Unserialise::integer(values.front()), _ref_val)));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::integer(Unserialise::integer(values.back()) - _ref_val);
+		return Serialise::integer(isub(Unserialise::integer(values.back()), _ref_val));
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::integer(_ref_val - Unserialise::integer(*it));
+		return Serialise::integer(isub(_ref_val, Unserialise::integer(*it)));
 	}
 
-	int64_t distance1 = _ref_val - Unserialise::integer(*it);
-	int64_t distance2 = Unserialise::integer(*last) - _ref_val;
+	int64_t distance1 = isub(_ref_val, Unserialise::integer(*it));
+	int64_t distance2 = isub(Unserialise::integer(*last), _ref_val);
 	return Serialise::integer(distance1 > distance2 ? distance1 : distance2);
 }
 
@@ -287,9 +307,9 @@ PositiveKey::unserialise(const char** p, const char* p_end)
 
 
 std::string
-PositiveKey::findSmallest(const Xapian::Document& doc) const
+PositiveKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -325,9 +345,9 @@ PositiveKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-PositiveKey::findBiggest(const Xapian::Document& doc) const
+PositiveKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -360,7 +380,7 @@ DateKey::serialise() const
 {
 	std::string serialised;
 	serialised += BaseKey::serialise();
-	serialised += serialise_double(_ref_val);
+	serialised += engine::serialise_double(_ref_val);
 	serialised += serialise_string(_ser_ref_val);
 	return serialised;
 }
@@ -370,15 +390,15 @@ void
 DateKey::unserialise(const char** p, const char* p_end)
 {
 	BaseKey::unserialise(p, p_end);
-	_ref_val = unserialise_double(p, p_end);
+	_ref_val = engine::unserialise_double(p, p_end);
 	_ser_ref_val = unserialise_string(p, p_end);
 }
 
 
 std::string
-DateKey::findSmallest(const Xapian::Document& doc) const
+DateKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -413,9 +433,9 @@ DateKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-DateKey::findBiggest(const Xapian::Document& doc) const
+DateKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -461,9 +481,9 @@ BoolKey::unserialise(const char** p, const char* p_end)
 
 
 std::string
-BoolKey::findSmallest(const Xapian::Document& doc) const
+BoolKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -478,9 +498,9 @@ BoolKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-BoolKey::findBiggest(const Xapian::Document& doc) const
+BoolKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -515,9 +535,9 @@ GeoKey::unserialise(const char** p, const char* p_end)
 
 
 std::string
-GeoKey::findSmallest(const Xapian::Document& doc) const
+GeoKey::findSmallest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -543,9 +563,9 @@ GeoKey::findSmallest(const Xapian::Document& doc) const
 
 
 std::string
-GeoKey::findBiggest(const Xapian::Document& doc) const
+GeoKey::findBiggest(const engine::DocView& doc) const
 {
-	const auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -570,14 +590,14 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 }
 
 
-Multi_MultiValueKeyMaker*
+std::unique_ptr<engine::KeyMaker>
 Multi_MultiValueKeyMaker::clone() const
 {
 	auto sorter = std::make_unique<Multi_MultiValueKeyMaker>();
 	for (const auto& slot : slots) {
 		sorter->slots.push_back(slot->clone());
 	}
-	return sorter.release();
+	return sorter;
 }
 
 
@@ -600,8 +620,8 @@ Multi_MultiValueKeyMaker::serialise() const
 }
 
 
-Multi_MultiValueKeyMaker*
-Multi_MultiValueKeyMaker::unserialise(const std::string& serialised, const Xapian::Registry& /*registry*/) const
+std::unique_ptr<engine::KeyMaker>
+Multi_MultiValueKeyMaker::unserialise(std::string_view serialised) const
 {
 	constexpr static auto _ = phf::make_phf({
 		hh("SerialiseKey"),
@@ -628,88 +648,92 @@ Multi_MultiValueKeyMaker::unserialise(const std::string& serialised, const Xapia
 	auto sorter = std::make_unique<Multi_MultiValueKeyMaker>();
 	const char *p = serialised.data();
 	const char *p_end = p + serialised.size();
-	while (p != p_end) {
-		auto name = unserialise_string(&p, p_end);
-		auto data = unserialise_string(&p, p_end);
-		const char *q = data.data();
-		const char *q_end = q + data.size();
-		std::unique_ptr<BaseKey> slot;
-		switch (_.fhh(name)) {
-			case _.fhh("SerialiseKey"):
-				slot = std::make_unique<SerialiseKey>();
-				break;
-			case _.fhh("FloatKey"):
-				slot = std::make_unique<FloatKey>();
-				break;
-			case _.fhh("IntegerKey"):
-				slot = std::make_unique<IntegerKey>();
-				break;
-			case _.fhh("PositiveKey"):
-				slot = std::make_unique<PositiveKey>();
-				break;
-			case _.fhh("DateKey"):
-				slot = std::make_unique<DateKey>();
-				break;
-			case _.fhh("BoolKey"):
-				slot = std::make_unique<BoolKey>();
-				break;
-			case _.fhh("GeoKey"):
-				slot = std::make_unique<GeoKey>();
-				break;
-			case _.fhh("Levenshtein"):
-				slot = std::make_unique<StringKey<SerialisableLevenshtein>>();
-				break;
-			case _.fhh("Jaro"):
-				slot = std::make_unique<StringKey<SerialisableMetric<Jaro>>>();
-				break;
-			case _.fhh("Jaro_Winkler"):
-				slot = std::make_unique<StringKey<SerialisableJaroWinkler>>();
-				break;
-			case _.fhh("Sorensen_Dice"):
-				slot = std::make_unique<StringKey<SerialisableMetric<Sorensen_Dice>>>();
-				break;
-			case _.fhh("Jaccard"):
-				slot = std::make_unique<StringKey<SerialisableMetric<Jaccard>>>();
-				break;
-			case _.fhh("LCSubstr"):
-				slot = std::make_unique<StringKey<SerialisableMetric<LCSubstr>>>();
-				break;
-			case _.fhh("LCSubsequence"):
-				slot = std::make_unique<StringKey<SerialisableMetric<LCSubsequence>>>();
-				break;
-			case _.fhh("SoundexEnglish"):
-				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexEnglish, LCSubsequence>>>();
-				break;
-			case _.fhh("SoundexFrench"):
-				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexFrench, LCSubsequence>>>();
-				break;
-			case _.fhh("SoundexGerman"):
-				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexGerman, LCSubsequence>>>();
-				break;
-			case _.fhh("SoundexSpanish"):
-				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexSpanish, LCSubsequence>>>();
-				break;
-			// The persistence dispatch key is the encoder's name() ("dmetaphone"),
-			// the same convention the Soundex slots use (key == encoder name()), so
-			// the name written by serialise() round-trips here.
-			case _.fhh("dmetaphone"):
-				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>();
-				break;
-			default:
-				THROW(SerialisationError, "{} not implemented");
+	try {
+		while (p != p_end) {
+			auto name = unserialise_string(&p, p_end);
+			auto data = unserialise_string(&p, p_end);
+			const char *q = data.data();
+			const char *q_end = q + data.size();
+			std::unique_ptr<BaseKey> slot;
+			switch (_.fhh(name)) {
+				case _.fhh("SerialiseKey"):
+					slot = std::make_unique<SerialiseKey>();
+					break;
+				case _.fhh("FloatKey"):
+					slot = std::make_unique<FloatKey>();
+					break;
+				case _.fhh("IntegerKey"):
+					slot = std::make_unique<IntegerKey>();
+					break;
+				case _.fhh("PositiveKey"):
+					slot = std::make_unique<PositiveKey>();
+					break;
+				case _.fhh("DateKey"):
+					slot = std::make_unique<DateKey>();
+					break;
+				case _.fhh("BoolKey"):
+					slot = std::make_unique<BoolKey>();
+					break;
+				case _.fhh("GeoKey"):
+					slot = std::make_unique<GeoKey>();
+					break;
+				case _.fhh("Levenshtein"):
+					slot = std::make_unique<StringKey<SerialisableLevenshtein>>();
+					break;
+				case _.fhh("Jaro"):
+					slot = std::make_unique<StringKey<SerialisableMetric<Jaro>>>();
+					break;
+				case _.fhh("Jaro_Winkler"):
+					slot = std::make_unique<StringKey<SerialisableJaroWinkler>>();
+					break;
+				case _.fhh("Sorensen_Dice"):
+					slot = std::make_unique<StringKey<SerialisableMetric<Sorensen_Dice>>>();
+					break;
+				case _.fhh("Jaccard"):
+					slot = std::make_unique<StringKey<SerialisableMetric<Jaccard>>>();
+					break;
+				case _.fhh("LCSubstr"):
+					slot = std::make_unique<StringKey<SerialisableMetric<LCSubstr>>>();
+					break;
+				case _.fhh("LCSubsequence"):
+					slot = std::make_unique<StringKey<SerialisableMetric<LCSubsequence>>>();
+					break;
+				case _.fhh("SoundexEnglish"):
+					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexEnglish, LCSubsequence>>>();
+					break;
+				case _.fhh("SoundexFrench"):
+					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexFrench, LCSubsequence>>>();
+					break;
+				case _.fhh("SoundexGerman"):
+					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexGerman, LCSubsequence>>>();
+					break;
+				case _.fhh("SoundexSpanish"):
+					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexSpanish, LCSubsequence>>>();
+					break;
+				// The persistence dispatch key is the encoder's name() ("dmetaphone"),
+				// the same convention the Soundex slots use (key == encoder name()), so
+				// the name written by serialise() round-trips here.
+				case _.fhh("dmetaphone"):
+					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>();
+					break;
+				default:
+					THROW(SerialisationError, "{} not implemented", name);
+			}
+			slot->unserialise(&q, q_end);
+			if (q != q_end) {
+				THROW(SerialisationError, "Bad serialised {} - junk at end", name);
+			}
+			sorter->slots.push_back(std::move(slot));
 		}
-		slot->unserialise(&q, q_end);
-		if (q != q_end) {
-			THROW(SerialisationError, "Bad serialised {} - junk at end", name);
-		}
-		sorter->slots.push_back(std::move(slot));
+	} catch (const SerialisationError& exc) {
+		throw engine::Error(engine::errc::invalid, std::string("Bad serialised Multi_MultiValueKeyMaker: ") + exc.what());
 	}
-	return sorter.release();
+	return sorter;
 }
 
 
 std::string
-Multi_MultiValueKeyMaker::operator()(const Xapian::Document& doc) const
+Multi_MultiValueKeyMaker::key(const engine::DocView& doc) const
 {
 	std::string result;
 
