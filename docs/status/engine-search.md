@@ -200,13 +200,33 @@ else). Baseline: `.scratch/xapiand-base`.
 8. `seam_check.sh`: exits 0; ceilings lowered (`--update`): handler.cc 211 to 168, handler.h 43 to 24, shard.cc 55 to
    43, shard.h 13 to 11, search_views.cc 17 to 14. Files naming Xapian 38 / lines 701 (X4a) to 622.
    `Shard::db()` sites outside the remote server: 2 to 0. `MSet`, `Enquire`, `RSet`, `ESet` outside
-   `src/engine/xapian`: 0.
+   `src/engine/xapian`: 0, except the remote server, whose header `remote_protocol_views.h` still names
+   `Xapian::Enquire` (a member and message comments) and keeps its seam ceiling (review N1).
 
 Not done: TSan, libFuzzer (no decoder or parser was added: `prepare` calls the existing query translation), Linux
 and FreeBSD builds, benchmarks, and a build and cluster run with the remote edit applied (the lead's).
 
 X4a review notes: N1, N4, N5, N6 and N7 are untouched (N1 is the dump retry, N4 the seam counter, N5 the UBSan
 downcasts, N6 the `DocView` exception contract for X4c, N7 one view per scanned document); N2 and N3 were closed in X4a.
+
+## X4b code review (C1, N1, I2, retry ruling)
+
+1. C1 closed. `search.h` now says how the relevant set for `nearest`/`fuzzy` is built, and `test_engine_search` has
+   `test_similar_relevant_set` (4,417 checks, ASan and UBSan, all pass). The reviewer's unit mutants M2 to M5
+   (`.scratch/mut_search_c1.py`, the reviewer's script re-rooted): with the new case each fails (M2 244 checks, M3 62,
+   M4 3, M5 3); before it, M3, M4 and M5 survived and M2 was caught only by the older case. M5 (the relevant set keeps
+   the request's cutoffs) is not reachable from the product, whose thresholds are constants (`handler.cc:1128-1129`);
+   it is killed here anyway because it was cheap (a 30-document relevant set under a 90 percent cutoff).
+2. Retry ruling (reviewer): the remote `get_document` needs no reopen-and-retry. It can return
+   `DatabaseModifiedError` to the client, and every client path has a retry ladder. Injection proof: 5,392 throws
+   injected, all 43,566 GETs answered 200.
+3. N1 fixed above: the "no `MSet`/`Enquire` outside `src/engine/xapian`" claim excepts the remote header.
+4. I2, pre-existing, for follow-up (not caused by X4): `nearest.type=` and `fuzzy.type=` filters never match.
+   `get_similar` (the old `get_edecider` body, moved verbatim) tests `starts_with(type_char)` or its lower case, but
+   every field term begins with the field's prefix, so only unprefixed terms could match. In the saved corpora every
+   `nearest.type=` request answers count 0 (35 for plain `nearest`); `fuzzy.type=` answers the same as `fuzzy`
+   without expansion. Either the filter should match the type character inside the prefix, or the feature should be
+   dropped; `engine::Similar::prefixes` carries the question into strata. Open for the architect.
 
 ## Next
 

@@ -442,6 +442,78 @@ void test_similar() {
 	CHECK_TRUE(differ);
 }
 
+// nearest and fuzzy each use their own settings, and the relevant set ignores the request's
+// collapse, cutoffs and docid order.
+void test_similar_relevant_set() {
+	Fixture fixture;
+	for (int n : {1, 2}) {
+		engine::Similar wide, narrow;
+		wide.n_rset = narrow.n_rset = 6;
+		wide.n_eset = narrow.n_eset = 20;
+		wide.n_term = 8;
+		narrow.n_term = 2;
+		engine::SearchRequest request;
+		request.maxitems = 100;
+		request.check_at_least = 100;
+		request.nearest = wide;
+		request.fuzzy = narrow;
+		CHECK_TRUE(agree(fixture, n, some_query(), request) > 0);
+		request.nearest = narrow;
+		request.fuzzy = wide;
+		CHECK_TRUE(agree(fixture, n, some_query(), request) > 0);
+
+		for (auto order : {engine::DocidOrder::descending, engine::DocidOrder::dont_care}) {
+			for (bool both : {false, true}) {
+				request = {};
+				request.maxitems = 100;
+				request.check_at_least = 100;
+				request.nearest = wide;
+				if (both) {
+					request.fuzzy = narrow;
+				}
+				request.collapse_key = 2;
+				request.collapse_max = 1;
+				request.percent_threshold = 60;
+				request.weight_threshold = 1.0;
+				request.order = order;
+				agree(fixture, n, some_query(), request);
+				agree(fixture, n, Query::match_all(), request);
+			}
+		}
+
+		// one class of "other" terms per document: the relevant set decides the hits
+		engine::Similar classes;
+		classes.n_eset = 10;
+		classes.n_term = 10;
+		classes.prefixes = {"other"};
+		const auto hits_of = [&](engine::SearchRequest request) {
+			request.maxitems = 100;
+			request.check_at_least = 100;
+			request.nearest = classes;
+			return agree(fixture, n, some_query(), request);
+		};
+		engine::SearchRequest request2;
+		classes.n_rset = 3;
+		request2.order = engine::DocidOrder::descending;
+		hits_of(request2);
+		// equal weights: the ascending order picks the relevant documents
+		request2.maxitems = request2.check_at_least = 100;
+		request2.nearest = classes;
+		CHECK_TRUE(agree(fixture, n, Query::match_all(), request2) > 0);
+		request2 = {};
+		request2.collapse_key = 2;
+		request2.collapse_max = 1;
+		hits_of(request2);
+		classes.n_rset = 30;
+		request2 = {};
+		request2.percent_threshold = 90;
+		hits_of(request2);
+		request2 = {};
+		request2.weight_threshold = 4.0;
+		hits_of(request2);
+	}
+}
+
 void test_empty_and_errors() {
 	Fixture fixture;
 	engine::SearchRequest request;
@@ -573,4 +645,4 @@ void test_result_outlives_shards() {
 
 }  // namespace
 
-TEST_MAIN(test_ranking_and_window, test_sort_collapse_cutoff_order, test_spy, test_similar, test_empty_and_errors, test_search_does_not_leak, test_result_outlives_shards)
+TEST_MAIN(test_ranking_and_window, test_sort_collapse_cutoff_order, test_spy, test_similar, test_similar_relevant_set, test_empty_and_errors, test_search_does_not_leak, test_result_outlives_shards)

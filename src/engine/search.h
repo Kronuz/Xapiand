@@ -60,6 +60,8 @@ enum class DocidOrder : std::uint8_t {
 };
 
 // "More like these": the terms that best set the top hits apart are added to the query.
+// The top hits are taken by relevance over all documents, in ascending docid order: the request's window, collapse,
+// cutoffs, sorter, spy and docid order do not apply to them. `nearest` and `fuzzy` each use their own settings.
 struct Similar {
 	doccount n_rset = 5;                  // top hits taken as relevant
 	doccount n_eset = 32;                 // terms picked from them
