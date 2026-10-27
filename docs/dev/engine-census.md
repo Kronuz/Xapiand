@@ -43,6 +43,25 @@ are keyed like user documents. Conclusion for the design: the keyed index needs 
 pass the key and a longer, unambiguous prefix); a numeric id field with accuracy terms breaks "at most one"; D5's
 `_id.` expectation (`schema.cc:91`) is wrong because the id term is built from `DOCUMENT_ID_TERM_PREFIX` (`utils.h:61`).
 
+## T5 after amendment A-T5 (2026-10-27, `phase0.5/seam-census`)
+
+The branch merges this census into the seam write path (`engine::Document` is a handle over the engine's native document)
+and moves a numeric `_id`'s accuracy terms from the `Q` prefix to `A` (`acc_term_prefix` in `src/database/utils.cc`). The same
+suite, one node, `--solo`, an `ENGINE_CENSUS` Release build (`harness/e2e_capture.sh`, newman 6.2.3, 576 of 576 assertions):
+
+| Counter | Before (`8170a3ef6`) | After |
+|---|---|---|
+| documents written | 2625 | 2625 |
+| exactly one `Q` term, the write named the key and it is that term | 473 | 473 |
+| exactly one `Q` term, the write named no key | 2150 | 2152 |
+| more than one `Q` term | 2 | **0** |
+
+`harness/id_terms_check.py BIN [--census]` repeats the case outside the suite: an index with an integer `_id`, 97 ids from 1
+to 3000000000, 20 range queries over `_id` checked against a brute-force answer, and the T5 count (87 documents with more than
+one `Q` term before, 0 after). Indexes with a numeric `_id` written before the change keep the old terms and need reindexing
+for range queries over `_id`. One id the harness leaves out (`ID_TERMS_EXTRA=268435456` adds it): it is missing from the answer to the range `0..3000000000`
+on the seam write binary and on this branch alike (a coarse-range gap in the range-term generator, not looked into here).
+
 ## What the suite uses, by facility
 
 Requests are the 339 suite requests (96 are `SEARCH`; 94 of them reach `engine::search`). "Calls" are
@@ -132,7 +151,7 @@ count above.
 |---|---|---|
 | A. Lifecycle | none; add that `reopen` (13 requests) and `stats` (3) are used, transactions and `metadata_keys` are not | shard table |
 | B. Documents | `replace_by_key` and `replace` (by docid) are both needed (85 and 121 requests); `add` once; delete by docid or key once or twice. **G2 term lists are needed** (`term_details`, 27 requests, `INFO`); G1 `values()` too. `version()` and `serialise()` of a view are unused by the suite (the WAL reads `Document::serialise`) | shard and DocView tables |
-| B/D5. Key prefix | The key prefix is `Q`, not `_id.`. A numeric id field puts its accuracy terms under the key prefix (T5 fails on 2 documents), so strata's keyed index must either accept more than one `Q` term, or the handler must stop giving the id field accuracy terms, or the prefix must be longer (`QK`, `QN` plus a delimiter) | T5 table |
+| B/D5. Key prefix | The key prefix is `Q`, not `_id.`. A numeric id field puts its accuracy terms under the key prefix (T5 fails on 2 documents), so strata's keyed index must either accept more than one `Q` term, or the handler must stop giving the id field accuracy terms, or the prefix must be longer (`QK`, `QN` plus a delimiter) **Resolved by A-T5** (see "T5 after amendment A-T5"): the accuracy terms lead with `A`, so one `Q` term per document | T5 table |
 | C. Values | `value(slot)` is the hot facility: 34446 calls, 98% from spies and key makers. No typed slots seen | DocView table |
 | D. Queries | G9 `queryparser` is certain (39 requests, 61 text nodes; flags PHRASE, LOVEHATE, FUZZY, partial expansion on all; WILDCARD 4, PARTIAL 3, BOOLEAN 1). **G3 shrinks**: ELITE_SET is used (2 requests), XOR, MAX and SCALE_WEIGHT never, SYNONYM only as the combiner of expansions, AND_NOT never as a node (negation lives in the text parser). **G8**: wildcard 2 requests, edit distance 1, partial 3; all three are exercised, `WILDCARD_SINGLE`/`MULTI` and CJK flags are not. NEAR, PHRASE, AND_MAYBE, FILTER once or more as nodes | Queries table |
 | E. Enquire | **G7 is needed for the E2E gate: all 94 searches ran over 5 shards** (`opts.cc:43` default `NUM_SHARDS 5`; `opts.h:89`'s `1` is only the struct default). The design's "G7 no (`num_shards = 1`)" does not hold for the default node; either the strata E2E runs with `--shards 1` (a documented difference) or G7 moves up. G5 key-then-relevance: 24 requests. Collapse, thresholds, `fuzzy`, `nearest` (`get_eset`), docid order other than ascending: 0, so they stay in the deferrable list. `check_at_least` is set on 82 searches and `maxitems = 0` on 29: the estimate and aggregation-only searches matter | Search table |

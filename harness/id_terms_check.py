@@ -23,7 +23,8 @@ CENSUS = "--census" in sys.argv
 PORT = int(os.environ.get("PORT", "18991"))
 SCRATCH = os.environ.get("ID_TERMS_TMP") or tempfile.mkdtemp(prefix="id_terms_", dir=os.path.expanduser("~/.scratch"))
 
-IDS = sorted(set(list(range(1, 60)) + list(range(99990, 100012)) + [65535, 65536, 123456, 999999, 5000000, 3000000000]))
+IDS = sorted(set(list(range(1, 60)) + list(range(99990, 100012)) + [65535, 65536, 123456, 999999, 5000000, 3000000000]
+                 + [int(x) for x in os.environ.get("ID_TERMS_EXTRA", "").split(",") if x]))
 
 
 def call(method, path, body=None, ctype="application/json"):
