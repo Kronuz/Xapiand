@@ -43,6 +43,7 @@
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
+#include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
 #include "database/schema.h"                // for Schema
@@ -3102,6 +3103,7 @@ void
 SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();   // the extension create_extension() built
+	ENGINE_CENSUS_REQUEST(census_request, hreq.method, hreq.target);
 	request.http_req = &hreq;                 // the source of truth for every HTTP fact
 	request.response_writer = &response;       // the response path emits through the library writer
 
@@ -3159,6 +3161,7 @@ SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 		}
 		request.view(request);
 	}
+	ENGINE_CENSUS_STATUS(census_request, request.response_status);
 
 	if (request.closing) {
 		response.set_close();

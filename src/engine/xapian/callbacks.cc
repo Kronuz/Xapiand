@@ -22,6 +22,7 @@
 
 #include "engine/xapian/callbacks.h"
 
+#include "engine/census.h"             // for ENGINE_CENSUS_*
 #include "engine/error.h"              // for Error
 #include "engine/xapian/convert.h"     // for make_view
 
@@ -68,6 +69,7 @@ PostingSourceAdapter::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
 	while (!at_end()) {
+		ENGINE_CENSUS_COUNT("callback.source:" + source_->name() + ".accept");
 		if (source_->accept(get_value())) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
@@ -79,6 +81,7 @@ PostingSourceAdapter::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (!at_end()) {
+		ENGINE_CENSUS_COUNT("callback.source:" + source_->name() + ".accept");
 		if (source_->accept(get_value())) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
@@ -98,6 +101,7 @@ PostingSourceAdapter::check(Xapian::docid min_docid, double min_wt)
 		return true;
 	}
 
+	ENGINE_CENSUS_COUNT("callback.source:" + source_->name() + ".accept");
 	return source_->accept(get_value());
 }
 
@@ -105,6 +109,7 @@ PostingSourceAdapter::check(Xapian::docid min_docid, double min_wt)
 double
 PostingSourceAdapter::get_weight() const
 {
+	ENGINE_CENSUS_COUNT("callback.source:" + source_->name() + ".weight");
 	return source_->weight(get_value());
 }
 
@@ -158,6 +163,7 @@ PostingSourceAdapter::get_description() const
 std::string
 KeyMakerAdapter::operator()(const Xapian::Document& doc) const
 {
+	ENGINE_CENSUS_CALLBACK(census_scope, "keymaker", get().name());
 	return get().key(*make_view(doc));
 }
 
@@ -193,6 +199,7 @@ KeyMakerAdapter::unserialise(const std::string& serialised, const Xapian::Regist
 void
 MatchSpyAdapter::operator()(const Xapian::Document& doc, double wt)
 {
+	ENGINE_CENSUS_CALLBACK(census_scope, "spy", spy_->name());
 	spy_->see(*make_view(doc), wt);
 }
 
