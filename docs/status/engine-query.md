@@ -318,7 +318,7 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 - Xapiand:dde867bc6 Test the spy merge through its adapter and saturating decoders; record step 2 in the ledger
 - Xapiand:635bff800 Register the key maker and match spy through the engine adapters (the lead)
 - Xapiand:02003b9a7 Review engine query step 2 (code review)
-- (the C1 to C3 fix commit follows)
+- Xapiand:f969aea56 Close the engine query step 2 review conditions C1 to C3
 
 ## Next
 
