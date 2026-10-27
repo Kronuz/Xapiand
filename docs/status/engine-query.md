@@ -6,7 +6,7 @@ Branch `phase0.5/engine-query` from Xapiand master `201414347`. Design:
 
 ## State
 
-X3 is split in two landable steps. Step 1 is built and proven (ready for code review); step 2 is not started.
+X3 is split in two landable steps. Step 1 is built and proven; the code review (`docs/reviews/engine-query-code.md`, APPROVE WITH CONDITIONS) found a leak and test gaps, and the fix round for CR1 to CR5 is done (below), ready for a re-check. Step 2 is not started.
 
 ## The split
 
@@ -26,9 +26,10 @@ Done when:
 2. The Xapian implementation (`src/engine/xapian/{query,callbacks}.{h,cc}`) translates a `Query` to the
    `Xapian::Query` the same Xapian calls build, and adapts the three callbacks to Xapian's bases
    and its `Registry`.
-3. A test guards each translation shape (leaves, binary and list operators, windows, expansions,
-   text, append, emptiness over random trees) and each adapter (match path, registry, serialisation
-   error).
+3. A test guards the translation shapes it names: leaves, binary and list operators (which translate
+   to the same query, so the seam does not rely on keeping them apart), windows, expansions and their
+   limit kinds, wildcard pattern flags, text, append chains, emptiness over random trees; and each
+   adapter: match path, registry, serialisation error, weight and termfreq bounds, source ownership.
 4. The `Query` producers are migrated: `query_dsl`, `range` (three sources), `geospatialrange`,
    `generate_terms` (query side), and the index-path query in `search_views.cc`. They name no
    `Xapian::Query`, `Xapian::termcount`, `Xapian::QueryParser` or `Xapian::ValuePostingSource`.
@@ -41,7 +42,9 @@ Done when:
    volatile fields; a 301-answer query corpus is byte-identical before and after.
 8. ASan+UBSan: unit tests, E2E and the query corpus show no report beyond the third-party lz4 and
    rapidjson lines the baseline also shows.
-9. A revert check for each guarded translation (mutants, below).
+9. A revert check for each guarded translation that is observable: the mutants below, each caught by a
+   test except the binary-as-list form, which is equivalent (test_binary_equals_list shows the same
+   description, matches and weights for every binary operator over operands that include empty ones).
 
 ### Step 2: sort keys and spies (not started)
 
@@ -153,10 +156,65 @@ Not done: a libFuzzer target (Apple clang ships no libFuzzer, and the sanitizers
 tree; the mutational test in `test_engine_query` is the fuzzing here), TSan, Linux and FreeBSD builds,
 and a benchmark.
 
+### Fix round (review CR1 to CR5)
+
+1. CR1, the leak: the translation now hands Xapian the adapter with `release()`, as the range sources
+   were handed before the seam. New `test_source_ownership` counts live sources across 20 translations
+   plus searches, a combined query and a registry round trip: only the seam query's own source stays
+   alive, and none after it. Revert (`new PostingSourceAdapter` without `release()`): the live-count checks fail
+   (`.scratch/mutants2.out`). Probe `probe_eq leak`: `live=1` while the query lives, `live=0` after.
+2. CR2, tests: `test_wildcard_patterns` (revert of PATTERN_SINGLE: 2 checks fail; PATTERN_MULTI: 2),
+   `test_adapter_bounds` (termfreq_min(0) removed: 1; max_weight dropped: 3), `test_fuzzy_limit` (limit
+   kind ERROR to MOST_FREQUENT: 2), `test_binary_equals_list` (binary as list: survives, equivalent).
+   Finding behind R2 and R3: the adapter set both bounds in `init()` and in the constructor, but
+   Xapian binds a `ValuePostingSource` through `reset(db, shard)`; the base `init()` throws
+   `InvalidOperationError`, and `reset` sets the weight bound to unbounded. So `set_termfreq_min(0)`
+   never ran and the `max_weight()` bound never reached the matcher, on master too (the geo source's
+   bound included). The adapter now overrides `reset` and sets both after the base call, so
+   `matches_lower_bound` can no longer exceed the real count and `get_max_possible` is the source's
+   bound. Only bounds change; the 301-answer corpus is still byte-identical.
+3. CR3: slot, start and end are read into named locals in order in the three `unserialise` functions.
+   No test can fail on this host (clang evaluates left to right); a reversed read (mutant) fails
+   `test_registered_sources` (2 checks).
+4. CR4: `to_xapian` folds a chain of appends in a loop (the same Xapian tree), and `~QueryNode` frees
+   uniquely owned children from a list, not by recursion. `test_append_chain` builds 600 appends on a
+   256 KB stack and compares a short chain with the left fold. Reverts: recursive translation and
+   recursive destructor both stack-overflow. Probe `deep` on a 512 KB stack: translation and destruction
+   pass at 2000 (the branch overflowed in `to_xapian` at 1000 before); a search passes at 1500 and
+   then fails inside Xapian's `postlist_sub_and_like` at 2000. `flatmap.py` against a node: 1000 keys
+   answer 200 on master and branch, 2000 keys abort in Xapian's `QueryBranch::get_length` on both. The
+   branch has master's headroom; what remains is Xapian's own recursion (and `Query::description()`,
+   for logs).
+5. CR5: `accept` of the three range sources and the geo source returns false on a value that does not
+   decode (the geo `weight` falls back to the no-centroid weight). `test_corrupt_stored_value`: 20000
+   random values per source, a search over a slot holding one corrupt value finds the other documents.
+   Reverts: range `accept` without the catch aborts the process; geo `accept` fails the test. Probe
+   `probe_eq garbage`: 200000 random stored values, no terminate. The contract is in `callbacks.h`.
+6. Evidence on the fixed head: 14 of 14 unit tests under ASan+UBSan (`test_engine_query` 22395
+   checks); the 301-answer corpus identical to master (`cmp` of `qd-base.json` and the new run, 253
+   200s, 0 AddressSanitizer reports); docs E2E 339 requests, 576 of 576 assertions GREEN, 0 reports;
+   2-node `cluster_range.sh` GREEN (range counts 11, 6, 4, 2). Revert script `.scratch/mutants2.py`,
+   output `.scratch/mutants2.out`.
+
+## Rulings and follow-ups
+
+1. PostingSource ruling (review R-A): the value-slot filter contract is accepted. A cursor-style source
+   (`next`, `skip_to`, `check`) would be a new base beside it, added when a user needs it. The contract
+   (const, thread-safe `accept`, `weight`, `clone`; `accept` false on an undecodable value; a selectivity
+   `estimate` planned, not built) is in `callbacks.h`.
+2. CR6 (follow-up): `get_mset` translates the same query up to three times for `nearest` and `fuzzy`;
+   translate once and pass the `Xapian::Query` down. Belongs with X4, which moves that boundary.
+3. CR7 (follow-up): the `KeyMaker` and `MatchSpy` adapters are scaffolding until step 2; revisit the
+   `DocView` signatures then.
+4. CR8: the disclosure on `remote_protocol_views.cc` (open question 2) is accepted by the review.
+
 ## Commits
 
 - Xapiand:801f16f5c Add engine::Query and the callback bases, and migrate the query producers
 - Xapiand:868af2635 Test the engine query seam hard, and keep SerialiseList::size() from aborting
+- Xapiand:c281e9618 Record the commits of engine-query step 1 in the ledger
+- Xapiand:a0926598b Review engine query (code review)
+- Xapiand:db0be79ad Fix the engine query review findings CR1 to CR5
 - (ledger update in the commit after these)
 
 ## Next
@@ -167,9 +225,8 @@ and a benchmark.
 
 ## Open questions
 
-1. D4 and the `PostingSource` shape (decision 4): the architect should confirm the filter contract, or
-   ask for the general cursor now. Both are additive for strata (a filter is a scorer over the slot's
-   column).
+1. D4 and the `PostingSource` shape (decision 4): the code review accepted the filter contract
+   (see Rulings).
 2. Disclosure: while migrating the remote server's four registration lines I listed lines 47, 48 and
    120 to 123 of `src/server/remote_protocol_views.cc` by accident (a `git grep` for the source class
    names). Nothing from them was copied beyond the call shape; the edit is a mechanical rewrite of those
