@@ -1590,6 +1590,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 	}
 
 	auto& endpoint = endpoints[shard_num];
+	engine::xapian::prepare(doc);
 	lock_shard lk_shard(endpoint, flags);
 	auto info = lk_shard->add_document(std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
@@ -1607,6 +1608,7 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
+	engine::xapian::prepare(doc);
 	lock_shard lk_shard(endpoint, flags);
 	auto info = lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
 	info.did = did;
@@ -1667,6 +1669,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	}
 
 	auto& endpoint = endpoints[shard_num];
+	engine::xapian::prepare(doc);
 	lock_shard lk_shard(endpoint, flags);
 	auto info = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db

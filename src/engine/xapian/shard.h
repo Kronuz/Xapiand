@@ -33,6 +33,9 @@
 
 namespace engine::xapian {
 
+// Converts the document ahead of the shard's write (off the shard's critical path).
+void prepare(Document& doc);
+
 // The Xapian implementation of the engine shard, over a Xapian database it owns.
 class Shard : public engine::Shard {
 public:

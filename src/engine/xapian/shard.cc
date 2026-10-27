@@ -63,7 +63,46 @@ stamp(Document& doc, const WriteResult& info)
 	doc.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(info.version)));
 }
 
+// Replays the calls made since begin_tail() onto the document converted before the hop.
+Xapian::Document
+finish(Xapian::Document&& pre, const Document& doc)
+{
+	for (const auto& op : doc.tail()) {
+		switch (op.kind) {
+			case Document::TailOp::term: pre.add_term(op.str, op.wdf); break;
+			case Document::TailOp::bterm: pre.add_boolean_term(op.str); break;
+			case Document::TailOp::posting: pre.add_posting(op.str, op.slot_or_pos, op.wdf); break;
+			case Document::TailOp::value: pre.add_value(op.slot_or_pos, op.str); break;
+			case Document::TailOp::data: pre.set_data(op.str); break;
+		}
+	}
+	return std::move(pre);
+}
+
 }  // namespace
+
+
+Xapian::Document
+take_prepared(Document& doc)
+{
+	if (doc.prepared_) {
+		auto pre = std::move(*static_cast<Xapian::Document*>(doc.prepared_.get()));
+		doc.prepared_.reset();
+		return pre;
+	}
+	doc.begin_tail();
+	return to_xapian(doc);
+}
+
+
+void
+prepare(Document& doc)
+{
+	if (!doc.prepared_) {
+		doc.begin_tail();
+		doc.prepared_ = std::make_shared<Xapian::Document>(to_xapian(doc));
+	}
+}
 
 
 Xapian::WritableDatabase&
@@ -103,12 +142,13 @@ Shard::check_version(const std::optional<rev>& expected, const std::optional<rev
 task::task<WriteResult>
 Shard::add(Document& doc, WriteArgs args)
 {
+	auto pre = take_prepared(doc);
 	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		WriteResult info;
 		if (!args.local) {
-			co_return from_xapian(db.add_document(to_xapian(doc)));
+			co_return from_xapian(db.add_document(finish(std::move(pre), doc)));
 		}
 		check_version(args.expected_version, std::nullopt);
 		info.did = db.get_lastdocid() + 1;
@@ -117,7 +157,7 @@ Shard::add(Document& doc, WriteArgs args)
 			args.finalise(doc, info);
 		}
 		stamp(doc, info);
-		db.replace_document(info.did, to_xapian(doc));
+		db.replace_document(info.did, finish(std::move(pre), doc));
 		co_return info;
 	} catch (...) {
 		rethrow_translated();
@@ -128,12 +168,13 @@ Shard::add(Document& doc, WriteArgs args)
 task::task<WriteResult>
 Shard::replace(docid did, Document& doc, WriteArgs args)
 {
+	auto pre = take_prepared(doc);
 	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		WriteResult info;
 		if (!args.local) {
-			co_return from_xapian(db.replace_document(did, to_xapian(doc)));
+			co_return from_xapian(db.replace_document(did, finish(std::move(pre), doc)));
 		}
 		info.did = did;
 		const auto stored = stored_version(did);
@@ -143,7 +184,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 			args.finalise(doc, info);
 		}
 		stamp(doc, info);
-		db.replace_document(did, to_xapian(doc));
+		db.replace_document(did, finish(std::move(pre), doc));
 		co_return info;
 	} catch (...) {
 		rethrow_translated();
@@ -154,12 +195,13 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 task::task<WriteResult>
 Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 {
+	auto pre = take_prepared(doc);
 	co_await Hop{on_};
 	try {
 		auto& db = writable();
 		WriteResult info;
 		if (!args.local) {
-			co_return from_xapian(db.replace_document(key, to_xapian(doc)));
+			co_return from_xapian(db.replace_document(key, finish(std::move(pre), doc)));
 		}
 		info.term = key;
 		std::optional<rev> stored;
@@ -176,7 +218,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			args.finalise(doc, info);
 		}
 		stamp(doc, info);
-		db.replace_document(info.did, to_xapian(doc));
+		db.replace_document(info.did, finish(std::move(pre), doc));
 		co_return info;
 	} catch (...) {
 		rethrow_translated();

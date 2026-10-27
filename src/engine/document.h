@@ -22,11 +22,13 @@
 
 #pragma once
 
+#include <memory>                  // for std::shared_ptr
 #include <map>                     // for std::map
 #include <set>                     // for std::set
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
 #include <utility>                 // for std::move
+#include <vector>                  // for std::vector
 
 #include "engine/types.h"          // for docid, termcount, termpos, valueno
 
@@ -45,16 +47,19 @@ public:
 
 	// Adds wdf_inc to the term's within-document frequency, creating the term if needed.
 	void add_term(std::string term, termcount wdf_inc = 1) {
+		if (tracking_) { tail_.push_back({TailOp::term, 0, wdf_inc, term}); }
 		terms_[std::move(term)].wdf += wdf_inc;
 	}
 
 	// Makes sure the term exists, without changing its frequency.
 	void add_boolean_term(std::string term) {
+		if (tracking_) { tail_.push_back({TailOp::bterm, 0, 0, term}); }
 		terms_[std::move(term)];
 	}
 
 	// Adds a position to the term, and wdf_inc to its frequency.
 	void add_posting(std::string term, termpos position, termcount wdf_inc = 1) {
+		if (tracking_) { tail_.push_back({TailOp::posting, position, wdf_inc, term}); }
 		auto& entry = terms_[std::move(term)];
 		entry.positions.insert(position);
 		entry.wdf += wdf_inc;
@@ -62,6 +67,7 @@ public:
 
 	// Sets the value of a slot; an empty value removes it.
 	void add_value(valueno slot, std::string value) {
+		if (tracking_) { tail_.push_back({TailOp::value, slot, 0, value}); }
 		if (value.empty()) {
 			values_.erase(slot);
 		} else {
@@ -76,12 +82,24 @@ public:
 	}
 
 	void set_data(std::string data) {
+		if (tracking_) { tail_.push_back({TailOp::data, 0, 0, data}); }
 		data_ = std::move(data);
 	}
 
 	std::string get_data() const {
 		return data_;
 	}
+
+	// Calls made after begin_tail() are also logged, to replay onto a copy converted earlier.
+	struct TailOp {
+		enum Kind { term, bterm, posting, value, data } kind;
+		valueno slot_or_pos;
+		termcount wdf;
+		std::string str;
+	};
+	std::shared_ptr<void> prepared_;
+	void begin_tail() { tracking_ = true; tail_.clear(); }
+	const std::vector<TailOp>& tail() const noexcept { return tail_; }
 
 	const std::map<std::string, Term>& terms() const noexcept {
 		return terms_;
@@ -99,6 +117,8 @@ private:
 	std::map<std::string, Term> terms_;
 	std::map<valueno, std::string> values_;
 	std::string data_;
+	bool tracking_ = false;
+	std::vector<TailOp> tail_;
 };
 
 }  // namespace engine
