@@ -61,54 +61,64 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 double
 GeoSpatialRange::calculateWeight(std::string_view value) const
 {
-	const auto centroids = Unserialise::centroids(value);
+	// A value that does not decode weighs like one with no centroid.
+	try {
+		const auto centroids = Unserialise::centroids(value);
 
-	if (_centroids.empty()) {
-		return geo_weight_from_angle(M_PI);
-	}
+		if (_centroids.empty()) {
+			return geo_weight_from_angle(M_PI);
+		}
 
-	double min_angle = M_PI;
-	for (const auto& centroid : centroids) {
-		for (const auto& _centroid : _centroids) {
-			double rad_angle = centroid.distance(_centroid);
-			if (rad_angle < min_angle) {
-				min_angle = rad_angle;
+		double min_angle = M_PI;
+		for (const auto& centroid : centroids) {
+			for (const auto& _centroid : _centroids) {
+				double rad_angle = centroid.distance(_centroid);
+				if (rad_angle < min_angle) {
+					min_angle = rad_angle;
+				}
 			}
 		}
+		return geo_weight_from_angle(min_angle);
+	} catch (const SerialisationError&) {
+		return geo_weight_from_angle(M_PI);
 	}
-	return geo_weight_from_angle(min_angle);
 }
 
 
 bool
 GeoSpatialRange::insideRanges(std::string_view value) const
 {
-	const auto ranges = Unserialise::ranges(value);
+	// A value that does not decode is not accepted.
+	try {
+		const auto ranges = Unserialise::ranges(value);
 
-	if (ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
+		if (ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
+			return false;
+		}
+
+		auto it1 = _ranges.begin();
+		auto it2 = ranges.begin();
+		const auto it1_e = _ranges.end();
+		const auto it2_e = ranges.end();
+
+		while (it1 != it1_e && it2 != it2_e) {
+			if (it1->start < it2->start) {
+				if (it1->end >= it2->start) {
+					return true;
+				}
+				++it1;
+			} else {
+				if (it2->end >= it1->start) {
+					return true;
+				}
+				++it2;
+			}
+		}
+
+		return false;
+	} catch (const SerialisationError&) {
 		return false;
 	}
-
-	auto it1 = _ranges.begin();
-	auto it2 = ranges.begin();
-	const auto it1_e = _ranges.end();
-	const auto it2_e = ranges.end();
-
-	while (it1 != it1_e && it2 != it2_e) {
-		if (it1->start < it2->start) {
-			if (it1->end >= it2->start) {
-				return true;
-			}
-			++it1;
-		} else {
-			if (it2->end >= it1->start) {
-				return true;
-			}
-			++it2;
-		}
-	}
-
-	return false;
 }
 
 

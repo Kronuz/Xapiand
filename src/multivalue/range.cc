@@ -353,19 +353,24 @@ MultipleValueRange::MultipleValueRange(engine::valueno slot, T&& start_, T&& end
 bool
 MultipleValueRange::insideRange(std::string_view value) const noexcept
 {
-	StringList data(value);
+	// A value that does not decode is not accepted.
+	try {
+		StringList data(value);
 
-	if (data.empty() || end < data.front() || start > data.back()) {
+		if (data.empty() || end < data.front() || start > data.back()) {
+			return false;
+		}
+
+		for (const auto& value_ : data) {
+			if (value_ >= start) {
+				return value_ <= end;
+			}
+		}
+
+		return false;
+	} catch (const SerialisationError&) {
 		return false;
 	}
-
-	for (const auto& value_ : data) {
-		if (value_ >= start) {
-			return value_ <= end;
-		}
-	}
-
-	return false;
 }
 
 
@@ -409,7 +414,10 @@ MultipleValueRange::unserialise(std::string_view serialised) const
 		}
 
 		auto it = data.begin();
-		return std::make_unique<MultipleValueRange>(unserialise_length(*it), std::string(*(++it)), std::string(*(++it)));
+		const auto slot = unserialise_length(*it);
+		std::string start(*++it);
+		std::string end(*++it);
+		return std::make_unique<MultipleValueRange>(slot, std::move(start), std::move(end));
 	} catch (const SerialisationError& er) {
 		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
 	}
@@ -435,13 +443,18 @@ MultipleValueGE::MultipleValueGE(engine::valueno slot, T&& start_)
 bool
 MultipleValueGE::insideRange(std::string_view value) const noexcept
 {
-	StringList data(value);
+	// A value that does not decode is not accepted.
+	try {
+		StringList data(value);
 
-	if (data.empty()) {
+		if (data.empty()) {
+			return false;
+		}
+
+		return data.back() >= start;
+	} catch (const SerialisationError&) {
 		return false;
 	}
-
-	return data.back() >= start;
 }
 
 
@@ -485,7 +498,9 @@ MultipleValueGE::unserialise(std::string_view serialised) const
 		}
 
 		auto it = data.begin();
-		return std::make_unique<MultipleValueGE>(unserialise_length(*it), std::string(*(++it)));
+		const auto slot = unserialise_length(*it);
+		std::string start(*++it);
+		return std::make_unique<MultipleValueGE>(slot, std::move(start));
 	} catch (const SerialisationError& er) {
 		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
 	}
@@ -510,13 +525,18 @@ MultipleValueLE::MultipleValueLE(engine::valueno slot, T&& end_)
 bool
 MultipleValueLE::insideRange(std::string_view value) const noexcept
 {
-	StringList data(value);
+	// A value that does not decode is not accepted.
+	try {
+		StringList data(value);
 
-	if (data.empty()) {
+		if (data.empty()) {
+			return false;
+		}
+
+		return data.front() <= end;
+	} catch (const SerialisationError&) {
 		return false;
 	}
-
-	return data.front() <= end;
 }
 
 
@@ -560,7 +580,9 @@ MultipleValueLE::unserialise(std::string_view serialised) const
 		}
 
 		auto it = data.begin();
-		return std::make_unique<MultipleValueLE>(unserialise_length(*it), std::string(*(++it)));
+		const auto slot = unserialise_length(*it);
+		std::string end(*++it);
+		return std::make_unique<MultipleValueLE>(slot, std::move(end));
 	} catch (const SerialisationError& er) {
 		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
 	}

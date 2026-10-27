@@ -48,10 +48,12 @@ public:
 	std::string name() const override;
 	std::string serialise() const override;
 	PostingSourceAdapter* unserialise_with_registry(const std::string& serialised, const Xapian::Registry& registry) const override;
-	void init(const Xapian::Database& db) override;
+	void reset(const Xapian::Database& db, Xapian::doccount shard_index) override;
 	std::string get_description() const override;
 
 private:
+	void set_bounds();
+
 	std::unique_ptr<engine::PostingSource> source_;
 };
 

@@ -22,6 +22,7 @@
 
 #include "engine/xapian/query.h"
 
+#include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
 #include "engine/callbacks.h"      // for PostingSource
@@ -164,12 +165,23 @@ to_xapian(const Query& query)
 		}
 
 		case QueryKind::append: {
-			auto accumulated = to_xapian(node->subqueries[0]);
-			auto next = to_xapian(node->subqueries[1]);
-			if (accumulated.empty()) {
-				return next;
+			// Folds a chain of appends left to right, so a long chain costs no stack.
+			std::vector<const QueryNode*> chain;
+			const Query* base = &query;
+			while (base->node() != nullptr && base->node()->kind == QueryKind::append) {
+				chain.push_back(base->node());
+				base = &base->node()->subqueries[0];
 			}
-			return Xapian::Query(to_xapian(node->op), accumulated, next);
+			auto accumulated = to_xapian(*base);
+			for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
+				auto next = to_xapian((*it)->subqueries[1]);
+				if (accumulated.empty()) {
+					accumulated = std::move(next);
+				} else {
+					accumulated = Xapian::Query(to_xapian((*it)->op), accumulated, next);
+				}
+			}
+			return accumulated;
 		}
 
 		case QueryKind::scale:
@@ -181,8 +193,11 @@ to_xapian(const Query& query)
 		case QueryKind::edit_distance:
 			return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, node->str, node->parameter, wildcard_flags(node->limit, 0), to_xapian(node->op), node->distance, node->prefix_length);
 
-		case QueryKind::source:
-			return Xapian::Query(new PostingSourceAdapter(node->src->clone()));
+		case QueryKind::source: {
+			// release() hands the adapter to the Query, which owns it.
+			auto* adapter = new PostingSourceAdapter(node->src->clone());
+			return Xapian::Query(adapter->release());
+		}
 
 		case QueryKind::text:
 			return parse_text(*node);

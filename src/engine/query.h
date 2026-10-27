@@ -175,6 +175,8 @@ public:
 	std::string description() const;
 
 private:
+	friend struct QueryNode;
+
 	explicit Query(std::shared_ptr<const QueryNode> node) : node_(std::move(node)) { }
 
 	std::shared_ptr<const QueryNode> node_;
@@ -194,6 +196,9 @@ enum class QueryKind : std::uint8_t {
 
 // The fields each kind uses are named on its line; the rest are unset.
 struct QueryNode {
+	// Releases a deep chain of nodes without recursing.
+	~QueryNode();
+
 	QueryKind kind = QueryKind::term;
 	std::string str;                              // term, wildcard and edit_distance: the term or pattern; text: the text
 	termcount wqf = 1;                            // term

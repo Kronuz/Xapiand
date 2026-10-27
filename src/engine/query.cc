@@ -56,6 +56,26 @@ combines_to_nothing(Op op, const std::vector<Query>& subqueries)
 }  // namespace
 
 
+QueryNode::~QueryNode()
+{
+	// The last owner of a node hands its children to a list, so a long chain frees in a loop.
+	std::vector<std::shared_ptr<const QueryNode>> pending;
+	const auto take = [&pending](std::vector<Query>& subqueries) {
+		for (auto& sub : subqueries) {
+			if (sub.node_ && sub.node_.use_count() == 1) {
+				pending.push_back(std::move(sub.node_));
+			}
+		}
+	};
+	take(subqueries);
+	while (!pending.empty()) {
+		const auto node = std::move(pending.back());
+		pending.pop_back();
+		take(const_cast<QueryNode&>(*node).subqueries);
+	}
+}
+
+
 Query
 Query::term(std::string term, termcount wqf, termpos pos)
 {

@@ -37,6 +37,10 @@ namespace engine {
 
 // The documents whose value in one slot passes a test. The engine reads the slot's values
 // in docid order and asks accept() of each; weight() scores a document that passed.
+//
+// accept, weight and clone are const and thread-safe: one source is shared by every
+// translation of its query, and later by every shard. accept returns false on a value that
+// does not decode. A selectivity estimate, for an engine's planner, is planned, not built.
 class PostingSource {
 public:
 	virtual ~PostingSource() = default;

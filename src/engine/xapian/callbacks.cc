@@ -49,6 +49,14 @@ PostingSourceAdapter::PostingSourceAdapter(std::unique_ptr<engine::PostingSource
 	: Xapian::ValuePostingSource(source->slot()),
 	  source_(std::move(source))
 {
+	set_bounds();
+}
+
+
+// Xapian resets the weight bound when it binds the source to a database, so it is set again then.
+void
+PostingSourceAdapter::set_bounds()
+{
 	if (const auto max_weight = source_->max_weight(); max_weight != 0.0) {
 		set_maxweight(max_weight);
 	}
@@ -130,9 +138,10 @@ PostingSourceAdapter::unserialise_with_registry(const std::string& serialised, c
 
 
 void
-PostingSourceAdapter::init(const Xapian::Database& db)
+PostingSourceAdapter::reset(const Xapian::Database& db, Xapian::doccount shard_index)
 {
-	Xapian::ValuePostingSource::init(db);
+	Xapian::ValuePostingSource::reset(db, shard_index);
+	set_bounds();
 
 	// A filter: possibly no document is accepted.
 	set_termfreq_min(0);
