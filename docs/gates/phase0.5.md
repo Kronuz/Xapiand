@@ -71,3 +71,17 @@ harness/cluster_check.sh 2; harness/cluster_check.sh 3; harness/wal_recovery_che
 ```
 
 `wal_recovery_check.sh` writes under `/tmp` by its own design; run unchanged.
+
+## Lead verdict (2026-10-27)
+
+Gate 0.5 is not passed yet. T2 and T4 pass. Three items stay open:
+
+1. T1: the census (design D12, `ENGINE_CENSUS`) was never built. It is a small build step on the
+   seam, then T1 and T5 are measured from it.
+2. T3 throughput: bulk index runs at 0.81x base (3,124 against 3,860 docs/s), slower in all four
+   interleaved pairs. It is bisected across the 19 first-parent commits from `855f75281` to
+   `cca0011bb` before any fix.
+3. T3 bodies: the `SEARCH /bank/` estimate reads 459 on base and 400 on ours with equal counts.
+   It is attributed in the same bisect; an estimate change is acceptable only if it is explained.
+
+The gate is rerun on the commit that closes all three.
