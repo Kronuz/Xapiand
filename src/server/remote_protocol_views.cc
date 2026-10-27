@@ -36,6 +36,7 @@
 #include "database/flags.h"                   // for DB_*
 #include "database/lock.h"                    // for lock_shard
 #include "database/shard.h"                   // for Shard
+#include "engine/xapian/shard.h"        // for engine::xapian::Shard
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
@@ -370,7 +371,7 @@ RemoteProtocolViews::msg_allterms(const std::string &message)
 	std::string reply;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		const std::string& prefix = message;
 		const Xapian::TermIterator end = db->allterms_end(prefix);
@@ -407,7 +408,7 @@ RemoteProtocolViews::msg_termlist(const std::string &message)
 	std::string reply;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		Xapian::TermIterator t = db->termlist_begin(did);
 		Xapian::termcount num_terms = t.internal->get_approx_size();
@@ -456,7 +457,7 @@ RemoteProtocolViews::msg_positionlist(const std::string &message)
 	std::string reply;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
 		const Xapian::PositionIterator end = db->positionlist_end(did, term);
@@ -488,7 +489,7 @@ RemoteProtocolViews::msg_positionlistcount(const std::string &message)
 	Xapian::termcount result = 0;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		// This is kind of clumsy, but what the public API requires.
 		Xapian::TermIterator termit = db->termlist_begin(did);
@@ -517,7 +518,7 @@ RemoteProtocolViews::msg_postlist(const std::string &message)
 
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		Xapian::doccount termfreq = db->get_termfreq(term);
 		pack_uint_last(reply, termfreq);
@@ -644,7 +645,7 @@ RemoteProtocolViews::msg_update(const std::string &)
 
 	if (!endpoint.empty()) {
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		Xapian::doccount num_docs = db->get_doccount();
 		pack_uint(message, num_docs);
@@ -671,7 +672,7 @@ RemoteProtocolViews::msg_query(const std::string &message_in)
 	const char *p_end = p + message_in.size();
 
 	lock_shard lk_shard(endpoint, flags);
-	auto db = lk_shard->db();
+	auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 	RemoteProtocolPendingQuery pending_query;
 
@@ -900,7 +901,7 @@ RemoteProtocolViews::msg_getmset(const std::string & message)
 	L_CALL("RemoteProtocolViews::msg_getmset(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
-	auto db = lk_shard->db();
+	auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -1004,7 +1005,7 @@ RemoteProtocolViews::msg_document(const std::string &message)
 	{
 		lock_shard lk_shard(endpoint, flags);
 
-		Xapian::Document doc = lk_shard->get_document(did, false);
+		Xapian::Document doc = lk_shard->engine().native<engine::xapian::Shard>().database()->get_document(did, false);
 
 		send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
 
@@ -1028,7 +1029,7 @@ RemoteProtocolViews::msg_keepalive(const std::string &)
 
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		// Ensure *our* database stays alive, as it may contain remote databases!
 		db->keep_alive();
@@ -1046,7 +1047,7 @@ RemoteProtocolViews::msg_termexists(const std::string &term)
 	bool term_exists;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		term_exists = db->term_exists(term);
 	}
@@ -1064,7 +1065,7 @@ RemoteProtocolViews::msg_collfreq(const std::string &term)
 	Xapian::termcount collection_freq;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		collection_freq = db->get_collection_freq(term);
 	}
@@ -1083,7 +1084,7 @@ RemoteProtocolViews::msg_termfreq(const std::string &term)
 	Xapian::doccount termfreq;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		termfreq = db->get_termfreq(term);
 	}
@@ -1103,7 +1104,7 @@ RemoteProtocolViews::msg_freqs(const std::string &term)
 	Xapian::termcount collection_freq;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		termfreq = db->get_termfreq(term);
 		collection_freq = db->get_collection_freq(term);
@@ -1134,7 +1135,7 @@ RemoteProtocolViews::msg_valuestats(const std::string & message)
 	std::string value_upper_bound;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		value_freq = db->get_value_freq(slot);
 		value_lower_bound = db->get_value_lower_bound(slot);
@@ -1165,7 +1166,7 @@ RemoteProtocolViews::msg_doclength(const std::string &message)
 	Xapian::termcount doclength;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		doclength = db->get_doclength(did);
 	}
@@ -1192,7 +1193,7 @@ RemoteProtocolViews::msg_uniqueterms(const std::string &message)
 	Xapian::termcount unique_terms;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		unique_terms = db->get_unique_terms(did);
 	}
@@ -1219,7 +1220,7 @@ RemoteProtocolViews::msg_wdfdocmax(const std::string &message)
 	Xapian::termcount wdfdocmax;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		wdfdocmax = db->get_wdfdocmax(did);
 	}
@@ -1251,7 +1252,7 @@ RemoteProtocolViews::msg_reconstructtext(const std::string &message)
 	std::string text;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		text = db->reconstruct_text(did, length, std::string_view(p, p_end - p), start_pos, end_pos);
 	}
@@ -1268,7 +1269,7 @@ RemoteProtocolViews::msg_synonymtermlist(const std::string &message)
 	std::string reply;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		std::string prev;
 		const Xapian::TermIterator end = db->synonyms_end(message);
@@ -1297,7 +1298,7 @@ RemoteProtocolViews::msg_synonymkeylist(const std::string &message)
 	std::string reply;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		std::string prev;
 		const Xapian::TermIterator end = db->synonym_keys_end(message);
@@ -1333,7 +1334,7 @@ RemoteProtocolViews::msg_requestdocument(const std::string &message)
 
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		db->internal->request_document(did);
 	}
@@ -1519,7 +1520,7 @@ RemoteProtocolViews::msg_metadatakeylist(const std::string & message)
 	std::string reply;
 	{
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
+		auto db = lk_shard->engine().native<engine::xapian::Shard>().database();
 
 		std::string prev = message;
 		const std::string& prefix = message;

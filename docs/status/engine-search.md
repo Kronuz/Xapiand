@@ -6,7 +6,8 @@ X2 and X3 (`docs/status/engine-core.md`, `docs/status/engine-query.md`).
 
 ## State
 
-X4a (reads) is built and proven; X4b and X4c are planned below.
+X4a (reads) is merged. X4b (search) is built and proven on `phase0.5/engine-search-b`; its last commit removes `Shard::db()` and
+needs the lead's edit to the remote server before it builds ("For the lead"). X4c is planned below.
 
 ## GPL boundary
 
@@ -61,12 +62,18 @@ Done when:
 
 ### X4b: search
 
-`engine::search` (hits, estimated, per-hit docid, optional weight/rank/percent for `comments`), the
-`Enquire`/`RSet`/`ESet` work behind it (`nearest`, `fuzzy`, collapse, spies, sorter), `match`,
-`get_mset`, `get_rset` and their consumers (`search_views.cc`, `manager.cc`) on the result type. Then
-`Shard::db()` is removed and the remote server reaches the database through `native<>`: the exact edit to
-`remote_protocol_views.cc` is the single token above, 22 times. Done when no MIT file calls `db()` and the
-lead's edit builds; the corpus is byte-identical.
+Done when:
+
+1. `engine::search` and its result exist (`src/engine/search.h`): hits with id, weight, rank and percent, the
+   estimate, and a request with the window, `check_at_least`, sorter, collapse, cutoffs, docid order, spy and the
+   `nearest`/`fuzzy` expansions. The Xapian side owns the `Enquire`, `RSet` and `ESet` work.
+2. `match`, `get_mset` and the MSet consumers (`search_views.cc`, `manager.cc`) run on it; `get_rset` and
+   `get_edecider` are gone.
+3. `Shard::db()` and `Shard::get_document(docid, flags)` are removed and no MIT file calls them; the remote server
+   reaches the database through `native<>` with the lead's edit.
+4. Unit tests under ASan+UBSan; the corpora (`qdiff.py` 2,007, `qnf.py` 104, `qread.py` 911) byte-identical to
+   the baseline; docs E2E 576 of 576; `cluster_range.sh` GREEN with search over the remote protocol.
+5. A live counter for each new object, a revert check per adapter, and `seam_check.sh` shrunk with new ceilings.
 
 ### X4c: kinds and types; the seam closes
 
@@ -136,21 +143,111 @@ Builds: ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`, x86_64, `.scratch/build-asan` (
 Not done: TSan, libFuzzer (no decoder was added: the views read through Xapian), Linux and FreeBSD builds,
 benchmarks (`scan` makes one view per document, as the dump made one document).
 
+## Done (X4b)
+
+Commits on `phase0.5/engine-search-b`: Xapiand:d3f914396 engine::search and tests; Xapiand:d160f6ba8 handler and
+consumers; Xapiand:d4307953c the removal of `db()` and the seam ceilings (does not build until the remote edit).
+
+- `engine::search(std::span<Shard* const>, const SearchRequest&)` returns `task<SearchResult>`; `engine::prepare`
+  reads the query once (a text node is analysed there) so the handler still skips the shards for a query that
+  matches nothing. The Xapian implementation (`engine/xapian/search.cc`) combines the shards into one `Database`,
+  computes the relevant set and the elite set for `nearest`/`fuzzy` as the handler did, matches with the
+  `KeyMakerAdapter`/`MatchSpyAdapter`, and copies the window out; the result holds no Xapian object.
+- Always filled: weight, rank and percent (cheap; the ledger said optional). `Hit::percent` is an `int` as Xapian's.
+- `DatabaseHandler::match` builds the request, takes `shard->engine()` of each checked-out shard (a missing index
+  is skipped), and keeps the retry ladder and reopen. `get_similar` turns the field/type lists into prefixes.
+- Removed: `get_rset` (handler, both), `FilterPrefixesExpandDecider`, `get_edecider`, `Shard::db()`,
+  `Shard::get_document(docid, flags)`.
+- Not changed: the exceptions are the same Xapian-derived `Failure` types the reads already throw.
+
+## Proof (X4b)
+
+Builds: ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`, `.scratch/build-asan`, `quiet light`, -j4. The corpora, E2E and
+cluster ran on the binary built at `Xapiand:d160f6ba8` (before the removal commit, which cannot build without the
+remote edit); a `-k` build of the removal commit fails in `remote_protocol_views.cc` only (19 error lines, nothing
+else). Baseline: `.scratch/xapiand-base`.
+
+1. Unit tests: 17 of 17 under ASan+UBSan. `test_engine_search` (3,497 checks) compares every field of every hit
+   and the estimate with a hand-written Xapian search over one and two shards: ranking, windows, ids across shards,
+   sorter, collapse, cutoffs, docid order, spy, `nearest`, `fuzzy`, both, with and without prefixes; empty query,
+   no shards, a shard of another engine (`std::bad_cast`), a wildcard error; callbacks that throw.
+2. Corpora, `cmp` identical to the baseline: `qdiff.py` 2,007, `qnf.py` 104, `qread.py` 911. New corpus
+   `.scratch/qsim.py` (265 answers: `nearest`/`fuzzy` n_rset, n_eset, n_term, field, type and mixes with different
+   settings, windows, comments, collapse, several indexes with a missing one, stop-word text, bad parameters):
+   stable across two baseline runs, new binary `cmp` identical.
+3. Docs E2E: 339 requests, 576 of 576 assertions; `e2e_diff` GREEN against the baseline.
+4. `cluster_range.sh 2`: GREEN, 30 checks, 0 failures. It searches from the non-owner node (the remote shards
+   answer) with ranges, sort, aggregations and the new section 3e (comments, window, `nearest`, `fuzzy`, both,
+   collapse). The 12 saved bodies (`cl3-base`, `cl3-new`) are `cmp` identical to the baseline run.
+5. Sanitizer reports in the node logs: only the lz4, rapidjson, `pair.h` and `engine/xapian/shard.cc:72/297` lines
+   the baseline prints too (X4a review N5); none from `search.cc`, `handler.cc`, `search_views.cc`; no
+   `blocks on database work` line.
+6. Live counter: `engine::xapian::live_search_objects()` counts prepared queries, expand deciders and search
+   scopes. `test_search_does_not_leak` expects 0 after every search (one and two shards, `nearest` and `fuzzy`,
+   sorter and spy), 1 while a prepared query is held and after a search cut short by a throwing key maker or spy.
+   Mutants S17 (leaked decider), S18 (leaked scope), S19 (leaked prepared query) each fail 12 checks.
+7. Revert checks, adapter (`.scratch/mutants5.py`, judged by `test_engine_search`): 20 of 21 caught (collapse,
+   cutoffs, docid order, sorter, spy, check_at_least, elite set size, fuzzy join, prefix filter, rank, percent,
+   weight, estimate, one shard only, rset size, rset window, three leaks, shard-local ids). S20 (the no-shard guard
+   removed) survives: Xapian answers an empty database with an empty set, so the guard changes no output.
+   Integration (`.scratch/mutants5i.py`, judged by `qdiff` + `qnf` + `qsim`): 11 of 13 caught (nearest with fuzzy's
+   settings, n_term, offset/limit, spy, sorter, collapse, rank, total, percent, missing shard, one shard). Two
+   survive: I2 (the lower-case type prefix: a type filter matches only terms with an empty field prefix, and no
+   corpus term has one, so `type=` always answers empty) and I12 (an empty query still searches: Xapian returns the
+   same empty set, and the corpora's stop-word text did not reach the early return). The first corpora run missed
+   I1 and I11 (`nearest`/`fuzzy` had equal settings; no missing shard in a multi-index): `qsim.py` was added and
+   catches both.
+8. `seam_check.sh`: exits 0; ceilings lowered (`--update`): handler.cc 211 to 168, handler.h 43 to 24, shard.cc 55 to
+   43, shard.h 13 to 11, search_views.cc 17 to 14. Files naming Xapian 38 / lines 701 (X4a) to 622.
+   `Shard::db()` sites outside the remote server: 2 to 0. `MSet`, `Enquire`, `RSet`, `ESet` outside
+   `src/engine/xapian`: 0, except the remote server, whose header `remote_protocol_views.h` still names
+   `Xapian::Enquire` (a member and message comments) and keeps its seam ceiling (review N1).
+
+Not done: TSan, libFuzzer (no decoder or parser was added: `prepare` calls the existing query translation), Linux
+and FreeBSD builds, benchmarks, and a build and cluster run with the remote edit applied (the lead's).
+
+X4a review notes: N1, N4, N5, N6 and N7 are untouched (N1 is the dump retry, N4 the seam counter, N5 the UBSan
+downcasts, N6 the `DocView` exception contract for X4c, N7 one view per scanned document); N2 and N3 were closed in X4a.
+
+## X4b code review (C1, N1, I2, retry ruling)
+
+1. C1 closed. `search.h` now says how the relevant set for `nearest`/`fuzzy` is built, and `test_engine_search` has
+   `test_similar_relevant_set` (4,417 checks, ASan and UBSan, all pass). The reviewer's unit mutants M2 to M5
+   (`.scratch/mut_search_c1.py`, the reviewer's script re-rooted): with the new case each fails (M2 244 checks, M3 62,
+   M4 3, M5 3); before it, M3, M4 and M5 survived and M2 was caught only by the older case. M5 (the relevant set keeps
+   the request's cutoffs) is not reachable from the product, whose thresholds are constants (`handler.cc:1128-1129`);
+   it is killed here anyway because it was cheap (a 30-document relevant set under a 90 percent cutoff).
+2. Retry ruling (reviewer): the remote `get_document` needs no reopen-and-retry. It can return
+   `DatabaseModifiedError` to the client, and every client path has a retry ladder. Injection proof: 5,392 throws
+   injected, all 43,566 GETs answered 200.
+3. N1 fixed above: the "no `MSet`/`Enquire` outside `src/engine/xapian`" claim excepts the remote header.
+4. I2, pre-existing, for follow-up (not caused by X4): `nearest.type=` and `fuzzy.type=` filters never match.
+   `get_similar` (the old `get_edecider` body, moved verbatim) tests `starts_with(type_char)` or its lower case, but
+   every field term begins with the field's prefix, so only unprefixed terms could match. In the saved corpora every
+   `nearest.type=` request answers count 0 (35 for plain `nearest`); `fuzzy.type=` answers the same as `fuzzy`
+   without expansion. Either the filter should match the type character inside the prefix, or the feature should be
+   dropped; `engine::Similar::prefixes` carries the question into strata. Open for the architect.
+
 ## Next
 
-X4b: `engine::search`. Then the lead applies the remote edit below with X4b.
+The lead applies `.scratch/remote_edits.sh`, commits the remote file, rebuilds, and reruns `cluster_range.sh 2`
+(and the docs E2E) on that head: the remote server then reaches the database through `native<>`. Then X4c.
 
-## For the lead (GPL file; applied with X4b, not before)
+## For the lead (GPL file)
 
-`src/server/remote_protocol_views.cc` needs nothing for X4a. When X4b removes `Shard::db()` and
-`Shard::get_document(Xapian::docid, unsigned)`, the file needs, mechanically:
+`src/server/remote_protocol_views.cc` needs, mechanically (`.scratch/remote_edits.sh` does it with `perl`, checks the
+counts before and after, and adds the include):
 
-1. All 22 `lk_shard->db()` become `lk_shard->engine().native<engine::xapian::Shard>().database()` (same type,
-   `Xapian::Database*`; `engine()` opens, reopens or refuses a closed shard as `db()` did). Add
-   `#include "engine/xapian/shard.h"` if it is not already reachable through `database/shard.h`.
-2. The one `lk_shard->get_document(...)` call keeps its arguments and becomes
-   `lk_shard->engine().native<engine::xapian::Shard>().database()->get_document(...)`.
+1. All 22 `lk_shard->db()` become `lk_shard->engine().native<engine::xapian::Shard>().database()` (same
+   type, `Xapian::Database*`; `engine()` opens, reopens or refuses a closed shard as `db()` did).
+2. The one `lk_shard->get_document(...)` becomes
+   `lk_shard->engine().native<engine::xapian::Shard>().database()->get_document(...)`. It loses the old
+   method's reopen-and-retry loop and its random-error hook.
+3. `#include "engine/xapian/shard.h"` after the `database/shard.h` include.
+
+Run it from anywhere in the worktree: `sh .scratch/remote_edits.sh`. The final commit
+(`Remove Shard::db()...`) does not build until that edit is committed.
 
 ## Blocked on
 
-Nothing.
+The remote server edit above (the lead's). Nothing else.

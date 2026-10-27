@@ -49,10 +49,9 @@
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
+#include "engine/search.h"                  // for engine::search, prepare
 #include "engine/sync.h"                    // for engine::sync_wait
-#include "engine/xapian/callbacks.h"       // for KeyMakerAdapter, MatchSpyAdapter
 #include "engine/xapian/errors.h"          // for engine::xapian::DatabaseFailure
-#include "engine/xapian/query.h"           // for engine::xapian::to_xapian
 #include "engine/xapian/shard.h"           // for engine::xapian::check
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
@@ -186,25 +185,6 @@ inject_data(Data& data, const MsgPack& obj)
 		}
 	}
 }
-
-
-class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
-	std::vector<std::string> prefixes;
-
-public:
-	FilterPrefixesExpandDecider(std::vector<std::string>  prefixes_)
-		: prefixes(std::move(prefixes_)) { }
-
-	bool operator() (const std::string& term) const override {
-		for (const auto& prefix : prefixes) {
-			if (strings::startswith(term, prefix)) {
-				return true;
-			}
-		}
-
-		return prefixes.empty();
-	}
-};
 
 
 /*
@@ -714,43 +694,17 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 }
 
 
-Xapian::RSet
-DatabaseHandler::get_rset(const engine::Query& query, Xapian::doccount maxitems)
+engine::Similar
+DatabaseHandler::get_similar(const similar_field_t& similar)
 {
-	L_CALL("DatabaseHandler::get_rset(...)");
-
-	return get_rset(engine::xapian::to_xapian(query), maxitems);
-}
-
-
-Xapian::RSet
-DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
-{
-	L_CALL("DatabaseHandler::get_rset(<xapian query>)");
-
-	// Xapian::RSet only keeps a set of Xapian::docid internally,
-	// so it's thread safe across database checkouts.
-
-	Xapian::RSet rset;
-
-	auto mset = match(query, 0, maxitems, 0, nullptr, Xapian::BAD_VALUENO, 0, 0, 0, Xapian::Enquire::ASCENDING, nullptr, nullptr, nullptr);
-	const auto m_e = mset.end();
-	for (auto m = mset.begin(); m != m_e; ++m) {
-		auto did = *m;
-		rset.add_document(did);
-	}
-
-	return rset;
-}
-
-
-std::unique_ptr<Xapian::ExpandDecider>
-DatabaseHandler::get_edecider(const similar_field_t& similar)
-{
-	L_CALL("DatabaseHandler::get_edecider(...)");
+	L_CALL("DatabaseHandler::get_similar(...)");
 
 	// Expand Decider filter.
-	std::vector<std::string> prefixes;
+	engine::Similar result;
+	result.n_rset = similar.n_rset;
+	result.n_eset = similar.n_eset;
+	result.n_term = similar.n_term;
+	auto& prefixes = result.prefixes;
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
 		char type = toUType(Unserialise::get_field_type(sim_type));
@@ -763,7 +717,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 			prefixes.push_back(field_spc.prefix());
 		}
 	}
-	return std::make_unique<FilterPrefixesExpandDecider>(prefixes);
+	return result;
 }
 
 
@@ -1072,16 +1026,16 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 }
 
 
-std::tuple<Xapian::MSet, MsgPack, engine::Query>
+std::tuple<engine::SearchResult, MsgPack, engine::Query>
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, engine::MatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
 	schema = get_schema();
 
-	Xapian::doccount first = query_field.offset;
-	Xapian::doccount maxitems = query_field.limit;
-	Xapian::doccount check_at_least = query_field.check_at_least;
+	engine::doccount first = query_field.offset;
+	engine::doccount maxitems = query_field.limit;
+	engine::doccount check_at_least = query_field.check_at_least;
 
 	QueryDSL query_object(schema);
 
@@ -1163,8 +1117,8 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	}
 
 	// Get the collapse key to use for queries.
-	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
-	Xapian::doccount collapse_max = 0;
+	engine::valueno collapse_key = engine::BAD_VALUENO;
+	engine::doccount collapse_max = 0;
 	if (!query_field.collapse.empty()) {
 		const auto field_spc = schema->get_slot_field(query_field.collapse);
 		collapse_key = field_spc.slot;
@@ -1174,7 +1128,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	double percent_threshold = 0;
 	double weight_threshold = 0;
 
-	Xapian::Enquire::docid_order order = Xapian::Enquire::ASCENDING;
+	engine::DocidOrder order = engine::DocidOrder::ascending;
 
 	if (aggs && check_at_least == 0) {
 		// When using aggregations, at request xapian to at least
@@ -1201,18 +1155,18 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 
 
-Xapian::MSet
+engine::SearchResult
 DatabaseHandler::get_mset(
 	const engine::Query& query,
-	Xapian::doccount first,
-	Xapian::doccount maxitems,
-	Xapian::doccount check_at_least,
+	engine::doccount first,
+	engine::doccount maxitems,
+	engine::doccount check_at_least,
 	const engine::KeyMaker* sorter,
-	Xapian::valueno collapse_key,
-	Xapian::doccount collapse_max,
+	engine::valueno collapse_key,
+	engine::doccount collapse_max,
 	double percent_threshold,
 	double weight_threshold,
-	Xapian::Enquire::docid_order order,
+	engine::DocidOrder order,
 	engine::MatchSpy* aggs,
 	const similar_field_t* fuzzy,
 	const similar_field_t* nearest
@@ -1220,126 +1174,80 @@ DatabaseHandler::get_mset(
 {
 	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
 
-	// The text of the query is read here, once, before any database is checked out.
-	return match(engine::xapian::to_xapian(query), first, maxitems, check_at_least, sorter, collapse_key, collapse_max, percent_threshold, weight_threshold, order, aggs, fuzzy, nearest);
+	// The engine reads the text of the query here, once, before any database is checked out.
+	auto prepared = engine::prepare(query);
+	return match(*prepared, first, maxitems, check_at_least, sorter, collapse_key, collapse_max, percent_threshold, weight_threshold, order, aggs, fuzzy, nearest);
 }
 
 
-Xapian::MSet
+engine::SearchResult
 DatabaseHandler::match(
-	const Xapian::Query& xapian_query,
-	Xapian::doccount first,
-	Xapian::doccount maxitems,
-	Xapian::doccount check_at_least,
+	const engine::PreparedQuery& query,
+	engine::doccount first,
+	engine::doccount maxitems,
+	engine::doccount check_at_least,
 	const engine::KeyMaker* sorter,
-	Xapian::valueno collapse_key,
-	Xapian::doccount collapse_max,
+	engine::valueno collapse_key,
+	engine::doccount collapse_max,
 	double percent_threshold,
 	double weight_threshold,
-	Xapian::Enquire::docid_order order,
+	engine::DocidOrder order,
 	engine::MatchSpy* aggs,
 	const similar_field_t* fuzzy,
 	const similar_field_t* nearest
 	)
 {
-	L_CALL("DatabaseHandler::match({}, {}, {}, {})", xapian_query.get_description(), first, maxitems, check_at_least);
+	L_CALL("DatabaseHandler::match({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
 
-	if (xapian_query.empty()) {
-		return Xapian::MSet{};
+	if (query.empty()) {
+		return {};
 	}
 
-	Xapian::RSet nearest_rset;
-	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
+	engine::SearchRequest request;
+	request.query = &query;
+	request.first = first;
+	request.maxitems = maxitems;
+	request.check_at_least = check_at_least;
+	request.sorter = sorter;
+	request.collapse_key = collapse_key;
+	request.collapse_max = collapse_max;
+	request.percent_threshold = percent_threshold;
+	request.weight_threshold = weight_threshold;
+	request.order = order;
+	request.spy = aggs;
 	if (nearest) {
-		nearest_rset = get_rset(xapian_query, nearest->n_rset);
-		nearest_edecider = get_edecider(*nearest);
+		request.nearest = get_similar(*nearest);
 	}
-
-	Xapian::RSet fuzzy_rset;
-	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (fuzzy) {
-		fuzzy_rset = get_rset(xapian_query, fuzzy->n_rset);
-		fuzzy_edecider = get_edecider(*fuzzy);
+		request.fuzzy = get_similar(*fuzzy);
 	}
 
-	// The callbacks reach Xapian through adapters that borrow them for this call.
-	std::unique_ptr<engine::xapian::KeyMakerAdapter> sorter_adapter;
-	if (sorter) {
-		sorter_adapter = std::make_unique<engine::xapian::KeyMakerAdapter>(*sorter);
-	}
-	std::unique_ptr<engine::xapian::MatchSpyAdapter> spy_adapter;
-	if (aggs) {
-		spy_adapter = std::make_unique<engine::xapian::MatchSpyAdapter>(*aggs);
-	}
-
-	// Distributed match, Xapian-native: feed every shard into ONE Enquire and let
-	// Xapian's matcher fan out and merge.  It sends every shard's MSG_QUERY up
-	// front, does local work, then collects replies with poll() -- so the remote
-	// shards' round trips overlap instead of running one-after-another -- and it
-	// merges the per-shard MSets and unshards the docids itself.  The two-phase
-	// (prepare_mset -> get_mset) keeps the remote *server* non-blocking; query_id
-	// correlates the two phases and is made per-shard-unique inside the matcher so
-	// co-located shards don't collide in the server's process-global pending map.
+	// The engine feeds every shard into one search: remote shards' round trips overlap, and it
+	// merges the per-shard results and unshards the docids itself. The ids that correlate its two
+	// phases carry the node's name, so co-located shards don't collide in the remote server's
+	// process-global pending map.
 	auto manager = XapiandManager::manager();
-	auto local_node = Node::get_local_node();
-	static std::atomic_size_t query_seq = 0;
+	request.origin = Node::get_local_node()->lower_name();
 
-	Xapian::MSet mset;
+	engine::SearchResult result;
 
 	auto shards = manager->database_pool->checkout(endpoints, flags);
 	try {
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				// Combine the shards into one database for a native distributed
-				// match.  A single shard is used directly (identical to the
-				// non-distributed path); a shard whose index doesn't exist is
-				// skipped (multi-index search over a missing one).
-				Xapian::Database db;
-				if (shards.size() == 1) {
+				// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
+				std::vector<engine::Shard*> engines;
+				engines.reserve(shards.size());
+				for (auto& shard : shards) {
 					try {
-						db = *shards[0]->db();
-					} catch (const Xapian::DatabaseNotFoundError&) {
-						break;  // nothing to search -> empty MSet
-					}
-				} else {
-					size_t valid = 0;
-					for (auto& shard : shards) {
-						try {
-							db.add_database(*shard->db());
-							++valid;
-						} catch (const Xapian::DatabaseNotFoundError&) { }
-					}
-					if (valid == 0) {
-						break;  // nothing to search -> empty MSet
-					}
+						engines.push_back(&shard->engine());
+					} catch (const Xapian::DatabaseNotFoundError&) { }
+				}
+				if (engines.empty()) {
+					break;  // nothing to search -> empty result
 				}
 
-				Xapian::Enquire enquire(db);
-				enquire.set_collapse_key(collapse_key, collapse_max);
-				enquire.set_cutoff(percent_threshold, weight_threshold);
-				enquire.set_docid_order(order);
-				if (spy_adapter) {
-					enquire.add_matchspy(spy_adapter.get());
-				}
-				if (sorter_adapter) {
-					enquire.set_sort_by_key_then_relevance(sorter_adapter.get(), false);
-				}
-
-				auto final_query = xapian_query;
-				if (nearest) {
-					auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
-					final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
-				}
-				if (fuzzy) {
-					auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
-					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
-				}
-				enquire.set_query(final_query);
-
-				std::string query_id = strings::format("{}:{}", local_node->lower_name(), ++query_seq);
-				enquire.prepare_mset(query_id, nullptr, nullptr);
-				mset = enquire.get_mset(first, maxitems, check_at_least);
-				mset.set_database(Xapian::Database{});  // release the shards held by the MSet
+				result = engine::sync_wait(engine::search(engines, request));
 				break;
 			} catch (const Xapian::DatabaseModifiedError&) {
 				if (t == 0) { throw; }
@@ -1370,8 +1278,7 @@ DatabaseHandler::match(
 	}
 	manager->database_pool->checkin(shards);
 
-	return mset;
-
+	return result;
 }
 
 

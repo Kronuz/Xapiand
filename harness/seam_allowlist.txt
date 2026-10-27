@@ -1,13 +1,13 @@
-211 src/database/handler.cc
-43 src/database/handler.h
+168 src/database/handler.cc
+24 src/database/handler.h
 2 src/database/lock.h
 4 src/database/pool.cc
 7 src/database/pool.h
 5 src/database/schema.h
 20 src/database/schemas_lru.cc
 3 src/database/schemas_lru.h
-55 src/database/shard.cc
-13 src/database/shard.h
+43 src/database/shard.cc
+11 src/database/shard.h
 24 src/database/wal.cc
 19 src/database/wal.h
 1 src/engine/query.h
@@ -31,7 +31,7 @@
 1 src/server/replication_protocol_service.cc
 7 src/server/replication_protocol_views.cc
 2 src/server/replication_protocol_views.h
-17 src/server/search_views.cc
+14 src/server/search_views.cc
 7 src/snowball_stem.h
 3 src/stopper.cc
 3 src/stopper.h

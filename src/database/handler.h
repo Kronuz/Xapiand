@@ -42,11 +42,12 @@
 #include "engine/callbacks.h"                // for engine::KeyMaker, engine::MatchSpy
 #include "engine/document.h"                 // for engine::Document
 #include "engine/query.h"                    // for engine::Query
+#include "engine/search.h"                   // for engine::SearchRequest, SearchResult, Similar
 #include "engine/types.h"                    // for engine::WriteResult
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
-#include "xapian.h"                          // for Document, docid, MSet
+#include "xapian.h"                          // for Document, docid
 
 
 class Data;
@@ -90,21 +91,20 @@ class DatabaseHandler {
 
 	DocumentInfo index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
-	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
+	engine::Similar get_similar(const similar_field_t& similar);
 
-	// The match proper, on a query already translated once.
-	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
-	Xapian::MSet match(
-		const Xapian::Query& query,
-		Xapian::doccount first,
-		Xapian::doccount maxitems,
-		Xapian::doccount check_at_least,
+	// The match proper, on a query the engine already read.
+	engine::SearchResult match(
+		const engine::PreparedQuery& query,
+		engine::doccount first,
+		engine::doccount maxitems,
+		engine::doccount check_at_least,
 		const engine::KeyMaker* sorter,
-		Xapian::valueno collapse_key,
-		Xapian::doccount collapse_max,
+		engine::valueno collapse_key,
+		engine::doccount collapse_max,
 		double percent_threshold,
 		double weight_threshold,
-		Xapian::Enquire::docid_order order,
+		engine::DocidOrder order,
 		engine::MatchSpy* aggs,
 		const similar_field_t* fuzzy,
 		const similar_field_t* nearest);
@@ -137,19 +137,18 @@ public:
 	void write_schema(const MsgPack& obj);
 
 
-	Xapian::RSet get_rset(const engine::Query& query, Xapian::doccount maxitems);
-	std::tuple<Xapian::MSet, MsgPack, engine::Query> get_mset(const query_field_t& e, const MsgPack* qdsl, engine::MatchSpy* aggs);
-	Xapian::MSet get_mset(
+	std::tuple<engine::SearchResult, MsgPack, engine::Query> get_mset(const query_field_t& e, const MsgPack* qdsl, engine::MatchSpy* aggs);
+	engine::SearchResult get_mset(
 		const engine::Query& query = engine::Query::match_all(),
-		Xapian::doccount first = 0,
-		Xapian::doccount maxitems = 10,
-		Xapian::doccount check_at_least = 0,
+		engine::doccount first = 0,
+		engine::doccount maxitems = 10,
+		engine::doccount check_at_least = 0,
 		const engine::KeyMaker* sorter = nullptr,
-		Xapian::valueno collapse_key = Xapian::BAD_VALUENO,
-		Xapian::doccount collapse_max = 0,
+		engine::valueno collapse_key = engine::BAD_VALUENO,
+		engine::doccount collapse_max = 0,
 		double percent_threshold = 0,
 		double weight_threshold = 0,
-		Xapian::Enquire::docid_order order = Xapian::Enquire::ASCENDING,
+		engine::DocidOrder order = engine::DocidOrder::ascending,
 		engine::MatchSpy* aggs = nullptr,
 		const similar_field_t* fuzzy = nullptr,
 		const similar_field_t* nearest = nullptr);
