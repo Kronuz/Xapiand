@@ -27,6 +27,7 @@
 #include <cassert>                          // for assert
 #include <cctype>                           // for tolower
 #include <exception>                        // for std::exception
+#include <limits>                           // for numeric_limits
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
@@ -1105,9 +1106,9 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	engine::DocidOrder order = engine::DocidOrder::ascending;
 
 	if (aggs && check_at_least == 0) {
-		// When using aggregations, at request xapian to at least
-		// check 1, otherwise aggregations are altogether skipped.
-		check_at_least = 1;
+		// The aggregations see only the documents the engine checks: ask for all of them
+		// (the engine clamps it), as a remote shard stops after the first otherwise.
+		check_at_least = std::numeric_limits<engine::doccount>::max();
 	}
 
 	return std::make_tuple(get_mset(
