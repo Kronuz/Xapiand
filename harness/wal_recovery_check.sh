@@ -26,7 +26,7 @@ BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8906}"
 NDOCS="${NDOCS:-50}"
 IDX="walrec"
-RUNDIR="/tmp/xwalrec_$$"
+RUNDIR="${RUNDIR:-$REPO/.scratch/xwalrec_$$}"
 mkdir -p "$RUNDIR"
 
 PID=""

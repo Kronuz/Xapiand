@@ -467,9 +467,18 @@ Shard::reopen_writable()
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_wal_active()) {
 		// WAL wasn't already active for the requested endpoint
-		DatabaseWAL wal(this);
-		if (wal.execute()) {
+		bool replayed;
+		{
+			DatabaseWAL wal(this);
+			replayed = wal.execute();
+		}
+		if (replayed) {
 			_modified.store(true, std::memory_order_relaxed);
+			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line,
+			// replicas are told); a replay inside a transaction stays in it. A failure propagates.
+			if (!is_transactional()) {
+				commit(true, true);
+			}
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
