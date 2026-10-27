@@ -31,7 +31,7 @@
 #include "database/schema.h"                      // for Schema, FieldType, required_spc_t
 #include "msgpack.h"                              // for MsgPack
 #include "multivalue/keymaker.h"                  // for Multi_MultiValueKeyMaker"
-#include "xapian.h"                               // for Query, Query::op, termcount
+#include "engine/query.h"                         // for engine::Query, Op, termcount
 
 
 constexpr const char QUERYDSL_ASC[]     = "asc";
@@ -48,22 +48,22 @@ class QueryDSL {
 	std::pair<FieldType, MsgPack> parse_guess_range(const required_spc_t& field_spc, std::string_view range);
 	MsgPack parse_range(const required_spc_t& field_spc, std::string_view range);
 
-	Xapian::Query process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags, bool is_leaf);
-	Xapian::Query get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_value_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
+	engine::Query process(engine::Op op, std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags, bool is_leaf);
+	engine::Query get_in_query(std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_value_query(std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 
-	Xapian::Query get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_acc_time_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_acc_timedelta_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_acc_geo_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_global_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
+	engine::Query get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_acc_time_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_acc_timedelta_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_acc_geo_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_global_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 
 	void create_2exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl);
 	void create_exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl);
@@ -74,7 +74,7 @@ public:
 	MsgPack make_dsl_query(std::string_view query);
 	MsgPack make_dsl_query(const query_field_t& e);
 
-	Xapian::Query get_query(const MsgPack& obj);
+	engine::Query get_query(const MsgPack& obj);
 
 	void get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const MsgPack& obj);
 	std::unique_ptr<Multi_MultiValueKeyMaker> get_sorter(const MsgPack& obj);

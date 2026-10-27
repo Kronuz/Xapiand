@@ -50,6 +50,7 @@
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
+#include "engine/xapian/query.h"              // for engine::xapian::to_xapian
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -708,7 +709,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 
 
 Xapian::RSet
-DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
+DatabaseHandler::get_rset(const engine::Query& query, Xapian::doccount maxitems)
 {
 	L_CALL("DatabaseHandler::get_rset(...)");
 
@@ -1066,7 +1067,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 }
 
 
-std::tuple<Xapian::MSet, MsgPack, Xapian::Query>
+std::tuple<Xapian::MSet, MsgPack, engine::Query>
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
@@ -1079,7 +1080,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 	QueryDSL query_object(schema);
 
-	Xapian::Query query;
+	engine::Query query;
 	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
 
 	if (qdsl && qdsl->find(RESERVED_QUERYDSL_SORT) != qdsl->end()) {
@@ -1093,7 +1094,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	L_DEBUG("qdsl: {}", qdsl_query.to_string());
 
 	query = query_object.get_query(qdsl_query);
-	L_DEBUG("query: {}", query.get_description());
+	L_DEBUG("query: {}", query.description());
 
 	if (qdsl && qdsl->find(RESERVED_QUERYDSL_OFFSET) != qdsl->end()) {
 		auto value = qdsl->at(RESERVED_QUERYDSL_OFFSET);
@@ -1197,7 +1198,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 Xapian::MSet
 DatabaseHandler::get_mset(
-	const Xapian::Query& query,
+	const engine::Query& query,
 	Xapian::doccount first,
 	Xapian::doccount maxitems,
 	Xapian::doccount check_at_least,
@@ -1212,9 +1213,11 @@ DatabaseHandler::get_mset(
 	const similar_field_t* nearest
 	)
 {
-	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), first, maxitems, check_at_least);
+	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
 
-	if (query.empty()) {
+	// The text of the query is read here, before any database is checked out.
+	const auto xapian_query = engine::xapian::to_xapian(query);
+	if (xapian_query.empty()) {
 		return Xapian::MSet{};
 	}
 
@@ -1285,7 +1288,7 @@ DatabaseHandler::get_mset(
 					enquire.set_sort_by_key_then_relevance(sorter, false);
 				}
 
-				auto final_query = query;
+				auto final_query = xapian_query;
 				if (nearest) {
 					auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
 					final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);

@@ -23,11 +23,16 @@
 #pragma once
 
 #include <cmath>                                  // for M_PI
+#include <memory>                                 // for std::unique_ptr
 #include <string>                                 // for std::string
+#include <string_view>                            // for std::string_view
+#include <vector>                                 // for std::vector
 
 #include "geospatial/geometry.h"                  // for M_PER_RADIUS_EARTH
 #include "msgpack.h"                              // for MsgPack
-#include "xapian.h"                               // for Xapian::*
+#include "engine/callbacks.h"                    // for engine::PostingSource
+#include "engine/query.h"                        // for engine::Query
+#include "engine/types.h"                        // for engine::valueno
 
 
 struct required_spc_t;
@@ -38,8 +43,10 @@ static inline constexpr double geo_weight_from_angle(double angle) {
 }
 
 
-// New Match Decider for GeoSpatial value range.
-class GeoSpatialRange : public Xapian::ValuePostingSource {
+// A value source for GeoSpatial value range: some of the document's ranges overlap the search ranges.
+class GeoSpatialRange : public engine::PostingSource {
+	engine::valueno slot_ = 0;
+
 	// Ranges for the search.
 	std::vector<range_t> _ranges;
 	std::vector<Cartesian> _centroids;
@@ -47,42 +54,38 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 	/*
 	 * Calculates the smallest angle between its centroids and search centroids.
 	 */
-	double calculateWeight() const;
+	double calculateWeight(std::string_view value) const;
 
 	/*
 	 * Calculates if some their values is inside ranges.
 	 */
-	bool insideRanges() const;
+	bool insideRanges(std::string_view value) const;
 
 public:
-	GeoSpatialRange() :
-		Xapian::ValuePostingSource(0) { }
+	GeoSpatialRange() = default;
 
-	/* Construct a new match decider which returns only documents with a
+	/* Construct a new source which returns only documents with a
 	 *  some of their values inside of ranges.
 	 *
-	 *  @param slot_ The value slot to read values from.
+	 *  @param slot The value slot to read values from.
 	 *  @param ranges
 	*/
 	template <typename R, typename C, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value && std::is_same<std::vector<Cartesian>, std::decay_t<C>>::value>>
-	GeoSpatialRange(Xapian::valueno slot_, R&& ranges, C&& centroids) :
-		Xapian::ValuePostingSource(slot_),
+	GeoSpatialRange(engine::valueno slot, R&& ranges, C&& centroids) :
+		slot_(slot),
 		_ranges(std::forward<R>(ranges)),
-		_centroids(std::forward<C>(centroids)) {
-		set_maxweight(geo_weight_from_angle(0.0));
-	}
+		_centroids(std::forward<C>(centroids)) { }
 
 	// Call this function for create a new Geo Spatial Query.
-	static Xapian::Query getQuery(const required_spc_t& field_spc, const MsgPack& obj);
+	static engine::Query getQuery(const required_spc_t& field_spc, const MsgPack& obj);
 
-	void next(double min_wt) override;
-	void skip_to(Xapian::docid min_docid, double min_wt) override;
-	bool check(Xapian::docid min_docid, double min_wt) override;
-	double get_weight() const override;
-	GeoSpatialRange* clone() const override;
+	engine::valueno slot() const override { return slot_; }
+	bool accept(std::string_view value) const override { return insideRanges(value); }
+	double weight(std::string_view value) const override;
+	double max_weight() const override { return geo_weight_from_angle(0.0); }
+	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	GeoSpatialRange* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
-	void init(const Xapian::Database& db_) override;
-	std::string get_description() const override;
+	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string description() const override;
 };

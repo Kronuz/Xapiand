@@ -181,15 +181,15 @@ print(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& a
 
 
 template <size_t mode, typename Tree, typename S>
-static inline Xapian::Query
-get_query(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& acc_prefix, Xapian::termcount wqf, char field_type, size_t& max_terms)
+static inline engine::Query
+get_query(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& acc_prefix, engine::termcount wqf, char field_type, size_t& max_terms)
 {
 	const auto accuracy_size = accuracy.size();
 	const auto terms_size = tree->terms->size();
 	size_t max_terms_level = tree->pos >= accuracy_size ? mode : tree->pos > 0 ? mode == 2 ? accuracy[tree->pos] / accuracy[tree->pos - 1] : 1 << (accuracy[tree->pos] - accuracy[tree->pos - 1]) : 0;
 	const auto& prefix = tree->pos >= accuracy_size ? "" : acc_prefix[tree->pos];
 
-	std::vector<Xapian::Query> queries;
+	std::vector<engine::Query> queries;
 	queries.reserve(terms_size);
 	for (const auto& t : *tree->terms) {
 		const auto size = t.second.terms->size();
@@ -200,12 +200,12 @@ get_query(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S
 			return get_query<mode>(&t.second, accuracy, acc_prefix, wqf, field_type, max_terms);
 		} else {
 			// Add level and...
-			auto query = Xapian::Query(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
+			auto query = engine::Query::term(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
 			// don't filter children if level is leaf or it has too many children
 			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
 				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
 				if (size) {
-					query = Xapian::Query(Xapian::Query::OP_AND, query,
+					query = engine::Query::combine(engine::Op::AND, query,
 						get_query<mode>(&t.second, accuracy, acc_prefix, wqf, field_type, max_terms)
 					);
 				}
@@ -214,7 +214,7 @@ get_query(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S
 			queries.push_back(query);
 		}
 	}
-	return Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+	return engine::Query::combine(engine::Op::OR, std::move(queries));
 }
 
 
@@ -619,15 +619,15 @@ GenerateTerms::text(engine::Document& doc,
 }
 
 
-Xapian::Query
-GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf)
 {
 	if (end_ < start_) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	if (accuracy.empty()) {
-		return Xapian::Query(std::string());
+		return engine::Query::match_all();
 	}
 
 	auto tm_s = Datetime::to_tm_t(static_cast<std::time_t>(start_));
@@ -663,8 +663,8 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 		++pos;
 	}
 
-	Xapian::Query query_upper;
-	Xapian::Query query_needed;
+	engine::Query query_upper;
+	engine::Query query_needed;
 
 	// If there is an upper accuracy.
 	if (pos < len) {
@@ -739,7 +739,7 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 	}
 
 	if (!query_upper.empty() && !query_needed.empty()) {
-		return Xapian::Query(Xapian::Query::OP_AND, query_upper, query_needed);
+		return engine::Query::combine(engine::Op::AND, query_upper, query_needed);
 	}
 	if (!query_upper.empty()) {
 		return query_upper;
@@ -749,10 +749,10 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 
 
 template <int accuracy>
-static inline Xapian::Query
-_year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+static inline engine::Query
+_year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
-	Xapian::Query query;
+	engine::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_s.mon = tm_e.day = tm_e.mon = 1;
@@ -761,14 +761,14 @@ _year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xap
 	size_t num_unions = (tm_e.year - tm_s.year) / accuracy;
 	if (num_unions < MAX_TERMS_LEVEL) {
 		// Reserve upper bound.
-		std::vector<Xapian::Query> queries;
+		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.emplace_back(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf);
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
 		while (tm_s.year != tm_e.year) {
-			queries.emplace_back(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf);
+			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
 			tm_s.year += accuracy;
 		}
-		query = Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+		query = engine::Query::combine(engine::Op::OR, std::move(queries));
 	}
 
 	return query;
@@ -776,158 +776,158 @@ _year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xap
 
 
 
-Xapian::Query
-GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
 	return _year<1000>(tm_s, tm_e, prefix, wqf);
 }
 
 
-Xapian::Query
-GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
 	return _year<100>(tm_s, tm_e, prefix, wqf);
 }
 
 
-Xapian::Query
-GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
 	return _year<10>(tm_s, tm_e, prefix, wqf);
 }
 
 
-Xapian::Query
-GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
 	return _year<1>(tm_s, tm_e, prefix, wqf);
 }
 
 
-Xapian::Query
-GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
-	Xapian::Query query;
+	engine::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	tm_s.day = tm_e.day = 1;
 	size_t num_unions = tm_e.mon - tm_s.mon;
 	if (num_unions < MAX_TERMS_LEVEL) {
 		// Reserve upper bound.
-		std::vector<Xapian::Query> queries;
+		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.emplace_back(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf);
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
 		while (tm_s.mon != tm_e.mon) {
-			queries.emplace_back(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf);
+			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
 			++tm_s.mon;
 		}
-		query = Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+		query = engine::Query::combine(engine::Op::OR, std::move(queries));
 	}
 
 	return query;
 }
 
 
-Xapian::Query
-GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
-	Xapian::Query query;
+	engine::Query query;
 
 	tm_s.sec = tm_s.min = tm_s.hour = tm_e.sec = tm_e.min = tm_e.hour = 0;
 	size_t num_unions = tm_e.day - tm_s.day;
 	if (num_unions < MAX_TERMS_LEVEL) {
 		// Reserve upper bound.
-		std::vector<Xapian::Query> queries;
+		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.emplace_back(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf);
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
 		while (tm_s.day != tm_e.day) {
-			queries.emplace_back(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf);
+			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
 			++tm_s.day;
 		}
-		query = Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+		query = engine::Query::combine(engine::Op::OR, std::move(queries));
 	}
 
 	return query;
 }
 
 
-Xapian::Query
-GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
-	Xapian::Query query;
+	engine::Query query;
 
 	tm_s.sec = tm_s.min = tm_e.sec = tm_e.min = 0;
 	size_t num_unions = tm_e.hour - tm_s.hour;
 	if (num_unions < MAX_TERMS_LEVEL) {
 		// Reserve upper bound.
-		std::vector<Xapian::Query> queries;
+		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.emplace_back(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf);
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
 		while (tm_s.hour != tm_e.hour) {
-			queries.emplace_back(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf);
+			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
 			++tm_s.hour;
 		}
-		query = Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+		query = engine::Query::combine(engine::Op::OR, std::move(queries));
 	}
 
 	return query;
 }
 
 
-Xapian::Query
-GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
-	Xapian::Query query;
+	engine::Query query;
 
 	tm_s.sec = tm_e.sec = 0;
 	size_t num_unions = tm_e.min - tm_s.min;
 	if (num_unions < MAX_TERMS_LEVEL) {
 		// Reserve upper bound.
-		std::vector<Xapian::Query> queries;
+		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.emplace_back(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf);
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
 		while (tm_s.min != tm_e.min) {
-			queries.emplace_back(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf);
+			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
 			++tm_s.min;
 		}
-		query = Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+		query = engine::Query::combine(engine::Op::OR, std::move(queries));
 	}
 
 	return query;
 }
 
 
-Xapian::Query
-GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf)
 {
-	Xapian::Query query;
+	engine::Query query;
 
 	size_t num_unions = tm_e.sec - tm_s.sec;
 	if (num_unions < MAX_TERMS_LEVEL) {
-		std::vector<Xapian::Query> queries;
+		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.emplace_back(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf);
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
 		while (tm_s.sec != tm_e.sec) {
-			queries.emplace_back(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf);
+			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
 			++tm_s.sec;
 		}
-		query = Xapian::Query(Xapian::Query::OP_OR, queries.begin(), queries.end());
+		query = engine::Query::combine(engine::Op::OR, std::move(queries));
 	}
 
 	return query;
 }
 
 
-Xapian::Query
-GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf)
 {
 	// The user does not specify the accuracy.
 	if (ranges.empty()) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	if (acc_prefix.empty()) {
-		return Xapian::Query(std::string());
+		return engine::Query::match_all();
 	}
 
 	const auto last_acc_pos = accuracy.size() - 1;
@@ -967,7 +967,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 
 	// The search has biggger trixels that the biggest trixel in accuracy.
 	if (!level_terms_size) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	// Generate tree.
@@ -1005,15 +1005,15 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 
 
 template <typename T>
-Xapian::Query
-_numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf, size_t max_terms, size_t max_terms_level)
+engine::Query
+_numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf, size_t max_terms, size_t max_terms_level)
 {
 	if (end < start) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	if (accuracy.empty()) {
-		return Xapian::Query(std::string());
+		return engine::Query::match_all();
 	}
 
 	const auto last_acc_pos = accuracy.size() - 1;
@@ -1133,7 +1133,7 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 
 	// The search has biggger ranges that the biggest range in accuracy.
 	if (!level_terms_size) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	// Generate tree.
@@ -1162,15 +1162,15 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 }
 
 
-Xapian::Query
-GenerateTerms::numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf)
 {
 	return _numeric(start, end, accuracy, acc_prefix, wqf, MAX_TERMS, MAX_TERMS_LEVEL);
 }
 
 
-Xapian::Query
-GenerateTerms::numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+engine::Query
+GenerateTerms::numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf)
 {
 	return _numeric(start, end, accuracy, acc_prefix, wqf, MAX_TERMS, MAX_TERMS_LEVEL);
 }

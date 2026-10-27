@@ -45,6 +45,7 @@
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
 #include "multivalue/geospatialrange.h"       // for GeoSpatialRange
+#include "engine/xapian/callbacks.h"           // for engine::xapian::register_posting_source
 #include "multivalue/range.h"                 // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"              // for Multi_MultiValueKeyMaker
 #include "server/remote_protocol_views.h"    // for RemoteProtocolViews
@@ -117,10 +118,10 @@ RemoteProtocolViews::RemoteProtocolViews(bool cluster_database_)
 		.xapiand_remote_connections
 		.Increment();
 
-	registry.register_posting_source(GeoSpatialRange{});
-	registry.register_posting_source(MultipleValueRange{});
-	registry.register_posting_source(MultipleValueGE{});
-	registry.register_posting_source(MultipleValueLE{});
+	engine::xapian::register_posting_source(registry, GeoSpatialRange{});
+	engine::xapian::register_posting_source(registry, MultipleValueRange{});
+	engine::xapian::register_posting_source(registry, MultipleValueGE{});
+	engine::xapian::register_posting_source(registry, MultipleValueLE{});
 	registry.register_match_spy(AggregationMatchSpy{});
 	registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
 

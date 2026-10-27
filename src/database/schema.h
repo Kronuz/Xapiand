@@ -39,6 +39,7 @@
 #include "analysis.hh"                            // for analysis::stem_strategy, analysis::stop_strategy
 #include "database/utils.h"
 #include "engine/document.h"                       // for engine::Document
+#include "engine/query.h"                          // for engine::Stem
 #include "enum.h"                                 // for ENUM_CLASS
 #include "htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
@@ -269,16 +270,16 @@ inline constexpr analysis::stem_strategy getGeneratorStemStrategy(StemStrategy s
 // }
 
 
-inline constexpr Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) {
+inline constexpr engine::Stem getQueryParserStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::stem_none:
-			return Xapian::QueryParser::STEM_NONE;
+			return engine::Stem::none;
 		case StemStrategy::stem_some:
-			return Xapian::QueryParser::STEM_SOME;
+			return engine::Stem::some;
 		case StemStrategy::stem_all:
-			return Xapian::QueryParser::STEM_ALL;
+			return engine::Stem::all;
 		case StemStrategy::stem_all_z:
-			return Xapian::QueryParser::STEM_ALL_Z;
+			return engine::Stem::all_z;
 		default:
 			THROW(Error, "Schema is corrupt: invalid stem strategy");
 	}

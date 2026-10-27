@@ -240,7 +240,7 @@ public:
 		return _single;
 	}
 
-	size_t size() const noexcept {
+	size_t size() const {
 		return std::distance(begin(), end());
 	}
 

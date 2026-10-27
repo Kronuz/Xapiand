@@ -40,6 +40,7 @@
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
 #include "engine/document.h"                 // for engine::Document
+#include "engine/query.h"                    // for engine::Query
 #include "engine/types.h"                    // for engine::WriteResult
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
@@ -120,10 +121,10 @@ public:
 	void write_schema(const MsgPack& obj);
 
 
-	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
-	std::tuple<Xapian::MSet, MsgPack, Xapian::Query> get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
+	Xapian::RSet get_rset(const engine::Query& query, Xapian::doccount maxitems);
+	std::tuple<Xapian::MSet, MsgPack, engine::Query> get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
 	Xapian::MSet get_mset(
-		const Xapian::Query& query = Xapian::Query(std::string()),
+		const engine::Query& query = engine::Query::match_all(),
 		Xapian::doccount first = 0,
 		Xapian::doccount maxitems = 10,
 		Xapian::doccount check_at_least = 0,

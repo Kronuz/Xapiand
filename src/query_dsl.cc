@@ -31,6 +31,7 @@
 #include "SyntacticException.h"     // for SyntacticException
 #include "cast.h"                                 // for Cast
 #include "database/utils.h"                       // for prefixed
+#include "engine/query.h"                         // for engine::Query
 #include "xapiand_exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
 #include "geospatial/geospatial.h"                // for GeoSpatial
@@ -46,8 +47,6 @@
 #include "reserved/types.h"                       // for RESERVED_POSITIVE,...
 #include "serialise.h"                            // for MsgPack, get_range_type...
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
-#include "snowball_stem.h"                       // for makeStem
-#include "stopper.h"                              // for getStopper
 #include "xapiand_strings.hh"                             // for strings::startswith
 
 #define L_QUERY L_NOTHING
@@ -72,22 +71,16 @@
 
 inline std::string readable_query_parser_flags(int flags) {
 	std::vector<std::string> values;
-	if ((flags & Xapian::QueryParser::FLAG_BOOLEAN) == Xapian::QueryParser::FLAG_BOOLEAN) values.push_back("FLAG_BOOLEAN");
-	if ((flags & Xapian::QueryParser::FLAG_PHRASE) == Xapian::QueryParser::FLAG_PHRASE) values.push_back("FLAG_PHRASE");
-	if ((flags & Xapian::QueryParser::FLAG_LOVEHATE) == Xapian::QueryParser::FLAG_LOVEHATE) values.push_back("FLAG_LOVEHATE");
-	if ((flags & Xapian::QueryParser::FLAG_BOOLEAN_ANY_CASE) == Xapian::QueryParser::FLAG_BOOLEAN_ANY_CASE) values.push_back("FLAG_BOOLEAN_ANY_CASE");
-	if ((flags & Xapian::QueryParser::FLAG_WILDCARD) == Xapian::QueryParser::FLAG_WILDCARD) values.push_back("FLAG_WILDCARD");
-	if ((flags & Xapian::QueryParser::FLAG_PURE_NOT) == Xapian::QueryParser::FLAG_PURE_NOT) values.push_back("FLAG_PURE_NOT");
-	if ((flags & Xapian::QueryParser::FLAG_PARTIAL) == Xapian::QueryParser::FLAG_PARTIAL) values.push_back("FLAG_PARTIAL");
-	if ((flags & Xapian::QueryParser::FLAG_SPELLING_CORRECTION) == Xapian::QueryParser::FLAG_SPELLING_CORRECTION) values.push_back("FLAG_SPELLING_CORRECTION");
-	if ((flags & Xapian::QueryParser::FLAG_SYNONYM) == Xapian::QueryParser::FLAG_SYNONYM) values.push_back("FLAG_SYNONYM");
-	if ((flags & Xapian::QueryParser::FLAG_AUTO_SYNONYMS) == Xapian::QueryParser::FLAG_AUTO_SYNONYMS) values.push_back("FLAG_AUTO_SYNONYMS");
-	if ((flags & Xapian::QueryParser::FLAG_AUTO_MULTIWORD_SYNONYMS) == Xapian::QueryParser::FLAG_AUTO_MULTIWORD_SYNONYMS) values.push_back("FLAG_AUTO_MULTIWORD_SYNONYMS");
-	if ((flags & Xapian::QueryParser::FLAG_CJK_NGRAM) == Xapian::QueryParser::FLAG_CJK_NGRAM) values.push_back("FLAG_CJK_NGRAM");
-	if ((flags & Xapian::QueryParser::FLAG_WORD_BREAKS) == Xapian::QueryParser::FLAG_WORD_BREAKS) values.push_back("FLAG_CJK_WORDS");
-	if ((flags & Xapian::QueryParser::FLAG_WILDCARD_MULTI) == Xapian::QueryParser::FLAG_WILDCARD_MULTI) values.push_back("FLAG_WILDCARD_MULTI");
-	if ((flags & Xapian::QueryParser::FLAG_WILDCARD_SINGLE) == Xapian::QueryParser::FLAG_WILDCARD_SINGLE) values.push_back("FLAG_WILDCARD_SINGLE");
-	if ((flags & Xapian::QueryParser::FLAG_FUZZY) == Xapian::QueryParser::FLAG_FUZZY) values.push_back("FLAG_FUZZY");
+	if ((flags & engine::text::BOOLEAN) == engine::text::BOOLEAN) values.push_back("FLAG_BOOLEAN");
+	if ((flags & engine::text::PHRASE) == engine::text::PHRASE) values.push_back("FLAG_PHRASE");
+	if ((flags & engine::text::LOVEHATE) == engine::text::LOVEHATE) values.push_back("FLAG_LOVEHATE");
+	if ((flags & engine::text::WILDCARD) == engine::text::WILDCARD) values.push_back("FLAG_WILDCARD");
+	if ((flags & engine::text::PARTIAL) == engine::text::PARTIAL) values.push_back("FLAG_PARTIAL");
+	if ((flags & engine::text::CJK_NGRAM) == engine::text::CJK_NGRAM) values.push_back("FLAG_CJK_NGRAM");
+	if ((flags & engine::text::WORD_BREAKS) == engine::text::WORD_BREAKS) values.push_back("FLAG_CJK_WORDS");
+	if ((flags & engine::text::WILDCARD_MULTI) == engine::text::WILDCARD_MULTI) values.push_back("FLAG_WILDCARD_MULTI");
+	if ((flags & engine::text::WILDCARD_SINGLE) == engine::text::WILDCARD_SINGLE) values.push_back("FLAG_WILDCARD_SINGLE");
+	if ((flags & engine::text::FUZZY) == engine::text::FUZZY) values.push_back("FLAG_FUZZY");
 	return strings::join(values, "|");
 }
 
@@ -187,18 +180,18 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 }
 
 
-inline Xapian::Query
-QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags, bool is_leaf)
+inline engine::Query
+QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags, bool is_leaf)
 {
 	L_CALL("QueryDSL::process({}, {}, {}, <default_op>, <wqf>, ({}))", (int)op, repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
-	Xapian::Query final_query;
+	engine::Query final_query;
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::MAP: {
 			if (is_leaf) {
 				auto query = get_value_query(path, obj, default_op, wqf, flags);
-				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+				final_query = engine::Query::append(op, final_query, query);
 				break;
 			}
 
@@ -215,7 +208,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 				L_QUERY(STEEL_BLUE + "{} = {}" + CLEAR_COLOR, repr(name), o.to_string());
 
-				Xapian::Query query;
+				engine::Query query;
 
 				if (is_reserved(name) && name != ID_FIELD_NAME) {
 					constexpr static auto _ = phf::make_phf({
@@ -271,13 +264,13 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						switch (_.fhh(name)) {
 							// Compound query operators
 							case _.fhh(RESERVED_QUERYDSL_AND):
-								query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::AND, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_OR):
-								query = process(Xapian::Query::OP_OR, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_NOT):
-								query = process(Xapian::Query::OP_AND_NOT, path, {
+								query = process(engine::Op::AND_NOT, path, {
 									{
 										{ RESERVED_QUERYDSL_MATCH_ALL, {} },
 									},
@@ -285,29 +278,29 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								}, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
-								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::AND_NOT, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_XOR):
-								query = process(Xapian::Query::OP_XOR, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::XOR, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
-								query = process(Xapian::Query::OP_AND_MAYBE, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::AND_MAYBE, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_FILTER):
-								query = process(Xapian::Query::OP_FILTER, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::FILTER, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
-								// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
-								query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags, is_leaf);
+								// engine::Query(OP_SCALE_WEIGHT, subquery, factor)
+								query = process(engine::Op::SCALE_WEIGHT, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-								query = process(Xapian::Query::OP_ELITE_SET, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::ELITE_SET, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
-								query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::WILDCARD, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_EDIT_DISTANCE):
-								query = process(Xapian::Query::OP_EDIT_DISTANCE, path, o, default_op, wqf, flags, is_leaf);
+								query = process(engine::Op::EDIT_DISTANCE, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							default:
 								THROW(QueryDslError, "Invalid operator: {}", name);
@@ -316,42 +309,42 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						switch (_.fhh(name)) {
 							// Query modifiers
 							case _.fhh(RESERVED_QUERYDSL_AND):
-								query = process(Xapian::Query::OP_AND, path, o, Xapian::Query::OP_AND, wqf, flags, true);
+								query = process(engine::Op::AND, path, o, engine::Op::AND, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_OR):
-								query = process(Xapian::Query::OP_OR, path, o, Xapian::Query::OP_OR, wqf, flags, true);
+								query = process(engine::Op::OR, path, o, engine::Op::OR, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_NEAR):
-								query = process(Xapian::Query::OP_NEAR, path, o, Xapian::Query::OP_NEAR, wqf, flags, true);
+								query = process(engine::Op::NEAR, path, o, engine::Op::NEAR, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_PHRASE):
-								query = process(Xapian::Query::OP_PHRASE, path, o, Xapian::Query::OP_PHRASE, wqf, flags, true);
+								query = process(engine::Op::PHRASE, path, o, engine::Op::PHRASE, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-								query = process(Xapian::Query::OP_ELITE_SET, path, o, Xapian::Query::OP_ELITE_SET, wqf, flags, true);
+								query = process(engine::Op::ELITE_SET, path, o, engine::Op::ELITE_SET, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_SYNONYM):
-								query = process(Xapian::Query::OP_SYNONYM, path, o, Xapian::Query::OP_SYNONYM, wqf, flags, true);
+								query = process(engine::Op::SYNONYM, path, o, engine::Op::SYNONYM, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_MAX):
-								query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags, true);
+								query = process(engine::Op::MAX, path, o, engine::Op::MAX, wqf, flags, true);
 								break;
 							// Special queries.
 							case _.fhh(RESERVED_QUERYDSL_MATCH_ALL):
-								query = Xapian::Query(std::string());
+								query = engine::Query::match_all();
 								break;
 							case _.fhh(RESERVED_QUERYDSL_MATCH_NONE):
-								query = Xapian::Query();
+								query = engine::Query();
 								break;
 							// Leaf query clauses.
 							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
-								query = process(op, path, o, default_op, wqf, flags | Xapian::QueryParser::FLAG_WILDCARD, true);
+								query = process(op, path, o, default_op, wqf, flags | engine::text::WILDCARD, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_PARTIAL):
-								query = process(op, path, o, default_op, wqf, flags | Xapian::QueryParser::FLAG_PARTIAL, true);
+								query = process(op, path, o, default_op, wqf, flags | engine::text::PARTIAL, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_FUZZY):
-								query = process(op, path, o, default_op, wqf, flags | Xapian::QueryParser::FLAG_FUZZY, true);
+								query = process(op, path, o, default_op, wqf, flags | engine::text::FUZZY, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_IN):
 								query = get_in_query(path, o, default_op, wqf, flags);
@@ -398,7 +391,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						query = process(op, n_parent, o, default_op, wqf, flags, is_leaf);
 					}
 				}
-				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+				final_query = engine::Query::append(op, final_query, query);
 			}
 			break;
 		}
@@ -408,27 +401,17 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 				THROW(QueryDslError, "Unexpected array");
 			}
 
-			// Xapian 2.0.0's Query(op, begin, end) constructor requires
-			// the iterators to expose std::iterator_traits (value_type,
-			// iterator_category), which our lazy itertools iterators
-			// don't.  Materialise into a vector<Query> first.
-			std::vector<Xapian::Query> processed;
+			std::vector<engine::Query> processed;
 			for (auto it = obj.begin(); it != obj.end(); ++it) {
 				processed.push_back(process(op, path, *it, default_op, wqf, flags, is_leaf));
 			}
-
-			if (final_query.empty()) {
-				final_query = Xapian::Query(op, processed.begin(), processed.end());
-			} else {
-				processed.insert(processed.begin(), final_query);
-				final_query = Xapian::Query(op, processed.begin(), processed.end());
-			}
+			final_query = engine::Query::combine(op, std::move(processed));
 			break;
 		}
 
 		default: {
 			auto query = get_value_query(path, obj, default_op, wqf, flags);
-			final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+			final_query = engine::Query::append(op, final_query, query);
 			break;
 		}
 	}
@@ -437,8 +420,8 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 }
 
 
-inline Xapian::Query
-QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_in_query({}, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -461,8 +444,8 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query:
 }
 
 
-inline Xapian::Query
-QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_value_query({}, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -493,8 +476,8 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Que
 }
 
 
-inline Xapian::Query
-QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op /*default_op*/, Xapian::termcount wqf, [[maybe_unused]] unsigned flags)
+inline engine::Query
+QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_acc_date_query(<required_spc_t>, {}, {}, <wqf>, ({}))", repr(field_accuracy), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -503,39 +486,39 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 		default:
 		case UnitTime::second: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::minute: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::hour: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::day: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::month: {
 			Datetime::tm_t _tm(tm.year, tm.mon);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::year: {
 			Datetime::tm_t _tm(tm.year);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::decade: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::century: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::millennium: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::INVALID:
 			THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
@@ -543,8 +526,8 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 }
 
 
-inline Xapian::Query
-QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op /*default_op*/, Xapian::termcount wqf, [[maybe_unused]] unsigned flags)
+inline engine::Query
+QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_acc_time_query(<required_spc_t>, {}, {}, <wqf>, ({}))", repr(field_accuracy), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -554,12 +537,12 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view f
 	}
 
 	int64_t value = Datetime::time_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
+	return engine::Query::term(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
 }
 
 
-inline Xapian::Query
-QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op /*default_op*/, Xapian::termcount wqf, [[maybe_unused]] unsigned flags)
+inline engine::Query
+QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_acc_timedelta_query(<required_spc_t>, {}, {}, <wqf>, ({}))", repr(field_accuracy), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -569,12 +552,12 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_v
 	}
 
 	int64_t value = Datetime::timedelta_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
+	return engine::Query::term(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
 }
 
 
-inline Xapian::Query
-QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op /*default_op*/, Xapian::termcount wqf, [[maybe_unused]] unsigned flags)
+inline engine::Query
+QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_acc_num_query(<required_spc_t>, {}, {}, <wqf>, ({}))", repr(field_accuracy), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -584,12 +567,12 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 	auto value = Cast::integer(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
+	return engine::Query::term(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
 }
 
 
-inline Xapian::Query
-QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op /*default_op*/, Xapian::termcount wqf, [[maybe_unused]] unsigned flags)
+inline engine::Query
+QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_acc_geo_query(<required_spc_t>, {}, {}, <wqf>, ({}))", repr(field_accuracy), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -608,8 +591,8 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 }
 
 
-inline Xapian::Query
-QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, {}, {}, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
@@ -631,21 +614,21 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 }
 
 
-inline Xapian::Query
-QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_global_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
-			return Xapian::Query(field_spc.prefix());
+			return engine::Query::term(field_spc.prefix());
 		case MsgPack::Type::STR: {
 			auto val = obj.str_view();
 			if (val.empty()) {
-				return Xapian::Query(field_spc.prefix());
+				return engine::Query::term(field_spc.prefix());
 			}
 			if (val == "*") {
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix());
+				return engine::Query::wildcard(field_spc.prefix());
 			}
 			break;
 		}
@@ -666,20 +649,20 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 }
 
 
-inline Xapian::Query
-QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_regular_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
-			return Xapian::Query(field_spc.prefix());
+			return engine::Query::term(field_spc.prefix());
 		case MsgPack::Type::STR: {
 			auto val = obj.str_view();
 			if (val.empty()) {
-				return Xapian::Query(field_spc.prefix());
+				return engine::Query::term(field_spc.prefix());
 			} if (val == "*") {
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix());
+				return engine::Query::wildcard(field_spc.prefix());
 			}
 			break;
 		}
@@ -692,8 +675,8 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 }
 
 
-inline Xapian::Query
-QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_term_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(serialised_term), readable_query_parser_flags(flags));
 
@@ -712,90 +695,70 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				serialised_term.remove_suffix(1);
 				if (strings::endswith(serialised_term, '*')) {
 					serialised_term.remove_suffix(1);
-					flags |= Xapian::QueryParser::FLAG_PARTIAL;
+					flags |= engine::text::PARTIAL;
 				} else {
-					flags |= Xapian::QueryParser::FLAG_WILDCARD;
+					flags |= engine::text::WILDCARD;
 				}
 			} else if (strings::endswith(serialised_term, '~')) {
 				serialised_term.remove_suffix(1);
-				flags |= Xapian::QueryParser::FLAG_FUZZY;
+				flags |= engine::text::FUZZY;
 			} else if (serialised_term[serialised_term.size() - 2] == '~') {
 				int errno_save = 0;
 				fuzzy_edit_distance = strict_stou(&errno_save, serialised_term.substr(serialised_term.size() - 1));
 				if (errno_save != 0) {
 					fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
 				} else {
-					flags |= Xapian::QueryParser::FLAG_FUZZY;
+					flags |= engine::text::FUZZY;
 					serialised_term.remove_suffix(2);
 				}
 			}
 
-			if (flags & Xapian::QueryParser::FLAG_PARTIAL) {
+			if (flags & engine::text::PARTIAL) {
 				auto partial_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
-				Xapian::termcount partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
-				int partial_flags = Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT;
-				return Xapian::Query(Xapian::Query::OP_OR,
-					Xapian::Query(Xapian::Query::OP_WILDCARD,
-						partial_term,
-						partial_max_expansion,
-						partial_flags,
-						Xapian::Query::OP_SYNONYM),
-					Xapian::Query(partial_term, 1, 1));
+				return engine::Query::combine(engine::Op::OR,
+					engine::Query::wildcard(partial_term, DEFAULT_PARTIAL_MAX_EXPANSION, engine::Expansion::most_frequent, 0, engine::Op::SYNONYM),
+					engine::Query::term(partial_term, 1, 1));
 			}
 
-			if (flags & Xapian::QueryParser::FLAG_WILDCARD) {
+			if (flags & engine::text::WILDCARD) {
 				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
-				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
-				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
+				unsigned pattern_flags = 0;
 				auto pos = serialised_term.find_first_of("?*");
 				if (pos != std::string::npos && pos != serialised_term.size() - 1) {
-					wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_SINGLE;
-					wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_MULTI;
+					pattern_flags = engine::PATTERN_SINGLE | engine::PATTERN_MULTI;
 				}
-				return Xapian::Query(Xapian::Query::OP_WILDCARD,
-					wildcard_term,
-					wildcard_max_expansion,
-					wildcard_flags,
-					Xapian::Query::OP_SYNONYM);
+				return engine::Query::wildcard(wildcard_term, DEFAULT_WILDCARD_MAX_EXPANSION, engine::Expansion::error, pattern_flags, engine::Op::SYNONYM);
 			}
 
-			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
+			if (flags & engine::text::FUZZY) {
 				auto fuzzy_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
-				Xapian::termcount fuzzy_max_expansion = DEFAULT_FUZZY_MAX_EXPANSION;
-				int fuzzy_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
 				size_t fuzzy_prefix_length = 0;
-				return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
-					fuzzy_term,
-					fuzzy_max_expansion,
-					fuzzy_flags,
-					Xapian::Query::OP_SYNONYM,
-					fuzzy_edit_distance,
-					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
+				return engine::Query::edit_distance(fuzzy_term, DEFAULT_FUZZY_MAX_EXPANSION, engine::Expansion::error, engine::Op::SYNONYM, fuzzy_edit_distance, field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 
-			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
+			return engine::Query::term(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 		}
 
 		case FieldType::text: {
 			// Cleanup for wildcard, partial and fuzzy
 			if (strings::endswith(serialised_term, "**")) {
 				serialised_term.remove_suffix(2);
-				flags |= Xapian::QueryParser::FLAG_PARTIAL;
+				flags |= engine::text::PARTIAL;
 			} else if (strings::endswith(serialised_term, '*')) {
 				auto sz = serialised_term.size();
 				if (sz >= 2) {
 					unsigned char cc = serialised_term[sz - 2];
 					if ((cc >= 128) || (cc >= '0' && cc <= '9') || (cc >= 'A' && cc <= 'Z') || (cc >= 'a' && cc <= 'z')) {
-						flags |= Xapian::QueryParser::FLAG_WILDCARD;
+						flags |= engine::text::WILDCARD;
 					} else {
 						serialised_term.remove_suffix(1);
 					}
 				} else {
-					flags |= Xapian::QueryParser::FLAG_WILDCARD;
+					flags |= engine::text::WILDCARD;
 				}
 			}
 
-			if (flags & Xapian::QueryParser::FLAG_WILDCARD) {
+			if (flags & engine::text::WILDCARD) {
 				auto pos = serialised_term.find_first_of("?*");
 				if (pos == std::string::npos) {
 					auto sz = serialised_term.size();
@@ -810,12 +773,12 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 						serialised_term = serialised_term_holder;
 					}
 				} else if (pos != serialised_term.size() - 1) {
-					flags |= Xapian::QueryParser::FLAG_WILDCARD_SINGLE;
-					flags |= Xapian::QueryParser::FLAG_WILDCARD_MULTI;
+					flags |= engine::text::WILDCARD_SINGLE;
+					flags |= engine::text::WILDCARD_MULTI;
 				}
 			}
 
-			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
+			if (flags & engine::text::FUZZY) {
 				std::vector<std::string> new_words;
 				for (const auto& word : Split<std::string_view>(serialised_term, ' ')) {
 					if (serialised_term.find_first_of("~") == std::string::npos) {
@@ -829,83 +792,83 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			}
 
 			// There cannot be non-keyword fields with bool_term
-			Xapian::QueryParser parser;
+			engine::TextConfig config;
+			config.prefix = field_spc.prefix() + field_spc.get_ctype();
 			switch (default_op) {
-				case Xapian::Query::OP_NEAR:
-				case Xapian::Query::OP_PHRASE:
-				case Xapian::Query::OP_ELITE_SET:
-				case Xapian::Query::OP_SYNONYM:
-				case Xapian::Query::OP_MAX:
-					parser.set_default_op(default_op);
+				case engine::Op::NEAR:
+				case engine::Op::PHRASE:
+				case engine::Op::ELITE_SET:
+				case engine::Op::SYNONYM:
+				case engine::Op::MAX:
+					config.default_op = default_op;
 					break;
-				case Xapian::Query::OP_AND:
-				case Xapian::Query::OP_OR:
-					parser.set_default_op(default_op);
-					flags |= Xapian::QueryParser::FLAG_BOOLEAN;
+				case engine::Op::AND:
+				case engine::Op::OR:
+					config.default_op = default_op;
+					flags |= engine::text::BOOLEAN;
 					[[fallthrough]];
-				case Xapian::Query::OP_AND_NOT:
-				case Xapian::Query::OP_XOR:
-				case Xapian::Query::OP_AND_MAYBE:
-				case Xapian::Query::OP_FILTER:
-				case Xapian::Query::OP_SCALE_WEIGHT:
-				case Xapian::Query::OP_WILDCARD:
-				case Xapian::Query::OP_EDIT_DISTANCE:
+				case engine::Op::AND_NOT:
+				case engine::Op::XOR:
+				case engine::Op::AND_MAYBE:
+				case engine::Op::FILTER:
+				case engine::Op::SCALE_WEIGHT:
+				case engine::Op::WILDCARD:
+				case engine::Op::EDIT_DISTANCE:
 				default:
 					if (!field_spc.language.empty()) {
-						parser.set_stopper(getStopper(field_spc.language).get());
-						// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
+						config.stop_language = field_spc.language;
 					}
 					if (!field_spc.stem_language.empty()) {
-						parser.set_stemmer(makeStem(field_spc.stem_language));
-						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
+						config.stem_language = field_spc.stem_language;
+						config.stem = getQueryParserStemStrategy(field_spc.stem_strategy);
 					}
 			}
 			if (field_spc.flags.cjk_ngram) {
-				flags |= Xapian::QueryParser::FLAG_CJK_NGRAM;
+				flags |= engine::text::CJK_NGRAM;
 			}
 #ifdef USE_ICU
 			if (field_spc.flags.cjk_words) {
-				flags |= Xapian::QueryParser::FLAG_WORD_BREAKS;
+				flags |= engine::text::WORD_BREAKS;
 			}
 #endif
-			flags |= Xapian::QueryParser::FLAG_PHRASE;
-			flags |= Xapian::QueryParser::FLAG_LOVEHATE;
-			flags |= Xapian::QueryParser::FLAG_FUZZY;
+			flags |= engine::text::PHRASE;
+			flags |= engine::text::LOVEHATE;
+			flags |= engine::text::FUZZY;
+			config.flags = flags;
+			config.partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
+			config.fuzzy_max_expansion = DEFAULT_FUZZY_MAX_EXPANSION;
 
-			parser.set_max_expansion(DEFAULT_PARTIAL_MAX_EXPANSION, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::QueryParser::FLAG_PARTIAL);
-			parser.set_max_expansion(DEFAULT_FUZZY_MAX_EXPANSION, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::QueryParser::FLAG_FUZZY);
-
-			return parser.parse_query(std::string(serialised_term), flags, field_spc.prefix() + field_spc.get_ctype());
+			return engine::Query::text(std::string(serialised_term), std::move(config));
 		}
 
 		default:
-			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
+			return engine::Query::term(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 	}
 }
 
 
-inline Xapian::Query
-QueryDSL::get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_global_in_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (obj.is_string()) {
 		auto parsed = parse_guess_range(field_spc, obj.str_view());
 		if (parsed.first == FieldType::empty) {
-			return Xapian::Query(std::string());
+			return engine::Query::match_all();
 		}
 		return get_in_query(Schema::get_prefixed_global(parsed.first, field_spc.prefix()), parsed.second, default_op, wqf, flags);
 	}
 	auto field_type = get_in_type(obj);
 	if (field_type == FieldType::empty) {
-		return Xapian::Query(std::string());
+		return engine::Query::match_all();
 	}
 	return get_in_query(Schema::get_prefixed_global(field_type, field_spc.prefix()), obj, default_op, wqf, flags);
 }
 
 
-inline Xapian::Query
-QueryDSL::get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+inline engine::Query
+QueryDSL::get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_regular_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -916,8 +879,8 @@ QueryDSL::get_regular_in_query(const required_spc_t& field_spc, const MsgPack& o
 }
 
 
-inline Xapian::Query
-QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op /*default_op*/, Xapian::termcount /*wqf*/, [[maybe_unused]] unsigned flags)
+inline engine::Query
+QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount /*wqf*/, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_in_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -1266,17 +1229,17 @@ QueryDSL::create_2exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::str
 }
 
 
-Xapian::Query
+engine::Query
 QueryDSL::get_query(const MsgPack& obj)
 {
 	L_CALL("QueryDSL::get_query({})", repr(obj.to_string()));
 
-	Xapian::Query query;
+	engine::Query query;
 
 	if (obj.is_string() && obj.str_view() == "*") {
-		query = Xapian::Query(std::string());
+		query = engine::Query::match_all();
 	} else {
-		query = process(Xapian::Query::OP_AND, "", obj, Xapian::Query::OP_INVALID, 1, 0, false);
+		query = process(engine::Op::AND, "", obj, engine::Op::INVALID, 1, 0, false);
 	}
 
 	L_QUERY("query = " + STEEL_BLUE + "{}" + CLEAR_COLOR + "\n" + DIM_GREY + "{}" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
