@@ -49,33 +49,66 @@ static_assert(engine::DB_ACTION_MASK == Xapian::DB_ACTION_MASK_);
 
 namespace engine::xapian {
 
-Xapian::Document
-to_xapian(const Document& doc)
+void
+XapianDocument::add_term(std::string_view term, termcount wdf_inc)
 {
-	Xapian::Document result;
-	for (const auto& [name, term] : doc.terms()) {
-		if (term.positions.empty()) {
-			if (term.wdf == 0) {
-				result.add_boolean_term(name);
-			} else {
-				result.add_term(name, term.wdf);
-			}
-			continue;
-		}
-		auto wdf = term.wdf;  // the first position carries the frequency
-		for (auto position : term.positions) {
-			result.add_posting(name, position, wdf);
-			wdf = 0;
-		}
-	}
-	for (const auto& [slot, value] : doc.values()) {
-		result.add_value(slot, value);
-	}
-	auto data = doc.get_data();
-	if (!data.empty()) {
-		result.set_data(std::move(data));
-	}
-	return result;
+	doc_.add_term(term, wdf_inc);
+}
+
+
+void
+XapianDocument::add_boolean_term(std::string_view term)
+{
+	doc_.add_boolean_term(term);
+}
+
+
+void
+XapianDocument::add_posting(std::string_view term, termpos position, termcount wdf_inc)
+{
+	doc_.add_posting(term, position, wdf_inc);
+}
+
+
+void
+XapianDocument::add_value(valueno slot, std::string value)
+{
+	doc_.add_value(slot, value);  // an empty value clears the slot
+}
+
+
+std::string
+XapianDocument::get_value(valueno slot) const
+{
+	return doc_.get_value(slot);
+}
+
+
+void
+XapianDocument::set_data(std::string data)
+{
+	doc_.set_data(std::move(data));
+}
+
+
+std::string
+XapianDocument::get_data() const
+{
+	return doc_.get_data();
+}
+
+
+std::string
+XapianDocument::serialise() const
+{
+	return doc_.serialise();
+}
+
+
+const Xapian::Document&
+xapian_document(const Document& doc)
+{
+	return static_cast<const XapianDocument&>(doc.native()).xapian();
 }
 
 
@@ -333,14 +366,10 @@ live_views() noexcept
 }  // namespace engine::xapian
 
 
+engine::Document::Document() : native_(std::make_unique<xapian::XapianDocument>()) { }
+
+
 // The stored form of an engine document is Xapian's own, which keeps old write-ahead log lines readable.
-std::string
-engine::Document::serialise() const
-{
-	return xapian::to_xapian(*this).serialise();
-}
-
-
 engine::Document
 engine::Document::unserialise(std::string_view serialised)
 {

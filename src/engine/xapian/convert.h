@@ -25,6 +25,7 @@
 #include <cstddef>                // for std::size_t
 #include <string>                  // for std::string
 #include <memory>                  // for std::unique_ptr
+#include <utility>                 // for std::move
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/document.h"       // for Document
@@ -36,10 +37,30 @@
 // The Xapian implementation of the engine seam. Everything that names Xapian lives here.
 namespace engine::xapian {
 
-// A Xapian document with the same terms, positions, values and data.
-Xapian::Document to_xapian(const Document& doc);
+// The document of the Xapian implementation: a Xapian document, built in place.
+class XapianDocument final : public Document::Native {
+public:
+	explicit XapianDocument(Xapian::Document doc = {}) : doc_(std::move(doc)) { }
 
-// The engine document with the same terms, positions, values and data.
+	void add_term(std::string_view term, termcount wdf_inc) override;
+	void add_boolean_term(std::string_view term) override;
+	void add_posting(std::string_view term, termpos position, termcount wdf_inc) override;
+	void add_value(valueno slot, std::string value) override;
+	std::string get_value(valueno slot) const override;
+	void set_data(std::string data) override;
+	std::string get_data() const override;
+	std::string serialise() const override;
+
+	const Xapian::Document& xapian() const noexcept { return doc_; }
+
+private:
+	Xapian::Document doc_;
+};
+
+// The Xapian document inside an engine document of this implementation.
+const Xapian::Document& xapian_document(const Document& doc);
+
+// An engine document with a copy of the terms, positions, values and data.
 Document from_xapian(const Xapian::Document& doc);
 
 WriteResult from_xapian(const Xapian::DocumentInfo& info);

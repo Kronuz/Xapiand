@@ -22,8 +22,7 @@
 
 #pragma once
 
-#include <map>                     // for std::map
-#include <set>                     // for std::set
+#include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
 #include <utility>                 // for std::move
@@ -33,72 +32,79 @@
 
 namespace engine {
 
-// A document under construction: its terms, values and stored data, owned by the caller and
-// independent of any engine. Each add_* call has the semantics of the Xapian call it replaces,
-// so building one is the same as building that engine's document.
+// A document under construction: its terms, values and stored data, owned by the caller. Each
+// add_* call has the semantics of the Xapian call it replaces, so building one is the same as
+// building that engine's document.
+//
+// The document is built straight into the engine's own representation (a Xapian document for the
+// Xapian engine), so a shard writes it without converting it and nothing is built twice. The
+// representation is opaque here; the engine that made it is the only one that reads it back.
 class Document {
 public:
-	struct Term {
-		termcount wdf = 0;
-		std::set<termpos> positions;
+	// The engine's side of a document: the calls below, over its own storage. The engine defines it.
+	class Native {
+	public:
+		virtual ~Native() = default;
+
+		virtual void add_term(std::string_view term, termcount wdf_inc) = 0;
+		virtual void add_boolean_term(std::string_view term) = 0;
+		virtual void add_posting(std::string_view term, termpos position, termcount wdf_inc) = 0;
+		virtual void add_value(valueno slot, std::string value) = 0;
+		virtual std::string get_value(valueno slot) const = 0;
+		virtual void set_data(std::string data) = 0;
+		virtual std::string get_data() const = 0;
+		virtual std::string serialise() const = 0;
 	};
 
+	// An empty document of the engine. Defined by the engine.
+	Document();
+	explicit Document(std::unique_ptr<Native> native) : native_(std::move(native)) { }
+
 	// Adds wdf_inc to the term's within-document frequency, creating the term if needed.
-	void add_term(std::string term, termcount wdf_inc = 1) {
-		terms_[std::move(term)].wdf += wdf_inc;
+	void add_term(std::string_view term, termcount wdf_inc = 1) {
+		native_->add_term(term, wdf_inc);
 	}
 
 	// Makes sure the term exists, without changing its frequency.
-	void add_boolean_term(std::string term) {
-		terms_[std::move(term)];
+	void add_boolean_term(std::string_view term) {
+		native_->add_boolean_term(term);
 	}
 
 	// Adds a position to the term, and wdf_inc to its frequency.
-	void add_posting(std::string term, termpos position, termcount wdf_inc = 1) {
-		auto& entry = terms_[std::move(term)];
-		entry.positions.insert(position);
-		entry.wdf += wdf_inc;
+	void add_posting(std::string_view term, termpos position, termcount wdf_inc = 1) {
+		native_->add_posting(term, position, wdf_inc);
 	}
 
 	// Sets the value of a slot; an empty value removes it.
 	void add_value(valueno slot, std::string value) {
-		if (value.empty()) {
-			values_.erase(slot);
-		} else {
-			values_[slot] = std::move(value);
-		}
+		native_->add_value(slot, std::move(value));
 	}
 
 	// The value of a slot, empty when unset.
 	std::string get_value(valueno slot) const {
-		auto it = values_.find(slot);
-		return it == values_.end() ? std::string() : it->second;
+		return native_->get_value(slot);
 	}
 
 	void set_data(std::string data) {
-		data_ = std::move(data);
+		native_->set_data(std::move(data));
 	}
 
 	std::string get_data() const {
-		return data_;
+		return native_->get_data();
 	}
 
-	const std::map<std::string, Term>& terms() const noexcept {
-		return terms_;
-	}
-
-	const std::map<valueno, std::string>& values() const noexcept {
-		return values_;
-	}
+	// The engine's own form of the document, for the engine that made it.
+	Native& native() noexcept { return *native_; }
+	const Native& native() const noexcept { return *native_; }
 
 	// The stored form of a document, as the write-ahead log keeps it. Defined by the engine.
-	std::string serialise() const;
+	std::string serialise() const {
+		return native_->serialise();
+	}
 	static Document unserialise(std::string_view serialised);
 
 private:
-	std::map<std::string, Term> terms_;
-	std::map<valueno, std::string> values_;
-	std::string data_;
+	std::unique_ptr<Native> native_;
 };
 
 }  // namespace engine

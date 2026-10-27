@@ -91,11 +91,13 @@ index_text_word_breaks(engine::Document& doc,
 	} else {
 		term_generator.index_text_without_positions(value, weight, prefix);
 	}
-	const auto generated = engine::xapian::from_xapian(xdoc);
-	for (const auto& [name, term] : generated.terms()) {
-		doc.add_term(name, term.wdf);
-		for (auto position : term.positions) {
-			doc.add_posting(name, position, 0);
+	const auto terms_end = xdoc.termlist_end();
+	for (auto it = xdoc.termlist_begin(); it != terms_end; ++it) {
+		const auto name = *it;
+		doc.add_term(name, it.get_wdf());
+		const auto positions_end = it.positionlist_end();
+		for (auto pit = it.positionlist_begin(); pit != positions_end; ++pit) {
+			doc.add_posting(name, *pit, 0);
 		}
 	}
 }

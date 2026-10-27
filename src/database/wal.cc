@@ -1054,7 +1054,7 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_length(did);
-	line.append(doc.serialise());
+	line.append(doc->serialise());
 	L_DATABASE("write_replace_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
