@@ -40,7 +40,7 @@
 #include "threadpool.hh"        // for TaskQueue
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
-#include "xapian.h"             // for Xapian::rev
+#include "engine/types.h"                  // for engine::rev, docid
 
 
 using namespace std::chrono_literals;
@@ -81,8 +81,8 @@ class ShardEndpoint : public Endpoint
 
 	std::atomic_bool locked;
 	mutable std::mutex revisions_mtx;
-	std::unordered_map<std::string, Xapian::rev> revisions;
-	std::atomic<Xapian::rev> pending_revision;
+	std::unordered_map<std::string, engine::rev> revisions;
+	std::atomic<engine::rev> pending_revision;
 	std::chrono::steady_clock::time_point renew_time;
 
 	std::shared_ptr<Shard> writable;
@@ -117,10 +117,10 @@ public:
 
 	std::pair<size_t, size_t> count();
 
-	Xapian::rev get_revision(const std::string& lower_name) const;
-	Xapian::rev get_revision() const;
-	void set_revision(const std::string& lower_name, Xapian::rev revision);
-	void set_revision(Xapian::rev revision);
+	engine::rev get_revision(const std::string& lower_name) const;
+	engine::rev get_revision() const;
+	void set_revision(const std::string& lower_name, engine::rev revision);
+	void set_revision(engine::rev revision);
 
 	bool is_locked() const {
 		return locked.load(std::memory_order_relaxed);

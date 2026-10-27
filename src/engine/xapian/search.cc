@@ -206,7 +206,11 @@ namespace engine {
 std::unique_ptr<PreparedQuery>
 prepare(const Query& query)
 {
-	return std::make_unique<xapian::Prepared>(xapian::to_xapian(query));
+	try {
+		return std::make_unique<xapian::Prepared>(xapian::to_xapian(query));
+	} catch (...) {
+		xapian::rethrow_translated();
+	}
 }
 
 

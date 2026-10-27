@@ -32,14 +32,14 @@
 #include "lru.h"                              // for lru::lru
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "node.h"                             // for Node
-#include "xapian.h"                           // for Xapian::rev
+#include "engine/types.h"                  // for engine::rev, docid
 
 
 struct IndexSettings;
 
 
 struct IndexSettingsShard {
-	Xapian::rev version;
+	engine::rev version;
 	bool modified;
 
 	std::vector<std::string> nodes;
@@ -49,7 +49,7 @@ struct IndexSettingsShard {
 
 
 struct IndexSettings {
-	Xapian::rev version;
+	engine::rev version;
 	bool loaded;
 	bool saved;
 	bool modified;
@@ -62,7 +62,7 @@ struct IndexSettings {
 
 	IndexSettings();
 
-	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
+	IndexSettings(engine::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
 
 	std::string __repr__() const;
 };

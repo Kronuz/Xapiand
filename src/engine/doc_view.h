@@ -48,7 +48,8 @@ struct TermDetail {
 };
 using TermDetailSink = std::function<void(const TermDetail&)>;
 
-// A stored document read lazily from a shard: the engine fetches only what is asked for.
+// A stored document read lazily from a shard: the engine fetches only what is asked for, so any
+// method can hit the shard (stale snapshot, remote failure). Each throws engine::Error only.
 class DocView {
 public:
 	virtual ~DocView() = default;

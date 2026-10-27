@@ -717,8 +717,9 @@ XapiandManager::init()
 						Node::touch_node(node, false);
 					}
 				}
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {}
+			} catch (const engine::Error& error) {
+				if (!engine::is_missing(error.kind)) { throw; }
+			}
 		}
 	} else
 #endif
@@ -856,16 +857,18 @@ XapiandManager::setup_node_async_cb()
 						found = true;
 					}
 				}
-			} catch (const Xapian::DatabaseNotAvailableError&) {
-				if (t == 0) {
-					if (!primary_node->is_active()) {
-						L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
+			} catch (const engine::Error& error) {
+				if (error.kind == engine::errc::not_available) {
+					if (t == 0) {
+						if (!primary_node->is_active()) {
+							L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
+						}
+						throw;
 					}
-					throw;
+					continue;
 				}
-				continue;
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) { }
+				if (!engine::is_missing(error.kind)) { throw; }
+			}
 
 			if (!found) {
 				try {
@@ -890,18 +893,18 @@ XapiandManager::setup_node_async_cb()
 							L_INFO("Cluster database doesn't exist. Generating database...");
 						} else {
 							if (!primary_node || primary_node->empty()) {
-								throw Xapian::NetworkError("Endpoint node is invalid");
+								throw engine::Error(engine::errc::network, "Endpoint node is invalid");
 							}
 							if (!primary_node->is_active()) {
-								throw Xapian::NetworkError("Endpoint node is inactive");
+								throw engine::Error(engine::errc::network, "Endpoint node is inactive");
 							}
 							auto port = primary_node->remote_port;
 							if (port == 0) {
-								throw Xapian::NetworkError("Endpoint node without a valid port");
+								throw engine::Error(engine::errc::network, "Endpoint node without a valid port");
 							}
 							auto& host = primary_node->host();
 							if (host.empty()) {
-								throw Xapian::NetworkError("Endpoint node without a valid host");
+								throw engine::Error(engine::errc::network, "Endpoint node without a valid host");
 							}
 						}
 					}

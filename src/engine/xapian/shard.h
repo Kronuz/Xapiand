@@ -34,7 +34,7 @@
 namespace engine::xapian {
 
 // The Xapian implementation of the engine shard, over a Xapian database it owns.
-class Shard final : public engine::Shard {
+class Shard : public engine::Shard {
 public:
 	// Each call hops onto `on` before calling Xapian; empty (the default) runs it on the thread
 	// that awaits it. A caller that sync_waits must not be one of on's threads.

@@ -47,7 +47,7 @@
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
-#include "xapian.h"                          // for Document, docid
+#include "engine/types.h"                  // for engine::rev, docid
 
 
 class Data;
@@ -64,7 +64,7 @@ struct query_field_t;
 struct similar_field_t;
 
 
-Xapian::docid to_docid(std::string_view document_id);
+engine::docid to_docid(std::string_view document_id);
 
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
@@ -87,9 +87,9 @@ class DatabaseHandler {
 
 	std::unique_ptr<MsgPack> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
 
-	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
+	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
-	DocumentInfo index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+	DocumentInfo index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
 	engine::Similar get_similar(const similar_field_t& similar);
 
@@ -111,7 +111,7 @@ class DatabaseHandler {
 
 	bool update_schema();
 
-	MsgPack _dump_document(Xapian::docid did, const Data& data);
+	MsgPack _dump_document(engine::docid did, const Data& data);
 
 public:
 	DatabaseHandler();
@@ -122,16 +122,16 @@ public:
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
 #if XAPIAND_DATABASE_WAL
-	MsgPack repr_wal(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
+	MsgPack repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised);
 #endif
 
 	MsgPack check();
 
-	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
+	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
-	DocumentInfo index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
-	DocumentInfo patch(const MsgPack& document_id, Xapian::rev document_ver, bool create, const MsgPack& patches, bool commit);
-	DocumentInfo update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DocumentInfo index(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DocumentInfo patch(const MsgPack& document_id, engine::rev document_ver, bool create, const MsgPack& patches, bool commit);
+	DocumentInfo update(const MsgPack& document_id, engine::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void update_schema(const MsgPack& obj);
 	void write_schema(const MsgPack& obj);
@@ -153,7 +153,7 @@ public:
 		const similar_field_t* fuzzy = nullptr,
 		const similar_field_t* nearest = nullptr);
 
-	MsgPack dump_document(Xapian::docid did);
+	MsgPack dump_document(engine::docid did);
 	MsgPack dump_document(std::string_view document_id);
 	MsgPack dump_documents();
 	std::string dump_documents(int fd);
@@ -169,18 +169,18 @@ public:
 	void set_metadata(const std::string& key, const std::string& value, bool commit = false, bool wal = true);
 	void set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
 
-	Document get_document(Xapian::docid did);
+	Document get_document(engine::docid did);
 	Document get_document(std::string_view document_id);
 	Document get_document_term(const std::string& term);
-	Xapian::docid get_docid(std::string_view document_id);
-	Xapian::docid get_docid_term(const std::string& term);
+	engine::docid get_docid(std::string_view document_id);
+	engine::docid get_docid_term(const std::string& term);
 
-	void delete_document(Xapian::docid did, bool commit = false, bool wal = true, bool version = true);
+	void delete_document(engine::docid did, bool commit = false, bool wal = true, bool version = true);
 	void delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
 	void delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
 
 	engine::WriteResult add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	engine::WriteResult replace_document(Xapian::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	engine::WriteResult replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	engine::WriteResult replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 
@@ -188,7 +188,7 @@ public:
 	MsgPack get_database_info();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(const Locator& locator, Xapian::docid did);
+	std::string storage_get_stored(const Locator& locator, engine::docid did);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	bool commit(bool wal = true);
@@ -244,8 +244,8 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	bool echo;
 	bool comments;
-	Xapian::doccount first;
-	Xapian::doccount maxitems;
+	engine::doccount first;
+	engine::doccount maxitems;
 
 	std::atomic_size_t _prepared;
 	std::atomic_size_t _processed;
@@ -312,23 +312,22 @@ public:
 
 
 class Document {
-	Xapian::docid did;
+	engine::docid did;
 
 	DatabaseHandler* db_handler;
 
 public:
 	Document();
-	Document(const Xapian::Document& doc_);
-	Document(Xapian::docid did_, DatabaseHandler* db_handler_);
+	Document(engine::docid did_, DatabaseHandler* db_handler_);
 
 	Document(const Document& doc_) = default;
 	Document& operator=(const Document& doc_) = default;
 
-	Xapian::docid get_docid();
+	engine::docid get_docid();
 	bool validate();
 
 	std::string serialise();
-	std::string get_value(Xapian::valueno slot);
+	std::string get_value(engine::valueno slot);
 	std::string get_data();
 	MsgPack get_terms();
 	MsgPack get_values();

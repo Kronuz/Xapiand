@@ -636,6 +636,52 @@ Shard::retry_or_throw(const engine::Error& error, int t, bool commit_)
 }
 
 
+void
+Shard::retry_read(const engine::Error& error, int t)
+{
+	switch (engine::read_fate(error.kind)) {
+		case engine::fate::retry_close:
+			if (t == 0) { do_close(); throw; }
+			return;
+		case engine::fate::close_retry:
+			do_close();
+			if (t == 0) { throw; }
+			return;
+		case engine::fate::close_fail:
+			do_close();
+			throw;
+		case engine::fate::fail:
+			throw;
+	}
+}
+
+
+void
+Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes)
+{
+	auto fate = engine::read_fate(error.kind);
+	if (writes && error.kind == engine::errc::reopen) {
+		fate = engine::fate::close_fail;
+	}
+	switch (fate) {
+		case engine::fate::retry_close:
+			eptr = std::current_exception();
+			--valid;
+			return;
+		case engine::fate::close_retry:
+			do_close();
+			eptr = std::current_exception();
+			--valid;
+			return;
+		case engine::fate::close_fail:
+			do_close();
+			throw;
+		case engine::fate::fail:
+			throw;
+	}
+}
+
+
 bool
 Shard::reopen()
 {
@@ -856,8 +902,8 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 				shard->commit();
 			} catch (const Exception& exc) {
 				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_message());
-			} catch (const Xapian::Error& exc) {
-				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_description());
+			} catch (const engine::Error& exc) {
+				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.description());
 			} catch (const std::exception& exc) {
 				// Runs inside checkin, which is noexcept: nothing may escape.
 				L_ERR("Autocommit of {} falied: {}", repr(shard->to_string()), exc.what());
@@ -1010,7 +1056,7 @@ Shard::cancel_transaction()
 
 
 void
-Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
 {
 	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
 
@@ -1095,7 +1141,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 	engine();
 	auto* wdb = engine_shard.get();
 
-	Xapian::docid shard_did = 0;
+	engine::docid shard_did = 0;
 	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1323,7 +1369,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 
 
 Xapian::DocumentInfo
-Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::replace_document(engine::docid shard_did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	return engine::xapian::to_xapian(replace_document(shard_did, engine::xapian::from_xapian(doc), commit_, wal_, version_));
 }
@@ -1337,7 +1383,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 
 
 engine::WriteResult
-Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
@@ -1537,7 +1583,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 
 
 void
-Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_, bool wal_)
+Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool commit_, bool wal_)
 {
 	L_CALL("Shard::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
@@ -1597,8 +1643,8 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 }
 
 
-Xapian::termcount
-Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_, bool wal_)
+engine::termcount
+Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_, bool wal_)
 {
 	L_CALL("Shard::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
 
@@ -1619,7 +1665,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	engine();
 	auto* wdb = engine_shard.get();
 
-	Xapian::termcount result = 0;
+	engine::termcount result = 0;
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
@@ -1662,12 +1708,12 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 }
 
 
-Xapian::docid
+engine::docid
 Shard::get_docid_term(const std::string& term)
 {
 	L_CALL("Shard::get_docid_term({})", repr(term));
 
-	Xapian::docid did = 0;
+	engine::docid did = 0;
 
 	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
@@ -1683,20 +1729,8 @@ Shard::get_docid_term(const std::string& term)
 				throw engine::xapian::DocNotFound("Document not found");
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_read(error, t);
 		}
 		reopen();
 		eng = &engine();
@@ -1708,7 +1742,7 @@ Shard::get_docid_term(const std::string& term)
 
 
 std::unique_ptr<engine::DocView>
-Shard::get_view(Xapian::docid shard_did)
+Shard::get_view(engine::docid shard_did)
 {
 	L_CALL("Shard::get_view({})", shard_did);
 
@@ -1725,20 +1759,8 @@ Shard::get_view(Xapian::docid shard_did)
 		try {
 			doc = engine::sync_wait(eng->get(shard_did));
 			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
+		} catch (const engine::Error& error) {
+			retry_read(error, t);
 		}
 		reopen();
 		eng = &engine();
@@ -1780,22 +1802,9 @@ Shard::get_metadata(const std::string& key)
 		try {
 			value = engine::sync_wait(eng->metadata(key));
 			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
-		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+		} catch (const engine::Error& error) {
+			if (error.kind == engine::errc::invalid) { break; }
+			retry_read(error, t);
 		}
 		reopen();
 		eng = &engine();
@@ -1824,22 +1833,9 @@ Shard::get_metadata_keys()
 		try {
 			values = engine::sync_wait(eng->metadata_keys());
 			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
-		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+		} catch (const engine::Error& error) {
+			if (error.kind == engine::errc::invalid) { break; }
+			retry_read(error, t);
 		}
 		reopen();
 		eng = &engine();

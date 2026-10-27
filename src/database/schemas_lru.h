@@ -30,7 +30,7 @@
 #include "endpoint.h"
 #include "lru.h"
 #include "msgpack.h"
-#include "xapian.h"              // for Xapian::rev
+#include "engine/types.h"                  // for engine::rev, docid
 
 
 constexpr size_t MAX_SCHEMA_RECURSION = 10;
@@ -44,7 +44,7 @@ class SchemasLRU {
 	lru::aging_lru<std::string, std::shared_ptr<const MsgPack>> schemas;
 
 	mutable std::mutex versions_mtx;
-	lru::aging_lru<std::string, Xapian::rev> versions;
+	lru::aging_lru<std::string, engine::rev> versions;
 
 	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>
 	_update(
@@ -60,7 +60,7 @@ public:
 
 	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
 
-	void updated(const std::string& uri, Xapian::rev version);
+	void updated(const std::string& uri, engine::rev version);
 
 	void cleanup();
 

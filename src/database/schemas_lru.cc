@@ -80,7 +80,7 @@ compare_schema(const MsgPack& a, const MsgPack& b)
 }
 
 
-static inline std::pair<Xapian::rev, MsgPack>
+static inline std::pair<engine::rev, MsgPack>
 load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("load_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), read_flags, context ? std::to_string(context->size()) : "nullptr");
@@ -105,7 +105,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(endpoints, read_flags, context);
-		Xapian::rev version;
+		engine::rev version;
 		auto document = _db_handler.get_document(id);
 		auto obj = document.get_obj();
 		auto it = obj.find(VERSION_FIELD_NAME);
@@ -133,8 +133,8 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 }
 
 
-static inline std::pair<Xapian::rev, MsgPack>
-save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
+static inline std::pair<engine::rev, MsgPack>
+save_shared(std::string_view id, const MsgPack& schema, engine::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("save_shared({}, {}, {}. {}, {})", repr(id), schema.to_string(), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
 
@@ -217,8 +217,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		std::lock_guard<std::mutex> lk(versions_mtx);
 		auto version_it = versions.find(local_schema_path);
 		if (version_it != versions.end()) {
-			Xapian::rev latest_version = version_it->second;
-			Xapian::rev schema_version = local_schema_ptr->get_flags();
+			engine::rev latest_version = version_it->second;
+			engine::rev schema_version = local_schema_ptr->get_flags();
 			if (latest_version <= schema_version) {
 				versions.erase(version_it);
 			} else {
@@ -275,8 +275,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		try {
 			DatabaseHandler _db_handler(endpoints, read_flags, context);
 			schema_ser = _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
-		} catch (const Xapian::DocNotFoundError&) {
-		} catch (const Xapian::DatabaseNotFoundError&) {
+		} catch (const engine::Error& error) {
+			if (!engine::is_missing(error.kind)) { throw; }
 		}
 		if (schema_ser.empty()) {
 			if (!foreign_uri.empty()) {
@@ -340,8 +340,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				std::string schema_ser;
 				try {
 					schema_ser = _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
-				} catch (const Xapian::DocNotFoundError&) {
-				} catch (const Xapian::DatabaseNotFoundError&) {
+				} catch (const engine::Error& error) {
+					if (!engine::is_missing(error.kind)) { throw; }
 				}
 				if (schema_ser.empty()) {
 					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
@@ -431,8 +431,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				std::lock_guard<std::mutex> lk(versions_mtx);
 				auto version_it = versions.find(foreign_uri);
 				if (version_it != versions.end()) {
-					Xapian::rev latest_version = version_it->second;
-					Xapian::rev schema_version = foreign_schema_ptr->get_flags();
+					engine::rev latest_version = version_it->second;
+					engine::rev schema_version = foreign_schema_ptr->get_flags();
 					if (latest_version <= schema_version) {
 						versions.erase(version_it);
 					} else {
@@ -514,23 +514,32 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (error), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
 						schema_ptr = initial_schema_ptr;
 					}
-				} catch (const Xapian::DocNotFoundError&) {
-					if (new_schema) {
-						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (document was not found), create from new schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), new_schema->to_string());
-						schema_ptr = new_schema;
-					} else {
-						auto initial_schema_ptr = Schema::get_initial_schema();
-						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (document was not found), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
-						schema_ptr = initial_schema_ptr;
-					}
-				} catch (const Xapian::DatabaseNotFoundError&) {
-					if (new_schema) {
-						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (database was not there), create from new schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), new_schema->to_string());
-						schema_ptr = new_schema;
-					} else {
-						auto initial_schema_ptr = Schema::get_initial_schema();
-						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (database was not there), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
-						schema_ptr = initial_schema_ptr;
+				} catch (const engine::Error& error) {
+					switch (error.kind) {
+						case engine::errc::doc_not_found: {
+							if (new_schema) {
+								L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (document was not found), create from new schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), new_schema->to_string());
+								schema_ptr = new_schema;
+							} else {
+								auto initial_schema_ptr = Schema::get_initial_schema();
+								L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (document was not found), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
+								schema_ptr = initial_schema_ptr;
+							}
+							break;
+						}
+						case engine::errc::not_found: {
+							if (new_schema) {
+								L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (database was not there), create from new schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), new_schema->to_string());
+								schema_ptr = new_schema;
+							} else {
+								auto initial_schema_ptr = Schema::get_initial_schema();
+								L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (database was not there), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
+								schema_ptr = initial_schema_ptr;
+							}
+							break;
+						}
+						default:
+							throw;
 					}
 				}
 				assert(schema_ptr);
@@ -558,8 +567,28 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				}
 			}
 			// If we still need to save the schema document, we save it:
-			Xapian::rev schema_version = foreign_schema_ptr ? foreign_schema_ptr->get_flags() : UNKNOWN_REVISION;
+			engine::rev schema_version = foreign_schema_ptr ? foreign_schema_ptr->get_flags() : UNKNOWN_REVISION;
 			if (writable && save_schema) {
+				// Reverts the saved schema and rethrows; called from a catch block.
+				auto save_failed = [&] {
+					L_EXC("Error saving foreign schema: endpoint:{}, id:{}, version: {}", repr(foreign_path), repr(foreign_id), schema_version);
+					if (foreign_schema_ptr != schema_ptr) {
+						// On error, try reverting
+						assert(foreign_schema_ptr);
+						std::lock_guard<std::mutex> lk(schemas_mtx);
+						auto& schema = schemas[foreign_uri];
+						if (!schema || schema == schema_ptr) {
+							schema = foreign_schema_ptr;
+							L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and was reverted: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr");
+						} else {
+							schema_ptr = schema;
+							L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and couldn't be reverted: " + DIM_GREY + "{} ==> {}", prefix, repr(foreign_uri), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+						}
+					} else {
+						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
+					}
+					throw;
+				};
 				try {
 					auto shared = save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
@@ -597,7 +626,10 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					}
 #endif
 					L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={} (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-				} catch (const Xapian::DocVersionConflictError&) {
+				} catch (const engine::Error& error) {
+					if (error.kind != engine::errc::version_conflict) {
+						save_failed();
+					}
 					// Foreign Schema needs to be read
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 					try {
@@ -620,23 +652,32 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (error), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
 							schema_ptr = initial_schema_ptr;
 						}
-					} catch (const Xapian::DocNotFoundError&) {
-						if (new_schema) {
-							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (document was not found), create from new schema: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), new_schema->to_string());
-							schema_ptr = new_schema;
-						} else {
-							auto initial_schema_ptr = Schema::get_initial_schema();
-							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (document was not found), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
-							schema_ptr = initial_schema_ptr;
-						}
-					} catch (const Xapian::DatabaseNotFoundError&) {
-						if (new_schema) {
-							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (database was not there), create from new schema: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), new_schema->to_string());
-							schema_ptr = new_schema;
-						} else {
-							auto initial_schema_ptr = Schema::get_initial_schema();
-							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (database was not there), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
-							schema_ptr = initial_schema_ptr;
+					} catch (const engine::Error& error) {
+						switch (error.kind) {
+							case engine::errc::doc_not_found: {
+								if (new_schema) {
+									L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (document was not found), create from new schema: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), new_schema->to_string());
+									schema_ptr = new_schema;
+								} else {
+									auto initial_schema_ptr = Schema::get_initial_schema();
+									L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (document was not found), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
+									schema_ptr = initial_schema_ptr;
+								}
+								break;
+							}
+							case engine::errc::not_found: {
+								if (new_schema) {
+									L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (database was not there), create from new schema: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), new_schema->to_string());
+									schema_ptr = new_schema;
+								} else {
+									auto initial_schema_ptr = Schema::get_initial_schema();
+									L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] {} id={} couldn't be reloaded (database was not there), create a new initial schema: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), repr(initial_schema_ptr->to_string()));
+									schema_ptr = initial_schema_ptr;
+								}
+								break;
+							}
+							default:
+								throw;
 						}
 					}
 					assert(schema_ptr);
@@ -664,23 +705,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					}
 					failure = true;
 				} catch (...) {
-					L_EXC("Error saving foreign schema: endpoint:{}, id:{}, version: {}", repr(foreign_path), repr(foreign_id), schema_version);
-					if (foreign_schema_ptr != schema_ptr) {
-						// On error, try reverting
-						assert(foreign_schema_ptr);
-						std::lock_guard<std::mutex> lk(schemas_mtx);
-						auto& schema = schemas[foreign_uri];
-						if (!schema || schema == schema_ptr) {
-							schema = foreign_schema_ptr;
-							L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and was reverted: " + DIM_GREY + "{} --> {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr");
-						} else {
-							schema_ptr = schema;
-							L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and couldn't be reverted: " + DIM_GREY + "{} ==> {}", prefix, repr(foreign_uri), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
-						}
-					} else {
-						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
-					}
-					throw;
+					save_failed();
 				}
 			}
 		}
@@ -761,7 +786,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 
 void
-SchemasLRU::updated(const std::string& uri, Xapian::rev version)
+SchemasLRU::updated(const std::string& uri, engine::rev version)
 {
 	L_CALL("SchemasLRU::updated({}, {})", repr(uri), version);
 
@@ -828,7 +853,7 @@ SchemasLRU::dump_schemas(int level) const
 			auto& schema = *schema_it;
 			ret += indent + indent;
 			if (schema.second) {
-				Xapian::rev schema_version = schema.second->get_flags();
+				engine::rev schema_version = schema.second->get_flags();
 				std::string outdated;
 				auto version_it = versions.find(schema.first);
 				if (version_it != versions.end() && version_it->second > schema_version) {

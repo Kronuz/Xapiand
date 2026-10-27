@@ -76,7 +76,7 @@
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
 #include "traceback.h"                            // for traceback::{backtrace, traceback, collect_callstack_sig_handler}
 #include "tls.h"                                  // for tls_setup
-#include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
+#include "engine/xapian/convert.h"                // for engine::xapian::version
 
 #if defined(__linux__) && !defined(__GLIBC__)
 #include <pthread.h>                              // for pthread_attr_t, pthread_setattr_default_np
@@ -749,7 +749,7 @@ void banner() {
 	set_thread_name("MAIN");
 
 	std::vector<std::string> values({
-			strings::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+			strings::format("Xapian v{}", engine::xapian::version()),
 #ifdef XAPIAND_LUA
 			strings::format("Lua v{}.{}", LUA_VERSION_MAJOR, LUA_VERSION_MINOR),
 #endif
@@ -1066,13 +1066,13 @@ int main(int argc, char **argv) {
 		Logging::config.with_location = opts.log_location;
 
 		// Wire the extracted logger's pluggable hooks to Xapiand's richer
-		// implementations: exception description (incl. Xapian::Error), thread
+		// implementations: exception description (incl. engine errors), thread
 		// names, and the in-tree traceback() (atos file:line + crash-dumper).
 		Logging::hooks.describe_exception = [](std::exception_ptr eptr) -> std::string {
 			try {
 				std::rethrow_exception(eptr);
-			} catch (const Xapian::Error& exc) {
-				return exc.get_description();
+			} catch (const engine::Error& exc) {
+				return exc.description();
 			} catch (const BaseException& exc) {
 				auto msg = exc.get_message();
 				return (msg != nullptr && *msg != 0) ? std::string(msg) : std::string("Unknown BaseException");
@@ -1123,8 +1123,8 @@ int main(int argc, char **argv) {
 		} catch (const BaseException& exc) {
 			L_CRIT("Uncaught exception: {}", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 			exit_code = EX_SOFTWARE;
-		} catch (const Xapian::Error& exc) {
-			L_CRIT("Uncaught exception: {}", exc.get_description());
+		} catch (const engine::Error& exc) {
+			L_CRIT("Uncaught exception: {}", exc.description());
 			exit_code = EX_SOFTWARE;
 		} catch (const std::exception& exc) {
 			L_CRIT("Uncaught exception: {}", *exc.what() ? exc.what() : "Unkown std::exception!");

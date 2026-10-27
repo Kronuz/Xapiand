@@ -115,7 +115,11 @@ ReplicationProtocolService::trigger_replication(const TriggerReplicationArgs& ar
 					// If it cannot checkout because database is busy, retry when ready...
 					::trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), args.dst_endpoint.path, args.src_endpoint, args.dst_endpoint);
 				});
-			} catch (const Xapian::DatabaseNotAvailableError&) {
+			} catch (const engine::Error& error) {
+				if (error.kind != engine::errc::not_available) {
+					L_EXC("ERROR: Stalled endpoint removal ended with an unhandled exception");
+					return;
+				}
 				L_REPLICATION("Stalled endpoint removal deferred (not available): {} -->  {}", repr(args.src_endpoint.to_string()), repr(args.dst_endpoint.to_string()));
 				return;
 			} catch (...) {

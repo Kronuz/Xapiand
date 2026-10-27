@@ -26,6 +26,7 @@
 
 #include "cartesian.h"                            // for CartesianError
 #include "datetime.h"                             // for DatetimeError
+#include "engine/error.h"                         // for engine::Error, engine::errc
 #include "xapiand_exception.h"                            // for Exception
 #include "hashes.hh"                              // for hhl
 #include "log.h"                                  // for L_EXC
@@ -53,58 +54,61 @@ catch_http_errors(Func&& func)
 	} catch (const MissingTypeError& exc) {
 		http_errors.error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		http_errors.error = exc.what();
-	} catch (const Xapian::DocNotFoundError& exc) {
-		http_errors.error_code = HTTP_STATUS_NOT_FOUND;
-		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
-	} catch (const Xapian::DatabaseNotFoundError& exc) {
-		http_errors.error_code = HTTP_STATUS_NOT_FOUND;
-		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
-	} catch (const Xapian::DocVersionConflictError& exc) {
-		http_errors.error_code = HTTP_STATUS_CONFLICT;
-		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
-	} catch (const Xapian::DatabaseNotAvailableError& exc) {
-		http_errors.error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
-	} catch (const Xapian::NetworkTimeoutError& exc) {
-		http_errors.error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
-		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
-	} catch (const Xapian::DatabaseModifiedError& exc) {
-		http_errors.error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
-	} catch (const Xapian::NetworkError& exc) {
-		std::string msg;
-		const char* error_string = exc.get_error_string();
-		if (!error_string) {
-			msg = exc.get_msg();
-			error_string = msg.c_str();
-		}
-		constexpr static auto _ = phf::make_phf({
-			hhl("Can't assign requested address"),
-			hhl("Connection refused"),
-			hhl("Connection reset by peer"),
-			hhl("Connection closed unexpectedly"),
-		});
-		switch (_.fhhl(error_string)) {
-			case _.fhhl("Can't assign requested address"):
-				http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
-				http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;
+	} catch (const engine::Error& exc) {
+		const auto status = [&](enum http_status code) {
+			http_errors.error_code = code;
+			http_errors.error = std::string(http_status_str(code)) + ": " + exc.reason();
+		};
+		switch (exc.kind) {
+			case engine::errc::doc_not_found:
+			case engine::errc::not_found:
+				status(HTTP_STATUS_NOT_FOUND);
 				break;
-			case _.fhhl("Connection refused"):
-				http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
-				http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;
+			case engine::errc::version_conflict:
+				status(HTTP_STATUS_CONFLICT);
 				break;
-			case _.fhhl("Connection reset by peer"):
-				http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
-				http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;
+			case engine::errc::not_available:
+			case engine::errc::reopen:
+				status(HTTP_STATUS_SERVICE_UNAVAILABLE);
 				break;
-			case _.fhhl("Connection closed unexpectedly"):
-				http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
-				http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;
+			case engine::errc::timeout:
+				status(HTTP_STATUS_GATEWAY_TIMEOUT);
 				break;
+			case engine::errc::network: {
+				const auto& error_string = exc.detail().empty() ? exc.reason() : exc.detail();
+				constexpr static auto _ = phf::make_phf({
+					hhl("Can't assign requested address"),
+					hhl("Connection refused"),
+					hhl("Connection reset by peer"),
+					hhl("Connection closed unexpectedly"),
+				});
+				switch (_.fhhl(error_string.c_str())) {
+					case _.fhhl("Can't assign requested address"):
+					case _.fhhl("Connection refused"):
+					case _.fhhl("Connection reset by peer"):
+					case _.fhhl("Connection closed unexpectedly"):
+						http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
+						http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;
+						break;
+					default:
+						http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+						http_errors.error = exc.description();
+						L_EXC("ERROR: Dispatching HTTP request");
+				}
+				break;
+			}
 			default:
-				http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-				http_errors.error = exc.get_description();
-				L_EXC("ERROR: Dispatching HTTP request");
+				if (const auto* client_error = dynamic_cast<const ClientError*>(&exc)) {
+					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + client_error->what();
+				} else if (exc.kind == engine::errc::syntax) {
+					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.description();
+				} else {
+					http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+					http_errors.error = exc.description();
+					L_EXC("ERROR: Dispatching HTTP request");
+				}
 		}
 	} catch (const DatetimeError& exc) {
 		// DatetimeError is now std::runtime_error-based (it comes from the
@@ -124,10 +128,6 @@ catch_http_errors(Func&& func)
 	} catch (const BaseException& exc) {
 		http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		http_errors.error = *exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!";
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (const Xapian::Error& exc) {
-		http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		http_errors.error = exc.get_description();
 		L_EXC("ERROR: Dispatching HTTP request");
 	} catch (const std::exception& exc) {
 		http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;

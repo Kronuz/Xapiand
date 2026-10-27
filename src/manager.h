@@ -43,7 +43,7 @@
 #include "node.h"                             // for Node, local_node
 #include "thread.hh"                          // for ThreadPolicyType::*
 #include "threadpool.hh"                      // for ThreadPool
-#include "xapian.h"                           // for Xapian::*
+#include "engine/error.h"                    // for engine::Error
 
 
 #ifdef XAPIAND_CLUSTERING
@@ -270,7 +270,7 @@ public:
 
 	static const auto& manager([[maybe_unused]] bool check = false) {
 		if (check && !_manager) {
-			throw Xapian::AssertionError("No manager");
+			throw engine::Error(engine::errc::internal, "No manager");
 		}
 		return _manager;
 	}

@@ -32,7 +32,7 @@
 
 #include "endpoint.h"                         // for Endpoint
 #include "enum.h"                             // for ENUM_CLASS
-#include "xapian.h"                           // for Xapian::Registry, Xapian::rev
+#include "engine/xapian/xapian.h"                           // for Xapian::Registry, Xapian::rev
 
 // #define SAVE_LAST_MESSAGES
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)

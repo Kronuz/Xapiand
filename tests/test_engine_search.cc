@@ -43,7 +43,7 @@
 #include "engine/xapian/query.h"
 #include "engine/xapian/search.h"
 #include "engine/xapian/shard.h"
-#include "xapian.h"
+#include "engine/xapian/xapian.h"
 
 namespace {
 

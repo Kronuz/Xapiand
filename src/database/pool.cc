@@ -535,7 +535,7 @@ ShardEndpoint::count()
 }
 
 
-Xapian::rev
+engine::rev
 ShardEndpoint::get_revision(const std::string& lower_name) const
 {
 	L_CALL("ShardEndpoint::get_revision({})", repr(lower_name));
@@ -552,7 +552,7 @@ ShardEndpoint::get_revision(const std::string& lower_name) const
 }
 
 
-Xapian::rev
+engine::rev
 ShardEndpoint::get_revision() const
 {
 	L_CALL("ShardEndpoint::get_revision()");
@@ -573,7 +573,7 @@ ShardEndpoint::get_revision() const
 
 
 void
-ShardEndpoint::set_revision(const std::string& lower_name, Xapian::rev revision)
+ShardEndpoint::set_revision(const std::string& lower_name, engine::rev revision)
 {
 	L_CALL("ShardEndpoint::set_revision({})", revision);
 
@@ -586,7 +586,7 @@ ShardEndpoint::set_revision(const std::string& lower_name, Xapian::rev revision)
 
 
 void
-ShardEndpoint::set_revision(Xapian::rev revision)
+ShardEndpoint::set_revision(engine::rev revision)
 {
 	L_CALL("ShardEndpoint::set_revision({})", revision);
 
