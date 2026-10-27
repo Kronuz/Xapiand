@@ -29,6 +29,7 @@
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
+#include "engine/census.h"  // for ENGINE_CENSUS_QUERY, ENGINE_CENSUS_SEARCH
 #include "engine/xapian/callbacks.h"  // for KeyMakerAdapter, MatchSpyAdapter
 #include "engine/xapian/errors.h"  // for rethrow_translated
 #include "engine/xapian/query.h"   // for to_xapian
@@ -206,6 +207,7 @@ namespace engine {
 std::unique_ptr<PreparedQuery>
 prepare(const Query& query)
 {
+	ENGINE_CENSUS_QUERY(query);
 	try {
 		return std::make_unique<xapian::Prepared>(xapian::to_xapian(query));
 	} catch (...) {
@@ -217,6 +219,7 @@ prepare(const Query& query)
 task::task<SearchResult>
 search(std::span<Shard* const> shards, const SearchRequest& request)
 {
+	ENGINE_CENSUS_SEARCH(request, shards.size());
 	try {
 		const auto& prepared = dynamic_cast<const xapian::Prepared&>(*request.query);
 		if (shards.empty() || prepared.empty()) {

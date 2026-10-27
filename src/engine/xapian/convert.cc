@@ -23,6 +23,7 @@
 #include "engine/xapian/convert.h"
 
 #include "engine/xapian/errors.h"      // for the Failure types
+#include "engine/census.h"         // for ENGINE_CENSUS_DOCVIEW
 
 #include <atomic>                // for std::atomic
 #include <type_traits>             // for std::is_same_v, std::is_unsigned_v
@@ -241,18 +242,22 @@ public:
 	static inline std::atomic<std::size_t> live{0};
 
 	docid did() const override {
+		ENGINE_CENSUS_DOCVIEW("did");
 		return guarded([&] { return doc_.get_docid(); });
 	}
 
 	std::string data() const override {
+		ENGINE_CENSUS_DOCVIEW("data");
 		return guarded([&] { return doc_.get_data(); });
 	}
 
 	std::string value(valueno slot) const override {
+		ENGINE_CENSUS_DOCVIEW("value");
 		return guarded([&] { return doc_.get_value(slot); });
 	}
 
 	rev version() const override {
+		ENGINE_CENSUS_DOCVIEW("version");
 		return guarded([&] {
 			auto serialised = doc_.get_value(DB_SLOT_VERSION);
 			return serialised.empty() ? 0 : static_cast<rev>(sortable_unserialise(serialised));
@@ -260,6 +265,7 @@ public:
 	}
 
 	void terms(std::string_view prefix, const TermSink& sink) const override {
+		ENGINE_CENSUS_DOCVIEW("terms");
 		guarded([&] {
 			// A termlist is sorted, so the terms with a prefix are contiguous.
 			const auto end = doc_.termlist_end();
@@ -276,6 +282,7 @@ public:
 	}
 
 	void values(const ValueSink& sink) const override {
+		ENGINE_CENSUS_DOCVIEW("values");
 		guarded([&] {
 			const auto end = doc_.values_end();
 			for (auto it = doc_.values_begin(); it != end; ++it) {
@@ -285,6 +292,7 @@ public:
 	}
 
 	void term_details(const TermDetailSink& sink) const override {
+		ENGINE_CENSUS_DOCVIEW("term_details");
 		guarded([&] {
 			const auto end = doc_.termlist_end();
 			for (auto it = doc_.termlist_begin(); it != end; ++it) {
@@ -306,6 +314,7 @@ public:
 	}
 
 	std::string serialise() const override {
+		ENGINE_CENSUS_DOCVIEW("serialise");
 		return guarded([&] { return doc_.serialise(); });
 	}
 

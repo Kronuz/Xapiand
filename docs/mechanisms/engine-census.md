@@ -1,0 +1,35 @@
+# Engine census (how it works)
+
+`-DENGINE_CENSUS=ON` makes the engine seam count the facilities each HTTP request uses. Off (the default) every hook is
+`((void)0)` and `census.cc` compiles to nothing, so the default binary has no census code.
+
+```
+SearchService::handle ---- RequestScope("GET", target) ----+
+   |                                                       |  one JSON line when it ends
+   v                                                       v
+ engine::prepare(query) -> census::query    ->  counters of the one request in flight
+ engine::search(...)    -> census::search       (or "unattributed" when none or several are)
+ Shard::add/replace/... -> count + census::document (T5)
+ XapianDocView::value.. -> census::docview (+ "@spy:Name" / "@keymaker:Name" while a callback runs)
+```
+
+Run: `XAPIAND_ENGINE_CENSUS=/path/census.jsonl xapiand ...`. Without the variable the counters are kept and not written.
+
+Files:
+
+1. `src/engine/census.h`: the macros (`ENGINE_CENSUS_COUNT`, `_QUERY`, `_SEARCH`, `_DOCUMENT`, `_DOCVIEW`, `_CALLBACK`, `_REQUEST`, `_STATUS`).
+2. `src/engine/census.cc`: counters, the query walk, the key prefix check, the JSON lines.
+3. Hook lines in `src/engine/xapian/{search,shard,convert,callbacks}.cc` and `src/server/search_views.cc`; a strata engine adds the same lines.
+
+Attribution: the engine runs on the scheduler's threads, not the request's, so there is no thread-local request. A count
+belongs to the request when exactly one is in flight; otherwise it goes to an `unattributed` line, and overlapping requests
+are marked `"tainted":true`. The docs suite runs requests one at a time.
+
+Line format: `{"seq","method","target","status","threw","tainted","counts":{key:n},"samples":[...]}`. Counter keys:
+`query.*`, `source.<name>`, `search.*`, `callback.<kind>:<name>`, `docview.<method>[@host|@spy:N|@keymaker:N]`,
+`shard.<op>`, `write.*`, `t5.*`. Strings are escaped to printable ASCII.
+
+T5: `census::document` runs on every document the shard writes; a term starting with `_id.` (`KEY_PREFIX`) that is not the
+write's key term, or a second one, is a `t5.violation.*` count with up to 8 samples per request. Nothing aborts.
+
+Tests: `tests/test_engine_census.cc`. Report: `docs/dev/engine-census.md`.

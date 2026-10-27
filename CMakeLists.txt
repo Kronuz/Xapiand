@@ -65,6 +65,7 @@ option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
 option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
+option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
 foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
@@ -75,6 +76,11 @@ foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM
 		set ("XAPIAND_${opt}" 0)
 	endif ()
 endforeach ()
+
+if (ENGINE_CENSUS)
+	message(STATUS "Option ENGINE_CENSUS - on")
+	add_compile_definitions(ENGINE_CENSUS)
+endif ()
 
 if (APPLE)
 	set (CMAKE_FIND_FRAMEWORK "LAST")
@@ -2146,7 +2152,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_query engine_sort engine_shard engine_read engine_search engine_error pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
