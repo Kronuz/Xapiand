@@ -134,6 +134,17 @@ benchmarks (`scan` makes one view per document, as the dump made one document).
 
 X4b: `engine::search`. Then the lead applies the remote edit below with X4b.
 
+## For the lead (GPL file; applied with X4b, not before)
+
+`src/server/remote_protocol_views.cc` needs nothing for X4a. When X4b removes `Shard::db()` and
+`Shard::get_document(Xapian::docid, unsigned)`, the file needs, mechanically:
+
+1. All 22 `lk_shard->db()` become `lk_shard->engine().native<engine::xapian::Shard>().database()` (same type,
+   `Xapian::Database*`; `engine()` opens, reopens or refuses a closed shard as `db()` did). Add
+   `#include "engine/xapian/shard.h"` if it is not already reachable through `database/shard.h`.
+2. The one `lk_shard->get_document(...)` call keeps its arguments and becomes
+   `lk_shard->engine().native<engine::xapian::Shard>().database()->get_document(...)`.
+
 ## Blocked on
 
 Nothing.
