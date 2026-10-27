@@ -153,6 +153,12 @@ Not done: a libFuzzer target (Apple clang ships no libFuzzer, and the sanitizers
 tree; the mutational test in `test_engine_query` is the fuzzing here), TSan, Linux and FreeBSD builds,
 and a benchmark.
 
+## Commits
+
+- Xapiand:801f16f5c Add engine::Query and the callback bases, and migrate the query producers
+- Xapiand:868af2635 Test the engine query seam hard, and keep SerialiseList::size() from aborting
+- (ledger update in the commit after these)
+
 ## Next
 
 1. Step 2 as above.
