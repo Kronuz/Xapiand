@@ -174,6 +174,8 @@ rethrow_translated()
 		throw;
 	} catch (const Error&) {
 		throw;
+	} catch (const std::exception&) {
+		throw;  // Xapiand's own exceptions, some of which also derive from a Xapian type
 	} catch (const Xapian::DatabaseNotFoundError& e) {
 		throw NotFound(e);
 	} catch (const Xapian::DatabaseNotAvailableError& e) {

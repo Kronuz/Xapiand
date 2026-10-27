@@ -67,7 +67,8 @@ using QueryParser = Failure<errc::syntax, Xapian::QueryParserError>;
 using Other = Failure<errc::internal, Xapian::Error>;  // any other Xapian failure
 
 // Rethrows the Xapian exception being handled as the Failure of its kind. An exception that is
-// already an engine error, or is not a Xapian exception, is rethrown unchanged; a Xapian exception
+// already an engine error, is one of Xapiand's own (a std::exception), or is not a Xapian exception,
+// is rethrown unchanged; a Xapian exception
 // of no particular kind becomes `Other` (errc::internal).
 // Call only inside a catch block.
 [[noreturn]] void rethrow_translated();

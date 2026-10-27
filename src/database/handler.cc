@@ -178,8 +178,8 @@ inject_data(Data& data, const MsgPack& obj)
 			case MsgPack::Type::ARRAY:
 				for (auto& blob : _data) {
 					inject_blob(data, blob);
-				break;
 				}
+				break;
 			default:
 				THROW(ClientError, "Data inconsistency, '{}' must be an array or an object", RESERVED_DATA);
 		}
@@ -760,8 +760,8 @@ DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 						{ "_type", "inplace" },
 						{ "_blob", locator.data() },
 					}));
-				break;
 				}
+				break;
 			}
 			case Locator::Type::stored:
 			case Locator::Type::lz4_compressed_stored:
@@ -1502,8 +1502,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					return did;
-				break;
 				}
+				break;
 			} catch (const engine::Error& error) {
 				if (error.kind == engine::errc::not_available) {
 					eptr = std::current_exception(); break;
@@ -1763,8 +1763,8 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 							{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
 							{ RESPONSE_TYPE, "inplace" },
 						}));
-					break;
 					}
+					break;
 				case Locator::Type::stored:
 				case Locator::Type::lz4_compressed_stored:
 				case Locator::Type::zstd_compressed_stored:

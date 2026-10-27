@@ -113,6 +113,15 @@ void test_translation_passes_others() {
 	}
 	CHECK_TRUE(same);
 
+	// Xapiand's own exceptions keep their type even when they also derive from a Xapian one.
+	bool own = false;
+	try {
+		translated([] { THROW(SerialisationError, "bad bytes"); });
+	} catch (const SerialisationError&) {
+		own = true;
+	} catch (...) { }
+	CHECK_TRUE(own);
+
 	// An engine error is rethrown as it is.
 	bool kept = false;
 	try {
