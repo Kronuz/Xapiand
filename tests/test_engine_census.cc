@@ -153,12 +153,12 @@ void test_key_prefix_check() {
 	census::document(doc({"_id.2", "title.word"}), "_id.2");
 	census::document(doc({"title.word"}), "");
 	auto counts = census::snapshot();
-	CHECK_EQ(get(counts, "t5.documents"), 3u);
-	CHECK_EQ(get(counts, "t5.one_key_term.unnamed"), 1u);
-	CHECK_EQ(get(counts, "t5.one_key_term.named"), 1u);
-	CHECK_EQ(get(counts, "t5.no_key_term"), 1u);
-	CHECK_EQ(get(counts, "t5.violation.multiple"), 0u);
-	CHECK_EQ(get(counts, "t5.violation.not_key_term"), 0u);
+	CHECK_EQ(get(counts, "t5[_id.].documents"), 3u);
+	CHECK_EQ(get(counts, "t5[_id.].one_key_term.unnamed"), 1u);
+	CHECK_EQ(get(counts, "t5[_id.].one_key_term.named"), 1u);
+	CHECK_EQ(get(counts, "t5[_id.].no_key_term"), 1u);
+	CHECK_EQ(get(counts, "t5[_id.].violation.multiple"), 0u);
+	CHECK_EQ(get(counts, "t5[_id.].violation.not_key_term"), 0u);
 	CHECK_EQ(get(counts, "write.terms"), 5u);
 	CHECK_EQ(get(counts, "write.terms.boolean"), 5u);
 
@@ -166,9 +166,23 @@ void test_key_prefix_check() {
 	census::document(doc({"_id.4", "_id.4x"}), "_id.4");
 	census::document(doc({"_id.5"}), "other.5");
 	counts = census::snapshot();
-	CHECK_EQ(get(counts, "t5.violation.multiple"), 2u);
-	CHECK_EQ(get(counts, "t5.violation.not_key_term"), 2u);
-	CHECK_EQ(get(counts, "t5.violation.key_without_prefix"), 1u);
+	CHECK_EQ(get(counts, "t5[_id.].violation.multiple"), 2u);
+	CHECK_EQ(get(counts, "t5[_id.].violation.not_key_term"), 2u);
+	CHECK_EQ(get(counts, "t5[_id.].violation.key_without_prefix"), 1u);
+	CHECK_EQ(get(counts, "t5[Q].documents"), 6u);
+	CHECK_EQ(get(counts, "t5[Q].no_key_term"), 6u);
+
+	// the id term prefix Q: a second Q-leading term (a field named Quote) breaks the premise
+	census::reset("");
+	census::document(doc({"QKabc", "title.q"}), "QKabc");
+	census::document(doc({"QKabc", "Quote.x"}), "QKabc");
+	census::document(doc({"Quote.x"}), "QKabc");
+	counts = census::snapshot();
+	CHECK_EQ(get(counts, "t5[Q].documents"), 3u);
+	CHECK_EQ(get(counts, "t5[Q].one_key_term.named"), 1u);
+	CHECK_EQ(get(counts, "t5[Q].violation.multiple"), 1u);
+	CHECK_EQ(get(counts, "t5[Q].violation.not_key_term"), 2u);
+	CHECK_EQ(get(counts, "t5[_id.].no_key_term"), 3u);
 }
 
 void test_shard_search_and_views() {
@@ -209,8 +223,9 @@ void test_shard_search_and_views() {
 	CHECK_EQ(get(counts, "shard.commit"), 1u);
 	CHECK_EQ(get(counts, "shard.get"), 1u);
 	CHECK_EQ(get(counts, "write.documents"), 3u);
-	CHECK_EQ(get(counts, "t5.one_key_term.named"), 3u);
-	CHECK_EQ(get(counts, "t5.documents"), 3u);
+	CHECK_EQ(get(counts, "t5[_id.].one_key_term.named"), 3u);
+	CHECK_EQ(get(counts, "t5[_id.].documents"), 3u);
+	CHECK_EQ(get(counts, "t5[Q].no_key_term"), 3u);
 	CHECK_EQ(get(counts, "search.calls"), 1u);
 	CHECK_EQ(get(counts, "search.sorter.SlotKey"), 1u);
 	CHECK_EQ(get(counts, "search.spy.Spy"), 1u);

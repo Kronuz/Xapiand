@@ -343,21 +343,11 @@ document(const Document& doc, std::string_view key)
 	std::lock_guard<std::mutex> lock(s.mutex);
 	add(s, "write.documents", 1);
 	std::uint64_t boolean = 0, positioned = 0;
-	std::uint64_t leading = 0;
-	for (const auto& [term, info] : doc.terms()) {
-		if (!info.positions.empty()) {
+	for (const auto& entry : doc.terms()) {
+		if (!entry.second.positions.empty()) {
 			++positioned;
-		} else if (info.wdf == 0) {
+		} else if (entry.second.wdf == 0) {
 			++boolean;
-		}
-		if (term.starts_with(KEY_PREFIX)) {
-			++leading;
-			if (key.empty()) {
-				if (leading == 1) { add_sample(s, join("key_term:", term)); }
-			} else if (term != key) {
-				add(s, "t5.violation.not_key_term", 1);
-				add_sample(s, join("not_key_term:", term));
-			}
 		}
 	}
 	add(s, "write.terms", doc.terms().size());
@@ -365,21 +355,42 @@ document(const Document& doc, std::string_view key)
 	add(s, "write.terms.positioned", positioned);
 	add(s, "write.values", doc.values().size());
 	if (!doc.get_data().empty()) { add(s, "write.data", 1); }
+	if (!key.empty()) { add(s, "write.named_key", 1); }
 
-	add(s, "t5.documents", 1);
-	if (leading == 0) {
-		add(s, "t5.no_key_term", 1);
-	} else if (leading == 1) {
-		add(s, key.empty() ? "t5.one_key_term.unnamed" : "t5.one_key_term.named", 1);
-	} else {
-		add(s, "t5.violation.multiple", 1);
-		add_sample(s, join("multiple_key_terms:", std::to_string(leading)));
-	}
-	if (!key.empty()) {
-		add(s, "write.named_key", 1);
-		if (!key.starts_with(KEY_PREFIX)) {
-			add(s, "t5.violation.key_without_prefix", 1);
-			add_sample(s, join("key_without_prefix:", key));
+	// Terms leading with each candidate key prefix (the terms are sorted, so they are contiguous).
+	for (const std::string_view prefix : KEY_PREFIXES) {
+		const auto tag = join("t5[", join(prefix, "]."));
+		std::uint64_t leading = 0;
+		bool other = false;
+		std::string listed;
+		for (auto it = doc.terms().lower_bound(std::string(prefix)); it != doc.terms().end() && it->first.starts_with(prefix); ++it) {
+			++leading;
+			if (leading <= 4) {
+				listed += listed.empty() ? "" : " ";
+				listed += it->first.substr(0, 40);
+			}
+			if (key.empty()) {
+				if (leading == 1) { add_sample(s, join(tag, join("key_term:", it->first))); }
+			} else if (it->first != key) {
+				other = true;
+				add(s, join(tag, "violation.not_key_term"), 1);
+				add_sample(s, join(tag, join("not_key_term:", it->first)));
+			}
+		}
+		add(s, join(tag, "documents"), 1);
+		if (leading == 0) {
+			add(s, join(tag, "no_key_term"), 1);
+		} else if (leading == 1) {
+			if (!other) {
+				add(s, join(tag, key.empty() ? "one_key_term.unnamed" : "one_key_term.named"), 1);
+			}
+		} else {
+			add(s, join(tag, "violation.multiple"), 1);
+			add_sample(s, join(tag, join("multiple:", join(std::to_string(leading), join(" ", listed)))));
+		}
+		if (!key.empty() && !key.starts_with(prefix)) {
+			add(s, join(tag, "violation.key_without_prefix"), 1);
+			add_sample(s, join(tag, join("key_without_prefix:", key)));
 		}
 	}
 }

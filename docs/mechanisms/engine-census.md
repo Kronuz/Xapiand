@@ -29,7 +29,9 @@ Line format: `{"seq","method","target","status","threw","tainted","counts":{key:
 `query.*`, `source.<name>`, `search.*`, `callback.<kind>:<name>`, `docview.<method>[@host|@spy:N|@keymaker:N]`,
 `shard.<op>`, `write.*`, `t5.*`. Strings are escaped to printable ASCII.
 
-T5: `census::document` runs on every document the shard writes; a term starting with `_id.` (`KEY_PREFIX`) that is not the
-write's key term, or a second one, is a `t5.violation.*` count with up to 8 samples per request. Nothing aborts.
+T5: `census::document` runs on every document the shard writes. For each candidate prefix in `KEY_PREFIXES` (`Q`, Xapiand's
+id term prefix, and `_id.`, the id field's name prefix) it counts `t5[prefix].*`: documents, documents with no term
+leading with it, with one, and violations (a second term, a term that is not the write's key term, a key that does not
+lead with it), with up to 8 samples per request. Nothing aborts.
 
 Tests: `tests/test_engine_census.cc`. Report: `docs/dev/engine-census.md`.

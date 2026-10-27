@@ -53,12 +53,12 @@ void query(const Query& query);
 // Counts the fields a search request uses.
 void search(const SearchRequest& request, std::size_t shards);
 
-// Counts a document about to be written and checks that at most one term leads with the key
-// prefix, and that it is the key term (when the write names one).
+// Counts a document about to be written and, for each of KEY_PREFIXES, checks that at most one term
+// leads with it, and that it is the key term (when the write names one): counters t5[prefix].*.
 void document(const Document& doc, std::string_view key);
 
-// The prefix the id term leads with.
-inline constexpr std::string_view KEY_PREFIX = "_id.";
+// The prefixes the id term might lead with: Xapiand's id term prefix, and the id field's name prefix.
+inline constexpr std::string_view KEY_PREFIXES[] = {"Q", "_id."};
 
 // One HTTP request: counters between construction and destruction are written as one JSON line.
 class RequestScope {
