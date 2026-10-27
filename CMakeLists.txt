@@ -2185,6 +2185,19 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
+		# The text adapter's tests: queryparser's tree against Xapian's parser.
+		add_executable(${PROJECT_NAME}_test_text_parser
+			"${PROJECT_SOURCE_DIR}/tests/test_text_parser.cc"
+			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+		)
+		target_link_libraries(${PROJECT_NAME}_test_text_parser PRIVATE
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+		)
+		add_test(NAME test_text_parser COMMAND ${PROJECT_NAME}_test_text_parser)
+		add_dependencies(check ${PROJECT_NAME}_test_text_parser)
+
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
 	# compile as-is; it's off by default.  The modules that became standalone Kronuz
 	# libraries (boolparser, msgpack, threadpool, url_parser, ...) were dropped since
