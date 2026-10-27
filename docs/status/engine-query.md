@@ -6,7 +6,7 @@ Branch `phase0.5/engine-query` from Xapiand master `201414347`. Design:
 
 ## State
 
-X3 is split in two landable steps. Step 1 is built and proven; the code review (`docs/reviews/engine-query-code.md`, APPROVE WITH CONDITIONS) found a leak and test gaps, and the fix round for CR1 to CR5 is done (below), ready for a re-check. Step 2 (sort keys and spies) is built and proven on `phase0.5/engine-query-2`, for review; it needs the two-line change in `remote_protocol_views.cc` that only the lead makes (Blocked on).
+X3 is split in two landable steps. Step 1 is built and proven; the code review (`docs/reviews/engine-query-code.md`, APPROVE WITH CONDITIONS) found a leak and test gaps, and the fix round for CR1 to CR5 is done (below), ready for a re-check. Step 2 (sort keys and spies) is built and proven on `phase0.5/engine-query-2`, for review; the registration change landed in Xapiand:635bff800. The step 2 code review (`docs/reviews/engine-query-2-code.md`, APPROVE WITH CONDITIONS) asked for C1 to C3; all three are closed (Proof 10 to 12).
 
 ## The split
 
@@ -54,9 +54,9 @@ Done when (each ticked with its evidence in "Proof (step 2)"):
    derives from `engine::MatchSpy`; `metrics.{h,cc}`, `bucket.{h,cc}`, `aggregations.{h,cc}` and
    `keymaker.{h,cc}` take a `DocView`. Proof 1 (no `Xapian::` left in them; seam metric).
 2. [x] `DatabaseHandler::get_mset` takes the sorter and the spy as engine types and wraps them in the borrowing
-   adapters at the one call into Enquire (`match`); [ ] the remote server registers them through
-   `register_key_maker` and `register_match_spy`: the helpers exist and are tested; the two calls in
-   `remote_protocol_views.cc` are the lead's (Blocked on). Proof 5.
+   adapters at the one call into Enquire (`match`); [x] the remote server registers them through
+   `register_key_maker` and `register_match_spy` (Xapiand:635bff800; the committed edit was re-proven by the
+   review's cluster run). Proof 5.
 3. [x] Behaviour unchanged: docs E2E, the query corpus extended with sorts, collapse and aggregations,
    and the 2-node `cluster_range.sh` extended with a sorted search and aggregations. Proof 2 to 4.
 4. [x] ASan+UBSan and revert checks. Proof 6 to 8.
@@ -252,8 +252,8 @@ Baseline: the step 1 head binary (`engine-query/.scratch/xapiand-final`; the tre
       `SerialisationError` now.
    c. `Unserialise::integer` and `positive` converted an out-of-range `long double` (bytes that are not a
       number) to an integer, undefined behaviour (UBSan at `serialise.h:296`, `:301`); they saturate.
-   d. `IntegerKey` subtracted `int64` with signed overflow on stored extremes (`INT64_MIN - 5`); it wraps in
-      two's complement now.
+   d. `IntegerKey` subtracted `int64` with signed overflow on stored extremes (`INT64_MIN - 5`); the distance
+      saturates now (C3, Proof 12).
    e. An unknown name in a serialised key maker threw with an unformatted `"{} not implemented"`; it names the
       key and all parse failures are `engine::Error(invalid)`.
 8. Revert checks (`.scratch/mutants3.py`, output `mutants3.out`): key maker adapter returns no key (12
@@ -261,8 +261,8 @@ Baseline: the step 1 head binary (`engine-query/.scratch/xapiand-final`; the tre
    added; it survived the first test); `register_key_maker` without `release()` (2); `DocView::terms` prefix
    off by one (6); `merge_results` trusts the aggregation name (abort); `SerialisationError` escapes the key
    maker's `unserialise` (17458); key maker takes the wrong end of a value list (9); aggregation does not
-   count documents (1); spy `clone()` returns an empty adapter (abort); signed subtraction restored (caught
-   by UBSan only: 1 line, no check fails); decoders without the clamp (1 check, 3 UBSan lines).
+   count documents (1); spy `clone()` returns an empty adapter (abort); signed subtraction restored (S10; caught
+   by the extremes order test since C3); decoders without the clamp (1 check, 3 UBSan lines).
 9. CR6: one translation per search. With a temporary `fprintf` in `get_mset`/`get_rset`, one
    `?nearest&fuzzy` search over a range source prints one translation (`.scratch/xlate.sh`); by reading
    master, the same search translated three times.
@@ -273,8 +273,26 @@ builds, benchmarks (`match` makes one view per document, as the adapters did in 
 Disclosure: a `git grep` I ran for the registration names printed lines 35, 50, 125 and 126 of
 `src/server/remote_protocol_views.cc` (two includes and the two registrations). I did not open the file. The
 local edit that built and ran the node and cluster used `sed` on those two exact strings
-(`.scratch/remote_registration.sh`); it is not committed.
+(`.scratch/remote_registration.sh`); the lead committed the same edit as Xapiand:635bff800.
 
+10. C1: the ledger follows Xapiand:635bff800 (criterion 2 ticked, Blocked on cleared).
+11. C2: `engine::unserialise_double` (`engine/xapian/codec.cc`) maps `Xapian::SerialisationError` to
+    `engine::Error(errc::invalid)`, the kind the codec contract names. The garbage test's seed has a float and a
+    date key now, and the aggregation merge test accepts only `SerialisationError` and `engine::Error(invalid)`.
+    Revert (`git checkout HEAD` of `codec.cc`): 7 of 40805 checks fail (6 in the key maker garbage test, and
+    the aggregation test throws `SerialisationError: Bad encoded double`). `probe_sort kmfuzz 300000`: 0
+    `Xapian::SerialisationError` (296771 `NetworkError` from the registry, 3229 accepted; the 1309 moved from
+    the unmapped type). `probe_sort aggfuzz 100000`: 0 Xapian errors, 876 `engine::Error(invalid)`.
+12. C3: `isub` saturates (`__builtin_sub_overflow`, `INT64_MIN`/`INT64_MAX` by direction) and `iabs` maps
+    `INT64_MIN` to `INT64_MAX`, so a distance of 2^63 or more sorts as the farthest (distances at or above
+    `INT64_MAX` tie). `test_sort_integer_extremes` orders nine extremes as one- and two-value documents,
+    forward and reversed, against an exact 128-bit distance (35640 ordered pairs, more than 10000 strict
+    ones checked). Mutants: signed subtraction restored (S10) and the two's-complement wrap both fail 4752 of
+    40808 checks (4751 order checks and the pinned key). `probe_sort extreme`: 0 inversions in 35640 pairs
+    (was 4751). Master has the same bug; answers change only at the extremes.
+13. After C1 to C3, under ASan+UBSan: 40808 checks pass (UBSan lines only in rapidjson); `qdiff.py` 2007
+    answers and `qnf.py` 104 answers `cmp` identical to the head binary (Xapiand:635bff800); `cluster_range.sh 2`
+    GREEN.
 
 ## Rulings and follow-ups
 
@@ -298,10 +316,13 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 - (ledger update in the commit after these)
 - Xapiand:4bbdbbe9b Move sort keys and spies to DocView and the engine callback bases (step 2, branch `phase0.5/engine-query-2`)
 - Xapiand:dde867bc6 Test the spy merge through its adapter and saturating decoders; record step 2 in the ledger
+- Xapiand:635bff800 Register the key maker and match spy through the engine adapters (the lead)
+- Xapiand:02003b9a7 Review engine query step 2 (code review)
+- (the C1 to C3 fix commit follows)
 
 ## Next
 
-1. The lead applies the registration change below; then the step 2 code review.
+1. The re-check of C1 to C3.
 2. X4 moves the `Xapian::Query` boundary in `get_mset`/`match` (the ESet terms for nearest and fuzzy,
    `Enquire`) behind `engine::search`, and error kinds for `QueryParserError` and `SerialisationError`.
 3. A neutral double codec for `engine/codec.h` (today it forwards to Xapian's, to keep the wire form).
@@ -317,14 +338,4 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 
 ## Blocked on
 
-The lead: two calls in `src/server/remote_protocol_views.cc` (I did not open the file):
-
-```
-registry.register_match_spy(AggregationMatchSpy{});
-  -> engine::xapian::register_match_spy(registry, AggregationMatchSpy{});
-registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
-  -> engine::xapian::register_key_maker(registry, Multi_MultiValueKeyMaker{});
-```
-
-`.scratch/remote_registration.sh apply` does it with `sed` (the include of `engine/xapian/callbacks.h` is
-already there from step 1). Without it the branch does not compile.
+Nothing.

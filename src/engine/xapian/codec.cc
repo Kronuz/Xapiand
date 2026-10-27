@@ -22,6 +22,9 @@
 
 #include "engine/codec.h"
 
+#include "engine/error.h"                         // for Error, errc
+#include "xapian.h"                               // for Xapian::SerialisationError
+
 #include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
@@ -35,5 +38,9 @@ engine::serialise_double(double value)
 double
 engine::unserialise_double(const char** p, const char* end)
 {
-	return ::unserialise_double(p, end);
+	try {
+		return ::unserialise_double(p, end);
+	} catch (const Xapian::SerialisationError& exc) {
+		throw engine::Error(engine::errc::invalid, exc.get_msg());
+	}
 }

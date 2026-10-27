@@ -33,13 +33,18 @@
 
 namespace {
 
-// Two's-complement difference, so extreme stored values do not overflow.
+// Saturating difference and absolute value, so a distance of 2^63 or more
+// sorts as the farthest instead of wrapping to a negative key.
 inline int64_t isub(int64_t a, int64_t b) noexcept {
-	return static_cast<int64_t>(static_cast<uint64_t>(a) - static_cast<uint64_t>(b));
+	int64_t r;
+	if (__builtin_sub_overflow(a, b, &r)) {
+		return b > 0 ? INT64_MIN : INT64_MAX;
+	}
+	return r;
 }
 
 inline int64_t iabs(int64_t v) noexcept {
-	return v < 0 ? isub(0, v) : v;
+	return v >= 0 ? v : (v == INT64_MIN ? INT64_MAX : -v);
 }
 
 }  // namespace

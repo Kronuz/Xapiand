@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <iterator>
 #include <functional>
 #include <map>
 #include <memory>
@@ -302,6 +303,8 @@ static void test_key_maker_unserialise_garbage() {
 	valid.add_integer(1, true, 3);
 	valid.add_geo(2, false, std::vector<Cartesian>{ Cartesian(0.5, 0.5, 0.5) });
 	valid.add_string_jaro(3, false, "abc", false);
+	valid.add_float(4, false, 1.5);
+	valid.add_date(5, true, 1e9);
 	const auto good = valid.serialise();
 	Multi_MultiValueKeyMaker prototype;
 
@@ -661,7 +664,8 @@ static void test_aggregation_spy_garbage() {
 		try {
 			target.merge_results(bytes);
 		} catch (const SerialisationError&) {
-		} catch (const Xapian::Error&) {
+		} catch (const engine::Error& exc) {
+			CHECK_EQ(exc.kind, engine::errc::invalid);
 		} catch (const std::exception&) {
 		}
 	}
@@ -717,7 +721,51 @@ static void test_unserialise_saturates() {
 	auto view = engine::xapian::make_view(doc);
 	Multi_MultiValueKeyMaker maker;
 	maker.add_integer(1, false, 5);
-	CHECK_EQ(maker.key(*view), Serialise::integer(INT64_MAX - 4));
+	CHECK_EQ(maker.key(*view), Serialise::integer(INT64_MAX));
+}
+
+// Distances of 2^63 or more saturate and sort as the farthest, for single and paired values, in both
+// directions, against an exact 128-bit distance.
+static void test_sort_integer_extremes() {
+	const std::int64_t E[] = {INT64_MIN, INT64_MIN + 1, INT64_MIN / 2, -5, 0, 5, INT64_MAX / 2, INT64_MAX - 1, INT64_MAX};
+	struct Doc { std::vector<std::int64_t> v; std::string key; __int128 dist; };
+	int pairs = 0;
+	for (bool reverse : {false, true}) {
+		for (auto ref : E) {
+			Multi_MultiValueKeyMaker maker;
+			maker.add_integer(1, reverse, ref);
+			std::vector<Doc> docs;
+			for (std::size_t i = 0; i < std::size(E); ++i) {
+				for (std::size_t j = i; j < std::size(E); ++j) {
+					Doc d;
+					d.v = (i == j) ? std::vector<std::int64_t>{E[i]} : std::vector<std::int64_t>{E[i], E[j]};
+					std::sort(d.v.begin(), d.v.end());
+					std::vector<std::string> vs;
+					__int128 best = reverse ? 0 : (static_cast<__int128>(1) << 100);
+					for (auto n : d.v) {
+						vs.push_back(Serialise::integer(n));
+						__int128 x = static_cast<__int128>(n) - ref;
+						if (x < 0) x = -x;
+						best = reverse ? std::max(best, x) : std::min(best, x);
+					}
+					d.dist = std::min<__int128>(best, INT64_MAX);
+					Xapian::Document doc;
+					doc.add_value(1, StringList::serialise(vs.begin(), vs.end()));
+					d.key = maker.key(*engine::xapian::make_view(doc));
+					docs.push_back(std::move(d));
+				}
+			}
+			for (const auto& a : docs) {
+				for (const auto& b : docs) {
+					if (a.dist < b.dist) {
+						++pairs;
+						CHECK_TRUE(reverse ? a.key > b.key : a.key < b.key);
+					}
+				}
+			}
+		}
+	}
+	CHECK_GT(pairs, 10000);
 }
 
 // Xapian's exceptions are not std::exception: report them as a failure of the test.
@@ -740,6 +788,7 @@ static void test_unserialise_saturates() {
 GUARDED(test_sort_integer)
 GUARDED(test_sort_float_text_and_pairs)
 GUARDED(test_key_maker_round_trip)
+GUARDED(test_sort_integer_extremes)
 GUARDED(test_key_maker_unserialise_garbage)
 GUARDED(test_key_maker_corrupt_values)
 GUARDED(test_adapter_ownership)
@@ -749,4 +798,4 @@ GUARDED(test_aggregation_spy)
 GUARDED(test_aggregation_spy_garbage)
 GUARDED(test_aggregation_spy_corrupt_values)
 
-TEST_MAIN(test_sort_integer_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded)
+TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded)
