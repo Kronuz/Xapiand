@@ -36,7 +36,8 @@ Fix built and proven locally; ready for the architect's durability check. No CI 
    5. `wal_recovery_check.sh` PASS (50/50); ctest 19/20, E2E 339 requests, 576/576, `e2e_assert.py` GREEN.
    6. `WALREPLAY=1 harness/cluster_check.sh 2` GREEN (kill -9 node1 after PUTs, restart: both nodes serve 40 documents and read the replayed document, no
       WAL error or revision mismatch in the logs).
-   7. ASan: see Next.
+   7. ASan (Apple clang, RelWithDebInfo, `ASAN=ON`, halt_on_error=1): `engine_replay` 17/17, `wal_replay_check.sh` PASS, `wal_replay_agg_check.sh` PASS,
+      `wal_recovery_check.sh` PASS, no report. Not run: cluster check and E2E under ASan.
 
 ## Findings (not fixed here)
 
