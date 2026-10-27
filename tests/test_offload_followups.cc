@@ -72,9 +72,10 @@ static void test_last_seen_refreshes_while_worker_busy() {
 	auto before = Node::get_node("followup-peer")->last_seen();
 	std::this_thread::sleep_for(20ms);
 
-	reactor::Reactor r(1, 1);
+	// Declared before the reactor so they outlive the pool worker still inside wait().
 	std::promise<void> worker_started, release;
 	auto release_future = release.get_future().share();
+	reactor::Reactor r(1, 1);
 	asio::post(*r.pool(), [&] {
 		worker_started.set_value();
 		release_future.wait();
