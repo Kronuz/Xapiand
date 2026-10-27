@@ -297,7 +297,7 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 - Xapiand:db0be79ad Fix the engine query review findings CR1 to CR5
 - (ledger update in the commit after these)
 - Xapiand:4bbdbbe9b Move sort keys and spies to DocView and the engine callback bases (step 2, branch `phase0.5/engine-query-2`)
-- Xapiand:64b128c58 Test the spy merge through its adapter and saturating decoders; record step 2 in the ledger
+- Xapiand:dde867bc6 Test the spy merge through its adapter and saturating decoders; record step 2 in the ledger
 
 ## Next
 
