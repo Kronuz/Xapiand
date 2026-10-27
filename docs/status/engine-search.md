@@ -6,9 +6,9 @@ X2 and X3 (`docs/status/engine-core.md`, `docs/status/engine-query.md`).
 
 ## State
 
-X4a (reads) is merged. X4b (search) is built and proven on `phase0.5/engine-search-b`; its last commit removes `Shard::db()` and
-needs the lead's edit to the remote server before it builds ("For the lead"). X4c phase 1 (plan) is written below
-and waits for the lead's ruling (branch `phase0.5/engine-search-c`).
+X4a (reads) and X4b (search) are merged on master. X4c (kinds and types; the seam closes) is built and proven on
+`phase0.5/engine-search-c`: commits Xapiand:b28875f07, Xapiand:94c212d24, Xapiand:01d8b6ccb and the proof commit
+that holds this text. `remote_protocol_views.cc` was not opened or edited; the lead's task for X4c is only to land it.
 
 ## GPL boundary
 
@@ -365,10 +365,102 @@ downcasts, N6 the `DocView` exception contract for X4c, N7 one view per scanned 
    without expansion. Either the filter should match the type character inside the prefix, or the feature should be
    dropped; `engine::Similar::prefixes` carries the question into strata. Open for the architect.
 
+## Done (X4c)
+
+Rulings applied: `errc::syntax`; `Error::description()`/`detail()`; any other `Xapian::Error` becomes `internal`; `DocView`
+throws `engine::Error` only (N6); `read_fate`/`is_missing` in `engine/error.h`; one `Shard::retry_read`; D1 unified with
+the write guard; D2 as proposed except the floor items below.
+
+- `engine/error.h`: `syntax`, `description()`, `detail()`, `is_missing`, `fate` and `read_fate`. `Failure` fills the texts from
+  the Xapian original; `rethrow_translated` adds `QueryParser` (syntax) and `Other` (internal) and leaves any
+  `std::exception` alone (Xapiand's `SerialisationError` is a `ClientError` and a Xapian type and must stay a 400).
+- `DocView`: the eight methods translate (`guarded`); `prepare` translates the query text.
+- `Shard::retry_read` (13 read ladders and `get_docid_term`, `get_view`, both metadata reads) and `Shard::collect_failure`
+  (the four fan-outs: metadata keys, get/set metadata, commit). 20 missing-is-data catches, the NotAvailable catches, the
+  match ladder (no close, as before), `http_utils.h`, the log hooks in main.cc, the eight raw `DocNotFound` throws,
+  manager.h/lock.h/manager.cc/search_views.cc raw throws are `engine::Error`.
+- Spellings: `Xapian::rev/docid/termcount/doccount/valueno` are `engine::` in every MIT file; `src/xapian.h` is
+  `src/engine/xapian/xapian.h`; `Xapian::major_version()` is `engine::xapian::version()`; `serialise-double.h` is
+  `engine::serialise_double`; word-break text (`TermGenerator`), `Stopper` and `Stem` live in `src/engine/xapian/{text,
+  stopper,snowball_stem}`; `src/stopper.*` keeps only the MIT stop-word list.
+- `exception_xapian.h`: `DocVersionConflictError`, `InvalidArgumentError`, `QueryParserError` are `ClientError` plus
+  `engine::Error` (no Xapian base); `CastError` is a `ClientError`. `SerialisationError` and `NetworkError` keep their
+  Xapian base (see floor).
+- New: `tests/test_engine_error.cc` (243 checks), `test_failure_policy` in `tests/test_pool.cc`, `harness/seam_allowlist.txt`
+  (7 files, 156 lines, from 38 files, 622 lines).
+
+### D1, the six sites
+
+Checked as ruled. The ledger's list was wrong for shard.cc 1783/1827 (`get_metadata`, `get_metadata_keys`): they already had
+the Modified arm. The real sites without it were the four fan-outs in handler.cc. `get_metadata_keys` and `get_metadata`
+only read: unified (a Modified that escapes the shard's own retries is now collected and the next shard is tried; the error
+is rethrown only if every shard failed, instead of closing and throwing the 503 at once). `set_metadata` and `commit` write
+inside the `try`: they keep close-and-throw for `reopen` (`collect_failure(..., writes=true)`); every other kind is
+collected as before. Also unified: `get_docid_term` and `get_view` now close the shard on a final Modified (they did not).
+The probe is `test_failure_policy` on a real opened shard: for every kind, retry or throw and open or closed, for reads and
+writes (reopen is collected by a read and fatal for a write). Forcing a real `DatabaseModifiedError` past the shard's own
+ladder needs fault injection (`XAPIAND_RANDOM_ERRORS`, off in this build), which I did not turn on.
+
+### Floor of the seam allowlist (differs from the ruling)
+
+`remote_protocol_views.cc` 125, `.h` 5, `remote_protocol_service.h` 1 as ruled; `replication_protocol_views.cc` 6, not 1: it
+serialises any `Xapian::Error` it catches to the peer with the GPL `serialise_error`, so its four catches and its include
+stay (its `NotAvailable` catch and its two throws moved). Also kept: `shard.cc` 6 and `shard.h` 4 (the remote server calls
+`add_document`, `replace_document` and `replace_document_term` with `Xapian::Document`; I found it only when the build broke,
+by match-only tokens), and `exception_xapian.h` 9 (`SerialisationError` and `NetworkError` stay Xapian-derived: the remote
+and replication servers catch `Xapian::Error` to answer a malformed message and the remote server throws and catches
+`NetworkError`). No `xapian.h` include line in the remote .cc needed a change (it reaches the header through
+`remote_protocol_views.h`), so there is no script for the lead.
+
+### Changes in behaviour
+
+1. D1 above (stale snapshot on exhausted retries in the read fan-outs and a close in `get_docid_term`/`get_view`).
+2. `engine::unserialise_double` throws `engine::Error(invalid)` on bad bytes where `metric_serialise.h` threw
+   `Xapian::SerialisationError`; only malformed remote bytes reach it. The wire bytes are the same function.
+3. Raw `engine::Error` throws that were Xapian types carry the reason as the 500 text (`manager.h`, `lock.h`, manager.cc's
+   endpoint checks, search_views' "Endpoint node not available"); the `NetworkError` mixin and the stem-language error keep
+   the old description. Unreachable from a request today (an unknown stem language is a 400 in the schema).
+4. `syntax` maps to HTTP 500 with the description when it is not also a `ClientError`, as the raw `QueryParserError` did
+   (the plan said 400; `prepare` runs outside the match ladder, so a text parse error never reached the ladder's 400).
+   The ladder still turns a `syntax` from `search` into a `ClientError`.
+
+## Proof (X4c)
+
+Builds: ASan+UBSan, `.scratch/build-asan`, `quiet light`, -j4, at Xapiand:01d8b6ccb. Baseline answers: the saved
+`qd/qnf/qr/qs-base.json`.
+
+1. Unit tests: 18 of 18 (`test_engine_error` 243 checks: the 19-row accessor table comparing `reason/description/detail` with
+   `get_msg/get_description/get_error_string`, the fates, a view over a closed database throwing `closed` from all 7 reading
+   methods, 30 exception values through the old Xapian-typed `catch_http_errors` (copied into the test) against the new
+   one, the double bytes; `test_pool` 97 checks).
+2. Corpora `cmp` identical to the baseline: `qdiff.py` 2,007, `qnf.py` 104, `qread.py` 911, `qsim.py` 265, including error
+   responses (404, 400, 409, 500 with Xapian descriptions). Docs E2E 339 requests, 576 of 576, `e2e_diff` GREEN.
+   `cluster_range.sh 2` GREEN, 30 checks, the 12 saved bodies identical to the X4b run (`cl3-new` vs `cl3-x4c`).
+3. The corpora caught my own bug: a regex pass moved four case-closing braces past their `break` in handler.cc (stored blobs
+   stopped being pushed; `qread` showed 462 differences and a 500 "Bad file descriptor"); a second run showed
+   `SerialisationError` answering 500 (`qdiff`), which became the `std::exception` pass-through in `rethrow_translated`.
+   Both fixed in Xapiand:94c212d24 and both rows now covered by tests or the corpora.
+4. Mutants (`.scratch/x4c/mutants6.py`, each rebuilt and judged by the unit tests): 30 of 30 caught: 8 HTTP kinds (404, 409,
+   reopen, 503/504, 504/502, `detail`, ClientError 400, 500 body), 15 translations (each Xapian type thrown as another
+   kind), the `std::exception` pass-through, `classify QueryParser`, 3 fates (reopen, closed, corrupt), `is_missing`, and
+   `description`. A first run was lost because two copies ran at once and one restored a stale file; the script now
+   restores with `git checkout`.
+5. Sanitizers: the unit tests and the corpora/E2E/cluster node logs show only the lz4 and rapidjson UBSan lines the
+   baseline prints; none from the new code.
+6. `seam_check.sh` exits 0 on the new floor.
+
+Not done: TSan, libFuzzer (no decoder or parser added), Linux and FreeBSD builds, benchmarks, `XAPIAND_RANDOM_ERRORS`
+injection through the converted fan-outs. `search_views.cc:1987` still prints `#xapian_query` from a Xapian query
+description (no `Xapian::` token, same output); queryparser work on `phase0.5/queryparser-ab` should replace it.
+
+For the other developer (queryparser): I did not touch the Text node, `query_dsl`, or CMake except adding
+`engine_error` to the unit-test list. `query.cc` still includes `snowball_stem.h` and `stopper.h`, which now resolve to
+`src/engine/xapian/` (same directory); `src/stopper.h` keeps only `getStopWords`.
+
 ## Next
 
-The lead applies `.scratch/remote_edits.sh`, commits the remote file, rebuilds, and reruns `cluster_range.sh 2`
-(and the docs E2E) on that head: the remote server then reaches the database through `native<>`. Then X4c.
+The lead reviews and lands `phase0.5/engine-search-c` (never pushed). Review focus: `read_fate` and the D1 write guard,
+the floor deviations above, and `rethrow_translated` ordering.
 
 ## For the lead (GPL file)
 
@@ -387,4 +479,4 @@ Run it from anywhere in the worktree: `sh .scratch/remote_edits.sh`. The final c
 
 ## Blocked on
 
-The remote server edit above (the lead's). Nothing else.
+Nothing.

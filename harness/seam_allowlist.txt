@@ -1,8 +1,6 @@
 6 src/database/shard.cc
 4 src/database/shard.h
-1 src/engine/query.h
-5 src/exception_xapian.h
-1 src/main.cc
+9 src/exception_xapian.h
 1 src/server/remote_protocol_service.h
 125 src/server/remote_protocol_views.cc
 5 src/server/remote_protocol_views.h
