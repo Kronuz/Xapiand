@@ -6,7 +6,7 @@ Branch `phase0.5/engine-query` from Xapiand master `201414347`. Design:
 
 ## State
 
-X3 is split in two landable steps. Step 1 is built and proven; the code review (`docs/reviews/engine-query-code.md`, APPROVE WITH CONDITIONS) found a leak and test gaps, and the fix round for CR1 to CR5 is done (below), ready for a re-check. Step 2 is not started.
+X3 is split in two landable steps. Step 1 is built and proven; the code review (`docs/reviews/engine-query-code.md`, APPROVE WITH CONDITIONS) found a leak and test gaps, and the fix round for CR1 to CR5 is done (below), ready for a re-check. Step 2 (sort keys and spies) is built and proven on `phase0.5/engine-query-2`, for review; it needs the two-line change in `remote_protocol_views.cc` that only the lead makes (Blocked on).
 
 ## The split
 
@@ -46,19 +46,28 @@ Done when:
    test except the binary-as-list form, which is equivalent (test_binary_equals_list shows the same
    description, matches and weights for every binary operator over operands that include empty ones).
 
-### Step 2: sort keys and spies (not started)
+### Step 2: sort keys and spies (branch `phase0.5/engine-query-2`)
 
-Done when:
+Done when (each ticked with its evidence in "Proof (step 2)"):
 
-1. `Multi_MultiValueKeyMaker` derives from `engine::KeyMaker` and reads a `DocView`; `AggregationMatchSpy`
-   derives from `engine::MatchSpy`; `metrics.h`, `bucket.h`, `bucket.cc`, `metrics.cc`, `aggregations.{h,cc}`
-   and `keymaker.{h,cc}` take a `DocView`, not a `Xapian::Document` (about 190 `Xapian::` references).
-2. `DatabaseHandler::get_mset` takes the sorter and the spy as engine types and wraps them in the
-   adapters at the one call into Enquire; the remote server registers them through
-   `register_key_maker` and `register_match_spy`.
-3. Aggregations, sort, collapse and remote-search behaviour is unchanged: E2E, the query corpus extended
-   with sorts and aggregations, `cluster_check.sh 2`.
-4. ASan+UBSan and revert checks as in step 1.
+1. [x] `Multi_MultiValueKeyMaker` derives from `engine::KeyMaker` and reads a `DocView`; `AggregationMatchSpy`
+   derives from `engine::MatchSpy`; `metrics.{h,cc}`, `bucket.{h,cc}`, `aggregations.{h,cc}` and
+   `keymaker.{h,cc}` take a `DocView`. Proof 1 (no `Xapian::` left in them; seam metric).
+2. [x] `DatabaseHandler::get_mset` takes the sorter and the spy as engine types and wraps them in the borrowing
+   adapters at the one call into Enquire (`match`); [ ] the remote server registers them through
+   `register_key_maker` and `register_match_spy`: the helpers exist and are tested; the two calls in
+   `remote_protocol_views.cc` are the lead's (Blocked on). Proof 5.
+3. [x] Behaviour unchanged: docs E2E, the query corpus extended with sorts, collapse and aggregations,
+   and the 2-node `cluster_range.sh` extended with a sorted search and aggregations. Proof 2 to 4.
+4. [x] ASan+UBSan and revert checks. Proof 6 to 8.
+
+## Open from step 1, closed here
+
+- CR6: `get_mset` translates the query once; the ESet rsets for `nearest` and `fuzzy` reuse the
+  `Xapian::Query` (`get_rset(const Xapian::Query&)`, `match`).
+- CR7: the `KeyMaker` and `MatchSpy` signatures are exercised by their real users now; no change was needed
+  to the `DocView` shape. `see` and `key` may throw `SerialisationError` on a stored value that does not
+  decode (contract in `callbacks.h`).
 
 ## Decisions
 
@@ -196,6 +205,77 @@ and a benchmark.
    2-node `cluster_range.sh` GREEN (range counts 11, 6, 4, 2). Revert script `.scratch/mutants2.py`,
    output `.scratch/mutants2.out`.
 
+## Proof (step 2)
+
+Baseline: the step 1 head binary (`engine-query/.scratch/xapiand-final`; the tree equals master `60efd75ef`,
+`git diff 58201fa8d 60efd75ef` is empty). Both ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`, x86_64.
+
+1. Migration: `Xapian::` and xapian includes in the eight files (aggregations, bucket, metrics, keymaker,
+   .h and .cc): 205 lines on master, 2 now (both the `exception_xapian.h` include, X4's). Seam metric
+   (`.scratch/seam.sh`): master 46 files / 889 lines, now 38 / 704. Double serialisation goes through
+   `engine/codec.h` (implemented in `engine/xapian/codec.cc` by Xapian's own functions, so the shard-to-shard
+   wire form is unchanged; the only GPL include of the migrated files moved there). `DocView::terms` now
+   skips to the prefix and stops after it.
+2. Docs E2E: 339 requests, 576 of 576 assertions GREEN, `e2e_diff` against the step 1 final GREEN with 0
+   status differences; 0 AddressSanitizer reports; UBSan lines only in lz4 and rapidjson.
+3. Query corpus (`.scratch/qdiff.py`, extended): 2007 answers (1581 are 200s), step 1 binary and new binary
+   `cmp` identical. New: 62 sort forms (field, `-field`, lists, `_order`, `_value` with every metric, geo
+   and date references, bad forms) times 4 queries times 3 paging variants, `sort=` query strings, 45
+   collapse runs, and 280 aggregation specs (11 metrics times 8 fields; values/terms with sort, limit and
+   min_doc_count; histogram, date_histogram, range, date_range, filter; nested buckets up to three deep;
+   error specs) times 4 queries, each also with hits; 516 aggregation answers are 200. 0 AddressSanitizer
+   reports. One pre-existing UBSan line remains in both binaries (a `long double` max converted to
+   `long long` in a `std::pair`, from an aggregation over no values); the other (`serialise.h:296`, below)
+   is gone.
+4. Two nodes with `--replicas 0` (`.scratch/cluster_range.sh 2`): GREEN with the new checks: `_sort` `-v` over
+   a range (20..10), `v` over all 30, `-v` with offset, `[t, -v]`; aggregations terms (five buckets of six),
+   stats (count 30, sum 465, min 1, max 30), histogram (9, 10, 10, 1), nested values with a max.
+5. Remote registration: `.scratch/remote_registration.sh apply` makes the two calls; with the key maker
+   registration removed 4 checks fail (all sorts return nothing), with the spy registration removed 13 fail
+   (`.scratch/remote_mutants.sh`, outputs `rm-nokeymaker.out`, `rm-nospy.out`).
+6. Unit tests, 15 of 15 under ASan+UBSan. New `test_engine_sort` (28144 checks): sort by integer (every
+   reference, forward and reversed, multi-valued, missing values) against a hand-computed order, by float,
+   by text, reversed, two keys; key maker clone, serialise round trip and registry rebuild; 20000 garbage and
+   mutated serialisations (engine error or a key maker, nothing else); 44000 corrupt stored values over 11
+   key kinds (a key or `SerialisationError`); the aggregation spy against hand-computed stats and buckets,
+   two halves merged into the whole (directly, through the serialised results, and through the adapter), a
+   registry rebuild; garbage spy serialisations and results; corrupt stored values; `DocView::terms`
+   against the full list for 12 prefixes; saturating decoders; ownership with live counters for every
+   adapter handed to Xapian: borrowed (the way `match` hands them over), owning, `clone()`, registered
+   prototypes and the copies the registry rebuilds, and malformed serialisations.
+7. Found by those tests, fixed in the same commit:
+   a. `register_key_maker` leaked the adapter: Xapian owns a registered key maker only through
+      `release()`; the count of live key makers stayed at 2 after the registry died (the step 1 helper, used
+      by tests only). Master's own call used `release()`.
+   b. `Aggregation::merge_results` indexed `_sub_aggs[name]` for a name from the wire; an unknown name made a
+      null entry and the next line dereferenced it (SEGV in ASan). A remote peer could send one. It throws
+      `SerialisationError` now.
+   c. `Unserialise::integer` and `positive` converted an out-of-range `long double` (bytes that are not a
+      number) to an integer, undefined behaviour (UBSan at `serialise.h:296`, `:301`); they saturate.
+   d. `IntegerKey` subtracted `int64` with signed overflow on stored extremes (`INT64_MIN - 5`); it wraps in
+      two's complement now.
+   e. An unknown name in a serialised key maker threw with an unformatted `"{} not implemented"`; it names the
+      key and all parse failures are `engine::Error(invalid)`.
+8. Revert checks (`.scratch/mutants3.py`, output `mutants3.out`): key maker adapter returns no key (12
+   checks fail); spy adapter drops `see` (6); drops `merge_results` (1, after the adapter-merge check was
+   added; it survived the first test); `register_key_maker` without `release()` (2); `DocView::terms` prefix
+   off by one (6); `merge_results` trusts the aggregation name (abort); `SerialisationError` escapes the key
+   maker's `unserialise` (17458); key maker takes the wrong end of a value list (9); aggregation does not
+   count documents (1); spy `clone()` returns an empty adapter (abort); signed subtraction restored (caught
+   by UBSan only: 1 line, no check fails); decoders without the clamp (1 check, 3 UBSan lines).
+9. CR6: one translation per search. With a temporary `fprintf` in `get_mset`/`get_rset`, one
+   `?nearest&fuzzy` search over a range source prints one translation (`.scratch/xlate.sh`); by reading
+   master, the same search translated three times.
+
+Not done: libFuzzer (none on this host; the mutational tests above are the fuzzing), TSan, Linux and FreeBSD
+builds, benchmarks (`match` makes one view per document, as the adapters did in step 1; the lead measures).
+
+Disclosure: a `git grep` I ran for the registration names printed lines 35, 50, 125 and 126 of
+`src/server/remote_protocol_views.cc` (two includes and the two registrations). I did not open the file. The
+local edit that built and ran the node and cluster used `sed` on those two exact strings
+(`.scratch/remote_registration.sh`); it is not committed.
+
+
 ## Rulings and follow-ups
 
 1. PostingSource ruling (review R-A): the value-slot filter contract is accepted. A cursor-style source
@@ -216,12 +296,15 @@ and a benchmark.
 - Xapiand:a0926598b Review engine query (code review)
 - Xapiand:db0be79ad Fix the engine query review findings CR1 to CR5
 - (ledger update in the commit after these)
+- Xapiand:4bbdbbe9b Move sort keys and spies to DocView and the engine callback bases (step 2, branch `phase0.5/engine-query-2`)
+- Xapiand:64b128c58 Test the spy merge through its adapter and saturating decoders; record step 2 in the ledger
 
 ## Next
 
-1. Step 2 as above.
-2. X4 moves the `Xapian::Query` boundary in `get_mset` (the ESet terms for nearest and fuzzy, `Enquire`)
-   behind `engine::search`, and error kinds for `QueryParserError`.
+1. The lead applies the registration change below; then the step 2 code review.
+2. X4 moves the `Xapian::Query` boundary in `get_mset`/`match` (the ESet terms for nearest and fuzzy,
+   `Enquire`) behind `engine::search`, and error kinds for `QueryParserError` and `SerialisationError`.
+3. A neutral double codec for `engine/codec.h` (today it forwards to Xapian's, to keep the wire form).
 
 ## Open questions
 
@@ -234,4 +317,14 @@ and a benchmark.
 
 ## Blocked on
 
-Nothing.
+The lead: two calls in `src/server/remote_protocol_views.cc` (I did not open the file):
+
+```
+registry.register_match_spy(AggregationMatchSpy{});
+  -> engine::xapian::register_match_spy(registry, AggregationMatchSpy{});
+registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
+  -> engine::xapian::register_key_maker(registry, Multi_MultiValueKeyMaker{});
+```
+
+`.scratch/remote_registration.sh apply` does it with `sed` (the include of `engine/xapian/callbacks.h` is
+already there from step 1). Without it the branch does not compile.

@@ -590,6 +590,14 @@ static void test_aggregation_spy() {
 	first.merge_results(second.serialise_results());
 	CHECK_TRUE(same_aggregations(first.get_aggregation(), result));
 
+	// The adapter forwards the merge, which is how Xapian folds in a remote shard's results.
+	AggregationMatchSpy third(config, schema), fourth(config, schema);
+	run_spy(first_db, third);
+	run_spy(second_db, fourth);
+	engine::xapian::MatchSpyAdapter merging(third);
+	merging.merge_results(fourth.serialise_results());
+	CHECK_TRUE(same_aggregations(third.get_aggregation(), result));
+
 	// By name through a registry, the way the remote server rebuilds it.
 	Xapian::Registry registry;
 	engine::xapian::register_match_spy(registry, AggregationMatchSpy());
@@ -692,6 +700,26 @@ static void test_aggregation_spy_corrupt_values() {
 	CHECK_GT(seen + thrown, 0);
 }
 
+
+// Bytes that decode out of range saturate instead of converting with undefined behaviour, and
+// stored extremes key without overflow.
+static void test_unserialise_saturates() {
+	CHECK_EQ(Unserialise::integer(Serialise::floating(1e30L)), INT64_MAX);
+	CHECK_EQ(Unserialise::integer(Serialise::floating(-1e30L)), INT64_MIN);
+	CHECK_EQ(Unserialise::positive(Serialise::floating(-1.75L)), 0U);
+	CHECK_EQ(Unserialise::positive(Serialise::floating(1e30L)), UINT64_MAX);
+	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MIN)), INT64_MIN);
+	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MAX)), INT64_MAX);
+	CHECK_EQ(Unserialise::positive(Serialise::positive(UINT64_MAX)), UINT64_MAX);
+
+	Xapian::Document doc;
+	doc.add_value(1, Serialise::integer(INT64_MIN));
+	auto view = engine::xapian::make_view(doc);
+	Multi_MultiValueKeyMaker maker;
+	maker.add_integer(1, false, 5);
+	CHECK_EQ(maker.key(*view), Serialise::integer(INT64_MAX - 4));
+}
+
 // Xapian's exceptions are not std::exception: report them as a failure of the test.
 #define GUARDED(fn) \
 	static void fn##_guarded() { \
@@ -716,8 +744,9 @@ GUARDED(test_key_maker_unserialise_garbage)
 GUARDED(test_key_maker_corrupt_values)
 GUARDED(test_adapter_ownership)
 GUARDED(test_doc_view_terms)
+GUARDED(test_unserialise_saturates)
 GUARDED(test_aggregation_spy)
 GUARDED(test_aggregation_spy_garbage)
 GUARDED(test_aggregation_spy_corrupt_values)
 
-TEST_MAIN(test_sort_integer_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded)
+TEST_MAIN(test_sort_integer_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded)
