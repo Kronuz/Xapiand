@@ -470,6 +470,13 @@ Shard::reopen_writable()
 		DatabaseWAL wal(this);
 		if (wal.execute()) {
 			_modified.store(true, std::memory_order_relaxed);
+			if (!is_transactional()) {
+				// Makes the replayed operations visible to readers of the shard.
+				engine::sync_wait(engine_shard->commit(engine::Transaction::none));
+				_modified.store(false, std::memory_order_relaxed);
+				reopen_revision = engine_shard->revision();
+				endpoint.set_revision(reopen_revision);
+			}
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
