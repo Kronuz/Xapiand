@@ -130,3 +130,42 @@ The ledger discloses that a `git grep` printed lines 47-48 and 120-123 of `remot
 - Docs E2E (339 requests, 576 assertions) and the two-node `cluster_check.sh`/`cluster_range.sh` (remote registration only read and covered by the registry unit test; the leak and test gaps do not touch them).
 - GCC or Linux or FreeBSD builds (CR3 is from reading); LeakSanitizer (not available on this host; the live-counter probe stands in for it); TSan; benchmarks; libFuzzer.
 - A fix check: I did not edit the branch, so CR1's fix is shown only on the probe's copy of the adapter lifecycle (`leakfix`).
+
+## Re-check
+
+Head `a808ecc9d` (fix commit `db0be79ad`). Local build `.scratch/build-asan` rebuilt at that head: `xapiand_test_engine_query` 22395 checks pass under ASan and UBSan. Nothing edited in the source tree (mutants were applied and restored; `git status` clean).
+
+| Item | Ruling | Evidence |
+|---|---|---|
+| CR1 | CLOSED | `src/engine/xapian/query.cc:197-199` builds the adapter and passes `adapter->release()` to the Query. `probe_eq leak`: `live=1` while the query is alive (made=201 over 100 translate-and-search rounds), `live=0` after it is destroyed (was 100 leaked). `leakfix` also 0. Revert (`Xapian::Query(adapter)`): `test_source_ownership` fails 5 checks (`tests/test_engine_query.cc:706, 712, 722, 724, 726`: live count 1/1/2/1/0 off). |
+| CR2 | CLOSED | `.scratch/rmutants.py` on the fixed head: R1 wildcard flags dropped fails 3 checks, R2 `set_termfreq_min(0)` removed fails 1, R3 `max_weight` dropped fails 3, R4 fuzzy limit kind swapped fails 2, R6 control fails 277. R5 (binary combine built as a list) survives, as the developer reports; `test_binary_equals_list` (`tests/test_engine_query.cc:796`) now pins that the two forms give the same description and the same hits and weights for every binary op over six operands including empties, so the survival is a stated equivalence, which was the "document" option of the finding. |
+| CR3 | CLOSED | `src/multivalue/range.cc:417-419`, `:501-502`, `:583-584`: slot, start and end are `const`/local reads in order, then the constructor call. Read, not testable on this clang (left to right); a reversed-read mutant fails `test_registered_sources` per the ledger. |
+| CR4 | CLOSED | `src/engine/xapian/query.cc:167-183` folds the append chain in a loop; `src/engine/query.cc:59-76` (`~QueryNode`) frees uniquely owned children from a list. `probe_eq deep 2000 524288` with the translation only (`NODESC=1`): ok at 2000, 5000 and 20000 (`engine::Query` alone: 200000 built and destroyed). With `get_description()` the probe overflows inside Xapian (`QueryBranch::get_description_helper`) at 2000, and Xapian's own destructor (`SmallVectorI::clear`) overflows at 5000: those are Xapian's recursion, not the seam's. `test_append_chain` covers 600 on 256 KB. |
+| CR5 | CLOSED | `probe_eq garbage`: 200000 random stored values, no terminate, hits=19502. `src/multivalue/range.cc:353-372, 443-458, 525-540` (range, GE, LE `insideRange`) and `src/multivalue/geospatialrange.cc:90-122` (`insideRanges`) catch `SerialisationError` and return false; geo `weight` (`:61-85`) returns the no-centroid weight. Revert (range `insideRange` catch rethrows): process aborts (exit -6). `test_corrupt_stored_value` runs 20000 random values per source plus a search over a slot holding one corrupt value. |
+| New: `reset(db, shard)` override | CLOSED | See below. |
+
+### New behaviour: bounds now reach the matcher
+
+`src/engine/xapian/callbacks.cc:140-147` overrides `reset(db, shard)`: base reset, then `set_bounds()` (`max_weight()` when non-zero), then `set_termfreq_min(0)`.
+
+From the code, `max_weight() >= weight(doc)` for every accepted document:
+
+- Range, GE, LE (`src/multivalue/range.cc`): `weight()` is a constant 1.0 and `max_weight()` is not overridden, so it is 0.0, which `set_bounds` treats as "not declared" and leaves Xapian's unbounded default. Nothing is declared, so nothing can be pruned wrongly; this is the same state as master.
+- Geo (`src/multivalue/geospatialrange.h:85`, `.cc:61-85`): `max_weight()` is `pi - 0`; `weight()` is `pi - min_angle` where `min_angle` starts at `pi` and only decreases to a `distance()` (`acos`, in [0, pi], NaN never wins the `<`). So the weight is in [0, pi] for every value, accepted or not, and a value that does not decode weighs 0.
+
+Probes (`.scratch/probes/probe_bound.cc`, new; output `.scratch/probe_bound_topk.out`):
+
+- `probe_bound srcbound`, 200000 random values per source: Range, GE, LE accepted 126454, 166358 and 171305, weight min = max = 1.0, declared bound 0 (undeclared, unbounded). Geo accepted 132023, weight in [0.000000, 3.137281], declared bound 3.141593: no violation.
+- `probe_bound topk`: 2500 documents per shard, 1 and 2 shards, 20 queries, four combinations (`OR`, `AND_MAYBE`, `AND` of a term group with the source, `FILTER` with the source on the left) and limits 1, 3, 10 and 40: 2560 cases. Real bound against unbounded: 0 differences in docids and weights, for every source. A declared tight bound of 1.0 on the three range sources (which the code does not declare today) against unbounded: 0 differences. Control, a declared bound of 1e-6 (far below the real weights): 2260 of 2560 cases differ, so the comparison does detect pruning and the matcher does use the bound.
+
+### New findings
+
+None in the fix. Two notes for the lead, not findings against the branch:
+
+1. The range sources keep weight 1.0 with no declared bound, so they never prune; declaring `max_weight() = 1.0` is safe (probe: 0 differences) if the matcher should skip documents sooner, but that is an optimisation, not part of this fix.
+2. `Query::description()` (`src/engine/query.cc`) is recursive, so logging a very deep query still costs stack, as the ledger already says; `probe_eq pattern` prints "expect 2" for `al?ce` in the probe's own text, but the data has only one four-letter-middle match (`alice`; `alce` is shorter), the right count is 1 and `test_wildcard_patterns` asserts the correct set.
+
+### Not run (re-check)
+
+Docs E2E, the two-node cluster scripts, the corpus diff (`qdiff.py`/`qrmutants.py`; the developer reports the 301 answers identical and the changed code is bounds and error paths only), GCC, Linux and FreeBSD builds, TSan, benchmarks, libFuzzer. The CR3 reversed-read mutant and the CR4 recursive-translation revert were not rerun (developer's `mutants2.out` read: both fail). The ASan build tree was left holding the last reverted-mutant build; rebuild it before reuse.
+
