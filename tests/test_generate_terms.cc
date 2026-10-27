@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "database/utils.h"
+#include "serialise.h"
 #include "multivalue/generate_terms.h"
 
 static void test_numeric_terms() {
@@ -80,4 +81,17 @@ static void test_id_accuracy_prefix() {
 	CHECK_FALSE(GenerateTerms::numeric(int64_t(1200), int64_t(1300), accuracy, acc_prefix).empty());
 }
 
-TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix)
+// A range reaching past twice the coarsest accuracy keeps the bucket that starts there: the default
+// numeric accuracies end at 1e8, so ids in [2e8, 3e8) (2^28 among them) must stay reachable.
+static void test_numeric_bucket_at_max_accuracy() {
+	const std::vector<uint64_t> accuracy = { 100, 1000, 10000, 100000, 1000000, 100000000 };
+	const std::vector<std::string> prefix = { "A1", "A2", "A3", "A4", "A5", "A6" };
+	const auto bucket = Serialise::integer(int64_t(200000000));
+
+	for (auto end : { int64_t(250000000), int64_t(2147483647), int64_t(3000000000) }) {
+		auto q = GenerateTerms::numeric(int64_t(55), end, accuracy, prefix);
+		CHECK(q.description().find(bucket) != std::string::npos);
+	}
+}
+
+TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix, test_numeric_bucket_at_max_accuracy)
