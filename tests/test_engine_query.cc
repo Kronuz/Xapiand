@@ -36,6 +36,11 @@
 #include "engine/query.h"
 #include "engine/xapian/callbacks.h"
 #include "engine/xapian/query.h"
+#include "length.h"
+#include "multivalue/geospatialrange.h"
+#include "multivalue/range.h"
+#include "serialise.h"
+#include "serialise_list.h"
 #include "snowball_stem.h"
 #include "stopper.h"
 #include "xapian.h"
@@ -173,6 +178,179 @@ static void test_expansions() {
 		Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, "Xabc", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM, 2, 3).get_description());
 }
 
+namespace {
+
+std::vector<Xapian::docid> run(const Xapian::Database& db, const Xapian::Query& query, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr) {
+	Xapian::Enquire enquire(db);
+	enquire.set_query(query);
+	if (sorter) {
+		enquire.set_sort_by_key_then_relevance(sorter, false);
+	}
+	if (spy) {
+		enquire.add_matchspy(spy);
+	}
+	std::vector<Xapian::docid> dids;
+	auto mset = enquire.get_mset(0, 20, 20);
+	for (auto it = mset.begin(); it != mset.end(); ++it) {
+		dids.push_back(*it);
+	}
+	return dids;
+}
+
+}  // namespace
+
+// Xapiand's own value sources cross the remote protocol by name through the registry, and come
+// back as the same filter.
+static void test_registered_sources() {
+	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	for (int i = 10; i <= 30; ++i) {
+		Xapian::Document doc;
+		doc.add_term("t");
+		doc.add_value(5, "0" + std::to_string(i));
+		db.add_document(doc);
+	}
+	Xapian::Registry registry;
+	engine::xapian::register_posting_source(registry, GeoSpatialRange{});
+	engine::xapian::register_posting_source(registry, MultipleValueRange{});
+	engine::xapian::register_posting_source(registry, MultipleValueGE{});
+	engine::xapian::register_posting_source(registry, MultipleValueLE{});
+
+	// The sources are built from their serialised form: their constructors are private to range.cc.
+	auto serialised = [](std::initializer_list<std::string> parts) {
+		std::vector<std::string> data(parts);
+		return StringList::serialise(data.begin(), data.end());
+	};
+	auto range = [&](std::string from, std::string to) { return MultipleValueRange{}.unserialise(serialised({ serialise_length(5), from, to })); };
+	auto ge = [&](std::string from) { return MultipleValueGE{}.unserialise(serialised({ serialise_length(5), from })); };
+	auto le = [&](std::string to) { return MultipleValueLE{}.unserialise(serialised({ serialise_length(5), to })); };
+	const std::vector<std::pair<Query, std::set<Xapian::docid>>> cases = {
+		{ Query::source(range("015", "018")), { 6, 7, 8, 9 } },
+		{ Query::source(ge("028")), { 19, 20, 21 } },
+		{ Query::source(le("012")), { 1, 2, 3 } },
+		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
+	};
+	for (const auto& [query, expected] : cases) {
+		auto local = to_xapian(query);
+		auto dids = run(db, local);
+		CHECK_EQ(std::set<Xapian::docid>(dids.begin(), dids.end()), expected);
+		auto remote = Xapian::Query::unserialise(local.serialise(), registry);
+		auto remote_dids = run(db, remote);
+		CHECK_EQ(std::set<Xapian::docid>(remote_dids.begin(), remote_dids.end()), expected);
+	}
+
+	// A registry that does not know the source cannot rebuild the query.
+	Xapian::Registry empty_registry;
+	bool raised = false;
+	try {
+		Xapian::Query::unserialise(to_xapian(cases[0].first).serialise(), empty_registry);
+	} catch (const Xapian::Error&) {
+		raised = true;
+	}
+	CHECK_TRUE(raised);
+
+	// Bytes the source never wrote are a network error.
+	const auto* prototype = registry.get_posting_source("MultipleValueRange");
+	CHECK_TRUE(prototype != nullptr);
+	bool network_error = false;
+	try {
+		prototype->unserialise_with_registry("x", registry);
+	} catch (const Xapian::NetworkError&) {
+		network_error = true;
+	}
+	CHECK_TRUE(network_error);
+}
+
+// Bytes a source never wrote: random, and valid serialisations with a few bytes flipped, cut or
+// extended. Each source must either rebuild or raise the engine's invalid error, and never
+// anything else (the remote server turns that one error into a network error).
+static void test_unserialise_garbage() {
+	auto serialised = [](std::initializer_list<std::string> parts) {
+		std::vector<std::string> data(parts);
+		return StringList::serialise(data.begin(), data.end());
+	};
+	const std::vector<std::pair<const engine::PostingSource*, std::string>> seeds = {
+		{ new MultipleValueRange{}, serialised({ serialise_length(5), "015", "018" }) },
+		{ new MultipleValueGE{}, serialised({ serialise_length(5), "015" }) },
+		{ new MultipleValueLE{}, serialised({ serialise_length(5), "015" }) },
+		{ new GeoSpatialRange{}, serialised({ serialise_length(7), Serialise::ranges_centroids({ range_t(1, 9), range_t(20, 30) }, { Cartesian(1, 0, 0) }) }) },
+	};
+	Lcg rng{777};
+	std::size_t rebuilt = 0, rejected = 0;
+	for (const auto& [source, seed] : seeds) {
+		for (int i = 0; i < 4000; ++i) {
+			std::string bytes;
+			switch (rng.next(4)) {
+				case 0:
+					for (auto n = rng.next(40); n > 0; --n) {
+						bytes.push_back(static_cast<char>(rng.next(256)));
+					}
+					break;
+				case 1:
+					bytes = seed;
+					for (auto n = rng.next(4) + 1; n > 0 && !bytes.empty(); --n) {
+						bytes[rng.next(static_cast<std::uint32_t>(bytes.size()))] = static_cast<char>(rng.next(256));
+					}
+					break;
+				case 2:
+					bytes = seed.substr(0, rng.next(static_cast<std::uint32_t>(seed.size() + 1)));
+					break;
+				default:
+					bytes = seed;
+					for (auto n = rng.next(8); n > 0; --n) {
+						bytes.push_back(static_cast<char>(rng.next(256)));
+					}
+					break;
+			}
+			try {
+				auto rebuilt_source = source->unserialise(bytes);
+				CHECK_TRUE(rebuilt_source != nullptr);
+				// What rebuilt is usable: it describes and serialises without raising.
+				(void)rebuilt_source->description();
+				(void)rebuilt_source->serialise();
+				++rebuilt;
+			} catch (const engine::Error& exc) {
+				CHECK_TRUE(exc.kind == engine::errc::invalid);
+				++rejected;
+			} catch (...) {
+				CHECK_TRUE(false);
+			}
+		}
+		delete source;
+	}
+	CHECK_TRUE(rebuilt > 100 && rejected > 100);
+}
+
+// What a wildcard does past its limit is the one thing a description does not show: run it.
+static void test_expansion_limits() {
+	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	const std::vector<std::vector<int>> docs_of_term = { {}, { 1, 2, 3, 4, 5 }, { 6, 7 }, { 8 }, { 9, 10, 11, 12 } };
+	for (int did = 1; did <= 12; ++did) {
+		Xapian::Document doc;
+		doc.add_term("zz");
+		for (std::size_t t = 1; t < docs_of_term.size(); ++t) {
+			for (int member : docs_of_term[t]) {
+				if (member == did) {
+					doc.add_term("ab" + std::to_string(t));
+				}
+			}
+		}
+		db.add_document(doc);
+	}
+	auto matched = [&](engine::Expansion limit) {
+		auto dids = run(db, to_xapian(Query::wildcard("ab", 2, limit)));
+		return std::set<Xapian::docid>(dids.begin(), dids.end());
+	};
+	CHECK_EQ(matched(engine::Expansion::first), (std::set<Xapian::docid>{ 1, 2, 3, 4, 5, 6, 7 }));
+	CHECK_EQ(matched(engine::Expansion::most_frequent), (std::set<Xapian::docid>{ 1, 2, 3, 4, 5, 9, 10, 11, 12 }));
+	bool raised = false;
+	try {
+		matched(engine::Expansion::error);
+	} catch (const Xapian::WildcardError&) {
+		raised = true;
+	}
+	CHECK_TRUE(raised);
+}
+
 // The seam simplifies as Xapian does, and translates to the same query, over random trees.
 static void test_random_trees() {
 	Lcg rng{12345};
@@ -231,6 +409,10 @@ static void test_text() {
 		{ "hello AND world OR \"big dog\"", Op::AND, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::BOOLEAN },
 		{ "running dogs jumped", Op::AND, "", "english", engine::Stem::some, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::BOOLEAN },
 		{ "running dogs jumped", Op::OR, "", "english", engine::Stem::all_z, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
+		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::some, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
+		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::all_z, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
+		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::all, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
+		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
 		{ "+must -never maybe", Op::AND, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
 		{ "he*", Op::OR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::WILDCARD },
 		{ "hel", Op::OR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::PARTIAL },
@@ -261,7 +443,13 @@ static void test_text() {
 				xflags |= m.xapian;
 			}
 		}
-		Xapian::QueryParser::stem_strategy strategy = c.strategy == engine::Stem::all_z ? Xapian::QueryParser::STEM_ALL_Z : Xapian::QueryParser::STEM_SOME;
+		Xapian::QueryParser::stem_strategy strategy = Xapian::QueryParser::STEM_NONE;
+		switch (c.strategy) {
+			case engine::Stem::none: strategy = Xapian::QueryParser::STEM_NONE; break;
+			case engine::Stem::some: strategy = Xapian::QueryParser::STEM_SOME; break;
+			case engine::Stem::all: strategy = Xapian::QueryParser::STEM_ALL; break;
+			case engine::Stem::all_z: strategy = Xapian::QueryParser::STEM_ALL_Z; break;
+		}
 		const bool set_op = c.op != Op::INVALID;
 		auto expected = parse(c.text, set_op ? xop(c.op) : Xapian::Query::OP_OR, set_op, c.stop, c.stem, strategy, xflags, "XTfield");
 		auto got = to_xapian(Query::text(c.text, config));
@@ -385,23 +573,6 @@ Xapian::WritableDatabase make_db() {
 	return db;
 }
 
-std::vector<Xapian::docid> run(const Xapian::Database& db, const Xapian::Query& query, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr) {
-	Xapian::Enquire enquire(db);
-	enquire.set_query(query);
-	if (sorter) {
-		enquire.set_sort_by_key_then_relevance(sorter, false);
-	}
-	if (spy) {
-		enquire.add_matchspy(spy);
-	}
-	std::vector<Xapian::docid> dids;
-	auto mset = enquire.get_mset(0, 20, 20);
-	for (auto it = mset.begin(); it != mset.end(); ++it) {
-		dids.push_back(*it);
-	}
-	return dids;
-}
-
 }  // namespace
 
 static void test_posting_source() {
@@ -507,7 +678,10 @@ static void test_match_spy() {
 	}
 
 GUARDED(test_leaves_and_ops)
+GUARDED(test_registered_sources)
+GUARDED(test_unserialise_garbage)
 GUARDED(test_expansions)
+GUARDED(test_expansion_limits)
 GUARDED(test_random_trees)
 GUARDED(test_append)
 GUARDED(test_text)
@@ -515,4 +689,4 @@ GUARDED(test_posting_source)
 GUARDED(test_key_maker)
 GUARDED(test_match_spy)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_expansions_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded)

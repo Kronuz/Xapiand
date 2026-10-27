@@ -6,7 +6,7 @@ Branch `phase0.5/engine-query` from Xapiand master `201414347`. Design:
 
 ## State
 
-X3 is split in two landable steps. Step 1 is built and proven; step 2 is not started.
+X3 is split in two landable steps. Step 1 is built and proven (ready for code review); step 2 is not started.
 
 ## The split
 
@@ -83,11 +83,75 @@ Done when:
 
 ## Done (step 1)
 
-See Proof below. Commits are listed at the end.
+- `src/engine/query.{h,cc}`, `src/engine/callbacks.h`: `Query`, `Op`, `TextConfig`, `text::` flags,
+  `PostingSource`, `KeyMaker`, `MatchSpy`.
+- `src/engine/xapian/query.{h,cc}`: `to_xapian(Query)`. `src/engine/xapian/callbacks.{h,cc}`:
+  `PostingSourceAdapter` (a `Xapian::ValuePostingSource` that forwards `accept` and `weight`),
+  `KeyMakerAdapter`, `MatchSpyAdapter` (owning, or borrowing the host object that holds the results),
+  and `register_posting_source`, `register_key_maker`, `register_match_spy`.
+- Migrated: `query_dsl.{h,cc}` (no `Xapian::` left), `multivalue/range.{h,cc}` and
+  `multivalue/geospatialrange.{h,cc}` (sources derive from `engine::PostingSource`),
+  `multivalue/generate_terms.{h,cc}` query side, `server/search_views.cc` (the index-path query),
+  `database/handler.{h,cc}` (`get_mset`, `get_rset`), `database/schema.h` (`getQueryParserStemStrategy`
+  returns `engine::Stem`), `server/remote_protocol_views.cc` (four registrations).
+- Found by the garbage-bytes test: `SerialiseList::size()` was `noexcept` but decodes lazily, so a
+  malformed serialised value terminated the process (a remote peer could send one in a source or a
+  stored value could carry one). It is no longer `noexcept`; the existing `catch (SerialisationError)`
+  sites now see it. Pre-existing on master.
 
 ## Proof (step 1)
 
-To be filled in with the final numbers.
+Baseline is master `201414347` built the same way (ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`,
+`-DBUILD_TESTS=ON`, x86_64, `.scratch/build-asan`), binary kept as `.scratch/xapiand-base`.
+
+1. Unit tests, all 14 ASan+UBSan: pass. New `test_engine_query`: 22091 checks (leaves and operators
+   against the Xapian calls; expansions, including what `first`, `most_frequent` and `error` do past the
+   limit on a database; 2000 random trees agree with Xapian on description and `empty()`; `append`; 16
+   text cases against `Xapian::QueryParser` set up as `query_dsl` set it up; the posting source through
+   every match path and through a `Registry`; Xapiand's three real range sources by name through a
+   registry; key maker and spy; 16000 garbage and mutated serialisations).
+2. Docs E2E (`.scratch/e2e.sh`): base 339 requests, 576 of 576 assertions GREEN; final 339 requests,
+   576 of 576, `e2e_assert` GREEN, `e2e_diff` against the base GREEN with 0 status differences.
+   `bodydiff` over 339 bodies: 2 differ, both volatile (a generated id, the metrics page).
+3. Query corpus (`.scratch/qdiff.py`, 301 answers: text, stop words, stemming, wildcard, partial, fuzzy,
+   ranges on integer, float, date, geo, every compound operator, sorts, `check_at_least`, `?q=`
+   strings, relevance order with comments, and 48 error answers): 0 of 301 differ between base and final,
+   error messages included.
+4. Two nodes with `--replicas 0` (`.scratch/cluster_range.sh`, `harness/cluster_check.sh` plus range
+   searches from the node that does not hold the shards): base GREEN, final GREEN. Without replicas the
+   search goes over the remote protocol; with the default replicas it is answered locally and the check
+   proves nothing about registration.
+5. ASan+UBSan on the final node in the E2E run and the corpus run: 0 AddressSanitizer reports; the
+   UBSan lines are the lz4 and rapidjson ones the base shows (4 and 4 and 2 and 2 across the two logs,
+   the same two kinds as the base's 2 and 2 and 1 and 1).
+6. Seam metric (files and lines naming `Xapian::` or including `xapian.h` or `xapian/`, outside
+   `src/xapian` and `src/engine/xapian`): master 52 files, 1297 lines; final 46 files, 889 lines.
+   `query_dsl`, `range`, `geospatialrange` and their headers, and `generate_terms.h`, are at 0;
+   `generate_terms.cc` keeps the 16 of the word-break document path.
+
+### Revert checks
+
+Unit mutants (rebuild the test, run it; `.scratch/mutants.py`, output `.scratch/mutants.out`), each caught:
+append stops skipping an empty accumulator (120 of 6068 checks fail), wildcard `first` maps to
+`most_frequent` (1), text flag PARTIAL unmapped (1), adapter `check` ignores `accept` (2), adapter
+`next` does not filter (4), AND_NOT with an empty left is not empty (28), engine error escapes the
+adapter (abort), stem strategy `all_z` maps to `some` (1), key maker adapter returns no key (1), spy
+adapter drops `merge_results` (1), scale factor ignored (277), edit-distance prefix length dropped (1).
+Two survived the first test version (the limit kind and the stem strategy: Xapian's description shows
+neither) and are caught by the database and capital-letter cases added after.
+
+Migration mutants against the query corpus (`.scratch/qmutants.py`): the fuzzy flag dropped from text
+(7 of 301 answers differ), `>=` to `>` in the GE source (3), `append` not skipping an empty accumulator
+(195). A partial-expansion limit kind swap changes no answer in this corpus (fewer terms than the limit);
+the unit test for the limits covers it.
+
+Remote registration: with `--replicas 0`, removing the `MultipleValueRange` registration makes the range
+checks fail (2 of 4: counts -1); restored, they pass. The garbage-bytes test aborted the process on the
+first input before the `size()` fix (an uncaught `SerialisationError`), and passes after.
+
+Not done: a libFuzzer target (Apple clang ships no libFuzzer, and the sanitizers instrument the whole
+tree; the mutational test in `test_engine_query` is the fuzzing here), TSan, Linux and FreeBSD builds,
+and a benchmark.
 
 ## Next
 
