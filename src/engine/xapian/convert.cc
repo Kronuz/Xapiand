@@ -233,6 +233,36 @@ public:
 		}
 	}
 
+	void values(const ValueSink& sink) const override {
+		const auto end = doc_.values_end();
+		for (auto it = doc_.values_begin(); it != end; ++it) {
+			sink(it.get_valueno(), *it);
+		}
+	}
+
+	void term_details(const TermDetailSink& sink) const override {
+		const auto end = doc_.termlist_end();
+		for (auto it = doc_.termlist_begin(); it != end; ++it) {
+			TermDetail detail;
+			auto name = *it;
+			detail.term = name;
+			detail.wdf = it.get_wdf();
+			try {
+				detail.termfreq = it.get_termfreq();
+			} catch (const Xapian::InvalidOperationError&) { }  // not tied to a database
+			const auto pend = it.positionlist_end();
+			detail.positions.reserve(it.positionlist_count());
+			for (auto pit = it.positionlist_begin(); pit != pend; ++pit) {
+				detail.positions.push_back(*pit);
+			}
+			sink(detail);
+		}
+	}
+
+	std::string serialise() const override {
+		return doc_.serialise();
+	}
+
 private:
 	Xapian::Document doc_;
 };

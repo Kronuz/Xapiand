@@ -280,7 +280,7 @@ DataHeaderV1::init(void* param, void* /*unused*/)
 	assert(shard);
 
 	head.magic = _LEGACY_STORAGE_MAGIC;
-	strncpy(head.uuid, shard->db()->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, shard->engine().uuid().c_str(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 }
 
@@ -293,7 +293,7 @@ DataHeaderV1::validate(void* param, void* /*unused*/)
 	}
 
 	auto shard = static_cast<Shard*>(param);
-	if (UUID(head.uuid) != UUID(shard->db()->get_uuid())) {
+	if (UUID(head.uuid) != UUID(shard->engine().uuid())) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
 }
@@ -308,7 +308,7 @@ DataHeaderV2::init(void* param, void* /*unused*/)
 	// The engine stamps meta (magic/txnid/high-water/checksum); we only carry the
 	// shard uuid so a foreign volume is rejected on open.
 	memset(uuid, 0, sizeof(uuid));
-	strncpy(uuid, shard->db()->get_uuid().c_str(), sizeof(uuid));
+	strncpy(uuid, shard->engine().uuid().c_str(), sizeof(uuid));
 }
 
 
@@ -318,7 +318,7 @@ DataHeaderV2::validate(void* param, void* /*unused*/)
 	// The engine has already checked the meta magic + whole-block checksum; this
 	// is the shard-domain check.
 	auto shard = static_cast<Shard*>(param);
-	if (UUID(uuid) != UUID(shard->db()->get_uuid())) {
+	if (UUID(uuid) != UUID(shard->engine().uuid())) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
 }
@@ -704,10 +704,10 @@ Shard::reopen()
 }
 
 
-Xapian::Database*
-Shard::db()
+engine::Shard&
+Shard::engine()
 {
-	L_CALL("Shard::db()");
+	L_CALL("Shard::engine()");
 
 	if (is_closed()) {
 		throw engine::xapian::Closed("Database has been closed");
@@ -717,6 +717,16 @@ Shard::db()
 		reopen();
 	}
 
+	return *engine_shard;
+}
+
+
+Xapian::Database*
+Shard::db()
+{
+	L_CALL("Shard::db()");
+
+	engine();
 	return engine_shard->database();
 }
 
@@ -895,7 +905,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -947,7 +957,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			retry_or_throw(error, t, false);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -966,7 +976,7 @@ Shard::begin_transaction(bool flushed)
 	if (!is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
-		db();
+		engine();
 		engine::sync_wait(engine_shard->begin_transaction(flushed));
 		_transaction.store(flushed ? Transaction::flushed : Transaction::unflushed, std::memory_order_relaxed);
 	}
@@ -984,7 +994,7 @@ Shard::commit_transaction()
 	if (is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
-		db();
+		engine();
 		engine::sync_wait(engine_shard->commit_transaction());
 		_transaction.store(Transaction::none, std::memory_order_relaxed);
 	}
@@ -1002,7 +1012,7 @@ Shard::cancel_transaction()
 	if (is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
 
-		db();
+		engine();
 		engine::sync_wait(engine_shard->cancel_transaction());
 		_transaction.store(Transaction::none);
 	}
@@ -1028,7 +1038,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, [[maybe
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
@@ -1062,7 +1072,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, [[maybe
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1092,7 +1102,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 	Xapian::docid shard_did = 0;
@@ -1128,7 +1138,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1246,7 +1256,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -1302,7 +1312,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::add_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1355,7 +1365,7 @@ Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool co
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -1412,7 +1422,7 @@ Shard::replace_document(Xapian::docid shard_did, engine::Document&& doc, bool co
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1444,7 +1454,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -1523,7 +1533,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1555,7 +1565,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1586,7 +1596,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1616,7 +1626,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 	Xapian::termcount result = 0;
@@ -1649,7 +1659,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
@@ -1674,15 +1684,14 @@ Shard::get_docid_term(const std::string& term)
 	L_DATABASE_WRAP_BEGIN("Shard::get_docid_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	auto *rdb = static_cast<Xapian::Database *>(db());
+	auto* eng = &engine();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto it = rdb->postlist_begin(term);
-			if (it == rdb->postlist_end(term)) {
-				throw Xapian::DocNotFoundError("Document not found");
+			did = engine::sync_wait(eng->find_key(term));
+			if (did == 0) {
+				throw engine::xapian::DocNotFound("Document not found");
 			}
-			did = *it;
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
@@ -1700,7 +1709,7 @@ Shard::get_docid_term(const std::string& term)
 			throw;
 		}
 		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
+		eng = &engine();
 		L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1750,6 +1759,48 @@ Shard::get_document(Xapian::docid shard_did, unsigned doc_flags)
 }
 
 
+std::unique_ptr<engine::DocView>
+Shard::get_view(Xapian::docid shard_did)
+{
+	L_CALL("Shard::get_view({})", shard_did);
+
+	std::unique_ptr<engine::DocView> doc;
+
+	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+
+	L_DATABASE_WRAP_BEGIN("Shard::get_view:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Shard::get_view:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	auto* eng = &engine();
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			doc = engine::sync_wait(eng->get(shard_did));
+			break;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseOpeningError&) {
+			if (t == 0) { do_close(); throw; }
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { do_close(); throw; }
+		} catch (const Xapian::NetworkError&) {
+			if (t == 0) { do_close(); throw; }
+		} catch (const Xapian::DatabaseClosedError&) {
+			do_close();
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError&) {
+			do_close();
+			throw;
+		}
+		reopen();
+		eng = &engine();
+		L_DATABASE_WRAP_END("Shard::get_view:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+	}
+
+	return doc;
+}
+
+
 std::string
 Shard::get_metadata(const std::string& key)
 {
@@ -1775,11 +1826,11 @@ Shard::get_metadata(const std::string& key)
 		}
 	}
 
-	auto *rdb = static_cast<Xapian::Database *>(db());
+	auto* eng = &engine();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			value = rdb->get_metadata(key);
+			value = engine::sync_wait(eng->metadata(key));
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
@@ -1799,7 +1850,7 @@ Shard::get_metadata(const std::string& key)
 			break;
 		}
 		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
+		eng = &engine();
 		L_DATABASE_WRAP_END("Shard::get_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1819,15 +1870,11 @@ Shard::get_metadata_keys()
 	L_DATABASE_WRAP_BEGIN("Shard::get_metadata_keys:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_metadata_keys:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	auto *rdb = static_cast<Xapian::Database *>(db());
+	auto* eng = &engine();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto it = rdb->metadata_keys_begin();
-			auto it_e = rdb->metadata_keys_end();
-			for (; it != it_e; ++it) {
-				values.push_back(*it);
-			}
+			values = engine::sync_wait(eng->metadata_keys());
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
@@ -1847,7 +1894,7 @@ Shard::get_metadata_keys()
 			break;
 		}
 		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
+		eng = &engine();
 		L_DATABASE_WRAP_END("Shard::get_metadata_keys:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 		values.clear();
@@ -1876,7 +1923,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	}
 #endif
 
-	db();
+	engine();
 	auto* wdb = engine_shard.get();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1907,7 +1954,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 			retry_or_throw(error, t);
 		}
 		reopen();
-		db();
+		engine();
 		wdb = engine_shard.get();
 		L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}

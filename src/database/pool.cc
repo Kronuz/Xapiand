@@ -347,7 +347,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 					if (referenced_database_endpoint) {
 						auto revision = referenced_database_endpoint->get_revision();
 						referenced_database_endpoint.reset();
-						if (revision && revision != shard_ref->db()->get_revision()) {
+						if (revision && revision != shard_ref->engine().revision()) {
 							L_DATABASE("Local writable shard has changed revision");
 							reopen = true;
 						}

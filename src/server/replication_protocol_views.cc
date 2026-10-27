@@ -510,9 +510,9 @@ ReplicationProtocolViews::msg_get_changesets(const std::string& message)
 
 	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE | DB_DISABLE_WRITES | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT, false);
 
-	auto db = lk_shard.lock()->db();
-	auto uuid = db->get_uuid();
-	auto db_revision = db->get_revision();
+	auto* db = &lk_shard.lock()->engine();
+	auto uuid = db->uuid();
+	auto db_revision = db->revision();
 	lk_shard.unlock();
 
 	auto from_revision = remote_revision;
@@ -570,8 +570,8 @@ ReplicationProtocolViews::msg_get_changesets(const std::string& message)
 					break;
 				}
 
-				db = lk_shard.lock()->db();
-				auto final_revision = db->get_revision();
+				db = &lk_shard.lock()->engine();
+				auto final_revision = db->revision();
 				lk_shard.unlock();
 
 				send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(final_revision));
@@ -594,13 +594,13 @@ ReplicationProtocolViews::msg_get_changesets(const std::string& message)
 					}
 					return;
 				} else if (--whole_db_copies_left == 0) {
-					db = lk_shard.lock()->db();
-					uuid = db->get_uuid();
-					db_revision = db->get_revision();
+					db = &lk_shard.lock()->engine();
+					uuid = db->uuid();
+					db_revision = db->revision();
 				} else {
-					db = lk_shard.lock()->db();
-					uuid = db->get_uuid();
-					db_revision = db->get_revision();
+					db = &lk_shard.lock()->engine();
+					uuid = db->uuid();
+					db_revision = db->revision();
 					lk_shard.unlock();
 				}
 			}
@@ -631,8 +631,8 @@ ReplicationProtocolViews::msg_get_changesets(const std::string& message)
 					reply_changesets.push_back(std::move(line));
 				}
 			}
-			db = lk_shard.lock()->db();
-			db_revision = db->get_revision();
+			db = &lk_shard.lock()->engine();
+			db_revision = db->revision();
 			lk_shard.unlock();
 		} while (to_revision < db_revision && --wal_iterations != 0);
 	}
@@ -676,8 +676,8 @@ ReplicationProtocolViews::msg_set_revision(const std::string& message)
 
 	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT, false);
 
-	auto db = lk_shard.lock()->db();
-	auto uuid = db->get_uuid();
+	auto* db = &lk_shard.lock()->engine();
+	auto uuid = db->uuid();
 	if (uuid == remote_uuid) {
 		lk_shard->endpoint.set_revision(remote_node_lower_name, remote_revision);
 	}
@@ -764,10 +764,10 @@ ReplicationProtocolViews::reply_welcome(const std::string&)
 
 	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
-	auto db = shard->db();
+	auto* db = &shard->engine();
 
-	message.append(serialise_string(db->get_uuid()));
-	message.append(serialise_length(db->get_revision()));
+	message.append(serialise_string(db->uuid()));
+	message.append(serialise_length(db->revision()));
 	message.append(serialise_string(shard->endpoint.path));
 
 	send_message(ReplicationMessageType::MSG_GET_CHANGESETS, message);
@@ -824,17 +824,17 @@ ReplicationProtocolViews::reply_end_of_changes(const std::string&)
 		}
 	}
 
-	auto db = shard->db();
+	auto* db = &shard->engine();
 
 	if (opts.log_replicas) {
 		if (switching && changesets) {
-			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a full copy and a set of {} {}{}", repr(shard->endpoint.path),  db->get_revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
+			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a full copy and a set of {} {}{}", repr(shard->endpoint.path),  db->revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
 		} else if (changesets) {
-			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a set of {} {}{}", repr(shard->endpoint.path),  db->get_revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
+			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a set of {} {}{}", repr(shard->endpoint.path),  db->revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
 		} else if (switching) {
-			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a full copy{}", repr(shard->endpoint.path),  db->get_revision(), switch_shard ? " (to switch database)" : "");
+			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a full copy{}", repr(shard->endpoint.path),  db->revision(), switch_shard ? " (to switch database)" : "");
 		} else {
-			L(LOG_DEBUG, rgb(116, 100, 77), "RECEIVED {} at revision {}: No changes{}", repr(shard->endpoint.path),  db->get_revision(), switch_shard ? " (to switch database)" : "");
+			L(LOG_DEBUG, rgb(116, 100, 77), "RECEIVED {} at revision {}: No changes{}", repr(shard->endpoint.path),  db->revision(), switch_shard ? " (to switch database)" : "");
 		}
 	}
 
@@ -848,8 +848,8 @@ ReplicationProtocolViews::reply_end_of_changes(const std::string&)
 
 	std::string reply;
 	reply.append(serialise_string(local_node->lower_name()));
-	reply.append(serialise_string(db->get_uuid()));
-	reply.append(serialise_length(db->get_revision()));
+	reply.append(serialise_string(db->uuid()));
+	reply.append(serialise_length(db->revision()));
 	reply.append(serialise_string(shard->endpoint.path));
 
 	send_message(ReplicationMessageType::MSG_SET_REVISION, reply);

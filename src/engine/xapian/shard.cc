@@ -339,11 +339,131 @@ Shard::reopen()
 }
 
 
+task::task<Stats>
+Shard::stats()
+{
+	co_await Hop{on_};
+	try {
+		Stats stats;
+		stats.uuid = database_->get_uuid();
+		stats.revision = database_->get_revision();
+		stats.doc_count = database_->get_doccount();
+		stats.lastdocid = database_->get_lastdocid();
+		stats.total_length = database_->get_total_length();
+		stats.doclen_lower = database_->get_doclength_lower_bound();
+		stats.doclen_upper = database_->get_doclength_upper_bound();
+		stats.avlength = database_->get_avlength();
+		stats.has_positions = database_->has_positions();
+		co_return stats;
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+task::task<docid>
+Shard::find_key(const std::string& key)
+{
+	co_await Hop{on_};
+	try {
+		auto it = database_->postlist_begin(key);
+		co_return it == database_->postlist_end(key) ? 0 : *it;
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+task::task<std::unique_ptr<DocView>>
+Shard::get(docid did)
+{
+	co_await Hop{on_};
+	try {
+		co_return make_view(database_->get_document(did));
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+task::task<void>
+Shard::scan(docid from, const ScanSink& sink)
+{
+	co_await Hop{on_};
+	try {
+		auto it = database_->postlist_begin("");
+		const auto end = database_->postlist_end("");
+		it.skip_to(from);
+		for (; it != end; ++it) {
+			auto view = make_view(database_->get_document(*it));
+			sink(*view);
+		}
+		co_return;
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+task::task<std::string>
+Shard::metadata(const std::string& key)
+{
+	co_await Hop{on_};
+	try {
+		co_return database_->get_metadata(key);
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+task::task<std::vector<std::string>>
+Shard::metadata_keys()
+{
+	co_await Hop{on_};
+	try {
+		std::vector<std::string> keys;
+		const auto end = database_->metadata_keys_end();
+		for (auto it = database_->metadata_keys_begin(); it != end; ++it) {
+			keys.push_back(*it);
+		}
+		co_return keys;
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+task::task<CheckResult>
+check(const std::string& path, task::scheduler_ref on)
+{
+	co_await Hop{on};
+	CheckResult result;
+	try {
+		result.errors = Xapian::Database::check(path);
+	} catch (const Xapian::Error& error) {
+		result.failure = error.get_description();
+	}
+	co_return result;
+}
+
+
 rev
 Shard::revision() const
 {
 	try {
 		return database_->get_revision();
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+doccount
+Shard::doc_count() const
+{
+	try {
+		return database_->get_doccount();
 	} catch (...) {
 		rethrow_translated();
 	}

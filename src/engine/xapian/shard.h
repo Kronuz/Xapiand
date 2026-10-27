@@ -23,7 +23,9 @@
 #pragma once
 
 #include <memory>                  // for std::unique_ptr
+#include <cstddef>                 // for std::size_t
 #include <string>                  // for std::string
+#include <vector>                  // for std::vector
 
 #include "engine/shard.h"          // for Shard
 #include "xapian.h"                // for Xapian::Database
@@ -56,7 +58,14 @@ public:
 	task::task<void> add_spelling(const std::string& word, termcount increment) override;
 	task::task<termcount> remove_spelling(const std::string& word, termcount decrement) override;
 	task::task<bool> reopen() override;
+	task::task<Stats> stats() override;
+	task::task<docid> find_key(const std::string& key) override;
+	task::task<std::unique_ptr<DocView>> get(docid did) override;
+	task::task<void> scan(docid from, const ScanSink& sink) override;
+	task::task<std::string> metadata(const std::string& key) override;
+	task::task<std::vector<std::string>> metadata_keys() override;
 	rev revision() const override;
+	doccount doc_count() const override;
 	std::string uuid() const override;
 	unsigned refs() const override;
 
@@ -68,6 +77,14 @@ private:
 	std::unique_ptr<Xapian::Database> database_;
 	task::scheduler_ref on_;
 };
+
+// Integrity check of the shard at a path. `errors` counts what the check found; `failure` holds the
+// description of the exception when the check itself could not run.
+struct CheckResult {
+	std::size_t errors = 0;
+	std::string failure;
+};
+task::task<CheckResult> check(const std::string& path, task::scheduler_ref on = {});
 
 struct Opened {
 	std::unique_ptr<Shard> shard;
