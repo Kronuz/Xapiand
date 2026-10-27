@@ -4615,7 +4615,7 @@ Schema::complete_specification(const MsgPack& item_value)
 			specification.acc_prefix);
 
 		for (auto& acc_prefix : spc.acc_prefix) {
-			acc_prefix.insert(0, spc.prefix);
+			acc_prefix.insert(0, acc_term_prefix(spc.prefix));
 		}
 
 		specification.partial_index_spcs.push_back(std::move(spc));
@@ -9569,7 +9569,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				auto acc_prefix_it = properties.find(RESERVED_ACC_PREFIX);
 				if (acc_prefix_it != it_e) {
 					for (const auto& acc_p : acc_prefix_it.value()) {
-						res.acc_prefix.push_back(res.prefix.field + acc_p.str());
+						res.acc_prefix.push_back(std::string(acc_term_prefix(res.prefix.field)).append(acc_p.str_view()));
 					}
 				}
 				break;
@@ -9946,7 +9946,7 @@ Schema::get_prefixed_global(FieldType namespace_type, const std::string& prefix_
 			case FieldType::timedelta:
 			case FieldType::geo:
 				for (auto& acc_prefix : spc.acc_prefix) {
-					acc_prefix.insert(0, spc.prefix.field);
+					acc_prefix.insert(0, acc_term_prefix(spc.prefix.field));
 				}
 				break;
 			default:

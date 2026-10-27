@@ -30,6 +30,7 @@
 #include <cassert>                          // for assert
 #include <chrono>                           // for std::chrono
 #include <memory>                           // for std::unique_ptr
+#include <optional>                         // for std::optional
 #include <string>                           // for std::string
 #include <sys/types.h>                      // for uint32_t, uint8_t, ssize_t
 #include <unordered_map>                    // for std::unordered_map
@@ -267,7 +268,7 @@ class DatabaseWALWriterTask {
 	UUID uuid;
 	engine::rev revision;
 
-	engine::Document doc;
+	std::optional<engine::Document> doc;
 	std::string key;
 	std::string term_word_val;
 	engine::termcount freq;

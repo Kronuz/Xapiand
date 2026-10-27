@@ -34,4 +34,12 @@ id term prefix, and `_id.`, the id field's name prefix) it counts `t5[prefix].*`
 leading with it, with one, and violations (a second term, a term that is not the write's key term, a key that does not
 lead with it), with up to 8 samples per request. Nothing aborts.
 
+Reading a document: `Document::Native` (under `ENGINE_CENSUS` only) has `census_terms(visit)`, which calls `visit(term, wdf,
+positions)` for each term in term order, and `census_values()`; the Xapian document answers from its term list. `census::document`
+collects the terms from that visit. Without `ENGINE_CENSUS` neither function exists (`nm` finds no census symbol and `size` shows
+the same segments as a build without the census).
+
+Numeric ids: a numeric `_id`'s accuracy terms lead with `A`, not `Q` (`acc_term_prefix`), so for every document exactly one term
+leads with `Q`, the id term; the T5 count of documents with a second `Q` term is 0 over the docs suite.
+
 Tests: `tests/test_engine_census.cc`. Report: `docs/dev/engine-census.md`.

@@ -141,7 +141,15 @@ void run(bool offload) {
 	CHECK_EQ(hooked_version, 1u);
 	// The blocking call runs on the chosen scheduler when there is one, and on the caller's thread when not.
 	CHECK_TRUE((writer != std::this_thread::get_id()) == offload);
-	CHECK_TRUE(doc.terms().count("stamped") == 1);
+	bool stamped = false;
+	const auto& written = engine::xapian::xapian_document(doc);
+	for (auto term = written.termlist_begin(); term != written.termlist_end(); ++term) {
+		stamped = stamped || *term == "stamped";
+	}
+	CHECK_TRUE(stamped);
+
+	// The document the write leaves is the stored one, as the write-ahead log keeps it.
+	CHECK_EQ(doc.serialise(), shard.database()->get_document(1).serialise());
 
 	// The version is recorded: the document carries it as a value and a term.
 	auto view = engine::xapian::make_view(shard.database()->get_document(1));

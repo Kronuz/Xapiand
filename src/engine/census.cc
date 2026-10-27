@@ -24,6 +24,7 @@
 
 #include "engine/census.h"
 
+#include <algorithm>                // for std::lower_bound
 #include <cstdio>                  // for std::FILE, std::fopen, std::fwrite
 #include <cstdlib>                 // for std::getenv
 #include <exception>               // for std::uncaught_exceptions
@@ -342,18 +343,21 @@ document(const Document& doc, std::string_view key)
 	auto& s = state();
 	std::lock_guard<std::mutex> lock(s.mutex);
 	add(s, "write.documents", 1);
-	std::uint64_t boolean = 0, positioned = 0;
-	for (const auto& entry : doc.terms()) {
-		if (!entry.second.positions.empty()) {
+	std::uint64_t boolean = 0, positioned = 0, terms = 0;
+	std::vector<std::string> all;
+	doc.native().census_terms([&](std::string_view term, termcount wdf, std::size_t positions) {
+		++terms;
+		if (positions != 0) {
 			++positioned;
-		} else if (entry.second.wdf == 0) {
+		} else if (wdf == 0) {
 			++boolean;
 		}
-	}
-	add(s, "write.terms", doc.terms().size());
+		all.emplace_back(term);
+	});
+	add(s, "write.terms", terms);
 	add(s, "write.terms.boolean", boolean);
 	add(s, "write.terms.positioned", positioned);
-	add(s, "write.values", doc.values().size());
+	add(s, "write.values", doc.native().census_values());
 	if (!doc.get_data().empty()) { add(s, "write.data", 1); }
 	if (!key.empty()) { add(s, "write.named_key", 1); }
 
@@ -363,18 +367,18 @@ document(const Document& doc, std::string_view key)
 		std::uint64_t leading = 0;
 		bool other = false;
 		std::string listed;
-		for (auto it = doc.terms().lower_bound(std::string(prefix)); it != doc.terms().end() && it->first.starts_with(prefix); ++it) {
+		for (auto it = std::lower_bound(all.begin(), all.end(), prefix); it != all.end() && it->starts_with(prefix); ++it) {
 			++leading;
 			if (leading <= 4) {
 				listed += listed.empty() ? "" : " ";
-				listed += it->first.substr(0, 40);
+				listed += it->substr(0, 40);
 			}
 			if (key.empty()) {
-				if (leading == 1) { add_sample(s, join(tag, join("key_term:", it->first))); }
-			} else if (it->first != key) {
+				if (leading == 1) { add_sample(s, join(tag, join("key_term:", *it))); }
+			} else if (*it != key) {
 				other = true;
 				add(s, join(tag, "violation.not_key_term"), 1);
-				add_sample(s, join(tag, join("not_key_term:", it->first)));
+				add_sample(s, join(tag, join("not_key_term:", *it)));
 			}
 		}
 		add(s, join(tag, "documents"), 1);

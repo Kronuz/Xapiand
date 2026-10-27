@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stemmers. The newer Danish, Italian, and Norwegian stemmers drop apostrophe suffixes
   (`it's` now stems to `it`, `all'art` to `art`), so documents indexed before this change
   need reindexing to match such words. `cjk_words` still uses Xapian's term generator.
+- **A numeric `_id`'s accuracy terms lead with `A` instead of `Q`,** so the id term is the only
+  term of a document that leads with `Q`. Range queries over `_id` use the new terms, so an
+  index with a numeric `_id` written before this change needs reindexing for them.
 - **Every library is pinned at its current release.** Each Kronuz library now pins its own
   dependencies, so Xapiand no longer pins the libraries its libraries fetch.
 

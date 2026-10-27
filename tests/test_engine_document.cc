@@ -40,17 +40,25 @@
 namespace {
 
 bool same(const engine::Document& a, const engine::Document& b) {
-	if (a.get_data() != b.get_data() || a.values() != b.values() || a.terms().size() != b.terms().size()) {
-		return false;
+	return a.serialise() == b.serialise();
+}
+
+// The within-document frequency and positions of a term in the document, by Xapian's own view of it.
+engine::termcount wdf_of(const engine::Document& doc, const std::string& name) {
+	const auto& xdoc = engine::xapian::xapian_document(doc);
+	auto it = xdoc.termlist_begin();
+	it.skip_to(name);
+	return it != xdoc.termlist_end() && *it == name ? it.get_wdf() : 0;
+}
+
+std::size_t positions_of(const engine::Document& doc, const std::string& name) {
+	const auto& xdoc = engine::xapian::xapian_document(doc);
+	auto it = xdoc.termlist_begin();
+	it.skip_to(name);
+	if (it == xdoc.termlist_end() || *it != name) {
+		return 0;
 	}
-	auto ib = b.terms().begin();
-	for (const auto& [name, term] : a.terms()) {
-		if (name != ib->first || term.wdf != ib->second.wdf || term.positions != ib->second.positions) {
-			return false;
-		}
-		++ib;
-	}
-	return true;
+	return it.positionlist_count();
 }
 
 // A small deterministic generator, so a failure reproduces.
@@ -73,7 +81,7 @@ static void test_values() {
 	CHECK_EQ(doc.get_value(5), "y");
 	doc.add_value(5, "");  // removes
 	CHECK_EQ(doc.get_value(5), "");
-	CHECK_TRUE(doc.values().empty());
+	CHECK_TRUE(doc.serialise() == engine::Document().serialise());
 
 	// Xapian agrees that an empty value removes the slot.
 	Xapian::Document xdoc;
@@ -86,16 +94,17 @@ static void test_terms() {
 	engine::Document doc;
 	doc.add_term("a", 2);
 	doc.add_term("a", 3);
-	CHECK_EQ(doc.terms().at("a").wdf, 5u);
+	CHECK_EQ(wdf_of(doc, "a"), 5u);
 	doc.add_boolean_term("a");  // keeps the frequency
-	CHECK_EQ(doc.terms().at("a").wdf, 5u);
+	CHECK_EQ(wdf_of(doc, "a"), 5u);
 	doc.add_boolean_term("b");
-	CHECK_EQ(doc.terms().at("b").wdf, 0u);
+	CHECK_EQ(wdf_of(doc, "b"), 0u);
+	CHECK_EQ(positions_of(doc, "b"), 0u);
 	doc.add_posting("c", 7, 2);
 	doc.add_posting("c", 7, 1);  // the same position once, the frequency twice
 	doc.add_posting("c", 3, 0);
-	CHECK_EQ(doc.terms().at("c").wdf, 3u);
-	CHECK_EQ(doc.terms().at("c").positions.size(), 2u);
+	CHECK_EQ(wdf_of(doc, "c"), 3u);
+	CHECK_EQ(positions_of(doc, "c"), 2u);
 }
 
 static void test_matches_xapian() {
@@ -133,7 +142,6 @@ static void test_matches_xapian() {
 
 		// Same stored bytes as the Xapian document built by the same calls.
 		CHECK_EQ(doc.serialise(), xdoc.serialise());
-		CHECK_EQ(engine::xapian::to_xapian(doc).serialise(), xdoc.serialise());
 
 		// And back: the stored form reads as the same document.
 		CHECK_TRUE(same(engine::Document::unserialise(xdoc.serialise()), doc));
@@ -269,7 +277,7 @@ static void test_word_breaks() {
 			generator.index_text_without_positions(text, 3, "Zt");
 		}
 
-		CHECK_FALSE(doc.terms().empty());
+		CHECK_TRUE(engine::xapian::xapian_document(doc).termlist_count() > 0);
 		CHECK_TRUE(same(doc, engine::xapian::from_xapian(xdoc)));
 	}
 }

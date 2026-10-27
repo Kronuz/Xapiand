@@ -111,7 +111,7 @@ Shard::add(Document& doc, WriteArgs args)
 		WriteResult info;
 		if (!args.local) {
 			ENGINE_CENSUS_DOCUMENT(doc, "");
-			co_return from_xapian(db.add_document(to_xapian(doc)));
+			co_return from_xapian(db.add_document(xapian_document(doc)));
 		}
 		check_version(args.expected_version, std::nullopt);
 		info.did = db.get_lastdocid() + 1;
@@ -121,7 +121,7 @@ Shard::add(Document& doc, WriteArgs args)
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		stamp(doc, info);
-		db.replace_document(info.did, to_xapian(doc));
+		db.replace_document(info.did, xapian_document(doc));
 		co_return info;
 	} catch (...) {
 		rethrow_translated();
@@ -139,7 +139,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		WriteResult info;
 		if (!args.local) {
 			ENGINE_CENSUS_DOCUMENT(doc, "");
-			co_return from_xapian(db.replace_document(did, to_xapian(doc)));
+			co_return from_xapian(db.replace_document(did, xapian_document(doc)));
 		}
 		info.did = did;
 		const auto stored = stored_version(did);
@@ -150,7 +150,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		stamp(doc, info);
-		db.replace_document(did, to_xapian(doc));
+		db.replace_document(did, xapian_document(doc));
 		co_return info;
 	} catch (...) {
 		rethrow_translated();
@@ -168,7 +168,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		WriteResult info;
 		if (!args.local) {
 			ENGINE_CENSUS_DOCUMENT(doc, key);
-			co_return from_xapian(db.replace_document(key, to_xapian(doc)));
+			co_return from_xapian(db.replace_document(key, xapian_document(doc)));
 		}
 		info.term = key;
 		std::optional<rev> stored;
@@ -186,7 +186,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		stamp(doc, info);
-		db.replace_document(info.did, to_xapian(doc));
+		db.replace_document(info.did, xapian_document(doc));
 		co_return info;
 	} catch (...) {
 		rethrow_translated();

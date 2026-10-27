@@ -59,6 +59,7 @@ constexpr engine::valueno DB_SLOT_TIMEDELTA       = 17; // Slot for saving globa
 
 // Default prefixes
 constexpr const char DOCUMENT_ID_TERM_PREFIX[]              = "Q";
+constexpr const char DOCUMENT_ID_ACCURACY_TERM_PREFIX[]     = "A";  // leads the accuracy terms of a numeric id, so only the id term leads with Q
 constexpr const char DOCUMENT_VERSION_TERM_PREFIX[]         = "V";
 constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[]    = "C";
 
@@ -128,6 +129,8 @@ std::string prefixed(std::string_view term, std::string_view field_prefix, char 
 engine::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(std::string_view field_name);
+// The prefix that leads the accuracy terms of a field: the field's own, but the id field's id term prefix is replaced.
+std::string_view acc_term_prefix(std::string_view field_prefix);
 std::string normalize_uuid(std::string_view uuid);
 std::string normalize_uuid(const std::string& uuid);
 MsgPack normalize_uuid(const MsgPack& uuid);

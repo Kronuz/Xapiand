@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 
+#include "database/utils.h"
 #include "multivalue/generate_terms.h"
 
 static void test_numeric_terms() {
@@ -59,4 +60,24 @@ static void test_numeric_signed() {
 	CHECK_FALSE(q.empty());
 }
 
-TEST_MAIN(test_numeric_terms, test_numeric_signed)
+// The accuracy terms of the id field must not lead with the id term prefix, so that the id term is the
+// only one that does; every other field keeps its own prefix.
+static void test_id_accuracy_prefix() {
+	CHECK_EQ(std::string(acc_term_prefix(DOCUMENT_ID_TERM_PREFIX)), std::string(DOCUMENT_ID_ACCURACY_TERM_PREFIX));
+	CHECK_EQ(std::string(acc_term_prefix("age.")), std::string("age."));
+	CHECK_EQ(std::string(acc_term_prefix("")), std::string());
+
+	const std::vector<uint64_t> accuracy = { 10, 100 };
+	std::vector<std::string> acc_prefix;
+	for (auto acc : accuracy) {
+		acc_prefix.push_back(std::string(acc_term_prefix(DOCUMENT_ID_TERM_PREFIX)) + get_prefix(acc));
+	}
+	engine::Document doc;
+	GenerateTerms::integer(doc, accuracy, acc_prefix, 1234);
+	const auto stored = doc.serialise();
+	CHECK(stored.find(std::string(DOCUMENT_ID_ACCURACY_TERM_PREFIX) + get_prefix(100)) != std::string::npos);
+	CHECK(stored.find(std::string(DOCUMENT_ID_TERM_PREFIX) + get_prefix(100)) == std::string::npos);
+	CHECK_FALSE(GenerateTerms::numeric(int64_t(1200), int64_t(1300), accuracy, acc_prefix).empty());
+}
+
+TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix)

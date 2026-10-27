@@ -185,6 +185,25 @@ void test_key_prefix_check() {
 	CHECK_EQ(get(counts, "t5[_id.].no_key_term"), 3u);
 }
 
+void test_document_shape() {
+	census::reset("");
+	engine::Document d;
+	d.add_boolean_term("b");
+	d.add_term("w", 2);
+	d.add_posting("p", 3, 1);
+	d.add_posting("p", 7, 1);
+	d.add_value(1, "x");
+	d.add_value(9, "y");
+	d.set_data("data");
+	census::document(d, "");
+	auto counts = census::snapshot();
+	CHECK_EQ(get(counts, "write.terms"), 3u);
+	CHECK_EQ(get(counts, "write.terms.boolean"), 1u);
+	CHECK_EQ(get(counts, "write.terms.positioned"), 1u);
+	CHECK_EQ(get(counts, "write.values"), 2u);
+	CHECK_EQ(get(counts, "write.data"), 1u);
+}
+
 void test_shard_search_and_views() {
 	census::reset("");
 	const auto path = path_of("engine_census.db");
@@ -284,7 +303,7 @@ void test_request_lines() {
 
 }  // namespace
 
-TEST_MAIN(test_query_nodes, test_key_prefix_check, test_shard_search_and_views, test_request_lines)
+TEST_MAIN(test_query_nodes, test_key_prefix_check, test_document_shape, test_shard_search_and_views, test_request_lines)
 
 #else
 
