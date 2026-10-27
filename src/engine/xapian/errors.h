@@ -35,10 +35,19 @@ namespace engine::xapian {
 template <errc Kind, typename X>
 class Failure : public Error, public X {
 public:
-	explicit Failure(const std::string& reason) : Error(Kind, reason), X(reason) { }
+	explicit Failure(const std::string& reason) : Error(Kind, reason), X(reason) {
+		set_texts(X::get_description(), text(X::get_error_string()));
+	}
 
 	// Keeps everything the original carries (system error, context, type name).
-	explicit Failure(const X& original) : Error(Kind, original.get_msg()), X(original) { }
+	explicit Failure(const X& original) : Error(Kind, original.get_msg()), X(original) {
+		set_texts(X::get_description(), text(X::get_error_string()));
+	}
+
+private:
+	static std::string text(const char* s) {
+		return s ? s : "";
+	}
 };
 
 using NotFound = Failure<errc::not_found, Xapian::DatabaseNotFoundError>;
@@ -54,9 +63,12 @@ using VersionConflict = Failure<errc::version_conflict, Xapian::DocVersionConfli
 using DatabaseFailure = Failure<errc::database, Xapian::DatabaseError>;
 using InvalidArgument = Failure<errc::invalid, Xapian::InvalidArgumentError>;
 using InvalidOperation = Failure<errc::invalid, Xapian::InvalidOperationError>;
+using QueryParser = Failure<errc::syntax, Xapian::QueryParserError>;
+using Other = Failure<errc::internal, Xapian::Error>;  // any other Xapian failure
 
 // Rethrows the Xapian exception being handled as the Failure of its kind. An exception that is
-// already an engine error, or that is not a Xapian database failure, is rethrown unchanged.
+// already an engine error, or is not a Xapian exception, is rethrown unchanged; a Xapian exception
+// of no particular kind becomes `Other` (errc::internal).
 // Call only inside a catch block.
 [[noreturn]] void rethrow_translated();
 

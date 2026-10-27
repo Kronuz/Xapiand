@@ -37,7 +37,7 @@
 #include "engine/xapian/convert.h"
 #include "engine/xapian/errors.h"
 #include "engine/xapian/shard.h"
-#include "xapian.h"
+#include "engine/xapian/xapian.h"
 
 namespace {
 

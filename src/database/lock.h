@@ -28,7 +28,7 @@
 #include "database/shard.h"     // for Shard
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager
-#include "xapian.h"             // for Xapian::Database
+#include "engine/error.h"       // for engine::Error
 
 
 class lock_shard {
@@ -66,7 +66,7 @@ public:
 			assert(_locks == 0);
 			auto manager = XapiandManager::manager();
 			if (!manager) {
-				throw Xapian::AssertionError("No manager");
+				throw engine::Error(engine::errc::internal, "No manager");
 			}
 			_locked = manager->database_pool->checkout(endpoint, flags, std::forward<Args>(args)...);
 		}

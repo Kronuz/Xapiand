@@ -23,6 +23,7 @@
 #pragma once
 
 #include <cstddef>                // for std::size_t
+#include <string>                  // for std::string
 #include <memory>                  // for std::unique_ptr
 
 #include "engine/doc_view.h"       // for DocView
@@ -46,6 +47,9 @@ Xapian::DocumentInfo to_xapian(const WriteResult& result);
 
 // The kind of failure the exception being handled reports. Call only inside a catch block.
 errc classify_current() noexcept;
+
+// The Xapian library version, "major.minor.revision".
+std::string version();
 
 // A lazy view over a Xapian document.
 std::unique_ptr<DocView> make_view(Xapian::Document doc);

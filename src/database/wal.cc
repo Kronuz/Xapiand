@@ -151,7 +151,7 @@ DatabaseWAL::get_uuid_le() const
 }
 
 
-Xapian::rev
+engine::rev
 DatabaseWAL::get_revision() const
 {
 	if (_shard) {
@@ -171,7 +171,7 @@ DatabaseWAL::execute()
 		THROW(Error, "Database is not defined");
 	}
 
-	Xapian::rev revision = _shard->reopen_revision;
+	engine::rev revision = _shard->reopen_revision;
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 
@@ -179,7 +179,7 @@ DatabaseWAL::execute()
 
 	try {
 		bool end = false;
-		Xapian::rev end_rev;
+		engine::rev end_rev;
 		for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 			try {
 				open(strings::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
@@ -195,7 +195,7 @@ DatabaseWAL::execute()
 				THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 			}
 
-			Xapian::rev file_rev, begin_rev;
+			engine::rev file_rev, begin_rev;
 			file_rev = begin_rev = end_rev;
 
 			auto high_slot = highest_valid_slot();
@@ -392,7 +392,7 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 
 
 MsgPack
-DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised)
+DatabaseWAL::to_string(engine::rev start_revision, engine::rev end_revision, bool unserialised)
 {
 	L_CALL("DatabaseWAL::to_string({}, {}, {})", start_revision, end_revision, unserialised);
 
@@ -405,7 +405,7 @@ DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, boo
 	auto result = MsgPack::ARRAY();
 
 	bool end = false;
-	Xapian::rev end_rev;
+	engine::rev end_rev;
 	for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 		try {
 			open(strings::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
@@ -421,7 +421,7 @@ DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, boo
 			header.revision = end_rev;
 		}
 
-		Xapian::rev file_rev, begin_rev;
+		engine::rev file_rev, begin_rev;
 		file_rev = begin_rev = end_rev;
 
 		auto high_slot = highest_valid_slot();
@@ -482,7 +482,7 @@ DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, boo
 	}
 
 	if (volumes.first <= volumes.second) {
-		if (end_rev < end_revision && end_revision != std::numeric_limits<Xapian::rev>::max()) {
+		if (end_rev < end_revision && end_revision != std::numeric_limits<engine::rev>::max()) {
 			L_WARNING("WAL did not reach the end revision {}, WAL ends at {}: {} volume {}", end_revision, end_rev, repr(base_path), volumes.second);
 		}
 	}
@@ -533,9 +533,9 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
 
-	Xapian::docid did;
+	engine::docid did;
 	std::string document;
-	Xapian::termcount freq;
+	engine::termcount freq;
 	std::string term;
 	std::size_t size;
 
@@ -553,12 +553,12 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
-			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
 			document = std::string(p, p_end - p);
 			_shard->replace_document(did, engine::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
-			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
 			_shard->delete_document(did, false, wal_, false);
 			break;
 		case Type::SET_METADATA:
@@ -566,11 +566,11 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 			_shard->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
 			break;
 		case Type::ADD_SPELLING:
-			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+			freq = static_cast<engine::termcount>(unserialise_length(&p, p_end));
 			_shard->add_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		case Type::REMOVE_SPELLING:
-			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+			freq = static_cast<engine::termcount>(unserialise_length(&p, p_end));
 			_shard->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		default:
@@ -653,7 +653,7 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, [[maybe_unused]] bool send_update)
+DatabaseWAL::write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data, [[maybe_unused]] bool send_update)
 {
 	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", repr(uuid.to_string()), revision, enum_name(type), send_update);
 
@@ -745,8 +745,8 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 }
 
 
-std::pair<Xapian::rev, uint32_t>
-DatabaseWAL::locate_revision(Xapian::rev revision)
+std::pair<engine::rev, uint32_t>
+DatabaseWAL::locate_revision(engine::rev revision)
 {
 	L_CALL("DatabaseWAL::locate_revision(...)");
 
@@ -772,7 +772,7 @@ DatabaseWAL::locate_revision(Xapian::rev revision)
 
 
 DatabaseWAL::iterator
-DatabaseWAL::find(Xapian::rev revision)
+DatabaseWAL::find(engine::rev revision)
 {
 	L_CALL("DatabaseWAL::find(...)");
 
@@ -1139,7 +1139,7 @@ DatabaseWALWriterTask::delete_wal(DatabaseWALWriterThread& thread)
 
 
 void
-DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec)
+DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& word, engine::termcount freqdec)
 {
 	L_CALL("DatabaseWALWriter::write_remove_spelling({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
@@ -1160,7 +1160,7 @@ DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& pa
 
 
 void
-DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, bool send_update)
+DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, bool send_update)
 {
 	L_CALL("DatabaseWALWriter::write_commit({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
@@ -1180,7 +1180,7 @@ DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const
 
 
 void
-DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, engine::Document&& doc)
+DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, engine::docid did, engine::Document&& doc)
 {
 	L_CALL("DatabaseWALWriter::write_replace_document({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
@@ -1203,7 +1203,7 @@ DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& p
 
 
 void
-DatabaseWALWriter::write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did)
+DatabaseWALWriter::write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, engine::docid did)
 {
 	L_CALL("DatabaseWALWriter::write_delete_document({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
@@ -1225,7 +1225,7 @@ DatabaseWALWriter::write_delete_document(bool synchronous, const std::string& pa
 
 
 void
-DatabaseWALWriter::write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val)
+DatabaseWALWriter::write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& key, const std::string& val)
 {
 	L_CALL("DatabaseWALWriter::write_set_metadata({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
@@ -1246,7 +1246,7 @@ DatabaseWALWriter::write_set_metadata(bool synchronous, const std::string& path,
 
 
 void
-DatabaseWALWriter::write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc)
+DatabaseWALWriter::write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& word, engine::termcount freqinc)
 {
 	L_CALL("DatabaseWALWriter::write_add_spelling({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 

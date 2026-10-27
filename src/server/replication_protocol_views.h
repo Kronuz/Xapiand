@@ -34,7 +34,7 @@
 
 #include "endpoint.h"                       // for Endpoint
 #include "enum.h"                           // for ENUM_CLASS
-#include "xapian.h"                         // for Xapian::rev
+#include "engine/types.h"                  // for engine::rev, docid
 
 
 // #define SAVE_LAST_MESSAGES
@@ -130,7 +130,7 @@ public:
 	std::string file_path;
 
 	std::string current_uuid;
-	Xapian::rev current_revision;
+	engine::rev current_revision;
 
 	size_t changesets;
 	std::shared_ptr<Logging> log;

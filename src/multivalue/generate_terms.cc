@@ -29,18 +29,18 @@
 #include <vector>                                 // for std::vector
 
 #include "config.h"                               // for HAVE_LIBCPP
+#include "engine/error.h"                         // for engine::Error
 #include "database/schema.h"                      // for required_spc_t, FieldType, UnitTime
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "math.hh"                          // for modulus
 #include "reversed.hh"                            // for reversed
 #include "snowball.hh"                           // for snowball::stemmer
-#include "snowball_stem.h"                       // for makeStem
-#include "stopper.h"                              // for getStopWords, getStopper
+#include "stopper.h"                              // for getStopWords
 #include "utype.hh"                               // for toUType
 
 #ifdef USE_ICU
-#include "engine/xapian/convert.h"                // for engine::xapian::from_xapian
+#include "engine/xapian/text.h"                   // for engine::xapian::index_text_word_breaks
 #endif
 
 // #undef L_DEBUG
@@ -499,70 +499,6 @@ GenerateTerms::geo(engine::Document& doc, const std::vector<uint64_t>& accuracy,
 }
 
 
-#ifdef USE_ICU
-// Word-break segmentation (cjk_words) is Xapian's only; analysis has no equivalent.
-static Xapian::TermGenerator::stop_strategy
-xapian_stop_strategy(analysis::stop_strategy strategy)
-{
-	switch (strategy) {
-		case analysis::stop_strategy::none: return Xapian::TermGenerator::STOP_NONE;
-		case analysis::stop_strategy::all: return Xapian::TermGenerator::STOP_ALL;
-		case analysis::stop_strategy::stemmed: return Xapian::TermGenerator::STOP_STEMMED;
-	}
-	return Xapian::TermGenerator::STOP_STEMMED;
-}
-
-
-static Xapian::TermGenerator::stem_strategy
-xapian_stem_strategy(analysis::stem_strategy strategy)
-{
-	switch (strategy) {
-		case analysis::stem_strategy::none: return Xapian::TermGenerator::STEM_NONE;
-		case analysis::stem_strategy::some: return Xapian::TermGenerator::STEM_SOME;
-		case analysis::stem_strategy::all: return Xapian::TermGenerator::STEM_ALL;
-		case analysis::stem_strategy::all_z: return Xapian::TermGenerator::STEM_ALL_Z;
-	}
-	return Xapian::TermGenerator::STEM_SOME;
-}
-
-
-static void
-text_word_breaks(engine::Document& doc,
-	const std::string& prefix, const std::string& value,
-	bool positions, engine::termcount weight, bool cjk_ngram,
-	const std::string& language, const std::string& stem_language,
-	analysis::stop_strategy stop_strategy, analysis::stem_strategy stem_strategy)
-{
-	Xapian::Document xdoc;
-	Xapian::TermGenerator term_generator;
-	Xapian::TermGenerator::flags flags = Xapian::TermGenerator::FLAG_WORD_BREAKS;
-	if (cjk_ngram) {
-		flags |= Xapian::TermGenerator::FLAG_CJK_NGRAM;
-	}
-	term_generator.set_flags(flags);
-	term_generator.set_document(xdoc);
-	if (!language.empty()) {
-		term_generator.set_stopper(getStopper(language).get());
-		term_generator.set_stopper_strategy(xapian_stop_strategy(stop_strategy));
-	}
-	if (!stem_language.empty()) {
-		term_generator.set_stemmer(makeStem(stem_language));
-		term_generator.set_stemming_strategy(xapian_stem_strategy(stem_strategy));
-	}
-	if (positions) {
-		term_generator.index_text(value, weight, prefix);
-	} else {
-		term_generator.index_text_without_positions(value, weight, prefix);
-	}
-	const auto generated = engine::xapian::from_xapian(xdoc);
-	for (const auto& [name, term] : generated.terms()) {
-		doc.add_term(name, term.wdf);
-		for (auto position : term.positions) {
-			doc.add_posting(name, position, 0);
-		}
-	}
-}
-#endif
 
 
 // One stemmer per language and thread: a snowball::stemmer is not thread-safe.
@@ -575,7 +511,8 @@ getStemmer(const std::string& stem_language)
 		try {
 			it = stemmers.emplace(stem_language, snowball::stemmer(stem_language)).first;
 		} catch (const std::invalid_argument&) {
-			throw Xapian::InvalidArgumentError("Language code " + stem_language + " unknown");
+			const auto reason = "Language code " + stem_language + " unknown";
+			throw engine::Error(engine::errc::invalid, reason, "InvalidArgumentError: " + reason);
 		}
 	}
 	return it->second;
@@ -593,7 +530,7 @@ GenerateTerms::text(engine::Document& doc,
 {
 #ifdef USE_ICU
 	if (cjk_words) {
-		text_word_breaks(doc, prefix, value, positions, weight, cjk_ngram, language, stem_language, stop_strategy, stem_strategy);
+		engine::xapian::index_text_word_breaks(doc, prefix, value, positions, weight, cjk_ngram, language, stem_language, stop_strategy, stem_strategy);
 		return;
 	}
 #else

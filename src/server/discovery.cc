@@ -548,7 +548,8 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 				} else {
 					L_WARNING("Ignoring update for unknown index: {}!", repr(path));
 				}
-			} catch (const Xapian::DatabaseNotAvailableError&) {
+			} catch (const engine::Error& error) {
+				if (error.kind != engine::errc::not_available) { throw; }
 			} catch (const MissingTypeError&) { }
 		}
 	}
@@ -579,7 +580,7 @@ Discovery::schema_updated([[maybe_unused]] Message type, const std::string& mess
 		return;
 	}
 
-	Xapian::rev version = unserialise_length(&p, p_end);
+	engine::rev version = unserialise_length(&p, p_end);
 
 	auto uri = std::string(p, p_end - p);
 
@@ -693,7 +694,7 @@ Discovery::_ASYNC_elect_primary(const std::string& message)
 		node->to_string(), repr(normalized_path));
 
 	std::string uuid;
-	Xapian::rev revision;
+	engine::rev revision;
 	size_t total_nodes;
 
 	auto index_settings = XapiandManager::resolve_index_settings(normalized_path);
@@ -758,7 +759,7 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 
 	auto normalized_path = std::string(unserialise_string(&p, p_end));
 	auto uuid = unserialise_string(&p, p_end);
-	Xapian::rev revision = unserialise_length(&p, p_end);
+	engine::rev revision = unserialise_length(&p, p_end);
 	auto eligible = unserialise_bool(&p, p_end);
 	size_t total_nodes = unserialise_length(&p, p_end);
 
@@ -775,7 +776,7 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 			auto nodes = IndexResolverLRU::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
 			assert(nodes.size() == 1);
 			if (nodes.size() == 1) {
-				Xapian::rev max_revision = 0;
+				engine::rev max_revision = 0;
 				std::shared_ptr<const Node> elected_node;
 				const auto& shards = nodes[0];
 				total_nodes = shards.size();
@@ -976,7 +977,7 @@ Discovery::message_send_signal_cb()
 }
 
 void
-Discovery::db_updated_send(Xapian::rev revision, std::string_view path)
+Discovery::db_updated_send(engine::rev revision, std::string_view path)
 {
 	L_CALL("Discovery::db_updated_send({}, {})", revision, repr(path));
 
@@ -989,7 +990,7 @@ Discovery::db_updated_send(Xapian::rev revision, std::string_view path)
 }
 
 void
-Discovery::schema_updated_send(Xapian::rev revision, std::string_view path)
+Discovery::schema_updated_send(engine::rev revision, std::string_view path)
 {
 	L_CALL("Discovery::schema_updated_send({}, {})", revision, repr(path));
 
@@ -1002,7 +1003,7 @@ Discovery::schema_updated_send(Xapian::rev revision, std::string_view path)
 }
 
 void
-Discovery::settings_updated_send([[maybe_unused]] Xapian::rev revision, std::string_view path)
+Discovery::settings_updated_send([[maybe_unused]] engine::rev revision, std::string_view path)
 {
 	L_CALL("Discovery::settings_updated_send({}, {})", revision, repr(path));
 
@@ -1045,7 +1046,7 @@ Discovery::getDescription() const
 }
 
 void
-db_updated_send(Xapian::rev revision, std::string path)
+db_updated_send(engine::rev revision, std::string path)
 {
 	auto manager = XapiandManager::manager();
 	if (manager) {
@@ -1054,7 +1055,7 @@ db_updated_send(Xapian::rev revision, std::string path)
 }
 
 void
-schema_updated_send(Xapian::rev revision, std::string path)
+schema_updated_send(engine::rev revision, std::string path)
 {
 	auto manager = XapiandManager::manager();
 	if (manager) {
@@ -1063,7 +1064,7 @@ schema_updated_send(Xapian::rev revision, std::string path)
 }
 
 void
-settings_updated_send(Xapian::rev revision, std::string path)
+settings_updated_send(engine::rev revision, std::string path)
 {
 	auto manager = XapiandManager::manager();
 	if (manager) {

@@ -25,7 +25,7 @@
 #include <string>                              // for std::string
 
 #include "length.h"                            // for serialise_bool/string/length, unserialise_*
-#include "xapian/common/serialise-double.h"    // for serialise_double, unserialise_double
+#include "engine/codec.h"                      // for engine::serialise_double, unserialise_double
 #include "string_metric.h"                     // the library metrics (Levenshtein, Jaro, ..., PhoneticMetric)
 
 // The string-similarity library is the pure algorithms; it drops the
@@ -79,15 +79,15 @@ struct SerialisableJaroWinkler : Jaro_Winkler {
 		std::string s;
 		s += serialise_bool(_icase);
 		s += serialise_string(_str);
-		s += serialise_double(_p);
-		s += serialise_double(_bt);
+		s += engine::serialise_double(_p);
+		s += engine::serialise_double(_bt);
 		return s;
 	}
 	void unserialise(const char** p, const char* p_end) {
 		_icase = unserialise_bool(p, p_end);
 		_str = unserialise_string(p, p_end);
-		_p = unserialise_double(p, p_end);
-		_bt = unserialise_double(p, p_end);
+		_p = engine::unserialise_double(p, p_end);
+		_bt = engine::unserialise_double(p, p_end);
 	}
 };
 

@@ -47,7 +47,6 @@
 #include "repr.hh"                                // for repr
 #include "reserved/fields.h"                      // for SCHEMA_FIELD_NAME
 #include "utype.hh"                               // for toUType
-#include "xapian.h"                               // for Xapian::QueryParser
 
 
 ENUM_CLASS(TypeIndex, uint8_t,
@@ -252,22 +251,6 @@ inline constexpr analysis::stem_strategy getGeneratorStemStrategy(StemStrategy s
 			THROW(Error, "Schema is corrupt: invalid stem strategy");
 	}
 }
-
-
-// Waiting for QueryParser::stop_strategy()
-// https://trac.xapian.org/ticket/750
-// inline constexpr Xapian::QueryParser::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
-// 	switch (stop_strategy) {
-// 		case StopStrategy::stop_none:
-// 			return Xapian::QueryParser::STOP_NONE;
-// 		case StopStrategy::stop_all:
-// 			return Xapian::QueryParser::STOP_ALL;
-// 		case StopStrategy::stop_stemmed:
-// 			return Xapian::QueryParser::STOP_STEMMED;
-// 		default:
-// 			THROW(Error, "Schema is corrupt: invalid stop strategy");
-// 	}
-// }
 
 
 inline constexpr engine::Stem getQueryParserStemStrategy(StemStrategy stem_strategy) {

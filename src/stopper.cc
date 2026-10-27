@@ -35,21 +35,9 @@
 
 namespace {
 
-class WordsStopper : public Xapian::Stopper {
-	const analysis::stopper& words;
-
-public:
-	explicit WordsStopper(const analysis::stopper& words_) : words(words_) { }
-
-	bool operator()(const std::string& term) const override {
-		return words(term);
-	}
-};
-
 struct StopWords {
 	bool loaded = false;
 	analysis::stopper words;
-	std::unique_ptr<Xapian::Stopper> stopper;
 };
 
 static StopWords&
@@ -70,7 +58,6 @@ getStopWordsEntry(std::string_view language)
 		for (std::istream_iterator<std::string> word(file), end; word != end; ++word) {
 			entry.words.add(*word);
 		}
-		entry.stopper = std::make_unique<WordsStopper>(entry.words);
 		entry.loaded = true;
 	} else {
 		L_WARNING_ONCE("Cannot open stop words file: {}", path);
@@ -88,9 +75,3 @@ getStopWords(std::string_view language)
 	return entry.loaded ? &entry.words : nullptr;
 }
 
-
-const std::unique_ptr<Xapian::Stopper>&
-getStopper(std::string_view language)
-{
-	return getStopWordsEntry(language).stopper;
-}

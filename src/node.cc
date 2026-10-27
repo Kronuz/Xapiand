@@ -34,7 +34,7 @@
 #include "opts.h"               // for opts::*
 #include "serialise.h"          // for Serialise
 #include "xapiand_strings.hh"           // for strings::format, strings::lower
-#include "xapian.h"             // for SerialisationError
+#include "exception_xapian.h"   // for SerialisationError
 
 
 #define L_NODE_NODES L_NOTHING

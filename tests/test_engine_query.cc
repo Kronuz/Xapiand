@@ -42,9 +42,9 @@
 #include "multivalue/range.h"
 #include "serialise.h"
 #include "serialise_list.h"
-#include "snowball_stem.h"
-#include "stopper.h"
-#include "xapian.h"
+#include "engine/xapian/snowball_stem.h"
+#include "engine/xapian/stopper.h"
+#include "engine/xapian/xapian.h"
 
 namespace {
 

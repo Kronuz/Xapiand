@@ -38,7 +38,7 @@
 #include "database/shard.h"                   // for Shard
 #include "database/wal.h"                     // for DatabaseWAL
 #include "error.hh"                           // for error:name, error::description
-#include "exception_xapian.h"                 // for InvalidArgumentError
+#include "engine/xapian/errors.h"             // for engine::xapian::InvalidArgument
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
 #include "index_resolver_lru.h"               // for IndexSettings
@@ -333,8 +333,12 @@ ReplicationProtocolViews::init_replication_protocol(const std::string& host, int
 		});
 
 		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
-	} catch (const Xapian::DatabaseNotAvailableError&) {
+	} catch (const engine::Error& error) {
 		lk_shard_ptr.reset();
+		if (error.kind != engine::errc::not_available) {
+			L_EXC("ERROR: Replication initialization ended with an unhandled exception (1)");
+			return false;
+		}
 		L_REPLICATION("Replication deferred (not available): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
 	} catch (...) {
@@ -419,7 +423,7 @@ ReplicationProtocolViews::replication_server(ReplicationMessageType type, const 
 			default: {
 				std::string errmsg("Unexpected message type ");
 				errmsg += std::to_string(toUType(type));
-				THROW(InvalidArgumentError, errmsg);
+				throw engine::xapian::InvalidArgument(errmsg);
 			}
 		}
 	} catch (const Xapian::NetworkTimeoutError& exc) {
@@ -732,7 +736,7 @@ ReplicationProtocolViews::replication_client(ReplicationReplyType type, const st
 			default: {
 				std::string errmsg("Unexpected message type ");
 				errmsg += std::to_string(toUType(type));
-				THROW(InvalidArgumentError, errmsg);
+				throw engine::xapian::InvalidArgument(errmsg);
 			}
 		}
 	} catch (const BaseException& exc) {

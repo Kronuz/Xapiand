@@ -39,7 +39,7 @@
 #include "engine/shard.h"         // for engine::Shard
 #include "engine/types.h"         // for engine::WriteResult
 #include "engine/xapian/shard.h"   // for engine::xapian::Shard
-#include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
+#include "engine/xapian/xapian.h"  // for Xapian::Document, Xapian::DocumentInfo
 
 
 class Node;
@@ -71,7 +71,7 @@ public:
 
 private:
 	std::chrono::steady_clock::time_point reopen_time;
-	Xapian::rev reopen_revision;
+	engine::rev reopen_revision;
 
 	std::atomic<bool> _busy;
 	std::atomic<bool> _local;
@@ -181,6 +181,10 @@ public:
 
 	void do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions = true);
 	void do_close(bool commit_ = true);
+
+	// Called from a catch block of a read ladder: closes the shard as the failure demands and
+	// rethrows when it is final or not a failure of the shard; otherwise the caller reopens.
+	void retry_read(const engine::Error& error, int t);
 	void close();
 
 	static void autocommit(const std::shared_ptr<Shard>& shard);
@@ -190,24 +194,24 @@ public:
 	void commit_transaction();
 	void cancel_transaction();
 
-	void delete_document(Xapian::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	void delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	engine::WriteResult add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	engine::WriteResult replace_document(Xapian::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	engine::WriteResult replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	// The Xapian remote server's entry points: it speaks Xapian's document and result types.
 	Xapian::DocumentInfo add_document(Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	Xapian::DocumentInfo replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	Xapian::DocumentInfo replace_document(engine::docid shard_did, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	Xapian::DocumentInfo replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
-	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_ = false, bool wal_ = true);
-	Xapian::termcount remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_ = false, bool wal_ = true);
+	void add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
+	engine::termcount remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
 
-	Xapian::docid get_docid_term(const std::string& term);
+	engine::docid get_docid_term(const std::string& term);
 
-	std::unique_ptr<engine::DocView> get_view(Xapian::docid shard_did);
+	std::unique_ptr<engine::DocView> get_view(engine::docid shard_did);
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);

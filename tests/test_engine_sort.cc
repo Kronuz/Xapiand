@@ -48,7 +48,7 @@
 #include "multivalue/keymaker.h"
 #include "serialise.h"
 #include "serialise_list.h"
-#include "xapian.h"
+#include "engine/xapian/xapian.h"
 
 namespace {
 

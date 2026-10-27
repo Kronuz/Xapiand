@@ -127,7 +127,7 @@ struct TextConfig {
 struct QueryNode;
 
 // A query, as a value: an immutable tree that shares its subtrees when copied. Each factory
-// has the semantics of the Xapian::Query constructor of the same shape, so a tree built here
+// has the semantics of the constructor of the same shape in Xapian's Query, so a tree built here
 // translates to the Xapian tree it replaces. A default Query matches nothing.
 class Query {
 public:

@@ -9,7 +9,8 @@
 #include <string>                  // for std::string
 
 #include "snowball.hh"             // for snowball::stemmer
-#include "xapian.h"                // for Xapian::Stem, Xapian::StemImplementation
+#include "engine/xapian/errors.h"    // for engine::xapian::InvalidArgument
+#include "engine/xapian/xapian.h"     // for Xapian::Stem, Xapian::StemImplementation
 
 
 // Each Stem owns its own stemmer.
@@ -35,6 +36,6 @@ makeStem(const std::string& language)
 	try {
 		return Xapian::Stem(new SnowballStem(language));
 	} catch (const std::invalid_argument&) {
-		throw Xapian::InvalidArgumentError("Language code " + language + " unknown");
+		throw engine::xapian::InvalidArgument("Language code " + language + " unknown");
 	}
 }

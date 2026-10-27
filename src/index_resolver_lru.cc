@@ -61,7 +61,7 @@ IndexSettings::IndexSettings() :
 }
 
 
-IndexSettings::IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+IndexSettings::IndexSettings(engine::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
 	version(version),
 	loaded(loaded),
 	saved(saved),
@@ -455,12 +455,9 @@ load_settings(const std::string& unsharded_normalized_path)
 
 			index_settings.loaded = true;
 			return index_settings;
-		} catch (const Xapian::DocNotFoundError&) {
-			break;
-		} catch (const Xapian::DatabaseNotFoundError&) {
-			break;
-		} catch (const Xapian::DatabaseNotAvailableError&) {
-			if (t == 0) { throw; }
+		} catch (const engine::Error& error) {
+			if (engine::is_missing(error.kind)) { break; }
+			if (error.kind != engine::errc::not_available || t == 0) { throw; }
 		}
 	}
 

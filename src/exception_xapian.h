@@ -24,16 +24,19 @@
 
 #include "engine/error.h"                                // for engine::Error, engine::errc
 #include "xapiand_exception.h"                            // for ClientError
-#include "xapian.h"                               // for DocNotFoundError, InternalError, InvalidArgument, ...
+#include "engine/xapian/xapian.h"                               // for Xapian::SerialisationError
 
 
-class DocVersionConflictError : public ClientError, public Xapian::DocVersionConflictError, public engine::Error {
+// Client errors that are also engine errors of one kind.
+class DocVersionConflictError : public ClientError, public engine::Error {
 public:
 	template<typename... Args>
-	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocVersionConflictError(message), engine::Error(engine::errc::version_conflict, message) { }
+	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::version_conflict, message) { }
 };
 
 
+// Stays a Xapian::SerialisationError: the remote and replication servers answer a malformed
+// message by sending back any Xapian::Error they catch.
 class SerialisationError : public ClientError, public Xapian::SerialisationError {
 public:
 	template<typename... Args>
@@ -41,43 +44,32 @@ public:
 };
 
 
-class CastError : public ClientError, public Xapian::SerialisationError {
+class CastError : public ClientError {
 public:
 	template<typename... Args>
-	CastError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError(message) { }
+	CastError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
 
+// The remote server throws it and catches it as a Xapian::NetworkError.
 class NetworkError : public ClientError, public Xapian::NetworkError, public engine::Error {
 public:
 	template<typename... Args>
-	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(message), engine::Error(engine::errc::network, message) { }
+	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(message), engine::Error(engine::errc::network, message) {
+		set_texts(Xapian::NetworkError::get_description(), {});
+	}
 };
 
 
-class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError, public engine::Error {
+class InvalidArgumentError : public ClientError, public engine::Error {
 public:
 	template<typename... Args>
-	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message), engine::Error(engine::errc::invalid, message) { }
+	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::invalid, message) { }
 };
 
 
-class InvalidOperationError : public ClientError, public Xapian::InvalidOperationError, public engine::Error {
+class QueryParserError : public ClientError, public engine::Error {
 public:
 	template<typename... Args>
-	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError(message), engine::Error(engine::errc::invalid, message) { }
-};
-
-
-class QueryParserError : public ClientError, public Xapian::QueryParserError, public engine::Error {
-public:
-	template<typename... Args>
-	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError(message), engine::Error(engine::errc::invalid, message) { }
-};
-
-
-class InternalError : public ClientError, public Xapian::InternalError {
-public:
-	template<typename... Args>
-	InternalError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InternalError(message) { }
+	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::syntax, message) { }
 };

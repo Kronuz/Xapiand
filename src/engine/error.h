@@ -41,6 +41,7 @@ enum class errc {
 	corrupt,           // the stored data failed its integrity checks
 	database,          // any other failure of the shard itself: close it
 	invalid,           // the caller passed something the engine rejects
+	syntax,            // query or serialised input the engine cannot parse: a client error
 	internal,          // anything else
 };
 
@@ -58,9 +59,42 @@ constexpr const char* to_string(errc kind) noexcept {
 		case errc::corrupt: return "corrupt";
 		case errc::database: return "database";
 		case errc::invalid: return "invalid";
+		case errc::syntax: return "syntax";
 		case errc::internal: return "internal";
 	}
 	return "internal";
+}
+
+// A missing document or shard is often data, not a failure.
+constexpr bool is_missing(errc kind) noexcept {
+	return kind == errc::doc_not_found || kind == errc::not_found;
+}
+
+// What a read retry ladder does with a failure on try `t` (counting down to 0).
+enum class fate {
+	retry_close,  // reopen and retry; on the last try close the shard and fail
+	close_retry,  // close the shard, then reopen and retry; fail on the last try
+	close_fail,   // close the shard and fail
+	fail,         // not a failure of the shard: fail as is
+};
+
+constexpr fate read_fate(errc kind) noexcept {
+	switch (kind) {
+		case errc::reopen:
+		case errc::opening:
+		case errc::not_found:
+		case errc::not_available:
+		case errc::timeout:
+		case errc::network:
+			return fate::retry_close;
+		case errc::closed:
+			return fate::close_retry;
+		case errc::corrupt:
+		case errc::database:
+			return fate::close_fail;
+		default:
+			return fate::fail;
+	}
 }
 
 // Every failure an engine raises, whatever its implementation threw. It is deliberately not a
@@ -70,16 +104,38 @@ constexpr const char* to_string(errc kind) noexcept {
 class Error {
 public:
 	Error(errc kind_, std::string reason) : kind(kind_), reason_(std::move(reason)) { }
+
+	// `description` is the engine's full text for logs and 500 bodies; `detail` the system or
+	// transport string behind it (empty when none).
+	Error(errc kind_, std::string reason, std::string description, std::string detail = {})
+		: kind(kind_), reason_(std::move(reason)), description_(std::move(description)), detail_(std::move(detail)) { }
+
 	virtual ~Error() = default;
 
 	const std::string& reason() const noexcept {
 		return reason_;
 	}
 
+	const std::string& description() const noexcept {
+		return description_.empty() ? reason_ : description_;
+	}
+
+	const std::string& detail() const noexcept {
+		return detail_;
+	}
+
 	errc kind;
+
+protected:
+	void set_texts(std::string description, std::string detail) {
+		description_ = std::move(description);
+		detail_ = std::move(detail);
+	}
 
 private:
 	std::string reason_;
+	std::string description_;
+	std::string detail_;
 };
 
 }  // namespace engine

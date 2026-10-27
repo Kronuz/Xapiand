@@ -22,16 +22,11 @@
 
 #pragma once
 
-#include <memory>                  // for std::unique_ptr
 #include <string_view>             // for std::string_view
 
 #include "analysis.hh"             // for analysis::stopper
-#include "xapian.h"                // for Xapian::Stopper
 
 
 // The stop words of a language, read once from <data path>/stopwords/<language>.txt;
 // null when there is no such list.
 const analysis::stopper* getStopWords(std::string_view language);
-
-// The same list for Xapian::QueryParser, which still takes a Xapian::Stopper.
-const std::unique_ptr<Xapian::Stopper>& getStopper(std::string_view language);

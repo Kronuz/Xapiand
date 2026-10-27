@@ -43,7 +43,7 @@
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
 #include "engine/document.h"                // for engine::Document
-#include "xapian.h"                         // for Xapian::docid, Xapian::rev
+#include "engine/types.h"                  // for engine::rev, docid
 
 
 class MsgPack;
@@ -58,13 +58,13 @@ struct WalHeader;
 // exactly one block (the static_assert below guards it); the `- 4` accounts for
 // the alignment padding the compiler inserts before the 8-byte revision, since the
 // packed StorageMetaHead is 28 bytes.
-#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(StorageMetaHead) - 4 - sizeof(Xapian::rev) - 16) / sizeof(uint32_t))
+#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(StorageMetaHead) - 4 - sizeof(engine::rev) - 16) / sizeof(uint32_t))
 
 
 struct WalHeader {
 	StorageMetaHead meta;
 
-	Xapian::rev revision;
+	engine::rev revision;
 	std::array<unsigned char, 16> uuid;
 
 	uint32_t slot[WAL_SLOTS];
@@ -147,14 +147,14 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	}
 
 public:
-	static constexpr Xapian::rev max_rev = std::numeric_limits<Xapian::rev>::max() - 1;
+	static constexpr engine::rev max_rev = std::numeric_limits<engine::rev>::max() - 1;
 	static constexpr uint32_t max_slot = std::numeric_limits<uint32_t>::max();
 
 	using Type = DatabaseWALType;
 
 	UUID _uuid;
 	UUID _uuid_le;
-	Xapian::rev _revision;
+	engine::rev _revision;
 	Shard* _shard;
 
 	DatabaseWAL(Shard* shard);
@@ -165,17 +165,17 @@ public:
 
 	const UUID& get_uuid() const;
 	const UUID& get_uuid_le() const;
-	Xapian::rev get_revision() const;
+	engine::rev get_revision() const;
 
 	bool init_database();
 	bool execute();
 	bool execute_line(std::string_view line, bool wal_, bool send_update);
-	void write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
+	void write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data, bool send_update);
 
-	MsgPack to_string(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
+	MsgPack to_string(engine::rev start_revision, engine::rev end_revision, bool unserialised);
 
-	std::pair<Xapian::rev, uint32_t> locate_revision(Xapian::rev revision);
-	iterator find(Xapian::rev revision);
+	std::pair<engine::rev, uint32_t> locate_revision(engine::rev revision);
+	iterator find(engine::rev revision);
 	std::string get_current_line(uint32_t end_off);
 };
 
@@ -265,13 +265,13 @@ class DatabaseWALWriterTask {
 
 	std::string path;
 	UUID uuid;
-	Xapian::rev revision;
+	engine::rev revision;
 
 	engine::Document doc;
 	std::string key;
 	std::string term_word_val;
-	Xapian::termcount freq;
-	Xapian::docid did;
+	engine::termcount freq;
+	engine::docid did;
 	bool send_update;
 
 	void write_commit(DatabaseWALWriterThread& thread);
@@ -351,12 +351,12 @@ public:
 
 	std::size_t running_size();
 
-	void write_commit(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, bool send_update);
-	void write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, engine::Document&& doc);
-	void write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did);
-	void write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val);
-	void write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc);
-	void write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec);
+	void write_commit(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, bool send_update);
+	void write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, engine::docid did, engine::Document&& doc);
+	void write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, engine::docid did);
+	void write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& key, const std::string& val);
+	void write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& word, engine::termcount freqinc);
+	void write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& word, engine::termcount freqdec);
 	void delete_wal(bool synchronous, const std::string& path);
 };
 

@@ -250,10 +250,19 @@ Processor::Processor(const Script& script)
 			DatabaseHandler _db_handler(endpoints, DB_OPEN);
 			auto doc = _db_handler.get_document(id);
 			obj = doc.get_obj();
-		} catch (const Xapian::DocNotFoundError&) {
-			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, id);
-		} catch (const Xapian::DatabaseNotFoundError& exc) {
-			THROW(ClientError, "Foreign script database {} doesn't exist", repr(foreign_path));
+		} catch (const engine::Error& error) {
+			switch (error.kind) {
+				case engine::errc::doc_not_found: {
+					THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, id);
+					break;
+				}
+				case engine::errc::not_found: {
+					THROW(ClientError, "Foreign script database {} doesn't exist", repr(foreign_path));
+					break;
+				}
+				default:
+					throw;
+			}
 		}
 		// If there's no selector use "script" (to be consistent with "schema" field):
 		obj = obj[SCRIPT_FIELD_NAME];

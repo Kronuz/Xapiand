@@ -35,7 +35,7 @@
 #include "engine/xapian/convert.h"
 #include "engine/xapian/errors.h"
 #include "multivalue/generate_terms.h"
-#include "xapian.h"
+#include "engine/xapian/xapian.h"
 
 namespace {
 
@@ -164,7 +164,7 @@ static void test_classify() {
 	CHECK_TRUE(classified(Xapian::DocVersionConflictError("x")) == errc::version_conflict);
 	CHECK_TRUE(classified(Xapian::InvalidArgumentError("x")) == errc::invalid);
 	CHECK_TRUE(classified(Xapian::InvalidOperationError("x")) == errc::invalid);
-	CHECK_TRUE(classified(Xapian::QueryParserError("x")) == errc::invalid);
+	CHECK_TRUE(classified(Xapian::QueryParserError("x")) == errc::syntax);
 	CHECK_TRUE(classified(Xapian::DatabaseError("x")) == errc::database);
 	CHECK_TRUE(classified(Xapian::InternalError("x")) == errc::internal);
 	CHECK_TRUE(classified(std::runtime_error("x")) == errc::internal);

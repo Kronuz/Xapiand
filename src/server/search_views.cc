@@ -80,7 +80,7 @@
 #include "serialise.h"                      // for Serialise::boolean
 #include "xapiand_strings.hh"                       // for strings::from_delta
 #include "system.hh"                        // for check_compiler, check_OS, check_architecture
-#include "xapian.h"                         // for Xapian::major_version, Xapian::minor_version
+#include "engine/xapian/convert.h"              // for engine::xapian::version
 
 
 // #undef L_DEBUG
@@ -748,7 +748,7 @@ node_obj()
 		} },
 		{ "versions", {
 			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : strings::format("{}_{}", Package::VERSION, Package::REVISION) },
-			{ "Xapian", strings::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
+			{ "Xapian", engine::xapian::version() },
 #ifdef XAPIAND_LUA
 			{ "Lua", LUA_VERSION_MAJOR "." LUA_VERSION_MINOR },
 #endif
@@ -1074,7 +1074,7 @@ retrieve_metadata_view(Request& request)
 	} else {
 		auto metadata = db_handler.get_metadata(key);
 		if (metadata.empty()) {
-			throw Xapian::DocNotFoundError("Metadata not found");
+			throw engine::Error(engine::errc::doc_not_found, "Metadata not found");
 		} else {
 			response_obj = MsgPack::unserialise(metadata);
 		}
@@ -1304,11 +1304,8 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 
 		// Retrieve full schema
 		schema = db_handler.get_schema()->get_full(true);
-	} catch (const Xapian::DocNotFoundError&) {
-		if (!is_root) {
-			throw;
-		}
-	} catch (const Xapian::DatabaseNotFoundError&) {
+	} catch (const engine::Error& error) {
+		if (!engine::is_missing(error.kind)) { throw; }
 		if (!is_root) {
 			throw;
 		}
@@ -1351,11 +1348,8 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		if (it != it_e) {
 			settings.erase(it);
 		}
-	} catch (const Xapian::DocNotFoundError&) {
-		if (!is_root) {
-			throw;
-		}
-	} catch (const Xapian::DatabaseNotFoundError&) {
+	} catch (const engine::Error& error) {
+		if (!engine::is_missing(error.kind)) { throw; }
 		if (!is_root) {
 			throw;
 		}
@@ -1763,7 +1757,7 @@ wal_view(Request& request)
 
 	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
-	auto obj = db_handler.repr_wal(0, std::numeric_limits<Xapian::rev>::max(), unserialised);
+	auto obj = db_handler.repr_wal(0, std::numeric_limits<engine::rev>::max(), unserialised);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1839,7 +1833,7 @@ retrieve_document_view(Request& request)
 	}
 
 	// Retrive document ID
-	Xapian::docid did;
+	engine::docid did;
 	did = db_handler.get_docid(id);
 
 	// Retrive document data
@@ -1873,7 +1867,7 @@ retrieve_document_view(Request& request)
 		if (obj.find(VERSION_FIELD_NAME) == obj.end()) {
 			auto version = document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				obj[VERSION_FIELD_NAME] = static_cast<Xapian::rev>(sortable_unserialise(version));
+				obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
 			}
 		}
 
@@ -1975,7 +1969,8 @@ search_view(Request& request)
 			mset_tuple = db_handler.get_mset(query_field, &decoded_body, &aggs);
 			aggregations = aggs.get_aggregation().at(RESERVED_AGGS_AGGREGATIONS);
 		}
-	} catch (const Xapian::DatabaseNotFoundError&) {
+	} catch (const engine::Error& error) {
+		if (error.kind != engine::errc::not_found) { throw; }
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
@@ -2022,7 +2017,7 @@ search_view(Request& request)
 		if (hit_obj.find(VERSION_FIELD_NAME) == hit_obj.end()) {
 			auto version = document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				hit_obj[VERSION_FIELD_NAME] = static_cast<Xapian::rev>(sortable_unserialise(version));
+				hit_obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
 			}
 		}
 
@@ -2108,7 +2103,8 @@ count_view(Request& request)
 			}
 			mset_tuple = db_handler.get_mset(query_field, &decoded_body, nullptr);
 		}
-	} catch (const Xapian::DatabaseNotFoundError&) {
+	} catch (const engine::Error& error) {
+		if (error.kind != engine::errc::not_found) { throw; }
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
@@ -2253,7 +2249,7 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 			query_field.primary,
 			settings);
 		if (index_endpoints.empty()) {
-			throw Xapian::NetworkError("Endpoint node not available");
+			throw engine::Error(engine::errc::network, "Endpoint node not available");
 		}
 		for (auto& endpoint : index_endpoints) {
 			request.endpoints.add(endpoint);

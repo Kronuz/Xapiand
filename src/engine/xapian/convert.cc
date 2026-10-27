@@ -119,6 +119,13 @@ to_xapian(const WriteResult& result)
 }
 
 
+std::string
+version()
+{
+	return std::to_string(Xapian::major_version()) + "." + std::to_string(Xapian::minor_version()) + "." + std::to_string(Xapian::revision());
+}
+
+
 errc
 classify_current() noexcept
 {
@@ -151,7 +158,7 @@ classify_current() noexcept
 	} catch (const Xapian::InvalidOperationError&) {
 		return errc::invalid;
 	} catch (const Xapian::QueryParserError&) {
-		return errc::invalid;
+		return errc::syntax;
 	} catch (const Xapian::DatabaseError&) {
 		return errc::database;
 	} catch (...) {
@@ -191,13 +198,30 @@ rethrow_translated()
 		throw InvalidArgument(e);
 	} catch (const Xapian::InvalidOperationError& e) {
 		throw InvalidOperation(e);
+	} catch (const Xapian::QueryParserError& e) {
+		throw QueryParser(e);
 	} catch (const Xapian::DatabaseError& e) {
 		throw DatabaseFailure(e);
+	} catch (const Xapian::Error& e) {
+		throw Other(e);
 	}
 }
 
 
 namespace {
+
+// Runs `f`, turning whatever Xapian throws into an engine::Error.
+template <typename F>
+auto
+guarded(F&& f) -> decltype(f())
+{
+	try {
+		return f();
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
 
 class XapianDocView final : public DocView {
 public:
@@ -215,64 +239,72 @@ public:
 	static inline std::atomic<std::size_t> live{0};
 
 	docid did() const override {
-		return doc_.get_docid();
+		return guarded([&] { return doc_.get_docid(); });
 	}
 
 	std::string data() const override {
-		return doc_.get_data();
+		return guarded([&] { return doc_.get_data(); });
 	}
 
 	std::string value(valueno slot) const override {
-		return doc_.get_value(slot);
+		return guarded([&] { return doc_.get_value(slot); });
 	}
 
 	rev version() const override {
-		auto serialised = doc_.get_value(DB_SLOT_VERSION);
-		return serialised.empty() ? 0 : static_cast<rev>(sortable_unserialise(serialised));
+		return guarded([&] {
+			auto serialised = doc_.get_value(DB_SLOT_VERSION);
+			return serialised.empty() ? 0 : static_cast<rev>(sortable_unserialise(serialised));
+		});
 	}
 
 	void terms(std::string_view prefix, const TermSink& sink) const override {
-		// A termlist is sorted, so the terms with a prefix are contiguous.
-		const auto end = doc_.termlist_end();
-		auto it = doc_.termlist_begin();
-		it.skip_to(std::string(prefix));
-		for (; it != end; ++it) {
-			auto name = *it;
-			if (name.compare(0, prefix.size(), prefix) != 0) {
-				break;
+		guarded([&] {
+			// A termlist is sorted, so the terms with a prefix are contiguous.
+			const auto end = doc_.termlist_end();
+			auto it = doc_.termlist_begin();
+			it.skip_to(std::string(prefix));
+			for (; it != end; ++it) {
+				auto name = *it;
+				if (name.compare(0, prefix.size(), prefix) != 0) {
+					break;
+				}
+				sink(name, it.get_wdf());
 			}
-			sink(name, it.get_wdf());
-		}
+		});
 	}
 
 	void values(const ValueSink& sink) const override {
-		const auto end = doc_.values_end();
-		for (auto it = doc_.values_begin(); it != end; ++it) {
-			sink(it.get_valueno(), *it);
-		}
+		guarded([&] {
+			const auto end = doc_.values_end();
+			for (auto it = doc_.values_begin(); it != end; ++it) {
+				sink(it.get_valueno(), *it);
+			}
+		});
 	}
 
 	void term_details(const TermDetailSink& sink) const override {
-		const auto end = doc_.termlist_end();
-		for (auto it = doc_.termlist_begin(); it != end; ++it) {
-			TermDetail detail;
-			auto name = *it;
-			detail.term = name;
-			detail.wdf = it.get_wdf();
-			try {
-				detail.termfreq = it.get_termfreq();
-			} catch (const Xapian::InvalidOperationError&) { }  // not tied to a database
-			const auto pend = it.positionlist_end();
-			detail.positions.reserve(it.positionlist_count());
-			for (auto pit = it.positionlist_begin(); pit != pend; ++pit) {
-				detail.positions.push_back(*pit);
+		guarded([&] {
+			const auto end = doc_.termlist_end();
+			for (auto it = doc_.termlist_begin(); it != end; ++it) {
+				TermDetail detail;
+				auto name = *it;
+				detail.term = name;
+				detail.wdf = it.get_wdf();
+				try {
+					detail.termfreq = it.get_termfreq();
+				} catch (const Xapian::InvalidOperationError&) { }  // not tied to a database
+				const auto pend = it.positionlist_end();
+				detail.positions.reserve(it.positionlist_count());
+				for (auto pit = it.positionlist_begin(); pit != pend; ++pit) {
+					detail.positions.push_back(*pit);
+				}
+				sink(detail);
 			}
-			sink(detail);
-		}
+		});
 	}
 
 	std::string serialise() const override {
-		return doc_.serialise();
+		return guarded([&] { return doc_.serialise(); });
 	}
 
 private:

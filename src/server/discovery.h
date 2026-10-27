@@ -39,7 +39,7 @@
 #include "lru.h"                            // for lru::aging_lru
 #include "opts.h"                           // for opts::*
 #include "thread.hh"                        // for ThreadPolicyType::* (the updater debouncers)
-#include "xapian.h"                         // for Xapian::rev
+#include "engine/types.h"                  // for engine::rev, docid
 
 // IMPORTANT include order (EV_ERROR clash): the Xapiand headers pull in libev (ev/ev.h),
 // whose `enum EV_ERROR` collides with macOS <sys/event.h>'s `#define EV_ERROR` that Asio
@@ -117,7 +117,7 @@ private:
 
 	struct PrimaryShardVoter {
 		std::string uuid;
-		Xapian::rev revision;
+		engine::rev revision;
 		bool eligible;
 	};
 
@@ -170,9 +170,9 @@ public:
 	void raft_add_command(const std::string& command);
 	void raft_request_vote();
 	void raft_relinquish_leadership();
-	void db_updated_send(Xapian::rev revision, std::string_view path);
-	void schema_updated_send(Xapian::rev revision, std::string_view path);
-	void settings_updated_send(Xapian::rev revision, std::string_view path);
+	void db_updated_send(engine::rev revision, std::string_view path);
+	void schema_updated_send(engine::rev revision, std::string_view path);
+	void settings_updated_send(engine::rev revision, std::string_view path);
 	void primary_updated_send(size_t shards, std::string_view path);
 
 	// Messages executed asynchronously from MAIN thread
@@ -187,7 +187,7 @@ public:
 	std::string getDescription() const;
 };
 
-void db_updated_send(Xapian::rev revision, std::string path);
+void db_updated_send(engine::rev revision, std::string path);
 
 inline auto& db_updater(bool create = true) {
 	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
@@ -195,7 +195,7 @@ inline auto& db_updater(bool create = true) {
 	return db_updater;
 }
 
-void schema_updated_send(Xapian::rev revision, std::string path);
+void schema_updated_send(engine::rev revision, std::string path);
 
 inline auto& schema_updater(bool create = true) {
 	static auto schema_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, schema_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
@@ -203,7 +203,7 @@ inline auto& schema_updater(bool create = true) {
 	return schema_updater;
 }
 
-void settings_updated_send(Xapian::rev revision, std::string path);
+void settings_updated_send(engine::rev revision, std::string path);
 
 inline auto& settings_updater(bool create = true) {
 	static auto settings_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("IU--", "SE{:02}", opts.num_discoverers, settings_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;

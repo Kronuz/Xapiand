@@ -30,7 +30,6 @@
 
 #include "xapiand_exception.h"                            // for MSG_SerialisationError, SerialisationError
 #include "likely.h"                               // for likely, unlikely
-#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
 /** Serialise a length as a variable-length string.
