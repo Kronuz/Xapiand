@@ -23,6 +23,9 @@
 #pragma once
 
 #include <cstddef>                // for std::size_t
+#ifdef ENGINE_CENSUS
+#include <functional>              // for std::function
+#endif
 #include <string>                  // for std::string
 #include <memory>                  // for std::unique_ptr
 #include <utility>                 // for std::move
@@ -50,6 +53,10 @@ public:
 	void set_data(std::string data) override;
 	std::string get_data() const override;
 	std::string serialise() const override;
+#ifdef ENGINE_CENSUS
+	void census_terms(const std::function<void(std::string_view, termcount, std::size_t)>& visit) const override;
+	std::size_t census_values() const override;
+#endif
 
 	const Xapian::Document& xapian() const noexcept { return doc_; }
 

@@ -22,6 +22,10 @@
 
 #pragma once
 
+#ifdef ENGINE_CENSUS
+#include <cstddef>                 // for std::size_t
+#include <functional>              // for std::function
+#endif
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
@@ -54,6 +58,12 @@ public:
 		virtual void set_data(std::string data) = 0;
 		virtual std::string get_data() const = 0;
 		virtual std::string serialise() const = 0;
+
+#ifdef ENGINE_CENSUS
+		// Calls visit(term, wdf, positions) for each term in term order; the number of values set.
+		virtual void census_terms(const std::function<void(std::string_view, termcount, std::size_t)>& visit) const = 0;
+		virtual std::size_t census_values() const = 0;
+#endif
 	};
 
 	// An empty document of the engine. Defined by the engine.

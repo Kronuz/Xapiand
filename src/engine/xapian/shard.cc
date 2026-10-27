@@ -29,6 +29,7 @@
 
 #include "config.h"                // for XAPIAND_DATABASE_WAL
 #include "database/utils.h"        // for DB_SLOT_VERSION
+#include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/xapian/convert.h" // for to_xapian, from_xapian
 #include "engine/xapian/errors.h"  // for rethrow_translated, VersionConflict, DocNotFound
 #include "length.h"                // for serialise_length
@@ -104,10 +105,12 @@ task::task<WriteResult>
 Shard::add(Document& doc, WriteArgs args)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.add");
 	try {
 		auto& db = writable();
 		WriteResult info;
 		if (!args.local) {
+			ENGINE_CENSUS_DOCUMENT(doc, "");
 			co_return from_xapian(db.add_document(xapian_document(doc)));
 		}
 		check_version(args.expected_version, std::nullopt);
@@ -116,6 +119,7 @@ Shard::add(Document& doc, WriteArgs args)
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
+		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		stamp(doc, info);
 		db.replace_document(info.did, xapian_document(doc));
 		co_return info;
@@ -129,10 +133,12 @@ task::task<WriteResult>
 Shard::replace(docid did, Document& doc, WriteArgs args)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.replace");
 	try {
 		auto& db = writable();
 		WriteResult info;
 		if (!args.local) {
+			ENGINE_CENSUS_DOCUMENT(doc, "");
 			co_return from_xapian(db.replace_document(did, xapian_document(doc)));
 		}
 		info.did = did;
@@ -142,6 +148,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
+		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		stamp(doc, info);
 		db.replace_document(did, xapian_document(doc));
 		co_return info;
@@ -155,10 +162,12 @@ task::task<WriteResult>
 Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.replace_by_key");
 	try {
 		auto& db = writable();
 		WriteResult info;
 		if (!args.local) {
+			ENGINE_CENSUS_DOCUMENT(doc, key);
 			co_return from_xapian(db.replace_document(key, xapian_document(doc)));
 		}
 		info.term = key;
@@ -175,6 +184,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
+		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		stamp(doc, info);
 		db.replace_document(info.did, xapian_document(doc));
 		co_return info;
@@ -188,6 +198,7 @@ task::task<void>
 Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.erase");
 	try {
 		auto& db = writable();
 		if (local && expected_version) {
@@ -205,6 +216,7 @@ task::task<docid>
 Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.erase_by_key");
 	try {
 		auto& db = writable();
 		if (!local) {
@@ -231,6 +243,7 @@ task::task<void>
 Shard::commit(Transaction transaction)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.commit");
 	try {
 		auto& db = writable();
 		if (transaction == Transaction::flushed) {
@@ -254,6 +267,7 @@ task::task<void>
 Shard::begin_transaction(bool flushed)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.begin_transaction");
 	try {
 		writable().begin_transaction(flushed);
 		co_return;
@@ -267,6 +281,7 @@ task::task<void>
 Shard::commit_transaction()
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.commit_transaction");
 	try {
 		writable().commit_transaction();
 		co_return;
@@ -280,6 +295,7 @@ task::task<void>
 Shard::cancel_transaction()
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.cancel_transaction");
 	try {
 		writable().cancel_transaction();
 		co_return;
@@ -293,6 +309,7 @@ task::task<void>
 Shard::set_metadata(const std::string& key, const std::string& value)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.set_metadata");
 	try {
 		writable().set_metadata(key, value);
 		co_return;
@@ -306,6 +323,7 @@ task::task<void>
 Shard::add_spelling(const std::string& word, termcount increment)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.add_spelling");
 	try {
 		writable().add_spelling(word, increment);
 		co_return;
@@ -319,6 +337,7 @@ task::task<termcount>
 Shard::remove_spelling(const std::string& word, termcount decrement)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.remove_spelling");
 	try {
 		co_return writable().remove_spelling(word, decrement);
 	} catch (...) {
@@ -331,6 +350,7 @@ task::task<bool>
 Shard::reopen()
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.reopen");
 	try {
 		co_return database_->reopen();
 	} catch (...) {
@@ -343,6 +363,7 @@ task::task<Stats>
 Shard::stats()
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.stats");
 	try {
 		Stats stats;
 		stats.uuid = database_->get_uuid();
@@ -365,6 +386,7 @@ task::task<docid>
 Shard::find_key(const std::string& key)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.find_key");
 	try {
 		auto it = database_->postlist_begin(key);
 		co_return it == database_->postlist_end(key) ? 0 : *it;
@@ -378,6 +400,7 @@ task::task<std::unique_ptr<DocView>>
 Shard::get(docid did)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.get");
 	try {
 		co_return make_view(database_->get_document(did));
 	} catch (...) {
@@ -390,6 +413,7 @@ task::task<void>
 Shard::scan(docid from, const ScanSink& sink)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.scan");
 	try {
 		auto it = database_->postlist_begin("");
 		const auto end = database_->postlist_end("");
@@ -409,6 +433,7 @@ task::task<std::string>
 Shard::metadata(const std::string& key)
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.metadata");
 	try {
 		co_return database_->get_metadata(key);
 	} catch (...) {
@@ -421,6 +446,7 @@ task::task<std::vector<std::string>>
 Shard::metadata_keys()
 {
 	co_await Hop{on_};
+	ENGINE_CENSUS_COUNT("shard.metadata_keys");
 	try {
 		std::vector<std::string> keys;
 		const auto end = database_->metadata_keys_end();
