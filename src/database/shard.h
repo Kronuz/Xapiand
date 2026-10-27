@@ -185,6 +185,10 @@ public:
 	// Called from a catch block of a read ladder: closes the shard as the failure demands and
 	// rethrows when it is final or not a failure of the shard; otherwise the caller reopens.
 	void retry_read(const engine::Error& error, int t);
+
+	// A fan-out over shards: remember a failure of this one so the next can go on, and rethrow what is
+	// final. A write does not treat a stale snapshot as retryable. Called from a catch block.
+	void collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes);
 	void close();
 
 	static void autocommit(const std::shared_ptr<Shard>& shard);

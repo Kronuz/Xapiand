@@ -197,34 +197,6 @@ inject_data(Data& data, const MsgPack& obj)
  */
 
 
-// A fan-out over shards: remember a failure of this one and go on with the next; rethrow what is
-// final. A write does not treat a stale snapshot as retryable. Call only inside a catch block.
-static void
-collect_failure(Shard& shard, const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes)
-{
-	auto fate = engine::read_fate(error.kind);
-	if (writes && error.kind == engine::errc::reopen) {
-		fate = engine::fate::close_fail;
-	}
-	switch (fate) {
-		case engine::fate::retry_close:
-			eptr = std::current_exception();
-			--valid;
-			return;
-		case engine::fate::close_retry:
-			shard.do_close();
-			eptr = std::current_exception();
-			--valid;
-			return;
-		case engine::fate::close_fail:
-			shard.do_close();
-			throw;
-		case engine::fate::fail:
-			throw;
-	}
-}
-
-
 DatabaseHandler::DatabaseHandler()
 	: flags(0)
 {
@@ -1351,7 +1323,7 @@ DatabaseHandler::get_metadata_keys()
 				break;
 			}
 		} catch (const engine::Error& error) {
-			collect_failure(*lk_shard, error, eptr, valid, false);
+			lk_shard->collect_failure(error, eptr, valid, false);
 		}
 	}
 	if (eptr && !valid) {
@@ -1379,7 +1351,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 				break;
 			}
 		} catch (const engine::Error& error) {
-			collect_failure(*lk_shard, error, eptr, valid, false);
+			lk_shard->collect_failure(error, eptr, valid, false);
 		}
 	}
 	if (eptr && !valid) {
@@ -1411,7 +1383,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 		try {
 			lk_shard->set_metadata(key, value, commit, wal);
 		} catch (const engine::Error& error) {
-			collect_failure(*lk_shard, error, eptr, valid, true);
+			lk_shard->collect_failure(error, eptr, valid, true);
 		}
 	}
 	if (eptr && !valid) {
@@ -1895,7 +1867,7 @@ DatabaseHandler::commit(bool wal)
 		try {
 			ret = lk_shard->commit(wal, true) || ret;
 		} catch (const engine::Error& error) {
-			collect_failure(*lk_shard, error, eptr, valid, true);
+			lk_shard->collect_failure(error, eptr, valid, true);
 		}
 	}
 	if (eptr && !valid) {

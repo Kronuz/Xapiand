@@ -656,6 +656,32 @@ Shard::retry_read(const engine::Error& error, int t)
 }
 
 
+void
+Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes)
+{
+	auto fate = engine::read_fate(error.kind);
+	if (writes && error.kind == engine::errc::reopen) {
+		fate = engine::fate::close_fail;
+	}
+	switch (fate) {
+		case engine::fate::retry_close:
+			eptr = std::current_exception();
+			--valid;
+			return;
+		case engine::fate::close_retry:
+			do_close();
+			eptr = std::current_exception();
+			--valid;
+			return;
+		case engine::fate::close_fail:
+			do_close();
+			throw;
+		case engine::fate::fail:
+			throw;
+	}
+}
+
+
 bool
 Shard::reopen()
 {

@@ -51,6 +51,7 @@ struct PoolTestAccess {
 	static std::condition_variable& readables_cond(ShardEndpoint& endpoint) { return endpoint.readables_cond; }
 	static void set_local(Shard& shard) { shard._local = true; }  // as if opened locally
 	static void close(Shard& shard) { shard._closed.store(true); }  // as if closed by a failed commit
+	static bool open(Shard& shard) { return shard.engine_shard != nullptr; }
 };
 
 namespace {
@@ -269,6 +270,101 @@ void clear_keeps_shared_shard(int flags) {
 void test_clear_keeps_shared_writable() { clear_keeps_shared_shard(DB_WRITABLE | DB_CREATE_OR_OPEN); }
 void test_clear_keeps_shared_readable() { clear_keeps_shared_shard(DB_OPEN); }
 
+
+// What the read ladders and the fan-out loops do with a failure follows its kind (engine/error.h):
+// whether the call returns (retry or go on) or throws, and whether the shard ends up closed.
+struct Outcome {
+	bool threw = false;
+	bool closed = false;
+	bool collected = false;
+};
+
+Outcome retry_outcome(engine::errc kind, int t) {
+	DatabasePool pool(8, 1);
+	auto shard = pool.checkout(Endpoint("pool_test_policy"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
+	shard->engine();  // opens the database
+	CHECK_TRUE(A::open(*shard));
+	Outcome outcome;
+	try {
+		throw engine::Error(kind, "x");
+	} catch (const engine::Error& error) {
+		try {
+			shard->retry_read(error, t);
+		} catch (const engine::Error&) {
+			outcome.threw = true;
+		}
+	}
+	outcome.closed = !A::open(*shard);
+	pool.checkin(shard);
+	return outcome;
+}
+
+Outcome collect_outcome(engine::errc kind, bool writes) {
+	DatabasePool pool(8, 1);
+	auto shard = pool.checkout(Endpoint("pool_test_policy"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
+	Outcome outcome;
+	shard->engine();  // opens the database
+	CHECK_TRUE(A::open(*shard));
+	std::exception_ptr eptr;
+	size_t valid = 2;
+	try {
+		throw engine::Error(kind, "x");
+	} catch (const engine::Error& error) {
+		try {
+			shard->collect_failure(error, eptr, valid, writes);
+		} catch (const engine::Error&) {
+			outcome.threw = true;
+		}
+	}
+	outcome.collected = eptr && valid == 1;
+	outcome.closed = !A::open(*shard);
+	pool.checkin(shard);
+	return outcome;
+}
+
+void test_failure_policy() {
+	using engine::errc;
+	for (auto kind : {errc::reopen, errc::opening, errc::not_found, errc::not_available, errc::timeout, errc::network}) {
+		auto more = retry_outcome(kind, 1);
+		CHECK_TRUE(!more.threw && !more.closed);  // reopen and try again
+		auto last = retry_outcome(kind, 0);
+		CHECK_TRUE(last.threw && last.closed);    // final: close the shard and fail
+	}
+	auto closed_more = retry_outcome(errc::closed, 1);
+	CHECK_TRUE(!closed_more.threw && closed_more.closed);  // close, then try again
+	auto closed_last = retry_outcome(errc::closed, 0);
+	CHECK_TRUE(closed_last.threw && closed_last.closed);
+	for (auto kind : {errc::corrupt, errc::database}) {
+		auto o = retry_outcome(kind, 3);
+		CHECK_TRUE(o.threw && o.closed);
+	}
+	for (auto kind : {errc::doc_not_found, errc::version_conflict, errc::invalid, errc::syntax, errc::internal}) {
+		auto o = retry_outcome(kind, 3);
+		CHECK_TRUE(o.threw && !o.closed);
+	}
+
+	// The fan-out loops go on with the next shard instead of retrying; a stale snapshot (reopen) is
+	// collected by a read and final for a write, which must not be retried after a stale read.
+	for (auto kind : {errc::reopen, errc::opening, errc::not_found, errc::not_available, errc::timeout, errc::network}) {
+		auto read = collect_outcome(kind, false);
+		CHECK_TRUE(!read.threw && read.collected && !read.closed);
+		auto write = collect_outcome(kind, true);
+		if (kind == errc::reopen) {
+			CHECK_TRUE(write.threw && write.closed && !write.collected);
+		} else {
+			CHECK_TRUE(!write.threw && write.collected && !write.closed);
+		}
+	}
+	auto closed = collect_outcome(errc::closed, false);
+	CHECK_TRUE(!closed.threw && closed.collected && closed.closed);
+	for (bool writes : {false, true}) {
+		auto corrupt = collect_outcome(errc::corrupt, writes);
+		CHECK_TRUE(corrupt.threw && corrupt.closed && !corrupt.collected);
+		auto invalid = collect_outcome(errc::invalid, writes);
+		CHECK_TRUE(invalid.threw && !invalid.closed && !invalid.collected);
+	}
+}
+
 }  // namespace
 
-TEST_MAIN(test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
+TEST_MAIN(test_failure_policy, test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
