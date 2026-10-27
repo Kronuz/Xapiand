@@ -27,12 +27,25 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <filesystem>
+#include <limits>
+#include <random>
+#include <set>
 #include <string>
 #include <vector>
 
+#include "database/schema.h"
 #include "database/utils.h"
+#include "datetime.h"
+#include "engine/search.h"
+#include "engine/sync.h"
+#include "engine/xapian/shard.h"
+#include "engine/xapian/xapian.h"
 #include "multivalue/generate_terms.h"
+#include "utype.hh"
 
 static void test_numeric_terms() {
 	const std::vector<uint64_t> accuracy = { 1, 10, 100, 1000, 10000, 100000 };
@@ -80,4 +93,145 @@ static void test_id_accuracy_prefix() {
 	CHECK_FALSE(GenerateTerms::numeric(int64_t(1200), int64_t(1300), accuracy, acc_prefix).empty());
 }
 
-TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix)
+// Documents indexed with GenerateTerms::integer and searched with GenerateTerms::numeric through the
+// real engine: a range query must find every document whose value is in the range. (An empty query
+// means "no term filter": the value-range source alone decides, so every document passes it.)
+static void test_numeric_range_finds_every_value_in_range() {
+	const std::vector<uint64_t> accuracy = { 100, 1000, 10000, 100000, 1000000, 100000000 };
+	std::vector<std::string> prefix;
+	for (size_t i = 0; i < accuracy.size(); ++i) {
+		prefix.push_back("N" + std::to_string(i));
+	}
+
+	std::set<int64_t> set = { 0, 1, 99, 100, 101, 999, 1000, 1001, 1999, 2000, 2001, 2500, 99999, 100000, 999999, 1000000, 1000001,
+		5000000, 99999999, 100000000, 150000000, 199999999, 200000000, 200000001, 250000000, 299999999, 300000000, 3000000000LL,
+		-1, -99, -100, -101, -1000, -100000000, -200000000, -300000000, std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max() };
+	for (int k = 16; k <= 40; ++k) {
+		for (int d = -1; d <= 1; ++d) {
+			set.insert((int64_t(1) << k) + d);
+		}
+	}
+	const std::vector<int64_t> values(set.begin(), set.end());
+
+	const auto path = (std::filesystem::current_path() / "test_generate_terms_shard").string();
+	std::filesystem::remove_all(path);
+	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto& shard = *opened.shard;
+	for (auto v : values) {
+		engine::Document doc;
+		GenerateTerms::integer(doc, accuracy, prefix, v);
+		engine::sync_wait(shard.add(doc, {}));
+	}
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+
+	std::mt19937_64 rng(7);
+	std::vector<std::pair<int64_t, int64_t>> ranges = { {0, 0}, {100, 100}, {0, 3000000000LL}, {1, 3000000000LL}, {1999, 4294967295LL},
+		{100000, 134217729}, {2, 150416086}, {55, 2147483647}, {0, 250000000}, {268435455, 268435457}, {-5, 5}, {-300000000, 0} };
+	for (int i = 0; i < 300; ++i) {
+		auto a = values[rng() % values.size()], b = values[rng() % values.size()];
+		ranges.push_back({std::min(a, b), std::max(a, b)});
+	}
+
+	size_t missing = 0;
+	for (const auto& [lo, hi] : ranges) {
+		auto query = GenerateTerms::numeric(lo, hi, accuracy, prefix);
+		std::set<engine::docid> found;
+		if (query.empty()) {
+			for (size_t i = 0; i < values.size(); ++i) {
+				found.insert(static_cast<engine::docid>(i + 1));
+			}
+		} else {
+			auto prepared = engine::prepare(query);
+			engine::SearchRequest request;
+			request.query = prepared.get();
+			request.maxitems = 1000;
+			request.check_at_least = 1000;
+			request.origin = "test";
+			std::vector<engine::Shard*> shards{&shard};
+			for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
+				found.insert(hit.did);
+			}
+		}
+		for (size_t i = 0; i < values.size(); ++i) {
+			if (values[i] >= lo && values[i] <= hi && !found.count(static_cast<engine::docid>(i + 1))) {
+				++missing;
+			}
+		}
+	}
+	std::filesystem::remove_all(path);
+	CHECK_EQ(missing, size_t(0));
+}
+
+// The same through the real engine for datetime ranges, over the default date and datetime accuracies.
+static void test_datetime_range_finds_every_value_in_range() {
+	const std::vector<std::vector<uint64_t>> lists = {
+		{ toUType(UnitTime::hour), toUType(UnitTime::day), toUType(UnitTime::month), toUType(UnitTime::year), toUType(UnitTime::decade), toUType(UnitTime::century) },
+		{ toUType(UnitTime::day), toUType(UnitTime::month), toUType(UnitTime::year), toUType(UnitTime::decade), toUType(UnitTime::century) },
+		{ toUType(UnitTime::day), toUType(UnitTime::year) },
+	};
+
+	std::vector<double> stamps;
+	for (int year : { 1899, 1900, 1969, 1970, 1971, 1999, 2000, 2001, 2019, 2020, 2037, 2038, 2039, 2100, 2300 }) {
+		for (auto [mon, day, hour, min, sec] : std::vector<std::array<int, 5>>{ {1, 1, 0, 0, 0}, {1, 1, 0, 0, 1}, {2, 28, 23, 59, 59}, {3, 1, 0, 0, 0}, {6, 15, 12, 34, 56}, {12, 31, 23, 59, 59} }) {
+			Datetime::tm_t tm(year, mon, day, hour, min, sec);
+			stamps.push_back(static_cast<double>(Datetime::timegm(tm)));
+		}
+	}
+	std::sort(stamps.begin(), stamps.end());
+
+	const auto path = (std::filesystem::current_path() / "test_generate_terms_shard_date").string();
+	std::mt19937_64 rng(11);
+	size_t missing = 0;
+	for (const auto& accuracy : lists) {
+		std::vector<std::string> prefix;
+		for (size_t i = 0; i < accuracy.size(); ++i) {
+			prefix.push_back("D" + std::to_string(i));
+		}
+		std::filesystem::remove_all(path);
+		auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+		auto& shard = *opened.shard;
+		for (auto t : stamps) {
+			engine::Document doc;
+			GenerateTerms::datetime(doc, accuracy, prefix, Datetime::to_tm_t(static_cast<std::time_t>(t)));
+			engine::sync_wait(shard.add(doc, {}));
+		}
+		engine::sync_wait(shard.commit(engine::Transaction::none));
+
+		for (int i = 0; i < 400; ++i) {
+			auto a = stamps[rng() % stamps.size()], b = stamps[rng() % stamps.size()];
+			if (rng() % 2) {
+				a += static_cast<double>(rng() % 100000) - 50000;
+			}
+			if (b < a) {
+				std::swap(a, b);
+			}
+			auto query = GenerateTerms::datetime(a, b, accuracy, prefix);
+			std::set<engine::docid> found;
+			if (query.empty()) {
+				for (size_t j = 0; j < stamps.size(); ++j) {
+					found.insert(static_cast<engine::docid>(j + 1));
+				}
+			} else {
+				auto prepared = engine::prepare(query);
+				engine::SearchRequest request;
+				request.query = prepared.get();
+				request.maxitems = 1000;
+				request.check_at_least = 1000;
+				request.origin = "test";
+				std::vector<engine::Shard*> shards{&shard};
+				for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
+					found.insert(hit.did);
+				}
+			}
+			for (size_t j = 0; j < stamps.size(); ++j) {
+				if (stamps[j] >= a && stamps[j] <= b && !found.count(static_cast<engine::docid>(j + 1))) {
+					++missing;
+				}
+			}
+		}
+	}
+	std::filesystem::remove_all(path);
+	CHECK_EQ(missing, size_t(0));
+}
+
+TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix, test_numeric_range_finds_every_value_in_range, test_datetime_range_finds_every_value_in_range)

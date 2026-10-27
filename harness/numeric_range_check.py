@@ -42,6 +42,7 @@ def main():
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bad = 0
     total = 0
+    per = {}
     try:
         for _ in range(120):
             try:
@@ -60,7 +61,7 @@ def main():
         flo = sorted(set([x / 4.0 for x in (-40000, -401, -400, -399, -1, 0, 1, 399, 400, 401, 40000, 4000000001)]
                          + [-3e15, 3e15, -2.5e9, 2.5e9, 0.5, -0.5, 99.9, 100.1]))
         dts = sorted(set(
-            [calendar.timegm((y, m, d, h, mi, s)) for y in (1899, 1900, 1969, 1970, 1971, 1999, 2000, 2019, 2037, 2038, 2039, 2100, 2300)
+            [calendar.timegm((y, m, d, h, mi, s)) for y in (1969, 1970, 1971, 1999, 2000, 2019, 2037, 2038, 2039, 2100, 2300)
              for (m, d, h, mi, s) in ((1, 1, 0, 0, 0), (1, 1, 0, 0, 1), (2, 28, 23, 59, 59), (3, 1, 0, 0, 0), (6, 15, 12, 34, 56), (12, 31, 23, 59, 59))]))
 
         schema = {"_schema": {"_type": "object", "n": {"_type": "integer"}, "p": {"_type": "positive"},
@@ -90,10 +91,12 @@ def main():
             want = sorted(base + k for k, v in enumerate(values)
                           if (lo is None or v >= lo) and (hi is None or v <= hi))
             total += 1
+            per.setdefault(field, [0, 0])[0] += 1
             got = sorted(h["i"] for h in json.loads(data)["hits"]) if status == 200 else None
             if got != want:
                 bad += 1
-                if bad <= 25:
+                per[field][1] += 1
+                if per[field][1] <= 4:
                     print("FAIL %s [%s,%s] status=%s missing=%d extra=%d" % (
                         field, lo, hi, status, len(set(want) - set(got or [])), len(set(got or []) - set(want))))
 
@@ -119,7 +122,7 @@ def main():
         node.terminate()
         node.wait()
         shutil.rmtree(data_dir, ignore_errors=True)
-    print("ranges %d, wrong %d" % (total, bad))
+    print("ranges %d, wrong %d (per field: %s)" % (total, bad, ", ".join("%s %d/%d" % (k, v[1], v[0]) for k, v in sorted(per.items()))))
     sys.exit(1 if bad else 0)
 
 

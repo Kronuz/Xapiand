@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Numeric range queries return every matching document.** The term walk behind a range over
+  an integer, positive, floating, time or timedelta field skipped whole buckets (for example
+  the 2e8 to 3e8 bucket, a range's own aligned start such as `[0, 0]`, and the coarse buckets
+  of a wide range such as `[1, 3000000000]`), so documents in range were missing from the
+  results. Open-ended ranges (only `_from` or only `_to`) no longer drop values beyond
+  2x the coarsest accuracy, and an open-ended date range no longer drops dates before 1970 or
+  after 2038. Index terms are unchanged: no reindex.
 - **A retried write no longer fails with a spurious version conflict.** After a failed write,
   the retry compared its own freshly assigned version against the stored one and returned 409.
 - **`FLUSH` no longer stalls other connections.** It commits every open index, and it now does

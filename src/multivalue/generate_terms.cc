@@ -34,6 +34,7 @@
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "math.hh"                          // for modulus
+#include "multivalue/range_terms.h"             // for range_terms::decompose
 #include "reversed.hh"                            // for reversed
 #include "snowball.hh"                           // for snowball::stemmer
 #include "stopper.h"                              // for getStopWords
@@ -941,9 +942,13 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 }
 
 
+// The terms of a numeric range: a document holding v in [start, end] has at least one of them (the
+// canonical decomposition in range_terms.h). They may also match values just outside the range, so
+// the caller pairs them with the exact value-range source; with no terms (empty query) the range
+// is wider than `max_terms` coarsest buckets and the source alone decides.
 template <typename T>
 engine::Query
-_numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf, size_t max_terms, size_t max_terms_level)
+_numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf, size_t max_terms)
 {
 	if (end < start) {
 		return engine::Query();
@@ -953,161 +958,29 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 		return engine::Query::match_all();
 	}
 
-	const auto last_acc_pos = accuracy.size() - 1;
-	std::vector<std::vector<T>> level_terms;
-	level_terms.resize(last_acc_pos + 1);
-
-	size_t total = 0;
-	size_t level_terms_size = 0;
-
-	const auto max_acc = max<T>(accuracy);
-	const auto min_acc = min<T>(accuracy);
-	auto lower_end = start <= min_acc ? min_acc : max_acc;
-	auto upper_start = end >= max_acc ? max_acc : min_acc;
-	if (end < lower_end) {
-		lower_end = end;
-	}
-	if (start > upper_start) {
-		upper_start = start;
-	}
-
-	bool invalid_initial = true;
-	T initial;
-	bool invalid_final = true;
-	T final;
-
-	L_GENERATE_TERMS("(start, end): {}..{}", start, end);
-
-	const auto last_pos = accuracy.size() - 1;
-	auto pos = last_pos;
-	do {
-		T acc;
-		if (accuracy[pos] < std::numeric_limits<T>::max()) {
-			acc = accuracy[pos];
-		} else {
-			acc = std::numeric_limits<T>::max();
-		}
-
-		auto lower_start = add<T>(start, acc - 1);
-		lower_start = sub<T>(lower_start, modulus(lower_start, acc));
-		if (start == std::numeric_limits<T>::min()) {
-			lower_start = std::numeric_limits<T>::min();
-		}
-
-		auto upper_end = sub<T>(end, modulus(end, acc));
-		if (end == std::numeric_limits<T>::max()) {
-			upper_end = std::numeric_limits<T>::max();
-		}
-
-		if (lower_start < upper_end || pos == 0) {
-			L_GENERATE_TERMS("pos={} <acc={}> -> [lower_start={}, lower_end={}, upper_start={}, upper_end={}]", pos, acc, lower_start, lower_end, upper_start, upper_end);
-
-			if (lower_end > upper_end) {
-				lower_end = add<T>(upper_end, acc);
-			}
-			if (upper_start < lower_end) {
-				upper_start = sub<T>(lower_end, acc);
-			}
-
-			if (lower_start <= lower_end) {
-				size_t num_unions = (lower_end - lower_start) / acc;
-				L_GENERATE_TERMS("  [lower_start={}, lower_end={}] (num_unions={})",lower_start, lower_end, num_unions);
-				if (num_unions > max_terms_level || total + num_unions > max_terms) {
-					lower_start = std::numeric_limits<T>::min();
-					if (pos != last_pos && !invalid_initial) {
-						level_terms[pos].push_back(initial);
-						// L_GENERATE_TERMS("      >> {} (initial)", initial);
-					}
-				} else {
-					L_GENERATE_TERMS("    LOWER: lower_start={} -> lower_end={}", lower_start, lower_end);
-					initial = sub<T>(lower_start, acc, invalid_initial);
-					invalid_initial = initial <= min_acc;
-					for (auto lower = lower_start; lower < lower_end; lower = add<T>(lower, acc, invalid_initial), ++total) {
-						level_terms[pos].push_back(lower);
-						// L_GENERATE_TERMS("      >> {}", lower);
-					}
-					if (pos == 0 && !invalid_initial) {
-						level_terms[pos].push_back(initial);
-						// L_GENERATE_TERMS("      >> {} (initial)", initial);
-					}
-				}
-				if (level_terms_size < pos + 1) {
-					level_terms_size = pos + 1;
-				}
-			}
-
-			if (upper_start <= upper_end) {
-				size_t num_unions = (upper_end - upper_start) / acc;
-				L_GENERATE_TERMS("  [upper_start={}, upper_end={}] (num_unions={})", upper_start, upper_end, num_unions);
-				if (num_unions > max_terms_level || total + num_unions > max_terms) {
-					upper_end = std::numeric_limits<T>::max();
-					if (pos != last_pos && !invalid_final) {
-						level_terms[pos].push_back(final);
-						// L_GENERATE_TERMS("      >> {} (final)", final);
-					}
-				} else {
-					L_GENERATE_TERMS("    UPPER: upper_start={} -> upper_end={}", upper_start, upper_end);
-					final = add<T>(upper_end, acc, invalid_final);
-					invalid_final = final >= max_acc || lower_start >= upper_end;
-					for (auto upper = upper_end; upper > upper_start; upper = sub<T>(upper, acc, invalid_final), ++total) {
-						level_terms[pos].push_back(upper);
-						// L_GENERATE_TERMS("      >> {}", upper);
-					}
-					if (pos == 0 && !invalid_final) {
-						level_terms[pos].push_back(final);
-						// L_GENERATE_TERMS("      >> {} (final)", final);
-					}
-				}
-				if (level_terms_size < pos + 1) {
-					level_terms_size = pos + 1;
-				}
-			}
-
-			lower_end = lower_start;
-			upper_start = upper_end;
-		}
-	} while (pos--);
-
-	// The search has biggger ranges that the biggest range in accuracy.
-	if (!level_terms_size) {
+	std::vector<range_terms::Bucket<T>> buckets;
+	if (!range_terms::decompose<T>(start, end, accuracy, max_terms, buckets)) {
 		return engine::Query();
 	}
 
-	// Generate tree.
-	Tree<T> root;
-	root.pos = level_terms_size;
-	for (pos = 0; pos < level_terms_size; ++pos) {
-		const auto& terms = level_terms[pos];
-		for (const auto& term : terms) {
-			auto current = &root;
-			for (size_t current_pos = level_terms_size; current_pos > pos; --current_pos) {
-				current->pos = current_pos;
-				auto current_term = current_pos <= last_pos ? term - modulus(term, accuracy[current_pos]) : 0;
-				current = &(*current->terms)[current_term];
-			}
-			current->pos = pos;
-			current = &(*current->terms)[term];
-			current->leaf = true;
-		}
+	std::vector<engine::Query> queries;
+	queries.reserve(buckets.size());
+	for (const auto& bucket : buckets) {
+		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(bucket.start), acc_prefix[bucket.level], ctype_integer), wqf));
 	}
-
-	// print<2>(&root, accuracy, acc_prefix, ctype_integer, max_terms);
-	// max_terms = MAX_TERMS;
-
-	// Create query.
-	return get_query<2>(&root, accuracy, acc_prefix, wqf, ctype_integer, max_terms);
+	return engine::Query::combine(engine::Op::OR, std::move(queries));
 }
 
 
 engine::Query
-GenerateTerms::numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf)
+GenerateTerms::numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf, size_t max_terms)
 {
-	return _numeric(start, end, accuracy, acc_prefix, wqf, MAX_TERMS, MAX_TERMS_LEVEL);
+	return _numeric(start, end, accuracy, acc_prefix, wqf, max_terms);
 }
 
 
 engine::Query
-GenerateTerms::numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf)
+GenerateTerms::numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf, size_t max_terms)
 {
-	return _numeric(start, end, accuracy, acc_prefix, wqf, MAX_TERMS, MAX_TERMS_LEVEL);
+	return _numeric(start, end, accuracy, acc_prefix, wqf, max_terms);
 }
