@@ -32,6 +32,8 @@
 #   harness/cluster_check.sh          # 2 nodes
 #   harness/cluster_check.sh 3        # 3 nodes
 #   FAILOVER=1 harness/cluster_check.sh 3   # and kill the leader: a new leader, writes resume, it rejoins
+#   WALREPLAY=1 harness/cluster_check.sh 2  # and kill -9 node1 after uncommitted writes: its WAL replay is visible
+#                                           # on every node, no WAL error (docs/mechanisms/wal-replay.md)
 #   BIN=build/bin/xapiand harness/cluster_check.sh 2
 set -u
 
@@ -240,6 +242,54 @@ print(ls[0] if len(ls)==1 else '')" 2>/dev/null)"
 		leaders="$(curl -s --max-time 5 "localhost:$a/" | python3 -c "import sys,json;d=json.load(sys.stdin);print(sum(1 for n in d.get('nodes',[]) if n.get('leader')))" 2>/dev/null)"
 		check "$([ "$leaders" = "1" ] && echo 0 || echo 1)" "exactly one leader after $leader rejoins (got ${leaders:-none})"
 	fi
+fi
+
+# --- 5. WALREPLAY (WALREPLAY=1): uncommitted numeric writes (PUT, before the autocommit) on node1, kill -9, restart. The replay commits
+# like any commit (WAL COMMIT line, update notification), so every node serves the replayed documents, and the
+# restarted node's peer keeps replicating; nothing in the logs reports a WAL error or a revision mismatch. ---
+if [ "${WALREPLAY:-0}" = "1" ]; then
+	echo "[5] wal replay: kill -9 node1 after uncommitted writes"
+	for i in $(seq 0 39); do
+		curl -s -m30 -o /dev/null -XPUT "localhost:$HTTP_BASE/walrep/w$i" -H 'Content-Type: application/json' -d "{\"age\": $i}"
+	done
+	[ "${WALREPLAY_KILL:-1}" = 1 ] && { kill -9 "${PIDS[1]}" 2>/dev/null; wait "${PIDS[1]}" 2>/dev/null; PIDS[1]=""; }
+	walrep_state() {  # walrep_state PORT -> "total avg"
+		curl -s --max-time 30 -XPOST "localhost:$1/walrep/:search?volatile" \
+			-d '{"_query":"*","_limit":0}' | python3 -c 'import sys,json
+try:
+    print(json.load(sys.stdin)["total"])
+except Exception:
+    print("?")'
+	}
+	walrep_wait() {  # walrep_wait PORT -> last state once it is "40" or after 120 s
+		local got="" deadline=$(( $(date +%s) + 120 ))
+		while [ "$(date +%s)" -lt "$deadline" ]; do
+			got="$(walrep_state "$1")"; [ "$got" = "40" ] && break; sleep 2
+		done
+		echo "$got"
+	}
+	# The survivors keep the dead name taken for a while: relaunch until node1 is accepted.
+	rj=1
+	[ "${WALREPLAY_KILL:-1}" = 1 ] || rj=0
+	for _ in $(seq 1 12); do
+		[ "${WALREPLAY_KILL:-1}" = 1 ] || break
+		launch_node 1
+		sleep 10
+		if kill -0 "${PIDS[1]}" 2>/dev/null; then
+			wait_member "$HTTP_BASE" 90 >/dev/null && rj=0
+			break
+		fi
+	done
+	check "$rj" "node1 restarts and sees all $N members"
+	for i in $(seq 1 "$N"); do
+		got="$(walrep_wait "$(http_port "$i")")"
+		check "$([ "$got" = "40" ] && echo 0 || echo 1)" "node$i serves 40 documents after the replay (got '$got')"
+		curl -s --max-time 30 "localhost:$(http_port "$i")/walrep/w39" | grep -q '"age":39' && r=0 || r=1
+		check "$r" "node$i reads the replayed document w39"
+	done
+	sleep 10
+	werr="$(grep -c 'WAL ERROR\|StorageCorruptWAL\|WAL revision mismatch' "$RUNDIR"/node*.log | awk -F: '{n+=$2} END {print n+0}')"
+	check "$([ "$werr" = 0 ] && echo 0 || echo 1)" "no WAL error in any node log ($werr)"
 fi
 
 echo

@@ -1,3 +1,4 @@
+> Status: CURRENT (2026-10-27) fix/cr1-replay; bisect and root cause of CR1, fix in docs/mechanisms/wal-replay.md.
 # CR1: numeric values ignored after kill -9 and WAL replay
 
 After `kill -9` and a restart, numeric aggregations and `_sort` ignored the replayed documents'
@@ -30,12 +31,13 @@ The documents were never lost.
 
 ## Fix
 
-`reopen_writable` commits after a replay that modified the shard (non-transactional shards), clears
-`_modified` and refreshes the endpoint revision. No WAL line is written for it, as for a replayed
-COMMIT.
+`reopen_writable` commits after a replay that left work pending, through `Shard::commit(true, true)`: the engine commit in the
+shard's transaction mode, the endpoint revision, the WAL COMMIT line and the update notification. A failure propagates to
+`Shard::reopen`. How it works: `docs/mechanisms/wal-replay.md`.
 
 ## Checks
 
 1. `harness/wal_replay_agg_check.sh`: fails on Xapiand:2466dac5c (avg=0.0), passes on 566943e9e and with the fix.
 2. `harness/wal_recovery_check.sh`: passes with the fix (50/50).
 3. `.scratch/xrep.sh` bank repro: 30.042 with the fix.
+4. `harness/wal_replay_check.sh`: visibility, WAL COMMIT line, crash-replay-crash-replay, a failing commit.
