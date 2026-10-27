@@ -1938,7 +1938,7 @@ search_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	std::tuple<Xapian::MSet, MsgPack, engine::Query> mset_tuple;
+	std::tuple<engine::SearchResult, MsgPack, engine::Query> mset_tuple;
 	MsgPack aggregations;
 
 	request.processing = std::chrono::steady_clock::now();
@@ -1993,13 +1993,12 @@ search_view(Request& request)
 		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_COUNT] = mset.size();
-	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
+	obj[RESPONSE_TOTAL] = mset.estimated;
 
 	auto& hits = obj[RESPONSE_HITS];
 
-	const auto m_e = mset.end();
-	for (auto m = mset.begin(); m != m_e; ++m) {
-		auto did = *m;
+	for (const auto& hit : mset.hits) {
+		auto did = hit.did;
 
 		// Retrive document data
 		auto document = db_handler.get_document(did);
@@ -2035,9 +2034,9 @@ search_view(Request& request)
 			hit_obj[RESPONSE_xSHARD] = shard_num + 1;
 			// hit_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
 
-			hit_obj[RESPONSE_xRANK] = m.get_rank();
-			hit_obj[RESPONSE_xWEIGHT] = m.get_weight();
-			hit_obj[RESPONSE_xPERCENT] = m.get_percent();
+			hit_obj[RESPONSE_xRANK] = hit.rank;
+			hit_obj[RESPONSE_xWEIGHT] = hit.weight;
+			hit_obj[RESPONSE_xPERCENT] = hit.percent;
 		}
 
 		if (!selector.empty()) {
@@ -2087,7 +2086,7 @@ count_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	resolve_index_endpoints(request, query_field);
 
-	std::tuple<Xapian::MSet, MsgPack, engine::Query> mset_tuple;
+	std::tuple<engine::SearchResult, MsgPack, engine::Query> mset_tuple;
 
 	request.processing = std::chrono::steady_clock::now();
 
@@ -2123,7 +2122,7 @@ count_view(Request& request)
 		obj["#query"] = qdsl;
 		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
 	}
-	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
+	obj[RESPONSE_TOTAL] = mset.estimated;
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -2287,7 +2286,7 @@ expand_paths(Request& request)
 
 
 #ifdef XAPIAND_CLUSTERING
-		Xapian::MSet mset;
+		engine::SearchResult mset;
 		if (strings::endswith(index_path, '*')) {
 			index_path.pop_back();
 			auto stripped_index_path = index_path;
@@ -2311,9 +2310,8 @@ expand_paths(Request& request)
 				);
 				mset = db_handler.get_mset(query, 0, 100);
 			}
-			const auto m_e = mset.end();
-			for (auto m = mset.begin(); m != m_e; ++m) {
-				auto document = db_handler.get_document(*m);
+			for (const auto& hit : mset.hits) {
+				auto document = db_handler.get_document(hit.did);
 				index_path = document.get_value(DB_SLOT_ID);
 				paths.push_back(std::move(index_path));
 			}

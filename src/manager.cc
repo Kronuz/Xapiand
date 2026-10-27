@@ -708,9 +708,8 @@ XapiandManager::init()
 				DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand/nodes"}});
 				if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 					auto mset = db_handler.get_mset();
-					const auto m_e = mset.end();
-					for (auto m = mset.begin(); m != m_e; ++m) {
-						auto did = *m;
+					for (const auto& hit : mset.hits) {
+						auto did = hit.did;
 						auto document = db_handler.get_document(did);
 						auto obj = document.get_obj();
 						Node node;
@@ -841,9 +840,8 @@ XapiandManager::setup_node_async_cb()
 #ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
 						auto mset = db_handler.get_mset();
-						const auto m_e = mset.end();
-						for (auto m = mset.begin(); m != m_e; ++m) {
-							auto did = *m;
+						for (const auto& hit : mset.hits) {
+							auto did = hit.did;
 							auto document = db_handler.get_document(did);
 							if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
 								found = true;
@@ -1648,8 +1646,8 @@ XapiandManager::load_nodes()
 	auto mset = db_handler.get_mset();
 
 	std::vector<std::string> db_nodes;
-	for (auto it = mset.begin(), it_e = mset.end(); it != it_e; ++it) {
-		auto document = db_handler.get_document(*it);
+	for (const auto& hit : mset.hits) {
+		auto document = db_handler.get_document(hit.did);
 		db_nodes.push_back(document.get_value(DB_SLOT_ID));
 	}
 
