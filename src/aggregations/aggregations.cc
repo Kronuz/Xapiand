@@ -28,6 +28,7 @@
 #include "bucket.h"                         // for FilterAggregation, Histog...
 #include "database/schema.h"                // for Schema
 #include "database/utils.h"                 // for is_valid
+#include "engine/error.h"                   // for Error, errc
 #include "exception_xapian.h"               // for AggregationError, SerialisationError
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
@@ -246,7 +247,7 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 
 
 void
-Aggregation::operator()(const Xapian::Document& doc)
+Aggregation::operator()(const engine::DocView& doc)
 {
 	++_doc_count;
 	for (auto& sub_agg : _sub_aggs) {
@@ -301,7 +302,11 @@ Aggregation::merge_results(const char** p, const char* p_end)
 		auto data = unserialise_string(p, p_end);
 		const char *q = data.data();
 		const char *q_end = q + data.size();
-		_sub_aggs[name]->merge_results(&q, q_end);
+		auto it = _sub_aggs.find(name);
+		if (it == _sub_aggs.end()) {
+			THROW(SerialisationError, "Unknown aggregation {} in serialised Aggregation", repr(name));
+		}
+		it->second->merge_results(&q, q_end);
 		if (q != q_end) {
 			THROW(SerialisationError, "Junk found at end of serialised Aggregation");
 		}
@@ -335,17 +340,17 @@ Aggregation::get_agg(std::string_view field)
 
 
 void
-AggregationMatchSpy::operator()(const Xapian::Document& doc, double /*wt*/)
+AggregationMatchSpy::see(const engine::DocView& doc, double /*wt*/)
 {
 	++_total;
 	_aggregation(doc);
 }
 
 
-Xapian::MatchSpy*
+std::unique_ptr<engine::MatchSpy>
 AggregationMatchSpy::clone() const
 {
-	return new AggregationMatchSpy(_aggs, _schema);
+	return std::make_unique<AggregationMatchSpy>(_aggs, _schema);
 }
 
 
@@ -364,20 +369,20 @@ AggregationMatchSpy::serialise() const
 }
 
 
-Xapian::MatchSpy*
-AggregationMatchSpy::unserialise(const std::string& serialised, const Xapian::Registry& /*context*/) const
+std::unique_ptr<engine::MatchSpy>
+AggregationMatchSpy::unserialise(std::string_view serialised) const
 {
 	try {
 		StringList data(serialised);
 
 		if (data.size() != 2) {
-			throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+			throw engine::Error(engine::errc::invalid, "Bad serialised AggregationMatchSpy");
 		}
 
 		auto it = data.begin();
-		return new AggregationMatchSpy(MsgPack::unserialise(*it), std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::unserialise(*++it)), nullptr, ""));
+		return std::make_unique<AggregationMatchSpy>(MsgPack::unserialise(*it), std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::unserialise(*++it)), nullptr, ""));
 	} catch (const SerialisationError&) {
-		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+		throw engine::Error(engine::errc::invalid, "Bad serialised AggregationMatchSpy");
 	}
 }
 
@@ -390,7 +395,7 @@ AggregationMatchSpy::serialise_results() const
 
 
 void
-AggregationMatchSpy::merge_results(const std::string& serialised)
+AggregationMatchSpy::merge_results(std::string_view serialised)
 {
 	const char *p = serialised.data();
 	const char *p_end = p + serialised.size();
@@ -406,7 +411,7 @@ AggregationMatchSpy::merge_results(const AggregationMatchSpy& other)
 
 
 std::string
-AggregationMatchSpy::get_description() const
+AggregationMatchSpy::description() const
 {
 	std::string desc("AggregationMatchSpy(");
 	desc.append(_aggs.to_string()).push_back(')');

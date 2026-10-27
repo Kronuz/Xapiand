@@ -34,13 +34,13 @@
 #include "database/schema.h"                      // for required_spc_t, required_sp...
 #include "database/utils.h"                       // for query_field_t
 #include "datetime.h"                             // for timestamp
+#include "engine/callbacks.h"                    // for KeyMaker, DocView
 #include "hashes.hh"                              // for fnv1ah32
 #include "phf.hh"                                 // for phf
 #include "phonetic.h"                             // for SoundexEnglish, SoundexFrench...
 #include "serialise_list.h"                       // for StringList, ...
 #include "strict_stox.hh"                         // for strict_stoull
 #include "string_metric.h"                        // for Jaccard, Jaro, ..., Serialisable* wrappers, DoubleMetaphone
-#include "xapian.h"                               // for valueno, KeyMaker
 
 
 const std::string MAX_CMPVALUE(Serialise::floating(DBL_MAX));
@@ -63,13 +63,13 @@ using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(const required_sp
 // Base class for creating keys.
 class BaseKey {
 protected:
-	Xapian::valueno _slot;
+	engine::valueno _slot;
 	bool _reverse;
 
 public:
 	BaseKey() = default;
 
-	BaseKey(Xapian::valueno slot, bool reverse)
+	BaseKey(engine::valueno slot, bool reverse)
 		: _slot(slot),
 		  _reverse(reverse) { }
 
@@ -84,8 +84,8 @@ public:
 		return _reverse;
 	}
 
-	virtual std::string findSmallest(const Xapian::Document& doc) const = 0;
-	virtual std::string findBiggest(const Xapian::Document& doc) const = 0;
+	virtual std::string findSmallest(const engine::DocView& doc) const = 0;
+	virtual std::string findBiggest(const engine::DocView& doc) const = 0;
 };
 
 
@@ -94,7 +94,7 @@ class SerialiseKey : public BaseKey {
 public:
 	SerialiseKey() = default;
 
-	SerialiseKey(Xapian::valueno slot, bool reverse)
+	SerialiseKey(engine::valueno slot, bool reverse)
 		: BaseKey(slot, reverse) { }
 
 	std::string_view name() const noexcept override {
@@ -108,8 +108,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -121,7 +121,7 @@ class FloatKey : public BaseKey {
 public:
 	FloatKey() = default;
 
-	FloatKey(Xapian::valueno slot, bool reverse, double val)
+	FloatKey(engine::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::floating(_ref_val)) { }
@@ -137,8 +137,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -150,7 +150,7 @@ class IntegerKey : public BaseKey {
 public:
 	IntegerKey() = default;
 
-	IntegerKey(Xapian::valueno slot, bool reverse, int64_t val)
+	IntegerKey(engine::valueno slot, bool reverse, int64_t val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::integer(_ref_val)) { }
@@ -166,8 +166,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -179,7 +179,7 @@ class PositiveKey : public BaseKey {
 public:
 	PositiveKey() = default;
 
-	PositiveKey(Xapian::valueno slot, bool reverse, uint64_t val)
+	PositiveKey(engine::valueno slot, bool reverse, uint64_t val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::positive(_ref_val)) { }
@@ -195,8 +195,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -208,7 +208,7 @@ class DateKey : public BaseKey {
 public:
 	DateKey() = default;
 
-	DateKey(Xapian::valueno slot, bool reverse, double val)
+	DateKey(engine::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
@@ -224,8 +224,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -236,7 +236,7 @@ class BoolKey : public BaseKey {
 public:
 	BoolKey() = default;
 
-	BoolKey(Xapian::valueno slot, bool reverse, bool val)
+	BoolKey(engine::valueno slot, bool reverse, bool val)
 		: BaseKey(slot, reverse),
 		  _ser_ref_val(Serialise::boolean(val)) { }
 
@@ -251,8 +251,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -264,7 +264,7 @@ class StringKey : public BaseKey {
 public:
 	StringKey() = default;
 
-	StringKey(Xapian::valueno slot, bool reverse, std::string_view value, bool icase)
+	StringKey(engine::valueno slot, bool reverse, std::string_view value, bool icase)
 		: BaseKey(slot, reverse),
 		  _metric(value, icase) { }
 
@@ -284,8 +284,8 @@ public:
 		_metric.unserialise(p, p_end);
 	}
 
-	std::string findSmallest(const Xapian::Document& doc) const override {
-		const auto multiValues = doc.get_value(_slot);
+	std::string findSmallest(const engine::DocView& doc) const override {
+		const auto multiValues = doc.value(_slot);
 		if (multiValues.empty()) {
 			return MAX_CMPVALUE;
 		}
@@ -306,8 +306,8 @@ public:
 		return Serialise::floating(min_distance);
 	}
 
-	std::string findBiggest(const Xapian::Document& doc) const override {
-		const auto multiValues = doc.get_value(_slot);
+	std::string findBiggest(const engine::DocView& doc) const override {
+		const auto multiValues = doc.value(_slot);
 		if (multiValues.empty()) {
 			return MIN_CMPVALUE;
 		}
@@ -335,7 +335,7 @@ public:
 	GeoKey() = default;
 
 	template <typename T, typename = std::enable_if_t<std::is_same<std::vector<Cartesian>, std::decay_t<T>>::value>>
-	GeoKey(Xapian::valueno slot, bool reverse, T&& centroids)
+	GeoKey(engine::valueno slot, bool reverse, T&& centroids)
 		: BaseKey(slot, reverse),
 		  _centroids(std::forward<T>(centroids)) { }
 
@@ -350,8 +350,8 @@ public:
 	std::string serialise() const override;
 	void unserialise(const char** p, const char* p_end) override;
 
-	std::string findSmallest(const Xapian::Document& doc) const override;
-	std::string findBiggest(const Xapian::Document& doc) const override;
+	std::string findSmallest(const engine::DocView& doc) const override;
+	std::string findBiggest(const engine::DocView& doc) const override;
 };
 
 
@@ -361,19 +361,19 @@ public:
  * Case 1: Ascending (include in the query -> sort:+field_name or sort:field_name), of all values is selected the smallest.
  * Case 2: Descending (include in the query -> sort:-field_name), of all values is selected the largest.
 
- * For collapsing, it is used Xapian::MultiValueKeyMaker.
+ * Collapsing uses a slot (set_collapse_key), not this class.
  */
-class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
+class Multi_MultiValueKeyMaker : public engine::KeyMaker {
 	// Vector of slots
 	std::vector<std::unique_ptr<BaseKey>> slots;
 
 public:
-	virtual Multi_MultiValueKeyMaker* clone() const override;
-	virtual std::string name() const override;
-	virtual std::string serialise() const override;
-	virtual Multi_MultiValueKeyMaker* unserialise(const std::string& serialised, const Xapian::Registry& registry) const override;
+	std::unique_ptr<engine::KeyMaker> clone() const override;
+	std::string name() const override;
+	std::string serialise() const override;
+	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view serialised) const override;
 
-	virtual std::string operator()(const Xapian::Document& doc) const override;
+	std::string key(const engine::DocView& doc) const override;
 
 	template <typename... Args>
 	void add_serialise(Args... args) {

@@ -41,8 +41,9 @@
 #include "repr.hh"                  // for repr (was transitive via htm.h -> strings.hh)
 #include "reserved/aggregations.h"  // for RESERVED_AGGS_*
 #include "serialise_list.h"         // for StringList, RangeList
-#include "xapian.h"                 // for valueno
-#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
+#include "engine/codec.h"          // for serialise_double, unserialise_double
+#include "engine/doc_view.h"       // for DocView
+#include "engine/types.h"          // for valueno
 
 
 class Schema;
@@ -53,30 +54,30 @@ class HandledSubAggregation;
 
 
 class ValuesHandler {
-	using func_value_handle = void (HandledSubAggregation<ValuesHandler>::*)(const Xapian::Document&);
+	using func_value_handle = void (HandledSubAggregation<ValuesHandler>::*)(const engine::DocView&);
 
 protected:
 	FieldType _type;
-	Xapian::valueno _slot;
+	engine::valueno _slot;
 	func_value_handle _func;
 
 public:
 	ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
-	std::vector<std::string> values(const Xapian::Document& doc) const;
+	std::vector<std::string> values(const engine::DocView& doc) const;
 
 	FieldType get_type() {
 		return _type;
 	}
 
-	void operator()(HandledSubAggregation<ValuesHandler>* agg, const Xapian::Document& doc) const {
+	void operator()(HandledSubAggregation<ValuesHandler>* agg, const engine::DocView& doc) const {
 		(agg->*_func)(doc);
 	}
 };
 
 
 class TermsHandler {
-	using func_value_handle = void (HandledSubAggregation<TermsHandler>::*)(const Xapian::Document&);
+	using func_value_handle = void (HandledSubAggregation<TermsHandler>::*)(const engine::DocView&);
 
 protected:
 	FieldType _type;
@@ -86,13 +87,13 @@ protected:
 public:
 	TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
-	std::vector<std::string> values(const Xapian::Document& doc) const;
+	std::vector<std::string> values(const engine::DocView& doc) const;
 
 	FieldType get_type() {
 		return _type;
 	}
 
-	void operator()(HandledSubAggregation<TermsHandler>* agg, const Xapian::Document& doc) const {
+	void operator()(HandledSubAggregation<TermsHandler>* agg, const engine::DocView& doc) const {
 		(agg->*_func)(doc);
 	}
 };
@@ -112,95 +113,95 @@ public:
 	HandledSubAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation(context.at(name), schema) { }
 
-	virtual void aggregate_float(long double, const Xapian::Document&) {
+	virtual void aggregate_float(long double, const engine::DocView&) {
 		THROW(AggregationError, "float type is not supported");
 	}
 
-	virtual void aggregate_integer(int64_t, const Xapian::Document&) {
+	virtual void aggregate_integer(int64_t, const engine::DocView&) {
 		THROW(AggregationError, "integer type is not supported");
 	}
 
-	virtual void aggregate_positive(uint64_t, const Xapian::Document&) {
+	virtual void aggregate_positive(uint64_t, const engine::DocView&) {
 		THROW(AggregationError, "positive type is not supported");
 	}
 
-	virtual void aggregate_date(double, const Xapian::Document&) {
+	virtual void aggregate_date(double, const engine::DocView&) {
 		THROW(AggregationError, "date type is not supported");
 	}
 
-	virtual void aggregate_time(double, const Xapian::Document&) {
+	virtual void aggregate_time(double, const engine::DocView&) {
 		THROW(AggregationError, "time type is not supported");
 	}
 
-	virtual void aggregate_timedelta(double, const Xapian::Document&) {
+	virtual void aggregate_timedelta(double, const engine::DocView&) {
 		THROW(AggregationError, "timedelta type is not supported");
 	}
 
-	virtual void aggregate_boolean(bool, const Xapian::Document&) {
+	virtual void aggregate_boolean(bool, const engine::DocView&) {
 		THROW(AggregationError, "boolean type is not supported");
 	}
 
-	virtual void aggregate_string(std::string_view, const Xapian::Document&) {
+	virtual void aggregate_string(std::string_view, const engine::DocView&) {
 		THROW(AggregationError, "string type is not supported");
 	}
 
-	virtual void aggregate_geo(const range_t&, const Xapian::Document&) {
+	virtual void aggregate_geo(const range_t&, const engine::DocView&) {
 		THROW(AggregationError, "geo type is not supported");
 	}
 
-	virtual void aggregate_uuid(std::string_view, const Xapian::Document&) {
+	virtual void aggregate_uuid(std::string_view, const engine::DocView&) {
 		THROW(AggregationError, "uuid type is not supported");
 	}
 
-	void _aggregate_float(const Xapian::Document& doc) {
+	void _aggregate_float(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_float(Unserialise::floating(value), doc);
 		}
 	}
 
-	void _aggregate_integer(const Xapian::Document& doc) {
+	void _aggregate_integer(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_integer(Unserialise::integer(value), doc);
 		}
 	}
 
-	void _aggregate_positive(const Xapian::Document& doc) {
+	void _aggregate_positive(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_positive(Unserialise::positive(value), doc);
 		}
 	}
 
-	void _aggregate_date(const Xapian::Document& doc) {
+	void _aggregate_date(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_date(Unserialise::timestamp(value), doc);
 		}
 	}
 
-	void _aggregate_time(const Xapian::Document& doc) {
+	void _aggregate_time(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_time(Unserialise::time_d(value), doc);
 		}
 	}
 
-	void _aggregate_timedelta(const Xapian::Document& doc) {
+	void _aggregate_timedelta(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_timedelta(Unserialise::timedelta_d(value), doc);
 		}
 	}
 
-	void _aggregate_boolean(const Xapian::Document& doc)  {
+	void _aggregate_boolean(const engine::DocView& doc)  {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_boolean(Unserialise::boolean(value), doc);
 		}
 	}
 
-	void _aggregate_string(const Xapian::Document& doc) {
+	void _aggregate_string(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_string(value, doc);
 		}
 	}
 
-	void _aggregate_geo(const Xapian::Document& doc) {
+	void _aggregate_geo(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			for (const auto& range : RangeList(value)) {
 				aggregate_geo(range, doc);
@@ -208,17 +209,17 @@ public:
 		}
 	}
 
-	void _aggregate_uuid(const Xapian::Document& doc) {
+	void _aggregate_uuid(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
 			aggregate_uuid(Unserialise::uuid(value), doc);
 		}
 	}
 
-	void _aggregate_nothing(const Xapian::Document&) {
+	void _aggregate_nothing(const engine::DocView&) {
 		/* do nothing */
 	}
 
-	void operator()(const Xapian::Document& doc) override {
+	void operator()(const engine::DocView& doc) override {
 		_handler(this, doc);
 	}
 };
@@ -241,14 +242,14 @@ public:
 
 	std::string serialise_results() const override {
 		std::string results;
-		results += serialise_double(_count);
+		results += engine::serialise_double(_count);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricCount::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		_count += unserialise_double(p, p_end);
+		_count += engine::unserialise_double(p, p_end);
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -270,43 +271,43 @@ public:
 		++_count;
 	}
 
-	void aggregate_float(long double, const Xapian::Document&) override {
+	void aggregate_float(long double, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_integer(int64_t, const Xapian::Document&) override {
+	void aggregate_integer(int64_t, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_positive(uint64_t, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_date(double, const Xapian::Document&) override {
+	void aggregate_date(double, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_time(double, const Xapian::Document&) override {
+	void aggregate_time(double, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_timedelta(double, const Xapian::Document&) override {
+	void aggregate_timedelta(double, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_boolean(bool, const Xapian::Document&) override {
+	void aggregate_boolean(bool, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_string(std::string_view, const Xapian::Document&) override {
+	void aggregate_string(std::string_view, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_geo(const range_t&, const Xapian::Document&) override {
+	void aggregate_geo(const range_t&, const engine::DocView&) override {
 		_aggregate();
 	}
 
-	void aggregate_uuid(std::string_view, const Xapian::Document&) override {
+	void aggregate_uuid(std::string_view, const engine::DocView&) override {
 		_aggregate();
 	}
 };
@@ -329,14 +330,14 @@ public:
 
 	std::string serialise_results() const override {
 		std::string results;
-		results += serialise_double(_sum);
+		results += engine::serialise_double(_sum);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetriSum::merge_results({})", repr(std::string_view(p, p_end - p)));
 
-		_sum += unserialise_double(p, p_end);
+		_sum += engine::unserialise_double(p, p_end);
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -358,27 +359,27 @@ public:
 		_sum += value;
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };
@@ -405,8 +406,8 @@ public:
 	std::string serialise_results() const override {
 		std::string results;
 		results += MetricSum::serialise_results();
-		results += serialise_double(_count);
-		// results += serialise_double(_avg);  // calculated during update()
+		results += engine::serialise_double(_count);
+		// results += engine::serialise_double(_avg);  // calculated during update()
 		return results;
 	}
 
@@ -415,8 +416,8 @@ public:
 
 		MetricSum::merge_results(p, p_end);
 
-		_count += unserialise_double(p, p_end);
-		// _avg = unserialise_double(p, p_end);  // calculated during update()
+		_count += engine::unserialise_double(p, p_end);
+		// _avg = engine::unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -442,27 +443,27 @@ public:
 		++_count;
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
@@ -500,14 +501,14 @@ public:
 
 	std::string serialise_results() const override {
 		std::string results;
-		results += serialise_double(_min);
+		results += engine::serialise_double(_min);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricMin::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		auto value = unserialise_double(p, p_end);
+		auto value = engine::unserialise_double(p, p_end);
 		if (_min > value) {
 			_min = value;
 		}
@@ -536,27 +537,27 @@ public:
 		}
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };
@@ -586,14 +587,14 @@ public:
 
 	std::string serialise_results() const override {
 		std::string results;
-		results += serialise_double(_max);
+		results += engine::serialise_double(_max);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricMax::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		auto value = unserialise_double(p, p_end);
+		auto value = engine::unserialise_double(p, p_end);
 		if (_max < value) {
 			_max = value;
 		}
@@ -622,27 +623,27 @@ public:
 		}
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };
@@ -668,8 +669,8 @@ public:
 	std::string serialise_results() const override {
 		std::string results;
 		results += MetricAvg::serialise_results();
-		results += serialise_double(_sq_sum);
-		// results += serialise_double(_variance);  // calculated during update()
+		results += engine::serialise_double(_sq_sum);
+		// results += engine::serialise_double(_variance);  // calculated during update()
 		return results;
 	}
 
@@ -678,8 +679,8 @@ public:
 
 		MetricAvg::merge_results(p, p_end);
 
-		_sq_sum += unserialise_double(p, p_end);
-		// _variance = unserialise_double(p, p_end);  // calculated during update()
+		_sq_sum += engine::unserialise_double(p, p_end);
+		// _variance = engine::unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -705,27 +706,27 @@ public:
 		_sq_sum += value * value;
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
@@ -783,10 +784,10 @@ public:
 	std::string serialise_results() const override {
 		std::string results;
 		results += MetricVariance::serialise_results();
-		results += serialise_double(_sigma);
-		// results += serialise_double(_std);  // calculated during update()
-		// results += serialise_double(_upper);  // calculated during update()
-		// results += serialise_double(_lower);  // calculated during update()
+		results += engine::serialise_double(_sigma);
+		// results += engine::serialise_double(_std);  // calculated during update()
+		// results += engine::serialise_double(_upper);  // calculated during update()
+		// results += engine::serialise_double(_lower);  // calculated during update()
 		return results;
 	}
 
@@ -794,10 +795,10 @@ public:
 		L_CALL("MetricStdDeviation::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricVariance::merge_results(p, p_end);
-		_sigma = unserialise_double(p, p_end);
-		// _std = unserialise_double(p, p_end);  // calculated during update()
-		// _upper = unserialise_double(p, p_end);  // calculated during update()
-		// _lower = unserialise_double(p, p_end);  // calculated during update()
+		_sigma = engine::unserialise_double(p, p_end);
+		// _std = engine::unserialise_double(p, p_end);  // calculated during update()
+		// _upper = engine::unserialise_double(p, p_end);  // calculated during update()
+		// _lower = engine::unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -861,9 +862,9 @@ public:
 		std::string results;
 		results += serialise_length(_values.size());
 		for (auto& value : _values) {
-			results += serialise_double(value);
+			results += engine::serialise_double(value);
 		}
-		// results += serialise_double(_median);  // calculated during update()
+		// results += engine::serialise_double(_median);  // calculated during update()
 		return results;
 	}
 
@@ -872,10 +873,10 @@ public:
 
 		size_t size = unserialise_length(p, p_end);
 		while (size--) {
-			auto value = unserialise_double(p, p_end);
+			auto value = engine::unserialise_double(p, p_end);
 			_values.push_back(value);
 		}
-		// _median = unserialise_double(p, p_end);  // calculated during update()
+		// _median = engine::unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -918,27 +919,27 @@ public:
 		_values.push_back(value);
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };
@@ -964,10 +965,10 @@ public:
 		std::string results;
 		results += serialise_length(_histogram.size());
 		for (auto& item : _histogram) {
-			results += serialise_double(item.first);
+			results += engine::serialise_double(item.first);
 			results += serialise_length(item.second);
 		}
-		// results += serialise_double(_mode);  // calculated during update()
+		// results += engine::serialise_double(_mode);  // calculated during update()
 		return results;
 	}
 
@@ -976,11 +977,11 @@ public:
 
 		size_t size = unserialise_length(p, p_end);
 		while (size--) {
-			auto key = unserialise_double(p, p_end);
+			auto key = engine::unserialise_double(p, p_end);
 			auto value = unserialise_length(p, p_end);
 			_histogram[key] += value;
 		}
-		// _mode = unserialise_double(p, p_end);  // calculated during update()
+		// _mode = engine::unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -1012,27 +1013,27 @@ public:
 		++_histogram[value];
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };
@@ -1110,27 +1111,27 @@ public:
 		_max_metric._aggregate(value);
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };
@@ -1237,27 +1238,27 @@ public:
 		_max_metric._aggregate(value);
 	}
 
-	void aggregate_float(long double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_date(double value, const Xapian::Document&) override {
+	void aggregate_date(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_time(double value, const Xapian::Document&) override {
+	void aggregate_time(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document&) override {
+	void aggregate_timedelta(double value, const engine::DocView&) override {
 		_aggregate(value);
 	}
 };

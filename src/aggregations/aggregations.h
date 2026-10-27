@@ -30,8 +30,9 @@
 #include <utility>                                // for std::pair, std::make_pair
 #include <vector>                                 // for vector
 
+#include "engine/callbacks.h"                    // for MatchSpy, DocView
+#include "engine/types.h"                        // for doccount
 #include "msgpack.h"                              // for MsgPack
-#include "xapian.h"                               // for MatchSpy, doccount
 
 
 class Schema;
@@ -41,7 +42,7 @@ class BaseAggregation {
 public:
 	virtual ~BaseAggregation() = default;
 
-	virtual void operator()(const Xapian::Document&) = 0;
+	virtual void operator()(const engine::DocView&) = 0;
 
 	virtual void update() { }
 
@@ -75,7 +76,7 @@ public:
 
 	Aggregation(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
-	void operator()(const Xapian::Document& doc) override;
+	void operator()(const engine::DocView& doc) override;
 
 	void update() override;
 
@@ -104,9 +105,9 @@ public:
 
 
 // Class for calculating aggregations in the matching documents.
-class AggregationMatchSpy : public Xapian::MatchSpy {
+class AggregationMatchSpy : public engine::MatchSpy {
 	// Total number of documents seen by the match spy.
-	Xapian::doccount _total;
+	engine::doccount _total;
 
 	// Result for aggregations.
 	MsgPack _result;
@@ -142,16 +143,16 @@ public:
 	 *
 	 * This implementation aggregates values for a matching document.
 	 */
-	void operator()(const Xapian::Document &doc, double wt) override;
+	void see(const engine::DocView& doc, double wt) override;
 
-	Xapian::MatchSpy* clone() const override;
+	std::unique_ptr<engine::MatchSpy> clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	Xapian::MatchSpy* unserialise(const std::string& serialised, const Xapian::Registry& context) const override;
+	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view serialised) const override;
 	std::string serialise_results() const override;
-	void merge_results(const std::string& serialised) override;
+	void merge_results(std::string_view serialised) override;
 	void merge_results(const AggregationMatchSpy& other);
 
-	std::string get_description() const override;
+	std::string description() const override;
 	const MsgPack& get_aggregation();
 };

@@ -120,11 +120,11 @@ FilterAggregation::merge_results(const BaseAggregation* other)
 
 
 void
-FilterAggregation::check_single(const Xapian::Document& doc)
+FilterAggregation::check_single(const engine::DocView& doc)
 {
 	for (const auto& filter : _filters) {
 		std::set<std::string_view> values;
-		auto doc_value = doc.get_value(filter.first);
+		auto doc_value = doc.value(filter.first);
 		StringList::unserialise(doc_value, std::inserter(values, values.begin()));
 		if (values.find(*filter.second.begin()) != values.end()) {
 			return _agg(doc);
@@ -134,11 +134,11 @@ FilterAggregation::check_single(const Xapian::Document& doc)
 
 
 void
-FilterAggregation::check_multiple(const Xapian::Document& doc)
+FilterAggregation::check_multiple(const engine::DocView& doc)
 {
 	for (const auto& filter : _filters) {
 		std::set<std::string_view> values;
-		auto doc_value = doc.get_value(filter.first);
+		auto doc_value = doc.value(filter.first);
 		StringList::unserialise(doc_value, std::inserter(values, values.begin()));
 		Counter c;
 		std::set_intersection(values.begin(), values.end(), filter.second.begin(), filter.second.end(), std::back_inserter(c));

@@ -42,7 +42,8 @@
 #include "exception_xapian.h"                     // for AggregationError, MSG_Agg...
 #include "xapiand_strings.hh"                             // for strings::format
 #include "hashes.hh"                              // for xxh64
-#include "xapian.h"                               // for Document, valueno
+#include "engine/doc_view.h"                     // for DocView
+#include "engine/types.h"                        // for valueno
 
 
 class Schema;
@@ -558,7 +559,7 @@ public:
 		return nullptr;
 	}
 
-	void aggregate(long double slot, std::string_view bucket, const Xapian::Document& doc, size_t idx = 0) {
+	void aggregate(long double slot, std::string_view bucket, const engine::DocView& doc, size_t idx = 0) {
 		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
 			it->second(doc);
@@ -605,43 +606,43 @@ public:
 	ValuesAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_count_desc) { }
 
-	void aggregate_float(long double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_date(double value, const Xapian::Document& doc) override {
+	void aggregate_date(double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_time(double value, const Xapian::Document& doc) override {
+	void aggregate_time(double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+	void aggregate_timedelta(double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
+	void aggregate_boolean(bool value, const engine::DocView& doc) override {
 		aggregate(value ? 1.0 : 0.0, std::string_view(value ? "true" : "false"), doc);
 	}
 
-	void aggregate_string(std::string_view value, const Xapian::Document& doc) override {
+	void aggregate_string(std::string_view value, const engine::DocView& doc) override {
 		aggregate(0.0, value, doc);
 	}
 
-	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
+	void aggregate_geo(const range_t& value, const engine::DocView& doc) override {
 		aggregate(0.0, value.to_string(), doc);
 	}
 
-	void aggregate_uuid(std::string_view value, const Xapian::Document& doc) override {
+	void aggregate_uuid(std::string_view value, const engine::DocView& doc) override {
 		aggregate(0.0, value, doc);
 	}
 };
@@ -652,43 +653,43 @@ public:
 	TermsAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<TermsHandler>(context, name, schema, Sort::by_count_desc) { }
 
-	void aggregate_float(long double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_date(double value, const Xapian::Document& doc) override {
+	void aggregate_date(double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_time(double value, const Xapian::Document& doc) override {
+	void aggregate_time(double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+	void aggregate_timedelta(double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
 	}
 
-	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
+	void aggregate_boolean(bool value, const engine::DocView& doc) override {
 		aggregate(value ? 1.0 : 0.0, std::string_view(value ? "true" : "false"), doc);
 	}
 
-	void aggregate_string(std::string_view value, const Xapian::Document& doc) override {
+	void aggregate_string(std::string_view value, const engine::DocView& doc) override {
 		aggregate(0.0, value, doc);
 	}
 
-	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
+	void aggregate_geo(const range_t& value, const engine::DocView& doc) override {
 		aggregate(0.0, value.to_string(), doc);
 	}
 
-	void aggregate_uuid(std::string_view value, const Xapian::Document& doc) override {
+	void aggregate_uuid(std::string_view value, const engine::DocView& doc) override {
 		aggregate(0.0, value, doc);
 	}
 };
@@ -849,32 +850,32 @@ public:
 		}
 	}
 
-	void aggregate_float(long double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const engine::DocView& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const engine::DocView& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const engine::DocView& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
-	void aggregate_date(double value, const Xapian::Document& doc) override {
+	void aggregate_date(double value, const engine::DocView& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
 		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
-	void aggregate_time(double value, const Xapian::Document& doc) override {
+	void aggregate_time(double value, const engine::DocView& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
 		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+	void aggregate_timedelta(double value, const engine::DocView& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
 		aggregate(value, strings::format("{}", bucket), doc);
 	}
@@ -1108,7 +1109,7 @@ public:
 		}
 	}
 
-	void aggregate_float(long double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const engine::DocView& doc) override {
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
@@ -1118,7 +1119,7 @@ public:
 		}
 	}
 
-	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const engine::DocView& doc) override {
 		size_t idx = 0;
 		for (const auto& range : ranges_i64) {
 			if (value >= range.second.first && value < range.second.second) {
@@ -1128,7 +1129,7 @@ public:
 		}
 	}
 
-	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const engine::DocView& doc) override {
 		size_t idx = 0;
 		for (const auto& range : ranges_u64) {
 			if (value >= range.second.first && value < range.second.second) {
@@ -1138,7 +1139,7 @@ public:
 		}
 	}
 
-	void aggregate_date(double value, const Xapian::Document& doc) override {
+	void aggregate_date(double value, const engine::DocView& doc) override {
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
@@ -1148,7 +1149,7 @@ public:
 		}
 	}
 
-	void aggregate_time(double value, const Xapian::Document& doc) override {
+	void aggregate_time(double value, const engine::DocView& doc) override {
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
@@ -1158,7 +1159,7 @@ public:
 		}
 	}
 
-	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+	void aggregate_timedelta(double value, const engine::DocView& doc) override {
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
@@ -1171,16 +1172,16 @@ public:
 
 
 class FilterAggregation : public BaseAggregation {
-	using func_filter = void (FilterAggregation::*)(const Xapian::Document&);
+	using func_filter = void (FilterAggregation::*)(const engine::DocView&);
 
-	std::vector<std::pair<Xapian::valueno, std::set<std::string>>> _filters;
+	std::vector<std::pair<engine::valueno, std::set<std::string>>> _filters;
 	Aggregation _agg;
 	func_filter func;
 
 public:
 	FilterAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema);
 
-	void operator()(const Xapian::Document& doc) override {
+	void operator()(const engine::DocView& doc) override {
 		(this->*func)(doc);
 	}
 
@@ -1193,6 +1194,6 @@ public:
 	void merge_results(const char** p, const char* p_end) override;
 	void merge_results(const BaseAggregation* other) override;
 
-	void check_single(const Xapian::Document& doc);
-	void check_multiple(const Xapian::Document& doc);
+	void check_single(const engine::DocView& doc);
+	void check_multiple(const engine::DocView& doc);
 };

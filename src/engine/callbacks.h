@@ -64,6 +64,9 @@ public:
 
 
 // A sort key built from a matching document: documents order by memcmp of their keys.
+//
+// key, clone and name are const and thread-safe. key may throw on a stored value that does not
+// decode; the engine abandons that search with the error, and nothing else is affected.
 class KeyMaker {
 public:
 	virtual ~KeyMaker() = default;
@@ -80,6 +83,10 @@ public:
 
 // Sees every matching document, with its weight, and accumulates a result. Results from
 // several shards merge through their serialised form.
+//
+// see may throw on a stored value that does not decode; the engine abandons that search with the
+// error. A spy is used by one search at a time, and an engine that matches shards in parallel
+// clones it per shard and merges the results.
 class MatchSpy {
 public:
 	virtual ~MatchSpy() = default;
