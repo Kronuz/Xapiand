@@ -47,7 +47,7 @@
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
-#include "xapian.h"                          // for Document, docid, MSet
+#include "xapian.h"                          // for Document, docid
 
 
 class Data;

@@ -721,16 +721,6 @@ Shard::engine()
 }
 
 
-Xapian::Database*
-Shard::db()
-{
-	L_CALL("Shard::db()");
-
-	engine();
-	return engine_shard->database();
-}
-
-
 unsigned
 Shard::refs() const
 {
@@ -1714,48 +1704,6 @@ Shard::get_docid_term(const std::string& term)
 	}
 
 	return did;
-}
-
-
-Xapian::Document
-Shard::get_document(Xapian::docid shard_did, unsigned doc_flags)
-{
-	L_CALL("Shard::get_document({})", shard_did);
-
-	Xapian::Document doc;
-
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::get_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::get_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	auto *rdb = static_cast<Xapian::Database *>(db());
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			doc = rdb->get_document(shard_did, doc_flags);
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			do_close();
-			throw;
-		}
-		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
-	return doc;
 }
 
 
