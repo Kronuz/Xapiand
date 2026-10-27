@@ -89,6 +89,12 @@ std::string get_prefix(std::string_view field_name)
 }
 
 
+std::string_view acc_term_prefix(std::string_view field_prefix)
+{
+	return field_prefix == DOCUMENT_ID_TERM_PREFIX ? std::string_view(DOCUMENT_ID_ACCURACY_TERM_PREFIX) : field_prefix;
+}
+
+
 std::string normalize_uuid(std::string_view uuid)
 {
 	return Unserialise::uuid(Serialise::uuid(uuid), static_cast<UUIDRepr>(opts.uuid_repr));
