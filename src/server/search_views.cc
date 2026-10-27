@@ -64,6 +64,8 @@
 #include "metrics.h"                        // for Metrics::metrics
 #include "mime_types.h"                    // for mime_type
 #include "msgpack.h"                        // for MsgPack, msgpack::object
+#include "engine/query.h"                   // for engine::Query
+#include "engine/xapian/query.h"            // for engine::xapian::to_xapian
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
@@ -1936,7 +1938,7 @@ search_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	std::tuple<Xapian::MSet, MsgPack, Xapian::Query> mset_tuple;
+	std::tuple<Xapian::MSet, MsgPack, engine::Query> mset_tuple;
 	MsgPack aggregations;
 
 	request.processing = std::chrono::steady_clock::now();
@@ -1988,7 +1990,7 @@ search_view(Request& request)
 	obj[RESPONSE_HITS] = MsgPack::ARRAY();
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = query.get_description();
+		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_COUNT] = mset.size();
 	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
@@ -2085,7 +2087,7 @@ count_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	resolve_index_endpoints(request, query_field);
 
-	std::tuple<Xapian::MSet, MsgPack, Xapian::Query> mset_tuple;
+	std::tuple<Xapian::MSet, MsgPack, engine::Query> mset_tuple;
 
 	request.processing = std::chrono::steady_clock::now();
 
@@ -2119,7 +2121,7 @@ count_view(Request& request)
 	MsgPack obj;
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = query.get_description();
+		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
 
@@ -2299,13 +2301,13 @@ expand_paths(Request& request)
 			DatabaseHandler db_handler;
 			db_handler.reset(index_endpoints);
 			if (stripped_index_path.empty()) {
-				mset = db_handler.get_mset(Xapian::Query(std::string()), 0, 100);
+				mset = db_handler.get_mset(engine::Query::match_all(), 0, 100);
 			} else {
-				auto query = Xapian::Query(Xapian::Query::OP_AND_NOT,
-					Xapian::Query(Xapian::Query::OP_OR,
-							Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
-							Xapian::Query(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
-					Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path + "/.", DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR)))
+				auto query = engine::Query::combine(engine::Op::AND_NOT,
+					engine::Query::combine(engine::Op::OR,
+							engine::Query::wildcard(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR)),
+							engine::Query::term(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
+					engine::Query::wildcard(prefixed(index_path + "/.", DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))
 				);
 				mset = db_handler.get_mset(query, 0, 100);
 			}

@@ -22,119 +22,120 @@
 
 #pragma once
 
+#include <memory>           // for std::unique_ptr
 #include <string>           // for string
+#include <string_view>      // for string_view
 
+#include "engine/callbacks.h"  // for engine::PostingSource
+#include "engine/query.h"   // for engine::Query
+#include "engine/types.h"   // for engine::valueno
 #include "msgpack.h"        // for MsgPack
-#include "xapian.h"         // for docid, ValuePostingSource, valueno, Query
 
 
 struct required_spc_t;
 
 
-// New Match Decider for multiple value range.
-class MultipleValueRange : public Xapian::ValuePostingSource {
+// A value source for a multiple value range: some of the document's values are inside [start, end].
+class MultipleValueRange : public engine::PostingSource {
+	engine::valueno slot_ = 0;
+
 	// Range [start, end] for the search.
 	std::string start, end;
 
 	// Calculate if some their values is inside range.
-	bool insideRange() const noexcept;
+	bool insideRange(std::string_view value) const noexcept;
 
 	// Get the geospatial query
-	static Xapian::Query query_geo(std::string_view str, const required_spc_t& field_spc);
+	static engine::Query query_geo(std::string_view str, const required_spc_t& field_spc);
 
 public:
-	MultipleValueRange() :
-		Xapian::ValuePostingSource(0) { }
+	MultipleValueRange() = default;
 
-	/* Construct a new match decider which returns only documents with a
+	/* Construct a new source which returns only documents with a
 	 *  some of their values inside of [start, end].
 	 *
-	 *  @param slot_ The value slot to read values from.
+	 *  @param slot The value slot to read values from.
 	 *  @param start_  range's start.
 	 *  @param end_ range's end.
 	*/
 	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
-	MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& end_);
+	MultipleValueRange(engine::valueno slot, T&& start_, T&& end_);
 
-	void next(double min_wt) override;
-	void skip_to(Xapian::docid min_docid, double min_wt) override;
-	bool check(Xapian::docid min_docid, double min_wt) override;
-	double get_weight() const override;
-	MultipleValueRange* clone() const override;
+	engine::valueno slot() const override { return slot_; }
+	bool accept(std::string_view value) const override { return insideRange(value); }
+	double weight(std::string_view value) const override;
+	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	MultipleValueRange* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
-	void init(const Xapian::Database& db_) override;
-	std::string get_description() const override;
+	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(const required_spc_t& field_spc, const MsgPack& obj);
+	static engine::Query getQuery(const required_spc_t& field_spc, const MsgPack& obj);
 };
 
 
-// New Match Decider for multiple value GE.
-class MultipleValueGE : public Xapian::ValuePostingSource {
+// A value source for multiple value GE: some of the document's values are inside [start, ..].
+class MultipleValueGE : public engine::PostingSource {
+	engine::valueno slot_ = 0;
+
 	// Range [start, ..] for the search.
 	std::string start;
 
 	// Calculate if some their values is inside range.
-	bool insideRange() const noexcept;
+	bool insideRange(std::string_view value) const noexcept;
 
 public:
-	MultipleValueGE() :
-		Xapian::ValuePostingSource(0) { }
+	MultipleValueGE() = default;
 
-	/* Construct a new match decider which returns only documents with a
+	/* Construct a new source which returns only documents with a
 	 *  some of their values inside of [start, ..].
 	 *
-	 *  @param slot_ The value slot to read values from.
+	 *  @param slot The value slot to read values from.
 	 *  @param start_  range's start.
 	*/
 	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
-	MultipleValueGE(Xapian::valueno slot_, T&& start_);
+	MultipleValueGE(engine::valueno slot, T&& start_);
 
-	void next(double min_wt) override;
-	void skip_to(Xapian::docid min_docid, double min_wt) override;
-	bool check(Xapian::docid min_docid, double min_wt) override;
-	double get_weight() const override;
-	MultipleValueGE* clone() const override;
+	engine::valueno slot() const override { return slot_; }
+	bool accept(std::string_view value) const override { return insideRange(value); }
+	double weight(std::string_view value) const override;
+	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	MultipleValueGE* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
-	void init(const Xapian::Database& db_) override;
-	std::string get_description() const override;
+	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string description() const override;
 };
 
 
-// New Match Decider for multiple value LE.
-class MultipleValueLE : public Xapian::ValuePostingSource {
+// A value source for multiple value LE: some of the document's values are inside [.., end].
+class MultipleValueLE : public engine::PostingSource {
+	engine::valueno slot_ = 0;
+
 	// Range [.., end] for the search.
 	std::string end;
 
 	// Calculate if some their values is inside range.
-	bool insideRange() const noexcept;
+	bool insideRange(std::string_view value) const noexcept;
 
 public:
-	MultipleValueLE() :
-		Xapian::ValuePostingSource(0) { }
+	MultipleValueLE() = default;
 
-	/* Construct a new match decider which returns only documents with a
+	/* Construct a new source which returns only documents with a
 	 *  some of their values inside of [.., end].
 	 *
-	 *  @param slot_ The value slot to read values from.
+	 *  @param slot The value slot to read values from.
 	 *  @param end_  range's end.
 	*/
 	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
-	MultipleValueLE(Xapian::valueno slot_, T&& end_);
+	MultipleValueLE(engine::valueno slot, T&& end_);
 
-	void next(double min_wt) override;
-	void skip_to(Xapian::docid min_docid, double min_wt) override;
-	bool check(Xapian::docid min_docid, double min_wt) override;
-	double get_weight() const override;
-	MultipleValueLE* clone() const override;
+	engine::valueno slot() const override { return slot_; }
+	bool accept(std::string_view value) const override { return insideRange(value); }
+	double weight(std::string_view value) const override;
+	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	MultipleValueLE* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
-	void init(const Xapian::Database& db_) override;
-	std::string get_description() const override;
+	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string description() const override;
 };

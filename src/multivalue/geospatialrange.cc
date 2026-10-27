@@ -25,12 +25,13 @@
 #include <cmath>                                  // for M_PI
 
 #include "database/schema.h"                      // for required_spc_t
+#include "engine/error.h"                         // for engine::Error
 #include "generate_terms.h"                       // for GenerateTerms
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "serialise_list.h"                       // for StringList
 
 
-Xapian::Query
+engine::Query
 GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	GeoSpatial geo(obj);
@@ -40,17 +41,17 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 	auto centroids = geometry->getCentroids();
 
 	if (ranges.empty()) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
 
-	if (field_spc.slot != Xapian::BAD_VALUENO) {
-		auto gsr = new GeoSpatialRange(field_spc.slot, std::move(ranges), std::move(centroids));
+	if (field_spc.slot != engine::BAD_VALUENO) {
+		auto gsr = std::make_unique<GeoSpatialRange>(field_spc.slot, std::move(ranges), std::move(centroids));
 		if (query.empty()) {
-			return Xapian::Query(gsr->release());
+			return engine::Query::source(std::move(gsr));
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(gsr->release()), query);
+		return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(gsr)), query);
 	}
 
 	return query;
@@ -58,9 +59,8 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 
 
 double
-GeoSpatialRange::calculateWeight() const
+GeoSpatialRange::calculateWeight(std::string_view value) const
 {
-	const auto value = get_value();
 	const auto centroids = Unserialise::centroids(value);
 
 	if (_centroids.empty()) {
@@ -81,9 +81,8 @@ GeoSpatialRange::calculateWeight() const
 
 
 bool
-GeoSpatialRange::insideRanges() const
+GeoSpatialRange::insideRanges(std::string_view value) const
 {
-	const auto value = get_value();
 	const auto ranges = Unserialise::ranges(value);
 
 	if (ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
@@ -113,56 +112,17 @@ GeoSpatialRange::insideRanges() const
 }
 
 
-void
-GeoSpatialRange::next(double min_wt)
-{
-	Xapian::ValuePostingSource::next(min_wt);
-	while (!at_end()) {
-		if (insideRanges()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-void
-GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt)
-{
-	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (!at_end()) {
-		if (insideRanges()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-bool
-GeoSpatialRange::check(Xapian::docid min_docid, double min_wt)
-{
-	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
-		// check returned false, so we know the document is not in the source.
-		return false;
-	}
-
-	if (at_end()) {
-		// return true, since we're definitely at the end of the list.
-		return true;
-	}
-
-	return insideRanges();
-}
-
-
 double
-GeoSpatialRange::get_weight() const
+GeoSpatialRange::weight(std::string_view value) const
 {
-	return calculateWeight();
+	return calculateWeight(value);
 }
 
 
-GeoSpatialRange*
+std::unique_ptr<engine::PostingSource>
 GeoSpatialRange::clone() const
 {
-	return new GeoSpatialRange(get_slot(), _ranges, _centroids);
+	return std::make_unique<GeoSpatialRange>(slot_, _ranges, _centroids);
 }
 
 
@@ -176,47 +136,37 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges_centroids(_ranges, _centroids) };
+	std::vector<std::string> data = { serialise_length(slot_), Serialise::ranges_centroids(_ranges, _centroids) };
 	return StringList::serialise(data.begin(), data.end());
 }
 
 
-GeoSpatialRange*
-GeoSpatialRange::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
+std::unique_ptr<engine::PostingSource>
+GeoSpatialRange::unserialise(std::string_view serialised) const
 {
 	try {
 		StringList data(serialised);
 
 		if (data.size() != 2) {
-			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+			throw engine::Error(engine::errc::invalid, "Bad serialised GeoSpatialRange");
 		}
 
 		auto it = data.begin();
-		const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(*it));
+		const auto slot = static_cast<engine::valueno>(unserialise_length(*it));
 		auto ranges_centroids = Unserialise::ranges_centroids(*++it);
-		return new GeoSpatialRange(slot_,
+		return std::make_unique<GeoSpatialRange>(slot,
 			std::vector<range_t>(std::make_move_iterator(ranges_centroids.first.begin()), std::make_move_iterator(ranges_centroids.first.end())),
 			std::vector<Cartesian>(std::make_move_iterator(ranges_centroids.second.begin()), std::make_move_iterator(ranges_centroids.second.end())));
 	} catch (const SerialisationError&) {
-		throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+		throw engine::Error(engine::errc::invalid, "Bad serialised GeoSpatialRange");
 	}
 }
 
 
-void
-GeoSpatialRange::init(const Xapian::Database& db_)
-{
-	Xapian::ValuePostingSource::init(db_);
-
-	// Possible that no documents are in range.
-	set_termfreq_min(0);
-}
-
-
 std::string
-GeoSpatialRange::get_description() const
+GeoSpatialRange::description() const
 {
 	std::string result("GeoSpatialRange ");
-	result += std::to_string(get_slot());
+	result += std::to_string(slot_);
 	return result;
 }

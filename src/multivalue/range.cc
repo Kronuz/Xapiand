@@ -32,6 +32,7 @@
 #include "database/schema.h"                      // for required_spc_t, FieldType
 #include "datetime.h"                             // for timestamp
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
+#include "engine/error.h"                       // for engine::Error
 #include "xapiand_exception.h"                            // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange
@@ -46,7 +47,7 @@
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-Xapian::Query
+engine::Query
 getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
 	std::string ser_start, ser_end;
@@ -57,7 +58,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::floating(*end) : max<double>(field_spc.accuracy);
 
 			if (val_s > val_e) {
-				return Xapian::Query();
+				return engine::Query();
 			}
 
 			ser_start = Serialise::floating(val_s);
@@ -71,7 +72,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : max<int64_t>(field_spc.accuracy);
 
 			if (val_s > val_e) {
-				return Xapian::Query();
+				return engine::Query();
 			}
 
 			ser_start = Serialise::integer(val_s);
@@ -85,7 +86,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : max<uint64_t>(field_spc.accuracy);
 
 			if (val_s > val_e) {
-				return Xapian::Query();
+				return engine::Query();
 			}
 
 			ser_start = Serialise::positive(val_s);
@@ -100,71 +101,71 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 
 	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix);
 
-	if (field_spc.slot != Xapian::BAD_VALUENO) {
+	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
-			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			auto mvle = std::make_unique<MultipleValueLE>(field_spc.slot, std::move(ser_end));
 			if (query.empty()) {
-				return Xapian::Query(mvle->release());
+				return engine::Query::source(std::move(mvle));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvle)), query);
 		}
 
 		if (!end) {
-			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			auto mvge = std::make_unique<MultipleValueGE>(field_spc.slot, std::move(ser_start));
 			if (query.empty()) {
-				return Xapian::Query(mvge->release());
+				return engine::Query::source(std::move(mvge));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvge)), query);
 		}
 
-		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		auto mvr = std::make_unique<MultipleValueRange>(field_spc.slot, std::move(ser_start), std::move(ser_end));
 		if (query.empty()) {
-			return Xapian::Query(mvr->release());
+			return engine::Query::source(std::move(mvr));
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+		return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvr)), query);
 	}
 
 	return query;
 }
 
 
-Xapian::Query
+engine::Query
 getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	if (field_spc.slot != Xapian::BAD_VALUENO) {
+	if (field_spc.slot != engine::BAD_VALUENO) {
 		std::string start_s = start ? Serialise::MsgPack(field_spc, *start) : "";
 		std::string end_s = end ? Serialise::MsgPack(field_spc, *end) : "";
 
 		if (start_s > end_s) {
-			return Xapian::Query();
+			return engine::Query();
 		}
 
 		if (!start) {
-			auto mvle = new MultipleValueLE(field_spc.slot, std::move(end_s));
-			return Xapian::Query(mvle->release());
+			auto mvle = std::make_unique<MultipleValueLE>(field_spc.slot, std::move(end_s));
+			return engine::Query::source(std::move(mvle));
 		}
 
 		if (!end) {
-			auto mvge = new MultipleValueGE(field_spc.slot, std::move(start_s));
-			return Xapian::Query(mvge->release());
+			auto mvge = std::make_unique<MultipleValueGE>(field_spc.slot, std::move(start_s));
+			return engine::Query::source(std::move(mvge));
 		}
 
-		auto mvr = new MultipleValueRange(field_spc.slot, std::move(start_s), std::move(end_s));
-		return Xapian::Query(mvr->release());
+		auto mvr = std::make_unique<MultipleValueRange>(field_spc.slot, std::move(start_s), std::move(end_s));
+		return engine::Query::source(std::move(mvr));
 	}
 
-	return Xapian::Query();
+	return engine::Query();
 }
 
 
-Xapian::Query
+engine::Query
 getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
 	double timestamp_s = start ? Datetime::timestamp(Datetime::DatetimeParser(*start)) : TIMESTAMP_MIN;
 	double timestamp_e = end ? Datetime::timestamp(Datetime::DatetimeParser(*end)) : TIMESTAMP_MAX;
 
 	if (timestamp_s > timestamp_e) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	auto ser_start = Serialise::timestamp(timestamp_s);
@@ -172,42 +173,42 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
 
-	if (field_spc.slot != Xapian::BAD_VALUENO) {
+	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
-			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			auto mvle = std::make_unique<MultipleValueLE>(field_spc.slot, std::move(ser_end));
 			if (query.empty()) {
-				return Xapian::Query(mvle->release());
+				return engine::Query::source(std::move(mvle));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvle)), query);
 		}
 
 		if (!end) {
-			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			auto mvge = std::make_unique<MultipleValueGE>(field_spc.slot, std::move(ser_start));
 			if (query.empty()) {
-				return Xapian::Query(mvge->release());
+				return engine::Query::source(std::move(mvge));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvge)), query);
 		}
 
-		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		auto mvr = std::make_unique<MultipleValueRange>(field_spc.slot, std::move(ser_start), std::move(ser_end));
 		if (query.empty()) {
-			return Xapian::Query(mvr->release());
+			return engine::Query::source(std::move(mvr));
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+		return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvr)), query);
 	}
 
 	return query;
 }
 
 
-Xapian::Query
+engine::Query
 getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
 	double time_s = start ? Datetime::time_to_double(*start) : min<double>(field_spc.accuracy);
 	double time_e = end ? Datetime::time_to_double(*end) : max<double>(field_spc.accuracy);
 
 	if (time_s > time_e) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	auto ser_start = Serialise::timestamp(time_s);
@@ -215,41 +216,41 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(time_s), static_cast<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix);
 
-	if (field_spc.slot != Xapian::BAD_VALUENO) {
+	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
-			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			auto mvle = std::make_unique<MultipleValueLE>(field_spc.slot, std::move(ser_end));
 			if (query.empty()) {
-				return Xapian::Query(mvle->release());
+				return engine::Query::source(std::move(mvle));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvle)), query);
 		}
 
 		if (!end) {
-			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			auto mvge = std::make_unique<MultipleValueGE>(field_spc.slot, std::move(ser_start));
 			if (query.empty()) {
-				return Xapian::Query(mvge->release());
+				return engine::Query::source(std::move(mvge));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvge)), query);
 		}
 
-		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		auto mvr = std::make_unique<MultipleValueRange>(field_spc.slot, std::move(ser_start), std::move(ser_end));
 		if (query.empty()) {
-			return Xapian::Query(mvr->release());
+			return engine::Query::source(std::move(mvr));
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+		return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvr)), query);
 	}
 
 	return query;
 }
 
 
-Xapian::Query
+engine::Query
 getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end) {
 	double timedelta_s = start ? Datetime::timedelta_to_double(*start) : min<double>(field_spc.accuracy);
 	double timedelta_e = end ? Datetime::timedelta_to_double(*end) : max<double>(field_spc.accuracy);
 
 	if (timedelta_s > timedelta_e) {
-		return Xapian::Query();
+		return engine::Query();
 	}
 
 	auto ser_start = Serialise::timestamp(timedelta_s);
@@ -257,35 +258,35 @@ getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const M
 
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(timedelta_s), static_cast<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix);
 
-	if (field_spc.slot != Xapian::BAD_VALUENO) {
+	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
-			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			auto mvle = std::make_unique<MultipleValueLE>(field_spc.slot, std::move(ser_end));
 			if (query.empty()) {
-				return Xapian::Query(mvle->release());
+				return engine::Query::source(std::move(mvle));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvle)), query);
 		}
 
 		if (!end) {
-			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			auto mvge = std::make_unique<MultipleValueGE>(field_spc.slot, std::move(ser_start));
 			if (query.empty()) {
-				return Xapian::Query(mvge->release());
+				return engine::Query::source(std::move(mvge));
 			}
-			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+			return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvge)), query);
 		}
 
-		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		auto mvr = std::make_unique<MultipleValueRange>(field_spc.slot, std::move(ser_start), std::move(ser_end));
 		if (query.empty()) {
-			return Xapian::Query(mvr->release());
+			return engine::Query::source(std::move(mvr));
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+		return engine::Query::combine(engine::Op::FILTER, engine::Query::source(std::move(mvr)), query);
 	}
 
 	return query;
 }
 
 
-Xapian::Query
+engine::Query
 MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	const MsgPack* start = nullptr;
@@ -303,7 +304,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 
 	try {
 		if (!start && !end) {
-			return Xapian::Query(std::string());
+			return engine::Query::match_all();
 		}
 
 		switch (field_spc.get_type()) {
@@ -333,7 +334,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				}
 				THROW(QueryParserError, "The format for Geo Spatial range is: <field>: [\"EWKT\"]");
 			default:
-				return Xapian::Query();
+				return engine::Query();
 		}
 	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: {} - {} like {} ({})", start ? start->to_string() : "", end ? end->to_string() : "",
@@ -343,16 +344,15 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 
 
 template <typename T, typename>
-MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& end_)
-	: Xapian::ValuePostingSource(slot_),
+MultipleValueRange::MultipleValueRange(engine::valueno slot, T&& start_, T&& end_)
+	: slot_(slot),
 	  start(std::forward<T>(start_)),
 	  end(std::forward<T>(end_)) { }
 
 
 bool
-MultipleValueRange::insideRange() const noexcept
+MultipleValueRange::insideRange(std::string_view value) const noexcept
 {
-	const auto value = get_value();
 	StringList data(value);
 
 	if (data.empty() || end < data.front() || start > data.back()) {
@@ -369,56 +369,17 @@ MultipleValueRange::insideRange() const noexcept
 }
 
 
-void
-MultipleValueRange::next(double min_wt)
-{
-	Xapian::ValuePostingSource::next(min_wt);
-	while (!at_end()) {
-		if (insideRange()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-void
-MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt)
-{
-	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (!at_end()) {
-		if (insideRange()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-bool
-MultipleValueRange::check(Xapian::docid min_docid, double min_wt)
-{
-	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
-		// check returned false, so we know the document is not in the source.
-		return false;
-	}
-
-	if (at_end()) {
-		// return true, since we're definitely at the end of the list.
-		return true;
-	}
-
-	return insideRange();
-}
-
-
 double
-MultipleValueRange::get_weight() const
+MultipleValueRange::weight(std::string_view /*value*/) const
 {
 	return 1.0;
 }
 
 
-MultipleValueRange*
+std::unique_ptr<engine::PostingSource>
 MultipleValueRange::clone() const
 {
-	return new MultipleValueRange(get_slot(), start, end);
+	return std::make_unique<MultipleValueRange>(slot_, start, end);
 }
 
 
@@ -432,59 +393,48 @@ MultipleValueRange::name() const
 std::string
 MultipleValueRange::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), start, end };
+	std::vector<std::string> data = { serialise_length(slot_), start, end };
 	return StringList::serialise(data.begin(), data.end());
 }
 
 
-MultipleValueRange*
-MultipleValueRange::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
+std::unique_ptr<engine::PostingSource>
+MultipleValueRange::unserialise(std::string_view serialised) const
 {
 	try {
 		StringList data(serialised);
 
 		if (data.size() != 3) {
-			throw Xapian::NetworkError("Bad serialised MultipleValueRange");
+			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
 		}
 
 		auto it = data.begin();
-		return new MultipleValueRange(unserialise_length(*it), std::string(*(++it)), std::string(*(++it)));
+		return std::make_unique<MultipleValueRange>(unserialise_length(*it), std::string(*(++it)), std::string(*(++it)));
 	} catch (const SerialisationError& er) {
-		throw Xapian::NetworkError("Bad serialised MultipleValueRange");
+		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
 	}
 }
 
 
-void
-MultipleValueRange::init(const Xapian::Database& db_)
-{
-	Xapian::ValuePostingSource::init(db_);
-
-	// Possible that no documents are in range.
-	set_termfreq_min(0);
-}
-
-
 std::string
-MultipleValueRange::get_description() const
+MultipleValueRange::description() const
 {
 	std::string result("MultipleValueRange ");
-	result += std::to_string(get_slot()) + " " + start;
+	result += std::to_string(slot_) + " " + start;
 	result += " " + end;
 	return result;
 }
 
 
 template <typename T, typename>
-MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, T&& start_)
-	: Xapian::ValuePostingSource(slot_),
+MultipleValueGE::MultipleValueGE(engine::valueno slot, T&& start_)
+	: slot_(slot),
 	  start(std::forward<T>(start_)) { }
 
 
 bool
-MultipleValueGE::insideRange() const noexcept
+MultipleValueGE::insideRange(std::string_view value) const noexcept
 {
-	const auto value = get_value();
 	StringList data(value);
 
 	if (data.empty()) {
@@ -495,56 +445,17 @@ MultipleValueGE::insideRange() const noexcept
 }
 
 
-void
-MultipleValueGE::next(double min_wt)
-{
-	Xapian::ValuePostingSource::next(min_wt);
-	while (!at_end()) {
-		if (insideRange()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-void
-MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt)
-{
-	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (!at_end()) {
-		if (insideRange()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-bool
-MultipleValueGE::check(Xapian::docid min_docid, double min_wt)
-{
-	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
-		// check returned false, so we know the document is not in the source.
-		return false;
-	}
-
-	if (at_end()) {
-		// return true, since we're definitely at the end of the list.
-		return true;
-	}
-
-	return insideRange();
-}
-
-
 double
-MultipleValueGE::get_weight() const
+MultipleValueGE::weight(std::string_view /*value*/) const
 {
 	return 1.0;
 }
 
 
-MultipleValueGE*
+std::unique_ptr<engine::PostingSource>
 MultipleValueGE::clone() const
 {
-	return new MultipleValueGE(get_slot(), start);
+	return std::make_unique<MultipleValueGE>(slot_, start);
 }
 
 
@@ -558,58 +469,47 @@ MultipleValueGE::name() const
 std::string
 MultipleValueGE::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), start };
+	std::vector<std::string> data = { serialise_length(slot_), start };
 	return StringList::serialise(data.begin(), data.end());
 }
 
 
-MultipleValueGE*
-MultipleValueGE::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
+std::unique_ptr<engine::PostingSource>
+MultipleValueGE::unserialise(std::string_view serialised) const
 {
 	try {
 		StringList data(serialised);
 
 		if (data.size() != 2) {
-			throw Xapian::NetworkError("Bad serialised MultipleValueGE");
+			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
 		}
 
 		auto it = data.begin();
-		return new MultipleValueGE(unserialise_length(*it), std::string(*(++it)));
+		return std::make_unique<MultipleValueGE>(unserialise_length(*it), std::string(*(++it)));
 	} catch (const SerialisationError& er) {
-		throw Xapian::NetworkError("Bad serialised MultipleValueGE");
+		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
 	}
 }
 
 
-void
-MultipleValueGE::init(const Xapian::Database& db_)
-{
-	Xapian::ValuePostingSource::init(db_);
-
-	// Possible that no documents are in range.
-	set_termfreq_min(0);
-}
-
-
 std::string
-MultipleValueGE::get_description() const
+MultipleValueGE::description() const
 {
 	std::string result("MultipleValueGE ");
-	result += std::to_string(get_slot()) + " " + start;
+	result += std::to_string(slot_) + " " + start;
 	return result;
 }
 
 
 template <typename T, typename>
-MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, T&& end_)
-	: Xapian::ValuePostingSource(slot_),
+MultipleValueLE::MultipleValueLE(engine::valueno slot, T&& end_)
+	: slot_(slot),
 	  end(std::forward<T>(end_)) { }
 
 
 bool
-MultipleValueLE::insideRange() const noexcept
+MultipleValueLE::insideRange(std::string_view value) const noexcept
 {
-	const auto value = get_value();
 	StringList data(value);
 
 	if (data.empty()) {
@@ -620,56 +520,17 @@ MultipleValueLE::insideRange() const noexcept
 }
 
 
-void
-MultipleValueLE::next(double min_wt)
-{
-	Xapian::ValuePostingSource::next(min_wt);
-	while (!at_end()) {
-		if (insideRange()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-void
-MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt)
-{
-	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (!at_end()) {
-		if (insideRange()) { break; }
-		Xapian::ValuePostingSource::next(min_wt);
-	}
-}
-
-
-bool
-MultipleValueLE::check(Xapian::docid min_docid, double min_wt)
-{
-	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
-		// check returned false, so we know the document is not in the source.
-		return false;
-	}
-
-	if (at_end()) {
-		// return true, since we're definitely at the end of the list.
-		return true;
-	}
-
-	return insideRange();
-}
-
-
 double
-MultipleValueLE::get_weight() const
+MultipleValueLE::weight(std::string_view /*value*/) const
 {
 	return 1.0;
 }
 
 
-MultipleValueLE*
+std::unique_ptr<engine::PostingSource>
 MultipleValueLE::clone() const
 {
-	return new MultipleValueLE(get_slot(), end);
+	return std::make_unique<MultipleValueLE>(slot_, end);
 }
 
 
@@ -683,43 +544,33 @@ MultipleValueLE::name() const
 std::string
 MultipleValueLE::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), end };
+	std::vector<std::string> data = { serialise_length(slot_), end };
 	return StringList::serialise(data.begin(), data.end());
 }
 
 
-MultipleValueLE*
-MultipleValueLE::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
+std::unique_ptr<engine::PostingSource>
+MultipleValueLE::unserialise(std::string_view serialised) const
 {
 	try {
 		StringList data(serialised);
 
 		if (data.size() != 2) {
-			throw Xapian::NetworkError("Bad serialised MultipleValueLE");
+			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
 		}
 
 		auto it = data.begin();
-		return new MultipleValueLE(unserialise_length(*it), std::string(*(++it)));
+		return std::make_unique<MultipleValueLE>(unserialise_length(*it), std::string(*(++it)));
 	} catch (const SerialisationError& er) {
-		throw Xapian::NetworkError("Bad serialised MultipleValueLE");
+		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
 	}
 }
 
 
-void
-MultipleValueLE::init(const Xapian::Database& db_)
-{
-	Xapian::ValuePostingSource::init(db_);
-
-	// Possible that no documents are in range.
-	set_termfreq_min(0);
-}
-
-
 std::string
-MultipleValueLE::get_description() const
+MultipleValueLE::description() const
 {
 	std::string result("MultipleValueLE ");
-	result += std::to_string(get_slot()) + " " + end;
+	result += std::to_string(slot_) + " " + end;
 	return result;
 }

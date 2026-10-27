@@ -34,7 +34,7 @@
 #include "engine/document.h"                       // for engine::Document
 #include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
 #include "serialise.h"                            // for serialise
-#include "xapian.h"                               // for Query, Query::op::OP_OR, Query::op::OP_AND
+#include "engine/query.h"                         // for engine::Query, Op
 
 
 constexpr size_t MAX_TERMS_LEVEL        = 256;
@@ -89,28 +89,28 @@ namespace GenerateTerms {
 	/*
 	 * Generate terms for numerical ranges.
 	 */
-	Xapian::Query numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
+	engine::Query numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1);
 
-	Xapian::Query numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
+	engine::Query numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1);
 
 	/*
 	 * Generate terms for datetime ranges.
 	 */
-	Xapian::Query datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
+	engine::Query datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1);
 
 	/*
 	 * Auxiliar functions for datetime ranges.
 	 */
 
-	Xapian::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
+	engine::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
+	engine::Query second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, engine::termcount wqf=1);
 
 	// Datetime only accepts year greater than 0.
 	inline constexpr int year(int year, int accuracy) noexcept {
@@ -121,5 +121,5 @@ namespace GenerateTerms {
 	/*
 	 * Generate ters for geospatial ranges.
 	 */
-	Xapian::Query geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
+	engine::Query geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1);
 };
