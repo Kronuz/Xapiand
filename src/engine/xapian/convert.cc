@@ -24,6 +24,7 @@
 
 #include "engine/xapian/errors.h"      // for the Failure types
 
+#include <atomic>                // for std::atomic
 #include <type_traits>             // for std::is_same_v, std::is_unsigned_v
 
 #include "database/flags.h"        // for DB_CREATE_OR_OPEN, DB_CREATE, ...
@@ -200,7 +201,18 @@ namespace {
 
 class XapianDocView final : public DocView {
 public:
-	explicit XapianDocView(Xapian::Document doc) : doc_(std::move(doc)) { }
+	explicit XapianDocView(Xapian::Document doc) : doc_(std::move(doc)) {
+		live.fetch_add(1, std::memory_order_relaxed);
+	}
+
+	~XapianDocView() override {
+		live.fetch_sub(1, std::memory_order_relaxed);
+	}
+
+	XapianDocView(const XapianDocView&) = delete;
+	XapianDocView& operator=(const XapianDocView&) = delete;
+
+	static inline std::atomic<std::size_t> live{0};
 
 	docid did() const override {
 		return doc_.get_docid();
@@ -233,6 +245,36 @@ public:
 		}
 	}
 
+	void values(const ValueSink& sink) const override {
+		const auto end = doc_.values_end();
+		for (auto it = doc_.values_begin(); it != end; ++it) {
+			sink(it.get_valueno(), *it);
+		}
+	}
+
+	void term_details(const TermDetailSink& sink) const override {
+		const auto end = doc_.termlist_end();
+		for (auto it = doc_.termlist_begin(); it != end; ++it) {
+			TermDetail detail;
+			auto name = *it;
+			detail.term = name;
+			detail.wdf = it.get_wdf();
+			try {
+				detail.termfreq = it.get_termfreq();
+			} catch (const Xapian::InvalidOperationError&) { }  // not tied to a database
+			const auto pend = it.positionlist_end();
+			detail.positions.reserve(it.positionlist_count());
+			for (auto pit = it.positionlist_begin(); pit != pend; ++pit) {
+				detail.positions.push_back(*pit);
+			}
+			sink(detail);
+		}
+	}
+
+	std::string serialise() const override {
+		return doc_.serialise();
+	}
+
 private:
 	Xapian::Document doc_;
 };
@@ -244,6 +286,13 @@ std::unique_ptr<DocView>
 make_view(Xapian::Document doc)
 {
 	return std::make_unique<XapianDocView>(std::move(doc));
+}
+
+
+std::size_t
+live_views() noexcept
+{
+	return XapianDocView::live.load(std::memory_order_relaxed);
 }
 
 

@@ -34,7 +34,9 @@
 #include "cuuid_v1.hh"                  // for UUID, UUID_LENGTH
 #include "database/flags.h"       // for DB_*
 #include "engine/document.h"      // for engine::Document
+#include "engine/doc_view.h"      // for engine::DocView
 #include "engine/error.h"         // for engine::Error
+#include "engine/shard.h"         // for engine::Shard
 #include "engine/types.h"         // for engine::WriteResult
 #include "engine/xapian/shard.h"   // for engine::xapian::Shard
 #include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
@@ -167,6 +169,11 @@ public:
 
 	bool reopen();
 
+	// The engine shard, opened (or reopened) if need be; raises when the shard is closed.
+	// Valid until the next reopen, close or checkin: hold neither it nor a `native<T>()` across one.
+	engine::Shard& engine();
+
+	// For the Xapian remote server and the code not yet moved to the seam (X4b removes it).
 	Xapian::Database* db();
 	unsigned refs() const;
 
@@ -202,6 +209,9 @@ public:
 
 	Xapian::docid get_docid_term(const std::string& term);
 
+	std::unique_ptr<engine::DocView> get_view(Xapian::docid shard_did);
+
+	// The Xapian remote server's entry point (X4b removes it).
 	Xapian::Document get_document(Xapian::docid shard_did, unsigned doc_flags = 0);
 
 	std::vector<std::string> get_metadata_keys();

@@ -125,9 +125,9 @@ ReplicationProtocolService::trigger_replication(const TriggerReplicationArgs& ar
 
 			// Retrieve local database uuid and revision.
 			auto shard = lk_shard_ptr->locked();
-			auto db = shard->db();
-			auto uuid = db->get_uuid();
-			auto revision = db->get_revision();
+			auto& eng = shard->engine();
+			auto uuid = eng.uuid();
+			auto revision = eng.revision();
 
 			// Figure out remote uuid and revisions.
 			const auto& shards = nodes[0];
@@ -137,9 +137,9 @@ ReplicationProtocolService::trigger_replication(const TriggerReplicationArgs& ar
 				try {
 					lock_shard lk_shard(Endpoint{args.dst_endpoint.path, shard_node}, DB_OPEN | DB_WRITABLE, false);
 					auto remote_shard = lk_shard.lock(0);
-					auto remote_db = remote_shard->db();
-					auto remote_uuid = remote_db->get_uuid();
-					auto remote_revision = remote_db->get_revision();
+					auto& remote_eng = remote_shard->engine();
+					auto remote_uuid = remote_eng.uuid();
+					auto remote_revision = remote_eng.revision();
 					if (remote_uuid == uuid && remote_revision >= revision) {
 						++ok_nodes;
 					}

@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Seam check (Xapian stays behind the engine seam)
+        run: harness/seam_check.sh
       - name: Install build deps
         run: |
           set -eux

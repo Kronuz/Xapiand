@@ -2775,7 +2775,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags, false);
 									lk_shard.lock(0);
-									auto doccount = lk_shard->db()->get_doccount();
+									auto doccount = lk_shard->engine().doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
 										shard_num = n;
@@ -2841,7 +2841,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags, false);
 									lk_shard.lock(0);
-									auto doccount = lk_shard->db()->get_doccount();
+									auto doccount = lk_shard->engine().doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
 										shard_num = n;

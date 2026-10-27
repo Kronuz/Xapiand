@@ -707,9 +707,9 @@ Discovery::_ASYNC_elect_primary(const std::string& message)
 				try {
 					lock_shard lk_shard(Endpoint{normalized_path}, DB_OPEN | DB_WRITABLE, false);
 					auto shard = lk_shard.lock(0);
-					auto db = shard->db();
-					uuid = db->get_uuid();
-					revision = db->get_revision();
+					auto& eng = shard->engine();
+					uuid = eng.uuid();
+					revision = eng.revision();
 				} catch (...) { }
 				break;
 			}

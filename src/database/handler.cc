@@ -49,8 +49,11 @@
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
-#include "engine/xapian/callbacks.h"           // for KeyMakerAdapter, MatchSpyAdapter
-#include "engine/xapian/query.h"              // for engine::xapian::to_xapian
+#include "engine/sync.h"                    // for engine::sync_wait
+#include "engine/xapian/callbacks.h"       // for KeyMakerAdapter, MatchSpyAdapter
+#include "engine/xapian/errors.h"          // for engine::xapian::DatabaseFailure
+#include "engine/xapian/query.h"           // for engine::xapian::to_xapian
+#include "engine/xapian/shard.h"           // for engine::xapian::check
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -283,9 +286,12 @@ DatabaseHandler::check()
 	MsgPack errors = MsgPack::MAP();
 	for (auto& endpoint : endpoints) {
 		try {
-			errors[endpoint.path] = Xapian::Database::check(endpoint.path);
-		} catch (const Xapian::Error &error) {
-			errors[endpoint.path] = error.get_description();
+			auto result = engine::sync_wait(engine::xapian::check(endpoint.path));
+			if (result.failure.empty()) {
+				errors[endpoint.path] = result.errors;
+			} else {
+				errors[endpoint.path] = result.failure;
+			}
 		} catch (...) {
 			L_EXC("Check: Unknown error");
 			errors[endpoint.path] = "Unknown error";
@@ -838,16 +844,11 @@ DatabaseHandler::dump_documents()
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			Xapian::docid shard_did = initial;
 			try {
-				auto db = lk_shard->db();
-				auto it = db->postlist_begin("");
-				auto it_e = db->postlist_end("");
-				it.skip_to(initial);
-				for (; it != it_e; ++it) {
-					shard_did = *it;
-					auto doc = db->get_document(shard_did);
+				engine::sync_wait(lk_shard->engine().scan(initial, [&](const engine::DocView& doc) {
+					shard_did = doc.did();
 					Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-					docs.push_back(_dump_document(did, Data(doc.get_data())));
-				}
+					docs.push_back(_dump_document(did, Data(doc.data())));
+				}));
 				break;
 			} catch (const Xapian::DatabaseModifiedError&) {
 				if (t == 0) { lk_shard->do_close(); throw; }
@@ -897,20 +898,15 @@ DatabaseHandler::dump_documents(int fd)
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			Xapian::docid shard_did = initial;
 			try {
-				auto db = lk_shard->db();
-				auto it = db->postlist_begin("");
-				auto it_e = db->postlist_end("");
-				it.skip_to(initial);
-				for (; it != it_e; ++it) {
-					shard_did = *it;
-					auto doc = db->get_document(shard_did);
+				engine::sync_wait(lk_shard->engine().scan(initial, [&](const engine::DocView& doc) {
+					shard_did = doc.did();
 					Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-					auto obj = _dump_document(did, Data(doc.get_data()));
+					auto obj = _dump_document(did, Data(doc.data()));
 					std::string obj_ser = obj.serialise();
 					ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
 					if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
 					sha256.add(obj_ser.data(), obj_ser.size());
-				}
+				}));
 				break;
 			} catch (const Xapian::DatabaseModifiedError&) {
 				if (t == 0) { lk_shard->do_close(); throw; }
@@ -1629,11 +1625,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				auto rdb = lk_shard->db();
-				auto it = rdb->postlist_begin(term);
-				auto it_e = rdb->postlist_end(term);
-				if (it != it_e) {
-					auto shard_did = *it;
+				auto shard_did = engine::sync_wait(lk_shard->engine().find_key(term));
+				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					return did;
 				}
@@ -1750,7 +1743,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 			auto node = lk_shard->node();
 			if (node && node->is_active()) {
 				try {
-					auto doccount = lk_shard->db()->get_doccount();
+					auto doccount = lk_shard->engine().doc_count();
 					if (min_doccount > doccount) {
 						min_doccount = doccount;
 						shard_num = n;
@@ -1810,7 +1803,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 					auto node = lk_shard->node();
 					if (node && node->is_active()) {
 						try {
-							auto doccount = lk_shard->db()->get_doccount();
+							auto doccount = lk_shard->engine().doc_count();
 							if (min_doccount > doccount) {
 								min_doccount = doccount;
 								shard_num = n;
@@ -1943,20 +1936,18 @@ DatabaseHandler::get_database_info()
 	if (endpoints.size() == 1) {
 		auto& endpoint = endpoints[0];
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
-		auto doccount = db->get_doccount();
-		auto lastdocid = db->get_lastdocid();
+		auto stats = engine::sync_wait(lk_shard->engine().stats());
 		return {
 			{ RESPONSE_ENDPOINT, endpoint.path },
-			{ RESPONSE_UUID, db->get_uuid() },
-			{ RESPONSE_REVISION, db->get_revision() },
-			{ RESPONSE_DOC_COUNT, doccount },
-			{ RESPONSE_LAST_ID, lastdocid },
-			{ RESPONSE_DOC_DEL, lastdocid - doccount },
-			{ RESPONSE_AV_LENGTH, db->get_avlength() },
-			{ RESPONSE_DOC_LEN_LOWER,  db->get_doclength_lower_bound() },
-			{ RESPONSE_DOC_LEN_UPPER, db->get_doclength_upper_bound() },
-			{ RESPONSE_HAS_POSITIONS, db->has_positions() },
+			{ RESPONSE_UUID, stats.uuid },
+			{ RESPONSE_REVISION, stats.revision },
+			{ RESPONSE_DOC_COUNT, stats.doc_count },
+			{ RESPONSE_LAST_ID, stats.lastdocid },
+			{ RESPONSE_DOC_DEL, stats.lastdocid - stats.doc_count },
+			{ RESPONSE_AV_LENGTH, stats.avlength },
+			{ RESPONSE_DOC_LEN_LOWER, stats.doclen_lower },
+			{ RESPONSE_DOC_LEN_UPPER, stats.doclen_upper },
+			{ RESPONSE_HAS_POSITIONS, stats.has_positions },
 		};
 	}
 
@@ -1977,20 +1968,20 @@ DatabaseHandler::get_database_info()
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
-		auto db = lk_shard->db();
-		doc_count += db->get_doccount();
-		Xapian::docid shard_lastdocid = db->get_lastdocid();
+		auto stats = engine::sync_wait(lk_shard->engine().stats());
+		doc_count += stats.doc_count;
+		Xapian::docid shard_lastdocid = stats.lastdocid;
 		Xapian::docid did = (shard_lastdocid - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 		lastdocid = std::max(lastdocid, did);
-		has_positions = has_positions || db->has_positions();
+		has_positions = has_positions || stats.has_positions;
 		auto old_total_length = total_length;
-		total_length += db->get_total_length();
+		total_length += stats.total_length;
 		if (total_length < old_total_length) {
-			throw Xapian::DatabaseError("Total document length overflowed!");
+			throw engine::xapian::DatabaseFailure("Total document length overflowed!");
 		}
-		Xapian::termcount shard_doclength_lower_bound = -db->get_doclength_lower_bound();
+		Xapian::termcount shard_doclength_lower_bound = -stats.doclen_lower;
 		doclength_lower_bound = std::max(doclength_lower_bound, shard_doclength_lower_bound);
-		doclength_upper_bound = std::max(doclength_upper_bound, db->get_doclength_upper_bound());
+		doclength_upper_bound = std::max(doclength_upper_bound, stats.doclen_upper);
 		++shard_num;
 	}
     double average_length = doc_count == 0 ? 0.0 : total_length / double(doc_count);
@@ -2528,8 +2519,8 @@ Document::serialise()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did);
-			serialised = doc.serialise();
+			auto doc = lk_shard->get_view(shard_did);
+			serialised = doc->serialise();
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2580,8 +2571,8 @@ Document::get_value(Xapian::valueno slot)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did);
-			value = doc.get_value(slot);
+			auto doc = lk_shard->get_view(shard_did);
+			value = doc->value(slot);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2632,8 +2623,8 @@ Document::get_data()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did);
-			data = doc.get_data();
+			auto doc = lk_shard->get_view(shard_did);
+			data = doc->data();
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2682,7 +2673,7 @@ Document::validate()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			lk_shard->get_document(shard_did);
+			lk_shard->get_view(shard_did);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2733,30 +2724,26 @@ Document::get_terms()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did);
-			const auto it_e = doc.termlist_end();
-			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-				auto full_term = *it;
-				Split<std::string_view> term_split(full_term, '.');
+			auto doc = lk_shard->get_view(shard_did);
+			doc->term_details([&](const engine::TermDetail& detail) {
+				Split<std::string_view> term_split(detail.term, '.');
 				auto* term_ptr = &terms;
 				for (const auto& term_part : term_split) {
 					term_ptr = &term_ptr->get(term_part);
 				}
 				auto& term = *term_ptr;
-				term[RESPONSE_WDF] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
-				try {
-					auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
-					term[RESPONSE_TERM_FREQ] = _term_freq;
-				} catch (const Xapian::InvalidOperationError&) { }  // Iterator has moved, and does not support random access or doc is not associated with a database.
-				if (it.positionlist_count() != 0u) {
+				term[RESPONSE_WDF] = detail.wdf;  // The within-document-frequency of the current term in the current document.
+				if (detail.termfreq) {
+					term[RESPONSE_TERM_FREQ] = *detail.termfreq;  // The number of documents which this term indexes.
+				}
+				if (!detail.positions.empty()) {
 					auto& term_pos = term[RESPONSE_POS];
-					term_pos.reserve(it.positionlist_count());
-					const auto pit_e = it.positionlist_end();
-					for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-						term_pos.push_back(*pit);
+					term_pos.reserve(detail.positions.size());
+					for (auto pos : detail.positions) {
+						term_pos.push_back(pos);
 					}
 				}
-			}
+			});
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2807,12 +2794,10 @@ Document::get_values()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did);
-			values.reserve(doc.values_count());
-			const auto iv_e = doc.values_end();
-			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-				values[std::to_string(iv.get_valueno())] = *iv;
-			}
+			auto doc = lk_shard->get_view(shard_did);
+			doc->values([&](engine::valueno slot, std::string_view value) {
+				values[std::to_string(slot)] = value;
+			});
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2913,23 +2898,20 @@ Document::hash()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did);
+			auto doc = lk_shard->get_view(shard_did);
 			// Add hash of values
-			const auto iv_e = doc.values_end();
-			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-				hash_value ^= xxh64::hash(*iv) * iv.get_valueno();
-			}
+			doc->values([&](engine::valueno slot, std::string_view value) {
+				hash_value ^= xxh64::hash(value) * slot;
+			});
 			// Add hash of terms
-			const auto it_e = doc.termlist_end();
-			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-				hash_value ^= xxh64::hash(*it) * it.get_wdf();
-				const auto pit_e = it.positionlist_end();
-				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-					hash_value ^= *pit;
+			doc->term_details([&](const engine::TermDetail& detail) {
+				hash_value ^= xxh64::hash(detail.term) * detail.wdf;
+				for (auto pos : detail.positions) {
+					hash_value ^= pos;
 				}
-			}
+			});
 			// Add hash of data
-			hash_value ^= xxh64::hash(doc.get_data());
+			hash_value ^= xxh64::hash(doc->data());
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }

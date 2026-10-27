@@ -132,7 +132,7 @@ DatabaseWAL::DatabaseWAL(Shard* shard)
 	  _revision(0),
 	  _shard(shard)
 {
-	_uuid = UUID(_shard->db()->get_uuid());
+	_uuid = UUID(_shard->engine().uuid());
 	_uuid_le = UUID(_uuid.get_bytes(), true);
 }
 
@@ -155,7 +155,7 @@ Xapian::rev
 DatabaseWAL::get_revision() const
 {
 	if (_shard) {
-		return _shard->db()->get_revision();
+		return _shard->engine().revision();
 	} else {
 		return _revision;
 	}
@@ -516,7 +516,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 		THROW(Error, "Database is not defined");
 	}
 
-	auto db_revision = _shard->db()->get_revision();
+	auto db_revision = _shard->engine().revision();
 
 	const char *p = line.data();
 	const char *p_end = p + line.size();
