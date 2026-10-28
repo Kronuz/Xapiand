@@ -28,8 +28,8 @@ search; docid tie-break; the default node's five shards searched as one index.
 ## Done
 
 - Xapiand:90cfd9775 the search, `Shard::pin`, the dispatcher, the tests; Xapiand:544b0ecb0 spies and the
-  `harness/strata_search_check.sh` screen; Xapiand:e4e29fb16 the append fix and the key-prefix function; the last
-  commit holds this ledger and the harness script.
+  `harness/strata_search_check.sh` screen; Xapiand:e4e29fb16 the append fix and the key-prefix function;
+  Xapiand:1791c7961 flat scorers for append runs (S3's stack-overflow finding); the last commit holds this ledger.
 - **Spies pulled forward.** The server gives every body search an `AggregationMatchSpy` and reports its
   `_doc_count`, so refusing spies answered 5 of 96 docs-suite searches. The spy now sees each match with its id
   in its shard, weight and stored data; values read empty (P1) and term lists are refused (P2), as a strata
@@ -37,7 +37,7 @@ search; docid tie-break; the default node's five shards searched as one index.
 - **Bug found by the server, not the unit tests.** The server builds every query as appends onto an empty query
   and the first version joined that empty side as "matches nothing": no search found anything. Fixed in
   Xapiand:e4e29fb16; test `test_append`; the mutant that restores the old join is caught by 93 checks.
-- **Unit test** `tests/test_engine_search_strata.cc` (227,719 checks, passes): one random corpus on a Xapian and
+- **Unit test** `tests/test_engine_search_strata.cc` (227,724 checks, passes): one random corpus on a Xapian and
   a strata index (1, 2, 3 and 5 shards, several commits so several segments, boolean weightless terms, positions);
   random trees of every supported node (900+ queries) plus directed phrase/near/append/spy/delete/replace/refusal/
   deep-query/20,000-append/concurrency cases. Documents, estimate, rank and weights of the strata engine are
@@ -45,8 +45,15 @@ search; docid tie-break; the default node's five shards searched as one index.
 - **Revert checks / mutants** (`.scratch/mutants.py`, each caught): interleave (2,490 checks fail), FILTER weighs
   (308), descending ignored (200), deleted documents visible (5), pruning drops ties (141), no refresh before search
   (6), AND_NOT as AND (2,879), estimate skipped (9,805), local statistics (crash: a term outside the snapshot),
-  OR needs both (811), PHRASE as NEAR (2,857), append joins nothing = the fix reverted (93), spy sees nothing (2),
-  rank offset (101,061), first ignored (1,632).
+  OR needs both (812), PHRASE as NEAR (2,857), append joins nothing = the fix reverted (93), spy sees nothing (2),
+  rank offset (101,061), first ignored (1,632). Rerun on the final code: all caught.
+- **Sanitizers.** ASan+UBSan Debug build, `test_engine_search_strata` with `NO_XAPIAN_COMPARE=1`: 150,016 checks, no
+  report (chains, concurrency, spies, deletes included); `engine_strata` 8,081 clean. With the old nested append
+  scorers the same run dies with `stack-overflow` (S3's finding, regression test `test_long_chains`). Xapian's own
+  matcher asserts (Debug) and use-after-frees (ASan) on some of the random shapes, hence `NO_XAPIAN_COMPARE`; the
+  Xapian comparison runs in the Release build. **Not run:** the server under the ASan build (rapidjson's
+  pointer-overflow UBSan report aborts it on the first response, both engines; the repository's ignore list
+  needs a recompile) and ThreadSanitizer (T10).
 - **Xapian engine unchanged**: `test_engine_search` 4,417, `engine_census`, `engine_strata` 8,081, `engine_read`,
   `engine_shard` pass. The docs suite on the Xapian engine is 576 of 576 assertions.
 - **Docs suite on a strata-backed index** (`.scratch/e2e.sh`, newman 6, one node per engine, 339 requests, 576
@@ -90,6 +97,13 @@ search; docid tie-break; the default node's five shards searched as one index.
   replaces it with a snapshot that outlives the lock.
 - No fuzz target: this change adds no decoder or parser; it reads the in-memory `Query`. The depth guard and
   a 20,000-append chain are tested.
+
+## From S3's note
+
+1. The append bug: already fixed here (Xapiand:e4e29fb16, same rule as Xapiand:7b5a62fdf; not cherry-picked, the
+   two will conflict textually, resolve by keeping this branch's version). 2. Iterative destruction: the query
+   tree already freed iteratively; the scorer tree is now flat per run (above). 3. `SpyView` is minimal (id,
+   data, version; values empty): S3's `SegmentDocView` replaces it.
 
 ## Next
 

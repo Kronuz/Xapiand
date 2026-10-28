@@ -225,7 +225,7 @@ struct Builder {
 
 using Scorer = p::scorer_ptr;
 
-// op applied to two scorers, with a null scorer matching nothing.
+// op applied to two scorers, with a null scorer matching nothing (AND and OR runs go through nary()).
 Scorer
 join(Op op, Scorer left, Scorer right)
 {
@@ -238,15 +238,6 @@ join(Op op, Scorer left, Scorer right)
 			children.push_back(std::move(left));
 			children.push_back(std::move(right));
 			return std::make_unique<p::conjunction_scorer>(std::move(children));
-		}
-		case Op::OR: {
-			if (!left || !right) {
-				return left ? std::move(left) : std::move(right);
-			}
-			std::vector<Scorer> children;
-			children.push_back(std::move(left));
-			children.push_back(std::move(right));
-			return std::make_unique<p::disjunction_scorer>(std::move(children));
 		}
 		case Op::AND_NOT:
 			if (!left || !right) {
