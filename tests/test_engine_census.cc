@@ -101,11 +101,6 @@ public:
 
 void test_query_nodes() {
 	census::reset("");
-	engine::TextConfig config;
-	config.prefix = "title.";
-	config.flags = engine::text::PHRASE | engine::text::PARTIAL;
-	config.stem = engine::Stem::all;
-	config.stop_language = "en";
 	const auto query = Query::combine(Op::AND, {
 		Query::term("a"),
 		Query::term("b", 2, 4),
@@ -114,12 +109,11 @@ void test_query_nodes() {
 		Query::wildcard("ab*", 10, engine::Expansion::first, engine::PATTERN_MULTI),
 		Query::edit_distance("abc", 5, engine::Expansion::error, Op::OR, 2, 1),
 		Query::source(std::make_unique<Source>()),
-		Query::text("hello world", config),
 	});
 	census::query(query);
 	const auto counts = census::snapshot();
 	CHECK_EQ(get(counts, "query.prepared"), 1u);
-	CHECK_EQ(get(counts, "query.nodes"), 12u);
+	CHECK_EQ(get(counts, "query.nodes"), 11u);
 	CHECK_EQ(get(counts, "query.kind.term"), 4u);
 	CHECK_EQ(get(counts, "query.kind.match_all"), 1u);
 	CHECK_EQ(get(counts, "query.kind.combine"), 2u);
@@ -135,11 +129,6 @@ void test_query_nodes() {
 	CHECK_EQ(get(counts, "query.edit_distance.distance.2"), 1u);
 	CHECK_EQ(get(counts, "source.TestSource"), 1u);
 	CHECK_EQ(get(counts, "source.max_weight"), 1u);
-	CHECK_EQ(get(counts, "query.text.flag.PHRASE"), 1u);
-	CHECK_EQ(get(counts, "query.text.flag.PARTIAL"), 1u);
-	CHECK_EQ(get(counts, "query.text.flag.FUZZY"), 0u);
-	CHECK_EQ(get(counts, "query.text.stem.all"), 1u);
-	CHECK_EQ(get(counts, "query.text.stop"), 1u);
 }
 
 void test_key_prefix_check() {

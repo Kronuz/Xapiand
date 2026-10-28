@@ -26,6 +26,8 @@
 
 #include "test_harness.h"
 
+#include <cstdlib>
+
 #include <cstdint>
 #include <pthread.h>
 #include <set>
@@ -35,6 +37,8 @@
 #include "engine/callbacks.h"
 #include "engine/error.h"
 #include "engine/query.h"
+#include "engine/text.h"
+#include "exception_engine.h"
 #include "engine/xapian/callbacks.h"
 #include "engine/xapian/query.h"
 #include "length.h"
@@ -47,6 +51,9 @@
 #include "engine/xapian/xapian.h"
 
 namespace {
+
+// The stop words are read from the source tree.
+const int data_path = (::setenv("XAPIAND_DATA_PATH", XAPIAND_SOURCE_DIR, 1), 0);
 
 using engine::Op;
 using engine::Query;
@@ -367,14 +374,14 @@ static void test_random_trees() {
 	CHECK_TRUE(empties > 100 && empties < 1900);
 }
 
-// append skips an accumulated query that matches nothing only once the text has been read.
+// A text without words reads as a query that matches nothing; append skips it.
 static void test_append() {
 	engine::TextConfig config;
 	config.prefix = "XT";
 	config.flags = engine::text::PHRASE;
-	auto stops = Query::text("the", config);
+	auto stops = engine::parse_text("", config);
 	auto word = Query::term("w");
-	CHECK_FALSE(stops.empty());
+	CHECK_TRUE(stops.empty());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, Query(), word)).get_description(), Xapian::Query("w").get_description());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, word, Query())).get_description(),
 		Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("w"), Xapian::Query()).get_description());
@@ -453,20 +460,20 @@ static void test_text() {
 		}
 		const bool set_op = c.op != Op::INVALID;
 		auto expected = parse(c.text, set_op ? xop(c.op) : Xapian::Query::OP_OR, set_op, c.stop, c.stem, strategy, xflags, "XTfield");
-		auto got = to_xapian(Query::text(c.text, config));
+		auto got = to_xapian(engine::parse_text(c.text, config));
 		CHECK_EQ(got.get_description(), expected.get_description());
 		CHECK_FALSE(got.empty() && !expected.empty());
 	}
 
-	// Text the parser rejects raises the Xapian error, as the query language did before.
+	// Text the parser rejects raises QueryParserError, an engine syntax error.
 	engine::TextConfig bad;
 	bad.prefix = "XT";
 	bad.flags = engine::text::BOOLEAN | engine::text::PHRASE;
 	bool raised = false;
 	try {
-		to_xapian(Query::text("AND AND", bad));
-	} catch (const Xapian::QueryParserError&) {
-		raised = true;
+		engine::parse_text("AND AND", bad);
+	} catch (const QueryParserError& exc) {
+		raised = exc.kind == engine::errc::syntax;
 	}
 	CHECK_TRUE(raised);
 }
@@ -781,14 +788,14 @@ static void test_fuzzy_limit() {
 	config.fuzzy_max_expansion = 2;
 	bool raised = false;
 	try {
-		run(db, to_xapian(Query::text("alice~", config)));
+		run(db, to_xapian(engine::parse_text("alice~", config)));
 	} catch (const Xapian::WildcardError&) {
 		raised = true;
 	}
 	CHECK_TRUE(raised);
 
 	config.fuzzy_max_expansion = 0;
-	CHECK_EQ(run(db, to_xapian(Query::text("alice~", config))).size(), 5U);
+	CHECK_EQ(run(db, to_xapian(engine::parse_text("alice~", config))).size(), 5U);
 }
 
 // A binary combine and the same operands as a list translate to the same query, with the same

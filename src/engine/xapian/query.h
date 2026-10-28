@@ -30,8 +30,7 @@ namespace engine::xapian {
 
 Xapian::Query::op to_xapian(Op op);
 
-// The Xapian query with the same shape. A text node is read by Xapian::QueryParser, which
-// throws Xapian::QueryParserError on text it cannot parse.
+// The Xapian query with the same shape.
 Xapian::Query to_xapian(const Query& query);
 
 }  // namespace engine::xapian

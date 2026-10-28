@@ -188,17 +188,6 @@ Query::source(std::unique_ptr<PostingSource> source)
 }
 
 
-Query
-Query::text(std::string text, TextConfig config)
-{
-	auto node = std::make_shared<QueryNode>();
-	node->kind = QueryKind::text;
-	node->str = std::move(text);
-	node->config = std::move(config);
-	return Query(std::move(node));
-}
-
-
 bool
 Query::empty() const noexcept
 {
@@ -239,8 +228,6 @@ Query::description() const
 			return "edit_distance(" + n.str + ", " + std::to_string(n.distance) + ")";
 		case QueryKind::source:
 			return n.src->description();
-		case QueryKind::text:
-			return "text(" + n.config.prefix + ": " + n.str + ")";
 	}
 	return "?";
 }

@@ -32,6 +32,8 @@
 #include "cast.h"                                 // for Cast
 #include "database/utils.h"                       // for prefixed
 #include "engine/query.h"                         // for engine::Query
+#include "engine/text.h"                          // for engine::parse_text, engine::TextConfig
+#include "exception_engine.h"                     // for QueryParserError, TermsOnlyRangeError
 #include "xapiand_exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
 #include "geospatial/geospatial.h"                // for GeoSpatial
@@ -840,7 +842,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			config.partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
 			config.fuzzy_max_expansion = DEFAULT_FUZZY_MAX_EXPANSION;
 
-			return engine::Query::text(std::string(serialised_term), std::move(config));
+			return engine::parse_text(serialised_term, config);
 		}
 
 		default:

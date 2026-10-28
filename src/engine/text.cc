@@ -20,25 +20,23 @@
  * THE SOFTWARE.
  */
 
-#include "engine/xapian/text_parser.h"
+#include "engine/text.h"
 
-#include <cstdio>                  // for std::fputs
-#include <cstdlib>                 // for std::getenv
-#include <cstring>                 // for std::strcmp
+#include <cstdint>                 // for std::uint32_t
 #include <new>                     // for std::bad_alloc
-#include <exception>               // for std::exception
+#include <optional>                // for std::optional
 #include <unordered_map>           // for std::unordered_map
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
 #include "analysis.hh"             // for analysis::stem_strategy
-#include "engine/xapian/query.h"   // for to_xapian
+#include "exception_engine.h"        // for QueryParserError, InvalidTextConfigError
 #include "queryparser.hh"          // for queryparser::parse
 #include "snowball.hh"             // for snowball::stemmer
 #include "stopper.h"               // for getStopWords
 
 
-namespace engine::xapian {
+namespace engine {
 
 namespace {
 
@@ -241,26 +239,12 @@ convert(const queryparser::query& tree)
 }  // namespace
 
 
-bool
-text_parser_enabled()
+Query
+parse_text(std::string_view text, const TextConfig& config, std::string* description)
 {
-	static const bool enabled = [] {
-		const char* value = std::getenv("XAPIAND_QUERYPARSER");
-		return value != nullptr && std::strcmp(value, "1") == 0;
-	}();
-	return enabled;
-}
-
-
-std::optional<ParsedText>
-parse_text_queryparser(std::string_view query_text, const TextConfig& config)
-{
-	if (config.flags & text::WORD_BREAKS) {
-		return std::nullopt;
-	}
 	const auto op = default_op(config.default_op);
 	if (!op) {
-		return std::nullopt;
+		throw InvalidTextConfigError(__func__, __FILE__, __LINE__, "InvalidTextConfigError", "Unsupported default operator for text: {}", to_string(config.default_op));
 	}
 	queryparser::config cfg;
 	cfg.flags = parser_flags(config.flags);
@@ -271,128 +255,28 @@ parse_text_queryparser(std::string_view query_text, const TextConfig& config)
 	if (!config.stem_language.empty()) {
 		cfg.stemmer = stemmer_for(config.stem_language);
 		if (cfg.stemmer == nullptr) {
-			return std::nullopt;
+			throw InvalidTextConfigError(__func__, __FILE__, __LINE__, "InvalidTextConfigError", "Language code {} unknown", config.stem_language);
 		}
 		cfg.stem = stem_strategy(config.stem);
 	} else {
 		cfg.stem = analysis::stem_strategy::none;
 	}
 	cfg.default_prefix = config.prefix;
-	cfg.max_word_length = std::size_t(1) << 20;  // Xapian keeps long words; the index side bounds them
+	cfg.max_word_length = std::size_t(1) << 20;  // long words are kept; the index side bounds them
 	cfg.partial_expansion = { config.partial_max_expansion, queryparser::expansion_limit::most_frequent };
 	cfg.fuzzy_expansion = { config.fuzzy_max_expansion, queryparser::expansion_limit::error };
 
-	auto parsed = queryparser::parse(query_text, cfg);
-	ParsedText result;
+	auto parsed = queryparser::parse(text, cfg);
 	if (parsed.err) {
-		result.failed = true;
-		result.unimplemented = parsed.err->kind == queryparser::error_kind::unsupported;
-		result.out_of_memory = parsed.err->kind == queryparser::error_kind::out_of_memory;
-		result.error = std::move(parsed.err->message);
-		return result;
-	}
-#ifdef XAPIAND_QP_AB
-	result.description = parsed.tree.describe();
-#endif
-	result.query = convert(parsed.tree);
-	return result;
-}
-
-
-void
-throw_text_error(const ParsedText& parsed)
-{
-	if (parsed.out_of_memory) {
-		throw std::bad_alloc();
-	}
-	if (parsed.unimplemented) {
-		throw Xapian::UnimplementedError(parsed.error);
-	}
-	throw Xapian::QueryParserError(parsed.error);
-}
-
-
-#ifdef XAPIAND_QP_AB
-
-namespace {
-
-void
-json_string(std::string& out, std::string_view s)
-{
-	out += '"';
-	for (unsigned char c : s) {
-		switch (c) {
-			case '"': out += "\\\""; break;
-			case '\\': out += "\\\\"; break;
-			case '\n': out += "\\n"; break;
-			case '\r': out += "\\r"; break;
-			case '\t': out += "\\t"; break;
-			default:
-				if (c < 0x20 || c == 0x7f) {
-					static const char hex[] = "0123456789abcdef";
-					out += "\\u00";
-					out += hex[c >> 4];
-					out += hex[c & 15];
-				} else {
-					out += static_cast<char>(c);
-				}
+		if (parsed.err->kind == queryparser::error_kind::out_of_memory) {
+			throw std::bad_alloc();
 		}
+		throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "{}", parsed.err->message);
 	}
-	out += '"';
+	if (description != nullptr) {
+		*description = parsed.tree.describe();
+	}
+	return convert(parsed.tree);
 }
 
-}  // namespace
-
-
-void
-text_parser_compare(std::string_view query_text, const TextConfig& config, const Xapian::Query* xapian, const std::string* xapian_error)
-{
-	try {
-		const char* verdict = "ok";
-		std::string want, got, adapted;
-		const auto parsed = parse_text_queryparser(query_text, config);
-		if (!parsed) {
-			verdict = "skip";
-		} else {
-			want = xapian_error != nullptr ? "ERROR " + *xapian_error : xapian->get_description();
-			if (parsed->failed) {
-				got = std::string("ERROR ") + (parsed->unimplemented ? "UnimplementedError: " : "QueryParserError: ") + parsed->error;
-				adapted = got;
-			} else {
-				got = parsed->description;
-				adapted = to_xapian(parsed->query).get_description();
-			}
-			if (got != want) {
-				verdict = adapted == want ? "describe" : "parser";
-			} else if (adapted != want) {
-				verdict = "adapter";
-			}
-		}
-		std::string line = "QPAB {\"r\":\"";
-		line += verdict;
-		line += "\",\"q\":";
-		json_string(line, query_text);
-		line += ",\"field\":";
-		json_string(line, config.prefix);
-		line += ",\"flags\":" + std::to_string(config.flags) + ",\"op\":\"" + to_string(config.default_op) + "\",\"stem\":" + std::to_string(static_cast<int>(config.stem)) + ",\"stem_language\":";
-		json_string(line, config.stem_language);
-		line += ",\"stop_language\":";
-		json_string(line, config.stop_language);
-		if (std::strcmp(verdict, "ok") != 0) {
-			line += ",\"xapian\":";
-			json_string(line, want);
-			line += ",\"queryparser\":";
-			json_string(line, got);
-			line += ",\"adapted\":";
-			json_string(line, adapted);
-		}
-		line += "}\n";
-		std::fputs(line.c_str(), stderr);
-	} catch (const std::exception&) {
-		std::fputs("QPAB {\"r\":\"exception\"}\n", stderr);
-	}
-}
-
-#endif
-
-}  // namespace engine::xapian
+}  // namespace engine

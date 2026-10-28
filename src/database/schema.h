@@ -39,7 +39,7 @@
 #include "analysis.hh"                            // for analysis::stem_strategy, analysis::stop_strategy
 #include "database/utils.h"
 #include "engine/document.h"                       // for engine::Document
-#include "engine/query.h"                          // for engine::Stem
+#include "engine/text.h"                           // for engine::Stem
 #include "enum.h"                                 // for ENUM_CLASS
 #include "htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL

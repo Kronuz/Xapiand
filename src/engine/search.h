@@ -40,8 +40,8 @@
 
 namespace engine {
 
-// A query as the engine reads it, once, before any shard is chosen. A text node is analysed here,
-// so a query that analyses to nothing (only stop words) is known to match nothing without a shard.
+// A query as the engine reads it, once, before any shard is chosen. The host has already read its
+// text, so a query that has no words is known to match nothing without a shard.
 class PreparedQuery {
 public:
 	virtual ~PreparedQuery() = default;

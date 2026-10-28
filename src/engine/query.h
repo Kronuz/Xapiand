@@ -89,41 +89,6 @@ enum class Expansion : std::uint8_t {
 inline constexpr unsigned PATTERN_SINGLE = 1;   // '?' matches one character
 inline constexpr unsigned PATTERN_MULTI  = 2;   // '*' matches any run anywhere in the pattern
 
-// Flags for the text of a field: how its query string is read.
-namespace text {
-inline constexpr unsigned BOOLEAN        = 1U << 0;   // AND, OR, NOT, XOR in the text
-inline constexpr unsigned PHRASE         = 1U << 1;   // "quoted phrases"
-inline constexpr unsigned LOVEHATE       = 1U << 2;   // +required and -excluded words
-inline constexpr unsigned WILDCARD       = 1U << 3;   // trailing '*'
-inline constexpr unsigned WILDCARD_SINGLE = 1U << 4;  // '?' inside a pattern
-inline constexpr unsigned WILDCARD_MULTI = 1U << 5;   // '*' inside a pattern
-inline constexpr unsigned PARTIAL        = 1U << 6;   // the last word may be incomplete
-inline constexpr unsigned FUZZY          = 1U << 7;   // words ending in '~' match within an edit distance
-inline constexpr unsigned CJK_NGRAM      = 1U << 8;   // CJK text as n-grams
-inline constexpr unsigned WORD_BREAKS    = 1U << 9;   // CJK text split with word-break rules
-}  // namespace text
-
-// Which words of a query text are stemmed.
-enum class Stem : std::uint8_t {
-	none,
-	some,           // not words that are capitalized, or follow a capitalized one
-	all,
-	all_z,          // all, with the stem marked with a 'Z' prefix
-};
-
-// How the text node of one field is analysed. An engine reads the text with its own query parser.
-struct TextConfig {
-	std::string prefix;                     // the field's term prefix
-	Op default_op = Op::INVALID;            // joins words that have no operator; INVALID keeps the parser's default
-	unsigned flags = 0;                     // text:: flags
-	std::string stop_language;              // stop words language; empty for none
-	std::string stem_language;              // stemmer language; empty for none
-	Stem stem = Stem::none;
-	termcount partial_max_expansion = 0;    // terms a partial word expands to (the most frequent)
-	termcount fuzzy_max_expansion = 0;      // terms a fuzzy word expands to (an error when exceeded)
-};
-
-
 struct QueryNode;
 
 // A query, as a value: an immutable tree that shares its subtrees when copied. Each factory
@@ -145,7 +110,7 @@ public:
 	static Query combine(Op op, std::vector<Query> subqueries, termcount parameter = 0);
 
 	// next when the accumulated query matches nothing, else op applied to both. The engine decides
-	// that at search time, so a text node that analyses to nothing (only stop words) is skipped.
+	// that at search time, so a text that analyses to nothing (only stop words) is skipped.
 	static Query append(Op op, Query accumulated, Query next);
 
 	static Query scale(Query subquery, double factor);
@@ -159,12 +124,9 @@ public:
 	// Documents a value source accepts. The query keeps the source and hands each engine a clone.
 	static Query source(std::unique_ptr<PostingSource> source);
 
-	// Free text of one field, read by the engine's query parser.
-	static Query text(std::string text, TextConfig config);
-
 	// True for a query that matches nothing by its structure, with the simplifications Xapian makes:
 	// an AND with a subquery that matches nothing matches nothing, an OR of such subqueries too,
-	// and so on. A text node is never empty here: the engine's parser decides what it analyses to.
+	// and so on.
 	bool empty() const noexcept;
 
 	const QueryNode* node() const noexcept {
@@ -191,7 +153,6 @@ enum class QueryKind : std::uint8_t {
 	wildcard,
 	edit_distance,
 	source,
-	text,
 };
 
 // The fields each kind uses are named on its line; the rest are unset.
@@ -200,7 +161,7 @@ struct QueryNode {
 	~QueryNode();
 
 	QueryKind kind = QueryKind::term;
-	std::string str;                              // term, wildcard and edit_distance: the term or pattern; text: the text
+	std::string str;                              // term, wildcard and edit_distance: the term or pattern
 	termcount wqf = 1;                            // term
 	termpos pos = 0;                              // term
 	Op op = Op::INVALID;                          // combine, append: the operator; wildcard, edit_distance: the combiner
@@ -212,7 +173,6 @@ struct QueryNode {
 	unsigned distance = 0;                        // edit_distance
 	std::size_t prefix_length = 0;                // edit_distance
 	std::shared_ptr<const PostingSource> src;     // source
-	TextConfig config;                            // text
 	bool binary = false;                          // combine: built from two operands
 	bool matches_nothing = false;                 // combine, append, scale: simplified to nothing
 };

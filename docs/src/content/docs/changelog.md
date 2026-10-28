@@ -28,11 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A numeric `_id`'s accuracy terms lead with `A` instead of `Q`,** so the id term is the only
   term of a document that leads with `Q`. Range queries over `_id` use the new terms, so an
   index with a numeric `_id` written before this change needs reindexing for them.
+- **Text queries are read by the Kronuz `queryparser` library** instead of Xapian's query parser,
+  on the host and once per query. The grammar is the same for the settings Xapiand uses, with
+  two recorded differences: a lone exclusion such as `-a` is a syntax error (it used to be read as
+  the word `a`), and the window of `+a b -c d` does not change because an exclusion stands between
+  its words. `cjk_words` fields no longer split CJK text in queries.
 - **Every library is pinned at its current release.** Each Kronuz library now pins its own
   dependencies, so Xapiand no longer pins the libraries its libraries fetch.
 
 ### Fixed
 
+- **A `_near`, `_phrase` or `_elite_set` query over a boolean expression is a client error.**
+  `{"_near": "(barack OR michelle) AND obama"}` corrupted the heap in the vendored parser; the
+  text is now read without recursion, and an operator that cannot take its operand answers
+  400 instead of 500.
 - **Numeric range queries return every matching document.** The term walk behind a range over
   an integer, positive, floating, time or timedelta field skipped whole buckets (for example
   the 2e8 to 3e8 bucket, a range's own aligned start such as `[0, 0]`, and the coarse buckets

@@ -33,6 +33,7 @@
 #include "datetime.h"                             // for timestamp
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 #include "engine/error.h"                       // for engine::Error
+#include "exception_engine.h"                   // for QueryParserError, TermsOnlyRangeError
 #include "xapiand_exception.h"                            // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange

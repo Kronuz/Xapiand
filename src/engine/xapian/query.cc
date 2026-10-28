@@ -27,9 +27,6 @@
 
 #include "engine/callbacks.h"      // for PostingSource
 #include "engine/xapian/callbacks.h"  // for PostingSourceAdapter
-#include "engine/xapian/text_parser.h"  // for text_parser_enabled
-#include "snowball_stem.h"         // for makeStem
-#include "stopper.h"               // for getStopper
 
 
 namespace engine::xapian {
@@ -52,93 +49,6 @@ wildcard_flags(Expansion limit, unsigned pattern_flags)
 		flags |= Xapian::Query::WILDCARD_PATTERN_MULTI;
 	}
 	return flags;
-}
-
-
-unsigned
-parser_flags(unsigned flags)
-{
-	struct Pair { unsigned engine; unsigned xapian; };
-	static constexpr Pair pairs[] = {
-		{ text::BOOLEAN, Xapian::QueryParser::FLAG_BOOLEAN },
-		{ text::PHRASE, Xapian::QueryParser::FLAG_PHRASE },
-		{ text::LOVEHATE, Xapian::QueryParser::FLAG_LOVEHATE },
-		{ text::WILDCARD, Xapian::QueryParser::FLAG_WILDCARD },
-		{ text::WILDCARD_SINGLE, Xapian::QueryParser::FLAG_WILDCARD_SINGLE },
-		{ text::WILDCARD_MULTI, Xapian::QueryParser::FLAG_WILDCARD_MULTI },
-		{ text::PARTIAL, Xapian::QueryParser::FLAG_PARTIAL },
-		{ text::FUZZY, Xapian::QueryParser::FLAG_FUZZY },
-		{ text::CJK_NGRAM, Xapian::QueryParser::FLAG_CJK_NGRAM },
-		{ text::WORD_BREAKS, Xapian::QueryParser::FLAG_WORD_BREAKS },
-	};
-	unsigned result = 0;
-	for (const auto& pair : pairs) {
-		if (flags & pair.engine) {
-			result |= pair.xapian;
-		}
-	}
-	return result;
-}
-
-
-Xapian::QueryParser::stem_strategy
-stem_strategy(Stem stem)
-{
-	switch (stem) {
-		case Stem::none: return Xapian::QueryParser::STEM_NONE;
-		case Stem::some: return Xapian::QueryParser::STEM_SOME;
-		case Stem::all: return Xapian::QueryParser::STEM_ALL;
-		case Stem::all_z: return Xapian::QueryParser::STEM_ALL_Z;
-	}
-	return Xapian::QueryParser::STEM_NONE;
-}
-
-
-Xapian::Query
-parse_text_xapian(const QueryNode& node)
-{
-	const auto& config = node.config;
-	Xapian::QueryParser parser;
-	if (config.default_op != Op::INVALID) {
-		parser.set_default_op(to_xapian(config.default_op));
-	}
-	if (!config.stop_language.empty()) {
-		parser.set_stopper(getStopper(config.stop_language).get());
-	}
-	if (!config.stem_language.empty()) {
-		parser.set_stemmer(makeStem(config.stem_language));
-		parser.set_stemming_strategy(stem_strategy(config.stem));
-	}
-	parser.set_max_expansion(config.partial_max_expansion, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::QueryParser::FLAG_PARTIAL);
-	parser.set_max_expansion(config.fuzzy_max_expansion, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::QueryParser::FLAG_FUZZY);
-	return parser.parse_query(node.str, parser_flags(config.flags), config.prefix);
-}
-
-
-Xapian::Query
-parse_text(const QueryNode& node)
-{
-	if (text_parser_enabled()) {
-		if (auto parsed = parse_text_queryparser(node.str, node.config)) {
-			if (parsed->failed) {
-				throw_text_error(*parsed);
-			}
-			return to_xapian(parsed->query);
-		}
-	}
-#ifdef XAPIAND_QP_AB
-	try {
-		auto query = parse_text_xapian(node);
-		text_parser_compare(node.str, node.config, &query, nullptr);
-		return query;
-	} catch (const Xapian::Error& exc) {
-		const auto message = exc.get_type() + std::string(": ") + exc.get_msg();
-		text_parser_compare(node.str, node.config, nullptr, &message);
-		throw;
-	}
-#else
-	return parse_text_xapian(node);
-#endif
 }
 
 }  // namespace
@@ -227,8 +137,6 @@ to_xapian(const Query& query)
 			return Xapian::Query(adapter->release());
 		}
 
-		case QueryKind::text:
-			return parse_text(*node);
 	}
 	return Xapian::Query();
 }
