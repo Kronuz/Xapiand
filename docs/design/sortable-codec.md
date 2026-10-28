@@ -558,3 +558,8 @@ refuse a new shard; the release notes say so and the upgrade is one-way. Q6 (ame
 rely on versions for optimistic concurrency; only the dump-and-restore path may restart them, and
 the release notes say which path does what. Q7 (accept): new nodes refuse old ones through an
 additive `Kronuz/cluster` change, coordinated with Detent's agent before it lands.
+
+**Lead ruling on N1 (2026-10-27).** Keep the window E = -60..63: doubles below 2^-60 cost 9.93 B
+against the old codec's 7.98 B (+24%, the 3-byte escape), measured by the re-check; such values
+are rare in indexed data (latencies and ratios sit far above 2^-60), and widening the window would
+cost a byte elsewhere. D6 states the number.
