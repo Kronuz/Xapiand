@@ -6,7 +6,7 @@ Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S2, G5, 
 
 ## State
 
-Built and proven; waiting for the code review. Local only: not pushed, no CI run (the lead watches CI).
+Built and proven; round 2 (P4 collectors, concurrency, mutants) done; waiting for the code review. Local only: not pushed, no CI run (the lead watches CI).
 
 ## Done criteria (design row S2)
 
@@ -15,8 +15,9 @@ search; docid tie-break; the default node's five shards searched as one index.
 
 1. `engine::search` dispatches on the shards' engine; a search over indexes of two engines is refused (`invalid`).
 2. Terms, `match_all`, AND, OR, AND_NOT, AND_MAYBE, FILTER, SCALE_WEIGHT, NEAR and PHRASE over terms, append chains.
-3. One snapshot over every segment of every shard: Xapian's docid interleave `(did - 1) * n + shard + 1`, global
-   statistics, prospect's `bm25_xapian` weights.
+3. One `prospect::multi_snapshot` over every segment of every shard: Xapian's docid interleave `(did - 1) * n + shard + 1`,
+   global statistics, prospect's `bm25_xapian` weights; `prospect::search` collects (pruned, or exhaustive for a spy or
+   descending ids).
 4. The estimate is the exact count of live matches (G12); the write buffer is flushed before a search.
 5. Ties by docid in the requested order (ascending, descending).
 6. Refused with a client error that names it (`errc::syntax`, so the handler does not retry): sorter, collapse,
@@ -53,7 +54,7 @@ search; docid tie-break; the default node's five shards searched as one index.
   matcher asserts (Debug) and use-after-frees (ASan) on some of the random shapes, hence `NO_XAPIAN_COMPARE`; the
   Xapian comparison runs in the Release build. **Not run:** the server under the ASan build (rapidjson's
   pointer-overflow UBSan report aborts it on the first response, both engines; the repository's ignore list
-  needs a recompile) and ThreadSanitizer (T10).
+  needs a recompile) and ThreadSanitizer (T10); round 2 ran TSan on the search tests (above).
 - **Xapian engine unchanged**: `test_engine_search` 4,417, `engine_census`, `engine_strata` 8,081, `engine_read`,
   `engine_shard` pass. The docs suite on the Xapian engine is 576 of 576 assertions.
 - **Docs suite on a strata-backed index** (`.scratch/e2e.sh`, newman 6, one node per engine, 339 requests, 576
@@ -64,6 +65,33 @@ search; docid tie-break; the default node's five shards searched as one index.
 - **Query smoke** `harness/strata_search_check.sh`, five shards through the server: term, `_and`, `_or`,
   `_and_not`, `_and_maybe`, `_filter` and a second term field return the document sets Python computes, on both
   engines (GREEN). Integer fields only: a string value in the query DSL is a `text` node until S4.
+
+- **Round 2** (Xapiand:94eb1c9ab, and the refusal commit after it).
+  1. **P4 in place of the local heap.** Prospect repinned to main (prospect:d8274b7: P3 operators, P4 `shards.hh`). The
+     local `Candidate`/`Ranks` heap, the docid interleave and the counting pass are gone: `multi_snapshot` +
+     `prospect::search` (pruned for ascending ids, exhaustive for a spy or descending ids, the spy as its visitor).
+     `term_table` still serves per-segment term infos, statistics and df over `snapshot.segments()`. Unit test: 230,444
+     checks pass, worst relative weight difference 3.9e-16 (tolerance 1e-9), the same 14/7/1 Xapian disagreements.
+  2. **Concurrency.** `test_snapshot_consistency`: a writer adds a document to shard 0, 1, 2 in turn and commits every 7th
+     generation while four searchers (in order, reversed with descending ids, with a spy) search; each result must show
+     per-shard counts that existed at one moment (c0 >= c1 >= c2 >= c0 - 1, documents 1..count per shard) and the weight of
+     exactly that many documents (BM25 model). Lock order: opposite-order searchers plus the writer. TSan (Homebrew LLVM
+     23.1.2, own build dir and dependency tree, `NO_XAPIAN_COMPARE`): 152,733 checks, 0 reports. ASan+UBSan (same
+     compiler, another tree): 152,733 checks, 0 reports. Both run the whole file.
+  3. **Mutants** (each run on the committed tree, `.scratch/mutants.py`; all caught but the two below):
+     - refused shapes returning a result: sorter, collapse, similar, each cutoff alone, PHRASE window, PHRASE of
+       non-terms, operators (combine and append), wildcard, edit distance, posting source, query text, depth. The depth
+       mutant survived until a refusal test on an index with no segment was added (1 check fails now). Added to
+       `test_refusals`: posting source, edit distance, shapes under scale/append/AND_NOT.
+     - flat scorer weights (a run scaled by 0.99, a run's first child weighing 0: 655 and 597 checks fail), run operator
+       confusion (2); `test_long_chains` compares documents, weights and order with the model.
+     - spy values: weight 0 (205), interleaved id (526), wrong ordinal (195), empty data (204), seen twice (3), seen
+       nothing (3); `test_spy` pairs id, data and weight per match for three windows/orders and after a delete.
+     - snapshot pin: lock released at once, no lock, pins in request order: the snapshot test alone aborts (an engine
+       error from a search racing the writer) or deadlocks (timeout) under each. Also: shard slot (1,679), no refresh (449).
+     - Not caught by design: `strata::search`'s "shard of another engine" check, which `engine::search` makes unreachable
+       by refusing a mixed set first (neither layer alone is testable; removing both would be).
+  4. `ONLY_TEST=<name>` runs one test function of the file.
 
 ## T7 list (differences from the Xapian engine, for the lead)
 
@@ -87,14 +115,14 @@ search; docid tie-break; the default node's five shards searched as one index.
   dictionary, and `term_key_prefix()` in `src/engine/strata/search.cc` is the one function to change when
   strata's fields-and-keys redesign (strata `design/fields-and-keys`) lands. `Shard::identity()` and `Shard::pin()`
   are the other seams; `pin()` is where the snapshot is taken.
-- **Prospect pin** is `phase4/xapian-ops` (prospect:c60547f, pushed) for `scale_scorer`; re-point to main when P3
-  lands. **P4** (`phase4/host-collectors`) is not started: the multi-shard collection is this file's, a heap with
-  pruning one ulp under the k-th weight so a lower id can still win a tie; it moves to P4's collector.
+- **Prospect pin** is main, prospect:d8274b7 (P3 `operators.hh`, P4 `shards.hh`). The multi-shard collection is P4's.
 - `rethrow_translated` is repeated in `search.cc` (a copy of `shard.cc`'s) to keep this branch clear of S1's file;
   fold into one when S1 lands.
 - The refusal kind is `errc::syntax` (a client error, not retried); `not_available` would be retried five times.
-- The lock: a search holds every shard's lock for its duration (pinned in address order). T10 (concurrency)
-  replaces it with a snapshot that outlives the lock.
+- The lock: a search holds every shard's lock for its duration (pinned in address order); a search is therefore one
+  moment of the whole index (the last pin). T10 (concurrency) replaces it with a snapshot that outlives the lock.
+- Sanitizer builds: Homebrew LLVM 23 rejects rapidjson v1.1.0's `GenericStringRef::operator=` (const member); the
+  scratch build trees were patched to `= delete`, the source and pin are unchanged.
 - No fuzz target: this change adds no decoder or parser; it reads the in-memory `Query`. The depth guard and
   a 20,000-append chain are tested.
 

@@ -1135,6 +1135,9 @@ void test_snapshot_consistency_impl() {
 // Reports an engine error with its text, which the bare terminate message of an uncaught one lacks.
 template <typename F>
 void guarded(const char* name, F&& test) {
+	if (const char* only = std::getenv("ONLY_TEST"); only != nullptr && std::string(only) != name) {
+		return;
+	}
 	try {
 		test();
 	} catch (const engine::Error& error) {
