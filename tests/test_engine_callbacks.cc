@@ -533,6 +533,26 @@ void test_spy() {
 			CHECK_EQ(from_strata.ids.size(), static_cast<std::size_t>(shard_count * 60));
 			CHECK_EQ(from_strata.ids.count(1), static_cast<std::size_t>(shard_count));
 		}
+		// A spy that asks for the document's terms, term details or serialisation is refused: the strata engine keeps no term lists.
+		for (const int ask : {0, 1, 2}) {
+			struct TermsSpy final : engine::MatchSpy {
+				int ask = 0;
+				void see(const engine::DocView& doc, double) override {
+					if (ask == 0) { doc.terms("", [](std::string_view, engine::termcount) { }); }
+					if (ask == 1) { doc.term_details([](const engine::TermDetail&) { }); }
+					if (ask == 2) { (void)doc.serialise(); }
+				}
+				std::unique_ptr<engine::MatchSpy> clone() const override { return nullptr; }
+				std::string name() const override { return "TermsSpy"; }
+				std::string serialise() const override { return ""; }
+				std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return nullptr; }
+				std::string serialise_results() const override { return ""; }
+				void merge_results(std::string_view) override { }
+				std::string description() const override { return "TermsSpy"; }
+			} asking;
+			asking.ask = ask;
+			CHECK_TRUE(error_kind([&] { run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &asking; }); }) == engine::errc::syntax);
+		}
 		// A spy that throws fails the search; the next one is unaffected.
 		GroupSpy throwing;
 		throwing.throw_on = true;

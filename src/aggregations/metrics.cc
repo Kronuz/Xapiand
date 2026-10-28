@@ -23,8 +23,6 @@
 
 #include "metrics.h"
 
-#include <algorithm>               // for std::find
-
 #include "database/schema.h"       // for FieldType, required_spc_t, FieldTy...
 #include "exception.h"             // for AggregationError, MSG_AggregationE...
 #include "msgpack/object_fwd.hpp"  // for type_error
@@ -131,11 +129,9 @@ TermsHandler::values(const engine::DocView& doc) const
 	std::vector<std::string> values;
 
 	if (_from_values) {
-		// A document counts once per distinct value.
+		// A document stores each distinct value once.
 		for (const auto& value : StringList(doc.value(_slot))) {
-			if (std::find(values.begin(), values.end(), value) == values.end()) {
-				values.emplace_back(value);
-			}
+			values.emplace_back(value);
 		}
 		return values;
 	}
