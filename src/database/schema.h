@@ -363,6 +363,7 @@ struct required_spc_t {
 	prefix_t prefix;
 	engine::valueno slot;
 	flags_t flags;
+	bool field_values = true;  // the field's values are stored in its slot (set by get_slot_field)
 
 	// For GEO, DATE, DATETIME, TIME, TIMEDELTA and Numeric types.
 	std::vector<uint64_t> accuracy;

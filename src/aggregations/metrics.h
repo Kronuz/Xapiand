@@ -83,6 +83,8 @@ class TermsHandler {
 protected:
 	FieldType _type;
 	std::string _prefix;
+	engine::valueno _slot;
+	bool _from_values;
 	func_value_handle _func;
 
 public:

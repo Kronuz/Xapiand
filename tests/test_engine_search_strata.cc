@@ -365,28 +365,6 @@ bool has_optional(const Query& query) {
 	return false;
 }
 
-class SlotKey final : public engine::KeyMaker {
-public:
-	std::string key(const engine::DocView& doc) const override { return doc.value(1); }
-	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(); }
-	std::string name() const override { return "SlotKey"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(); }
-};
-
-// A value source accepting everything.
-class AnySource final : public engine::PostingSource {
-public:
-	engine::valueno slot() const override { return 1; }
-	bool accept(std::string_view) const override { return true; }
-	double weight(std::string_view) const override { return 1.0; }
-	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<AnySource>(); }
-	std::string name() const override { return "AnySource"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view) const override { return std::make_unique<AnySource>(); }
-	std::string description() const override { return "AnySource"; }
-};
-
 // Records every document it is shown.
 class CountingSpy final : public engine::MatchSpy {
 public:
@@ -881,33 +859,23 @@ void test_refusals_impl() {
 	};
 	const auto syntax = engine::errc::syntax;
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
-	SlotKey key;
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.percent_threshold = 50; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.weight_threshold = 0.1; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.nearest = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.fuzzy = engine::Similar{}; }), syntax);
-	CHECK_EQ(kind(Query::combine(Op::XOR, t("w1"), t("w2"))), syntax);
-	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), t("w2")})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::MAX, {t("w1"), t("w2")})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), t("w2")}, 1)), syntax);
+	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
+	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}, 1)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::wildcard("", "w", 10)), syntax);
 	CHECK_EQ(kind(Query::text("w1 w2", engine::TextConfig{})), syntax);
-	CHECK_EQ(kind(Query::source(std::make_unique<AnySource>())), syntax);
-	CHECK_EQ(kind(Query::edit_distance("", "w1", 10, engine::Expansion::error, Op::SYNONYM, 1, 0)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	// Refused wherever the node sits: under a scale, an append, a deep spine, an AND_NOT's right side.
-	CHECK_EQ(kind(Query::scale(Query::wildcard("", "w", 10), 2.0)), syntax);
-	CHECK_EQ(kind(Query::append(Op::XOR, t("w1"), t("w2"))), syntax);
+	// Refused wherever the node sits: under an append.
 	CHECK_EQ(kind(Query::append(Op::AND, Query::append(Op::OR, t("w1"), t("w2")), Query::text("w3", engine::TextConfig{}))), syntax);
-	CHECK_EQ(kind(Query::combine(Op::AND_NOT, t("w1"), Query::combine(Op::MAX, {t("w2"), t("w3")}))), syntax);
 	// A refusal leaves nothing behind: the same shard answers the next search.
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	// Refused even where a short-circuit would never reach the node.
-	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::wildcard("", "w", 10))), syntax);
+	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::text("w1", engine::TextConfig{}))), syntax);
 	// A search over the two engines is refused, and a query nested too deeply.
 	{
 		auto prepared = engine::prepare(t("w1"));
@@ -926,8 +894,7 @@ void test_refusals_impl() {
 	Model model_empty;
 	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
 	CHECK_EQ(error_kind([&] { search_with(strata_empty, deep, none); }), syntax);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::wildcard("", "w", 10), none); }), syntax);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }); }), syntax);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }); }), syntax);
 }
 
 // A term is looked up under its field: two fields holding the same word are found each under its own, a

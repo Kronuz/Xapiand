@@ -35,6 +35,7 @@
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
 #include <system_error>            // for std::system_error
+#include <unordered_map>           // for std::unordered_map
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
@@ -45,10 +46,13 @@
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/error.h"          // for Error, errc
+#include "engine/strata/doc_view.h"  // for SegmentDocView
+#include "engine/strata/expand.h"  // for expand
 #include "engine/strata/interim_terms.h"  // for interim::flat_term
 #include "engine/strata/keys.h"    // for keys::key_prefix
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
+#include "engine/strata/values.h"  // for values::Slot
 
 
 namespace engine::strata {
@@ -131,6 +135,32 @@ is_match_all(const QueryNode& node)
 	return node.field.empty() && node.str.empty();
 }
 
+
+bool
+is_term(const Query& query)
+{
+	const auto* leaf = query.node();
+	return leaf != nullptr && leaf->kind == QueryKind::term && !is_match_all(*leaf);
+}
+
+// Whether the operator joins two scorers (the rest take a list of terms).
+bool
+is_joining(Op op)
+{
+	switch (op) {
+		case Op::AND:
+		case Op::OR:
+		case Op::AND_NOT:
+		case Op::AND_MAYBE:
+		case Op::FILTER:
+		case Op::XOR:
+		case Op::MAX:
+			return true;
+		default:
+			return false;
+	}
+}
+
 // Refuses, before any segment is read, what the engine does not search yet, so the answer does not
 // depend on which segments a short-circuited operator reaches.
 void
@@ -148,17 +178,10 @@ validate(const Query& query, int depth)
 			return;
 		case QueryKind::combine:
 			switch (node->op) {
-				case Op::AND:
-				case Op::OR:
-				case Op::AND_NOT:
-				case Op::AND_MAYBE:
-				case Op::FILTER:
-					break;
 				case Op::PHRASE:
 				case Op::NEAR: {
 					for (const auto& sub : node->subqueries) {
-						const auto* leaf = sub.node();
-						if (leaf == nullptr || leaf->kind != QueryKind::term || is_match_all(*leaf)) {
+						if (!is_term(sub)) {
 							unsupported(std::string(to_string(node->op)) + " of anything but terms");
 						}
 					}
@@ -168,8 +191,18 @@ validate(const Query& query, int depth)
 					}
 					return;
 				}
+				case Op::SYNONYM:
+				case Op::ELITE_SET:
+					for (const auto& sub : node->subqueries) {
+						if (!is_term(sub)) {
+							unsupported(std::string(to_string(node->op)) + " of anything but terms");
+						}
+					}
+					return;
 				default:
-					unsupported(std::string("the ") + to_string(node->op) + " operator");
+					if (!is_joining(node->op)) {
+						unsupported(std::string("the ") + to_string(node->op) + " operator");
+					}
 			}
 			for (const auto& sub : node->subqueries) {
 				validate(sub, depth + 1);
@@ -179,15 +212,8 @@ validate(const Query& query, int depth)
 			// A chain of appends is walked along its spine, so its length costs no stack.
 			const Query* spine = &query;
 			while (spine->node() != nullptr && spine->node()->kind == QueryKind::append) {
-				switch (spine->node()->op) {
-					case Op::AND:
-					case Op::OR:
-					case Op::AND_NOT:
-					case Op::AND_MAYBE:
-					case Op::FILTER:
-						break;
-					default:
-						unsupported(std::string("the ") + to_string(spine->node()->op) + " operator");
+				if (!is_joining(spine->node()->op)) {
+					unsupported(std::string("the ") + to_string(spine->node()->op) + " operator");
 				}
 				validate(spine->node()->subqueries[1], depth + 1);
 				spine = &spine->node()->subqueries[0];
@@ -199,22 +225,52 @@ validate(const Query& query, int depth)
 			validate(node->subqueries[0], depth + 1);
 			return;
 		case QueryKind::wildcard:
-			unsupported("wildcards");
 		case QueryKind::edit_distance:
-			unsupported("edit distances");
+			switch (node->op) {
+				case Op::SYNONYM:
+				case Op::OR:
+				case Op::MAX:
+					return;
+				default:
+					unsupported(std::string("expansions combined by ") + to_string(node->op));
+			}
 		case QueryKind::source:
-			unsupported("posting sources");
+			if (node->src == nullptr) {
+				throw Error(errc::invalid, "A source node has no source");
+			}
+			return;
 		case QueryKind::text:
 			unsupported("query text");
 	}
 }
 
 
+// The terms that act as one operator: a SYNONYM or an ELITE_SET node's, or the terms a wildcard or
+// edit-distance node expands to.
+struct Group {
+	struct Member {
+		std::string term;
+		termcount wqf;
+	};
+	std::vector<Member> members;
+	std::optional<p::weight> synonym;   // the weight of the union, for a SYNONYM combiner
+};
+
+// What a search works out once over the whole index and every segment then shares, so a document
+// weighs the same in all of them: the groups of its nodes.
+struct Plan {
+	std::span<const p::segment_snapshot> segments;
+	p::term_table& terms;
+	std::string_view key_prefix;
+	std::unordered_map<const QueryNode*, Group> groups;
+};
+
 // What building a query for one segment reads: the segment, and the term table and statistics of
 // the snapshot that spans every segment of every shard, so a weight is the same in all of them.
 struct Builder {
 	const p::segment& seg;
 	p::term_table& terms;
+	Plan& plan;
 
 	const p::inverted_plugin::reader& reader() const { return seg.get<p::inverted_plugin>(); }
 
@@ -223,7 +279,86 @@ struct Builder {
 	}
 };
 
+// The combiner of a group node: how its terms join.
+Op
+combiner_of(const QueryNode& node)
+{
+	if (node.kind == QueryKind::combine) {
+		return node.op == Op::SYNONYM ? Op::SYNONYM : Op::OR;
+	}
+	return node.op;
+}
+
+// The group of a SYNONYM, ELITE_SET, wildcard or edit-distance node, worked out on first use.
+const Group&
+group_of(const QueryNode& node, const Builder& b)
+{
+	auto& groups = b.plan.groups;
+	if (const auto found = groups.find(&node); found != groups.end()) {
+		return found->second;
+	}
+	Group group;
+	if (node.kind == QueryKind::combine) {
+		for (const auto& sub : node.subqueries) {
+			const auto& leaf = *sub.node();
+			group.members.push_back({interim::flat_term(leaf.field, leaf.str), leaf.wqf});
+		}
+	} else {
+		for (auto& term : expand(node, b.plan.segments, b.terms, b.plan.key_prefix)) {
+			group.members.push_back({std::move(term), 1});
+		}
+	}
+	if (node.kind == QueryKind::combine && node.op == Op::ELITE_SET) {
+		// The heaviest terms of the whole index, by idf, in query order; equal weights keep the earlier term.
+		constexpr std::size_t default_size = 10;
+		const std::size_t size = node.parameter != 0 ? node.parameter : default_size;
+		std::vector<std::pair<double, std::size_t>> keyed;
+		for (std::size_t i = 0; i < group.members.size(); ++i) {
+			const auto& member = group.members[i];
+			if (b.terms.df(member.term) != 0) {
+				keyed.emplace_back(b.weight_of(member.term, member.wqf).idf, i);
+			}
+		}
+		std::stable_sort(keyed.begin(), keyed.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
+		if (keyed.size() > size) {
+			keyed.resize(size);
+		}
+		std::vector<std::size_t> kept;
+		for (const auto& entry : keyed) {
+			kept.push_back(entry.second);
+		}
+		std::sort(kept.begin(), kept.end());
+		std::vector<Group::Member> members;
+		for (const auto i : kept) {
+			members.push_back(std::move(group.members[i]));
+		}
+		group.members = std::move(members);
+	}
+	if (combiner_of(node) == Op::SYNONYM) {
+		std::vector<std::uint64_t> dfs;
+		for (const auto& member : group.members) {
+			dfs.push_back(b.terms.df(member.term));
+		}
+		const auto& stats = b.terms.stats();
+		group.synonym = p::weight::bm25_xapian(stats, dfs.empty() ? 0 : p::synonym_df(dfs, stats.doc_count), 1);
+	}
+	return groups.emplace(&node, std::move(group)).first->second;
+}
+
 using Scorer = p::scorer_ptr;
+
+// XOR or MAX of the scorers, which are not null.
+Scorer
+merge(Op op, std::vector<Scorer> children)
+{
+	if (children.size() == 1) {
+		return std::move(children[0]);
+	}
+	if (op == Op::XOR) {
+		return std::make_unique<p::xor_scorer>(std::move(children));
+	}
+	return std::make_unique<p::max_scorer>(std::move(children));
+}
 
 // op applied to two scorers, with a null scorer matching nothing (AND and OR runs go through nary()).
 Scorer
@@ -254,6 +389,16 @@ join(Op op, Scorer left, Scorer right)
 				return nullptr;
 			}
 			return join(Op::AND, std::move(left), std::make_unique<p::scale_scorer>(std::move(right), 0.0));
+		case Op::XOR:
+		case Op::MAX: {
+			if (!left || !right) {
+				return left ? std::move(left) : std::move(right);
+			}
+			std::vector<Scorer> children;
+			children.push_back(std::move(left));
+			children.push_back(std::move(right));
+			return merge(op, std::move(children));
+		}
 		default:
 			throw Error(errc::internal, "A strata search met an operator it does not run");
 	}
@@ -285,6 +430,60 @@ nary(Op op, std::vector<Scorer> children)
 }
 
 Scorer build(const Query& query, const Builder& b, int depth);
+
+// Appends the query, or, when `into` is set and it is an OR, the subqueries of that OR (and of the ORs
+// inside it), to the list.
+void
+flatten_or(bool into, const Query& query, std::vector<const Query*>& list, int depth)
+{
+	const auto* node = query.node();
+	if (depth > max_depth) {
+		throw Error(errc::syntax, "The query is nested too deeply");
+	}
+	if (into && node != nullptr && node->kind == QueryKind::combine && node->op == Op::OR && !node->matches_nothing) {
+		for (const auto& sub : node->subqueries) {
+			flatten_or(true, sub, list, depth + 1);
+		}
+		return;
+	}
+	list.push_back(&query);
+}
+
+// The scorer of a group node in one segment: its terms joined by the node's combiner.
+Scorer
+build_group(const QueryNode& node, const Builder& b)
+{
+	const auto& group = group_of(node, b);
+	const Op combiner = combiner_of(node);
+	if (combiner == Op::SYNONYM) {
+		std::vector<p::format::term_info> infos;
+		for (const auto& member : group.members) {
+			if (const auto* info = b.terms.info(b.seg, member.term)) {
+				infos.push_back(*info);
+			}
+		}
+		if (infos.empty()) {
+			return nullptr;
+		}
+		return std::make_unique<p::synonym_scorer>(b.reader(), infos, *group.synonym);
+	}
+	std::vector<Scorer> children;
+	for (const auto& member : group.members) {
+		if (const auto* info = b.terms.info(b.seg, member.term)) {
+			children.push_back(std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(member.term, member.wqf)));
+		}
+	}
+	if (children.empty()) {
+		return nullptr;
+	}
+	if (children.size() == 1) {
+		return std::move(children[0]);
+	}
+	if (combiner == Op::MAX) {
+		return std::make_unique<p::max_scorer>(std::move(children));
+	}
+	return std::make_unique<p::disjunction_scorer>(std::move(children));
+}
 
 Scorer
 build_positional(const QueryNode& node, const Builder& b)
@@ -337,20 +536,41 @@ build(const Query& query, const Builder& b, int depth)
 			if (node->op == Op::PHRASE || node->op == Op::NEAR) {
 				return build_positional(*node, b);
 			}
+			if (node->op == Op::SYNONYM || node->op == Op::ELITE_SET) {
+				return build_group(*node, b);
+			}
 			// AND_NOT, AND_MAYBE and FILTER take the first subquery against all the others.
 			Scorer result;
 			bool first = true;
 			std::vector<Scorer> rest;
+			// Xapian reads an OR inside a MAX as more subqueries of the MAX, not as a sum.
+			std::vector<const Query*> flat;
 			for (const auto& sub : node->subqueries) {
+				flatten_or(node->op == Op::MAX, sub, flat, depth);
+			}
+			for (const Query* subquery : flat) {
+				const Query& sub = *subquery;
 				auto scorer = build(sub, b, depth + 1);
 				if (first) {
 					result = std::move(scorer);
 					first = false;
-				} else if (node->op == Op::AND || node->op == Op::OR) {
+				} else if (node->op == Op::AND || node->op == Op::OR || node->op == Op::XOR || node->op == Op::MAX) {
 					rest.push_back(std::move(scorer));
 				} else {
 					result = join(node->op, std::move(result), std::move(scorer));
 				}
+			}
+			if (node->op == Op::XOR || node->op == Op::MAX) {
+				std::vector<Scorer> children;
+				if (result) {
+					children.push_back(std::move(result));
+				}
+				for (auto& scorer : rest) {
+					if (scorer) {
+						children.push_back(std::move(scorer));
+					}
+				}
+				return children.empty() ? nullptr : merge(node->op, std::move(children));
 			}
 			if (node->op == Op::AND || node->op == Op::OR) {
 				std::vector<Scorer> children;
@@ -429,38 +649,20 @@ build(const Query& query, const Builder& b, int depth)
 			}
 			return std::make_unique<p::scale_scorer>(std::move(child), node->factor);
 		}
+		case QueryKind::wildcard:
+		case QueryKind::edit_distance:
+			return build_group(*node, b);
+		case QueryKind::source: {
+			const auto* column = values::Reader(b.seg).column(node->src->slot());
+			if (column == nullptr) {
+				return nullptr;
+			}
+			return std::make_unique<p::source_scorer<values::Slot, PostingSource>>(values::Slot(*column), *node->src);
+		}
 		default:
 			throw Error(errc::internal, "A strata search met a node it does not run");
 	}
 }
-
-
-// A matching document shown to a spy: its id in its shard, as Xapian shows it, and its stored data,
-// read when asked.
-// Values and term lists arrive with the plugins that hold them (P1, P2); until then a value reads empty
-// and the terms are refused, as a strata shard's own DocView does.
-class SpyView final : public DocView {
-public:
-	SpyView(const p::segment& seg, p::ordinal_t ord, docid did) : seg_(seg), ord_(ord), did_(did) { }
-
-	docid did() const override { return did_; }
-	std::string data() const override { return seg_.get<::strata::stored_plugin>().stored(ord_); }
-	rev version() const override { return seg_.get<::strata::keys_plugin>().version(ord_); }
-	std::string value(valueno) const override { return {}; }
-	void values(const ValueSink&) const override { }
-	void terms(std::string_view, const TermSink&) const override { unavailable(); }
-	void term_details(const TermDetailSink&) const override { unavailable(); }
-	std::string serialise() const override { unavailable(); }
-
-private:
-	[[noreturn]] static void unavailable() {
-		throw Error(errc::not_available, "The strata engine does not keep term lists yet");
-	}
-
-	const p::segment& seg_;
-	p::ordinal_t ord_;
-	docid did_;
-};
 
 
 SearchResult
@@ -469,9 +671,6 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	const auto& source = request.query->source();
 	if (shards.empty() || request.query->empty()) {
 		return {};
-	}
-	if (request.sorter != nullptr) {
-		unsupported("sorted results");
 	}
 	if (request.collapse_key != BAD_VALUENO) {
 		unsupported("collapsed results");
@@ -518,12 +717,14 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
 		for (const auto& view : pin_of(mine[i]).segments()) {
-			inputs[i].segments.push_back({view.seg, view.deleted, view.dead});
-			documents += view.seg->core().doc_count();
+			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead});
+			documents += view.seg()->core().doc_count();
 		}
 	}
 	const p::multi_snapshot snapshot(std::move(inputs));
-	p::term_table terms(snapshot.segments(), term_key_prefix());
+	const std::string key_prefix = term_key_prefix();
+	p::term_table terms(snapshot.segments(), key_prefix);
+	Plan plan{snapshot.segments(), terms, key_prefix, {}};
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	p::search_options options;
@@ -531,17 +732,26 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	options.k = static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
 	options.count = true;
 	options.order = request.order == DocidOrder::descending ? p::docid_order::descending : p::docid_order::ascending;
-	if (request.spy != nullptr) {
+	// The heaviest match, when a key or a spy makes the search visit every match (the first hit is then not the heaviest).
+	double heaviest = 0;
+	if (request.sorter != nullptr) {
+		options.key = [&](const p::match& m) { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); };
+	}
+	if (request.sorter != nullptr || request.spy != nullptr) {
 		// The spy sees every match once, as Xapian shows it the documents it examines.
 		options.visit = [&](const p::match& m) {
-			request.spy->see(SpyView(*m.seg, m.ord, static_cast<docid>(m.did)), m.score());
+			const double weight = m.score();
+			heaviest = std::max(heaviest, weight);
+			if (request.spy != nullptr) {
+				request.spy->see(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord), weight);
+			}
 		};
 	}
-	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms}, 0); }, options);
+	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options);
 
 	SearchResult result;
 	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
-	const double top = found.hits.empty() ? 0.0 : found.hits.front().score;
+	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
 	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
 		const auto& found_hit = found.hits[i];
 		if (found_hit.docid > std::numeric_limits<docid>::max()) {

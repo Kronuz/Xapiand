@@ -671,6 +671,9 @@ add_compile_definitions(
 # exceptions bind to Xapiand's real hierarchy. The vendored msgpack/exception.hpp
 # still includes "exception.h" directly; src/ is first on the include path, so
 # Xapiand's wrapper wins here.
+# hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
+# the commit with wordwise::hash32.
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 975492a85458739f1b1d8617342c542760f328ba)
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 75d13ce7e99f8aad3526d109b38db151d1fc7fc4)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
@@ -684,7 +687,6 @@ add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapi
 FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG eb1efcb39f4d8bb4fd20a9ea91498a288d25aca2)
 FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 306ecd96d55d47d9bd3167eaeb7877e40d0631ac)
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 21b7941c71064b5a4e52ffb50a2701ee4aae4c6c)
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 7ab0c23325debfbaf4104044987ba6583d14808f)
 foreach(dep static_string char_classify strict_stox hashes)
 	FetchContent_MakeAvailable(${dep})
 endforeach()
@@ -770,7 +772,7 @@ FetchContent_MakeAvailable(task)
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eecd03aa01e2c11c55aa7beb01d905b49bf3bdae)
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG becfe3cebbf999a3e374f0081afa9ffb0120808c)
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -2181,7 +2183,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_shard engine_read engine_search engine_search_strata engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_shard engine_read engine_search engine_search_strata engine_callbacks engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2218,6 +2220,14 @@ if (BUILD_TESTS)
 		target_compile_features(fuzz_strata_document PRIVATE cxx_std_20)
 		target_compile_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
 		target_link_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
+		add_executable(fuzz_strata_pattern
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_strata_pattern.cc"
+			"${PROJECT_SOURCE_DIR}/src/engine/strata/pattern.cc"
+		)
+		target_include_directories(fuzz_strata_pattern PRIVATE "${PROJECT_SOURCE_DIR}/src" "${unicode_SOURCE_DIR}")
+		target_compile_features(fuzz_strata_pattern PRIVATE cxx_std_20)
+		target_compile_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
+		target_link_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
 	endif ()
 
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
