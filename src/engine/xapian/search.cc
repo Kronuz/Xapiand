@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,7 @@ struct Live {
 
 class Prepared final : public PreparedQuery, private Live {
 public:
-	explicit Prepared(Xapian::Query query) : query(std::move(query)) { }
+	Prepared(const Query& source, Xapian::Query query) : PreparedQuery(source), query(std::move(query)) { }
 
 	bool empty() const override {
 		return query.empty();
@@ -135,10 +135,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 {
 	Scope scope;
 	for (auto* shard : shards) {
-		if (shard->kind() != Kind::xapian) {
-			throw Error(errc::not_available, "Searching a strata shard is not available yet");
-		}
-		const auto& database = *static_cast<Shard&>(*shard).database();
+		const auto& database = *dynamic_cast<Shard&>(*shard).database();
 		if (shards.size() == 1) {
 			scope.db = database;
 		} else {
@@ -212,26 +209,30 @@ prepare(const Query& query)
 {
 	ENGINE_CENSUS_QUERY(query);
 	try {
-		return std::make_unique<xapian::Prepared>(xapian::to_xapian(query));
+		return std::make_unique<xapian::Prepared>(query, xapian::to_xapian(query));
 	} catch (...) {
 		xapian::rethrow_translated();
 	}
 }
 
 
+}  // namespace engine
+
+
+namespace engine::xapian {
+
 task::task<SearchResult>
-search(std::span<Shard* const> shards, const SearchRequest& request)
+search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 {
-	ENGINE_CENSUS_SEARCH(request, shards.size());
 	try {
-		const auto& prepared = dynamic_cast<const xapian::Prepared&>(*request.query);
+		const auto& prepared = dynamic_cast<const Prepared&>(*request.query);
 		if (shards.empty() || prepared.empty()) {
 			co_return SearchResult{};
 		}
-		co_return xapian::run(shards, request, prepared.query);
+		co_return run(shards, request, prepared.query);
 	} catch (...) {
-		xapian::rethrow_translated();
+		rethrow_translated();
 	}
 }
 
-}  // namespace engine
+}  // namespace engine::xapian
