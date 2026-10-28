@@ -34,6 +34,12 @@
 
 namespace engine::strata {
 
+// Whether terms that start with `literal` live in the key table instead of the dictionary. The one
+// place the expansion depends on the index's key prefix and on a field and its term being one flat
+// string: both go away when strata makes fields first-class and keys leave the term space
+// (strata design/fields-and-keys), and this function and `expand` are what then change.
+bool in_key_space(std::string_view literal, std::string_view key_prefix);
+
 // The terms of the whole index that a wildcard or edit-distance node matches, sorted, after its
 // expansion limit: more than `max_expansion` matches (0 for no limit) fail the search with
 // errc::invalid, keep the first terms, or keep the most frequent ones, as the node says. A term

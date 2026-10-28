@@ -227,6 +227,7 @@ engine::Document make(Kind kind, int shard, int i, const Spec& spec) {
 	for (const auto& [term, wdf] : spec.terms) {
 		doc.add_term(term, wdf);
 	}
+	doc.add_boolean_term("B" + spec.group);   // a term without frequency, as the fields of a schema make
 	doc.add_value(KEY, spec.key);
 	doc.add_value(GROUP, spec.group);
 	if (spec.has_number) {
@@ -512,6 +513,25 @@ void test_spy() {
 			CHECK_TRUE(x.datas == s.datas);
 			CHECK_TRUE(x.groups == s.groups);
 		}
+		// A spy is given the document's id across the shards: the ids of the hits.
+		{
+			std::set<engine::docid> given;
+			struct IdSpy final : engine::MatchSpy {
+				std::set<engine::docid>* ids;
+				void see(const engine::DocView& doc, double) override { ids->insert(doc.did()); }
+				std::unique_ptr<engine::MatchSpy> clone() const override { return nullptr; }
+				std::string name() const override { return "IdSpy"; }
+				std::string serialise() const override { return ""; }
+				std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return nullptr; }
+				std::string serialise_results() const override { return ""; }
+				void merge_results(std::string_view) override { }
+				std::string description() const override { return "IdSpy"; }
+			} ids_spy;
+			ids_spy.ids = &given;
+			const auto found = run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &ids_spy; });
+			CHECK_TRUE(given == ids_of(found));
+			CHECK_EQ(given.size(), static_cast<std::size_t>(shard_count * 60));
+		}
 		// A spy that throws fails the search; the next one is unaffected.
 		GroupSpy throwing;
 		throwing.throw_on = true;
@@ -569,6 +589,69 @@ void test_sources() {
 		const auto s = run(corpus.strata, n, query);
 		CHECK_TRUE(ids_of(x) == ids_of(s));
 		CHECK_EQ(x.estimated, s.estimated);
+	}
+}
+
+// Terms that carry no frequency (a schema's keyword and number fields) are searched like any other.
+void test_boolean_terms() {
+	Corpus corpus;
+	for (const int shard_count : {1, 5}) {
+		build("boolean", shard_count, 60, 3, corpus);
+		const std::size_t n = static_cast<std::size_t>(shard_count);
+		const std::vector<std::pair<const char*, Query>> queries = {
+			{"boolean", t("Bg1")},
+			{"boolean absent", t("Bg9")},
+			{"and", Query::combine(Op::AND, t("Bg1"), t("common"))},
+			{"or", Query::combine(Op::OR, t("Bg1"), t("Bg2"))},
+			{"filter", Query::combine(Op::FILTER, t("apple"), t("Bg0"))},
+			{"and_not", Query::combine(Op::AND_NOT, t("common"), t("Bg3"))},
+			{"id", t("Q0_5")},
+			{"wildcard", Query::wildcard("Bg", 0, engine::Expansion::error, 0, Op::OR)},
+		};
+		for (const auto& [name, query] : queries) {
+			const auto s = both(corpus, n, query, name);
+			if (std::string(name) == "boolean") {
+				CHECK_GT(s.hits.size(), 0u);
+			}
+		}
+		CHECK_EQ(run(corpus.strata, n, t("Q0_5")).hits.size(), 1u);
+	}
+}
+
+// Shards of one document each, with no commit between the writes and the search: every term has one posting.
+void test_single_documents() {
+	Corpus corpus;
+	build("single", 5, 1, 1, corpus);
+	for (const std::size_t n : {std::size_t{1}, std::size_t{5}}) {
+		for (const auto& [name, query] : std::vector<std::pair<const char*, Query>>{{"common", t("common")}, {"boolean", t("Bg1")}, {"or", Query::combine(Op::OR, t("common"), t("Bg1"))}, {"all", Query::match_all()}}) {
+			const auto s = both(corpus, n, query, name);
+			if (std::string(name) == "common") {
+				CHECK_EQ(s.hits.size(), n);
+			}
+		}
+	}
+}
+
+// An append onto a query that is empty by its structure (a text that analyses to nothing) is the next query.
+void test_appends() {
+	Corpus corpus;
+	for (const int shard_count : {1, 5}) {
+		build("appends", shard_count, 60, 3, corpus);
+		const std::size_t n = static_cast<std::size_t>(shard_count);
+		const Query nothing = Query::combine(Op::AND, t("apple"), Query());
+		CHECK_TRUE(nothing.empty());
+		const std::vector<std::pair<const char*, Query>> queries = {
+			{"append to nothing", Query::append(Op::AND, nothing, t("Bg1"))},
+			{"twice", Query::append(Op::AND, Query::append(Op::AND, nothing, t("Bg1")), t("common"))},
+			{"or", Query::append(Op::OR, Query::append(Op::AND, nothing, t("band")), t("apple"))},
+			{"after a missing term", Query::append(Op::OR, t("absent"), t("apple"))},
+			{"and with a missing term", Query::append(Op::AND, t("absent"), t("apple"))},
+			{"nothing on nothing", Query::append(Op::AND, nothing, nothing)},
+		};
+		for (const auto& [name, query] : queries) {
+			both(corpus, n, query, name);
+		}
+		CHECK_GT(run(corpus.strata, n, queries[0].second).hits.size(), 0u);
 	}
 }
 
@@ -685,7 +768,7 @@ static void test_expansions_() { test_expansions(); }
 
 int main() {
 	const struct { const char* name; void (*run)(); } tests[] = {
-		{"sorter", test_sorter_},
+		{"sorter", test_sorter_}, {"boolean", test_boolean_terms}, {"single", test_single_documents}, {"appends", test_appends},
 		{"spy", test_spy_}, {"sources", test_sources_}, {"operators", test_operators_}, {"expansions", test_expansions_},
 	};
 	const char* only = std::getenv("ONLY");

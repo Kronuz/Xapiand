@@ -580,7 +580,13 @@ build(const Query& query, const Builder& b, int depth)
 			auto accumulated = build(*base, b, depth + 1);
 			for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
 				auto next = build((*it)->subqueries[1], b, depth + 1);
-				accumulated = join((*it)->op, std::move(accumulated), std::move(next));
+				// An accumulated query that is empty by its structure is replaced by the next one; one that
+				// only misses this segment's terms is joined as a null scorer.
+				if ((*it)->subqueries[0].empty()) {
+					accumulated = std::move(next);
+				} else {
+					accumulated = join((*it)->op, std::move(accumulated), std::move(next));
+				}
 			}
 			return accumulated;
 		}

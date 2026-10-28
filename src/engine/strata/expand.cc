@@ -36,6 +36,13 @@
 
 namespace engine::strata {
 
+bool
+in_key_space(std::string_view literal, std::string_view key_prefix)
+{
+	return !key_prefix.empty() && literal.starts_with(key_prefix);
+}
+
+
 std::vector<std::string>
 expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segments, prospect::term_table& terms, std::string_view key_prefix)
 {
@@ -48,7 +55,7 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 		prefix = std::string(head(node.str, node.prefix_length));
 		tail = std::string_view(node.str).substr(prefix.size());
 	}
-	if (!key_prefix.empty() && prefix.starts_with(key_prefix)) {
+	if (in_key_space(prefix, key_prefix)) {
 		throw Error(errc::syntax, "The strata engine does not expand terms of the key field");
 	}
 
