@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   body no longer exhausts the stack or the memory: anchors and aliases answer `400` before any expansion.
 - **A field path of 150 levels answers `400`**, not `500`, and a `_fuzzy` text of tens of thousands of words
   is refused in milliseconds instead of after seconds.
+- **Nested bucket aggregations over a multi-valued field no longer exhaust the host.** A
+  document is still counted once in each bucket it belongs to, as in Elasticsearch, so seven
+  values nested six levels made 117,649 buckets (8 s, 200 MB). A search now holds at most
+  65,535 live buckets (Elasticsearch's `search.max_buckets`) and aggregations nest at most 16
+  levels deep; past either it answers 400 naming the limit.
 - **A client error raised inside an aggregation or a sort on the strata engine answers 400**,
   as on the Xapian engine (it answered 500).
 - **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
