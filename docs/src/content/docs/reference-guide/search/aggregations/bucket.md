@@ -48,6 +48,7 @@ The following snippet captures the structure of aggregations types for buckets:
   "<bucket_aggregation_type>": {
     ( "_sort": {  <sort_body> }, )?
     ( "_limit": <limit_count>, )?
+    ( "_shard_size": <shard_size>, )?
     ( "_min_doc_count": <min_doc_count>, )?
     ( "_keyed": <keyed_boolean>, )?
     ...
@@ -295,6 +296,15 @@ e2e:end -->
 The maximum number of buckets allowed in a single response is not currently
 hard limited, but the default is 10,000 buckets. The `<limit_count>` in the
 `_limit` option is a positive integer number used for changing this default.
+
+`_terms` and `_values` keep at most about `<shard_size>` buckets while they collect, like
+Elasticsearch's `shard_size`: it defaults to `<limit_count> * 1.5 + 10`, and the
+`_shard_size` option raises it (it is never below `_limit`). Past that many distinct values the
+buckets with the lowest counts (or, when sorted by key, the keys last in order) are dropped as
+they are met, so the memory of a request does not grow with the number of distinct values. The
+caveat is Elasticsearch's: when a field has more distinct values than the cap, the counts of the
+buckets that come back can be lower than the true counts and the order approximate; below the
+cap the answer is exact. `_terms` and `_values` over geo fields are not supported.
 
 ### Response Format
 By default, the buckets are returned as an ordered array. It is also possible

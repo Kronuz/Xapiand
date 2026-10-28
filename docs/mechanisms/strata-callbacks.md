@@ -57,7 +57,9 @@ SearchRequest         sorter  -> key per match (memcmp), then weight, then docid
    match count.
 9. **Spies** see every match, once, with its weight, in segment order; `check_at_least` and the window do not
    limit them. The `DocView` passed to a spy and to a key maker carries the document's id within its shard, as
-   the Xapian engine's does. A spy or key maker that throws fails that search only.
+   the Xapian engine's does. A spy, key maker or scan sink that throws fails that search only, and its exception
+   leaves the engine as thrown (Xapiand's client errors stay client errors, a 400): `CallbackGuard` (`shard.h`)
+   marks the throw so `rethrow_translated` does not turn it into an internal error.
 
 ## Why this mechanism
 
@@ -78,6 +80,13 @@ SearchRequest         sorter  -> key per match (memcmp), then weight, then docid
 11. **No term lists (R-P2).** `DocView::terms`, `term_details` and `serialise` raise `errc::syntax` ("keeps no
     term lists"), a 400 over HTTP: the `_terms` aggregation over a text field, and a document's `:info` (which
     lists its terms), fail with it.
+    `_terms` and `_values` over a geo field are refused (400): a geo value is a range list, not a countable value.
+    Both aggregations keep at most about `shard_size` buckets while collecting (`BucketAggregation::_prune`,
+    default `_limit * 1.5 + 10` as Elasticsearch's, `_shard_size` raises it): past twice that many they drop the
+    buckets that rank last in the aggregation's own order (counts for an order by a sub-aggregation), and
+    `serialise_results` sends the best `shard_size`. Below the cap the buckets are exact; past it a dropped value that
+    returns restarts its count, so counts can fall short, as Elasticsearch documents. The strata engine's one spy sees
+    every shard, so its cap holds across them.
 12. **Append chains.** `Query::append(op, accumulated, next)` is `next` when the accumulated query is empty by
     its structure (a text that analyses to nothing, which is how every query of the server starts:
     `(<nothing> AND (<nothing> AND term))`); an accumulated query that only misses a segment's terms is a null
