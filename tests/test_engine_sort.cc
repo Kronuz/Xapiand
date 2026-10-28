@@ -197,7 +197,7 @@ std::string integer_key(const Row& row, std::int64_t ref, bool reverse) {
 	}
 	std::int64_t best = reverse ? 0 : INT64_MAX;
 	for (auto n : row.ints) {
-		auto d = std::llabs(n - ref);
+		std::int64_t d = std::llabs(n - ref);
 		best = reverse ? std::max(best, d) : std::min(best, d);
 	}
 	char buf[32];
