@@ -1,65 +1,84 @@
 # strata-engine-callbacks (S3, phase 7a)
 
-> Status: CURRENT (2026-10-27) workstream `strata-engine-callbacks`; branch `phase7a/strata-engine-callbacks` from `phase7a/strata-engine-search` (Xapiand:90cfd9775). Local only, not pushed, no CI run.
+> Status: DONE, MERGED LOCALLY (2026-10-28) workstream `strata-engine-callbacks`; branch `phase7a/strata-engine-callbacks` (merged into Xapiand master, not pushed, no CI run).
 
-Design: `strata/docs/design/xapiand-on-strata.md` (strata:8972cf8), row S3, D4, G4, G5, G6, G8.
+Design: `strata/docs/design/xapiand-on-strata.md` (row S3, D4, G4, G5, G6, G8; ruling R-P2: no term lists in strata or prospect).
 
 ## State
 
-Ready for review except criterion 6 (term lists) and the aggregations that read them: waits on prospect P2
-(`phase4/term-lists`). Local only, no CI. Everything below ran on a scratch merge of prospect
-`xapian-ops` + `values-bytes` with strata `phase4/values-rank` (b644708); re-pin when P1 lands.
+Every done criterion holds under R-P2: the engine keeps no term lists, `_terms` is served from stored values, and
+`DocView::terms`, `term_details`, `serialise` (so the `:info` term view) are refused with a 400. The branch has
+master merged (S1, S2, X6 with (field, term) at the seam, copyright, alpha.10 build fixes) and prospect main
+(becfe3c, strata c4ea4ce).
 
 ## Done criteria (design row S3)
 
-1. [x] SYNONYM, XOR, MAX, ELITE_SET, SCALE_WEIGHT with Xapian's scoring (`test_operators`, 29 queries x 1 and 5
-   shards, weights to 1e-9). A nested XOR and an elite set chosen by whole-index frequencies; an OR inside a MAX is
-   read as Xapian does (found by the test, fixed).
-2. [x] WILDCARD (prefix, `?`, `*`) and EDIT_DISTANCE expand over the dictionaries once per search; limits and
-   combiners as Xapian's (`test_expansions`). Multi-shard weights of expansions differ from Xapian's (it weighs
-   them 1.5 to 5 times higher; ours equal one shard holding every document): documents and counts agree.
-3. [x] Posting sources scan the values plugin's column (`test_sources`, with deletes and replacements).
-4. [x] Key makers order by key, then weight, then docid in the requested order (`test_sorter`, exact order, windows).
-5. [x] A spy sees every match with a lazy `DocView` whatever `check_at_least` and the window say (`test_spy`).
-6. [ ] `DocView` values read from the values plugin: done. Term lists (`terms`, `term_details`, `serialise`): not
-   wired (P2 not landed); they raise `errc::not_available`.
-7. [x] Tests shared with the Xapian engine: `tests/test_engine_callbacks.cc` 934 checks, one and five shards;
-   `tests/test_engine_strata.cc` 8091; `tests/test_engine_search_strata.cc` 232,732. ASan+UBSan: callbacks and
-   strata tests clean. 16 mutants killed (below). Fuzz: `fuzz_strata_pattern` 3.4 million runs, no failure.
-8. [x] `harness/numeric_range_check.py` on a strata index: 797 ranges, 0 wrong. `harness/strata_callbacks_check.py`
-   (new): 120 searches on both engines through the server (metric and bucket aggregations with and without a
-   query, ranges, sorted, windows): 114 identical, 6 differ, all `_terms` buckets, which need term lists.
+1. [x] SYNONYM, XOR, MAX, ELITE_SET, SCALE_WEIGHT with Xapian's scoring (`test_operators`).
+2. [x] WILDCARD and EDIT_DISTANCE expand over the dictionaries once per search (`test_expansions`); a node's field
+   and pattern join through `interim::flat_term` as Xapian's flat term (an edit distance's prefix length counts the
+   pattern's characters, after the field). Multi-shard weights of expansions differ from Xapian's (documents and
+   counts agree).
+3. [x] Posting sources scan the values plugin's column (`test_sources`).
+4. [x] Key makers order by key, then weight, then docid, through `prospect::search`'s `key` hook (`test_sorter`).
+5. [x] A spy sees every match with a lazy `SegmentDocView` (S2's value-less `SpyView` is replaced by it), through
+   the `visit` hook; its `did()` is the id within the shard, as Xapian's (`test_spy`).
+6. [x] Values read from the values plugin; term lists are not offered (R-P2).
+7. [x] Tests shared with the Xapian engine: see Proof.
+8. [x] `harness/numeric_range_check.py` on a strata index: 797 ranges, 0 wrong. `harness/strata_callbacks_check.py`:
+   176 searches (metrics, buckets, `_terms` over keyword, integer, float, boolean, array and missing fields,
+   ranges, sorted, windows) on both engines through the server, 0 different, both indexes asserted to hold the 400
+   documents, and the refusals checked.
 9. [x] `docs/mechanisms/strata-callbacks.md`.
+
+## `_terms` over values (R-P2)
+
+`TermsHandler` (`src/aggregations/metrics.cc`) counts the field's stored values (the slot), one count per
+document and distinct value, when the field is not `text` and keeps its values (`required_spc_t::field_values`, read
+from the field's `_index` by `Schema::get_slot_field`); otherwise it reads index terms, as before. Compared with the
+Xapian engine's old `_terms` on the same documents (old binary):
+
+| Field | Old Xapian `_terms` | Now (both engines) |
+|---|---|---|
+| integer, floating, date | the values plus range/accuracy terms (keys like `-453727543426300`, counts 3 to 4) | the values only |
+| keyword | folded to lower case (`Red` and `red` one bucket) | raw values, case kept (Elasticsearch's) |
+| boolean, array of keywords | the values | the values, a document once per distinct value |
+| text (analysed) | words (`quick`, `dogs`) | words on the Xapian engine; refused (400) on the strata engine |
+| missing field | no buckets | no buckets |
+
+Dynamic string fields are `text`, so a `_terms` over one is refused on strata (count a keyword field). `_values`
+(already value-based) is unchanged. A field indexed without field values (`_index: field_terms`) still reads terms
+on the Xapian engine and is refused on strata.
 
 ## Done
 
-- Xapiand:8e4a37b4b first draft; Xapiand:4a7873574 callbacks test + OR in MAX; Xapiand:95efb3fc3 drop a refusal;
-  Xapiand:e8d634c8d pattern split + fuzz target; Xapiand:7b5a62fdf append fix; the check script and note in the
-  commits after. Merge of master (Xapiand:523c9f398) brought the numeric-range and CHECK_ALL changes; a rebase
-  onto S2 drops it.
+- First draft Xapiand:8e4a37b4b .. append fix Xapiand:7b5a62fdf, the check script and note (before this round).
+- 2026-10-28: Xapiand:3998a95b9 merge of master (S2's append fix and `p::search` wiring kept; the hand-rolled
+  collection loop, `Candidate`, `Ranks`, `to_docid` and `SpyView` dropped), Xapiand:95905a5f3 merge of master again
+  (alpha.10 build fixes), Xapiand:74d8236e5 prospect repin and API, Xapiand:d43000e22 `_terms` over values and the
+  refusals; later commits on the branch: the once-per-value check and the spy-terms test.
 
 ## Proof
 
-- Mutants (`.scratch/mutants.py`, one per rule, each fails the callbacks or strata test): spy visits only a
-  window, sort ignores keys, sort descending, estimate counts only the window, OR in MAX summed, synonym df of
-  one term, elite set keeps the lightest, XOR drops a lone child, source never matches, values not stored,
-  wildcard limit ignored, most-frequent keeps the rarest, edit distance without swaps, `?` matches a byte, append
-  ignores an empty accumulated query, spy given a shard-local id: 16 killed, 0 survived (an "empty value is
-  stored" mutant survived because the document already drops empty values; the redundant check was removed).
-- Revert check for the append fix: the mutant "append ignores ..." fails `test_appends`; without the fix every
-  server search on a strata index found nothing (`(<nothing> AND (<nothing> AND term))`).
-- Found by the tests: MAX(OR) flattening; the Xapian engine reserves value slots 0 to 19 (tests use 21+);
-  Xapian's spy is given the id within its shard.
+- Tests (Release build, own deps in `.scratch/build-s3`): `test_engine_callbacks` 942 checks, `test_engine_strata`
+  9568, `test_engine_search_strata` 231,298, `test_engine_search` 4423: all pass.
+- Mutants for this round (each caught): `_terms` never from values (harness: 62 searches differ), no refusal in
+  the spy's view (new `TermsSpy` test fails 2 checks, and the harness), dedupe removed (survived: a document stores
+  each distinct value once, so the dedupe was removed as redundant). Revert check: removing the refusal fails
+  `test_spy`; removing the values path fails the check. The earlier 16 mutants (previous round) still apply.
+- A comparison that did not hold: the harness once loaded no documents on either engine (a keyword array was
+  refused); it now asserts both indexes hold all documents and that the buckets sum correctly.
+- ASan+UBSan: see the log below.
 
 ## Findings for others
 
-1. S2 (`strata-engine-search`): the append bug above, in S2's `build`, fixed here in Xapiand:7b5a62fdf; the
-   same hunk should land with S2. S2's `544b0ecb0` adds a `SpyView` and removes the spy refusal; this branch's
-   `SegmentDocView` (values included) replaces it, so the two will conflict in `search.cc` and `test_refusals`.
-2. S2: `xapiand_test_engine_search_strata` under ASan overflows the stack destroying the 20,000-append chain of
-   `disjunction_scorer` (recursive destructors; passes without ASan). Not from this branch.
-3. The server needs `harness` runs with the lead's quiet queue: a pending strict hold blocked every light build
-   for about 40 minutes.
+1. S2's ASan overflow in `xapiand_test_engine_search_strata` (recursive destructors of the 20,000-append
+   `disjunction_scorer` chain) is S2's; see the ASan log below for whether it still occurs.
+2. The Xapian engine's old `_terms` returned range and accuracy terms for numeric and date fields (table above);
+   fixed here for both engines by reading values.
+3. Master's `hashes` pin was declared after msgpack's own, so it never applied; it is now declared before msgpack
+   (strata needs `wordwise::hash32`). Other pins matched.
+4. `Shard::pin()` holds a `segment_list` now (prospect main / strata c4ea4ce), which owns the delete bits the views
+   point into.
 
 ## Dependencies recorded (lead note, key prefix redesign)
 
@@ -69,19 +88,15 @@ only places this branch reads the key prefix or the concatenation; they change t
 
 ## Next
 
-1. Wire term lists when P2 lands: `SegmentDocView::terms/term_details/serialise` (`doc_view.cc`, `no_term_lists`),
-   opt the structure in (`index_options()` in `shard.cc`), key term from the keys plugin, positions through
-   `positions_reader`; then rerun `harness/strata_callbacks_check.py` (expect 0 different) and the docs suite on
-   strata (S2's `.scratch/e2e.sh`). Layout order in the scratch merge: inverted, keys, stored, values, term_lists.
-2. Re-pin prospect/strata (P1, P2, P3 are on prospect main or branches), rebase onto S2.
-3. Collapse, cutoffs, `nearest`/`fuzzy` stay refused.
+1. Collapse, weight cutoffs, `nearest`/`fuzzy` stay refused (not in S3's row).
+2. When strata makes fields first-class, `interim_terms.h`, `expand.cc` and `group_of` change together.
 
 ## Blocked on
 
-Term lists: P2 `phase4/term-lists` (committed, last commit unbuilt per its ledger, not landed).
+Nothing.
 
 ## Log
 
-- 2026-10-27: branch created from S2's head (Xapiand:90cfd9775). Scratch build dir `.scratch/build` configured against the
-  merged prospect (xapian-ops + values-bytes) and strata `phase4/values-rank`.
-- 2026-10-27: tests, mutants, ASan, fuzz, server checks as above; build dirs deleted.
+- 2026-10-27: branch created from S2's head (Xapiand:90cfd9775); tests, mutants, ASan, fuzz, server checks.
+- 2026-10-28: R-P2 ruling: merged master twice, repinned prospect to main, `_terms` over values, term lists refused,
+  checks rerun; build dirs deleted.

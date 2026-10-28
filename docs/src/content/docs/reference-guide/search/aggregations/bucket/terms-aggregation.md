@@ -5,6 +5,10 @@ title: "Terms Aggregation"
 A _multi-bucket_ value source based aggregation where buckets are dynamically
 built - one per unique **term**.
 
+The terms of a `keyword`, numeric, `boolean` or `date` field are its stored values, and a
+document counts once for each distinct value. The terms of an analysed `text` field are the
+words the index holds for it.
+
 :::hint[Performance]{.caution}
 Whenever is possible, prefer [Values Aggregation](../values-aggregation) to this type as
 it's more efficient.

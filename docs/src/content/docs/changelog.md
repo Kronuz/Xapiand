@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Changed
+- **`_terms` counts a field's stored values** (as Elasticsearch's terms aggregation reads doc
+  values), once per document and distinct value. Keyword buckets keep their case (`Red` and
+  `red` are two buckets). The words of an analysed `text` field, or of a field indexed without
+  values, are still counted from the index terms.
+
+### Fixed
+- **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
+  among the values; it now returns the values.
+
 ## [1.0.0-alpha.10] - 2026-10-28
 
 ### Added
