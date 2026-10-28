@@ -45,6 +45,8 @@ public:
 		return database_.get();
 	}
 
+	Kind kind() const noexcept override { return Kind::xapian; }
+
 	task::task<WriteResult> add(Document& doc, WriteArgs args) override;
 	task::task<WriteResult> replace(docid did, Document& doc, WriteArgs args) override;
 	task::task<WriteResult> replace_by_key(const std::string& key, Document& doc, WriteArgs args) override;

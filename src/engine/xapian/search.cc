@@ -135,7 +135,10 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 {
 	Scope scope;
 	for (auto* shard : shards) {
-		const auto& database = *dynamic_cast<Shard&>(*shard).database();
+		if (shard->kind() != Kind::xapian) {
+			throw Error(errc::not_available, "Searching a strata shard is not available yet");
+		}
+		const auto& database = *static_cast<Shard&>(*shard).database();
 		if (shards.size() == 1) {
 			scope.db = database;
 		} else {

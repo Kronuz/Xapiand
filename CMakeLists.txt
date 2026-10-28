@@ -747,6 +747,12 @@ set(TASK_ASIO OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG aa447e726c617c5c10a569409ecf8e024b88750f)
 FetchContent_MakeAvailable(task)
 
+# prospect: the search layout on the strata segment core, behind the strata engine
+# (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
+# strata and the libraries strata links (the pins above win where the same library is declared).
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 9de01a18853e7da36c97abbacc07f11a08074dcc)
+FetchContent_MakeAvailable(prospect)
+
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
 # (the extracted library correctly no longer pulls it). Rather than an absolute-path
 # macro, Xapiand keeps a thin wrapper named src/xapiand_strings.hh (not strings.hh, so
@@ -1376,6 +1382,7 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/xapian/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/xapian/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/engine/strata/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/strata/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h*"
@@ -1502,6 +1509,7 @@ if (TLS)
 endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
+	prospect::prospect
 	task::task
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}

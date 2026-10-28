@@ -34,6 +34,8 @@
 #include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
+#include "engine/kind.h"            // for engine::kind_of
+#include "engine/open.h"            // for engine::open_local
 #include "engine/sync.h"            // for engine::sync_wait
 #include "engine/xapian/convert.h"  // for engine::xapian::to_xapian, from_xapian
 #include "engine/xapian/errors.h"   // for engine::xapian::NotAvailable, Closed, Opening, DatabaseFailure
@@ -111,7 +113,7 @@ finalise_write(engine::Document& doc, engine::WriteResult& info, const std::opti
 		auto did = static_cast<double>((info.did - 1) * numeric->n_shards + numeric->shard_num + 1);  // unshard number and shard docid to docid in multi-db
 		auto did_serialised = sortable_serialise(did);
 		info.term = "QN" + did_serialised;
-		doc.add_boolean_term(info.term);
+		doc.set_key(info.term);
 		doc.add_value(DB_SLOT_ID, did_serialised);
 		// Set id inside serialized object:
 		auto it = data_obj.find(ID_FIELD_NAME);
@@ -396,7 +398,7 @@ Shard::reopen_writable()
 
 	reset();
 
-	std::unique_ptr<engine::xapian::Shard> new_database;
+	std::unique_ptr<engine::Shard> new_database;
 
 	assert(!endpoint.empty());
 	bool local = false;
@@ -434,7 +436,7 @@ Shard::reopen_writable()
 	{
 		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		auto opened = engine::sync_wait(engine::xapian::open_local(endpoint.path, true, has_db_create_or_open(flags)));
+		auto opened = engine::sync_wait(engine::open_local(engine::kind_of(endpoint.path), endpoint.path, true, has_db_create_or_open(flags)));
 		new_database = std::move(opened.shard);
 		created = opened.created;
 		local = true;
@@ -510,7 +512,7 @@ Shard::reopen_readable()
 
 	reset();
 
-	std::unique_ptr<engine::xapian::Shard> new_database;
+	std::unique_ptr<engine::Shard> new_database;
 
 	assert(!endpoint.empty());
 	bool local = false;
@@ -556,7 +558,7 @@ Shard::reopen_readable()
 			if (fallback) {
 				try {
 					RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-					auto same = engine::sync_wait(engine::xapian::open_local_if_same(*new_database, endpoint.path));
+					auto same = engine::sync_wait(engine::xapian::open_local_if_same(new_database->native<engine::xapian::Shard>(), endpoint.path));
 					if (same) {
 						L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
 						// Handle remote endpoint and figure out if the endpoint is a local database
@@ -588,7 +590,7 @@ Shard::reopen_readable()
 	{
 		L_DATABASE("Opening local shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		auto opened = engine::sync_wait(engine::xapian::open_local(endpoint.path, false, has_db_create_or_open(flags)));
+		auto opened = engine::sync_wait(engine::open_local(engine::kind_of(endpoint.path), endpoint.path, false, has_db_create_or_open(flags)));
 		new_database = std::move(opened.shard);
 		created = opened.created;
 		local = true;

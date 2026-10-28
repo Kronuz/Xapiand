@@ -36,6 +36,7 @@
 #include "engine/document.h"      // for engine::Document
 #include "engine/doc_view.h"      // for engine::DocView
 #include "engine/error.h"         // for engine::Error
+#include "engine/kind.h"          // for engine::Kind, kind_of
 #include "engine/shard.h"         // for engine::Shard
 #include "engine/types.h"         // for engine::WriteResult
 #include "engine/xapian/shard.h"   // for engine::xapian::Shard
@@ -80,7 +81,7 @@ private:
 	std::atomic<bool> _incomplete;
 	std::atomic<Transaction> _transaction;
 
-	std::unique_ptr<engine::xapian::Shard> engine_shard;
+	std::unique_ptr<engine::Shard> engine_shard;
 
 #ifdef XAPIAND_DATA_STORAGE
 	std::unique_ptr<DataStorage> writable_storage;
@@ -103,6 +104,11 @@ public:
 
 	ShardEndpoint& endpoint;
 	int flags;
+
+	// The engine of this shard: its own once open, else the one its files are.
+	engine::Kind kind() const {
+		return engine_shard ? engine_shard->kind() : engine::kind_of(endpoint.path);
+	}
 
 	bool is_local() const {
 		return _local.load(std::memory_order_relaxed);
