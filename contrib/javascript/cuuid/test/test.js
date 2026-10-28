@@ -3,6 +3,7 @@
  * ~~~~~~~~~~~~~~~~
  *
  * :author: Dubalu Framework Team. See AUTHORS.
+ * :copyright: Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * :copyright: Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
  * :license: See LICENSE for more details.
  *

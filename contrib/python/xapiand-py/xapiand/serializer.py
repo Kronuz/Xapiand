@@ -1,3 +1,4 @@
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
 # Copyright (c) 2019 Dubalu LLC
 # Copyright (c) 2017 Elasticsearch
 #
