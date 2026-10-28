@@ -105,12 +105,67 @@ Findings outside this branch (not fixed here):
    (`url_parser.cc:106`, called from `QueryParser::init`) reads one byte past the buffer: ASan heap-buffer-overflow.
    Found by the probes of this round; belongs to the url_parser library. Repro: `SEARCH /t/?q=` with a percent-encoded
    query of that length on an ASan server.
-4. A document nested 150 levels (`{"a":{"a":...}}`) answers 500 (`InvalidArgumentError: Term too long (> 245)`), not 400.
-   Pre-existing. MessagePack and YAML bodies were not probed for nesting; `json_load` guards JSON only.
+4. (Closed in the second round below: the 150-level field path is a 400, MessagePack and YAML bodies are depth-limited.)
+
+## Security fix round 2 (SR1b, SR3, field path, `_fuzzy` cost; re-check 1 in `docs/reviews/strata-engine-text-security.md`)
+
+`Xapiand:c1fca3f6c` (SR1b), `Xapiand:a38904396` (SR3), `Xapiand:5fd538f82` (field path, `_fuzzy`). ASan+UBSan build
+`.scratch/s4-sr1b/build-asan` and a release build `build-rel` (own deps, deleted at the end); probes and scripts in
+`.scratch/s4-sr1b/` (`bisect.py`, `bisect2.py`, `atcap.py`, `sr3.py`, `fz.py`, `allprobes.sh`).
+
+1. SR1b, measured by bisection over HTTP on the ASan server (`-O1`, worker-thread stack, caps lifted by shape):
+   the matcher recurses once per phrase or near group that an AND or FILTER joins. Crash at 601, 600 survive:
+   AND and FILTER of `_phrase` (2, 3 or 5 words) or `_near`; AND of mixed phrases and near groups; AND of
+   `(AND_NOT phrase x)`; AND of one-phrase ORs; AND of wildcard and phrase pairs (600). Chains add through an
+   OR: AND(OR(AND of 299 phrases), AND of 299) survives, 300 each dies (598 and 600 joined). They do not add
+   across siblings: AND_NOT and XOR of two ANDs of 682, an OR of 13 ANDs of 100, AND_MAYBE(AND 600, AND 600)
+   survive, and AND_MAYBE with 601 on one side dies. Survive at the clause cap (4,095 nodes): AND of terms,
+   wildcards, fuzzy leaves, and of 1,365 OR, AND or AND_NOT groups of terms or of 585 OR-of-two-phrases groups;
+   OR, XOR, AND_MAYBE, AND_NOT of 1,365 phrases or near groups; scaled phrases in an AND (1,023); text `_max`,
+   `_synonym`, `_elite_set` of phrases nest one level per phrase, so the depth cap (100) bounds them.
+   Limit: `QueryNode::chain` (a phrase or near group is 1; AND and FILTER add, every other operator takes the
+   deepest operand), refused past `MAX_QUERY_CHAIN` = 256 in `set_extent`, a 400. Margin under ASan 2.3x (601 to
+   256); the shapes at the limit (nested through OR, AND_NOT, AND_MAYBE, FILTER, 20-word phrases, near groups of 5)
+   answer 200 on the ASan and the release server (`atcap.py`). Release sanity: the pre-S4 release binary
+   (`.scratch/build`, no caps) survives 2,942 five-word phrases and dies at 2,943 (nested through an OR: 1,470 each
+   side survive, 1,471 die), so the release margin is 11x. The release build of this branch answers the harness
+   and the at-limit shapes with 200 and 400, node alive.
+2. SR3: MessagePack bodies unpack with msgpack's own depth limit (`msgpack_load`, `make_msgpack_unpacker` for the
+   streaming path), YAML counts open collections in the y2j event loop; both refuse past 200 (`MAX_JSON_DEPTH`)
+   with a 400. NDJSON (and RESTORE) lines go through `json_load`, already guarded. The fuzz target
+   `xapiand_fuzz_body` (JSON, YAML, MessagePack, structured around the limit plus byte mutations) found two more
+   YAML crashes at once: a bare-scalar document indexed an empty collection stack, and an empty document popped
+   an empty value stack. Fixed (a 400 for no document); an error also stops the alias pass. Not probed over HTTP
+   before the fix whether the framework reaches the decoder with an empty body.
+3. A 150-level field path (`Term too long (> 245)`, an `errc::invalid` engine error) answers 400; any
+   `errc::invalid` that is not already a client error does (it was 500). Also turns the `_scale_weight` list
+   misuse (`op not valid with a list of subqueries`) from 500 to 400.
+4. `_fuzzy` text searched the whole text for a tilde once per word (quadratic). Hoisted: 12,000 words 3.02 s to
+   0.04 s on the ASan server, 14,000 4.23 s to 0.05 s, 100,000 timed out to 0.34 s (400).
+5. Changelog: queries over 4,096 clauses or nested past the cap are refused with 400, the new chain limit, the
+   body depth limits and the crash fixes.
+6. Proof: `xapiand_test_engine_query` 22442 checks (`test_chain_cap`: the limit per operator, wrappers, appends,
+   nesting through an OR, and the matcher running 256 phrases), `xapiand_test_text` 13224 (`test_body_depth_per_format`:
+   200 loads and 201, 400 and 100,000 are refused for MessagePack arrays and maps and YAML flow sequences, flow maps
+   and block maps; bare scalars load; empty documents are errors) on ASan+UBSan and release. Over HTTP on the ASan
+   server: the re-check's probes (`p7` text, flat, dsl, qstr, body, yaml, mp groups, `p8` width shapes at 650, 1,365
+   and 4,095, `p9` MessagePack, `sr3.py`): 682 requests, every answer 200, 204 or 400 except 15 transport-level
+   resets on `q=` URLs of 20,000+ characters (as in the re-check) and the aggregation-nesting timeout the review
+   already noted; no crash. `harness/query_depth_check.py` (now 56 checks, the worst shape and one per operator) exit
+   0 on both builds. Docs E2E 576/576 (339 requests, uncovered 0). `fuzz_body` 90 s seed 7 and 60 s seed 11 (174k
+   bodies), `fuzz_text` 40 s seed 7 (369k texts): no violation.
+   Revert checks: chain check off fails `test_chain_cap` (10 checks); msgpack limit off aborts `xapiand_test_text` in
+   `msgpack::object` copy (`object.hpp:570`, the review's frame); YAML limit off fails 4 checks; the two YAML fixes off
+   SEGV in `countEntry`; the reverted field-path and `_fuzzy` sources answer 500 for 150 levels and 3.02 s for 12,000
+   words (100,000 times out), the fixed 400 and 0.04 s. Mutants: FILTER not joining fails 3 checks, OR joining fails
+   `test_chain_cap` ("threw ... too many phrases").
+
+Left open: YAML aliases were not probed for amplification (a chain of aliases to anchors copies the value each
+time); the aggregation 10-level nesting timeout in the review; the DSL depth margin (cap 45, ASan crash 80).
 
 ## Next
 
-Route the findings above (wildcard cap, url_parser, deep field path 500, MessagePack/YAML body depth). Open for the lead: the `cjk_words` segmenter (decision 2).
+Route the findings above (wildcard cap, url_parser, YAML alias amplification). Open for the lead: the `cjk_words` segmenter (decision 2).
 
 ## Blocked on
 

@@ -12,14 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Queries have size limits.** A query nests at most 100 levels of operators and holds at most 4096
-  terms and operators; the query DSL allows 45 levels of nested clauses and a JSON body 200 levels.
-  Anything larger answers `400` with the limit in the message. Elasticsearch's defaults are 30 levels
-  and 4096 clauses.
+  terms and operators; the query DSL allows 45 levels of nested clauses, and a JSON, YAML or MessagePack
+  body 200 levels. An AND (or FILTER) joins at most 256 phrases and `_near` groups. A query with more than
+  4,096 clauses, or nested past the depth cap, is refused with `400` and the limit in the message.
+  Elasticsearch's defaults are 30 levels and 4096 clauses.
 
 ### Fixed
 - **A deeply nested or very wide query no longer crashes the node.** A text of thousands of nested
   brackets or tens of thousands of words, and a query DSL nested a few hundred levels, overflowed the
   stack of the thread that ran the search.
+- **A nested MessagePack or YAML body, or a few hundred ANDed phrases, no longer crashes the node.** A
+  MessagePack body of 800 nested arrays (about 1 KB), a YAML flow sequence 1,000 levels deep, and an AND of
+  about 600 `"phrase"` or `_near` clauses overflowed the stack; they answer `400` now. A YAML body that is
+  empty or a bare scalar no longer crashes the decoder either.
+- **A field path of 150 levels answers `400`**, not `500`, and a `_fuzzy` text of tens of thousands of words
+  is refused in milliseconds instead of after seconds.
 
 ## [1.0.0-alpha.10] - 2026-10-28
 

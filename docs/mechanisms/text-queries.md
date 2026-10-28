@@ -52,9 +52,13 @@ replays all of them through the lowering (`tests/test_text.cc`).
    (`src/engine/query.h`); the factories of `engine::Query` refuse a larger one with `QueryDepthError`, a
    client error (400). Xapian's matcher recurses over a tree by depth and by width, so the caps are
    what keeps a query from overflowing the matcher's stack; `to_xapian` and `Query::description` are
-   iterative and do not depend on them. The query DSL bounds its own recursion (`QueryDSL::MAX_NESTING`,
-   45 to 90 levels of nested clauses, and the `q=` expression before it is built) and `json_load` refuses
-   bodies nested past `MAX_JSON_DEPTH` (200).
+   iterative and do not depend on them. The matcher also recurses once per phrase or near group that an
+   AND or FILTER joins, however flat the query is, so each node carries its `chain` (a phrase or near group
+   is 1; AND and FILTER add their operands, every other operator takes the deepest) and `MAX_QUERY_CHAIN`
+   (256) bounds it. The query DSL bounds its own recursion (`QueryDSL::MAX_NESTING`, 45 to 90 levels of
+   nested clauses, and the `q=` expression before it is built). JSON, YAML and MessagePack bodies are
+   refused past `MAX_JSON_DEPTH` (200) before they are copied: `json_load` scans the text, `yaml_load`
+   counts libyaml's open collections, `msgpack_load` and the streaming unpacker use msgpack's depth limit.
 
 ## Proof
 
