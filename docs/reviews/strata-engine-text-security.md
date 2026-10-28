@@ -207,3 +207,165 @@ Non-blocking (tracked, not conditions of this merge):
   repro before it's actionable.
 - `p3_expansion.py` harness bug (not a product finding) — fix and rerun if expansion cost under
   real term cardinality is still an open question.
+
+
+## Re-check 1 (head `Xapiand:4233bf25e`, fixes `Xapiand:3612b7a57` and `Xapiand:4233bf25e`)
+
+Clean room honored (no `src/xapian/`, `oracle.cc`, `sortable_serialise.{cc,h}` or
+`src/server/remote_protocol_views.cc` opened; the Xapian frames below are ASan backtrace names
+only). ASan+UBSan build in its own dir (`.scratch/s4-recheck/build`, own deps, deleted after),
+probes in `.scratch/s4-recheck/` (`p7_recheck.py` groups text/flat/dsl/qstr/body/yaml,
+`p8_width.py`, `p9_mp.py`, outputs `p7_*.out`, `p8_*.out`, `p9_mp.out`, ASan logs `node-r*.log`).
+Nothing outside this file was edited; no commit.
+
+### Verdicts
+
+- **SR1: PARTIAL.** The nesting crash I reported is closed, but a width crash through the same
+  tree remains, so the claim "every case past a cap answers 400" and the cap's rationale do not
+  hold. See SR1b.
+- **SR2: CLOSED** for `QueryDSL::process` and the `q=` boolean path (below). The MessagePack and
+  YAML body nesting the developer flagged is a crash, filed as SR3 (blocking for the claim, not
+  for SR2's own code).
+
+### What is closed (SR1 nesting, SR2)
+
+- `to_xapian` is a post-order loop on an explicit stack (`src/engine/xapian/query.cc:141-185`),
+  `Query::description()` likewise (`src/engine/query.cc:239-313`). No other recursion over the
+  tree exists: `census.cc:235-278` already uses a worklist, and `~QueryNode`
+  (`src/engine/query.cc:80-98`) frees chains in a loop. The 40 KB-stack test
+  (`tests/test_engine_query.cc`, `test_depth_cap`) builds, describes and converts a tree at the
+  cap.
+- The caps live in `set_extent` (`src/engine/query.cc:58-77`), called from every factory that
+  builds an inner node (`combine` x2, `append`, `scale`); leaves (`term`, `wildcard`,
+  `edit_distance`, `source`) have depth/size 1, and `QueryNode` is built nowhere outside these
+  factories (grep of `src/`). Every caller found goes through them: text (`text.cc:229-236`),
+  DSL (`query_dsl.cc:210,410,424,430,736`), `multivalue/range.cc`, `generate_terms.cc`,
+  `geospatialrange.cc`, `search_views.cc:2302`. `QueryDepthError` derives from `QueryParserError`
+  and is a `ClientError`, so it answers 400. The caps fire when the node is built (bottom-up),
+  before `to_xapian` or any matcher sees it, and `text.cc:218` additionally refuses at the push
+  of level 101 before the rest of the text is lowered. Aggregations build no queries (no
+  `engine::Query` use under `src/aggregations/`). The remote/replication side builds
+  `Xapian::Query` in `src/server/remote_protocol_views.cc`, which the clean room keeps me out of;
+  I did not review it (cluster-internal peers; see "For the lead").
+- Probes against the live ASan server, all alive, no 500, no crash:
+  - Text with the boolean modifier (`_or`/`_and`/`_near`), shapes paren/altparen/andparen/orparen/
+    notchain/minus/plus/wcflat/tilde at n = 50..200000: 200 up to depth 99, **400 from 100**
+    (`p7_text.out`; same-operator chains and bare parens flatten and answer 200 by design).
+  - The original SR1 shapes (`a AND (` x 20000 and 40000, 140-300 KB): 400 in 0.00-0.01 s
+    (`p7_text.out`, `harness/query_depth_check.py`).
+  - Flat width: 4095 words 200, 4096/4097/12000/14000/100000 words 400 for plain, `_and`, `_or`,
+    `_near`, `_phrase`, `_wildcard`, `_partial`, `_fuzzy` and boolean AND/OR/alternating
+    (`p7_flat.out`). One 100000-word `_fuzzy` request timed out at 300 s with the node alive (a
+    `_fuzzy` over 100 KB of words spends its time before the cap is reached; see "For the lead").
+  - DSL: `_and`/`_or`/`_filter`/`_not`/`_scale`/`_xor` arrays, object-in-object and array-of-array
+    nesting at 20..12000 levels: nesting 44 answers 200, 45 answers 400; array-of-array is capped
+    at the frame limit (n=150 answers 400); field paths 30..12000 answer 400; 4095 values 200,
+    4096+ 400; 40 levels x 100 leaves 200, x 110 leaves 400 (`p7_dsl.out`).
+  - `q=`: altparen / NOT / parens / xor-maybe / right-deep chains at n = 20..1000 answer 200 or
+    400 correctly (n = 44-46 alt and NOT chains answer 400); at n >= 20000 the URL is too long and
+    the connection is reset (transport limit, node alive) (`p7_qstr.out`).
+  - `harness/query_depth_check.py` against the new build: exit 0, every line ok.
+- Unit tests: `xapiand_test_engine_query` 22411 checks and `xapiand_test_text` 13196 checks pass
+  under ASan+UBSan (the only sanitizer notes are the known lz4/rapidjson null-offset hits).
+- **Revert check:** with the two cap checks in `set_extent` disabled, `test_depth_cap` fails
+  (6 of 22411 checks, `tests/test_engine_query.cc:952,958,959` among them); with the
+  `json_depth` guard in `json_load` disabled, `test_text` dies with a rapidjson `ParseArray`
+  stack overflow (`test_json_depth_matches_the_document`). Both restored; `git status` is clean.
+- Caps before recursion: `json_load` scans the text for depth first (`src/database/utils.cc:147-179`,
+  limit 200) and so refuses before rapidjson's recursive `ParseArray`; `expression_levels`
+  (`src/query_dsl.cc:956-1015`) refuses a `q=` expression before `make_dsl_query` builds the
+  nested object; the `Depth` guard in `process` (`src/query_dsl.cc:192-202`) counts frames, and
+  the guard's constructor throws before incrementing so the counter stays balanced. `QueryDSL`
+  is built per request (`src/database/handler.cc:1015`), so `depth` is not shared across
+  threads.
+
+### SR1b (critical, blocking): AND of a few hundred phrases crashes Xapian's matcher below the clause cap
+
+The 4096-clause and 100-level caps bound node count and depth, but Xapian's matcher recurses
+(`EstimateOp::resolve`, `estimateop.cc:312`, 250+ frames in the backtrace) per ANDed operand
+that is itself an operator, so the node count is the wrong bound. Reproduced over HTTP,
+node killed by an ASan stack overflow, body 4-5 KB:
+
+```
+text "_and": '"a b" ' x n      n=600 -> 200, n=650 -> crash   (p8_bis2.out, node-r8phrase_and*.log)
+text boolean: "a b" AND ... x1365 -> crash                      (p8_phrase_bool.out)
+DSL {"_and":[{"_phrase":"a b"} x n]}   n=600 -> 200, n=1365 -> crash   (p8_dsl.out)
+DSL {"_and":[{"_near":"a b"} x 1365]}  -> crash                  (p8_dsl.out)
+```
+
+1365 phrases is 4095 nodes, under the clause cap; the crash starts between 600 and 650 phrases
+(about 1,800-1,950 nodes) under ASan at -O1. The same width of other shapes survives: AND of
+4095 terms, 4095 fuzzy leaves, 4095 wildcard leaves, 1365 `(a OR b)` groups, 1365 `(a AND b)`
+groups, 1365 `(a NOT b)` groups, an OR of 1365 phrases (`p8_*.out`), so the bound depends on the
+operand kind and the developer's "survives 12,000 flat terms" measurement does not carry over.
+This is almost certainly the "unreproduced SEGV in `EstimateOp`/`AndContext::postlist`" my first
+review recorded; it is now reproduced and reachable from a 4 KB request. It is not new to S4 (the
+same Xapian tree was reachable before), but SR1 asked for the matcher to be protected and the
+fix's stated margin ("500 levels survive, caps at 100 and 4096") is wrong for this shape.
+
+Fix direction (developer's call): bound operands of AND-like operators that are themselves
+operators (phrases, near groups) at a width the matcher survives with margin (e.g. weight an
+operator child at 8 or more clauses, or cap AND fan-out of non-leaf children near 100), then
+re-measure every operand kind (AND/FILTER/AND_NOT/XOR/MAYBE/NEAR/PHRASE x term/phrase/group/
+scale/synonym/wildcard) with a bisect to the crash, add the worst shape to
+`harness/query_depth_check.py`, and keep a 2x margin under ASan.
+
+### SR3 (critical, blocking for "every case past a cap answers 400"; pre-existing, not in S4's code): deeply nested MessagePack and YAML bodies crash the node
+
+`json_load` is the only body decoder with a depth guard. The other decoders in
+`search_views.cc:2866-2870` (`yaml_load` then `MsgPack(rdoc)`, `MsgPack::unserialise`) have none:
+
+```
+MessagePack array nest (0x91 x n)  PUT/SEARCH: n=600 -> 400, n=800 -> crash   (p9_mp.out)
+MessagePack map nest   (0x81 0xa1 f x n)  PUT: n=250 -> 204, n=400 -> crash
+YAML flow sequence "[" x 1000      PUT/SEARCH -> crash                        (p7_yaml.out)
+```
+
+The MessagePack crash is `msgpack::object::object(const object&, zone&)` (object.hpp:570, copy
+recursion), reached with a 1 KB body; no credentials needed. YAML at 150 levels answers 400/500,
+at 1000 levels kills the node (the later YAML cases did not run after the node died).
+Also note the access-log prettifier (`search_views.cc:3195-3220`) decodes the same bodies again,
+inside a `try` that cannot catch a stack overflow.
+
+Fix direction: a depth scan that rejects before decoding, as `json_depth` does, for MessagePack
+(walk the header bytes iteratively) and YAML (flow-bracket and indentation depth, or a limit on
+libyaml events); one shared limit; unit tests with a small-stack thread as in `test_depth_cap`.
+
+### Developer-flagged items
+
+- 150-level-deep field path answers 500 (`JSON PUT object nest n=150` and `YAML flow map nest
+  n=150`): **wrong status only**, node alive, schema code rejects it with `InvalidArgumentError`
+  (`p7_body.out`). The same shape at 190/199 answers 400. Fix when convenient: map that error to a
+  400. Not blocking by itself.
+- MessagePack and YAML body nesting: **crash**, SR3 above.
+
+### For the lead (one line each, outside scope)
+
+- `src/server/remote_protocol_views.cc` builds `Xapian::Query` from peer messages; not checked
+  (clean room). Trusted-cluster model applies, but a depth/width check there is worth a look by
+  someone allowed to open it.
+- An aggregation nested 10 levels (`_aggs` of `_terms` on one field) did not answer within 120 s
+  (node alive); not diagnosed, may be my payload or a real hang.
+- `q=` with an AND chain of 1000 terms costs 3.4 s CPU under ASan (0.1 s at 100): superlinear in
+  `make_dsl_query`; a few thousand terms fit in a URL, so this is a CPU cost to keep an eye on.
+- A `_fuzzy` text of 100000 words spends minutes before the clause cap applies (3-4 s at 12000-
+  14000 words); the cap check could come before the per-word expansion.
+- The new caps also reject large legitimate queries (more than 4096 values in an `_in`/`_or`
+  list); intended, but worth a line in the changelog.
+- DSL margin: crash at 80 levels vs cap at 45 under ASan is under 2x; release builds have more
+  room, but the margin is thin.
+
+### Not run
+
+- Non-ASan (release) build and the matcher thresholds in it; the thresholds above are ASan -O1.
+- Remote/replication query construction (clean room).
+- YAML cases after the first crash (block nesting at 20000, alias amplification); MessagePack
+  SEARCH on maps; CPU-cost probes for wildcard expansion (`p3_expansion.py` still unfixed).
+- No benchmarks, no TLS review, no differential run against the pre-S4 tree.
+
+### Verdict after re-check
+
+**S4 may not land yet.** SR1 is PARTIAL (nesting closed, phrase-width crash open: SR1b), SR2 is
+CLOSED, and SR3 (MessagePack/YAML body nesting) is a crash reachable with a 1 KB unauthenticated
+body. SR1b blocks. SR3 is pre-existing and outside the query path, so the lead may land S4 with SR3
+tracked, but only if the "every case past a cap answers 400" wording is narrowed to JSON bodies.
