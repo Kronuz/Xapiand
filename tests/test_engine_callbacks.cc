@@ -78,9 +78,14 @@ private:
 	engine::valueno slot_;
 };
 
+// Stands for Xapiand's own client errors, which are not engine errors: they must leave a search as thrown.
+struct ClientLike : std::runtime_error {
+	using std::runtime_error::runtime_error;
+};
+
 class ThrowingKey final : public engine::KeyMaker {
 public:
-	std::string key(const engine::DocView&) const override { throw std::runtime_error("key"); }
+	std::string key(const engine::DocView&) const override { throw ClientLike("key"); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<ThrowingKey>(); }
 	std::string name() const override { return "ThrowingKey"; }
 	std::string serialise() const override { return ""; }
@@ -98,7 +103,7 @@ public:
 
 	void see(const engine::DocView& doc, double weight) override {
 		if (throw_on && datas.size() == 2) {
-			throw std::runtime_error("spy");
+			throw ClientLike("spy");
 		}
 		auto& entry = groups[doc.value(GROUP)];
 		++entry.first;
@@ -430,6 +435,18 @@ std::optional<engine::errc> error_kind(F&& f) {
 	return std::nullopt;
 }
 
+// Whether the call raises a T, not translated to an engine error.
+template <typename T, typename F>
+bool throws_as(F&& f) {
+	try {
+		f();
+	} catch (const T&) {
+		return true;
+	} catch (...) {
+	}
+	return false;
+}
+
 Query t(const char* term, engine::termcount wqf = 1) {
 	return Query::term("", term, wqf);
 }
@@ -472,7 +489,7 @@ void test_sorter() {
 		}
 		// A key maker that throws fails the search, and the next search is fine.
 		ThrowingKey throwing;
-		CHECK_TRUE(error_kind([&] { run(corpus.strata, n, t("common"), [&](engine::SearchRequest& q) { q.sorter = &throwing; }); }).has_value());
+		CHECK_TRUE(throws_as<ClientLike>([&] { run(corpus.strata, n, t("common"), [&](engine::SearchRequest& q) { q.sorter = &throwing; }); }));
 		CHECK_EQ(run(corpus.strata, n, t("common")).hits.size(), static_cast<std::size_t>(shard_count * 60));
 	}
 }
@@ -556,7 +573,9 @@ void test_spy() {
 		// A spy that throws fails the search; the next one is unaffected.
 		GroupSpy throwing;
 		throwing.throw_on = true;
-		CHECK_TRUE(error_kind([&] { run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &throwing; }); }).has_value());
+		CHECK_TRUE(throws_as<ClientLike>([&] { run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &throwing; }); }));
+		// A scan sink that throws leaves as thrown too.
+		CHECK_TRUE(throws_as<ClientLike>([&] { engine::sync_wait(corpus.strata.owned[0]->scan(0, [](const engine::DocView&) { throw ClientLike("sink"); })); }));
 		GroupSpy fine;
 		CHECK_EQ(run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &fine; }).estimated, static_cast<unsigned>(shard_count * 60));
 		CHECK_EQ(fine.datas.size(), static_cast<std::size_t>(shard_count * 60));

@@ -34,8 +34,26 @@ namespace engine::strata {
 struct Core;
 
 // Rethrows the exception being handled as an engine error of its kind, marking `core` (when given) fenced
-// on an index_fenced. Call only inside a catch block.
-[[noreturn]] void rethrow_translated(Core* core = nullptr);
+// on an index_fenced. An exception of no known kind becomes an internal error, unless `callback_threw`: it came
+// from the caller's own code (a spy, a key maker, a sink), so it leaves as thrown. Call only inside a catch block.
+[[noreturn]] void rethrow_translated(Core* core = nullptr, bool callback_threw = false);
+
+// Runs the caller's callbacks, remembering that one threw.
+class CallbackGuard {
+public:
+	template <typename F>
+	decltype(auto) operator()(F&& call) {
+		try {
+			return call();
+		} catch (...) {
+			threw_ = true;
+			throw;
+		}
+	}
+	bool threw() const noexcept { return threw_; }
+private:
+	bool threw_ = false;
+};
 
 struct Handle;
 class Pinned;

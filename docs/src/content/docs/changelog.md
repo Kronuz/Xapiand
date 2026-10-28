@@ -16,7 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `red` are two buckets). The words of an analysed `text` field, or of a field indexed without
   values, are still counted from the index terms.
 
+- **`_terms` and `_values` keep a bounded number of buckets** while they collect: at most about
+  `_limit * 1.5 + 10` (Elasticsearch's `shard_size`, settable with `_shard_size`), dropping the
+  buckets with the lowest counts. Counts can fall short of the true counts when a field has more
+  distinct values than that. They are refused (400) over geo fields.
+
+### Added
+- **`_sort` takes the order as a string**: `{"balance": "desc"}` and
+  `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
+
 ### Fixed
+- **A client error raised inside an aggregation or a sort on the strata engine answers 400**,
+  as on the Xapian engine (it answered 500).
 - **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
   among the values; it now returns the values.
 

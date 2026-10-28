@@ -99,7 +99,7 @@ void mark_fenced(Core* core) noexcept;
 // Rethrows the exception being handled as an engine error of its kind; a fenced index marks its Core,
 // so the next handle opened on it gets a fresh index. Call only inside a catch block.
 [[noreturn]] void
-rethrow_translated(Core* core)
+rethrow_translated(Core* core, bool callback_threw)
 {
 	try {
 		throw;
@@ -119,6 +119,9 @@ rethrow_translated(Core* core)
 	} catch (const std::invalid_argument& exc) {
 		throw Error(errc::invalid, exc.what());
 	} catch (const std::exception& exc) {
+		if (callback_threw) {
+			throw;
+		}
 		throw Error(errc::internal, exc.what());
 	}
 }
@@ -954,6 +957,7 @@ task::task<void>
 Shard::scan(docid from, const ScanSink& sink)
 {
 	co_await Hop{on_};
+	CallbackGuard guard;
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
@@ -980,11 +984,11 @@ Shard::scan(docid from, const ScanSink& sink)
 		std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) { return a.did < b.did; });
 		for (auto& hit : hits) {
 			const OwnedDocView view(SegmentDocView(hit.did, *hit.seg, hit.ord));
-			sink(view);
+			guard([&] { sink(view); });
 		}
 		co_return;
 	} catch (...) {
-		rethrow_translated(handle_->core);
+		rethrow_translated(handle_->core, guard.threw());
 	}
 }
 

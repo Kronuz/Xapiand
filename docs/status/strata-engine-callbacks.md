@@ -1,6 +1,6 @@
 # strata-engine-callbacks (S3, phase 7a)
 
-> Status: DONE, MERGED LOCALLY (2026-10-28) workstream `strata-engine-callbacks`; branch `phase7a/strata-engine-callbacks` (merged into Xapiand master, not pushed, no CI run).
+> Status: DONE, MERGED LOCALLY (2026-10-28); review fixes CR1, CR2 and the follow-ups below on the branch (2026-10-29) workstream `strata-engine-callbacks`; branch `phase7a/strata-engine-callbacks` (merged into Xapiand master, not pushed, no CI run).
 
 Design: `strata/docs/design/xapiand-on-strata.md` (row S3, D4, G4, G5, G6, G8; ruling R-P2: no term lists in strata or prospect).
 
@@ -78,6 +78,43 @@ on the Xapian engine and is refused on strata.
   the numeric-range check on strata 797 ranges 0 wrong. No new caller of the key adapter (the key prefix still
   reaches the engine through `term_key_prefix()` only). No decoder or parser changed, so no new fuzz target.
 
+## Review round (code review CR1, CR2; lead's follow-ups)
+
+1. **CR1.** A spy, key maker or scan sink that throws now leaves the strata engine as thrown: `CallbackGuard`
+   (`shard.h`) marks the throw and `rethrow_translated(core, callback_threw)` keeps an exception of no known kind
+   (strata's own kinds are still translated). `AggregationError` and `SerialisationError` are 400 again. Tests:
+   `test_sorter` and `test_spy` throw a `ClientLike` (a `std::runtime_error`, not an engine error) and check its
+   type; the scan sink too. Revert check: ignoring `callback_threw` fails 6 of 944 checks. The five probe shapes
+   (`_sum` over keyword, `_avg` over geo and boolean, `_terms` with an unknown `_sort` field, `_terms` and
+   `_values` over geo) plus histogram over keyword, `_terms` with no field and two bad sort orders are asserted 400
+   on both engines by `strata_callbacks_check.py` (`misuse()`).
+2. **CR2.** The harness asserts 200 on every compared search. That exposed that its aggregation names began with
+   `_` ("Aggregation name '_count' is not valid") and its `_filter` lacked `_term`: most of the earlier 176
+   searches were equal 400s. Fixed; 208 searches now (12 more sorted searches, a geo and a boolean field, the 20
+   misuse checks), all 200 or the expected 400, 0 different. The "all aggs" search now compares aggregations only
+   (`_limit: 0`): with a window of 5 and all weights equal the two engines pick different hits (docids from the
+   same RESTORE batch differ).
+3. **Sort shapes.** `{"balance": "desc"}` and `[{"age": "asc"}, ...]` (a field's order as a string, Elasticsearch's)
+   work on both engines (`QueryDSL::get_sorter`); an order other than asc/desc, or a number, is a 400. Revert check:
+   with the string branch off the harness reports 24 differences and NOT 200 on the sorted searches.
+4. **`_terms` memory.** `BucketAggregation` keeps at most about `shard_size` buckets while collecting (`_prune`):
+   default `_limit * 1.5 + 10`, `_shard_size` raises it (never below `_limit`); past twice that many it keeps the
+   best `shard_size` in its own order (key orders exactly; count orders by count; an order by a sub-aggregation by
+   count) and `serialise_results` sends the best `shard_size`. Only `_terms` and `_values` are capped. Counts of
+   values pruned and met again restart, so counts fall short past the cap and a flat distribution loses its top
+   (guaranteed only for values above `1/shard_size` of the documents), Elasticsearch's caveat. Nested bucket
+   aggregations each cap their own buckets. `harness/terms_cap_check.py`: 345,000 documents, 200,000 distinct
+   keywords and integers, 5 shards, `_limit` 10, `_shard_size` 100: top 10 right with counts within 1% on both
+   engines; strata resident growth during the request 10 and 19 MB with the cap, 104 and 67 MB with the cap
+   mutated off (ASan build, `ps` polled every 20 ms; the Xapian engine's number moves with file-backed pages and
+   is printed, not asserted).
+5. **Geo `_terms` and `_values`** are refused with 400 "terms over geo fields are not supported" ("values over geo
+   fields..."): a geo slot holds a range list, not countable values, and a count of range strings is not useful.
+6. **Ties inside sort groups** (keys and weight equal) can come back in another order from each engine; not changed.
+   For gate 7a's body-difference list.
+7. The docs E2E on the strata engine is not a gate (it refuses query text: 410 of 576 pass); on the default engine
+   576 of 576.
+
 ## Findings for others
 
 1. S2's ASan overflow in `xapiand_test_engine_search_strata` (recursive destructors of the 20,000-append
@@ -105,6 +142,13 @@ only places this branch reads the key prefix or the concatenation; they change t
 Nothing.
 
 ## Log
+
+- 2026-10-29: review fixes CR1, CR2, sort shapes, `_terms` cap, geo refusal (above). ASan+UBSan (own dir and deps):
+  `test_engine_callbacks` 944, `test_engine_strata` 9568, `test_engine_search_strata` 231,298 (`ulimit -s 65520`),
+  `test_engine_search` 4423 pass; `strata_callbacks_check.py` 208 searches 0 different (UBSan: only lz4 and
+  RapidJSON); `numeric_range_check.py` 797 ranges 0 wrong on both engines; `terms_cap_check.py` right on both;
+  docs E2E 576/576 (newman 6.2.3, default engine). No fuzz target: no decoder changed (the sort shape is JSON
+  through the existing `QueryDSL`). Build dirs deleted.
 
 - 2026-10-27: branch created from S2's head (Xapiand:90cfd9775); tests, mutants, ASan, fuzz, server checks.
 - 2026-10-28: R-P2 ruling: merged master twice, repinned prospect to main, `_terms` over values, term lists refused,

@@ -666,7 +666,7 @@ build(const Query& query, const Builder& b, int depth)
 
 
 SearchResult
-run(std::span<engine::Shard* const> shards, const SearchRequest& request)
+run(std::span<engine::Shard* const> shards, const SearchRequest& request, CallbackGuard& guarded)
 {
 	const auto& source = request.query->source();
 	if (shards.empty() || request.query->empty()) {
@@ -735,7 +735,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	// The heaviest match, when a key or a spy makes the search visit every match (the first hit is then not the heaviest).
 	double heaviest = 0;
 	if (request.sorter != nullptr) {
-		options.key = [&](const p::match& m) { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); };
+		options.key = [&](const p::match& m) { return guarded([&] { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); }); };
 	}
 	if (request.sorter != nullptr || request.spy != nullptr) {
 		// The spy sees every match once, as Xapian shows it the documents it examines.
@@ -743,7 +743,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 			const double weight = m.score();
 			heaviest = std::max(heaviest, weight);
 			if (request.spy != nullptr) {
-				request.spy->see(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord), weight);
+				guarded([&] { request.spy->see(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord), weight); });
 			}
 		};
 	}
@@ -773,10 +773,11 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 task::task<SearchResult>
 search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 {
+	CallbackGuard guarded;
 	try {
-		co_return run(shards, request);
+		co_return run(shards, request, guarded);
 	} catch (...) {
-		rethrow_translated(nullptr);
+		rethrow_translated(nullptr, guarded.threw());
 	}
 }
 
