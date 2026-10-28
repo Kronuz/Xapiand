@@ -1302,6 +1302,10 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	} else {
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
+	// Numeric id 0 is the shard's "assign a new id" request, so a user id of 0 would be renumbered and lost.
+	if (spc_id.get_ctype() == 'N' && sortable_unserialise(unprefixed_term_id) == 0) {
+		THROW(ClientError, "Document id 0 is reserved for numeric ids [{}]", repr(document_id.to_string()));
+	}
 	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 }
 
