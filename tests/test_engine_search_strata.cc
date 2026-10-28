@@ -354,6 +354,36 @@ bool has_optional(const Query& query) {
 	return false;
 }
 
+class SlotKey final : public engine::KeyMaker {
+public:
+	std::string key(const engine::DocView& doc) const override { return doc.value(1); }
+	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(); }
+	std::string name() const override { return "SlotKey"; }
+	std::string serialise() const override { return ""; }
+	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(); }
+};
+
+// Records every document it is shown.
+class CountingSpy final : public engine::MatchSpy {
+public:
+	std::vector<engine::docid> seen;
+	std::vector<double> weights;
+	std::vector<std::string> data;
+
+	void see(const engine::DocView& doc, double weight) override {
+		seen.push_back(doc.did());
+		weights.push_back(weight);
+		data.push_back(doc.data());
+	}
+	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<CountingSpy>(); }
+	std::string name() const override { return "CountingSpy"; }
+	std::string serialise() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<CountingSpy>(); }
+	std::string serialise_results() const override { return ""; }
+	void merge_results(std::string_view) override { }
+	std::string description() const override { return "CountingSpy"; }
+};
+
 // --- running a query ---
 
 engine::SearchResult run(const Index& index, std::size_t shards, const Query& query, engine::doccount first, engine::doccount maxitems, engine::DocidOrder order = engine::DocidOrder::ascending) {
@@ -595,6 +625,39 @@ void test_two_shards() {
 	std::printf("Xapian's ranking differs from the strata engine's (which matches the model) in %d queries with repeated terms and %d of distinct terms with AND_MAYBE, FILTER, PHRASE or NEAR; its documents differ from the model in %d\n", ranking_differs, optional_differs, xapian_differs);
 }
 
+// A spy is shown every match once, with its id in its shard and its data.
+void test_spy() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("spy", 3, 30, 2, xapian, strata, model);
+	const auto query = Query::combine(Op::OR, Query::term("w1"), Query::term("tag2"));
+	const auto expected = model_hits(model, query, 3);
+	std::vector<double> want;
+	for (const auto& [id, weight] : expected) { want.push_back(weight); }
+	std::sort(want.begin(), want.end());
+	for (auto* index : {&xapian, &strata}) {
+		CountingSpy spy;
+		auto prepared = engine::prepare(query);
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		request.maxitems = 3;
+		request.check_at_least = 100000;   // Xapian shows its spies only the documents it examines
+		request.spy = &spy;
+		const auto result = engine::sync_wait(engine::search(index->shards(3), request));
+		CHECK_EQ(spy.seen.size(), expected.size());
+		CHECK_EQ(result.estimated, expected.size());
+		for (std::size_t i = 0; i < spy.seen.size(); ++i) {
+			CHECK_EQ(spy.data[i], "d" + std::to_string(spy.seen[i]));
+		}
+		auto got = spy.weights;
+		std::sort(got.begin(), got.end());
+		REQUIRE_EQ(got.size(), want.size());
+		for (std::size_t i = 0; i < got.size(); ++i) {
+			CHECK_TRUE(close(got[i], want[i]));
+		}
+	}
+}
+
 void test_five_shards() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
@@ -632,27 +695,6 @@ void test_no_shards_and_empty() {
 
 
 // --- what is the strata engine's own ---
-
-class SlotKey final : public engine::KeyMaker {
-public:
-	std::string key(const engine::DocView& doc) const override { return doc.value(1); }
-	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(); }
-	std::string name() const override { return "SlotKey"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(); }
-};
-
-class NoSpy final : public engine::MatchSpy {
-public:
-	void see(const engine::DocView&, double) override { }
-	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<NoSpy>(); }
-	std::string name() const override { return "NoSpy"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<NoSpy>(); }
-	std::string serialise_results() const override { return ""; }
-	void merge_results(std::string_view) override { }
-	std::string description() const override { return "NoSpy"; }
-};
 
 template <typename F>
 engine::errc error_kind(F&& f) {
@@ -738,9 +780,7 @@ void test_refusals() {
 	const auto syntax = engine::errc::syntax;
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	SlotKey key;
-	NoSpy spy;
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }), syntax);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.spy = &spy; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.percent_threshold = 50; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.weight_threshold = 0.1; }), syntax);
@@ -824,4 +864,4 @@ void test_concurrent_searches() {
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_two_shards, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_concurrent_searches)
+TEST_MAIN(test_one_shard, test_positional, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_concurrent_searches)

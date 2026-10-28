@@ -41,6 +41,7 @@
 #include "prospect/operators.hh"   // for prospect::scale_scorer
 #include "prospect/searcher.hh"    // for prospect::term_table, live_scorer
 
+#include "engine/doc_view.h"       // for DocView
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
@@ -378,6 +379,34 @@ build(const Query& query, const Builder& b, int depth)
 }
 
 
+// A matching document shown to a spy: its id in its shard, as Xapian shows it, and its stored data,
+// read when asked.
+// Values and term lists arrive with the plugins that hold them (P1, P2); until then a value reads empty
+// and the terms are refused, as a strata shard's own DocView does.
+class SpyView final : public DocView {
+public:
+	SpyView(const p::segment& seg, p::ordinal_t ord, docid did) : seg_(seg), ord_(ord), did_(did) { }
+
+	docid did() const override { return did_; }
+	std::string data() const override { return seg_.get<::strata::stored_plugin>().stored(ord_); }
+	rev version() const override { return seg_.get<::strata::keys_plugin>().version(ord_); }
+	std::string value(valueno) const override { return {}; }
+	void values(const ValueSink&) const override { }
+	void terms(std::string_view, const TermSink&) const override { unavailable(); }
+	void term_details(const TermDetailSink&) const override { unavailable(); }
+	std::string serialise() const override { unavailable(); }
+
+private:
+	[[noreturn]] static void unavailable() {
+		throw Error(errc::not_available, "The strata engine does not keep term lists yet");
+	}
+
+	const p::segment& seg_;
+	p::ordinal_t ord_;
+	docid did_;
+};
+
+
 // A hit on its way to the result: its weight and its id across the shards.
 struct Candidate {
 	double weight;
@@ -408,9 +437,6 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	}
 	if (request.collapse_key != BAD_VALUENO) {
 		unsupported("collapsed results");
-	}
-	if (request.spy != nullptr) {
-		unsupported("aggregations");
 	}
 	if (request.fuzzy || request.nearest) {
 		unsupported("similar documents");
@@ -481,13 +507,22 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		if (!counting) {
 			continue;
 		}
-		matches += p::count(*counting);
+		const auto& core = snap.seg->core();
+		const auto interleave = [&](p::ordinal_t ord) { return (core.docid(ord) - 1) * n + shard_of[s] + 1; };
+		if (request.spy != nullptr) {
+			// The spy sees every match once, as Xapian shows it the documents it examines.
+			for (auto ord = counting->next(); ord != p::no_more_docs; ord = counting->next()) {
+				request.spy->see(SpyView(*snap.seg, ord, static_cast<docid>(core.docid(ord))), counting->score());
+				++matches;
+			}
+		} else {
+			matches += p::count(*counting);
+		}
 		if (keep == 0) {
 			continue;
 		}
 
 		auto scorer = live(build(source, builder, 0));
-		const auto& core = snap.seg->core();
 		const auto prune = [&] {
 			if (best.size() == keep && best.front().weight > 0) {
 				scorer->set_min_competitive_score(std::nextafter(best.front().weight, 0.0));
@@ -499,7 +534,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 			if (best.size() == keep && weight < best.front().weight) {
 				continue;
 			}
-			const std::uint64_t id = (core.docid(ord) - 1) * n + shard_of[s] + 1;
+			const std::uint64_t id = interleave(ord);
 			const Candidate candidate{weight, id};
 			if (best.size() < keep) {
 				best.push_back(candidate);
