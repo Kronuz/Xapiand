@@ -55,8 +55,8 @@ combines_to_nothing(Op op, const std::vector<Query>& subqueries)
 	}
 }
 
-// Sets the node's depth and size from its subqueries (an operator adds a level and a node, an append
-// neither), and refuses a tree beyond MAX_QUERY_DEPTH or MAX_QUERY_CLAUSES.
+// Sets the node's depth, size and chain from its subqueries (an operator adds a level and a node, an append
+// neither), and refuses a tree beyond MAX_QUERY_DEPTH, MAX_QUERY_CLAUSES or MAX_QUERY_CHAIN.
 void
 set_extent(QueryNode& node, bool operator_node)
 {
@@ -74,6 +74,21 @@ set_extent(QueryNode& node, bool operator_node)
 		throw QueryDepthError(__func__, __FILE__, __LINE__, "QueryDepthError", "Query is too large: the limit is {} clauses", MAX_QUERY_CLAUSES);
 	}
 	node.size = static_cast<unsigned>(total);
+
+	// A phrase or near group is one link; AND and FILTER join their operands' links, other operators run them apart.
+	std::uint64_t links = 0;
+	if (node.kind == QueryKind::combine && (node.op == Op::PHRASE || node.op == Op::NEAR)) {
+		links = 1;
+	} else {
+		const bool joins = node.op == Op::AND || node.op == Op::FILTER;
+		for (const auto& sub : node.subqueries) {
+			links = joins ? links + sub.chain() : std::max<std::uint64_t>(links, sub.chain());
+		}
+	}
+	if (links > MAX_QUERY_CHAIN) {
+		throw QueryDepthError(__func__, __FILE__, __LINE__, "QueryDepthError", "Query joins too many phrases: the limit is {}", MAX_QUERY_CHAIN);
+	}
+	node.chain = static_cast<unsigned>(links);
 }
 
 }  // namespace
@@ -226,6 +241,13 @@ unsigned
 Query::size() const noexcept
 {
 	return node_ ? node_->size : 0;
+}
+
+
+unsigned
+Query::chain() const noexcept
+{
+	return node_ ? node_->chain : 0;
 }
 
 

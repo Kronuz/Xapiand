@@ -8,6 +8,7 @@ import http.client, json, os, re, sys, urllib.parse
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAUSES = int(re.search(r"MAX_QUERY_CLAUSES\s*=\s*(\d+)", open(os.path.join(ROOT, "src/engine/query.h")).read()).group(1))
 CAP = int(re.search(r"MAX_QUERY_DEPTH\s*=\s*(\d+)", open(os.path.join(ROOT, "src/engine/query.h")).read()).group(1))
+CHAIN = int(re.search(r"MAX_QUERY_CHAIN\s*=\s*(\d+)", open(os.path.join(ROOT, "src/engine/query.h")).read()).group(1))
 port = int(sys.argv[1])
 failures = 0
 
@@ -48,7 +49,7 @@ def alt(n):
     return "xx AND (yy OR (" * (n // 2) + "zz" + "))" * (n // 2)
 
 
-call("PUT", "/t/1?commit", json.dumps({"body": {"_type": "text", "_value": "xx yy zz"}}))
+call("PUT", "/t/1?commit", json.dumps({"body": {"_type": "text", "_value": "xx yy zz a b"}}))
 
 # The text path: nesting is exact at the cap, and a result below it.
 check("text alt below cap n=%d" % (CAP - 8), search(boolean(alt(CAP - 8)))[0], 200)
@@ -88,5 +89,39 @@ check("dsl one above n=%d" % hi, status, 400, data)
 check("dsl at least ES default (30)", lo >= 30, True)
 for n in (1000, 12000):
     check("dsl n=%d" % n, search(dsl(n))[0], 400)
+# The matcher recurses once per phrase or near group that an AND joins, whatever the clause count: the
+# limit is on those. Phrases under an OR (or any operator but AND and FILTER) run apart and are not limited.
+def joined(op, n, kind="_phrase"):
+    return {"body": {op: [{kind: "a b"} for _ in range(n)]}}
+
+
+for kind in ("_phrase", "_near"):
+    for op in ("_and", "_filter"):
+        check("dsl %s of %d %ss" % (op, CHAIN, kind), search(joined(op, CHAIN, kind))[0], 200)
+        status, data = search(joined(op, CHAIN + 1, kind))
+        check("dsl %s of %d %ss" % (op, CHAIN + 1, kind), status, 400, data)
+    for op in ("_or", "_xor", "_and_maybe", "_and_not"):
+        check("dsl %s of %d %ss" % (op, CLAUSES // 3, kind), search(joined(op, CLAUSES // 3, kind))[0], 200)
+check("dsl _and of the worst shape, %d phrases" % (CLAUSES // 3), search(joined("_and", CLAUSES // 3))[0], 400)
+check("text _and of %d phrases" % CHAIN, search({"body": {"_and": '"a b" ' * CHAIN}})[0], 200)
+status, data = search({"body": {"_and": '"a b" ' * (CHAIN + 1)}})
+check("text _and of %d phrases" % (CHAIN + 1), status, 400, data)
+check("text _or of %d phrases" % (CLAUSES // 3), search({"body": {"_or": '"a b" ' * (CLAUSES // 3)}})[0], 200)
+check("text AND of %d phrases" % CHAIN, search(boolean(" AND ".join(['"a b"'] * CHAIN)))[0], 200)
+status, data = search(boolean(" AND ".join(['"a b"'] * (CLAUSES // 3))))
+check("text AND of %d phrases" % (CLAUSES // 3), status, 400, data)
+for word in ("_max", "_synonym", "_elite_set"):  # these nest one level per phrase, so the depth cap bounds them
+    check("text %s of %d phrases" % (word, CAP - 1), search({"body": {word: '"a b" ' * (CAP - 1)}})[0], 200)
+    check("text %s of %d phrases" % (word, CAP + 1), search({"body": {word: '"a b" ' * (CAP + 1)}})[0], 400)
+# Phrases wrapped in other operators still chain; halves under an OR and an AND add up.
+wrapped = lambda n: {"body": {"_and": [{"_and_not": [{"_phrase": "a b"}, {"_value": "zz"}]} for _ in range(n)]}}
+check("dsl _and of %d wrapped phrases" % CHAIN, search(wrapped(CHAIN))[0], 200)
+status, data = search(wrapped(CHAIN + 1))
+check("dsl _and of %d wrapped phrases" % (CHAIN + 1), status, 400, data)
+half = lambda n: {"_and": [{"_phrase": "a b"} for _ in range(n)]}
+nested = lambda n: {"body": {"_and": [{"_or": [half(CHAIN // 2), {"_value": "c"}]}, half(n)]}}
+check("dsl _and over an _or, %d phrases" % CHAIN, search(nested(CHAIN // 2))[0], 200)
+status, data = search(nested(CHAIN // 2 + 1))
+check("dsl _and over an _or, %d phrases" % (CHAIN + 1), status, 400, data)
 check("node alive", call("GET", "/")[0], 200)
 sys.exit(1 if failures else 0)

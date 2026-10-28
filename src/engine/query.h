@@ -95,6 +95,9 @@ struct QueryNode;
 // throws QueryDepthError (a 400). Both bound every recursion over a tree, Xapian's matcher's included.
 inline constexpr unsigned MAX_QUERY_DEPTH = 100;
 inline constexpr unsigned MAX_QUERY_CLAUSES = 4096;
+// Xapian's matcher recurses once per phrase or near group that an AND (or FILTER) joins, however flat the
+// query is, so the number it joins is bounded apart from the clause count. See Query::chain().
+inline constexpr unsigned MAX_QUERY_CHAIN = 256;
 
 // A query, as a value: an immutable tree that shares its subtrees when copied. Each factory
 // has the semantics of the constructor of the same shape in Xapian's Query, so a tree built here
@@ -147,6 +150,10 @@ public:
 	// Nodes in the tree: a leaf is 1, an operator adds 1, an append adds none.
 	unsigned size() const noexcept;
 
+	// The matcher's recursion over the query, in phrases and near groups: a phrase or near group is 1;
+	// AND and FILTER add up their operands, every other operator takes its deepest operand.
+	unsigned chain() const noexcept;
+
 private:
 	friend struct QueryNode;
 
@@ -188,6 +195,7 @@ struct QueryNode {
 	bool matches_nothing = false;                 // combine, append, scale: simplified to nothing
 	unsigned depth = 1;                           // levels of nested operators, at most MAX_QUERY_DEPTH
 	unsigned size = 1;                            // nodes in the tree, shared subtrees counted each time, at most MAX_QUERY_CLAUSES
+	unsigned chain = 0;                           // see Query::chain(), at most MAX_QUERY_CHAIN
 };
 
 }  // namespace engine
