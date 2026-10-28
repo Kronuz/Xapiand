@@ -23,7 +23,7 @@
 
 #include "engine/strata/search.h"
 
-#include <algorithm>               // for std::push_heap, std::pop_heap, std::sort_heap
+#include <algorithm>               // for std::push_heap, std::pop_heap, std::sort_heap, std::remove_if
 #include <cmath>                   // for std::nextafter
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint64_t
@@ -268,6 +268,31 @@ join(Op op, Scorer left, Scorer right)
 	}
 }
 
+// AND or OR of any number of scorers, with a null scorer matching nothing.
+Scorer
+nary(Op op, std::vector<Scorer> children)
+{
+	if (op == Op::AND) {
+		for (const auto& child : children) {
+			if (!child) {
+				return nullptr;
+			}
+		}
+	} else {
+		children.erase(std::remove_if(children.begin(), children.end(), [](const Scorer& child) { return !child; }), children.end());
+	}
+	if (children.empty()) {
+		return nullptr;
+	}
+	if (children.size() == 1) {
+		return std::move(children[0]);
+	}
+	if (op == Op::AND) {
+		return std::make_unique<p::conjunction_scorer>(std::move(children));
+	}
+	return std::make_unique<p::disjunction_scorer>(std::move(children));
+}
+
 Scorer build(const Query& query, const Builder& b, int depth);
 
 Scorer
@@ -370,12 +395,38 @@ build(const Query& query, const Builder& b, int depth)
 				base = &base->node()->subqueries[0];
 			}
 			auto accumulated = build(*base, b, depth + 1);
+			// A run of appends with one AND or OR is one n-ary scorer, so a long chain builds (and frees) a
+			// flat scorer, not one nested as deep as the chain.
+			std::vector<Scorer> run;
+			Op run_op = Op::INVALID;
+			const auto flush = [&] {
+				if (!run.empty()) {
+					accumulated = nary(run_op, std::move(run));
+					run.clear();
+					run_op = Op::INVALID;
+				}
+			};
 			for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
 				auto next = build((*it)->subqueries[1], b, depth + 1);
-				// A query that matches nothing by its structure (a text that analysed to nothing) is skipped, not
-				// joined; a term missing from this segment is a different thing and joins as nothing.
-				accumulated = (*it)->subqueries[0].empty() ? std::move(next) : join((*it)->op, std::move(accumulated), std::move(next));
+				const Op op = (*it)->op;
+				if ((*it)->subqueries[0].empty()) {
+					// A query that matches nothing by its structure (a text that analysed to nothing) is skipped,
+					// not joined; a term missing from this segment is a different thing and joins as nothing.
+					flush();
+					accumulated = std::move(next);
+				} else if (op == Op::AND || op == Op::OR) {
+					if (run_op != op) {
+						flush();
+						run.push_back(std::move(accumulated));
+						run_op = op;
+					}
+					run.push_back(std::move(next));
+				} else {
+					flush();
+					accumulated = join(op, std::move(accumulated), std::move(next));
+				}
 			}
+			flush();
 			return accumulated;
 		}
 		case QueryKind::scale: {

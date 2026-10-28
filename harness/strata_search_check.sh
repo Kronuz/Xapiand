@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # strata_search_check.sh -- engine::search on the strata engine through the server, against the Xapian engine.
 #
-# Boots a single node twice (XAPIAND_ENGINE=xapian, then strata), loads the same keyword documents (the index
+# Boots a single node twice (XAPIAND_ENGINE=xapian, then strata), loads the same integer documents (the index
 # has the default five shards), and runs the queries the strata search covers: term, _and, _or, _and_not,
 # _and_maybe, _filter, _near, _phrase. The documents found must be the same set on both engines, and equal to
 # the set Python computes from the documents; the count must match. Weights are not compared here (the unit test
@@ -43,19 +43,18 @@ rng = random.Random(7)
 words = ["alpha", "beta", "gamma", "delta", "eps"]
 docs = []
 for i in range(n):
-    docs.append({"id": "d%d" % i, "color": rng.choice(["red", "green", "blue", "gold"]), "size": rng.choice(["s", "m", "l"]),
-                 "tag": rng.sample(["x", "y", "z", "w"], rng.randint(1, 3))})
+    docs.append({"id": "d%d" % i, "color": rng.randrange(4), "size": rng.randrange(3), "tag": rng.randrange(5)})
 json.dump(docs, open(run + "/docs.json", "w"))
 def t(f, v): return {"_query": {f: v}}
-def match(d, f, v): return d[f] == v if f != "tag" else v in d[f]
+def match(d, f, v): return d[f] == v
 queries = [
-    ("term", {"color": "red"}),
-    ("and", {"_and": [{"color": "red"}, {"size": "m"}]}),
-    ("or", {"_or": [{"color": "blue"}, {"size": "l"}]}),
-    ("and_not", {"_and_not": [{"color": "green"}, {"size": "s"}]}),
-    ("and_maybe", {"_and_maybe": [{"color": "gold"}, {"size": "l"}]}),
-    ("filter", {"_filter": [{"color": "gold"}, {"size": "m"}]}),
-    ("tag", {"tag": "x"}),
+    ("term", {"color": 1}),
+    ("and", {"_and": [{"color": 1}, {"size": 1}]}),
+    ("or", {"_or": [{"color": 2}, {"size": 2}]}),
+    ("and_not", {"_and_not": [{"color": 3}, {"size": 0}]}),
+    ("and_maybe", {"_and_maybe": [{"color": 0}, {"size": 2}]}),
+    ("filter", {"_filter": [{"color": 0}, {"size": 1}]}),
+    ("tag", {"tag": 4}),
 ]
 def ev(d, q):
     (k, v), = q.items()
@@ -83,7 +82,7 @@ def call(method, path, body):
         sys.exit("%s %s -> %s %s" % (method, path, e.code, e.read().decode()[:300]))
 docs = json.load(open(run + "/docs.json"))
 for d in docs:
-    body = {k: {"_type": "keyword", "_value": d[k]} for k in ("color", "size", "tag")}
+    body = {k: d[k] for k in ("color", "size", "tag")}
     call("PUT", "/smoke/" + d["id"] + "?commit", body)
 PY
 }
