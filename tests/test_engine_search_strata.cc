@@ -93,7 +93,11 @@ engine::Document make(Kind kind, int shard, int i, const Model::Doc& model) {
 	}
 	for (const auto& term : model.terms) {
 		if (!model.positions.contains(term)) {
-			doc.add_term(term, model.wdf.at(term));
+			if (model.wdf.at(term) == 0) {
+				doc.add_boolean_term(term);
+			} else {
+				doc.add_term(term, model.wdf.at(term));
+			}
 		}
 	}
 	doc.set_data("d" + std::to_string(i));
@@ -118,9 +122,11 @@ Model::Doc random_doc(std::mt19937& rng, int i) {
 	if (i % 2 == 0) {
 		doc.terms.insert("even");
 	}
+	doc.terms.insert("bool" + std::to_string(i % 3));   // a boolean term: present, weighing nothing
+	doc.terms.insert("bool" + std::to_string(3 + rng() % 2));
 	for (const auto& term : doc.terms) {
 		const auto it = doc.positions.find(term);
-		doc.wdf[term] = it != doc.positions.end() ? static_cast<std::uint32_t>(it->second.size()) : 1 + static_cast<std::uint32_t>(term.size() % 3);
+		doc.wdf[term] = it != doc.positions.end() ? static_cast<std::uint32_t>(it->second.size()) : term.starts_with("bool") ? 0 : 1 + static_cast<std::uint32_t>(term.size() % 3);
 		doc.length += doc.wdf[term];
 	}
 	return doc;
@@ -274,6 +280,7 @@ std::pair<bool, double> weigh(const Statistics& st, const Model::Doc& doc, const
 		case engine::QueryKind::combine:
 		case engine::QueryKind::append: {
 			const auto& subs = node->subqueries;
+			if (node->kind == engine::QueryKind::append && subs[0].empty()) { return weigh(st, doc, subs[1]); }
 			switch (node->op) {
 				case Op::AND:
 				case Op::OR: {
@@ -285,7 +292,6 @@ std::pair<bool, double> weigh(const Statistics& st, const Model::Doc& doc, const
 						every = every && hit;
 						sum += hit ? weight : 0.0;
 					}
-					if (node->kind == engine::QueryKind::append && subs[0].empty()) { return weigh(st, doc, subs[1]); }
 					return {node->op == Op::AND ? every : any, sum};
 				}
 				case Op::AND_NOT: {
@@ -450,6 +456,25 @@ void compare(const Index& xapian, const Index& strata, const Model& model, std::
 	const auto s = run(strata, shards, query, 0, 100000);
 	if (distinct) {
 		CHECK_TRUE(ids_of(x) == expected);
+		if (ids_of(x) != expected && std::getenv("DIAG")) {
+			std::fprintf(stderr, "DIAG %s\n", query.description().c_str());
+			for (const auto id : expected) {
+				if (!ids_of(x).contains(id)) {
+					const auto& d = model.shards[(id - 1) % shards][(id - 1) / shards];
+					std::fprintf(stderr, "  model only: id %llu terms:", static_cast<unsigned long long>(id));
+					for (const auto& t : d.terms) { std::fprintf(stderr, " %s", t.c_str()); }
+					std::fprintf(stderr, "\n");
+				}
+			}
+			for (const auto id : ids_of(x)) {
+				if (!expected.contains(id)) {
+					const auto& d = model.shards[(id - 1) % shards][(id - 1) / shards];
+					std::fprintf(stderr, "  xapian only: id %llu terms:", static_cast<unsigned long long>(id));
+					for (const auto& t : d.terms) { std::fprintf(stderr, " %s", t.c_str()); }
+					std::fprintf(stderr, "\n");
+				}
+			}
+		}
 	} else if (ids_of(x) != expected) {
 		++xapian_differs;
 	}
@@ -496,7 +521,7 @@ void compare(const Index& xapian, const Index& strata, const Model& model, std::
 
 // The terms a query may use. With `distinct`, no term is used twice in a query: Xapian weighs a term that
 // a query uses in several places (or in several roles) in ways the strata engine does not copy, so the
-// ranking is compared only for queries of distinct terms; the documents found are always compared.
+// ranking is compared only for queries of distinct terms; the documents found are always compared with the model.
 struct Terms {
 	std::mt19937& rng;
 	bool distinct;
@@ -504,9 +529,9 @@ struct Terms {
 	int missing = 0;
 
 	std::string pick() {
-		static const char* const pool[] = {"w0", "w1", "w2", "w3", "w4", "w5", "common", "even", "tag0", "tag1", "tag2", "tag3", "tag4"};
+		static const char* const pool[] = {"w0", "w1", "w2", "w3", "w4", "w5", "common", "even", "tag0", "tag1", "tag2", "tag3", "tag4", "bool0", "bool1", "bool2", "bool3", "bool4"};
 		for (int attempt = 0; attempt < 40; ++attempt) {
-			std::string term = pool[rng() % 13];
+			std::string term = pool[rng() % (distinct ? 13 : 18)];   // Xapian is compared only on queries without boolean terms
 			if (rng() % 12 == 0) {
 				term = "zzz" + std::to_string(missing++);
 			}
@@ -612,6 +637,30 @@ void test_positional() {
 			}
 		}
 	}
+}
+
+// An append onto a query that matches nothing by its structure (a text that analysed to nothing) is the
+// appended query; a term that no segment holds is a different matter and joins as nothing.
+void test_append() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("append", 2, 40, 2, xapian, strata, model);
+	const auto t = [](const char* w) { return Query::term(w); };
+	std::vector<Query> queries;
+	queries.push_back(Query::append(Op::AND, Query(), t("w1")));
+	queries.push_back(Query::append(Op::AND, Query::append(Op::AND, Query(), t("w1")), t("tag2")));
+	queries.push_back(Query::append(Op::OR, Query::append(Op::AND, Query(), t("w1")), t("tag2")));
+	queries.push_back(Query::append(Op::AND, Query::append(Op::AND, Query(), Query()), t("w3")));
+	queries.push_back(Query::append(Op::AND, t("zzz"), t("w1")));
+	queries.push_back(Query::append(Op::AND, t("w1"), t("zzz")));
+	queries.push_back(Query::append(Op::AND_NOT, Query(), t("w1")));
+	for (std::size_t shards = 1; shards <= 2; ++shards) {
+		for (const auto& query : queries) {
+			compare(xapian, strata, model, shards, query, true);
+		}
+	}
+	CHECK_EQ(run(strata, 2, queries[0], 0, 1000).estimated, model_hits(model, t("w1"), 2).size());
+	CHECK_EQ(run(strata, 2, queries[4], 0, 1000).estimated, 0u);
 }
 
 void test_two_shards() {
@@ -864,4 +913,4 @@ void test_concurrent_searches() {
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_concurrent_searches)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_concurrent_searches)

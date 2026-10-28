@@ -26,7 +26,6 @@
 #include <memory>                  // for std::unique_ptr
 #include <mutex>                   // for std::mutex, std::unique_lock
 #include <span>                    // for std::span
-#include <string>                  // for std::string
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
@@ -48,7 +47,6 @@ public:
 	// The Shard::pin() that made it fills these.
 	std::vector<segment_view> segments_;
 	const void* identity_ = nullptr;
-	std::string key_prefix_;               // the leading bytes of the index's key terms
 
 private:
 	std::unique_lock<std::mutex> lock_;

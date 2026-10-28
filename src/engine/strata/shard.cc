@@ -940,7 +940,6 @@ Shard::pin()
 		core.refresh();
 		pinned.segments_ = core.index->segments();
 		pinned.identity_ = handle_->core;
-		pinned.key_prefix_ = std::string(1, key_lead);
 	} catch (...) {
 		rethrow_translated();
 	}

@@ -33,6 +33,7 @@
 #include <optional>                // for std::optional
 #include <stdexcept>               // for std::invalid_argument, std::exception
 #include <string>                  // for std::string
+#include <string_view>             // for std::string_view
 #include <system_error>            // for std::system_error
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
@@ -52,6 +53,15 @@ namespace engine::strata {
 namespace {
 
 namespace p = ::prospect;
+
+// The prefix that routes a term to the index's key table instead of its dictionary. A query never names a key:
+// the id term is also an ordinary term of its document, so every term is looked up in the dictionary. This one
+// function is where the lookup depends on how the index keeps keys (strata's design/fields-and-keys).
+std::string_view
+term_key_prefix()
+{
+	return {};
+}
 
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
@@ -362,7 +372,9 @@ build(const Query& query, const Builder& b, int depth)
 			auto accumulated = build(*base, b, depth + 1);
 			for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
 				auto next = build((*it)->subqueries[1], b, depth + 1);
-				accumulated = join((*it)->op, std::move(accumulated), std::move(next));
+				// A query that matches nothing by its structure (a text that analysed to nothing) is skipped, not
+				// joined; a term missing from this segment is a different thing and joins as nothing.
+				accumulated = (*it)->subqueries[0].empty() ? std::move(next) : join((*it)->op, std::move(accumulated), std::move(next));
 			}
 			return accumulated;
 		}
@@ -483,7 +495,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 			shard_of.push_back(i);
 		}
 	}
-	p::term_table terms(segments, pins.front().key_prefix_);
+	p::term_table terms(segments, term_key_prefix());
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	const std::size_t keep = static_cast<std::size_t>(std::min<std::uint64_t>(window, std::numeric_limits<doccount>::max()));
