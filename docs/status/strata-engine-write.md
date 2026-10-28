@@ -6,7 +6,8 @@ Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S1, D2 t
 ## State
 
 Code complete and proven locally, sanitizers included (proof round 2 closed the auditor's gaps: replay idempotence,
-concurrency, crash windows, mutants); not reviewed. Strata and prospect are
+concurrency, crash windows, mutants). Code review: approve with conditions (`docs/reviews/strata-engine-write-code.md`);
+the fix round below folds in CR1 to CR7, awaiting the re-check. Strata and prospect are
 pinned at prospect `9de01a18`, which pins strata `75d1e7e` (format 14 step 1, 296 commits behind strata main);
 Xapiand's compressors pin moved to strata's `816bc82`.
 
@@ -111,6 +112,34 @@ Xapiand's compressors pin moved to strata's `816bc82`.
       6. Fuzz: `fuzz_strata_document` now also checks the stamp round trip; 443926 runs in 61 s, no finding.
       7. `docs/mechanisms/strata-engine.md` describes the stamp and the crash points.
 
+   8. Review fix round (Xapiand:d0a664b8c; CR1 to CR7; ASan+UBSan and TSan builds in separate dirs with their own `_deps`,
+      `test_engine_strata` 9549 checks and `test_engine_replay` 17 pass in both, 0 sanitizer reports; the reviewer's
+      probes `conc` (806 checks) and `oldline` (20001) pass in both).
+      1. CR1: a `Core` whose index is empty (a failed `cancel_transaction` reopen) raises `errc::database` from every
+         entry point (`Core::check`), never touching freed state; `reopen()` or the next `acquire` retries the open.
+         `cancel_reopen_fails` (chmod 0 on the strata dir). With `check()` disabled the test dies on the ASan
+         heap-use-after-free the reviewer saw.
+      2. CR2: `~Core` does not commit while a transaction is open. `drop_mid_transaction` runs on both engines
+         (doc_count 1 after reopen; Xapian unchanged). With the guard removed 3 checks fail.
+      3. CR3: an `index_fenced` error marks the Core; `acquire` and `reopen()` replace the fenced (or empty) index in
+         place with one opened from the last commit, so every live handle sees the fresh one; pending writes are
+         dropped (the WAL replays them on a node). `fenced_recovers` (new writable handle while a reader lives, and
+         `reopen()`). With recovery disabled both fail.
+      4. CR4: a replayed line whose key lives at another id is skipped; the erase of a document that is gone stays
+         `doc_not_found` in the engine and `DatabaseWAL::execute_line` treats it as done (both engines; covered by the
+         engine test through a helper with the same rule, not by a node run, which was not built). A stamped line is
+         applied only when it is exactly stored + 1 (1 for an absent document), skipped when `stored >= stamp`,
+         `errc::corrupt` otherwise. `replay_idempotent`: the five double-replay scripts and the gap. Mutants: moved-key
+         skip off (1 check), gap rule off (4 checks).
+      5. CR5: `index->refresh()` runs before every `commit()`. Not observable through the API, so no failing test.
+      6. CR6: `src/engine/strata/keys.h` holds the lead byte, `engine_key()` and `key_prefix()`.
+      7. CR7: a failed commit in `~Core` is logged (`L_ERR`).
+      8. The document codec's format byte is 2; a format 1 line raises `errc::syntax` naming the version stamp
+         (`old_format`; reverting the byte fails the codec, replay and old-format tests).
+      Reviewer probe `probe_replay` still reports its erase scripts as errors because it replays through the engine
+      alone; with the WAL's rule they converge (`replay_idempotent`). `probe_errors` ends at its own unguarded
+      `find_key` after the failed cancel, which now raises `database` instead of crashing.
+
 ## Findings
 
 1. **Key prefix `Q` cannot be the index's key prefix.** strata refuses any term that starts with the key
@@ -143,10 +172,9 @@ Xapiand's compressors pin moved to strata's `816bc82`.
    they cannot run on a strata index yet; `strata_write_check.sh` is their write-slice counterpart.
 6. Strata search: `engine::search` raises `not_available` for a strata shard (S2).
 
-7. Replayed erases are not stamped: a replayed erase of a document that is already gone raises `doc_not_found`
-   (safe behind the revision check; a log that is replayed over a newer committed state would need the erase to
-   carry a version too).
-8. The Xapian engine's replay is not per-line idempotent either (it relies on the same revision check); left alone.
+7. Replayed erases are not stamped; the WAL treats `doc_not_found` of a replayed erase as done (CR4).
+8. CR8 to CR10 of the review are open: the `apply` internal-error path after the index applied, erase by docid after a
+   write forcing a flush, and strata shards having no remote or replica story (architect).
 
 ## Blocked on
 
