@@ -65,6 +65,7 @@ option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
 option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
+option(FUZZ "Build the libFuzzer targets (tests/fuzz_*.cc; needs a clang with libFuzzer)" OFF)
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
@@ -462,6 +463,10 @@ endif ()
 
 
 include(FetchContent)
+
+# compressors: the commit strata pins, for its stored blocks' one-shot LZ4 and zstd block codecs
+# (declared first, so it wins over the older pins of the libraries that also use compressors).
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 816bc82ca9e41bd6fc54831d172ede45b3fc6eaa)
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
 # rapidjson; logger / http_log pull cppcodec). FetchContent is first-declaration-wins
@@ -989,7 +994,6 @@ include_directories("${htm_SOURCE_DIR}")
 # located-exception trick). lz4.h comes from the lz4 FetchContent already on the
 # path, zlib from the system. Xapiand uses deflate + lz4 only (no zstd), so only
 # those two .cc compile into XAPIAND_OBJ.
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG ed590c87201afd270afbfbb2d58d5d467c6d23b6)
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
@@ -2160,7 +2164,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error engine_replay pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error engine_replay engine_strata pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2184,6 +2188,18 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+	# libFuzzer targets: standalone (they link only the code they fuzz), built with -DFUZZ=ON.
+	if (FUZZ)
+		add_executable(fuzz_strata_document
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_strata_document.cc"
+			"${PROJECT_SOURCE_DIR}/src/engine/strata/document.cc"
+		)
+		target_include_directories(fuzz_strata_document PRIVATE "${PROJECT_SOURCE_DIR}/src")
+		target_compile_features(fuzz_strata_document PRIVATE cxx_std_20)
+		target_compile_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
+		target_link_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
+	endif ()
 
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
 	# compile as-is; it's off by default.  The modules that became standalone Kronuz

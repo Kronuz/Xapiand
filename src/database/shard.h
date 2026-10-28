@@ -36,7 +36,7 @@
 #include "engine/document.h"      // for engine::Document
 #include "engine/doc_view.h"      // for engine::DocView
 #include "engine/error.h"         // for engine::Error
-#include "engine/kind.h"          // for engine::Kind, kind_of
+#include "engine/kind.h"          // for engine::Kind
 #include "engine/shard.h"         // for engine::Shard
 #include "engine/types.h"         // for engine::WriteResult
 #include "engine/xapian/shard.h"   // for engine::xapian::Shard
@@ -106,9 +106,7 @@ public:
 	int flags;
 
 	// The engine of this shard: its own once open, else the one its files are.
-	engine::Kind kind() const {
-		return engine_shard ? engine_shard->kind() : engine::kind_of(endpoint.path);
-	}
+	engine::Kind kind() const;
 
 	bool is_local() const {
 		return _local.load(std::memory_order_relaxed);

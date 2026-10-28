@@ -377,6 +377,12 @@ Shard::~Shard() noexcept
 	}
 }
 
+engine::Kind
+Shard::kind() const
+{
+	return engine_shard ? engine_shard->kind() : engine::kind_of(endpoint.path);
+}
+
 bool
 Shard::reopen_writable()
 {

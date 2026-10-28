@@ -308,9 +308,9 @@ new_native()
 Document
 unserialise_document(std::string_view serialised)
 {
-	Document doc(Kind::strata);
-	strata_document(doc).unserialise_from(serialised);
-	return doc;
+	auto native = std::make_unique<StrataDocument>();
+	native->unserialise_from(serialised);
+	return Document(std::move(native));
 }
 
 

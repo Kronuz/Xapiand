@@ -81,8 +81,6 @@ rethrow_translated()
 		throw;
 	} catch (const ::strata::index_not_created& exc) {
 		throw Error(errc::not_found, exc.what());
-	} catch (const ::strata::index_closed& exc) {
-		throw Error(errc::closed, exc.what());
 	} catch (const ::strata::index_fenced& exc) {
 		throw Error(errc::database, exc.what());
 	} catch (const ::strata::corrupt_segment& exc) {
@@ -287,7 +285,7 @@ locate(Core& core, docid did, bool want_stored)
 	const auto segments = core.index->segments();
 	for (auto it = segments.end(); it != segments.begin();) {
 		const auto& view = *--it;
-		const auto* seg = view.seg();
+		const auto* seg = view.seg;
 		const auto ord = seg->core().ordinal_of(did);
 		if (!ord || !view.live(*ord)) {
 			continue;
@@ -301,6 +299,17 @@ locate(Core& core, docid did, bool want_stored)
 		return found;
 	}
 	return std::nullopt;
+}
+
+// The live documents of the flushed segments (the manifest's count waits for a commit).
+doccount
+live_count(Core& core)
+{
+	std::uint64_t live = 0;
+	for (const auto& view : core.index->segments()) {
+		live += view.seg->core().doc_count() - view.dead;
+	}
+	return static_cast<doccount>(live);
 }
 
 void
@@ -340,8 +349,12 @@ native_of(Document& doc)
 void
 fill(prospect::index::document& out, StrataDocument& doc)
 {
+	if (doc.key().empty()) {
+		// A version belongs to a key in strata (a keyless document has none), and every Xapiand document has one.
+		throw Error(errc::invalid, "The document has no key");
+	}
 	doc.normalise();
-	out.key = doc.key().empty() ? std::string() : engine_key(doc.key());
+	out.key = engine_key(doc.key());
 	out.stored = doc.data();
 	out.terms.clear();
 	out.terms.reserve(doc.terms().size());
@@ -758,7 +771,7 @@ Shard::stats()
 		stats.uuid = core.uuid;
 		stats.revision = manifest.revision;
 		stats.lastdocid = static_cast<docid>(manifest.last_docid);
-		stats.doc_count = static_cast<doccount>(manifest.live_count);
+		stats.doc_count = live_count(core);
 		stats.total_length = manifest.live_length;
 		// TODO(P4): the document-length bounds; until then they are unknown.
 		stats.avlength = stats.doc_count ? static_cast<double>(stats.total_length) / stats.doc_count : 0;
@@ -819,7 +832,7 @@ Shard::scan(docid from, const ScanSink& sink)
 		std::vector<Hit> hits;
 		const auto segments = core.index->segments();
 		for (const auto& view : segments) {
-			const auto* seg = view.seg();
+			const auto* seg = view.seg;
 			const auto& core_seg = seg->core();
 			for (::strata::ordinal_t ord = 0; ord < core_seg.doc_count(); ++ord) {
 				const auto did = core_seg.docid(ord);
@@ -892,7 +905,7 @@ Shard::doc_count() const
 	auto& core = *handle_->core;
 	std::lock_guard<std::mutex> lk(core.mtx);
 	core.refresh();
-	return static_cast<doccount>(core.index->manifest().live_count);
+	return live_count(core);
 }
 
 
