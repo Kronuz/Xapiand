@@ -76,7 +76,7 @@ start() {  # start LOG FLAGS...: a solo node, ready when it answers HTTPS with a
 }
 stop() { [ -n "$node_pid" ] && { kill "$node_pid" 2>/dev/null; wait "$node_pid" 2>/dev/null; node_pid=""; }; }
 trap stop EXIT
-logged() { sleep 1; grep -qF "$2" "$1"; }  # logged LOG TEXT
+logged() { for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do sleep 0.5; grep -qF "$2" "$1" && return 0; done; return 1; }  # logged LOG TEXT: within 6 s
 
 # hello VERSION: sends a raw ClientHello (record 1.0, the given client_version, ECDHE-RSA
 # and ECDHE-ECDSA AES-GCM suites, no supported_versions) and prints the first reply record:
