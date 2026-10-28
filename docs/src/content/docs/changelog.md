@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Autocommits and WAL fsyncs requested during shutdown are no longer dropped.** When the
   committer or the fsync pool has already stopped (or cannot allocate), the commit or fsync
   runs right away on the calling thread.
+- **Aggregations on a cluster count every document.** A node aggregated its own shards fully but
+  only a sample of the remote ones, so `_doc_count`, `_sum` and `_avg` came back low and
+  differed from node to node. Aggregations now check every match, whatever `_check_at_least`
+  says.
 - Builds with `-DLUA=OFF` retain the declaration of the existing scripting-unavailable stub, so the database handler compiles without Lua.
 
 ---

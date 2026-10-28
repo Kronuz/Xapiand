@@ -1104,10 +1104,10 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 	engine::DocidOrder order = engine::DocidOrder::ascending;
 
-	if (aggs && check_at_least == 0) {
-		// When using aggregations, at request xapian to at least
-		// check 1, otherwise aggregations are altogether skipped.
-		check_at_least = 1;
+	if (aggs) {
+		// Aggregations see only the documents the engine checks: every match on every shard,
+		// whatever `check_at_least` asks (no value is larger), so they are never a sample.
+		check_at_least = engine::CHECK_ALL;
 	}
 
 	return std::make_tuple(get_mset(

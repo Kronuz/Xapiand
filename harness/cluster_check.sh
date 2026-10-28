@@ -195,6 +195,35 @@ done
 [ "$s" = 0 ] || echo "     node$N last search: $(echo "$last" | head -c 160)"
 check "$s" "SEARCH from node$N gathers the doc (count>=1, the hit present)"
 
+# --- 3b. AGGREGATIONS: every node's sum / avg / count over all the shards equals the
+# values written (compares the numbers, not the document counts). ---
+echo "[3b] aggregations from every node"
+AGG_INDEX="cluster_agg"; agg_n=40; agg_sum=0
+for k in $(seq "$agg_n"); do
+	a=$((k % 30 + 1)); agg_sum=$((agg_sum + a))
+	curl -s --max-time 60 -XPUT "localhost:$HTTP_BASE/$AGG_INDEX/$k" -H 'Content-Type: application/json' \
+		-d "{\"age\":$a}" -o /dev/null
+done
+# The second request asks for a tiny _check_at_least: aggregations still cover every match.
+for cal in "" ',"_check_at_least":1'; do
+for i in $(seq 1 "$N"); do
+	port="$(http_port "$i")"
+	r=1; last=""
+	deadline=$(( $(date +%s) + 60 ))
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		last="$(curl -s --max-time 45 -XSEARCH "localhost:$port/$AGG_INDEX/?volatile" -H 'Content-Type: application/json' \
+			-d "{\"_query\":\"*\",\"_limit\":0$cal,\"_aggs\":{\"s\":{\"_sum\":{\"_field\":\"age\"}},\"a\":{\"_avg\":{\"_field\":\"age\"}}}}")"
+		echo "$last" | python3 -c "import sys,json
+try: g=json.load(sys.stdin)['aggregations']
+except Exception: sys.exit(1)
+sys.exit(0 if g.get('_doc_count')==$agg_n and g['s']['_sum']==$agg_sum and abs(g['a']['_avg']-$agg_sum/$agg_n)<1e-9 else 1)" && { r=0; break; }
+		sleep 2
+	done
+	[ "$r" = 0 ] || echo "     node$i last aggregation: $(echo "$last" | head -c 200)"
+	check "$r" "node$i: _doc_count=$agg_n _sum=$agg_sum _avg=$(python3 -c "print($agg_sum/$agg_n)") over all shards${cal:+ (with$cal)}"
+done
+done
+
 # --- 4. FAILOVER (FAILOVER=1, N >= 3): kill the leader. The survivors elect one new leader,
 # and writes through a survivor resume and read back from another, before the killed node
 # returns; then it rejoins under the one leader. Nodes start with a 5 s
