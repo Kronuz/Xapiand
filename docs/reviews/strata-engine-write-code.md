@@ -223,3 +223,36 @@ TSan or ASan on the `xapiand` binary and the node scenarios under a sanitizer, p
 CI, benchmarks, a node-level run of NF1 (reproduced at the engine API only, through the same calls the node makes), the mutant for CR5
 (none can fail).
 
+
+## Re-check 2 (NF1)
+
+Re-checker: rechecker, 2026-10-28. Fix Xapiand:3abbfb4f7 on `phase7a/strata-engine-write`, local only. Read: that commit's diff (`src/engine/strata/shard.cc`,
+`CMakeLists.txt`, `tests/`) and the callers it relies on (`src/database/shard.cc` `retry_or_throw`, `reopen`, `do_close`, `commit`; `src/engine/error.h`
+`read_fate`). No GPL source read. Probes copied (not edited) to `.scratch/s1-recheck2/`: `probe_fence3.cc`, `probe_wal.cc`; new there: `probe_fence3b.cc`
+(`probe_fence3` with every writer call guarded and `reopen()`/`revision()` added), `probe_node.cc` and `probe_node2.cc` (the same fence through
+`DatabasePool` and the database-layer `Shard`), `cfg.sh`, `build.sh`, `mkprobe2.sh`. Builds: ASan+UBSan and TSan, separate dirs and `_deps`
+(Homebrew LLVM 23, RelWithDebInfo, `-DASSERTS=ON -DCRASH_POINTS=ON -DLTO=OFF`, rapidjson `operator=` deleted in the build's `_deps`), under
+`quiet light nf1-recheck`; both build dirs deleted afterwards.
+
+### Verdict
+
+**NF1: CLOSED.**
+
+| Check | Result |
+|---|---|
+| The writer is told on every entry point | `Core::check(const Handle&)` (`shard.cc:291`) raises `errc::database` for a writable handle whose `seen` differs from `epoch`; `reopen_index()` bumps `epoch` (`:204`). Every `core.check(*handle_)` site takes `core.mtx` first and covers `add`, `replace`, `replace_by_key`, `erase`, `erase_by_key`, `commit`, `begin/commit/cancel_transaction`, `set_metadata`, `stats`, `find_key`, `get`, `scan`, `metadata`, `metadata_keys`, `revision`, `doc_count` and the free `check()`. Left without a check on purpose: `uuid()`, `refs()` (no index access) and the two spelling stubs (always `not_available`). `reopen()` (`:898-909`) on a writable handle that is stale or fenced replaces a fenced index and raises `errc::reopen`; it stays stale, so it keeps raising until the shard is closed. `probe_fence3b` (ASan and TSan): writer `find_key` `database: The strata index was replaced...`, `reopen()` `reopen: ...`, `revision()` `database: ...`, `add` and `commit` `database: ...`; the old `probe_fence3` now ends in an uncaught `engine::Error` at the writer's first call instead of printing `Qb=0` (the old silent loss). |
+| No reader path is wrongly refused | `handle.writable` is set only by `open_local(..., writable)` (`:1097`); a reader handle never compares epochs. `probe_fence3b`: the second reader's `stats()` is `ok doc_count=1` and the failed reader works after the replacement; the test checks `joined.shard->stats()` too. A reader's own `reopen()` on an unusable core replaces the index and returns `true` (`:909`). A writable handle that held no writes is also refused after a replacement by another handle (it cannot tell); the cost is a close and a reopen, not a loss. |
+| New writable opens are not stale | `acquire` records `seen = epoch` after any replacement it made itself (`:353`), so the open that follows a close is current. |
+| Node consequence | Database layer, read: a refused write raises `errc::database`, `retry_or_throw` (`src/database/shard.cc:645-651`) calls `do_close` and rethrows, so the engine handle is released and the next use reopens writable (`reopen_writable` replays the WAL when `is_wal_active`, `:476-492`). The WAL `COMMIT` line is written only after `wdb->commit` returns (`:975-990`) and `wdb->revision()` is read inside the same try, so a stale writer cannot commit past its lost lines. A stale writer's `Shard::reopen()` (`:703`) retries `engine_shard->reopen()` (`errc::reopen` is a stale failure, `:166`) and then falls to `do_close(true)` plus `reopen_writable()`; the failed commit in that `do_close` is swallowed with a warning. Run through `DatabasePool` (WAL disabled, so no replay): `probe_node` and `probe_node2`, ASan and TSan, no reports: reader flush fails with `durability failure`, second reader opens, the writer's next `add_document` raises `database ... reopen the shard` (or its `reopen()` first returns `ok`), the following writer call works on a fresh handle (`doc_count` 2 or 3, `Qb=0` only because the WAL is off here), and reader 2 sees the writer's later commit. That the writes reappear then rests on the WAL replay already proven by the node harness (previous round) and on the stamp rule (CR4). |
+| Test fails with the fix reverted | In the ASan build, edited and restored: epoch check skipped (`false && ...` in `Core::check`) fails 6 checks (`test_engine_strata.cc:846-851` and `:992`, `fenced_writer_notified`); epoch never bumped fails 7; the writable `reopen()` rule removed fails 2 (`:803`, `:850`); the `wal.cc` erase hunk reverted (`wal.cc:563-570` back to a bare `delete_document`) fails `test_wal_replay` strata 3 of 5 (`test_wal_replay.cc:77`, `:103` twice) and xapian 1 of 1. All four restored byte for byte (`cmp`, `git status` clean). |
+| Suites with the fix | `test_engine_strata` 9559 pass (was 9549), `test_engine_replay` 17, `test_wal_replay` 5 under strata and 1 under `XAPIAND_ENGINE=xapian`, in ASan+UBSan and in TSan; `probe_wal` (the original) 5 pass in both; no sanitizer report. The new CMake `test_wal_replay_xapian` entry sets `XAPIAND_ENGINE=xapian` and runs the same binary (checked by hand, not through ctest). |
+
+### New findings
+
+None blocking. One note for the lead, not a finding: a stale writer closed through `do_close(true)` logs `WARNING: Commit during close failed!` (a `database` error from `check`); expected and harmless.
+
+### May S1 land
+
+Yes, on NF1: closed, with every named entry point verified, reader paths unaffected, and the tests failing with the fix reverted. The earlier verdicts (CR1 to CR7, format byte) were not re-run beyond the suites above; CR8 to CR10 remain as recorded in the ledger.
+
+Not run: the node harness (`harness/strata_write_check.sh`, no `xapiand` binary built: a full-binary build is not cheap and no scenario fences an index), the NF1 case with the WAL on (the replay after the refusal is read, and covered by the previous round's `replay` and `replaycrash` runs), the other ctest suites, the libFuzzer target, Linux and FreeBSD, CI, benchmarks, power-loss or fsync ordering, ctest registration of `test_wal_replay_xapian` through `ctest`.
