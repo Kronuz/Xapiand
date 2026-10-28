@@ -45,6 +45,7 @@
 #include "engine/xapian/errors.h"
 #include "engine/xapian/shard.h"
 #include "engine/xapian/xapian.h"
+#include "node.h"
 
 using namespace std::chrono_literals;
 
@@ -420,6 +421,13 @@ Outcome collect_outcome(engine::errc kind, bool writes) {
 	return outcome;
 }
 
+// A writable reopen records its revision under the local node's name.
+void name_local_node() {
+	auto node = std::make_shared<Node>();
+	node->name("pool-test");
+	Node::set_local_node(node);
+}
+
 void test_failure_policy() {
 	std::filesystem::remove_all("pool_test_policy");
 	using engine::errc;
@@ -467,4 +475,4 @@ void test_failure_policy() {
 
 }  // namespace
 
-TEST_MAIN(test_failure_policy, test_get_docid_term_policy, test_fan_out_call_sites, test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
+TEST_MAIN(name_local_node, test_failure_policy, test_get_docid_term_policy, test_fan_out_call_sites, test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
