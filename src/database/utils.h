@@ -135,11 +135,15 @@ std::string normalize_uuid(std::string_view uuid);
 std::string normalize_uuid(const std::string& uuid);
 MsgPack normalize_uuid(const MsgPack& uuid);
 int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid);
-inline constexpr size_t MAX_JSON_DEPTH = 200;  // levels of nested arrays and objects json_load accepts
+inline constexpr size_t MAX_JSON_DEPTH = 200;  // levels of nested arrays and objects a JSON, YAML or MessagePack body may have
 // Levels of nested arrays and objects in the text, brackets inside strings ignored.
 size_t json_depth(std::string_view str);
 void json_load(rapidjson::Document& doc, std::string_view str);
 void yaml_load(rapidjson::Document& doc, std::string_view str);
+// A streaming unpacker that refuses an object nested deeper than MAX_JSON_DEPTH.
+msgpack::unpacker make_msgpack_unpacker();
+// Decodes a MessagePack body, refusing (ClientError) one nested deeper than MAX_JSON_DEPTH before it is copied.
+MsgPack msgpack_load(std::string_view str);
 rapidjson::Document to_json(std::string_view str);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);

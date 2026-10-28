@@ -218,9 +218,33 @@ void yaml_load(rapidjson::Document& doc, std::string_view str)
 {
 	const char* errorMessage = nullptr;
 	size_t errorLine = 0;
-	doc = y2j::yamlParseBytes(str.data(), str.size(), &errorMessage, &errorLine);
+	doc = y2j::yamlParseBytes(str.data(), str.size(), &errorMessage, &errorLine, MAX_JSON_DEPTH);
 	if (errorMessage) {
 		THROW(ClientError, "JSON parse error at line {} : {}", errorLine, errorMessage);
+	}
+}
+
+
+static msgpack::unpack_limit msgpack_limits()
+{
+	return msgpack::unpack_limit(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, MAX_JSON_DEPTH);
+}
+
+
+msgpack::unpacker make_msgpack_unpacker()
+{
+	// Strings and binaries refer to the buffer, as the unpacker does by default.
+	return msgpack::unpacker([](msgpack::type::object_type, std::size_t, void*) { return true; }, nullptr, MSGPACK_UNPACKER_INIT_BUFFER_SIZE, msgpack_limits());
+}
+
+
+MsgPack msgpack_load(std::string_view str)
+{
+	// Copying a nested object into a MsgPack recurses, so the unpacker refuses a deep one first.
+	try {
+		return MsgPack(msgpack::unpack(str.data(), str.size(), nullptr, nullptr, msgpack_limits()).get());
+	} catch (const msgpack::depth_size_overflow&) {
+		THROW(ClientError, "MessagePack is nested too deeply: the limit is {} levels", MAX_JSON_DEPTH);
 	}
 }
 

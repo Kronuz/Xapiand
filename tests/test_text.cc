@@ -420,4 +420,88 @@ test_json_depth_matches_the_document()
 	}
 }
 
-TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_near_of_a_boolean_expression, test_wildcard_pattern_flags, test_all_wildcard_patterns)
+// A MessagePack or YAML body nested past MAX_JSON_DEPTH is a client error before it is copied or built;
+// at the limit it loads, and a body far past it (the size of a small request) is refused the same way.
+void
+test_body_depth_per_format()
+{
+	const auto refused = [](auto&& load) {
+		try {
+			load();
+			return false;
+		} catch (const ClientError& exc) {
+			return std::string(exc.what()).find("nested too deeply") != std::string::npos;
+		}
+	};
+	const auto refused_as = [](auto&& load, const char* what) {
+		try {
+			load();
+			return false;
+		} catch (const ClientError& exc) {
+			return std::string(exc.what()).find(what) != std::string::npos;
+		}
+	};
+	// MessagePack: n nested one-element arrays (0x91) or maps (0x81 "f"), around an integer.
+	const auto arrays = [](std::size_t n) { return std::string(n, '\x91') + '\x01'; };
+	const auto maps = [](std::size_t n) {
+		std::string out;
+		for (std::size_t i = 0; i < n; ++i) {
+			out += "\x81\xa1" "f";
+		}
+		return out + '\x01';
+	};
+	for (const auto make : { +arrays, +maps }) {
+		CHECK_EQ(msgpack_load(make(MAX_JSON_DEPTH)).size(), std::size_t(1));
+		for (const auto n : { MAX_JSON_DEPTH + 1, std::size_t(400), std::size_t(100000) }) {
+			CHECK_TRUE(refused([&] { msgpack_load(make(n)); }));
+		}
+	}
+	// A header that promises more than the body holds is a decode error, not a crash.
+	try {
+		msgpack_load(std::string("\xdd\xff\xff\xff\xff\x91", 6));
+	} catch (const std::exception&) {
+	}
+	// YAML: n nested flow sequences, flow maps and block maps.
+	const auto flow_seq = [](std::size_t n) { return std::string(n, '[') + "1" + std::string(n, ']'); };
+	const auto flow_map = [](std::size_t n) {
+		std::string out;
+		for (std::size_t i = 0; i < n; ++i) {
+			out += "{f: ";
+		}
+		return out + "1" + std::string(n, '}');
+	};
+	const auto block_map = [](std::size_t n) {
+		std::string out;
+		for (std::size_t i = 0; i < n; ++i) {
+			out += std::string(i, ' ') + "f:\n";
+		}
+		return out + std::string(n, ' ') + "1\n";
+	};
+	for (const auto make : { +flow_seq, +flow_map, +block_map }) {
+		rapidjson::Document doc;
+		yaml_load(doc, make(MAX_JSON_DEPTH));
+		CHECK_TRUE(!doc.IsNull());
+		for (const auto n : { MAX_JSON_DEPTH + 1, std::size_t(400), std::size_t(1000) }) {
+			CHECK_TRUE(refused([&] { rapidjson::Document d; yaml_load(d, make(n)); }));
+		}
+	}
+	// A document of a bare scalar loads; one without a value (empty, blank, comments, markers) is a client error.
+	for (const char* text : { "foo", "1", "~", "\"a: b\"", "--- x" }) {
+		rapidjson::Document doc;
+		yaml_load(doc, text);
+		CHECK_FALSE(doc.IsObject());
+	}
+	for (const char* text : { "", "\n", "  \n# only a comment\n" }) {
+		CHECK_TRUE(refused_as([&] { rapidjson::Document doc; yaml_load(doc, text); }, "no document"));
+	}
+	// Aliases to a missing anchor and truncated documents stay errors, with the partial document dropped.
+	for (const char* text : { "a: *x", "[*x]", "a: &x [1,\n", "{a: [", "&x [*x" }) {
+		try {
+			rapidjson::Document doc;
+			yaml_load(doc, text);
+		} catch (const ClientError&) {
+		}
+	}
+}
+
+TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_wildcard_pattern_flags, test_all_wildcard_patterns)

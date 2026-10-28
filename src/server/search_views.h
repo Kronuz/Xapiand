@@ -39,6 +39,7 @@
 #include "atomic_shared_ptr.h"              // for atomic_shared_ptr
 #include "compressor_deflate.h"             // for DeflateCompressData
 #include "database/data.h"                  // for ct_type_t, accept_set_t
+#include "database/utils.h"                 // for make_msgpack_unpacker
 #include "endpoint.h"                       // for Endpoints
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
@@ -154,7 +155,7 @@ public:
 
 	std::mutex objects_mtx;
 	std::deque<MsgPack> objects;
-	msgpack::unpacker unpacker;  // msgpack unpacker
+	msgpack::unpacker unpacker = make_msgpack_unpacker();  // msgpack unpacker, depth-limited
 
 	ct_type_t ct_type;
 

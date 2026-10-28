@@ -20,6 +20,8 @@ static const char* TAG_FLOAT = "tag:yaml.org,2002:float";
 static const char* TAG_STR = "tag:yaml.org,2002:str";
 static const char* tagErrorString = "Scalar tag could not be resolved.";
 static const char* aliasErrorString = "Encountered an unidentified alias";
+static const char depthErrorString[] = "YAML is nested too deeply";
+static const char emptyErrorString[] = "YAML has no document";
 static const char complexKeyString[] = "COMPLEX YAML KEYS ARE NOT SUPPORTED";
 
 using JsonPointer = rapidjson::Pointer;
@@ -42,9 +44,10 @@ struct Alias {
 
 struct Generator {
 
-    Generator(const char* bytes, size_t length, const char** errorMessage, size_t* errorLine) :
+    Generator(const char* bytes, size_t length, const char** errorMessage, size_t* errorLine, size_t maxDepth) :
         errorMessage(errorMessage),
-        errorLine(errorLine) {
+        errorLine(errorLine),
+        maxDepth(maxDepth) {
         yaml_parser_initialize(&parser);
         yaml_parser_set_input_string(&parser, (const unsigned char*)bytes, length);
         yaml_parser_set_encoding(&parser, YAML_UTF8_ENCODING);
@@ -64,6 +67,10 @@ struct Generator {
     size_t complexKeyDepth = 0;
     const char** errorMessage;
     size_t* errorLine;
+    size_t maxDepth;
+    size_t depth = 0; // Open sequences and mappings, complex keys included.
+    bool produced = false; // A sequence, mapping, scalar or alias was read, so the document has a value.
+    bool failed = false; // Reading stopped on an error, so aliases may point at nothing.
 
     size_t getSeqLength() {
         assert(!collections.empty());
@@ -82,6 +89,13 @@ struct Generator {
             !collections.empty() &&
             collections.back().isMapping &&
             collections.back().count % 2 == 0;
+    }
+
+    // A scalar or alias is an entry of its collection; a document that is one has no collection.
+    void countEntry() {
+        if (!collections.empty()) {
+            ++collections.back().count;
+        }
     }
 
     void pushCollection(bool isMapping) {
@@ -165,6 +179,27 @@ struct Generator {
             printEvent(event);
             #endif
 
+            if (event.type == YAML_SEQUENCE_START_EVENT || event.type == YAML_MAPPING_START_EVENT ||
+                event.type == YAML_SCALAR_EVENT || event.type == YAML_ALIAS_EVENT) {
+                produced = true;
+            }
+
+            // Everything below recurses with the nesting, so a deep document is refused as it is read.
+            if (event.type == YAML_SEQUENCE_START_EVENT || event.type == YAML_MAPPING_START_EVENT) {
+                if (++depth > maxDepth && maxDepth) {
+                    if (errorMessage) {
+                        *errorMessage = depthErrorString;
+                    }
+                    if (errorLine) {
+                        *errorLine = event.start_mark.line;
+                    }
+                    ok = false;
+                    break;
+                }
+            } else if (event.type == YAML_SEQUENCE_END_EVENT || event.type == YAML_MAPPING_END_EVENT) {
+                --depth;
+            }
+
             if (complexKeyDepth > 0) {
                 switch (event.type) {
                 case YAML_SEQUENCE_START_EVENT:
@@ -231,17 +266,28 @@ struct Generator {
                     break;
                 case YAML_ALIAS_EVENT:
                     ok = handleAlias(handler, event);
-                    collections.back().count++;
+                    countEntry();
                     break;
                 case YAML_SCALAR_EVENT:
                     handleAnchor((char*)event.data.scalar.anchor);
                     ok = parseScalar(handler, event);
-                    collections.back().count++;
+                    countEntry();
                     break;
                 }
             }
         }
 
+        if (ok && !produced) {
+            // The document would be left without a value, which the JSON document cannot hold.
+            if (errorMessage) {
+                *errorMessage = emptyErrorString;
+            }
+            if (errorLine) {
+                *errorLine = 0;
+            }
+            ok = false;
+        }
+        failed = !ok;
         return ok;
     }
 
@@ -432,11 +478,14 @@ struct Generator {
     #endif
 };
 
-JsonDocument yamlParseBytes(const char* bytes, size_t length, const char** errorMessage, size_t* errorOffset) {
+JsonDocument yamlParseBytes(const char* bytes, size_t length, const char** errorMessage, size_t* errorOffset, size_t maxDepth) {
 
-    Generator generator(bytes, length, errorMessage, errorOffset);
+    Generator generator(bytes, length, errorMessage, errorOffset, maxDepth);
     JsonDocument document;
     document.Populate(generator);
+    if (generator.failed) {
+        return document;
+    }
 
     // Apply aliases.
     for (const auto& alias : generator.aliases) {

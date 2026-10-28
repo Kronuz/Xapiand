@@ -2246,6 +2246,17 @@ if (BUILD_TESTS)
 		target_include_directories(${PROJECT_NAME}_fuzz_text PRIVATE "${queryparser_SOURCE_DIR}/test")
 		target_compile_definitions(${PROJECT_NAME}_fuzz_text PRIVATE QUERYPARSER_VECTORS="${queryparser_SOURCE_DIR}/test/vectors" XAPIAND_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
+		# Fuzzes the request body decoders (JSON, YAML, MessagePack) around the nesting limit. Run it: xapiand_fuzz_body SECONDS [SEED].
+		add_executable(${PROJECT_NAME}_fuzz_body
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_body.cc"
+			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+		)
+		target_link_libraries(${PROJECT_NAME}_fuzz_body PRIVATE
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+		)
+
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
 	# compile as-is; it's off by default.  The modules that became standalone Kronuz
 	# libraries (boolparser, msgpack, threadpool, url_parser, ...) were dropped since
