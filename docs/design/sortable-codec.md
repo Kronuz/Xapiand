@@ -551,3 +551,10 @@ of 2^63 or more in an integer field is rejected with 400.
 | C3 (finding 9) the missing-value sentinel | D7 (`max_finite`, `min_finite`), D12 |
 | C4 (finding 10) a mutant per D5 rule | D5, `model.py rules`, T4, step 1 |
 | C5 the arm64 `long double` question | D5, stays unverified |
+
+**Lead rulings on revision 2 (2026-10-27).** Q5 (accept): a release older than this design cannot
+refuse a new shard; the release notes say so and the upgrade is one-way. Q6 (amended): the in-place
+`--upgrade-codec` keeps every document's `_version`, since it rewrites values in place and clients
+rely on versions for optimistic concurrency; only the dump-and-restore path may restart them, and
+the release notes say which path does what. Q7 (accept): new nodes refuse old ones through an
+additive `Kronuz/cluster` change, coordinated with Detent's agent before it lands.
