@@ -2,7 +2,7 @@
 
 # sortable-codec (design)
 
-- Design: `docs/design/sortable-codec.md` revision 2 at this commit (hash recorded in the next); review: `docs/reviews/sortable-codec-design.md` (architect, preliminary, REJECT, 2026-10-27, Xapiand:57deb969c).
+- Design: `docs/design/sortable-codec.md` revision 2 at Xapiand:8e9790af5; review: `docs/reviews/sortable-codec-design.md` (architect, preliminary, REJECT, 2026-10-27, Xapiand:57deb969c).
 - Branch / worktree: `design/sortable-codec` at `~/code/Kronuz/Xapiand-wt/sortable-codec`; from Xapiand:6c5c1a40d; local only, never pushed.
 - State: designing (ready for preliminary review)
 
@@ -34,7 +34,7 @@ Q5 (a release older than this design on a new data directory), Q6 (`_version` re
 
 ## Findings folded in
 
-L1-L6 and C1-C5 of `docs/reviews/sortable-codec-design.md`, in the commit that carries revision 2 (this commit (hash recorded in the next)).
+L1-L6 and C1-C5 of `docs/reviews/sortable-codec-design.md`, in Xapiand:8e9790af5.
 
 ## Last verified
 
@@ -45,4 +45,4 @@ L1-L6 and C1-C5 of `docs/reviews/sortable-codec-design.md`, in the commit that c
 - 2026-10-27: revision 0 drafted, Xapiand:72f1006ac.
 - 2026-10-27: the lead's rulings on Q1-Q4, Xapiand:22418c6b8.
 - 2026-10-27: architect's preliminary review, REJECT, Xapiand:57deb969c.
-- 2026-10-27: revision 2 drafted, this commit (hash recorded in the next).
+- 2026-10-27: revision 2 drafted, Xapiand:8e9790af5.
