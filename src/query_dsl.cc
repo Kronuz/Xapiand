@@ -1264,8 +1264,20 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 				const auto field = it->str_view();
 				const auto field_spc = schema->get_slot_field(field);
 				auto const& o = it.value();
-				const auto it_val_e = o.end();
-				for (auto it_val = o.begin(); it_val != it_val_e; ++it_val) {
+				// {"field": "asc"} / {"field": "desc"} is the order alone.
+				if (o.is_string()) {
+					if (strncasecmp(o.as_str().data(), QUERYDSL_DESC, sizeof(QUERYDSL_DESC)) == 0) {
+						descending = true;
+					} else if (strncasecmp(o.as_str().data(), QUERYDSL_ASC, sizeof(QUERYDSL_ASC)) != 0) {
+						THROW(QueryDslError, "Sort order for field {} must be asc or desc [{}]", field, repr(o.to_string()));
+					}
+				} else if (!o.is_map()) {
+					THROW(QueryDslError, "Invalid sort for field {}: {}", field, repr(o.to_string()));
+				}
+				static const MsgPack no_properties = MsgPack::MAP();
+				auto const& properties = o.is_map() ? o : no_properties;
+				const auto it_val_e = properties.end();
+				for (auto it_val = properties.begin(); it_val != it_val_e; ++it_val) {
 					const auto field_key = it_val->str_view();
 					auto const& val = it_val.value();
 					constexpr static auto _ = phf::make_phf({
