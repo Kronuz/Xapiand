@@ -17,19 +17,21 @@ engine::search(shards, request)
    all Xapian -> xapian::search          all strata -> strata::search       mixed -> errc::invalid
 strata::search
    pin each distinct index once, in address order:  flush the write buffer, lock, segments()
-   one snapshot = the segments of all shards:  term_table (global statistics and document frequencies)
-   per segment:  build scorers from the Query  ->  count (estimate)  ->  top-k with pruning
-   merge into one heap:  weight, then interleaved docid
+   one prospect::multi_snapshot = the segments of all shards (shard i = the i-th shard asked for)
+   term_table over its segments: global statistics and document frequencies
+   prospect::search(snapshot, build, options):  pruned top-k per shard merged by weight then interleaved docid,
+   or, with a spy or descending ids, the exhaustive collector (every live match once, in a heap of k)
 ```
 
 1. **One snapshot over the shards.** The segments of all shards go into one `term_table`, so a term's weight
    uses the whole index's document count, total length and document frequency, as Xapian's multi-database
    does. Deleted documents count in those statistics until a merge drops them (a prospect rule), where
    Xapian excludes them: weights drift slightly after deletes and replacements (T7).
-2. **Ids.** A hit's id is Xapian's interleave, `(did - 1) * n + shard + 1`, for `n` shards in the order given.
-   Ties in weight go to the lower id (the higher with `DocidOrder::descending`).
-3. **Estimate.** The count of live matches, exact (G12): the segment's scorer is counted in bit windows,
-   wrapped in `live_scorer` where documents are deleted. `check_at_least` is not needed.
+2. **Ids.** A hit's id is Xapian's interleave, `(did - 1) * n + shard + 1`, for `n` shards in the order given
+   (`multi_snapshot`, prospect's `shards.hh`). Ties in weight go to the lower id (the higher with
+   `DocidOrder::descending`).
+3. **Estimate.** The count of live matches, exact (G12), from prospect's search with `count`; the exhaustive
+   collector counts as it visits. `check_at_least` is not needed.
 4. **Refresh before search.** `Shard::pin()` flushes the write buffer if documents were applied since the
    last flush (D7), then holds the shard's lock for the search. A write, merge or close waits for it.
    Indexes are pinned in address order, so searches that share indexes cannot deadlock.
@@ -39,9 +41,12 @@ strata::search
    `operators.hh`); PHRASE is a `phrase_scorer` over consecutive positions (window equal to the term count)
    and NEAR the same with a window. A scorer is null where a segment cannot match, and the operators treat a
    null as Xapian treats a subquery that matches nothing.
-6. **Top-k.** Each segment feeds one heap of `first + maxitems` candidates; once it is full the scorer is
-   told to skip what scores below the k-th (one ulp under it, so a tie with a lower id can still enter).
+6. **Collection.** `prospect::search` keeps the `first + maxitems` best: the pruned collector for ascending ids
+   without a spy, the exhaustive one (which scores every match) for a spy or `DocidOrder::descending`. A spy
+   is the exhaustive collector's visitor and is shown each live match once, whatever the window.
    `percent` is the weight over the best weight, `rank` the position in the full order.
+7. **One snapshot.** A search holds every pinned shard's lock from the first pin to the end, so the documents
+   and statistics it reads are the index as of the last pin: no write, commit or merge lands in between.
 
 ## Tests
 
@@ -49,3 +54,9 @@ strata::search
 five shards, in several commits (several segments), and runs random query trees through `engine::search` on
 both. Each result is checked against a model of the corpus (documents and estimate exact) and against the
 Xapian result (the same ranking up to ties, weights within a relative 1e-9).
+
+`test_snapshot_consistency` searches (in order, in reverse with descending ids, and with a spy) while a
+writer adds a document to shard 0, 1 and 2 in turn and commits: every search must find per-shard counts that
+existed at one moment, and weights equal to a model's for exactly that many documents. The refusal,
+long-chain (weights and order against the model), spy (ids, data and weights per match) and snapshot tests
+each have a mutant that fails them (`docs/status/strata-engine-search.md`).

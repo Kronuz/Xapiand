@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,10 +48,10 @@ struct DocTerm {
 // until the shard hands them to the index.
 class StrataDocument final : public Document::Native {
 public:
-	void add_term(std::string_view term, termcount wdf_inc) override;
-	void add_boolean_term(std::string_view term) override;
-	void set_key(std::string_view term) override;
-	void add_posting(std::string_view term, termpos position, termcount wdf_inc) override;
+	void add_term(const Field& field, std::string_view term, termcount wdf_inc) override;
+	void add_boolean_term(const Field& field, std::string_view term) override;
+	void set_key(std::string_view key) override;
+	void add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc) override;
 	void add_value(valueno slot, std::string value) override;
 	std::string get_value(valueno slot) const override;
 	void set_data(std::string data) override;
@@ -68,6 +68,14 @@ public:
 	const std::map<std::string, DocTerm, std::less<>>& terms() const noexcept { return terms_; }
 	const std::map<valueno, std::string>& values() const noexcept { return values_; }
 
+	// The version this document was written at: the shard stamps it when it writes, the log keeps it,
+	// and replay reads it back. 0 until written.
+	rev version() const noexcept { return version_; }
+	void stamp(rev version) noexcept { version_ = version; replayed_ = false; }
+	// True for a document read from the log: the shard applies it only if the index is not already at
+	// its version.
+	bool replayed() const noexcept { return replayed_; }
+
 	// Sorts and deduplicates every term's positions; the shard calls it before it reads them.
 	void normalise();
 
@@ -76,10 +84,15 @@ public:
 	void unserialise_from(std::string_view serialised);
 
 private:
+	// Adds to a term by its whole bytes: the interim flat term (interim_terms.h), or one read from the log.
+	DocTerm& flat(std::string_view term);
+
 	std::map<std::string, DocTerm, std::less<>> terms_;
 	std::map<valueno, std::string> values_;
 	std::string data_;
 	std::string key_;
+	rev version_ = 0;
+	bool replayed_ = false;
 };
 
 std::unique_ptr<Document::Native> new_native();

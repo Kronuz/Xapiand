@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,7 @@
  */
 
 #include "engine/strata/document.h"
+#include "engine/strata/interim_terms.h"  // for interim::flat_term
 
 #include <algorithm>               // for std::sort, std::unique
 #include <cstdint>                 // for std::uint8_t, std::uint64_t
@@ -32,7 +33,8 @@ namespace engine::strata {
 
 namespace {
 
-constexpr std::uint8_t serial_version = 1;
+// Format 1 (before the version stamp) is named but no longer read.
+constexpr std::uint8_t serial_version = 2;
 
 void
 put(std::string& out, std::uint64_t value)
@@ -121,37 +123,45 @@ private:
 }  // namespace
 
 
-void
-StrataDocument::add_term(std::string_view term, termcount wdf_inc)
+DocTerm&
+StrataDocument::flat(std::string_view term)
 {
 	auto it = terms_.find(term);
 	if (it == terms_.end()) {
 		it = terms_.emplace(std::string(term), DocTerm{}).first;
 	}
-	it->second.wdf += wdf_inc;
+	return it->second;
 }
 
 
 void
-StrataDocument::add_boolean_term(std::string_view term)
+StrataDocument::add_term(const Field& field, std::string_view term, termcount wdf_inc)
 {
-	add_term(term, 0);
+	flat(interim::flat_term(field.name, term)).wdf += wdf_inc;
 }
 
 
 void
-StrataDocument::set_key(std::string_view term)
+StrataDocument::add_boolean_term(const Field& field, std::string_view term)
 {
-	key_.assign(term);
-	add_term(term, 0);
+	add_term(field, term, 0);
 }
 
 
 void
-StrataDocument::add_posting(std::string_view term, termpos position, termcount wdf_inc)
+StrataDocument::set_key(std::string_view key)
 {
-	add_term(term, wdf_inc);
-	terms_.find(term)->second.positions.push_back(position);
+	key_.assign(key);
+	flat(key);
+}
+
+
+void
+StrataDocument::add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc)
+{
+	auto& entry = flat(interim::flat_term(field.name, term));
+	entry.wdf += wdf_inc;
+	entry.positions.push_back(position);
 }
 
 
@@ -201,12 +211,13 @@ StrataDocument::normalise()
 }
 
 
-// version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
+// format, written version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
 std::string
 StrataDocument::serialise() const
 {
 	std::string out;
 	out.push_back(static_cast<char>(serial_version));
+	put(out, version_);
 	put(out, key_);
 	put(out, data_);
 	put(out, values_.size());
@@ -236,10 +247,16 @@ void
 StrataDocument::unserialise_from(std::string_view serialised)
 {
 	Cursor in(serialised);
-	if (in.byte() != serial_version) {
+	const auto format = in.byte();
+	if (format == 1) {
+		malformed("format 1 predates the version stamp and is no longer read");
+	}
+	if (format != serial_version) {
 		malformed("unknown version");
 	}
 	StrataDocument result;
+	result.version_ = in.number();
+	result.replayed_ = result.version_ != 0;
 	result.key_.assign(in.bytes());
 	result.data_.assign(in.bytes());
 	for (auto n = in.count(2); n; --n) {

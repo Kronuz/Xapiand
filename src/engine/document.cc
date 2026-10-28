@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,24 @@ engine::Document::Document() : Document(default_kind()) { }
 
 engine::Document::Document(Kind kind)
 	: native_(kind == Kind::strata ? strata::new_native() : xapian::new_native()) { }
+
+
+engine::FieldRef
+engine::Document::field(std::string_view name, FieldKind kind)
+{
+	const auto it = field_ids_.find(name);
+	if (it != field_ids_.end()) {
+		auto& known = fields_[it->second];
+		if (kind > known.kind) {
+			known.kind = kind;
+		}
+		return FieldRef{it->second};
+	}
+	const auto id = static_cast<std::uint32_t>(fields_.size());
+	fields_.push_back(Field{std::string(name), kind});
+	field_ids_.emplace(fields_.back().name, id);
+	return FieldRef{id};
+}
 
 
 engine::Document

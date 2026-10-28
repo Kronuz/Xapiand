@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -63,12 +63,12 @@ std::unique_ptr<engine::xapian::Shard> build(const std::string& path) {
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= kDocs; ++i) {
 		engine::Document doc;
-		doc.add_boolean_term("Q" + std::to_string(i));
-		doc.add_posting("alpha", 1, 2);
-		doc.add_posting("alpha", 5);
-		doc.add_posting("beta" + std::to_string(i % 3), 2, 3);
+		doc.add_boolean_term(doc.field(""), "Q" + std::to_string(i));
+		doc.add_posting(doc.field(""), "alpha", 1, 2);
+		doc.add_posting(doc.field(""), "alpha", 5);
+		doc.add_posting(doc.field(""), "beta" + std::to_string(i % 3), 2, 3);
 		if (i % 2 == 0) {
-			doc.add_term("even", 4);
+			doc.add_term(doc.field(""), "even", 4);
 		}
 		doc.add_value(3, "v3-" + std::to_string(i));
 		doc.add_value(9, std::string("v9\0x", 4) + std::to_string(i));

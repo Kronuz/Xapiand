@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,31 +50,39 @@ static_assert(engine::DB_ACTION_MASK == Xapian::DB_ACTION_MASK_);
 
 namespace engine::xapian {
 
-void
-XapianDocument::add_term(std::string_view term, termcount wdf_inc)
+const std::string&
+XapianDocument::join(const Field& field, std::string_view term)
 {
-	doc_.add_term(term, wdf_inc);
+	scratch_.assign(field.name).append(term);
+	return scratch_;
 }
 
 
 void
-XapianDocument::add_boolean_term(std::string_view term)
+XapianDocument::add_term(const Field& field, std::string_view term, termcount wdf_inc)
 {
-	doc_.add_boolean_term(term);
+	doc_.add_term(join(field, term), wdf_inc);
 }
 
 
 void
-XapianDocument::set_key(std::string_view term)
+XapianDocument::add_boolean_term(const Field& field, std::string_view term)
 {
-	doc_.add_boolean_term(term);
+	doc_.add_boolean_term(join(field, term));
 }
 
 
 void
-XapianDocument::add_posting(std::string_view term, termpos position, termcount wdf_inc)
+XapianDocument::set_key(std::string_view key)
 {
-	doc_.add_posting(term, position, wdf_inc);
+	doc_.add_boolean_term(key);
+}
+
+
+void
+XapianDocument::add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc)
+{
+	doc_.add_posting(join(field, term), position, wdf_inc);
 }
 
 
@@ -142,13 +150,14 @@ Document
 from_xapian(const Xapian::Document& doc)
 {
 	Document result(Kind::xapian);
+	auto& native = static_cast<XapianDocument&>(result.native());
 	const auto terms_end = doc.termlist_end();
 	for (auto it = doc.termlist_begin(); it != terms_end; ++it) {
 		auto name = *it;
-		result.add_term(name, it.get_wdf());
+		native.add_whole_term(name, it.get_wdf());
 		const auto positions_end = it.positionlist_end();
 		for (auto pit = it.positionlist_begin(); pit != positions_end; ++pit) {
-			result.add_posting(name, *pit, 0);
+			native.add_whole_posting(name, *pit, 0);
 		}
 	}
 	const auto values_end = doc.values_end();

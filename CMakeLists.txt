@@ -1,4 +1,5 @@
 #
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
 # Copyright (c) 2015-2019 Dubalu LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -32,7 +33,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set (PACKAGE_NAME "Xapiand")
-set (PACKAGE_VERSION "1.0.0-alpha.9")
+set (PACKAGE_VERSION "1.0.0-alpha.10")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
@@ -66,6 +67,7 @@ option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
 option(FUZZ "Build the libFuzzer targets (tests/fuzz_*.cc; needs a clang with libFuzzer)" OFF)
+option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a strata commit or replay point (crash tests)" OFF)
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
@@ -78,6 +80,10 @@ foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM
 	endif ()
 endforeach ()
 
+if (CRASH_POINTS)
+	message(STATUS "Option CRASH_POINTS - on")
+	add_compile_definitions(XAPIAND_CRASH_POINTS)
+endif ()
 if (ENGINE_CENSUS)
 	message(STATUS "Option ENGINE_CENSUS - on")
 	add_compile_definitions(ENGINE_CENSUS)
@@ -755,7 +761,7 @@ FetchContent_MakeAvailable(task)
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG c60547fe901e962f50e8cdb4db3f1d45ca2d792f)  # phase4/xapian-ops (operators.hh), until it lands on main
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG becfe3cebbf999a3e374f0081afa9ffb0120808c)
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -2164,7 +2170,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_search_strata engine_callbacks engine_error engine_replay engine_strata pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_shard engine_read engine_search engine_search_strata engine_callbacks engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2188,6 +2194,8 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+		add_test(NAME test_wal_replay_xapian COMMAND ${PROJECT_NAME}_test_wal_replay)
+		set_tests_properties(test_wal_replay_xapian PROPERTIES ENVIRONMENT "XAPIAND_ENGINE=xapian")
 
 	# libFuzzer targets: standalone (they link only the code they fuzz), built with -DFUZZ=ON.
 	if (FUZZ)

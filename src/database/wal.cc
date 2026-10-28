@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -285,7 +286,8 @@ DatabaseWAL::to_string_document(std::string_view serialised_document, bool unser
 		return MsgPack(serialised_document);
 	}
 
-	auto doc = engine::Document::unserialise(_shard->kind(), serialised_document);
+	// The dump endpoints read a log without opening its shard, so the engine is the one the files are.
+	auto doc = engine::Document::unserialise(_shard ? _shard->kind() : engine::kind_of(base_path), serialised_document);
 
 	auto data = Data(doc.get_data());
 	auto main_locator = data.get("");
@@ -559,7 +561,14 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 			break;
 		case Type::DELETE_DOCUMENT:
 			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
-			_shard->delete_document(did, false, wal_, false);
+			try {
+				_shard->delete_document(did, false, wal_, false);
+			} catch (const engine::Error& error) {
+				// A document that is already gone is the state the line leads to: replaying it again changes nothing.
+				if (error.kind != engine::errc::doc_not_found) {
+					throw;
+				}
+			}
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length_and_check(&p, p_end);

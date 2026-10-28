@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1302,7 +1303,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	} else {
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
-	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+	return flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 }
 
 

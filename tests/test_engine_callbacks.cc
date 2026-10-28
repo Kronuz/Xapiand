@@ -430,7 +430,7 @@ std::optional<engine::errc> error_kind(F&& f) {
 }
 
 Query t(const char* term, engine::termcount wqf = 1) {
-	return Query::term(term, wqf);
+	return Query::term("", term, wqf);
 }
 
 // --- tests ---
@@ -717,7 +717,7 @@ void test_expansions() {
 			return Query::wildcard(pattern, max, limit, flags, combiner);
 		};
 		const auto fuzzy = [](const char* pattern, unsigned distance, std::size_t prefix = 0, engine::termcount max = 0, engine::Expansion limit = engine::Expansion::error, Op combiner = Op::SYNONYM) {
-			return Query::edit_distance(pattern, max, limit, combiner, distance, prefix);
+			return Query::edit_distance("", pattern, max, limit, combiner, distance, prefix);
 		};
 		const unsigned S = engine::PATTERN_SINGLE, M = engine::PATTERN_MULTI;
 		std::vector<std::pair<std::string, Query>> queries;

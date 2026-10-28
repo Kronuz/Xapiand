@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -93,6 +93,18 @@ stem_strategy(Stem stem)
 }
 
 
+// The Xapian term or pattern of a node: its field's name followed by its bytes. An empty field and
+// bytes stay empty, which Xapian reads as match-all.
+std::string
+joined(const QueryNode& node)
+{
+	std::string result;
+	result.reserve(node.field.size() + node.str.size());
+	result.append(node.field).append(node.str);
+	return result;
+}
+
+
 Xapian::Query
 parse_text(const QueryNode& node)
 {
@@ -110,7 +122,7 @@ parse_text(const QueryNode& node)
 	}
 	parser.set_max_expansion(config.partial_max_expansion, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::QueryParser::FLAG_PARTIAL);
 	parser.set_max_expansion(config.fuzzy_max_expansion, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::QueryParser::FLAG_FUZZY);
-	return parser.parse_query(node.str, parser_flags(config.flags), config.prefix);
+	return parser.parse_query(node.str, parser_flags(config.flags), config.field);
 }
 
 }  // namespace
@@ -150,7 +162,7 @@ to_xapian(const Query& query)
 
 	switch (node->kind) {
 		case QueryKind::term:
-			return Xapian::Query(node->str, node->wqf, node->pos);
+			return Xapian::Query(joined(*node), node->wqf, node->pos);
 
 		case QueryKind::combine: {
 			if (node->binary) {
@@ -188,10 +200,10 @@ to_xapian(const Query& query)
 			return Xapian::Query(Xapian::Query::OP_SCALE_WEIGHT, to_xapian(node->subqueries[0]), node->factor);
 
 		case QueryKind::wildcard:
-			return Xapian::Query(Xapian::Query::OP_WILDCARD, node->str, node->parameter, wildcard_flags(node->limit, node->pattern_flags), to_xapian(node->op));
+			return Xapian::Query(Xapian::Query::OP_WILDCARD, joined(*node), node->parameter, wildcard_flags(node->limit, node->pattern_flags), to_xapian(node->op));
 
 		case QueryKind::edit_distance:
-			return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, node->str, node->parameter, wildcard_flags(node->limit, 0), to_xapian(node->op), node->distance, node->prefix_length);
+			return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, joined(*node), node->parameter, wildcard_flags(node->limit, 0), to_xapian(node->op), node->distance, node->field.size() + node->prefix_length);
 
 		case QueryKind::source: {
 			// release() hands the adapter to the Query, which owns it.

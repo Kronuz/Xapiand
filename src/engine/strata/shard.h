@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,12 @@
 
 
 namespace engine::strata {
+
+struct Core;
+
+// Rethrows the exception being handled as an engine error of its kind, marking `core` (when given) fenced
+// on an index_fenced. Call only inside a catch block.
+[[noreturn]] void rethrow_translated(Core* core = nullptr);
 
 struct Handle;
 class Pinned;

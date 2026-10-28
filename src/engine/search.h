@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -126,7 +126,8 @@ struct SearchResult {
 // Searches the shards as one index. Hit ids are the documents' ids across the shards, interleaved
 // the way the shards number them: document d of shard i of n is (d - 1) * n + i + 1. No shards, or
 // an empty query, find nothing. The shards must all be of one engine, stay open and be used by this
-// search only until it ends. What the strata engine does not search yet raises errc::not_available.
+// search only until it ends. A query shape the strata engine does not search yet raises errc::syntax
+// (a client error, not retried); prepare() may reject a shape first, with errc::invalid or errc::internal.
 task::task<SearchResult> search(std::span<Shard* const> shards, const SearchRequest& request);
 
 }  // namespace engine

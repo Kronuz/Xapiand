@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,11 @@ LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
 		const auto again = engine::strata::unserialise_document(doc.serialise());
 		if (again.serialise() != doc.serialise()) {
 			std::abort();  // the form is not a fixed point
+		}
+		const auto& before = engine::strata::strata_document(doc);
+		const auto& after = engine::strata::strata_document(again);
+		if (before.version() != after.version() || before.replayed() != after.replayed() || before.replayed() != (before.version() != 0)) {
+			std::abort();  // the version the log kept is the one replay reads
 		}
 	} catch (const engine::Error& error) {
 		if (error.kind != engine::errc::syntax) {

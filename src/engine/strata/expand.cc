@@ -31,6 +31,7 @@
 #include "prospect/reader.hh"      // for prospect::inverted_plugin
 
 #include "engine/error.h"          // for Error, errc
+#include "engine/strata/interim_terms.h"  // for interim::flat_term
 #include "engine/strata/pattern.h"  // for wildcard_prefix, wildcard_matches, within_edit_distance, head
 
 
@@ -47,13 +48,16 @@ std::vector<std::string>
 expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segments, prospect::term_table& terms, std::string_view key_prefix)
 {
 	const bool wildcard = node.kind == QueryKind::wildcard;
+	// The field and the pattern are one flat string, as Xapian's; an edit distance's prefix length counts the term's characters.
+	const std::string pattern = interim::flat_term(node.field, node.str);
 	std::string prefix;
 	std::string_view tail;
 	if (wildcard) {
-		prefix = wildcard_prefix(node.str, node.pattern_flags);
+		prefix = wildcard_prefix(pattern, node.pattern_flags);
 	} else {
-		prefix = std::string(head(node.str, node.prefix_length));
-		tail = std::string_view(node.str).substr(prefix.size());
+		const auto lead = head(node.str, node.prefix_length);
+		prefix = node.field + std::string(lead);
+		tail = std::string_view(node.str).substr(lead.size());
 	}
 	if (in_key_space(prefix, key_prefix)) {
 		throw Error(errc::syntax, "The strata engine does not expand terms of the key field");
@@ -65,7 +69,7 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 			if (!key.starts_with(prefix)) {
 				return false;
 			}
-			if (wildcard ? wildcard_matches(node.str, key, node.pattern_flags) : within_edit_distance(tail, key.substr(prefix.size()), node.distance)) {
+			if (wildcard ? wildcard_matches(pattern, key, node.pattern_flags) : within_edit_distance(tail, key.substr(prefix.size()), node.distance)) {
 				found.emplace(key);
 			}
 			return true;
@@ -77,7 +81,7 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 	if (limit != 0 && result.size() > limit) {
 		switch (node.limit) {
 			case Expansion::error:
-				throw Error(errc::invalid, "The pattern \"" + node.str + "\" expands to more than " + std::to_string(limit) + " terms");
+				throw Error(errc::invalid, "The pattern \"" + pattern + "\" expands to more than " + std::to_string(limit) + " terms");
 			case Expansion::first:
 				result.resize(limit);
 				break;

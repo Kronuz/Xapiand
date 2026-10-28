@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -161,8 +161,8 @@ void test_view_throws_engine_errors() {
 	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
 	{
 		engine::Document doc;
-		doc.add_boolean_term("Q1");
-		doc.add_posting("alpha", 1, 2);
+		doc.add_boolean_term(doc.field(""), "Q1");
+		doc.add_posting(doc.field(""), "alpha", 1, 2);
 		doc.add_value(3, "v3");
 		doc.set_data("data");
 		engine::sync_wait(opened.shard->add(doc, {}));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +80,7 @@ Pair random_pair(Lcg& rng, int depth) {
 			auto term = "t" + std::to_string(rng.next(6));
 			auto wqf = rng.next(3) + 1;
 			auto pos = rng.next(3);
-			return { Query::term(term, wqf, pos), Xapian::Query(term, wqf, pos) };
+			return { Query::term("", term, wqf, pos), Xapian::Query(term, wqf, pos) };
 		}
 		case 1:
 			return { Query(), Xapian::Query() };
@@ -132,7 +132,7 @@ Pair random_pair(Lcg& rng, int depth) {
 			std::vector<Xapian::Query> xapian;
 			for (auto n = rng.next(3) + 2; n > 0; --n) {
 				auto term = "w" + std::to_string(rng.next(5));
-				seam.push_back(Query::term(term));
+				seam.push_back(Query::term("", term));
 				xapian.push_back(Xapian::Query(term));
 			}
 			auto window = static_cast<engine::termcount>(seam.size() + rng.next(4));
@@ -144,15 +144,15 @@ Pair random_pair(Lcg& rng, int depth) {
 }  // namespace
 
 static void test_leaves_and_ops() {
-	CHECK_EQ(to_xapian(Query::term("a", 2, 3)).get_description(), Xapian::Query("a", 2, 3).get_description());
+	CHECK_EQ(to_xapian(Query::term("", "a", 2, 3)).get_description(), Xapian::Query("a", 2, 3).get_description());
 	CHECK_EQ(to_xapian(Query::match_all()).get_description(), Xapian::Query(std::string()).get_description());
 	CHECK_EQ(to_xapian(Query()).get_description(), Xapian::Query().get_description());
 	CHECK_TRUE(Query().empty());
 	CHECK_FALSE(Query::match_all().empty());
-	CHECK_FALSE(Query::term("a").empty());
+	CHECK_FALSE(Query::term("", "a").empty());
 
 	// The binary and list forms translate to the same Xapian query (test_binary_equals_list).
-	auto a = Query::term("a"), b = Query::term("b"), c = Query::term("c");
+	auto a = Query::term("", "a"), b = Query::term("", "b"), c = Query::term("", "c");
 	CHECK_EQ(to_xapian(Query::combine(Op::AND, a, b)).get_description(),
 		Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("a"), Xapian::Query("b")).get_description());
 	const std::vector<Xapian::Query> xs = { Xapian::Query("a"), Xapian::Query("b"), Xapian::Query("c") };
@@ -169,13 +169,13 @@ static void test_leaves_and_ops() {
 }
 
 static void test_expansions() {
-	CHECK_EQ(to_xapian(Query::wildcard("ab")).get_description(),
+	CHECK_EQ(to_xapian(Query::wildcard("", "ab")).get_description(),
 		Xapian::Query(Xapian::Query::OP_WILDCARD, "ab", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard("ab", 50, engine::Expansion::most_frequent, 0, Op::SYNONYM)).get_description(),
+	CHECK_EQ(to_xapian(Query::wildcard("", "ab", 50, engine::Expansion::most_frequent, 0, Op::SYNONYM)).get_description(),
 		Xapian::Query(Xapian::Query::OP_WILDCARD, "ab", 50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard("a?c*e", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR)).get_description(),
+	CHECK_EQ(to_xapian(Query::wildcard("", "a?c*e", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR)).get_description(),
 		Xapian::Query(Xapian::Query::OP_WILDCARD, "a?c*e", 7, Xapian::Query::WILDCARD_LIMIT_FIRST | Xapian::Query::WILDCARD_PATTERN_SINGLE | Xapian::Query::WILDCARD_PATTERN_MULTI, Xapian::Query::OP_OR).get_description());
-	CHECK_EQ(to_xapian(Query::edit_distance("Xabc", 0, engine::Expansion::error, Op::SYNONYM, 2, 3)).get_description(),
+	CHECK_EQ(to_xapian(Query::edit_distance("", "Xabc", 0, engine::Expansion::error, Op::SYNONYM, 2, 3)).get_description(),
 		Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, "Xabc", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM, 2, 3).get_description());
 }
 
@@ -228,7 +228,7 @@ static void test_registered_sources() {
 		{ Query::source(range("015", "018")), { 6, 7, 8, 9 } },
 		{ Query::source(ge("028")), { 19, 20, 21 } },
 		{ Query::source(le("012")), { 1, 2, 3 } },
-		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
+		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("", "t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
 	};
 	for (const auto& [query, expected] : cases) {
 		auto local = to_xapian(query);
@@ -338,7 +338,7 @@ static void test_expansion_limits() {
 		db.add_document(doc);
 	}
 	auto matched = [&](engine::Expansion limit) {
-		auto dids = run(db, to_xapian(Query::wildcard("ab", 2, limit)));
+		auto dids = run(db, to_xapian(Query::wildcard("", "ab", 2, limit)));
 		return std::set<Xapian::docid>(dids.begin(), dids.end());
 	};
 	CHECK_EQ(matched(engine::Expansion::first), (std::set<Xapian::docid>{ 1, 2, 3, 4, 5, 6, 7 }));
@@ -370,10 +370,10 @@ static void test_random_trees() {
 // append skips an accumulated query that matches nothing only once the text has been read.
 static void test_append() {
 	engine::TextConfig config;
-	config.prefix = "XT";
+	config.field = "XT";
 	config.flags = engine::text::PHRASE;
 	auto stops = Query::text("the", config);
-	auto word = Query::term("w");
+	auto word = Query::term("", "w");
 	CHECK_FALSE(stops.empty());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, Query(), word)).get_description(), Xapian::Query("w").get_description());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, word, Query())).get_description(),
@@ -424,7 +424,7 @@ static void test_text() {
 	};
 	for (const auto& c : cases) {
 		engine::TextConfig config;
-		config.prefix = "XTfield";
+		config.field = "XTfield";
 		config.default_op = c.op;
 		config.flags = c.flags;
 		config.stop_language = c.stop;
@@ -460,7 +460,7 @@ static void test_text() {
 
 	// Text the parser rejects raises the Xapian error, as the query language did before.
 	engine::TextConfig bad;
-	bad.prefix = "XT";
+	bad.field = "XT";
 	bad.flags = engine::text::BOOLEAN | engine::text::PHRASE;
 	bool raised = false;
 	try {
@@ -586,7 +586,7 @@ static void test_posting_source() {
 	CHECK_EQ(std::set<Xapian::docid>(dids.begin(), dids.end()), (std::set<Xapian::docid>{ 3, 4, 5, 6 }));
 
 	// A filter: skip_to and check run when the source meets another term.
-	auto filtered = to_xapian(Query::combine(Op::FILTER, Query::term("t"), Query::source(std::make_unique<Between>(8, 9))));
+	auto filtered = to_xapian(Query::combine(Op::FILTER, Query::term("", "t"), Query::source(std::make_unique<Between>(8, 9))));
 	auto filtered_dids = run(db, filtered);
 	CHECK_EQ(std::set<Xapian::docid>(filtered_dids.begin(), filtered_dids.end()), (std::set<Xapian::docid>{ 8, 9 }));
 	auto both = to_xapian(Query::combine(Op::AND, Query::source(std::make_unique<Between>(2, 9)), Query::source(std::make_unique<Between>(5, 20))));
@@ -705,7 +705,7 @@ static void test_source_ownership() {
 		}
 		CHECK_EQ(Counted::live, 1);
 
-		auto combined = Query::combine(Op::FILTER, Query::term("t"), query);
+		auto combined = Query::combine(Op::FILTER, Query::term("", "t"), query);
 		for (int i = 0; i < 20; ++i) {
 			CHECK_EQ(run(db, to_xapian(combined)).size(), 10U);
 		}
@@ -756,7 +756,7 @@ static void test_wildcard_patterns() {
 		db.add_document(doc);
 	}
 	auto matched = [&](const std::string& pattern, unsigned flags) {
-		auto dids = run(db, to_xapian(Query::wildcard(pattern, 0, engine::Expansion::error, flags)));
+		auto dids = run(db, to_xapian(Query::wildcard("", pattern, 0, engine::Expansion::error, flags)));
 		return std::set<Xapian::docid>(dids.begin(), dids.end());
 	};
 	CHECK_EQ(matched("al?ce", engine::PATTERN_SINGLE), (std::set<Xapian::docid>{ 1, 2 }));
@@ -803,7 +803,7 @@ static void test_binary_equals_list() {
 		doc.add_term("z");
 		db.add_document(doc);
 	}
-	const std::vector<Query> operands = { Query::term("a"), Query::term("b"), Query::term("nothing"), Query(), Query::match_all(), Query::term("c", 2) };
+	const std::vector<Query> operands = { Query::term("", "a"), Query::term("", "b"), Query::term("", "nothing"), Query(), Query::match_all(), Query::term("", "c", 2) };
 	auto results = [&](const Query& query) {
 		auto translated = to_xapian(query);
 		Xapian::Enquire enquire(db);
@@ -839,7 +839,7 @@ void* chain_run(void* arg) {
 		Query chain;
 		for (std::size_t i = 0; i < job->length; ++i) {
 			// Every 7th operand matches nothing, as a stop-word-only text does.
-			chain = Query::append(Op::AND, chain, i % 7 == 6 ? Query() : Query::term("t" + std::to_string(i)));
+			chain = Query::append(Op::AND, chain, i % 7 == 6 ? Query() : Query::term("", "t" + std::to_string(i)));
 		}
 		job->description = to_xapian(chain).get_description().substr(0, 40);
 		job->done = true;
@@ -866,7 +866,7 @@ static void test_append_chain() {
 	Query chain;
 	Xapian::Query expected;
 	for (int i = 0; i < 12; ++i) {
-		auto operand = i % 5 == 4 ? Query() : Query::term("t" + std::to_string(i));
+		auto operand = i % 5 == 4 ? Query() : Query::term("", "t" + std::to_string(i));
 		auto expected_operand = i % 5 == 4 ? Xapian::Query() : Xapian::Query("t" + std::to_string(i));
 		chain = Query::append(i % 2 != 0 ? Op::OR : Op::AND, chain, operand);
 		expected = expected.empty() ? expected_operand : Xapian::Query(i % 2 != 0 ? Xapian::Query::OP_OR : Xapian::Query::OP_AND, expected, expected_operand);

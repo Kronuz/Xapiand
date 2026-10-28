@@ -23,8 +23,8 @@
 
 #include "engine/strata/search.h"
 
-#include <algorithm>               // for std::push_heap, std::pop_heap, std::sort_heap
-#include <cmath>                   // for std::nextafter
+#include <algorithm>               // for std::sort, std::remove_if
+#include <cmath>                   // for std::isfinite
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint64_t
 #include <functional>              // for std::less
@@ -33,6 +33,7 @@
 #include <optional>                // for std::optional
 #include <stdexcept>               // for std::invalid_argument, std::exception
 #include <string>                  // for std::string
+#include <string_view>             // for std::string_view
 #include <system_error>            // for std::system_error
 #include <unordered_map>           // for std::unordered_map
 #include <utility>                 // for std::move
@@ -40,11 +41,15 @@
 
 #include "prospect/index.hh"       // for prospect::index
 #include "prospect/operators.hh"   // for prospect::scale_scorer
-#include "prospect/searcher.hh"    // for prospect::term_table, live_scorer
+#include "prospect/searcher.hh"    // for prospect::term_table
+#include "prospect/shards.hh"      // for prospect::multi_snapshot, search
 
+#include "engine/doc_view.h"       // for DocView
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/doc_view.h"  // for SegmentDocView
 #include "engine/strata/expand.h"  // for expand
+#include "engine/strata/interim_terms.h"  // for interim::flat_term
+#include "engine/strata/keys.h"    // for keys::key_prefix
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
 #include "engine/strata/values.h"  // for values::Slot
@@ -56,6 +61,16 @@ namespace {
 
 namespace p = ::prospect;
 
+// The index's key prefix: the term table routes a term that starts with it to the key table. A query never
+// names a key (the id term is also an ordinary term of its document, and terms are UTF-8, which cannot start
+// with the lead byte), so every term is looked up in the dictionary. This one function is where the lookup
+// depends on how the index keeps keys (strata's design/fields-and-keys).
+std::string
+term_key_prefix()
+{
+	return keys::key_prefix();
+}
+
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
 
@@ -65,31 +80,20 @@ unsupported(const std::string& what)
 	throw Error(errc::syntax, "The strata engine does not search " + what + " yet");
 }
 
-// Rethrows the exception being handled as an engine error of its kind. Call only inside a catch block.
-[[noreturn]] void
-rethrow_translated()
+// A hit's weight as a percentage of the top weight, in [0, 100]. Against an infinite top weight (an
+// overflowed or infinite scale factor) a hit is 100 if it is infinite too and 0 otherwise.
+int
+percent_of(double score, double top)
 {
-	try {
-		throw;
-	} catch (const Error&) {
-		throw;
-	} catch (const ::strata::index_not_created& exc) {
-		throw Error(errc::not_found, exc.what());
-	} catch (const ::strata::index_fenced& exc) {
-		throw Error(errc::database, exc.what());
-	} catch (const ::strata::corrupt_segment& exc) {
-		throw Error(errc::corrupt, exc.what());
-	} catch (const ::strata::corrupt_index& exc) {
-		throw Error(errc::corrupt, exc.what());
-	} catch (const std::system_error& exc) {
-		throw Error(errc::database, exc.what());
-	} catch (const std::invalid_argument& exc) {
-		throw Error(errc::invalid, exc.what());
-	} catch (const std::exception& exc) {
-		throw Error(errc::internal, exc.what());
+	if (!(top > 0)) {
+		return 100;
 	}
+	if (!std::isfinite(top)) {
+		return score >= top ? 100 : 0;
+	}
+	const double ratio = score / top * 100.0 + 0.5;
+	return ratio >= 100.0 ? 100 : ratio > 0.0 ? static_cast<int>(ratio) : 0;
 }
-
 
 // Every document of a segment, weighing nothing: the empty term and match_all.
 class AllScorer final : public p::scorer {
@@ -124,11 +128,19 @@ private:
 };
 
 
+// An empty field and term match every document; a field with an empty term is the field's marker.
+bool
+is_match_all(const QueryNode& node)
+{
+	return node.field.empty() && node.str.empty();
+}
+
+
 bool
 is_term(const Query& query)
 {
 	const auto* leaf = query.node();
-	return leaf != nullptr && leaf->kind == QueryKind::term && !leaf->str.empty();
+	return leaf != nullptr && leaf->kind == QueryKind::term && !is_match_all(*leaf);
 }
 
 // Whether the operator joins two scorers (the rest take a list of terms).
@@ -256,11 +268,11 @@ struct Plan {
 // What building a query for one segment reads: the segment, and the term table and statistics of
 // the snapshot that spans every segment of every shard, so a weight is the same in all of them.
 struct Builder {
-	const p::segment_snapshot& snap;
+	const p::segment& seg;
 	p::term_table& terms;
 	Plan& plan;
 
-	const p::inverted_plugin::reader& reader() const { return snap.seg->get<p::inverted_plugin>(); }
+	const p::inverted_plugin::reader& reader() const { return seg.get<p::inverted_plugin>(); }
 
 	p::weight weight_of(const std::string& term, termcount wqf = 1) const {
 		return p::weight::bm25_xapian(terms.stats(), terms.df(term), wqf);
@@ -289,7 +301,7 @@ group_of(const QueryNode& node, const Builder& b)
 	if (node.kind == QueryKind::combine) {
 		for (const auto& sub : node.subqueries) {
 			const auto& leaf = *sub.node();
-			group.members.push_back({leaf.str, leaf.wqf});
+			group.members.push_back({interim::flat_term(leaf.field, leaf.str), leaf.wqf});
 		}
 	} else {
 		for (auto& term : expand(node, b.plan.segments, b.terms, b.plan.key_prefix)) {
@@ -348,7 +360,7 @@ merge(Op op, std::vector<Scorer> children)
 	return std::make_unique<p::max_scorer>(std::move(children));
 }
 
-// op applied to two scorers, with a null scorer matching nothing.
+// op applied to two scorers, with a null scorer matching nothing (AND and OR runs go through nary()).
 Scorer
 join(Op op, Scorer left, Scorer right)
 {
@@ -361,15 +373,6 @@ join(Op op, Scorer left, Scorer right)
 			children.push_back(std::move(left));
 			children.push_back(std::move(right));
 			return std::make_unique<p::conjunction_scorer>(std::move(children));
-		}
-		case Op::OR: {
-			if (!left || !right) {
-				return left ? std::move(left) : std::move(right);
-			}
-			std::vector<Scorer> children;
-			children.push_back(std::move(left));
-			children.push_back(std::move(right));
-			return std::make_unique<p::disjunction_scorer>(std::move(children));
 		}
 		case Op::AND_NOT:
 			if (!left || !right) {
@@ -401,6 +404,31 @@ join(Op op, Scorer left, Scorer right)
 	}
 }
 
+// AND or OR of any number of scorers, with a null scorer matching nothing.
+Scorer
+nary(Op op, std::vector<Scorer> children)
+{
+	if (op == Op::AND) {
+		for (const auto& child : children) {
+			if (!child) {
+				return nullptr;
+			}
+		}
+	} else {
+		children.erase(std::remove_if(children.begin(), children.end(), [](const Scorer& child) { return !child; }), children.end());
+	}
+	if (children.empty()) {
+		return nullptr;
+	}
+	if (children.size() == 1) {
+		return std::move(children[0]);
+	}
+	if (op == Op::AND) {
+		return std::make_unique<p::conjunction_scorer>(std::move(children));
+	}
+	return std::make_unique<p::disjunction_scorer>(std::move(children));
+}
+
 Scorer build(const Query& query, const Builder& b, int depth);
 
 // Appends the query, or, when `into` is set and it is an OR, the subqueries of that OR (and of the ORs
@@ -430,7 +458,7 @@ build_group(const QueryNode& node, const Builder& b)
 	if (combiner == Op::SYNONYM) {
 		std::vector<p::format::term_info> infos;
 		for (const auto& member : group.members) {
-			if (const auto* info = b.terms.info(*b.snap.seg, member.term)) {
+			if (const auto* info = b.terms.info(b.seg, member.term)) {
 				infos.push_back(*info);
 			}
 		}
@@ -441,7 +469,7 @@ build_group(const QueryNode& node, const Builder& b)
 	}
 	std::vector<Scorer> children;
 	for (const auto& member : group.members) {
-		if (const auto* info = b.terms.info(*b.snap.seg, member.term)) {
+		if (const auto* info = b.terms.info(b.seg, member.term)) {
 			children.push_back(std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(member.term, member.wqf)));
 		}
 	}
@@ -470,12 +498,13 @@ build_positional(const QueryNode& node, const Builder& b)
 	weights.reserve(n);
 	for (const auto& sub : node.subqueries) {
 		const auto& leaf = *sub.node();
-		const auto* info = b.terms.info(*b.snap.seg, leaf.str);
+		const auto flat = interim::flat_term(leaf.field, leaf.str);
+		const auto* info = b.terms.info(b.seg, flat);
 		if (info == nullptr) {
 			return nullptr;
 		}
 		infos.push_back(*info);
-		weights.push_back(b.weight_of(leaf.str, leaf.wqf));
+		weights.push_back(b.weight_of(flat, leaf.wqf));
 	}
 	const std::uint32_t window = node.op == Op::NEAR ? (node.parameter != 0 ? node.parameter : static_cast<std::uint32_t>(n)) : 0;
 	return std::make_unique<p::phrase_scorer>(b.reader(), infos, std::move(weights), window);
@@ -493,14 +522,15 @@ build(const Query& query, const Builder& b, int depth)
 	}
 	switch (node->kind) {
 		case QueryKind::term: {
-			if (node->str.empty()) {
-				return std::make_unique<AllScorer>(b.snap.seg->core().doc_count());
+			if (is_match_all(*node)) {
+				return std::make_unique<AllScorer>(b.seg.core().doc_count());
 			}
-			const auto* info = b.terms.info(*b.snap.seg, node->str);
+			const auto flat = interim::flat_term(node->field, node->str);
+			const auto* info = b.terms.info(b.seg, flat);
 			if (info == nullptr) {
 				return nullptr;
 			}
-			return std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(node->str, node->wqf));
+			return std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(flat, node->wqf));
 		}
 		case QueryKind::combine: {
 			if (node->op == Op::PHRASE || node->op == Op::NEAR) {
@@ -578,16 +608,38 @@ build(const Query& query, const Builder& b, int depth)
 				base = &base->node()->subqueries[0];
 			}
 			auto accumulated = build(*base, b, depth + 1);
+			// A run of appends with one AND or OR is one n-ary scorer, so a long chain builds (and frees) a
+			// flat scorer, not one nested as deep as the chain.
+			std::vector<Scorer> run;
+			Op run_op = Op::INVALID;
+			const auto flush = [&] {
+				if (!run.empty()) {
+					accumulated = nary(run_op, std::move(run));
+					run.clear();
+					run_op = Op::INVALID;
+				}
+			};
 			for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
 				auto next = build((*it)->subqueries[1], b, depth + 1);
-				// An accumulated query that is empty by its structure is replaced by the next one; one that
-				// only misses this segment's terms is joined as a null scorer.
+				const Op op = (*it)->op;
 				if ((*it)->subqueries[0].empty()) {
+					// A query that matches nothing by its structure (a text that analysed to nothing) is skipped,
+					// not joined; a term missing from this segment is a different thing and joins as nothing.
+					flush();
 					accumulated = std::move(next);
+				} else if (op == Op::AND || op == Op::OR) {
+					if (run_op != op) {
+						flush();
+						run.push_back(std::move(accumulated));
+						run_op = op;
+					}
+					run.push_back(std::move(next));
 				} else {
-					accumulated = join((*it)->op, std::move(accumulated), std::move(next));
+					flush();
+					accumulated = join(op, std::move(accumulated), std::move(next));
 				}
 			}
+			flush();
 			return accumulated;
 		}
 		case QueryKind::scale: {
@@ -601,7 +653,7 @@ build(const Query& query, const Builder& b, int depth)
 		case QueryKind::edit_distance:
 			return build_group(*node, b);
 		case QueryKind::source: {
-			const auto* column = values::Reader(*b.snap.seg).column(node->src->slot());
+			const auto* column = values::Reader(b.seg).column(node->src->slot());
 			if (column == nullptr) {
 				return nullptr;
 			}
@@ -610,40 +662,6 @@ build(const Query& query, const Builder& b, int depth)
 		default:
 			throw Error(errc::internal, "A strata search met a node it does not run");
 	}
-}
-
-
-// A hit on its way to the result: its weight, its id across the shards and, when the request has a
-// sorter, its key.
-struct Candidate {
-	double weight;
-	std::uint64_t id;
-	std::string key;
-};
-
-// Whether a ranks before b: by key when there are keys (ascending, bytewise), then heavier first,
-// then by id in the requested order.
-struct Ranks {
-	bool descending;
-	bool keyed;
-	bool operator()(const Candidate& a, const Candidate& b) const noexcept {
-		if (keyed && a.key != b.key) {
-			return a.key < b.key;
-		}
-		if (a.weight != b.weight) {
-			return a.weight > b.weight;
-		}
-		return descending ? a.id > b.id : a.id < b.id;
-	}
-};
-
-docid
-to_docid(std::uint64_t id)
-{
-	if (id > std::numeric_limits<docid>::max()) {
-		throw Error(errc::internal, "A document id does not fit across the shards");
-	}
-	return static_cast<docid>(id);
 }
 
 
@@ -693,105 +711,57 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		throw Error(errc::internal, "A strata search lost a pinned shard");
 	};
 
-	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's.
-	std::vector<p::segment_snapshot> segments;
-	std::vector<std::size_t> shard_of;
+	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's, and
+	// shard i is the i-th shard asked for (its slot in Xapian's docid interleave).
+	std::vector<p::shard_input> inputs(mine.size());
+	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
 		for (const auto& view : pin_of(mine[i]).segments()) {
-			segments.push_back({view.seg, view.deleted, view.dead});
-			shard_of.push_back(i);
+			inputs[i].segments.push_back({view.seg, view.deleted, view.dead});
+			documents += view.seg->core().doc_count();
 		}
 	}
-	p::term_table terms(segments, pins.front().key_prefix_);
-	Plan plan{segments, terms, pins.front().key_prefix_, {}};
+	const p::multi_snapshot snapshot(std::move(inputs));
+	const std::string key_prefix = term_key_prefix();
+	p::term_table terms(snapshot.segments(), key_prefix);
+	Plan plan{snapshot.segments(), terms, key_prefix, {}};
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
-	const std::size_t keep = static_cast<std::size_t>(std::min<std::uint64_t>(window, std::numeric_limits<doccount>::max()));
-	const Ranks ranks{request.order == DocidOrder::descending, request.sorter != nullptr};
-	const std::uint64_t n = mine.size();
-	std::vector<Candidate> best;
-	best.reserve(std::min<std::size_t>(keep, 1024));
-	std::uint64_t matches = 0;
-	double heaviest = 0;   // the greatest weight of any match, when every match is visited
-	// A spy sees every match and a key maker keys every one, so those searches visit them all; the
-	// others count first and then stop as soon as no later document can enter the window.
-	const bool exhaustive = request.sorter != nullptr || request.spy != nullptr;
-
-	for (std::size_t s = 0; s < segments.size(); ++s) {
-		const auto& snap = segments[s];
-		const Builder builder{snap, terms, plan};
-		const auto live = [&](Scorer scorer) -> Scorer {
-			if (scorer && snap.any_deleted()) {
-				return std::make_unique<p::live_scorer>(std::move(scorer), *snap.deleted);
-			}
-			return scorer;
-		};
-
-		if (!exhaustive) {
-			auto counting = live(build(source, builder, 0));
-			if (!counting) {
-				continue;
-			}
-			matches += p::count(*counting);
-			if (keep == 0) {
-				continue;
-			}
-		}
-
-		auto scorer = live(build(source, builder, 0));
-		if (!scorer) {
-			continue;
-		}
-		const auto& core = snap.seg->core();
-		const auto prune = [&] {
-			if (!exhaustive && best.size() == keep && best.front().weight > 0) {
-				scorer->set_min_competitive_score(std::nextafter(best.front().weight, 0.0));
-			}
-		};
-		prune();
-		for (auto ord = scorer->next(); ord != p::no_more_docs; ord = scorer->next()) {
-			const double weight = scorer->score();
-			const std::uint64_t id = (core.docid(ord) - 1) * n + shard_of[s] + 1;
-			Candidate candidate{weight, id, {}};
-			if (exhaustive) {
-				++matches;
-				heaviest = std::max(heaviest, weight);
-				const SegmentDocView view(to_docid(id), *snap.seg, ord);
-				if (request.spy != nullptr) {
-					request.spy->see(view, weight);
-				}
-				if (keep == 0) {
-					continue;
-				}
-				if (request.sorter != nullptr) {
-					candidate.key = request.sorter->key(view);
-				}
-			} else if (best.size() == keep && weight < best.front().weight) {
-				continue;
-			}
-			if (best.size() < keep) {
-				best.push_back(std::move(candidate));
-				std::push_heap(best.begin(), best.end(), ranks);
-				prune();
-			} else if (ranks(candidate, best.front())) {
-				std::pop_heap(best.begin(), best.end(), ranks);
-				best.back() = std::move(candidate);
-				std::push_heap(best.begin(), best.end(), ranks);
-				prune();
-			}
-		}
+	p::search_options options;
+	// A window cannot return more than the snapshot holds, so k (which sizes the collector) never exceeds it.
+	options.k = static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
+	options.count = true;
+	options.order = request.order == DocidOrder::descending ? p::docid_order::descending : p::docid_order::ascending;
+	// The heaviest match, when a key or a spy makes the search visit every match (the first hit is then not the heaviest).
+	double heaviest = 0;
+	if (request.sorter != nullptr) {
+		options.key = [&](const p::match& m) { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); };
 	}
+	if (request.sorter != nullptr || request.spy != nullptr) {
+		// The spy sees every match once, as Xapian shows it the documents it examines.
+		options.visit = [&](const p::match& m) {
+			const double weight = m.score();
+			heaviest = std::max(heaviest, weight);
+			if (request.spy != nullptr) {
+				request.spy->see(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord), weight);
+			}
+		};
+	}
+	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options);
 
-	std::sort_heap(best.begin(), best.end(), ranks);
 	SearchResult result;
-	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(matches, std::numeric_limits<doccount>::max()));
-	const double top = exhaustive ? heaviest : (best.empty() ? 0.0 : best.front().weight);
-	for (std::size_t i = request.first; i < best.size(); ++i) {
+	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
+	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
+	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
+		const auto& found_hit = found.hits[i];
+		if (found_hit.docid > std::numeric_limits<docid>::max()) {
+			throw Error(errc::internal, "A document id does not fit across the shards");
+		}
 		Hit hit;
-		hit.did = to_docid(best[i].id);
-		hit.weight = best[i].weight;
+		hit.did = static_cast<docid>(found_hit.docid);
+		hit.weight = found_hit.score;
 		hit.rank = static_cast<doccount>(i);
-		hit.percent = top > 0 ? static_cast<int>(best[i].weight / top * 100.0 + 0.5) : 100;
+		hit.percent = percent_of(found_hit.score, top);
 		result.hits.push_back(hit);
 	}
 	return result;
@@ -806,7 +776,7 @@ search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	try {
 		co_return run(shards, request);
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(nullptr);
 	}
 }
 
