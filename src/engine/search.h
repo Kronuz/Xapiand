@@ -24,6 +24,7 @@
 
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint8_t
+#include <limits>                  // for std::numeric_limits
 #include <memory>                  // for std::unique_ptr
 #include <optional>                // for std::optional
 #include <span>                    // for std::span
@@ -69,13 +70,16 @@ struct Similar {
 	std::vector<std::string> prefixes;    // only terms with one of these prefixes; empty allows all
 };
 
+// A `check_at_least` that asks the engine to look at every matching document.
+inline constexpr doccount CHECK_ALL = std::numeric_limits<doccount>::max();
+
 struct SearchRequest {
 	// Not null; must outlive the search.
 	const PreparedQuery* query = nullptr;
 
 	doccount first = 0;                   // hits skipped
 	doccount maxitems = 10;               // hits returned
-	doccount check_at_least = 0;          // documents the engine looks at, for the estimate and the spy
+	doccount check_at_least = 0;          // documents the engine looks at, for the estimate and the spy; CHECK_ALL looks at all
 
 	const KeyMaker* sorter = nullptr;     // orders hits by key, then by relevance; borrowed
 	valueno collapse_key = BAD_VALUENO;   // keeps `collapse_max` hits per value of this slot

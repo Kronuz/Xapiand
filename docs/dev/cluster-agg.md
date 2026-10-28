@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-27) explore/cluster-agg from Xapiand:17e11d2cf; prototype, local only.
+> Status: SUPERSEDED (2026-10-27) by the fix in [aggregation-scope.md](../mechanisms/aggregation-scope.md); the symptom and mechanism below stay valid.
 
 # Cluster aggregations are partial (check_at_least = 1)
 
