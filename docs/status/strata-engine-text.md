@@ -151,7 +151,7 @@ Findings outside this branch (not fixed here):
    server: the re-check's probes (`p7` text, flat, dsl, qstr, body, yaml, mp groups, `p8` width shapes at 650, 1,365
    and 4,095, `p9` MessagePack, `sr3.py`): 682 requests, every answer 200, 204 or 400 except 15 transport-level
    resets on `q=` URLs of 20,000+ characters (as in the re-check) and the aggregation-nesting timeout the review
-   already noted; no crash. `harness/query_depth_check.py` (now 56 checks, the worst shape and one per operator) exit
+   already noted; no crash. `harness/query_depth_check.py` (now with the worst shape and one per operator) exit
    0 on both builds. Docs E2E 576/576 (339 requests, uncovered 0). `fuzz_body` 90 s seed 7 and 60 s seed 11 (174k
    bodies), `fuzz_text` 40 s seed 7 (369k texts): no violation.
    Revert checks: chain check off fails `test_chain_cap` (10 checks); msgpack limit off aborts `xapiand_test_text` in
