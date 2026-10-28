@@ -23,8 +23,7 @@
 
 #include "engine/strata/search.h"
 
-#include <algorithm>               // for std::push_heap, std::pop_heap, std::sort_heap, std::remove_if
-#include <cmath>                   // for std::nextafter
+#include <algorithm>               // for std::sort, std::remove_if
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint64_t
 #include <functional>              // for std::less
@@ -40,7 +39,8 @@
 
 #include "prospect/index.hh"       // for prospect::index
 #include "prospect/operators.hh"   // for prospect::scale_scorer
-#include "prospect/searcher.hh"    // for prospect::term_table, live_scorer
+#include "prospect/searcher.hh"    // for prospect::term_table
+#include "prospect/shards.hh"      // for prospect::multi_snapshot, search
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/error.h"          // for Error, errc
@@ -213,10 +213,10 @@ validate(const Query& query, int depth)
 // What building a query for one segment reads: the segment, and the term table and statistics of
 // the snapshot that spans every segment of every shard, so a weight is the same in all of them.
 struct Builder {
-	const p::segment_snapshot& snap;
+	const p::segment& seg;
 	p::term_table& terms;
 
-	const p::inverted_plugin::reader& reader() const { return snap.seg->get<p::inverted_plugin>(); }
+	const p::inverted_plugin::reader& reader() const { return seg.get<p::inverted_plugin>(); }
 
 	p::weight weight_of(const std::string& term, termcount wqf = 1) const {
 		return p::weight::bm25_xapian(terms.stats(), terms.df(term), wqf);
@@ -299,7 +299,7 @@ build_positional(const QueryNode& node, const Builder& b)
 	weights.reserve(n);
 	for (const auto& sub : node.subqueries) {
 		const auto& leaf = *sub.node();
-		const auto* info = b.terms.info(*b.snap.seg, leaf.str);
+		const auto* info = b.terms.info(b.seg, leaf.str);
 		if (info == nullptr) {
 			return nullptr;
 		}
@@ -323,9 +323,9 @@ build(const Query& query, const Builder& b, int depth)
 	switch (node->kind) {
 		case QueryKind::term: {
 			if (node->str.empty()) {
-				return std::make_unique<AllScorer>(b.snap.seg->core().doc_count());
+				return std::make_unique<AllScorer>(b.seg.core().doc_count());
 			}
-			const auto* info = b.terms.info(*b.snap.seg, node->str);
+			const auto* info = b.terms.info(b.seg, node->str);
 			if (info == nullptr) {
 				return nullptr;
 			}
@@ -461,24 +461,6 @@ private:
 };
 
 
-// A hit on its way to the result: its weight and its id across the shards.
-struct Candidate {
-	double weight;
-	std::uint64_t id;
-};
-
-// Whether a ranks before b: heavier first, then by id in the requested order.
-struct Ranks {
-	bool descending;
-	bool operator()(const Candidate& a, const Candidate& b) const noexcept {
-		if (a.weight != b.weight) {
-			return a.weight > b.weight;
-		}
-		return descending ? a.id > b.id : a.id < b.id;
-	}
-};
-
-
 SearchResult
 run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 {
@@ -528,94 +510,43 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		throw Error(errc::internal, "A strata search lost a pinned shard");
 	};
 
-	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's.
-	std::vector<p::segment_snapshot> segments;
-	std::vector<std::size_t> shard_of;
+	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's, and
+	// shard i is the i-th shard asked for (its slot in Xapian's docid interleave).
+	std::vector<p::shard_input> inputs(mine.size());
 	for (std::size_t i = 0; i < mine.size(); ++i) {
 		for (const auto& view : pin_of(mine[i]).segments()) {
-			segments.push_back({view.seg, view.deleted, view.dead});
-			shard_of.push_back(i);
+			inputs[i].segments.push_back({view.seg, view.deleted, view.dead});
 		}
 	}
-	p::term_table terms(segments, term_key_prefix());
+	const p::multi_snapshot snapshot(std::move(inputs));
+	p::term_table terms(snapshot.segments(), term_key_prefix());
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
-	const std::size_t keep = static_cast<std::size_t>(std::min<std::uint64_t>(window, std::numeric_limits<doccount>::max()));
-	const Ranks ranks{request.order == DocidOrder::descending};
-	const std::uint64_t n = mine.size();
-	std::vector<Candidate> best;
-	best.reserve(std::min<std::size_t>(keep, 1024));
-	std::uint64_t matches = 0;
-
-	for (std::size_t s = 0; s < segments.size(); ++s) {
-		const auto& snap = segments[s];
-		const Builder builder{snap, terms};
-		const auto live = [&](Scorer scorer) -> Scorer {
-			if (scorer && snap.any_deleted()) {
-				return std::make_unique<p::live_scorer>(std::move(scorer), *snap.deleted);
-			}
-			return scorer;
+	p::search_options options;
+	options.k = static_cast<std::size_t>(std::min<std::uint64_t>(window, std::numeric_limits<doccount>::max()));
+	options.count = true;
+	options.order = request.order == DocidOrder::descending ? p::docid_order::descending : p::docid_order::ascending;
+	if (request.spy != nullptr) {
+		// The spy sees every match once, as Xapian shows it the documents it examines.
+		options.visit = [&](const p::match& m) {
+			request.spy->see(SpyView(*m.seg, m.ord, static_cast<docid>(m.did)), m.score());
 		};
-
-		auto counting = live(build(source, builder, 0));
-		if (!counting) {
-			continue;
-		}
-		const auto& core = snap.seg->core();
-		const auto interleave = [&](p::ordinal_t ord) { return (core.docid(ord) - 1) * n + shard_of[s] + 1; };
-		if (request.spy != nullptr) {
-			// The spy sees every match once, as Xapian shows it the documents it examines.
-			for (auto ord = counting->next(); ord != p::no_more_docs; ord = counting->next()) {
-				request.spy->see(SpyView(*snap.seg, ord, static_cast<docid>(core.docid(ord))), counting->score());
-				++matches;
-			}
-		} else {
-			matches += p::count(*counting);
-		}
-		if (keep == 0) {
-			continue;
-		}
-
-		auto scorer = live(build(source, builder, 0));
-		const auto prune = [&] {
-			if (best.size() == keep && best.front().weight > 0) {
-				scorer->set_min_competitive_score(std::nextafter(best.front().weight, 0.0));
-			}
-		};
-		prune();
-		for (auto ord = scorer->next(); ord != p::no_more_docs; ord = scorer->next()) {
-			const double weight = scorer->score();
-			if (best.size() == keep && weight < best.front().weight) {
-				continue;
-			}
-			const std::uint64_t id = interleave(ord);
-			const Candidate candidate{weight, id};
-			if (best.size() < keep) {
-				best.push_back(candidate);
-				std::push_heap(best.begin(), best.end(), ranks);
-				prune();
-			} else if (ranks(candidate, best.front())) {
-				std::pop_heap(best.begin(), best.end(), ranks);
-				best.back() = candidate;
-				std::push_heap(best.begin(), best.end(), ranks);
-				prune();
-			}
-		}
 	}
+	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms}, 0); }, options);
 
-	std::sort_heap(best.begin(), best.end(), ranks);
 	SearchResult result;
-	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(matches, std::numeric_limits<doccount>::max()));
-	const double top = best.empty() ? 0.0 : best.front().weight;
-	for (std::size_t i = request.first; i < best.size(); ++i) {
-		if (best[i].id > std::numeric_limits<docid>::max()) {
+	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
+	const double top = found.hits.empty() ? 0.0 : found.hits.front().score;
+	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
+		const auto& found_hit = found.hits[i];
+		if (found_hit.docid > std::numeric_limits<docid>::max()) {
 			throw Error(errc::internal, "A document id does not fit across the shards");
 		}
 		Hit hit;
-		hit.did = static_cast<docid>(best[i].id);
-		hit.weight = best[i].weight;
+		hit.did = static_cast<docid>(found_hit.docid);
+		hit.weight = found_hit.score;
 		hit.rank = static_cast<doccount>(i);
-		hit.percent = top > 0 ? static_cast<int>(best[i].weight / top * 100.0 + 0.5) : 100;
+		hit.percent = top > 0 ? static_cast<int>(found_hit.score / top * 100.0 + 0.5) : 100;
 		result.hits.push_back(hit);
 	}
 	return result;
