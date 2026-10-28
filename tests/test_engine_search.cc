@@ -123,6 +123,7 @@ public:
 	task::task<void> scan(engine::docid, const engine::ScanSink&) override { nope<void>(); }
 	task::task<std::string> metadata(const std::string&) override { nope<std::string>(); }
 	task::task<std::vector<std::string>> metadata_keys() override { nope<std::vector<std::string>>(); }
+	engine::Kind kind() const noexcept override { return engine::Kind::xapian; }
 	engine::rev revision() const override { return 0; }
 	engine::doccount doc_count() const override { return 0; }
 	std::string uuid() const override { return ""; }

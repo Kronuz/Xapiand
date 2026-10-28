@@ -32,6 +32,7 @@
 namespace engine::strata {
 
 struct Handle;
+class Pinned;
 
 // The strata implementation of the engine shard: an index in the shard's "strata" directory. The
 // writable and the readable handle of one shard share one index (strata locks its directory), so the
@@ -67,6 +68,14 @@ public:
 	doccount doc_count() const override;
 	std::string uuid() const override;
 	unsigned refs() const override;
+
+	// Flushes the write buffer and pins the shard's segments for a search (src/engine/strata/search.cc).
+	// The pin holds the shard's lock; see identity() for taking several in order.
+	Pinned pin();
+
+	// Names the index behind the handle: handles of one shard share it, and shards are pinned in the
+	// order of their identities.
+	const void* identity() const noexcept;
 
 private:
 	std::unique_ptr<Handle> handle_;

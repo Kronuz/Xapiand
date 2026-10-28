@@ -39,6 +39,7 @@
 #include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for StrataDocument
+#include "engine/strata/pin.h"    // for Pinned
 #include "engine/strata/values.h"  // for the value columns
 
 
@@ -920,6 +921,30 @@ unsigned
 Shard::refs() const
 {
 	return 1;
+}
+
+
+const void*
+Shard::identity() const noexcept
+{
+	return handle_->core;
+}
+
+
+Pinned
+Shard::pin()
+{
+	auto& core = *handle_->core;
+	Pinned pinned{std::unique_lock<std::mutex>(core.mtx)};
+	try {
+		core.refresh();
+		pinned.segments_ = core.index->segments();
+		pinned.identity_ = handle_->core;
+		pinned.key_prefix_ = std::string(1, key_lead);
+	} catch (...) {
+		rethrow_translated();
+	}
+	return pinned;
 }
 
 

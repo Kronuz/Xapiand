@@ -23,6 +23,11 @@
 #pragma once
 
 #include <cstddef>                 // for std::size_t
+#include <span>                    // for std::span
+
+#include "engine/search.h"         // for SearchRequest, SearchResult
+#include "engine/shard.h"          // for Shard
+#include "task.hh"                 // for task::task
 
 
 namespace engine::xapian {
@@ -30,5 +35,8 @@ namespace engine::xapian {
 // The objects a search makes (prepared queries, expand deciders, matching scopes) and has not yet
 // destroyed, for the tests that check ownership.
 std::size_t live_search_objects() noexcept;
+
+// engine::search over Xapian shards: the request's query is the one prepare() made.
+task::task<SearchResult> search(std::span<engine::Shard* const> shards, const SearchRequest& request);
 
 }  // namespace engine::xapian
