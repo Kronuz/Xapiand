@@ -984,7 +984,7 @@ include_directories("${htm_SOURCE_DIR}")
 # located-exception trick). lz4.h comes from the lz4 FetchContent already on the
 # path, zlib from the system. Xapiand uses deflate + lz4 only (no zstd), so only
 # those two .cc compile into XAPIAND_OBJ.
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG ed590c87201afd270afbfbb2d58d5d467c6d23b6)
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 816bc82ca9e41bd6fc54831d172ede45b3fc6eaa)
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
@@ -1291,6 +1291,8 @@ list(APPEND XAPIAN_SRC_LIST ${UNICODE_SRC_LIST})
 list(APPEND XAPIAN_SRC_LIST ${QUERYPARSER_SRC_LIST})
 add_library(XAPIAN_OBJ OBJECT ${XAPIAN_SRC_LIST})
 
+# The vendored sources include "xapian.h", the umbrella header that lives under src/engine/xapian.
+target_include_directories(XAPIAN_OBJ AFTER PRIVATE "${PROJECT_SOURCE_DIR}/src/engine/xapian")
 target_include_directories(XAPIAN_OBJ PUBLIC
 	${ZLIB_INCLUDE_DIRS}
 	${UUID_INCLUDE_DIRS}
