@@ -6,7 +6,7 @@ Branch `phase7a/strata-engine-text` from Xapiand master `7efc3753e` merged with 
 
 ## State
 
-In progress. queryparser is the only text parser and runs on the host: `engine::parse_text`
+S4 ready to land (SR3b and SR3c closed). queryparser is the only text parser and runs on the host: `engine::parse_text`
 (`src/engine/text.{h,cc}`) reads a field's query string into an `engine::Query`. The `Text` node is gone
 from the seam (`Query::text`, `QueryKind::text`, the Xapian `QueryParser` path, `XAPIAND_QUERYPARSER` and the
 A/B build). Mechanism note: `docs/mechanisms/text-queries.md`.
@@ -163,9 +163,26 @@ Findings outside this branch (not fixed here):
 Left open: YAML aliases were not probed for amplification (a chain of aliases to anchors copies the value each
 time); the aggregation 10-level nesting timeout in the review; the DSL depth margin (cap 45, ASan crash 80).
 
+## Security fix round 3 (SR3b, SR3c; re-check 2 in `docs/reviews/strata-engine-text-security.md`)
+
+Lead ruling: a YAML request body may not use anchors or aliases. `src/y2j/y2j.cc` refuses any alias event and
+any anchor on a scalar, sequence or mapping right after the event is read (400 "YAML anchors and aliases are
+not supported"), before the document is built; the anchor and alias bookkeeping and the expansion pass are
+deleted, so nothing expands. An alias as a map key is refused the same way.
+
+- Tests: `test_body_depth_per_format` in `tests/test_text.cc`: the 800-line alias chain, billion-laughs levels 5
+  to 9, aliases and anchors on scalars, sequences, mappings and keys, unknown names; plain bodies (strings
+  that only look like anchors) still load. With `y2j.cc` reverted 15 checks fail; a mutant that stops refusing
+  mapping anchors fails the `a: &x {b: 1}` check.
+- ASan+UBSan (-O1) server, `.scratch/s4-yaml/`: `yaml_chain.py` (n 300, 800, 1000), `yaml.py` (chains to
+  100000, laughs, self references, alias as key) all 400 in 0.00 s, RSS 95 to 110 MB, node alive; `sr3.py` 64
+  ok, 0 FAIL; `restore.py` node alive. `xapiand_test_text` 13243 and `xapiand_test_engine_query` 22442 pass;
+  `xapiand_fuzz_body 40 7` no violation; docs E2E 576/576, 339 requests, none uncovered.
+- Changelog lines now say YAML depth is limited and aliases are refused.
+
 ## Next
 
-Route the findings above (wildcard cap, url_parser, YAML alias amplification). Open for the lead: the `cjk_words` segmenter (decision 2).
+Route the findings above (wildcard cap, url_parser). Open for the lead: the `cjk_words` segmenter (decision 2).
 
 ## Blocked on
 

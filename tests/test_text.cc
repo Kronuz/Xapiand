@@ -494,13 +494,35 @@ test_body_depth_per_format()
 	for (const char* text : { "", "\n", "  \n# only a comment\n" }) {
 		CHECK_TRUE(refused_as([&] { rapidjson::Document doc; yaml_load(doc, text); }, "no document"));
 	}
-	// Aliases to a missing anchor and truncated documents stay errors, with the partial document dropped.
-	for (const char* text : { "a: *x", "[*x]", "a: &x [1,\n", "{a: [", "&x [*x" }) {
-		try {
-			rapidjson::Document doc;
-			yaml_load(doc, text);
-		} catch (const ClientError&) {
+	// Anchors and aliases are refused before any expansion: the chain, the billion laughs, a key, an unknown name.
+	const auto not_supported = [&](const std::string& text) {
+		return refused_as([&] { rapidjson::Document doc; yaml_load(doc, text); }, "anchors and aliases are not supported");
+	};
+	std::string chain;
+	for (std::size_t i = 0; i < 800; ++i) {
+		chain += "- &a" + std::to_string(i) + " [" + (i ? "*a" + std::to_string(i - 1) : std::string("x")) + "]\n";
+	}
+	CHECK_TRUE(not_supported(chain));
+	for (std::size_t levels = 5; levels <= 9; ++levels) {
+		std::string laughs = "a0: &a0 [\"lol\",\"lol\",\"lol\",\"lol\",\"lol\",\"lol\",\"lol\",\"lol\",\"lol\"]\n";
+		for (std::size_t i = 1; i < levels; ++i) {
+			const auto prev = "*a" + std::to_string(i - 1);
+			laughs += "a" + std::to_string(i) + ": &a" + std::to_string(i) + " [" + prev + "," + prev + "," + prev + "," + prev + "," + prev + "," + prev + "," + prev + "," + prev + "," + prev + "]\n";
 		}
+		CHECK_TRUE(not_supported(laughs));
+	}
+	for (const char* text : { "a: &x 1\nb: *x", "&x [1]", "a: &x {b: 1}", "{&k a: 1}", "{*k : 1}", "a: &x 1\n*x : 2", "a: *x", "[*x]", "&x [*x" }) {
+		CHECK_TRUE(not_supported(text));
+	}
+	// Plain bodies still load, with strings that only look like anchors or aliases.
+	for (const char* text : { "a: [1, 2, {b: c}]\nd: \"&x\"\ne: '*y'\nf: a&b*c\n", "- x\n- y\n" }) {
+		rapidjson::Document doc;
+		yaml_load(doc, text);
+		CHECK_FALSE(doc.IsNull());
+	}
+	// Truncated documents stay errors, with the partial document dropped.
+	for (const char* text : { "a: [1,\n", "{a: [" }) {
+		CHECK_TRUE(refused_as([&] { rapidjson::Document doc; yaml_load(doc, text); }, "JSON parse error"));
 	}
 }
 
