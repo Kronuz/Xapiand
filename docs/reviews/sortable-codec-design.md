@@ -247,3 +247,164 @@ L1 and L2 block step 1. L3 to L6 block step 2, not step 1: they change no byte o
 
 Not run: no Xapiand build, unit tests, docs E2E, harness, cluster or fuzzing; no benchmarks; no arm64
 or Linux host; only syntax-only compiles and Python probes on this Mac.
+
+## Re-check 1
+
+- Date: 2026-10-27. Scope: L1 to L6 and C1 to C5 only, against revision 2 (Xapiand:8e9790af5) plus the
+  lead's rulings on Q5 to Q7 (Xapiand:cc383ab86), `docs/design/sortable-codec.md`,
+  `docs/design/sortable-codec/{model.py,sizes.py,overloads.cc}`, `docs/status/sortable-codec.md`.
+- Clean room kept: `src/sortable_serialise.{cc,h}`, `src/xapian/` and `src/server/remote_protocol_views.cc`
+  not opened. Probes ran under `quiet light codec-recheck`; outputs in `.scratch/sortable-codec-recheck/`
+  (`p1.out`, `p2.out`, `rc_bytes.py`/`rc_bytes.out`, `sizes.out`, `rc_lat.py`/`rc_lat.out`).
+
+### Verdicts
+
+| Item | Status |
+|---|---|
+| L1 one tag per exponent | CLOSED |
+| L2 size row and corpora | CLOSED, one residual (R1) |
+| L3 `.xapiand/*` at first start | CLOSED |
+| L4 DUMP and what the migration carries | PARTIAL: the lead's Q6 ruling is not in D10 or T13 (R2) |
+| L5 the marker's write path | CLOSED |
+| L6 mixed versions and downgrades | CLOSED (depends on the Q7 `cluster` change) |
+| C1 overloads | CLOSED |
+| C2 T10's grep | CLOSED |
+| C3 missing-value sentinel | CLOSED |
+| C4 a mutant per D5 rule | CLOSED (design level) |
+| C5 arm64 `long double` | CLOSED |
+
+### L1 CLOSED
+
+`model.py` is the layout of `p4_alt.py`; the architect should not need to look again.
+
+1. Bytes: `rc_bytes.py` (my own comparison, not the designer's `xcheck.py`) encodes P1's 196,961 typed values
+   with `model.encode` and `p4_alt.encode`: 0 byte differences; longest 10 bytes; 0 start with `0x00`.
+2. Accepted sets: `model.decode` against `p4_alt.decode` over every 1- and 2-byte input, every tag with every
+   2-byte field (stride 7) and 6 tails, every escape tag with every field and 4 tails, 2,000,000 random 3-byte
+   inputs and 10^6 random 4 to 13-byte inputs seeded on the tags that matter: 9,212,576 accepted, 0
+   disagreements (value or rejection).
+3. Order: `p1_order.py` rerun against the revised model: order failures 0, cross-type equality failures 0,
+   `0x00`-first 0. Its `spec!=model 194227` line is expected and not a defect: `p1_order.py`'s independent
+   encoder is written from revision 0's two-tags-per-exponent text, so it differs from any one-tag layout
+   (its "max len 11" is that old encoder's). The order check in that probe uses `model.encode`.
+4. Strictness: `p2_decoder.py` against the revised `model.decode`: 25,028,525 inputs tried, 19,661,306
+   accepted (with repeats), 0 that do not re-encode to themselves.
+5. The model's own commands: `selftest` 213,624 values, 0 failures, longest 10 B; three encoder mutants fail
+   15,617, 11,004 and 24,897 checks; `rules` shows a witness for each D5 rule.
+
+### L2 CLOSED, with R1
+
+`sizes.py` reruns to the design's table to the byte (legacy probe built from my kept
+`.scratch/sortable-codec-arch/legacy_probe`): corpora values 22,790 B old against 21,089 B new, terms 57,601
+against 54,951; synthetic values 174,849 against 170,070, terms 581,663 against 553,242; `T5: PASS`, exit 0, no
+set larger in values or terms (the worst are within 0.02 B per value: prices 7.77 against 7.79, scores 7.82
+against 7.93). The datetime terms are Xapiand's: `sizes.py:dt_terms` builds hour, day, month, year, decade
+and century by calendar truncation with `GenerateTerms::year` flooring, matching `def_accuracy_datetime`
+(`src/database/schema.cc:169-176`) and the `case UnitTime::*` branches (`src/multivalue/generate_terms.cc:253-293`);
+the bucket table gives 4.12 B new against 4.40 to 4.41 B old, equal to my earlier `p3_sizes.out`. The two 64-bit
+sets are 8.95 B and 8.96 B against 8.99 B and 9.24 B. D6 now states the corpus with each number.
+
+R1 (condition for step 1's T5, not a blocker): `sizes.py` and T5 have no sub-1/16-seconds set, which my
+finding 2 listed and which is where revision 0 lost (+24%). I measured it with the revised model and the
+legacy probe (`rc_lat.out`, 2,000 values each): latencies 0.0005 to 0.06 s 7.99 B old, 7.94 B new; 1e-9 to 1e-3
+7.99 B, 7.94 B. Add one such set to `sizes.py`, so T5 guards the window. Also measured: doubles below 2^-60
+(uniform 1e-30 to 1e-20) are 7.98 B old and 9.93 B new (+24%, the 3-byte escape). D6 says this is "not
+measured" and no set holds such values; it is real and the T5 rule "no larger, every set" would fail on it.
+Accept it and state the number in D6, or widen the window; the lead decides (rare in practice, a deliberate
+trade).
+
+### L3 CLOSED
+
+D10 item 2 runs the in-place routine for `.xapiand/*` at node start, before the manager opens them
+(`src/manager.cc:708, 836` are the first uses; I read both), so D9's refusal cannot stop an upgraded node;
+the text names why (never empty, old version-slot bytes) and that `.xapiand/indexes` holds the settings.
+The unreplayed-WAL case stops with a message instead of decoding old version bytes. T13 starts the new binary
+on an old data directory, single node and 2 nodes, kill -9 included. Residual: item 2 has no flag, so a
+node with an unreplayed-WAL internal index refuses to start with the message; that is the right outcome and
+T13 tests it.
+
+### L4 PARTIAL (R2)
+
+Closed parts: D10's carry list (documents, blobs, schema, foreign schemas, user metadata, settings via
+`.xapiand/indexes` first) and the manual route's order (foreign schemas, schemas and settings, RESTORE,
+metadata); T13 checks identity of each and runs both routes.
+
+R2, open: the lead's Q6 ruling is in the rulings paragraph only (`sortable-codec.md:555-559`: the in-place
+`--upgrade-codec` keeps every document's `_version`; only dump and restore may restart them). The design body
+still says the opposite in five places: D10 (`:371-376`, "What it does not: `_version`", "every version restarts
+at 1, here and in DUMP and RESTORE alike", "never decodes a slot or a term"), the manual route (`:388`), Q6
+(`:486`, "Every document restarts at version 1", recommends (a)), T13 ("`_version` is 1 for every document"), and
+the step 2 changelog line (`:523`); the ledger's "Blocked on" (`docs/status/sortable-codec.md:33`) still lists Q6
+as open. T13 would therefore fail a correct implementation of the ruling.
+
+The ruling is also not a text edit. It says the upgrade "rewrites values in place", but D10's mechanism
+copies data into a new `<shard>.codec2` and never reads an old slot or term; the version lives only in the `V`
+term and `DB_SLOT_VERSION` in old bytes (`src/engine/xapian/shard.cc:52-64`), and a fresh add stamps version 1
+(`shard.cc:116-118`). Keeping versions needs two things the design has not specified: a reader for the old
+version bytes (the cost Q6 (b) names: the GPL algorithm back in the tree, or a table derived by black-box
+probing of the old codec, which is feasible for the small unsigned range a version occupies and checkable
+exhaustively against `legacy_probe`), and a way for the upgrade's indexer to stamp a given version instead of
+1. Fix: rewrite D10, Q6, T13, the manual-route sentence and the changelog line to the ruling, say which reader
+D10 uses and how the indexer sets the version, and keep the "legacy mode never decodes a slot or a term"
+sentence true or amend it for the version slot alone. This blocks step 2, not step 1.
+
+### L5 CLOSED
+
+D9 now has a creation table: new primary (marker written by `reopen_writable` straight to the engine, not the
+WAL, committed before the open returns; covers RESTORE's `DB_DISABLE_WAL`), replica (no write at creation; a
+revision-0 replica receives the whole database, checked at `replication_protocol_views.cc:515-538`: `to_revision
+== 0` copies every file), readable open (writes nothing, shard stays empty and unmarked, adopted by the next
+writable open) and remote shards. The revision effect (0 to 1 on the marker's commit, via `set_metadata`'s
+`prior_revision + 1`, `shard.cc:1878-1905`) is stated as by-reading and checked in T8, which also adds the
+fresh 2-node replication, the crash between creation and the marker, a `"3"` marker and RESTORE. The read-only
+guard is named: `search_views.cc:1131` compares the command minus its first character with `schema`, `wal`,
+`nodes`, `metrics`; the design refuses `_value_codec` by its stored name and every key beginning with `_`, and
+T8 tries both spellings. Worth checking at the step 2 review only: a blanket `_` prefix refusal also bars user
+metadata keys that start with `_`.
+
+### L6 CLOSED
+
+D11 bumps the discovery major to 2 (`src/server/discovery.cc:73`; read) and the remote protocol to 48.0, states
+the one-way property that matters (the bus drops frames newer than itself, accepts older ones:
+`cluster/bus.h` `on_datagram`, rx at or below its own version, which I confirmed in the pinned `cluster`
+checkout), so a new node would hear an old node; the lead's Q7 ruling picks the additive `Kronuz/cluster`
+minimum-version change, coordinated with Detent's agent. T14 covers both start orders and the handshake.
+Residual for the lead: D11 item 1 and T14 still read "Q7 chooses" / "after Q7's change"; fold the ruling into
+the body when D10 is revised. The `cluster` change is a dependency of step 2d, not of step 1. Downgrades: D11
+item 4 and Q5's ruling (accept; changelog) state that a release older than this design cannot refuse a new
+shard and that every later release refuses an unknown marker.
+
+### Conditions
+
+- C1 CLOSED. D7 is one constrained template (`encodable`: standard integers except `bool` and the character
+  types, `float`, `double`). `c++ -std=c++20 -fsyntax-only overloads.cc` (Apple clang) exits 0: 20 `OK` forms,
+  7 `NO` forms. It is a stub, so T11 must compile the real header with the same forms on Linux (where
+  `int64_t` is `long`); the design says so.
+- C2 CLOSED. T10 filters by path prefix (`grep -v '^src/xapian/'`) and says why `--exclude-dir=xapian` is wrong.
+- C3 CLOSED. `max_finite` and `min_finite` are named in D7; D7 and D12 say a missing value sorts after every
+  finite number and below +inf, and the mechanism note will state it against -inf and +inf.
+- C4 CLOSED at design level. `model.py rules` has a witness for every D5 rule (including the 9-byte tail and the
+  64-bit tail, which the model's rule 9 would otherwise hide), with six shown needed; step 1's done list and T4
+  require a decoder mutant per rule including 6 and 8, and a fuzz minute budget. The C++ mutants do not exist
+  yet; that is step 1's work.
+- C5 CLOSED. D5 labels the question unverified and says nothing depends on it.
+
+### New findings
+
+- N1 (R1 above, lead's call): doubles below 2^-60 cost 24% more than the old codec (9.93 B against 7.98 B),
+  unmeasured in D6 and incompatible with T5's "no larger on every set" if such a set is ever added.
+- N2 (R2 above): the Q6 ruling contradicts D10, Q6 and T13 as written, and implementing it needs a reader for the
+  old version bytes that D10's "never decodes old bytes" currently forbids.
+
+### Whether step 1 may start
+
+Yes. L1 and L2 closed, which were the items that blocked step 1; the bytes are fixed (identical to the
+`p4_alt.py` layout, 0 byte differences). Step 1 should add the sub-1/16-seconds set to `sizes.py` (R1) and
+decide the below-2^-60 trade before its `vectors.txt` freezes the escape window (the vectors fixture freezes
+the escape base too). Step 2 stays blocked on R2 (and Q7's `cluster` change for 2d).
+
+Not run: the C++ library (does not exist yet), no Xapiand build, unit tests, docs E2E, harness, cluster or
+fuzzing; no benchmarks; no arm64 or Linux host; T8, T13 and T14 are rows, not results, so L3 to L6 are
+closed as design text checked against the code by reading, not as behavior; the by-reading claims about the
+revision effect, the replica copy and `_version` remain unverified live; the Q7 `cluster` change was not
+reviewed (not written).
