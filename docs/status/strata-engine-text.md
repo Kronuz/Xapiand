@@ -57,9 +57,60 @@ A/B build). Mechanism note: `docs/mechanisms/text-queries.md`.
      `test_wildcard_pattern_flags`); unsafe format string: abort (format_error).
    - The changelog bullet already matches the probe (400).
 
+## Security fix round (SR1, SR2; review `docs/reviews/strata-engine-text-security.md`)
+
+`Xapiand:3612b7a57`. ASan+UBSan build `.scratch/s4-fix/build` (Apple clang, own deps), probes in `.scratch/s4-fix/`.
+
+1. SR1: `to_xapian` and `Query::description` are iterative (one explicit-stack loop over combine, append and
+   scale). Revert checks: the old `to_xapian` and the old `description` each overflow the stack in
+   `test_depth_cap` (a tree at the cap, on a 40 KB thread stack).
+2. The matcher recurses by depth and by width, so iterative conversion alone is not enough. Measured with the
+   caps lifted, ASan server, macOS worker stack, `{"body": {"_or": TEXT}}` (the `_or` modifier turns the boolean
+   syntax on; a plain `{"body": TEXT}` is a bag of words, and the reviewer's `a`, `b`, `c` are stop words):
+   - nested depth (alternating AND/OR brackets): 500 survives, 550 dies. `oralt`: 500 survives, 600 dies.
+   - width (one flat text of matching words, same word or distinct): 12,000 survives, 14,000 dies, a 60 KB body.
+   - DSL `_and` nesting: 60 levels survive, 80 die; JSON to MsgPack conversion of a body: 300 levels survive,
+     500 die.
+   Caps (`src/engine/query.h`, applied in the `engine::Query` factories, so text lowering and the DSL share them):
+   depth 100 (Elasticsearch default 30; 5x under the measured 500), clauses 4096 (Elasticsearch
+   `max_clause_count` default; 2.9x under 12,000). Past either: `QueryDepthError` (a `QueryParserError`), 400.
+   Elasticsearch's `indices.query.bool.max_nested_depth` is 20 in the 8.0 docs and 30 in 8.19.
+3. SR2: `QueryDSL::process` counts frames (`MAX_NESTING` 90, about 45 levels of `_and`; ASan crash at 80 levels, so
+   1.8x), the `q=` expression is measured on its RPN queue before the nested MsgPack is built
+   (`expression_levels`; copying a deep one recursed and crashed an ASan server at 2,000 levels), and
+   `json_load` refuses bodies nested past 200 levels (`MAX_JSON_DEPTH`, 1.5x under 300) before parsing.
+   All answer 400 with the limit in the message.
+4. Proof: `xapiand_test_text` 13196 checks (nesting at and past the cap; `test_json_depth_matches_the_document`:
+   3,000 random documents against the parsed depth), `xapiand_test_engine_query` 22411, `fuzz_text` 90 s seed 7
+   (522k texts, no violation), docs E2E 576/576 (339 requests, uncovered 0). `harness/query_depth_check.py`
+   (22 checks over HTTP on an ASan server: text at the cap 200, past it 400, 4095 words 200, 4097 words 400,
+   DSL 44 levels 200 and 45 levels 400, JSON 1,000 and 12,000 levels 400, node alive). The reviewer's probes
+   rerun: `p1_nesting.py` 1,000 to 100,000 (72 requests, plain and wrapped in `_or`), `p2_httpq.py`,
+   `p6_dsl_nest.py`: every answer 200 or 400, no crash. Worst shapes at the cap (every operator, NOT, +, -,
+   phrases, boosts) answer 200 or 400, node alive.
+   Mutants: `>` to `>=` in the cap check aborts `test_depth_cap` (uncaught `QueryDepthError` at exactly the cap);
+   dropping the escape handling in `json_depth` fails the random-document check 3 times at least. Revert checks of
+   the caps: the lifted-cap build dies at the depths above, the capped build answers 400.
+
+Findings outside this branch (not fixed here):
+
+1. Text-field wildcard expansion has no host cap (unchanged from before S4; `TextConfig` has no wildcard field).
+   Reviewer's numbers: no crash or runaway memory up to a million-byte pattern, but no cap enforced (`scale_1.out`).
+   Follow-up: decide a `wildcard_max_expansion` like `partial` (50) and `fuzzy` (error on exceed).
+2. Hunt list: the unreproduced SEGV in the matcher (`Xapian::Vec<EstimateOp*>::clear()` from
+   `AndContext::postlist`, once in ~26,000 requests of `p4_errors.py` seed 1, ~150 s). The depth and width caps
+   make a stack overflow in the matcher unlikely to be its cause but do not rule out a use after free there;
+   re-run `p4_errors.py` on this build to watch for it.
+3. `url_parser`: a `q=` URL near 64 KB (66,008 characters) is cut inside a `%XX` escape and `urldecode`
+   (`url_parser.cc:106`, called from `QueryParser::init`) reads one byte past the buffer: ASan heap-buffer-overflow.
+   Found by the probes of this round; belongs to the url_parser library. Repro: `SEARCH /t/?q=` with a percent-encoded
+   query of that length on an ASan server.
+4. A document nested 150 levels (`{"a":{"a":...}}`) answers 500 (`InvalidArgumentError: Term too long (> 245)`), not 400.
+   Pre-existing. MessagePack and YAML bodies were not probed for nesting; `json_load` guards JSON only.
+
 ## Next
 
-Open for the lead: the `cjk_words` segmenter (decision 2).
+Route the findings above (wildcard cap, url_parser, deep field path 500, MessagePack/YAML body depth). Open for the lead: the `cjk_words` segmenter (decision 2).
 
 ## Blocked on
 

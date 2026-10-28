@@ -48,7 +48,13 @@ replays all of them through the lowering (`tests/test_text.cc`).
 ## Limits
 
 1. `WORD_BREAKS` (`cjk_words`, ICU builds) is not read; indexing with it still uses Xapian's term generator.
-2. The lowered tree is as deep as the text, and `to_xapian` and `Query::description` recurse over it.
+2. A query is at most `MAX_QUERY_DEPTH` (100) levels of operators and `MAX_QUERY_CLAUSES` (4096) nodes
+   (`src/engine/query.h`); the factories of `engine::Query` refuse a larger one with `QueryDepthError`, a
+   client error (400). Xapian's matcher recurses over a tree by depth and by width, so the caps are
+   what keeps a query from overflowing the matcher's stack; `to_xapian` and `Query::description` are
+   iterative and do not depend on them. The query DSL bounds its own recursion (`QueryDSL::MAX_NESTING`,
+   45 to 90 levels of nested clauses, and the `q=` expression before it is built) and `json_load` refuses
+   bodies nested past `MAX_JSON_DEPTH` (200).
 
 ## Proof
 
