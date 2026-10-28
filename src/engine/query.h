@@ -113,7 +113,7 @@ enum class Stem : std::uint8_t {
 
 // How the text node of one field is analysed. An engine reads the text with its own query parser.
 struct TextConfig {
-	std::string prefix;                     // the field's term prefix
+	std::string field;                      // the field the words belong to
 	Op default_op = Op::INVALID;            // joins words that have no operator; INVALID keeps the parser's default
 	unsigned flags = 0;                     // text:: flags
 	std::string stop_language;              // stop words language; empty for none
@@ -133,8 +133,9 @@ class Query {
 public:
 	Query() = default;
 
-	// Documents containing the term; an empty term matches every document.
-	static Query term(std::string term, termcount wqf = 1, termpos pos = 0);
+	// Documents containing the term under the field. An empty term is the field's marker term (the
+	// one a document has when the field holds a null); an empty field and term match every document.
+	static Query term(std::string field, std::string term, termcount wqf = 1, termpos pos = 0);
 	static Query match_all();
 
 	// op applied to two subqueries.
@@ -150,11 +151,18 @@ public:
 
 	static Query scale(Query subquery, double factor);
 
-	// The terms starting with, or (with PATTERN flags) matching, the pattern, combined by combiner.
-	static Query wildcard(std::string pattern, termcount max_expansion = 0, Expansion limit = Expansion::error, unsigned pattern_flags = 0, Op combiner = Op::SYNONYM);
+	// The terms of the field starting with, or (with PATTERN flags) matching, the pattern, combined by
+	// combiner.
+	static Query wildcard(std::string field, std::string pattern, termcount max_expansion = 0, Expansion limit = Expansion::error, unsigned pattern_flags = 0, Op combiner = Op::SYNONYM);
 
-	// The terms within an edit distance of the pattern's tail (from prefix_length on).
-	static Query edit_distance(std::string pattern, termcount max_expansion, Expansion limit, Op combiner, unsigned distance, std::size_t prefix_length);
+	// The terms of the field within an edit distance of the pattern's tail (from prefix_length bytes of
+	// the pattern on).
+	static Query edit_distance(std::string field, std::string pattern, termcount max_expansion, Expansion limit, Op combiner, unsigned distance, std::size_t prefix_length);
+
+	// Documents with any term in the field. The Xapian engine reads the name as a prefix, so it also
+	// reaches the fields whose names extend it: the query `field: "*"` over an object relies on that
+	// until the strata adapter builds that case from the schema.
+	static Query field(std::string field);
 
 	// Documents a value source accepts. The query keeps the source and hands each engine a clone.
 	static Query source(std::unique_ptr<PostingSource> source);
@@ -200,6 +208,7 @@ struct QueryNode {
 	~QueryNode();
 
 	QueryKind kind = QueryKind::term;
+	std::string field;                            // term, wildcard, edit_distance: the field
 	std::string str;                              // term, wildcard and edit_distance: the term or pattern; text: the text
 	termcount wqf = 1;                            // term
 	termpos pos = 0;                              // term

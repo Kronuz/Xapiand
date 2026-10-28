@@ -22,13 +22,17 @@
 
 #pragma once
 
-#ifdef ENGINE_CENSUS
+#include <cassert>                // for assert
 #include <cstddef>                 // for std::size_t
+#include <cstdint>                 // for std::uint32_t, std::uint8_t
+#include <deque>                   // for std::deque
+#ifdef ENGINE_CENSUS
 #include <functional>              // for std::function
 #endif
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
+#include <unordered_map>          // for std::unordered_map
 #include <utility>                 // for std::move
 
 #include "engine/kind.h"           // for Kind
@@ -37,9 +41,29 @@
 
 namespace engine {
 
-// A document under construction: its terms, values and stored data, owned by the caller. Each
-// add_* call has the semantics of the Xapian call it replaces, so building one is the same as
-// building that engine's document.
+// What a field holds, which is the most its postings need to keep: `boolean` the documents that
+// have a term (wdf 0), `terms` also the frequencies, `text` also the positions.
+enum class FieldKind : std::uint8_t {
+	boolean,
+	terms,
+	text,
+};
+
+// A field of one document: a name the host gives it (any bytes, matched exactly) and the widest
+// kind the document asked for.
+struct Field {
+	std::string name;
+	FieldKind kind = FieldKind::terms;
+};
+
+// A field as a document hands it out: valid for the document that made it.
+struct FieldRef {
+	std::uint32_t id = 0;
+};
+
+// A document under construction: its terms, values and stored data, owned by the caller. A term
+// is a field and the bytes under it; each add_* call has the semantics of the Xapian call it
+// replaces, so building one is the same as building that engine's document.
 //
 // The document is built straight into the engine's own representation (a Xapian document for the
 // Xapian engine), so a shard writes it without converting it and nothing is built twice. The
@@ -51,10 +75,10 @@ public:
 	public:
 		virtual ~Native() = default;
 
-		virtual void add_term(std::string_view term, termcount wdf_inc) = 0;
-		virtual void add_boolean_term(std::string_view term) = 0;
-		virtual void set_key(std::string_view term) = 0;
-		virtual void add_posting(std::string_view term, termpos position, termcount wdf_inc) = 0;
+		virtual void add_term(const Field& field, std::string_view term, termcount wdf_inc) = 0;
+		virtual void add_boolean_term(const Field& field, std::string_view term) = 0;
+		virtual void set_key(std::string_view key) = 0;
+		virtual void add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc) = 0;
 		virtual void add_value(valueno slot, std::string value) = 0;
 		virtual std::string get_value(valueno slot) const = 0;
 		virtual void set_data(std::string data) = 0;
@@ -73,26 +97,30 @@ public:
 	explicit Document(Kind kind);
 	explicit Document(std::unique_ptr<Native> native) : native_(std::move(native)) { }
 
-	// Adds wdf_inc to the term's within-document frequency, creating the term if needed.
-	void add_term(std::string_view term, termcount wdf_inc = 1) {
-		native_->add_term(term, wdf_inc);
+	// The field of this name, declared by the first call; a later call with a wider kind widens it.
+	FieldRef field(std::string_view name, FieldKind kind = FieldKind::terms);
+
+	// Adds wdf_inc to the within-document frequency of the term under the field, creating the
+	// term if needed. The term may be empty: it marks that the document has the field.
+	void add_term(FieldRef field, std::string_view term, termcount wdf_inc = 1) {
+		native_->add_term(at(field), term, wdf_inc);
 	}
 
-	// Makes sure the term exists, without changing its frequency.
-	void add_boolean_term(std::string_view term) {
-		native_->add_boolean_term(term);
+	// Makes sure the term exists under the field, without changing its frequency.
+	void add_boolean_term(FieldRef field, std::string_view term) {
+		native_->add_boolean_term(at(field), term);
 	}
 
-	// Makes the term the document's key (the id term): the one term that names the document for
-	// replace-by-key, whatever else the term is used for. Adds it as a boolean term, so it is also a
-	// term of the document.
-	void set_key(std::string_view term) {
-		native_->set_key(term);
+	// Makes the key the document's: the one string that names the document for replace-by-key,
+	// whatever else it is used for. The key is the document's id term, built by the host
+	// (database/utils.h document_key), and is also a boolean term of the document.
+	void set_key(std::string_view key) {
+		native_->set_key(key);
 	}
 
-	// Adds a position to the term, and wdf_inc to its frequency.
-	void add_posting(std::string_view term, termpos position, termcount wdf_inc = 1) {
-		native_->add_posting(term, position, wdf_inc);
+	// Adds a position to the term under the field, and wdf_inc to its frequency.
+	void add_posting(FieldRef field, std::string_view term, termpos position, termcount wdf_inc = 1) {
+		native_->add_posting(at(field), term, position, wdf_inc);
 	}
 
 	// Sets the value of a slot; an empty value removes it.
@@ -125,7 +153,16 @@ public:
 	static Document unserialise(Kind kind, std::string_view serialised);
 
 private:
+	// The field a ref names; a ref from another document, or a default one on an empty document, is
+	// out of contract and trips the assert in a debug build.
+	const Field& at(FieldRef field) const {
+		assert(field.id < fields_.size());
+		return fields_[field.id];
+	}
+
 	std::unique_ptr<Native> native_;
+	std::deque<Field> fields_;                                   // by FieldRef::id; a deque keeps the views below valid
+	std::unordered_map<std::string_view, std::uint32_t> field_ids_;   // name (a view of fields_) to id
 };
 
 }  // namespace engine

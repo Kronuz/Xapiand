@@ -126,7 +126,12 @@ inline std::pair<std::string_view, bool> unsharded_path(std::string_view path) {
 }
 
 
-std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type);
+// The name of the engine field a field prefix and its type character stand for.
+std::string field_name(std::string_view field_prefix, char field_type);
+// The flat term for a term under a field: the field's name and the term joined. Only for the document
+// key (the id term, which the engine treats as an opaque string) and for logs; documents and queries
+// name the field and the term apart.
+std::string flat_term(std::string_view term, std::string_view field_prefix, char field_type);
 engine::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(std::string_view field_name);

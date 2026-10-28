@@ -47,7 +47,16 @@
 #include "y2j/y2j.h"                                 // for y2j::yamlParseBytes
 
 
-std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type)
+std::string field_name(std::string_view field_prefix, char field_type)
+{
+	std::string result;
+	result.reserve(field_prefix.size() + 1);
+	result.assign(field_prefix).push_back(field_type);
+	return result;
+}
+
+
+std::string flat_term(std::string_view term, std::string_view field_prefix, char field_type)
 {
 	std::string result;
 	result.reserve(field_prefix.size() + term.size() + 1);

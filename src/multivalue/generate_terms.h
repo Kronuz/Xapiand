@@ -31,7 +31,7 @@
 #include <vector>                                 // for vector, allocator
 
 #include "analysis.hh"                            // for analysis::stop_strategy, analysis::stem_strategy
-#include "database/utils.h"                       // for prefixed
+#include "database/utils.h"                       // for field_name, flat_term
 #include "engine/document.h"                       // for engine::Document
 #include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
 #include "serialise.h"                            // for serialise
@@ -52,6 +52,14 @@ extern const char ctype_integer;
 inline constexpr size_t get_upper_bound(size_t length_prefix, size_t number_unions, size_t length_union) noexcept {
 	auto max_length_term = length_prefix + MAX_SERIALISE_LENGTH;
 	return (max_length_term + length_union) * number_unions + max_length_term;
+}
+
+
+// The field of the document that a field prefix and its type character name.
+inline engine::FieldRef
+doc_field(engine::Document& doc, std::string_view field_prefix, char field_type, engine::FieldKind kind = engine::FieldKind::terms)
+{
+	return doc.field(field_name(field_prefix, field_type), kind);
 }
 
 

@@ -93,15 +93,15 @@ engine::Document make(Kind kind, int shard, int i, const Model::Doc& model) {
 	doc.set_key("Q" + std::to_string(shard) + "_" + std::to_string(i));
 	for (const auto& [term, positions] : model.positions) {
 		for (const auto position : positions) {
-			doc.add_posting(term, position);
+			doc.add_posting(doc.field(""), term, position);
 		}
 	}
 	for (const auto& term : model.terms) {
 		if (!model.positions.contains(term)) {
 			if (model.wdf.at(term) == 0) {
-				doc.add_boolean_term(term);
+				doc.add_boolean_term(doc.field(""), term);
 			} else {
-				doc.add_term(term, model.wdf.at(term));
+				doc.add_term(doc.field(""), term, model.wdf.at(term));
 			}
 		}
 	}
@@ -585,7 +585,7 @@ struct Terms {
 Query random_query(Terms& terms, int depth) {
 	auto& rng = terms.rng;
 	if (depth == 0 || rng() % 4 == 0) {
-		return Query::term(terms.pick(), 1 + static_cast<engine::termcount>(rng() % 3));
+		return Query::term("", terms.pick(), 1 + static_cast<engine::termcount>(rng() % 3));
 	}
 	switch (rng() % 9) {
 		case 0:
@@ -605,7 +605,7 @@ Query random_query(Terms& terms, int depth) {
 		case 6: return Query::combine(Op::FILTER, random_query(terms, depth - 1), random_query(terms, depth - 1));
 		case 7: {
 			std::vector<Query> subs;
-			for (unsigned n = 2 + rng() % 2; n > 0; --n) { subs.push_back(Query::term(terms.word())); }
+			for (unsigned n = 2 + rng() % 2; n > 0; --n) { subs.push_back(Query::term("", terms.word())); }
 			const auto n = static_cast<engine::termcount>(subs.size());
 			if (rng() % 2) {
 				return Query::combine(Op::PHRASE, std::move(subs), rng() % 2 ? 0 : n);
@@ -637,7 +637,7 @@ void test_one_shard_impl() {
 	random_queries(xapian, strata, model, 1, 7, 300, true);
 	random_queries(xapian, strata, model, 1, 8, 300, false);
 	// A single term finds what the model says, heaviest first.
-	const auto found = run(strata, 1, Query::term("w1"), 0, 10);
+	const auto found = run(strata, 1, Query::term("", "w1"), 0, 10);
 	CHECK_GT(found.hits.size(), 0u);
 	for (std::size_t i = 1; i < found.hits.size(); ++i) {
 		CHECK_GE(found.hits[i - 1].weight, found.hits[i].weight);
@@ -651,7 +651,7 @@ void test_positional_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("positional", 2, 80, 2, xapian, strata, model);
-	const auto t = [](const char* w) { return Query::term(w); };
+	const auto t = [](const char* w) { return Query::term("", w); };
 	for (const std::size_t shards : {1u, 2u}) {
 		for (int a = 0; a < vocabulary; ++a) {
 			for (int b = 0; b < vocabulary; ++b) {
@@ -675,7 +675,7 @@ void test_append_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("append", 2, 40, 2, xapian, strata, model);
-	const auto t = [](const char* w) { return Query::term(w); };
+	const auto t = [](const char* w) { return Query::term("", w); };
 	std::vector<Query> queries;
 	queries.push_back(Query::append(Op::AND, Query(), t("w1")));
 	queries.push_back(Query::append(Op::AND, Query::append(Op::AND, Query(), t("w1")), t("tag2")));
@@ -711,7 +711,7 @@ void test_spy_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("spy", 3, 30, 2, xapian, strata, model);
-	const auto query = Query::combine(Op::OR, Query::term("w1"), Query::term("tag2"));
+	const auto query = Query::combine(Op::OR, Query::term("", "w1"), Query::term("", "tag2"));
 	const auto expected = model_hits(model, query, 3);
 	// What the spy must be shown: the (id in its shard, weight) of every match, sorted.
 	std::vector<std::pair<engine::docid, double>> want;
@@ -749,7 +749,7 @@ void test_spy_impl() {
 	// A deleted document is not shown: the common term matches every live document of the three shards.
 	engine::sync_wait(strata.owned[0]->erase_by_key("Q0_5", true, std::nullopt));
 	CountingSpy spy;
-	auto prepared = engine::prepare(Query::term("common"));
+	auto prepared = engine::prepare(Query::term("", "common"));
 	engine::SearchRequest request;
 	request.query = prepared.get();
 	request.maxitems = 1;
@@ -833,34 +833,34 @@ void test_writes_and_deletes_impl() {
 		added.length += 1;
 		auto doc = make(index->kind, 0, 41, added);
 		engine::sync_wait(shard.add(doc, {}));
-		CHECK_EQ(run(*index, 1, Query::term("fresh"), 0, 10).estimated, 1u);
-		CHECK_EQ(run(*index, 1, Query::term("common"), 0, 10).estimated, 41u);
+		CHECK_EQ(run(*index, 1, Query::term("", "fresh"), 0, 10).estimated, 1u);
+		CHECK_EQ(run(*index, 1, Query::term("", "common"), 0, 10).estimated, 41u);
 		// A delete.
 		engine::sync_wait(shard.erase_by_key("Q0_5", true, std::nullopt));
-		CHECK_EQ(run(*index, 1, Query::term("common"), 0, 100).estimated, 40u);
-		CHECK_EQ(run(*index, 1, Query::term("common"), 0, 100).hits.size(), 40u);
+		CHECK_EQ(run(*index, 1, Query::term("", "common"), 0, 100).estimated, 40u);
+		CHECK_EQ(run(*index, 1, Query::term("", "common"), 0, 100).hits.size(), 40u);
 		const auto gone = engine::sync_wait(shard.find_key("Q0_5"));
 		CHECK_EQ(gone, 0u);
-		for (const auto& hit : run(*index, 1, Query::term("common"), 0, 100).hits) {
+		for (const auto& hit : run(*index, 1, Query::term("", "common"), 0, 100).hits) {
 			CHECK_NE(hit.did, 5u);
 		}
 		// A replacement: new content under the key, found once.
 		engine::Document replacement(index->kind);
 		replacement.set_key("Q0_7");
-		replacement.add_posting("renewed", 1);
-		replacement.add_posting("common", 2);
+		replacement.add_posting(replacement.field(""), "renewed", 1);
+		replacement.add_posting(replacement.field(""), "common", 2);
 		engine::sync_wait(shard.replace_by_key("Q0_7", replacement, {}));
-		const auto renewed = run(*index, 1, Query::term("renewed"), 0, 10);
+		const auto renewed = run(*index, 1, Query::term("", "renewed"), 0, 10);
 		CHECK_EQ(renewed.estimated, 1u);
 		REQUIRE_EQ(renewed.hits.size(), 1u);
 		CHECK_EQ(renewed.hits[0].did, engine::sync_wait(shard.find_key("Q0_7")));
-		CHECK_EQ(run(*index, 1, Query::term("common"), 0, 100).estimated, 40u);
+		CHECK_EQ(run(*index, 1, Query::term("", "common"), 0, 100).estimated, 40u);
 		// The old content of the replaced document is gone from the terms it no longer has.
 		std::size_t had = 0;
 		for (const auto& term : model.shards[0][6].terms) {
 			if (term.starts_with("tag")) {
 				++had;
-				const auto found = run(*index, 1, Query::term(term), 0, 100);
+				const auto found = run(*index, 1, Query::term("", term), 0, 100);
 				for (const auto& hit : found.hits) {
 					CHECK_NE(hit.did, engine::sync_wait(shard.find_key("Q0_7")));
 				}
@@ -874,7 +874,7 @@ void test_refusals_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("refusals", 1, 10, 1, xapian, strata, model);
-	const auto t = [](const char* w) { return Query::term(w); };
+	const auto t = [](const char* w) { return Query::term("", w); };
 	const auto none = [](engine::SearchRequest&) { };
 	const auto kind = [&](const Query& query, const std::function<void(engine::SearchRequest&)>& tweak = [](engine::SearchRequest&) { }) {
 		return error_kind([&] { search_with(strata, query, tweak); });
@@ -894,20 +894,20 @@ void test_refusals_impl() {
 	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), t("w2")}, 1)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::wildcard("w", 10)), syntax);
+	CHECK_EQ(kind(Query::wildcard("", "w", 10)), syntax);
 	CHECK_EQ(kind(Query::text("w1 w2", engine::TextConfig{})), syntax);
 	CHECK_EQ(kind(Query::source(std::make_unique<AnySource>())), syntax);
-	CHECK_EQ(kind(Query::edit_distance("w1", 10, engine::Expansion::error, Op::SYNONYM, 1, 0)), syntax);
+	CHECK_EQ(kind(Query::edit_distance("", "w1", 10, engine::Expansion::error, Op::SYNONYM, 1, 0)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	// Refused wherever the node sits: under a scale, an append, a deep spine, an AND_NOT's right side.
-	CHECK_EQ(kind(Query::scale(Query::wildcard("w", 10), 2.0)), syntax);
+	CHECK_EQ(kind(Query::scale(Query::wildcard("", "w", 10), 2.0)), syntax);
 	CHECK_EQ(kind(Query::append(Op::XOR, t("w1"), t("w2"))), syntax);
 	CHECK_EQ(kind(Query::append(Op::AND, Query::append(Op::OR, t("w1"), t("w2")), Query::text("w3", engine::TextConfig{}))), syntax);
 	CHECK_EQ(kind(Query::combine(Op::AND_NOT, t("w1"), Query::combine(Op::MAX, {t("w2"), t("w3")}))), syntax);
 	// A refusal leaves nothing behind: the same shard answers the next search.
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	// Refused even where a short-circuit would never reach the node.
-	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::wildcard("w", 10))), syntax);
+	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::wildcard("", "w", 10))), syntax);
 	// A search over the two engines is refused, and a query nested too deeply.
 	{
 		auto prepared = engine::prepare(t("w1"));
@@ -926,8 +926,75 @@ void test_refusals_impl() {
 	Model model_empty;
 	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
 	CHECK_EQ(error_kind([&] { search_with(strata_empty, deep, none); }), syntax);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::wildcard("w", 10), none); }), syntax);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::wildcard("", "w", 10), none); }), syntax);
 	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }); }), syntax);
+}
+
+// A term is looked up under its field: two fields holding the same word are found each under its own, a
+// marker term (a field with an empty term) matches the documents that have the field, not every
+// document, and a phrase reads its words under their field. Both engines agree.
+void test_fields_impl() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	for (auto* index : {&xapian, &strata}) {
+		auto opened = engine::sync_wait(engine::open_local(index->kind, path_of("fields", index->kind, 0), true, true));
+		index->owned.clear();
+		index->owned.push_back(std::move(opened.shard));
+		auto& shard = *index->owned[0];
+		const auto add = [&](const char* key, const std::function<void(engine::Document&)>& fill) {
+			engine::Document doc(index->kind);
+			doc.set_key(key);
+			fill(doc);
+			doc.set_data(key);
+			engine::sync_wait(shard.add(doc, {}));
+		};
+		add("Q1", [](engine::Document& d) {   // title: same, "first second"; the tags marker
+			const auto title = d.field("title"), tags = d.field("tags");
+			d.add_term(title, "same");
+			d.add_posting(title, "first", 1);
+			d.add_posting(title, "second", 2);
+			d.add_term(tags, "");
+		});
+		add("Q2", [](engine::Document& d) {   // body: same, "first second" in the other order
+			const auto body = d.field("body");
+			d.add_term(body, "same");
+			d.add_posting(body, "second", 1);
+			d.add_posting(body, "first", 2);
+		});
+		add("Q3", [](engine::Document& d) {   // both fields, the words split across fields
+			const auto title = d.field("title"), body = d.field("body");
+			d.add_term(title, "same");
+			d.add_term(body, "same");
+			d.add_posting(title, "first", 1);
+			d.add_posting(body, "second", 1);
+		});
+		engine::sync_wait(shard.commit(engine::Transaction::none));
+	}
+	const auto ids = [](const Index& index, const Query& query) {
+		std::set<engine::docid> found;
+		for (const auto& hit : run(index, 1, query, 0, 100).hits) { found.insert(hit.did); }
+		return found;
+	};
+	using Set = std::set<engine::docid>;
+	const auto t = [](const char* f, const char* w) { return Query::term(f, w); };
+	const std::pair<Query, Set> cases[] = {
+		{t("title", "same"), {1, 3}},
+		{t("body", "same"), {2, 3}},
+		{t("", "same"), {}},
+		{t("tags", ""), {1}},
+		{t("title", ""), {}},
+		{Query::match_all(), {1, 2, 3}},
+		{Query::combine(Op::AND, t("title", "same"), t("body", "same")), {3}},
+		{Query::combine(Op::PHRASE, {t("title", "first"), t("title", "second")}), {1}},
+		{Query::combine(Op::PHRASE, {t("body", "second"), t("body", "first")}), {2}},
+		{Query::combine(Op::PHRASE, {t("title", "first"), t("body", "second")}), {}},
+	};
+	for (const auto* index : {&xapian, &strata}) {
+		for (const auto& [query, expected] : cases) {
+			const int before = testh::failures;
+			CHECK_TRUE(ids(*index, query) == expected);
+			if (testh::failures != before) { std::fprintf(stderr, "  %s: %s\n", engine::to_string(index->kind), query.description().c_str()); }
+		}
+	}
 }
 
 // A query's whole answer against the model: the documents, their weights and their order (heavier first,
@@ -958,7 +1025,7 @@ void test_long_chains_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("chains", 2, 40, 2, xapian, strata, model);
-	const auto t = [](const char* w) { return Query::term(w); };
+	const auto t = [](const char* w) { return Query::term("", w); };
 	Query ors = t("w1");
 	for (int i = 0; i < 20000; ++i) {
 		ors = Query::append(Op::OR, ors, i % 2 ? t("w1") : t("zzz"));
@@ -997,7 +1064,7 @@ void test_concurrent_searches_impl() {
 	const auto searcher = [&](bool reversed) {
 		std::vector<engine::Shard*> shards{strata.owned[0].get(), strata.owned[1].get()};
 		if (reversed) { std::swap(shards[0], shards[1]); }
-		auto prepared = engine::prepare(Query::term("common"));
+		auto prepared = engine::prepare(Query::term("", "common"));
 		engine::SearchRequest request;
 		request.query = prepared.get();
 		request.maxitems = 5;
@@ -1023,7 +1090,7 @@ void test_concurrent_searches_impl() {
 	CHECK_EQ(failures.load(), 0);
 	// The same shard named twice is searched once and counted twice.
 	std::vector<engine::Shard*> twice{strata.owned[0].get(), strata.owned[0].get()};
-	auto prepared = engine::prepare(Query::term("common"));
+	auto prepared = engine::prepare(Query::term("", "common"));
 	engine::SearchRequest request;
 	request.query = prepared.get();
 	request.maxitems = 1000;
@@ -1039,7 +1106,7 @@ double weight_in(std::size_t n, const Model::Doc& doc) {
 	Model sized;
 	sized.shards.assign(3, {});
 	sized.shards[0].assign(n, doc);
-	return weigh(statistics_of(sized, 3), doc, Query::term("common")).second;
+	return weigh(statistics_of(sized, 3), doc, Query::term("", "common")).second;
 }
 
 // A search that runs while another thread writes and commits sees one snapshot of the whole index.
@@ -1076,7 +1143,7 @@ void test_snapshot_consistency_impl() {
 		std::vector<engine::Shard*> shards = strata.shards(3);
 		std::vector<std::size_t> shard_at{0, 1, 2};   // the writer's shard at each position of the request
 		if (kind == 1) { std::reverse(shards.begin(), shards.end()); std::reverse(shard_at.begin(), shard_at.end()); }
-		auto prepared = engine::prepare(Query::term("common"));
+		auto prepared = engine::prepare(Query::term("", "common"));
 		while (!done || searches < 40) {
 			CountingSpy spy;
 			engine::SearchRequest request;
@@ -1130,7 +1197,7 @@ void test_snapshot_consistency_impl() {
 	d.join();
 	CHECK_EQ(bad.load(), 0);
 	CHECK_GT(sizes.size(), 3u);   // the searches overlapped the writes
-	const auto last = run(strata, 3, Query::term("common"), 0, 100000);
+	const auto last = run(strata, 3, Query::term("", "common"), 0, 100000);
 	CHECK_EQ(last.estimated, 3u * generations);
 	for (const auto& hit : last.hits) { CHECK_TRUE(close(hit.weight, weight_for(3u * generations))); }
 }
@@ -1173,7 +1240,7 @@ void test_pin_holds_impl() {
 	std::thread searcher([&] {
 		// Asked for out of order, so the locks are not taken in the order of the request.
 		std::vector<engine::Shard*> order{strata.owned[2].get(), strata.owned[0].get(), strata.owned[1].get()};
-		auto prepared = engine::prepare(Query::term("common"));
+		auto prepared = engine::prepare(Query::term("", "common"));
 		engine::SearchRequest request;
 		request.query = prepared.get();
 		request.maxitems = 1000;
@@ -1229,7 +1296,7 @@ void test_pin_after_failed_reopen_impl() {
 	CHECK_EQ(error_kind([&] { engine::sync_wait(broken.cancel_transaction()); }), engine::errc::database);
 	::chmod(dir.c_str(), 0700);
 
-	auto prepared = engine::prepare(Query::term("common"));
+	auto prepared = engine::prepare(Query::term("", "common"));
 	engine::SearchRequest request;
 	request.query = prepared.get();
 	request.maxitems = 1000;
@@ -1250,7 +1317,7 @@ void test_huge_window_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("huge_window", 2, 40, 2, xapian, strata, model);
-	const auto query = Query::term("common");
+	const auto query = Query::term("", "common");
 	const auto all = run(strata, 2, query, 0, 1000);
 	CHECK_EQ(all.hits.size(), 80u);
 	constexpr engine::doccount big = 0xFFFFFFFFu;
@@ -1285,7 +1352,7 @@ void test_percent_infinite_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("percent", 2, 40, 2, xapian, strata, model);
-	const auto query = Query::combine(Op::OR, Query::scale(Query::term("w1"), HUGE_VAL), Query::term("w2"));
+	const auto query = Query::combine(Op::OR, Query::scale(Query::term("", "w1"), HUGE_VAL), Query::term("", "w2"));
 	for (const bool spied : {false, true}) {
 		CountingSpy spy;
 		auto prepared = engine::prepare(query);
@@ -1303,7 +1370,7 @@ void test_percent_infinite_impl() {
 		CHECK_TRUE(infinite > 0);
 	}
 	// Finite weights keep their ratio to the top.
-	const auto plain = run(strata, 2, Query::combine(Op::OR, Query::term("w1"), Query::term("w2")), 0, 100);
+	const auto plain = run(strata, 2, Query::combine(Op::OR, Query::term("", "w1"), Query::term("", "w2")), 0, 100);
 	CHECK_TRUE(!plain.hits.empty());
 	CHECK_EQ(plain.hits.front().percent, 100);
 	for (const auto& hit : plain.hits) {
@@ -1328,6 +1395,7 @@ void guarded(const char* name, F&& test) {
 void test_one_shard() { guarded("test_one_shard", test_one_shard_impl); }
 void test_positional() { guarded("test_positional", test_positional_impl); }
 void test_append() { guarded("test_append", test_append_impl); }
+void test_fields() { guarded("test_fields", test_fields_impl); }
 void test_two_shards() { guarded("test_two_shards", test_two_shards_impl); }
 void test_spy() { guarded("test_spy", test_spy_impl); }
 void test_five_shards() { guarded("test_five_shards", test_five_shards_impl); }
@@ -1344,4 +1412,4 @@ void test_percent_infinite() { guarded("test_percent_infinite", test_percent_inf
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_append, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite)

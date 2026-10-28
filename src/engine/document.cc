@@ -36,6 +36,24 @@ engine::Document::Document(Kind kind)
 	: native_(kind == Kind::strata ? strata::new_native() : xapian::new_native()) { }
 
 
+engine::FieldRef
+engine::Document::field(std::string_view name, FieldKind kind)
+{
+	const auto it = field_ids_.find(name);
+	if (it != field_ids_.end()) {
+		auto& known = fields_[it->second];
+		if (kind > known.kind) {
+			known.kind = kind;
+		}
+		return FieldRef{it->second};
+	}
+	const auto id = static_cast<std::uint32_t>(fields_.size());
+	fields_.push_back(Field{std::string(name), kind});
+	field_ids_.emplace(fields_.back().name, id);
+	return FieldRef{id};
+}
+
+
 engine::Document
 engine::Document::unserialise(std::string_view serialised)
 {

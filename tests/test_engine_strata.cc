@@ -62,9 +62,9 @@ std::string scratch(const char* name, Kind kind) {
 engine::Document make(Kind kind, const std::string& key, const std::string& data) {
 	engine::Document doc(kind);
 	doc.set_key(key);
-	doc.add_term("body", 2);
-	doc.add_posting("word", 1);
-	doc.add_posting("word", 3);
+	doc.add_term(doc.field(""), "body", 2);
+	doc.add_posting(doc.field(""), "word", 1);
+	doc.add_posting(doc.field(""), "word", 3);
 	doc.set_data(data);
 	return doc;
 }
@@ -99,7 +99,7 @@ void shared(Kind kind) {
 	args.finalise = [&](engine::Document& doc, engine::WriteResult& result) {
 		hooked_did = result.did;
 		hooked_version = result.version;
-		doc.add_term("stamped");
+		doc.add_term(doc.field(""), "stamped");
 	};
 	auto doc = make(kind, "Qa", "one");
 	auto added = engine::sync_wait(shard.add(doc, args));
@@ -320,14 +320,14 @@ void strata_only() {
 	// A term that starts like an id term ("Q...") is an ordinary term, not the key: a field called
 	// "Quote" must index.
 	auto doc = make(kind, "QKone", "d");
-	doc.add_term("Quote.word");
+	doc.add_term(doc.field(""), "Quote.word");
 	CHECK_EQ(engine::sync_wait(shard.replace_by_key("QKone", doc, plain)).did, 1u);
 	CHECK_EQ(engine::sync_wait(shard.find_key("QKone")), 1u);
 	CHECK_EQ(engine::sync_wait(shard.find_key("Quote.word")), 0u);
 
 	// A document without a key is refused: its version would have no key to belong to.
 	engine::Document keyless(kind);
-	keyless.add_term("x");
+	keyless.add_term(keyless.field(""), "x");
 	keyless.set_data("k");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(keyless, plain)); }) == engine::errc::invalid);
 	auto other = make(kind, "QKtwo", "t");
@@ -356,7 +356,7 @@ void strata_only() {
 
 	// A document built for the other engine is refused.
 	engine::Document foreign(Kind::xapian);
-	foreign.add_term("x");
+	foreign.add_term(foreign.field(""), "x");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(foreign, plain)); }) == engine::errc::invalid);
 
 	// The readable handle of a shard in this process shares the writable one's index and sees its
@@ -421,10 +421,10 @@ void codec() {
 	using engine::strata::StrataDocument;
 	engine::Document doc(Kind::strata);
 	doc.set_key("Qk");
-	doc.add_term("a", 3);
-	doc.add_posting("b", 9);
-	doc.add_posting("b", 2);
-	doc.add_posting("b", 9);
+	doc.add_term(doc.field(""), "a", 3);
+	doc.add_posting(doc.field(""), "b", 9);
+	doc.add_posting(doc.field(""), "b", 2);
+	doc.add_posting(doc.field(""), "b", 9);
 	doc.add_value(1, "x");
 	doc.add_value(0xfffffffe, std::string(300, 'y'));
 	doc.set_data(std::string("bin\0data", 8));

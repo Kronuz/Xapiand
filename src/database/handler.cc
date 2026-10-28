@@ -1303,7 +1303,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	} else {
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
-	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+	return flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 }
 
 
