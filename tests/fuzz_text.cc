@@ -30,6 +30,7 @@
 // Seeds its corpus from the vector files' queries. Exits non-zero on the first violation and
 // prints the text and settings that caused it. Under -fsanitize it also finds memory errors.
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -160,22 +161,22 @@ show(const std::string& text)
 	return out;
 }
 
-// Xapian builds some wildcards whose pattern is only '*' and '?' as match-all and keeps others; both
-// sides read all of them as match-all.
+// A wildcard of '*' (at least one) and at most one '?' matches every term: the engine query has match-all.
 std::string
 match_all_wildcards(std::string tree)
 {
 	static const std::string head = "WILDCARD SYNONYM ";
-	for (std::size_t at = 0; (at = tree.find(head, at)) != std::string::npos;) {
-		auto from = at + head.size();
+	for (std::size_t at = 0; (at = tree.find(head, at)) != std::string::npos; ++at) {
+		const auto from = at + head.size();
 		auto to = tree.find_first_not_of("*?", from);
 		if (to == std::string::npos) {
 			to = tree.size();
 		}
-		if (to > from && (to == tree.size() || tree[to] == ' ' || tree[to] == ')')) {
+		const auto pattern = tree.substr(from, to - from);
+		if ((to == tree.size() || tree[to] == ' ' || tree[to] == ')') && pattern.find('*') != std::string::npos &&
+			std::count(pattern.begin(), pattern.end(), '?') <= 1) {
 			tree.replace(at, to - at, "<alldocuments>");
 		}
-		++at;
 	}
 	return tree;
 }
@@ -194,7 +195,6 @@ reading(const std::string& text, const engine::TextConfig& c)
 	try {
 		const auto query = engine::parse_text(text, c, &r.tree);
 		r.lowered = engine::xapian::to_xapian(query).get_description();
-		r.lowered = match_all_wildcards(r.lowered);
 		r.tree = match_all_wildcards(r.tree);
 	} catch (const QueryParserError& exc) {
 		r.error = "syntax: " + exc.reason();

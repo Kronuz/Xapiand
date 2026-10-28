@@ -295,4 +295,28 @@ test_wildcard_pattern_flags()
 	CHECK_EQ(flags("f?o*b"), engine::PATTERN_SINGLE | engine::PATTERN_MULTI);
 }
 
-TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_near_of_a_boolean_expression, test_wildcard_pattern_flags)
+void
+test_all_wildcard_patterns()
+{
+	// Match-all only when the pattern matches every term: a '*' and at most one '?'. The others filter by length.
+	auto cfg = config(base | text::WILDCARD | text::WILDCARD_SINGLE | text::WILDCARD_MULTI);
+	cfg.prefix.clear();
+	for (const char* text : { "**", "*?", "?*" }) {
+		const auto query = engine::parse_text(text, cfg);
+		CHECK_TRUE(query.node() != nullptr && query.node()->kind == engine::QueryKind::term && query.node()->str.empty());
+		CHECK_EQ(to_xapian(query).get_description(), "Query(<alldocuments>)");
+	}
+	for (const char* text : { "??", "*??" }) {
+		const auto query = engine::parse_text(text, cfg);
+		CHECK_TRUE(query.node() != nullptr && query.node()->kind == engine::QueryKind::wildcard && query.node()->str == text);
+		CHECK_EQ(to_xapian(query).get_description(), std::string("Query(WILDCARD SYNONYM ") + text + ")");
+	}
+	// A lone '*' or '?' is not a wildcard to the parser: it reads as no words at all.
+	CHECK_TRUE(engine::parse_text("*", cfg).empty());
+	CHECK_TRUE(engine::parse_text("?", cfg).empty());
+	// Behind a field prefix the pattern is a prefix filter, never match-all.
+	const auto prefixed = engine::parse_text("**", config(base | text::WILDCARD | text::WILDCARD_MULTI));
+	CHECK_TRUE(prefixed.node() != nullptr && prefixed.node()->kind == engine::QueryKind::wildcard);
+}
+
+TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_near_of_a_boolean_expression, test_wildcard_pattern_flags, test_all_wildcard_patterns)

@@ -22,6 +22,7 @@
 
 #include "engine/text.h"
 
+#include <algorithm>
 #include <cstdint>                 // for std::uint32_t
 #include <new>                     // for std::bad_alloc
 #include <optional>                // for std::optional
@@ -135,6 +136,11 @@ leaf(const queryparser::query& tree, const queryparser::node& n)
 			return Query::term(std::string(tree.text(n)), n.wqf, n.pos);
 		case kind::wildcard: {
 			auto pattern = std::string(tree.text(n));
+			// Every term has a character: a pattern of '*' (at least one) and at most one '?' matches them all.
+			if (pattern.find_first_not_of("*?") == std::string::npos && pattern.find('*') != std::string::npos &&
+				std::count(pattern.begin(), pattern.end(), '?') <= 1) {
+				return Query::match_all();
+			}
 			unsigned pattern_flags = 0;
 			if (pattern.find('?') != std::string::npos) {
 				pattern_flags |= PATTERN_SINGLE;
