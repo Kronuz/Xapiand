@@ -120,7 +120,9 @@ top_hits(const Xapian::Database& db, const Xapian::Query& query, const SearchReq
 	enquire.set_cutoff(0, 0);
 	enquire.set_docid_order(Xapian::Enquire::ASCENDING);
 	enquire.set_query(query);
-	enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	if (!query.empty()) {  // prepare_mset requires a non-empty query; get_mset on an empty one finds nothing
+		enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	}
 	auto mset = enquire.get_mset(0, n, Xapian::doccount{0});
 	Xapian::RSet rset;
 	const auto end = mset.end();
@@ -177,7 +179,9 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 	}
 	enquire.set_query(final_query);
 
-	enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	if (!final_query.empty()) {  // as in top_hits
+		enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	}
 	auto mset = enquire.get_mset(request.first, request.maxitems, request.check_at_least);
 
 	SearchResult result;

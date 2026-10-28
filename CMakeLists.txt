@@ -57,6 +57,7 @@ option(DATABASE_WAL  "Enable database write ahead log (WAL)"         ON)
 option(DATA_STORAGE  "Enable data storage"                           ON)
 option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
+option(XAPIAN_ASSERTS "Enable the vendored Xapian's own assertions in asserts builds (always on in Debug)" OFF)
 option(TRACKED_MEM   "Enable tracked memory allocator"              OFF)
 option(CHECK_IO_FDES "Check file descriptors"                       OFF)
 option(LUA           "Enable Lua scripting engine"               ON)
@@ -84,6 +85,14 @@ if (CRASH_POINTS)
 	message(STATUS "Option CRASH_POINTS - on")
 	add_compile_definitions(XAPIAND_CRASH_POINTS)
 endif ()
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _XAPIAN_BUILD_TYPE)
+if (XAPIAN_ASSERTS OR _XAPIAN_BUILD_TYPE STREQUAL "DEBUG")
+	set (XAPIAND_XAPIAN_ASSERTIONS 1)
+else ()
+	set (XAPIAND_XAPIAN_ASSERTIONS 0)
+endif ()
+add_compile_definitions(XAPIAND_XAPIAN_ASSERTIONS=${XAPIAND_XAPIAN_ASSERTIONS})
+
 if (ENGINE_CENSUS)
 	message(STATUS "Option ENGINE_CENSUS - on")
 	add_compile_definitions(ENGINE_CENSUS)
@@ -1306,6 +1315,8 @@ list(APPEND XAPIAN_SRC_LIST ${UNICODE_SRC_LIST})
 list(APPEND XAPIAN_SRC_LIST ${QUERYPARSER_SRC_LIST})
 add_library(XAPIAN_OBJ OBJECT ${XAPIAN_SRC_LIST})
 
+# The vendored sources include "xapian.h", the umbrella header that lives under src/engine/xapian.
+target_include_directories(XAPIAN_OBJ AFTER PRIVATE "${PROJECT_SOURCE_DIR}/src/engine/xapian")
 target_include_directories(XAPIAN_OBJ PUBLIC
 	${ZLIB_INCLUDE_DIRS}
 	${UUID_INCLUDE_DIRS}
