@@ -365,28 +365,6 @@ bool has_optional(const Query& query) {
 	return false;
 }
 
-class SlotKey final : public engine::KeyMaker {
-public:
-	std::string key(const engine::DocView& doc) const override { return doc.value(1); }
-	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(); }
-	std::string name() const override { return "SlotKey"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(); }
-};
-
-// A value source accepting everything.
-class AnySource final : public engine::PostingSource {
-public:
-	engine::valueno slot() const override { return 1; }
-	bool accept(std::string_view) const override { return true; }
-	double weight(std::string_view) const override { return 1.0; }
-	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<AnySource>(); }
-	std::string name() const override { return "AnySource"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view) const override { return std::make_unique<AnySource>(); }
-	std::string description() const override { return "AnySource"; }
-};
-
 // Records every document it is shown.
 class CountingSpy final : public engine::MatchSpy {
 public:
@@ -916,8 +894,7 @@ void test_refusals_impl() {
 	Model model_empty;
 	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
 	CHECK_EQ(error_kind([&] { search_with(strata_empty, deep, none); }), syntax);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::wildcard("", "w", 10), none); }), syntax);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }); }), syntax);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }); }), syntax);
 }
 
 // A term is looked up under its field: two fields holding the same word are found each under its own, a

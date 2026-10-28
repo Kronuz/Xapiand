@@ -671,6 +671,9 @@ add_compile_definitions(
 # exceptions bind to Xapiand's real hierarchy. The vendored msgpack/exception.hpp
 # still includes "exception.h" directly; src/ is first on the include path, so
 # Xapiand's wrapper wins here.
+# hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
+# the commit with wordwise::hash32.
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 975492a85458739f1b1d8617342c542760f328ba)
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 75d13ce7e99f8aad3526d109b38db151d1fc7fc4)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
@@ -684,7 +687,6 @@ add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapi
 FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG eb1efcb39f4d8bb4fd20a9ea91498a288d25aca2)
 FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 306ecd96d55d47d9bd3167eaeb7877e40d0631ac)
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 21b7941c71064b5a4e52ffb50a2701ee4aae4c6c)
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 7ab0c23325debfbaf4104044987ba6583d14808f)
 foreach(dep static_string char_classify strict_stox hashes)
 	FetchContent_MakeAvailable(${dep})
 endforeach()

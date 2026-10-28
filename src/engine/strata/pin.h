@@ -39,13 +39,14 @@ namespace engine::strata {
 class Pinned {
 public:
 	using segment_view = ::prospect::index::segment_view;
+	using segment_list = ::prospect::index::segment_list;
 
 	explicit Pinned(std::unique_lock<std::mutex> lock) noexcept : lock_(std::move(lock)) { }
 
-	std::span<const segment_view> segments() const noexcept { return segments_; }
+	std::span<const segment_view> segments() const noexcept { return {segments_.data(), segments_.size()}; }
 
 	// The Shard::pin() that made it fills these.
-	std::vector<segment_view> segments_;
+	segment_list segments_;
 	const void* identity_ = nullptr;
 
 private:

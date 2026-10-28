@@ -717,8 +717,8 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
 		for (const auto& view : pin_of(mine[i]).segments()) {
-			inputs[i].segments.push_back({view.seg, view.deleted, view.dead});
-			documents += view.seg->core().doc_count();
+			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead});
+			documents += view.seg()->core().doc_count();
 		}
 	}
 	const p::multi_snapshot snapshot(std::move(inputs));

@@ -224,10 +224,11 @@ Spec random_spec(std::mt19937& rng, int shard, int i) {
 engine::Document make(Kind kind, int shard, int i, const Spec& spec) {
 	engine::Document doc(kind);
 	doc.set_key("Q" + std::to_string(shard) + "_" + std::to_string(i));
+	const auto flat = doc.field("");   // the terms are flat strings; no field name is joined to them
 	for (const auto& [term, wdf] : spec.terms) {
-		doc.add_term(term, wdf);
+		doc.add_term(flat, term, wdf);
 	}
-	doc.add_boolean_term("B" + spec.group);   // a term without frequency, as the fields of a schema make
+	doc.add_boolean_term(flat, "B" + spec.group);   // a term without frequency, as the fields of a schema make
 	doc.add_value(KEY, spec.key);
 	doc.add_value(GROUP, spec.group);
 	if (spec.has_number) {
@@ -513,12 +514,11 @@ void test_spy() {
 			CHECK_TRUE(x.datas == s.datas);
 			CHECK_TRUE(x.groups == s.groups);
 		}
-		// A spy is given the document's id across the shards: the ids of the hits.
+		// A spy is given the document's id within its shard, as the Xapian engine gives it.
 		{
-			std::set<engine::docid> given;
 			struct IdSpy final : engine::MatchSpy {
-				std::set<engine::docid>* ids;
-				void see(const engine::DocView& doc, double) override { ids->insert(doc.did()); }
+				std::multiset<engine::docid> ids;
+				void see(const engine::DocView& doc, double) override { ids.insert(doc.did()); }
 				std::unique_ptr<engine::MatchSpy> clone() const override { return nullptr; }
 				std::string name() const override { return "IdSpy"; }
 				std::string serialise() const override { return ""; }
@@ -526,11 +526,12 @@ void test_spy() {
 				std::string serialise_results() const override { return ""; }
 				void merge_results(std::string_view) override { }
 				std::string description() const override { return "IdSpy"; }
-			} ids_spy;
-			ids_spy.ids = &given;
-			const auto found = run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &ids_spy; });
-			CHECK_TRUE(given == ids_of(found));
-			CHECK_EQ(given.size(), static_cast<std::size_t>(shard_count * 60));
+			} from_xapian, from_strata;
+			run(corpus.xapian, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &from_xapian; r.check_at_least = engine::CHECK_ALL; });
+			run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &from_strata; });
+			CHECK_TRUE(from_xapian.ids == from_strata.ids);
+			CHECK_EQ(from_strata.ids.size(), static_cast<std::size_t>(shard_count * 60));
+			CHECK_EQ(from_strata.ids.count(1), static_cast<std::size_t>(shard_count));
 		}
 		// A spy that throws fails the search; the next one is unaffected.
 		GroupSpy throwing;
@@ -606,7 +607,7 @@ void test_boolean_terms() {
 			{"filter", Query::combine(Op::FILTER, t("apple"), t("Bg0"))},
 			{"and_not", Query::combine(Op::AND_NOT, t("common"), t("Bg3"))},
 			{"id", t("Q0_5")},
-			{"wildcard", Query::wildcard("Bg", 0, engine::Expansion::error, 0, Op::OR)},
+			{"wildcard", Query::wildcard("", "Bg", 0, engine::Expansion::error, 0, Op::OR)},
 		};
 		for (const auto& [name, query] : queries) {
 			const auto s = both(corpus, n, query, name);
@@ -714,7 +715,7 @@ void test_expansions() {
 		build("expansions", shard_count, 60, 3, corpus);
 		const std::size_t n = static_cast<std::size_t>(shard_count);
 		const auto wild = [](const char* pattern, engine::termcount max = 0, engine::Expansion limit = engine::Expansion::error, unsigned flags = 0, Op combiner = Op::SYNONYM) {
-			return Query::wildcard(pattern, max, limit, flags, combiner);
+			return Query::wildcard("", pattern, max, limit, flags, combiner);
 		};
 		const auto fuzzy = [](const char* pattern, unsigned distance, std::size_t prefix = 0, engine::termcount max = 0, engine::Expansion limit = engine::Expansion::error, Op combiner = Op::SYNONYM) {
 			return Query::edit_distance("", pattern, max, limit, combiner, distance, prefix);

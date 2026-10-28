@@ -376,7 +376,7 @@ locate(Core& core, docid did)
 	const auto segments = core.index->segments();
 	for (auto it = segments.end(); it != segments.begin();) {
 		const auto& view = *--it;
-		const auto* seg = view.seg;
+		const auto* seg = view.seg();
 		const auto ord = seg->core().ordinal_of(did);
 		if (!ord || !view.live(*ord)) {
 			continue;
@@ -397,7 +397,7 @@ live_count(Core& core)
 {
 	std::uint64_t live = 0;
 	for (const auto& view : core.index->segments()) {
-		live += view.seg->core().doc_count() - view.dead;
+		live += view.seg()->core().doc_count() - view.dead;
 	}
 	return static_cast<doccount>(live);
 }
@@ -967,7 +967,7 @@ Shard::scan(docid from, const ScanSink& sink)
 		std::vector<Hit> hits;
 		const auto segments = core.index->segments();
 		for (const auto& view : segments) {
-			const auto* seg = view.seg;
+			const auto* seg = view.seg();
 			const auto& core_seg = seg->core();
 			for (::strata::ordinal_t ord = 0; ord < core_seg.doc_count(); ++ord) {
 				const auto did = core_seg.docid(ord);
