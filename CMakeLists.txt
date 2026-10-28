@@ -706,7 +706,7 @@ FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.
 FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG 0fe9a1e98914a423574bfe675eaa82f3e1cb1df6)
 FetchContent_Declare(times      GIT_REPOSITORY https://github.com/Kronuz/times.git      GIT_TAG a9f754113635f7c7cca6cb5988b21dec8c0f151d)
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG b42d3c4ce1130043a381e487ae0a693248c2c0f5)
-FetchContent_Declare(url_parser GIT_REPOSITORY https://github.com/Kronuz/url-parser.git GIT_TAG 8e27ff670cd429bacde995bda6abd75aa7199552)
+FetchContent_Declare(url_parser GIT_REPOSITORY https://github.com/Kronuz/url-parser.git GIT_TAG 4424e25c53c54ae5697ddae2dd643885d921b4e2)
 foreach(dep endian repr times strings url_parser)
 	FetchContent_MakeAvailable(${dep})
 endforeach()
