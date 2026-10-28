@@ -369,3 +369,190 @@ libyaml events); one shared limit; unit tests with a small-stack thread as in `t
 CLOSED, and SR3 (MessagePack/YAML body nesting) is a crash reachable with a 1 KB unauthenticated
 body. SR1b blocks. SR3 is pre-existing and outside the query path, so the lead may land S4 with SR3
 tracked, but only if the "every case past a cap answers 400" wording is narrowed to JSON bodies.
+
+
+## Re-check 2 (head `Xapiand:63de8e913`; fixes `Xapiand:c1fca3f6c`, `Xapiand:a38904396`, `Xapiand:5fd538f82`)
+
+Clean room honored (no `src/xapian/`, `oracle.cc`, `sortable_serialise.{cc,h}` or
+`src/server/remote_protocol_views.cc` opened). ASan+UBSan (-O1) build in its own dir
+(`.scratch/s4-recheck2/build`, own deps, deleted after), probes in `.scratch/s4-recheck2/` (`chain.py`,
+`nearnest.py`, `qstr.py`, `yaml.py`, `yaml_chain.py`, `restore.py`, `aggs.py`, `sr3.py` copied from
+`s4-sr1b`; outputs `chain{A,B,C}.out`, `nearnest.out`, `qstr.out`, `yaml.out`, `ychain.out`,
+`restore.out`, `aggs2.out`, `sr3.out`, ASan logs `node-*.log`). The probe harness kills any node whose
+RSS passes 3 GB. Release build not run. Nothing outside this file was edited; no commit.
+
+### Verdicts
+
+- **SR1b: CLOSED.** The chain cap is not bypassable by anything I could construct.
+- **SR3: PARTIAL.** JSON, MessagePack (buffered and streamed) and NDJSON are guarded and the two YAML
+  crashes are fixed, but the YAML depth guard counts parse-time nesting, not alias-expanded nesting, so
+  a 12 KB YAML body still crashes the node (SR3b), and a 340-byte YAML body exhausts memory (SR3c).
+  Both are new findings; the changelog line "a JSON, YAML or MessagePack body 200 levels" is false for
+  YAML with aliases.
+
+### SR1b: CLOSED
+
+Fix: `chain` per node in `set_extent` (`src/engine/query.cc:77-91`): a `combine` PHRASE or NEAR is 1,
+AND and FILTER (also as `append`) add their operands' chains, every other operator takes the maximum,
+refused past `MAX_QUERY_CHAIN` 256 (`query.h:98-100`, message "Query joins too many phrases").
+
+- Tests and revert: `xapiand_test_engine_query` 22442 checks and `xapiand_test_text` 13224 pass under
+  ASan+UBSan. With the `links > MAX_QUERY_CHAIN` throw disabled, 9 checks fail
+  (`tests/test_engine_query.cc:989,990,999,1021,1025,1033,1038`); restored.
+- Bisect to the largest accepted n and the first refused, then 2x and 4000, node restarted on death,
+  42 shapes, **no crash anywhere** (`chainA/B/C.out`). Every AND-like shape answers 200 up to 256 chain
+  units and 400 from 257 (n is phrases, or groups x phrases):
+  - Text `_and` of phrases, boolean `AND`, groups of 2 and of 8 phrases ANDed (257 and 263 phrases: the
+    sum is over the groups), phrases of 15 words (255) and of 50 words (80, the clause cap fires first).
+  - DSL `_and` of `_phrase` and of `_near` (256, 15-word `_near` 255), `_filter` of phrases (256),
+    `_and` of `_filter` pairs (257), `_and` of `_and` groups of 8 (263), text `_filter` of text groups
+    (257), `_and` over sibling fields (256), a DSL `_and` whose children are text `_and` groups (259).
+  - Phrases under OR, AND_NOT, XOR, AND_MAYBE (`+"a b" "c d"` and in groups), SYNONYM (`~`) and boost
+    (`^2`) inside an AND, text and DSL: 256 groups, no crash. An OR of 8 phrases inside an AND: 655
+    phrases fine (one chain unit per group, as designed).
+  - `NEAR` between phrases and between OR groups in text: 1024 and 512 operands, no crash.
+  - Flat n-ary `_and_not`, `_xor`, `_and_maybe`, `_elite_set`, `_or` of 1365 phrases (the clause cap):
+    200 and alive. They take the maximum (chain 1) and the matcher survives them at full width.
+- Nesting around the reset at PHRASE/NEAR (`links = 1` ignores their operands): `nearnest.out` nests
+  AND-groups of phrases inside `( ... ) NEAR z`, up to 1,000 phrases over 8 to 40 levels: 200 up to 200
+  phrases, then 400 "joins too many phrases"; no bypass. The reset is not reachable anyway: the text
+  parser refuses a NEAR or PHRASE over non-words (`tests/test_text.cc:203-208`, `:292-298`) and the
+  DSL's `_near` and `_phrase` objects are leaves (`query_dsl.cc:334-337`, `is_leaf = true`), so no
+  PHRASE or NEAR node has an operator operand today. A future constructor that builds one would reopen
+  this, so the factory could sum the operands' chains instead of resetting (one-line hardening).
+- `q=`: AND, default-op, `+required`, `body:` and OR-group chains of `"a b"` at n = 255..1000
+  (`qstr.out`): 200 and alive. The `q=` quoted text did not become PHRASE nodes in that request (1000
+  ANDed `body:"a b"` answers 200, not 400), so the chain cap is not exercised on that path and there is
+  nothing to bypass; the AND chain of 1000 terms costs 2.5 s CPU there (the known `make_dsl_query` cost).
+- Caveat on margin: the cap (256) against the unmodified crash at 601 under ASan -O1 is 2.3x, and the
+  probes at the cap were run at exactly 256 chain units (255-257 above); every shape that undercounts
+  per-unit cost (phrases of 15 words, `_near` of 15 words, 8-phrase OR groups) was tried at the cap.
+
+### SR3: PARTIAL
+
+Guarded, with evidence:
+
+- JSON: `json_load` (`src/database/utils.cc:174-`, `json_depth` before rapidjson) used by every JSON
+  path, including form-urlencoded (`search_views.cc:2877-2886`, falls back to a string when refused) and
+  NDJSON, both the buffered `decode` (`:2850-2858`) and the streamed RESTORE (`:2936-2975`, an
+  over-deep line is dropped with `L_EXC`, `processed:0`).
+- MessagePack buffered: `msgpack_load` (`utils.cc:241-249`) unpacks with `unpack_limit` depth 200 and
+  throws `ClientError` before the recursive `MsgPack(object)` copy; `Request::decode` and the access-log
+  prettifier (`search_views.cc:2873`, `:3217`) both use it. Streamed (`STREAM_MSGPACK`): the `unpacker`
+  member is built by `make_msgpack_unpacker()` with the same limit (`search_views.h:158`).
+- `text/plain`, `application/octet-stream` and any other type fall to `MsgPack(body)`, a string, never
+  parsed (`search_views.cc:2888`).
+- `sr3.py` against my build: 64 ok, 0 FAIL (MessagePack array and map nests 200 to 100000 on PUT and
+  SEARCH, YAML flow and block nests 150 to 100000, field paths 100-199 answer 400, NDJSON POST). My
+  `restore.py`: RESTORE of a database and of a document with MessagePack nested 150 to 200000, NDJSON
+  lines nested 150 to 200000, text/plain, form-urlencoded and octet-stream bodies: node alive in every
+  case, 400 or dropped objects past 200 levels.
+- Revert: with `unpack_limit` depth lifted, `xapiand_test_text` and `xapiand_fuzz_body` die with an ASan
+  stack overflow in `msgpack::object::object(const object&, zone&)`; with the YAML `++depth > maxDepth`
+  check disabled, `tests/test_text.cc:485` fails on every depth case; restored (`git status` clean).
+- `xapiand_fuzz_body 40 7`: 46,750 bodies, 12,007 decoded, 34,743 refused, no violation. It covers
+  nesting and byte mutations; it has no alias generator, which is why it misses SR3b and SR3c.
+- The two YAML crashes (empty document, bare scalar): `fuzz_body` and `yaml.py` show 400, no crash.
+- 150-level field path: `sr3.py` PUT n=100..199 all 400 (`http_utils.h:101-107`, `errc::invalid` to 400).
+
+### SR3b (critical, blocking for the claim "every body decoder is depth-guarded"; pre-existing): YAML alias chains expand past the depth limit and crash the node
+
+`yaml_load`'s guard counts open collections as events arrive (`src/y2j/y2j.cc:189-201`). Aliases are
+applied afterwards by `reference.Set(document, *value)` (`:490-500`), a deep copy, so a chain of
+anchors that each wrap the previous one is 2 levels deep to the guard and N levels deep afterwards:
+
+```
+- &a0 [x]
+- &a1 [*a0]
+- &a2 [*a1]      (n lines, 16 bytes each)
+```
+
+`ychain.out` (fresh node each): n = 300, 400, 500, 600 answer 400 (refused later, by the indexed-object
+check); **n = 800 (12.6 KB) and 1000 (15.8 KB) kill the node** on PUT and on SEARCH. ASan
+(`node-ychain800.log`): `stack-overflow` in `msgpack::object::object(const object&, zone&)`
+(`object.hpp:570`), 250+ frames, from `MsgPack(rdoc)` copying the expanded document. n = 5000 to 100000
+(88 KB to 2 MB) also kill it and take 0.8 to 1 GB before dying. Unauthenticated, one request.
+
+Fix direction: bound the expansion, not just the parse. Track each anchor's depth and node count when its
+collection closes; at an alias, refuse if `depth + anchor depth` passes `maxDepth` or the running total of
+expanded nodes passes a budget. Or refuse aliases in request bodies (they are rare in an API payload); that
+is the smallest change and also closes SR3c.
+
+### SR3c (critical, blocking for the same claim; pre-existing): YAML alias amplification ("billion laughs") is a memory and CPU bomb, a crash by OOM
+
+Probe `yaml.py`: level 0 is a mapping of nine strings, level i is nine aliases of level i-1 (the classic
+shape, 9^i leaves), top-level keys `a0..a(n-1)`:
+
+| levels | body | PUT | peak RSS |
+|---|---|---|---|
+| 3 | 156 B | 204, 0.08 s | 156 MB |
+| 4 | 202 B | 204, 0.23 s | 389 MB |
+| 5 | 248 B | 204, 1.2 s | 476 MB |
+| 6 | 294 B | 204, 11.6 s | 1.07 GB |
+| 7 | 340 B | **no answer in 47 s; stopped by my 3 GB RSS watchdog** | >3 GB |
+
+Each level is about 10x the time and memory. The bodies are accepted as documents (204), so the
+expansion is not even rejected downstream. SEARCH with the same bodies is also expanded (level 7: 2.2 s,
+964 MB RSS). A level-9 body (about 430 bytes) means 387 million nodes; the node dies of memory or
+`std::bad_alloc`, and every request that survives pegs a worker. This is a crash/DoS class: blocking for
+any listener open to untrusted clients. The fix is the same expansion budget as SR3b (a total-node cap
+relative to the body size, or no aliases).
+Also seen, not blocking: `a: &a [*a]` and `a: &a {b: *a}` are accepted (204) and the node stays up; an
+alias used as a map key answers 500 (`MAP keys must ...`) rather than 400.
+
+### Nested aggregation that did not answer within 120 s: a resource-exhaustion vector, separate from S4
+
+`aggs.py`, `aggs2.out`: 300 documents, field `n` with 7 distinct integer values, a `_terms` aggregation
+nested `k` times on `n` (the same payload as the original probe, 200 bytes):
+
+| nesting k | time | peak RSS |
+|---|---|---|
+| 0 | 0.01 s | 285 MB |
+| 1 | 0.04 s | 285 MB |
+| 2 | 0.27 s | 341 MB |
+| 3 | 1.9 s | 616 MB |
+| 4 | 12.7 s | 945 MB |
+| 5 | no answer in 60 s, node at 100% CPU, 1.15 GB and rising | |
+
+Cost multiplies by about 7 (the number of distinct values) per level, so it is exponential in the nesting
+and bounded only by the 200-level JSON cap (about 95 levels of `_aggs`); the 1-document, field-absent
+payload of re-check 1 answers in 0.00 s at 90 levels, and `_values` nested 90 levels answers in 0.1 s
+(linear), so the hang is specific to populated `_terms` and my earlier non-answer was this, not a payload
+mistake. It runs on the worker with no timeout and no cap, from a 200-byte request, and repeats until the
+pool is full. Likely a bug in how `TermsAggregation` fans out per bucket (the first-level `_doc_count`
+of 342 over 300 documents shows documents are counted more than once), not the query path; the aggregation
+code is untouched by S4 (`src/aggregations/` differs from the merge base only by the earlier callback
+refactor; I did not run master to confirm it is pre-existing). It is not an S4 blocker (aggregations are
+not on the text query path and S4 makes no claim about them), but it is a **separate high-severity
+follow-up** (call it SR4): cap aggregation nesting (say 5 levels), cap total buckets while collecting
+(as `_terms` and `_values` already cap their own buckets for the engine callbacks), and find why the
+fan-out multiplies.
+
+### Other items
+
+- Changelog (`docs/src/content/docs/changelog.md:14-16,24-27`) states YAML bodies are limited to 200
+  levels and that a "YAML flow sequence 1,000 levels deep" answers 400. True for flow nesting, false for
+  aliases (SR3b, SR3c). Narrow it or fix the aliases before landing.
+- The 2.3x chain-cap margin is measured under ASan -O1 only; release has more stack, so its margin is larger but unmeasured.
+
+### Not run
+
+- Release (non-ASan) build and its matcher thresholds; benchmarks (none run).
+- `src/server/remote_protocol_views.cc` (clean room); replication query construction.
+- The aggregation hang on master (to confirm pre-existing); the cause inside `TermsAggregation`.
+- A level-8 and level-9 billion-laughs body (stopped at 7 by the 3 GB RSS watchdog on a shared host).
+- HTTP chunked-transfer variants of the body decoders; TLS.
+
+### Verdict after re-check 2
+
+SR1b is CLOSED, and with it the text query path: it is bounded in depth, clause count and
+matcher-recursion width, with 42 shapes surviving at the cap. SR3 is PARTIAL: the decoders named in the
+request are guarded, but YAML aliases bypass the depth guard and crash the node with a 12 KB body (SR3b)
+and exhaust memory with a 340-byte body (SR3c). Both are pre-existing, outside the text query path and
+cheap to fix in `y2j.cc` (an expansion budget, or no aliases).
+
+**S4 may land as the text query path.** It may not land with the changelog claim "a JSON, YAML or
+MessagePack body 200 levels" and "no longer crashes the node" unless SR3b and SR3c are fixed first
+(recommended: small, and it makes the claim true) or the wording is narrowed to YAML without aliases and
+SR3b/SR3c are tracked as blocking for any release exposed to untrusted clients. The nested-aggregation
+blowup (SR4) is a separate follow-up and does not gate S4.
