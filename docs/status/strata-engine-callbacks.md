@@ -55,7 +55,7 @@ on the Xapian engine and is refused on strata.
 - 2026-10-28: Xapiand:3998a95b9 merge of master (S2's append fix and `p::search` wiring kept; the hand-rolled
   collection loop, `Candidate`, `Ranks`, `to_docid` and `SpyView` dropped), Xapiand:95905a5f3 merge of master again
   (alpha.10 build fixes), Xapiand:74d8236e5 prospect repin and API, Xapiand:d43000e22 `_terms` over values and the
-  refusals; later commits on the branch: the once-per-value check and the spy-terms test.
+  refusals; later commits: the once-per-value check, the spy-terms test, the dedupe removal, the ASan fix, the docs.
 
 ## Proof
 
@@ -67,7 +67,16 @@ on the Xapian engine and is refused on strata.
   `test_spy`; removing the values path fails the check. The earlier 16 mutants (previous round) still apply.
 - A comparison that did not hold: the harness once loaded no documents on either engine (a keyword array was
   refused); it now asserts both indexes hold all documents and that the buckets sum correctly.
-- ASan+UBSan: see the log below.
+- ASan+UBSan (Apple clang, own build dir and deps; Homebrew LLVM 23 does not find libc++'s C headers here):
+  `test_engine_callbacks` 942, `test_engine_strata` 9568 clean; `test_engine_search_strata` clean (231,298) with a
+  64 MB stack (`ulimit -s 65520`): with the default stack its test model's recursive `weigh` overflows on the
+  20,000-append chain, as S2 recorded. The sanitized server under `strata_callbacks_check.py` found a real
+  stack-use-after-scope in the first version of `TermsHandler` (a temporary string viewed by `StringList`), fixed
+  in the commit "Keep the stored value alive"; afterwards 176 searches, 0 different, no ASan report. UBSan reports
+  RapidJSON's pointer-overflow at startup (vendored library, unrelated).
+- Final Release run after the last commit: the four test binaries pass, the callbacks check 176 searches 0 different,
+  the numeric-range check on strata 797 ranges 0 wrong. No new caller of the key adapter (the key prefix still
+  reaches the engine through `term_key_prefix()` only). No decoder or parser changed, so no new fuzz target.
 
 ## Findings for others
 
