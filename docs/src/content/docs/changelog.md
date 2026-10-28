@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Fixed
+- **Nested bucket aggregations over a multi-valued field no longer exhaust the host.** A
+  document is still counted once in each bucket it belongs to, as in Elasticsearch, so seven
+  values nested six levels made 117,649 buckets (8 s, 200 MB). A search now holds at most
+  65,535 buckets below the outermost level (Elasticsearch's `search.max_buckets`) and
+  aggregations nest at most 16 levels deep; past either it answers 400 naming the limit.
+
 ## [1.0.0-alpha.10] - 2026-10-28
 
 ### Added
