@@ -38,7 +38,7 @@ def documents():
     out = []
     for i in range(DOCS):
         out.append({"_id": "doc%d" % i, "n": i, "balance": round(r.uniform(-500, 6000), 2), "age": r.randint(18, 90),
-                    "state": r.choice(states), "word": r.choice(words), "tags": r.sample(words, 2),
+                    "state": r.choice(states), "word": r.choice(words), "tags": (lambda t: t + [t[0]])(r.sample(words, 2)),
                     "note": "%s and %s" % (r.choice(words), r.choice(words)), "mixed": r.choice(["Red", "red", "RED", "Blue"]),
                     "flag": r.random() < 0.3})
     return out
@@ -123,9 +123,11 @@ def main():
             total += 1
             if name.startswith("agg terms_") and "missing" not in name and name.endswith("/ all"):
                 buckets = res["strata"][1].get("aggregations", {}).get(name.split()[1], [])
-                if not buckets:
+                # A document counts once per distinct value: two distinct tags (one repeated) per document, one age.
+                expected = {"terms_tags": 2 * DOCS, "terms_age": DOCS, "terms_word": DOCS, "terms_mixed": DOCS}.get(name.split()[1])
+                if not buckets or (expected is not None and sum(b["_doc_count"] for b in buckets) != expected):
                     bad += 1
-                    print("NO BUCKETS %s: %s" % (name, json.dumps(res["strata"][1])[:160]))
+                    print("WRONG BUCKETS %s: %s" % (name, json.dumps(res["strata"][1])[:160]))
             if res["xapian"] != res["strata"]:
                 bad += 1
                 if bad <= 8:
