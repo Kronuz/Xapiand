@@ -2199,6 +2199,14 @@ if (BUILD_TESTS)
 		target_compile_features(fuzz_strata_document PRIVATE cxx_std_20)
 		target_compile_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
 		target_link_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
+		add_executable(fuzz_strata_pattern
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_strata_pattern.cc"
+			"${PROJECT_SOURCE_DIR}/src/engine/strata/pattern.cc"
+		)
+		target_include_directories(fuzz_strata_pattern PRIVATE "${PROJECT_SOURCE_DIR}/src" "${unicode_SOURCE_DIR}")
+		target_compile_features(fuzz_strata_pattern PRIVATE cxx_std_20)
+		target_compile_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
+		target_link_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
 	endif ()
 
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all

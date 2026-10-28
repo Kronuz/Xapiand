@@ -32,21 +32,7 @@
 #include "engine/query.h"          // for QueryNode
 
 
-// The terms a wildcard or edit-distance node stands for (docs/mechanisms/strata-callbacks.md).
 namespace engine::strata {
-
-// The bytes a wildcard pattern starts with, up to its first pattern character: every term that
-// matches starts with them.
-std::string wildcard_prefix(std::string_view pattern, unsigned pattern_flags);
-
-// Whether the term matches the pattern. Without pattern flags the pattern is a prefix; with them
-// it matches the whole term, '?' one character and '*' any run of characters, each only when its
-// flag is set.
-bool wildcard_matches(std::string_view pattern, std::string_view term, unsigned pattern_flags);
-
-// Whether two UTF-8 strings are at most `distance` edits apart: insertions, deletions,
-// substitutions and swaps of two neighbouring characters, each one edit.
-bool within_edit_distance(std::string_view a, std::string_view b, unsigned distance);
 
 // The terms of the whole index that a wildcard or edit-distance node matches, sorted, after its
 // expansion limit: more than `max_expansion` matches (0 for no limit) fail the search with
