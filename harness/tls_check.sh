@@ -113,7 +113,14 @@ pass "startup with a valid pair at mode 0600"
 ok --cacert "$WORK/ec/ca.pem" "https://localhost:$PORT/" && pass "client trusting the CA accepted" || fail "client trusting the CA refused"
 if ok --cacert "$WORK/other/ca.pem" "https://localhost:$PORT/"; then fail "client not trusting the CA got through"
 elif logged "$WORK/ec.log" "the client refused the certificate"; then pass "client not trusting the CA refused, logged as certificate"
-else fail "client not trusting the CA: no certificate reason in the log: $(tail -n 5 "$WORK/ec.log" | tr '\n' '|') curl: $(curl -sv --max-time 5 --cacert "$WORK/other/ca.pem" "https://localhost:$PORT/" 2>&1 | tail -n 8 | tr '\n' '|')"; fi
+else
+	fail "client not trusting the CA: no certificate reason in the log"
+	echo "--- diagnosis: $(curl --version | head -n 1) / $(openssl version)"
+	for v in "" "--tls-max 1.2" "--tlsv1.3"; do
+		curl -sv --max-time 5 $v --cacert "$WORK/other/ca.pem" "https://localhost:$PORT/" 2>&1 | grep -E "TLS|alert|SSL|connect|Connected|closing" | head -n 14
+		sleep 2; echo "--- log after [$v]:"; tail -n 4 "$WORK/ec.log"
+	done
+fi
 
 # 2. Protocol.
 if ok "http://localhost:$PORT/"; then fail "plain HTTP answered on the TLS port"
