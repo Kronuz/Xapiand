@@ -13,7 +13,7 @@ same way). The hit window (`_offset`, `_limit`) only trims the hits returned.
 
 ```
 get_mset(aggs)  ->  check_at_least = engine::CHECK_ALL  ->  SearchRequest  ->  Enquire::get_mset
-                                                                (src/engine/xapian/search.cc)
+                                                                (engine/xapian/search.cc)
    local shards: matcher walks every match     remote shards: same request, same walk
    match spy sees each checked document  ->  Aggregation::merge_results  ->  response
 ```
@@ -21,8 +21,7 @@ get_mset(aggs)  ->  check_at_least = engine::CHECK_ALL  ->  SearchRequest  ->  E
 1. `DatabaseHandler::get_mset` (`src/database/handler.cc`) sets `check_at_least` to
    `engine::CHECK_ALL` (`src/engine/search.h`) whenever a spy is given. No user value is
    larger, so the user's value cannot shrink it.
-2. `engine/xapian/search.cc` clamps the value to the database's document count before it
-   reaches the matcher.
+2. The engine clamps the value to the database's document count.
 3. The match spy sees only the documents the matcher checks. A matcher stops once it has the
    requested hits and `check_at_least` documents, so any smaller value leaves the spy with
    a prefix of the matches. In a cluster each node scans its local shards fully but a remote

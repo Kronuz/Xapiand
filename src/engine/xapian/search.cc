@@ -22,7 +22,6 @@
 
 #include "engine/search.h"
 
-#include <algorithm>               // for std::min
 #include <atomic>                  // for std::atomic
 #include <cstddef>                 // for std::size_t
 #include <optional>                // for std::optional
@@ -179,7 +178,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 	enquire.set_query(final_query);
 
 	enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
-	auto mset = enquire.get_mset(request.first, request.maxitems, std::min(request.check_at_least, scope.db.get_doccount()));
+	auto mset = enquire.get_mset(request.first, request.maxitems, request.check_at_least);
 
 	SearchResult result;
 	result.estimated = mset.get_matches_estimated();
