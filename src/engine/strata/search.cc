@@ -45,6 +45,7 @@
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/error.h"          // for Error, errc
+#include "engine/strata/keys.h"    // for keys::key_prefix
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
 
@@ -55,13 +56,14 @@ namespace {
 
 namespace p = ::prospect;
 
-// The prefix that routes a term to the index's key table instead of its dictionary. A query never names a key:
-// the id term is also an ordinary term of its document, so every term is looked up in the dictionary. This one
-// function is where the lookup depends on how the index keeps keys (strata's design/fields-and-keys).
-std::string_view
+// The index's key prefix: the term table routes a term that starts with it to the key table. A query never
+// names a key (the id term is also an ordinary term of its document, and terms are UTF-8, which cannot start
+// with the lead byte), so every term is looked up in the dictionary. This one function is where the lookup
+// depends on how the index keeps keys (strata's design/fields-and-keys).
+std::string
 term_key_prefix()
 {
-	return {};
+	return keys::key_prefix();
 }
 
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
@@ -87,32 +89,6 @@ percent_of(double score, double top)
 	const double ratio = score / top * 100.0 + 0.5;
 	return ratio >= 100.0 ? 100 : ratio > 0.0 ? static_cast<int>(ratio) : 0;
 }
-
-// Rethrows the exception being handled as an engine error of its kind. Call only inside a catch block.
-[[noreturn]] void
-rethrow_translated()
-{
-	try {
-		throw;
-	} catch (const Error&) {
-		throw;
-	} catch (const ::strata::index_not_created& exc) {
-		throw Error(errc::not_found, exc.what());
-	} catch (const ::strata::index_fenced& exc) {
-		throw Error(errc::database, exc.what());
-	} catch (const ::strata::corrupt_segment& exc) {
-		throw Error(errc::corrupt, exc.what());
-	} catch (const ::strata::corrupt_index& exc) {
-		throw Error(errc::corrupt, exc.what());
-	} catch (const std::system_error& exc) {
-		throw Error(errc::database, exc.what());
-	} catch (const std::invalid_argument& exc) {
-		throw Error(errc::invalid, exc.what());
-	} catch (const std::exception& exc) {
-		throw Error(errc::internal, exc.what());
-	}
-}
-
 
 // Every document of a segment, weighing nothing: the empty term and match_all.
 class AllScorer final : public p::scorer {
@@ -580,7 +556,7 @@ search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	try {
 		co_return run(shards, request);
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(nullptr);
 	}
 }
 

@@ -24,7 +24,13 @@
 
 #include <algorithm>               // for std::sort
 #include <array>                   // for std::array
+#include <atomic>                  // for std::atomic
 #include <coroutine>               // for std::coroutine_handle
+#ifdef XAPIAND_CRASH_POINTS
+#include <csignal>                 // for SIGKILL
+#include <cstdlib>                 // for std::getenv
+#include <unistd.h>                // for getpid, kill
+#endif
 #include <cstdio>                  // for std::snprintf
 #include <filesystem>              // for std::filesystem
 #include <map>                     // for std::map
@@ -36,9 +42,12 @@
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
 #include "prospect/index.hh"       // for prospect::index
 
+#include "log.h"                   // for L_ERR
+
 #include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for StrataDocument
+#include "engine/strata/keys.h"  // for the key adapter
 #include "engine/strata/pin.h"    // for Pinned
 #include "engine/strata/values.h"  // for the value columns
 
@@ -56,25 +65,40 @@ struct Hop {
 	void await_resume() const noexcept { }
 };
 
-// A key leads with a byte no term can start with (terms are UTF-8 text), so a field named "Quote"
-// never collides with the key prefix; the term follows it unchanged.
-constexpr char key_lead = '\xff';
+using keys::engine_key;
 
-std::string
-engine_key(std::string_view term)
+#ifdef XAPIAND_CRASH_POINTS
+// Crash tests only: XAPIAND_STRATA_CRASH=point:n kills the process (SIGKILL) at the n-th pass through
+// that point (commit.before, commit.flushed, commit.after, replay).
+void
+crash_point(const char* point)
 {
-	std::string key;
-	key.reserve(term.size() + 1);
-	key.push_back(key_lead);
-	key.append(term);
-	return key;
+	static const std::string spec = [] {
+		const char* env = std::getenv("XAPIAND_STRATA_CRASH");
+		return std::string(env ? env : "");
+	}();
+	static std::atomic<long> hits{0};
+	const std::string_view want(spec);
+	const auto colon = want.find(':');
+	if (colon != std::string_view::npos && want.substr(0, colon) == point &&
+		++hits == std::atol(std::string(want.substr(colon + 1)).c_str())) {
+		::kill(::getpid(), SIGKILL);
+	}
 }
+#else
+inline void crash_point(const char*) { }
+#endif
 
 constexpr std::string_view reserved_meta_prefix = "strata.";
 
-// Rethrows the exception being handled as an engine error of its kind. Call only inside a catch block.
+}  // namespace
+
+void mark_fenced(Core* core) noexcept;
+
+// Rethrows the exception being handled as an engine error of its kind; a fenced index marks its Core,
+// so the next handle opened on it gets a fresh index. Call only inside a catch block.
 [[noreturn]] void
-rethrow_translated()
+rethrow_translated(Core* core)
 {
 	try {
 		throw;
@@ -83,6 +107,7 @@ rethrow_translated()
 	} catch (const ::strata::index_not_created& exc) {
 		throw Error(errc::not_found, exc.what());
 	} catch (const ::strata::index_fenced& exc) {
+		mark_fenced(core);
 		throw Error(errc::database, exc.what());
 	} catch (const ::strata::corrupt_segment& exc) {
 		throw Error(errc::corrupt, exc.what());
@@ -96,6 +121,9 @@ rethrow_translated()
 		throw Error(errc::internal, exc.what());
 	}
 }
+
+
+namespace {
 
 std::string
 format_uuid(const std::array<char, 16>& bytes)
@@ -131,7 +159,7 @@ prospect::index::options
 index_options()
 {
 	prospect::index::options options;
-	options.key_prefix = std::string(1, key_lead);
+	options.key_prefix = keys::key_prefix();
 	options.auto_merge = true;
 	return options;
 }
@@ -143,19 +171,45 @@ index_options()
 struct Core {
 	std::string dir;
 	std::unique_ptr<kronuz::journal::PosixIO> io;
-	std::optional<prospect::index> index;
+	std::optional<prospect::index> index;  // empty after a reopen that failed: recover() retries it
 	std::string uuid;
 	std::mutex mtx;
+	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
 	bool dirty = false;        // applied since the last refresh: reads by id need a refresh first
 	bool pending = false;      // applied since the last commit
 	bool transaction = false;
+	std::atomic<std::uint64_t> epoch{0};  // bumped whenever the index is replaced: writes it held are gone
 
 	~Core() {
-		if (index && pending) {
+		// A transaction that is still open is discarded, as a Xapian writer discards it.
+		if (index && pending && !transaction) {
 			try {
 				index->commit();  // a dropped writer keeps its work, as a Xapian writer does
-			} catch (...) { }
+			} catch (const std::exception& exc) {
+				L_ERR("strata: the commit on closing {} failed: {}", dir, exc.what());
+			} catch (...) {
+				L_ERR("strata: the commit on closing {} failed", dir);
+			}
 		}
+	}
+
+	// Under mtx: whether the handle can use the index; a writable handle that has not seen the latest
+	// replacement lost its writes with it and must be closed, so that opening it again replays the log.
+	void check(const Handle& handle) const;
+
+	bool unusable() const noexcept { return fenced.load() || !index; }
+
+	// Under mtx: drops the index and opens it again from its last commit; what was written since is lost.
+	// The handle that asks (`seen`) knows of the replacement.
+	void reopen_index(std::uint64_t* seen = nullptr) {
+		const auto replaced = ++epoch;
+		if (seen) {
+			*seen = replaced;
+		}
+		pending = dirty = transaction = false;
+		index.reset();
+		index.emplace(prospect::index::open(*io, index_options()));
+		fenced = false;
 	}
 
 	void refresh() {
@@ -167,13 +221,25 @@ struct Core {
 
 	void commit() {
 		if (pending) {
+			crash_point("commit.before");
+			index->refresh();  // the segment is on disk and the manifest does not name it
+			crash_point("commit.flushed");
 			index->commit();
+			crash_point("commit.after");
 			pending = dirty = false;
 		}
 	}
 
 	rev revision() const { return index->manifest().revision; }
 };
+
+void
+mark_fenced(Core* core) noexcept
+{
+	if (core) {
+		core->fenced = true;
+	}
+}
 
 
 namespace {
@@ -206,6 +272,8 @@ entry_for(const std::string& dir)
 struct Handle {
 	std::shared_ptr<Entry> entry;
 	Core* core;
+	bool writable = false;
+	std::uint64_t seen = 0;  // the latest replacement of the index this handle knows of; under core->mtx
 
 	Handle(std::shared_ptr<Entry> entry_, Core* core_) : entry(std::move(entry_)), core(core_) { }
 	Handle(const Handle&) = delete;
@@ -218,6 +286,18 @@ struct Handle {
 		}
 	}
 };
+
+
+void
+Core::check(const Handle& handle) const
+{
+	if (!index) {
+		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
+	}
+	if (handle.writable && handle.seen != epoch.load()) {
+		throw Error(errc::database, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+	}
+}
 
 
 namespace {
@@ -262,9 +342,17 @@ acquire(const std::string& path, bool create_missing, bool& created)
 		}
 		core->uuid = format_uuid(core->index->manifest().uuid);
 		entry->core = std::move(core);
+	} else if (entry->core->unusable()) {
+		// A fenced or failed index is replaced by one reopened from disk; the handles that live keep working on it.
+		std::lock_guard<std::mutex> core_lock(entry->core->mtx);
+		if (entry->core->unusable()) {
+			entry->core->reopen_index();
+		}
 	}
 	++entry->handles;
-	return std::make_unique<Handle>(std::move(entry), entry->core.get());
+	auto handle = std::make_unique<Handle>(std::move(entry), entry->core.get());
+	handle->seen = handle->core->epoch.load();
+	return handle;
 }
 
 // A document as the index has it by id: its version and, when asked, its stored record.
@@ -368,6 +456,23 @@ fill(prospect::index::document& out, StrataDocument& doc)
 	values::put(out, doc);
 }
 
+// Whether a replayed line (stamped with the version it was written at) is to be applied over a document
+// stored at `stored`: not when the index already holds that version or a later one, and only when it is
+// exactly the next; anything else means a line of the log is missing.
+bool
+replay_applies(const StrataDocument& native, const std::optional<rev>& stored)
+{
+	const rev next = stored.value_or(0) + 1;
+	if (stored && *stored >= native.version()) {
+		return false;
+	}
+	if (native.version() != next) {
+		throw Error(errc::corrupt, "The log skips a version of a document: it holds version " +
+			std::to_string(native.version()) + " over " + std::to_string(stored.value_or(0)));
+	}
+	return true;
+}
+
 // Applies one operation; its docid and version as the index assigned them.
 WriteResult
 apply(Core& core, prospect::operation&& op, const WriteResult& expected)
@@ -452,6 +557,7 @@ Shard::add(Document& doc, WriteArgs args)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		check_version(args.expected_version, std::nullopt);
 		WriteResult info;
 		info.did = static_cast<docid>(core.index->last_docid() + 1);
@@ -462,10 +568,12 @@ Shard::add(Document& doc, WriteArgs args)
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		prospect::operation op;
 		op.type = prospect::operation::add;
-		fill(op.doc, native_of(doc));
+		auto& native = native_of(doc);
+		native.stamp(info.version);
+		fill(op.doc, native);
 		co_return apply(core, std::move(op), info);
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -480,12 +588,21 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		auto& native = native_of(doc);
+		const bool replayed = native.replayed();
 		std::optional<rev> stored;
 		if (!native.key().empty()) {
 			// A document with a key is found by it; the id must be the one that holds the key.
 			if (const auto found = core.index->find_key(engine_key(native.key()))) {
 				if (found->first != did) {
+					if (replayed) {
+						// The key was erased and added again after this line: the index is past it.
+						WriteResult skipped;
+						skipped.did = did;
+						skipped.version = static_cast<rev>(found->second);
+						co_return skipped;
+					}
 					throw Error(errc::invalid, "The key belongs to another document");
 				}
 				stored = static_cast<rev>(found->second);
@@ -495,21 +612,31 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		} else if (const auto located = locate(core, did, false)) {
 			stored = located->version;
 		}
-		check_version(args.expected_version, stored);
 		WriteResult info;
 		info.did = did;
+		if (replayed && !replay_applies(native, stored)) {
+			// A log line the index already holds: replaying it again changes nothing.
+			info.version = *stored;
+			co_return info;
+		}
+		check_version(args.expected_version, stored);
 		info.version = stored.value_or(0) + 1;
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
+		native.stamp(info.version);
 		prospect::operation op;
 		op.type = prospect::operation::replace_docid;
 		op.docid = did;
 		fill(op.doc, native);
-		co_return apply(core, std::move(op), info);
+		auto result = apply(core, std::move(op), info);
+		if (replayed) {
+			crash_point("replay");
+		}
+		co_return result;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -524,6 +651,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		const auto ekey = engine_key(key);
 		WriteResult info;
 		info.term = key;
@@ -534,23 +662,28 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		} else {
 			info.did = static_cast<docid>(core.index->last_docid() + 1);
 		}
+		auto& native = native_of(doc);
+		if (native.replayed() && !replay_applies(native, stored)) {
+			info.version = *stored;
+			co_return info;
+		}
 		check_version(args.expected_version, stored);
 		info.version = stored.value_or(0) + 1;
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
-		auto& native = native_of(doc);
 		if (native.key() != key) {
 			native.set_key(key);
 		}
+		native.stamp(info.version);
 		prospect::operation op;
 		op.type = prospect::operation::replace_key;
 		op.key = ekey;
 		fill(op.doc, native);
 		co_return apply(core, std::move(op), info);
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -564,6 +697,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		const auto located = locate(core, did, false);
 		if (!located) {
 			throw Error(errc::doc_not_found, "Document not found");
@@ -582,7 +716,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		core.dirty = core.pending = true;
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -596,6 +730,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		const auto ekey = engine_key(key);
 		const auto found = core.index->find_key(ekey);
 		if (!found) {
@@ -616,7 +751,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 		(void)local;
 		co_return static_cast<docid>(found->first);
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -632,11 +767,12 @@ Shard::commit(Transaction transaction)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		core.commit();
 		(void)transaction;
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -649,6 +785,7 @@ Shard::begin_transaction(bool flushed)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		if (core.transaction) {
 			throw Error(errc::invalid, "A transaction is already in progress");
 		}
@@ -658,7 +795,7 @@ Shard::begin_transaction(bool flushed)
 		core.transaction = true;
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -671,6 +808,7 @@ Shard::commit_transaction()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		if (!core.transaction) {
 			throw Error(errc::invalid, "No transaction is in progress");
 		}
@@ -678,7 +816,7 @@ Shard::commit_transaction()
 		core.transaction = false;
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -691,16 +829,14 @@ Shard::cancel_transaction()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		if (!core.transaction) {
 			throw Error(errc::invalid, "No transaction is in progress");
 		}
-		core.pending = core.dirty = false;  // what the reopen drops
-		core.index.reset();
-		core.index.emplace(prospect::index::open(*core.io, index_options()));
-		core.transaction = false;
+		core.reopen_index(&handle_->seen);  // when it fails the shard raises on every call until a reopen succeeds
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -717,6 +853,7 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		prospect::transaction t;
 		t.ops.emplace_back();
 		auto& op = t.ops[0];
@@ -730,7 +867,7 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 		core.pending = true;
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -755,7 +892,26 @@ task::task<bool>
 Shard::reopen()
 {
 	co_await Hop{on_};
-	co_return false;  // one index in this process: a handle always sees the latest
+	try {
+		// One index in this process: a handle always sees the latest. Only a fenced or failed index is replaced.
+		auto& core = *handle_->core;
+		std::lock_guard<std::mutex> lk(core.mtx);
+		const bool stale = writable_ && handle_->seen != core.epoch.load();
+		if (!stale && !core.unusable()) {
+			co_return false;
+		}
+		if (writable_ && (stale || core.fenced.load())) {
+			// The writer's unsaved writes are gone with the index: it must be closed and opened again, which replays the log.
+			if (core.unusable()) {
+				core.reopen_index();
+			}
+			throw Error(errc::reopen, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+		}
+		core.reopen_index(&handle_->seen);
+		co_return true;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
 }
 
 
@@ -766,6 +922,7 @@ Shard::stats()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		core.refresh();
 		const auto& manifest = core.index->manifest();
 		Stats stats;
@@ -779,7 +936,7 @@ Shard::stats()
 		stats.has_positions = true;
 		co_return stats;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -791,10 +948,11 @@ Shard::find_key(const std::string& key)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		const auto found = core.index->find_key(engine_key(key));
 		co_return found ? static_cast<docid>(found->first) : docid{0};
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -806,13 +964,14 @@ Shard::get(docid did)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		auto found = locate(core, did, true);
 		if (!found) {
 			throw Error(errc::doc_not_found, "Document not found");
 		}
 		co_return std::make_unique<StrataDocView>(found->did, found->version, std::move(found->stored));
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -824,6 +983,7 @@ Shard::scan(docid from, const ScanSink& sink)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		core.refresh();
 		struct Hit {
 			docid did;
@@ -850,7 +1010,7 @@ Shard::scan(docid from, const ScanSink& sink)
 		}
 		co_return;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -862,11 +1022,12 @@ Shard::metadata(const std::string& key)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		const auto& all = core.index->metadata();
 		const auto it = all.find(key);
 		co_return it == all.end() ? std::string() : it->second;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -878,6 +1039,7 @@ Shard::metadata_keys()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle_);
 		std::vector<std::string> keys;
 		for (const auto& entry : core.index->metadata()) {
 			if (!entry.first.starts_with(reserved_meta_prefix)) {
@@ -886,7 +1048,7 @@ Shard::metadata_keys()
 		}
 		co_return keys;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 }
 
@@ -896,6 +1058,7 @@ Shard::revision() const
 {
 	auto& core = *handle_->core;
 	std::lock_guard<std::mutex> lk(core.mtx);
+	core.check(*handle_);
 	return core.revision();
 }
 
@@ -905,6 +1068,7 @@ Shard::doc_count() const
 {
 	auto& core = *handle_->core;
 	std::lock_guard<std::mutex> lk(core.mtx);
+	core.check(*handle_);
 	core.refresh();
 	return live_count(core);
 }
@@ -937,11 +1101,12 @@ Shard::pin()
 	auto& core = *handle_->core;
 	Pinned pinned{std::unique_lock<std::mutex>(core.mtx)};
 	try {
+		core.check(*handle_);
 		core.refresh();
 		pinned.segments_ = core.index->segments();
 		pinned.identity_ = handle_->core;
 	} catch (...) {
-		rethrow_translated();
+		rethrow_translated(handle_->core);
 	}
 	return pinned;
 }
@@ -954,6 +1119,7 @@ open_local(const std::string& path, bool writable, bool create_missing, task::sc
 	try {
 		Opened opened;
 		auto handle = acquire(path, create_missing, opened.created);
+		handle->writable = writable;
 		opened.shard = std::make_unique<Shard>(std::move(handle), writable, on);
 		co_return opened;
 	} catch (...) {
@@ -972,6 +1138,7 @@ check(const std::string& path, task::scheduler_ref on)
 		auto handle = acquire(path, false, created);
 		auto& core = *handle->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
+		core.check(*handle);
 		core.refresh();
 		(void)core.index->check();
 	} catch (const Error& error) {

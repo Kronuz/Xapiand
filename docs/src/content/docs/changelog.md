@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+## [1.0.0-alpha.10] - 2026-10-28
+
 ### Added
 - **HTTPS for the REST API.** `--tls-cert` and `--tls-key` serve the API over TLS on
   `--port`, with forward-secret ciphers only, a connection cap (`--tls-max-connections`),
@@ -33,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Numeric range queries return every matching document.** The term walk behind a range over
+  an integer, positive, floating, time or timedelta field skipped whole buckets (for example
+  the 2e8 to 3e8 bucket, a range's own aligned start such as `[0, 0]`, and the coarse buckets
+  of a wide range such as `[1, 3000000000]`), so documents in range were missing from the
+  results. Open-ended ranges (only `_from` or only `_to`) no longer drop values beyond
+  2x the coarsest accuracy, and an open-ended date range no longer drops dates before 1970 or
+  after 2038. Index terms are unchanged: no reindex. On a field indexed with terms only
+  (`_index: "field_terms"`), a range that terms cannot answer exactly (open-ended, or wider
+  than 4096 coarsest buckets) now fails with a 400 that says so, instead of returning no
+  documents; index the field's values to make such ranges exact.
 - **A retried write no longer fails with a spurious version conflict.** After a failed write,
   the retry compared its own freshly assigned version against the stored one and returned 409.
 - **`FLUSH` no longer stalls other connections.** It commits every open index, and it now does
@@ -48,6 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Autocommits and WAL fsyncs requested during shutdown are no longer dropped.** When the
   committer or the fsync pool has already stopped (or cannot allocate), the commit or fsync
   runs right away on the calling thread.
+- **Aggregations on a cluster count every document.** A node aggregated its own shards fully but
+  only a sample of the remote ones, so `_doc_count`, `_sum` and `_avg` came back low and
+  differed from node to node. Aggregations now check every match, whatever `_check_at_least`
+  says.
 - Builds with `-DLUA=OFF` retain the declaration of the existing scripting-unavailable stub, so the database handler compiles without Lua.
 
 ---

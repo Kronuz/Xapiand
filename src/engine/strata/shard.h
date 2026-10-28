@@ -31,6 +31,12 @@
 
 namespace engine::strata {
 
+struct Core;
+
+// Rethrows the exception being handled as an engine error of its kind, marking `core` (when given) fenced
+// on an index_fenced. Call only inside a catch block.
+[[noreturn]] void rethrow_translated(Core* core = nullptr);
+
 struct Handle;
 class Pinned;
 

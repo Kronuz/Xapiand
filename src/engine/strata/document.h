@@ -68,6 +68,14 @@ public:
 	const std::map<std::string, DocTerm, std::less<>>& terms() const noexcept { return terms_; }
 	const std::map<valueno, std::string>& values() const noexcept { return values_; }
 
+	// The version this document was written at: the shard stamps it when it writes, the log keeps it,
+	// and replay reads it back. 0 until written.
+	rev version() const noexcept { return version_; }
+	void stamp(rev version) noexcept { version_ = version; replayed_ = false; }
+	// True for a document read from the log: the shard applies it only if the index is not already at
+	// its version.
+	bool replayed() const noexcept { return replayed_; }
+
 	// Sorts and deduplicates every term's positions; the shard calls it before it reads them.
 	void normalise();
 
@@ -80,6 +88,8 @@ private:
 	std::map<valueno, std::string> values_;
 	std::string data_;
 	std::string key_;
+	rev version_ = 0;
+	bool replayed_ = false;
 };
 
 std::unique_ptr<Document::Native> new_native();

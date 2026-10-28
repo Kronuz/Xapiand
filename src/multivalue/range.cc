@@ -42,8 +42,41 @@
 #include "serialise_list.h"                       // for StringList
 
 
-#define TIMESTAMP_MIN 1
-#define TIMESTAMP_MAX 2147483648
+// Terms-only fields (no value slot) have no exact check behind the terms, so they get a larger budget.
+constexpr size_t TERMS_ONLY_MAX_TERMS = 4096;
+
+// A terms-only field has no value to check a range against, so a range its terms cannot cover exactly is
+// an error: no terms means the range is too wide for the budget, and an open end has no finite cover.
+static void
+require_terms_only_cover(const required_spc_t& field_spc, bool open_ended, const engine::Query& query)
+{
+	if (field_spc.slot != engine::BAD_VALUENO) {
+		return;
+	}
+	if (open_ended) {
+		THROW(TermsOnlyRangeError, "the range is open-ended, and a terms-only field cannot answer an open-ended range exactly");
+	}
+	if (query.empty()) {
+		THROW(TermsOnlyRangeError, "the range is too wide for the terms of a terms-only field, which cannot answer it exactly");
+	}
+}
+
+
+// The truncated integer a double is indexed as (static_cast truncates), saturating at T's limits.
+template <typename T>
+static T
+truncate_saturating(double d)
+{
+	constexpr double lowest = static_cast<double>(std::numeric_limits<T>::min());
+	constexpr double highest = static_cast<double>(std::numeric_limits<T>::max());  // 2^63 or 2^64: first out of range
+	if (!(d > lowest)) {
+		return std::numeric_limits<T>::min();
+	}
+	if (d >= highest) {
+		return std::numeric_limits<T>::max();
+	}
+	return static_cast<T>(d);
+}
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
@@ -54,8 +87,8 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
 		case FieldType::floating: {
-			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::floating(*start) : min<double>(field_spc.accuracy);
-			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::floating(*end) : max<double>(field_spc.accuracy);
+			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::floating(*start) : std::numeric_limits<double>::lowest();
+			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::floating(*end) : std::numeric_limits<double>::max();
 
 			if (val_s > val_e) {
 				return engine::Query();
@@ -63,13 +96,13 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 
 			ser_start = Serialise::floating(val_s);
 			ser_end = Serialise::floating(val_e);
-			value_s = val_s;
-			value_e = val_e;
+			value_s = truncate_saturating<T>(val_s);
+			value_e = truncate_saturating<T>(val_e);
 			break;
 		}
 		case FieldType::integer: {
-			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : min<int64_t>(field_spc.accuracy);
-			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : max<int64_t>(field_spc.accuracy);
+			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : std::numeric_limits<int64_t>::min();
+			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : std::numeric_limits<int64_t>::max();
 
 			if (val_s > val_e) {
 				return engine::Query();
@@ -82,8 +115,8 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			break;
 		}
 		case FieldType::positive: {
-			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : min<uint64_t>(field_spc.accuracy);
-			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : max<uint64_t>(field_spc.accuracy);
+			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : std::numeric_limits<uint64_t>::min();
+			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : std::numeric_limits<uint64_t>::max();
 
 			if (val_s > val_e) {
 				return engine::Query();
@@ -99,7 +132,8 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			THROW(QueryParserError, "Expected numeric type for query range");
 	}
 
-	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix);
+	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -161,17 +195,25 @@ getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgP
 engine::Query
 getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	double timestamp_s = start ? Datetime::timestamp(Datetime::DatetimeParser(*start)) : TIMESTAMP_MIN;
-	double timestamp_e = end ? Datetime::timestamp(Datetime::DatetimeParser(*end)) : TIMESTAMP_MAX;
+	// An open end has no finite timestamp: the check below only compares the ends given, and the value
+	// source alone decides (a finite term cover would drop the dates outside it).
+	double timestamp_s = start ? Datetime::timestamp(Datetime::DatetimeParser(*start)) : 0;
+	double timestamp_e = end ? Datetime::timestamp(Datetime::DatetimeParser(*end)) : 0;
 
-	if (timestamp_s > timestamp_e) {
+	if (start && end && timestamp_s > timestamp_e) {
 		return engine::Query();
 	}
 
-	auto ser_start = Serialise::timestamp(timestamp_s);
-	auto ser_end = Serialise::timestamp(timestamp_e);
+	std::string ser_start, ser_end;
+	if (start) {
+		ser_start = Serialise::timestamp(timestamp_s);
+	}
+	if (end) {
+		ser_end = Serialise::timestamp(timestamp_e);
+	}
 
-	auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+	auto query = start && end ? GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix) : engine::Query();
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -204,17 +246,23 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 engine::Query
 getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	double time_s = start ? Datetime::time_to_double(*start) : min<double>(field_spc.accuracy);
-	double time_e = end ? Datetime::time_to_double(*end) : max<double>(field_spc.accuracy);
+	double time_s = start ? Datetime::time_to_double(*start) : std::numeric_limits<double>::lowest();
+	double time_e = end ? Datetime::time_to_double(*end) : std::numeric_limits<double>::max();
 
 	if (time_s > time_e) {
 		return engine::Query();
 	}
 
-	auto ser_start = Serialise::timestamp(time_s);
-	auto ser_end = Serialise::timestamp(time_e);
+	std::string ser_start, ser_end;
+	if (start) {
+		ser_start = Serialise::timestamp(time_s);
+	}
+	if (end) {
+		ser_end = Serialise::timestamp(time_e);
+	}
 
-	auto query = GenerateTerms::numeric(static_cast<int64_t>(time_s), static_cast<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix);
+	auto query = GenerateTerms::numeric(truncate_saturating<int64_t>(time_s), truncate_saturating<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -246,17 +294,23 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 engine::Query
 getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end) {
-	double timedelta_s = start ? Datetime::timedelta_to_double(*start) : min<double>(field_spc.accuracy);
-	double timedelta_e = end ? Datetime::timedelta_to_double(*end) : max<double>(field_spc.accuracy);
+	double timedelta_s = start ? Datetime::timedelta_to_double(*start) : std::numeric_limits<double>::lowest();
+	double timedelta_e = end ? Datetime::timedelta_to_double(*end) : std::numeric_limits<double>::max();
 
 	if (timedelta_s > timedelta_e) {
 		return engine::Query();
 	}
 
-	auto ser_start = Serialise::timestamp(timedelta_s);
-	auto ser_end = Serialise::timestamp(timedelta_e);
+	std::string ser_start, ser_end;
+	if (start) {
+		ser_start = Serialise::timestamp(timedelta_s);
+	}
+	if (end) {
+		ser_end = Serialise::timestamp(timedelta_e);
+	}
 
-	auto query = GenerateTerms::numeric(static_cast<int64_t>(timedelta_s), static_cast<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix);
+	auto query = GenerateTerms::numeric(truncate_saturating<int64_t>(timedelta_s), truncate_saturating<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -336,6 +390,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			default:
 				return engine::Query();
 		}
+	} catch (const TermsOnlyRangeError&) {
+		throw;
 	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: {} - {} like {} ({})", start ? start->to_string() : "", end ? end->to_string() : "",
 			enum_name(field_spc.get_type()), exc.what());

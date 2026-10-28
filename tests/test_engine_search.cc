@@ -101,6 +101,8 @@ public:
 // A shard of another engine: it implements nothing.
 class Foreign final : public engine::Shard {
 public:
+	engine::Kind kind() const noexcept override { return engine::Kind::strata; }
+
 	template <typename T>
 	[[noreturn]] static task::task<T> nope() { throw std::logic_error("foreign"); }
 
@@ -394,6 +396,28 @@ void test_spy() {
 	CHECK_EQ(spy.seen, 2 * after_one);
 }
 
+// CHECK_ALL makes the spy see every match; a small check_at_least leaves it a sample.
+void test_spy_check_all() {
+	Fixture fixture;
+	for (int n : {1, 2}) {
+		CountingSpy all, some, sample;
+		engine::SearchRequest request;
+		request.maxitems = 0;
+		request.check_at_least = engine::CHECK_ALL;
+		request.spy = &all;
+		run(fixture, n, some_query(), request);
+		request.check_at_least = 1000;
+		request.spy = &some;
+		run(fixture, n, some_query(), request);
+		request.check_at_least = 1;
+		request.spy = &sample;
+		run(fixture, n, some_query(), request);
+		CHECK_TRUE(all.seen > 10);
+		CHECK_EQ(all.seen, some.seen);
+		CHECK_TRUE(sample.seen <= all.seen);
+	}
+}
+
 
 void test_similar() {
 	Fixture fixture;
@@ -539,8 +563,8 @@ void test_empty_and_errors() {
 	bool refused = false;
 	try {
 		engine::sync_wait(engine::search(std::vector<engine::Shard*>{&foreign}, request));
-	} catch (const std::bad_cast&) {
-		refused = true;
+	} catch (const engine::Error& error) {
+		refused = error.kind == engine::errc::not_available;
 	}
 	CHECK_TRUE(refused);
 	// a wildcard that expands past its limit fails the search with Xapian's error
@@ -646,4 +670,4 @@ void test_result_outlives_shards() {
 
 }  // namespace
 
-TEST_MAIN(test_ranking_and_window, test_sort_collapse_cutoff_order, test_spy, test_similar, test_similar_relevant_set, test_empty_and_errors, test_search_does_not_leak, test_result_outlives_shards)
+TEST_MAIN(test_ranking_and_window, test_sort_collapse_cutoff_order, test_spy, test_spy_check_all, test_similar, test_similar_relevant_set, test_empty_and_errors, test_search_does_not_leak, test_result_outlives_shards)

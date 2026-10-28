@@ -67,6 +67,9 @@ The following snippet captures the basic structure of aggregations:
 ( "_limit": <limit>, )
 ```
 
+Aggregations always cover every matching document, on every node; `_check_at_least` does
+not make them a sample.
+
 ### Aggregation Name
 
 The `_aggregations` object (the key `_aggs` can also be used) in the JSON

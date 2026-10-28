@@ -45,6 +45,8 @@
 #include <random>
 #include <set>
 #include <thread>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string>
 #include <vector>
 
@@ -1208,6 +1210,37 @@ void test_pin_holds_impl() {
 	CHECK_EQ(finished.load(), 9);
 }
 
+// A pin after a failed reopen raises a database error and releases the other shards' locks; it never reads the
+// closed index. After a reopen the shard searches again.
+void test_pin_after_failed_reopen_impl() {
+	if (::geteuid() == 0) {
+		return;
+	}
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("pin_failed", 2, 20, 1, xapian, strata, model);
+	auto& broken = *strata.owned[0];
+	engine::sync_wait(broken.begin_transaction(true));
+	const auto dir = path_of("pin_failed", Kind::strata, 0) + "/strata";
+	::chmod(dir.c_str(), 0000);
+	CHECK_EQ(error_kind([&] { engine::sync_wait(broken.cancel_transaction()); }), engine::errc::database);
+	::chmod(dir.c_str(), 0700);
+
+	auto prepared = engine::prepare(Query::term("common"));
+	engine::SearchRequest request;
+	request.query = prepared.get();
+	request.maxitems = 1000;
+	CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(strata.shards(2), request)); }), engine::errc::database);
+	CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(strata.shards(1), request)); }), engine::errc::database);
+	// The other shard's lock was released with the failed search: a write to it goes through.
+	auto doc = make(Kind::strata, 1, 555, model.shards[1][0]);
+	engine::sync_wait(strata.owned[1]->add(doc, {}));
+	CHECK_EQ(engine::sync_wait(engine::search(std::vector<engine::Shard*>{strata.owned[1].get()}, request)).hits.size(), 21u);
+
+	CHECK_TRUE(engine::sync_wait(broken.reopen()));
+	CHECK_EQ(engine::sync_wait(engine::search(std::vector<engine::Shard*>{strata.owned[0].get()}, request)).hits.size(), 20u);
+}
+
 // A window larger than the index is clamped to it: it answers as a window of the index's size does, at
 // once, and holds no memory for the number asked.
 void test_huge_window_impl() {
@@ -1302,9 +1335,10 @@ void test_long_chains() { guarded("test_long_chains", test_long_chains_impl); }
 void test_snapshot_consistency() { guarded("test_snapshot_consistency", test_snapshot_consistency_impl); }
 void test_concurrent_searches() { guarded("test_concurrent_searches", test_concurrent_searches_impl); }
 void test_pin_holds() { guarded("test_pin_holds", test_pin_holds_impl); }
+void test_pin_after_failed_reopen() { guarded("test_pin_after_failed_reopen", test_pin_after_failed_reopen_impl); }
 void test_huge_window() { guarded("test_huge_window", test_huge_window_impl); }
 void test_percent_infinite() { guarded("test_percent_infinite", test_percent_infinite_impl); }
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_append, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_huge_window, test_percent_infinite)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite)

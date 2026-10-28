@@ -32,7 +32,8 @@ namespace engine::strata {
 
 namespace {
 
-constexpr std::uint8_t serial_version = 1;
+// Format 1 (before the version stamp) is named but no longer read.
+constexpr std::uint8_t serial_version = 2;
 
 void
 put(std::string& out, std::uint64_t value)
@@ -201,12 +202,13 @@ StrataDocument::normalise()
 }
 
 
-// version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
+// format, written version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
 std::string
 StrataDocument::serialise() const
 {
 	std::string out;
 	out.push_back(static_cast<char>(serial_version));
+	put(out, version_);
 	put(out, key_);
 	put(out, data_);
 	put(out, values_.size());
@@ -236,10 +238,16 @@ void
 StrataDocument::unserialise_from(std::string_view serialised)
 {
 	Cursor in(serialised);
-	if (in.byte() != serial_version) {
+	const auto format = in.byte();
+	if (format == 1) {
+		malformed("format 1 predates the version stamp and is no longer read");
+	}
+	if (format != serial_version) {
 		malformed("unknown version");
 	}
 	StrataDocument result;
+	result.version_ = in.number();
+	result.replayed_ = result.version_ != 0;
 	result.key_.assign(in.bytes());
 	result.data_.assign(in.bytes());
 	for (auto n = in.count(2); n; --n) {
