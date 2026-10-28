@@ -76,7 +76,7 @@ start() {  # start LOG FLAGS...: a solo node, ready when it answers HTTPS with a
 }
 stop() { [ -n "$node_pid" ] && { kill "$node_pid" 2>/dev/null; wait "$node_pid" 2>/dev/null; node_pid=""; }; }
 trap stop EXIT
-logged() { sleep 1; grep -qF "$2" "$1"; }  # logged LOG TEXT
+logged() { for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do sleep 0.5; grep -qF "$2" "$1" && return 0; done; return 1; }  # logged LOG TEXT: within 6 s
 
 # hello VERSION: sends a raw ClientHello (record 1.0, the given client_version, ECDHE-RSA
 # and ECDHE-ECDSA AES-GCM suites, no supported_versions) and prints the first reply record:
@@ -111,7 +111,8 @@ pass "startup with a valid pair at mode 0600"
 
 # 1. Trust.
 ok --cacert "$WORK/ec/ca.pem" "https://localhost:$PORT/" && pass "client trusting the CA accepted" || fail "client trusting the CA refused"
-if ok --cacert "$WORK/other/ca.pem" "https://localhost:$PORT/"; then fail "client not trusting the CA got through"
+# s_client aborts inside the handshake; newer curl finishes it and rejects the certificate afterwards.
+if echo | "$OPENSSL" s_client -connect "localhost:$PORT" -CAfile "$WORK/other/ca.pem" -verify_return_error -verify_hostname localhost >/dev/null 2>&1; then fail "client not trusting the CA got through"
 elif logged "$WORK/ec.log" "the client refused the certificate"; then pass "client not trusting the CA refused, logged as certificate"
 else fail "client not trusting the CA: no certificate reason in the log"; fi
 
@@ -170,4 +171,5 @@ refuse "group-readable key" "make it mode 0600" --tls-cert "$WORK/ec/server.pem"
 refuse "--tls-cert without --tls-key" "go together" --tls-cert "$WORK/ec/server.pem"
 
 [ "$failures" = 0 ] && { echo "tls_check: OK"; exit 0; }
+echo "--- ec.log:"; cat "$WORK/ec.log"
 echo "tls_check: $failures failed"; exit 1

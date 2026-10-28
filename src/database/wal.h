@@ -267,14 +267,14 @@ class DatabaseWALWriterTask {
 
 	std::string path;
 	UUID uuid;
-	engine::rev revision;
+	engine::rev revision{};
 
 	std::optional<engine::Document> doc;
 	std::string key;
 	std::string term_word_val;
-	engine::termcount freq;
-	engine::docid did;
-	bool send_update;
+	engine::termcount freq{};
+	engine::docid did{};
+	bool send_update{};
 
 	void write_commit(DatabaseWALWriterThread& thread);
 	void write_replace_document(DatabaseWALWriterThread& thread);
