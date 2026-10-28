@@ -48,6 +48,7 @@
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for StrataDocument
 #include "engine/strata/keys.h"  // for the key adapter
+#include "engine/strata/pin.h"    // for Pinned
 #include "engine/strata/values.h"  // for the value columns
 
 
@@ -92,15 +93,12 @@ constexpr std::string_view reserved_meta_prefix = "strata.";
 
 }  // namespace
 
-struct Core;
 void mark_fenced(Core* core) noexcept;
-
-namespace {
 
 // Rethrows the exception being handled as an engine error of its kind; a fenced index marks its Core,
 // so the next handle opened on it gets a fresh index. Call only inside a catch block.
 [[noreturn]] void
-rethrow_translated(Core* core = nullptr)
+rethrow_translated(Core* core)
 {
 	try {
 		throw;
@@ -123,6 +121,9 @@ rethrow_translated(Core* core = nullptr)
 		throw Error(errc::internal, exc.what());
 	}
 }
+
+
+namespace {
 
 std::string
 format_uuid(const std::array<char, 16>& bytes)
@@ -1084,6 +1085,30 @@ unsigned
 Shard::refs() const
 {
 	return 1;
+}
+
+
+const void*
+Shard::identity() const noexcept
+{
+	return handle_->core;
+}
+
+
+Pinned
+Shard::pin()
+{
+	auto& core = *handle_->core;
+	Pinned pinned{std::unique_lock<std::mutex>(core.mtx)};
+	try {
+		core.check(*handle_);
+		core.refresh();
+		pinned.segments_ = core.index->segments();
+		pinned.identity_ = handle_->core;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+	return pinned;
 }
 
 

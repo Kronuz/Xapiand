@@ -379,13 +379,13 @@ void strata_only() {
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->terms("", [](std::string_view, engine::termcount) { }); }) == engine::errc::not_available);
 	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::not_available);
 
-	// Search waits for S2: a strata shard says so, for a term and for match-all.
-	for (const auto& query : {engine::Query::term("x"), engine::Query::match_all()}) {
-		auto prepared = engine::prepare(query);
+	// Search is S2's: match-all finds every document.
+	{
+		auto prepared = engine::prepare(engine::Query::match_all());
 		engine::SearchRequest request;
 		request.query = prepared.get();
 		engine::Shard* shards[] = {&shard};
-		CHECK_TRUE(error_kind([&] { engine::sync_wait(engine::search(shards, request)); }) == engine::errc::not_available);
+		CHECK_EQ(engine::sync_wait(engine::search(shards, request)).hits.size(), static_cast<std::size_t>(shard.doc_count()));
 	}
 
 	// Dropping the writable shard without a commit keeps its work, as a Xapian writer does.

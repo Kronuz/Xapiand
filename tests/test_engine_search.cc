@@ -101,8 +101,6 @@ public:
 // A shard of another engine: it implements nothing.
 class Foreign final : public engine::Shard {
 public:
-	engine::Kind kind() const noexcept override { return engine::Kind::strata; }
-
 	template <typename T>
 	[[noreturn]] static task::task<T> nope() { throw std::logic_error("foreign"); }
 
@@ -125,6 +123,7 @@ public:
 	task::task<void> scan(engine::docid, const engine::ScanSink&) override { nope<void>(); }
 	task::task<std::string> metadata(const std::string&) override { nope<std::string>(); }
 	task::task<std::vector<std::string>> metadata_keys() override { nope<std::vector<std::string>>(); }
+	engine::Kind kind() const noexcept override { return engine::Kind::xapian; }
 	engine::rev revision() const override { return 0; }
 	engine::doccount doc_count() const override { return 0; }
 	std::string uuid() const override { return ""; }
@@ -562,8 +561,8 @@ void test_empty_and_errors() {
 	bool refused = false;
 	try {
 		engine::sync_wait(engine::search(std::vector<engine::Shard*>{&foreign}, request));
-	} catch (const engine::Error& error) {
-		refused = error.kind == engine::errc::not_available;
+	} catch (const std::bad_cast&) {
+		refused = true;
 	}
 	CHECK_TRUE(refused);
 	// a wildcard that expands past its limit fails the search with Xapian's error
