@@ -285,7 +285,8 @@ DatabaseWAL::to_string_document(std::string_view serialised_document, bool unser
 		return MsgPack(serialised_document);
 	}
 
-	auto doc = engine::Document::unserialise(_shard->kind(), serialised_document);
+	// The dump endpoints read a log without opening its shard, so the engine is the one the files are.
+	auto doc = engine::Document::unserialise(_shard ? _shard->kind() : engine::kind_of(base_path), serialised_document);
 
 	auto data = Data(doc.get_data());
 	auto main_locator = data.get("");

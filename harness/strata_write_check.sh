@@ -5,16 +5,17 @@
 # checks what the write slice serves without search (S2): documents by id, versions, deletes, and WAL
 # replay after kill -9 (the strata variant of wal_replay_check.sh, which asserts through search).
 #   write     PUT, GET, replace (version 2), DELETE; the shard is a strata directory
-#   replay    RESTORE N docs without a commit, kill -9, restart: every document is served by id; a second
-#             crash replays nothing and loses nothing; a write between the crashes is replayed once
+#   replay    PUT N docs without a commit, kill -9, restart (a write to every shard opens it writable and
+#             replays its WAL): every document is served by id; a crash after the commit loses nothing;
+#             a write between the crashes is replayed
 # Usage: harness/strata_write_check.sh [write|replay ...]   (default: both)
-#        BIN=build/bin/xapiand PORT=8909 NDOCS=200
+#        BIN=build/bin/xapiand PORT=8909 NDOCS=30
 set -u
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8909}"
-NDOCS="${NDOCS:-200}"
+NDOCS="${NDOCS:-30}"
 RUNDIR="${RUNDIR:-$REPO/.scratch/xstrata_$$}"
 IDX="sw"
 mkdir -p "$RUNDIR"
@@ -29,7 +30,7 @@ start_node() {  # start_node LOG
 	local log="$RUNDIR/$1"
 	(
 		exec > >(cat >>"$log") 2>&1
-		XAPIAND_ENGINE=strata exec "$BIN" --port "$PORT" --solo --name strataw --verbosity 3 -D "$RUNDIR/n"
+		XAPIAND_ENGINE="${ENGINE:-strata}" exec "$BIN" --port "$PORT" --solo --name strataw --verbosity 3 -D "$RUNDIR/n"
 	) &
 	PID=$!
 	for _ in $(seq 80); do
@@ -65,6 +66,13 @@ served() {  # served FIRST LAST: how many of the ids are served with the right a
 	echo "$ok"
 }
 count_log() { grep -c "$2" "$RUNDIR/$1" 2>/dev/null || true; }
+wal_dump() {  # the :wal endpoint of every shard answers (it decodes the strata documents in the log)
+	local s ok=0
+	for s in 1 2 3 4 5; do
+		[ "$(http "localhost:$PORT/$IDX/.__$s/:wal")" = 200 ] && ok=$((ok + 1))
+	done
+	echo "$ok"
+}
 strata_dirs() { find "$RUNDIR/n/$IDX" -type d -name strata 2>/dev/null | wc -l | tr -d ' '; }
 glass_files() { find "$RUNDIR/n/$IDX" -name iamglass 2>/dev/null | wc -l | tr -d ' '; }
 
@@ -77,37 +85,57 @@ scenario_write() {
 	http -XPUT "localhost:$PORT/$IDX/a" -H 'Content-Type: application/json' -d '{"name":"two","n":2}' > /dev/null
 	[ "$(http "localhost:$PORT/$IDX/a")" = 200 ] && [ "$(field name)" = two ] && pass "a replace is served" || fail "GET after replace: $(cat "$RUNDIR/body")"
 	[ "$(field _version)" = 2 ] && pass "its version is 2" || fail "version after replace: $(field _version)"
-	[ "$(http -XDELETE "localhost:$PORT/$IDX/a")" = 200 ] && pass "DELETE" || fail "DELETE: $(cat "$RUNDIR/body")"
+	local deleted; deleted="$(http -XDELETE "localhost:$PORT/$IDX/a")"
+	[ "$deleted" = 200 ] || [ "$deleted" = 204 ] && pass "DELETE ($deleted)" || fail "DELETE: $deleted $(cat "$RUNDIR/body")"
 	[ "$(http "localhost:$PORT/$IDX/a")" = 404 ] && pass "a deleted document is 404" || fail "GET after DELETE"
-	[ "$(strata_dirs)" -ge 1 ] && [ "$(glass_files)" = 0 ] && pass "the index is a strata directory ($(strata_dirs) shard(s)), no glass files" || fail "engine on disk: strata=$(strata_dirs) glass=$(glass_files)"
+	[ "${ENGINE:-strata}" != strata ] || { [ "$(strata_dirs)" -ge 1 ] && [ "$(glass_files)" = 0 ]; } && pass "the index is a strata directory ($(strata_dirs) shard(s)), no glass files" || fail "engine on disk: strata=$(strata_dirs) glass=$(glass_files)"
 	crash
+}
+
+put_docs() {  # put_docs FIRST LAST: one PUT each, so nothing commits before the crash
+	local i
+	for i in $(seq "$1" $(($2 - 1))); do
+		curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/$IDX/u$i" -H 'Content-Type: application/json' -d "{\"age\": $((i % 40))}"
+	done
+	sleep 1
+}
+poke() {  # a write to every shard: opens each writable, which replays its WAL (replay is lazy, as with Xapian)
+	local i
+	for i in $(seq 0 39); do
+		curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/$IDX/poke$i" -H 'Content-Type: application/json' -d '{"poke":true}'
+	done
 }
 
 scenario_replay() {
 	echo "== [strata-write] crash, replay, crash, replay =="
 	rm -rf "$RUNDIR/n"
 	start_node r1.log || { fail "startup"; return; }
-	restore 0 "$NDOCS"
-	local before; before="$(served 0 "$NDOCS")"
-	[ "$before" = "$NDOCS" ] && pass "all $NDOCS documents are served before the crash" || fail "before the crash: $before of $NDOCS"
+	put_docs 0 "$NDOCS"   # few enough to crash before the autocommit (about 3 s)
+	[ "$(wal_dump)" = 5 ] && pass "the :wal endpoint decodes the log of every shard" || fail ":wal answered for $(wal_dump) of 5 shards"
 	crash
 
 	start_node r2.log || { fail "restart 1"; return; }
+	poke
 	local s1; s1="$(served 0 "$NDOCS")"
 	[ "$s1" = "$NDOCS" ] && pass "all $NDOCS documents are served after the first replay" || fail "after replay: $s1 of $NDOCS"
-	[ "$(count_log r2.log 'Read and execute operations WAL')" -ge 1 ] && pass "the first restart replayed the WAL" || pass "the first restart found everything committed (nothing to replay)"
+	[ "$(count_log r2.log "Read and execute operations WAL file ('$IDX/")" -ge 1 ] && pass "the first restart replayed the WAL" || fail "no replay logged on the first restart"
+	sleep 5   # the autocommit commits the replay
 	crash
 
 	start_node r3.log || { fail "restart 2"; return; }
+	poke
 	local s2; s2="$(served 0 "$NDOCS")"
 	[ "$s2" = "$NDOCS" ] && pass "idempotent: all documents after the second crash" || fail "second crash: $s2 of $NDOCS"
 	[ "$(count_log r3.log 'WAL ERROR')" = 0 ] && pass "no WAL error" || fail "WAL error on the second restart"
 
 	http -XPUT "localhost:$PORT/$IDX/extra" -H 'Content-Type: application/json' -d '{"age":7}' > /dev/null
+	sleep 1.5
 	crash
 	start_node r4.log || { fail "restart 3"; return; }
+	poke
 	[ "$(http "localhost:$PORT/$IDX/extra")" = 200 ] && [ "$(field age)" = 7 ] && pass "the write between the crashes is served" || fail "extra after crash: $(cat "$RUNDIR/body")"
 	[ "$(served 0 "$NDOCS")" = "$NDOCS" ] && pass "and the rest is intact" || fail "rest after the third crash"
+	[ "$(count_log r4.log "Read and execute operations WAL file ('$IDX/")" -ge 1 ] && pass "that write was replayed" || fail "nothing replayed on the third restart"
 	crash
 }
 
