@@ -6,7 +6,7 @@
   `strata/docs/reviews/fields-and-keys-design.md` (approve with conditions, re-check closed FK-R1 to FK-R6).
 - Branch / worktree: `phase7a/seam-fields` at `~/code/Kronuz/Xapiand-wt/seam-fields`, from Xapiand master `5d7f3263d`;
   local only, not pushed, no CI run. Baseline (master) build for the comparisons: `Xapiand-wt/seam-fields-base`.
-- State: ready for review (code review; no format, wire or durability change, so no architect or security review).
+- State: code review done (approve with conditions, `docs/reviews/seam-fields-code.md`); CR1 and CR3 fixed, CR2/CR4/CR5/CR6 recorded for SF; merged with S2; merged to master (local, not pushed).
 - Done criteria (from the lead's task; evidence in Last verified):
   - [x] X1 `engine::Document` and the query nodes carry a field; the Xapian engine joins (field, term) into today's term.
   - [x] X2 Every site of D12's counts migrated; `git grep 'prefixed('` is empty (the document key and logs use `flat_term`).
@@ -31,7 +31,18 @@
 - Next: code review; then the S2 to S4 branches rebase onto this (their `add_term`, `Query::term`, `term_key_prefix` sites are
   SF's); SF resolves fields to ids and deletes `interim_terms.h`.
 - Blocked on: nothing.
-- Findings folded in: none yet.
+- Findings folded in: CR1 (merge with S2: `search.cc` joins `interim::flat_term(field, str)`, match-all is an empty field and term;
+  strata has no edit distance or wildcard, so no prefix length to adjust; `test_fields` in `test_engine_search_strata`), CR3 (debug
+  assert in `Document::at`, `test_foreign_ref_asserts`). CR2, CR4, CR5, CR6 recorded below.
+- For SF (from the code review `docs/reviews/seam-fields-code.md`; none needs another review):
+  1. CR2: the stem field is found by a leading `Z` in two copies (`xapian/text.cc`, `generate_terms.cc`); the `analysis`
+     change that reports the stem flag removes both. Do not add a third copy.
+  2. CR4: `Field::kind` and its widening have no consumer on either engine; Schema's choices (`schema.cc`: positions mean
+     `text`, `bool_term` means `boolean`, else `terms`; accuracy and geo terms default to `terms`) are unverified against D12.
+     SF adds the consumer and a test that fails on a wrong kind.
+  3. CR5: `set_key(key)` keeps the host building the key term (open item 2): a design amendment for SF's shard key path.
+  4. CR6: `index_partial_paths` (`schema.cc`) declares the whole partial-path term as a field name with an empty term; on
+     strata after SF that is one field per path, so check their types then.
 - Open for the reviewer and SF (decisions I did not take):
   1. `DocView::terms(prefix, sink)` (aggregations `metrics.cc`) and `term_details` still hand out whole Xapian terms.
   2. Shard key operations take the opaque key string (`flat_term`), not (field, key); `Document::set_key(key)` is unchanged and
@@ -69,6 +80,19 @@
   7. No decoder or parser added or changed (the log format is untouched), so no new fuzz target; `fuzz_strata_document` does not
      use the changed calls.
   8. Not run: CI (nothing pushed); TSan (no new shared state: a `Document` is built by one thread); the cluster harnesses.
+
+- Round after the review (2026-10-28, Apple clang, own build dirs and `_deps`, removed after):
+  1. Merged master (S2 and the copyright commit) into the branch; S2's strata search tests moved to the (field, term) API.
+  2. ASan+UBSan, RelWithDebInfo: `engine_fields` 1237, `document`, `query`, `search`, `strata`, `shard`, `read`, `error`, `replay`,
+     `generate_terms` pass; `engine_search_strata` 153600 checks pass with `NO_XAPIAN_COMPARE=1` and `ulimit -s 65532` (S2's
+     recipe: Xapian's own matcher use-after-frees under ASan; the model's recursion over the 20000-link chains needs the stack
+     under Apple clang). 0 ASan reports; UBSan only rapidjson's zero-offset lines in `wal_replay` and `sort`. Debug ASan:
+     `engine_fields` 1242 (the assert test is live only there), `document`, `query`, `strata`, `search_strata` pass;
+     `engine_search` aborts inside Xapian's Debug matcher (S2 records the same family).
+  3. CR1 revert (master's `search.cc`): `test_fields` fails 7 checks; mutant (match-all ignores the field): 2 fail.
+     CR3 revert (assert removed): `test_foreign_ref_asserts` fails 4 checks.
+  4. Docs E2E on the Xapian engine (Release, newman 6.2.3): 576 of 576, 339 requests, e2e_assert GREEN.
+  Not run: `harness/seam_check.sh`, `fields_identity.py`, census (unchanged by this round except `search.cc`, a strata-only file).
 
 ## Log
 - 2026-10-28: branch created from master `5d7f3263d`; seam, Xapian and strata natives, callers and tests edited;
