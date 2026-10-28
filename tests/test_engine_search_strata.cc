@@ -737,25 +737,19 @@ void test_refusals() {
 	};
 	const auto syntax = engine::errc::syntax;
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
-	SlotKey key;
-	NoSpy spy;
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }), syntax);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.spy = &spy; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.percent_threshold = 50; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.weight_threshold = 0.1; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.nearest = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.fuzzy = engine::Similar{}; }), syntax);
-	CHECK_EQ(kind(Query::combine(Op::XOR, t("w1"), t("w2"))), syntax);
-	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), t("w2")})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::MAX, {t("w1"), t("w2")})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), t("w2")}, 1)), syntax);
+	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
+	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}, 1)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::wildcard("w", 10)), syntax);
+	CHECK_EQ(kind(Query::wildcard("w", 10, engine::Expansion::error, 0, Op::AND)), syntax);
 	CHECK_EQ(kind(Query::text("w1 w2", engine::TextConfig{})), syntax);
 	// Refused even where a short-circuit would never reach the node.
-	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::wildcard("w", 10))), syntax);
+	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::text("w1", engine::TextConfig{}))), syntax);
 	// A search over the two engines is refused, and a query nested too deeply.
 	{
 		auto prepared = engine::prepare(t("w1"));

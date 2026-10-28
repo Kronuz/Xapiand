@@ -40,6 +40,7 @@
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for StrataDocument
 #include "engine/strata/pin.h"    // for Pinned
+#include "engine/strata/doc_view.h"  // for SegmentDocView, OwnedDocView
 #include "engine/strata/values.h"  // for the value columns
 
 
@@ -267,17 +268,18 @@ acquire(const std::string& path, bool create_missing, bool& created)
 	return std::make_unique<Handle>(std::move(entry), entry->core.get());
 }
 
-// A document as the index has it by id: its version and, when asked, its stored record.
+// A document as the index has it by id: its version and where it is.
 struct Located {
 	docid did = 0;
 	rev version = 0;
-	std::string stored;
+	const prospect::segment* seg = nullptr;
+	prospect::ordinal_t ord = 0;
 };
 
 // The live document with this id, or none. Reads what the index has flushed, so a buffer with
 // writes is flushed first.
 std::optional<Located>
-locate(Core& core, docid did, bool want_stored)
+locate(Core& core, docid did)
 {
 	if (did == 0 || did > core.index->last_docid()) {
 		return std::nullopt;
@@ -294,9 +296,8 @@ locate(Core& core, docid did, bool want_stored)
 		Located found;
 		found.did = did;
 		found.version = seg->get<::strata::keys_plugin>().version(*ord);
-		if (want_stored) {
-			found.stored = seg->get<::strata::stored_plugin>().stored(*ord);
-		}
+		found.seg = seg;
+		found.ord = *ord;
 		return found;
 	}
 	return std::nullopt;
@@ -407,33 +408,6 @@ require_writable(bool writable)
 	}
 }
 
-class StrataDocView final : public DocView {
-public:
-	StrataDocView(docid did, rev version, std::string data) : did_(did), version_(version), data_(std::move(data)) { }
-
-	docid did() const override { return did_; }
-	std::string data() const override { return data_; }
-	rev version() const override { return version_; }
-
-	// TODO(P1): values come from the values plugin's columns once prospect has it.
-	std::string value(valueno) const override { return {}; }
-	void values(const ValueSink&) const override { }
-
-	// TODO(P2): term lists. Until prospect has them a document's terms cannot be read back.
-	void terms(std::string_view, const TermSink&) const override { unavailable(); }
-	void term_details(const TermDetailSink&) const override { unavailable(); }
-	std::string serialise() const override { unavailable(); }
-
-private:
-	[[noreturn]] static void unavailable() {
-		throw Error(errc::not_available, "The strata engine does not keep term lists yet");
-	}
-
-	docid did_;
-	rev version_;
-	std::string data_;
-};
-
 }  // namespace
 
 
@@ -489,10 +463,10 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 					throw Error(errc::invalid, "The key belongs to another document");
 				}
 				stored = static_cast<rev>(found->second);
-			} else if (const auto located = locate(core, did, false)) {
+			} else if (const auto located = locate(core, did)) {
 				stored = located->version;
 			}
-		} else if (const auto located = locate(core, did, false)) {
+		} else if (const auto located = locate(core, did)) {
 			stored = located->version;
 		}
 		check_version(args.expected_version, stored);
@@ -564,7 +538,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		const auto located = locate(core, did, false);
+		const auto located = locate(core, did);
 		if (!located) {
 			throw Error(errc::doc_not_found, "Document not found");
 		}
@@ -806,11 +780,11 @@ Shard::get(docid did)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		auto found = locate(core, did, true);
+		const auto found = locate(core, did);
 		if (!found) {
 			throw Error(errc::doc_not_found, "Document not found");
 		}
-		co_return std::make_unique<StrataDocView>(found->did, found->version, std::move(found->stored));
+		co_return std::make_unique<OwnedDocView>(SegmentDocView(found->did, *found->seg, found->ord));
 	} catch (...) {
 		rethrow_translated();
 	}
@@ -827,8 +801,8 @@ Shard::scan(docid from, const ScanSink& sink)
 		core.refresh();
 		struct Hit {
 			docid did;
-			rev version;
-			std::string stored;
+			const prospect::segment* seg;
+			prospect::ordinal_t ord;
 		};
 		std::vector<Hit> hits;
 		const auto segments = core.index->segments();
@@ -840,12 +814,12 @@ Shard::scan(docid from, const ScanSink& sink)
 				if (did < from || !view.live(ord)) {
 					continue;
 				}
-				hits.push_back({static_cast<docid>(did), seg->get<::strata::keys_plugin>().version(ord), seg->get<::strata::stored_plugin>().stored(ord)});
+				hits.push_back({static_cast<docid>(did), seg, ord});
 			}
 		}
 		std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) { return a.did < b.did; });
 		for (auto& hit : hits) {
-			StrataDocView view(hit.did, hit.version, std::move(hit.stored));
+			const OwnedDocView view(SegmentDocView(hit.did, *hit.seg, hit.ord));
 			sink(view);
 		}
 		co_return;

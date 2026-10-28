@@ -34,6 +34,7 @@
 #include <stdexcept>               // for std::invalid_argument, std::exception
 #include <string>                  // for std::string
 #include <system_error>            // for std::system_error
+#include <unordered_map>           // for std::unordered_map
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
@@ -42,8 +43,11 @@
 #include "prospect/searcher.hh"    // for prospect::term_table, live_scorer
 
 #include "engine/error.h"          // for Error, errc
+#include "engine/strata/doc_view.h"  // for SegmentDocView
+#include "engine/strata/expand.h"  // for expand
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
+#include "engine/strata/values.h"  // for values::Slot
 
 
 namespace engine::strata {
@@ -120,6 +124,31 @@ private:
 };
 
 
+bool
+is_term(const Query& query)
+{
+	const auto* leaf = query.node();
+	return leaf != nullptr && leaf->kind == QueryKind::term && !leaf->str.empty();
+}
+
+// Whether the operator joins two scorers (the rest take a list of terms).
+bool
+is_joining(Op op)
+{
+	switch (op) {
+		case Op::AND:
+		case Op::OR:
+		case Op::AND_NOT:
+		case Op::AND_MAYBE:
+		case Op::FILTER:
+		case Op::XOR:
+		case Op::MAX:
+			return true;
+		default:
+			return false;
+	}
+}
+
 // Refuses, before any segment is read, what the engine does not search yet, so the answer does not
 // depend on which segments a short-circuited operator reaches.
 void
@@ -137,17 +166,10 @@ validate(const Query& query, int depth)
 			return;
 		case QueryKind::combine:
 			switch (node->op) {
-				case Op::AND:
-				case Op::OR:
-				case Op::AND_NOT:
-				case Op::AND_MAYBE:
-				case Op::FILTER:
-					break;
 				case Op::PHRASE:
 				case Op::NEAR: {
 					for (const auto& sub : node->subqueries) {
-						const auto* leaf = sub.node();
-						if (leaf == nullptr || leaf->kind != QueryKind::term || leaf->str.empty()) {
+						if (!is_term(sub)) {
 							unsupported(std::string(to_string(node->op)) + " of anything but terms");
 						}
 					}
@@ -157,8 +179,18 @@ validate(const Query& query, int depth)
 					}
 					return;
 				}
+				case Op::SYNONYM:
+				case Op::ELITE_SET:
+					for (const auto& sub : node->subqueries) {
+						if (!is_term(sub)) {
+							unsupported(std::string(to_string(node->op)) + " of anything but terms");
+						}
+					}
+					return;
 				default:
-					unsupported(std::string("the ") + to_string(node->op) + " operator");
+					if (!is_joining(node->op)) {
+						unsupported(std::string("the ") + to_string(node->op) + " operator");
+					}
 			}
 			for (const auto& sub : node->subqueries) {
 				validate(sub, depth + 1);
@@ -168,15 +200,8 @@ validate(const Query& query, int depth)
 			// A chain of appends is walked along its spine, so its length costs no stack.
 			const Query* spine = &query;
 			while (spine->node() != nullptr && spine->node()->kind == QueryKind::append) {
-				switch (spine->node()->op) {
-					case Op::AND:
-					case Op::OR:
-					case Op::AND_NOT:
-					case Op::AND_MAYBE:
-					case Op::FILTER:
-						break;
-					default:
-						unsupported(std::string("the ") + to_string(spine->node()->op) + " operator");
+				if (!is_joining(spine->node()->op)) {
+					unsupported(std::string("the ") + to_string(spine->node()->op) + " operator");
 				}
 				validate(spine->node()->subqueries[1], depth + 1);
 				spine = &spine->node()->subqueries[0];
@@ -188,22 +213,52 @@ validate(const Query& query, int depth)
 			validate(node->subqueries[0], depth + 1);
 			return;
 		case QueryKind::wildcard:
-			unsupported("wildcards");
 		case QueryKind::edit_distance:
-			unsupported("edit distances");
+			switch (node->op) {
+				case Op::SYNONYM:
+				case Op::OR:
+				case Op::MAX:
+					return;
+				default:
+					unsupported(std::string("expansions combined by ") + to_string(node->op));
+			}
 		case QueryKind::source:
-			unsupported("posting sources");
+			if (node->src == nullptr) {
+				throw Error(errc::invalid, "A source node has no source");
+			}
+			return;
 		case QueryKind::text:
 			unsupported("query text");
 	}
 }
 
 
+// The terms that act as one operator: a SYNONYM or an ELITE_SET node's, or the terms a wildcard or
+// edit-distance node expands to.
+struct Group {
+	struct Member {
+		std::string term;
+		termcount wqf;
+	};
+	std::vector<Member> members;
+	std::optional<p::weight> synonym;   // the weight of the union, for a SYNONYM combiner
+};
+
+// What a search works out once over the whole index and every segment then shares, so a document
+// weighs the same in all of them: the groups of its nodes.
+struct Plan {
+	std::span<const p::segment_snapshot> segments;
+	p::term_table& terms;
+	std::string_view key_prefix;
+	std::unordered_map<const QueryNode*, Group> groups;
+};
+
 // What building a query for one segment reads: the segment, and the term table and statistics of
 // the snapshot that spans every segment of every shard, so a weight is the same in all of them.
 struct Builder {
 	const p::segment_snapshot& snap;
 	p::term_table& terms;
+	Plan& plan;
 
 	const p::inverted_plugin::reader& reader() const { return snap.seg->get<p::inverted_plugin>(); }
 
@@ -212,7 +267,86 @@ struct Builder {
 	}
 };
 
+// The combiner of a group node: how its terms join.
+Op
+combiner_of(const QueryNode& node)
+{
+	if (node.kind == QueryKind::combine) {
+		return node.op == Op::SYNONYM ? Op::SYNONYM : Op::OR;
+	}
+	return node.op;
+}
+
+// The group of a SYNONYM, ELITE_SET, wildcard or edit-distance node, worked out on first use.
+const Group&
+group_of(const QueryNode& node, const Builder& b)
+{
+	auto& groups = b.plan.groups;
+	if (const auto found = groups.find(&node); found != groups.end()) {
+		return found->second;
+	}
+	Group group;
+	if (node.kind == QueryKind::combine) {
+		for (const auto& sub : node.subqueries) {
+			const auto& leaf = *sub.node();
+			group.members.push_back({leaf.str, leaf.wqf});
+		}
+	} else {
+		for (auto& term : expand(node, b.plan.segments, b.terms, b.plan.key_prefix)) {
+			group.members.push_back({std::move(term), 1});
+		}
+	}
+	if (node.kind == QueryKind::combine && node.op == Op::ELITE_SET) {
+		// The heaviest terms of the whole index, by idf, in query order; equal weights keep the earlier term.
+		constexpr std::size_t default_size = 10;
+		const std::size_t size = node.parameter != 0 ? node.parameter : default_size;
+		std::vector<std::pair<double, std::size_t>> keyed;
+		for (std::size_t i = 0; i < group.members.size(); ++i) {
+			const auto& member = group.members[i];
+			if (b.terms.df(member.term) != 0) {
+				keyed.emplace_back(b.weight_of(member.term, member.wqf).idf, i);
+			}
+		}
+		std::stable_sort(keyed.begin(), keyed.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
+		if (keyed.size() > size) {
+			keyed.resize(size);
+		}
+		std::vector<std::size_t> kept;
+		for (const auto& entry : keyed) {
+			kept.push_back(entry.second);
+		}
+		std::sort(kept.begin(), kept.end());
+		std::vector<Group::Member> members;
+		for (const auto i : kept) {
+			members.push_back(std::move(group.members[i]));
+		}
+		group.members = std::move(members);
+	}
+	if (combiner_of(node) == Op::SYNONYM) {
+		std::vector<std::uint64_t> dfs;
+		for (const auto& member : group.members) {
+			dfs.push_back(b.terms.df(member.term));
+		}
+		const auto& stats = b.terms.stats();
+		group.synonym = p::weight::bm25_xapian(stats, dfs.empty() ? 0 : p::synonym_df(dfs, stats.doc_count), 1);
+	}
+	return groups.emplace(&node, std::move(group)).first->second;
+}
+
 using Scorer = p::scorer_ptr;
+
+// XOR or MAX of the scorers, which are not null.
+Scorer
+merge(Op op, std::vector<Scorer> children)
+{
+	if (children.size() == 1) {
+		return std::move(children[0]);
+	}
+	if (op == Op::XOR) {
+		return std::make_unique<p::xor_scorer>(std::move(children));
+	}
+	return std::make_unique<p::max_scorer>(std::move(children));
+}
 
 // op applied to two scorers, with a null scorer matching nothing.
 Scorer
@@ -252,12 +386,58 @@ join(Op op, Scorer left, Scorer right)
 				return nullptr;
 			}
 			return join(Op::AND, std::move(left), std::make_unique<p::scale_scorer>(std::move(right), 0.0));
+		case Op::XOR:
+		case Op::MAX: {
+			if (!left || !right) {
+				return left ? std::move(left) : std::move(right);
+			}
+			std::vector<Scorer> children;
+			children.push_back(std::move(left));
+			children.push_back(std::move(right));
+			return merge(op, std::move(children));
+		}
 		default:
 			throw Error(errc::internal, "A strata search met an operator it does not run");
 	}
 }
 
 Scorer build(const Query& query, const Builder& b, int depth);
+
+// The scorer of a group node in one segment: its terms joined by the node's combiner.
+Scorer
+build_group(const QueryNode& node, const Builder& b)
+{
+	const auto& group = group_of(node, b);
+	const Op combiner = combiner_of(node);
+	if (combiner == Op::SYNONYM) {
+		std::vector<p::format::term_info> infos;
+		for (const auto& member : group.members) {
+			if (const auto* info = b.terms.info(*b.snap.seg, member.term)) {
+				infos.push_back(*info);
+			}
+		}
+		if (infos.empty()) {
+			return nullptr;
+		}
+		return std::make_unique<p::synonym_scorer>(b.reader(), infos, *group.synonym);
+	}
+	std::vector<Scorer> children;
+	for (const auto& member : group.members) {
+		if (const auto* info = b.terms.info(*b.snap.seg, member.term)) {
+			children.push_back(std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(member.term, member.wqf)));
+		}
+	}
+	if (children.empty()) {
+		return nullptr;
+	}
+	if (children.size() == 1) {
+		return std::move(children[0]);
+	}
+	if (combiner == Op::MAX) {
+		return std::make_unique<p::max_scorer>(std::move(children));
+	}
+	return std::make_unique<p::disjunction_scorer>(std::move(children));
+}
 
 Scorer
 build_positional(const QueryNode& node, const Builder& b)
@@ -308,6 +488,9 @@ build(const Query& query, const Builder& b, int depth)
 			if (node->op == Op::PHRASE || node->op == Op::NEAR) {
 				return build_positional(*node, b);
 			}
+			if (node->op == Op::SYNONYM || node->op == Op::ELITE_SET) {
+				return build_group(*node, b);
+			}
 			// AND_NOT, AND_MAYBE and FILTER take the first subquery against all the others.
 			Scorer result;
 			bool first = true;
@@ -317,11 +500,23 @@ build(const Query& query, const Builder& b, int depth)
 				if (first) {
 					result = std::move(scorer);
 					first = false;
-				} else if (node->op == Op::AND || node->op == Op::OR) {
+				} else if (node->op == Op::AND || node->op == Op::OR || node->op == Op::XOR || node->op == Op::MAX) {
 					rest.push_back(std::move(scorer));
 				} else {
 					result = join(node->op, std::move(result), std::move(scorer));
 				}
+			}
+			if (node->op == Op::XOR || node->op == Op::MAX) {
+				std::vector<Scorer> children;
+				if (result) {
+					children.push_back(std::move(result));
+				}
+				for (auto& scorer : rest) {
+					if (scorer) {
+						children.push_back(std::move(scorer));
+					}
+				}
+				return children.empty() ? nullptr : merge(node->op, std::move(children));
 			}
 			if (node->op == Op::AND || node->op == Op::OR) {
 				std::vector<Scorer> children;
@@ -372,28 +567,54 @@ build(const Query& query, const Builder& b, int depth)
 			}
 			return std::make_unique<p::scale_scorer>(std::move(child), node->factor);
 		}
+		case QueryKind::wildcard:
+		case QueryKind::edit_distance:
+			return build_group(*node, b);
+		case QueryKind::source: {
+			const auto* column = values::Reader(*b.snap.seg).column(node->src->slot());
+			if (column == nullptr) {
+				return nullptr;
+			}
+			return std::make_unique<p::source_scorer<values::Slot, PostingSource>>(values::Slot(*column), *node->src);
+		}
 		default:
 			throw Error(errc::internal, "A strata search met a node it does not run");
 	}
 }
 
 
-// A hit on its way to the result: its weight and its id across the shards.
+// A hit on its way to the result: its weight, its id across the shards and, when the request has a
+// sorter, its key.
 struct Candidate {
 	double weight;
 	std::uint64_t id;
+	std::string key;
 };
 
-// Whether a ranks before b: heavier first, then by id in the requested order.
+// Whether a ranks before b: by key when there are keys (ascending, bytewise), then heavier first,
+// then by id in the requested order.
 struct Ranks {
 	bool descending;
+	bool keyed;
 	bool operator()(const Candidate& a, const Candidate& b) const noexcept {
+		if (keyed && a.key != b.key) {
+			return a.key < b.key;
+		}
 		if (a.weight != b.weight) {
 			return a.weight > b.weight;
 		}
 		return descending ? a.id > b.id : a.id < b.id;
 	}
 };
+
+docid
+to_docid(std::uint64_t id)
+{
+	if (id > std::numeric_limits<docid>::max()) {
+		throw Error(errc::internal, "A document id does not fit across the shards");
+	}
+	return static_cast<docid>(id);
+}
 
 
 SearchResult
@@ -403,14 +624,8 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	if (shards.empty() || request.query->empty()) {
 		return {};
 	}
-	if (request.sorter != nullptr) {
-		unsupported("sorted results");
-	}
 	if (request.collapse_key != BAD_VALUENO) {
 		unsupported("collapsed results");
-	}
-	if (request.spy != nullptr) {
-		unsupported("aggregations");
 	}
 	if (request.fuzzy || request.nearest) {
 		unsupported("similar documents");
@@ -458,18 +673,23 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		}
 	}
 	p::term_table terms(segments, pins.front().key_prefix_);
+	Plan plan{segments, terms, pins.front().key_prefix_, {}};
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	const std::size_t keep = static_cast<std::size_t>(std::min<std::uint64_t>(window, std::numeric_limits<doccount>::max()));
-	const Ranks ranks{request.order == DocidOrder::descending};
+	const Ranks ranks{request.order == DocidOrder::descending, request.sorter != nullptr};
 	const std::uint64_t n = mine.size();
 	std::vector<Candidate> best;
 	best.reserve(std::min<std::size_t>(keep, 1024));
 	std::uint64_t matches = 0;
+	double heaviest = 0;   // the greatest weight of any match, when every match is visited
+	// A spy sees every match and a key maker keys every one, so those searches visit them all; the
+	// others count first and then stop as soon as no later document can enter the window.
+	const bool exhaustive = request.sorter != nullptr || request.spy != nullptr;
 
 	for (std::size_t s = 0; s < segments.size(); ++s) {
 		const auto& snap = segments[s];
-		const Builder builder{snap, terms};
+		const Builder builder{snap, terms, plan};
 		const auto live = [&](Scorer scorer) -> Scorer {
 			if (scorer && snap.any_deleted()) {
 				return std::make_unique<p::live_scorer>(std::move(scorer), *snap.deleted);
@@ -477,37 +697,55 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 			return scorer;
 		};
 
-		auto counting = live(build(source, builder, 0));
-		if (!counting) {
-			continue;
-		}
-		matches += p::count(*counting);
-		if (keep == 0) {
-			continue;
+		if (!exhaustive) {
+			auto counting = live(build(source, builder, 0));
+			if (!counting) {
+				continue;
+			}
+			matches += p::count(*counting);
+			if (keep == 0) {
+				continue;
+			}
 		}
 
 		auto scorer = live(build(source, builder, 0));
+		if (!scorer) {
+			continue;
+		}
 		const auto& core = snap.seg->core();
 		const auto prune = [&] {
-			if (best.size() == keep && best.front().weight > 0) {
+			if (!exhaustive && best.size() == keep && best.front().weight > 0) {
 				scorer->set_min_competitive_score(std::nextafter(best.front().weight, 0.0));
 			}
 		};
 		prune();
 		for (auto ord = scorer->next(); ord != p::no_more_docs; ord = scorer->next()) {
 			const double weight = scorer->score();
-			if (best.size() == keep && weight < best.front().weight) {
+			const std::uint64_t id = (core.docid(ord) - 1) * n + shard_of[s] + 1;
+			Candidate candidate{weight, id, {}};
+			if (exhaustive) {
+				++matches;
+				heaviest = std::max(heaviest, weight);
+				const SegmentDocView view(to_docid(id), *snap.seg, ord);
+				if (request.spy != nullptr) {
+					request.spy->see(view, weight);
+				}
+				if (keep == 0) {
+					continue;
+				}
+				if (request.sorter != nullptr) {
+					candidate.key = request.sorter->key(view);
+				}
+			} else if (best.size() == keep && weight < best.front().weight) {
 				continue;
 			}
-			const std::uint64_t id = (core.docid(ord) - 1) * n + shard_of[s] + 1;
-			const Candidate candidate{weight, id};
 			if (best.size() < keep) {
-				best.push_back(candidate);
+				best.push_back(std::move(candidate));
 				std::push_heap(best.begin(), best.end(), ranks);
 				prune();
 			} else if (ranks(candidate, best.front())) {
 				std::pop_heap(best.begin(), best.end(), ranks);
-				best.back() = candidate;
+				best.back() = std::move(candidate);
 				std::push_heap(best.begin(), best.end(), ranks);
 				prune();
 			}
@@ -517,13 +755,10 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	std::sort_heap(best.begin(), best.end(), ranks);
 	SearchResult result;
 	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(matches, std::numeric_limits<doccount>::max()));
-	const double top = best.empty() ? 0.0 : best.front().weight;
+	const double top = exhaustive ? heaviest : (best.empty() ? 0.0 : best.front().weight);
 	for (std::size_t i = request.first; i < best.size(); ++i) {
-		if (best[i].id > std::numeric_limits<docid>::max()) {
-			throw Error(errc::internal, "A document id does not fit across the shards");
-		}
 		Hit hit;
-		hit.did = static_cast<docid>(best[i].id);
+		hit.did = to_docid(best[i].id);
 		hit.weight = best[i].weight;
 		hit.rank = static_cast<doccount>(i);
 		hit.percent = top > 0 ? static_cast<int>(best[i].weight / top * 100.0 + 0.5) : 100;

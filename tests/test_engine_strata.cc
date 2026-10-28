@@ -322,17 +322,45 @@ void strata_only() {
 	std::filesystem::remove_all(path);
 }
 
-// Values are the seam's opaque bytes, held by the document until prospect's values plugin (P1) stores
-// them. This pins the gap: when P1 lands the shard returns them and this check flips.
-void values_gap() {
+// Values are the seam's opaque bytes, stored in the values plugin's columns: a document reads them back
+// by slot and in slot order, an empty value is no value, the write buffer is flushed first, and a
+// replacement drops the old ones.
+void values_stored() {
 	const auto path = scratch("values", Kind::strata);
 	auto opened = open_shard(Kind::strata, path);
 	engine::WriteArgs plain;
 	auto doc = make(Kind::strata, "Qv", "d");
 	doc.add_value(9, "nine");
-	CHECK_EQ(doc.get_value(9), "nine");  // the document holds it
+	doc.add_value(2, std::string("t\0wo", 4));
+	doc.add_value(5, "");
+	CHECK_EQ(doc.get_value(9), "nine");
 	engine::sync_wait(opened.shard->add(doc, plain));
-	CHECK_EQ(engine::sync_wait(opened.shard->get(1))->value(9), "");  // TODO(P1): "nine"
+	auto view = engine::sync_wait(opened.shard->get(1));
+	CHECK_EQ(view->value(9), "nine");
+	CHECK_EQ(view->value(2), std::string("t\0wo", 4));
+	CHECK_EQ(view->value(5), "");
+	CHECK_EQ(view->value(7), "");
+	std::vector<std::pair<engine::valueno, std::string>> seen;
+	view->values([&](engine::valueno slot, std::string_view bytes) { seen.emplace_back(slot, std::string(bytes)); });
+	CHECK_EQ(seen.size(), 2u);
+	CHECK_EQ(seen[0].first, 2u);
+	CHECK_EQ(seen[1].first, 9u);
+
+	// A replacement carries its own values only.
+	auto again = make(Kind::strata, "Qv", "e");
+	again.add_value(3, "three");
+	engine::sync_wait(opened.shard->replace_by_key("Qv", again, plain));
+	engine::sync_wait(opened.shard->commit(engine::Transaction::none));
+	auto replaced = engine::sync_wait(opened.shard->find_key("Qv"));
+	view = engine::sync_wait(opened.shard->get(replaced));
+	CHECK_EQ(view->value(3), "three");
+	CHECK_EQ(view->value(9), "");
+	CHECK_EQ(view->data(), "e");
+
+	// The reserved slot is refused.
+	auto reserved = make(Kind::strata, "Qr", "r");
+	reserved.add_value(0xffffffffu, "x");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(opened.shard->add(reserved, plain)); }) == engine::errc::invalid);
 	opened.shard.reset();
 	std::filesystem::remove_all(path);
 }
@@ -402,7 +430,7 @@ static void test_shared_strata() { guarded("shared strata", [] { shared(Kind::st
 static void test_replay_xapian() { guarded("replay xapian", [] { replay(Kind::xapian); }); }
 static void test_replay_strata() { guarded("replay strata", [] { replay(Kind::strata); }); }
 static void test_strata_only() { guarded("strata only", [] { strata_only(); }); }
-static void test_values_gap() { guarded("values gap", [] { values_gap(); }); }
+static void test_values_stored() { guarded("values stored", [] { values_stored(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_stored, test_codec)
