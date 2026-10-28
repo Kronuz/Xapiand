@@ -46,9 +46,12 @@ A/B build). Mechanism note: `docs/mechanisms/text-queries.md`.
      `_near`, `-barack`, `michelle` answer 200 with the right hits. No AddressSanitizer report. UBSan
      reports only null-offset arithmetic in lz4.c and rapidjson stack.h (third party, not the text path).
    - Fuzz of the lowering: 60 s + 2 x 120 s (seeds 1, 2, 3), 1.7M texts, no violation.
-   - Fuzz finding (oracle, not the lowering): Xapian builds some all-`*`/`?` wildcards (`*?`, `**`) as
-     match-all and keeps others (`??`, `*??`); the oracle now reads all of them as match-all on both sides.
-     Open for the strata engine: it must pick the same match-all patterns or not (lead).
+   - Fuzz finding, ruled by the lead: an all-`*`/`?` pattern is match-all iff it has a `*` and at most one `?`
+     (`**`, `*?`, `?*`); `??`, `*??` filter by length. `leaf()` in `src/engine/text.cc` now lowers the
+     match-all shapes to `Query::match_all()` on the host, so both engines get the same engine query (the
+     strata engine has no wildcard lowering yet). A pattern behind a field prefix is never match-all. A lone
+     `*` or `?` parses to no words. `test_all_wildcard_patterns`; its mutants (`<= 2`, `<= 0`, no `*`
+     needed) each fail 2 checks. Fuzz after: 120 s seed 4, 835k texts, no violation.
    - Mutants of `src/engine/text.cc` (failing checks): window lost 318; operands swapped 2790; unsupported
      not a client error: abort (uncaught bad_alloc); single `?` flag lost 2 (was surviving; new
      `test_wildcard_pattern_flags`); unsafe format string: abort (format_error).
@@ -56,7 +59,7 @@ A/B build). Mechanism note: `docs/mechanisms/text-queries.md`.
 
 ## Next
 
-Nothing on S4 but the lead's decisions: `cjk_words` segmenter (decision 2) and the all-wildcard patterns.
+Open for the lead: the `cjk_words` segmenter (decision 2).
 
 ## Blocked on
 
