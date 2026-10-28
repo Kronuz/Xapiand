@@ -9725,6 +9725,10 @@ Schema::get_slot_field(std::string_view field_name) const
 		}
 	}
 
+	if (const auto index_it = properties.find(RESERVED_INDEX); index_it != it_e && index_it.value().is_string()) {
+		res.field_values = toUType(_get_index(index_it.value().str_view()) & TypeIndex::FIELD_VALUES) != 0u;
+	}
+
 	// Get required specification.
 	switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::geo: {

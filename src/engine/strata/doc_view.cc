@@ -32,12 +32,11 @@ namespace engine::strata {
 
 namespace {
 
-// The term lists are P2's (prospect phase4/term-lists); until the strata engine reads them a
-// document's terms cannot be read back.
+// The strata engine keeps no term lists (the owner's ruling R-P2): buckets come from stored values.
 [[noreturn]] void
 no_term_lists()
 {
-	throw Error(errc::not_available, "The strata engine does not keep term lists yet");
+	throw Error(errc::syntax, "The strata engine keeps no term lists; a document's terms are not offered (count a keyword field's stored values instead)");
 }
 
 }  // namespace

@@ -38,7 +38,9 @@ def documents():
     out = []
     for i in range(DOCS):
         out.append({"_id": "doc%d" % i, "n": i, "balance": round(r.uniform(-500, 6000), 2), "age": r.randint(18, 90),
-                    "state": r.choice(states), "word": r.choice(words), "tags": r.sample(words, 2)})
+                    "state": r.choice(states), "word": r.choice(words), "tags": r.sample(words, 2),
+                    "note": "%s and %s" % (r.choice(words), r.choice(words)), "mixed": r.choice(["Red", "red", "RED", "Blue"]),
+                    "flag": r.random() < 0.3})
     return out
 
 
@@ -51,6 +53,12 @@ def queries():
             "_std": {"_std_deviation": {"_field": "age"}},
             "by_state": {"_terms": {"_field": "state"}, "_aggs": {"avg": {"_avg": {"_field": "balance"}}}},
             "by_word": {"_values": {"_field": "word"}},
+            "terms_age": {"_terms": {"_field": "age"}}, "terms_balance": {"_terms": {"_field": "balance"}},
+            "terms_word": {"_terms": {"_field": "word"}}, "terms_tags": {"_terms": {"_field": "tags"}},
+            "terms_mixed": {"_terms": {"_field": "mixed"}}, "terms_flag": {"_terms": {"_field": "flag"}},
+            "terms_missing": {"_terms": {"_field": "nothing"}},
+            "terms_nested": {"_terms": {"_field": "state"}, "_aggs": {"words": {"_terms": {"_field": "word"}}}},
+            "terms_sorted": {"_terms": {"_field": "age", "_sort": {"_key": "asc"}, "_limit": 7}},
             "hist": {"_histogram": {"_field": "age", "_interval": 10}},
             "ranges": {"_range": {"_field": "balance", "_ranges": [{"_to": 0}, {"_from": 0, "_to": 3000}, {"_from": 3000}]}},
             "filtered": {"_filter": {"state": "TX"}, "_aggs": {"s": {"_sum": {"_field": "balance"}}}}}
@@ -88,9 +96,13 @@ def main():
                 except OSError:
                     time.sleep(0.5)
             schema = {"_schema": {"_type": "object", "balance": {"_type": "floating"}, "age": {"_type": "integer"}, "n": {"_type": "integer"},
-                                  "state": {"_type": "keyword"}, "word": {"_type": "keyword"}}}
+                                  "state": {"_type": "keyword"}, "word": {"_type": "keyword"}, "mixed": {"_type": "keyword"}, "tags": {"_type": "array/keyword"},
+                                  "note": {"_type": "text"}}}
             assert call(port, "PUT", "/cb/", json.dumps(schema))[0] in (200, 201, 204)
-            assert call(port, "RESTORE", "/cb/?commit", body, "application/x-ndjson")[0] in (200, 201, 204)
+            restored = call(port, "RESTORE", "/cb/?commit", body, "application/x-ndjson")
+            assert restored[0] in (200, 201, 204), restored
+            counted = json.loads(call(port, "SEARCH", "/cb/?volatile", json.dumps({"_query": "*", "_limit": 0, "_check_at_least": 1000}))[1])["total"]
+            assert counted == DOCS, "%s holds %s of %d documents" % (engine, counted, DOCS)
         bad = 0
         total = 0
         for name, query, ordered in queries():
@@ -109,10 +121,25 @@ def main():
                         doc["hits"] = sorted(doc["hits"], key=lambda h: h.get("_id", ""))
                 res[engine] = (status, doc)
             total += 1
+            if name.startswith("agg terms_") and "missing" not in name and name.endswith("/ all"):
+                buckets = res["strata"][1].get("aggregations", {}).get(name.split()[1], [])
+                if not buckets:
+                    bad += 1
+                    print("NO BUCKETS %s: %s" % (name, json.dumps(res["strata"][1])[:160]))
             if res["xapian"] != res["strata"]:
                 bad += 1
                 if bad <= 8:
                     print("DIFF %s: xapian %s %s | strata %s %s" % (name, res["xapian"][0], json.dumps(res["xapian"][1])[:160], res["strata"][0], json.dumps(res["strata"][1])[:160]))
+        # The strata engine keeps no term lists: `_terms` over analysed text and a document's `:info` are refused.
+        refused = call(BASE + 1, "SEARCH", "/cb/?volatile", json.dumps({"_query": "*", "_limit": 0, "_check_at_least": 1000, "_aggs": {"a": {"_terms": {"_field": "note"}}}}))
+        listed = call(BASE + 1, "SEARCH", "/cb/?volatile", json.dumps({"_query": "*", "_limit": 1}))[1]
+        first = json.loads(listed)["hits"][0]["_id"] if json.loads(listed).get("hits") else print("NO HITS", listed[:200]) or "doc1"
+        info = call(BASE + 1, "INFO", "/cb/" + first)
+        for what, (status, data) in (("_terms over text", refused), ("document :info", info)):
+            total += 1
+            if status != 400 or b"term lists" not in data:
+                bad += 1
+                print("NOT REFUSED %s: %s %s" % (what, status, data[:160]))
         print("searches %d, different %d" % (total, bad))
         sys.exit(1 if bad else 0)
     finally:

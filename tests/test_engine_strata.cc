@@ -374,10 +374,10 @@ void strata_only() {
 	// Spelling is not kept.
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add_spelling("word", 1)); }) == engine::errc::not_available);
 
-	// Term lists wait for prospect's term-list plugin (P2): reading a document's terms says so.
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->term_details([](const engine::TermDetail&) { }); }) == engine::errc::not_available);
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->terms("", [](std::string_view, engine::termcount) { }); }) == engine::errc::not_available);
-	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::not_available);
+	// The strata engine keeps no term lists (R-P2): reading a document's terms is a clear client error.
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->term_details([](const engine::TermDetail&) { }); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->terms("", [](std::string_view, engine::termcount) { }); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::syntax);
 
 	// Search is S2's: match-all finds every document.
 	{
