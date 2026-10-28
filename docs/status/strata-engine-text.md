@@ -180,6 +180,16 @@ deleted, so nothing expands. An alias as a map key is refused the same way.
   `xapiand_fuzz_body 40 7` no violation; docs E2E 576/576, 339 requests, none uncovered.
 - Changelog lines now say YAML depth is limited and aliases are refused.
 
+## Merge of master (X6 fields, S2, S3)
+
+Master's seam speaks (field, term), so `TextConfig.prefix` is `field` and `engine::parse_text` splits each term,
+wildcard and edit-distance pattern the parser leads with the field into (field, rest), as Xapian re-joins them
+(a pattern of only `*` and `?` is match-all only without a field). `QueryKind::text` is gone from
+`src/engine/strata/search.cc`; the master tests that used `Query::text` use `parse_text` or drop the refusal.
+Master's `test_engine_search_strata` chains (20000 appends, 5000 wide) now stay under the 4096-clause cap and its
+1200-deep tree is refused by the factory; `test_engine_error` expects 400 for an engine invalid argument and
+operation (5fd538f82). All 25 unit test binaries pass under ASan+UBSan (`.scratch/s4-yaml/rt.sh`), docs E2E 576/576.
+
 ## Next
 
 Route the findings above (wildcard cap, url_parser). Open for the lead: the `cjk_words` segmenter (decision 2).

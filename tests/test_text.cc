@@ -61,7 +61,7 @@ engine::TextConfig
 config(unsigned flags, Op op = Op::INVALID, const char* stop = "", const char* stem = "", Stem strategy = Stem::none)
 {
 	engine::TextConfig c;
-	c.prefix = "XTfield";
+	c.field = "XTfield";
 	c.default_op = op;
 	c.flags = flags;
 	c.stop_language = stop;
@@ -113,7 +113,7 @@ row_config(std::map<std::string, std::string>& r, engine::TextConfig& c)
 	c.stem = stem->second;
 	c.stop_language = r["stopper"] == "none" ? "" : r["stopper"];
 	c.stem_language = r["stem_lang"] == "none" ? "" : r["stem_lang"];
-	c.prefix = r["prefix"];
+	c.field = r["prefix"];
 	c.partial_max_expansion = static_cast<engine::termcount>(std::stoul(r["partial_max"]));
 	c.fuzzy_max_expansion = static_cast<engine::termcount>(std::stoul(r["fuzzy_max"]));
 	return true;
@@ -245,7 +245,7 @@ test_text_without_words_matches_nothing()
 	CHECK_FALSE(engine::parse_text("quick", config(base, Op::INVALID, "en")).empty());
 
 	// Stop words go from a group with other words and stay in a group of their own.
-	const auto stopped = engine::Query::term("XTfieldquick", 1, 2);
+	const auto stopped = engine::Query::term("", "XTfieldquick", 1, 2);
 	CHECK_EQ(described("the quick", config(base, Op::INVALID, "en")), to_xapian(stopped).get_description());
 	CHECK_FALSE(engine::parse_text("the and of", config(base, Op::INVALID, "en")).empty());
 }
@@ -321,7 +321,7 @@ test_all_wildcard_patterns()
 {
 	// Match-all only when the pattern matches every term: a '*' and at most one '?'. The others filter by length.
 	auto cfg = config(base | text::WILDCARD | text::WILDCARD_SINGLE | text::WILDCARD_MULTI);
-	cfg.prefix.clear();
+	cfg.field.clear();
 	for (const char* text : { "**", "*?", "?*" }) {
 		const auto query = engine::parse_text(text, cfg);
 		CHECK_TRUE(query.node() != nullptr && query.node()->kind == engine::QueryKind::term && query.node()->str.empty());

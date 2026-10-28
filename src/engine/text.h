@@ -56,7 +56,7 @@ enum class Stem : std::uint8_t {
 
 // How the text of one field is read.
 struct TextConfig {
-	std::string prefix;                     // the field's term prefix
+	std::string field;                      // the field the words belong to
 	Op default_op = Op::INVALID;            // joins words that have no operator; INVALID keeps the parser's default
 	unsigned flags = 0;                     // text:: flags
 	std::string stop_language;              // stop words language; empty for none

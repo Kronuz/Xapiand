@@ -21,11 +21,11 @@ field text + TextConfig --> queryparser::parse --> tree (node ids, no recursion)
                                               engine::Query --> to_xapian | strata
 ```
 
-`TextConfig` carries the field's prefix, the default operator, the `text::` flags, the stop-word and stemmer
+`TextConfig` carries the field, the default operator, the `text::` flags, the stop-word and stemmer
 languages, the stem strategy and the partial and fuzzy expansion limits. `parse_text` maps them onto
 `queryparser::config` (stop words from `getStopWords`, one `snowball::stemmer` per language and thread) and
 lowers the returned tree with an explicit stack: the call stack does not grow with the nesting of the text.
-Nodes become `Query::term`, `wildcard`, `edit_distance`, `scale` and `combine`; a binary AND, OR, AND_NOT, XOR
+Nodes become `Query::term` (the field's name and the rest of the term, split where the text leads with the field), `wildcard`, `edit_distance`, `scale` and `combine`; a binary AND, OR, AND_NOT, XOR
 or AND_MAYBE is built as a binary combine, the rest as a list with the window of NEAR, PHRASE and ELITE_SET.
 
 Errors: a syntax error, an operator that cannot take its operand (NEAR and PHRASE take terms only) and an

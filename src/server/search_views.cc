@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -2301,9 +2302,9 @@ expand_paths(Request& request)
 			} else {
 				auto query = engine::Query::combine(engine::Op::AND_NOT,
 					engine::Query::combine(engine::Op::OR,
-							engine::Query::wildcard(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR)),
-							engine::Query::term(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
-					engine::Query::wildcard(prefixed(index_path + "/.", DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))
+							engine::Query::wildcard(field_name(DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR), index_path),
+							engine::Query::term(field_name(DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR), std::string(stripped_index_path))),
+					engine::Query::wildcard(field_name(DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR), index_path + "/.")
 				);
 				mset = db_handler.get_mset(query, 0, 100);
 			}

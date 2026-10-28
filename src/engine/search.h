@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@
 #include <optional>                // for std::optional
 #include <span>                    // for std::span
 #include <string>                  // for std::string
+#include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
 #include "engine/callbacks.h"      // for KeyMaker, MatchSpy
@@ -44,10 +45,19 @@ namespace engine {
 // text, so a query that has no words is known to match nothing without a shard.
 class PreparedQuery {
 public:
+	explicit PreparedQuery(Query source) : source_(std::move(source)) { }
 	virtual ~PreparedQuery() = default;
 
 	virtual bool empty() const = 0;
 	virtual std::string description() const = 0;
+
+	// The query as it was given to prepare(), for the engines that read it themselves.
+	const Query& source() const noexcept {
+		return source_;
+	}
+
+private:
+	Query source_;
 };
 
 // Reads the query. Raises what the engine's query parser raises on text it cannot parse.
@@ -114,8 +124,10 @@ struct SearchResult {
 };
 
 // Searches the shards as one index. Hit ids are the documents' ids across the shards, interleaved
-// the way the shards number them. No shards, or an empty query, find nothing. The shards must be
-// of the engine that implements this, stay open and be used by this search only until it ends.
+// the way the shards number them: document d of shard i of n is (d - 1) * n + i + 1. No shards, or
+// an empty query, find nothing. The shards must all be of one engine, stay open and be used by this
+// search only until it ends. A query shape the strata engine does not search yet raises errc::syntax
+// (a client error, not retried); prepare() may reject a shape first, with errc::invalid or errc::internal.
 task::task<SearchResult> search(std::span<Shard* const> shards, const SearchRequest& request);
 
 }  // namespace engine

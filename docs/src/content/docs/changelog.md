@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Added
+- **`_sort` takes the order as a string**: `{"balance": "desc"}` and
+  `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
+
 ### Changed
 - **Queries have size limits.** A query nests at most 100 levels of operators and holds at most 4096
   terms and operators; the query DSL allows 45 levels of nested clauses, and a JSON, YAML or MessagePack
@@ -17,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   An AND (or FILTER) joins at most 256 phrases and `_near` groups. A query with more than
   4,096 clauses, or nested past the depth cap, is refused with `400` and the limit in the message.
   Elasticsearch's defaults are 30 levels and 4096 clauses.
+- **`_terms` counts a field's stored values** (as Elasticsearch's terms aggregation reads doc
+  values), once per document and distinct value. Keyword buckets keep their case (`Red` and
+  `red` are two buckets). The words of an analysed `text` field, or of a field indexed without
+  values, are still counted from the index terms.
+
+- **`_terms` and `_values` keep a bounded number of buckets** while they collect: at most about
+  `_limit * 1.5 + 10` (Elasticsearch's `shard_size`, settable with `_shard_size`), dropping the
+  buckets with the lowest counts. Counts can fall short of the true counts when a field has more
+  distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
 - **A deeply nested or very wide query no longer crashes the node.** A text of thousands of nested
@@ -29,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   body no longer exhausts the stack or the memory: anchors and aliases answer `400` before any expansion.
 - **A field path of 150 levels answers `400`**, not `500`, and a `_fuzzy` text of tens of thousands of words
   is refused in milliseconds instead of after seconds.
+- **A client error raised inside an aggregation or a sort on the strata engine answers 400**,
+  as on the Xapian engine (it answered 500).
+- **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
+  among the values; it now returns the values.
 
 ## [1.0.0-alpha.10] - 2026-10-28
 

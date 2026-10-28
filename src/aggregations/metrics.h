@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -82,6 +83,8 @@ class TermsHandler {
 protected:
 	FieldType _type;
 	std::string _prefix;
+	engine::valueno _slot;
+	bool _from_values;
 	func_value_handle _func;
 
 public:

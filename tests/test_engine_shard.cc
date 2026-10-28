@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -95,8 +95,8 @@ private:
 
 engine::Document make(const std::string& key, const std::string& data) {
 	engine::Document doc;
-	doc.add_boolean_term(key);
-	doc.add_term("body", 2);
+	doc.add_boolean_term(doc.field(""), key);
+	doc.add_term(doc.field(""), "body", 2);
 	doc.set_data(data);
 	return doc;
 }
@@ -131,7 +131,7 @@ void run(bool offload) {
 		writer = std::this_thread::get_id();
 		hooked_did = result.did;
 		hooked_version = result.version;
-		doc.add_term("stamped");
+		doc.add_term(doc.field(""), "stamped");
 	};
 	auto doc = make("Qa", "one");
 	auto added = engine::sync_wait(shard.add(doc, args));

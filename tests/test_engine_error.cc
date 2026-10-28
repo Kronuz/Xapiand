@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -161,8 +161,8 @@ void test_view_throws_engine_errors() {
 	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
 	{
 		engine::Document doc;
-		doc.add_boolean_term("Q1");
-		doc.add_posting("alpha", 1, 2);
+		doc.add_boolean_term(doc.field(""), "Q1");
+		doc.add_posting(doc.field(""), "alpha", 1, 2);
 		doc.add_value(3, "v3");
 		doc.set_data("data");
 		engine::sync_wait(opened.shard->add(doc, {}));
@@ -332,8 +332,13 @@ void test_http_answers_unchanged() {
 	xapian_case("Closed", [] { throw Xapian::DatabaseClosedError("closed"); });
 	xapian_case("Corrupt", [] { throw Xapian::DatabaseCorruptError("corrupt"); });
 	xapian_case("DatabaseError", [] { throw Xapian::DatabaseError("db"); });
+	// An invalid argument is the request's own: 400, where it used to be 500 (5fd538f82).
 	xapian_case("InvalidArgument", [] { throw Xapian::InvalidArgumentError("arg"); });
+	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;
+	cases.back().expect_error = "Bad Request: InvalidArgumentError: arg";
 	xapian_case("InvalidOperation", [] { throw Xapian::InvalidOperationError("op"); });
+	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;
+	cases.back().expect_error = "Bad Request: InvalidOperationError: op";
 	xapian_case("QueryParser", [] { throw Xapian::QueryParserError("Syntax: bad"); });
 	// A syntax error from the query parser answers 400 (it was 500).
 	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;

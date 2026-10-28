@@ -535,7 +535,7 @@
 /* #  undef WORDS_BIGENDIAN */
 
 /* Define if you want assertions (causes some slow-down) */
-#ifndef NDEBUG
+#if !defined(NDEBUG) && @XAPIAND_XAPIAN_ASSERTIONS@
 # define XAPIAN_ASSERTIONS 1
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -87,7 +87,7 @@ Pair random_pair(Lcg& rng, int depth) {
 			auto term = "t" + std::to_string(rng.next(6));
 			auto wqf = rng.next(3) + 1;
 			auto pos = rng.next(3);
-			return { Query::term(term, wqf, pos), Xapian::Query(term, wqf, pos) };
+			return { Query::term("", term, wqf, pos), Xapian::Query(term, wqf, pos) };
 		}
 		case 1:
 			return { Query(), Xapian::Query() };
@@ -139,7 +139,7 @@ Pair random_pair(Lcg& rng, int depth) {
 			std::vector<Xapian::Query> xapian;
 			for (auto n = rng.next(3) + 2; n > 0; --n) {
 				auto term = "w" + std::to_string(rng.next(5));
-				seam.push_back(Query::term(term));
+				seam.push_back(Query::term("", term));
 				xapian.push_back(Xapian::Query(term));
 			}
 			auto window = static_cast<engine::termcount>(seam.size() + rng.next(4));
@@ -151,15 +151,15 @@ Pair random_pair(Lcg& rng, int depth) {
 }  // namespace
 
 static void test_leaves_and_ops() {
-	CHECK_EQ(to_xapian(Query::term("a", 2, 3)).get_description(), Xapian::Query("a", 2, 3).get_description());
+	CHECK_EQ(to_xapian(Query::term("", "a", 2, 3)).get_description(), Xapian::Query("a", 2, 3).get_description());
 	CHECK_EQ(to_xapian(Query::match_all()).get_description(), Xapian::Query(std::string()).get_description());
 	CHECK_EQ(to_xapian(Query()).get_description(), Xapian::Query().get_description());
 	CHECK_TRUE(Query().empty());
 	CHECK_FALSE(Query::match_all().empty());
-	CHECK_FALSE(Query::term("a").empty());
+	CHECK_FALSE(Query::term("", "a").empty());
 
 	// The binary and list forms translate to the same Xapian query (test_binary_equals_list).
-	auto a = Query::term("a"), b = Query::term("b"), c = Query::term("c");
+	auto a = Query::term("", "a"), b = Query::term("", "b"), c = Query::term("", "c");
 	CHECK_EQ(to_xapian(Query::combine(Op::AND, a, b)).get_description(),
 		Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("a"), Xapian::Query("b")).get_description());
 	const std::vector<Xapian::Query> xs = { Xapian::Query("a"), Xapian::Query("b"), Xapian::Query("c") };
@@ -176,13 +176,13 @@ static void test_leaves_and_ops() {
 }
 
 static void test_expansions() {
-	CHECK_EQ(to_xapian(Query::wildcard("ab")).get_description(),
+	CHECK_EQ(to_xapian(Query::wildcard("", "ab")).get_description(),
 		Xapian::Query(Xapian::Query::OP_WILDCARD, "ab", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard("ab", 50, engine::Expansion::most_frequent, 0, Op::SYNONYM)).get_description(),
+	CHECK_EQ(to_xapian(Query::wildcard("", "ab", 50, engine::Expansion::most_frequent, 0, Op::SYNONYM)).get_description(),
 		Xapian::Query(Xapian::Query::OP_WILDCARD, "ab", 50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard("a?c*e", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR)).get_description(),
+	CHECK_EQ(to_xapian(Query::wildcard("", "a?c*e", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR)).get_description(),
 		Xapian::Query(Xapian::Query::OP_WILDCARD, "a?c*e", 7, Xapian::Query::WILDCARD_LIMIT_FIRST | Xapian::Query::WILDCARD_PATTERN_SINGLE | Xapian::Query::WILDCARD_PATTERN_MULTI, Xapian::Query::OP_OR).get_description());
-	CHECK_EQ(to_xapian(Query::edit_distance("Xabc", 0, engine::Expansion::error, Op::SYNONYM, 2, 3)).get_description(),
+	CHECK_EQ(to_xapian(Query::edit_distance("", "Xabc", 0, engine::Expansion::error, Op::SYNONYM, 2, 3)).get_description(),
 		Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, "Xabc", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM, 2, 3).get_description());
 }
 
@@ -235,7 +235,7 @@ static void test_registered_sources() {
 		{ Query::source(range("015", "018")), { 6, 7, 8, 9 } },
 		{ Query::source(ge("028")), { 19, 20, 21 } },
 		{ Query::source(le("012")), { 1, 2, 3 } },
-		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
+		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("", "t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
 	};
 	for (const auto& [query, expected] : cases) {
 		auto local = to_xapian(query);
@@ -345,7 +345,7 @@ static void test_expansion_limits() {
 		db.add_document(doc);
 	}
 	auto matched = [&](engine::Expansion limit) {
-		auto dids = run(db, to_xapian(Query::wildcard("ab", 2, limit)));
+		auto dids = run(db, to_xapian(Query::wildcard("", "ab", 2, limit)));
 		return std::set<Xapian::docid>(dids.begin(), dids.end());
 	};
 	CHECK_EQ(matched(engine::Expansion::first), (std::set<Xapian::docid>{ 1, 2, 3, 4, 5, 6, 7 }));
@@ -377,10 +377,10 @@ static void test_random_trees() {
 // A text without words reads as a query that matches nothing; append skips it.
 static void test_append() {
 	engine::TextConfig config;
-	config.prefix = "XT";
+	config.field = "XT";
 	config.flags = engine::text::PHRASE;
 	auto stops = engine::parse_text("", config);
-	auto word = Query::term("w");
+	auto word = Query::term("", "w");
 	CHECK_TRUE(stops.empty());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, Query(), word)).get_description(), Xapian::Query("w").get_description());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, word, Query())).get_description(),
@@ -431,7 +431,7 @@ static void test_text() {
 	};
 	for (const auto& c : cases) {
 		engine::TextConfig config;
-		config.prefix = "XTfield";
+		config.field = "XTfield";
 		config.default_op = c.op;
 		config.flags = c.flags;
 		config.stop_language = c.stop;
@@ -467,7 +467,7 @@ static void test_text() {
 
 	// Text the parser rejects raises QueryParserError, an engine syntax error.
 	engine::TextConfig bad;
-	bad.prefix = "XT";
+	bad.field = "XT";
 	bad.flags = engine::text::BOOLEAN | engine::text::PHRASE;
 	bool raised = false;
 	try {
@@ -593,7 +593,7 @@ static void test_posting_source() {
 	CHECK_EQ(std::set<Xapian::docid>(dids.begin(), dids.end()), (std::set<Xapian::docid>{ 3, 4, 5, 6 }));
 
 	// A filter: skip_to and check run when the source meets another term.
-	auto filtered = to_xapian(Query::combine(Op::FILTER, Query::term("t"), Query::source(std::make_unique<Between>(8, 9))));
+	auto filtered = to_xapian(Query::combine(Op::FILTER, Query::term("", "t"), Query::source(std::make_unique<Between>(8, 9))));
 	auto filtered_dids = run(db, filtered);
 	CHECK_EQ(std::set<Xapian::docid>(filtered_dids.begin(), filtered_dids.end()), (std::set<Xapian::docid>{ 8, 9 }));
 	auto both = to_xapian(Query::combine(Op::AND, Query::source(std::make_unique<Between>(2, 9)), Query::source(std::make_unique<Between>(5, 20))));
@@ -712,7 +712,7 @@ static void test_source_ownership() {
 		}
 		CHECK_EQ(Counted::live, 1);
 
-		auto combined = Query::combine(Op::FILTER, Query::term("t"), query);
+		auto combined = Query::combine(Op::FILTER, Query::term("", "t"), query);
 		for (int i = 0; i < 20; ++i) {
 			CHECK_EQ(run(db, to_xapian(combined)).size(), 10U);
 		}
@@ -763,7 +763,7 @@ static void test_wildcard_patterns() {
 		db.add_document(doc);
 	}
 	auto matched = [&](const std::string& pattern, unsigned flags) {
-		auto dids = run(db, to_xapian(Query::wildcard(pattern, 0, engine::Expansion::error, flags)));
+		auto dids = run(db, to_xapian(Query::wildcard("", pattern, 0, engine::Expansion::error, flags)));
 		return std::set<Xapian::docid>(dids.begin(), dids.end());
 	};
 	CHECK_EQ(matched("al?ce", engine::PATTERN_SINGLE), (std::set<Xapian::docid>{ 1, 2 }));
@@ -810,7 +810,7 @@ static void test_binary_equals_list() {
 		doc.add_term("z");
 		db.add_document(doc);
 	}
-	const std::vector<Query> operands = { Query::term("a"), Query::term("b"), Query::term("nothing"), Query(), Query::match_all(), Query::term("c", 2) };
+	const std::vector<Query> operands = { Query::term("", "a"), Query::term("", "b"), Query::term("", "nothing"), Query(), Query::match_all(), Query::term("", "c", 2) };
 	auto results = [&](const Query& query) {
 		auto translated = to_xapian(query);
 		Xapian::Enquire enquire(db);
@@ -846,7 +846,7 @@ void* chain_run(void* arg) {
 		Query chain;
 		for (std::size_t i = 0; i < job->length; ++i) {
 			// Every 7th operand matches nothing, as a stop-word-only text does.
-			chain = Query::append(Op::AND, chain, i % 7 == 6 ? Query() : Query::term("t" + std::to_string(i)));
+			chain = Query::append(Op::AND, chain, i % 7 == 6 ? Query() : Query::term("", "t" + std::to_string(i)));
 		}
 		job->description = to_xapian(chain).get_description().substr(0, 40);
 		job->done = true;
@@ -873,7 +873,7 @@ static void test_append_chain() {
 	Query chain;
 	Xapian::Query expected;
 	for (int i = 0; i < 12; ++i) {
-		auto operand = i % 5 == 4 ? Query() : Query::term("t" + std::to_string(i));
+		auto operand = i % 5 == 4 ? Query() : Query::term("", "t" + std::to_string(i));
 		auto expected_operand = i % 5 == 4 ? Xapian::Query() : Xapian::Query("t" + std::to_string(i));
 		chain = Query::append(i % 2 != 0 ? Op::OR : Op::AND, chain, operand);
 		expected = expected.empty() ? expected_operand : Xapian::Query(i % 2 != 0 ? Xapian::Query::OP_OR : Xapian::Query::OP_AND, expected, expected_operand);
@@ -892,10 +892,10 @@ struct DepthJob {
 
 void* depth_run(void* arg) {
 	auto* job = static_cast<DepthJob*>(arg);
-	Query tree = Query::term("a");
+	Query tree = Query::term("", "a");
 	for (unsigned level = 1; level < engine::MAX_QUERY_DEPTH; ++level) {
 		// Alternating operators and a scale: nothing is flattened into a wide node.
-		tree = level % 5 == 0 ? Query::scale(tree, 2.0) : Query::combine(level % 2 ? Op::AND : Op::OR, tree, Query::term("b"));
+		tree = level % 5 == 0 ? Query::scale(tree, 2.0) : Query::combine(level % 2 ? Op::AND : Op::OR, tree, Query::term("", "b"));
 	}
 	job->description = tree.description();
 	job->xapian = !to_xapian(tree).empty();
@@ -920,9 +920,9 @@ static void test_depth_cap() {
 	CHECK_TRUE(job.xapian);
 
 	// Exactly the cap builds; one more level of any operator throws a client error.
-	Query tree = Query::term("a");
+	Query tree = Query::term("", "a");
 	for (unsigned level = 1; level < engine::MAX_QUERY_DEPTH; ++level) {
-		tree = Query::combine(Op::AND, tree, Query::term("b"));
+		tree = Query::combine(Op::AND, tree, Query::term("", "b"));
 	}
 	CHECK_EQ(tree.depth(), engine::MAX_QUERY_DEPTH);
 	const auto refused = [](auto&& build, const char* message = "nested too deeply") {
@@ -933,29 +933,29 @@ static void test_depth_cap() {
 		}
 		return false;
 	};
-	CHECK_TRUE(refused([&] { Query::combine(Op::OR, tree, Query::term("b")); }));
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, tree, Query::term("", "b")); }));
 	CHECK_TRUE(refused([&] { Query::combine(Op::OR, std::vector<Query>{ tree }, 0); }));
 	CHECK_TRUE(refused([&] { Query::scale(tree, 2.0); }));
 
 	// An append adds no level: a flat object with many keys is not nested.
 	Query flat;
 	for (unsigned i = 0; i < 4 * engine::MAX_QUERY_DEPTH; ++i) {
-		flat = Query::append(Op::AND, flat, Query::term("t" + std::to_string(i)));
+		flat = Query::append(Op::AND, flat, Query::term("", "t" + std::to_string(i)));
 	}
 	CHECK_EQ(flat.depth(), 1U);
-	CHECK_EQ(Query::append(Op::AND, tree, Query::term("c")).depth(), engine::MAX_QUERY_DEPTH);
+	CHECK_EQ(Query::append(Op::AND, tree, Query::term("", "c")).depth(), engine::MAX_QUERY_DEPTH);
 
 	// The clause cap: a node per term and one for the operator, appends and shared subtrees included.
-	std::vector<Query> wide(engine::MAX_QUERY_CLAUSES - 1, Query::term("t"));
+	std::vector<Query> wide(engine::MAX_QUERY_CLAUSES - 1, Query::term("", "t"));
 	CHECK_EQ(Query::combine(Op::OR, wide).size(), engine::MAX_QUERY_CLAUSES);
-	wide.push_back(Query::term("t"));
+	wide.push_back(Query::term("", "t"));
 	CHECK_TRUE(refused([&] { Query::combine(Op::OR, wide); }, "too large"));
 	Query chain;
 	for (unsigned i = 0; i < engine::MAX_QUERY_CLAUSES; ++i) {
-		chain = Query::append(Op::AND, chain, Query::term("t"));
+		chain = Query::append(Op::AND, chain, Query::term("", "t"));
 	}
 	CHECK_EQ(chain.size(), engine::MAX_QUERY_CLAUSES);
-	CHECK_TRUE(refused([&] { Query::append(Op::AND, chain, Query::term("t")); }, "too large"));
+	CHECK_TRUE(refused([&] { Query::append(Op::AND, chain, Query::term("", "t")); }, "too large"));
 	CHECK_TRUE(refused([&] { Query::combine(Op::AND, chain, chain); }, "too large"));
 	CHECK_FALSE(to_xapian(flat).empty());
 }
@@ -963,7 +963,7 @@ static void test_depth_cap() {
 // Xapian's matcher recurses once per phrase or near group an AND joins, so the query counts the
 // links it would chain: AND and FILTER add their operands' up, every other operator takes the deepest.
 static void test_chain_cap() {
-	const auto phrase = [](const char* a, const char* b, Op op = Op::PHRASE) { return Query::combine(op, std::vector<Query>{ Query::term(a), Query::term(b) }, 2); };
+	const auto phrase = [](const char* a, const char* b, Op op = Op::PHRASE) { return Query::combine(op, std::vector<Query>{ Query::term("", a), Query::term("", b) }, 2); };
 	const auto many = [&](unsigned n, Op op = Op::PHRASE) {
 		std::vector<Query> list;
 		for (unsigned i = 0; i < n; ++i) {
@@ -980,7 +980,7 @@ static void test_chain_cap() {
 		return false;
 	};
 	const unsigned cap = engine::MAX_QUERY_CHAIN;
-	CHECK_EQ(Query::term("a").chain(), 0U);
+	CHECK_EQ(Query::term("", "a").chain(), 0U);
 	CHECK_EQ(phrase("a", "b").chain(), 1U);
 	CHECK_EQ(phrase("a", "b", Op::NEAR).chain(), 1U);
 	CHECK_EQ(Query::combine(Op::AND, many(cap)).chain(), cap);
@@ -997,7 +997,7 @@ static void test_chain_cap() {
 	CHECK_EQ(Query::combine(Op::AND, mixed).chain(), cap);
 	mixed.push_back(phrase("c", "d"));
 	CHECK_TRUE(refused([&] { Query::combine(Op::AND, mixed); }));
-	std::vector<Query> terms(1000, Query::term("t"));
+	std::vector<Query> terms(1000, Query::term("", "t"));
 	terms.push_back(Query::combine(Op::OR, terms));
 	CHECK_EQ(Query::combine(Op::AND, terms).chain(), 0U);
 
@@ -1011,8 +1011,8 @@ static void test_chain_cap() {
 	const auto wrapped = [&](unsigned n) {
 		std::vector<Query> list;
 		for (unsigned i = 0; i < n; ++i) {
-			list.push_back(i % 3 == 0 ? Query::combine(Op::AND, phrase("a", "b"), Query::term("c"))
-				: i % 3 == 1 ? Query::combine(Op::AND_NOT, phrase("a", "b"), Query::term("z"))
+			list.push_back(i % 3 == 0 ? Query::combine(Op::AND, phrase("a", "b"), Query::term("", "c"))
+				: i % 3 == 1 ? Query::combine(Op::AND_NOT, phrase("a", "b"), Query::term("", "z"))
 				: Query::combine(Op::OR, std::vector<Query>{ phrase("a", "b") }, 0));
 		}
 		return list;
@@ -1021,8 +1021,8 @@ static void test_chain_cap() {
 	CHECK_TRUE(refused([&] { Query::combine(Op::AND, wrapped(cap + 1)); }));
 	// An OR between ANDs does not hide the links below it, and sibling ORs do not add up.
 	const auto half = Query::combine(Op::AND, many(cap / 2));
-	CHECK_EQ(Query::combine(Op::AND, Query::combine(Op::OR, half, Query::term("c")), half).chain(), cap);
-	CHECK_TRUE(refused([&] { Query::combine(Op::AND, Query::combine(Op::OR, half, Query::term("c")), Query::combine(Op::AND, many(cap / 2 + 1))); }));
+	CHECK_EQ(Query::combine(Op::AND, Query::combine(Op::OR, half, Query::term("", "c")), half).chain(), cap);
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, Query::combine(Op::OR, half, Query::term("", "c")), Query::combine(Op::AND, many(cap / 2 + 1))); }));
 	CHECK_EQ(Query::combine(Op::OR, half, half).chain(), cap / 2);
 	// A chain of appends (the text path) adds up as an AND does.
 	Query chain;

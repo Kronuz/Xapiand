@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,32 @@
 
 namespace engine::strata {
 
+struct Core;
+
+// Rethrows the exception being handled as an engine error of its kind, marking `core` (when given) fenced
+// on an index_fenced. An exception of no known kind becomes an internal error, unless `callback_threw`: it came
+// from the caller's own code (a spy, a key maker, a sink), so it leaves as thrown. Call only inside a catch block.
+[[noreturn]] void rethrow_translated(Core* core = nullptr, bool callback_threw = false);
+
+// Runs the caller's callbacks, remembering that one threw.
+class CallbackGuard {
+public:
+	template <typename F>
+	decltype(auto) operator()(F&& call) {
+		try {
+			return call();
+		} catch (...) {
+			threw_ = true;
+			throw;
+		}
+	}
+	bool threw() const noexcept { return threw_; }
+private:
+	bool threw_ = false;
+};
+
 struct Handle;
+class Pinned;
 
 // The strata implementation of the engine shard: an index in the shard's "strata" directory. The
 // writable and the readable handle of one shard share one index (strata locks its directory), so the
@@ -67,6 +92,14 @@ public:
 	doccount doc_count() const override;
 	std::string uuid() const override;
 	unsigned refs() const override;
+
+	// Flushes the write buffer and pins the shard's segments for a search (src/engine/strata/search.cc).
+	// The pin holds the shard's lock; see identity() for taking several in order.
+	Pinned pin();
+
+	// Names the index behind the handle: handles of one shard share it, and shards are pinned in the
+	// order of their identities.
+	const void* identity() const noexcept;
 
 private:
 	std::unique_ptr<Handle> handle_;

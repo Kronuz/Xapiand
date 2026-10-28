@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -115,10 +115,11 @@ QueryNode::~QueryNode()
 
 
 Query
-Query::term(std::string term, termcount wqf, termpos pos)
+Query::term(std::string field, std::string term, termcount wqf, termpos pos)
 {
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::term;
+	node->field = std::move(field);
 	node->str = std::move(term);
 	node->wqf = wqf;
 	node->pos = pos;
@@ -129,7 +130,7 @@ Query::term(std::string term, termcount wqf, termpos pos)
 Query
 Query::match_all()
 {
-	return term(std::string());
+	return term(std::string(), std::string());
 }
 
 
@@ -192,10 +193,11 @@ Query::scale(Query subquery, double factor)
 
 
 Query
-Query::wildcard(std::string pattern, termcount max_expansion, Expansion limit, unsigned pattern_flags, Op combiner)
+Query::wildcard(std::string field, std::string pattern, termcount max_expansion, Expansion limit, unsigned pattern_flags, Op combiner)
 {
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::wildcard;
+	node->field = std::move(field);
 	node->str = std::move(pattern);
 	node->parameter = max_expansion;
 	node->limit = limit;
@@ -206,10 +208,11 @@ Query::wildcard(std::string pattern, termcount max_expansion, Expansion limit, u
 
 
 Query
-Query::edit_distance(std::string pattern, termcount max_expansion, Expansion limit, Op combiner, unsigned distance, std::size_t prefix_length)
+Query::edit_distance(std::string field, std::string pattern, termcount max_expansion, Expansion limit, Op combiner, unsigned distance, std::size_t prefix_length)
 {
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::edit_distance;
+	node->field = std::move(field);
 	node->str = std::move(pattern);
 	node->parameter = max_expansion;
 	node->limit = limit;
@@ -217,6 +220,13 @@ Query::edit_distance(std::string pattern, termcount max_expansion, Expansion lim
 	node->distance = distance;
 	node->prefix_length = prefix_length;
 	return Query(std::move(node));
+}
+
+
+Query
+Query::field(std::string field)
+{
+	return wildcard(std::move(field), std::string());
 }
 
 
@@ -270,11 +280,11 @@ Query::description() const
 	const auto leaf = [](const QueryNode& n) -> std::string {
 		switch (n.kind) {
 			case QueryKind::term:
-				return n.str.empty() ? "<all>" : n.str;
+				return n.field.empty() && n.str.empty() ? "<all>" : n.field + "/" + n.str;
 			case QueryKind::wildcard:
-				return "wildcard(" + n.str + ")";
+				return "wildcard(" + n.field + "/" + n.str + ")";
 			case QueryKind::edit_distance:
-				return "edit_distance(" + n.str + ", " + std::to_string(n.distance) + ")";
+				return "edit_distance(" + n.field + "/" + n.str + ", " + std::to_string(n.distance) + ")";
 			case QueryKind::source:
 				return n.src->description();
 			default:

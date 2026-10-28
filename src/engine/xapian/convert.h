@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,10 +45,11 @@ class XapianDocument final : public Document::Native {
 public:
 	explicit XapianDocument(Xapian::Document doc = {}) : doc_(std::move(doc)) { }
 
-	void add_term(std::string_view term, termcount wdf_inc) override;
-	void add_boolean_term(std::string_view term) override;
-	void set_key(std::string_view term) override;
-	void add_posting(std::string_view term, termpos position, termcount wdf_inc) override;
+	// A term is its field's name followed by its bytes: the Xapian term of today, byte for byte.
+	void add_term(const Field& field, std::string_view term, termcount wdf_inc) override;
+	void add_boolean_term(const Field& field, std::string_view term) override;
+	void set_key(std::string_view key) override;
+	void add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc) override;
 	void add_value(valueno slot, std::string value) override;
 	std::string get_value(valueno slot) const override;
 	void set_data(std::string data) override;
@@ -59,10 +60,18 @@ public:
 	std::size_t census_values() const override;
 #endif
 
+	// A term that is already a whole Xapian term, as read back from a stored document.
+	void add_whole_term(std::string_view term, termcount wdf_inc) { doc_.add_term(term, wdf_inc); }
+	void add_whole_posting(std::string_view term, termpos position, termcount wdf_inc) { doc_.add_posting(term, position, wdf_inc); }
+
 	const Xapian::Document& xapian() const noexcept { return doc_; }
 
 private:
+	// The field's name and the term, joined in scratch_ (reused, so adding a term allocates nothing once warm).
+	const std::string& join(const Field& field, std::string_view term);
+
 	Xapian::Document doc_;
+	std::string scratch_;
 };
 
 // The Xapian document inside an engine document of this implementation.

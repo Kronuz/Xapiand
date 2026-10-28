@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -85,7 +85,7 @@ void double_replay() {
 	DatabaseWAL wal(shard.get());
 	auto& e = shard->engine();
 	const auto rev = e.revision();
-	auto make = [&](const std::string& data) { engine::Document d(Kind::strata); d.set_key("Qa"); d.add_term("body", 2); d.set_data(data); return d; };
+	auto make = [&](const std::string& data) { engine::Document d(Kind::strata); d.set_key("Qa"); d.add_term(d.field(""), "body", 2); d.set_data(data); return d; };
 	std::vector<std::string> lines;
 	engine::WriteArgs a;
 	auto d1 = make("a1"); auto r1 = engine::sync_wait(e.replace_by_key("Qa", d1, a));

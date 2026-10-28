@@ -3,7 +3,8 @@ title: "Copyright Notice"
 ---
 
 ## Xapiand
-Copyright &copy; 2015-2026 Dubalu LLC
+Copyright &copy; 2026 Germán Méndez Bravo (Kronuz)<br />
+Copyright &copy; 2015-2020 Dubalu LLC
 
 All rights reserved. All materials in the Xapiand project, including source
 code, documentation, trademarks, service marks, trade names, trade dress,

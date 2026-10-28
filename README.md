@@ -128,7 +128,7 @@ suite ([testing.md](docs/dev/testing.md)).
 
 ## 📄 License
 
-[MIT](LICENSE) — Copyright © 2015–2026 Dubalu LLC.
+[MIT](LICENSE) — Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC.
 
 Note that the bundled Xapian fork under `src/xapian/` carries Xapian's own
 (GPL) license; see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note) before

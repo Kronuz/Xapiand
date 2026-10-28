@@ -126,7 +126,7 @@ random_config(Rng& rng)
 		engine::Op::PHRASE, engine::Op::ELITE_SET, engine::Op::SYNONYM, engine::Op::MAX,
 	};
 	engine::TextConfig c;
-	c.prefix = rng.chance(20) ? "" : (rng.chance(50) ? "XTfield" : "t_some.S");
+	c.field = rng.chance(20) ? "" : (rng.chance(50) ? "XTfield" : "t_some.S");
 	c.default_op = ops[rng.below(sizeof(ops) / sizeof(*ops))];
 	for (auto bit : bits) {
 		if (rng.chance(55)) {
@@ -244,7 +244,7 @@ main(int argc, char** argv)
 			if (bad) {
 				std::fprintf(stderr, "FAIL seed=%s text=\"%s\" flags=%u op=%s stop=%s stem=%s/%d prefix=%s\n  lowered: %s\n  tree:    %s\n  error:   %s\n",
 					argc > 2 ? argv[2] : "1", show(text).c_str(), c.flags, engine::to_string(c.default_op), c.stop_language.c_str(),
-					c.stem_language.c_str(), static_cast<int>(c.stem), c.prefix.c_str(), show(first.lowered).c_str(), show(first.tree).c_str(), first.error.c_str());
+					c.stem_language.c_str(), static_cast<int>(c.stem), c.field.c_str(), show(first.lowered).c_str(), show(first.tree).c_str(), first.error.c_str());
 				return 1;
 			}
 		}

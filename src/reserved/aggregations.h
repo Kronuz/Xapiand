@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -78,4 +79,5 @@ constexpr const char RESERVED_AGGS_SORT[]                   = RESERVED__ "sort";
 constexpr const char RESERVED_AGGS_ORDER[]                  = RESERVED__ "order";
 constexpr const char RESERVED_AGGS_MIN_DOC_COUNT[]          = RESERVED__ "min_doc_count";
 constexpr const char RESERVED_AGGS_LIMIT[]                  = RESERVED__ "limit";
+constexpr const char RESERVED_AGGS_SHARD_SIZE[]             = RESERVED__ "shard_size";
 constexpr const char RESERVED_AGGS_KEYED[]                  = RESERVED__ "keyed";

@@ -26,6 +26,8 @@
 #include <cstdint>                 // for std::uint32_t
 #include <new>                     // for std::bad_alloc
 #include <optional>                // for std::optional
+#include <string>                  // for std::string
+#include <string_view>             // for std::string_view
 #include <unordered_map>           // for std::unordered_map
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
@@ -127,17 +129,31 @@ stemmer_for(const std::string& language)
 }
 
 
+// The parser leads a term with the field's name; the seam takes the two apart.
+std::pair<std::string, std::string>
+split_field(const std::string& field, std::string_view text)
+{
+	if (!field.empty() && text.starts_with(field)) {
+		return { field, std::string(text.substr(field.size())) };
+	}
+	return { std::string(), std::string(text) };
+}
+
+
 Query
-leaf(const queryparser::query& tree, const queryparser::node& n)
+leaf(const queryparser::query& tree, const queryparser::node& n, const std::string& field)
 {
 	using queryparser::kind;
 	switch (n.k) {
 		case kind::term:
-			return Query::term(std::string(tree.text(n)), n.wqf, n.pos);
+			{
+			auto [name, bytes] = split_field(field, tree.text(n));
+			return Query::term(std::move(name), std::move(bytes), n.wqf, n.pos);
+		}
 		case kind::wildcard: {
-			auto pattern = std::string(tree.text(n));
+			auto [name, pattern] = split_field(field, tree.text(n));
 			// Every term has a character: a pattern of '*' (at least one) and at most one '?' matches them all.
-			if (pattern.find_first_not_of("*?") == std::string::npos && pattern.find('*') != std::string::npos &&
+			if (name.empty() && pattern.find_first_not_of("*?") == std::string::npos && pattern.find('*') != std::string::npos &&
 				std::count(pattern.begin(), pattern.end(), '?') <= 1) {
 				return Query::match_all();
 			}
@@ -148,10 +164,14 @@ leaf(const queryparser::query& tree, const queryparser::node& n)
 			if (pattern.find('*') != std::string::npos) {
 				pattern_flags |= PATTERN_MULTI;
 			}
-			return Query::wildcard(std::move(pattern), n.max_expansion, expansion_limit(n.limit), pattern_flags, Op::SYNONYM);
+			return Query::wildcard(std::move(name), std::move(pattern), n.max_expansion, expansion_limit(n.limit), pattern_flags, Op::SYNONYM);
 		}
 		case kind::edit_distance:
-			return Query::edit_distance(std::string(tree.text(n)), n.max_expansion, expansion_limit(n.limit), Op::SYNONYM, n.window, n.pos);
+			{
+			auto [name, bytes] = split_field(field, tree.text(n));
+			const auto prefix_length = name.empty() || n.pos < name.size() ? n.pos : n.pos - name.size();
+			return Query::edit_distance(std::move(name), std::move(bytes), n.max_expansion, expansion_limit(n.limit), Op::SYNONYM, n.window, prefix_length);
+		}
 		default:
 			return Query::match_all();
 	}
@@ -188,7 +208,7 @@ op_of(queryparser::kind k)
 
 // The tree as an engine query, bottom-up on an explicit stack: nesting is as deep as the text.
 Query
-convert(const queryparser::query& tree)
+convert(const queryparser::query& tree, const std::string& field)
 {
 	using queryparser::kind;
 	using queryparser::no_node;
@@ -196,7 +216,7 @@ convert(const queryparser::query& tree)
 		return Query();
 	}
 	if (is_leaf(tree.at(tree.root()).k)) {
-		return leaf(tree, tree.at(tree.root()));
+		return leaf(tree, tree.at(tree.root()), field);
 	}
 	struct Frame {
 		queryparser::node_id id;
@@ -213,7 +233,7 @@ convert(const queryparser::query& tree)
 			const auto& n = tree.at(child);
 			frame.cursor = n.next;
 			if (is_leaf(n.k)) {
-				frame.kids.push_back(leaf(tree, n));
+				frame.kids.push_back(leaf(tree, n, field));
 			} else {
 				if (stack.size() >= MAX_QUERY_DEPTH) {
 					// The factories refuse this bottom-up; refusing here skips building the rest.
@@ -271,7 +291,7 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 	} else {
 		cfg.stem = analysis::stem_strategy::none;
 	}
-	cfg.default_prefix = config.prefix;
+	cfg.default_prefix = config.field;
 	cfg.max_word_length = std::size_t(1) << 20;  // long words are kept; the index side bounds them
 	cfg.partial_expansion = { config.partial_max_expansion, queryparser::expansion_limit::most_frequent };
 	cfg.fuzzy_expansion = { config.fuzzy_max_expansion, queryparser::expansion_limit::error };
@@ -286,7 +306,7 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 	if (description != nullptr) {
 		*description = parsed.tree.describe();
 	}
-	return convert(parsed.tree);
+	return convert(parsed.tree, config.field);
 }
 
 }  // namespace engine

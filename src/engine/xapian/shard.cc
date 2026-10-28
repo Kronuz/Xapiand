@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,18 +49,18 @@ struct Hop {
 	void await_resume() const noexcept { }
 };
 
-// The term that records a document's version.
+// The term that records a document's version, under the field `V`.
 std::string
 version_term(docid did, rev version)
 {
-	return "V" + serialise_length(did) + sortable_serialise(static_cast<double>(version));
+	return serialise_length(did) + sortable_serialise(static_cast<double>(version));
 }
 
 // Adds the version bookkeeping to the document about to be written.
 void
 stamp(Document& doc, const WriteResult& info)
 {
-	doc.add_boolean_term(version_term(info.did, info.version));
+	doc.add_boolean_term(doc.field("V", FieldKind::boolean), version_term(info.did, info.version));
 	doc.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(info.version)));
 }
 

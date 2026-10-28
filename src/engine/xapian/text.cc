@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -86,18 +87,28 @@ index_text_word_breaks(engine::Document& doc,
 		term_generator.set_stemmer(makeStem(stem_language));
 		term_generator.set_stemming_strategy(xapian_stem_strategy(stem_strategy));
 	}
+	// No prefix, so a term that leads with 'Z' is a stem (words are lowercase): it goes to the field
+	// `Z` + prefix, every other term to the field itself.
 	if (positions) {
-		term_generator.index_text(value, weight, prefix);
+		term_generator.index_text(value, weight);
 	} else {
-		term_generator.index_text_without_positions(value, weight, prefix);
+		term_generator.index_text_without_positions(value, weight);
 	}
+	const auto kind = positions ? engine::FieldKind::text : engine::FieldKind::terms;
+	const bool stems_lead_z = stem_strategy == analysis::stem_strategy::all_z || stem_strategy == analysis::stem_strategy::some;
 	const auto terms_end = xdoc.termlist_end();
 	for (auto it = xdoc.termlist_begin(); it != terms_end; ++it) {
-		const auto name = *it;
-		doc.add_term(name, it.get_wdf());
+		const std::string whole = *it;
+		std::string_view name = whole;
+		const bool stem = stems_lead_z && !name.empty() && name.front() == 'Z';
+		if (stem) {
+			name.remove_prefix(1);
+		}
+		const auto field = doc.field(stem ? "Z" + prefix : prefix, kind);
+		doc.add_term(field, name, it.get_wdf());
 		const auto positions_end = it.positionlist_end();
 		for (auto pit = it.positionlist_begin(); pit != positions_end; ++pit) {
-			doc.add_posting(name, *pit, 0);
+			doc.add_posting(field, name, *pit, 0);
 		}
 	}
 }

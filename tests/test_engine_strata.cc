@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,9 +62,9 @@ std::string scratch(const char* name, Kind kind) {
 engine::Document make(Kind kind, const std::string& key, const std::string& data) {
 	engine::Document doc(kind);
 	doc.set_key(key);
-	doc.add_term("body", 2);
-	doc.add_posting("word", 1);
-	doc.add_posting("word", 3);
+	doc.add_term(doc.field(""), "body", 2);
+	doc.add_posting(doc.field(""), "word", 1);
+	doc.add_posting(doc.field(""), "word", 3);
 	doc.set_data(data);
 	return doc;
 }
@@ -99,7 +99,7 @@ void shared(Kind kind) {
 	args.finalise = [&](engine::Document& doc, engine::WriteResult& result) {
 		hooked_did = result.did;
 		hooked_version = result.version;
-		doc.add_term("stamped");
+		doc.add_term(doc.field(""), "stamped");
 	};
 	auto doc = make(kind, "Qa", "one");
 	auto added = engine::sync_wait(shard.add(doc, args));
@@ -320,14 +320,14 @@ void strata_only() {
 	// A term that starts like an id term ("Q...") is an ordinary term, not the key: a field called
 	// "Quote" must index.
 	auto doc = make(kind, "QKone", "d");
-	doc.add_term("Quote.word");
+	doc.add_term(doc.field(""), "Quote.word");
 	CHECK_EQ(engine::sync_wait(shard.replace_by_key("QKone", doc, plain)).did, 1u);
 	CHECK_EQ(engine::sync_wait(shard.find_key("QKone")), 1u);
 	CHECK_EQ(engine::sync_wait(shard.find_key("Quote.word")), 0u);
 
 	// A document without a key is refused: its version would have no key to belong to.
 	engine::Document keyless(kind);
-	keyless.add_term("x");
+	keyless.add_term(keyless.field(""), "x");
 	keyless.set_data("k");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(keyless, plain)); }) == engine::errc::invalid);
 	auto other = make(kind, "QKtwo", "t");
@@ -356,7 +356,7 @@ void strata_only() {
 
 	// A document built for the other engine is refused.
 	engine::Document foreign(Kind::xapian);
-	foreign.add_term("x");
+	foreign.add_term(foreign.field(""), "x");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(foreign, plain)); }) == engine::errc::invalid);
 
 	// The readable handle of a shard in this process shares the writable one's index and sees its
@@ -374,18 +374,18 @@ void strata_only() {
 	// Spelling is not kept.
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add_spelling("word", 1)); }) == engine::errc::not_available);
 
-	// Term lists wait for prospect's term-list plugin (P2): reading a document's terms says so.
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->term_details([](const engine::TermDetail&) { }); }) == engine::errc::not_available);
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->terms("", [](std::string_view, engine::termcount) { }); }) == engine::errc::not_available);
-	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::not_available);
+	// The strata engine keeps no term lists (R-P2): reading a document's terms is a clear client error.
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->term_details([](const engine::TermDetail&) { }); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->terms("", [](std::string_view, engine::termcount) { }); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::syntax);
 
-	// Search waits for S2: a strata shard says so, for a term and for match-all.
-	for (const auto& query : {engine::Query::term("x"), engine::Query::match_all()}) {
-		auto prepared = engine::prepare(query);
+	// Search is S2's: match-all finds every document.
+	{
+		auto prepared = engine::prepare(engine::Query::match_all());
 		engine::SearchRequest request;
 		request.query = prepared.get();
 		engine::Shard* shards[] = {&shard};
-		CHECK_TRUE(error_kind([&] { engine::sync_wait(engine::search(shards, request)); }) == engine::errc::not_available);
+		CHECK_EQ(engine::sync_wait(engine::search(shards, request)).hits.size(), static_cast<std::size_t>(shard.doc_count()));
 	}
 
 	// Dropping the writable shard without a commit keeps its work, as a Xapian writer does.
@@ -401,17 +401,45 @@ void strata_only() {
 	std::filesystem::remove_all(path);
 }
 
-// Values are the seam's opaque bytes, held by the document until prospect's values plugin (P1) stores
-// them. This pins the gap: when P1 lands the shard returns them and this check flips.
-void values_gap() {
+// Values are the seam's opaque bytes, stored in the values plugin's columns: a document reads them back
+// by slot and in slot order, an empty value is no value, the write buffer is flushed first, and a
+// replacement drops the old ones.
+void values_stored() {
 	const auto path = scratch("values", Kind::strata);
 	auto opened = open_shard(Kind::strata, path);
 	engine::WriteArgs plain;
 	auto doc = make(Kind::strata, "Qv", "d");
 	doc.add_value(9, "nine");
-	CHECK_EQ(doc.get_value(9), "nine");  // the document holds it
+	doc.add_value(2, std::string("t\0wo", 4));
+	doc.add_value(5, "");
+	CHECK_EQ(doc.get_value(9), "nine");
 	engine::sync_wait(opened.shard->add(doc, plain));
-	CHECK_EQ(engine::sync_wait(opened.shard->get(1))->value(9), "");  // TODO(P1): "nine"
+	auto view = engine::sync_wait(opened.shard->get(1));
+	CHECK_EQ(view->value(9), "nine");
+	CHECK_EQ(view->value(2), std::string("t\0wo", 4));
+	CHECK_EQ(view->value(5), "");
+	CHECK_EQ(view->value(7), "");
+	std::vector<std::pair<engine::valueno, std::string>> seen;
+	view->values([&](engine::valueno slot, std::string_view bytes) { seen.emplace_back(slot, std::string(bytes)); });
+	CHECK_EQ(seen.size(), 2u);
+	CHECK_EQ(seen[0].first, 2u);
+	CHECK_EQ(seen[1].first, 9u);
+
+	// A replacement carries its own values only.
+	auto again = make(Kind::strata, "Qv", "e");
+	again.add_value(3, "three");
+	engine::sync_wait(opened.shard->replace_by_key("Qv", again, plain));
+	engine::sync_wait(opened.shard->commit(engine::Transaction::none));
+	auto replaced = engine::sync_wait(opened.shard->find_key("Qv"));
+	view = engine::sync_wait(opened.shard->get(replaced));
+	CHECK_EQ(view->value(3), "three");
+	CHECK_EQ(view->value(9), "");
+	CHECK_EQ(view->data(), "e");
+
+	// The reserved slot is refused.
+	auto reserved = make(Kind::strata, "Qr", "r");
+	reserved.add_value(0xffffffffu, "x");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(opened.shard->add(reserved, plain)); }) == engine::errc::invalid);
 	opened.shard.reset();
 	std::filesystem::remove_all(path);
 }
@@ -421,10 +449,10 @@ void codec() {
 	using engine::strata::StrataDocument;
 	engine::Document doc(Kind::strata);
 	doc.set_key("Qk");
-	doc.add_term("a", 3);
-	doc.add_posting("b", 9);
-	doc.add_posting("b", 2);
-	doc.add_posting("b", 9);
+	doc.add_term(doc.field(""), "a", 3);
+	doc.add_posting(doc.field(""), "b", 9);
+	doc.add_posting(doc.field(""), "b", 2);
+	doc.add_posting(doc.field(""), "b", 9);
 	doc.add_value(1, "x");
 	doc.add_value(0xfffffffe, std::string(300, 'y'));
 	doc.set_data(std::string("bin\0data", 8));
@@ -998,7 +1026,7 @@ static void test_shared_strata() { guarded("shared strata", [] { shared(Kind::st
 static void test_replay_xapian() { guarded("replay xapian", [] { replay(Kind::xapian); }); }
 static void test_replay_strata() { guarded("replay strata", [] { replay(Kind::strata); }); }
 static void test_strata_only() { guarded("strata only", [] { strata_only(); }); }
-static void test_values_gap() { guarded("values gap", [] { values_gap(); }); }
+static void test_values_stored() { guarded("values stored", [] { values_stored(); }); }
 static void test_fresh_reads() { guarded("fresh reads", [] { fresh_reads(); }); }
 static void test_commit_on_drop() { guarded("commit on drop", [] { commit_on_drop(); }); }
 static void test_concurrent_cas() { guarded("concurrent cas", [] { concurrent_cas(); }); }
@@ -1012,4 +1040,4 @@ static void test_replay_idempotent() { guarded("replay idempotent", [] { replay_
 static void test_old_format() { guarded("old format", [] { old_format(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format)

@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -110,9 +111,14 @@ TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& s
 	}
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_data_field(field_name).first;
+	const auto slot_spc = schema->get_slot_field(field_name);
 
 	_type = field_spc.get_type();
 	_prefix = field_spc.prefix();
+	_slot = slot_spc.slot;
+	// The buckets are the field's stored values, as Elasticsearch's terms aggregation reads doc values. The words
+	// of an analysed text field, or of a field kept without values, are index terms the strata engine does not keep.
+	_from_values = _type != FieldType::text && slot_spc.field_values && _slot != engine::BAD_VALUENO;
 	_func = get_func_value_handle<TermsHandler>(_type);
 }
 
@@ -122,6 +128,14 @@ TermsHandler::values(const engine::DocView& doc) const
 {
 	std::vector<std::string> values;
 
+	if (_from_values) {
+		// A document stores each distinct value once.
+		const auto stored = doc.value(_slot);
+		for (const auto& value : StringList(stored)) {
+			values.emplace_back(value);
+		}
+		return values;
+	}
 	doc.terms(_prefix, [&](std::string_view term, engine::termcount) {
 		if (term.size() > _prefix.size() + 1) {
 			values.emplace_back(term.substr(_prefix.size() + 1));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,7 @@ struct Live {
 
 class Prepared final : public PreparedQuery, private Live {
 public:
-	explicit Prepared(Xapian::Query query) : query(std::move(query)) { }
+	Prepared(const Query& source, Xapian::Query query) : PreparedQuery(source), query(std::move(query)) { }
 
 	bool empty() const override {
 		return query.empty();
@@ -120,7 +120,9 @@ top_hits(const Xapian::Database& db, const Xapian::Query& query, const SearchReq
 	enquire.set_cutoff(0, 0);
 	enquire.set_docid_order(Xapian::Enquire::ASCENDING);
 	enquire.set_query(query);
-	enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	if (!query.empty()) {  // prepare_mset requires a non-empty query; get_mset on an empty one finds nothing
+		enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	}
 	auto mset = enquire.get_mset(0, n, Xapian::doccount{0});
 	Xapian::RSet rset;
 	const auto end = mset.end();
@@ -135,10 +137,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 {
 	Scope scope;
 	for (auto* shard : shards) {
-		if (shard->kind() != Kind::xapian) {
-			throw Error(errc::not_available, "Searching a strata shard is not available yet");
-		}
-		const auto& database = *static_cast<Shard&>(*shard).database();
+		const auto& database = *dynamic_cast<Shard&>(*shard).database();
 		if (shards.size() == 1) {
 			scope.db = database;
 		} else {
@@ -180,7 +179,9 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 	}
 	enquire.set_query(final_query);
 
-	enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	if (!final_query.empty()) {  // as in top_hits
+		enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
+	}
 	auto mset = enquire.get_mset(request.first, request.maxitems, request.check_at_least);
 
 	SearchResult result;
@@ -212,26 +213,30 @@ prepare(const Query& query)
 {
 	ENGINE_CENSUS_QUERY(query);
 	try {
-		return std::make_unique<xapian::Prepared>(xapian::to_xapian(query));
+		return std::make_unique<xapian::Prepared>(query, xapian::to_xapian(query));
 	} catch (...) {
 		xapian::rethrow_translated();
 	}
 }
 
 
+}  // namespace engine
+
+
+namespace engine::xapian {
+
 task::task<SearchResult>
-search(std::span<Shard* const> shards, const SearchRequest& request)
+search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 {
-	ENGINE_CENSUS_SEARCH(request, shards.size());
 	try {
-		const auto& prepared = dynamic_cast<const xapian::Prepared&>(*request.query);
+		const auto& prepared = dynamic_cast<const Prepared&>(*request.query);
 		if (shards.empty() || prepared.empty()) {
 			co_return SearchResult{};
 		}
-		co_return xapian::run(shards, request, prepared.query);
+		co_return run(shards, request, prepared.query);
 	} catch (...) {
-		xapian::rethrow_translated();
+		rethrow_translated();
 	}
 }
 
-}  // namespace engine
+}  // namespace engine::xapian

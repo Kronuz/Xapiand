@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -92,17 +92,17 @@ static void test_values() {
 
 static void test_terms() {
 	engine::Document doc;
-	doc.add_term("a", 2);
-	doc.add_term("a", 3);
+	doc.add_term(doc.field(""), "a", 2);
+	doc.add_term(doc.field(""), "a", 3);
 	CHECK_EQ(wdf_of(doc, "a"), 5u);
-	doc.add_boolean_term("a");  // keeps the frequency
+	doc.add_boolean_term(doc.field(""), "a");  // keeps the frequency
 	CHECK_EQ(wdf_of(doc, "a"), 5u);
-	doc.add_boolean_term("b");
+	doc.add_boolean_term(doc.field(""), "b");
 	CHECK_EQ(wdf_of(doc, "b"), 0u);
 	CHECK_EQ(positions_of(doc, "b"), 0u);
-	doc.add_posting("c", 7, 2);
-	doc.add_posting("c", 7, 1);  // the same position once, the frequency twice
-	doc.add_posting("c", 3, 0);
+	doc.add_posting(doc.field(""), "c", 7, 2);
+	doc.add_posting(doc.field(""), "c", 7, 1);  // the same position once, the frequency twice
+	doc.add_posting(doc.field(""), "c", 3, 0);
 	CHECK_EQ(wdf_of(doc, "c"), 3u);
 	CHECK_EQ(positions_of(doc, "c"), 2u);
 }
@@ -118,15 +118,15 @@ static void test_matches_xapian() {
 			const auto n = rng.next(6);
 			if (n == 0) {
 				const auto wdf = rng.next(4);
-				doc.add_term(term, wdf);
+				doc.add_term(doc.field(""), term, wdf);
 				xdoc.add_term(term, wdf);
 			} else if (n == 1) {
-				doc.add_boolean_term(term);
+				doc.add_boolean_term(doc.field(""), term);
 				xdoc.add_boolean_term(term);
 			} else if (n == 2) {
 				const auto pos = 1 + rng.next(6);
 				const auto wdf = rng.next(3);
-				doc.add_posting(term, pos, wdf);
+				doc.add_posting(doc.field(""), term, pos, wdf);
 				xdoc.add_posting(term, pos, wdf);
 			} else if (n == 3) {
 				const auto slot = rng.next(5);

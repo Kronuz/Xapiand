@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -380,7 +381,9 @@ AggregationMatchSpy::unserialise(std::string_view serialised) const
 		}
 
 		auto it = data.begin();
-		return std::make_unique<AggregationMatchSpy>(MsgPack::unserialise(*it), std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::unserialise(*++it)), nullptr, ""));
+		auto aggs = MsgPack::unserialise(*it);
+		auto schema = MsgPack::unserialise(*++it);  // argument order is unspecified, so not inline
+		return std::make_unique<AggregationMatchSpy>(std::move(aggs), std::make_shared<Schema>(std::make_shared<const MsgPack>(std::move(schema)), nullptr, ""));
 	} catch (const SerialisationError&) {
 		throw engine::Error(engine::errc::invalid, "Bad serialised AggregationMatchSpy");
 	}

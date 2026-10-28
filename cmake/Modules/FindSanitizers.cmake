@@ -1,4 +1,5 @@
 #
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
 # Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -78,7 +79,13 @@ endif ()
 # Check for Undefined Behavior Sanitizer.
 if (UBSAN)
 	set (UBSAN_DESCRIPTION "UndefinedBehaviorSanitizer")
-	set (UBSAN_FLAGS  "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+	# GCC has no "function" check to disable; only Clang accepts -fno-sanitize=function.
+	if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		set (UBSAN_NO_CHECKS "vptr,function")
+	else ()
+		set (UBSAN_NO_CHECKS "vptr")
+	endif ()
+	set (UBSAN_FLAGS  "-fsanitize=undefined -fno-sanitize=${UBSAN_NO_CHECKS} -fno-sanitize-recover=all")
 	check_sanitizer_flags(${UBSAN_DESCRIPTION} ${UBSAN_FLAGS})
 endif ()
 
