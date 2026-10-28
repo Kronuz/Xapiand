@@ -199,12 +199,24 @@ private:
 		if (!_capped || _aggs.size() < 2 * _shard_size) {
 			return;
 		}
+		const auto before = bucket_count();
 		const auto kept = _best(_shard_size);
 		std::map<std::string, Aggregation> trimmed;
 		for (auto& it : kept) {
 			trimmed.insert(_aggs.extract(it));
 		}
 		_aggs = std::move(trimmed);
+		if (auto* budget = current_bucket_budget) {
+			budget->used -= std::min(budget->used, before - bucket_count());
+		}
+	}
+
+	size_t bucket_count() const override {
+		size_t count = _aggs.size();
+		for (const auto& agg : _aggs) {
+			count += agg.second.bucket_count();
+		}
+		return count;
 	}
 
 	void update() override {
@@ -645,6 +657,12 @@ public:
 		}
 
 		_prune();
+
+		if (auto* budget = current_bucket_budget) {
+			if (++budget->used > budget->max) {
+				THROW(AggregationError, "Aggregations would make more than {} buckets", budget->max);
+			}
+		}
 
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
 			std::forward_as_tuple(bucket),
@@ -1274,6 +1292,10 @@ public:
 	}
 
 	void update() override;
+
+	size_t bucket_count() const override {
+		return _agg.bucket_count();
+	}
 
 	MsgPack get_result() const override;
 
