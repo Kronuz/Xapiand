@@ -24,7 +24,7 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
    (`strata/` or `iamglass`), else `XAPIAND_ENGINE` (`xapian` or `strata`, read once, default `xapian`), and
    the registry (`.xapiand/...`) is always Xapian. `Document(kind)` is built in the engine's own form, the
    shard opens through `engine::open_local(kind, ...)`, and `DatabaseWAL` unserialises with the shard's
-   kind. The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
+   kind (the `:wal` dump has no shard and takes it from the log's files). The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
    takes the process default.
 2. **The key is explicit.** `Document::set_key(term)` names the id term (D5); a Xapian document takes it as
    a boolean term, a strata document also remembers it. The index key is `\xff` followed by the term. The
@@ -51,6 +51,14 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
    to wire it, `tests/test_engine_strata.cc` `values_gap` flips then). `DocView::terms`, `term_details` and
    `serialise` raise `not_available` until the term-list plugin. Searching a strata shard raises it too (S2).
 
+## Replay
+
+A WAL line is `Document::serialise()`; replay is `Document::unserialise(kind, line)` then `replace(did, doc)`.
+A replayed id above `last_docid` is a create (no lookup); one with a key finds its version by the key. Replay
+runs at a writable open, as with Xapian, so a restart serves the committed state until a write opens the
+shard; a strata shard exists from its creation, so unlike an uncommitted new Xapian shard it answers (empty)
+instead of failing the read. A transaction replays inside itself and cancels with it.
+
 ## Invariants
 
 1. Only `src/engine/strata/` names strata or prospect (`harness/seam_check.sh` does not need an entry).
@@ -68,4 +76,4 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
 | Document in the engine's form, the codec | `src/engine/strata/document.{h,cc}`, `src/engine/document.cc` |
 | The shard | `src/engine/strata/shard.{h,cc}` |
 | Values adapter (gated) | `src/engine/strata/values.h` |
-| Tests | `tests/test_engine_strata.cc`; fuzz target `tests/fuzz_strata_document.cc` |
+| Tests | `tests/test_engine_strata.cc` (both engines); fuzz target `tests/fuzz_strata_document.cc`; `harness/strata_write_check.sh` (a node on strata: documents by id, `:wal`, kill -9 replay) |
