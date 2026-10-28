@@ -34,4 +34,4 @@ integer field), for the owner.
 
 ## Log
 
-- 2026-10-27: revision 0 drafted (commit in `git log` of this branch).
+- 2026-10-27: revision 0 drafted, Xapiand:72f1006ac.
