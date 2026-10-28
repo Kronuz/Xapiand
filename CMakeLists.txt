@@ -32,7 +32,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set (PACKAGE_NAME "Xapiand")
-set (PACKAGE_VERSION "1.0.0-alpha.9")
+set (PACKAGE_VERSION "1.0.0-alpha.10")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
@@ -65,6 +65,8 @@ option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
 option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
+option(FUZZ "Build the libFuzzer targets (tests/fuzz_*.cc; needs a clang with libFuzzer)" OFF)
+option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a strata commit or replay point (crash tests)" OFF)
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
@@ -77,6 +79,10 @@ foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM
 	endif ()
 endforeach ()
 
+if (CRASH_POINTS)
+	message(STATUS "Option CRASH_POINTS - on")
+	add_compile_definitions(XAPIAND_CRASH_POINTS)
+endif ()
 if (ENGINE_CENSUS)
 	message(STATUS "Option ENGINE_CENSUS - on")
 	add_compile_definitions(ENGINE_CENSUS)
@@ -462,6 +468,10 @@ endif ()
 
 
 include(FetchContent)
+
+# compressors: the commit strata pins, for its stored blocks' one-shot LZ4 and zstd block codecs
+# (declared first, so it wins over the older pins of the libraries that also use compressors).
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 816bc82ca9e41bd6fc54831d172ede45b3fc6eaa)
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
 # rapidjson; logger / http_log pull cppcodec). FetchContent is first-declaration-wins
@@ -752,6 +762,12 @@ set(TASK_ASIO OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG aa447e726c617c5c10a569409ecf8e024b88750f)
 FetchContent_MakeAvailable(task)
 
+# prospect: the search layout on the strata segment core, behind the strata engine
+# (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
+# strata and the libraries strata links (the pins above win where the same library is declared).
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 9de01a18853e7da36c97abbacc07f11a08074dcc)
+FetchContent_MakeAvailable(prospect)
+
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
 # (the extracted library correctly no longer pulls it). Rather than an absolute-path
 # macro, Xapiand keeps a thin wrapper named src/xapiand_strings.hh (not strings.hh, so
@@ -988,7 +1004,6 @@ include_directories("${htm_SOURCE_DIR}")
 # located-exception trick). lz4.h comes from the lz4 FetchContent already on the
 # path, zlib from the system. Xapiand uses deflate + lz4 only (no zstd), so only
 # those two .cc compile into XAPIAND_OBJ.
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG ed590c87201afd270afbfbb2d58d5d467c6d23b6)
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
@@ -1381,6 +1396,7 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/xapian/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/xapian/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/engine/strata/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/strata/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h*"
@@ -1508,6 +1524,7 @@ endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
 	queryparser::queryparser
+	prospect::prospect
 	task::task
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
@@ -2158,7 +2175,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error engine_replay pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2182,6 +2199,20 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+		add_test(NAME test_wal_replay_xapian COMMAND ${PROJECT_NAME}_test_wal_replay)
+		set_tests_properties(test_wal_replay_xapian PROPERTIES ENVIRONMENT "XAPIAND_ENGINE=xapian")
+
+	# libFuzzer targets: standalone (they link only the code they fuzz), built with -DFUZZ=ON.
+	if (FUZZ)
+		add_executable(fuzz_strata_document
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_strata_document.cc"
+			"${PROJECT_SOURCE_DIR}/src/engine/strata/document.cc"
+		)
+		target_include_directories(fuzz_strata_document PRIVATE "${PROJECT_SOURCE_DIR}/src")
+		target_compile_features(fuzz_strata_document PRIVATE cxx_std_20)
+		target_compile_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
+		target_link_options(fuzz_strata_document PRIVATE -fsanitize=fuzzer,address,undefined)
+	endif ()
 
 		# The query tests read the stop words from the source tree.
 		target_compile_definitions(${PROJECT_NAME}_test_engine_query PRIVATE XAPIAND_SOURCE_DIR="${PROJECT_SOURCE_DIR}")

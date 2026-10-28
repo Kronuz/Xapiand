@@ -40,6 +40,7 @@
 #include "base_x.hh"                              // for Base64
 #include "cast.h"                                 // for Cast
 #include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialise
+#include "engine/kind.h"                          // for engine::kind_of
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
@@ -2972,7 +2973,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			version_field = &fields.back();
 		}
 
-		engine::Document doc;
+		engine::Document doc(db_handler.endpoints.empty() ? engine::default_kind() : engine::kind_of(db_handler.endpoints[0].path));
 		MsgPack data_obj;
 
 		auto data_ptr = &data_obj;
@@ -2985,7 +2986,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		}
 
 		if (term_id != "QN\x80") {
-			doc.add_boolean_term(term_id);  // make sure the ID term is ALWAYS added!
+			doc.set_key(term_id);  // make sure the ID term is ALWAYS added!
 		}
 
 		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());

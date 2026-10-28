@@ -65,6 +65,13 @@ XapianDocument::add_boolean_term(std::string_view term)
 
 
 void
+XapianDocument::set_key(std::string_view term)
+{
+	doc_.add_boolean_term(term);
+}
+
+
+void
 XapianDocument::add_posting(std::string_view term, termpos position, termcount wdf_inc)
 {
 	doc_.add_posting(term, position, wdf_inc);
@@ -134,7 +141,7 @@ xapian_document(const Document& doc)
 Document
 from_xapian(const Xapian::Document& doc)
 {
-	Document result;
+	Document result(Kind::xapian);
 	const auto terms_end = doc.termlist_end();
 	for (auto it = doc.termlist_begin(); it != terms_end; ++it) {
 		auto name = *it;
@@ -393,12 +400,16 @@ live_views() noexcept
 }  // namespace engine::xapian
 
 
-engine::Document::Document() : native_(std::make_unique<xapian::XapianDocument>()) { }
-
-
-// The stored form of an engine document is Xapian's own, which keeps old write-ahead log lines readable.
-engine::Document
-engine::Document::unserialise(std::string_view serialised)
+std::unique_ptr<engine::Document::Native>
+engine::xapian::new_native()
 {
-	return xapian::from_xapian(Xapian::Document::unserialise(std::string(serialised)));
+	return std::make_unique<XapianDocument>();
+}
+
+
+// The stored form of a Xapian engine document is Xapian's own, which keeps old write-ahead log lines readable.
+engine::Document
+engine::xapian::unserialise_document(std::string_view serialised)
+{
+	return from_xapian(Xapian::Document::unserialise(std::string(serialised)));
 }

@@ -5,7 +5,8 @@
 # Counts the lines naming `Xapian::` or including a Xapian header in every source outside
 # src/xapian and src/engine/xapian, and compares each file with harness/seam_allowlist.txt
 # ("<count> <path>" per line). A file that is not listed, or whose count grew, fails. The
-# list only shrinks: --update rewrites it from the tree. The end state (X4c) is an allowlist
+# list only shrinks: --update rewrites it from the tree. The strata engine's headers (prospect/, strata/core/,
+# completion/) may be included from src/engine/strata only. The end state (X4c) is an allowlist
 # of the remote protocol and replication files only.
 set -u
 cd "$(dirname "$0")/.."
@@ -43,6 +44,14 @@ while read -r n f; do
 	echo "$actual" | awk -v f="$f" '$2 == f { found = 1 } END { exit !found }' ||
 		{ echo "seam_check: $f no longer names Xapian: run harness/seam_check.sh --update"; fail=1; }
 done < "$LIST"
+
+# strata and prospect stay behind the seam too: only src/engine/strata includes their headers.
+leaks=$(git ls-files src | grep -E '\.(cc|h|hh|cpp|c)$' | grep -v -e '^src/xapian/' -e '^src/engine/strata/' |
+	xargs grep -lE '#include "(prospect|strata/core|completion)/' 2>/dev/null)
+if [ -n "$leaks" ]; then
+	echo "$leaks" | while read -r f; do echo "seam_check: $f includes strata or prospect outside src/engine/strata"; done
+	fail=1
+fi
 
 files=$(echo "$actual" | grep -c .)
 lines=$(echo "$actual" | awk '{ s += $1 } END { print s + 0 }')

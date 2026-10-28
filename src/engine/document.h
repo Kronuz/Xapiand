@@ -31,6 +31,7 @@
 #include <string_view>             // for std::string_view
 #include <utility>                 // for std::move
 
+#include "engine/kind.h"           // for Kind
 #include "engine/types.h"          // for docid, termcount, termpos, valueno
 
 
@@ -52,6 +53,7 @@ public:
 
 		virtual void add_term(std::string_view term, termcount wdf_inc) = 0;
 		virtual void add_boolean_term(std::string_view term) = 0;
+		virtual void set_key(std::string_view term) = 0;
 		virtual void add_posting(std::string_view term, termpos position, termcount wdf_inc) = 0;
 		virtual void add_value(valueno slot, std::string value) = 0;
 		virtual std::string get_value(valueno slot) const = 0;
@@ -66,8 +68,9 @@ public:
 #endif
 	};
 
-	// An empty document of the engine. Defined by the engine.
+	// An empty document of the default engine, or of the given one. Defined in document.cc.
 	Document();
+	explicit Document(Kind kind);
 	explicit Document(std::unique_ptr<Native> native) : native_(std::move(native)) { }
 
 	// Adds wdf_inc to the term's within-document frequency, creating the term if needed.
@@ -78,6 +81,13 @@ public:
 	// Makes sure the term exists, without changing its frequency.
 	void add_boolean_term(std::string_view term) {
 		native_->add_boolean_term(term);
+	}
+
+	// Makes the term the document's key (the id term): the one term that names the document for
+	// replace-by-key, whatever else the term is used for. Adds it as a boolean term, so it is also a
+	// term of the document.
+	void set_key(std::string_view term) {
+		native_->set_key(term);
 	}
 
 	// Adds a position to the term, and wdf_inc to its frequency.
@@ -112,6 +122,7 @@ public:
 		return native_->serialise();
 	}
 	static Document unserialise(std::string_view serialised);
+	static Document unserialise(Kind kind, std::string_view serialised);
 
 private:
 	std::unique_ptr<Native> native_;
