@@ -403,6 +403,24 @@ join(Op op, Scorer left, Scorer right)
 
 Scorer build(const Query& query, const Builder& b, int depth);
 
+// Appends the query, or, when `into` is set and it is an OR, the subqueries of that OR (and of the ORs
+// inside it), to the list.
+void
+flatten_or(bool into, const Query& query, std::vector<const Query*>& list, int depth)
+{
+	const auto* node = query.node();
+	if (depth > max_depth) {
+		throw Error(errc::syntax, "The query is nested too deeply");
+	}
+	if (into && node != nullptr && node->kind == QueryKind::combine && node->op == Op::OR && !node->matches_nothing) {
+		for (const auto& sub : node->subqueries) {
+			flatten_or(true, sub, list, depth + 1);
+		}
+		return;
+	}
+	list.push_back(&query);
+}
+
 // The scorer of a group node in one segment: its terms joined by the node's combiner.
 Scorer
 build_group(const QueryNode& node, const Builder& b)
@@ -495,7 +513,13 @@ build(const Query& query, const Builder& b, int depth)
 			Scorer result;
 			bool first = true;
 			std::vector<Scorer> rest;
+			// Xapian reads an OR inside a MAX as more subqueries of the MAX, not as a sum.
+			std::vector<const Query*> flat;
 			for (const auto& sub : node->subqueries) {
+				flatten_or(node->op == Op::MAX, sub, flat, depth);
+			}
+			for (const Query* subquery : flat) {
+				const Query& sub = *subquery;
 				auto scorer = build(sub, b, depth + 1);
 				if (first) {
 					result = std::move(scorer);
