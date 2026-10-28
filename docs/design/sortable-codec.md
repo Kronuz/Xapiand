@@ -303,3 +303,8 @@ after landing.
 
 **Step 3. Follow-ups, outside this branch.** prospect's `ordered.hh` into `sortable` (Q3 (a)); the strata
 PLAN and xapiand-on-strata notes of "Changes to other designs".
+
+**Lead rulings (2026-10-27, on the designer's recommendations; reversible before release).**
+Q1 (a): NaN in a document is rejected at indexing with 400. Q2 (a): -0.0 encodes as 0. Q3 (a): a
+new `Kronuz/sortable` library now; prospect's `ordered.hh` moves into it later. Q4 (a): a `uint64`
+of 2^63 or more in an integer field is rejected with 400.
