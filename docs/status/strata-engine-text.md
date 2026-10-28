@@ -26,12 +26,27 @@ A/B build). Mechanism note: `docs/mechanisms/text-queries.md`.
 
 ## Done
 
-(commits listed as they land)
+1. `Xapiand:f29dfe942` host-side `engine::parse_text`, Text node removed, errors mapped, changelog and
+   mechanism note (`docs/mechanisms/text-queries.md`). Pin queryparser `09a4ea6`.
+2. Test braces commit after it. Proven so far, ASan+UBSan build `.scratch/build-asan` (Apple clang):
+   `xapiand_test_text` 7165 checks (706 A/B decisions as recorded; lowering equals the tree on ~5,500
+   vector rows), `xapiand_test_engine_query` 22395 checks (live agreement with Xapian's parser),
+   `seam_check.sh` green (7 files, 158 lines: unchanged; the text path never appeared in the allowlist).
+3. Finding: `_near` over `(barack OR michelle) AND obama` (no BOOLEAN flag) is a QueryParserError: 400,
+   asserted in `test_near_of_a_boolean_expression`. Stop words only: a group of only stop words keeps
+   its words (as Xapian); only a text without words is empty.
 
-## Next
+## Doing / Next (resume here)
 
-1. Build and prove (below).
+1. Run `.scratch/proof.sh` under `quiet light` (rebuilds, fuzz 2x150 s, five mutants of `src/engine/text.cc`
+   via `.scratch/mutants.sh`; it restores the file with `git checkout`). Record the fuzz line and mutant
+   failure counts here. Never edit `src/engine/text.cc` while it runs.
+2. Rebuild `xapiand` (`.scratch/build-asan.sh xapiand`), run `.scratch/probe.sh .scratch/build-asan/bin/xapiand`
+   (the finding's input over HTTP, expect 400 and no ASan report), then `.scratch/e2e.sh qp
+   .scratch/build-asan/bin/xapiand` and expect 576/576 in `.scratch/e2e/qp.assert`.
+3. Fix the changelog "Fixed" bullet to match the probe (400 for brackets under NEAR/PHRASE/ELITE_SET).
+4. Delete `.scratch/build-asan` when done. Not done: E2E, fuzz run, mutants, ASan server probe.
 
 ## Blocked on
 
-Nothing.
+Nothing. Host hold queue was long (light slots full); each `quiet light` waited 10 to 30 minutes.
