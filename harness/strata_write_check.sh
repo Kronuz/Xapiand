@@ -8,7 +8,14 @@
 #   replay    PUT N docs without a commit, kill -9, restart (a write to every shard opens it writable and
 #             replays its WAL): every document is served by id; a crash after the commit loses nothing;
 #             a write between the crashes is replayed
-# Usage: harness/strata_write_check.sh [write|replay ...]   (default: both)
+#   versions  writes, replaces and deletes with known versions; kill -9; after each replay every document is at the
+#             version and value the model acknowledged (harness/strata_write_model.py), through a second crash
+#   commit    the node kills itself at a commit point (XAPIAND_STRATA_CRASH, a -DCRASH_POINTS=ON build): before the
+#             commit, after the segment is flushed and before the manifest, after it; random writes and deletes
+#             run until it dies; restart, replay, verify the model; crash again, verify again
+#   replaycrash  kill -9 under load, then the node kills itself in the middle of the replay, twice at different
+#             lines; the next restart converges, and so does one more crash after it
+# Usage: harness/strata_write_check.sh [write|replay|versions|commit|replaycrash ...]   (default: write replay)
 #        BIN=build/bin/xapiand PORT=8909 NDOCS=30
 set -u
 
@@ -30,7 +37,7 @@ start_node() {  # start_node LOG
 	local log="$RUNDIR/$1"
 	(
 		exec > >(cat >>"$log") 2>&1
-		XAPIAND_ENGINE="${ENGINE:-strata}" exec "$BIN" --port "$PORT" --solo --name strataw --verbosity 3 -D "$RUNDIR/n"
+		XAPIAND_STRATA_CRASH="${HOOK:-}" XAPIAND_ENGINE="${ENGINE:-strata}" exec "$BIN" --port "$PORT" --solo --name strataw --verbosity 3 -D "$RUNDIR/n"
 	) &
 	PID=$!
 	for _ in $(seq 80); do
@@ -139,11 +146,109 @@ scenario_replay() {
 	crash
 }
 
+MODEL="$RUNDIR/model.json"
+model() { local c="$1"; shift; python3 "$REPO/harness/strata_write_model.py" "$c" "$PORT" "$IDX" "$MODEL" "$@"; }
+ids() { local i; for i in $(seq "$1" "$2" "$3"); do printf 'u%d ' "$i"; done; }  # ids FIRST STEP LAST
+check_model() {  # check_model LABEL: every id is at the version and value the model acknowledged
+	local out
+	if out="$(model verify 2>&1)"; then pass "$1: $out"; else fail "$1: $out"; fi
+}
+died() {  # died LABEL: the node killed itself (a crash point fired)
+	local _
+	for _ in $(seq 40); do
+		kill -0 "$PID" 2>/dev/null || { wait "$PID" 2>/dev/null; PID=""; pass "$1: the node died at its crash point"; return 0; }
+		sleep 0.5
+	done
+	fail "$1: the crash point did not fire (is the build -DCRASH_POINTS=ON?)"
+	crash
+	return 1
+}
+
+scenario_versions() {
+	echo "== [strata-write] versions and values through crashes =="
+	rm -rf "$RUNDIR/n" "$MODEL"
+	local last=$((NDOCS - 1))
+	start_node v1.log || { fail "startup"; return; }
+	model put $(ids 0 1 "$last")      # version 1 everywhere
+	model put $(ids 0 2 "$last")      # version 2 on the evens
+	model put $(ids 0 3 "$last")      # version 3 on multiples of three (6 is 3)
+	model del $(ids 4 5 "$last")      # deleted
+	model put $(ids 4 10 "$last")     # a deleted key written again
+	check_model "before the crash"
+	crash
+	start_node v2.log || { fail "restart 1"; return; }
+	poke
+	check_model "after the first replay"
+	[ "$(count_log v2.log "Read and execute operations WAL file ('$IDX/")" -ge 1 ] && pass "the restart replayed the WAL" || fail "no replay logged"
+	sleep 5   # the autocommit commits the replay
+	crash
+	start_node v3.log || { fail "restart 2"; return; }
+	poke
+	check_model "after the second crash"
+	model put $(ids 0 4 "$last")
+	model del $(ids 1 7 "$last")
+	sleep 1.5
+	crash
+	start_node v4.log || { fail "restart 3"; return; }
+	poke
+	check_model "writes between the crashes"
+	crash
+}
+
+scenario_commit() {
+	echo "== [strata-write] the node dies at a commit point =="
+	local point
+	for point in commit.before commit.flushed commit.after; do
+		rm -rf "$RUNDIR/n" "$MODEL"
+		HOOK="$point:3" start_node c1.log || { fail "startup ($point)"; continue; }
+		model load 12 40   # until the node dies; the autocommit is about 3 s in
+		died "$point" || continue
+		start_node c2.log || { fail "restart ($point)"; continue; }
+		poke
+		check_model "$point: after the restart"
+		[ "$(count_log c2.log 'WAL ERROR')" = 0 ] && pass "$point: no WAL error" || fail "$point: WAL error on the restart"
+		model load 1 40
+		sleep 5
+		crash
+		start_node c3.log || { fail "restart 2 ($point)"; continue; }
+		poke
+		check_model "$point: after a second crash"
+		crash
+	done
+}
+
+scenario_replaycrash() {
+	echo "== [strata-write] the node dies in the middle of the replay =="
+	rm -rf "$RUNDIR/n" "$MODEL"
+	start_node p1.log || { fail "startup"; return; }
+	model load 1.5 40   # under the autocommit, so the log holds all of it
+	crash
+	HOOK="replay:5" start_node p2.log || { fail "restart 1"; return; }
+	poke
+	died "the first replay" || return
+	HOOK="replay:2" start_node p3.log || { fail "restart 2"; return; }
+	poke
+	died "the second replay" || return
+	start_node p4.log || { fail "restart 3"; return; }
+	poke
+	check_model "after two crashes in the replay"
+	sleep 5
+	crash
+	start_node p5.log || { fail "restart 4"; return; }
+	poke
+	check_model "after one more crash"
+	[ "$(count_log p5.log 'WAL ERROR')" = 0 ] && pass "no WAL error" || fail "WAL error on the last restart"
+	crash
+}
+
 picked=("$@"); [ ${#picked[@]} -eq 0 ] && picked=(write replay)
 for p in "${picked[@]}"; do
 	case "$p" in
 		write) scenario_write ;;
 		replay) scenario_replay ;;
+		versions) scenario_versions ;;
+		commit) scenario_commit ;;
+		replaycrash) scenario_replaycrash ;;
 		*) echo "unknown scenario $p"; exit 2 ;;
 	esac
 done
