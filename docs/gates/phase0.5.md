@@ -85,3 +85,48 @@ Gate 0.5 is not passed yet. T2 and T4 pass. Three items stay open:
    It is attributed in the same bisect; an estimate change is acceptable only if it is explained.
 
 The gate is rerun on the commit that closes all three.
+
+## Run 2 (2026-10-27, master `7efc3753e`)
+
+Master `7efc3753e98109a0cb0191fb892e73c2c730707b` (census, write path that builds documents once, A-T5, CR1 replay commit,
+exact numeric ranges, exact cluster aggregations), detached worktree, Apple Silicon macOS, Release (`-DBUILD_TESTS=OFF`,
+default LTO), plus an `ENGINE_CENSUS=ON` build for T1 and T5. Base: `855f75281`, the binary of run 1 (same commit). newman 6.2.3.
+Throughput units ran one at a time under `quiet exclusive`; the other rows under `quiet light`.
+
+| Row | Target | Result | Status |
+|---|---|---|---|
+| T1 census | `docs/dev/engine-census.md` from an `ENGINE_CENSUS` build | Build works; 339 requests in 339 lines (7 readiness probes, 11 unattributed lines, 0 tainted), 576 of 576 assertions. Per-class and facility tables regenerated (call counts moved; same facilities) | PASS |
+| T2 seam closed | `harness/seam_check.sh` exits 0 | Exit 0: 7 files, 158 lines in the allowlist | PASS |
+| T3 assertions | Zero assertion regressions | 339 requests, ours 576/576, base 574/576; 0 regressions, 0 pre-existing, 2 fixes (Basque) | PASS |
+| T3 bodies | Differ only in volatile fields, or explained | 19 divergences by `bodydiff.py` (21 request-level differences in a path-level diff), all classified below: volatile ids and counters, Basque, and the exact aggregations; the bank estimate 459 became 232, the exact match count | PASS |
+| T3 index throughput | Within the noise band | 0.996x base by trial mean (4456 vs 4476 docs/s; by run median 0.989x, 4470 vs 4520). Pairs 1.06, 0.95, 1.03, 0.94; every perfdiff verdict `~same`. Run 1 was 0.81x | PASS |
+| T3 query QPS | Within the noise band | 0.974x base by trial mean (4178 vs 4291; by run median 0.984x). Pairs 1.07, 0.93, 0.94, 0.96, all inside the QPS band; p95 +10% in 2 of 4 pairs. Ours-ours A/A 4076 vs 4152, base-base 4375 vs 4410 | PASS (see note) |
+| T4 cluster | `cluster_check.sh 2` and `3` incl. [3b] | Both GREEN; [3b] every node reports `_doc_count=40 _sum=530 _avg=13.25`, with and without `_check_at_least:1` | PASS |
+| T4 WAL | `wal_recovery_check.sh`, `wal_replay_check.sh`, `wal_replay_agg_check.sh` | PASS 50/50; PASS (visible, walcommit, idempotent, failure); PASS (avg 19.5, max 39.0 after replay) | PASS |
+| T5 key prefix | At most one `Q` term per document, the id term | Census over the suite: 2625 documents written, 2625 with exactly one `Q` term (473 named the key and it is that term, 2152 by docid), 0 with a second. `id_terms_check.py --census`: 97 documents, 0 with more than one `Q` term, 20 of 20 range queries correct | PASS |
+| Values | `numeric_range_check.py` | 797 ranges over integer, positive, floating and datetime fields, 0 wrong | PASS |
+| T11 | Recorded only | Not measured: `harness/profile_bulk.sh` is not on master | n/a |
+
+### Run 2 body divergences (`bodydiff.py` and a path-level diff of the raw reports)
+
+1. `POST /twitter/user/`, `POST /test/comment-ignore/`, `RESTORE /test/restore/`: generated ids. Volatile.
+2. `GET /` (`server/revision`, `versions/Xapiand`) and `GET /:metrics` counters. Volatile.
+3. `PUT /test/stemlang/basque/doc` 500 to 200 and its search 0 to 1 hit: intentional (basque mapped to `eu`, `58bdfdd83`).
+4. 14 `SEARCH /bank/` requests differ in `aggregations._doc_count` (for example 38 to 91, 6 to 64, 56 to 991) and in `total`
+   (for example 400 to 349, 700 to 461, 1000 to 443). Intentional, `9dd443095` and `47d0db117`: aggregations now check every
+   match (`engine::CHECK_ALL`). Base counted only the documents its match spy was shown and reports `total` as a match estimate; ours checks all
+   matches, so `_doc_count` and `total` are the true count where they changed.
+5. The bank estimate, `_and [gender female, age 20..30]`: base `total` 459 (run 1 ours 400), now 232 with `_doc_count` 232.
+   A brute-force count over `docs/public/assets/accounts.ndjson` gives 232 (953 rows), so 232 is the true match count and the
+   old 459 and 400 were estimates. Unchanged requests (`_doc_count` 349, 211, 461, 232 on both) confirm the base is exact
+   when the query's matches are all checked.
+
+### Notes
+
+1. One base unit stalled (a RESTORE took 64 s and the connection died on trial 2). The unit was rerun as `base1r`; the
+   rerun is the base1 used above. Not seen on ours in 7 units.
+2. The query mix includes aggregations, which now visit every match; the 2.6% lean on QPS fits that cost and sits inside the
+   band, so the row passes, but it is the number to watch.
+3. Disk bytes after a bulk load are equal within 1.5% (about 12.8 to 13.1 MB).
+4. Results, binaries, scripts: `.scratch/gate05b/` in the main Xapiand checkout. The census tables in
+   `docs/dev/engine-census.md` ("Per request class", "Facility totals") are regenerated from this run.

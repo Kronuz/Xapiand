@@ -163,8 +163,9 @@ count above.
 
 ## Per request class
 
-Class is the method and the path shape (`{index}` the first segment, `{path}` the rest). Facilities are the census keys; `shard:` lists the shard operations. Zero-activity rows touch no engine facility (index state is served from the host).
+The tables under this heading and under "Facility totals" are regenerated from an `ENGINE_CENSUS` build of master `7efc3753e` (gate 0.5 run 2: 339 requests, 576 of 576 assertions); the sections above keep their original capture. Call counts moved with the exact aggregations (every match is checked), the exact numeric ranges and the write path that builds documents once.
 
+Class is the method and the path shape (`{index}` the first segment, `{path}` the rest). Facilities are the census keys; `shard:` lists the shard operations. Zero-activity rows touch no engine facility (index state is served from the host).
 
 | Class | Requests | Facilities (requests using each) |
 |---|---|---|
@@ -173,7 +174,7 @@ Class is the method and the path shape (`{index}` the first segment, `{path}` th
 | `DELETE /{index}/{path}/` | 2 |  |
 | `DUMP /{index}/{path}/` | 2 | shard: scan 2; `docview.data` 2, `docview.data@host` 2, `docview.did` 2, `docview.did@host` 2 |
 | `GET /` | 1 | shard: find_key 1, get 1; `docview.data` 1, `docview.data@host` 1 |
-| `GET /:metrics` | 1 |  |
+| `GET /:metrics` | 1 | shard: commit 1 |
 | `GET /{index}` | 1 |  |
 | `GET /{index}/` | 1 | shard: find_key 1, get 1; `docview.data` 1, `docview.data@host` 1 |
 | `GET /{index}/:info` | 1 | shard: stats 1 |
@@ -191,59 +192,58 @@ Class is the method and the path shape (`{index}` the first segment, `{path}` th
 | `PUT /{index}/{path}` | 88 | shard: commit 86, find_key 88, get 67, metadata 50, replace 74, replace_by_key 69, set_metadata 50; `docview.data` 67, `docview.data@host` 67, `docview.value` 66, `docview.value@host` 66, `t5[Q].documents` 88, `t5[Q].one_key_term.named` 69, `t5[Q].one_key_term.unnamed` 74, `t5[_id.].documents` 88, `t5[_id.].no_key_term` 88, `t5[_id.].violation.key_without_prefix` 69 |
 | `PUT /{index}/{path}/` | 5 | shard: find_key 5, get 5, metadata 3, reopen 4, replace 3, replace_by_key 3, set_metadata 2; `docview.data` 5, `docview.data@host` 5, `docview.value` 3, `docview.value@host` 3, `t5[Q].documents` 4, `t5[Q].one_key_term.named` 3, `t5[Q].one_key_term.unnamed` 3, `t5[_id.].documents` 4, `t5[_id.].no_key_term` 4, `t5[_id.].violation.key_without_prefix` 3 |
 | `RESTORE /{index}/` | 2 | shard: commit 2, find_key 2, get 2, metadata 2, replace 2, replace_by_key 2, set_metadata 2; `docview.data` 2, `docview.data@host` 2, `docview.value` 2, `docview.value@host` 2, `t5[Q].documents` 2, `t5[Q].one_key_term.named` 2, `t5[Q].one_key_term.unnamed` 2, `t5[_id.].documents` 2, `t5[_id.].no_key_term` 2, `t5[_id.].violation.key_without_prefix` 2 |
-| `RESTORE /{index}/{path}/` | 4 | shard: commit 3, find_key 3, get 2, metadata 1, replace 3, replace_by_key 1, set_metadata 1; `docview.data` 2, `docview.data@host` 2, `docview.value` 2, `docview.value@host` 2, `t5[Q].documents` 3, `t5[Q].one_key_term.named` 1, `t5[Q].one_key_term.unnamed` 3, `t5[Q].violation.multiple` 1, `t5[_id.].documents` 3, `t5[_id.].no_key_term` 3, `t5[_id.].violation.key_without_prefix` 1 |
-| `SEARCH /{index}/` | 82 | shard: get 48; `callback.keymaker:Multi_MultiValueKeyMaker` 21, `callback.source:GeoSpatialRange.accept` 4, `callback.source:GeoSpatialRange.weight` 4, `callback.source:MultipleValueGE.accept` 2, `callback.source:MultipleValueGE.weight` 2, `callback.source:MultipleValueRange.accept` 3, `callback.source:MultipleValueRange.weight` 3, `callback.spy:AggregationMatchSpy` 74, `docview.data` 48, `docview.data@host` 48, `docview.terms` 1, `docview.terms@spy:AggregationMatchSpy` 1, `docview.value` 49, `docview.value@keymaker:Multi_MultiValueKeyMaker` 21, `docview.value@spy:AggregationMatchSpy` 28, `query.combine.binary` 7, `query.combine.nary` 11, `query.op.AND` 45, `query.op.AND_MAYBE` 1, `query.op.ELITE_SET` 2, `query.op.FILTER` 8, `query.op.NEAR` 1, `query.op.OR` 8, `query.op.PHRASE` 1, `query.text.default_op.AND` 1, `query.text.default_op.ELITE_SET` 1, `query.text.default_op.NEAR` 1, `query.text.default_op.PHRASE` 1, `query.text.flag.BOOLEAN` 1, `query.text.flag.FUZZY` 32, `query.text.flag.LOVEHATE` 32, `query.text.flag.PARTIAL` 2, `query.text.flag.PHRASE` 32, `query.text.flag.WILDCARD` 2, `query.text.partial_max_expansion` 32, `query.text.stem.none` 25, `query.text.stem.some` 7, `query.text.stem_language` 7, `query.text.stop` 7, `query.wildcard.combiner.SYNONYM` 1, `query.wildcard.limit.error` 1, `search.check_at_least` 77, `search.first` 1, `search.maxitems_zero` 29, `search.order.ascending` 80, `search.sorter.Multi_MultiValueKeyMaker` 21, `search.spy.AggregationMatchSpy` 77, `source.GeoSpatialRange` 4, `source.MultipleValueGE` 2, `source.MultipleValueRange` 3, `source.max_weight` 4 |
-| `SEARCH /{index}/{path}/` | 14 | shard: get 13; `callback.keymaker:Multi_MultiValueKeyMaker` 3, `callback.source:MultipleValueRange.accept` 3, `callback.source:MultipleValueRange.weight` 3, `callback.spy:AggregationMatchSpy` 5, `docview.data` 13, `docview.data@host` 13, `docview.value` 3, `docview.value@keymaker:Multi_MultiValueKeyMaker` 3, `query.combine.binary` 5, `query.combine.nary` 6, `query.edit_distance.combiner.SYNONYM` 1, `query.edit_distance.distance.3` 1, `query.edit_distance.limit.error` 1, `query.edit_distance.prefix_length` 1, `query.op.AND` 14, `query.op.FILTER` 3, `query.op.OR` 7, `query.term.pos` 1, `query.text.flag.FUZZY` 7, `query.text.flag.LOVEHATE` 7, `query.text.flag.PARTIAL` 1, `query.text.flag.PHRASE` 7, `query.text.flag.WILDCARD` 2, `query.text.partial_max_expansion` 7, `query.text.stem.none` 5, `query.text.stem.some` 2, `query.text.stem_language` 2, `query.text.stop` 2, `query.wildcard.combiner.SYNONYM` 1, `query.wildcard.limit.most_frequent` 1, `query.wildcard.max_expansion` 1, `search.check_at_least` 5, `search.order.ascending` 14, `search.sorter.Multi_MultiValueKeyMaker` 3, `search.spy.AggregationMatchSpy` 5, `source.MultipleValueRange` 3 |
+| `RESTORE /{index}/{path}/` | 4 | shard: commit 3, find_key 3, get 2, metadata 1, replace 3, replace_by_key 1, set_metadata 1; `docview.data` 2, `docview.data@host` 2, `docview.value` 2, `docview.value@host` 2, `t5[Q].documents` 3, `t5[Q].one_key_term.named` 1, `t5[Q].one_key_term.unnamed` 3, `t5[_id.].documents` 3, `t5[_id.].no_key_term` 3, `t5[_id.].violation.key_without_prefix` 1 |
+| `SEARCH /{index}/` | 82 | shard: commit 1, get 48; `callback.keymaker:Multi_MultiValueKeyMaker` 21, `callback.source:GeoSpatialRange.accept` 4, `callback.source:GeoSpatialRange.weight` 4, `callback.source:MultipleValueGE.accept` 2, `callback.source:MultipleValueGE.weight` 2, `callback.source:MultipleValueRange.accept` 3, `callback.source:MultipleValueRange.weight` 3, `callback.spy:AggregationMatchSpy` 74, `docview.data` 48, `docview.data@host` 48, `docview.terms` 1, `docview.terms@spy:AggregationMatchSpy` 1, `docview.value` 49, `docview.value@keymaker:Multi_MultiValueKeyMaker` 21, `docview.value@spy:AggregationMatchSpy` 28, `query.combine.binary` 7, `query.combine.nary` 11, `query.op.AND` 45, `query.op.AND_MAYBE` 1, `query.op.ELITE_SET` 2, `query.op.FILTER` 8, `query.op.NEAR` 1, `query.op.OR` 8, `query.op.PHRASE` 1, `query.text.default_op.AND` 1, `query.text.default_op.ELITE_SET` 1, `query.text.default_op.NEAR` 1, `query.text.default_op.PHRASE` 1, `query.text.flag.BOOLEAN` 1, `query.text.flag.FUZZY` 32, `query.text.flag.LOVEHATE` 32, `query.text.flag.PARTIAL` 2, `query.text.flag.PHRASE` 32, `query.text.flag.WILDCARD` 2, `query.text.partial_max_expansion` 32, `query.text.stem.none` 25, `query.text.stem.some` 7, `query.text.stem_language` 7, `query.text.stop` 7, `query.wildcard.combiner.SYNONYM` 1, `query.wildcard.limit.error` 1, `search.check_at_least` 77, `search.first` 1, `search.maxitems_zero` 29, `search.order.ascending` 80, `search.sorter.Multi_MultiValueKeyMaker` 21, `search.spy.AggregationMatchSpy` 77, `source.GeoSpatialRange` 4, `source.MultipleValueGE` 2, `source.MultipleValueRange` 3, `source.max_weight` 4 |
+| `SEARCH /{index}/{path}/` | 14 | shard: get 13; `callback.keymaker:Multi_MultiValueKeyMaker` 3, `callback.source:MultipleValueRange.accept` 3, `callback.source:MultipleValueRange.weight` 3, `callback.spy:AggregationMatchSpy` 5, `docview.data` 13, `docview.data@host` 13, `docview.value` 3, `docview.value@keymaker:Multi_MultiValueKeyMaker` 3, `query.combine.binary` 4, `query.combine.nary` 6, `query.edit_distance.combiner.SYNONYM` 1, `query.edit_distance.distance.3` 1, `query.edit_distance.limit.error` 1, `query.edit_distance.prefix_length` 1, `query.op.AND` 14, `query.op.FILTER` 3, `query.op.OR` 7, `query.term.pos` 1, `query.text.flag.FUZZY` 7, `query.text.flag.LOVEHATE` 7, `query.text.flag.PARTIAL` 1, `query.text.flag.PHRASE` 7, `query.text.flag.WILDCARD` 2, `query.text.partial_max_expansion` 7, `query.text.stem.none` 5, `query.text.stem.some` 2, `query.text.stem_language` 2, `query.text.stop` 2, `query.wildcard.combiner.SYNONYM` 1, `query.wildcard.limit.most_frequent` 1, `query.wildcard.max_expansion` 1, `search.check_at_least` 5, `search.order.ascending` 14, `search.sorter.Multi_MultiValueKeyMaker` 3, `search.spy.AggregationMatchSpy` 5, `source.MultipleValueRange` 3 |
 | `UPDATE /{index}/{path}` | 31 | shard: commit 31, find_key 31, get 31, replace 31; `docview.data` 31, `docview.data@host` 31, `docview.value` 31, `docview.value@host` 31, `t5[Q].documents` 31, `t5[Q].one_key_term.unnamed` 31, `t5[_id.].documents` 31, `t5[_id.].no_key_term` 31 |
 
 ## Facility totals
 
-
 | Facility | Requests | Count |
 |---|---|---|
 | `callback.keymaker:Multi_MultiValueKeyMaker` | 24 | 6103 |
-| `callback.source:GeoSpatialRange.accept` | 4 | 39 |
+| `callback.source:GeoSpatialRange.accept` | 4 | 25 |
 | `callback.source:GeoSpatialRange.weight` | 4 | 19 |
-| `callback.source:MultipleValueGE.accept` | 2 | 18 |
+| `callback.source:MultipleValueGE.accept` | 2 | 26 |
 | `callback.source:MultipleValueGE.weight` | 2 | 10 |
-| `callback.source:MultipleValueRange.accept` | 6 | 1083 |
+| `callback.source:MultipleValueRange.accept` | 6 | 787 |
 | `callback.source:MultipleValueRange.weight` | 6 | 522 |
-| `callback.spy:AggregationMatchSpy` | 79 | 36808 |
-| `docview.data` | 262 | 1036 |
-| `docview.data@host` | 262 | 1036 |
+| `callback.spy:AggregationMatchSpy` | 79 | 39009 |
+| `docview.data` | 262 | 1049 |
+| `docview.data@host` | 262 | 1049 |
 | `docview.did` | 2 | 5 |
 | `docview.did@host` | 2 | 5 |
 | `docview.term_details` | 27 | 27 |
 | `docview.term_details@host` | 27 | 27 |
 | `docview.terms` | 1 | 1000 |
 | `docview.terms@spy:AggregationMatchSpy` | 1 | 1000 |
-| `docview.value` | 191 | 34447 |
-| `docview.value@host` | 139 | 231 |
+| `docview.value` | 191 | 34453 |
+| `docview.value@host` | 139 | 237 |
 | `docview.value@keymaker:Multi_MultiValueKeyMaker` | 24 | 6103 |
 | `docview.value@spy:AggregationMatchSpy` | 28 | 28113 |
 | `docview.values` | 27 | 27 |
 | `docview.values@host` | 27 | 27 |
-| `query.combine.binary` | 12 | 29 |
-| `query.combine.nary` | 17 | 39 |
+| `query.combine.binary` | 11 | 21 |
+| `query.combine.nary` | 17 | 31 |
 | `query.edit_distance.combiner.SYNONYM` | 1 | 1 |
 | `query.edit_distance.distance.3` | 1 | 1 |
 | `query.edit_distance.limit.error` | 1 | 1 |
 | `query.edit_distance.prefix_length` | 1 | 1 |
 | `query.kind.append` | 59 | 184 |
-| `query.kind.combine` | 19 | 68 |
+| `query.kind.combine` | 19 | 52 |
 | `query.kind.edit_distance` | 1 | 1 |
 | `query.kind.match_all` | 38 | 38 |
 | `query.kind.source` | 10 | 12 |
-| `query.kind.term` | 17 | 91 |
+| `query.kind.term` | 17 | 79 |
 | `query.kind.text` | 39 | 61 |
 | `query.kind.wildcard` | 2 | 2 |
-| `query.nodes` | 95 | 457 |
-| `query.op.AND` | 59 | 153 |
+| `query.nodes` | 95 | 429 |
+| `query.op.AND` | 59 | 147 |
 | `query.op.AND_MAYBE` | 1 | 4 |
 | `query.op.ELITE_SET` | 2 | 32 |
-| `query.op.FILTER` | 11 | 16 |
+| `query.op.FILTER` | 11 | 14 |
 | `query.op.NEAR` | 1 | 1 |
-| `query.op.OR` | 15 | 45 |
+| `query.op.OR` | 15 | 37 |
 | `query.op.PHRASE` | 1 | 1 |
 | `query.prepared` | 95 | 95 |
 | `query.term.pos` | 1 | 1 |
@@ -275,14 +275,14 @@ Class is the method and the path shape (`{index}` the first segment, `{path}` th
 | `search.sorter.Multi_MultiValueKeyMaker` | 24 | 24 |
 | `search.spy.AggregationMatchSpy` | 82 | 82 |
 | `shard.add` | 1 | 1 |
-| `shard.commit` | 127 | 150 |
+| `shard.commit` | 129 | 161 |
 | `shard.erase` | 2 | 2 |
 | `shard.erase_by_key` | 1 | 1 |
-| `shard.find_key` | 228 | 16698 |
-| `shard.get` | 261 | 1317 |
+| `shard.find_key` | 228 | 16774 |
+| `shard.get` | 261 | 1336 |
 | `shard.metadata` | 62 | 425 |
 | `shard.reopen` | 13 | 65 |
-| `shard.replace` | 121 | 2153 |
+| `shard.replace` | 121 | 2152 |
 | `shard.replace_by_key` | 85 | 471 |
 | `shard.scan` | 2 | 10 |
 | `shard.set_metadata` | 62 | 433 |
@@ -291,18 +291,16 @@ Class is the method and the path shape (`{index}` the first segment, `{path}` th
 | `source.MultipleValueGE` | 2 | 2 |
 | `source.MultipleValueRange` | 6 | 6 |
 | `source.max_weight` | 4 | 4 |
-| `t5[Q].documents` | 142 | 2625 |
+| `t5[Q].documents` | 142 | 2624 |
 | `t5[Q].one_key_term.named` | 86 | 472 |
-| `t5[Q].one_key_term.unnamed` | 121 | 2151 |
-| `t5[Q].violation.multiple` | 1 | 2 |
-| `t5[_id.].documents` | 142 | 2625 |
-| `t5[_id.].no_key_term` | 142 | 2625 |
+| `t5[Q].one_key_term.unnamed` | 121 | 2152 |
+| `t5[_id.].documents` | 142 | 2624 |
+| `t5[_id.].no_key_term` | 142 | 2624 |
 | `t5[_id.].violation.key_without_prefix` | 86 | 472 |
-| `write.data` | 142 | 2625 |
-| `write.documents` | 142 | 2625 |
+| `write.data` | 142 | 2624 |
+| `write.documents` | 142 | 2624 |
 | `write.named_key` | 86 | 472 |
-| `write.terms` | 142 | 196327 |
-| `write.terms.boolean` | 142 | 583 |
+| `write.terms` | 142 | 196326 |
+| `write.terms.boolean` | 142 | 582 |
 | `write.terms.positioned` | 142 | 113779 |
-| `write.values` | 142 | 28912 |
-
+| `write.values` | 142 | 28910 |
