@@ -160,6 +160,26 @@ show(const std::string& text)
 	return out;
 }
 
+// Xapian builds some wildcards whose pattern is only '*' and '?' as match-all and keeps others; both
+// sides read all of them as match-all.
+std::string
+match_all_wildcards(std::string tree)
+{
+	static const std::string head = "WILDCARD SYNONYM ";
+	for (std::size_t at = 0; (at = tree.find(head, at)) != std::string::npos;) {
+		auto from = at + head.size();
+		auto to = tree.find_first_not_of("*?", from);
+		if (to == std::string::npos) {
+			to = tree.size();
+		}
+		if (to > from && (to == tree.size() || tree[to] == ' ' || tree[to] == ')')) {
+			tree.replace(at, to - at, "<alldocuments>");
+		}
+		++at;
+	}
+	return tree;
+}
+
 // Parses once: the description of the lowered query, an error marker, or the tree's own description.
 struct Reading {
 	std::string lowered;
@@ -174,6 +194,8 @@ reading(const std::string& text, const engine::TextConfig& c)
 	try {
 		const auto query = engine::parse_text(text, c, &r.tree);
 		r.lowered = engine::xapian::to_xapian(query).get_description();
+		r.lowered = match_all_wildcards(r.lowered);
+		r.tree = match_all_wildcards(r.tree);
 	} catch (const QueryParserError& exc) {
 		r.error = "syntax: " + exc.reason();
 	} catch (const InvalidTextConfigError& exc) {

@@ -36,17 +36,28 @@ A/B build). Mechanism note: `docs/mechanisms/text-queries.md`.
    asserted in `test_near_of_a_boolean_expression`. Stop words only: a group of only stop words keeps
    its words (as Xapian); only a text without words is empty.
 
-## Doing / Next (resume here)
+## Resumed (after master gained S1)
 
-1. Run `.scratch/proof.sh` under `quiet light` (rebuilds, fuzz 2x150 s, five mutants of `src/engine/text.cc`
-   via `.scratch/mutants.sh`; it restores the file with `git checkout`). Record the fuzz line and mutant
-   failure counts here. Never edit `src/engine/text.cc` while it runs.
-2. Rebuild `xapiand` (`.scratch/build-asan.sh xapiand`), run `.scratch/probe.sh .scratch/build-asan/bin/xapiand`
-   (the finding's input over HTTP, expect 400 and no ASan report), then `.scratch/e2e.sh qp
-   .scratch/build-asan/bin/xapiand` and expect 576/576 in `.scratch/e2e/qp.assert`.
-3. Fix the changelog "Fixed" bullet to match the probe (400 for brackets under NEAR/PHRASE/ELITE_SET).
-4. Delete `.scratch/build-asan` when done. Not done: E2E, fuzz run, mutants, ASan server probe.
+4. Merged master into the branch (`CMakeLists.txt`: queryparser and prospect both linked). `seam_check.sh`
+   green (7 files, 158 lines, unchanged). Proof, ASan+UBSan Apple clang, own build dir:
+   - `xapiand_test_text` 7172 checks (706 A/B decisions unchanged), `xapiand_test_engine_query` 22395.
+   - Docs E2E on the Xapian engine, ASan server: 576/576, 339 requests, uncovered 0.
+   - Server probe: `_near` and `_phrase` over `(barack OR michelle) AND obama` answer 400; `_and`, plain
+     `_near`, `-barack`, `michelle` answer 200 with the right hits. No AddressSanitizer report. UBSan
+     reports only null-offset arithmetic in lz4.c and rapidjson stack.h (third party, not the text path).
+   - Fuzz of the lowering: 60 s + 2 x 120 s (seeds 1, 2, 3), 1.7M texts, no violation.
+   - Fuzz finding (oracle, not the lowering): Xapian builds some all-`*`/`?` wildcards (`*?`, `**`) as
+     match-all and keeps others (`??`, `*??`); the oracle now reads all of them as match-all on both sides.
+     Open for the strata engine: it must pick the same match-all patterns or not (lead).
+   - Mutants of `src/engine/text.cc` (failing checks): window lost 318; operands swapped 2790; unsupported
+     not a client error: abort (uncaught bad_alloc); single `?` flag lost 2 (was surviving; new
+     `test_wildcard_pattern_flags`); unsafe format string: abort (format_error).
+   - The changelog bullet already matches the probe (400).
+
+## Next
+
+Nothing on S4 but the lead's decisions: `cjk_words` segmenter (decision 2) and the all-wildcard patterns.
 
 ## Blocked on
 
-Nothing. Host hold queue was long (light slots full); each `quiet light` waited 10 to 30 minutes.
+Nothing.

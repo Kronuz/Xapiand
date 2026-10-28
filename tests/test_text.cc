@@ -281,4 +281,18 @@ test_near_of_a_boolean_expression()
 		"Query(((XTfieldbarack@1 OR XTfieldmichelle@2) AND XTfieldobama@3))");
 }
 
-TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_near_of_a_boolean_expression)
+void
+test_wildcard_pattern_flags()
+{
+	const auto flags = [](const char* text) {
+		const auto query = engine::parse_text(text, config(base | text::WILDCARD | text::WILDCARD_SINGLE | text::WILDCARD_MULTI));
+		const auto* node = query.node();
+		CHECK_TRUE(node != nullptr && node->kind == engine::QueryKind::wildcard);
+		return node == nullptr ? 0u : node->pattern_flags;
+	};
+	CHECK_EQ(flags("fo?b"), engine::PATTERN_SINGLE);
+	CHECK_EQ(flags("fo*b"), engine::PATTERN_MULTI);
+	CHECK_EQ(flags("f?o*b"), engine::PATTERN_SINGLE | engine::PATTERN_MULTI);
+}
+
+TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_near_of_a_boolean_expression, test_wildcard_pattern_flags)
