@@ -798,8 +798,9 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 
 			if (flags & engine::text::FUZZY) {
 				std::vector<std::string> new_words;
+				const bool tilde = serialised_term.find('~') != std::string::npos;
 				for (const auto& word : Split<std::string_view>(serialised_term, ' ')) {
-					if (serialised_term.find_first_of("~") == std::string::npos) {
+					if (!tilde) {
 						new_words.push_back(std::string(word) + "~");
 					} else {
 						new_words.push_back(std::string(word));
