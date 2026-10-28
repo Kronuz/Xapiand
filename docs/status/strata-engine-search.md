@@ -1,12 +1,12 @@
 # strata-engine-search (S2, phase 7a)
 
-> Status: CURRENT (2026-10-27) workstream `strata-engine-search`; branch `phase7a/strata-engine-search` from `phase7a/strata-engine-write` (Xapiand:b078d5a18). Local only, not pushed, no CI run.
+> Status: CURRENT (2026-10-28) workstream `strata-engine-search`; branch `phase7a/strata-engine-search`, rebased by merge onto master (S1, Xapiand:5d7f3263d). Local only, not pushed, no CI run.
 
 Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S2, G5, G7, D13, T6, T7, T11.
 
 ## State
 
-Built and proven; round 2 (P4 collectors, concurrency, mutants) done; waiting for the code review. Local only: not pushed, no CI run (the lead watches CI).
+Built, proven, reviewed (CR1-CR4, CR6 closed), and merged with S1's master; CR2 closed. Ready for the lead's re-check. Local only: not pushed, no CI run (the lead watches CI).
 
 ## Done criteria (design row S2)
 
@@ -111,13 +111,14 @@ search; docid tie-break; the default node's five shards searched as one index.
 
 ## Dependencies and decisions
 
-- **Key prefix (lead's note, 2026-10-27).** Nothing here routes by the key prefix: terms are looked up in the
-  dictionary, and `term_key_prefix()` in `src/engine/strata/search.cc` is the one function to change when
+- **Key prefix (lead's note, 2026-10-27).** No query names a key: terms are looked up in the dictionary, and
+  `term_key_prefix()` returns `keys::key_prefix()` (S1's, the prefix the index opens with; `src/engine/strata/keys.h`);
+  `term_key_prefix()` in `src/engine/strata/search.cc` is the one function to change when
   strata's fields-and-keys redesign (strata `design/fields-and-keys`) lands. `Shard::identity()` and `Shard::pin()`
   are the other seams; `pin()` is where the snapshot is taken.
-- **Prospect pin** is main, prospect:d8274b7 (P3 `operators.hh`, P4 `shards.hh`). The multi-shard collection is P4's.
-- `rethrow_translated` is repeated in `search.cc` (a copy of `shard.cc`'s) to keep this branch clear of S1's file;
-  fold into one when S1 lands.
+- **Prospect pin** is prospect:0296b8b (`fix/collector-reserve`, CR1; branch pushed, not yet merged into prospect
+  main, which is at eee749f). Move the pin to main once it merges. The multi-shard collection is P4's.
+- `rethrow_translated` is one function now (`shard.cc`, declared in `shard.h`); `strata::search` calls it with no Core.
 - The refusal kind is `errc::syntax` (a client error, not retried); `not_available` would be retried five times.
 - The lock: a search holds every shard's lock for its duration (pinned in address order); a search is therefore one
   moment of the whole index (the last pin). T10 (concurrency) replaces it with a snapshot that outlives the lock.
@@ -142,14 +143,22 @@ search; docid tie-break; the default node's five shards searched as one index.
 - CR4 closed: `percent_of` defines non-finite weights (100 for an infinite hit, 0 for a finite one under an infinite
   top); `test_percent_infinite`.
 - CR6 comment: `engine/search.h` now says `errc::syntax`.
-- Open: CR2 (`pin()` needs S1's `check()` and `rethrow_translated(core)`, and `term_key_prefix()` against
-  `keys::key_prefix()`) at the rebase onto S1. Notes, not fixed: CR5 (a spy re-entering a pinned shard deadlocks: say
+- CR2 closed (merge Xapiand:5f0d5e598 and the test commit after it): `Shard::pin()` calls `core.check(*handle_)` under
+  the lock and translates with `rethrow_translated(handle_->core)`; `term_key_prefix()` is `keys::key_prefix()`.
+  Test `test_pin_after_failed_reopen` (a cancel whose reopen fails, then a search over both shards and over the
+  broken one alone raise `errc::database`, the other shard's lock is free, a reopen searches again). With the
+  `check()` in `pin()` removed the test fails (2 checks). `test_engine_strata` expected `not_available` from a
+  strata search (S1's stub); it now checks match-all finds every document.
+- Rebase proof (ASan+UBSan and TSan, Homebrew LLVM 23.1.2, separate build dirs and dependency trees, rapidjson
+  patched in `_deps` only, `NO_XAPIAN_COMPARE=1`): `test_engine_search_strata` 153,580 checks, `test_engine_strata`
+  9,558, the reviewer's `probe_pin_holds` (6) and `probe_lock_order` (1): all pass, no sanitizer report. Build dirs deleted.
+  Notes, not fixed: CR5 (a spy re-entering a pinned shard deadlocks: say
   so in the `MatchSpy`/`KeyMaker` contract, and `pin_of` is a linear scan, O(n^2) over thousands of shards); CR6 (the
   lock is held for the whole search; the architect says whether T10 precedes the aggregation spy).
 
 ## Next
 
-Code review; rebase onto S1 (`phase7a/strata-engine-write`) when it moves; S3 (key makers, spies, expansions,
+Lead's re-check of CR2; repin prospect to main when `fix/collector-reserve` merges; S3 (key makers, spies, expansions,
 operators) and S4 (text).
 
 ## Blocked on
