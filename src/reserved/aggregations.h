@@ -79,4 +79,5 @@ constexpr const char RESERVED_AGGS_SORT[]                   = RESERVED__ "sort";
 constexpr const char RESERVED_AGGS_ORDER[]                  = RESERVED__ "order";
 constexpr const char RESERVED_AGGS_MIN_DOC_COUNT[]          = RESERVED__ "min_doc_count";
 constexpr const char RESERVED_AGGS_LIMIT[]                  = RESERVED__ "limit";
+constexpr const char RESERVED_AGGS_SHARD_SIZE[]             = RESERVED__ "shard_size";
 constexpr const char RESERVED_AGGS_KEYED[]                  = RESERVED__ "keyed";

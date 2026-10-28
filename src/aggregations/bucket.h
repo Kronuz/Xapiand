@@ -75,6 +75,9 @@ protected:
 	size_t _limit;
 	bool _keyed;
 	size_t _min_doc_count;
+	// A capped aggregation (distinct values) keeps at most about `_shard_size` buckets while it collects.
+	bool _capped;
+	size_t _shard_size;
 
 private:
 	friend struct CmpByIndex;
@@ -160,6 +163,49 @@ private:
 			return a->first > b->first;
 		}
 	};
+
+	using BucketIterator = std::map<std::string, Aggregation>::const_iterator;
+
+	// The `keep` buckets that rank first in the aggregation's order (counts stand in for an order by a sub-aggregation's value).
+	std::vector<BucketIterator> _best(size_t keep) const {
+		std::vector<BucketIterator> all;
+		all.reserve(_aggs.size());
+		for (auto it = _aggs.cbegin(); it != _aggs.cend(); ++it) {
+			all.push_back(it);
+		}
+		if (all.size() > keep) {
+			switch (_sort) {
+				case Sort::by_key_asc:
+					std::nth_element(all.begin(), all.begin() + keep, all.end(), CmpByKeyAsc());
+					break;
+				case Sort::by_key_desc:
+					std::nth_element(all.begin(), all.begin() + keep, all.end(), CmpByKeyDesc());
+					break;
+				case Sort::by_count_asc:
+					std::nth_element(all.begin(), all.begin() + keep, all.end(), CmpByCountAsc());
+					break;
+				default:
+					std::nth_element(all.begin(), all.begin() + keep, all.end(), CmpByCountDesc());
+					break;
+			}
+			all.resize(keep);
+		}
+		return all;
+	}
+
+	// Drops the buckets beyond the best `_shard_size` once twice that many exist: the memory is bounded and the
+	// work amortised. A dropped value that comes back starts over, so counts can fall short past the cap.
+	void _prune() {
+		if (!_capped || _aggs.size() < 2 * _shard_size) {
+			return;
+		}
+		const auto kept = _best(_shard_size);
+		std::map<std::string, Aggregation> trimmed;
+		for (auto& it : kept) {
+			trimmed.insert(_aggs.extract(it));
+		}
+		_aggs = std::move(trimmed);
+	}
 
 	void update() override {
 		for (auto it = _aggs.begin(); it != _aggs.end(); ++it) {
@@ -406,6 +452,28 @@ private:
 		return false;
 	}
 
+	// Elasticsearch's default: a little more than the size, so the merged top is mostly exact.
+	size_t _conf_shard_size() {
+		const auto& conf = this->_conf;
+		auto it = conf.find(RESERVED_AGGS_SHARD_SIZE);
+		if (it != conf.end()) {
+			const auto& value = it.value();
+			switch (value.get_type()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER: {
+					auto val = value.as_i64();
+					if (val > 0) {
+						return std::max(static_cast<size_t>(val), _limit);
+					}
+				}
+				[[fallthrough]];
+				default:
+					THROW(AggregationError, "'{}' must be a positive integer", RESERVED_AGGS_SHARD_SIZE);
+			}
+		}
+		return _limit > (std::numeric_limits<size_t>::max() - 10) / 2 ? std::numeric_limits<size_t>::max() / 4 : _limit + _limit / 2 + 10;
+	}
+
 	size_t _conf_min_doc_count() {
 		const auto& conf = this->_conf;
 		auto it = conf.find(RESERVED_AGGS_MIN_DOC_COUNT);
@@ -428,7 +496,7 @@ private:
 	}
 
 public:
-	BucketAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema, Sort default_sort)
+	BucketAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema, Sort default_sort, bool capped = false)
 		: HandledSubAggregation<Handler>(context, name, schema),
 		  _schema(schema),
 		  _context(context),
@@ -437,7 +505,9 @@ public:
 		  _sort(_conf_sort()),
 		  _limit(_conf_limit()),
 		  _keyed(_conf_keyed()),
-		  _min_doc_count(_conf_min_doc_count()) { }
+		  _min_doc_count(_conf_min_doc_count()),
+		  _capped(capped),
+		  _shard_size(_conf_shard_size()) { }
 
 	MsgPack get_result() const override {
 		switch (_sort) {
@@ -461,6 +531,13 @@ public:
 
 	std::string serialise_results() const override {
 		std::string results;
+		if (_capped && _aggs.size() > _shard_size) {
+			for (auto& it : _best(_shard_size)) {
+				results += serialise_string(it->first);
+				results += serialise_string(it->second.serialise_results());
+			}
+			return results;
+		}
 		for (auto& agg : _aggs) {
 			results += serialise_string(agg.first);
 			results += serialise_string(agg.second.serialise_results());
@@ -567,6 +644,8 @@ public:
 			return;
 		}
 
+		_prune();
+
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
 			std::forward_as_tuple(bucket),
 			std::forward_as_tuple(_context, _schema));
@@ -605,7 +684,11 @@ public:
 class ValuesAggregation : public BucketAggregation<ValuesHandler> {
 public:
 	ValuesAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_count_desc) { }
+		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_count_desc, true) {
+		if (this->_handler.get_type() == FieldType::geo) {
+			THROW(AggregationError, "values over geo fields are not supported");
+		}
+	}
 
 	void aggregate_float(long double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
@@ -652,7 +735,11 @@ public:
 class TermsAggregation : public BucketAggregation<TermsHandler> {
 public:
 	TermsAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<TermsHandler>(context, name, schema, Sort::by_count_desc) { }
+		: BucketAggregation<TermsHandler>(context, name, schema, Sort::by_count_desc, true) {
+		if (this->_handler.get_type() == FieldType::geo) {
+			THROW(AggregationError, "terms over geo fields are not supported");
+		}
+	}
 
 	void aggregate_float(long double value, const engine::DocView& doc) override {
 		aggregate(value, strings::format("{}", value), doc);
