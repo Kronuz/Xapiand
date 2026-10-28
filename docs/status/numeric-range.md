@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-27) numeric-range workstream ledger; branch `fix/numeric-range`, local only, ready for review.
+> Status: CURRENT (2026-10-27) numeric-range workstream ledger; branch `fix/numeric-range`, local only, CR1 fixed, ready for re-check.
 
 # numeric-range (fix, from side findings)
 
@@ -7,7 +7,7 @@ Branch `fix/numeric-range` from Xapiand master `17e11d2cf`. Source: `docs/dev/si
 
 ## State
 
-Built and proven locally; ready for code review. Index-time terms are unchanged (no reindex).
+Built and proven locally; CR1 fixed (Xapiand:9ee98a9cb), ready for re-check. Index-time terms are unchanged (no reindex).
 
 ## Done
 
@@ -44,6 +44,11 @@ Built and proven locally; ready for code review. Index-time terms are unchanged 
    200). `require_terms_only_cover` in `src/multivalue/range.cc`; `QueryDSL::get_in_query` adds the field name. Engine-level
    tests in `tests/test_generate_terms.cc` (CR4): terms-only and open ends for integer, positive, floating, time, timedelta,
    datetime and date. Stated in `docs/mechanisms/numeric-range-terms.md`; changelog line.
+   Proof: the new engine test fails 23 of 50 checks with the check disabled and passes with it; a mutant (the too-wide branch
+   off) fails 7; ctest 20/20; `numeric_range_check.py` 0 wrong of 797; reviewer's `live_probe.py`: value-slot rows identical to
+   the review's branch run, terms-only rows 0 missing and 0 empty-while-nonempty (were 124 to 229 per field), open-ended and
+   wide ranges now 400 with the field named (the timedelta rows over 99 hours still 400 from the parser); docs E2E 576/576
+   (newman 6.2.3); ASan+UBSan (`halt_on_error=1`) `test_generate_terms` 50 checks and `test_range_terms` 321553, clean.
 2. CR2: left as is (see Open).
 3. CR3 and CR5: recorded under Open, out of scope.
 
