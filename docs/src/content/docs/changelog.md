@@ -10,7 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Added
+- **`_sort` takes the order as a string**: `{"balance": "desc"}` and
+  `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
+
 ### Changed
+- **Queries have size limits.** A query nests at most 100 levels of operators and holds at most 4096
+  terms and operators; the query DSL allows 45 levels of nested clauses, and a JSON, YAML or MessagePack
+  body 200 levels. A YAML body may not use anchors or aliases (`&name`, `*name`): they answer `400`.
+  An AND (or FILTER) joins at most 256 phrases and `_near` groups. A query with more than
+  4,096 clauses, or nested past the depth cap, is refused with `400` and the limit in the message.
+  Elasticsearch's defaults are 30 levels and 4096 clauses.
 - **`_terms` counts a field's stored values** (as Elasticsearch's terms aggregation reads doc
   values), once per document and distinct value. Keyword buckets keep their case (`Red` and
   `red` are two buckets). The words of an analysed `text` field, or of a field indexed without
@@ -21,11 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   buckets with the lowest counts. Counts can fall short of the true counts when a field has more
   distinct values than that. They are refused (400) over geo fields.
 
-### Added
-- **`_sort` takes the order as a string**: `{"balance": "desc"}` and
-  `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
-
 ### Fixed
+- **A deeply nested or very wide query no longer crashes the node.** A text of thousands of nested
+  brackets or tens of thousands of words, and a query DSL nested a few hundred levels, overflowed the
+  stack of the thread that ran the search.
+- **A nested MessagePack or YAML body, or a few hundred ANDed phrases, no longer crashes the node.** A
+  MessagePack body of 800 nested arrays (about 1 KB), a YAML flow sequence 1,000 levels deep, and an AND of
+  about 600 `"phrase"` or `_near` clauses overflowed the stack; they answer `400` now. A YAML body that is
+  empty or a bare scalar no longer crashes the decoder either, and a YAML alias chain or "billion laughs"
+  body no longer exhausts the stack or the memory: anchors and aliases answer `400` before any expansion.
+- **A field path of 150 levels answers `400`**, not `500`, and a `_fuzzy` text of tens of thousands of words
+  is refused in milliseconds instead of after seconds.
 - **A client error raised inside an aggregation or a sort on the strata engine answers 400**,
   as on the Xapian engine (it answered 500).
 - **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
@@ -51,11 +67,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A numeric `_id`'s accuracy terms lead with `A` instead of `Q`,** so the id term is the only
   term of a document that leads with `Q`. Range queries over `_id` use the new terms, so an
   index with a numeric `_id` written before this change needs reindexing for them.
+- **Text queries are read by the Kronuz `queryparser` library** instead of Xapian's query parser,
+  on the host and once per query. The grammar is the same for the settings Xapiand uses, with
+  two recorded differences: a lone exclusion such as `-a` is a syntax error (it used to be read as
+  the word `a`), and the window of `+a b -c d` does not change because an exclusion stands between
+  its words. `cjk_words` fields no longer split CJK text in queries.
 - **Every library is pinned at its current release.** Each Kronuz library now pins its own
   dependencies, so Xapiand no longer pins the libraries its libraries fetch.
 
 ### Fixed
 
+- **A `_near`, `_phrase` or `_elite_set` query over a boolean expression is a client error.**
+  `{"_near": "(barack OR michelle) AND obama"}` corrupted the heap in the vendored parser; the
+  text is now read without recursion, and an operator that cannot take its operand answers
+  400 instead of 500.
 - **Numeric range queries return every matching document.** The term walk behind a range over
   an integer, positive, floating, time or timedelta field skipped whole buckets (for example
   the 2e8 to 3e8 bucket, a range's own aligned start such as `[0, 0]`, and the coarse buckets

@@ -2871,7 +2871,7 @@ Request::decode(std::string_view body)
 			return decoded;
 		case _.fhhl(MSGPACK_CONTENT_TYPE):
 		case _.fhhl(X_MSGPACK_CONTENT_TYPE):
-			decoded = MsgPack::unserialise(body);
+			decoded = msgpack_load(body);
 			ct_type = msgpack_type;
 			return decoded;
 		case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
@@ -3215,7 +3215,7 @@ make_http_log_options()
 				yaml_load(rdoc, body);
 				decoded = MsgPack(rdoc);
 			} else if (ct.find("msgpack") != std::string_view::npos) {
-				decoded = MsgPack::unserialise(body);
+				decoded = msgpack_load(body);
 			} else {
 				return std::nullopt;
 			}

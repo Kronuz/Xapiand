@@ -42,7 +42,11 @@ constexpr const char QUERYDSL_DESC[]    = "desc";
 
 
 class QueryDSL {
+	// process() frames a nested query may use; a compound clause takes two or three, so 30 to 45 levels.
+	static constexpr unsigned MAX_NESTING = 90;
+
 	std::shared_ptr<Schema> schema;
+	unsigned depth = 0;  // process() frames in flight, at most MAX_NESTING
 
 	FieldType get_in_type(const MsgPack& obj);
 

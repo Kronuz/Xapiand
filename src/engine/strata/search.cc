@@ -239,8 +239,6 @@ validate(const Query& query, int depth)
 				throw Error(errc::invalid, "A source node has no source");
 			}
 			return;
-		case QueryKind::text:
-			unsupported("query text");
 	}
 }
 

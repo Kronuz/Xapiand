@@ -168,13 +168,6 @@ add_sample(State& s, std::string text)
 	}
 }
 
-constexpr struct { unsigned bit; const char* name; } TEXT_FLAGS[] = {
-	{text::BOOLEAN, "BOOLEAN"}, {text::PHRASE, "PHRASE"}, {text::LOVEHATE, "LOVEHATE"},
-	{text::WILDCARD, "WILDCARD"}, {text::WILDCARD_SINGLE, "WILDCARD_SINGLE"},
-	{text::WILDCARD_MULTI, "WILDCARD_MULTI"}, {text::PARTIAL, "PARTIAL"}, {text::FUZZY, "FUZZY"},
-	{text::CJK_NGRAM, "CJK_NGRAM"}, {text::WORD_BREAKS, "WORD_BREAKS"},
-};
-
 const char*
 name_of(Expansion limit) noexcept
 {
@@ -182,18 +175,6 @@ name_of(Expansion limit) noexcept
 		case Expansion::error: return "error";
 		case Expansion::first: return "first";
 		case Expansion::most_frequent: return "most_frequent";
-	}
-	return "?";
-}
-
-const char*
-name_of(Stem stem) noexcept
-{
-	switch (stem) {
-		case Stem::none: return "none";
-		case Stem::some: return "some";
-		case Stem::all: return "all";
-		case Stem::all_z: return "all_z";
 	}
 	return "?";
 }
@@ -220,7 +201,6 @@ name_of(QueryKind kind) noexcept
 		case QueryKind::wildcard: return "wildcard";
 		case QueryKind::edit_distance: return "edit_distance";
 		case QueryKind::source: return "source";
-		case QueryKind::text: return "text";
 	}
 	return "?";
 }
@@ -293,19 +273,6 @@ query(const Query& query)
 					if (node.src->max_weight() > 0) { add(s, "source.max_weight", 1); }
 				}
 				break;
-			case QueryKind::text: {
-				const auto& config = node.config;
-				for (const auto& flag : TEXT_FLAGS) {
-					if ((config.flags & flag.bit) != 0) { add(s, join("query.text.flag.", flag.name), 1); }
-				}
-				if (config.default_op != Op::INVALID) { add(s, join("query.text.default_op.", to_string(config.default_op)), 1); }
-				add(s, join("query.text.stem.", name_of(config.stem)), 1);
-				if (!config.stop_language.empty()) { add(s, "query.text.stop", 1); }
-				if (!config.stem_language.empty()) { add(s, "query.text.stem_language", 1); }
-				if (config.partial_max_expansion != 0) { add(s, "query.text.partial_max_expansion", 1); }
-				if (config.fuzzy_max_expansion != 0) { add(s, "query.text.fuzzy_max_expansion", 1); }
-				break;
-			}
 		}
 		for (const auto& sub : node.subqueries) {
 			if (sub.node() != nullptr) {

@@ -102,7 +102,8 @@ catch_http_errors(Func&& func)
 				if (const auto* client_error = dynamic_cast<const ClientError*>(&exc)) {
 					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
 					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + client_error->what();
-				} else if (exc.kind == engine::errc::syntax) {
+				} else if (exc.kind == engine::errc::syntax || exc.kind == engine::errc::invalid) {
+					// An invalid argument is the request's own (a field path too long to be a term, say).
 					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
 					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.description();
 				} else {

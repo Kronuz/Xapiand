@@ -868,14 +868,9 @@ void test_refusals_impl() {
 	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}, 1)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::text("w1 w2", engine::TextConfig{})), syntax);
 	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	// Refused wherever the node sits: under an append.
-	CHECK_EQ(kind(Query::append(Op::AND, Query::append(Op::OR, t("w1"), t("w2")), Query::text("w3", engine::TextConfig{}))), syntax);
 	// A refusal leaves nothing behind: the same shard answers the next search.
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
-	// Refused even where a short-circuit would never reach the node.
-	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::text("w1", engine::TextConfig{}))), syntax);
 	// A search over the two engines is refused, and a query nested too deeply.
 	{
 		auto prepared = engine::prepare(t("w1"));
@@ -884,16 +879,17 @@ void test_refusals_impl() {
 		std::vector<engine::Shard*> both{xapian.owned[0].get(), strata.owned[0].get()};
 		CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(both, request)); }), engine::errc::invalid);
 	}
-	Query deep = t("w1");
-	for (int i = 0; i < 1200; ++i) {
-		deep = Query::combine(Op::AND, deep, t("common"));
-	}
-	CHECK_EQ(kind(deep), syntax);
+	// A tree nested past the cap is refused when it is built, before any engine sees it.
+	CHECK_EQ(error_kind([&] {
+		Query deep = t("w1");
+		for (int i = 0; i < 1200; ++i) {
+			deep = Query::combine(Op::AND, deep, t("common"));
+		}
+	}), syntax);
 	// An index with no segment refuses the same: the query is checked before any segment is read.
 	Index xapian_empty{Kind::xapian, {}}, strata_empty{Kind::strata, {}};
 	Model model_empty;
 	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, deep, none); }), syntax);
 	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }); }), syntax);
 }
 
@@ -993,30 +989,31 @@ void test_long_chains_impl() {
 	Model model;
 	build("chains", 2, 40, 2, xapian, strata, model);
 	const auto t = [](const char* w) { return Query::term("", w); };
+	const int kChain = static_cast<int>(engine::MAX_QUERY_CLAUSES) - 100;   // the longest chain a query may hold
 	Query ors = t("w1");
-	for (int i = 0; i < 20000; ++i) {
+	for (int i = 0; i < kChain; ++i) {
 		ors = Query::append(Op::OR, ors, i % 2 ? t("w1") : t("zzz"));
 	}
 	check_against_model(strata, model, 2, ors);
 	Query ands = t("common");
-	for (int i = 0; i < 20000; ++i) {
+	for (int i = 0; i < kChain; ++i) {
 		ands = Query::append(Op::AND, ands, t("common"));
 	}
 	check_against_model(strata, model, 2, ands);
 	Query mixed = t("w1");
-	for (int i = 0; i < 6000; ++i) {
+	for (int i = 0; i < kChain; ++i) {
 		mixed = Query::append(i % 3 == 0 ? Op::AND : Op::OR, mixed, i % 2 ? t("common") : t("w1"));
 	}
 	check_against_model(strata, model, 2, mixed);   // ends on OR common
-	// A chain of exclusions nests one scorer per link; a few thousand links run.
+	// A chain of exclusions nests one scorer per link; thousands of links run.
 	Query excluded = t("common");
-	for (int i = 0; i < 3000; ++i) {
+	for (int i = 0; i < kChain; ++i) {
 		excluded = Query::append(Op::AND_NOT, excluded, t("zzz"));
 	}
 	check_against_model(strata, model, 2, excluded);
 	// A wide OR and a wide AND in one node.
 	std::vector<Query> wide;
-	for (int i = 0; i < 5000; ++i) { wide.push_back(t("w1")); }
+	for (int i = 0; i < kChain; ++i) { wide.push_back(t("w1")); }
 	check_against_model(strata, model, 2, Query::combine(Op::OR, wide));
 	check_against_model(strata, model, 2, Query::combine(Op::AND, wide));
 }

@@ -332,8 +332,13 @@ void test_http_answers_unchanged() {
 	xapian_case("Closed", [] { throw Xapian::DatabaseClosedError("closed"); });
 	xapian_case("Corrupt", [] { throw Xapian::DatabaseCorruptError("corrupt"); });
 	xapian_case("DatabaseError", [] { throw Xapian::DatabaseError("db"); });
+	// An invalid argument is the request's own: 400, where it used to be 500 (5fd538f82).
 	xapian_case("InvalidArgument", [] { throw Xapian::InvalidArgumentError("arg"); });
+	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;
+	cases.back().expect_error = "Bad Request: InvalidArgumentError: arg";
 	xapian_case("InvalidOperation", [] { throw Xapian::InvalidOperationError("op"); });
+	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;
+	cases.back().expect_error = "Bad Request: InvalidOperationError: op";
 	xapian_case("QueryParser", [] { throw Xapian::QueryParserError("Syntax: bad"); });
 	// A syntax error from the query parser answers 400 (it was 500).
 	cases.back().expect_code = HTTP_STATUS_BAD_REQUEST;

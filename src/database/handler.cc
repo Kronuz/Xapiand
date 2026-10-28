@@ -34,6 +34,7 @@
 #include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
+#include "exception_engine.h"                     // for QueryParserError
 #include "exception_xapian.h"                     // for DocVersionConflictError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard

@@ -41,6 +41,7 @@
 #include "config.h"
 #include "engine/document.h"
 #include "engine/query.h"
+#include "engine/text.h"
 #include "engine/strata/document.h"
 #include "engine/xapian/convert.h"
 #include "engine/xapian/query.h"
@@ -190,7 +191,7 @@ static void test_query_nodes() {
 
 	engine::TextConfig config;
 	config.field = field;
-	CHECK_EQ(to_xapian(Query::text("bob smith", config)).get_description(), [&] {
+	CHECK_EQ(to_xapian(engine::parse_text("bob smith", config)).get_description(), [&] {
 		Xapian::QueryParser parser;
 		return parser.parse_query("bob smith", 0, field).get_description();
 	}());

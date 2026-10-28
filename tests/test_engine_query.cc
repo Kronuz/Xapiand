@@ -26,6 +26,8 @@
 
 #include "test_harness.h"
 
+#include <cstdlib>
+
 #include <cstdint>
 #include <pthread.h>
 #include <set>
@@ -35,6 +37,8 @@
 #include "engine/callbacks.h"
 #include "engine/error.h"
 #include "engine/query.h"
+#include "engine/text.h"
+#include "exception_engine.h"
 #include "engine/xapian/callbacks.h"
 #include "engine/xapian/query.h"
 #include "length.h"
@@ -47,6 +51,9 @@
 #include "engine/xapian/xapian.h"
 
 namespace {
+
+// The stop words are read from the source tree.
+const int data_path = (::setenv("XAPIAND_DATA_PATH", XAPIAND_SOURCE_DIR, 1), 0);
 
 using engine::Op;
 using engine::Query;
@@ -367,14 +374,14 @@ static void test_random_trees() {
 	CHECK_TRUE(empties > 100 && empties < 1900);
 }
 
-// append skips an accumulated query that matches nothing only once the text has been read.
+// A text without words reads as a query that matches nothing; append skips it.
 static void test_append() {
 	engine::TextConfig config;
 	config.field = "XT";
 	config.flags = engine::text::PHRASE;
-	auto stops = Query::text("the", config);
+	auto stops = engine::parse_text("", config);
 	auto word = Query::term("", "w");
-	CHECK_FALSE(stops.empty());
+	CHECK_TRUE(stops.empty());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, Query(), word)).get_description(), Xapian::Query("w").get_description());
 	CHECK_EQ(to_xapian(Query::append(Op::AND, word, Query())).get_description(),
 		Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("w"), Xapian::Query()).get_description());
@@ -453,20 +460,20 @@ static void test_text() {
 		}
 		const bool set_op = c.op != Op::INVALID;
 		auto expected = parse(c.text, set_op ? xop(c.op) : Xapian::Query::OP_OR, set_op, c.stop, c.stem, strategy, xflags, "XTfield");
-		auto got = to_xapian(Query::text(c.text, config));
+		auto got = to_xapian(engine::parse_text(c.text, config));
 		CHECK_EQ(got.get_description(), expected.get_description());
 		CHECK_FALSE(got.empty() && !expected.empty());
 	}
 
-	// Text the parser rejects raises the Xapian error, as the query language did before.
+	// Text the parser rejects raises QueryParserError, an engine syntax error.
 	engine::TextConfig bad;
 	bad.field = "XT";
 	bad.flags = engine::text::BOOLEAN | engine::text::PHRASE;
 	bool raised = false;
 	try {
-		to_xapian(Query::text("AND AND", bad));
-	} catch (const Xapian::QueryParserError&) {
-		raised = true;
+		engine::parse_text("AND AND", bad);
+	} catch (const QueryParserError& exc) {
+		raised = exc.kind == engine::errc::syntax;
 	}
 	CHECK_TRUE(raised);
 }
@@ -781,14 +788,14 @@ static void test_fuzzy_limit() {
 	config.fuzzy_max_expansion = 2;
 	bool raised = false;
 	try {
-		run(db, to_xapian(Query::text("alice~", config)));
+		run(db, to_xapian(engine::parse_text("alice~", config)));
 	} catch (const Xapian::WildcardError&) {
 		raised = true;
 	}
 	CHECK_TRUE(raised);
 
 	config.fuzzy_max_expansion = 0;
-	CHECK_EQ(run(db, to_xapian(Query::text("alice~", config))).size(), 5U);
+	CHECK_EQ(run(db, to_xapian(engine::parse_text("alice~", config))).size(), 5U);
 }
 
 // A binary combine and the same operands as a list translate to the same query, with the same
@@ -874,6 +881,170 @@ static void test_append_chain() {
 	CHECK_EQ(to_xapian(chain).get_description(), expected.get_description());
 }
 
+// A tree as deep as the cap converts and describes itself on a small stack, and one level more is a 400.
+namespace {
+
+struct DepthJob {
+	bool done = false;
+	std::string description;
+	bool xapian = false;
+};
+
+void* depth_run(void* arg) {
+	auto* job = static_cast<DepthJob*>(arg);
+	Query tree = Query::term("", "a");
+	for (unsigned level = 1; level < engine::MAX_QUERY_DEPTH; ++level) {
+		// Alternating operators and a scale: nothing is flattened into a wide node.
+		tree = level % 5 == 0 ? Query::scale(tree, 2.0) : Query::combine(level % 2 ? Op::AND : Op::OR, tree, Query::term("", "b"));
+	}
+	job->description = tree.description();
+	job->xapian = !to_xapian(tree).empty();
+	job->done = true;
+	return nullptr;
+}
+
+}  // namespace
+
+static void test_depth_cap() {
+	// 40 KB of stack: a frame per level of a tree at the cap would not fit.
+	DepthJob job;
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 40 * 1024);
+	pthread_t thread;
+	CHECK_EQ(pthread_create(&thread, &attr, depth_run, &job), 0);
+	pthread_join(thread, nullptr);
+	pthread_attr_destroy(&attr);
+	CHECK_TRUE(job.done);
+	CHECK_TRUE(job.description.size() > engine::MAX_QUERY_DEPTH);
+	CHECK_TRUE(job.xapian);
+
+	// Exactly the cap builds; one more level of any operator throws a client error.
+	Query tree = Query::term("", "a");
+	for (unsigned level = 1; level < engine::MAX_QUERY_DEPTH; ++level) {
+		tree = Query::combine(Op::AND, tree, Query::term("", "b"));
+	}
+	CHECK_EQ(tree.depth(), engine::MAX_QUERY_DEPTH);
+	const auto refused = [](auto&& build, const char* message = "nested too deeply") {
+		try {
+			build();
+		} catch (const QueryDepthError& exc) {
+			return std::string(exc.what()).find(message) != std::string::npos && dynamic_cast<const ClientError*>(&exc) != nullptr;
+		}
+		return false;
+	};
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, tree, Query::term("", "b")); }));
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, std::vector<Query>{ tree }, 0); }));
+	CHECK_TRUE(refused([&] { Query::scale(tree, 2.0); }));
+
+	// An append adds no level: a flat object with many keys is not nested.
+	Query flat;
+	for (unsigned i = 0; i < 4 * engine::MAX_QUERY_DEPTH; ++i) {
+		flat = Query::append(Op::AND, flat, Query::term("", "t" + std::to_string(i)));
+	}
+	CHECK_EQ(flat.depth(), 1U);
+	CHECK_EQ(Query::append(Op::AND, tree, Query::term("", "c")).depth(), engine::MAX_QUERY_DEPTH);
+
+	// The clause cap: a node per term and one for the operator, appends and shared subtrees included.
+	std::vector<Query> wide(engine::MAX_QUERY_CLAUSES - 1, Query::term("", "t"));
+	CHECK_EQ(Query::combine(Op::OR, wide).size(), engine::MAX_QUERY_CLAUSES);
+	wide.push_back(Query::term("", "t"));
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, wide); }, "too large"));
+	Query chain;
+	for (unsigned i = 0; i < engine::MAX_QUERY_CLAUSES; ++i) {
+		chain = Query::append(Op::AND, chain, Query::term("", "t"));
+	}
+	CHECK_EQ(chain.size(), engine::MAX_QUERY_CLAUSES);
+	CHECK_TRUE(refused([&] { Query::append(Op::AND, chain, Query::term("", "t")); }, "too large"));
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, chain, chain); }, "too large"));
+	CHECK_FALSE(to_xapian(flat).empty());
+}
+
+// Xapian's matcher recurses once per phrase or near group an AND joins, so the query counts the
+// links it would chain: AND and FILTER add their operands' up, every other operator takes the deepest.
+static void test_chain_cap() {
+	const auto phrase = [](const char* a, const char* b, Op op = Op::PHRASE) { return Query::combine(op, std::vector<Query>{ Query::term("", a), Query::term("", b) }, 2); };
+	const auto many = [&](unsigned n, Op op = Op::PHRASE) {
+		std::vector<Query> list;
+		for (unsigned i = 0; i < n; ++i) {
+			list.push_back(phrase("a", "b", op));
+		}
+		return list;
+	};
+	const auto refused = [](auto&& build) {
+		try {
+			build();
+		} catch (const QueryDepthError& exc) {
+			return std::string(exc.what()).find("too many phrases") != std::string::npos && dynamic_cast<const ClientError*>(&exc) != nullptr;
+		}
+		return false;
+	};
+	const unsigned cap = engine::MAX_QUERY_CHAIN;
+	CHECK_EQ(Query::term("", "a").chain(), 0U);
+	CHECK_EQ(phrase("a", "b").chain(), 1U);
+	CHECK_EQ(phrase("a", "b", Op::NEAR).chain(), 1U);
+	CHECK_EQ(Query::combine(Op::AND, many(cap)).chain(), cap);
+	CHECK_EQ(Query::combine(Op::FILTER, many(cap)).chain(), cap);
+	for (const auto op : { Op::AND, Op::FILTER }) {
+		CHECK_TRUE(refused([&] { Query::combine(op, many(cap + 1)); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, many(cap + 1, Op::NEAR)); }));
+	}
+	// Near groups and phrases are counted together; terms and groups of terms are not links.
+	auto mixed = many(cap / 2);
+	for (auto& near : many(cap / 2, Op::NEAR)) {
+		mixed.push_back(std::move(near));
+	}
+	CHECK_EQ(Query::combine(Op::AND, mixed).chain(), cap);
+	mixed.push_back(phrase("c", "d"));
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, mixed); }));
+	std::vector<Query> terms(1000, Query::term("", "t"));
+	terms.push_back(Query::combine(Op::OR, terms));
+	CHECK_EQ(Query::combine(Op::AND, terms).chain(), 0U);
+
+	// Other operators run their operands apart: an OR of thousands of phrases is no deeper than one.
+	for (const auto op : { Op::OR, Op::XOR, Op::AND_MAYBE, Op::AND_NOT, Op::SYNONYM, Op::MAX, Op::ELITE_SET }) {
+		CHECK_EQ(Query::combine(op, many(1000), 5).chain(), 1U);
+	}
+	CHECK_EQ(Query::combine(Op::AND_NOT, Query::combine(Op::AND, many(cap)), Query::combine(Op::AND, many(cap))).chain(), cap);
+
+	// Operands pass their links up through AND, however they are wrapped.
+	const auto wrapped = [&](unsigned n) {
+		std::vector<Query> list;
+		for (unsigned i = 0; i < n; ++i) {
+			list.push_back(i % 3 == 0 ? Query::combine(Op::AND, phrase("a", "b"), Query::term("", "c"))
+				: i % 3 == 1 ? Query::combine(Op::AND_NOT, phrase("a", "b"), Query::term("", "z"))
+				: Query::combine(Op::OR, std::vector<Query>{ phrase("a", "b") }, 0));
+		}
+		return list;
+	};
+	CHECK_EQ(Query::combine(Op::AND, wrapped(cap)).chain(), cap);
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, wrapped(cap + 1)); }));
+	// An OR between ANDs does not hide the links below it, and sibling ORs do not add up.
+	const auto half = Query::combine(Op::AND, many(cap / 2));
+	CHECK_EQ(Query::combine(Op::AND, Query::combine(Op::OR, half, Query::term("", "c")), half).chain(), cap);
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, Query::combine(Op::OR, half, Query::term("", "c")), Query::combine(Op::AND, many(cap / 2 + 1))); }));
+	CHECK_EQ(Query::combine(Op::OR, half, half).chain(), cap / 2);
+	// A chain of appends (the text path) adds up as an AND does.
+	Query chain;
+	for (unsigned i = 0; i < cap; ++i) {
+		chain = Query::append(Op::AND, chain, phrase("a", "b"));
+	}
+	CHECK_EQ(chain.chain(), cap);
+	CHECK_TRUE(refused([&] { Query::append(Op::AND, chain, phrase("a", "b")); }));
+	CHECK_EQ(Query::append(Op::OR, chain, phrase("a", "b")).chain(), cap);
+	// A scale passes its operand's links through.
+	CHECK_EQ(Query::scale(Query::combine(Op::AND, many(cap)), 2.0).chain(), cap);
+	// Shared subtrees count each time, as they do for the clause cap.
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, Query::combine(Op::AND, many(cap)), phrase("a", "b")); }));
+	// The matcher runs a query at the cap.
+	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	Xapian::Document doc;
+	doc.add_posting("a", 1);
+	doc.add_posting("b", 2);
+	db.add_document(doc);
+	CHECK_EQ(run(db, to_xapian(Query::combine(Op::AND, many(cap)))).size(), std::size_t(1));
+}
+
 // A stored value that does not decode is not accepted; it must never stop the process.
 static void test_corrupt_stored_value() {
 	auto serialised = [](std::initializer_list<std::string> parts) {
@@ -950,6 +1121,8 @@ GUARDED(test_wildcard_patterns)
 GUARDED(test_fuzzy_limit)
 GUARDED(test_binary_equals_list)
 GUARDED(test_append_chain)
+GUARDED(test_depth_cap)
+GUARDED(test_chain_cap)
 GUARDED(test_corrupt_stored_value)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_adapter_bounds_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_corrupt_stored_value_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_adapter_bounds_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded)

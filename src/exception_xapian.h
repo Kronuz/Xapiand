@@ -24,6 +24,7 @@
 #pragma once
 
 #include "engine/error.h"                                // for engine::Error, engine::errc
+#include "exception_engine.h"                            // for QueryParserError, TermsOnlyRangeError
 #include "xapiand_exception.h"                            // for ClientError
 #include "engine/xapian/xapian.h"                               // for Xapian::SerialisationError
 
@@ -66,20 +67,4 @@ class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentE
 public:
 	template<typename... Args>
 	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message), engine::Error(engine::errc::invalid, message) { }
-};
-
-
-class QueryParserError : public ClientError, public engine::Error {
-public:
-	template<typename... Args>
-	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::syntax, message) { }
-};
-
-
-// A range a terms-only field cannot answer exactly: the reason, without the field name, which the query
-// builder adds.
-class TermsOnlyRangeError : public QueryParserError {
-public:
-	template<typename... Args>
-	TermsOnlyRangeError(Args&&... args) : QueryParserError(std::forward<Args>(args)...) { }
 };

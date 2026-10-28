@@ -759,8 +759,13 @@ include_directories(
 # target is named snowball_compiler so the library can own the name snowball.
 FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG c93026cedf9124421886d449528dd6edb16e5ed3)
 FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 570a0b78fc2967f9ec6a0ec005547d20fcf32b61)
-FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG a0825b1a376754d4718ac6dd89b7b31c6dd96738)
+FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG 991ff3349d7e7d834b331c4b406139e76c76b24e)
 FetchContent_MakeAvailable(unicode snowball analysis)
+
+# queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the
+# host, whatever engine runs the query. It pins analysis itself; the pin above is declared first and wins.
+FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG 09a4ea6863d4576e08e28749711bb72b7b114056)
+FetchContent_MakeAvailable(queryparser)
 
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
 # that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only; the Asio binding
@@ -1532,6 +1537,7 @@ if (TLS)
 endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
+	queryparser::queryparser
 	prospect::prospect
 	task::task
 	prometheus-cpp::core
@@ -2229,6 +2235,49 @@ if (BUILD_TESTS)
 		target_compile_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
 		target_link_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
 	endif ()
+
+		# The query tests read the stop words from the source tree.
+		target_compile_definitions(${PROJECT_NAME}_test_engine_query PRIVATE XAPIAND_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+		# The text parser's tests: the recorded A/B decisions and the lowering of queryparser's tree.
+		add_executable(${PROJECT_NAME}_test_text
+			"${PROJECT_SOURCE_DIR}/tests/test_text.cc"
+			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+		)
+		target_link_libraries(${PROJECT_NAME}_test_text PRIVATE
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+		)
+		target_include_directories(${PROJECT_NAME}_test_text PRIVATE "${queryparser_SOURCE_DIR}/test")
+		target_compile_definitions(${PROJECT_NAME}_test_text PRIVATE QUERYPARSER_VECTORS="${queryparser_SOURCE_DIR}/test/vectors" XAPIAND_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+		add_test(NAME test_text COMMAND ${PROJECT_NAME}_test_text)
+		add_dependencies(check ${PROJECT_NAME}_test_text)
+
+		# Fuzzes the text parser: random and mutated query strings under random settings, each
+		# checked against queryparser's own description of its tree. Run it: xapiand_fuzz_text SECONDS [SEED].
+		add_executable(${PROJECT_NAME}_fuzz_text
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_text.cc"
+			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+		)
+		target_link_libraries(${PROJECT_NAME}_fuzz_text PRIVATE
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+		)
+		target_include_directories(${PROJECT_NAME}_fuzz_text PRIVATE "${queryparser_SOURCE_DIR}/test")
+		target_compile_definitions(${PROJECT_NAME}_fuzz_text PRIVATE QUERYPARSER_VECTORS="${queryparser_SOURCE_DIR}/test/vectors" XAPIAND_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+		# Fuzzes the request body decoders (JSON, YAML, MessagePack) around the nesting limit. Run it: xapiand_fuzz_body SECONDS [SEED].
+		add_executable(${PROJECT_NAME}_fuzz_body
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_body.cc"
+			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+		)
+		target_link_libraries(${PROJECT_NAME}_fuzz_body PRIVATE
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+		)
 
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
 	# compile as-is; it's off by default.  The modules that became standalone Kronuz
