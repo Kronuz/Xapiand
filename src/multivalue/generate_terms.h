@@ -87,11 +87,13 @@ namespace GenerateTerms {
 		analysis::stem_strategy stem_strategy);
 
 	/*
-	 * Generate terms for numerical ranges.
+	 * Generate terms for numerical ranges: at least one matches every value in [start, end], and some
+	 * may match values just outside it, so pair them with an exact value check. Empty when the range
+	 * needs more than `max_terms` buckets of the coarsest accuracy.
 	 */
-	engine::Query numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1);
+	engine::Query numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1, size_t max_terms=MAX_TERMS);
 
-	engine::Query numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1);
+	engine::Query numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, engine::termcount wqf=1, size_t max_terms=MAX_TERMS);
 
 	/*
 	 * Generate terms for datetime ranges.

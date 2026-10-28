@@ -440,6 +440,8 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, engine::Op def
 		return get_regular_in_query(field_spc, obj, default_op, wqf, flags);
 	} catch (const SerialisationError&) {
 		return get_global_in_query(field_spc, obj, default_op, wqf, flags);
+	} catch (const TermsOnlyRangeError& exc) {
+		THROW(QueryParserError, "Cannot answer a range on field {}: {}; index its values (not only its terms) to make ranges exact", repr(path), exc.what());
 	}
 }
 

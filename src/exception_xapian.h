@@ -73,3 +73,12 @@ public:
 	template<typename... Args>
 	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::syntax, message) { }
 };
+
+
+// A range a terms-only field cannot answer exactly: the reason, without the field name, which the query
+// builder adds.
+class TermsOnlyRangeError : public QueryParserError {
+public:
+	template<typename... Args>
+	TermsOnlyRangeError(Args&&... args) : QueryParserError(std::forward<Args>(args)...) { }
+};
