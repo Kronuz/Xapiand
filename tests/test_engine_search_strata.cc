@@ -917,6 +917,13 @@ void test_refusals_impl() {
 		deep = Query::combine(Op::AND, deep, t("common"));
 	}
 	CHECK_EQ(kind(deep), syntax);
+	// An index with no segment refuses the same: the query is checked before any segment is read.
+	Index xapian_empty{Kind::xapian, {}}, strata_empty{Kind::strata, {}};
+	Model model_empty;
+	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, deep, none); }), syntax);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::wildcard("w", 10), none); }), syntax);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.sorter = &key; }); }), syntax);
 }
 
 // A query's whole answer against the model: the documents, their weights and their order (heavier first,
