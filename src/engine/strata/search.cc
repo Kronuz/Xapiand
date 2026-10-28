@@ -24,6 +24,7 @@
 #include "engine/strata/search.h"
 
 #include <algorithm>               // for std::sort, std::remove_if
+#include <cmath>                   // for std::isfinite
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint64_t
 #include <functional>              // for std::less
@@ -70,6 +71,21 @@ constexpr int max_depth = 1000;
 unsupported(const std::string& what)
 {
 	throw Error(errc::syntax, "The strata engine does not search " + what + " yet");
+}
+
+// A hit's weight as a percentage of the top weight, in [0, 100]. Against an infinite top weight (an
+// overflowed or infinite scale factor) a hit is 100 if it is infinite too and 0 otherwise.
+int
+percent_of(double score, double top)
+{
+	if (!(top > 0)) {
+		return 100;
+	}
+	if (!std::isfinite(top)) {
+		return score >= top ? 100 : 0;
+	}
+	const double ratio = score / top * 100.0 + 0.5;
+	return ratio >= 100.0 ? 100 : ratio > 0.0 ? static_cast<int>(ratio) : 0;
 }
 
 // Rethrows the exception being handled as an engine error of its kind. Call only inside a catch block.
@@ -513,9 +529,11 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's, and
 	// shard i is the i-th shard asked for (its slot in Xapian's docid interleave).
 	std::vector<p::shard_input> inputs(mine.size());
+	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
 		for (const auto& view : pin_of(mine[i]).segments()) {
 			inputs[i].segments.push_back({view.seg, view.deleted, view.dead});
+			documents += view.seg->core().doc_count();
 		}
 	}
 	const p::multi_snapshot snapshot(std::move(inputs));
@@ -523,7 +541,8 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	p::search_options options;
-	options.k = static_cast<std::size_t>(std::min<std::uint64_t>(window, std::numeric_limits<doccount>::max()));
+	// A window cannot return more than the snapshot holds, so k (which sizes the collector) never exceeds it.
+	options.k = static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
 	options.count = true;
 	options.order = request.order == DocidOrder::descending ? p::docid_order::descending : p::docid_order::ascending;
 	if (request.spy != nullptr) {
@@ -546,7 +565,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		hit.did = static_cast<docid>(found_hit.docid);
 		hit.weight = found_hit.score;
 		hit.rank = static_cast<doccount>(i);
-		hit.percent = top > 0 ? static_cast<int>(found_hit.score / top * 100.0 + 0.5) : 100;
+		hit.percent = percent_of(found_hit.score, top);
 		result.hits.push_back(hit);
 	}
 	return result;

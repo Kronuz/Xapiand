@@ -31,12 +31,14 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -1132,6 +1134,147 @@ void test_snapshot_consistency_impl() {
 }
 
 
+// A spy that stops inside its first see() until released, with every shard's lock held by the search.
+class BlockingSpy final : public engine::MatchSpy {
+public:
+	std::promise<void> inside;
+	std::shared_future<void> gate;
+	std::atomic<bool> first{true};
+	std::atomic<int> seen{0};
+
+	void see(const engine::DocView&, double) override {
+		++seen;
+		if (first.exchange(false)) {
+			inside.set_value();
+			gate.wait();
+		}
+	}
+	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<CountingSpy>(); }
+	std::string name() const override { return "BlockingSpy"; }
+	std::string serialise() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<CountingSpy>(); }
+	std::string serialise_results() const override { return ""; }
+	void merge_results(std::string_view) override { }
+	std::string description() const override { return "BlockingSpy"; }
+};
+
+// While a spy is inside see(), every shard's lock is held: a write, a commit and a delete on each shard (the
+// one pinned last included) wait until the search ends, and the search sees the state before them.
+void test_pin_holds_impl() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("pin_holds", 3, 20, 2, xapian, strata, model);
+	std::promise<void> release;
+	BlockingSpy spy;
+	spy.gate = release.get_future().share();
+	engine::SearchResult result;
+	std::thread searcher([&] {
+		// Asked for out of order, so the locks are not taken in the order of the request.
+		std::vector<engine::Shard*> order{strata.owned[2].get(), strata.owned[0].get(), strata.owned[1].get()};
+		auto prepared = engine::prepare(Query::term("common"));
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		request.maxitems = 1000;
+		request.spy = &spy;
+		result = engine::sync_wait(engine::search(order, request));
+	});
+	spy.inside.get_future().wait();
+	std::atomic<int> finished{0};
+	std::vector<std::thread> writers;
+	for (std::size_t s = 0; s < 3; ++s) {
+		writers.emplace_back([&, s] {
+			auto doc = make(Kind::strata, static_cast<int>(s), 777, model.shards[0][0]);
+			engine::sync_wait(strata.owned[s]->add(doc, {}));
+			++finished;
+		});
+		writers.emplace_back([&, s] {
+			engine::sync_wait(strata.owned[s]->commit(engine::Transaction::none));
+			++finished;
+		});
+		writers.emplace_back([&, s] {
+			engine::sync_wait(strata.owned[s]->erase_by_key("Q" + std::to_string(s) + "_3", true, std::nullopt));
+			++finished;
+		});
+	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(700));
+	const int during = finished.load();
+	release.set_value();
+	searcher.join();
+	for (auto& writer : writers) { writer.join(); }
+	CHECK_EQ(during, 0);
+	CHECK_EQ(result.hits.size(), 60u);
+	CHECK_EQ(result.estimated, 60u);
+	CHECK_EQ(spy.seen.load(), 60);
+	CHECK_EQ(finished.load(), 9);
+}
+
+// A window larger than the index is clamped to it: it answers as a window of the index's size does, at
+// once, and holds no memory for the number asked.
+void test_huge_window_impl() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("huge_window", 2, 40, 2, xapian, strata, model);
+	const auto query = Query::term("common");
+	const auto all = run(strata, 2, query, 0, 1000);
+	CHECK_EQ(all.hits.size(), 80u);
+	constexpr engine::doccount big = 0xFFFFFFFFu;
+	const auto begin = std::chrono::steady_clock::now();
+	for (const auto order : {engine::DocidOrder::ascending, engine::DocidOrder::descending}) {
+		const auto reference = run(strata, 2, query, 0, 1000, order);
+		for (const auto& [first, maxitems] : {std::pair{0u, big}, std::pair{big, 10u}, std::pair{10u, big}, std::pair{big, big}}) {
+			const auto found = run(strata, 2, query, first, maxitems, order);
+			CHECK_EQ(found.estimated, all.estimated);
+			const std::size_t skip = std::min<std::size_t>(first, reference.hits.size());
+			CHECK_EQ(found.hits.size(), reference.hits.size() - skip);
+			for (std::size_t i = 0; i < found.hits.size(); ++i) {
+				CHECK_EQ(found.hits[i].did, reference.hits[skip + i].did);
+				CHECK_EQ(found.hits[i].rank, reference.hits[skip + i].rank);
+			}
+		}
+	}
+	CountingSpy spy;
+	auto prepared = engine::prepare(query);
+	engine::SearchRequest request;
+	request.query = prepared.get();
+	request.maxitems = big;
+	request.spy = &spy;
+	CHECK_EQ(engine::sync_wait(engine::search(strata.shards(2), request)).hits.size(), 80u);
+	CHECK_EQ(spy.seen.size(), 80u);
+	CHECK_TRUE(std::chrono::steady_clock::now() - begin < std::chrono::seconds(10));
+}
+
+// A hit's percent stays in [0, 100] when the top weight overflows to infinity: the infinite hits are 100, the
+// rest 0 (a finite weight against an infinite top).
+void test_percent_infinite_impl() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("percent", 2, 40, 2, xapian, strata, model);
+	const auto query = Query::combine(Op::OR, Query::scale(Query::term("w1"), HUGE_VAL), Query::term("w2"));
+	for (const bool spied : {false, true}) {
+		CountingSpy spy;
+		auto prepared = engine::prepare(query);
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		request.maxitems = 100;
+		request.spy = spied ? &spy : nullptr;
+		const auto found = engine::sync_wait(engine::search(strata.shards(2), request));
+		std::size_t infinite = 0;
+		CHECK_TRUE(!found.hits.empty());
+		for (const auto& hit : found.hits) {
+			infinite += std::isinf(hit.weight);
+			CHECK_EQ(hit.percent, std::isinf(hit.weight) ? 100 : 0);
+		}
+		CHECK_TRUE(infinite > 0);
+	}
+	// Finite weights keep their ratio to the top.
+	const auto plain = run(strata, 2, Query::combine(Op::OR, Query::term("w1"), Query::term("w2")), 0, 100);
+	CHECK_TRUE(!plain.hits.empty());
+	CHECK_EQ(plain.hits.front().percent, 100);
+	for (const auto& hit : plain.hits) {
+		CHECK_EQ(hit.percent, static_cast<int>(hit.weight / plain.hits.front().weight * 100.0 + 0.5));
+	}
+}
+
 // Reports an engine error with its text, which the bare terminate message of an uncaught one lacks.
 template <typename F>
 void guarded(const char* name, F&& test) {
@@ -1158,7 +1301,10 @@ void test_refusals() { guarded("test_refusals", test_refusals_impl); }
 void test_long_chains() { guarded("test_long_chains", test_long_chains_impl); }
 void test_snapshot_consistency() { guarded("test_snapshot_consistency", test_snapshot_consistency_impl); }
 void test_concurrent_searches() { guarded("test_concurrent_searches", test_concurrent_searches_impl); }
+void test_pin_holds() { guarded("test_pin_holds", test_pin_holds_impl); }
+void test_huge_window() { guarded("test_huge_window", test_huge_window_impl); }
+void test_percent_infinite() { guarded("test_percent_infinite", test_percent_infinite_impl); }
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_append, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_huge_window, test_percent_infinite)

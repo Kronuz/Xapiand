@@ -133,6 +133,20 @@ search; docid tie-break; the default node's five shards searched as one index.
    tree already freed iteratively; the scorer tree is now flat per run (above). 3. `SpyView` is minimal (id,
    data, version; values empty): S3's `SegmentDocView` replaces it.
 
+## Code review round (`docs/reviews/strata-engine-search-code.md`)
+
+- CR1 closed: `options.k` is clamped to the pinned snapshot's document count (`search.cc`), and prospect's collector
+  reserves for the documents searched, not for k (prospect branch `fix/collector-reserve`, pushed, not merged; the
+  pin in `CMakeLists.txt` moves when it lands). Test `test_huge_window`.
+- CR3 closed: `test_pin_holds` (the reviewer's deterministic probe) is in the file.
+- CR4 closed: `percent_of` defines non-finite weights (100 for an infinite hit, 0 for a finite one under an infinite
+  top); `test_percent_infinite`.
+- CR6 comment: `engine/search.h` now says `errc::syntax`.
+- Open: CR2 (`pin()` needs S1's `check()` and `rethrow_translated(core)`, and `term_key_prefix()` against
+  `keys::key_prefix()`) at the rebase onto S1. Notes, not fixed: CR5 (a spy re-entering a pinned shard deadlocks: say
+  so in the `MatchSpy`/`KeyMaker` contract, and `pin_of` is a linear scan, O(n^2) over thousands of shards); CR6 (the
+  lock is held for the whole search; the architect says whether T10 precedes the aggregation spy).
+
 ## Next
 
 Code review; rebase onto S1 (`phase7a/strata-engine-write`) when it moves; S3 (key makers, spies, expansions,
