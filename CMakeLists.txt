@@ -66,6 +66,7 @@ option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
 option(FUZZ "Build the libFuzzer targets (tests/fuzz_*.cc; needs a clang with libFuzzer)" OFF)
+option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a strata commit or replay point (crash tests)" OFF)
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
@@ -78,6 +79,10 @@ foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM
 	endif ()
 endforeach ()
 
+if (CRASH_POINTS)
+	message(STATUS "Option CRASH_POINTS - on")
+	add_compile_definitions(XAPIAND_CRASH_POINTS)
+endif ()
 if (ENGINE_CENSUS)
 	message(STATUS "Option ENGINE_CENSUS - on")
 	add_compile_definitions(ENGINE_CENSUS)

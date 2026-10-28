@@ -24,7 +24,13 @@
 
 #include <algorithm>               // for std::sort
 #include <array>                   // for std::array
+#include <atomic>                  // for std::atomic
 #include <coroutine>               // for std::coroutine_handle
+#ifdef XAPIAND_CRASH_POINTS
+#include <csignal>                 // for SIGKILL
+#include <cstdlib>                 // for std::getenv
+#include <unistd.h>                // for getpid, kill
+#endif
 #include <cstdio>                  // for std::snprintf
 #include <filesystem>              // for std::filesystem
 #include <map>                     // for std::map
@@ -68,6 +74,28 @@ engine_key(std::string_view term)
 	key.append(term);
 	return key;
 }
+
+#ifdef XAPIAND_CRASH_POINTS
+// Crash tests only: XAPIAND_STRATA_CRASH=point:n kills the process (SIGKILL) at the n-th pass through
+// that point (commit.before, commit.flushed, commit.after, replay).
+void
+crash_point(const char* point)
+{
+	static const std::string spec = [] {
+		const char* env = std::getenv("XAPIAND_STRATA_CRASH");
+		return std::string(env ? env : "");
+	}();
+	static std::atomic<long> hits{0};
+	const std::string_view want(spec);
+	const auto colon = want.find(':');
+	if (colon != std::string_view::npos && want.substr(0, colon) == point &&
+		++hits == std::atol(std::string(want.substr(colon + 1)).c_str())) {
+		::kill(::getpid(), SIGKILL);
+	}
+}
+#else
+inline void crash_point(const char*) { }
+#endif
 
 constexpr std::string_view reserved_meta_prefix = "strata.";
 
@@ -166,7 +194,13 @@ struct Core {
 
 	void commit() {
 		if (pending) {
+			crash_point("commit.before");
+#ifdef XAPIAND_CRASH_POINTS
+			index->refresh();  // the segment is on disk and the manifest does not name it
+			crash_point("commit.flushed");
+#endif
 			index->commit();
+			crash_point("commit.after");
 			pending = dirty = false;
 		}
 	}
@@ -461,7 +495,9 @@ Shard::add(Document& doc, WriteArgs args)
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		prospect::operation op;
 		op.type = prospect::operation::add;
-		fill(op.doc, native_of(doc));
+		auto& native = native_of(doc);
+		native.stamp(info.version);
+		fill(op.doc, native);
 		co_return apply(core, std::move(op), info);
 	} catch (...) {
 		rethrow_translated();
@@ -480,6 +516,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		auto& native = native_of(doc);
+		const bool replayed = native.replayed();
 		std::optional<rev> stored;
 		if (!native.key().empty()) {
 			// A document with a key is found by it; the id must be the one that holds the key.
@@ -494,19 +531,29 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		} else if (const auto located = locate(core, did, false)) {
 			stored = located->version;
 		}
-		check_version(args.expected_version, stored);
 		WriteResult info;
 		info.did = did;
+		if (replayed && stored && *stored >= native.version()) {
+			// A log line the index already holds: replaying it again changes nothing.
+			info.version = *stored;
+			co_return info;
+		}
+		check_version(args.expected_version, stored);
 		info.version = stored.value_or(0) + 1;
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
+		native.stamp(info.version);
 		prospect::operation op;
 		op.type = prospect::operation::replace_docid;
 		op.docid = did;
 		fill(op.doc, native);
-		co_return apply(core, std::move(op), info);
+		auto result = apply(core, std::move(op), info);
+		if (replayed) {
+			crash_point("replay");
+		}
+		co_return result;
 	} catch (...) {
 		rethrow_translated();
 	}
@@ -533,16 +580,21 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		} else {
 			info.did = static_cast<docid>(core.index->last_docid() + 1);
 		}
+		auto& native = native_of(doc);
+		if (native.replayed() && stored && *stored >= native.version()) {
+			info.version = *stored;
+			co_return info;
+		}
 		check_version(args.expected_version, stored);
 		info.version = stored.value_or(0) + 1;
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
-		auto& native = native_of(doc);
 		if (native.key() != key) {
 			native.set_key(key);
 		}
+		native.stamp(info.version);
 		prospect::operation op;
 		op.type = prospect::operation::replace_key;
 		op.key = ekey;

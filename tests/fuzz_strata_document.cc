@@ -42,6 +42,11 @@ LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
 		if (again.serialise() != doc.serialise()) {
 			std::abort();  // the form is not a fixed point
 		}
+		const auto& before = engine::strata::strata_document(doc);
+		const auto& after = engine::strata::strata_document(again);
+		if (before.version() != after.version() || before.replayed() != after.replayed() || before.replayed() != (before.version() != 0)) {
+			std::abort();  // the version the log kept is the one replay reads
+		}
 	} catch (const engine::Error& error) {
 		if (error.kind != engine::errc::syntax) {
 			std::abort();

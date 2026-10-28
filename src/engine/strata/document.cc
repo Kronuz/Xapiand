@@ -201,12 +201,13 @@ StrataDocument::normalise()
 }
 
 
-// version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
+// format, written version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
 std::string
 StrataDocument::serialise() const
 {
 	std::string out;
 	out.push_back(static_cast<char>(serial_version));
+	put(out, version_);
 	put(out, key_);
 	put(out, data_);
 	put(out, values_.size());
@@ -240,6 +241,8 @@ StrataDocument::unserialise_from(std::string_view serialised)
 		malformed("unknown version");
 	}
 	StrataDocument result;
+	result.version_ = in.number();
+	result.replayed_ = result.version_ != 0;
 	result.key_.assign(in.bytes());
 	result.data_.assign(in.bytes());
 	for (auto n = in.count(2); n; --n) {

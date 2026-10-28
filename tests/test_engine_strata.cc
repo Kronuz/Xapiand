@@ -29,15 +29,19 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <atomic>
 #include <cstdio>
 #include <filesystem>
+#include <map>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "engine/error.h"
 #include "engine/kind.h"
 #include "engine/open.h"
+#include "engine/search.h"
 #include "engine/strata/document.h"
 #include "engine/sync.h"
 
@@ -224,30 +228,73 @@ void shared(Kind kind) {
 	std::filesystem::remove_all(path);
 }
 
-// Replay: the log keeps the serialised document and replays it by id; the shard must end up with the
-// same document and version, and a second replay of the same line must not change it.
+// Replay: the log keeps the serialised document (after the write, so it carries what the write
+// stamped) and replays it by id. On strata a line the index already holds changes nothing: the same
+// version, data and values; an older line does not roll a newer document back. On Xapian the shard
+// versions every replace and the log is protected by the revision check in `DatabaseWAL::execute_line`.
 void replay(Kind kind) {
 	const auto path = scratch("replay", kind);
 	auto opened = open_shard(kind, path);
 	auto& shard = *opened.shard;
 	engine::WriteArgs plain;
 
+	// Replayed as a replace by id of an id that does not exist yet: it is created with that id.
 	auto doc = make(kind, "Qr", "first");
 	doc.add_value(7, "seven");
-	const auto line = doc.serialise();
-	auto replayed = engine::Document::unserialise(kind, line);
+	CHECK_EQ(engine::sync_wait(shard.replace(5, doc, plain)).did, 5u);
+	CHECK_EQ(engine::sync_wait(shard.get(5))->version(), 1u);
+	const auto line1 = doc.serialise();
+	auto replayed = engine::Document::unserialise(kind, line1);
 	CHECK_EQ(replayed.get_data(), "first");
 	CHECK_EQ(replayed.get_value(7), "seven");
-	CHECK_EQ(replayed.serialise(), line);
-
-	// Replayed as a replace by id of an id that does not exist yet: it is created with that id.
-	CHECK_EQ(engine::sync_wait(shard.replace(5, replayed, plain)).did, 5u);
+	CHECK_EQ(replayed.serialise(), line1);
 	CHECK_EQ(engine::sync_wait(shard.find_key("Qr")), 5u);
 	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 5u);
-	auto again = engine::Document::unserialise(kind, line);
-	CHECK_EQ(engine::sync_wait(shard.replace(5, again, plain)).version, 2u);
-	CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "first");
-	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 1u);
+
+	if (kind == Kind::strata) {
+		// The same line, again: nothing changes, however many times it comes.
+		for (int i = 0; i < 3; ++i) {
+			auto again = engine::Document::unserialise(kind, line1);
+			const auto result = engine::sync_wait(shard.replace(5, again, plain));
+			CHECK_EQ(result.did, 5u);
+			CHECK_EQ(result.version, 1u);
+			auto view = engine::sync_wait(shard.get(5));
+			CHECK_EQ(view->version(), 1u);
+			CHECK_EQ(view->data(), "first");
+			CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 1u);
+			CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 5u);
+		}
+
+		// A newer write is not rolled back by replaying the older line; replaying the newer one is a no-op too.
+		auto second = make(kind, "Qr", "second");
+		CHECK_EQ(engine::sync_wait(shard.replace(5, second, plain)).version, 2u);
+		const auto line2 = second.serialise();
+		for (const auto& line : {line1, line2, line1, line2}) {
+			auto again = engine::Document::unserialise(kind, line);
+			CHECK_EQ(engine::sync_wait(shard.replace(5, again, plain)).version, 2u);
+			auto view = engine::sync_wait(shard.get(5));
+			CHECK_EQ(view->version(), 2u);
+			CHECK_EQ(view->data(), "second");
+		}
+
+		// The same holds by key, and a line that is ahead of the index is applied (the index is behind).
+		auto by_key = engine::Document::unserialise(kind, line2);
+		CHECK_EQ(engine::sync_wait(shard.replace_by_key("Qr", by_key, plain)).version, 2u);
+		CHECK_EQ(engine::sync_wait(shard.get(5))->version(), 2u);
+		auto third = make(kind, "Qr", "third");
+		CHECK_EQ(engine::sync_wait(shard.replace(5, third, plain)).version, 3u);
+		CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "third");
+
+		// A document the shard stamped is a fresh write when written again, not a replay.
+		auto fresh = make(kind, "Qs", "s");
+		CHECK_EQ(engine::sync_wait(shard.add(fresh, plain)).version, 1u);
+		CHECK_EQ(engine::sync_wait(shard.replace(6, fresh, plain)).version, 2u);
+	} else {
+		auto again = engine::Document::unserialise(kind, line1);
+		CHECK_EQ(engine::sync_wait(shard.replace(5, again, plain)).version, 2u);
+		CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "first");
+	}
+	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, kind == Kind::strata ? 2u : 1u);
 
 	// A line that is not a document is a syntax error, not a crash.
 	if (kind == Kind::strata) {
@@ -285,6 +332,23 @@ void strata_only() {
 	// A key that belongs to another document cannot be replaced by id.
 	auto clash = make(kind, "QKone", "c");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.replace(2, clash, plain)); }) == engine::errc::invalid);
+	{
+		// The shard says why itself; the index would refuse the write too, with its own words.
+		std::string why;
+		try {
+			engine::sync_wait(shard.replace(2, clash, plain));
+		} catch (const engine::Error& error) {
+			why = error.description();
+		}
+		CHECK_TRUE(why.find("key belongs to another document") != std::string::npos);
+	}
+	CHECK_EQ(engine::sync_wait(shard.get(1))->data(), "d");  // neither document changed
+	CHECK_EQ(engine::sync_wait(shard.get(2))->data(), "t");
+	CHECK_EQ(engine::sync_wait(shard.get(1))->version(), 1u);
+	CHECK_EQ(engine::sync_wait(shard.get(2))->version(), 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("QKone")), 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("QKtwo")), 2u);
+	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 2u);
 
 	// A document built for the other engine is refused.
 	engine::Document foreign(Kind::xapian);
@@ -308,6 +372,17 @@ void strata_only() {
 
 	// Term lists wait for prospect's term-list plugin (P2): reading a document's terms says so.
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->term_details([](const engine::TermDetail&) { }); }) == engine::errc::not_available);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1))->terms("", [](std::string_view, engine::termcount) { }); }) == engine::errc::not_available);
+	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::not_available);
+
+	// Search waits for S2: a strata shard says so, for a term and for match-all.
+	for (const auto& query : {engine::Query::term("x"), engine::Query::match_all()}) {
+		auto prepared = engine::prepare(query);
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		engine::Shard* shards[] = {&shard};
+		CHECK_TRUE(error_kind([&] { engine::sync_wait(engine::search(shards, request)); }) == engine::errc::not_available);
+	}
 
 	// Dropping the writable shard without a commit keeps its work, as a Xapian writer does.
 	opened.shard.reset();
@@ -357,15 +432,25 @@ void codec() {
 	CHECK_EQ(terms.at("b").positions.size(), 2u);  // sorted and unique in the serialised form
 	CHECK_EQ(terms.at("a").wdf, 3u);
 
+	// The version the shard stamped is what the log keeps and replay reads; a fresh document has none.
+	CHECK_EQ(engine::strata::strata_document(back).version(), 0u);
+	CHECK_FALSE(engine::strata::strata_document(back).replayed());
+	engine::strata::strata_document(back).stamp(77);
+	auto stamped = engine::Document::unserialise(Kind::strata, back.serialise());
+	CHECK_EQ(engine::strata::strata_document(stamped).version(), 77u);
+	CHECK_TRUE(engine::strata::strata_document(stamped).replayed());
+	CHECK_EQ(stamped.serialise(), back.serialise());
+	engine::strata::strata_document(back).stamp(0);
+
 	// Every truncation fails cleanly.
 	for (std::size_t n = 0; n < bytes.size(); ++n) {
 		CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string_view(bytes).substr(0, n)); }) == engine::errc::syntax);
 	}
 	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, bytes + "x"); }) == engine::errc::syntax);
 	// A count larger than the input could hold is refused before anything is allocated for it.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x01\x00\x00\xff\xff\xff\xff\x0f", 8)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x01\x00\x00\x00\xff\xff\xff\xff\x0f", 9)); }) == engine::errc::syntax);
 	// A key that is not one of the terms is refused.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x01\x01Q\x00\x00\x00", 6)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x01\x00\x01Q\x00\x00\x00", 7)); }) == engine::errc::syntax);
 
 	// Random single-byte damage never crashes: it either decodes or raises a syntax error.
 	std::mt19937 random(42);
@@ -382,6 +467,235 @@ void codec() {
 			CHECK_TRUE(error.kind == engine::errc::syntax);
 		}
 	}
+}
+
+// A read by id sees every write of this handle at once: the index is refreshed when a write left it
+// dirty, and only then.
+void fresh_reads() {
+	const auto kind = Kind::strata;
+	const auto path = scratch("fresh", kind);
+	auto opened = open_shard(kind, path);
+	auto& shard = *opened.shard;
+	engine::WriteArgs plain;
+
+	auto one = make(kind, "Qa", "one");
+	CHECK_EQ(engine::sync_wait(shard.add(one, plain)).did, 1u);
+	CHECK_EQ(engine::sync_wait(shard.get(1))->data(), "one");  // flushes the write; the index is clean now
+
+	// A replace after a clean read is seen, with its version.
+	auto two = make(kind, "Qa", "two");
+	CHECK_EQ(engine::sync_wait(shard.replace(1, two, plain)).version, 2u);
+	{
+		auto view = engine::sync_wait(shard.get(1));
+		CHECK_EQ(view->data(), "two");
+		CHECK_EQ(view->version(), 2u);
+	}
+
+	// An erase after a clean read is seen, by id and by key.
+	engine::sync_wait(shard.erase(1, true, std::nullopt));
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1)); }) == engine::errc::doc_not_found);
+	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 0u);
+	auto b = make(kind, "Qb", "b");
+	CHECK_EQ(engine::sync_wait(shard.add(b, plain)).did, 2u);
+	CHECK_EQ(engine::sync_wait(shard.get(2))->data(), "b");
+	CHECK_EQ(engine::sync_wait(shard.erase_by_key("Qb", true, std::nullopt)), 2u);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(2)); }) == engine::errc::doc_not_found);
+	CHECK_EQ(shard.doc_count(), 0u);
+
+	// A replace by key after a clean read.
+	auto c1 = make(kind, "Qc", "c1");
+	CHECK_EQ(engine::sync_wait(shard.add(c1, plain)).did, 3u);
+	CHECK_EQ(engine::sync_wait(shard.get(3))->data(), "c1");
+	auto c2 = make(kind, "Qc", "c2");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Qc", c2, plain)).version, 2u);
+	CHECK_EQ(engine::sync_wait(shard.get(3))->data(), "c2");
+	std::vector<std::string> scanned;
+	engine::sync_wait(shard.scan(0, [&](const engine::DocView& view) { scanned.push_back(view.data()); }));
+	CHECK_TRUE(scanned == (std::vector<std::string>{"c2"}));
+
+	opened.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
+// Closing the last handle commits what is pending, as a Xapian writer does: documents, erases and
+// metadata survive; a handle that wrote nothing leaves the revision alone.
+void commit_on_drop() {
+	const auto kind = Kind::strata;
+	const auto path = scratch("drop", kind);
+	engine::WriteArgs plain;
+	{
+		auto opened = open_shard(kind, path);
+		auto& shard = *opened.shard;
+		auto a = make(kind, "Qa", "a");
+		auto b = make(kind, "Qb", "b");
+		engine::sync_wait(shard.add(a, plain));
+		engine::sync_wait(shard.add(b, plain));
+		engine::sync_wait(shard.commit(engine::Transaction::none));
+		engine::sync_wait(shard.erase(1, true, std::nullopt));
+		engine::sync_wait(shard.set_metadata("m", "v"));
+		auto c = make(kind, "Qc", "c");
+		engine::sync_wait(shard.add(c, plain));
+	}
+	engine::rev revision = 0;
+	{
+		auto reopened = open_shard(kind, path, true, false);
+		auto& shard = *reopened.shard;
+		CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1)); }) == engine::errc::doc_not_found);
+		CHECK_EQ(engine::sync_wait(shard.get(2))->data(), "b");
+		CHECK_EQ(engine::sync_wait(shard.get(3))->data(), "c");
+		CHECK_EQ(engine::sync_wait(shard.metadata("m")), "v");
+		CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 2u);
+		revision = shard.revision();
+		CHECK_GE(revision, 2u);
+	}
+	{
+		auto reopened = open_shard(kind, path, true, false);
+		CHECK_EQ(reopened.shard->revision(), revision);  // nothing was written, so nothing committed
+	}
+	std::filesystem::remove_all(path);
+}
+
+// Writers on one shard that check and set: a write with a stale expectation conflicts, the ones that win
+// get each version once, no update is lost, and a key that must be new is created by exactly one.
+void concurrent_cas() {
+	const auto kind = Kind::strata;
+	const auto path = scratch("cas", kind);
+	auto opened = open_shard(kind, path);
+	auto& shard = *opened.shard;
+	engine::WriteArgs plain;
+
+	constexpr int keys = 3;
+	constexpr int threads = 8;
+	constexpr int wins_wanted = 150;  // successful updates per thread
+	for (int k = 0; k < keys; ++k) {
+		auto doc = make(kind, "Qk" + std::to_string(k), "seed");
+		CHECK_EQ(engine::sync_wait(shard.add(doc, plain)).did, static_cast<engine::docid>(k + 1));
+	}
+
+	struct Win {
+		int key;
+		engine::rev version;
+		std::string data;
+	};
+	std::vector<std::vector<Win>> wins(threads);
+	std::vector<long> conflicts(threads, 0);
+	std::vector<std::string> unexpected(threads);
+	std::atomic<bool> go{false};
+	std::vector<std::thread> workers;
+	for (int t = 0; t < threads; ++t) {
+		workers.emplace_back([&, t] {
+			while (!go.load()) { }
+			std::mt19937 random(t * 7919 + 1);
+			try {
+				while (static_cast<int>(wins[t].size()) < wins_wanted) {
+					const int k = static_cast<int>(random() % keys);
+					const auto did = static_cast<engine::docid>(k + 1);
+					const auto seen = engine::sync_wait(shard.get(did))->version();
+					const auto data = "t" + std::to_string(t) + "n" + std::to_string(wins[t].size());
+					auto doc = make(kind, "Qk" + std::to_string(k), data);
+					engine::WriteArgs args;
+					args.expected_version = seen;
+					try {
+						const auto result = engine::sync_wait(shard.replace(did, doc, args));
+						wins[t].push_back({k, result.version, data});
+					} catch (const engine::Error& error) {
+						if (error.kind != engine::errc::version_conflict) {
+							throw;
+						}
+						++conflicts[t];
+					}
+				}
+			} catch (const std::exception& exc) {
+				unexpected[t] = exc.what();
+			}
+		});
+	}
+	go = true;
+	for (auto& worker : workers) {
+		worker.join();
+	}
+
+	long total_conflicts = 0;
+	for (int t = 0; t < threads; ++t) {
+		CHECK_TRUE(unexpected[t].empty());
+		CHECK_EQ(static_cast<int>(wins[t].size()), wins_wanted);
+		total_conflicts += conflicts[t];
+	}
+	CHECK_GT(total_conflicts, 0);  // the writers did contend
+	for (int k = 0; k < keys; ++k) {
+		std::map<engine::rev, std::string> by_version;
+		for (const auto& list : wins) {
+			for (const auto& win : list) {
+				if (win.key == k) {
+					CHECK_TRUE(by_version.emplace(win.version, win.data).second);  // each version won once
+				}
+			}
+		}
+		// the versions that won are exactly 2..final: nothing lost, nothing skipped
+		const auto final_version = static_cast<engine::rev>(by_version.size()) + 1;
+		CHECK_TRUE(!by_version.empty() && by_version.begin()->first == 2 && by_version.rbegin()->first == final_version);
+		auto view = engine::sync_wait(shard.get(static_cast<engine::docid>(k + 1)));
+		CHECK_EQ(view->version(), final_version);
+		CHECK_EQ(view->data(), by_version.rbegin()->second);
+	}
+
+	// A key that must be new: exactly one of the racing creators wins, the rest conflict.
+	for (int round = 0; round < 20; ++round) {
+		const auto key = "Qnew" + std::to_string(round);
+		std::atomic<int> created{0}, refused{0}, other{0};
+		std::atomic<bool> start{false};
+		std::vector<std::thread> racers;
+		for (int t = 0; t < threads; ++t) {
+			racers.emplace_back([&, t] {
+				while (!start.load()) { }
+				auto doc = make(kind, key, "by" + std::to_string(t));
+				engine::WriteArgs args;
+				args.expected_version = 0;
+				try {
+					engine::sync_wait(shard.replace_by_key(key, doc, args));
+					++created;
+				} catch (const engine::Error& error) {
+					++(error.kind == engine::errc::version_conflict ? refused : other);
+				}
+			});
+		}
+		start = true;
+		for (auto& racer : racers) {
+			racer.join();
+		}
+		CHECK_EQ(created.load(), 1);
+		CHECK_EQ(refused.load(), threads - 1);
+		CHECK_EQ(other.load(), 0);
+	}
+
+	// Erasing at a version: of the racers that name the current one, exactly one removes the document.
+	{
+		const auto current = engine::sync_wait(shard.get(1))->version();
+		std::atomic<int> erased{0}, conflicted{0}, missing{0};
+		std::atomic<bool> start{false};
+		std::vector<std::thread> racers;
+		for (int t = 0; t < threads; ++t) {
+			racers.emplace_back([&] {
+				while (!start.load()) { }
+				try {
+					engine::sync_wait(shard.erase_by_key("Qk0", true, current));
+					++erased;
+				} catch (const engine::Error& error) {
+					++(error.kind == engine::errc::version_conflict ? conflicted : missing);
+				}
+			});
+		}
+		start = true;
+		for (auto& racer : racers) {
+			racer.join();
+		}
+		CHECK_EQ(erased.load(), 1);
+		CHECK_EQ(erased.load() + conflicted.load() + missing.load(), threads);
+		CHECK_EQ(engine::sync_wait(shard.find_key("Qk0")), 0u);
+	}
+
+	opened.shard.reset();
+	std::filesystem::remove_all(path);
 }
 
 }  // namespace
@@ -403,6 +717,9 @@ static void test_replay_xapian() { guarded("replay xapian", [] { replay(Kind::xa
 static void test_replay_strata() { guarded("replay strata", [] { replay(Kind::strata); }); }
 static void test_strata_only() { guarded("strata only", [] { strata_only(); }); }
 static void test_values_gap() { guarded("values gap", [] { values_gap(); }); }
+static void test_fresh_reads() { guarded("fresh reads", [] { fresh_reads(); }); }
+static void test_commit_on_drop() { guarded("commit on drop", [] { commit_on_drop(); }); }
+static void test_concurrent_cas() { guarded("concurrent cas", [] { concurrent_cas(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas)
