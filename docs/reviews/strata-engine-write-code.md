@@ -144,9 +144,82 @@ absent key), skip when `stored >= stamp`, else raise `errc::corrupt`.
 
 ## Re-check
 
-(none yet)
+See "Re-check 1" at the end of this file.
 
 Not run: the node scenarios `harness/strata_write_check.sh` (no `xapiand` binary was built; the proof round's numbers are taken from the
 ledger), the other 19 ctest suites and the Xapian-only checks, the libFuzzer target, power-loss or fsync-ordering durability, Linux and
 FreeBSD, CI, benchmarks, scan memory under a large shard (read from code), a security review (no untrusted-input surface beyond the WAL codec,
 whose decoder returns `errc::syntax` on 20000 old-layout lines and the existing fuzz target).
+
+## Re-check 1
+
+Re-checker: rechecker, 2026-10-28. Fix round Xapiand:d0a664b8c (code) and Xapiand:d6c2eaa3e (ledger) on `phase7a/strata-engine-write`,
+local only. Read: the two commits' diff and the callers they touch (`src/database/shard.cc` `retry_or_throw`/`reopen`, `src/database/wal.cc`
+`execute_line`). No GPL source read. Reused the reviewer's probes unchanged (`.scratch/s1-review/probe_*.cc`, identical to `.scratch/s1-fix/`).
+New probes and scripts are in `.scratch/s1-recheck/`: `probe_wal.cc` (CR4 through `wal.cc`), `probe_fence2.cc`, `probe_fence3.cc` (NF1),
+`mkprobe2.sh` (builds a probe with the link line of `xapiand_test_pool`, which links `wal.cc`), `mutants.py`, `cfg.sh`, `build.sh`.
+
+Builds (own dirs, own `_deps`, Homebrew LLVM 23, RelWithDebInfo, `-DASSERTS=ON -DCRASH_POINTS=ON -DLTO=OFF`):
+
+| Build | `test_engine_strata` | `test_engine_replay` | Probes | Reports |
+|---|---|---|---|---|
+| ASan+UBSan | 9549 pass | 17 pass | conc 806 pass, oldline 20001 pass, replay and errors as below | 0 |
+| TSan | 9549 pass | 17 pass | conc 806 pass, replay and errors as in ASan | 0 |
+| ASan+UBSan, other suites | `engine_shard` 54, `engine_document` 645, `engine_census` (off) pass | | | 0 |
+
+### Verdicts
+
+| Item | Verdict | Evidence |
+|---|---|---|
+| CR1 | CLOSED | `shard.cc:195` `Core::check()` is called first under `core.mtx` by every entry point (checked: `add`, `replace`, `replace_by_key`, `erase`, `erase_by_key`, `commit`, `begin/commit/cancel_transaction`, `set_metadata`, `stats`, `find_key`, `get`, `scan`, `metadata`, `metadata_keys`, `revision`, `doc_count`, free `check()`); `reopen_index()` (`shard.cc:204`) is what `cancel_transaction` (`:816`) calls. `probe_errors.cc` under ASan and TSan: `cancel_reopen_fails` gives `database: open journal scan cursor: Permission denied`, then `stats()` gives `database: The strata index is closed after a failed reopen`, with no ASan or TSan report; the probe then ends at its own unguarded `find_key` (an uncaught `engine::Error`, the probe's last line, not a crash in the code). Test `cancel_reopen_fails` covers `stats`, `find_key`, `get`, `add`, `commit`, `metadata`, `doc_count`, `revision` and the recovery by `reopen()`. Mutant (`check()` disabled): ASan heap-use-after-free at the test's `stats()` call, the original finding. |
+| CR2 | CLOSED | `shard.cc:181` `~Core` commits only when `!transaction`. `probe_errors.cc` `drop_in_transaction`: xapian `doc_count=1`, strata `doc_count=1` (was 2). Test `drop_mid_transaction` runs both engines and then a cancel. Mutant (`!transaction` removed): 3 checks fail (`test_engine_strata.cc:721, 722, 726`). |
+| CR3 | CLOSED for the finding as written; see NF1, which this fix introduces | `shard.cc:96-116` `rethrow_translated(core)` marks the Core on `index_fenced`; `acquire` (`:327`) and `Shard::reopen()` (`:872`) replace a fenced or empty index with one opened from the last commit. `probe_errors.cc` `fenced` (ASan, TSan): commit fails with `durability failure`, then the write fails as fenced, `reopen(): 1`, a new writable handle opened while the readable one lives adds `ok`, and after every handle closes `doc_count=3` (was a wedge). `probe_fence2.cc` (no intermediate write): the first write on a new writable handle after the failed commit is `ok`, so the first failure marks the Core by itself (it is an `index_fenced`). Tests `fenced_recovers(true/false)`. Mutant (`unusable()` always false): the reopen and new-handle tests fail. |
+| CR4 | CLOSED | Stamp rule: `replay_applies` (`shard.cc:443`) skips when `stored >= stamp`, applies only as `stored + 1` (1 for an absent key), else `errc::corrupt`; used by `replace` (`:597`) and `replace_by_key` (`:646`). Moved key: `replace` skips a replayed line whose key lives at another id (`:578`). `probe_replay.cc` (ASan, TSan): `erase_readd`, `readd_replace`, `two_keys_swap` now end with state equal to the primary's and the only error left is the engine's `doc_not_found` for the replayed erase; `stamp_gap` gives `corrupt: The log skips a version of a document` and the replica stays at v1 (its `v == 3` check still reports, as intended: the probe asserted the old drift). Mutants: moved-key skip off (1 check fails), gap rule off (4 checks fail). **`wal.cc` itself** (`:563-570`): the ledger covered it only through an engine-side copy, so I wrote `.scratch/s1-recheck/probe_wal.cc`, which opens a shard through `DatabasePool`, builds lines as `DatabaseWALWriterTask` does and runs `DatabaseWAL::execute_line`. With the fix: an erase of a missing document returns `ok` on both engines (strata and xapian), and a double replay of `put a, erase, put a` through `execute_line` is `all ok` twice with the primary's state (5 checks). With the `wal.cc` hunk reverted: strata fails 3 of 5 (`doc_not_found` from the erase, twice in the replay), xapian fails 1 of 1; restored afterwards. |
+| CR5 | CLOSED | `shard.cc:218-226` `Core::commit` calls `index->refresh()` then `crash_point("commit.flushed")` then `index->commit()` with no `#ifdef`; `crash_point` is the no-op inline outside `XAPIAND_CRASH_POINTS`, so the crash build runs the shipped path. Not observable through the API (as the ledger says). |
+| Format byte 2 | CLOSED | `document.cc:36` `serial_version = 2`; `:242` a format 1 line raises `errc::syntax` "format 1 predates the version stamp and is no longer read"; any other byte is "unknown version". `probe_oldline.cc`: 20000 old-layout lines, 0 decoded, 20000 `syntax` (ASan and TSan not needed for the codec; run under ASan). Tests `old_format` and `codec`; mutant (byte back to 1) fails the codec, replay and old-format tests. |
+| CR6, CR7 | CLOSED (non-blocking) | `src/engine/strata/keys.h` holds `lead`, `engine_key`, `key_prefix`; `~Core` logs a failed commit with `L_ERR` (`shard.cc:181-191`). |
+| CR8 to CR10 | open as recorded in the ledger | not in scope of this fix round. |
+
+### Node scenarios
+
+`xapiand` built (Homebrew LLVM, `-O2 -g`, `-DASSERTS=ON -DCRASH_POINTS=ON -DLTO=OFF`, own dir) and
+`BIN=... PORT=8931 harness/strata_write_check.sh write replay versions commit replaycrash` run to the end under
+`quiet light` and `timeout 3000`: 36 checks `ok`, 0 `FAIL`, final `PASS`; all five scenarios, including the crash points build
+(`commit.before`, `commit.flushed`, `commit.after` each fired and recovered with 40 of 40 documents verified, twice;
+the two mid-replay crashes fired and the third restart converged). `ps` afterwards: no `xapiand` left.
+
+### New finding
+
+**NF1 (blocking, introduced by the CR3 fix). A handle other than the writer that replaces a fenced index silently drops the live writer's
+uncommitted writes and its transaction.** `acquire` (`shard.cc:327-333`) and `reopen()` call `reopen_index()` (`:204`), which sets
+`pending = dirty = transaction = false`, drops the index and opens a fresh one, whichever handle asked and whatever handles are live.
+The writer is told nothing: its next call passes `Core::check()` (the index is engaged) and works on the fresh index.
+Reachable on a node because a *read* flushes the writer's buffered documents (`core.refresh()` in `get`, `stats`, `scan`, `doc_count`): a flush that
+fails with an I/O error fences the shared index and raises `errc::database` on the reader; `read_fate` is `close_fail` for `errc::database`
+(`engine/error.h:94-96`), so the node closes that reader; the next request opens a reader, `acquire` replaces the index, and the writer's acknowledged writes
+(their WAL lines already carry the revision) are gone from the index. A later commit moves the revision on, so the WAL never replays them.
+Before the fix the fenced Core stayed fenced, the writer's next write failed, the node closed the writer and the WAL replayed: no loss.
+Probe `.scratch/s1-recheck/probe_fence3.cc` (writer adds `Qb` unflushed; directory made read-only; reader `stats()` fails with `durability failure`;
+directory fixed; a second reader opens): `find_key("Qb")` through the writer is `0`, `add Qc` and `commit` succeed, and after reopening
+`doc_count=2`, `Qb=0`, `Qc=2`. Reproduces under ASan.
+Fix (small): give `Core` an epoch bumped by `reopen_index()`; a writable `Shard` records the epoch it has seen when it is opened (or when it
+called `reopen()` itself) and `Core::check()` raises `errc::database` ("the index was replaced; reopen the shard") for a writable handle
+whose epoch is behind, so the node closes the writer and the writable open replays the WAL. Add `probe_fence3` as a test (it fails now,
+passes with the epoch). The ledger sentence "pending writes are dropped (the WAL replays them on a node)" is true only for the handle that
+opens the writable shard afterwards, which is what the epoch makes the only path.
+
+Side notes, not findings: `Shard::reopen()` on a fenced engine returns `true` without a WAL replay (`database/shard.cc:715`), which the
+epoch above also covers; `probe_wal.cc` is worth keeping as `tests/test_wal_replay.cc` (it needs a local `Node` set and a relative path for the
+`Endpoint`, both in the probe).
+
+### May S1 land
+
+No: CR1, CR2, CR4, CR5 and the format byte are closed and CR3 meets its own criterion, but NF1 turns a transient I/O error plus a second
+handle into silent loss of acknowledged writes, which is the failure the WAL exists to prevent. The fix is the epoch above plus the
+`probe_fence3` test; a re-check of NF1 alone is enough after that.
+
+Not run: the other 15 ctest suites (only `engine_shard`, `engine_document`, `engine_census` and the two named ones), the libFuzzer target,
+TSan or ASan on the `xapiand` binary and the node scenarios under a sanitizer, power-loss or fsync-ordering durability, Linux and FreeBSD,
+CI, benchmarks, a node-level run of NF1 (reproduced at the engine API only, through the same calls the node makes), the mutant for CR5
+(none can fail).
+
