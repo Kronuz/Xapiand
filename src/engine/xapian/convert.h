@@ -47,6 +47,7 @@ public:
 
 	void add_term(std::string_view term, termcount wdf_inc) override;
 	void add_boolean_term(std::string_view term) override;
+	void set_key(std::string_view term) override;
 	void add_posting(std::string_view term, termpos position, termcount wdf_inc) override;
 	void add_value(valueno slot, std::string value) override;
 	std::string get_value(valueno slot) const override;
@@ -66,6 +67,10 @@ private:
 
 // The Xapian document inside an engine document of this implementation.
 const Xapian::Document& xapian_document(const Document& doc);
+
+// An empty native document, and the document the write-ahead log's bytes hold.
+std::unique_ptr<Document::Native> new_native();
+Document unserialise_document(std::string_view serialised);
 
 // An engine document with a copy of the terms, positions, values and data.
 Document from_xapian(const Xapian::Document& doc);

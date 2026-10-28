@@ -32,6 +32,7 @@
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/document.h"       // for Document
+#include "engine/kind.h"           // for Kind
 #include "engine/types.h"          // for docid, rev, termcount, WriteResult
 #include "task.hh"                 // for task::task
 
@@ -134,6 +135,9 @@ public:
 	T& native() {
 		return dynamic_cast<T&>(*this);
 	}
+
+	// The engine this shard belongs to.
+	virtual Kind kind() const noexcept = 0;
 
 	// Cheap state of a local shard, read from memory.
 	virtual rev revision() const = 0;
