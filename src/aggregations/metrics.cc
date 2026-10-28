@@ -130,7 +130,8 @@ TermsHandler::values(const engine::DocView& doc) const
 
 	if (_from_values) {
 		// A document stores each distinct value once.
-		for (const auto& value : StringList(doc.value(_slot))) {
+		const auto stored = doc.value(_slot);
+		for (const auto& value : StringList(stored)) {
 			values.emplace_back(value);
 		}
 		return values;

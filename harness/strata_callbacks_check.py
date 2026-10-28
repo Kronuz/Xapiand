@@ -85,10 +85,11 @@ def main():
         for k, engine in enumerate(("xapian", "strata")):
             port = BASE + k
             data = os.path.join(SCRATCH, "data_" + engine)
+            log = open(os.environ["CHECK_LOG"] + "." + engine, "w") if os.environ.get("CHECK_LOG") else subprocess.DEVNULL
             shutil.rmtree(data, ignore_errors=True)
             env = dict(os.environ, XAPIAND_ENGINE=engine)
             nodes[engine] = subprocess.Popen(["timeout", "900", BIN, "--port", str(port), "--name", "cb" + engine, "--solo", "-D", data],
-                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+                                             stdout=log, stderr=log, env=env)
             for _ in range(120):
                 try:
                     if call(port, "GET", "/")[0] == 200:
