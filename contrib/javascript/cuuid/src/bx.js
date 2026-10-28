@@ -5,6 +5,7 @@
 // Ported to JavaScript by Stefan Thomas
 // Merged Buffer refactorings from base58-native by Stephen Pair
 // Copyright (c) 2013 BitPay Inc
+// Copyright © 2026 Germán Méndez Bravo (Kronuz)
 // Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
 
 function base (ALPHABET, TRANSLATE) {

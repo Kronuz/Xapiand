@@ -685,7 +685,7 @@ history is discoverable and a feature can be revived from the exact commit if ne
 
 ## Licensing note
 
-Xapiand itself is MIT (Copyright © 2015–2026 Dubalu LLC). However, `src/xapian/`
+Xapiand itself is MIT (Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC). However, `src/xapian/`
 is a fork of Xapian, which is **GPL**, and a few helpers were taken from it —
 notably `sortable_serialise.*`. The combined binary is effectively bound by the
 GPL. If you extract a component to reuse elsewhere, check its provenance first:

@@ -1,3 +1,4 @@
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
 # Copyright (c) 2015-2019 Dubalu LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy

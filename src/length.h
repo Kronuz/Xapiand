@@ -1,4 +1,5 @@
 /*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (C) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
  *
