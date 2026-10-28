@@ -45,7 +45,10 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
    commit. An unflushed one takes the writes before it along, as Xapian does.
 6. **Handles.** strata locks its directory, and Xapiand holds a writable and a readable `Shard` per
    endpoint, so the handles of one shard in a process share one index (`Handle`, `Core`); the last one to
-   go commits what is pending and closes it, as a Xapian writer does when dropped.
+   go commits what is pending and closes it, as a Xapian writer does when dropped; a writer dropped inside an
+   open transaction discards the transaction instead. An index that an I/O error fenced, or that a failed
+   cancel could not reopen, is replaced by one reopened from the last commit when the next handle opens or
+   `reopen()` is called; until then the shard raises `errc::database` on every call.
 7. **Values (P1) and term lists (P2).** `Document` holds values, WAL lines carry them, and `DocView::value`
    returns nothing until prospect's values plugin stores them (`src/engine/strata/values.h` is the one place
    to wire it, `tests/test_engine_strata.cc` `values_gap` flips then). `DocView::terms`, `term_details` and
@@ -62,10 +65,14 @@ instead of failing the read. A transaction replays inside itself and cancels wit
 Replay is idempotent per line. The index assigns a version as the stored one plus one and cannot be told a
 version, so the shard stamps the version it wrote into the document before the log serialises it. A document read
 back from the log with a stamp is applied only when the index is behind it: a line the index already holds, or an
-older one after a newer write, changes nothing (`tests/test_engine_strata.cc` `replay`). Across restarts the
-revision check in `DatabaseWAL::execute_line` against the manifest revision picks the lines to replay; pending
-writes are lost with the process, so a replay always starts from the committed state. An erase has no stamp: a
-replayed erase of a document that is already gone raises `doc_not_found`, and relies on that revision check.
+older one after a newer write, changes nothing (`tests/test_engine_strata.cc` `replay`). A line is applied only
+when it is exactly the next version of the document (version 1 for an absent one); a line further ahead means a
+line of the log is missing and raises `errc::corrupt`. A line whose key now lives at another id (the key was
+erased and added again after the line) is skipped. An erase has no stamp: the engine raises `doc_not_found` for a
+document that is gone, and `DatabaseWAL::execute_line` treats that as done, so a log applied twice over the
+state it produced changes nothing (`replay_idempotent`). Across restarts the revision check there against the
+manifest revision still picks the lines to replay; pending writes are lost with the process, so a replay always
+starts from the committed state.
 `-DCRASH_POINTS=ON` builds let `XAPIAND_STRATA_CRASH=point:n` kill the process at the n-th pass through
 `commit.before`, `commit.flushed`, `commit.after` or `replay`; `harness/strata_write_check.sh` uses them.
 
@@ -75,7 +82,7 @@ replayed erase of a document that is already gone raises `doc_not_found`, and re
 2. A shard is used by one task at a time; the shard's mutex serialises the handles that share an index.
 3. A write that the index rejects leaves no trace; a version or key conflict is `errc::version_conflict`,
    an invalid document `errc::invalid`.
-4. The stored form of a document is the engine's own (`StrataDocument::serialise`, version byte 1); a line
+4. The stored form of a document is the engine's own (`StrataDocument::serialise`, format byte 2; a format 1 line, written before the version stamp, is named as such); a line
    that does not decode is `errc::syntax`.
 
 ## Code

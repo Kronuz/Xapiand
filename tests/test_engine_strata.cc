@@ -32,11 +32,15 @@
 #include <atomic>
 #include <cstdio>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <random>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "engine/error.h"
 #include "engine/kind.h"
@@ -448,9 +452,9 @@ void codec() {
 	}
 	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, bytes + "x"); }) == engine::errc::syntax);
 	// A count larger than the input could hold is refused before anything is allocated for it.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x01\x00\x00\x00\xff\xff\xff\xff\x0f", 9)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x02\x00\x00\x00\xff\xff\xff\xff\x0f", 9)); }) == engine::errc::syntax);
 	// A key that is not one of the terms is refused.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x01\x00\x01Q\x00\x00\x00", 7)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x02\x00\x01Q\x00\x00\x00", 7)); }) == engine::errc::syntax);
 
 	// Random single-byte damage never crashes: it either decodes or raises a syntax error.
 	std::mt19937 random(42);
@@ -698,6 +702,238 @@ void concurrent_cas() {
 	std::filesystem::remove_all(path);
 }
 
+
+// A writer dropped in the middle of a transaction discards it, on both engines: only the commit before it
+// is on disk when the shard is opened again.
+void drop_mid_transaction(Kind kind) {
+	const auto path = scratch("txdrop", kind);
+	engine::WriteArgs plain;
+	{
+		auto opened = open_shard(kind, path);
+		auto a = make(kind, "Qa", "committed");
+		engine::sync_wait(opened.shard->add(a, plain));
+		engine::sync_wait(opened.shard->commit(engine::Transaction::none));
+		engine::sync_wait(opened.shard->begin_transaction(true));
+		auto b = make(kind, "Qb", "in the transaction");
+		engine::sync_wait(opened.shard->add(b, plain));
+	}
+	auto reopened = open_shard(kind, path, true, false);
+	CHECK_EQ(engine::sync_wait(reopened.shard->stats()).doc_count, 1u);
+	CHECK_EQ(engine::sync_wait(reopened.shard->find_key("Qb")), 0u);
+	// A cancel then has nothing of the half transaction to come back to.
+	engine::sync_wait(reopened.shard->begin_transaction(true));
+	engine::sync_wait(reopened.shard->cancel_transaction());
+	CHECK_EQ(engine::sync_wait(reopened.shard->stats()).doc_count, 1u);
+	reopened.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
+bool can_deny_access() { return ::geteuid() != 0; }
+
+// A cancel whose reopen fails leaves a shard that raises a database error on every call, never one that
+// reads freed state; once the directory is readable again a reopen brings back the last commit.
+void cancel_reopen_fails() {
+	if (!can_deny_access()) {
+		return;
+	}
+	const auto kind = Kind::strata;
+	const auto path = scratch("cancelfail", kind);
+	engine::WriteArgs plain;
+	auto opened = open_shard(kind, path);
+	auto& shard = *opened.shard;
+	auto a = make(kind, "Qa", "committed");
+	engine::sync_wait(shard.add(a, plain));
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	engine::sync_wait(shard.begin_transaction(true));
+	auto b = make(kind, "Qb", "in the transaction");
+	engine::sync_wait(shard.add(b, plain));
+
+	const auto dir = path + "/strata";
+	::chmod(dir.c_str(), 0000);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.cancel_transaction()); }) == engine::errc::database);
+	::chmod(dir.c_str(), 0700);
+
+	auto c = make(kind, "Qc", "after the failure");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.stats()); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.find_key("Qa")); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(1)); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(c, plain)); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.commit(engine::Transaction::none)); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.metadata("m")); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { (void)shard.doc_count(); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { (void)shard.revision(); }) == engine::errc::database);
+
+	CHECK_TRUE(engine::sync_wait(shard.reopen()));
+	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Qb")), 0u);
+	CHECK_EQ(engine::sync_wait(shard.add(c, plain)).version, 1u);
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 2u);
+	opened.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
+// One transient I/O error fences the index; the next writable handle, or a reopen, gets a working one from
+// the last commit, whatever handles are still open.
+void fenced_recovers(bool through_reopen) {
+	if (!can_deny_access()) {
+		return;
+	}
+	const auto kind = Kind::strata;
+	const auto path = scratch(through_reopen ? "fenceb" : "fencea", kind);
+	engine::WriteArgs plain;
+	auto writer = open_shard(kind, path);
+	auto reader = open_shard(kind, path, false, false);
+	auto a = make(kind, "Qa", "committed");
+	engine::sync_wait(writer.shard->add(a, plain));
+	engine::sync_wait(writer.shard->commit(engine::Transaction::none));
+	auto b = make(kind, "Qb", "lost with the error");
+	engine::sync_wait(writer.shard->add(b, plain));
+
+	const auto dir = path + "/strata";
+	::chmod(dir.c_str(), 0500);  // no new files
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->commit(engine::Transaction::none)); }) == engine::errc::database);
+	::chmod(dir.c_str(), 0700);
+	auto c = make(kind, "Qc", "refused while fenced");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->add(c, plain)); }) == engine::errc::database);
+
+	std::unique_ptr<engine::Shard> next;
+	if (through_reopen) {
+		CHECK_TRUE(engine::sync_wait(writer.shard->reopen()));
+		next = std::move(writer.shard);
+	} else {
+		next = std::move(open_shard(kind, path, true, false).shard);  // the reader and the fenced writer still live
+	}
+	auto d = make(kind, "Qd", "after the recovery");
+	CHECK_EQ(engine::sync_wait(next->add(d, plain)).version, 1u);
+	engine::sync_wait(next->commit(engine::Transaction::none));
+	CHECK_EQ(engine::sync_wait(next->find_key("Qb")), 0u);  // what the fenced index held is gone (the WAL replays it on a node)
+	CHECK_EQ(engine::sync_wait(next->stats()).doc_count, 2u);
+	CHECK_EQ(engine::sync_wait(reader.shard->stats()).doc_count, 2u);
+	next.reset();
+	writer.shard.reset();
+	reader.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
+// A scripted log on the strata engine: each write keeps the line the WAL would hold.
+struct Logged {
+	enum { put, erase } type;
+	engine::docid did;
+	std::string line;
+};
+
+struct Primary {
+	engine::Opened opened;
+	std::vector<Logged> log;
+	engine::WriteArgs plain;
+
+	explicit Primary(const std::string& path) : opened(open_shard(Kind::strata, path)) { }
+
+	void write(const std::string& key, const std::string& data) {
+		auto doc = make(Kind::strata, key, data);
+		const auto result = engine::sync_wait(opened.shard->replace_by_key(key, doc, plain));
+		log.push_back({Logged::put, result.did, doc.serialise()});
+	}
+	void drop(engine::docid did) {
+		engine::sync_wait(opened.shard->erase(did, true, std::nullopt));
+		log.push_back({Logged::erase, did, {}});
+	}
+};
+
+std::string shard_state(engine::Shard& shard) {
+	std::string state;
+	const auto last = engine::sync_wait(shard.stats()).lastdocid;
+	for (engine::docid did = 1; did <= last; ++did) {
+		try {
+			auto view = engine::sync_wait(shard.get(did));
+			state += std::to_string(did) + "=v" + std::to_string(view->version()) + ":" + view->data() + " ";
+		} catch (const engine::Error& error) {
+			CHECK_TRUE(error.kind == engine::errc::doc_not_found);
+		}
+	}
+	return state + "last=" + std::to_string(last);
+}
+
+// What the WAL does with a line: a replace by id from the document, an erase that tolerates a document that is already gone.
+void replay_line(engine::Shard& shard, const Logged& line) {
+	engine::WriteArgs plain;
+	if (line.type == Logged::put) {
+		auto doc = engine::Document::unserialise(Kind::strata, line.line);
+		engine::sync_wait(shard.replace(line.did, doc, plain));
+	} else {
+		try {
+			engine::sync_wait(shard.erase(line.did, false, std::nullopt));
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::doc_not_found) {
+				throw;
+			}
+		}
+	}
+}
+
+// The log applied again over the state it produced changes nothing, including a key that was erased and
+// added again (it lives at a new id by then).
+void double_replay(const char* name, const std::function<void(Primary&)>& script) {
+	Primary primary(scratch(name, Kind::strata));
+	script(primary);
+	const auto want = shard_state(*primary.opened.shard);
+	for (int pass = 0; pass < 2; ++pass) {
+		for (const auto& line : primary.log) {
+			replay_line(*primary.opened.shard, line);
+		}
+		CHECK_EQ(shard_state(*primary.opened.shard), want);
+	}
+}
+
+void replay_idempotent() {
+	double_replay("dr_plain", [](Primary& p) { p.write("Qa", "a1"); p.write("Qa", "a2"); p.write("Qb", "b1"); });
+	double_replay("dr_erase", [](Primary& p) { p.write("Qa", "a1"); p.write("Qb", "b1"); p.drop(1); });
+	double_replay("dr_readd", [](Primary& p) { p.write("Qa", "a1"); p.drop(1); p.write("Qa", "a2"); });
+	double_replay("dr_readd_replace", [](Primary& p) { p.write("Qa", "a1"); p.drop(1); p.write("Qa", "a2"); p.write("Qa", "a3"); });
+	double_replay("dr_swap", [](Primary& p) { p.write("Qa", "a1"); p.write("Qb", "b1"); p.drop(1); p.write("Qa", "a2"); p.drop(2); });
+
+	// A line that is not the next version of the document is refused, not applied as the next one: the
+	// replica below never saw version 2.
+	Primary primary(scratch("gap_primary", Kind::strata));
+	primary.write("Qg", "v1");
+	primary.write("Qg", "v2");
+	primary.write("Qg", "v3");
+	auto replica = open_shard(Kind::strata, scratch("gap_replica", Kind::strata));
+	replay_line(*replica.shard, primary.log[0]);
+	CHECK_TRUE(error_kind([&] { replay_line(*replica.shard, primary.log[2]); }) == engine::errc::corrupt);
+	CHECK_EQ(shard_state(*replica.shard), "1=v1:v1 last=1");
+	replay_line(*replica.shard, primary.log[1]);
+	replay_line(*replica.shard, primary.log[2]);
+	replay_line(*replica.shard, primary.log[0]);  // older lines are no-ops
+	CHECK_EQ(shard_state(*replica.shard), "1=v3:v3 last=1");
+	// A document that is gone takes a line only at version 1.
+	auto fresh = open_shard(Kind::strata, scratch("gap_fresh", Kind::strata));
+	CHECK_TRUE(error_kind([&] { replay_line(*fresh.shard, primary.log[1]); }) == engine::errc::corrupt);
+	CHECK_EQ(engine::sync_wait(fresh.shard->stats()).doc_count, 0u);
+}
+
+// A log line from before the version stamp (format 1) is named as such; the current format is 2.
+void old_format() {
+	const auto old_line = std::string("\x01\x01Qk\x01x\x00\x00", 8);
+	try {
+		engine::Document::unserialise(Kind::strata, old_line);
+		CHECK_TRUE(false);
+	} catch (const engine::Error& error) {
+		CHECK_TRUE(error.kind == engine::errc::syntax);
+		CHECK_TRUE(error.description().find("predates the version stamp") != std::string::npos);
+	}
+	try {
+		engine::Document::unserialise(Kind::strata, std::string("\x09", 1));
+		CHECK_TRUE(false);
+	} catch (const engine::Error& error) {
+		CHECK_TRUE(error.description().find("unknown version") != std::string::npos);
+	}
+	engine::Document doc(Kind::strata);
+	doc.set_key("Qk");
+	CHECK_EQ(static_cast<unsigned char>(doc.serialise()[0]), 2u);
+}
+
 }  // namespace
 
 // An engine error that escapes a test is a failure with its text, not an abort.
@@ -720,6 +956,13 @@ static void test_values_gap() { guarded("values gap", [] { values_gap(); }); }
 static void test_fresh_reads() { guarded("fresh reads", [] { fresh_reads(); }); }
 static void test_commit_on_drop() { guarded("commit on drop", [] { commit_on_drop(); }); }
 static void test_concurrent_cas() { guarded("concurrent cas", [] { concurrent_cas(); }); }
+static void test_drop_mid_transaction_xapian() { guarded("drop mid transaction xapian", [] { drop_mid_transaction(Kind::xapian); }); }
+static void test_drop_mid_transaction_strata() { guarded("drop mid transaction strata", [] { drop_mid_transaction(Kind::strata); }); }
+static void test_cancel_reopen_fails() { guarded("cancel reopen fails", [] { cancel_reopen_fails(); }); }
+static void test_fenced_new_handle() { guarded("fenced new handle", [] { fenced_recovers(false); }); }
+static void test_fenced_reopen() { guarded("fenced reopen", [] { fenced_recovers(true); }); }
+static void test_replay_idempotent() { guarded("replay idempotent", [] { replay_idempotent(); }); }
+static void test_old_format() { guarded("old format", [] { old_format(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_replay_idempotent, test_old_format)

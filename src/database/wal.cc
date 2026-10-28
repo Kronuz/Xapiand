@@ -560,7 +560,14 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 			break;
 		case Type::DELETE_DOCUMENT:
 			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
-			_shard->delete_document(did, false, wal_, false);
+			try {
+				_shard->delete_document(did, false, wal_, false);
+			} catch (const engine::Error& error) {
+				// A document that is already gone is the state the line leads to: replaying it again changes nothing.
+				if (error.kind != engine::errc::doc_not_found) {
+					throw;
+				}
+			}
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length_and_check(&p, p_end);
