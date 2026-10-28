@@ -59,6 +59,16 @@ runs at a writable open, as with Xapian, so a restart serves the committed state
 shard; a strata shard exists from its creation, so unlike an uncommitted new Xapian shard it answers (empty)
 instead of failing the read. A transaction replays inside itself and cancels with it.
 
+Replay is idempotent per line. The index assigns a version as the stored one plus one and cannot be told a
+version, so the shard stamps the version it wrote into the document before the log serialises it. A document read
+back from the log with a stamp is applied only when the index is behind it: a line the index already holds, or an
+older one after a newer write, changes nothing (`tests/test_engine_strata.cc` `replay`). Across restarts the
+revision check in `DatabaseWAL::execute_line` against the manifest revision picks the lines to replay; pending
+writes are lost with the process, so a replay always starts from the committed state. An erase has no stamp: a
+replayed erase of a document that is already gone raises `doc_not_found`, and relies on that revision check.
+`-DCRASH_POINTS=ON` builds let `XAPIAND_STRATA_CRASH=point:n` kill the process at the n-th pass through
+`commit.before`, `commit.flushed`, `commit.after` or `replay`; `harness/strata_write_check.sh` uses them.
+
 ## Invariants
 
 1. Only `src/engine/strata/` names strata or prospect (`harness/seam_check.sh` does not need an entry).

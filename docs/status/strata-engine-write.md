@@ -5,7 +5,8 @@ Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S1, D2 t
 
 ## State
 
-Code complete and proven locally, sanitizers included; not reviewed. Strata and prospect are
+Code complete and proven locally, sanitizers included (proof round 2 closed the auditor's gaps: replay idempotence,
+concurrency, crash windows, mutants); not reviewed. Strata and prospect are
 pinned at prospect `9de01a18`, which pins strata `75d1e7e` (format 14 step 1, 296 commits behind strata main);
 Xapiand's compressors pin moved to strata's `816bc82`.
 
@@ -33,7 +34,9 @@ Xapiand's compressors pin moved to strata's `816bc82`.
 1. Xapiand:75178826d the engine, `Document(Kind)`/`set_key`, `kind_of`, `open_local(kind, ...)`.
 2. Xapiand:b078d5a18 tests on both engines, the codec fuzz target, the pins, the harness.
 3. Xapiand:91da13d05 the `:wal` dump no longer dereferences a null shard (found by the harness).
-4. Proof.
+4. Xapiand:9cbd16f51 idempotent replay (the version stamp), `CRASH_POINTS`, the S1 proof tests (concurrency, reads
+      by id, commit on drop, not_available); Xapiand:a73ea8d18 the crash scenarios and the model client.
+5. Proof.
    1. `ctest` 21 of 21 (`test_engine_strata`: 8081 checks, the shared expectations on both engines, the
       strata-only ones, the codec's damaged-input loop).
    2. Node (`harness/strata_write_check.sh`): PUT, GET, replace (version 2), DELETE 204, the index is a
@@ -64,6 +67,49 @@ Xapiand's compressors pin moved to strata's `816bc82`.
       The whole pipeline is 1.14 times faster in docs/s and uses 0.77 of the CPU. strata does less work here (no
       values, no term lists, no spelling), so this is a screen for the T11 run, which needs the engine share from
       `profile_bulk.sh` on both binaries and the same work on both sides.
+
+   7. Proof round 2 (auditor gaps).
+      1. Replay idempotence. Cause: the strata index assigns a version as stored + 1 and cannot be told one, and the
+         log line did not carry the version, so replaying a line the index already held bumped it (the unit test
+         asserted version 2 and its comment said the opposite). Fix (Xapiand:9cbd16f51): the shard stamps the written
+         version into the document before the log serialises it; a document read back with a stamp is applied only when
+         the index is behind it. `replay` now asserts version, data and doc count unchanged over repeated replays, an
+         older line after a newer write, and the same by key. With the skip removed 21 checks fail (mutant
+         `replay-skip`); with `>=` weakened to `>` 19 fail. At the node the double apply cannot arise by itself (pending
+         writes die with the process, so a replay starts from the committed state, and `execute_line` compares the
+         manifest revision), so this is the engine's own contract; a node mutant that applies each replayed line twice
+         is caught by the `versions` scenario (3 assertions fail, 18 of 30 documents right). Xapian is unchanged: its
+         seam versions every replace the same way, and its test keeps asserting version 2.
+      2. Concurrency: `concurrent_cas` (8 threads, 3 hot keys, 150 wins each): every winning version appears exactly
+         once and the versions that won are 2..final, the final data is the last winner's, conflicts occurred; 20 rounds
+         of 8 creators of one new key (exactly one wins); 8 erasers at one version (exactly one). TSan build
+         (`build-tsan`, Homebrew LLVM, own `_deps`): 9482 checks, 0 reports. Mutant removing the lock in `replace`:
+         TSan reports data races (44 lines) and the plain build aborts. ASan+UBSan build (`build-asan`, Homebrew LLVM, own
+         `_deps`): 9482 checks, 0 ASan reports, 0 UBSan lines. Homebrew clang needs the SDK's zlib and uuid headers
+         linked into a scratch include dir (the SDK `usr/include` as `-isystem` breaks its libc++) and rapidjson 1.1.0's
+         `GenericStringRef::operator=` made `= delete` in the build's own copy.
+      3. Crash windows (`harness/strata_write_check.sh versions|commit|replaycrash`, model client
+         `harness/strata_write_model.py`): every document is written as `{seq: k}`, k the version the write must
+         produce; verification checks `_version` == `seq` == acknowledged for every id, deleted ids are 404, and an
+         unanswered write may be either side. `commit`: the node kills itself (`-DCRASH_POINTS=ON`,
+         `XAPIAND_STRATA_CRASH=point:n`) before the commit, after the segment flush before the manifest, after the
+         commit, at the 3rd pass (mid-way through the five shards), under random puts and deletes; restart, replay,
+         verify, crash again, verify: PASS for all three. `replaycrash`: kill -9, then the node dies mid-replay at the
+         5th replayed line, restarts and dies at the 2nd, then converges (40 of 40), then one more crash (40 of 40).
+         `versions`: v1, v2, v3, delete, re-create, crash, replay, second crash, more writes, crash: all correct.
+         A node mutant that skips the commit (`commit-is-lost`) survives: the WAL keeps the whole history and replays it,
+         so a lost commit is invisible to the model by design (durability is the WAL's).
+      4. Mutants, all in `tests/test_engine_strata.cc` unless noted: commit-on-drop removed (`~Core`): killed (`strata
+         only`, `commit_on_drop`); `apply` not marking dirty: killed (`shared`, `replay`, `fresh_reads`); `refresh` a
+         no-op: killed; `locate` without its refresh (a stale read-by-id): killed; key-owner check removed: survived
+         until the test asserted the shard's own message (the index refuses the write too, with its words); now killed;
+         `check_version` removed from `replace`: killed (`concurrent_cas`: no conflicts, plus `shared`); no lock in
+         `replace`: killed. `erase` not marking dirty survives and is equivalent: an erase of a flushed document shows at
+         once through the segment's live bits, and an erase of a buffered one flushes first in `locate`.
+      5. `not_available` for `DocView::terms`, `term_details`, `serialise`, and for `engine::search` (a term and
+         match-all) on a strata shard (`strata_only`).
+      6. Fuzz: `fuzz_strata_document` now also checks the stamp round trip; 443926 runs in 61 s, no finding.
+      7. `docs/mechanisms/strata-engine.md` describes the stamp and the crash points.
 
 ## Findings
 
@@ -96,6 +142,11 @@ Xapiand's compressors pin moved to strata's `816bc82`.
 5. `wal_replay_check.sh` and `wal_replay_agg_check.sh` assert through search and aggregations (S2, S3), so
    they cannot run on a strata index yet; `strata_write_check.sh` is their write-slice counterpart.
 6. Strata search: `engine::search` raises `not_available` for a strata shard (S2).
+
+7. Replayed erases are not stamped: a replayed erase of a document that is already gone raises `doc_not_found`
+   (safe behind the revision check; a log that is replayed over a newer committed state would need the erase to
+   carry a version too).
+8. The Xapian engine's replay is not per-line idempotent either (it relies on the same revision check); left alone.
 
 ## Blocked on
 
