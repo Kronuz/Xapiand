@@ -135,6 +135,9 @@ std::string normalize_uuid(std::string_view uuid);
 std::string normalize_uuid(const std::string& uuid);
 MsgPack normalize_uuid(const MsgPack& uuid);
 int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid);
+inline constexpr size_t MAX_JSON_DEPTH = 200;  // levels of nested arrays and objects json_load accepts
+// Levels of nested arrays and objects in the text, brackets inside strings ignored.
+size_t json_depth(std::string_view str);
 void json_load(rapidjson::Document& doc, std::string_view str);
 void yaml_load(rapidjson::Document& doc, std::string_view str);
 rapidjson::Document to_json(std::string_view str);

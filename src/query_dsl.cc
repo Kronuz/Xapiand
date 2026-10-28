@@ -22,9 +22,11 @@
 
 #include "query_dsl.h"
 
+#include <algorithm>                              // for std::max
 #include <cassert>                                // for assert
 #include <strings.h>                              // for strncasecmp
 #include <utility>
+#include <vector>
 
 #include "BooleanParser.h"          // for BooleanTree
 #include "LexicalException.h"       // for LexicalException
@@ -186,6 +188,18 @@ inline engine::Query
 QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags, bool is_leaf)
 {
 	L_CALL("QueryDSL::process({}, {}, {}, <default_op>, <wqf>, ({}))", (int)op, repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
+
+	// Bounds the recursion over nested JSON: the stack of a worker thread holds about twice this many frames.
+	struct Depth {
+		unsigned& depth;
+		explicit Depth(unsigned& d) : depth(d) {
+			if (depth >= MAX_NESTING) {
+				THROW(QueryDslError, "Query is nested too deeply: the limit is {} levels of clauses", MAX_NESTING / 2);
+			}
+			++depth;
+		}
+		~Depth() { --depth; }
+	} guard(depth);
 
 	engine::Query final_query;
 
@@ -940,6 +954,68 @@ QueryDSL::make_dsl_query(const query_field_t& e)
 }
 
 
+namespace {
+
+// Levels of operators the boolean expression nests into, counted as make_dsl_query merges them, so
+// that a deep expression is refused before its nested object is built (copying one recurses).
+std::size_t
+expression_levels(std::string_view query)
+{
+	struct Entry {
+		TokenType op;
+		std::size_t levels;
+	};
+	BooleanTree booltree(query);
+	std::vector<Entry> stack;
+	TokenType last_op(TokenType::EndOfFile);
+	std::size_t deepest = 0;
+	for (; !booltree.empty(); booltree.pop_front()) {
+		const auto type = booltree.front().get_type();
+		switch (type) {
+			case TokenType::Not:
+				if (stack.empty()) {
+					return deepest;
+				}
+				stack.back() = { type, stack.back().levels + 1 };
+				last_op = type;
+				break;
+			case TokenType::Or:
+			case TokenType::And:
+			case TokenType::Maybe:
+			case TokenType::Xor: {
+				if (stack.size() < 2) {
+					return deepest;
+				}
+				const auto top = stack.back();
+				stack.pop_back();
+				const auto second = stack.back();
+				stack.pop_back();
+				if (last_op == type && top.op == type) {
+					stack.push_back({ type, std::max(top.levels, second.levels + 1) });
+				} else if (last_op == type && second.op == type) {
+					stack.push_back({ type, std::max(second.levels, top.levels + 1) });
+				} else {
+					stack.push_back({ type, std::max(top.levels, second.levels) + 1 });
+				}
+				last_op = type;
+				break;
+			}
+			case TokenType::Id:
+				stack.push_back({ type, 0 });
+				break;
+			default:
+				break;
+		}
+		if (!stack.empty()) {
+			deepest = std::max(deepest, stack.back().levels);
+		}
+	}
+	return deepest;
+}
+
+}  // namespace
+
+
 MsgPack
 QueryDSL::make_dsl_query(std::string_view query)
 {
@@ -951,6 +1027,9 @@ QueryDSL::make_dsl_query(std::string_view query)
 
 	TokenType last_op(TokenType::EndOfFile);
 	try {
+		if (expression_levels(query) > MAX_NESTING / 2) {
+			THROW(QueryDslError, "Query is nested too deeply: the limit is {} levels of clauses", MAX_NESTING / 2);
+		}
 		BooleanTree booltree(query);
 		std::vector<MsgPack> stack_msgpack;
 

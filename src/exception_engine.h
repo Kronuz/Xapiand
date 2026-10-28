@@ -36,6 +36,14 @@ public:
 };
 
 
+// A query nested deeper, or with more nodes, than engine::MAX_QUERY_DEPTH and MAX_QUERY_CLAUSES allow.
+class QueryDepthError : public QueryParserError {
+public:
+	template<typename... Args>
+	QueryDepthError(Args&&... args) : QueryParserError(std::forward<Args>(args)...) { }
+};
+
+
 // A range a terms-only field cannot answer exactly: the reason, without the field name, which the query
 // builder adds.
 class TermsOnlyRangeError : public QueryParserError {

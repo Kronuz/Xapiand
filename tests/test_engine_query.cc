@@ -881,6 +881,85 @@ static void test_append_chain() {
 	CHECK_EQ(to_xapian(chain).get_description(), expected.get_description());
 }
 
+// A tree as deep as the cap converts and describes itself on a small stack, and one level more is a 400.
+namespace {
+
+struct DepthJob {
+	bool done = false;
+	std::string description;
+	bool xapian = false;
+};
+
+void* depth_run(void* arg) {
+	auto* job = static_cast<DepthJob*>(arg);
+	Query tree = Query::term("a");
+	for (unsigned level = 1; level < engine::MAX_QUERY_DEPTH; ++level) {
+		// Alternating operators and a scale: nothing is flattened into a wide node.
+		tree = level % 5 == 0 ? Query::scale(tree, 2.0) : Query::combine(level % 2 ? Op::AND : Op::OR, tree, Query::term("b"));
+	}
+	job->description = tree.description();
+	job->xapian = !to_xapian(tree).empty();
+	job->done = true;
+	return nullptr;
+}
+
+}  // namespace
+
+static void test_depth_cap() {
+	// 40 KB of stack: a frame per level of a tree at the cap would not fit.
+	DepthJob job;
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, 40 * 1024);
+	pthread_t thread;
+	CHECK_EQ(pthread_create(&thread, &attr, depth_run, &job), 0);
+	pthread_join(thread, nullptr);
+	pthread_attr_destroy(&attr);
+	CHECK_TRUE(job.done);
+	CHECK_TRUE(job.description.size() > engine::MAX_QUERY_DEPTH);
+	CHECK_TRUE(job.xapian);
+
+	// Exactly the cap builds; one more level of any operator throws a client error.
+	Query tree = Query::term("a");
+	for (unsigned level = 1; level < engine::MAX_QUERY_DEPTH; ++level) {
+		tree = Query::combine(Op::AND, tree, Query::term("b"));
+	}
+	CHECK_EQ(tree.depth(), engine::MAX_QUERY_DEPTH);
+	const auto refused = [](auto&& build, const char* message = "nested too deeply") {
+		try {
+			build();
+		} catch (const QueryDepthError& exc) {
+			return std::string(exc.what()).find(message) != std::string::npos && dynamic_cast<const ClientError*>(&exc) != nullptr;
+		}
+		return false;
+	};
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, tree, Query::term("b")); }));
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, std::vector<Query>{ tree }, 0); }));
+	CHECK_TRUE(refused([&] { Query::scale(tree, 2.0); }));
+
+	// An append adds no level: a flat object with many keys is not nested.
+	Query flat;
+	for (unsigned i = 0; i < 4 * engine::MAX_QUERY_DEPTH; ++i) {
+		flat = Query::append(Op::AND, flat, Query::term("t" + std::to_string(i)));
+	}
+	CHECK_EQ(flat.depth(), 1U);
+	CHECK_EQ(Query::append(Op::AND, tree, Query::term("c")).depth(), engine::MAX_QUERY_DEPTH);
+
+	// The clause cap: a node per term and one for the operator, appends and shared subtrees included.
+	std::vector<Query> wide(engine::MAX_QUERY_CLAUSES - 1, Query::term("t"));
+	CHECK_EQ(Query::combine(Op::OR, wide).size(), engine::MAX_QUERY_CLAUSES);
+	wide.push_back(Query::term("t"));
+	CHECK_TRUE(refused([&] { Query::combine(Op::OR, wide); }, "too large"));
+	Query chain;
+	for (unsigned i = 0; i < engine::MAX_QUERY_CLAUSES; ++i) {
+		chain = Query::append(Op::AND, chain, Query::term("t"));
+	}
+	CHECK_EQ(chain.size(), engine::MAX_QUERY_CLAUSES);
+	CHECK_TRUE(refused([&] { Query::append(Op::AND, chain, Query::term("t")); }, "too large"));
+	CHECK_TRUE(refused([&] { Query::combine(Op::AND, chain, chain); }, "too large"));
+	CHECK_FALSE(to_xapian(flat).empty());
+}
+
 // A stored value that does not decode is not accepted; it must never stop the process.
 static void test_corrupt_stored_value() {
 	auto serialised = [](std::initializer_list<std::string> parts) {
@@ -957,6 +1036,7 @@ GUARDED(test_wildcard_patterns)
 GUARDED(test_fuzzy_limit)
 GUARDED(test_binary_equals_list)
 GUARDED(test_append_chain)
+GUARDED(test_depth_cap)
 GUARDED(test_corrupt_stored_value)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_adapter_bounds_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_corrupt_stored_value_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_adapter_bounds_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_corrupt_stored_value_guarded)

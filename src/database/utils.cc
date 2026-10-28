@@ -144,8 +144,39 @@ int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
 }
 
 
+size_t json_depth(std::string_view str)
+{
+	size_t depth = 0;
+	size_t deepest = 0;
+	bool in_string = false;
+	for (auto it = str.begin(); it != str.end(); ++it) {
+		const char c = *it;
+		if (in_string) {
+			if (c == '\\') {
+				if (++it == str.end()) {
+					break;
+				}
+			} else if (c == '"') {
+				in_string = false;
+			}
+		} else if (c == '"') {
+			in_string = true;
+		} else if (c == '{' || c == '[') {
+			deepest = std::max(deepest, ++depth);
+		} else if ((c == '}' || c == ']') && depth) {
+			--depth;
+		}
+	}
+	return deepest;
+}
+
+
 void json_load(rapidjson::Document& doc, std::string_view str)
 {
+	// Converting a nested document to MsgPack recurses, so a deep one is refused before it is read.
+	if (json_depth(str) > MAX_JSON_DEPTH) {
+		THROW(ClientError, "JSON is nested too deeply: the limit is {} levels", MAX_JSON_DEPTH);
+	}
 	rapidjson::ParseResult parse_done = doc.Parse(str.data(), str.size());
 	if (!parse_done) {
 		constexpr size_t tabsize = 3;

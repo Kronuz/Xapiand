@@ -91,6 +91,11 @@ inline constexpr unsigned PATTERN_MULTI  = 2;   // '*' matches any run anywhere 
 
 struct QueryNode;
 
+// The largest query a factory builds: levels of nested operators and nodes in all. A larger one
+// throws QueryDepthError (a 400). Both bound every recursion over a tree, Xapian's matcher's included.
+inline constexpr unsigned MAX_QUERY_DEPTH = 100;
+inline constexpr unsigned MAX_QUERY_CLAUSES = 4096;
+
 // A query, as a value: an immutable tree that shares its subtrees when copied. Each factory
 // has the semantics of the constructor of the same shape in Xapian's Query, so a tree built here
 // translates to the Xapian tree it replaces. A default Query matches nothing.
@@ -136,6 +141,12 @@ public:
 	// Readable form, for logs.
 	std::string description() const;
 
+	// Levels of nested operators: a leaf is 1 and a chain of appends adds none.
+	unsigned depth() const noexcept;
+
+	// Nodes in the tree: a leaf is 1, an operator adds 1, an append adds none.
+	unsigned size() const noexcept;
+
 private:
 	friend struct QueryNode;
 
@@ -175,6 +186,8 @@ struct QueryNode {
 	std::shared_ptr<const PostingSource> src;     // source
 	bool binary = false;                          // combine: built from two operands
 	bool matches_nothing = false;                 // combine, append, scale: simplified to nothing
+	unsigned depth = 1;                           // levels of nested operators, at most MAX_QUERY_DEPTH
+	unsigned size = 1;                            // nodes in the tree, shared subtrees counted each time, at most MAX_QUERY_CLAUSES
 };
 
 }  // namespace engine

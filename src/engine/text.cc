@@ -215,6 +215,10 @@ convert(const queryparser::query& tree)
 			if (is_leaf(n.k)) {
 				frame.kids.push_back(leaf(tree, n));
 			} else {
+				if (stack.size() >= MAX_QUERY_DEPTH) {
+					// The factories refuse this bottom-up; refusing here skips building the rest.
+					throw QueryDepthError(__func__, __FILE__, __LINE__, "QueryDepthError", "Query is nested too deeply: the limit is {} levels", MAX_QUERY_DEPTH);
+				}
 				stack.push_back({ child, n.first, {} });
 			}
 			continue;

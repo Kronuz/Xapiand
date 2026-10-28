@@ -23,8 +23,10 @@
 #include "engine/query.h"
 
 #include <algorithm>               // for std::all_of, std::any_of
+#include <cstdint>                 // for std::uint64_t
 
 #include "engine/callbacks.h"      // for PostingSource
+#include "exception_engine.h"      // for QueryDepthError
 
 
 namespace engine {
@@ -51,6 +53,27 @@ combines_to_nothing(Op op, const std::vector<Query>& subqueries)
 		default:
 			return std::all_of(subqueries.begin(), subqueries.end(), is_empty);
 	}
+}
+
+// Sets the node's depth and size from its subqueries (an operator adds a level and a node, an append
+// neither), and refuses a tree beyond MAX_QUERY_DEPTH or MAX_QUERY_CLAUSES.
+void
+set_extent(QueryNode& node, bool operator_node)
+{
+	unsigned deepest = 0;
+	std::uint64_t total = operator_node ? 1 : 0;
+	for (const auto& sub : node.subqueries) {
+		deepest = std::max(deepest, sub.depth());
+		total += sub.size();
+	}
+	node.depth = deepest + (operator_node ? 1 : 0);
+	if (node.depth > MAX_QUERY_DEPTH) {
+		throw QueryDepthError(__func__, __FILE__, __LINE__, "QueryDepthError", "Query is nested too deeply: the limit is {} levels", MAX_QUERY_DEPTH);
+	}
+	if (total > MAX_QUERY_CLAUSES) {
+		throw QueryDepthError(__func__, __FILE__, __LINE__, "QueryDepthError", "Query is too large: the limit is {} clauses", MAX_QUERY_CLAUSES);
+	}
+	node.size = static_cast<unsigned>(total);
 }
 
 }  // namespace
@@ -106,6 +129,7 @@ Query::combine(Op op, Query left, Query right)
 	node->subqueries.push_back(std::move(left));
 	node->subqueries.push_back(std::move(right));
 	node->matches_nothing = combines_to_nothing(op, node->subqueries);
+	set_extent(*node, true);
 	return Query(std::move(node));
 }
 
@@ -119,6 +143,7 @@ Query::combine(Op op, std::vector<Query> subqueries, termcount parameter)
 	node->parameter = parameter;
 	node->matches_nothing = combines_to_nothing(op, subqueries);
 	node->subqueries = std::move(subqueries);
+	set_extent(*node, true);
 	return Query(std::move(node));
 }
 
@@ -133,6 +158,7 @@ Query::append(Op op, Query accumulated, Query next)
 	node->subqueries.push_back(std::move(accumulated));
 	node->subqueries.push_back(std::move(next));
 	node->matches_nothing = node->subqueries[0].empty() ? node->subqueries[1].empty() : combines_to_nothing(op, node->subqueries);
+	set_extent(*node, false);
 	return Query(std::move(node));
 }
 
@@ -145,6 +171,7 @@ Query::scale(Query subquery, double factor)
 	node->factor = factor;
 	node->matches_nothing = subquery.empty();
 	node->subqueries.push_back(std::move(subquery));
+	set_extent(*node, true);
 	return Query(std::move(node));
 }
 
@@ -188,6 +215,20 @@ Query::source(std::unique_ptr<PostingSource> source)
 }
 
 
+unsigned
+Query::depth() const noexcept
+{
+	return node_ ? node_->depth : 0;
+}
+
+
+unsigned
+Query::size() const noexcept
+{
+	return node_ ? node_->size : 0;
+}
+
+
 bool
 Query::empty() const noexcept
 {
@@ -198,38 +239,77 @@ Query::empty() const noexcept
 std::string
 Query::description() const
 {
+	// Post-order on an explicit stack: the call stack does not grow with the depth of the tree.
+	struct Frame {
+		const QueryNode* node;
+		std::size_t cursor;
+		std::vector<std::string> parts;
+	};
+	const auto leaf = [](const QueryNode& n) -> std::string {
+		switch (n.kind) {
+			case QueryKind::term:
+				return n.str.empty() ? "<all>" : n.str;
+			case QueryKind::wildcard:
+				return "wildcard(" + n.str + ")";
+			case QueryKind::edit_distance:
+				return "edit_distance(" + n.str + ", " + std::to_string(n.distance) + ")";
+			case QueryKind::source:
+				return n.src->description();
+			default:
+				return "?";
+		}
+	};
+	const auto is_inner = [](const QueryNode& n) {
+		return n.kind == QueryKind::combine || n.kind == QueryKind::append || n.kind == QueryKind::scale;
+	};
 	if (!node_) {
 		return "<nothing>";
 	}
-	const auto& n = *node_;
-	switch (n.kind) {
-		case QueryKind::term:
-			return n.str.empty() ? "<all>" : n.str;
-		case QueryKind::combine:
-		case QueryKind::append: {
+	if (!is_inner(*node_)) {
+		return leaf(*node_);
+	}
+	std::vector<Frame> stack;
+	stack.push_back({ node_.get(), 0, {} });
+	std::string result;
+	while (!stack.empty()) {
+		auto& frame = stack.back();
+		const auto& n = *frame.node;
+		if (frame.cursor < n.subqueries.size()) {
+			const auto* child = n.subqueries[frame.cursor++].node();
+			if (child == nullptr) {
+				frame.parts.emplace_back("<nothing>");
+			} else if (is_inner(*child)) {
+				stack.push_back({ child, 0, {} });
+			} else {
+				frame.parts.push_back(leaf(*child));
+			}
+			continue;
+		}
+		std::string text;
+		if (n.kind == QueryKind::scale) {
+			text = "(" + frame.parts.front() + " SCALE " + std::to_string(n.factor) + ")";
+		} else {
 			const char* name = to_string(n.op);
-			std::string result("(");
-			for (std::size_t i = 0; i < n.subqueries.size(); ++i) {
+			text = "(";
+			for (std::size_t i = 0; i < frame.parts.size(); ++i) {
 				if (i != 0) {
-					result.append(" ").append(name).append(" ");
+					text.append(" ").append(name).append(" ");
 				}
-				result.append(n.subqueries[i].description());
+				text.append(frame.parts[i]);
 			}
 			if (n.parameter != 0) {
-				result.append(" ").append(std::to_string(n.parameter));
+				text.append(" ").append(std::to_string(n.parameter));
 			}
-			return result.append(")");
+			text.append(")");
 		}
-		case QueryKind::scale:
-			return "(" + n.subqueries.front().description() + " SCALE " + std::to_string(n.factor) + ")";
-		case QueryKind::wildcard:
-			return "wildcard(" + n.str + ")";
-		case QueryKind::edit_distance:
-			return "edit_distance(" + n.str + ", " + std::to_string(n.distance) + ")";
-		case QueryKind::source:
-			return n.src->description();
+		stack.pop_back();
+		if (stack.empty()) {
+			result = std::move(text);
+		} else {
+			stack.back().parts.push_back(std::move(text));
+		}
 	}
-	return "?";
+	return result;
 }
 
 }  // namespace engine

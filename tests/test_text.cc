@@ -27,6 +27,8 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -37,6 +39,7 @@
 #include "engine/query.h"
 #include "engine/text.h"
 #include "engine/xapian/query.h"
+#include "database/utils.h"
 #include "exception_engine.h"
 #include "jsonl.hh"
 #include "xapian.h"
@@ -254,15 +257,33 @@ test_nesting_is_not_recursive()
 	const std::string deep = std::string(200000, '(') + "a" + std::string(200000, ')');
 	CHECK_FALSE(engine::parse_text(deep, config(base | text::BOOLEAN, Op::AND)).empty());
 
-	// Brackets that each hold an operator: the lowered tree is as deep as the text.
-	std::string nested;
-	std::string closing;
-	for (int i = 0; i < 50000; ++i) {
-		nested += (i % 2 ? "a OR (" : "a AND (");
-		closing += ")";
-	}
-	const auto lowered = engine::parse_text(nested + "z" + closing, config(base | text::BOOLEAN, Op::OR));
+	// Brackets that each hold an operator: the lowered tree is as deep as the text, up to the cap.
+	const auto nest = [](int levels) {
+		std::string nested;
+		std::string closing;
+		for (int i = 0; i < levels; ++i) {
+			nested += (i % 2 ? "a OR (" : "a AND (");
+			closing += ")";
+		}
+		return nested + "z" + closing;
+	};
+	const auto cfg = config(base | text::BOOLEAN, Op::OR);
+	const int cap = static_cast<int>(engine::MAX_QUERY_DEPTH);
+	const auto lowered = engine::parse_text(nest(cap - 2), cfg);
 	CHECK_FALSE(lowered.empty());
+	CHECK_TRUE(lowered.depth() <= engine::MAX_QUERY_DEPTH);
+	CHECK_FALSE(lowered.description().empty());
+
+	// Past the cap the text is a client error, however deep (and cheap to refuse).
+	for (const int levels : { cap + 1, cap * 4, 50000 }) {
+		try {
+			engine::parse_text(nest(levels), cfg);
+			CHECK_TRUE(false);
+		} catch (const QueryDepthError& exc) {
+			CHECK_TRUE(std::string(exc.what()).find("nested too deeply") != std::string::npos);
+			CHECK_TRUE(dynamic_cast<const QueryParserError*>(&exc) != nullptr);
+		}
+	}
 }
 
 void
@@ -319,4 +340,84 @@ test_all_wildcard_patterns()
 	CHECK_TRUE(prefixed.node() != nullptr && prefixed.node()->kind == engine::QueryKind::wildcard);
 }
 
-TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_near_of_a_boolean_expression, test_wildcard_pattern_flags, test_all_wildcard_patterns)
+// json_depth reads the nesting of a JSON text as the parsed document has it, on random documents.
+void
+test_json_depth_matches_the_document()
+{
+	std::uint64_t state = 88172645463325252ULL;
+	const auto next = [&](std::uint32_t bound) {
+		state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+		return static_cast<std::uint32_t>((state >> 33) % bound);
+	};
+	// A random value; strings carry brackets, quotes and escapes.
+	const auto make = [&](auto&& self, int budget) -> std::string {
+		switch (budget <= 0 ? next(3) : next(5)) {
+			case 0: return std::to_string(next(100));
+			case 1: return "\"[{\\\"]}\\\\\"";
+			case 2: return "null";
+			case 3: {
+				std::string out = "[";
+				for (unsigned i = 0, n = next(4); i < n; ++i) {
+					out += (i ? "," : "") + self(self, budget - 1);
+				}
+				return out + "]";
+			}
+			default: {
+				std::string out = "{";
+				for (unsigned i = 0, n = next(4); i < n; ++i) {
+					out += (i ? ",\"k\":" : "\"k\":") + self(self, budget - 1);
+				}
+				return out + "}";
+			}
+		}
+	};
+	const auto levels = [](const rapidjson::Value& root) {
+		std::vector<std::pair<const rapidjson::Value*, std::size_t>> stack{ { &root, 1 } };
+		std::size_t deepest = 0;
+		while (!stack.empty()) {
+			const auto [value, depth] = stack.back();
+			stack.pop_back();
+			if (value->IsArray()) {
+				deepest = std::max(deepest, depth);
+				for (const auto& item : value->GetArray()) {
+					stack.push_back({ &item, depth + 1 });
+				}
+			} else if (value->IsObject()) {
+				deepest = std::max(deepest, depth);
+				for (const auto& member : value->GetObject()) {
+					stack.push_back({ &member.value, depth + 1 });
+				}
+			}
+		}
+		return deepest;
+	};
+	for (int round = 0; round < 3000; ++round) {
+		const auto text = make(make, 1 + static_cast<int>(next(8)));
+		rapidjson::Document doc;
+		json_load(doc, text);
+		CHECK_EQ(json_depth(text), levels(doc));
+	}
+	// Past the limit the text is a client error, before it is parsed; at the limit it loads.
+	const auto nested = [](std::size_t n) { return std::string(n, '[') + std::string(n, ']'); };
+	rapidjson::Document doc;
+	json_load(doc, nested(MAX_JSON_DEPTH));
+	for (const auto n : { MAX_JSON_DEPTH + 1, std::size_t(100000) }) {
+		try {
+			json_load(doc, nested(n));
+			CHECK_TRUE(false);
+		} catch (const ClientError& exc) {
+			CHECK_TRUE(std::string(exc.what()).find("nested too deeply") != std::string::npos);
+		}
+	}
+	// Brackets in strings and after escapes do not count; random bytes never fail the scan.
+	CHECK_EQ(json_depth("[\"[[[\\\"[[\",{\"a\":\"}}\"}]"), std::size_t(2));
+	for (int round = 0; round < 3000; ++round) {
+		std::string bytes;
+		for (unsigned i = 0, n = next(64); i < n; ++i) {
+			bytes.push_back("[]{}\"\\a"[next(8)]);
+		}
+		CHECK_TRUE(json_depth(bytes) <= bytes.size());
+	}
+}
+
+TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_near_of_a_boolean_expression, test_wildcard_pattern_flags, test_all_wildcard_patterns)
