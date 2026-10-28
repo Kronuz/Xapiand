@@ -130,3 +130,12 @@ Throughput units ran one at a time under `quiet exclusive`; the other rows under
 3. Disk bytes after a bulk load are equal within 1.5% (about 12.8 to 13.1 MB).
 4. Results, binaries, scripts: `.scratch/gate05b/` in the main Xapiand checkout. The census tables in
    `docs/dev/engine-census.md` ("Per request class", "Facility totals") are regenerated from this run.
+
+## Lead verdict, run 2 (2026-10-27)
+
+Gate 0.5 passes on master `7efc3753e`. Every row passes, and the rows that counted documents in
+run 1 now check values: aggregations per node, sums and averages after replay, 797 numeric
+ranges, and one key term per document. Bulk index is 0.996x base (run 1: 0.81x); query QPS is
+0.974x base, inside the band, and is watched (aggregations now visit every match). The bank
+estimate reads 232, the true count. Open, not gating: a RESTORE that stalls about 64 s roughly
+once in 40 runs on every binary (hunt list); T11 starts with S1's first measurement.
