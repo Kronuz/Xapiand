@@ -48,7 +48,10 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
    go commits what is pending and closes it, as a Xapian writer does when dropped; a writer dropped inside an
    open transaction discards the transaction instead. An index that an I/O error fenced, or that a failed
    cancel could not reopen, is replaced by one reopened from the last commit when the next handle opens or
-   `reopen()` is called; until then the shard raises `errc::database` on every call.
+   `reopen()` is called; until then the shard raises `errc::database` on every call. Replacing the index bumps
+   the `Core`'s epoch, and a writable handle that has not seen the latest epoch lost its unsaved writes with
+   the index: its calls raise `errc::database` and its `reopen()` raises `errc::reopen`, so the node closes it
+   and the next writable open replays the log.
 7. **Values (P1) and term lists (P2).** `Document` holds values, WAL lines carry them, and `DocView::value`
    returns nothing until prospect's values plugin stores them (`src/engine/strata/values.h` is the one place
    to wire it, `tests/test_engine_strata.cc` `values_gap` flips then). `DocView::terms`, `term_details` and

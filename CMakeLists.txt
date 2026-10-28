@@ -2169,7 +2169,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error engine_replay engine_strata pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_census engine_query engine_sort engine_shard engine_read engine_search engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2193,6 +2193,8 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+		add_test(NAME test_wal_replay_xapian COMMAND ${PROJECT_NAME}_test_wal_replay)
+		set_tests_properties(test_wal_replay_xapian PROPERTIES ENVIRONMENT "XAPIAND_ENGINE=xapian")
 
 	# libFuzzer targets: standalone (they link only the code they fuzz), built with -DFUZZ=ON.
 	if (FUZZ)

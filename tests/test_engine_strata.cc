@@ -799,8 +799,10 @@ void fenced_recovers(bool through_reopen) {
 
 	std::unique_ptr<engine::Shard> next;
 	if (through_reopen) {
-		CHECK_TRUE(engine::sync_wait(writer.shard->reopen()));
-		next = std::move(writer.shard);
+		// A writer's unsaved writes went with the fenced index: reopen() tells it to close and open again (the log replays).
+		CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->reopen()); }) == engine::errc::reopen);
+		writer.shard.reset();
+		next = std::move(open_shard(kind, path, true, false).shard);
 	} else {
 		next = std::move(open_shard(kind, path, true, false).shard);  // the reader and the fenced writer still live
 	}
@@ -812,6 +814,50 @@ void fenced_recovers(bool through_reopen) {
 	CHECK_EQ(engine::sync_wait(reader.shard->stats()).doc_count, 2u);
 	next.reset();
 	writer.shard.reset();
+	reader.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
+// NF1: a handle that is not the writer replaces a fenced index while the writer holds unsaved writes. The writer
+// must hear of it (its writes are gone, its log lines are not): every call raises, reopen() asks to close and open
+// again, and the writable open that follows works on the last commit.
+void fenced_writer_notified() {
+	if (!can_deny_access()) {
+		return;
+	}
+	const auto kind = Kind::strata;
+	const auto path = scratch("fencec", kind);
+	engine::WriteArgs plain;
+	auto writer = open_shard(kind, path);
+	auto reader = open_shard(kind, path, false, false);
+	auto a = make(kind, "Qa", "committed");
+	engine::sync_wait(writer.shard->add(a, plain));
+	engine::sync_wait(writer.shard->commit(engine::Transaction::none));
+	auto b = make(kind, "Qb", "acknowledged, not committed");
+	engine::sync_wait(writer.shard->add(b, plain));
+
+	const auto dir = path + "/strata";
+	::chmod(dir.c_str(), 0500);  // the reader's flush of the writer's buffer cannot write
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(reader.shard->stats()); }) == engine::errc::database);
+	::chmod(dir.c_str(), 0700);
+	auto joined = open_shard(kind, path, false, false);  // replaces the fenced index
+
+	auto c = make(kind, "Qc", "after the replacement");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->find_key("Qb")); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->add(c, plain)); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->commit(engine::Transaction::none)); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { (void)writer.shard->revision(); }) == engine::errc::database);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(writer.shard->reopen()); }) == engine::errc::reopen);
+	CHECK_EQ(engine::sync_wait(joined.shard->stats()).doc_count, 1u);  // readers keep working
+
+	writer.shard.reset();
+	auto next = open_shard(kind, path, true, false);
+	CHECK_EQ(engine::sync_wait(next.shard->add(c, plain)).version, 1u);
+	engine::sync_wait(next.shard->commit(engine::Transaction::none));
+	CHECK_EQ(engine::sync_wait(next.shard->stats()).doc_count, 2u);
+	CHECK_EQ(engine::sync_wait(next.shard->find_key("Qb")), 0u);  // the log replays it on a node
+	next.shard.reset();
+	joined.shard.reset();
 	reader.shard.reset();
 	std::filesystem::remove_all(path);
 }
@@ -961,8 +1007,9 @@ static void test_drop_mid_transaction_strata() { guarded("drop mid transaction s
 static void test_cancel_reopen_fails() { guarded("cancel reopen fails", [] { cancel_reopen_fails(); }); }
 static void test_fenced_new_handle() { guarded("fenced new handle", [] { fenced_recovers(false); }); }
 static void test_fenced_reopen() { guarded("fenced reopen", [] { fenced_recovers(true); }); }
+static void test_fenced_writer_notified() { guarded("fenced writer notified", [] { fenced_writer_notified(); }); }
 static void test_replay_idempotent() { guarded("replay idempotent", [] { replay_idempotent(); }); }
 static void test_old_format() { guarded("old format", [] { old_format(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_replay_idempotent, test_old_format)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_gap, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format)

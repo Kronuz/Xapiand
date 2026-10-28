@@ -136,6 +136,12 @@ Xapiand's compressors pin moved to strata's `816bc82`.
       7. CR7: a failed commit in `~Core` is logged (`L_ERR`).
       8. The document codec's format byte is 2; a format 1 line raises `errc::syntax` naming the version stamp
          (`old_format`; reverting the byte fails the codec, replay and old-format tests).
+      9. NF1 (re-check 1): `Core` carries an epoch that every `reopen_index()` bumps; each `Handle` records the epoch it
+         has seen (its own replacement counts), and `Core::check` raises `errc::database` for a writable handle that is
+         behind. `reopen()` on a writable handle whose index was fenced or replaced replaces a fenced index and raises
+         `errc::reopen` (the node's retry then closes the shard and reopens it writable, which replays the log). Tests:
+         `fenced_writer_notified` (the re-checker's `probe_fence3` as a test), `fenced_recovers(true)` updated, and
+         `tests/test_wal_replay.cc` (the re-checker's `probe_wal` through `DatabaseWAL::execute_line`, both engines).
       Reviewer probe `probe_replay` still reports its erase scripts as errors because it replays through the engine
       alone; with the WAL's rule they converge (`replay_idempotent`). `probe_errors` ends at its own unguarded
       `find_key` after the failed cancel, which now raises `database` instead of crashing.

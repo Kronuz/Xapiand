@@ -177,6 +177,7 @@ struct Core {
 	bool dirty = false;        // applied since the last refresh: reads by id need a refresh first
 	bool pending = false;      // applied since the last commit
 	bool transaction = false;
+	std::atomic<std::uint64_t> epoch{0};  // bumped whenever the index is replaced: writes it held are gone
 
 	~Core() {
 		// A transaction that is still open is discarded, as a Xapian writer discards it.
@@ -191,17 +192,19 @@ struct Core {
 		}
 	}
 
-	// Under mtx: whether calls can use the index.
-	void check() const {
-		if (!index) {
-			throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
-		}
-	}
+	// Under mtx: whether the handle can use the index; a writable handle that has not seen the latest
+	// replacement lost its writes with it and must be closed, so that opening it again replays the log.
+	void check(const Handle& handle) const;
 
 	bool unusable() const noexcept { return fenced.load() || !index; }
 
 	// Under mtx: drops the index and opens it again from its last commit; what was written since is lost.
-	void reopen_index() {
+	// The handle that asks (`seen`) knows of the replacement.
+	void reopen_index(std::uint64_t* seen = nullptr) {
+		const auto replaced = ++epoch;
+		if (seen) {
+			*seen = replaced;
+		}
 		pending = dirty = transaction = false;
 		index.reset();
 		index.emplace(prospect::index::open(*io, index_options()));
@@ -268,6 +271,8 @@ entry_for(const std::string& dir)
 struct Handle {
 	std::shared_ptr<Entry> entry;
 	Core* core;
+	bool writable = false;
+	std::uint64_t seen = 0;  // the latest replacement of the index this handle knows of; under core->mtx
 
 	Handle(std::shared_ptr<Entry> entry_, Core* core_) : entry(std::move(entry_)), core(core_) { }
 	Handle(const Handle&) = delete;
@@ -280,6 +285,18 @@ struct Handle {
 		}
 	}
 };
+
+
+void
+Core::check(const Handle& handle) const
+{
+	if (!index) {
+		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
+	}
+	if (handle.writable && handle.seen != epoch.load()) {
+		throw Error(errc::database, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+	}
+}
 
 
 namespace {
@@ -332,7 +349,9 @@ acquire(const std::string& path, bool create_missing, bool& created)
 		}
 	}
 	++entry->handles;
-	return std::make_unique<Handle>(std::move(entry), entry->core.get());
+	auto handle = std::make_unique<Handle>(std::move(entry), entry->core.get());
+	handle->seen = handle->core->epoch.load();
+	return handle;
 }
 
 // A document as the index has it by id: its version and, when asked, its stored record.
@@ -537,7 +556,7 @@ Shard::add(Document& doc, WriteArgs args)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		check_version(args.expected_version, std::nullopt);
 		WriteResult info;
 		info.did = static_cast<docid>(core.index->last_docid() + 1);
@@ -568,7 +587,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		auto& native = native_of(doc);
 		const bool replayed = native.replayed();
 		std::optional<rev> stored;
@@ -631,7 +650,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		const auto ekey = engine_key(key);
 		WriteResult info;
 		info.term = key;
@@ -677,7 +696,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		const auto located = locate(core, did, false);
 		if (!located) {
 			throw Error(errc::doc_not_found, "Document not found");
@@ -710,7 +729,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		const auto ekey = engine_key(key);
 		const auto found = core.index->find_key(ekey);
 		if (!found) {
@@ -747,7 +766,7 @@ Shard::commit(Transaction transaction)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		core.commit();
 		(void)transaction;
 		co_return;
@@ -765,7 +784,7 @@ Shard::begin_transaction(bool flushed)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		if (core.transaction) {
 			throw Error(errc::invalid, "A transaction is already in progress");
 		}
@@ -788,7 +807,7 @@ Shard::commit_transaction()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		if (!core.transaction) {
 			throw Error(errc::invalid, "No transaction is in progress");
 		}
@@ -809,11 +828,11 @@ Shard::cancel_transaction()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		if (!core.transaction) {
 			throw Error(errc::invalid, "No transaction is in progress");
 		}
-		core.reopen_index();  // when it fails the shard raises on every call until a reopen succeeds
+		core.reopen_index(&handle_->seen);  // when it fails the shard raises on every call until a reopen succeeds
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -833,7 +852,7 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		prospect::transaction t;
 		t.ops.emplace_back();
 		auto& op = t.ops[0];
@@ -876,10 +895,18 @@ Shard::reopen()
 		// One index in this process: a handle always sees the latest. Only a fenced or failed index is replaced.
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		if (!core.unusable()) {
+		const bool stale = writable_ && handle_->seen != core.epoch.load();
+		if (!stale && !core.unusable()) {
 			co_return false;
 		}
-		core.reopen_index();
+		if (writable_ && (stale || core.fenced.load())) {
+			// The writer's unsaved writes are gone with the index: it must be closed and opened again, which replays the log.
+			if (core.unusable()) {
+				core.reopen_index();
+			}
+			throw Error(errc::reopen, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+		}
+		core.reopen_index(&handle_->seen);
 		co_return true;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -894,7 +921,7 @@ Shard::stats()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		core.refresh();
 		const auto& manifest = core.index->manifest();
 		Stats stats;
@@ -920,7 +947,7 @@ Shard::find_key(const std::string& key)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		const auto found = core.index->find_key(engine_key(key));
 		co_return found ? static_cast<docid>(found->first) : docid{0};
 	} catch (...) {
@@ -936,7 +963,7 @@ Shard::get(docid did)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		auto found = locate(core, did, true);
 		if (!found) {
 			throw Error(errc::doc_not_found, "Document not found");
@@ -955,7 +982,7 @@ Shard::scan(docid from, const ScanSink& sink)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		core.refresh();
 		struct Hit {
 			docid did;
@@ -994,7 +1021,7 @@ Shard::metadata(const std::string& key)
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		const auto& all = core.index->metadata();
 		const auto it = all.find(key);
 		co_return it == all.end() ? std::string() : it->second;
@@ -1011,7 +1038,7 @@ Shard::metadata_keys()
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle_);
 		std::vector<std::string> keys;
 		for (const auto& entry : core.index->metadata()) {
 			if (!entry.first.starts_with(reserved_meta_prefix)) {
@@ -1030,7 +1057,7 @@ Shard::revision() const
 {
 	auto& core = *handle_->core;
 	std::lock_guard<std::mutex> lk(core.mtx);
-	core.check();
+	core.check(*handle_);
 	return core.revision();
 }
 
@@ -1040,7 +1067,7 @@ Shard::doc_count() const
 {
 	auto& core = *handle_->core;
 	std::lock_guard<std::mutex> lk(core.mtx);
-	core.check();
+	core.check(*handle_);
 	core.refresh();
 	return live_count(core);
 }
@@ -1067,6 +1094,7 @@ open_local(const std::string& path, bool writable, bool create_missing, task::sc
 	try {
 		Opened opened;
 		auto handle = acquire(path, create_missing, opened.created);
+		handle->writable = writable;
 		opened.shard = std::make_unique<Shard>(std::move(handle), writable, on);
 		co_return opened;
 	} catch (...) {
@@ -1085,7 +1113,7 @@ check(const std::string& path, task::scheduler_ref on)
 		auto handle = acquire(path, false, created);
 		auto& core = *handle->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check();
+		core.check(*handle);
 		core.refresh();
 		(void)core.index->check();
 	} catch (const Error& error) {
