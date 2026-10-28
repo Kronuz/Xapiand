@@ -5,7 +5,7 @@ Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S1, D2 t
 
 ## State
 
-Code complete and proven locally except the sanitizer run (see Next); not reviewed. Strata and prospect are
+Code complete and proven locally, sanitizers included; not reviewed. Strata and prospect are
 pinned at prospect `9de01a18`, which pins strata `75d1e7e` (format 14 step 1, 296 commits behind strata main);
 Xapiand's compressors pin moved to strata's `816bc82`.
 
@@ -48,6 +48,23 @@ Xapiand's compressors pin moved to strata's `816bc82`.
    4. Fuzz: `tests/fuzz_strata_document.cc` (libFuzzer, Homebrew LLVM, ASan+UBSan), 808144 runs in 61 s,
       no finding. Build: `clang++ -std=c++20 -fsanitize=fuzzer,address,undefined -Isrc tests/fuzz_strata_document.cc src/engine/strata/document.cc`.
 
+   5. ASan+UBSan build (Apple clang, `-DASAN=ON` and `-fsanitize=undefined`): `test_engine_strata` 8081 of 8081;
+      `strata_write_check.sh` PASS (NDOCS=10, ASan is slower than the 3 s autocommit); a 3000-document RESTORE
+      on strata and on Xapian. No ASan report; the only UBSan lines are the known third-party ones (`lz4.c` zero
+      offset to null, rapidjson `stack.h`), none in `src/engine`, the shard, the WAL or the handler.
+   6. Bulk screen (not a measurement: a timed `RESTORE` of 20000 documents, 6 words of title and 40 of body, one
+      `--solo` node per engine, 3 interleaved rounds under `quiet strict`, RelWithDebInfo without LTO;
+      `harness/profile_bulk.sh` is not on master, so the engine's own share is not isolated):
+
+      | Engine | docs/s (3 rounds) | server CPU s |
+      |---|---|---|
+      | Xapian | 4608, 4595, 4595 | 15.5, 16.0, 15.7 |
+      | strata | 5200, 5185, 5363 | 12.3, 12.3, 12.0 |
+
+      The whole pipeline is 1.14 times faster in docs/s and uses 0.77 of the CPU. strata does less work here (no
+      values, no term lists, no spelling), so this is a screen for the T11 run, which needs the engine share from
+      `profile_bulk.sh` on both binaries and the same work on both sides.
+
 ## Findings
 
 1. **Key prefix `Q` cannot be the index's key prefix.** strata refuses any term that starts with the key
@@ -71,9 +88,9 @@ Xapiand's compressors pin moved to strata's `816bc82`.
 
 ## Next
 
-1. ASan+UBSan: build `build-asan` (`-DASAN=ON`, `-DBUILD_TESTS=ON`), run `test_engine_strata` and
-   `strata_write_check.sh` on it. Not run yet.
-2. Bulk screen against Xapian (`.scratch/bulk.sh`): see the report; `harness/profile_bulk.sh` is not on master.
+1. T11 on `profile_bulk.sh` once it is on master, with values (P1) and term lists (P2) on the strata side.
+2. Merge policy and the executor: strata merges inline on the committing thread (`auto_merge`, no background
+   executor); bind its executor to the reactor's pool (D13's adapter) with S2.
 3. D8's `IndexSettings` field (saved with the index, a REST setting) instead of the process default.
 4. Values when P1 lands (`values.h`, the `values_gap` test), term lists when P2 lands (`DocView::terms`).
 5. `wal_replay_check.sh` and `wal_replay_agg_check.sh` assert through search and aggregations (S2, S3), so
