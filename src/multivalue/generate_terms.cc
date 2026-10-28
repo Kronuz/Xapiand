@@ -22,6 +22,7 @@
 
 #include "generate_terms.h"
 
+#include <optional>                                // for std::optional
 #include <set>                                    // for std::set
 #include <stdexcept>                              // for std::invalid_argument
 #include <unordered_set>                          // for std::unordered_set
@@ -161,20 +162,20 @@ print(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& a
 			// Skip level if:
 			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
 			//   It's the topmost "magic" level
-			L_GREY("{}{} - {}:{}:{} ({}/{}) (skipped)", indent, tree->pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+			L_GREY("{}{} - {}:{}:{} ({}/{}) (skipped)", indent, tree->pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(flat_term(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 			print<mode>(&t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 		} else {
 			// Add level and...
 			// don't filter children if level is leaf or it has too many children
 			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
 				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
-				L_GREY("{}{} - {}:{}:{} ({}/{}) (filtered)", indent, tree->pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+				L_GREY("{}{} - {}:{}:{} ({}/{}) (filtered)", indent, tree->pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(flat_term(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 				if (size) {
 					print<mode>(&t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 				}
 				max_terms -= size;
 			} else {
-				L_GREY("{}{} - {}:{}:{} ({}/{}) (whole)", indent, tree->pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+				L_GREY("{}{} - {}:{}:{} ({}/{}) (whole)", indent, tree->pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(flat_term(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 			}
 		}
 	}
@@ -201,7 +202,7 @@ get_query(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S
 			return get_query<mode>(&t.second, accuracy, acc_prefix, wqf, field_type, max_terms);
 		} else {
 			// Add level and...
-			auto query = engine::Query::term(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
+			auto query = engine::Query::term(field_name(prefix, field_type), Serialise::serialise(t.first), wqf);
 			// don't filter children if level is leaf or it has too many children
 			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
 				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
@@ -225,7 +226,7 @@ GenerateTerms::integer(engine::Document& doc, const std::vector<uint64_t>& accur
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::integer(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it, ctype_integer));
+		doc.add_term(doc_field(doc, *it, ctype_integer), term_v);
 		++it;
 	}
 }
@@ -237,7 +238,7 @@ GenerateTerms::positive(engine::Document& doc, const std::vector<uint64_t>& accu
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::positive(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it, ctype_integer));
+		doc.add_term(doc_field(doc, *it, ctype_integer), term_v);
 		++it;
 	}
 }
@@ -251,47 +252,47 @@ GenerateTerms::datetime(engine::Document& doc, const std::vector<uint64_t>& accu
 		switch (static_cast<UnitTime>(acc)) {
 			case UnitTime::millennium: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::century: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::decade: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::year: {
 				Datetime::tm_t _tm(tm.year);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::month: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::day: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::hour: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::minute: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::second: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), Serialise::timestamp(Datetime::timegm(_tm)));
 				break;
 			}
 			case UnitTime::INVALID:
@@ -338,7 +339,7 @@ GenerateTerms::geo(engine::Document& doc, const std::vector<uint64_t>& accuracy,
 		const auto& terms = level_terms[pos];
 		const auto& prefix = acc_prefix[last_acc_pos - pos];
 		for (const auto& term : terms) {
-			doc.add_term(prefixed(Serialise::positive(term), prefix, ctype_geo));
+			doc.add_term(doc_field(doc, prefix, ctype_geo), Serialise::positive(term));
 		}
 	}
 }
@@ -352,8 +353,8 @@ GenerateTerms::integer(engine::Document& doc, const std::vector<uint64_t>& accur
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::integer(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it, ctype_integer));
-		doc.add_term(prefixed(term_v, *itg, ctype_integer));
+		doc.add_term(doc_field(doc, *it, ctype_integer), term_v);
+		doc.add_term(doc_field(doc, *itg, ctype_integer), term_v);
 		++it;
 		++itg;
 	}
@@ -368,8 +369,8 @@ GenerateTerms::positive(engine::Document& doc, const std::vector<uint64_t>& accu
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		auto term_v = Serialise::positive(value - modulus(value, acc));
-		doc.add_term(prefixed(term_v, *it, ctype_integer));
-		doc.add_term(prefixed(term_v, *itg, ctype_integer));
+		doc.add_term(doc_field(doc, *it, ctype_integer), term_v);
+		doc.add_term(doc_field(doc, *itg, ctype_integer), term_v);
 		++it;
 		++itg;
 	}
@@ -387,64 +388,64 @@ GenerateTerms::datetime(engine::Document& doc, const std::vector<uint64_t>& accu
 			case UnitTime::millennium: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::century: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::decade: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::year: {
 				Datetime::tm_t _tm(tm.year);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::month: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::day: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::hour: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::minute: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::second: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
+				doc.add_term(doc_field(doc, *it, ctype_date), term_v);
+				doc.add_term(doc_field(doc, *itg, ctype_date), term_v);
 				break;
 			}
 			case UnitTime::INVALID:
@@ -493,8 +494,8 @@ GenerateTerms::geo(engine::Document& doc, const std::vector<uint64_t>& accuracy,
 		const auto& gprefix = acc_global_prefix[pos];
 		for (const auto& term : terms) {
 			const auto term_s = Serialise::positive(term);
-			doc.add_term(prefixed(term_s, prefix, ctype_geo));
-			doc.add_term(prefixed(term_s, gprefix, ctype_geo));
+			doc.add_term(doc_field(doc, prefix, ctype_geo), term_s);
+			doc.add_term(doc_field(doc, gprefix, ctype_geo), term_s);
 		}
 	}
 }
@@ -547,13 +548,31 @@ GenerateTerms::text(engine::Document& doc,
 		term_generator.stemmer = &getStemmer(stem_language);
 		term_generator.stem = stem_strategy;
 	}
-	term_generator.index_text(value, [&doc](std::string_view term, std::uint32_t wdf, std::uint32_t pos) {
-		if (pos != 0) {
-			doc.add_posting(std::string(term), pos, wdf);
+	// The generator runs without a prefix, so a term that leads with 'Z' is a stem (words are
+	// lowercase) and goes to the field `Z` + name; every other term goes to the field itself.
+	const auto kind = positions ? engine::FieldKind::text : engine::FieldKind::terms;
+	std::optional<engine::FieldRef> word_field, stem_field;
+	const bool stems_lead_z = stem_strategy == analysis::stem_strategy::all_z || stem_strategy == analysis::stem_strategy::some;
+	term_generator.index_text(value, [&](std::string_view term, std::uint32_t wdf, std::uint32_t pos) {
+		engine::FieldRef field;
+		if (stems_lead_z && !term.empty() && term.front() == 'Z') {
+			if (!stem_field) {
+				stem_field = doc.field("Z" + prefix, kind);
+			}
+			field = *stem_field;
+			term.remove_prefix(1);
 		} else {
-			doc.add_term(std::string(term), wdf);
+			if (!word_field) {
+				word_field = doc.field(prefix, kind);
+			}
+			field = *word_field;
 		}
-	}, {.wdf_inc = weight, .prefix = prefix, .positions = positions});
+		if (pos != 0) {
+			doc.add_posting(field, term, pos, wdf);
+		} else {
+			doc.add_term(field, term, wdf);
+		}
+	}, {.wdf_inc = weight, .positions = positions});
 }
 
 
@@ -701,9 +720,9 @@ _year(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, eng
 		// Reserve upper bound.
 		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
+		queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_e), wqf));
 		while (tm_s.year != tm_e.year) {
-			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
+			queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_s), wqf));
 			tm_s.year += accuracy;
 		}
 		query = engine::Query::combine(engine::Op::OR, std::move(queries));
@@ -754,9 +773,9 @@ GenerateTerms::month(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::stri
 		// Reserve upper bound.
 		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
+		queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_e), wqf));
 		while (tm_s.mon != tm_e.mon) {
-			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
+			queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_s), wqf));
 			++tm_s.mon;
 		}
 		query = engine::Query::combine(engine::Op::OR, std::move(queries));
@@ -777,9 +796,9 @@ GenerateTerms::day(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string
 		// Reserve upper bound.
 		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
+		queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_e), wqf));
 		while (tm_s.day != tm_e.day) {
-			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
+			queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_s), wqf));
 			++tm_s.day;
 		}
 		query = engine::Query::combine(engine::Op::OR, std::move(queries));
@@ -800,9 +819,9 @@ GenerateTerms::hour(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::strin
 		// Reserve upper bound.
 		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
+		queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_e), wqf));
 		while (tm_s.hour != tm_e.hour) {
-			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
+			queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_s), wqf));
 			++tm_s.hour;
 		}
 		query = engine::Query::combine(engine::Op::OR, std::move(queries));
@@ -823,9 +842,9 @@ GenerateTerms::minute(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 		// Reserve upper bound.
 		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
+		queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_e), wqf));
 		while (tm_s.min != tm_e.min) {
-			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
+			queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_s), wqf));
 			++tm_s.min;
 		}
 		query = engine::Query::combine(engine::Op::OR, std::move(queries));
@@ -844,9 +863,9 @@ GenerateTerms::second(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::str
 	if (num_unions < MAX_TERMS_LEVEL) {
 		std::vector<engine::Query> queries;
 		queries.reserve(num_unions);
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_e), prefix, ctype_date), wqf));
+		queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_e), wqf));
 		while (tm_s.sec != tm_e.sec) {
-			queries.push_back(engine::Query::term(prefixed(Serialise::serialise(tm_s), prefix, ctype_date), wqf));
+			queries.push_back(engine::Query::term(field_name(prefix, ctype_date), Serialise::serialise(tm_s), wqf));
 			++tm_s.sec;
 		}
 		query = engine::Query::combine(engine::Op::OR, std::move(queries));
@@ -966,7 +985,7 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 	std::vector<engine::Query> queries;
 	queries.reserve(buckets.size());
 	for (const auto& bucket : buckets) {
-		queries.push_back(engine::Query::term(prefixed(Serialise::serialise(bucket.start), acc_prefix[bucket.level], ctype_integer), wqf));
+		queries.push_back(engine::Query::term(field_name(acc_prefix[bucket.level], ctype_integer), Serialise::serialise(bucket.start), wqf));
 	}
 	return engine::Query::combine(engine::Op::OR, std::move(queries));
 }

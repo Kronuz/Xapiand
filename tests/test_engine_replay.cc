@@ -37,7 +37,7 @@ namespace {
 
 engine::Document make(const std::string& key) {
 	engine::Document doc;
-	doc.add_boolean_term(key);
+	doc.add_boolean_term(doc.field(""), key);
 	doc.set_data(key);
 	return doc;
 }

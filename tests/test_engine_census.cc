@@ -102,17 +102,17 @@ public:
 void test_query_nodes() {
 	census::reset("");
 	engine::TextConfig config;
-	config.prefix = "title.";
+	config.field = "title.";
 	config.flags = engine::text::PHRASE | engine::text::PARTIAL;
 	config.stem = engine::Stem::all;
 	config.stop_language = "en";
 	const auto query = Query::combine(Op::AND, {
-		Query::term("a"),
-		Query::term("b", 2, 4),
+		Query::term("", "a"),
+		Query::term("", "b", 2, 4),
 		Query::match_all(),
-		Query::combine(Op::OR, Query::term("c"), Query::scale(Query::term("d"), 2.0)),
-		Query::wildcard("ab*", 10, engine::Expansion::first, engine::PATTERN_MULTI),
-		Query::edit_distance("abc", 5, engine::Expansion::error, Op::OR, 2, 1),
+		Query::combine(Op::OR, Query::term("", "c"), Query::scale(Query::term("", "d"), 2.0)),
+		Query::wildcard("", "ab*", 10, engine::Expansion::first, engine::PATTERN_MULTI),
+		Query::edit_distance("", "abc", 5, engine::Expansion::error, Op::OR, 2, 1),
 		Query::source(std::make_unique<Source>()),
 		Query::text("hello world", config),
 	});
@@ -146,7 +146,7 @@ void test_key_prefix_check() {
 	census::reset("");
 	auto doc = [](std::vector<std::string> terms) {
 		engine::Document d;
-		for (auto& t : terms) { d.add_boolean_term(std::move(t)); }
+		for (auto& t : terms) { d.add_boolean_term(d.field(""), std::move(t)); }
 		return d;
 	};
 	census::document(doc({"_id.1", "title.word"}), "");
@@ -188,10 +188,10 @@ void test_key_prefix_check() {
 void test_document_shape() {
 	census::reset("");
 	engine::Document d;
-	d.add_boolean_term("b");
-	d.add_term("w", 2);
-	d.add_posting("p", 3, 1);
-	d.add_posting("p", 7, 1);
+	d.add_boolean_term(d.field(""), "b");
+	d.add_term(d.field(""), "w", 2);
+	d.add_posting(d.field(""), "p", 3, 1);
+	d.add_posting(d.field(""), "p", 7, 1);
 	d.add_value(1, "x");
 	d.add_value(9, "y");
 	d.set_data("data");
@@ -212,8 +212,8 @@ void test_shard_search_and_views() {
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= 3; ++i) {
 		engine::Document doc;
-		doc.add_boolean_term("_id." + std::to_string(i));
-		doc.add_term("word");
+		doc.add_boolean_term(doc.field(""), "_id." + std::to_string(i));
+		doc.add_term(doc.field(""), "word");
 		doc.add_value(1, "k" + std::to_string(4 - i));
 		doc.set_data("d");
 		engine::WriteArgs args;
@@ -221,7 +221,7 @@ void test_shard_search_and_views() {
 	}
 	engine::sync_wait(shard.commit(engine::Transaction::none));
 
-	const auto query = Query::term("word");
+	const auto query = Query::term("", "word");
 	auto prepared = engine::prepare(query);
 	SlotKey sorter;
 	Spy spy;

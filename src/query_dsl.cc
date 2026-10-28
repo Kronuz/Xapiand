@@ -30,7 +30,7 @@
 #include "LexicalException.h"       // for LexicalException
 #include "SyntacticException.h"     // for SyntacticException
 #include "cast.h"                                 // for Cast
-#include "database/utils.h"                       // for prefixed
+#include "database/utils.h"                       // for field_name
 #include "engine/query.h"                         // for engine::Query
 #include "xapiand_exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
@@ -488,39 +488,39 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 		default:
 		case UnitTime::second: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::minute: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::hour: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::day: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::month: {
 			Datetime::tm_t _tm(tm.year, tm.mon);
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::year: {
 			Datetime::tm_t _tm(tm.year);
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::decade: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::century: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::millennium: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-			return engine::Query::term(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), Serialise::serialise(_tm), wqf);
 		}
 		case UnitTime::INVALID:
 			THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
@@ -539,7 +539,7 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view f
 	}
 
 	int64_t value = Datetime::time_to_double(obj);
-	return engine::Query::term(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
+	return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), wqf);
 }
 
 
@@ -554,7 +554,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_v
 	}
 
 	int64_t value = Datetime::timedelta_to_double(obj);
-	return engine::Query::term(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
+	return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), wqf);
 }
 
 
@@ -569,7 +569,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 	auto value = Cast::integer(obj);
-	return engine::Query::term(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
+	return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), Serialise::integer(value - modulus(value, acc)), wqf);
 }
 
 
@@ -623,14 +623,14 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
-			return engine::Query::term(field_spc.prefix());
+			return engine::Query::term(field_spc.prefix(), std::string());
 		case MsgPack::Type::STR: {
 			auto val = obj.str_view();
 			if (val.empty()) {
-				return engine::Query::term(field_spc.prefix());
+				return engine::Query::term(field_spc.prefix(), std::string());
 			}
 			if (val == "*") {
-				return engine::Query::wildcard(field_spc.prefix());
+				return engine::Query::field(field_spc.prefix());
 			}
 			break;
 		}
@@ -658,13 +658,13 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
-			return engine::Query::term(field_spc.prefix());
+			return engine::Query::term(field_spc.prefix(), std::string());
 		case MsgPack::Type::STR: {
 			auto val = obj.str_view();
 			if (val.empty()) {
-				return engine::Query::term(field_spc.prefix());
+				return engine::Query::term(field_spc.prefix(), std::string());
 			} if (val == "*") {
-				return engine::Query::wildcard(field_spc.prefix());
+				return engine::Query::field(field_spc.prefix());
 			}
 			break;
 		}
@@ -716,29 +716,27 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			}
 
 			if (flags & engine::text::PARTIAL) {
-				auto partial_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
+				auto field = field_name(field_spc.prefix(), field_spc.get_ctype());
 				return engine::Query::combine(engine::Op::OR,
-					engine::Query::wildcard(partial_term, DEFAULT_PARTIAL_MAX_EXPANSION, engine::Expansion::most_frequent, 0, engine::Op::SYNONYM),
-					engine::Query::term(partial_term, 1, 1));
+					engine::Query::wildcard(field, std::string(serialised_term), DEFAULT_PARTIAL_MAX_EXPANSION, engine::Expansion::most_frequent, 0, engine::Op::SYNONYM),
+					engine::Query::term(field, std::string(serialised_term), 1, 1));
 			}
 
 			if (flags & engine::text::WILDCARD) {
-				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				unsigned pattern_flags = 0;
 				auto pos = serialised_term.find_first_of("?*");
 				if (pos != std::string::npos && pos != serialised_term.size() - 1) {
 					pattern_flags = engine::PATTERN_SINGLE | engine::PATTERN_MULTI;
 				}
-				return engine::Query::wildcard(wildcard_term, DEFAULT_WILDCARD_MAX_EXPANSION, engine::Expansion::error, pattern_flags, engine::Op::SYNONYM);
+				return engine::Query::wildcard(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), DEFAULT_WILDCARD_MAX_EXPANSION, engine::Expansion::error, pattern_flags, engine::Op::SYNONYM);
 			}
 
 			if (flags & engine::text::FUZZY) {
-				auto fuzzy_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				size_t fuzzy_prefix_length = 0;
-				return engine::Query::edit_distance(fuzzy_term, DEFAULT_FUZZY_MAX_EXPANSION, engine::Expansion::error, engine::Op::SYNONYM, fuzzy_edit_distance, field_spc.prefix().size() + 1 + fuzzy_prefix_length);
+				return engine::Query::edit_distance(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), DEFAULT_FUZZY_MAX_EXPANSION, engine::Expansion::error, engine::Op::SYNONYM, fuzzy_edit_distance, fuzzy_prefix_length);
 			}
 
-			return engine::Query::term(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), wqf);
 		}
 
 		case FieldType::text: {
@@ -795,7 +793,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 
 			// There cannot be non-keyword fields with bool_term
 			engine::TextConfig config;
-			config.prefix = field_spc.prefix() + field_spc.get_ctype();
+			config.field = field_spc.prefix() + field_spc.get_ctype();
 			switch (default_op) {
 				case engine::Op::NEAR:
 				case engine::Op::PHRASE:
@@ -844,7 +842,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 		}
 
 		default:
-			return engine::Query::term(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
+			return engine::Query::term(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), wqf);
 	}
 }
 

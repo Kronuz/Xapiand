@@ -48,10 +48,10 @@ struct DocTerm {
 // until the shard hands them to the index.
 class StrataDocument final : public Document::Native {
 public:
-	void add_term(std::string_view term, termcount wdf_inc) override;
-	void add_boolean_term(std::string_view term) override;
-	void set_key(std::string_view term) override;
-	void add_posting(std::string_view term, termpos position, termcount wdf_inc) override;
+	void add_term(const Field& field, std::string_view term, termcount wdf_inc) override;
+	void add_boolean_term(const Field& field, std::string_view term) override;
+	void set_key(std::string_view key) override;
+	void add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc) override;
 	void add_value(valueno slot, std::string value) override;
 	std::string get_value(valueno slot) const override;
 	void set_data(std::string data) override;
@@ -84,6 +84,9 @@ public:
 	void unserialise_from(std::string_view serialised);
 
 private:
+	// Adds to a term by its whole bytes: the interim flat term (interim_terms.h), or one read from the log.
+	DocTerm& flat(std::string_view term);
+
 	std::map<std::string, DocTerm, std::less<>> terms_;
 	std::map<valueno, std::string> values_;
 	std::string data_;

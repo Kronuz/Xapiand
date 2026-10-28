@@ -21,6 +21,7 @@
  */
 
 #include "engine/strata/document.h"
+#include "engine/strata/interim_terms.h"  // for interim::flat_term
 
 #include <algorithm>               // for std::sort, std::unique
 #include <cstdint>                 // for std::uint8_t, std::uint64_t
@@ -122,37 +123,45 @@ private:
 }  // namespace
 
 
-void
-StrataDocument::add_term(std::string_view term, termcount wdf_inc)
+DocTerm&
+StrataDocument::flat(std::string_view term)
 {
 	auto it = terms_.find(term);
 	if (it == terms_.end()) {
 		it = terms_.emplace(std::string(term), DocTerm{}).first;
 	}
-	it->second.wdf += wdf_inc;
+	return it->second;
 }
 
 
 void
-StrataDocument::add_boolean_term(std::string_view term)
+StrataDocument::add_term(const Field& field, std::string_view term, termcount wdf_inc)
 {
-	add_term(term, 0);
+	flat(interim::flat_term(field.name, term)).wdf += wdf_inc;
 }
 
 
 void
-StrataDocument::set_key(std::string_view term)
+StrataDocument::add_boolean_term(const Field& field, std::string_view term)
 {
-	key_.assign(term);
-	add_term(term, 0);
+	add_term(field, term, 0);
 }
 
 
 void
-StrataDocument::add_posting(std::string_view term, termpos position, termcount wdf_inc)
+StrataDocument::set_key(std::string_view key)
 {
-	add_term(term, wdf_inc);
-	terms_.find(term)->second.positions.push_back(position);
+	key_.assign(key);
+	flat(key);
+}
+
+
+void
+StrataDocument::add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc)
+{
+	auto& entry = flat(interim::flat_term(field.name, term));
+	entry.wdf += wdf_inc;
+	entry.positions.push_back(position);
 }
 
 

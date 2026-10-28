@@ -139,18 +139,18 @@ std::unique_ptr<engine::xapian::Shard> build(const std::string& path, int count,
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= count; ++i) {
 		engine::Document doc;
-		doc.add_boolean_term("Q" + std::to_string(salt) + "_" + std::to_string(i));
-		doc.add_term("t" + std::to_string((i + salt) % 4), 1 + (i * salt) % 5);
+		doc.add_boolean_term(doc.field(""), "Q" + std::to_string(salt) + "_" + std::to_string(i));
+		doc.add_term(doc.field(""), "t" + std::to_string((i + salt) % 4), 1 + (i * salt) % 5);
 		if (i % 3 == 0) {
-			doc.add_term("t" + std::to_string((i + 1) % 4), 2);
+			doc.add_term(doc.field(""), "t" + std::to_string((i + 1) % 4), 2);
 		}
-		doc.add_term("common", 1);
+		doc.add_term(doc.field(""), "common", 1);
 		if (i % 2 == 0) {
-			doc.add_term("even", 2);
+			doc.add_term(doc.field(""), "even", 2);
 		}
-		doc.add_term("Xcolor" + std::to_string((i * salt) % 6), 1 + i % 3);
-		doc.add_term("Xshape" + std::to_string(i % 5), 1);
-		doc.add_term("other" + std::to_string(i % 7), 1);
+		doc.add_term(doc.field(""), "Xcolor" + std::to_string((i * salt) % 6), 1 + i % 3);
+		doc.add_term(doc.field(""), "Xshape" + std::to_string(i % 5), 1);
+		doc.add_term(doc.field(""), "other" + std::to_string(i % 7), 1);
 		const int key = (i * 7 + salt * 3) % 23;
 		doc.add_value(1, (key < 10 ? "k0" : "k") + std::to_string(key));
 		doc.add_value(2, "g" + std::to_string((i + salt) % 3));
@@ -275,7 +275,7 @@ size_t agree(const Fixture& fixture, int n, const Query& query, engine::SearchRe
 }
 
 Query some_query() {
-	return Query::combine(Op::OR, {Query::term("t1"), Query::term("t2", 2), Query::term("even")});
+	return Query::combine(Op::OR, {Query::term("", "t1"), Query::term("", "t2", 2), Query::term("", "even")});
 }
 
 void test_ranking_and_window() {
@@ -300,13 +300,13 @@ void test_ranking_and_window() {
 	// the ids across two shards interleave the way the shards number them
 	engine::SearchRequest request;
 	request.maxitems = 100;
-	auto both = run(fixture, 2, Query::term("Q2_1"), request);
+	auto both = run(fixture, 2, Query::term("", "Q2_1"), request);
 	CHECK_EQ(both.hits.size(), 1u);
 	CHECK_EQ(both.hits[0].did, 2u);
-	auto first = run(fixture, 2, Query::term("Q1_1"), request);
+	auto first = run(fixture, 2, Query::term("", "Q1_1"), request);
 	CHECK_EQ(first.hits.size(), 1u);
 	CHECK_EQ(first.hits[0].did, 1u);
-	CHECK_EQ(run(fixture, 2, Query::term("Q2_2"), request).hits[0].did, 4u);
+	CHECK_EQ(run(fixture, 2, Query::term("", "Q2_2"), request).hits[0].did, 4u);
 }
 
 void test_sort_collapse_cutoff_order() {
@@ -388,10 +388,10 @@ void test_spy() {
 	request.maxitems = 3;
 	request.check_at_least = 1000;
 	request.spy = &spy;
-	run(fixture, 1, Query::term("t1"), request);
+	run(fixture, 1, Query::term("", "t1"), request);
 	const int after_one = spy.seen;
 	CHECK_TRUE(after_one > 0);
-	run(fixture, 1, Query::term("t1"), request);
+	run(fixture, 1, Query::term("", "t1"), request);
 	CHECK_EQ(spy.seen, 2 * after_one);
 }
 
@@ -433,12 +433,12 @@ void test_similar() {
 			request.maxitems = 100;
 			request.check_at_least = 100;
 			request.nearest = similar;
-			CHECK_TRUE(agree(fixture, n, Query::term("t1"), request) > 0);
+			CHECK_TRUE(agree(fixture, n, Query::term("", "t1"), request) > 0);
 			request.nearest.reset();
 			request.fuzzy = similar;
-			CHECK_TRUE(agree(fixture, n, Query::term("t1"), request) > 0);
+			CHECK_TRUE(agree(fixture, n, Query::term("", "t1"), request) > 0);
 			request.nearest = similar;
-			CHECK_TRUE(agree(fixture, n, Query::term("t1"), request) > 0);
+			CHECK_TRUE(agree(fixture, n, Query::term("", "t1"), request) > 0);
 			request.sorter = nullptr;
 			request.first = 1;
 			request.maxitems = 6;
@@ -457,8 +457,8 @@ void test_similar() {
 	a.maxitems = b.maxitems = 100;
 	a.nearest = only_other;
 	b.nearest = only_color;
-	auto ra = run(fixture, 1, Query::term("t1"), a);
-	auto rb = run(fixture, 1, Query::term("t1"), b);
+	auto ra = run(fixture, 1, Query::term("", "t1"), a);
+	auto rb = run(fixture, 1, Query::term("", "t1"), b);
 	bool differ = ra.hits.size() != rb.hits.size();
 	for (size_t i = 0; !differ && i < ra.hits.size(); ++i) {
 		differ = ra.hits[i].did != rb.hits[i].did;
@@ -568,7 +568,7 @@ void test_empty_and_errors() {
 	CHECK_TRUE(refused);
 	// a wildcard that expands past its limit fails the search with Xapian's error
 	bool failed = false;
-	auto wild = engine::prepare(Query::wildcard("t", 1, engine::Expansion::error));
+	auto wild = engine::prepare(Query::wildcard("", "t", 1, engine::Expansion::error));
 	request.query = wild.get();
 	try {
 		engine::sync_wait(engine::search(std::vector<engine::Shard*>{fixture.a.get()}, request));
