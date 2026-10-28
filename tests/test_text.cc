@@ -204,12 +204,6 @@ test_errors_are_engine_errors()
 	} catch (const QueryParserError& exc) {
 		CHECK_TRUE(exc.kind == engine::errc::syntax);
 	}
-
-	// A message with braces reaches the client as written.
-	try {
-		engine::parse_text("a AND {}", config(text::BOOLEAN, Op::AND));
-	} catch (const QueryParserError&) {
-	}
 }
 
 void
@@ -221,6 +215,14 @@ test_unreadable_settings_are_invalid()
 		engine::parse_text("quick", config(base, Op::FILTER));
 	} catch (const InvalidTextConfigError& exc) {
 		CHECK_TRUE(exc.kind == engine::errc::invalid);
+	}
+
+	// The reason carries the language as given, braces and all.
+	try {
+		engine::parse_text("quick", config(base, Op::INVALID, "", "no{}such", Stem::some));
+		CHECK_TRUE(false);
+	} catch (const InvalidTextConfigError& exc) {
+		CHECK_EQ(exc.reason(), "Language code no{}such unknown");
 	}
 }
 
