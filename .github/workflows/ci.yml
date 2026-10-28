@@ -38,7 +38,7 @@ jobs:
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
+            -DBUILD_TESTS=ON -DASSERTS=ON -DXAPIAN_ASSERTS=ON -DLTO=OFF
           ninja -C build
       - name: Unit tests (ctest)
         run: ctest --test-dir build --output-on-failure
