@@ -170,4 +170,5 @@ refuse "group-readable key" "make it mode 0600" --tls-cert "$WORK/ec/server.pem"
 refuse "--tls-cert without --tls-key" "go together" --tls-cert "$WORK/ec/server.pem"
 
 [ "$failures" = 0 ] && { echo "tls_check: OK"; exit 0; }
+echo "--- ec.log:"; cat "$WORK/ec.log"
 echo "tls_check: $failures failed"; exit 1
