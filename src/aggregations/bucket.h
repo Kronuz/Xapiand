@@ -563,8 +563,17 @@ public:
 	void aggregate(long double slot, std::string_view bucket, const engine::DocView& doc, size_t idx = 0) {
 		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
+			BucketNesting nesting;
 			it->second(doc);
 			return;
+		}
+
+		if (auto* budget = current_bucket_budget) {
+			// Only buckets below another bucket are charged: the buckets of the outermost level are bounded by the
+			// distinct values, the nested ones multiply with the values of each document.
+			if (budget->nesting > 0 && ++budget->used > budget->max) {
+				THROW(AggregationError, "Aggregations would make more than {} buckets in one search; nest fewer levels or aggregate fewer values", budget->max);
+			}
 		}
 
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
@@ -572,7 +581,10 @@ public:
 			std::forward_as_tuple(_context, _schema));
 		it = emplaced.first;
 
-		it->second(doc);
+		{
+			BucketNesting nesting;
+			it->second(doc);
+		}
 
 		it->second.slot = slot;
 		it->second.idx = idx;

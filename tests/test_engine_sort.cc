@@ -41,6 +41,7 @@
 #include "engine/error.h"
 #include "engine/xapian/callbacks.h"
 #include "aggregations/aggregations.h"
+#include "aggregations/exception.h"
 #include "database/schema.h"
 #include "engine/xapian/convert.h"
 #include "exception_xapian.h"
@@ -778,6 +779,96 @@ static void test_sort_integer_extremes() {
 	CHECK_GT(pairs, 10000);
 }
 
+namespace {
+
+// One document holding `ages` in slot 1001 and `names` in slot 1002, seen by a spy over `config`; returns the result.
+MsgPack see_document(const MsgPack& config, const std::vector<std::int64_t>& ages, const std::vector<std::string>& names) {
+	Xapian::Document doc;
+	std::vector<std::string> values;
+	for (auto n : ages) {
+		values.push_back(Serialise::integer(n));
+	}
+	doc.add_value(1001, multi(values));
+	doc.add_value(1002, multi(names));
+	auto view = engine::xapian::make_view(doc);
+	AggregationMatchSpy spy(config, make_schema());
+	spy.see(*view, 1.0);
+	return spy.get_aggregation();
+}
+
+// Nests `depth` levels of `_values` over name.
+MsgPack nested_values(int depth) {
+	MsgPack inner = MsgPack({ { "_values", { { "_field", "name" } } } });
+	for (int i = 1; i < depth; ++i) {
+		inner = MsgPack({ { "_values", { { "_field", "name" } } }, { "_aggs", { { "a", inner } } } });
+	}
+	return MsgPack({ { "_aggs", { { "a", inner } } } });
+}
+
+// Counts the buckets of a nested result.
+std::size_t count_buckets(const MsgPack& level) {
+	std::size_t n = 0;
+	for (const auto& bucket : level) {
+		++n;
+		if (bucket.is_map() && bucket.find("a") != bucket.end()) {
+			n += count_buckets(bucket.at("a"));
+		}
+	}
+	return n;
+}
+
+}  // namespace
+
+// A search holds at most AGGS_MAX_BUCKETS buckets below the outermost level: the last one is accepted, the next fails with a
+// client error that names the limit.
+static void test_aggregation_bucket_budget() {
+	const auto histogram = MsgPack({ { "_histogram", { { "_field", "age" }, { "_interval", 1 } } } });
+	const auto config = MsgPack({ { "_aggs", { { "top", { { "_values", { { "_field", "name" } } }, { "_aggs", { { "h", histogram } } } } } } } });
+	std::vector<std::int64_t> ages;
+	for (std::size_t i = 0; i < AGGS_MAX_BUCKETS; ++i) {
+		ages.push_back(static_cast<std::int64_t>(i));
+	}
+	see_document(config, ages, { "x" });  // exactly at the limit
+	ages.push_back(static_cast<std::int64_t>(AGGS_MAX_BUCKETS));
+	bool refused = false;
+	try {
+		see_document(config, ages, { "x" });
+	} catch (const AggregationError& exc) {
+		refused = true;
+		CHECK_TRUE(std::string(exc.what()).find("more than 65535 buckets") != std::string::npos);
+	}
+	CHECK_TRUE(refused);
+
+	// The outermost level is not charged: its buckets are bounded by the distinct values.
+	see_document(MsgPack({ { "_aggs", { { "h", histogram } } } }), ages, { "x" });
+	ages.push_back(static_cast<std::int64_t>(AGGS_MAX_BUCKETS));
+	see_document(MsgPack({ { "_aggs", { { "h", histogram } } } }), ages, { "x" });
+}
+
+// Nesting up to AGGS_MAX_DEPTH levels is accepted, one more is refused when the spy is built.
+static void test_aggregation_depth_cap() {
+	see_document(nested_values(static_cast<int>(AGGS_MAX_DEPTH)), { 1 }, { "x" });
+	bool refused = false;
+	try {
+		see_document(nested_values(static_cast<int>(AGGS_MAX_DEPTH) + 1), { 1 }, { "x" });
+	} catch (const AggregationError& exc) {
+		refused = true;
+		CHECK_TRUE(std::string(exc.what()).find("deeper than the limit of 16 levels") != std::string::npos);
+	}
+	CHECK_TRUE(refused);
+}
+
+// A document with V values is counted once in each bucket it belongs to, at every level, as Elasticsearch
+// does: three levels over three values make 3 + 9 + 27 buckets, each with a count of one.
+static void test_aggregation_multivalued_counts_each_bucket() {
+	const auto result = see_document(nested_values(3), { 1 }, { "a", "b", "c" });
+	const auto& top = result.at("_aggregations").at("a");
+	CHECK_EQ(count_buckets(top), std::size_t(3 + 9 + 27));
+	for (const auto& bucket : top) {
+		CHECK_EQ(bucket.at("_doc_count").as_i64(), std::int64_t(1));
+	}
+}
+
 // Xapian's exceptions are not std::exception: report them as a failure of the test.
 #define GUARDED(fn) \
 	static void fn##_guarded() { \
@@ -807,5 +898,8 @@ GUARDED(test_unserialise_saturates)
 GUARDED(test_aggregation_spy)
 GUARDED(test_aggregation_spy_garbage)
 GUARDED(test_aggregation_spy_corrupt_values)
+GUARDED(test_aggregation_bucket_budget)
+GUARDED(test_aggregation_depth_cap)
+GUARDED(test_aggregation_multivalued_counts_each_bucket)
 
-TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded)
+TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)

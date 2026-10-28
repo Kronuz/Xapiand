@@ -39,6 +39,31 @@
 class Schema;
 
 
+// Limits on one search's aggregations, as Elasticsearch's `search.max_buckets`: nested bucket aggregations over a
+// multi-valued field make a bucket per combination of values, so the live buckets (all levels) are counted while
+// collecting and the nesting is bounded up front.
+constexpr size_t AGGS_MAX_BUCKETS = 65535;
+constexpr size_t AGGS_MAX_DEPTH = 16;
+
+struct BucketBudget {
+	size_t used = 0;
+	size_t max = AGGS_MAX_BUCKETS;
+	size_t nesting = 0;  // bucket aggregations being fed a document, outermost first
+};
+
+// The budget of the spy collecting on this thread, or null (merging serialised results is not charged).
+extern thread_local BucketBudget* current_bucket_budget;
+
+// Marks the buckets created meanwhile as nested.
+struct BucketNesting {
+	BucketBudget* budget = current_bucket_budget;
+	BucketNesting() { if (budget) { ++budget->nesting; } }
+	~BucketNesting() { if (budget) { --budget->nesting; } }
+	BucketNesting(const BucketNesting&) = delete;
+	BucketNesting& operator=(const BucketNesting&) = delete;
+};
+
+
 class BaseAggregation {
 public:
 	virtual ~BaseAggregation() = default;
@@ -119,6 +144,8 @@ class AggregationMatchSpy : public engine::MatchSpy {
 	// Aggregation seen so far.
 	Aggregation _aggregation;
 
+	BucketBudget _budget;
+
 public:
 	// Construct an empty AggregationMatchSpy.
 	AggregationMatchSpy()
@@ -137,7 +164,12 @@ public:
 		  _result(MsgPack::MAP()),
 		  _aggs(std::forward<T>(aggs)),
 		  _schema(schema),
-		  _aggregation(_aggs, _schema) { }
+		  _aggregation(_aggs, _schema) {
+		check_depth(_aggs);
+	}
+
+	// Refuses aggregations nested deeper than AGGS_MAX_DEPTH.
+	static void check_depth(const MsgPack& aggs);
 
 	/*
 	 * Implementation of virtual operator().

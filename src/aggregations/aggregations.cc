@@ -23,6 +23,7 @@
 
 #include "aggregations.h"
 
+#include <algorithm>                       // for max
 #include <cassert>                          // for assert
 #include <stdexcept>                        // for out_of_range
 
@@ -344,7 +345,49 @@ void
 AggregationMatchSpy::see(const engine::DocView& doc, double /*wt*/)
 {
 	++_total;
+	struct Scope {
+		BucketBudget* previous;
+		explicit Scope(BucketBudget* budget) : previous(current_bucket_budget) { current_bucket_budget = budget; }
+		~Scope() { current_bucket_budget = previous; }
+	} scope(&_budget);
 	_aggregation(doc);
+}
+
+
+thread_local BucketBudget* current_bucket_budget = nullptr;
+
+
+static size_t
+aggs_depth(const MsgPack& context)
+{
+	if (!context.is_map()) {
+		return 0;
+	}
+	auto it = context.find(RESERVED_AGGS_AGGREGATIONS);
+	if (it == context.end()) {
+		it = context.find(RESERVED_AGGS_AGGS);
+	}
+	if (it == context.end() || !it.value().is_map()) {
+		return 0;
+	}
+	size_t deepest = 0;
+	const auto& subs = it.value();
+	for (auto sub = subs.begin(); sub != subs.end(); ++sub) {
+		deepest = std::max(deepest, aggs_depth(sub.value()));
+		if (deepest >= AGGS_MAX_DEPTH) {
+			break;
+		}
+	}
+	return deepest + 1;
+}
+
+
+void
+AggregationMatchSpy::check_depth(const MsgPack& aggs)
+{
+	if (aggs_depth(aggs) > AGGS_MAX_DEPTH) {
+		THROW(AggregationError, "Aggregations are nested deeper than the limit of {} levels", AGGS_MAX_DEPTH);
+	}
 }
 
 
