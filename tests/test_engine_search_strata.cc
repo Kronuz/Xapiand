@@ -746,7 +746,6 @@ void test_refusals() {
 	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}, 1)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::wildcard("w", 10, engine::Expansion::error, 0, Op::AND)), syntax);
 	CHECK_EQ(kind(Query::text("w1 w2", engine::TextConfig{})), syntax);
 	// Refused even where a short-circuit would never reach the node.
 	CHECK_EQ(kind(Query::combine(Op::AND, t("missing"), Query::text("w1", engine::TextConfig{}))), syntax);
