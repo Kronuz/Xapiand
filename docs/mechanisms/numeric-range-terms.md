@@ -11,9 +11,19 @@ of `value / a` (negatives floor, the 64-bit result wraps like the index). A rang
 
 With a value slot (every field indexed with values, the default) the exact value source decides, and the terms only
 narrow what it looks at. So the term set may match values outside the range and must match every value inside it: a
-bucket missed is a document silently lost. A terms-only field (no slot) has no exact check; its range answer is the
-union of the buckets, wider than the range by less than one finest bucket per end, and it gets a larger budget
-(`TERMS_ONLY_MAX_TERMS`, 4096).
+bucket missed is a document silently lost. A terms-only field (`_index: "field_terms"`, no slot) has no exact check: its
+closed-range answer is the union of the buckets, wider than the range by less than one finest bucket per end for the numeric kinds (datetime terms can be wider), and
+it gets a larger budget (`TERMS_ONLY_MAX_TERMS`, 4096).
+
+## Terms-only fields
+
+A range that the terms cannot cover is an error on a terms-only field, never an empty or an over-covering answer: an
+open-ended range (`_from` or `_to` alone), a range wider than the budget (4096 coarsest buckets), and a datetime range whose
+calendar terms come out empty. The query throws `TermsOnlyRangeError` (a `QueryParserError`, HTTP 400); `QueryDSL` adds the
+field name: "Cannot answer a range on field ...: the range is open-ended ... / too wide ...; index its values (not only its
+terms) to make ranges exact". An inverted range (`_from` above `_to`) is empty, not an error. A field with no accuracies at all
+matches every document, including those without the field: a superset, as on a value-slot field. With a value slot none of this applies: an
+empty cover means "no prefilter" and the value source decides.
 
 ## Decomposition
 
@@ -38,17 +48,18 @@ fit the budget.
 ## Open ends
 
 A missing bound is the type's limit (not a multiple of the coarsest accuracy), so `{_to: 5}` is `[min, 5]`, which has no
-term cover and runs on the value source. A date range with an open end likewise has no terms.
+term cover and runs on the value source (an error on a terms-only field). A date range with an open end likewise has no terms.
 
 ## Dates
 
 Date and datetime ranges use calendar buckets (`GenerateTerms::datetime`): one "needed" accuracy from the largest differing
 calendar unit, ANDed with the next coarser accuracy, a handful of terms either way. Their open ends were bounded by
-`TIMESTAMP_MIN`/`TIMESTAMP_MAX` (1970 and 2038), which dropped dates outside them; an open end now has no term filter.
+`TIMESTAMP_MIN`/`TIMESTAMP_MAX` (1970 and 2038), which dropped dates outside them; an open end now has no term filter (an error on a terms-only field).
 
 ## Tests
 
 `tests/test_range_terms.cc` checks the decomposition against brute force (every range on a small domain for nested and
 non-nested accuracies and tight budgets; random and boundary ranges over the whole 64-bit domain, signed and unsigned).
-`tests/test_generate_terms.cc` runs the real query through the engine over indexed documents, numeric and datetime.
+`tests/test_generate_terms.cc` runs the real query through the engine over indexed documents, numeric and datetime, and checks
+the terms-only errors for every kind.
 `harness/numeric_range_check.py` runs closed and half-open `_range` queries against a live server.

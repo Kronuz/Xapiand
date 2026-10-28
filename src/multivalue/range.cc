@@ -45,6 +45,23 @@
 // Terms-only fields (no value slot) have no exact check behind the terms, so they get a larger budget.
 constexpr size_t TERMS_ONLY_MAX_TERMS = 4096;
 
+// A terms-only field has no value to check a range against, so a range its terms cannot cover exactly is
+// an error: no terms means the range is too wide for the budget, and an open end has no finite cover.
+static void
+require_terms_only_cover(const required_spc_t& field_spc, bool open_ended, const engine::Query& query)
+{
+	if (field_spc.slot != engine::BAD_VALUENO) {
+		return;
+	}
+	if (open_ended) {
+		THROW(TermsOnlyRangeError, "the range is open-ended, and a terms-only field cannot answer an open-ended range exactly");
+	}
+	if (query.empty()) {
+		THROW(TermsOnlyRangeError, "the range is too wide for the terms of a terms-only field, which cannot answer it exactly");
+	}
+}
+
+
 // The truncated integer a double is indexed as (static_cast truncates), saturating at T's limits.
 template <typename T>
 static T
@@ -116,6 +133,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 	}
 
 	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -195,6 +213,7 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 	}
 
 	auto query = start && end ? GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix) : engine::Query();
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -243,6 +262,7 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 	}
 
 	auto query = GenerateTerms::numeric(truncate_saturating<int64_t>(time_s), truncate_saturating<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -290,6 +310,7 @@ getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const M
 	}
 
 	auto query = GenerateTerms::numeric(truncate_saturating<int64_t>(timedelta_s), truncate_saturating<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
 		if (!start) {
@@ -369,6 +390,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			default:
 				return engine::Query();
 		}
+	} catch (const TermsOnlyRangeError&) {
+		throw;
 	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: {} - {} like {} ({})", start ? start->to_string() : "", end ? end->to_string() : "",
 			enum_name(field_spc.get_type()), exc.what());

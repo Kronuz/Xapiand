@@ -45,6 +45,9 @@
 #include "engine/xapian/shard.h"
 #include "engine/xapian/xapian.h"
 #include "multivalue/generate_terms.h"
+#include "multivalue/range.h"
+#include "exception_xapian.h"
+#include "msgpack.h"
 #include "utype.hh"
 
 static void test_numeric_terms() {
@@ -234,4 +237,137 @@ static void test_datetime_range_finds_every_value_in_range() {
 	CHECK_EQ(missing, size_t(0));
 }
 
-TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix, test_numeric_range_finds_every_value_in_range, test_datetime_range_finds_every_value_in_range)
+// Ranges on terms-only fields (no value slot): there is no exact check behind the terms, so a range the
+// terms cannot cover exactly (an open end, or wider than the budget) must be an error, never an empty answer.
+static MsgPack range_obj(const MsgPack* from, const MsgPack* to) {
+	MsgPack obj = MsgPack::MAP();
+	if (from) {
+		obj["_from"] = *from;
+	}
+	if (to) {
+		obj["_to"] = *to;
+	}
+	return obj;
+}
+
+static std::set<engine::docid> search_hits(engine::Shard& shard, const engine::Query& query) {
+	std::set<engine::docid> found;
+	auto prepared = engine::prepare(query);
+	engine::SearchRequest request;
+	request.query = prepared.get();
+	request.maxitems = 1000;
+	request.check_at_least = 1000;
+	request.origin = "test";
+	std::vector<engine::Shard*> shards{&shard};
+	for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
+		found.insert(hit.did);
+	}
+	return found;
+}
+
+static required_spc_t make_spc(engine::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy) {
+	std::vector<std::string> prefix;
+	for (size_t i = 0; i < accuracy.size(); ++i) {
+		prefix.push_back("T" + std::to_string(i));
+	}
+	return required_spc_t(slot, type, accuracy, prefix);
+}
+
+static void test_terms_only_numeric_range() {
+	const std::vector<uint64_t> accuracy = { 100, 1000, 10000 };
+	const std::vector<int64_t> values = { -5000000, -1, 0, 99, 100, 5000, 123456, 4000000, 40000000 };
+	const auto path = (std::filesystem::current_path() / "test_generate_terms_shard_terms_only").string();
+	std::filesystem::remove_all(path);
+	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto& shard = *opened.shard;
+	auto spc = make_spc(engine::BAD_VALUENO, FieldType::integer, accuracy);
+	for (auto v : values) {
+		engine::Document doc;
+		GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, v);
+		engine::sync_wait(shard.add(doc, {}));
+	}
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+
+	// Closed ranges within the budget find every value inside.
+	size_t missing = 0;
+	for (const auto& [lo, hi] : std::vector<std::pair<int64_t, int64_t>>{ {0, 0}, {-1, 100}, {99, 5000}, {1, 123456}, {-6000000, 30000000} }) {
+		MsgPack from(lo), to(hi);
+		auto found = search_hits(shard, MultipleValueRange::getQuery(spc, range_obj(&from, &to)));
+		for (size_t i = 0; i < values.size(); ++i) {
+			if (values[i] >= lo && values[i] <= hi && !found.count(static_cast<engine::docid>(i + 1))) {
+				++missing;
+			}
+		}
+	}
+	CHECK_EQ(missing, size_t(0));
+
+	// An inverted range is empty, not an error.
+	MsgPack five(5), one(1);
+	CHECK(MultipleValueRange::getQuery(spc, range_obj(&five, &one)).empty());
+
+	// Open ends and ranges of more than 4096 coarsest buckets are errors.
+	MsgPack zero(0), wide(1000000000LL);
+	CHECK_THROW(MultipleValueRange::getQuery(spc, range_obj(&five, nullptr)), TermsOnlyRangeError);
+	CHECK_THROW(MultipleValueRange::getQuery(spc, range_obj(nullptr, &five)), TermsOnlyRangeError);
+	CHECK_THROW(MultipleValueRange::getQuery(spc, range_obj(&zero, &wide)), TermsOnlyRangeError);
+	std::string what;
+	try {
+		MultipleValueRange::getQuery(spc, range_obj(&five, nullptr));
+	} catch (const QueryParserError& exc) {
+		what = exc.what();
+	}
+	CHECK(what.find("open-ended") != std::string::npos);
+	what.clear();
+	try {
+		MultipleValueRange::getQuery(spc, range_obj(&zero, &wide));
+	} catch (const QueryParserError& exc) {
+		what = exc.what();
+	}
+	CHECK(what.find("too wide") != std::string::npos);
+
+	// The same for the other numeric kinds.
+	for (auto type : { FieldType::positive, FieldType::floating }) {
+		auto s = make_spc(engine::BAD_VALUENO, type, accuracy);
+		CHECK_THROW(MultipleValueRange::getQuery(s, range_obj(&five, nullptr)), TermsOnlyRangeError);
+		CHECK_THROW(MultipleValueRange::getQuery(s, range_obj(nullptr, &five)), TermsOnlyRangeError);
+		CHECK_THROW(MultipleValueRange::getQuery(s, range_obj(&zero, &wide)), TermsOnlyRangeError);
+		CHECK_FALSE(MultipleValueRange::getQuery(s, range_obj(&zero, &five)).empty());
+	}
+	MsgPack day(86399), tiny(1);
+	for (auto type : { FieldType::time, FieldType::timedelta }) {
+		auto s = make_spc(engine::BAD_VALUENO, type, { 1, 10 });
+		CHECK_THROW(MultipleValueRange::getQuery(s, range_obj(&tiny, nullptr)), TermsOnlyRangeError);
+		CHECK_THROW(MultipleValueRange::getQuery(s, range_obj(nullptr, &tiny)), TermsOnlyRangeError);
+		CHECK_THROW(MultipleValueRange::getQuery(s, range_obj(&zero, &day)), TermsOnlyRangeError);
+		CHECK_FALSE(MultipleValueRange::getQuery(s, range_obj(&zero, &tiny)).empty());
+	}
+
+	// With a value slot the source decides: open ends and wide ranges stay queries.
+	auto with_slot = make_spc(7, FieldType::integer, accuracy);
+	CHECK_FALSE(MultipleValueRange::getQuery(with_slot, range_obj(&five, nullptr)).empty());
+	CHECK_FALSE(MultipleValueRange::getQuery(with_slot, range_obj(nullptr, &five)).empty());
+	CHECK_FALSE(MultipleValueRange::getQuery(with_slot, range_obj(&zero, &wide)).empty());
+	std::filesystem::remove_all(path);
+}
+
+static void test_terms_only_datetime_range() {
+	const std::vector<uint64_t> accuracy = { toUType(UnitTime::day), toUType(UnitTime::month), toUType(UnitTime::year) };
+	MsgPack a("2020-03-01T00:00:00"), b("2020-03-09T12:00:00"), early("1000-01-01T00:00:00"), late("5000-01-01T00:00:00");
+	for (auto type : { FieldType::datetime, FieldType::date }) {
+		auto spc = make_spc(engine::BAD_VALUENO, type, accuracy);
+		CHECK_THROW(MultipleValueRange::getQuery(spc, range_obj(&a, nullptr)), TermsOnlyRangeError);
+		CHECK_THROW(MultipleValueRange::getQuery(spc, range_obj(nullptr, &b)), TermsOnlyRangeError);
+		CHECK_FALSE(MultipleValueRange::getQuery(spc, range_obj(&a, &b)).empty());
+
+		// A span with no usable accuracy among the terms has no cover.
+		auto only_year = make_spc(engine::BAD_VALUENO, type, { toUType(UnitTime::year) });
+		CHECK_THROW(MultipleValueRange::getQuery(only_year, range_obj(&early, &late)), TermsOnlyRangeError);
+
+		// With a value slot the same ranges are queries.
+		auto with_slot = make_spc(9, type, { toUType(UnitTime::year) });
+		CHECK_FALSE(MultipleValueRange::getQuery(with_slot, range_obj(&a, nullptr)).empty());
+		CHECK_FALSE(MultipleValueRange::getQuery(with_slot, range_obj(&early, &late)).empty());
+	}
+}
+
+TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix, test_numeric_range_finds_every_value_in_range, test_datetime_range_finds_every_value_in_range, test_terms_only_numeric_range, test_terms_only_datetime_range)

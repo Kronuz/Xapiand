@@ -37,9 +37,39 @@ Built and proven locally; ready for code review. Index-time terms are unchanged 
      master returned fewer documents (it lost the buckets); open ends now run on the value source alone.
 6. No fuzz target: `decompose` takes numbers, not bytes; the property test is its hardening.
 
+## Fix round (code review `docs/reviews/numeric-range-code.md`)
+
+1. CR1 (blocker): a terms-only field (no value slot) throws `TermsOnlyRangeError` (400, field named) for an open-ended range, a
+   range wider than 4096 coarsest buckets, and a datetime range with an empty calendar cover, instead of an empty query (0 hits,
+   200). `require_terms_only_cover` in `src/multivalue/range.cc`; `QueryDSL::get_in_query` adds the field name. Engine-level
+   tests in `tests/test_generate_terms.cc` (CR4): terms-only and open ends for integer, positive, floating, time, timedelta,
+   datetime and date. Stated in `docs/mechanisms/numeric-range-terms.md`; changelog line.
+2. CR2: left as is (see Open).
+3. CR3 and CR5: recorded under Open, out of scope.
+
 ## Next
 
-1. Code review. Lead: CI.
+1. Re-check of CR1. Lead: CI.
+
+## Open
+
+Not this branch's scope; each needs its own owner.
+
+1. CR2 (architect follow-up): open-ended ranges run on the value source alone; a prefilter needs the shard's value bounds at
+   query-open time (`get_value_lower_bound(slot)` / `get_value_upper_bound(slot)`, per shard in a cluster). Reviewer's screen
+   (200k docs, `n` uniform in [0, 1e9), medians of 7): `n >= 999000000` (187 hits) 9.1 ms open vs 2.0 ms bounded; `n <= 1000000`
+   7.9 vs 1.9 ms; `n >= 990000000` 9.7 vs 3.9 ms; `n >= 900000000` 13.6 vs 8.4 ms; `n >= 500000000` 29.9 vs 31.2 ms. About 35 ns
+   per document, on selective open-ended queries only (master returned 0 documents for them).
+2. CR3: the value-slot compare is inexact for some integers, identical on master and branch: a positive field holding
+   2147483647..2147483651, `_from: 2147483649` returns [2147483649, 8796093022209] (misses 2147483650 and 2147483651), `_to:
+   2147483649` also returns 2147483650 and 2147483651, `[2147483649, 2147483650]` returns nothing (probe `one2.py`). Seen from
+   2^31 up to at least 2^43 and for negatives near -2^43 to -2^62.
+3. CR3: two custom-accuracy integer fields in one schema (`c` {7,100,3000}, `c2` {3,5,11,1000}, same values): `c` with
+   `_to: 70` misses the ten most negative documents (`live_probe.py`, `ONLY=c,c2`); not with `c` alone, or with `n` or `tc`.
+   Open-ended means no terms, so the source or slot handling.
+4. CR5: `static_cast<int64_t>(double)` at |f| >= 2^63 and NaN is undefined on the index side (x86 gives INT64_MIN, arm64
+   saturates); `truncate_saturating` assumes the saturating result. Use a saturating cast on the index side.
+5. CR5: `RESTORE` drops the first document of an ndjson body (a 200k-document restore holds 199999; `miss.py`).
 
 ## Findings outside scope
 

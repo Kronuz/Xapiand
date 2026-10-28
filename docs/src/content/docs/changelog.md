@@ -39,7 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of a wide range such as `[1, 3000000000]`), so documents in range were missing from the
   results. Open-ended ranges (only `_from` or only `_to`) no longer drop values beyond
   2x the coarsest accuracy, and an open-ended date range no longer drops dates before 1970 or
-  after 2038. Index terms are unchanged: no reindex.
+  after 2038. Index terms are unchanged: no reindex. On a field indexed with terms only
+  (`_index: "field_terms"`), a range that terms cannot answer exactly (open-ended, or wider
+  than 4096 coarsest buckets) now fails with a 400 that says so, instead of returning no
+  documents; index the field's values to make such ranges exact.
 - **A retried write no longer fails with a spurious version conflict.** After a failed write,
   the retry compared its own freshly assigned version against the stored one and returned 409.
 - **`FLUSH` no longer stalls other connections.** It commits every open index, and it now does
