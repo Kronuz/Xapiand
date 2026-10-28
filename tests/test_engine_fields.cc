@@ -27,13 +27,19 @@
 
 #include "test_harness.h"
 
+#include <csignal>
+#include <functional>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "analysis.hh"
 #include "config.h"
+#include "engine/document.h"
 #include "engine/query.h"
 #include "engine/strata/document.h"
 #include "engine/xapian/convert.h"
@@ -312,4 +318,41 @@ static void test_strata_interim() {
 	CHECK_EQ(back.serialise(), doc.serialise());
 }
 
-TEST_MAIN(test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_strata_interim)
+// A field ref used on a document that did not declare it trips the debug assert, for each add_*.
+#ifndef NDEBUG
+bool aborts(const std::function<void()>& call) {
+	int fds[2];
+	if (pipe(fds) != 0) { return false; }
+	const pid_t pid = fork();
+	if (pid == 0) {
+		dup2(fds[1], STDERR_FILENO);
+		close(fds[0]);
+		call();
+		_exit(0);
+	}
+	close(fds[1]);
+	std::string err;
+	char buffer[512];
+	for (ssize_t n; (n = read(fds[0], buffer, sizeof buffer)) > 0;) { err.append(buffer, static_cast<std::size_t>(n)); }
+	close(fds[0]);
+	int status = 0;
+	waitpid(pid, &status, 0);
+	// The assert's own message, so a sanitizer's abort on the stray access does not pass for it.
+	return WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT && err.find("field.id < fields_.size()") != std::string::npos;
+}
+
+void test_foreign_ref_asserts() {
+	engine::Document big, empty;
+	for (int i = 0; i < 10; ++i) { big.field("f" + std::to_string(i)); }
+	const auto foreign = big.field("f9");
+	CHECK_TRUE(aborts([&] { empty.add_term(foreign, "x"); }));
+	CHECK_TRUE(aborts([&] { empty.add_boolean_term(foreign, "x"); }));
+	CHECK_TRUE(aborts([&] { empty.add_posting(foreign, "x", 1); }));
+	CHECK_TRUE(aborts([&] { empty.add_term(engine::FieldRef{}, "x"); }));   // a default ref on an empty document
+	CHECK_FALSE(aborts([&] { big.add_term(foreign, "x"); }));               // the control: the ref's own document
+}
+#else
+void test_foreign_ref_asserts() { }
+#endif
+
+TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_strata_interim)

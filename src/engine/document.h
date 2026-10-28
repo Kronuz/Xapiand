@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cassert>                // for assert
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint32_t, std::uint8_t
 #include <deque>                   // for std::deque
@@ -102,12 +103,12 @@ public:
 	// Adds wdf_inc to the within-document frequency of the term under the field, creating the
 	// term if needed. The term may be empty: it marks that the document has the field.
 	void add_term(FieldRef field, std::string_view term, termcount wdf_inc = 1) {
-		native_->add_term(fields_[field.id], term, wdf_inc);
+		native_->add_term(at(field), term, wdf_inc);
 	}
 
 	// Makes sure the term exists under the field, without changing its frequency.
 	void add_boolean_term(FieldRef field, std::string_view term) {
-		native_->add_boolean_term(fields_[field.id], term);
+		native_->add_boolean_term(at(field), term);
 	}
 
 	// Makes the key the document's: the one string that names the document for replace-by-key,
@@ -119,7 +120,7 @@ public:
 
 	// Adds a position to the term under the field, and wdf_inc to its frequency.
 	void add_posting(FieldRef field, std::string_view term, termpos position, termcount wdf_inc = 1) {
-		native_->add_posting(fields_[field.id], term, position, wdf_inc);
+		native_->add_posting(at(field), term, position, wdf_inc);
 	}
 
 	// Sets the value of a slot; an empty value removes it.
@@ -152,6 +153,13 @@ public:
 	static Document unserialise(Kind kind, std::string_view serialised);
 
 private:
+	// The field a ref names; a ref from another document, or a default one on an empty document, is
+	// out of contract and trips the assert in a debug build.
+	const Field& at(FieldRef field) const {
+		assert(field.id < fields_.size());
+		return fields_[field.id];
+	}
+
 	std::unique_ptr<Native> native_;
 	std::deque<Field> fields_;                                   // by FieldRef::id; a deque keeps the views below valid
 	std::unordered_map<std::string_view, std::uint32_t> field_ids_;   // name (a view of fields_) to id

@@ -45,6 +45,7 @@
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/error.h"          // for Error, errc
+#include "engine/strata/interim_terms.h"  // for interim::flat_term
 #include "engine/strata/keys.h"    // for keys::key_prefix
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
@@ -123,6 +124,13 @@ private:
 };
 
 
+// An empty field and term match every document; a field with an empty term is the field's marker.
+bool
+is_match_all(const QueryNode& node)
+{
+	return node.field.empty() && node.str.empty();
+}
+
 // Refuses, before any segment is read, what the engine does not search yet, so the answer does not
 // depend on which segments a short-circuited operator reaches.
 void
@@ -150,7 +158,7 @@ validate(const Query& query, int depth)
 				case Op::NEAR: {
 					for (const auto& sub : node->subqueries) {
 						const auto* leaf = sub.node();
-						if (leaf == nullptr || leaf->kind != QueryKind::term || leaf->str.empty()) {
+						if (leaf == nullptr || leaf->kind != QueryKind::term || is_match_all(*leaf)) {
 							unsupported(std::string(to_string(node->op)) + " of anything but terms");
 						}
 					}
@@ -291,12 +299,13 @@ build_positional(const QueryNode& node, const Builder& b)
 	weights.reserve(n);
 	for (const auto& sub : node.subqueries) {
 		const auto& leaf = *sub.node();
-		const auto* info = b.terms.info(b.seg, leaf.str);
+		const auto flat = interim::flat_term(leaf.field, leaf.str);
+		const auto* info = b.terms.info(b.seg, flat);
 		if (info == nullptr) {
 			return nullptr;
 		}
 		infos.push_back(*info);
-		weights.push_back(b.weight_of(leaf.str, leaf.wqf));
+		weights.push_back(b.weight_of(flat, leaf.wqf));
 	}
 	const std::uint32_t window = node.op == Op::NEAR ? (node.parameter != 0 ? node.parameter : static_cast<std::uint32_t>(n)) : 0;
 	return std::make_unique<p::phrase_scorer>(b.reader(), infos, std::move(weights), window);
@@ -314,14 +323,15 @@ build(const Query& query, const Builder& b, int depth)
 	}
 	switch (node->kind) {
 		case QueryKind::term: {
-			if (node->str.empty()) {
+			if (is_match_all(*node)) {
 				return std::make_unique<AllScorer>(b.seg.core().doc_count());
 			}
-			const auto* info = b.terms.info(b.seg, node->str);
+			const auto flat = interim::flat_term(node->field, node->str);
+			const auto* info = b.terms.info(b.seg, flat);
 			if (info == nullptr) {
 				return nullptr;
 			}
-			return std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(node->str, node->wqf));
+			return std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(flat, node->wqf));
 		}
 		case QueryKind::combine: {
 			if (node->op == Op::PHRASE || node->op == Op::NEAR) {
