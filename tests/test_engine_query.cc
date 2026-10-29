@@ -20,9 +20,8 @@
  * THE SOFTWARE.
  */
 
-// Unit tests for the engine seam's Query and callbacks: a query built through the seam must
-// translate to the Xapian query the same Xapian calls build, and the host callbacks must behave
-// the same behind their Xapian adapters.
+// Unit tests for the engine seam's Query and callbacks: the shape a query keeps, what it matches
+// on a strata shard, and how the host callbacks (sources, key makers, spies) behave in a search.
 
 #include "test_harness.h"
 
@@ -38,17 +37,13 @@
 #include "engine/error.h"
 #include "engine/query.h"
 #include "engine/text.h"
+#include "engine_support.h"
 #include "exception_engine.h"
-#include "engine/xapian/callbacks.h"
-#include "engine/xapian/query.h"
 #include "length.h"
 #include "multivalue/geospatialrange.h"
 #include "multivalue/range.h"
 #include "serialise.h"
 #include "serialise_list.h"
-#include "engine/xapian/snowball_stem.h"
-#include "engine/xapian/stopper.h"
-#include "engine/xapian/xapian.h"
 
 namespace {
 
@@ -57,7 +52,6 @@ const int data_path = (::setenv("XAPIAND_DATA_PATH", XAPIAND_SOURCE_DIR, 1), 0);
 
 using engine::Op;
 using engine::Query;
-using engine::xapian::to_xapian;
 
 // A small deterministic generator, so a failure reproduces.
 struct Lcg {
@@ -68,161 +62,147 @@ struct Lcg {
 	}
 };
 
-// A seam query and the Xapian query built by the Xapian calls it stands for.
-struct Pair {
-	Query seam;
-	Xapian::Query xapian;
-};
-
 constexpr Op binary_ops[] = { Op::AND, Op::OR, Op::AND_NOT, Op::XOR, Op::AND_MAYBE, Op::FILTER };
-constexpr Op list_ops[] = { Op::AND, Op::OR, Op::MAX, Op::XOR };
 
-Xapian::Query::op xop(Op op) {
-	return to_xapian(op);
+// The ids a query finds in a shard (at most 20), in rank order.
+std::vector<engine::docid> ranked(engine::Shard& shard, const Query& query, const engine::KeyMaker* sorter = nullptr, engine::MatchSpy* spy = nullptr) {
+	testsupport::Find find;
+	find.maxitems = 20;
+	find.check_at_least = 20;
+	find.sorter = sorter;
+	find.spy = spy;
+	return testsupport::hit_ids(shard, query, find);
 }
 
-Pair random_pair(Lcg& rng, int depth) {
-	switch (rng.next(depth > 0 ? 9 : 3)) {
-		case 0: {
-			auto term = "t" + std::to_string(rng.next(6));
-			auto wqf = rng.next(3) + 1;
-			auto pos = rng.next(3);
-			return { Query::term("", term, wqf, pos), Xapian::Query(term, wqf, pos) };
-		}
-		case 1:
-			return { Query(), Xapian::Query() };
-		case 2:
-			return { Query::match_all(), Xapian::Query(std::string()) };
-		case 3: {
-			auto op = binary_ops[rng.next(std::size(binary_ops))];
-			auto a = random_pair(rng, depth - 1);
-			auto b = random_pair(rng, depth - 1);
-			return { Query::combine(op, a.seam, b.seam), Xapian::Query(xop(op), a.xapian, b.xapian) };
-		}
-		case 4: {
-			auto op = list_ops[rng.next(std::size(list_ops))];
-			std::vector<Query> seam;
-			std::vector<Xapian::Query> xapian;
-			for (auto n = rng.next(4); n > 0; --n) {
-				auto p = random_pair(rng, depth - 1);
-				seam.push_back(p.seam);
-				xapian.push_back(p.xapian);
-			}
-			return { Query::combine(op, seam), Xapian::Query(xop(op), xapian.begin(), xapian.end()) };
-		}
-		case 5: {
-			auto a = random_pair(rng, depth - 1);
-			auto factor = 0.5 + rng.next(4);
-			return { Query::scale(a.seam, factor), Xapian::Query(Xapian::Query::OP_SCALE_WEIGHT, a.xapian, factor) };
-		}
-		case 6: {
-			// A MAX takes any queries; a SYNONYM takes words.
-			const bool synonym = rng.next(2) != 0;
-			std::vector<Query> seam;
-			std::vector<Xapian::Query> xapian;
-			for (auto n = rng.next(5); n > 0; --n) {
-				auto term = "t" + std::to_string(rng.next(6));
-				auto p = synonym ? Pair{ Query::term("", term), Xapian::Query(term) } : random_pair(rng, 0);
-				seam.push_back(p.seam);
-				xapian.push_back(p.xapian);
-			}
-			const auto op = synonym ? Op::SYNONYM : Op::MAX;
-			return { Query::combine(op, seam), Xapian::Query(xop(op), xapian.begin(), xapian.end()) };
-		}
-		case 7: {
-			// append skips an accumulated query that matches nothing, once Xapian has simplified it.
-			auto a = random_pair(rng, depth - 1);
-			auto b = random_pair(rng, depth - 1);
-			auto op = binary_ops[rng.next(std::size(binary_ops))];
-			return { Query::append(op, a.seam, b.seam), a.xapian.empty() ? b.xapian : Xapian::Query(xop(op), a.xapian, b.xapian) };
-		}
-		default: {
-			auto op = rng.next(2) != 0 ? Op::NEAR : Op::PHRASE;
-			std::vector<Query> seam;
-			std::vector<Xapian::Query> xapian;
-			for (auto n = rng.next(3) + 2; n > 0; --n) {
-				auto term = "w" + std::to_string(rng.next(5));
-				seam.push_back(Query::term("", term));
-				xapian.push_back(Xapian::Query(term));
-			}
-			auto window = static_cast<engine::termcount>(seam.size() + rng.next(4));
-			return { Query::combine(op, seam, window), Xapian::Query(xop(op), xapian.begin(), xapian.end(), window) };
-		}
+std::set<engine::docid> run(engine::Shard& shard, const Query& query, const engine::KeyMaker* sorter = nullptr, engine::MatchSpy* spy = nullptr) {
+	const auto dids = ranked(shard, query, sorter, spy);
+	return std::set<engine::docid>(dids.begin(), dids.end());
+}
+
+// One document per term, in the field "f".
+std::unique_ptr<engine::Shard> terms_db(const char* name, std::initializer_list<const char*> terms) {
+	auto shard = testsupport::scratch_shard(name);
+	int n = 0;
+	for (auto term : terms) {
+		engine::Document doc;
+		doc.add_term(doc.field("f"), term);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(++n));
 	}
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	return shard;
 }
 
 }  // namespace
 
 static void test_leaves_and_ops() {
-	CHECK_EQ(to_xapian(Query::term("", "a", 2, 3)).get_description(), Xapian::Query("a", 2, 3).get_description());
-	CHECK_EQ(to_xapian(Query::match_all()).get_description(), Xapian::Query(std::string()).get_description());
-	CHECK_EQ(to_xapian(Query()).get_description(), Xapian::Query().get_description());
 	CHECK_TRUE(Query().empty());
 	CHECK_FALSE(Query::match_all().empty());
 	CHECK_FALSE(Query::term("", "a").empty());
+	const auto term = Query::term("", "a", 2, 3);
+	CHECK_TRUE(term.node() != nullptr && term.node()->kind == engine::QueryKind::term);
+	CHECK_EQ(term.node()->str, "a");
+	CHECK_EQ(term.node()->wqf, 2u);
+	CHECK_EQ(term.node()->pos, 3u);
 
-	// The binary and list forms translate to the same Xapian query (test_binary_equals_list).
+	// The binary and list forms of an operator keep the operands in order.
 	auto a = Query::term("", "a"), b = Query::term("", "b"), c = Query::term("", "c");
-	CHECK_EQ(to_xapian(Query::combine(Op::AND, a, b)).get_description(),
-		Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("a"), Xapian::Query("b")).get_description());
-	const std::vector<Xapian::Query> xs = { Xapian::Query("a"), Xapian::Query("b"), Xapian::Query("c") };
-	CHECK_EQ(to_xapian(Query::combine(Op::OR, { a, b, c })).get_description(),
-		Xapian::Query(Xapian::Query::OP_OR, xs.begin(), xs.end()).get_description());
-	CHECK_EQ(to_xapian(Query::combine(Op::PHRASE, { a, b, c }, 5)).get_description(),
-		Xapian::Query(Xapian::Query::OP_PHRASE, xs.begin(), xs.end(), 5).get_description());
-	CHECK_EQ(to_xapian(Query::combine(Op::NEAR, { a, b }, 3)).get_description(),
-		Xapian::Query(Xapian::Query::OP_NEAR, xs.begin(), xs.begin() + 2, 3).get_description());
-	CHECK_EQ(to_xapian(Query::scale(a, 2.5)).get_description(),
-		Xapian::Query(Xapian::Query::OP_SCALE_WEIGHT, Xapian::Query("a"), 2.5).get_description());
+	const auto both = Query::combine(Op::AND, a, b);
+	CHECK_TRUE(both.node()->kind == engine::QueryKind::combine && both.node()->op == Op::AND);
+	CHECK_EQ(both.node()->subqueries.size(), 2u);
+	const auto list = Query::combine(Op::PHRASE, { a, b, c }, 5);
+	CHECK_TRUE(list.node()->op == Op::PHRASE);
+	CHECK_EQ(list.node()->subqueries.size(), 3u);
+	CHECK_EQ(list.node()->parameter, 5u);
+	CHECK_EQ(list.node()->subqueries[2].node()->str, "c");
+	const auto scaled = Query::scale(a, 2.5);
+	CHECK_TRUE(scaled.node()->kind == engine::QueryKind::scale);
+	CHECK_TRUE(scaled.node()->factor == 2.5);
+}
+
+// Whether a query matches nothing by its structure, operator by operator, for operands that do and do not.
+static void test_emptiness() {
+	const auto term = Query::term("", "t");
+	const auto none = Query();
+	// Binary operators: matches nothing when ...
+	struct Row { Op op; bool left_empty_is_nothing, right_empty_is_nothing, both_empty_is_nothing; };
+	const Row rows[] = {
+		{ Op::AND, true, true, true },
+		{ Op::OR, false, false, true },
+		{ Op::AND_NOT, true, false, true },
+		{ Op::XOR, false, false, true },
+		{ Op::AND_MAYBE, true, false, true },
+		{ Op::FILTER, true, true, true },
+	};
+	for (const auto& row : rows) {
+		CHECK_FALSE(Query::combine(row.op, term, term).empty());
+		CHECK_EQ(Query::combine(row.op, none, term).empty(), row.left_empty_is_nothing);
+		CHECK_EQ(Query::combine(row.op, term, none).empty(), row.right_empty_is_nothing);
+		CHECK_EQ(Query::combine(row.op, none, none).empty(), row.both_empty_is_nothing);
+		// The list form agrees.
+		CHECK_EQ(Query::combine(row.op, std::vector<Query>{ none, term }).empty(), row.left_empty_is_nothing);
+		CHECK_EQ(Query::combine(row.op, std::vector<Query>{ term, none }).empty(), row.right_empty_is_nothing);
+	}
+	// A list operator over nothing, and a scale or a synonym of it.
+	CHECK_TRUE(Query::combine(Op::OR, std::vector<Query>{}).empty());
+	CHECK_TRUE(Query::combine(Op::MAX, std::vector<Query>{ none, none }).empty());
+	CHECK_FALSE(Query::combine(Op::MAX, std::vector<Query>{ none, term }).empty());
+	CHECK_TRUE(Query::scale(none, 2.0).empty());
+	CHECK_FALSE(Query::scale(term, 2.0).empty());
+	CHECK_FALSE(Query::combine(Op::SYNONYM, std::vector<Query>{ term, Query::term("", "u") }).empty());
+	// A phrase or a near of words is a query; with a missing operand it matches nothing.
+	CHECK_FALSE(Query::combine(Op::PHRASE, std::vector<Query>{ term, Query::term("", "u") }, 2).empty());
+	CHECK_TRUE(Query::combine(Op::NEAR, std::vector<Query>{ term, none }, 2).empty());
+	// An append of nothing onto nothing is nothing; otherwise the append has something to find.
+	CHECK_TRUE(Query::append(Op::AND, none, none).empty());
+	CHECK_FALSE(Query::append(Op::AND, none, term).empty());
+	CHECK_FALSE(Query::append(Op::AND, term, term).empty());
+	// Nesting keeps the rule: an AND with a branch that matches nothing is nothing, an OR is not.
+	const auto dead = Query::combine(Op::AND, term, none);
+	CHECK_TRUE(dead.empty());
+	CHECK_TRUE(Query::combine(Op::AND, dead, term).empty());
+	CHECK_FALSE(Query::combine(Op::OR, dead, term).empty());
+	CHECK_TRUE(Query::combine(Op::OR, dead, dead).empty());
+	CHECK_TRUE(Query::combine(Op::AND_NOT, dead, term).empty());
+	CHECK_FALSE(Query::combine(Op::AND_NOT, term, dead).empty());
 }
 
 static void test_expansions() {
-	CHECK_EQ(to_xapian(Query::wildcard("", "ab")).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, "ab", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard("", "ab", 50, engine::Expansion::most_frequent, 0, Op::SYNONYM)).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, "ab", 50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard("", "a?c*e", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR)).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, "a?c*e", 7, Xapian::Query::WILDCARD_LIMIT_FIRST | Xapian::Query::WILDCARD_PATTERN_SINGLE | Xapian::Query::WILDCARD_PATTERN_MULTI, Xapian::Query::OP_OR).get_description());
-	CHECK_EQ(to_xapian(Query::edit_distance("", "Xabc", 0, engine::Expansion::error, Op::SYNONYM, 2, 3)).get_description(),
-		Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, "Xabc", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM, 2, 3).get_description());
+	const auto plain = Query::wildcard("", "ab");
+	CHECK_TRUE(plain.node()->kind == engine::QueryKind::wildcard);
+	CHECK_EQ(plain.node()->str, "ab");
+	CHECK_EQ(plain.node()->parameter, 0u);
+	CHECK_TRUE(plain.node()->limit == engine::Expansion::error);
+	CHECK_TRUE(plain.node()->op == Op::SYNONYM);
+	CHECK_EQ(plain.node()->pattern_flags, 0u);
+
+	const auto limited = Query::wildcard("", "ab", 50, engine::Expansion::most_frequent, 0, Op::SYNONYM);
+	CHECK_EQ(limited.node()->parameter, 50u);
+	CHECK_TRUE(limited.node()->limit == engine::Expansion::most_frequent);
+
+	const auto glob = Query::wildcard("", "a?c*e", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR);
+	CHECK_EQ(glob.node()->str, "a?c*e");
+	CHECK_EQ(glob.node()->parameter, 7u);
+	CHECK_TRUE(glob.node()->limit == engine::Expansion::first);
+	CHECK_EQ(glob.node()->pattern_flags, engine::PATTERN_SINGLE | engine::PATTERN_MULTI);
+	CHECK_TRUE(glob.node()->op == Op::OR);
+
+	const auto fuzzy = Query::edit_distance("", "Xabc", 0, engine::Expansion::error, Op::SYNONYM, 2, 3);
+	CHECK_TRUE(fuzzy.node()->kind == engine::QueryKind::edit_distance);
+	CHECK_EQ(fuzzy.node()->str, "Xabc");
+	CHECK_EQ(fuzzy.node()->distance, 2u);
+	CHECK_EQ(fuzzy.node()->prefix_length, 3u);
 }
 
-namespace {
-
-std::vector<Xapian::docid> run(const Xapian::Database& db, const Xapian::Query& query, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr) {
-	Xapian::Enquire enquire(db);
-	enquire.set_query(query);
-	if (sorter) {
-		enquire.set_sort_by_key_then_relevance(sorter, false);
-	}
-	if (spy) {
-		enquire.add_matchspy(spy);
-	}
-	std::vector<Xapian::docid> dids;
-	auto mset = enquire.get_mset(0, 20, 20);
-	for (auto it = mset.begin(); it != mset.end(); ++it) {
-		dids.push_back(*it);
-	}
-	return dids;
-}
-
-}  // namespace
-
-// Xapiand's own value sources cross the remote protocol by name through the registry, and come
-// back as the same filter.
+// Xapiand's own value sources find the documents their range names.
 static void test_registered_sources() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	auto shard = testsupport::scratch_shard("engine_query_sources");
 	for (int i = 10; i <= 30; ++i) {
-		Xapian::Document doc;
-		doc.add_term("t");
+		engine::Document doc;
+		doc.add_term(doc.field("f"), "t");
 		doc.add_value(5, "0" + std::to_string(i));
-		db.add_document(doc);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(i));
 	}
-	Xapian::Registry registry;
-	engine::xapian::register_posting_source(registry, GeoSpatialRange{});
-	engine::xapian::register_posting_source(registry, MultipleValueRange{});
-	engine::xapian::register_posting_source(registry, MultipleValueGE{});
-	engine::xapian::register_posting_source(registry, MultipleValueLE{});
+	engine::sync_wait(shard->commit(engine::Transaction::none));
 
 	// The sources are built from their serialised form: their constructors are private to range.cc.
 	auto serialised = [](std::initializer_list<std::string> parts) {
@@ -232,46 +212,20 @@ static void test_registered_sources() {
 	auto range = [&](std::string from, std::string to) { return MultipleValueRange{}.unserialise(serialised({ serialise_length(5), from, to })); };
 	auto ge = [&](std::string from) { return MultipleValueGE{}.unserialise(serialised({ serialise_length(5), from })); };
 	auto le = [&](std::string to) { return MultipleValueLE{}.unserialise(serialised({ serialise_length(5), to })); };
-	const std::vector<std::pair<Query, std::set<Xapian::docid>>> cases = {
+	const std::vector<std::pair<Query, std::set<engine::docid>>> cases = {
 		{ Query::source(range("015", "018")), { 6, 7, 8, 9 } },
 		{ Query::source(ge("028")), { 19, 20, 21 } },
 		{ Query::source(le("012")), { 1, 2, 3 } },
-		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("", "t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
+		{ Query::combine(Op::FILTER, Query::source(range("015", "025")), Query::term("f", "t")), { 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 } },
 	};
 	for (const auto& [query, expected] : cases) {
-		auto local = to_xapian(query);
-		auto dids = run(db, local);
-		CHECK_EQ(std::set<Xapian::docid>(dids.begin(), dids.end()), expected);
-		auto remote = Xapian::Query::unserialise(local.serialise(), registry);
-		auto remote_dids = run(db, remote);
-		CHECK_EQ(std::set<Xapian::docid>(remote_dids.begin(), remote_dids.end()), expected);
+		CHECK_TRUE(run(*shard, query) == expected);
 	}
-
-	// A registry that does not know the source cannot rebuild the query.
-	Xapian::Registry empty_registry;
-	bool raised = false;
-	try {
-		Xapian::Query::unserialise(to_xapian(cases[0].first).serialise(), empty_registry);
-	} catch (const Xapian::Error&) {
-		raised = true;
-	}
-	CHECK_TRUE(raised);
-
-	// Bytes the source never wrote are a network error.
-	const auto* prototype = registry.get_posting_source("MultipleValueRange");
-	CHECK_TRUE(prototype != nullptr);
-	bool network_error = false;
-	try {
-		prototype->unserialise_with_registry("x", registry);
-	} catch (const Xapian::NetworkError&) {
-		network_error = true;
-	}
-	CHECK_TRUE(network_error);
 }
 
 // Bytes a source never wrote: random, and valid serialisations with a few bytes flipped, cut or
 // extended. Each source must either rebuild or raise the engine's invalid error, and never
-// anything else (the remote server turns that one error into a network error).
+// anything else.
 static void test_unserialise_garbage() {
 	auto serialised = [](std::initializer_list<std::string> parts) {
 		std::vector<std::string> data(parts);
@@ -330,141 +284,69 @@ static void test_unserialise_garbage() {
 }
 
 // What a wildcard does past its limit is the one thing a description does not show: run it.
+
+// What a wildcard does past its limit is the one thing a description does not show: run it.
 static void test_expansion_limits() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
 	const std::vector<std::vector<int>> docs_of_term = { {}, { 1, 2, 3, 4, 5 }, { 6, 7 }, { 8 }, { 9, 10, 11, 12 } };
+	auto shard = testsupport::scratch_shard("engine_query_limits");
 	for (int did = 1; did <= 12; ++did) {
-		Xapian::Document doc;
-		doc.add_term("zz");
+		engine::Document doc;
+		doc.add_term(doc.field("f"), "zz");
 		for (std::size_t t = 1; t < docs_of_term.size(); ++t) {
 			for (int member : docs_of_term[t]) {
 				if (member == did) {
-					doc.add_term("ab" + std::to_string(t));
+					doc.add_term(doc.field("f"), "ab" + std::to_string(t));
 				}
 			}
 		}
-		db.add_document(doc);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(did));
 	}
+	engine::sync_wait(shard->commit(engine::Transaction::none));
 	auto matched = [&](engine::Expansion limit) {
-		auto dids = run(db, to_xapian(Query::wildcard("", "ab", 2, limit)));
-		return std::set<Xapian::docid>(dids.begin(), dids.end());
+		return run(*shard, Query::wildcard("f", "ab", 2, limit));
 	};
-	CHECK_EQ(matched(engine::Expansion::first), (std::set<Xapian::docid>{ 1, 2, 3, 4, 5, 6, 7 }));
-	CHECK_EQ(matched(engine::Expansion::most_frequent), (std::set<Xapian::docid>{ 1, 2, 3, 4, 5, 9, 10, 11, 12 }));
-	bool raised = false;
-	try {
-		matched(engine::Expansion::error);
-	} catch (const Xapian::WildcardError&) {
-		raised = true;
-	}
-	CHECK_TRUE(raised);
-}
-
-// The seam simplifies as Xapian does, and translates to the same query, over random trees.
-static void test_random_trees() {
-	Lcg rng{12345};
-	int empties = 0;
-	for (int i = 0; i < 2000; ++i) {
-		auto pair = random_pair(rng, 3);
-		const auto translated = to_xapian(pair.seam);
-		CHECK_EQ(translated.get_description(), pair.xapian.get_description());
-		CHECK_EQ(pair.seam.empty(), pair.xapian.empty());
-		CHECK_EQ(translated.empty(), pair.xapian.empty());
-		empties += pair.xapian.empty();
-	}
-	CHECK_TRUE(empties > 100 && empties < 1900);
+	CHECK_TRUE((matched(engine::Expansion::first) == std::set<engine::docid>{ 1, 2, 3, 4, 5, 6, 7 }));
+	CHECK_TRUE((matched(engine::Expansion::most_frequent) == std::set<engine::docid>{ 1, 2, 3, 4, 5, 9, 10, 11, 12 }));
+	CHECK_THROW(matched(engine::Expansion::error), engine::Error);
 }
 
 // A text without words reads as a query that matches nothing; append skips it.
 static void test_append() {
 	engine::TextConfig config;
-	config.field = "XT";
+	config.field = "f";
 	config.flags = engine::text::PHRASE;
 	auto stops = engine::parse_text("", config);
-	auto word = Query::term("", "w");
 	CHECK_TRUE(stops.empty());
-	CHECK_EQ(to_xapian(Query::append(Op::AND, Query(), word)).get_description(), Xapian::Query("w").get_description());
-	CHECK_EQ(to_xapian(Query::append(Op::AND, word, Query())).get_description(),
-		Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("w"), Xapian::Query()).get_description());
+	auto shard = terms_db("engine_query_append", { "w", "w", "x" });
+	const auto word = Query::term("f", "w");
+	CHECK_TRUE((run(*shard, Query::append(Op::AND, Query(), word)) == std::set<engine::docid>{ 1, 2 }));
+	CHECK_TRUE((run(*shard, Query::append(Op::AND, stops, word)) == std::set<engine::docid>{ 1, 2 }));
+	CHECK_TRUE(run(*shard, Query::append(Op::AND, word, Query())).empty());
+	CHECK_TRUE((run(*shard, Query::append(Op::OR, word, Query::term("f", "x"))) == std::set<engine::docid>{ 1, 2, 3 }));
 }
 
-static Xapian::Query parse(const std::string& text, Xapian::Query::op default_op, bool set_op, const std::string& stop, const std::string& stem, Xapian::QueryParser::stem_strategy strategy, unsigned flags, const std::string& prefix) {
-	Xapian::QueryParser parser;
-	if (set_op) {
-		parser.set_default_op(default_op);
-	}
-	if (!stop.empty()) {
-		parser.set_stopper(getStopper(stop).get());
-	}
-	if (!stem.empty()) {
-		parser.set_stemmer(makeStem(stem));
-		parser.set_stemming_strategy(strategy);
-	}
-	parser.set_max_expansion(50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::QueryParser::FLAG_PARTIAL);
-	parser.set_max_expansion(0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::QueryParser::FLAG_FUZZY);
-	return parser.parse_query(text, flags, prefix);
-}
-
+// A text query finds the documents its words name, with the operator and the stems the config says.
 static void test_text() {
-	struct Case {
-		std::string text;
-		Op op;
-		std::string stop, stem;
-		engine::Stem strategy;
-		unsigned flags;
-	};
-	const Case cases[] = {
-		{ "hello world", Op::OR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::BOOLEAN },
-		{ "hello AND world OR \"big dog\"", Op::AND, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::BOOLEAN },
-		{ "running dogs jumped", Op::AND, "", "english", engine::Stem::some, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::BOOLEAN },
-		{ "running dogs jumped", Op::OR, "", "english", engine::Stem::all_z, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::some, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::all_z, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::all, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "\"Running Dogs\" jumped", Op::AND, "", "english", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "+must -never maybe", Op::AND, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "he*", Op::OR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::WILDCARD },
-		{ "hel", Op::OR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::PARTIAL },
-		{ "helo~ wrld~", Op::OR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "near words here", Op::NEAR, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "a phrase of words", Op::PHRASE, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-		{ "x y z", Op::INVALID, "", "", engine::Stem::none, engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY },
-	};
-	for (const auto& c : cases) {
-		engine::TextConfig config;
-		config.field = "XTfield";
-		config.default_op = c.op;
-		config.flags = c.flags;
-		config.stop_language = c.stop;
-		config.stem_language = c.stem;
-		config.stem = c.strategy;
-		config.partial_max_expansion = 50;
-		config.fuzzy_max_expansion = 0;
+	auto shard = terms_db("engine_query_text", { "hello", "world", "hello", "run", "ran" });
+	engine::TextConfig config;
+	config.field = "f";
+	config.flags = engine::text::PHRASE | engine::text::LOVEHATE | engine::text::FUZZY | engine::text::BOOLEAN;
+	config.partial_max_expansion = 50;
+	config.fuzzy_max_expansion = 0;
 
-		unsigned xflags = 0;
-		struct { unsigned seam, xapian; } map[] = {
-			{ engine::text::BOOLEAN, Xapian::QueryParser::FLAG_BOOLEAN }, { engine::text::PHRASE, Xapian::QueryParser::FLAG_PHRASE },
-			{ engine::text::LOVEHATE, Xapian::QueryParser::FLAG_LOVEHATE }, { engine::text::WILDCARD, Xapian::QueryParser::FLAG_WILDCARD },
-			{ engine::text::PARTIAL, Xapian::QueryParser::FLAG_PARTIAL }, { engine::text::FUZZY, Xapian::QueryParser::FLAG_FUZZY },
-		};
-		for (auto m : map) {
-			if (c.flags & m.seam) {
-				xflags |= m.xapian;
-			}
-		}
-		Xapian::QueryParser::stem_strategy strategy = Xapian::QueryParser::STEM_NONE;
-		switch (c.strategy) {
-			case engine::Stem::none: strategy = Xapian::QueryParser::STEM_NONE; break;
-			case engine::Stem::some: strategy = Xapian::QueryParser::STEM_SOME; break;
-			case engine::Stem::all: strategy = Xapian::QueryParser::STEM_ALL; break;
-			case engine::Stem::all_z: strategy = Xapian::QueryParser::STEM_ALL_Z; break;
-		}
-		const bool set_op = c.op != Op::INVALID;
-		auto expected = parse(c.text, set_op ? xop(c.op) : Xapian::Query::OP_OR, set_op, c.stop, c.stem, strategy, xflags, "XTfield");
-		auto got = to_xapian(engine::parse_text(c.text, config));
-		CHECK_EQ(got.get_description(), expected.get_description());
-		CHECK_FALSE(got.empty() && !expected.empty());
-	}
+	config.default_op = Op::OR;
+	CHECK_TRUE((run(*shard, engine::parse_text("hello world", config)) == std::set<engine::docid>{ 1, 2, 3 }));
+	config.default_op = Op::AND;
+	CHECK_TRUE(run(*shard, engine::parse_text("hello world", config)).empty());
+	config.default_op = Op::OR;
+	CHECK_TRUE((run(*shard, engine::parse_text("hello -world", config)) == std::set<engine::docid>{ 1, 3 }));
+	CHECK_TRUE((run(*shard, engine::parse_text("+hello world", config)) == std::set<engine::docid>{ 1, 3 }));
+	CHECK_TRUE((run(*shard, engine::parse_text("hello AND NOT world", config)) == std::set<engine::docid>{ 1, 3 }));
+
+	// A wildcard and a fuzzy word expand over the terms of the shard.
+	config.flags |= engine::text::WILDCARD;
+	CHECK_TRUE((run(*shard, engine::parse_text("hel*", config)) == std::set<engine::docid>{ 1, 3 }));
+	CHECK_TRUE((run(*shard, engine::parse_text("helo~", config)) == std::set<engine::docid>{ 1, 3 }));
 
 	// Text the parser rejects raises QueryParserError, an engine syntax error.
 	engine::TextConfig bad;
@@ -481,13 +363,13 @@ static void test_text() {
 
 namespace {
 
-// Documents whose slot-1 value holds a number in [lo, hi]; the weight is the number.
+// Documents whose slot-21 value holds a number in [lo, hi]; the weight is the number.
 class Between final : public engine::PostingSource {
 public:
 	Between() = default;
 	Between(int lo, int hi) : lo_(lo), hi_(hi) { }
 
-	engine::valueno slot() const override { return 1; }
+	engine::valueno slot() const override { return 21; }
 	bool accept(std::string_view value) const override { return !value.empty() && std::stoi(std::string(value)) >= lo_ && std::stoi(std::string(value)) <= hi_; }
 	double weight(std::string_view value) const override { return std::stoi(std::string(value)); }
 	double max_weight() const override { return 100; }
@@ -507,11 +389,11 @@ private:
 	int lo_ = 0, hi_ = 0;
 };
 
-// Orders documents by the slot-1 value, descending, and counts how often it is asked.
+// Orders documents by the slot-21 value, descending.
 class ByValue final : public engine::KeyMaker {
 public:
 	std::string key(const engine::DocView& doc) const override {
-		auto value = doc.value(1);
+		auto value = doc.value(21);
 		for (auto& ch : value) {
 			ch = static_cast<char>(0xff - static_cast<unsigned char>(ch));
 		}
@@ -570,16 +452,18 @@ public:
 	std::string data;
 };
 
-Xapian::WritableDatabase make_db() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+// Ten documents with the term "t", the numbers 1 to 10 in slot 21 and "d1" to "d10" as data.
+std::unique_ptr<engine::Shard> make_db() {
+	auto shard = testsupport::scratch_shard("engine_query_ten");
 	for (int i = 1; i <= 10; ++i) {
-		Xapian::Document doc;
-		doc.add_term("t");
-		doc.add_value(1, std::to_string(i));
+		engine::Document doc;
+		doc.add_term(doc.field("f"), "t");
+		doc.add_value(21, std::to_string(i));
 		doc.set_data("d" + std::to_string(i));
-		db.add_document(doc);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(i));
 	}
-	return db;
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	return shard;
 }
 
 }  // namespace
@@ -587,97 +471,63 @@ Xapian::WritableDatabase make_db() {
 static void test_posting_source() {
 	auto db = make_db();
 
-	// The adapter accepts exactly what the source accepts, through every match path.
-	auto query = to_xapian(Query::source(std::make_unique<Between>(3, 6)));
-	auto dids = run(db, query);
+	// The search accepts exactly what the source accepts, through every match path.
+	const auto query = Query::source(std::make_unique<Between>(3, 6));
+	auto dids = ranked(*db, query);
 	CHECK_EQ(dids.size(), 4U);
-	CHECK_EQ(std::set<Xapian::docid>(dids.begin(), dids.end()), (std::set<Xapian::docid>{ 3, 4, 5, 6 }));
+	CHECK_TRUE((std::set<engine::docid>(dids.begin(), dids.end()) == std::set<engine::docid>{ 3, 4, 5, 6 }));
 
 	// A filter: skip_to and check run when the source meets another term.
-	auto filtered = to_xapian(Query::combine(Op::FILTER, Query::term("", "t"), Query::source(std::make_unique<Between>(8, 9))));
-	auto filtered_dids = run(db, filtered);
-	CHECK_EQ(std::set<Xapian::docid>(filtered_dids.begin(), filtered_dids.end()), (std::set<Xapian::docid>{ 8, 9 }));
-	auto both = to_xapian(Query::combine(Op::AND, Query::source(std::make_unique<Between>(2, 9)), Query::source(std::make_unique<Between>(5, 20))));
-	auto both_dids = run(db, both);
-	CHECK_EQ(std::set<Xapian::docid>(both_dids.begin(), both_dids.end()), (std::set<Xapian::docid>{ 5, 6, 7, 8, 9 }));
+	CHECK_TRUE((run(*db, Query::combine(Op::FILTER, Query::term("f", "t"), Query::source(std::make_unique<Between>(8, 9)))) == std::set<engine::docid>{ 8, 9 }));
+	CHECK_TRUE((run(*db, Query::combine(Op::AND, Query::source(std::make_unique<Between>(2, 9)), Query::source(std::make_unique<Between>(5, 20)))) == std::set<engine::docid>{ 5, 6, 7, 8, 9 }));
 
 	// The weight is the source's: the highest value ranks first.
 	CHECK_EQ(dids.front(), 6U);
 
-	// It crosses the remote protocol by name through a registry.
-	Xapian::Registry registry;
-	engine::xapian::register_posting_source(registry, Between());
-	auto rebuilt = Xapian::Query::unserialise(query.serialise(), registry);
-	CHECK_EQ(run(db, rebuilt), dids);
-
-	// A malformed serialisation is a network error, not an engine error, on the Xapian side.
-	const auto* prototype = registry.get_posting_source("Between");
-	CHECK_TRUE(prototype != nullptr);
-	bool network_error = false;
-	try {
-		prototype->unserialise_with_registry("bad", registry);
-	} catch (const Xapian::NetworkError&) {
-		network_error = true;
-	}
-	CHECK_TRUE(network_error);
-	CHECK_EQ(prototype->name(), "Between");
-	CHECK_EQ(prototype->get_description(), "Between 0,0");
+	// A malformed serialisation is an invalid argument; a good one rebuilds the source.
+	CHECK_THROW(Between().unserialise("bad"), engine::Error);
+	CHECK_EQ(Between().unserialise("3,6")->description(), "Between 3,6");
+	CHECK_EQ(Between().name(), "Between");
+	CHECK_EQ(Between().description(), "Between 0,0");
 }
 
 static void test_key_maker() {
 	auto db = make_db();
-	ByValue seam_sorter;
-	engine::xapian::KeyMakerAdapter borrowed(seam_sorter);
-	auto dids = run(db, Xapian::Query("t"), &borrowed);
+	ByValue sorter;
+	auto dids = ranked(*db, Query::term("f", "t"), &sorter);
 	CHECK_EQ(dids.size(), 10U);
 	// Descending by the number's text: "9", "8", ... "2", then "1" before its extension "10".
 	CHECK_EQ(dids.front(), 9U);
 	CHECK_EQ(dids.back(), 10U);
 
-	Xapian::Registry registry;
-	engine::xapian::register_key_maker(registry, ByValue());
-	const auto* prototype = registry.get_key_maker("ByValue");
-	CHECK_TRUE(prototype != nullptr);
-	std::unique_ptr<Xapian::KeyMaker> rebuilt(prototype->unserialise("v", registry));
-	CHECK_EQ(run(db, Xapian::Query("t"), rebuilt.get()), dids);
-	bool network_error = false;
-	try {
-		prototype->unserialise("x", registry);
-	} catch (const Xapian::NetworkError&) {
-		network_error = true;
-	}
-	CHECK_TRUE(network_error);
+	auto rebuilt = sorter.unserialise("v");
+	CHECK_TRUE(ranked(*db, Query::term("f", "t"), rebuilt.get()) == dids);
+	CHECK_THROW(sorter.unserialise("x"), engine::Error);
 }
 
 static void test_match_spy() {
 	auto db = make_db();
 	Collect collect;
-	engine::xapian::MatchSpyAdapter adapter(collect);
-	auto dids = run(db, Xapian::Query("t"), nullptr, &adapter);
+	auto dids = ranked(*db, Query::term("f", "t"), nullptr, &collect);
 	CHECK_EQ(dids.size(), 10U);
 	CHECK_EQ(collect.seen.size(), 10U);
 	CHECK_EQ(collect.data, "d1d2d3d4d5d6d7d8d9d10");
 	CHECK_TRUE(collect.total_weight > 0);
 
 	// Results of other shards merge through the serialised form.
-	Xapian::Registry registry;
-	engine::xapian::register_match_spy(registry, Collect());
-	const auto* prototype = registry.get_match_spy("Collect");
-	CHECK_TRUE(prototype != nullptr);
-	std::unique_ptr<Xapian::MatchSpy> remote(prototype->unserialise("c", registry));
-	auto remote_dids = run(db, Xapian::Query(Xapian::Query::OP_AND, Xapian::Query("t"), Xapian::Query(Xapian::Query::OP_VALUE_GE, 1, "9")), nullptr, remote.get());
-	CHECK_FALSE(remote_dids.empty());
+	auto remote = collect.unserialise("c");
+	auto remote_dids = ranked(*db, Query::combine(Op::AND, Query::term("f", "t"), Query::source(std::make_unique<Between>(9, 10))), nullptr, remote.get());
+	CHECK_EQ(remote_dids.size(), 2u);
 	Collect merged;
-	engine::xapian::MatchSpyAdapter merging(merged);
-	merging.merge_results(remote->serialise_results());
+	merged.merge_results(remote->serialise_results());
 	CHECK_EQ(merged.seen.size(), remote_dids.size());
-	CHECK_EQ(adapter.name(), "Collect");
-	CHECK_EQ(adapter.get_description(), "Collect");
+	CHECK_TRUE((merged.seen == std::set<engine::docid>{ 9, 10 }));
+	CHECK_THROW(collect.unserialise("x"), engine::Error);
 }
 
 namespace {
 
-// Counts its live instances, to see whether a translation frees what it makes.
+// Counts its live instances, to see whether a search frees what it makes.
 class Counted final : public engine::PostingSource {
 public:
 	static inline int live = 0;
@@ -686,7 +536,7 @@ public:
 	Counted(const Counted&) = delete;
 	~Counted() override { --live; }
 
-	engine::valueno slot() const override { return 1; }
+	engine::valueno slot() const override { return 21; }
 	bool accept(std::string_view value) const override { return !value.empty(); }
 	double weight(std::string_view) const override { return 1.0; }
 	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<Counted>(); }
@@ -698,8 +548,8 @@ public:
 
 }  // namespace
 
-// Translating a source query hands Xapian its own adapter and source; Xapian frees them with the
-// query. Only the seam query's source stays alive.
+// A search hands each shard its own clone of the source and frees it at the end: only the query's
+// source stays alive.
 static void test_source_ownership() {
 	auto db = make_db();
 	Counted::live = 0;
@@ -707,129 +557,79 @@ static void test_source_ownership() {
 		auto query = Query::source(std::make_unique<Counted>());
 		CHECK_EQ(Counted::live, 1);
 		for (int i = 0; i < 20; ++i) {
-			auto translated = to_xapian(query);
-			auto copy = translated;
-			CHECK_EQ(run(db, copy).size(), 10U);
+			auto copy = query;
+			CHECK_EQ(run(*db, copy).size(), 10U);
 		}
 		CHECK_EQ(Counted::live, 1);
 
-		auto combined = Query::combine(Op::FILTER, Query::term("", "t"), query);
+		auto combined = Query::combine(Op::FILTER, Query::term("f", "t"), query);
 		for (int i = 0; i < 20; ++i) {
-			CHECK_EQ(run(db, to_xapian(combined)).size(), 10U);
-		}
-		CHECK_EQ(Counted::live, 1);
-
-		// Through a registry: the prototype lives with the registry, the rebuilt source with the query.
-		{
-			Xapian::Registry registry;
-			engine::xapian::register_posting_source(registry, Counted());
-			for (int i = 0; i < 20; ++i) {
-				auto rebuilt = Xapian::Query::unserialise(to_xapian(query).serialise(), registry);
-				CHECK_EQ(run(db, rebuilt).size(), 10U);
-			}
-			CHECK_EQ(Counted::live, 2);
+			CHECK_EQ(run(*db, combined).size(), 10U);
 		}
 		CHECK_EQ(Counted::live, 1);
 	}
 	CHECK_EQ(Counted::live, 0);
 }
 
-// The adapter tells Xapian what the source says: its bound on the weight, and that a filter may
-// accept no document at all.
-static void test_adapter_bounds() {
-	auto db = make_db();
-	engine::xapian::PostingSourceAdapter bounded(std::make_unique<Between>(3, 6));
-	CHECK_EQ(bounded.get_maxweight(), 100.0);
-	bounded.reset(db, 0);
-	CHECK_EQ(bounded.get_maxweight(), 100.0);
-	CHECK_EQ(bounded.get_termfreq_min(), 0U);
-	CHECK_EQ(bounded.get_termfreq_max(), 10U);
-
-	engine::xapian::PostingSourceAdapter unbounded(std::make_unique<Counted>());
-	CHECK_EQ(unbounded.get_maxweight(), 0.0);
-
-	Xapian::Enquire enquire(db);
-	enquire.set_query(to_xapian(Query::source(std::make_unique<Between>(3, 6))));
-	auto mset = enquire.get_mset(0, 10);
-	CHECK_EQ(mset.get_max_possible(), 100.0);
-	CHECK_TRUE(mset.get_matches_lower_bound() <= 4U);
-}
-
-// A pattern's '?' and '*' reach Xapian only when the pattern flags say so.
+// A pattern's '?' and '*' count only when the pattern flags say so.
 static void test_wildcard_patterns() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
-	for (auto term : { "alice", "alyce", "alce", "alicce", "bob" }) {
-		Xapian::Document doc;
-		doc.add_term(term);
-		db.add_document(doc);
-	}
+	auto db = terms_db("engine_query_patterns", { "alice", "alyce", "alce", "alicce", "bob" });
 	auto matched = [&](const std::string& pattern, unsigned flags) {
-		auto dids = run(db, to_xapian(Query::wildcard("", pattern, 0, engine::Expansion::error, flags)));
-		return std::set<Xapian::docid>(dids.begin(), dids.end());
+		return run(*db, Query::wildcard("f", pattern, 0, engine::Expansion::error, flags));
 	};
-	CHECK_EQ(matched("al?ce", engine::PATTERN_SINGLE), (std::set<Xapian::docid>{ 1, 2 }));
-	CHECK_EQ(matched("al?ce", 0), (std::set<Xapian::docid>{}));
-	CHECK_EQ(matched("al*e", engine::PATTERN_MULTI), (std::set<Xapian::docid>{ 1, 2, 3, 4 }));
-	CHECK_EQ(matched("al*e", 0), (std::set<Xapian::docid>{}));
-	CHECK_EQ(matched("al*e", engine::PATTERN_SINGLE), (std::set<Xapian::docid>{}));
-	CHECK_EQ(matched("a?*e", engine::PATTERN_SINGLE | engine::PATTERN_MULTI), (std::set<Xapian::docid>{ 1, 2, 3, 4 }));
+	CHECK_TRUE((matched("al?ce", engine::PATTERN_SINGLE) == std::set<engine::docid>{ 1, 2 }));
+	CHECK_TRUE(matched("al?ce", 0).empty());
+	CHECK_TRUE((matched("al*e", engine::PATTERN_MULTI) == std::set<engine::docid>{ 1, 2, 3, 4 }));
+	CHECK_TRUE(matched("al*e", 0).empty());
+	CHECK_TRUE(matched("al*e", engine::PATTERN_SINGLE).empty());
+	CHECK_TRUE((matched("a?*e", engine::PATTERN_SINGLE | engine::PATTERN_MULTI) == std::set<engine::docid>{ 1, 2, 3, 4 }));
 }
 
 // A fuzzy word that expands past its limit fails the search, where a partial word keeps the most
 // frequent terms.
 static void test_fuzzy_limit() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
-	for (auto term : { "alica", "alicb", "alicc", "alicd", "alice" }) {
-		Xapian::Document doc;
-		doc.add_term(term);
-		db.add_document(doc);
-	}
+	auto db = terms_db("engine_query_fuzzy", { "alica", "alicb", "alicc", "alicd", "alice" });
 	engine::TextConfig config;
+	config.field = "f";
 	config.flags = engine::text::FUZZY;
 	config.fuzzy_max_expansion = 2;
-	bool raised = false;
-	try {
-		run(db, to_xapian(engine::parse_text("alice~", config)));
-	} catch (const Xapian::WildcardError&) {
-		raised = true;
-	}
-	CHECK_TRUE(raised);
+	CHECK_THROW(run(*db, engine::parse_text("alice~", config)), engine::Error);
 
 	config.fuzzy_max_expansion = 0;
-	CHECK_EQ(run(db, to_xapian(engine::parse_text("alice~", config))).size(), 5U);
+	CHECK_EQ(run(*db, engine::parse_text("alice~", config)).size(), 5U);
 }
 
-// A binary combine and the same operands as a list translate to the same query, with the same
-// matches and weights, so the seam need not keep the two forms apart in the translation.
+// A binary combine and the same operands as a list match the same documents with the same weights.
 static void test_binary_equals_list() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	auto db = testsupport::scratch_shard("engine_query_binary");
 	for (int i = 0; i < 12; ++i) {
-		Xapian::Document doc;
-		if (i % 2 == 0) { doc.add_term("a", 1); }
-		if (i % 3 == 0) { doc.add_term("b", 1 + i % 4); }
-		if (i % 4 == 0) { doc.add_term("c", 1); }
-		doc.add_term("z");
-		db.add_document(doc);
+		engine::Document doc;
+		if (i % 2 == 0) { doc.add_term(doc.field("f"), "a", 1); }
+		if (i % 3 == 0) { doc.add_term(doc.field("f"), "b", 1 + i % 4); }
+		if (i % 4 == 0) { doc.add_term(doc.field("f"), "c", 1); }
+		doc.add_term(doc.field("f"), "z");
+		testsupport::add_keyed(*db, doc, "K" + std::to_string(i));
 	}
-	const std::vector<Query> operands = { Query::term("", "a"), Query::term("", "b"), Query::term("", "nothing"), Query(), Query::match_all(), Query::term("", "c", 2) };
+	engine::sync_wait(db->commit(engine::Transaction::none));
+	const std::vector<Query> operands = { Query::term("f", "a"), Query::term("f", "b"), Query::term("f", "nothing"), Query(), Query::match_all(), Query::term("f", "c", 2) };
 	auto results = [&](const Query& query) {
-		auto translated = to_xapian(query);
-		Xapian::Enquire enquire(db);
-		enquire.set_query(translated);
-		std::vector<std::pair<Xapian::docid, double>> hits;
-		auto mset = enquire.get_mset(0, 20);
-		for (auto it = mset.begin(); it != mset.end(); ++it) {
-			hits.emplace_back(*it, it.get_weight());
+		std::vector<std::pair<engine::docid, double>> hits;
+		for (const auto& hit : testsupport::search({ db.get() }, query).hits) {
+			hits.emplace_back(hit.did, hit.weight);
 		}
-		return std::make_pair(translated.get_description(), hits);
+		return hits;
 	};
+	std::size_t found = 0;
 	for (auto op : binary_ops) {
 		for (const auto& left : operands) {
 			for (const auto& right : operands) {
-				CHECK_TRUE(results(Query::combine(op, left, right)) == results(Query::combine(op, std::vector<Query>{ left, right })));
+				const auto binary = results(Query::combine(op, left, right));
+				CHECK_TRUE(binary == results(Query::combine(op, std::vector<Query>{ left, right })));
+				found += binary.size();
 			}
 		}
 	}
+	CHECK_GT(found, 100u);
 }
 
 // A chain of appends (one per key of a flat query object) costs no stack and keeps its meaning.
@@ -849,7 +649,7 @@ void* chain_run(void* arg) {
 			// Every 7th operand matches nothing, as a stop-word-only text does.
 			chain = Query::append(Op::AND, chain, i % 7 == 6 ? Query() : Query::term("", "t" + std::to_string(i)));
 		}
-		job->description = to_xapian(chain).get_description().substr(0, 40);
+		job->description = chain.description().substr(0, 40);
 		job->done = true;
 	}
 	return nullptr;
@@ -870,16 +670,33 @@ static void test_append_chain() {
 	pthread_attr_destroy(&attr);
 	CHECK_TRUE(job.done);
 
-	// The same chain, short, is the left fold Xapiand built before.
-	Query chain;
-	Xapian::Query expected;
-	for (int i = 0; i < 12; ++i) {
-		auto operand = i % 5 == 4 ? Query() : Query::term("", "t" + std::to_string(i));
-		auto expected_operand = i % 5 == 4 ? Xapian::Query() : Xapian::Query("t" + std::to_string(i));
-		chain = Query::append(i % 2 != 0 ? Op::OR : Op::AND, chain, operand);
-		expected = expected.empty() ? expected_operand : Xapian::Query(i % 2 != 0 ? Xapian::Query::OP_OR : Xapian::Query::OP_AND, expected, expected_operand);
+	// The same chain, short, is the left fold of its operands: an operand that matches nothing leaves an
+	// AND with a query that matches nothing, from which the next operand starts again.
+	auto shard = testsupport::scratch_shard("engine_query_fold");
+	for (int k = 0; k < 12; ++k) {
+		// Each of twelve documents has every term but its own.
+		engine::Document doc;
+		for (int j = 0; j < 12; ++j) {
+			if (j != k) {
+				doc.add_term(doc.field("f"), "t" + std::to_string(j));
+			}
+		}
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(k));
 	}
-	CHECK_EQ(to_xapian(chain).get_description(), expected.get_description());
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	for (const Op op : { Op::AND, Op::OR }) {
+		Query chain;
+		Query expected;
+		for (int i = 0; i < 12; ++i) {
+			auto operand = i % 5 == 4 ? Query() : Query::term("f", "t" + std::to_string(i));
+			chain = Query::append(op, chain, operand);
+			expected = expected.empty() ? operand : Query::combine(op, expected, operand);
+		}
+		CHECK_EQ(chain.empty(), expected.empty());
+		CHECK_TRUE(run(*shard, chain) == run(*shard, expected));
+		// AND: the empty operands 4 and 9 cut the chain, so only t10 AND t11 remain; OR skips the empty ones.
+		CHECK_EQ(run(*shard, chain).size(), op == Op::AND ? 10u : 12u);
+	}
 }
 
 // A tree as deep as the cap converts and describes itself on a small stack, and one level more is a 400.
@@ -888,7 +705,7 @@ namespace {
 struct DepthJob {
 	bool done = false;
 	std::string description;
-	bool xapian = false;
+	bool nonempty = false;
 };
 
 void* depth_run(void* arg) {
@@ -899,7 +716,7 @@ void* depth_run(void* arg) {
 		tree = level % 5 == 0 ? Query::scale(tree, 2.0) : Query::combine(level % 2 ? Op::AND : Op::OR, tree, Query::term("", "b"));
 	}
 	job->description = tree.description();
-	job->xapian = !to_xapian(tree).empty();
+	job->nonempty = !tree.empty();
 	job->done = true;
 	return nullptr;
 }
@@ -918,7 +735,7 @@ static void test_depth_cap() {
 	pthread_attr_destroy(&attr);
 	CHECK_TRUE(job.done);
 	CHECK_TRUE(job.description.size() > engine::MAX_QUERY_DEPTH);
-	CHECK_TRUE(job.xapian);
+	CHECK_TRUE(job.nonempty);
 
 	// Exactly the cap builds; one more level of any operator throws a client error.
 	Query tree = Query::term("", "a");
@@ -958,10 +775,10 @@ static void test_depth_cap() {
 	CHECK_EQ(chain.size(), engine::MAX_QUERY_CLAUSES);
 	CHECK_TRUE(refused([&] { Query::append(Op::AND, chain, Query::term("", "t")); }, "too large"));
 	CHECK_TRUE(refused([&] { Query::combine(Op::AND, chain, chain); }, "too large"));
-	CHECK_FALSE(to_xapian(flat).empty());
+	CHECK_FALSE(flat.empty());
 }
 
-// Xapian's matcher recurses once per phrase or near group an AND joins, so the query counts the
+// The matcher recurses once per phrase or near group an AND joins, so the query counts the
 // links it would chain: AND and FILTER add their operands' up, every other operator takes the deepest.
 static void test_chain_cap() {
 	const auto phrase = [](const char* a, const char* b, Op op = Op::PHRASE) { return Query::combine(op, std::vector<Query>{ Query::term("", a), Query::term("", b) }, 2); };
@@ -1038,12 +855,17 @@ static void test_chain_cap() {
 	// Shared subtrees count each time, as they do for the clause cap.
 	CHECK_TRUE(refused([&] { Query::combine(Op::AND, Query::combine(Op::AND, many(cap)), phrase("a", "b")); }));
 	// The matcher runs a query at the cap.
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
-	Xapian::Document doc;
-	doc.add_posting("a", 1);
-	doc.add_posting("b", 2);
-	db.add_document(doc);
-	CHECK_EQ(run(db, to_xapian(Query::combine(Op::AND, many(cap)))).size(), std::size_t(1));
+	auto shard = testsupport::scratch_shard("engine_query_chain");
+	engine::Document doc;
+	doc.add_posting(doc.field("f"), "a", 1);
+	doc.add_posting(doc.field("f"), "b", 2);
+	testsupport::add_keyed(*shard, doc, "K1");
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	const auto fphrase = [](Op op) {
+		return Query::combine(op, std::vector<Query>{ Query::term("f", "a"), Query::term("f", "b") }, 2);
+	};
+	std::vector<Query> at_cap(cap, fphrase(Op::PHRASE));
+	CHECK_EQ(run(*shard, Query::combine(Op::AND, at_cap)).size(), std::size_t(1));
 }
 
 // A stored value that does not decode is not accepted; it must never stop the process.
@@ -1078,27 +900,26 @@ static void test_corrupt_stored_value() {
 	CHECK_FALSE(sources[3]->accept(garbage_values[2]));
 
 	// A search over a slot with a corrupt value skips that document and finds the others.
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	auto shard = testsupport::scratch_shard("engine_query_corrupt");
 	for (int i = 0; i < 5; ++i) {
-		Xapian::Document doc;
-		doc.add_term("t");
+		engine::Document doc;
+		doc.add_term(doc.field("f"), "t");
 		std::vector<std::string> one = { std::string(1, static_cast<char>('b' + i)) };
 		doc.add_value(5, i == 2 ? garbage_values[2] : StringList::serialise(one.begin(), one.end()));
-		db.add_document(doc);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(i));
 	}
-	auto found = run(db, to_xapian(Query::source(MultipleValueGE{}.unserialise(serialised({ serialise_length(5), "a" })))));
-	CHECK_EQ(std::set<Xapian::docid>(found.begin(), found.end()), (std::set<Xapian::docid>{ 1, 2, 4, 5 }));
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	auto found = run(*shard, Query::source(MultipleValueGE{}.unserialise(serialised({ serialise_length(5), "a" }))));
+	CHECK_TRUE((found == std::set<engine::docid>{ 1, 2, 4, 5 }));
 }
 
 
-// Xapian's exceptions are not std::exception: report them as a failure of the test.
+
+// An engine error that escapes a test is a failure with its text, not an abort.
 #define GUARDED(fn) \
 	static void fn##_guarded() { \
 		try { \
 			fn(); \
-		} catch (const Xapian::Error& exc) { \
-			std::fprintf(stderr, "  FAIL %s: threw %s\n", #fn, exc.get_description().c_str()); \
-			++testh::failures; \
 		} catch (const engine::Error& exc) { \
 			std::fprintf(stderr, "  FAIL %s: threw engine error %s\n", #fn, exc.reason().c_str()); \
 			++testh::failures; \
@@ -1106,18 +927,17 @@ static void test_corrupt_stored_value() {
 	}
 
 GUARDED(test_leaves_and_ops)
+GUARDED(test_emptiness)
 GUARDED(test_registered_sources)
 GUARDED(test_unserialise_garbage)
 GUARDED(test_expansions)
 GUARDED(test_expansion_limits)
-GUARDED(test_random_trees)
 GUARDED(test_append)
 GUARDED(test_text)
 GUARDED(test_posting_source)
 GUARDED(test_key_maker)
 GUARDED(test_match_spy)
 GUARDED(test_source_ownership)
-GUARDED(test_adapter_bounds)
 GUARDED(test_wildcard_patterns)
 GUARDED(test_fuzzy_limit)
 GUARDED(test_binary_equals_list)
@@ -1126,4 +946,4 @@ GUARDED(test_depth_cap)
 GUARDED(test_chain_cap)
 GUARDED(test_corrupt_stored_value)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_random_trees_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_adapter_bounds_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded)

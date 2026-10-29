@@ -20,10 +20,11 @@
  * THE SOFTWARE.
  */
 
-// Callbacks and operators on both engines. One corpus is written to a Xapian and a strata shard set and
-// every search runs on both through the seam: the documents found, their order, the estimate, the
-// weights (within a stated tolerance), what a spy accumulated and what a key maker ordered must agree,
-// on one shard and on five.
+// Callbacks and operators through the seam. One corpus is written to a set of strata shards (and, as a
+// whole, to one more shard); every search is checked against a model of the corpus: the documents found
+// and the estimate are exact, a search over shards weighs as one shard holding every document, hits come
+// in weight order, a spy sees what the model says and a key maker orders as its keys do. On one shard
+// and on five.
 
 #include "test_harness.h"
 
@@ -46,20 +47,18 @@
 
 #include "engine/callbacks.h"
 #include "engine/error.h"
-#include "engine/kind.h"
 #include "engine/open.h"
 #include "engine/search.h"
 #include "engine/sync.h"
 
 namespace {
 
-using engine::Kind;
 using engine::Op;
 using engine::Query;
 
 constexpr double tolerance = 1e-9;
 
-// Value slots: the Xapian engine reserves the first twenty for its own bookkeeping.
+// Value slots (slot 1 is the shard's own version slot).
 constexpr engine::valueno KEY = 21, GROUP = 22, NUMBER = 23, EMPTY = 29;
 
 // --- callbacks ---
@@ -97,7 +96,7 @@ public:
 class GroupSpy final : public engine::MatchSpy {
 public:
 	std::map<std::string, std::pair<std::uint64_t, std::uint64_t>> groups;
-	std::set<std::string> datas;   // by stored data: a spy of the Xapian engine is given the id within its shard
+	std::set<std::string> datas;   // by stored data: a spy is given the id within its shard
 	double weights = 0;
 	bool throw_on = false;
 
@@ -175,7 +174,6 @@ private:
 // --- the corpus ---
 
 struct Index {
-	Kind kind;
 	std::vector<std::unique_ptr<engine::Shard>> owned;
 
 	std::vector<engine::Shard*> shards(std::size_t n) const {
@@ -195,8 +193,8 @@ std::string pad(unsigned n, int width) {
 	return buffer;
 }
 
-std::string path_of(const char* name, Kind kind, int shard) {
-	const auto path = (std::filesystem::current_path() / (std::string("engine_callbacks_") + name + "_" + engine::to_string(kind) + std::to_string(shard) + ".db")).string();
+std::string path_of(const char* name, int shard) {
+	const auto path = (std::filesystem::current_path() / (std::string("engine_callbacks_") + name + "_" + std::to_string(shard) + ".db")).string();
 	std::filesystem::remove_all(path);
 	return path;
 }
@@ -205,6 +203,7 @@ struct Spec {
 	std::map<std::string, unsigned> terms;
 	std::string key, group, number, data;
 	bool has_number = true;
+	bool live = true;
 };
 
 Spec random_spec(std::mt19937& rng, int shard, int i) {
@@ -226,9 +225,13 @@ Spec random_spec(std::mt19937& rng, int shard, int i) {
 	return spec;
 }
 
-engine::Document make(Kind kind, int shard, int i, const Spec& spec) {
-	engine::Document doc(kind);
-	doc.set_key("Q" + std::to_string(shard) + "_" + std::to_string(i));
+std::string key_of(int shard, int i) {
+	return "Q" + std::to_string(shard) + "_" + std::to_string(i);
+}
+
+engine::Document make(int shard, int i, const Spec& spec) {
+	engine::Document doc;
+	doc.set_key(key_of(shard, i));
 	const auto flat = doc.field("f");   // the terms are flat strings; no field name is joined to them
 	for (const auto& [term, wdf] : spec.terms) {
 		doc.add_term(flat, term, wdf);
@@ -244,23 +247,21 @@ engine::Document make(Kind kind, int shard, int i, const Spec& spec) {
 }
 
 struct Corpus {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
-	Index merged{Kind::strata, {}};   // every document of every shard in one shard: the whole-index statistics
+	Index strata;
+	Index merged;   // every document of every shard in one shard: the whole-index statistics
 	std::vector<std::vector<Spec>> specs;
 };
 
-// The same documents on both engines, `commits` commits per shard (several segments on strata).
+// The documents on `shard_count` shards, `commits` commits per shard (several segments), and all of them in one more shard.
 void build(const char* name, int shard_count, int count, int commits, Corpus& corpus) {
 	std::mt19937 rng(4321);
 	corpus.specs.assign(static_cast<std::size_t>(shard_count), {});
-	for (auto* index : {&corpus.xapian, &corpus.strata}) {
-		index->owned.clear();
-		for (int s = 0; s < shard_count; ++s) {
-			index->owned.push_back(engine::sync_wait(engine::open_local(index->kind, path_of(name, index->kind, s), true, true)).shard);
-		}
+	corpus.strata.owned.clear();
+	for (int s = 0; s < shard_count; ++s) {
+		corpus.strata.owned.push_back(engine::sync_wait(engine::open_local(path_of(name, s), true, true)).shard);
 	}
 	corpus.merged.owned.clear();
-	corpus.merged.owned.push_back(engine::sync_wait(engine::open_local(Kind::strata, path_of(name, Kind::strata, 99), true, true)).shard);
+	corpus.merged.owned.push_back(engine::sync_wait(engine::open_local(path_of(name, 99), true, true)).shard);
 	for (int s = 0; s < shard_count; ++s) {
 		auto& list = corpus.specs[static_cast<std::size_t>(s)];
 		for (int c = 0; c < commits; ++c) {
@@ -275,17 +276,197 @@ void build(const char* name, int shard_count, int count, int commits, Corpus& co
 						}
 					}
 				}
-				for (auto* index : {&corpus.xapian, &corpus.strata, &corpus.merged}) {
-					auto doc = make(index->kind, s, i, list.back());
+				for (auto* index : {&corpus.strata, &corpus.merged}) {
+					auto doc = make(s, i, list.back());
 					engine::sync_wait(index->owned[index == &corpus.merged ? 0 : static_cast<std::size_t>(s)]->add(doc, {}));
 				}
 			}
-			for (auto* index : {&corpus.xapian, &corpus.strata}) {
-				engine::sync_wait(index->owned[static_cast<std::size_t>(s)]->commit(engine::Transaction::none));
-			}
+			engine::sync_wait(corpus.strata.owned[static_cast<std::size_t>(s)]->commit(engine::Transaction::none));
 		}
 	}
 	engine::sync_wait(corpus.merged.owned[0]->commit(engine::Transaction::none));
+}
+
+// --- the model: which documents a query matches ---
+
+bool has_term(const Spec& spec, const std::string& term) {
+	return spec.terms.contains(term) || term == "B" + spec.group;
+}
+
+// The terms of the field "f" over the live documents of the first `shards` shards, with the number of documents holding each.
+using Dictionary = std::map<std::string, std::size_t>;
+
+Dictionary dictionary_of(const Corpus& corpus, std::size_t shards) {
+	Dictionary dictionary;
+	for (std::size_t s = 0; s < shards; ++s) {
+		for (const auto& spec : corpus.specs[s]) {
+			if (!spec.live) { continue; }
+			for (const auto& [term, wdf] : spec.terms) { ++dictionary[term]; }
+			++dictionary["B" + spec.group];
+		}
+	}
+	return dictionary;
+}
+
+std::vector<char32_t> code_points(const std::string& text) {
+	std::vector<char32_t> out;
+	for (std::size_t i = 0; i < text.size();) {
+		const auto lead = static_cast<unsigned char>(text[i]);
+		const std::size_t n = lead < 0x80 ? 1 : lead < 0xe0 ? 2 : lead < 0xf0 ? 3 : 4;
+		char32_t cp = n == 1 ? lead : lead & (0xff >> (n + 1));
+		for (std::size_t k = 1; k < n; ++k) { cp = (cp << 6) | (static_cast<unsigned char>(text[i + k]) & 0x3f); }
+		out.push_back(cp);
+		i += n;
+	}
+	return out;
+}
+
+// Whether the term matches a pattern whose '?' (one character) and '*' (any run) count as the flags say, whole.
+bool glob(const std::vector<char32_t>& pattern, std::size_t p, const std::vector<char32_t>& term, std::size_t t, unsigned flags) {
+	if (p == pattern.size()) { return t == term.size(); }
+	if (pattern[p] == U'*' && (flags & engine::PATTERN_MULTI)) {
+		for (std::size_t skip = t; skip <= term.size(); ++skip) {
+			if (glob(pattern, p + 1, term, skip, flags)) { return true; }
+		}
+		return false;
+	}
+	if (t == term.size()) { return false; }
+	if (pattern[p] == U'?' && (flags & engine::PATTERN_SINGLE)) { return glob(pattern, p + 1, term, t + 1, flags); }
+	return pattern[p] == term[t] && glob(pattern, p + 1, term, t + 1, flags);
+}
+
+// The optimal-string-alignment distance: insertions, deletions, substitutions and adjacent swaps count one.
+std::size_t distance_of(const std::vector<char32_t>& a, const std::vector<char32_t>& b) {
+	std::vector<std::vector<std::size_t>> d(a.size() + 1, std::vector<std::size_t>(b.size() + 1));
+	for (std::size_t i = 0; i <= a.size(); ++i) { d[i][0] = i; }
+	for (std::size_t j = 0; j <= b.size(); ++j) { d[0][j] = j; }
+	for (std::size_t i = 1; i <= a.size(); ++i) {
+		for (std::size_t j = 1; j <= b.size(); ++j) {
+			d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1)});
+			if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) { d[i][j] = std::min(d[i][j], d[i - 2][j - 2] + 1); }
+		}
+	}
+	return d[a.size()][b.size()];
+}
+
+// The terms a wildcard or an edit-distance node stands for, within its limit; none and `error` set when
+// there are more than the limit allows under the `error` policy.
+struct Expansion {
+	std::set<std::string> terms;
+	bool error = false;
+};
+
+Expansion expand(const engine::QueryNode& node, const Dictionary& dictionary) {
+	std::vector<std::string> found;
+	for (const auto& [term, count] : dictionary) {
+		bool match;
+		if (node.kind == engine::QueryKind::wildcard) {
+			match = node.pattern_flags == 0 ? term.starts_with(node.str) : glob(code_points(node.str), 0, code_points(term), 0, node.pattern_flags);
+		} else {
+			const auto prefix = node.str.substr(0, node.prefix_length);
+			match = term.starts_with(prefix) && distance_of(code_points(node.str.substr(prefix.size())), code_points(term.substr(prefix.size()))) <= node.distance;
+		}
+		if (match) { found.push_back(term); }
+	}
+	Expansion result;
+	if (node.parameter != 0 && found.size() > node.parameter) {
+		switch (node.limit) {
+			case engine::Expansion::error:
+				result.error = true;
+				return result;
+			case engine::Expansion::first:
+				found.resize(node.parameter);
+				break;
+			case engine::Expansion::most_frequent:
+				std::stable_sort(found.begin(), found.end(), [&](const auto& x, const auto& y) { return dictionary.at(x) > dictionary.at(y); });
+				found.resize(node.parameter);
+				break;
+		}
+	}
+	result.terms.insert(found.begin(), found.end());
+	return result;
+}
+
+struct Matcher {
+	const Dictionary& dictionary;
+	const std::string& key;
+	const Spec& spec;
+	bool errored = false;
+
+	bool value_accepted(const engine::PostingSource& source) const {
+		std::string value;
+		if (source.slot() == KEY) { value = spec.key; }
+		else if (source.slot() == GROUP) { value = spec.group; }
+		else if (source.slot() == NUMBER && spec.has_number) { value = spec.number; }
+		return !value.empty() && source.accept(value);
+	}
+
+	bool operator()(const Query& query) {
+		const auto* node = query.node();
+		if (node == nullptr) { return false; }
+		switch (node->kind) {
+			case engine::QueryKind::term:
+				if (node->field.empty() && node->str.empty()) { return true; }
+				if (node->field == engine::KEY_FIELD) { return node->str == key; }
+				return node->field == "f" && has_term(spec, node->str);
+			case engine::QueryKind::wildcard:
+			case engine::QueryKind::edit_distance: {
+				const auto expansion = expand(*node, dictionary);
+				errored = errored || expansion.error;
+				return std::any_of(expansion.terms.begin(), expansion.terms.end(), [&](const auto& term) { return has_term(spec, term); });
+			}
+			case engine::QueryKind::source:
+				return value_accepted(*node->src);
+			case engine::QueryKind::scale:
+				return (*this)(node->subqueries[0]);
+			case engine::QueryKind::append:
+				if (node->subqueries[0].empty()) { return (*this)(node->subqueries[1]); }
+				return combine(node->op, node->subqueries);
+			case engine::QueryKind::combine:
+				return combine(node->op, node->subqueries);
+		}
+		return false;
+	}
+
+	bool combine(Op op, const std::vector<Query>& subs) {
+		std::vector<bool> hit;
+		for (const auto& sub : subs) { hit.push_back((*this)(sub)); }
+		const auto count = static_cast<std::size_t>(std::count(hit.begin(), hit.end(), true));
+		switch (op) {
+			case Op::AND: return count == hit.size();
+			case Op::OR:
+			case Op::MAX:
+			case Op::SYNONYM: return count != 0;
+			case Op::AND_NOT: return hit[0] && count == 1;
+			case Op::AND_MAYBE: return hit[0];
+			case Op::FILTER: return hit[0] && hit[1];
+			case Op::XOR: return count % 2 == 1;
+			default: return false;
+		}
+	}
+};
+
+// The stored data of the live documents of the first `shards` shards that the query matches; `error` when an
+// expansion past its limit under the `error` policy fails the search.
+struct Expected {
+	std::set<std::string> datas;
+	bool error = false;
+};
+
+Expected expected_of(const Corpus& corpus, std::size_t shards, const Query& query) {
+	const auto dictionary = dictionary_of(corpus, shards);
+	Expected expected;
+	for (std::size_t s = 0; s < shards; ++s) {
+		for (std::size_t i = 0; i < corpus.specs[s].size(); ++i) {
+			const auto& spec = corpus.specs[s][i];
+			if (!spec.live) { continue; }
+			const auto key = key_of(static_cast<int>(s), static_cast<int>(i + 1));
+			Matcher matcher{dictionary, key, spec};
+			if (matcher(query)) { expected.datas.insert(spec.data); }
+			expected.error = expected.error || matcher.errored;
+		}
+	}
+	return expected;
 }
 
 // --- running and comparing ---
@@ -298,7 +479,6 @@ engine::SearchResult run(const Index& index, std::size_t shards, const Query& qu
 	request.query = prepared.get();
 	request.maxitems = 100000;
 	request.check_at_least = 100000;
-	request.origin = "test";
 	tweak(request);
 	return engine::sync_wait(engine::search(index.shards(shards), request));
 }
@@ -307,119 +487,99 @@ bool close(double a, double b) {
 	return std::fabs(a - b) <= tolerance * std::max(1.0, std::fabs(b));
 }
 
-// Hits in the same order up to ties: the weights agree position by position, and the ids of each run of
-// equal weights agree as sets.
-bool same_ranking(const std::vector<engine::Hit>& a, const std::vector<engine::Hit>& b) {
-	if (a.size() != b.size()) {
-		return false;
-	}
-	for (std::size_t i = 0; i < a.size();) {
-		std::size_t j = i;
-		std::set<engine::docid> left, right;
-		while (j < a.size() && close(a[j].weight, a[i].weight)) {
-			if (!close(a[j].weight, b[j].weight)) {
-				return false;
-			}
-			left.insert(a[j].did);
-			right.insert(b[j].did);
-			++j;
-		}
-		if (j == i || left != right) {
-			return false;
-		}
-		i = j;
-	}
-	return true;
-}
-
-std::set<engine::docid> ids_of(const engine::SearchResult& result) {
-	std::set<engine::docid> ids;
-	for (const auto& hit : result.hits) {
-		ids.insert(hit.did);
-	}
-	return ids;
-}
-
-// The same search on both engines: same documents, same estimate, the same ranking up to ties.
-engine::SearchResult both(const Corpus& corpus, std::size_t shards, const Query& query, const char* what, const Tweak& tweak = [](engine::SearchRequest&) { }) {
-	const auto x = run(corpus.xapian, shards, query, tweak);
-	const auto s = run(corpus.strata, shards, query, tweak);
-	const bool ok = ids_of(x) == ids_of(s) && x.estimated == s.estimated && x.hits.size() == s.hits.size() && same_ranking(x.hits, s.hits);
-	if (!ok) {
-		std::fprintf(stderr, "  differs: %s (%zu shards): xapian %zu hits est %u, strata %zu hits est %u, same ids %d\n", what, shards, x.hits.size(), x.estimated, s.hits.size(), s.estimated, ids_of(x) == ids_of(s));
-		std::map<engine::docid, double> xw;
-		for (const auto& h : x.hits) { xw[h.did] = h.weight; }
-		int shown = 0;
-		for (const auto& h : s.hits) {
-			const auto it = xw.find(h.did);
-			if (it != xw.end() && !close(it->second, h.weight) && shown++ < 3) {
-				std::fprintf(stderr, "    doc %u: xapian %.12g strata %.12g\n", h.did, it->second, h.weight);
-			}
-		}
-	}
-	CHECK_TRUE(ok);
-	return s;
+// The stored data of a document of the search over `shards` shards of the index.
+std::string data_of(const Index& index, std::size_t shards, engine::docid did) {
+	const std::size_t shard = (did - 1) % shards;
+	const auto local = static_cast<engine::docid>((did - 1) / shards + 1);
+	return engine::sync_wait(index.owned[shard]->get(local))->data();
 }
 
 // The documents' weights by stored data, for comparing indexes that number their documents differently.
 std::map<std::string, double> weights_by_data(const Index& index, std::size_t shards, const engine::SearchResult& result) {
 	std::map<std::string, double> weights;
 	for (const auto& hit : result.hits) {
-		const std::size_t shard = (hit.did - 1) % shards;
-		const auto local = static_cast<engine::docid>((hit.did - 1) / shards + 1);
-		weights[engine::sync_wait(index.owned[shard]->get(local))->data()] = hit.weight;
+		weights[data_of(index, shards, hit.did)] = hit.weight;
 	}
 	return weights;
 }
 
-// Like both(), but for searches whose terms Xapian weighs with statistics that are not the whole index's
-// on several shards (a wildcard or edit-distance expansion): there the documents and the estimate must agree
-// with Xapian, and the weights with the strata engine's own search of one shard holding every document.
-void same_documents(const Corpus& corpus, std::size_t shards, const Query& query, const char* what) {
-	if (shards == 1) {
-		both(corpus, shards, query, what);
-		return;
-	}
-	const auto x = run(corpus.xapian, shards, query);
-	const auto s = run(corpus.strata, shards, query);
-	const auto m = run(corpus.merged, 1, query);
-	bool ok = ids_of(x).size() == ids_of(s).size() && x.estimated == s.estimated && s.estimated == m.estimated;
-	std::set<std::string> xd, sd;
-	for (const auto& [data, w] : weights_by_data(corpus.xapian, shards, x)) { xd.insert(data); }
-	const auto sw = weights_by_data(corpus.strata, shards, s);
-	const auto mw = weights_by_data(corpus.merged, 1, m);
-	for (const auto& [data, w] : sw) { sd.insert(data); }
-	ok = ok && xd == sd && sw.size() == mw.size();
-	for (const auto& [data, w] : sw) {
-		const auto it = mw.find(data);
-		ok = ok && it != mw.end() && close(w, it->second);
-	}
-	if (!ok) {
-		std::fprintf(stderr, "  differs (whole-index weights): %s (%zu shards)\n", what, shards);
-	}
-	CHECK_TRUE(ok);
+std::set<std::string> datas_of(const Index& index, std::size_t shards, const engine::SearchResult& result) {
+	std::set<std::string> datas;
+	for (const auto& [data, weight] : weights_by_data(index, shards, result)) { datas.insert(data); }
+	return datas;
 }
 
-// The same search with a fixed order of hits: the documents, in order, agree exactly.
-void same_order(const Corpus& corpus, std::size_t shards, const Query& query, const char* what, const Tweak& tweak) {
-	const auto x = run(corpus.xapian, shards, query, tweak);
-	const auto s = run(corpus.strata, shards, query, tweak);
-	bool ok = x.hits.size() == s.hits.size() && x.estimated == s.estimated;
-	for (std::size_t i = 0; ok && i < x.hits.size(); ++i) {
-		ok = x.hits[i].did == s.hits[i].did && x.hits[i].rank == s.hits[i].rank && close(x.hits[i].weight, s.hits[i].weight);
+// The ranks and the order of the hits of a full search: weight order, ranks counting from zero.
+void check_ranking(const engine::SearchResult& result) {
+	for (std::size_t i = 0; i < result.hits.size(); ++i) {
+		CHECK_EQ(result.hits[i].rank, i);
+		if (i > 0) { CHECK_GE(result.hits[i - 1].weight + 1e-12, result.hits[i].weight); }
+	}
+}
+
+// A search checked against the model: the documents and the estimate are the model's, the ranking is by
+// weight, and (when `weights`) the weights are those of one shard holding every document. With a window
+// the hits are that slice of the full ranking.
+engine::SearchResult both(const Corpus& corpus, std::size_t shards, const Query& query, const char* what, const Tweak& tweak = [](engine::SearchRequest&) { }, bool weights = true) {
+	const auto want = expected_of(corpus, shards, query);
+	const auto full = run(corpus.strata, shards, query);
+	const bool ok = datas_of(corpus.strata, shards, full) == want.datas && full.estimated == want.datas.size() && full.hits.size() == want.datas.size();
+	if (!ok) {
+		std::fprintf(stderr, "  differs: %s (%zu shards): %zu hits est %u, model %zu\n", what, shards, full.hits.size(), full.estimated, want.datas.size());
+	}
+	CHECK_TRUE(ok);
+	check_ranking(full);
+	if (weights && shards == corpus.specs.size()) {
+		const auto whole = run(corpus.merged, 1, query);
+		const auto mine = weights_by_data(corpus.strata, shards, full), theirs = weights_by_data(corpus.merged, 1, whole);
+		bool same = mine.size() == theirs.size();
+		for (const auto& [data, weight] : mine) {
+			const auto it = theirs.find(data);
+			same = same && it != theirs.end() && close(weight, it->second);
+		}
+		if (!same) { std::fprintf(stderr, "  weights differ from the whole index's: %s (%zu shards)\n", what, shards); }
+		CHECK_TRUE(same);
+	}
+	engine::SearchRequest window;
+	window.maxitems = 100000;   // as run() starts every request
+	tweak(window);
+	const auto windowed = run(corpus.strata, shards, query, tweak);
+	CHECK_EQ(windowed.estimated, full.estimated);
+	const std::size_t begin = std::min<std::size_t>(window.first, full.hits.size());
+	const std::size_t end = std::min<std::size_t>(begin + window.maxitems, full.hits.size());
+	CHECK_EQ(windowed.hits.size(), end - begin);
+	if (windowed.hits.size() != end - begin) { return full; }
+	for (std::size_t i = begin; i < end; ++i) {
+		CHECK_EQ(windowed.hits[i - begin].did, full.hits[i].did);
+		CHECK_EQ(windowed.hits[i - begin].rank, i);
+	}
+	return full;
+}
+
+// Like both(), but for searches whose terms weigh with statistics that are not the whole index's on
+// several shards (a wildcard or edit-distance expansion): the documents and the estimate are the model's,
+// and the weights those of the search of one shard holding every document.
+void same_documents(const Corpus& corpus, std::size_t shards, const Query& query, const char* what) {
+	const auto want = expected_of(corpus, shards, query);
+	if (want.error) {
+		CHECK_THROW(run(corpus.strata, shards, query), engine::Error);
+		return;
+	}
+	const auto s = run(corpus.strata, shards, query);
+	const auto m = run(corpus.merged, 1, query);
+	bool ok = datas_of(corpus.strata, shards, s) == want.datas && s.estimated == want.datas.size() && m.estimated == s.estimated;
+	check_ranking(s);
+	const auto sw = weights_by_data(corpus.strata, shards, s);
+	const auto mw = weights_by_data(corpus.merged, 1, m);
+	ok = ok && sw.size() == mw.size();
+	if (shards == 1) {
+		for (const auto& [data, w] : sw) {
+			const auto it = mw.find(data);
+			ok = ok && it != mw.end() && close(w, it->second);
+		}
 	}
 	if (!ok) {
-		std::fprintf(stderr, "  differs in order: %s (%zu shards): xapian %zu hits, strata %zu hits\n", what, shards, x.hits.size(), s.hits.size());
-		for (std::size_t i = 0; i < std::min(x.hits.size(), s.hits.size()); ++i) {
-			if (x.hits[i].did != s.hits[i].did || !close(x.hits[i].weight, s.hits[i].weight)) {
-				const auto key_of = [&](const Index& index, engine::docid did) {
-					const std::size_t n = shards;
-					return engine::sync_wait(index.owned[(did - 1) % n]->get(static_cast<engine::docid>((did - 1) / n + 1)))->value(KEY);
-				};
-				std::fprintf(stderr, "    first at %zu: xapian doc %u rank %u w %.9g key %s, strata doc %u rank %u w %.9g key %s\n", i, x.hits[i].did, x.hits[i].rank, x.hits[i].weight, key_of(corpus.xapian, x.hits[i].did).c_str(), s.hits[i].did, s.hits[i].rank, s.hits[i].weight, key_of(corpus.strata, s.hits[i].did).c_str());
-				break;
-			}
-		}
+		std::fprintf(stderr, "  differs: %s (%zu shards)\n", what, shards);
 	}
 	CHECK_TRUE(ok);
 }
@@ -451,6 +611,17 @@ Query t(const char* term, engine::termcount wqf = 1) {
 	return Query::term("f", term, wqf);
 }
 
+// The key of the document with this id in the search over `shards` shards.
+std::string key_value(const Index& index, std::size_t shards, engine::docid did) {
+	const std::size_t shard = (did - 1) % shards;
+	return engine::sync_wait(index.owned[shard]->get(static_cast<engine::docid>((did - 1) / shards + 1)))->value(KEY);
+}
+
+std::string group_value(const Index& index, std::size_t shards, engine::docid did) {
+	const std::size_t shard = (did - 1) % shards;
+	return engine::sync_wait(index.owned[shard]->get(static_cast<engine::docid>((did - 1) / shards + 1)))->value(GROUP);
+}
+
 // --- tests ---
 
 void test_sorter() {
@@ -467,25 +638,53 @@ void test_sorter() {
 			{"none", t("absent")},
 		};
 		for (const auto& [name, query] : queries) {
+			const auto want = expected_of(corpus, n, query);
+			// The documents' keys, in the order a sort by key gives: unique keys, so the order is total.
+			std::vector<std::string> keys;
+			for (std::size_t s = 0; s < n; ++s) {
+				for (const auto& spec : corpus.specs[s]) {
+					if (spec.live && want.datas.contains(spec.data)) { keys.push_back(spec.key); }
+				}
+			}
+			std::sort(keys.begin(), keys.end());
 			for (const auto order : {engine::DocidOrder::ascending, engine::DocidOrder::descending}) {
-				// Unique keys: the order is total.
-				same_order(corpus, n, query, name, [&](engine::SearchRequest& r) { r.sorter = &by_key; r.order = order; });
-				same_order(corpus, n, query, name, [&](engine::SearchRequest& r) { r.sorter = &by_key; r.order = order; r.first = 3; r.maxitems = 7; });
+				const auto sorted = run(corpus.strata, n, query, [&](engine::SearchRequest& r) { r.sorter = &by_key; r.order = order; });
+				CHECK_EQ(sorted.estimated, want.datas.size());
+				REQUIRE_EQ(sorted.hits.size(), keys.size());
+				for (std::size_t i = 0; i < keys.size(); ++i) {
+					CHECK_EQ(key_value(corpus.strata, n, sorted.hits[i].did), keys[i]);
+					CHECK_EQ(sorted.hits[i].rank, i);
+				}
+				// A window is that slice of the order.
+				const auto window = run(corpus.strata, n, query, [&](engine::SearchRequest& r) { r.sorter = &by_key; r.order = order; r.first = 3; r.maxitems = 7; });
+				CHECK_EQ(window.estimated, want.datas.size());
+				const std::size_t end = std::min<std::size_t>(10, keys.size());
+				const std::size_t begin = std::min<std::size_t>(3, keys.size());
+				REQUIRE_EQ(window.hits.size(), end - begin);
+				for (std::size_t i = begin; i < end; ++i) {
+					CHECK_EQ(window.hits[i - begin].did, sorted.hits[i].did);
+				}
 				// Shared keys: ties fall back to relevance, then to the document order.
-				same_order(corpus, n, query, name, [&](engine::SearchRequest& r) { r.sorter = &by_group; r.order = order; });
+				const auto grouped = run(corpus.strata, n, query, [&](engine::SearchRequest& r) { r.sorter = &by_group; r.order = order; });
+				CHECK_EQ(grouped.hits.size(), keys.size());
+				CHECK_TRUE(datas_of(corpus.strata, n, grouped) == want.datas);
+				for (std::size_t i = 1; i < grouped.hits.size(); ++i) {
+					const auto& before = grouped.hits[i - 1];
+					const auto& hit = grouped.hits[i];
+					const auto g0 = group_value(corpus.strata, n, before.did), g1 = group_value(corpus.strata, n, hit.did);
+					CHECK_TRUE(g0 <= g1);
+					if (g0 == g1) {
+						CHECK_GE(before.weight + 1e-12, hit.weight);
+						if (close(before.weight, hit.weight)) {
+							CHECK_TRUE(order == engine::DocidOrder::descending ? before.did > hit.did : before.did < hit.did);
+						}
+					}
+				}
 			}
 			const auto r = run(corpus.strata, n, query, [&](engine::SearchRequest& r) { r.sorter = &by_key; });
 			CHECK_EQ(r.estimated, run(corpus.strata, n, query).estimated);
-		}
-		// The key order is the keys' order.
-		const auto r = run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.sorter = &by_key; });
-		REQUIRE_EQ(r.hits.size(), static_cast<std::size_t>(shard_count * 60));
-		auto view = [&](engine::docid did) {
-			const std::size_t shard = (did - 1) % n, local = (did - 1) / n + 1;
-			return engine::sync_wait(corpus.strata.owned[shard]->get(static_cast<engine::docid>(local)))->value(KEY);
-		};
-		for (std::size_t i = 1; i < r.hits.size(); ++i) {
-			CHECK_LT(view(r.hits[i - 1].did), view(r.hits[i].did));
+			CHECK_EQ(r.estimated, want.datas.size());
+			(void)name;
 		}
 		// A key maker that throws fails the search, and the next search is fine.
 		ThrowingKey throwing;
@@ -507,31 +706,39 @@ void test_spy() {
 			{"none", t("absent")},
 		};
 		for (const auto& [name, query] : queries) {
+			// What a spy must have seen: the model's matches, grouped, and their weights as the full search gives them.
+			const auto want = expected_of(corpus, n, query);
+			std::map<std::string, std::pair<std::uint64_t, std::uint64_t>> groups;
+			for (std::size_t s = 0; s < n; ++s) {
+				for (const auto& spec : corpus.specs[s]) {
+					if (!spec.live || !want.datas.contains(spec.data)) { continue; }
+					auto& entry = groups[spec.group];
+					++entry.first;
+					entry.second += spec.has_number ? std::stoull(spec.number) : 0;
+				}
+			}
+			const auto full = run(corpus.strata, n, query);
+			double total = 0;
+			for (const auto& hit : full.hits) { total += hit.weight; }
 			// The window and the checked count do not limit what the spy sees: it sees every match.
 			for (const auto& [first, items, check] : {std::tuple{0u, 10u, 0u}, {0u, 0u, 1u}, {3u, 5u, 100000u}, {0u, 100000u, 0u}}) {
-				GroupSpy x, s;
-				const auto tweak = [&](GroupSpy& spy) {
-					return [&, first = first, items = items, check = check](engine::SearchRequest& r) { r.first = first; r.maxitems = items; r.check_at_least = check; r.spy = &spy; };
-				};
-				// Xapian stops checking at its window unless it is asked to check everything.
-				const auto xr = run(corpus.xapian, n, query, [&](engine::SearchRequest& r) { tweak(x)(r); r.check_at_least = engine::CHECK_ALL; });
-				const auto sr = run(corpus.strata, n, query, tweak(s));
-				const bool ok = x.datas == s.datas && x.groups == s.groups && close(x.weights, s.weights) && sr.estimated == xr.estimated;
+				GroupSpy s;
+				const auto sr = run(corpus.strata, n, query, [&, first = first, items = items, check = check](engine::SearchRequest& r) { r.first = first; r.maxitems = items; r.check_at_least = check; r.spy = &s; });
+				const bool ok = s.datas == want.datas && s.groups == groups && close(s.weights, total) && sr.estimated == want.datas.size();
 				if (!ok) {
-					std::fprintf(stderr, "  spy differs: %s (%zu shards) first %u items %u: xapian %zu, strata %zu\n", name, n, first, items, x.datas.size(), s.datas.size());
+					std::fprintf(stderr, "  spy differs: %s (%zu shards) first %u items %u: model %zu, strata %zu\n", name, n, first, items, want.datas.size(), s.datas.size());
 				}
 				CHECK_TRUE(ok);
 				CHECK_EQ(s.datas.size(), sr.estimated);
 			}
 			// A spy together with a key maker.
-			GroupSpy x, s;
+			GroupSpy s;
 			SlotKey key(KEY);
-			run(corpus.xapian, n, query, [&](engine::SearchRequest& r) { r.spy = &x; r.sorter = &key; });
 			run(corpus.strata, n, query, [&](engine::SearchRequest& r) { r.spy = &s; r.sorter = &key; });
-			CHECK_TRUE(x.datas == s.datas);
-			CHECK_TRUE(x.groups == s.groups);
+			CHECK_TRUE(s.datas == want.datas);
+			CHECK_TRUE(s.groups == groups);
 		}
-		// A spy is given the document's id within its shard, as the Xapian engine gives it.
+		// A spy is given the document's id within its shard.
 		{
 			struct IdSpy final : engine::MatchSpy {
 				std::multiset<engine::docid> ids;
@@ -543,12 +750,12 @@ void test_spy() {
 				std::string serialise_results() const override { return ""; }
 				void merge_results(std::string_view) override { }
 				std::string description() const override { return "IdSpy"; }
-			} from_xapian, from_strata;
-			run(corpus.xapian, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &from_xapian; r.check_at_least = engine::CHECK_ALL; });
+			} from_strata;
 			run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &from_strata; });
-			CHECK_TRUE(from_xapian.ids == from_strata.ids);
 			CHECK_EQ(from_strata.ids.size(), static_cast<std::size_t>(shard_count * 60));
 			CHECK_EQ(from_strata.ids.count(1), static_cast<std::size_t>(shard_count));
+			CHECK_EQ(from_strata.ids.count(60), static_cast<std::size_t>(shard_count));
+			CHECK_EQ(from_strata.ids.count(61), std::size_t(0));
 		}
 		// A spy that asks for the document's serialisation is refused: the strata engine keeps no term lists.
 		{
@@ -607,24 +814,21 @@ void test_sources() {
 			}
 		}
 		// Deleted and replaced documents leave no trace in a source.
-		for (auto* index : {&corpus.xapian, &corpus.strata}) {
-			for (int shard = 0; shard < shard_count; ++shard) {
-				auto& s = *index->owned[static_cast<std::size_t>(shard)];
-				engine::sync_wait(s.erase_by_key("Q" + std::to_string(shard) + "_5", true, std::nullopt));
-				auto replacement = make(index->kind, shard, 6, corpus.specs[static_cast<std::size_t>(shard)][5]);
-				replacement.add_value(NUMBER, "00250");
-				engine::sync_wait(s.replace_by_key("Q" + std::to_string(shard) + "_6", replacement, {}));
-				engine::sync_wait(s.commit(engine::Transaction::none));
-			}
+		for (int shard = 0; shard < shard_count; ++shard) {
+			auto& s = *corpus.strata.owned[static_cast<std::size_t>(shard)];
+			auto& specs = corpus.specs[static_cast<std::size_t>(shard)];
+			engine::sync_wait(s.erase_by_key(key_of(shard, 5), true, std::nullopt));
+			specs[4].live = false;
+			specs[5].number = "00250";
+			specs[5].has_number = true;
+			auto replacement = make(shard, 6, specs[5]);
+			engine::sync_wait(s.replace_by_key(key_of(shard, 6), replacement, {}));
+			engine::sync_wait(s.commit(engine::Transaction::none));
 		}
-		// Term statistics count deleted documents until a merge removes them (the strata engine), so only the
-		// documents and the estimate are compared here, and the weights of a search by source alone.
-		both(corpus, n, Query::source(std::make_unique<Between>(NUMBER, "00100", "00600")), "after writes");
-		const auto query = Query::combine(Op::OR, Query::source(std::make_unique<Between>(NUMBER, "00200", "00300")), t("even"));
-		const auto x = run(corpus.xapian, n, query);
-		const auto s = run(corpus.strata, n, query);
-		CHECK_TRUE(ids_of(x) == ids_of(s));
-		CHECK_EQ(x.estimated, s.estimated);
+		// Term statistics count deleted documents until a merge removes them, so only the documents and the
+		// estimate are compared here.
+		both(corpus, n, Query::source(std::make_unique<Between>(NUMBER, "00100", "00600")), "after writes", [](engine::SearchRequest&) { }, false);
+		both(corpus, n, Query::combine(Op::OR, Query::source(std::make_unique<Between>(NUMBER, "00200", "00300")), t("even")), "after writes, with a term", [](engine::SearchRequest&) { }, false);
 	}
 }
 
@@ -739,7 +943,7 @@ void test_operators() {
 	}
 }
 
-// What a wildcard or edit-distance node stands for is the same terms on both engines, whatever the pattern.
+// What a wildcard or edit-distance node stands for is the terms the model says, whatever the pattern.
 void test_expansions() {
 	Corpus corpus;
 	for (const int shard_count : {1, 5}) {
@@ -780,12 +984,19 @@ void test_expansions() {
 		queries.emplace_back("fuzzy limit first", fuzzy("bnad", 2, 0, 2, engine::Expansion::first));
 		queries.emplace_back("wildcard and", Query::combine(Op::AND, wild("ban"), t("common")));
 		queries.emplace_back("wildcard or fuzzy", Query::combine(Op::OR, wild("ap"), fuzzy("cart", 1)));
+		std::size_t found = 0;
 		for (const auto& [name, query] : queries) {
 			same_documents(corpus, n, query, name.c_str());
+			found += !expected_of(corpus, n, query).datas.empty();
 		}
-		// Past the limit with `error` fails the search on both engines.
-		CHECK_TRUE(error_kind([&] { run(corpus.xapian, n, wild("ban", 2)); }).has_value());
+		CHECK_GT(found, queries.size() / 2);
+		// The limits pick the terms the corpus gives them: the first two prefixed "mf_" by byte order, the two with the most documents.
+		CHECK_EQ(expected_of(corpus, n, wild("mf_", 2, engine::Expansion::first)).datas.size(), 5u);   // mf_a (docs 1-5) and mf_b (1-3)
+		CHECK_EQ(expected_of(corpus, n, wild("mf_", 2, engine::Expansion::most_frequent)).datas.size(), 8u);   // mf_c (docs 1-8) and mf_a (1-5)
+		// Past the limit with `error` fails the search.
+		CHECK_TRUE(expected_of(corpus, n, wild("ban", 2)).error);
 		CHECK_TRUE(error_kind([&] { run(corpus.strata, n, wild("ban", 2)); }).has_value());
+		CHECK_TRUE(expected_of(corpus, n, fuzzy("bnad", 2, 0, 1)).error);
 		CHECK_TRUE(error_kind([&] { run(corpus.strata, n, fuzzy("bnad", 2, 0, 1)); }).has_value());
 	}
 }
