@@ -298,14 +298,14 @@ on every text query and BOOLEAN only for the AND and OR operators.
 
 - Live server, build of `Xapiand:3bc11f31f` (the closing run's binary, Xapian engine; the text parser is the same on both engines): index a
   document with a default text field `t`, then `SEARCH /h/ {"_query": {"t": "-(a b) -c"}}`: no answer in 20 s, one core at 98%, resident
-  memory 11 GB and growing. Any client that may search can wedge a thread and exhaust memory with one 9-byte request. `-alpha`,
-  `alpha -(a b) -c` and `-a -b` answer normally.
+  memory 11 GB and growing. Any client that may search can wedge a thread and exhaust memory with one 9-byte request. `-alpha` answers
+  normally on the same server, and `queryparser::parse` alone builds sound trees for `x -a`, `alpha -(a b) -c`, `a b -c` and `a -(b c)`.
 - Control: `v1.0.0-alpha.9` (rebuilt in its own worktree) answers `-(a b) -c`, `-a -b` and `x -(a b) -c` in about a millisecond. The hang is
   new since the queryparser library replaced Xapian's query parser in the seam (`src/engine/text.cc`).
 - Cause, by reading and a probe (`.scratch/qp/probe.cc`, calling `queryparser::parse` alone at `Kronuz/queryparser@09a4ea6`, the pin): for
   `-(a b) -c` with `flag::lovehate` the tree's last node has `next` equal to its own id (`node 3 kind=0 first=-1 last=-1 next=3`). A list
   that links to itself is what `builder::add` produces when it is handed the node that is already its parent's last child
-  (`queryparser.cc:192-199` clears the child's `next`, then sets `nodes_[p.last].next = c`); which caller adds a node twice is for the
+  (`queryparser.cc:189-199` clears the child's `next`, then sets `nodes_[p.last].next = c`); which caller adds a node twice is for the
   library's owner to find. `engine::convert` (`src/engine/text.cc`) walks each node's children by `first` and `next`, so it read the list
   for ever and appended to a vector; `query::describe()` (used by the fuzzer and `test_text`) loops the same way.
 - Fix here: `convert` reads at most twice the tree's size in nodes and otherwise fails the text with a `QueryParserError` ("The parsed query
