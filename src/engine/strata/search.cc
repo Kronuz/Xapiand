@@ -48,8 +48,6 @@
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/doc_view.h"  // for SegmentDocView
 #include "engine/strata/expand.h"  // for expand
-#include "engine/strata/interim_terms.h"  // for interim::flat_term
-#include "engine/strata/keys.h"    // for keys::key_prefix
 #include "engine/strata/pin.h"     // for Pinned
 #include "engine/strata/shard.h"   // for Shard
 #include "engine/strata/values.h"  // for values::Slot
@@ -60,16 +58,6 @@ namespace engine::strata {
 namespace {
 
 namespace p = ::prospect;
-
-// The index's key prefix: the term table routes a term that starts with it to the key table. A query never
-// names a key (the id term is also an ordinary term of its document, and terms are UTF-8, which cannot start
-// with the lead byte), so every term is looked up in the dictionary. This one function is where the lookup
-// depends on how the index keeps keys (strata's design/fields-and-keys).
-std::string
-term_key_prefix()
-{
-	return keys::key_prefix();
-}
 
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
@@ -247,6 +235,7 @@ validate(const Query& query, int depth)
 // edit-distance node expands to.
 struct Group {
 	struct Member {
+		std::string field;
 		std::string term;
 		termcount wqf;
 	};
@@ -259,7 +248,6 @@ struct Group {
 struct Plan {
 	std::span<const p::segment_snapshot> segments;
 	p::term_table& terms;
-	std::string_view key_prefix;
 	std::unordered_map<const QueryNode*, Group> groups;
 };
 
@@ -272,8 +260,12 @@ struct Builder {
 
 	const p::inverted_plugin::reader& reader() const { return seg.get<p::inverted_plugin>(); }
 
-	p::weight weight_of(const std::string& term, termcount wqf = 1) const {
-		return p::weight::bm25_xapian(terms.stats(), terms.df(term), wqf);
+	// The term's document frequency over the whole index, its info in this segment and its weight; the key
+	// field's terms are looked up as keys.
+	std::uint64_t df(const std::string& field, const std::string& term) const { return terms.df(field, lookup_bytes(field, term)); }
+	const p::format::term_info* info(const std::string& field, const std::string& term) const { return terms.info(seg, field, lookup_bytes(field, term)); }
+	p::weight weight_of(const std::string& field, const std::string& term, termcount wqf = 1) const {
+		return p::weight::bm25_xapian(terms.stats(), df(field, term), wqf);
 	}
 };
 
@@ -299,11 +291,11 @@ group_of(const QueryNode& node, const Builder& b)
 	if (node.kind == QueryKind::combine) {
 		for (const auto& sub : node.subqueries) {
 			const auto& leaf = *sub.node();
-			group.members.push_back({interim::flat_term(leaf.field, leaf.str), leaf.wqf});
+			group.members.push_back({leaf.field, leaf.str, leaf.wqf});
 		}
 	} else {
-		for (auto& term : expand(node, b.plan.segments, b.terms, b.plan.key_prefix)) {
-			group.members.push_back({std::move(term), 1});
+		for (auto& expanded : expand(node, b.plan.segments, b.terms)) {
+			group.members.push_back({std::move(expanded.field), std::move(expanded.term), 1});
 		}
 	}
 	if (node.kind == QueryKind::combine && node.op == Op::ELITE_SET) {
@@ -313,8 +305,8 @@ group_of(const QueryNode& node, const Builder& b)
 		std::vector<std::pair<double, std::size_t>> keyed;
 		for (std::size_t i = 0; i < group.members.size(); ++i) {
 			const auto& member = group.members[i];
-			if (b.terms.df(member.term) != 0) {
-				keyed.emplace_back(b.weight_of(member.term, member.wqf).idf, i);
+			if (b.df(member.field, member.term) != 0) {
+				keyed.emplace_back(b.weight_of(member.field, member.term, member.wqf).idf, i);
 			}
 		}
 		std::stable_sort(keyed.begin(), keyed.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
@@ -335,7 +327,7 @@ group_of(const QueryNode& node, const Builder& b)
 	if (combiner_of(node) == Op::SYNONYM) {
 		std::vector<std::uint64_t> dfs;
 		for (const auto& member : group.members) {
-			dfs.push_back(b.terms.df(member.term));
+			dfs.push_back(b.df(member.field, member.term));
 		}
 		const auto& stats = b.terms.stats();
 		group.synonym = p::weight::bm25_xapian(stats, dfs.empty() ? 0 : p::synonym_df(dfs, stats.doc_count), 1);
@@ -456,7 +448,7 @@ build_group(const QueryNode& node, const Builder& b)
 	if (combiner == Op::SYNONYM) {
 		std::vector<p::format::term_info> infos;
 		for (const auto& member : group.members) {
-			if (const auto* info = b.terms.info(b.seg, member.term)) {
+			if (const auto* info = b.info(member.field, member.term)) {
 				infos.push_back(*info);
 			}
 		}
@@ -467,8 +459,8 @@ build_group(const QueryNode& node, const Builder& b)
 	}
 	std::vector<Scorer> children;
 	for (const auto& member : group.members) {
-		if (const auto* info = b.terms.info(b.seg, member.term)) {
-			children.push_back(std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(member.term, member.wqf)));
+		if (const auto* info = b.info(member.field, member.term)) {
+			children.push_back(std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(member.field, member.term, member.wqf)));
 		}
 	}
 	if (children.empty()) {
@@ -490,19 +482,24 @@ build_positional(const QueryNode& node, const Builder& b)
 	if (n == 1) {
 		return build(node.subqueries[0], b, 0);
 	}
+	for (const auto& sub : node.subqueries) {
+		// Positions are per field and document, so a phrase of terms from two fields matches nothing.
+		if (sub.node()->field != node.subqueries[0].node()->field) {
+			return nullptr;
+		}
+	}
 	std::vector<p::format::term_info> infos;
 	std::vector<p::weight> weights;
 	infos.reserve(n);
 	weights.reserve(n);
 	for (const auto& sub : node.subqueries) {
 		const auto& leaf = *sub.node();
-		const auto flat = interim::flat_term(leaf.field, leaf.str);
-		const auto* info = b.terms.info(b.seg, flat);
+		const auto* info = b.info(leaf.field, leaf.str);
 		if (info == nullptr) {
 			return nullptr;
 		}
 		infos.push_back(*info);
-		weights.push_back(b.weight_of(flat, leaf.wqf));
+		weights.push_back(b.weight_of(leaf.field, leaf.str, leaf.wqf));
 	}
 	const std::uint32_t window = node.op == Op::NEAR ? (node.parameter != 0 ? node.parameter : static_cast<std::uint32_t>(n)) : 0;
 	return std::make_unique<p::phrase_scorer>(b.reader(), infos, std::move(weights), window);
@@ -523,12 +520,11 @@ build(const Query& query, const Builder& b, int depth)
 			if (is_match_all(*node)) {
 				return std::make_unique<AllScorer>(b.seg.core().doc_count());
 			}
-			const auto flat = interim::flat_term(node->field, node->str);
-			const auto* info = b.terms.info(b.seg, flat);
+			const auto* info = b.info(node->field, node->str);
 			if (info == nullptr) {
 				return nullptr;
 			}
-			return std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(flat, node->wqf));
+			return std::make_unique<p::term_scorer>(b.reader(), *info, b.weight_of(node->field, node->str, node->wqf));
 		}
 		case QueryKind::combine: {
 			if (node->op == Op::PHRASE || node->op == Op::NEAR) {
@@ -715,14 +711,13 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
 		for (const auto& view : pin_of(mine[i]).segments()) {
-			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead});
+			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead, &pin_of(mine[i]).fields()});
 			documents += view.seg()->core().doc_count();
 		}
 	}
 	const p::multi_snapshot snapshot(std::move(inputs));
-	const std::string key_prefix = term_key_prefix();
-	p::term_table terms(snapshot.segments(), key_prefix);
-	Plan plan{snapshot.segments(), terms, key_prefix, {}};
+	p::term_table terms(snapshot.segments());
+	Plan plan{snapshot.segments(), terms, {}};
 
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	p::search_options options;

@@ -26,24 +26,29 @@
 #include <string_view>             // for std::string_view
 
 
-// The key adapter of the strata engine: how a document's id term becomes the index's key. This is the
-// one place that names the key lead byte; the fields-and-keys design (no key prefix) replaces the
-// three functions below and nothing else.
+// The key adapter of the strata engine, until the strata index keeps keys without a prefix (fields-and-keys
+// F3): the index's key is a lead byte and the host's key, which the key field's terms also name.
 namespace engine::strata::keys {
 
-// A key leads with a byte no term can start with (terms are UTF-8 text), so a field named "Quote"
-// never collides with the key prefix; the term follows it unchanged.
+// A key leads with a byte no host key can start with (the key is the id's type character, ASCII).
 inline constexpr char lead = '\xff';
 
-// The index's key for a document's id term.
+// The index's key for the host's key.
 inline std::string
-engine_key(std::string_view term)
+stored(std::string_view key)
 {
-	std::string key;
-	key.reserve(term.size() + 1);
-	key.push_back(lead);
-	key.append(term);
-	return key;
+	std::string result;
+	result.reserve(key.size() + 1);
+	result.push_back(lead);
+	result.append(key);
+	return result;
+}
+
+// The host's key of an index's key.
+inline std::string_view
+host(std::string_view stored_key)
+{
+	return stored_key.substr(1);
 }
 
 // The key prefix the index is opened with.

@@ -1429,7 +1429,7 @@ RemoteProtocolViews::msg_deletedocumentterm(const std::string & message)
 	{
 		lock_shard lk_shard(endpoint, flags);
 
-		lk_shard->delete_document_term(message);
+		lk_shard->delete_document_term(key_of_term(message));
 	}
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
@@ -1485,7 +1485,7 @@ RemoteProtocolViews::msg_replacedocumentterm(const std::string & message)
 	{
 		lock_shard lk_shard(endpoint, flags);
 
-		info = lk_shard->replace_document_term(unique_term, std::move(document));
+		info = lk_shard->replace_document_term(key_of_term(unique_term), std::move(document));
 	}
 
 	std::string reply;

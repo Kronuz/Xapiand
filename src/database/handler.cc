@@ -418,14 +418,14 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 
 	engine::WriteResult info;
 	if (did) {
-		assert(term_id != "QN\x80");
+		assert(term_id != "N\x80");
 		info = replace_document(did, std::move(doc), commit);
 	} else {
 		info = replace_document_term(term_id, std::move(doc), commit);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
-	if (it != data_obj.end() && term_id == "QN\x80") {
+	if (it != data_obj.end() && term_id == "N\x80") {
 		data_obj.erase(it);
 	}
 
@@ -1304,7 +1304,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	} else {
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
-	return flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+	return document_key(unprefixed_term_id, spc_id.get_ctype());
 }
 
 
@@ -1554,7 +1554,7 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 		}
 	}
 
-	size_t shard_num = fnv1ah64::hash(term) % n_shards;
+	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->delete_document_term(term, commit, wal, version);
@@ -1627,9 +1627,9 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		assert(term.size() > 2);
-		if (term[0] == 'Q' && term[1] == 'N') {
-			auto did_serialised = term.substr(2);
+		assert(term.size() > 1);
+		if (term[0] == 'N') {
+			auto did_serialised = term.substr(1);
 			engine::docid did = sortable_unserialise(did_serialised);
 			if (did == 0u) {
 				// Try getting a new ID which can currently be indexed (active node)
@@ -1654,7 +1654,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 			}
 			doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 		} else {
-			shard_num = fnv1ah64::hash(term) % n_shards;
+			shard_num = key_placement_hash(term) % n_shards;
 		}
 
 		try {
@@ -1908,11 +1908,11 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
 	L_CALL("DatabaseHandler::unserialise_term_id({})", repr(term_id));
 
 	assert(!term_id.empty());
-	if (term_id.size() < 3 || term_id[0] != 'Q') {
+	if (term_id.size() < 2) {
 		THROW(SerialisationError, "Term cannot be unserialised");
 	}
-	auto type = term_id[1];
-	term_id.remove_prefix(2);
+	auto type = term_id[0];
+	term_id.remove_prefix(1);
 	switch (type) {
 		case 'U':
 			return Unserialise::MsgPack(FieldType::uuid, term_id);
@@ -1993,7 +1993,7 @@ DocPreparer::operator()()
 		// Route document to proper indexer:
 		auto n_shards = indexer->endpoints.size();
 		auto& term_id = std::get<0>(prepared);
-		auto shard_num = fnv1ah64::hash(term_id) % n_shards;
+		auto shard_num = key_placement_hash(term_id) % n_shards;
 		if unlikely(!indexer->ready_queues[shard_num % indexer->indexers]->enqueue(
 			std::make_tuple(
 				std::move(term_id),
@@ -2130,7 +2130,7 @@ DocIndexer::operator()()
 
 							Document document(info.did, &db_handler);
 
-							if (term_id == "QN\x80") {
+							if (term_id == "N\x80") {
 								obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 							} else {
 								auto it_id = data_obj.find(ID_FIELD_NAME);

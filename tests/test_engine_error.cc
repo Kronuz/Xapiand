@@ -161,8 +161,8 @@ void test_view_throws_engine_errors() {
 	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
 	{
 		engine::Document doc;
-		doc.add_boolean_term(doc.field(""), "Q1");
-		doc.add_posting(doc.field(""), "alpha", 1, 2);
+		doc.add_boolean_term(doc.field("f"), "Q1");
+		doc.add_posting(doc.field("f"), "alpha", 1, 2);
 		doc.add_value(3, "v3");
 		doc.set_data("data");
 		engine::sync_wait(opened.shard->add(doc, {}));

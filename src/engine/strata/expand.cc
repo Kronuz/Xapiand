@@ -26,62 +26,110 @@
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint64_t
 #include <set>                     // for std::set
+#include <string>                  // for std::string
+#include <vector>                  // for std::vector
 #include <utility>                 // for std::move
 
 #include "prospect/reader.hh"      // for prospect::inverted_plugin
 
 #include "engine/error.h"          // for Error, errc
-#include "engine/strata/interim_terms.h"  // for interim::flat_term
+#include "engine/strata/keys.h"  // for keys::stored, host
 #include "engine/strata/pattern.h"  // for wildcard_prefix, wildcard_matches, within_edit_distance, head
 
 
 namespace engine::strata {
 
-bool
-in_key_space(std::string_view literal, std::string_view key_prefix)
+std::string
+lookup_bytes(std::string_view field, std::string_view term)
 {
-	return !key_prefix.empty() && literal.starts_with(key_prefix);
+	return field == KEY_FIELD ? keys::stored(term) : std::string(term);
 }
 
 
+namespace {
+
+// The names of the fields a node reads: its own, or with an empty pattern (Query::field) every field of the
+// snapshot whose name starts with it.
 std::vector<std::string>
-expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segments, prospect::term_table& terms, std::string_view key_prefix)
+field_names(const QueryNode& node, std::span<const prospect::segment_snapshot> segments)
+{
+	if (node.kind != QueryKind::wildcard || !node.str.empty() || node.field == KEY_FIELD) {
+		return {node.field};
+	}
+	std::set<std::string> names;
+	for (const auto& snapshot : segments) {
+		const auto& table = snapshot.table();
+		for (std::size_t id = 0; id < table.size(); ++id) {
+			if (table[id].name.starts_with(node.field)) {
+				names.insert(table[id].name);
+			}
+		}
+	}
+	return {names.begin(), names.end()};
+}
+
+}  // namespace
+
+
+std::vector<FieldTerm>
+expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segments, prospect::term_table& terms)
 {
 	const bool wildcard = node.kind == QueryKind::wildcard;
-	// The field and the pattern are one flat string, as Xapian's; an edit distance's prefix length counts the term's characters.
-	const std::string pattern = interim::flat_term(node.field, node.str);
 	std::string prefix;
 	std::string_view tail;
 	if (wildcard) {
-		prefix = wildcard_prefix(pattern, node.pattern_flags);
+		prefix = wildcard_prefix(node.str, node.pattern_flags);
 	} else {
+		// An edit distance's prefix length counts the term's characters.
 		const auto lead = head(node.str, node.prefix_length);
-		prefix = node.field + std::string(lead);
+		prefix = std::string(lead);
 		tail = std::string_view(node.str).substr(lead.size());
 	}
-	if (in_key_space(prefix, key_prefix)) {
+	if (!wildcard && node.field == KEY_FIELD) {
 		throw Error(errc::syntax, "The strata engine does not expand terms of the key field");
 	}
 
-	std::set<std::string> found;
-	for (const auto& snapshot : segments) {
-		snapshot.seg->get<prospect::inverted_plugin>().scan_dictionary(prefix, [&](std::string_view key, std::string_view) {
-			if (!key.starts_with(prefix)) {
-				return false;
+	std::set<FieldTerm> found;
+	for (const auto& name : field_names(node, segments)) {
+		const auto matches = [&](std::string_view term) {
+			return wildcard ? wildcard_matches(node.str, term, node.pattern_flags) : within_edit_distance(tail, term.substr(prefix.size()), node.distance);
+		};
+		for (const auto& snapshot : segments) {
+			const auto id = snapshot.field_id(name);
+			if (!id) {
+				continue;
 			}
-			if (wildcard ? wildcard_matches(pattern, key, node.pattern_flags) : within_edit_distance(tail, key.substr(prefix.size()), node.distance)) {
-				found.emplace(key);
+			if (snapshot.key_field() == id) {
+				const auto from = keys::stored(prefix);
+				snapshot.seg->get<prospect::keys_plugin>().scan(from, [&](std::string_view key, auto) {
+					if (!key.starts_with(from)) {
+						return false;
+					}
+					if (matches(keys::host(key))) {
+						found.insert({name, std::string(keys::host(key))});
+					}
+					return true;
+				});
+				continue;
 			}
-			return true;
-		});
+			snapshot.seg->get<prospect::inverted_plugin>().scan_dictionary(*id, prefix, [&](std::string_view term, std::string_view) {
+				if (!term.starts_with(prefix)) {
+					return false;
+				}
+				if (matches(term)) {
+					found.insert({name, std::string(term)});
+				}
+				return true;
+			});
+		}
 	}
 
-	std::vector<std::string> result(found.begin(), found.end());
+	std::vector<FieldTerm> result(found.begin(), found.end());
 	const std::size_t limit = node.parameter;
 	if (limit != 0 && result.size() > limit) {
 		switch (node.limit) {
 			case Expansion::error:
-				throw Error(errc::invalid, "The pattern \"" + pattern + "\" expands to more than " + std::to_string(limit) + " terms");
+				throw Error(errc::invalid, "The pattern \"" + node.field + node.str + "\" expands to more than " + std::to_string(limit) + " terms");
 			case Expansion::first:
 				result.resize(limit);
 				break;
@@ -89,7 +137,7 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 				std::vector<std::pair<std::uint64_t, std::size_t>> by_frequency;
 				by_frequency.reserve(result.size());
 				for (std::size_t i = 0; i < result.size(); ++i) {
-					by_frequency.emplace_back(terms.df(result[i]), i);
+					by_frequency.emplace_back(terms.df(result[i].field, lookup_bytes(result[i].field, result[i].term)), i);
 				}
 				std::stable_sort(by_frequency.begin(), by_frequency.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
 				by_frequency.resize(limit);
@@ -98,7 +146,7 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 					keep.push_back(entry.second);
 				}
 				std::sort(keep.begin(), keep.end());
-				std::vector<std::string> kept;
+				std::vector<FieldTerm> kept;
 				for (const auto i : keep) {
 					kept.push_back(std::move(result[i]));
 				}

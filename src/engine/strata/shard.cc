@@ -66,7 +66,6 @@ struct Hop {
 	void await_resume() const noexcept { }
 };
 
-using keys::engine_key;
 
 #ifdef XAPIAND_CRASH_POINTS
 // Crash tests only: XAPIAND_STRATA_CRASH=point:n kills the process (SIGKILL) at the n-th pass through
@@ -213,6 +212,7 @@ struct Core {
 		pending = dirty = transaction = false;
 		index.reset();
 		index.emplace(prospect::index::open(*io, index_options()));
+		verify_fields();
 		fenced = false;
 	}
 
@@ -235,6 +235,16 @@ struct Core {
 	}
 
 	rev revision() const { return index->manifest().revision; }
+
+	// Under mtx: every segment's dictionary names only fields of the table and none is the key field
+	// (fielddict::check_fields); a segment that does not is corrupt. The merge's inputs are the segments
+	// this verifies at open, so a merge cannot carry such an id into a new one.
+	void verify_fields() const {
+		const auto& table = index->fields();
+		for (const auto& view : index->segments()) {
+			view.seg()->get<prospect::inverted_plugin>().dictionary().check_fields(table.size(), table.key_field());
+		}
+	}
 };
 
 void
@@ -345,6 +355,7 @@ acquire(const std::string& path, bool create_missing, bool& created)
 			create();
 		}
 		core->uuid = format_uuid(core->index->manifest().uuid);
+		core->verify_fields();
 		entry->core = std::move(core);
 	} else if (entry->core->unusable()) {
 		// A fenced or failed index is replaced by one reopened from disk; the handles that live keep working on it.
@@ -423,6 +434,8 @@ reject(const ::strata::verdict& verdict)
 			throw Error(errc::invalid, "The index rejected the operation");
 		case ::strata::verdict::no_space:
 			throw Error(errc::database, "No space left for the operation");
+		case ::strata::verdict::fields_conflict:
+			throw Error(errc::internal, "The field table changed under a write");
 		default:
 			throw Error(errc::internal, "The index did not apply the operation");
 	}
@@ -438,23 +451,52 @@ native_of(Document& doc)
 	return *native;
 }
 
-// Fills the index's document from ours.
+// What a field's kind says its postings hold (Lucene's IndexOptions).
+::strata::field_postings
+postings_of(FieldKind kind)
+{
+	switch (kind) {
+		case FieldKind::boolean: return ::strata::field_postings::docs;
+		case FieldKind::terms: return ::strata::field_postings::freqs;
+		case FieldKind::text: return ::strata::field_postings::positions;
+	}
+	return ::strata::field_postings::docs;
+}
+
+// Fills the index's document from ours, and names its fields in `t`: the ones the index knows by id under
+// the table's mark, the others declared by the transaction; the key field too, once.
 void
-fill(prospect::index::document& out, StrataDocument& doc)
+fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& doc, const ::strata::field_table& table)
 {
 	if (doc.key().empty()) {
 		// A version belongs to a key in strata (a keyless document has none), and every Xapiand document has one.
 		throw Error(errc::invalid, "The document has no key");
 	}
 	doc.normalise();
-	out.key = engine_key(doc.key());
+	out.key = keys::stored(doc.key());
 	out.stored = doc.data();
-	out.terms.clear();
-	out.terms.reserve(doc.terms().size());
-	std::uint64_t length = 0;
-	for (const auto& [term, info] : doc.terms()) {
-		out.terms.push_back({term, info.wdf, info.positions});
-		length += info.wdf;
+	t.expected_fields = table.mark();
+	out.fields.clear();
+	out.fields.reserve(doc.fields().size());
+	std::uint64_t length = doc.key_wdf();
+	for (const auto& [name, field] : doc.fields()) {
+		prospect::inverted_plugin::field_part part;
+		if (const auto id = table.find(name)) {
+			part.field = ::strata::field_ref::id(*id);
+		} else {
+			part.field = ::strata::field_ref::declared(static_cast<std::uint32_t>(t.fields.size()));
+			t.fields.push_back({name, ::strata::field_role::indexed, postings_of(field.kind), false});
+		}
+		part.terms.reserve(field.terms.size());
+		for (const auto& [term, info] : field.terms) {
+			part.terms.push_back({term, info.wdf, info.positions});
+			part.length += info.wdf;
+		}
+		length += part.length;
+		out.fields.push_back(std::move(part));
+	}
+	if (!table.key_field()) {
+		t.fields.push_back({std::string(KEY_FIELD), ::strata::field_role::key, ::strata::field_postings::docs, false});
 	}
 	out.length = static_cast<std::uint32_t>(std::min<std::uint64_t>(length, 0xffffffffULL));
 	values::put(out, doc);
@@ -479,10 +521,8 @@ replay_applies(const StrataDocument& native, const std::optional<rev>& stored)
 
 // Applies one operation; its docid and version as the index assigned them.
 WriteResult
-apply(Core& core, prospect::operation&& op, const WriteResult& expected)
+apply(Core& core, prospect::transaction& t, const WriteResult& expected)
 {
-	prospect::transaction t;
-	t.ops.push_back(std::move(op));
 	const auto verdict = core.index->apply(t, {});
 	if (verdict.result != ::strata::verdict::accepted) {
 		reject(verdict);
@@ -543,12 +583,13 @@ Shard::add(Document& doc, WriteArgs args)
 			args.finalise(doc, info);
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
-		prospect::operation op;
+		prospect::transaction t;
+		auto& op = t.ops.emplace_back();
 		op.type = prospect::operation::add;
 		auto& native = native_of(doc);
 		native.stamp(info.version);
-		fill(op.doc, native);
-		co_return apply(core, std::move(op), info);
+		fill(t, op.doc, native, core.index->fields());
+		co_return apply(core, t, info);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -571,7 +612,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		std::optional<rev> stored;
 		if (!native.key().empty()) {
 			// A document with a key is found by it; the id must be the one that holds the key.
-			if (const auto found = core.index->find_key(engine_key(native.key()))) {
+			if (const auto found = core.index->find_key(keys::stored(native.key()))) {
 				if (found->first != did) {
 					if (replayed) {
 						// The key was erased and added again after this line: the index is past it.
@@ -603,11 +644,12 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		native.stamp(info.version);
-		prospect::operation op;
+		prospect::transaction t;
+		auto& op = t.ops.emplace_back();
 		op.type = prospect::operation::replace_docid;
 		op.docid = did;
-		fill(op.doc, native);
-		auto result = apply(core, std::move(op), info);
+		fill(t, op.doc, native, core.index->fields());
+		auto result = apply(core, t, info);
 		if (replayed) {
 			crash_point("replay");
 		}
@@ -629,7 +671,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto ekey = engine_key(key);
+		const auto ekey = keys::stored(key);
 		WriteResult info;
 		info.term = key;
 		std::optional<rev> stored;
@@ -654,11 +696,12 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			native.set_key(key);
 		}
 		native.stamp(info.version);
-		prospect::operation op;
+		prospect::transaction t;
+		auto& op = t.ops.emplace_back();
 		op.type = prospect::operation::replace_key;
 		op.key = ekey;
-		fill(op.doc, native);
-		co_return apply(core, std::move(op), info);
+		fill(t, op.doc, native, core.index->fields());
+		co_return apply(core, t, info);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -708,7 +751,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto ekey = engine_key(key);
+		const auto ekey = keys::stored(key);
 		const auto found = core.index->find_key(ekey);
 		if (!found) {
 			throw Error(errc::doc_not_found, "Document not found");
@@ -926,7 +969,7 @@ Shard::find_key(const std::string& key)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto found = core.index->find_key(engine_key(key));
+		const auto found = core.index->find_key(keys::stored(key));
 		co_return found ? static_cast<docid>(found->first) : docid{0};
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -1066,6 +1109,27 @@ Shard::refs() const
 }
 
 
+std::vector<DeclaredField>
+Shard::declared_fields() const
+{
+	auto& core = *handle_->core;
+	std::lock_guard<std::mutex> lk(core.mtx);
+	core.check(*handle_);
+	std::vector<DeclaredField> result;
+	const auto& table = core.index->fields();
+	for (std::size_t id = 0; id < table.size(); ++id) {
+		const auto& declaration = table[id];
+		DeclaredField field;
+		field.name = declaration.name;
+		field.key = declaration.role == ::strata::field_role::key;
+		field.kind = declaration.postings == ::strata::field_postings::positions ? FieldKind::text :
+			declaration.postings == ::strata::field_postings::freqs ? FieldKind::terms : FieldKind::boolean;
+		result.push_back(std::move(field));
+	}
+	return result;
+}
+
+
 const void*
 Shard::identity() const noexcept
 {
@@ -1082,6 +1146,7 @@ Shard::pin()
 		core.check(*handle_);
 		core.refresh();
 		pinned.segments_ = core.index->segments();
+		pinned.fields_ = &core.index->fields();
 		pinned.identity_ = handle_->core;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -1118,6 +1183,7 @@ check(const std::string& path, task::scheduler_ref on)
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle);
 		core.refresh();
+		core.verify_fields();
 		(void)core.index->check();
 	} catch (const Error& error) {
 		result.errors = 1;

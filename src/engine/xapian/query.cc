@@ -27,6 +27,7 @@
 
 #include "engine/callbacks.h"      // for PostingSource
 #include "engine/xapian/callbacks.h"  // for PostingSourceAdapter
+#include "engine/xapian/legacy_terms.h"  // for join_into, key_term
 
 
 namespace engine::xapian {
@@ -94,8 +95,7 @@ joined(const QueryNode& node)
 {
 	std::string result;
 	result.reserve(node.field.size() + node.str.size());
-	result.append(node.field).append(node.str);
-	return result;
+	return join_into(result, node.field, node.str);
 }
 
 
@@ -110,7 +110,7 @@ leaf(const QueryNode& node)
 			return Xapian::Query(Xapian::Query::OP_WILDCARD, joined(node), node.parameter, wildcard_flags(node.limit, node.pattern_flags), to_xapian(node.op));
 
 		case QueryKind::edit_distance:
-			return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, joined(node), node.parameter, wildcard_flags(node.limit, 0), to_xapian(node.op), node.distance, node.field.size() + node.prefix_length);
+			return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, joined(node), node.parameter, wildcard_flags(node.limit, 0), to_xapian(node.op), node.distance, term_prefix(node.field).size() + node.prefix_length);
 
 		case QueryKind::source: {
 			// release() hands the adapter to the Query, which owns it.

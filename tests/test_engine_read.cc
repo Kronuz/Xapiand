@@ -63,12 +63,12 @@ std::unique_ptr<engine::xapian::Shard> build(const std::string& path) {
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= kDocs; ++i) {
 		engine::Document doc;
-		doc.add_boolean_term(doc.field(""), "Q" + std::to_string(i));
-		doc.add_posting(doc.field(""), "alpha", 1, 2);
-		doc.add_posting(doc.field(""), "alpha", 5);
-		doc.add_posting(doc.field(""), "beta" + std::to_string(i % 3), 2, 3);
+		doc.add_boolean_term(doc.field("f"), "Q" + std::to_string(i));
+		doc.add_posting(doc.field("f"), "alpha", 1, 2);
+		doc.add_posting(doc.field("f"), "alpha", 5);
+		doc.add_posting(doc.field("f"), "beta" + std::to_string(i % 3), 2, 3);
 		if (i % 2 == 0) {
-			doc.add_term(doc.field(""), "even", 4);
+			doc.add_term(doc.field("f"), "even", 4);
 		}
 		doc.add_value(3, "v3-" + std::to_string(i));
 		doc.add_value(9, std::string("v9\0x", 4) + std::to_string(i));

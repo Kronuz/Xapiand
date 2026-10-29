@@ -121,13 +121,12 @@ SearchRequest         sorter  -> key per match (memcmp), then weight, then docid
    counts words on the Xapian engine and is refused on the strata engine, as Elasticsearch refuses a terms
    aggregation on an analysed field.
 
-## Dependencies that will change
+## Fields
 
-Expansions read the index's key prefix (`in_key_space`, `Plan::key_prefix`) and join a node's field and pattern
-into one flat string with `interim::flat_term` (a wildcard's literal prefix is scanned in the dictionary as
-written; a group's plain terms join the same way). Strata is making fields first-class and keys leave the term
-space (strata `design/fields-and-keys`); `expand.cc` and `search.cc` (`group_of`) are the places that change then,
-with `interim_terms.h`, which goes away.
+Expansions name one field: a wildcard or edit-distance node scans that field's dictionary in each segment (the keys
+for the key field), after resolving the name to the segment's id; a wildcard with an empty pattern (`Query::field`)
+takes every field of the snapshot whose name starts with the node's. The group's terms are (field, term) pairs
+(`group_of` in `search.cc`, `expand` in `expand.cc`). See `strata-fields.md`.
 
 ## Not built
 

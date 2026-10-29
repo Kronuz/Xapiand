@@ -2789,8 +2789,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_unprefixed_term_id = mint(opts.uuid_compact);
-						auto tmp_term_id = flat_term(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
+						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
+						auto tmp_shard_num = key_placement_hash(tmp_term_id) % n_shards;
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
 								unprefixed_term_id = std::move(tmp_unprefixed_term_id);
@@ -2806,7 +2806,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						// "Invalid UUID format: ''"), fall back to a valid generated UUID
 						// rather than leaving the id empty.
 						unprefixed_term_id = mint(opts.uuid_compact);
-						term_id = flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+						term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					}
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
@@ -2814,17 +2814,17 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::integer:
 					document_id = MsgPack(0).as_i64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					break;
 				case FieldType::positive:
 					document_id = MsgPack(0).as_u64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					break;
 				case FieldType::floating:
 					document_id = MsgPack(0).as_f64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					break;
 				case FieldType::text:
 				case FieldType::keyword: {
@@ -2856,8 +2856,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(mint(true));
 						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
-						auto tmp_term_id = flat_term(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
+						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
+						auto tmp_shard_num = key_placement_hash(tmp_term_id) % n_shards;
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
 								document_id = std::move(tmp_document_id);
@@ -2873,7 +2873,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						// shard (shards can be momentarily inactive while being created).
 						document_id = Base64::rfc4648url_unpadded().encode(mint(true));
 						unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-						term_id = flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+						term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					}
 					break;
 				}
@@ -2909,7 +2909,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
 			}
-			term_id = flat_term(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+			term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 		}
 
 #ifdef XAPIAND_LUA
@@ -2986,8 +2986,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			L_INDEX("Slot: {}  Values: {}", elem.first, repr(val_ser));
 		}
 
-		if (term_id != "QN\x80") {
-			doc.set_key(term_id);  // make sure the ID term is ALWAYS added!
+		if (term_id != "N\x80") {
+			doc.set_key(term_id);  // make sure the key is ALWAYS set!
 		}
 
 		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
@@ -5292,7 +5292,8 @@ Schema::index_term(engine::Document& doc, std::string_view field, std::string_vi
 {
 	L_CALL("Schema::index_term(<doc>, {}, {}, <field_spc>, {})", repr(field), repr(term), pos);
 
-	if (field == "QN" && term == "\x80") {
+	const bool is_key = field_spc.prefix.field == DOCUMENT_ID_TERM_PREFIX && field == field_name(field_spc.prefix.field, field_spc.get_ctype());
+	if (is_key && field_spc.get_ctype() == 'N' && term == "\x80") {
 		// Term reserved for numeric (autoincremented) IDs
 		return;
 	}
@@ -5303,6 +5304,14 @@ Schema::index_term(engine::Document& doc, std::string_view field, std::string_vi
 			THROW(ClientError, "Keyword too long");
 		}
 		return;
+	}
+
+	// The id's terms are the key field's: the id's type character and its bytes.
+	std::string key;
+	if (is_key) {
+		key = document_key(term, field_spc.get_ctype());
+		field = engine::KEY_FIELD;
+		term = key;
 	}
 
 	auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];

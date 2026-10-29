@@ -6,9 +6,8 @@ A term at the engine seam is a field and the bytes under it, never one string wi
 name glued to the front. `engine::Document` and the query nodes name the field; each engine
 decides what a field is. The Xapian engine joins the two back into the term Xapiand has always
 written, so its index files, answers and write-ahead log lines are unchanged. The strata engine
-keeps one named interim mapping (`src/engine/strata/interim_terms.h`) that does the same join
-until the strata adapter on fields (SF) resolves each field to the index's field id and deletes
-that file. Design: strata `docs/design/fields-and-keys.md` (D1, D9, D12, C4).
+keeps terms apart by field and declares each field in the index's field table (SF,
+`strata-fields.md`). Design: strata `docs/design/fields-and-keys.md` (D1, D9, D12, C4).
 
 ## How it works
 
@@ -16,7 +15,7 @@ that file. Design: strata `docs/design/fields-and-keys.md` (D1, D9, D12, C4).
 Schema / GenerateTerms / QueryDSL            seam                         engine
  field_name(prefix, ctype)  ----------->  Document::field(name, kind) -> FieldRef (document-local)
  term bytes                 ----------->  add_term(FieldRef, term, wdf)  -> Xapian: name + term
-                                                                          -> strata: interim::flat_term
+                                                                          -> strata: DocField(name).terms
  field_name(prefix, ctype)  ----------->  Query::term(field, term, ..)   -> Xapian: Query(name + term)
 ```
 
@@ -41,8 +40,7 @@ Schema / GenerateTerms / QueryDSL            seam                         engine
    the field. This stands in for `Kronuz/analysis` reporting stems itself (an additive change
    D12 names for SF); `test_text_fields` compares every stem strategy against the generator run
    with the prefix.
-5. **The strata engine.** `StrataDocument` joins field and term with `interim::flat_term` into
-   the flat terms it already held, so its log lines and the shard do not change. Nothing else in
+5. **The strata engine.** `StrataDocument` keeps the terms by field (`strata-fields.md`). Nothing else in
    the engine joins a field and a term.
 
 ## Invariants
@@ -69,6 +67,6 @@ Schema / GenerateTerms / QueryDSL            seam                         engine
 ## Code
 
 `src/engine/document.{h,cc}`, `src/engine/query.{h,cc}`, `src/engine/xapian/{convert,query,text}.cc`,
-`src/engine/strata/{document.cc,interim_terms.h}`, `src/database/{utils,schema}.cc`,
+`src/engine/strata/document.cc`, `src/database/{utils,schema}.cc`,
 `src/multivalue/generate_terms.cc`, `src/query_dsl.cc`; tests `tests/test_engine_fields.cc`.
 Ledger: `docs/status/seam-fields.md`.

@@ -22,8 +22,7 @@
 
 // Unit tests for the seam's fields (fields-and-keys X6): a term is a field and the bytes under it.
 // The Xapian engine joins them back into today's term byte for byte, so each test builds the Xapian
-// objects by hand from the joined strings and compares; the strata engine's interim mapping joins
-// them the same way until it resolves fields to ids.
+// objects by hand from the joined strings and compares; the strata engine keeps them apart.
 
 #include "test_harness.h"
 
@@ -293,10 +292,35 @@ static void test_word_break_fields() {
 #endif
 }
 
-// The strata engine's interim mapping holds the same joined terms, with the frequencies and positions.
-static void test_strata_interim() {
+// The key field's terms are the Xapian engine's id terms: a 'Q', the id's type character and its bytes.
+static void test_key_field() {
+	engine::Document doc;
+	doc.set_key("Kid");
+	doc.add_term(doc.field(engine::KEY_FIELD, FieldKind::terms), "Kother", 2);
+	doc.add_term(doc.field("QK"), "plain", 1);  // a field that merely looks like the id term's lead
+	Xapian::Document xdoc;
+	xdoc.add_boolean_term("QKid");
+	xdoc.add_term("QKother", 2);
+	xdoc.add_term("QKplain", 1);
+	CHECK_EQ(doc.serialise(), engine::xapian::from_xapian(xdoc).serialise());
+
+	CHECK_EQ(to_xapian(Query::term(std::string(engine::KEY_FIELD), "Kid")).get_description(), Xapian::Query("QKid").get_description());
+	CHECK_EQ(to_xapian(Query::wildcard(std::string(engine::KEY_FIELD), "Kbo", 50, engine::Expansion::most_frequent)).get_description(),
+		Xapian::Query(Xapian::Query::OP_WILDCARD, "QKbo", 50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::Query::OP_SYNONYM).get_description());
+	CHECK_EQ(to_xapian(Query::field(std::string(engine::KEY_FIELD))).get_description(),
+		Xapian::Query(Xapian::Query::OP_WILDCARD, "Q", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM).get_description());
+	for (std::size_t prefix_length : { 0u, 2u }) {
+		CHECK_EQ(to_xapian(Query::edit_distance(std::string(engine::KEY_FIELD), "Kidd", 5, engine::Expansion::error, Op::OR, 1, prefix_length)).get_description(),
+			Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, "QKidd", 5, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_OR, 1, 1 + prefix_length).get_description());
+	}
+}
+
+// The strata engine holds a document's terms by field, with the frequencies and positions; the key and
+// the key field's frequency stay apart from the terms.
+static void test_strata_fields() {
 	engine::Document doc(engine::Kind::strata);
-	doc.set_key("QKid");
+	doc.set_key("Kid");
+	doc.add_term(doc.field(engine::KEY_FIELD, FieldKind::boolean), "Kid", 1);
 	const auto title = doc.field("title.S", FieldKind::text);
 	const auto marker = doc.field("title.");
 	doc.add_term(title, "bob", 2);
@@ -306,15 +330,20 @@ static void test_strata_interim() {
 	doc.add_term(doc.field("title.S"), "bob", 3);
 	auto& native = engine::strata::strata_document(doc);
 	native.normalise();
-	CHECK_EQ(native.key(), "QKid");
-	CHECK_EQ(native.terms().size(), 4u);
-	CHECK_EQ(native.terms().at("title.Sbob").wdf, 5u);
-	CHECK_EQ(native.terms().at("title.Ssmith").wdf, 2u);
-	CHECK_EQ(native.terms().at("title.Ssmith").positions, (std::vector<engine::termpos>{ 2, 4 }));
-	CHECK_EQ(native.terms().at("title.").wdf, 0u);
-	CHECK_EQ(native.terms().at("QKid").wdf, 0u);
+	CHECK_EQ(native.key(), "Kid");
+	CHECK_EQ(native.key_wdf(), 1u);
+	CHECK_EQ(native.fields().size(), 2u);
+	const auto& text = native.fields().at("title.S");
+	CHECK_TRUE(text.kind == FieldKind::text);
+	CHECK_EQ(text.terms.size(), 2u);
+	CHECK_EQ(text.terms.at("bob").wdf, 5u);
+	CHECK_EQ(text.terms.at("smith").wdf, 2u);
+	CHECK_EQ(text.terms.at("smith").positions, (std::vector<engine::termpos>{ 2, 4 }));
+	// The same bytes under another field are another term; the empty term is a term.
+	CHECK_TRUE(native.fields().at("title.").kind == FieldKind::terms);
+	CHECK_EQ(native.fields().at("title.").terms.at("").wdf, 0u);
 
-	// The log line carries the joined terms: it reads back to the same document.
+	// The log line carries the fields: it reads back to the same document.
 	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
 	CHECK_EQ(back.serialise(), doc.serialise());
 }
@@ -356,4 +385,4 @@ void test_foreign_ref_asserts() {
 void test_foreign_ref_asserts() { }
 #endif
 
-TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_strata_interim)
+TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_key_field, test_strata_fields)

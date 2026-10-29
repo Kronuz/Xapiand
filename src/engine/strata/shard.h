@@ -26,6 +26,7 @@
 #include <string>                  // for std::string
 #include <vector>                  // for std::vector
 
+#include "engine/document.h"       // for FieldKind
 #include "engine/shard.h"          // for engine::Shard
 
 
@@ -57,6 +58,14 @@ private:
 
 struct Handle;
 class Pinned;
+
+// A field of the shard's field table: its name, the kind of the first document that named it (the table
+// keeps what its postings hold), and whether it is the key field.
+struct DeclaredField {
+	std::string name;
+	FieldKind kind = FieldKind::boolean;
+	bool key = false;
+};
 
 // The strata implementation of the engine shard: an index in the shard's "strata" directory. The
 // writable and the readable handle of one shard share one index (strata locks its directory), so the
@@ -100,6 +109,9 @@ public:
 	// Names the index behind the handle: handles of one shard share it, and shards are pinned in the
 	// order of their identities.
 	const void* identity() const noexcept;
+
+	// The shard's field table, in id order, as of its last applied write.
+	std::vector<DeclaredField> declared_fields() const;
 
 private:
 	std::unique_ptr<Handle> handle_;

@@ -85,7 +85,7 @@ void double_replay() {
 	DatabaseWAL wal(shard.get());
 	auto& e = shard->engine();
 	const auto rev = e.revision();
-	auto make = [&](const std::string& data) { engine::Document d(Kind::strata); d.set_key("Qa"); d.add_term(d.field(""), "body", 2); d.set_data(data); return d; };
+	auto make = [&](const std::string& data) { engine::Document d(Kind::strata); d.set_key("Qa"); d.add_term(d.field("f"), "body", 2); d.set_data(data); return d; };
 	std::vector<std::string> lines;
 	engine::WriteArgs a;
 	auto d1 = make("a1"); auto r1 = engine::sync_wait(e.replace_by_key("Qa", d1, a));

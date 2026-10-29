@@ -29,21 +29,29 @@
 
 #include "prospect/searcher.hh"    // for prospect::segment_snapshot, term_table
 
+#include "engine/document.h"       // for KEY_FIELD
 #include "engine/query.h"          // for QueryNode
 
 
 namespace engine::strata {
 
-// Whether terms that start with `literal` live in the key table instead of the dictionary. The one
-// place the expansion depends on the index's key prefix and on a field and its term being one flat
-// string: both go away when strata makes fields first-class and keys leave the term space
-// (strata design/fields-and-keys), and this function and `expand` are what then change.
-bool in_key_space(std::string_view literal, std::string_view key_prefix);
+// A term under a field, as the host names them.
+struct FieldTerm {
+	std::string field;
+	std::string term;
+	bool operator<(const FieldTerm& other) const { return field != other.field ? field < other.field : term < other.term; }
+};
+
+// The bytes the term table looks `term` up by: the key field's terms are keys, which the index holds
+// behind the interim key lead (keys.h); any other field's are as given.
+std::string lookup_bytes(std::string_view field, std::string_view term);
 
 // The terms of the whole index that a wildcard or edit-distance node matches, sorted, after its
 // expansion limit: more than `max_expansion` matches (0 for no limit) fail the search with
 // errc::invalid, keep the first terms, or keep the most frequent ones, as the node says. A term
-// whose documents are all deleted still counts until a merge removes it.
-std::vector<std::string> expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segments, prospect::term_table& terms, std::string_view key_prefix);
+// whose documents are all deleted still counts until a merge removes it. A wildcard with an empty
+// pattern (Query::field) takes every field whose name starts with the node's, the key field's keys
+// included only when it is named exactly.
+std::vector<FieldTerm> expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segments, prospect::term_table& terms);
 
 }  // namespace engine::strata

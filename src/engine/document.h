@@ -41,6 +41,11 @@
 
 namespace engine {
 
+// The field of a document's id: its terms are the document's key (the id's type character and its
+// bytes). A document names its key with set_key; a term of this field is the key's (a query for it
+// finds the document), and holds no postings of its own. The key's bytes are the host's.
+inline constexpr std::string_view KEY_FIELD = "_id";
+
 // What a field holds, which is the most its postings need to keep: `boolean` the documents that
 // have a term (wdf 0), `terms` also the frequencies, `text` also the positions.
 enum class FieldKind : std::uint8_t {
@@ -112,8 +117,8 @@ public:
 	}
 
 	// Makes the key the document's: the one string that names the document for replace-by-key,
-	// whatever else it is used for. The key is the document's id term, built by the host
-	// (database/utils.h document_key), and is also a boolean term of the document.
+	// whatever else it is used for. The key is built by the host (database/utils.h document_key); the
+	// document also has it as a boolean term of the key field.
 	void set_key(std::string_view key) {
 		native_->set_key(key);
 	}

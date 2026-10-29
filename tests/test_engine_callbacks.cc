@@ -229,7 +229,7 @@ Spec random_spec(std::mt19937& rng, int shard, int i) {
 engine::Document make(Kind kind, int shard, int i, const Spec& spec) {
 	engine::Document doc(kind);
 	doc.set_key("Q" + std::to_string(shard) + "_" + std::to_string(i));
-	const auto flat = doc.field("");   // the terms are flat strings; no field name is joined to them
+	const auto flat = doc.field("f");   // the terms are flat strings; no field name is joined to them
 	for (const auto& [term, wdf] : spec.terms) {
 		doc.add_term(flat, term, wdf);
 	}
@@ -448,7 +448,7 @@ bool throws_as(F&& f) {
 }
 
 Query t(const char* term, engine::termcount wqf = 1) {
-	return Query::term("", term, wqf);
+	return Query::term("f", term, wqf);
 }
 
 // --- tests ---
@@ -646,7 +646,7 @@ void test_boolean_terms() {
 			{"filter", Query::combine(Op::FILTER, t("apple"), t("Bg0"))},
 			{"and_not", Query::combine(Op::AND_NOT, t("common"), t("Bg3"))},
 			{"id", t("Q0_5")},
-			{"wildcard", Query::wildcard("", "Bg", 0, engine::Expansion::error, 0, Op::OR)},
+			{"wildcard", Query::wildcard("f", "Bg", 0, engine::Expansion::error, 0, Op::OR)},
 		};
 		for (const auto& [name, query] : queries) {
 			const auto s = both(corpus, n, query, name);
@@ -754,10 +754,10 @@ void test_expansions() {
 		build("expansions", shard_count, 60, 3, corpus);
 		const std::size_t n = static_cast<std::size_t>(shard_count);
 		const auto wild = [](const char* pattern, engine::termcount max = 0, engine::Expansion limit = engine::Expansion::error, unsigned flags = 0, Op combiner = Op::SYNONYM) {
-			return Query::wildcard("", pattern, max, limit, flags, combiner);
+			return Query::wildcard("f", pattern, max, limit, flags, combiner);
 		};
 		const auto fuzzy = [](const char* pattern, unsigned distance, std::size_t prefix = 0, engine::termcount max = 0, engine::Expansion limit = engine::Expansion::error, Op combiner = Op::SYNONYM) {
-			return Query::edit_distance("", pattern, max, limit, combiner, distance, prefix);
+			return Query::edit_distance("f", pattern, max, limit, combiner, distance, prefix);
 		};
 		const unsigned S = engine::PATTERN_SINGLE, M = engine::PATTERN_MULTI;
 		std::vector<std::pair<std::string, Query>> queries;

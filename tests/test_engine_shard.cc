@@ -95,8 +95,8 @@ private:
 
 engine::Document make(const std::string& key, const std::string& data) {
 	engine::Document doc;
-	doc.add_boolean_term(doc.field(""), key);
-	doc.add_term(doc.field(""), "body", 2);
+	doc.add_boolean_term(doc.field("f"), key);
+	doc.add_term(doc.field("f"), "body", 2);
 	doc.set_data(data);
 	return doc;
 }
@@ -131,7 +131,7 @@ void run(bool offload) {
 		writer = std::this_thread::get_id();
 		hooked_did = result.did;
 		hooked_version = result.version;
-		doc.add_term(doc.field(""), "stamped");
+		doc.add_term(doc.field("f"), "stamped");
 	};
 	auto doc = make("Qa", "one");
 	auto added = engine::sync_wait(shard.add(doc, args));

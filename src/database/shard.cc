@@ -113,7 +113,7 @@ finalise_write(engine::Document& doc, engine::WriteResult& info, const std::opti
 	if (numeric) {
 		auto did = static_cast<double>((info.did - 1) * numeric->n_shards + numeric->shard_num + 1);  // unshard number and shard docid to docid in multi-db
 		auto did_serialised = sortable_serialise(did);
-		info.term = "QN" + did_serialised;
+		info.term = document_key(did_serialised, 'N');
 		doc.set_key(info.term);
 		doc.add_value(DB_SLOT_ID, did_serialised);
 		// Set id inside serialized object:
@@ -1540,13 +1540,13 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 			args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
 			if (!local) {
 				info = engine::sync_wait(wdb->replace_by_key(term, doc, args));
-			} else if (term[0] == 'Q' && term[1] == 'N') {
-				assert(term.size() > 2);
+			} else if (term[0] == 'N') {
+				assert(term.size() > 1);
 				const char *p = n_shards_ser.data();
 				const char *p_end = p + n_shards_ser.size();
 				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
 				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-				auto did = sortable_unserialise(term.substr(2));
+				auto did = sortable_unserialise(term.substr(1));
 				if (did == 0u) {
 					// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
 					args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };

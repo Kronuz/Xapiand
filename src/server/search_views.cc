@@ -2302,9 +2302,9 @@ expand_paths(Request& request)
 			} else {
 				auto query = engine::Query::combine(engine::Op::AND_NOT,
 					engine::Query::combine(engine::Op::OR,
-							engine::Query::wildcard(field_name(DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR), index_path),
-							engine::Query::term(field_name(DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR), std::string(stripped_index_path))),
-					engine::Query::wildcard(field_name(DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR), index_path + "/.")
+							engine::Query::wildcard(std::string(engine::KEY_FIELD), document_key(index_path, KEYWORD_CHAR)),
+							engine::Query::term(std::string(engine::KEY_FIELD), document_key(stripped_index_path, KEYWORD_CHAR))),
+					engine::Query::wildcard(std::string(engine::KEY_FIELD), document_key(index_path + "/.", KEYWORD_CHAR))
 				);
 				mset = db_handler.get_mset(query, 0, 100);
 			}

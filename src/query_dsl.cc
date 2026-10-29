@@ -640,14 +640,14 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
-			return engine::Query::term(field_spc.prefix(), std::string());
+			return engine::Query::term(std::string(query_field(field_spc.prefix())), std::string());
 		case MsgPack::Type::STR: {
 			auto val = obj.str_view();
 			if (val.empty()) {
-				return engine::Query::term(field_spc.prefix(), std::string());
+				return engine::Query::term(std::string(query_field(field_spc.prefix())), std::string());
 			}
 			if (val == "*") {
-				return engine::Query::field(field_spc.prefix());
+				return engine::Query::field(std::string(query_field(field_spc.prefix())));
 			}
 			break;
 		}
@@ -675,13 +675,13 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
-			return engine::Query::term(field_spc.prefix(), std::string());
+			return engine::Query::term(std::string(query_field(field_spc.prefix())), std::string());
 		case MsgPack::Type::STR: {
 			auto val = obj.str_view();
 			if (val.empty()) {
-				return engine::Query::term(field_spc.prefix(), std::string());
+				return engine::Query::term(std::string(query_field(field_spc.prefix())), std::string());
 			} if (val == "*") {
-				return engine::Query::field(field_spc.prefix());
+				return engine::Query::field(std::string(query_field(field_spc.prefix())));
 			}
 			break;
 		}
@@ -733,10 +733,10 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			}
 
 			if (flags & engine::text::PARTIAL) {
-				auto field = field_name(field_spc.prefix(), field_spc.get_ctype());
+				auto [field, term] = field_term(field_spc.prefix(), field_spc.get_ctype(), serialised_term);
 				return engine::Query::combine(engine::Op::OR,
-					engine::Query::wildcard(field, std::string(serialised_term), DEFAULT_PARTIAL_MAX_EXPANSION, engine::Expansion::most_frequent, 0, engine::Op::SYNONYM),
-					engine::Query::term(field, std::string(serialised_term), 1, 1));
+					engine::Query::wildcard(field, term, DEFAULT_PARTIAL_MAX_EXPANSION, engine::Expansion::most_frequent, 0, engine::Op::SYNONYM),
+					engine::Query::term(field, term, 1, 1));
 			}
 
 			if (flags & engine::text::WILDCARD) {
@@ -745,15 +745,18 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				if (pos != std::string::npos && pos != serialised_term.size() - 1) {
 					pattern_flags = engine::PATTERN_SINGLE | engine::PATTERN_MULTI;
 				}
-				return engine::Query::wildcard(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), DEFAULT_WILDCARD_MAX_EXPANSION, engine::Expansion::error, pattern_flags, engine::Op::SYNONYM);
+				auto [field, term] = field_term(field_spc.prefix(), field_spc.get_ctype(), serialised_term);
+				return engine::Query::wildcard(field, term, DEFAULT_WILDCARD_MAX_EXPANSION, engine::Expansion::error, pattern_flags, engine::Op::SYNONYM);
 			}
 
 			if (flags & engine::text::FUZZY) {
 				size_t fuzzy_prefix_length = 0;
-				return engine::Query::edit_distance(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), DEFAULT_FUZZY_MAX_EXPANSION, engine::Expansion::error, engine::Op::SYNONYM, fuzzy_edit_distance, fuzzy_prefix_length);
+				auto [field, term] = field_term(field_spc.prefix(), field_spc.get_ctype(), serialised_term);
+				return engine::Query::edit_distance(field, term, DEFAULT_FUZZY_MAX_EXPANSION, engine::Expansion::error, engine::Op::SYNONYM, fuzzy_edit_distance, fuzzy_prefix_length);
 			}
 
-			return engine::Query::term(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), wqf);
+			auto [field, term] = field_term(field_spc.prefix(), field_spc.get_ctype(), serialised_term);
+			return engine::Query::term(field, term, wqf);
 		}
 
 		case FieldType::text: {
@@ -859,8 +862,10 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			return engine::parse_text(serialised_term, config);
 		}
 
-		default:
-			return engine::Query::term(field_name(field_spc.prefix(), field_spc.get_ctype()), std::string(serialised_term), wqf);
+		default: {
+			auto [field, term] = field_term(field_spc.prefix(), field_spc.get_ctype(), serialised_term);
+			return engine::Query::term(field, term, wqf);
+		}
 	}
 }
 

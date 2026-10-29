@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstdint>                 // for std::uint64_t
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
 #include <vector>                  // for std::vector
@@ -128,10 +129,27 @@ inline std::pair<std::string_view, bool> unsharded_path(std::string_view path) {
 
 // The name of the engine field a field prefix and its type character stand for.
 std::string field_name(std::string_view field_prefix, char field_type);
-// The flat term for a term under a field: the field's name and the term joined. Only for the document
-// key (the id term, which the engine treats as an opaque string) and for logs; documents and queries
-// name the field and the term apart.
+// The flat term for a term under a field: the field's name and the term joined. Only for logs;
+// documents and queries name the field and the term apart.
 std::string flat_term(std::string_view term, std::string_view field_prefix, char field_type);
+// A document's key: the type character of its id and the id's serialised bytes. It is what the
+// engine's key field holds (engine::KEY_FIELD) and what replace-by-key, erase and find take.
+std::string document_key(std::string_view serialised_id, char field_type);
+// The engine field and bytes of a term under a Xapiand field. The id field's terms are the key
+// field's, led by the type character (document_key); any other field's are as given.
+struct FieldTerm {
+	std::string field;
+	std::string term;
+};
+FieldTerm field_term(std::string_view field_prefix, char field_type, std::string_view term);
+// The engine field of a whole field prefix: the key field for the id field's.
+std::string_view query_field(std::string_view field_prefix);
+// The key of an id term as the Xapian remote protocol carries it ('Q' and the key): for the requests a
+// remote node makes of this one.
+std::string key_of_term(std::string_view id_term);
+// Which of a multi-shard index's shards holds a key. The hash is of the key's id term as the Xapian
+// engine has always spelled it ('Q' and the key), so an index keeps its documents on the same shards.
+std::uint64_t key_placement_hash(std::string_view key);
 engine::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
 std::string get_prefix(std::string_view field_name);
