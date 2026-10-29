@@ -132,53 +132,17 @@ void test_find_key_and_get() {
 		}
 		CHECK_TRUE(values == want);
 		CHECK_GE(values.size(), 2u);  // the engine adds its version slot
-
-		// term details: term order, wdf, frequency in the database, positions
-		struct Row { std::string term; engine::termcount wdf; std::optional<engine::doccount> freq; std::vector<engine::termpos> pos; };
-		std::vector<Row> rows, expect;
-		view->term_details([&](const engine::TermDetail& d) { rows.push_back({std::string(d.term), d.wdf, d.termfreq, d.positions}); });
-		for (auto it = doc.termlist_begin(); it != doc.termlist_end(); ++it) {
-			Row row{*it, it.get_wdf(), it.get_termfreq(), {}};
-			for (auto p = it.positionlist_begin(); p != it.positionlist_end(); ++p) {
-				row.pos.push_back(*p);
-			}
-			expect.push_back(std::move(row));
-		}
-		CHECK_EQ(rows.size(), expect.size());
-		for (size_t r = 0; r < rows.size() && r < expect.size(); ++r) {
-			CHECK_EQ(rows[r].term, expect[r].term);
-			CHECK_EQ(rows[r].wdf, expect[r].wdf);
-			CHECK_TRUE(rows[r].freq == expect[r].freq);
-			CHECK_TRUE(rows[r].pos == expect[r].pos);
-		}
-		CHECK_TRUE(!rows.empty() && rows.front().freq.has_value());
 	}
-	// the document with positions reports them; the one with only a boolean term reports none
-	auto view = engine::sync_wait(shard->get(1));
-	bool saw_alpha = false;
-	view->term_details([&](const engine::TermDetail& d) {
-		if (d.term == "alpha") { saw_alpha = d.positions == std::vector<engine::termpos>{1, 5}; }
-		if (d.term == "QQ1") { CHECK_TRUE(d.positions.empty()); }
-	});
-	CHECK_TRUE(saw_alpha);
 }
 
 void test_view_outlives_shard() {
 	std::unique_ptr<engine::DocView> view;
-	std::string want;
 	{
 		auto shard = build(path_of("engine_read_own.db"));
 		view = engine::sync_wait(shard->get(2));
-		auto doc = shard->database()->get_document(2);
-		for (auto it = doc.termlist_begin(); it != doc.termlist_end(); ++it) {
-			want += *it + ",";
-		}
 	}
 	CHECK_EQ(view->data(), "data 2");
 	CHECK_EQ(view->value(3), "v3-2");
-	std::string joined;
-	view->term_details([&](const engine::TermDetail& d) { joined += std::string(d.term) + ","; });
-	CHECK_EQ(joined, want);
 }
 
 // Every view an engine read makes is destroyed: none alive after get, scan (also a scan cut short by

@@ -240,7 +240,6 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 						hh(RESERVED_QUERYDSL_NEAR),
 						hh(RESERVED_QUERYDSL_PHRASE),
 						hh(RESERVED_QUERYDSL_SCALE_WEIGHT),
-						hh(RESERVED_QUERYDSL_ELITE_SET),
 						hh(RESERVED_QUERYDSL_SYNONYM),
 						hh(RESERVED_QUERYDSL_MAX),
 						hh(RESERVED_QUERYDSL_WILDCARD),
@@ -310,9 +309,6 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 								// engine::Query(OP_SCALE_WEIGHT, subquery, factor)
 								query = process(engine::Op::SCALE_WEIGHT, path, o, default_op, wqf, flags, is_leaf);
 								break;
-							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-								query = process(engine::Op::ELITE_SET, path, o, default_op, wqf, flags, is_leaf);
-								break;
 							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
 								query = process(engine::Op::WILDCARD, path, o, default_op, wqf, flags, is_leaf);
 								break;
@@ -336,9 +332,6 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 								break;
 							case _.fhh(RESERVED_QUERYDSL_PHRASE):
 								query = process(engine::Op::PHRASE, path, o, engine::Op::PHRASE, wqf, flags, true);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-								query = process(engine::Op::ELITE_SET, path, o, engine::Op::ELITE_SET, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_SYNONYM):
 								query = process(engine::Op::SYNONYM, path, o, engine::Op::SYNONYM, wqf, flags, true);
@@ -818,7 +811,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			switch (default_op) {
 				case engine::Op::NEAR:
 				case engine::Op::PHRASE:
-				case engine::Op::ELITE_SET:
 				case engine::Op::SYNONYM:
 				case engine::Op::MAX:
 					config.default_op = default_op;

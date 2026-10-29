@@ -49,7 +49,6 @@ enum class Op : std::uint8_t {
 	FILTER,         // left, restricted to right, which adds no weight
 	NEAR,           // terms within a window, in any order
 	PHRASE,         // terms within a window, in order
-	ELITE_SET,      // the best n subqueries
 	SYNONYM,        // subqueries counted as one term
 	MAX,            // the best subquery weight
 	SCALE_WEIGHT,
@@ -68,7 +67,6 @@ constexpr const char* to_string(Op op) noexcept {
 		case Op::FILTER: return "FILTER";
 		case Op::NEAR: return "NEAR";
 		case Op::PHRASE: return "PHRASE";
-		case Op::ELITE_SET: return "ELITE_SET";
 		case Op::SYNONYM: return "SYNONYM";
 		case Op::MAX: return "MAX";
 		case Op::SCALE_WEIGHT: return "SCALE_WEIGHT";
@@ -114,8 +112,7 @@ public:
 	// op applied to two subqueries.
 	static Query combine(Op op, Query left, Query right);
 
-	// op applied to any number of subqueries; parameter is the window of NEAR and PHRASE, and
-	// the number of terms ELITE_SET keeps.
+	// op applied to any number of subqueries; parameter is the window of NEAR and PHRASE.
 	static Query combine(Op op, std::vector<Query> subqueries, termcount parameter = 0);
 
 	// next when the accumulated query matches nothing, else op applied to both. The engine decides

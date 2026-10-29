@@ -64,38 +64,3 @@ pm.test("Default operator values are valid", function() {
 });
 ```
 e2e:end -->
-
-## Elite Set
-
-_Elite Set_ uses the `_elite_set` modifier.
-
-### Example
-
-```rest
-SEARCH /bank/
-
-{
-  "_query": {
-    "personality": {
-      "_elite_set": "the biggest two things to know are that hes lovable and cooperative. Of course he's also kind, honest and considerate, but they're far less prominent, especially compared to impulses of being shallow as well"
-    }
-  }
-}
-```
-
-<!-- e2e:begin
-
-```js
-pm.test("Response is success", function() {
-  pm.response.to.be.success;
-});
-```
-
-```js
-pm.test("Example results", function() {
-  var jsonData = pm.response.json();
-  pm.expect(jsonData.count).to.equal(10);
-  pm.expect(jsonData.hits.length).to.equal(10);
-});
-```
-e2e:end -->

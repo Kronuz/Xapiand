@@ -192,9 +192,7 @@ void test_view_throws_engine_errors() {
 	expect([&] { view->data(); });
 	expect([&] { view->value(3); });
 	expect([&] { view->version(); });
-	expect([&] { view->terms("", [](std::string_view, engine::termcount) {}); });
 	expect([&] { view->values([](engine::valueno, std::string_view) {}); });
-	expect([&] { view->term_details([](const engine::TermDetail&) {}); });
 	expect([&] { (void)view->serialise(); });
 	// A view reads lazily, so at least the data fetch hits the closed shard.
 	CHECK_TRUE(threw > 0);

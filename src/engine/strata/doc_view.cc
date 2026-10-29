@@ -32,11 +32,11 @@ namespace engine::strata {
 
 namespace {
 
-// The strata engine keeps no term lists (the owner's ruling R-P2): buckets come from stored values.
+// The strata engine keeps no term lists, so a stored document cannot be written back out as one.
 [[noreturn]] void
 no_term_lists()
 {
-	throw Error(errc::syntax, "The strata engine keeps no term lists; a document's terms are not offered (count a keyword field's stored values instead)");
+	throw Error(errc::syntax, "The strata engine keeps no term lists, so it does not serialise a stored document");
 }
 
 }  // namespace
@@ -71,20 +71,6 @@ SegmentDocView::values(const ValueSink& sink) const
 }
 
 
-void
-SegmentDocView::terms(std::string_view, const TermSink&) const
-{
-	no_term_lists();
-}
-
-
-void
-SegmentDocView::term_details(const TermDetailSink&) const
-{
-	no_term_lists();
-}
-
-
 std::string
 SegmentDocView::serialise() const
 {
@@ -112,20 +98,6 @@ OwnedDocView::values(const ValueSink& sink) const
 	for (const auto& [slot, bytes] : values_) {
 		sink(slot, bytes);
 	}
-}
-
-
-void
-OwnedDocView::terms(std::string_view, const TermSink&) const
-{
-	no_term_lists();
-}
-
-
-void
-OwnedDocView::term_details(const TermDetailSink&) const
-{
-	no_term_lists();
 }
 
 

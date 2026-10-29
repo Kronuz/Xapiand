@@ -26,7 +26,7 @@ languages, the stem strategy and the partial and fuzzy expansion limits. `parse_
 `queryparser::config` (stop words from `getStopWords`, one `snowball::stemmer` per language and thread) and
 lowers the returned tree with an explicit stack: the call stack does not grow with the nesting of the text.
 Nodes become `Query::term` (the field's name and the rest of the term, split where the text leads with the field), `wildcard`, `edit_distance`, `scale` and `combine`; a binary AND, OR, AND_NOT, XOR
-or AND_MAYBE is built as a binary combine, the rest as a list with the window of NEAR, PHRASE and ELITE_SET.
+or AND_MAYBE is built as a binary combine, the rest as a list with the window of NEAR and PHRASE.
 
 Errors: a syntax error, an operator that cannot take its operand (NEAR and PHRASE take terms only) and an
 over-long text raise `QueryParserError` (`src/exception_engine.h`): a `ClientError` (HTTP 400) that is also an

@@ -312,9 +312,6 @@ export const sidebar = [
                     "slug": "reference-guide/search/query-dsl/compound-queries/filter-operator"
                   },
                   {
-                    "slug": "reference-guide/search/query-dsl/compound-queries/elite-set-operator"
-                  },
-                  {
                     "slug": "reference-guide/search/query-dsl/compound-queries/range-searches"
                   },
                   {

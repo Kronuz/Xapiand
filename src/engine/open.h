@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstddef>                 // for std::size_t
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::string
 
@@ -40,5 +41,14 @@ struct Opened {
 // Opens (or, when create_missing, creates) the local shard at `path` of the given engine. The shard
 // hops onto `on` for each call, as the engines' own openers do.
 task::task<Opened> open_local(Kind kind, const std::string& path, bool writable, bool create_missing, task::scheduler_ref on = {});
+
+// The engine's own integrity check of the shard at `path`, by the engine whose files are there
+// (kind_of). `errors` counts what the check found; `failure` says why the check could not run or
+// did not pass.
+struct CheckResult {
+	std::size_t errors = 0;
+	std::string failure;
+};
+task::task<CheckResult> check(const std::string& path, task::scheduler_ref on = {});
 
 }  // namespace engine

@@ -65,9 +65,6 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.terms.types.arms).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', 'N\ufffd@']);
-  pm.expect(jsonData.terms.types.legs).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', 'N\ufffd@']);
-  pm.expect(jsonData.terms.types.type).to.have.all.keys(['Shuman']);
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1663382011','3248593248', '3741895486']);
 });
 ```
@@ -176,29 +173,6 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
-#### Info Object
-
-```rest
-INFO /test/object/doc.terms.name
-```
-
-<!-- e2e:begin
-```js
-pm.test("Response is success", function() {
-  pm.response.to.be.success;
-});
-```
-
-```js
-pm.test("Value is valid", function() {
-  var jsonData = pm.response.json();
-  pm.expect(jsonData.first).to.have.all.keys(['Sjohn']);
-  pm.expect(jsonData.last).to.have.all.keys(['Sdoe']);
-  pm.expect(jsonData.middle).to.have.all.keys(['Sr']);
-});
-```
-e2e:end -->
-
 ## Nested Object
 
 #### Index Nested Object
@@ -242,29 +216,6 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData._type).to.equal('object');
-});
-```
-e2e:end -->
-
-#### Info Nested Object
-
-```rest
-INFO /test/nested_object/doc.terms.name
-```
-
-<!-- e2e:begin
-```js
-pm.test("Response is success", function() {
-  pm.response.to.be.success;
-});
-```
-
-```js
-pm.test("Value is valid", function() {
-  var jsonData = pm.response.json();
-  pm.expect(jsonData.first).to.have.all.keys(['Sjohn']);
-  pm.expect(jsonData.last).to.have.all.keys(['Sdoe']);
-  pm.expect(jsonData.middle).to.have.all.keys(['Sr']);
 });
 ```
 e2e:end -->
@@ -383,26 +334,6 @@ pm.test("Response is success", function() {
 pm.test("Values are valid", function() {
   var jsonData = pm.response.json();
 
-  pm.expect(jsonData.terms).to.have.any.keys(['Zpersonality']);
-  pm.expect(jsonData.terms['Zpersonality']).to.have.all.keys(['Sassum','Sbehavior', 'Sblow', 'Scherish', 'Sclever', 'Scount', 'Sdeal', 'Sdisrupt', 'Seleg', 'Sexcit', 'Sfind', 'Sflaw', 'Sfortun', 'Sfrequent', 'Sfriend', 'Shelp', 'Sheroic', 'Sinsult', 'Skind', 'Slee', 'Slesser', 'Slighten', 'Slot', 'Sloyal', 'Smichael', 'Smood', 'Snatur', 'Sneed', 'Spassion', 'Spleasant', 'Sprejud', 'Srang', 'Sreach', 'Srisk', 'Sruin', 'Stain', 'Stime', 'Strait']);
-  pm.expect(jsonData.terms['contact']['address']).to.have.all.keys(['S630','Sroad', 'Svictor']);
-  pm.expect(jsonData.terms['contact']['city']).to.have.all.keys(['Sleyner']);
-  pm.expect(jsonData.terms['contact']['email']).to.have.all.keys(['Sco', 'Sgloboil', 'Slee', 'Smichael', 'Suk']);
-  pm.expect(jsonData.terms['contact']['phone']).to.have.all.keys(['S1', 'S3216', 'S594', 'S924']);
-  pm.expect(jsonData.terms['contact']['postcode']).to.have.all.keys(['S61952']);
-  pm.expect(jsonData.terms['contact']['state']).to.have.all.keys(['Sindiana']);
-  pm.expect(jsonData.terms['employer']).to.have.all.keys(['Sgloboil']);
-  pm.expect(jsonData.terms['eyeColor']).to.have.all.keys(['Sblue']);
-  pm.expect(jsonData.terms['favoriteFruit']).to.have.all.keys(['Slemon']);
-  pm.expect(jsonData.terms['gender']).to.have.all.keys(['Smale']);
-  pm.expect(jsonData.terms['name']['firstName']).to.have.all.keys(['Smichael']);
-  pm.expect(jsonData.terms['name']['lastName']).to.have.all.keys(['Slee']);
-  pm.expect(jsonData.terms['personality']).to.have.all.keys(['Sa', 'Sall', 'Salso', 'Sand', 'Sare', 'Saround', 'Sas', 'Sassumed', 'Sat', 'Sbe', 'Sbehaviors', 'Sbeing', 'Sblows', 'Sbut', 'Sby', 'Scan', 'Scherished', 'Sclever', 'Scount', 'Scourse', 'Sdeal', 'Sdisruptive', 'Selegance', 'Selegant', 'Sexcitement', 'Sfind', 'Sfirst', 'Sflaws', 'Sfor', 'Sfortunately', 'Sfrequently', 'Sfriends', 'Shas', 'She', 'Shelps', 'Sheroic', 'Shis', 'Sin', 'Sinsulting', 'Sis', 'Skind', 'Sleast', 'Slee', 'Slesser', 'Slighten', 'Slot', 'Sloyal', 'Smichael', 'Smoods', 'Snature', 'Sneed', 'Sneeded', 'Sof', 'Son', 'Sout', 'Spassionate', 'Spleasant', 'Sprejudiced', 'Srange', 'Sreach', 'Srisk', 'Sruining', 'Ssee', 'Stained', 'Sthe', 'Sthey', 'Sthis', 'Sthough', 'Stimes', 'Sto', 'Stoo', 'Straits', 'Svery', 'Sway', 'Swell', 'Swhat', 'Swhen', 'Swill', 'Swith', 'Syou']);
-  pm.expect(jsonData.terms['style']['clothing']['pants']).to.have.all.keys(['Skhakis']);
-  pm.expect(jsonData.terms['style']['clothing']['shirt']).to.have.all.keys(['Sshirt', 'St']);
-  pm.expect(jsonData.terms['style']['hairstyle']).to.have.all.keys(['Sback', 'Sslick']);
-  pm.expect(jsonData.terms['style']['pants']).to.have.all.keys(['Skhakis']);
-  pm.expect(jsonData.terms['style']['shirt']).to.have.all.keys(['Sshirt', 'St']);
 
   var t1 = 'N\ufffda\ufffd';
   var t2 = 'N\ufffdu0';
@@ -412,13 +343,6 @@ pm.test("Values are valid", function() {
   var t6 = 'N\ufffd';
   var t7 = 'N\ufffdw\u0012\ufffd';
 
-  pm.expect(jsonData.terms.accountNumber).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
-  pm.expect(jsonData.terms.accountNumber['<186a0>']).to.have.any.keys([t1]);
-  pm.expect(jsonData.terms.accountNumber['<2710>']).to.have.any.keys([t2]);
-  pm.expect(jsonData.terms.accountNumber['<3e8>']).to.have.any.keys([t3]);
-  pm.expect(jsonData.terms.accountNumber['<5f5e100>']).to.have.any.keys([t4]);
-  pm.expect(jsonData.terms.accountNumber['<64>']).to.have.any.keys([t5]);
-  pm.expect(jsonData.terms.accountNumber['<f4240>']).to.have.any.keys([t6]);
 
   t1 = 'N\ufffd';
   t2 = 'N\ufffd';
@@ -428,13 +352,6 @@ pm.test("Values are valid", function() {
   t6 = 'N\ufffd';
   t7 = 'N\ufffd\u0020';
 
-  pm.expect(jsonData.terms.age).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
-  pm.expect(jsonData.terms.age['<186a0>']).to.have.any.keys([t1]);
-  pm.expect(jsonData.terms.age['<2710>']).to.have.any.keys([t2]);
-  pm.expect(jsonData.terms.age['<3e8>']).to.have.any.keys([t3]);
-  pm.expect(jsonData.terms.age['<5f5e100>']).to.have.any.keys([t4]);
-  pm.expect(jsonData.terms.age['<64>']).to.have.any.keys([t5]);
-  pm.expect(jsonData.terms.age['<f4240>']).to.have.any.keys([t6]);
 
   t1 = 'N\ufffd';
   t2 = 'N\ufffd';
@@ -445,14 +362,6 @@ pm.test("Values are valid", function() {
   t7 = 'N\ufffd';
   var t8 = '\ufffd\ufffdG\ufffd\u0014|';
 
-  pm.expect(jsonData.terms.balance).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
-  pm.expect(jsonData.terms.balance['<186a0>']).to.have.any.keys([t1]);
-  pm.expect(jsonData.terms.balance['<2710>']).to.have.any.keys([t2]);
-  pm.expect(jsonData.terms.balance['<3e8>']).to.have.any.keys([t3]);
-  pm.expect(jsonData.terms.balance['<5f5e100>']).to.have.any.keys([t4]);
-  pm.expect(jsonData.terms.balance['<64>']).to.have.any.keys([t5]);
-  pm.expect(jsonData.terms.balance['<f4240>']).to.have.any.keys([t6]);
-  pm.expect(jsonData.terms.balance[t7]).to.have.any.keys([t8]);
 
   t1 = 'G\ufffd\ufffd\ufffd';
   t2 = 'G\ufffd\ufffd\ufffd';
@@ -461,13 +370,6 @@ pm.test("Values are valid", function() {
   t5 = 'G\ufffd\u0008\ufffdG(';
   t6 = 'G\u0188\ufffdG(`';
 
-  pm.expect(jsonData.terms.checkin).to.have.all.keys(['<3>', '<5>', '<8>', '<a>', '<c>', '<f>', 'G\u0000']);
-  pm.expect(jsonData.terms.checkin['<3>']).to.have.any.keys([t1]);
-  pm.expect(jsonData.terms.checkin['<5>']).to.have.any.keys([t2]);
-  pm.expect(jsonData.terms.checkin['<8>']).to.have.any.keys([t3]);
-  pm.expect(jsonData.terms.checkin['<a>']).to.have.any.keys([t4]);
-  pm.expect(jsonData.terms.checkin['<c>']).to.have.any.keys([t5]);
-  pm.expect(jsonData.terms.checkin['<f>']).to.have.any.keys([t6]);
 
 });
 ```

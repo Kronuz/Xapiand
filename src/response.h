@@ -61,16 +61,12 @@ constexpr const char RESPONSE_DOC_LEN_LOWER[]               = "doc_len_lower";
 constexpr const char RESPONSE_DOC_LEN_UPPER[]               = "doc_len_upper";
 constexpr const char RESPONSE_HAS_POSITIONS[]               = "has_positions";
 
-constexpr const char RESPONSE_WDF[]                         = "wdf";
-constexpr const char RESPONSE_TERM_FREQ[]                   = "term_freq";
-constexpr const char RESPONSE_POS[]                         = "pos";
 
 constexpr const char RESPONSE_DOCID[]                       = "docid";
 constexpr const char RESPONSE_VERSION[]                     = "version";
 constexpr const char RESPONSE_SHARD[]                       = "shard";
 constexpr const char RESPONSE_DATA[]                        = "data";
 constexpr const char RESPONSE_RAW_DATA[]                    = "raw_data";
-constexpr const char RESPONSE_TERMS[]                       = "terms";
 constexpr const char RESPONSE_VALUES[]                      = "values";
 
 constexpr const char RESPONSE_CONTENT_TYPE[]                = "content_type";

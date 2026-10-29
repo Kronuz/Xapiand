@@ -68,7 +68,6 @@ to_xapian(Op op)
 		case Op::FILTER: return Xapian::Query::OP_FILTER;
 		case Op::NEAR: return Xapian::Query::OP_NEAR;
 		case Op::PHRASE: return Xapian::Query::OP_PHRASE;
-		case Op::ELITE_SET: return Xapian::Query::OP_ELITE_SET;
 		case Op::SYNONYM: return Xapian::Query::OP_SYNONYM;
 		case Op::MAX: return Xapian::Query::OP_MAX;
 		case Op::SCALE_WEIGHT: return Xapian::Query::OP_SCALE_WEIGHT;

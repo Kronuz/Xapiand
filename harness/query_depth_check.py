@@ -110,7 +110,7 @@ check("text _or of %d phrases" % (CLAUSES // 3), search({"body": {"_or": '"a b" 
 check("text AND of %d phrases" % CHAIN, search(boolean(" AND ".join(['"a b"'] * CHAIN)))[0], 200)
 status, data = search(boolean(" AND ".join(['"a b"'] * (CLAUSES // 3))))
 check("text AND of %d phrases" % (CLAUSES // 3), status, 400, data)
-for word in ("_max", "_synonym", "_elite_set"):  # these nest one level per phrase, so the depth cap bounds them
+for word in ("_max", "_synonym"):  # these nest one level per phrase, so the depth cap bounds them
     check("text %s of %d phrases" % (word, CAP - 1), search({"body": {word: '"a b" ' * (CAP - 1)}})[0], 200)
     check("text %s of %d phrases" % (word, CAP + 1), search({"body": {word: '"a b" ' * (CAP + 1)}})[0], 400)
 # Phrases wrapped in other operators still chain; halves under an OR and an AND add up.

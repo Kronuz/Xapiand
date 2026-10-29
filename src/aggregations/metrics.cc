@@ -114,11 +114,12 @@ TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& s
 	const auto slot_spc = schema->get_slot_field(field_name);
 
 	_type = field_spc.get_type();
-	_prefix = field_spc.prefix();
 	_slot = slot_spc.slot;
-	// The buckets are the field's stored values, as Elasticsearch's terms aggregation reads doc values. The words
-	// of an analysed text field, or of a field kept without values, are index terms the strata engine does not keep.
-	_from_values = _type != FieldType::text && slot_spc.field_values && _slot != engine::BAD_VALUENO;
+	// The buckets are the field's stored values, as Elasticsearch's terms aggregation reads doc values; the words
+	// of an analysed text field, or of a field kept without values, have none to count.
+	if (_type == FieldType::text || !slot_spc.field_values || _slot == engine::BAD_VALUENO) {
+		THROW(AggregationError, "'{}' has no stored values to count: '{}' is not available on text fields or on fields without values", field_name, RESERVED_AGGS_TERMS);
+	}
 	_func = get_func_value_handle<TermsHandler>(_type);
 }
 
@@ -128,18 +129,10 @@ TermsHandler::values(const engine::DocView& doc) const
 {
 	std::vector<std::string> values;
 
-	if (_from_values) {
-		// A document stores each distinct value once.
-		const auto stored = doc.value(_slot);
-		for (const auto& value : StringList(stored)) {
-			values.emplace_back(value);
-		}
-		return values;
+	// A document stores each distinct value once.
+	const auto stored = doc.value(_slot);
+	for (const auto& value : StringList(stored)) {
+		values.emplace_back(value);
 	}
-	doc.terms(_prefix, [&](std::string_view term, engine::termcount) {
-		if (term.size() > _prefix.size() + 1) {
-			values.emplace_back(term.substr(_prefix.size() + 1));
-		}
-	});
 	return values;
 }

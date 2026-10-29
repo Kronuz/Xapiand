@@ -28,5 +28,4 @@ document:
 
 * `docid`      - Internal document ID.
 * `data`       - Content types stored in the document data.
-* `terms`      - Object containing a tree with all the terms indexed by the document.
 * `values`     - Object containing all values stored by the document.

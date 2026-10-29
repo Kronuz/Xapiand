@@ -113,6 +113,7 @@ LAYERS = [
  ('WAL (delete/write/replay)',            'replaced 7b', r'DatabaseWAL|delete_wal|delete_files|\bwal\.cc|WALWriter'),
  ('Xapian::Document in-memory build',     'replaced S1', r'Xapian::Document::Internal|Xapian::TermIterator|Xapian::Document::'),
  ('Xapian engine (add/replace/commit)',   'replaced S1', r'Glass|Xapian::|Inverter|DocumentTermList|CompressionStream|engine::xapian::|io_read_block|io_write_block|Honey|Brass'),
+ ('Strata engine (add/replace/commit)',  'replaced S1', r'engine::strata::|\bstrata::|\bprospect::'),
  ('Shard checkout / sync_wait / lock',    'replaced 7c', r'ShardEndpoint|DatabasePool|lock_shard|sync_wait|packaged_task|DatabaseHandler::get_docid_term|Shard::find_key|Shard::replace_document'),
  ('Term generation (analysis, snowball)', 'stays',       r'GenerateTerms|analysis::|snowball|term_generator|Schema::index_item\b'),
  ('Schema processing',                    'stays',       r'Schema::'),
@@ -130,7 +131,7 @@ def classify(frames):
     for f in reversed(frames):
         for n, r, rx in LAYERS:
             if rx.search(f):
-                if n.startswith(('JSON', 'Doc pipeline')) and any(DATA_RX.search(x) for x in frames): return LAYERS[6][0]
+                if n.startswith(('JSON', 'Doc pipeline')) and any(DATA_RX.search(x) for x in frames): return [n for n, r, rx in LAYERS if n.startswith('Data record')][0]
                 return n
     return 'other/unattributed (malloc, libc, runtime)'
 cnt = collections.Counter(); tfun = collections.defaultdict(collections.Counter)
@@ -173,6 +174,13 @@ res['profile'] = {'wall_samples': total_samples, 'busy_samples': busy_total, 'bu
                   'critical_thread': worst[0] if worst else None, 'dir_count_in_data': shards}
 rep_pct = sum(r['cpu_pct'] for r in layer_rows if r['status'].startswith('replaced'))
 res['profile']['replaced_cpu_pct'] = rep_pct
+# The engine share (rows 'replaced S1'): CPU and critical-path time per document. A sample is 1 ms of one thread (sample(1) default).
+s1 = [r for r in layer_rows if r['status'] == 'replaced S1']
+engine_cpu_ms_doc = sum(r['samples'] for r in s1) / ndocs
+engine_crit_ms_doc = sum(crit.get(r['layer'], 0) for r in s1) / ndocs
+res['profile']['engine_share'] = {'cpu_ms_per_doc': engine_cpu_ms_doc, 'critical_thread_ms_per_doc': engine_crit_ms_doc,
+    'cpu_pct': sum(r['cpu_pct'] for r in s1), 'critical_pct': sum(r['critical_pct'] for r in s1),
+    'cpu_ms_per_doc_by_smoke': res['smoke']['cpu_ms_per_doc'] * sum(r['cpu_pct'] for r in s1) / 100}
 sm_ = res['smoke']
 ncore = int(subprocess.check_output(['sysctl', '-n', 'hw.physicalcpu']).strip())
 cpu = sm_['cpu_ms_per_doc']
@@ -195,7 +203,7 @@ md = [f"# {a.label}", '', f"{ndocs} docs, binary `{a.bin}`", '',
 for r in layer_rows:
     md.append(f"| {r['layer']} | {r['status']} | {r['cpu_pct']:.1f} | {r['critical_pct']:.1f} | " + '; '.join(f"`{f[:60]}` {v}" for f, v in r['top_functions']) + ' |')
 am = res['amdahl']
-md += ['', f"replaced layers: {rep_pct:.1f}% of CPU. Without them: {am['remaining_cpu_ms_per_doc_without_replaced_layers']:.3f} ms CPU/doc (from {am['cpu_ms_per_doc']:.3f}); CPU-bound ceiling on {am['physical_cores']} physical cores {am['docs_per_s_cpu_bound_without_replaced_layers']:.0f} docs/s; without the Xapian rows only {am['docs_per_s_cpu_bound_without_xapian_only']:.0f} docs/s; front end (HTTP+decode) one-thread ceiling {am['docs_per_s_front_end_one_thread'] or 0:.0f} docs/s", '', 'thread groups (samples: busy / lockwait / idle):', '']
+md += ['', f"replaced layers: {rep_pct:.1f}% of CPU. Without them: {am['remaining_cpu_ms_per_doc_without_replaced_layers']:.3f} ms CPU/doc (from {am['cpu_ms_per_doc']:.3f}); CPU-bound ceiling on {am['physical_cores']} physical cores {am['docs_per_s_cpu_bound_without_replaced_layers']:.0f} docs/s; without the Xapian rows only {am['docs_per_s_cpu_bound_without_xapian_only']:.0f} docs/s; front end (HTTP+decode) one-thread ceiling {am['docs_per_s_front_end_one_thread'] or 0:.0f} docs/s", '', f"engine share (rows replaced S1): {engine_cpu_ms_doc:.4f} ms CPU/doc by samples ({res['profile']['engine_share']['cpu_ms_per_doc_by_smoke']:.4f} by smoke CPU x share), {engine_crit_ms_doc:.4f} ms/doc on the critical thread", '', 'thread groups (samples: busy / lockwait / idle):', '']
 for g, c in sorted(tg.items(), key=lambda kv: -kv[1]['busy']):
     if c['busy'] or c['lockwait']: md.append(f"- {g}: {c['busy']} / {c['lockwait']} / {c['idle']}")
 open(os.path.join(a.out, f'{a.label}.md'), 'w').write('\n'.join(md) + '\n')

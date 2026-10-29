@@ -86,7 +86,7 @@ for i in range(n):
 
 print(f"compared {n} response bodies (normalized)\n")
 print(f"BODY DIVERGENCES: {len(diffs)}\n")
-for lbl, bc, oc, bb, ob in diffs[:40]:
+for lbl, bc, oc, bb, ob in diffs:
     if bc != oc:
         print(f"  {lbl}  status {bc} -> {oc}")
     else:

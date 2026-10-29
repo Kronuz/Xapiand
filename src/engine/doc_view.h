@@ -33,20 +33,8 @@
 
 namespace engine {
 
-// Called once per term of a document.
-using TermSink = std::function<void(std::string_view term, termcount wdf)>;
-
 // Called once per value slot that holds a value, in slot order.
 using ValueSink = std::function<void(valueno slot, std::string_view value)>;
-
-// One term of a document with what the info endpoints report about it.
-struct TermDetail {
-	std::string_view term;                 // valid only during the sink call; copy it to keep it
-	termcount wdf = 0;
-	std::optional<doccount> termfreq;  // empty when the document is not tied to a database
-	std::vector<termpos> positions;    // empty when the term has none
-};
-using TermDetailSink = std::function<void(const TermDetail&)>;
 
 // A stored document read lazily from a shard: the engine fetches only what is asked for, so any
 // method can hit the shard (stale snapshot, remote failure). Each throws engine::Error only.
@@ -58,13 +46,9 @@ public:
 	virtual std::string data() const = 0;
 	virtual std::string value(valueno slot) const = 0;
 	virtual rev version() const = 0;
-	virtual void terms(std::string_view prefix, const TermSink& sink) const = 0;
 
 	// Every value, in slot order.
 	virtual void values(const ValueSink& sink) const = 0;
-
-	// Every term in term order, with its frequency and positions.
-	virtual void term_details(const TermDetailSink& sink) const = 0;
 
 	// The document in the form `engine::Document::unserialise` and the log read back.
 	virtual std::string serialise() const = 0;
