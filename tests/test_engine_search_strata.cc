@@ -877,6 +877,9 @@ void test_refusals_impl() {
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
+	// An append of a non-joining operator onto something still refuses, and ELITE_SET stays refused.
+	CHECK_EQ(kind(Query::append(Op::PHRASE, t("w1"), t("w2"))), syntax);
+	CHECK_EQ(kind(Query::append(Op::ELITE_SET, Query(), Query::combine(Op::ELITE_SET, {t("w1"), t("w2")}, 1))), syntax);
 	// A refusal leaves nothing behind: the same shard answers the next search.
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	// A search over the two engines is refused, and a query nested too deeply.
@@ -958,6 +961,11 @@ void test_fields_impl() {
 		{Query::combine(Op::PHRASE, {t("title", "first"), t("title", "second")}), {1}},
 		{Query::combine(Op::PHRASE, {t("body", "second"), t("body", "first")}), {2}},
 		{Query::combine(Op::PHRASE, {t("title", "first"), t("body", "second")}), {}},
+		// What the query DSL builds for a text under _phrase or _near: an append onto nothing.
+		{Query::append(Op::PHRASE, Query(), Query::combine(Op::PHRASE, {t("title", "first"), t("title", "second")})), {1}},
+		{Query::append(Op::PHRASE, Query(), Query::combine(Op::PHRASE, {t("body", "second"), t("body", "first")})), {2}},
+		{Query::append(Op::NEAR, Query(), Query::combine(Op::NEAR, {t("title", "second"), t("title", "first")})), {1}},
+		{Query::append(Op::PHRASE, Query(), t("title", "first")), {1, 3}},
 		// The key field: a term on it is a key, and a key is never a term of another field.
 		{t(std::string(engine::KEY_FIELD).c_str(), "Q1"), {1}},
 		{t(std::string(engine::KEY_FIELD).c_str(), "Q3"), {3}},

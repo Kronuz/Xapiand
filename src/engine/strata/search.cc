@@ -200,8 +200,12 @@ validate(const Query& query, int depth)
 			// A chain of appends is walked along its spine, so its length costs no stack.
 			const Query* spine = &query;
 			while (spine->node() != nullptr && spine->node()->kind == QueryKind::append) {
-				if (!is_joining(spine->node()->op)) {
-					unsupported(std::string("the ") + to_string(spine->node()->op) + " operator");
+				// An append onto an empty accumulation is just the next query, whatever its operator (the
+				// owner has not ruled on ELITE_SET over text, which stays refused).
+				const Op op = spine->node()->op;
+				const bool alone = spine->node()->subqueries[0].empty() && op != Op::ELITE_SET;
+				if (!alone && !is_joining(op)) {
+					unsupported(std::string("the ") + to_string(op) + " operator");
 				}
 				validate(spine->node()->subqueries[1], depth + 1);
 				spine = &spine->node()->subqueries[0];
