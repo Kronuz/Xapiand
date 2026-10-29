@@ -39,18 +39,15 @@
 
 #include "engine/query.h"
 #include "engine/text.h"
-#include "engine/xapian/query.h"
 #include "database/utils.h"
 #include "exception_engine.h"
 #include "jsonl.hh"
-#include "xapian.h"
 
 namespace {
 
 using engine::Op;
 using engine::Query;
 using engine::Stem;
-using engine::xapian::to_xapian;
 namespace text = engine::text;
 
 // The stop words are read from the source tree.
@@ -73,10 +70,46 @@ config(unsigned flags, Op op = Op::INVALID, const char* stop = "", const char* s
 	return c;
 }
 
+// The description queryparser gives its own tree for the text.
 std::string
 described(const std::string& text, const engine::TextConfig& c)
 {
-	return to_xapian(engine::parse_text(text, c)).get_description();
+	std::string tree;
+	engine::parse_text(text, c, &tree);
+	return tree;
+}
+
+// The nodes of a lowered query that stand for what the description counts: terms with a position,
+// wildcards and edit-distance expansions.
+struct Leaves {
+	std::size_t terms = 0, wildcards = 0, fuzzy = 0;
+};
+
+Leaves
+leaves_of(const Query& query)
+{
+	Leaves leaves;
+	std::vector<const engine::QueryNode*> stack;
+	if (query.node() != nullptr) { stack.push_back(query.node()); }
+	while (!stack.empty()) {
+		const auto* node = stack.back();
+		stack.pop_back();
+		leaves.terms += node->kind == engine::QueryKind::term && node->pos != 0;
+		leaves.wildcards += node->kind == engine::QueryKind::wildcard;
+		leaves.fuzzy += node->kind == engine::QueryKind::edit_distance;
+		for (const auto& sub : node->subqueries) {
+			if (sub.node() != nullptr) { stack.push_back(sub.node()); }
+		}
+	}
+	return leaves;
+}
+
+std::size_t
+count_of(const std::string& text, const std::string& what)
+{
+	std::size_t n = 0;
+	for (auto at = text.find(what); at != std::string::npos; at = text.find(what, at + what.size())) { ++n; }
+	return n;
 }
 
 // One row of a vector file as a text configuration; false when it sets a flag the engine has no word for.
@@ -141,7 +174,7 @@ constexpr std::size_t INVALID_ROWS = 4;
 void
 test_ab_decisions_stand()
 {
-	// Every recorded decision, through the lowering and into Xapian's description format.
+	// Every recorded decision: queryparser's tree reads as recorded, and the lowering errors as recorded.
 	auto all = rows("parse-ab.jsonl");
 	REQUIRE_EQ(all.size(), 706U);
 	std::size_t errors = 0, invalid = 0;
@@ -153,7 +186,8 @@ test_ab_decisions_stand()
 		REQUIRE(row_config(r, c));
 		if (r["error"].empty()) {
 			try {
-				CHECK_EQ(described(r["query"], c), r["description"]);
+				const auto tree = described(r["query"], c);
+				CHECK_EQ(tree, r["description"]);
 			} catch (const QueryParserError& exc) {
 				// A SYNONYM of anything but words is not a valid query, whatever the library records.
 				CHECK_TRUE(exc.kind == engine::errc::syntax);
@@ -181,7 +215,8 @@ test_ab_decisions_stand()
 void
 test_lowering_is_the_tree()
 {
-	// The engine query describes as the tree queryparser built, for every row of the larger vector files.
+	// The engine query has the leaves queryparser's description names, for every row of the larger vector files:
+	// a term for each "@position", a wildcard for each WILDCARD and an edit-distance node for each EDIT_DISTANCE.
 	std::size_t read = 0, failed = 0;
 	for (const char* file : { "parse-v2.jsonl", "parse-v3.jsonl", "parse-ab.jsonl" }) {
 		auto all = rows(file);
@@ -194,7 +229,10 @@ test_lowering_is_the_tree()
 			std::string tree;
 			try {
 				const auto lowered = engine::parse_text(r["query"], c, &tree);
-				CHECK_EQ(to_xapian(lowered).get_description(), tree);
+				const auto leaves = leaves_of(lowered);
+				CHECK_EQ(leaves.terms, count_of(tree, "@"));
+				CHECK_EQ(leaves.wildcards, count_of(tree, "WILDCARD "));
+				CHECK_EQ(leaves.fuzzy, count_of(tree, "EDIT_DISTANCE "));
 				++read;
 			} catch (const QueryParserError&) {
 				++failed;
@@ -288,8 +326,12 @@ test_text_without_words_matches_nothing()
 	CHECK_FALSE(engine::parse_text("quick", config(base, Op::INVALID, "en")).empty());
 
 	// Stop words go from a group with other words and stay in a group of their own.
-	const auto stopped = engine::Query::term("", "XTfieldquick", 1, 2);
-	CHECK_EQ(described("the quick", config(base, Op::INVALID, "en")), to_xapian(stopped).get_description());
+	CHECK_EQ(described("the quick", config(base, Op::INVALID, "en")), "Query(XTfieldquick@2)");
+	const auto parsed = engine::parse_text("the quick", config(base, Op::INVALID, "en"));
+	CHECK_TRUE(parsed.node() != nullptr && parsed.node()->kind == engine::QueryKind::term);
+	CHECK_EQ(parsed.node()->field, "XTfield");
+	CHECK_EQ(parsed.node()->str, "quick");
+	CHECK_EQ(parsed.node()->pos, 2u);
 	CHECK_FALSE(engine::parse_text("the and of", config(base, Op::INVALID, "en")).empty());
 }
 
@@ -332,7 +374,7 @@ test_nesting_is_not_recursive()
 void
 test_near_of_a_boolean_expression()
 {
-	// _near over "(barack OR michelle) AND obama" reached a heap overflow in the Xapian parser. NEAR
+	// _near over "(barack OR michelle) AND obama" once reached a heap overflow in the parser. NEAR
 	// takes words only, so the bracket is a client error: the answer is a 400, not a corrupted heap.
 	try {
 		engine::parse_text("(barack OR michelle) AND obama", config(base, Op::NEAR));
@@ -369,7 +411,7 @@ test_stems_are_terms_of_the_stem_field()
 			else { CHECK_EQ(field, "XTfield"); }
 		}
 		CHECK_TRUE(stem_found);
-		// The Xapian engine joins them back into the term Xapian has always had.
+		// The description names the stem under its field.
 		CHECK_TRUE(described("running", cfg).find("ZXTfieldrun") != std::string::npos);
 	}
 	// Without a stemmer no field but the word's.
@@ -400,12 +442,10 @@ test_all_wildcard_patterns()
 	for (const char* text : { "**", "*?", "?*" }) {
 		const auto query = engine::parse_text(text, cfg);
 		CHECK_TRUE(query.node() != nullptr && query.node()->kind == engine::QueryKind::term && query.node()->str.empty());
-		CHECK_EQ(to_xapian(query).get_description(), "Query(<alldocuments>)");
 	}
 	for (const char* text : { "??", "*??" }) {
 		const auto query = engine::parse_text(text, cfg);
 		CHECK_TRUE(query.node() != nullptr && query.node()->kind == engine::QueryKind::wildcard && query.node()->str == text);
-		CHECK_EQ(to_xapian(query).get_description(), std::string("Query(WILDCARD SYNONYM ") + text + ")");
 	}
 	// A lone '*' or '?' is not a wildcard to the parser: it reads as no words at all.
 	CHECK_TRUE(engine::parse_text("*", cfg).empty());

@@ -21,11 +21,10 @@
  */
 
 
-// Unit tests for engine::search on both engines. One corpus is written to a Xapian and a strata shard
-// set; every query runs on both through the seam and is checked against a model of the corpus: the
-// documents found and the estimate are exact, the order is by weight, and the strata engine's weights
-// stay within a stated tolerance of Xapian's. Then what is the strata engine's own: deletes and
-// replacements, segments, shards that interleave, and what it refuses.
+// Unit tests for engine::search. One corpus is written to a strata shard set; every query runs through
+// the seam and is checked against a model of the corpus: the documents found and the estimate are
+// exact, the order is by weight, and the weights (BM25 over the model's statistics) stay within a stated
+// tolerance. Then deletes and replacements, segments, shards that interleave, and what it refuses.
 
 #include "test_harness.h"
 
@@ -52,20 +51,17 @@
 
 #include "engine/callbacks.h"
 #include "engine/error.h"
-#include "engine/kind.h"
 #include "engine/open.h"
 #include "engine/search.h"
 #include "engine/sync.h"
 
 namespace {
 
-using engine::Kind;
 using engine::Op;
 using engine::Query;
 
-// The strata engine's weights are Xapian's BM25 over the same statistics; they differ in the last
-// digits of the sums, so a relative tolerance covers them, and hits whose weights lie within it of
-// each other may swap.
+// The weights are the model's BM25 over the same statistics; they differ in the last digits of the
+// sums, so a relative tolerance covers them, and hits whose weights lie within it of each other may swap.
 constexpr double tolerance = 1e-9;
 
 constexpr int vocabulary = 6;
@@ -83,14 +79,14 @@ struct Model {
 	std::vector<std::vector<Doc>> shards;
 };
 
-std::string path_of(const char* name, Kind kind, int shard) {
-	const auto path = (std::filesystem::current_path() / (std::string("engine_search_strata_") + name + "_" + engine::to_string(kind) + std::to_string(shard) + ".db")).string();
+std::string path_of(const char* name, int shard) {
+	const auto path = (std::filesystem::current_path() / (std::string("engine_search_strata_") + name + "_" + std::to_string(shard) + ".db")).string();
 	std::filesystem::remove_all(path);
 	return path;
 }
 
-engine::Document make(Kind kind, int shard, int i, const Model::Doc& model) {
-	engine::Document doc(kind);
+engine::Document make(int shard, int i, const Model::Doc& model) {
+	engine::Document doc;
 	const auto key = "Q" + std::to_string(shard) + "_" + std::to_string(i);
 	doc.set_key(key);
 	// Slot 2 groups the documents (every seventh has no group), slot 3 orders them.
@@ -151,7 +147,6 @@ Model::Doc random_doc(std::mt19937& rng, int i) {
 }
 
 struct Index {
-	Kind kind;
 	std::vector<std::unique_ptr<engine::Shard>> owned;
 
 	std::vector<engine::Shard*> shards(std::size_t n) const {
@@ -167,22 +162,20 @@ struct Index {
 void write_docs(Index& index, int shard, const Model& model, std::size_t from, std::size_t to) {
 	const auto& list = model.shards[static_cast<std::size_t>(shard)];
 	for (std::size_t i = from; i < to; ++i) {
-		auto doc = make(index.kind, shard, static_cast<int>(i + 1), list[i]);
+		auto doc = make(shard, static_cast<int>(i + 1), list[i]);
 		engine::sync_wait(index.owned[static_cast<std::size_t>(shard)]->add(doc, {}));
 	}
 }
 
-// Two indexes, one per engine, holding the same documents; `commits` splits each shard's load into
-// that many commits, which on the strata engine leaves several segments.
-void build(const char* name, int shard_count, int count, int commits, Index& xapian, Index& strata, Model& model) {
+// An index holding the model's documents; `commits` splits each shard's load into that many commits,
+// which leaves several segments.
+void build(const char* name, int shard_count, int count, int commits, Index& strata, Model& model) {
 	std::mt19937 rng(1234);
 	model.shards.assign(static_cast<std::size_t>(shard_count), {});
-	for (auto* index : {&xapian, &strata}) {
-		index->owned.clear();
-		for (int s = 0; s < shard_count; ++s) {
-			auto opened = engine::sync_wait(engine::open_local(index->kind, path_of(name, index->kind, s), true, true));
-			index->owned.push_back(std::move(opened.shard));
-		}
+	strata.owned.clear();
+	for (int s = 0; s < shard_count; ++s) {
+		auto opened = engine::sync_wait(engine::open_local(path_of(name, s), true, true));
+		strata.owned.push_back(std::move(opened.shard));
 	}
 	for (int s = 0; s < shard_count; ++s) {
 		auto& list = model.shards[static_cast<std::size_t>(s)];
@@ -191,10 +184,8 @@ void build(const char* name, int shard_count, int count, int commits, Index& xap
 			for (int n = 0; n < count / commits; ++n) {
 				list.push_back(random_doc(rng, static_cast<int>(list.size()) + 1));
 			}
-			for (auto* index : {&xapian, &strata}) {
-				write_docs(*index, s, model, from, list.size());
-				engine::sync_wait(index->owned[static_cast<std::size_t>(s)]->commit(engine::Transaction::none));
-			}
+			write_docs(strata, s, model, from, list.size());
+			engine::sync_wait(strata.owned[static_cast<std::size_t>(s)]->commit(engine::Transaction::none));
 		}
 	}
 }
@@ -252,7 +243,7 @@ bool near_in(const Model::Doc& doc, const std::vector<std::string>& words, std::
 	return place(0);
 }
 
-// --- the model's weights: Xapian's BM25 (k1 = 1, k3 = 1, b = 0.5, minimum normalised length 0.5) ---
+// --- the model's weights: BM25 (k1 = 1, k3 = 1, b = 0.5, minimum normalised length 0.5) ---
 
 struct Statistics {
 	double docs = 0, length = 0;
@@ -272,7 +263,7 @@ Statistics statistics_of(const Model& model, std::size_t shards) {
 	return st;
 }
 
-// Xapian's BM25 weight of a term of document frequency df occurring tf times in the document.
+// The BM25 weight of a term of document frequency df occurring tf times in the document.
 double bm25_of(const Statistics& st, const Model::Doc& doc, double df, double tf, double wqf) {
 	double tw = (st.docs - df + 0.5) / (df + 0.5);
 	if (tw < 2) { tw = tw * 0.5 + 1; }
@@ -493,18 +484,6 @@ std::map<std::uint64_t, double> model_hits(const Model& model, const Query& quer
 	return hits;
 }
 
-bool has_optional(const Query& query) {
-	const auto* node = query.node();
-	if (node == nullptr) { return false; }
-	if ((node->kind == engine::QueryKind::combine || node->kind == engine::QueryKind::append) && (node->op == Op::AND_MAYBE || node->op == Op::FILTER || node->op == Op::PHRASE || node->op == Op::NEAR)) {
-		return true;
-	}
-	for (const auto& sub : node->subqueries) {
-		if (has_optional(sub)) { return true; }
-	}
-	return false;
-}
-
 // Records every document it is shown.
 class CountingSpy final : public engine::MatchSpy {
 public:
@@ -536,39 +515,11 @@ engine::SearchResult run(const Index& index, std::size_t shards, const Query& qu
 	request.maxitems = maxitems;
 	request.check_at_least = 100000;
 	request.order = order;
-	request.origin = "test";
 	return engine::sync_wait(engine::search(index.shards(shards), request));
 }
 
 bool close(double a, double b) {
 	return std::fabs(a - b) <= tolerance * std::max(1.0, std::fabs(b));
-}
-
-// Hits in the same order up to ties: the weights agree position by position, and the ids of each
-// run of equal weights agree as sets.
-bool same_ranking(const std::vector<engine::Hit>& a, const std::vector<engine::Hit>& b) {
-	if (a.size() != b.size()) {
-		return false;
-	}
-	for (std::size_t i = 0; i < a.size();) {
-		std::size_t j = i;
-		std::set<engine::docid> left, right;
-		while (j < a.size() && close(a[j].weight, a[i].weight)) {
-			if (!close(a[j].weight, b[j].weight)) {
-				return false;
-			}
-			left.insert(a[j].did);
-			right.insert(b[j].did);
-			++j;
-		}
-		if (j == i || left != right) {
-			// A run cut by the window may end inside a run of the other: compare what is there.
-			if (j == i) { return false; }
-			return false;
-		}
-		i = j;
-	}
-	return true;
 }
 
 Ids ids_of(const engine::SearchResult& result) {
@@ -579,53 +530,12 @@ Ids ids_of(const engine::SearchResult& result) {
 	return ids;
 }
 
-double worst_difference = 0;
-int ranking_differs = 0, optional_differs = 0, xapian_differs = 0, xapian_asserts = 0;
-
-// One query on both engines against the model and each other.
-void compare(const Index& xapian, const Index& strata, const Model& model, std::size_t shards, const Query& query, bool distinct, bool force = false) {
-	const bool rank = force || (distinct && !has_optional(query));
+// One query against the model: the documents, the estimate, the weights, the order and the ranks.
+void compare(const Index& strata, const Model& model, std::size_t shards, const Query& query) {
 	const auto weights = model_hits(model, query, shards);
 	Ids expected;
 	for (const auto& [id, weight] : weights) { expected.insert(id); }
-	// A Debug build of Xapian asserts inside its own matcher on a few shapes; that query is not compared with it.
-	// With NO_XAPIAN_COMPARE the Xapian engine is not searched (its matcher misbehaves under ASan and Debug asserts).
-	engine::SearchResult x;
-	bool xapian_ok = std::getenv("NO_XAPIAN_COMPARE") == nullptr;
-	try {
-		if (xapian_ok) {
-			x = run(xapian, shards, query, 0, 100000);
-		}
-	} catch (const engine::Error& error) {
-		if (error.kind != engine::errc::internal) { throw; }
-		xapian_ok = false;
-		++xapian_asserts;
-	}
 	const auto s = run(strata, shards, query, 0, 100000);
-	if (xapian_ok && distinct) {
-		CHECK_TRUE(ids_of(x) == expected);
-		if (ids_of(x) != expected && std::getenv("DIAG")) {
-			std::fprintf(stderr, "DIAG %s\n", query.description().c_str());
-			for (const auto id : expected) {
-				if (!ids_of(x).contains(id)) {
-					const auto& d = model.shards[(id - 1) % shards][(id - 1) / shards];
-					std::fprintf(stderr, "  model only: id %llu terms:", static_cast<unsigned long long>(id));
-					for (const auto& t : d.terms) { std::fprintf(stderr, " %s", t.c_str()); }
-					std::fprintf(stderr, "\n");
-				}
-			}
-			for (const auto id : ids_of(x)) {
-				if (!expected.contains(id)) {
-					const auto& d = model.shards[(id - 1) % shards][(id - 1) / shards];
-					std::fprintf(stderr, "  xapian only: id %llu terms:", static_cast<unsigned long long>(id));
-					for (const auto& t : d.terms) { std::fprintf(stderr, " %s", t.c_str()); }
-					std::fprintf(stderr, "\n");
-				}
-			}
-		}
-	} else if (xapian_ok && ids_of(x) != expected) {
-		++xapian_differs;
-	}
 	CHECK_TRUE(ids_of(s) == expected);
 	CHECK_EQ(s.estimated, expected.size());
 	CHECK_EQ(s.hits.size(), expected.size());
@@ -639,16 +549,7 @@ void compare(const Index& xapian, const Index& strata, const Model& model, std::
 	for (std::size_t i = 1; i < s.hits.size(); ++i) {
 		CHECK_GE(s.hits[i - 1].weight + 1e-12, s.hits[i].weight);
 	}
-	const bool ranked = !xapian_ok || same_ranking(x.hits, s.hits);
-	if (rank) {
-		CHECK_TRUE(ranked);
-		for (std::size_t i = 0; i < std::min(x.hits.size(), s.hits.size()); ++i) {
-			worst_difference = std::max(worst_difference, std::fabs(x.hits[i].weight - s.hits[i].weight) / std::max(1.0, std::fabs(x.hits[i].weight)));
-		}
-	} else if (!ranked) {
-		++(distinct ? optional_differs : ranking_differs);
-	}
-	for (std::size_t i = 0; i < std::min(x.hits.size(), s.hits.size()); ++i) {
+	for (std::size_t i = 0; i < s.hits.size(); ++i) {
 		CHECK_EQ(s.hits[i].rank, i);
 	}
 	// Windows: the same documents as the full ranking.
@@ -667,9 +568,8 @@ void compare(const Index& xapian, const Index& strata, const Model& model, std::
 
 // --- random queries ---
 
-// The terms a query may use. With `distinct`, no term is used twice in a query: Xapian weighs a term that
-// a query uses in several places (or in several roles) in ways the strata engine does not copy, so the
-// ranking is compared only for queries of distinct terms; the documents found are always compared with the model.
+// The terms a query may use. With `distinct`, no term is used twice in a query and no boolean term is
+// used; otherwise a query may repeat terms and use the boolean ones.
 struct Terms {
 	std::mt19937& rng;
 	bool distinct;
@@ -679,7 +579,7 @@ struct Terms {
 	std::string pick() {
 		static const char* const pool[] = {"w0", "w1", "w2", "w3", "w4", "w5", "common", "even", "tag0", "tag1", "tag2", "tag3", "tag4", "bool0", "bool1", "bool2", "bool3", "bool4"};
 		for (int attempt = 0; attempt < 40; ++attempt) {
-			std::string term = pool[rng() % (distinct ? 13 : 18)];   // Xapian is compared only on queries without boolean terms
+			std::string term = pool[rng() % (distinct ? 13 : 18)];   // the first 13 have no boolean terms
 			if (rng() % 12 == 0) {
 				term = "zzz" + std::to_string(missing++);
 			}
@@ -735,13 +635,13 @@ Query random_query(Terms& terms, int depth) {
 }
 
 
-void random_queries(const Index& xapian, const Index& strata, const Model& model, std::size_t shards, unsigned seed, int count, bool distinct) {
+void random_queries(const Index& strata, const Model& model, std::size_t shards, unsigned seed, int count, bool distinct) {
 	std::mt19937 rng(seed);
 	for (int i = 0; i < count; ++i) {
 		Terms terms{rng, distinct, {}, 0};
 		const auto query = random_query(terms, 3);
 		const int before = testh::failures;
-		compare(xapian, strata, model, shards, query, distinct);
+		compare(strata, model, shards, query);
 		if (testh::failures != before) {
 			std::fprintf(stderr, "  query %d: %s\n", i, query.description().c_str());
 		}
@@ -749,11 +649,11 @@ void random_queries(const Index& xapian, const Index& strata, const Model& model
 }
 
 void test_one_shard_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("one", 1, 60, 3, xapian, strata, model);
-	random_queries(xapian, strata, model, 1, 7, 300, true);
-	random_queries(xapian, strata, model, 1, 8, 300, false);
+	build("one", 1, 60, 3, strata, model);
+	random_queries(strata, model, 1, 7, 300, true);
+	random_queries(strata, model, 1, 8, 300, false);
 	// A single term finds what the model says, heaviest first.
 	const auto found = run(strata, 1, Query::term("f", "w1"), 0, 10);
 	CHECK_GT(found.hits.size(), 0u);
@@ -761,14 +661,13 @@ void test_one_shard_impl() {
 		CHECK_GE(found.hits[i - 1].weight, found.hits[i].weight);
 	}
 	CHECK_EQ(found.hits.front().percent, 100);
-	std::printf("one shard: worst relative weight difference %.3g\n", worst_difference);
 }
 
-// Positional operators on their own and under AND rank as in Xapian.
+// Positional operators on their own and under AND match and weigh as the model says.
 void test_positional_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("positional", 2, 80, 2, xapian, strata, model);
+	build("positional", 2, 80, 2, strata, model);
 	const auto t = [](const char* w) { return Query::term("f", w); };
 	for (const std::size_t shards : {1u, 2u}) {
 		for (int a = 0; a < vocabulary; ++a) {
@@ -779,7 +678,7 @@ void test_positional_impl() {
 				const auto near = Query::combine(Op::NEAR, {t(wa.c_str()), t(wb.c_str())}, 4);
 				for (const auto& query : {phrase, near, Query::combine(Op::AND, phrase, t("common")), Query::combine(Op::AND, near, t("even"))}) {
 					const int before = testh::failures;
-					compare(xapian, strata, model, shards, query, true, true);
+					compare(strata, model, shards, query);
 					if (testh::failures != before) { std::fprintf(stderr, "  %s\n", query.description().c_str()); }
 				}
 			}
@@ -790,9 +689,9 @@ void test_positional_impl() {
 // An append onto a query that matches nothing by its structure (a text that analysed to nothing) is the
 // appended query; a term that no segment holds is a different matter and joins as nothing.
 void test_append_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("append", 2, 40, 2, xapian, strata, model);
+	build("append", 2, 40, 2, strata, model);
 	const auto t = [](const char* w) { return Query::term("f", w); };
 	std::vector<Query> queries;
 	queries.push_back(Query::append(Op::AND, Query(), t("w1")));
@@ -804,7 +703,7 @@ void test_append_impl() {
 	queries.push_back(Query::append(Op::AND_NOT, Query(), t("w1")));
 	for (std::size_t shards = 1; shards <= 2; ++shards) {
 		for (const auto& query : queries) {
-			compare(xapian, strata, model, shards, query, true);
+			compare(strata, model, shards, query);
 		}
 	}
 	CHECK_EQ(run(strata, 2, queries[0], 0, 1000).estimated, model_hits(model, t("w1"), 2).size());
@@ -812,23 +711,20 @@ void test_append_impl() {
 }
 
 void test_two_shards_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("two", 2, 50, 2, xapian, strata, model);
-	random_queries(xapian, strata, model, 2, 11, 300, true);
-	random_queries(xapian, strata, model, 2, 12, 300, false);
-	random_queries(xapian, strata, model, 1, 13, 50, true);
-	std::printf("two shards: worst relative weight difference %.3g\n", worst_difference);
-	std::printf("Xapian asserted inside its own matcher on %d queries (a Debug build)\n", xapian_asserts);
-	std::printf("Xapian's ranking differs from the strata engine's (which matches the model) in %d queries with repeated terms and %d of distinct terms with AND_MAYBE, FILTER, PHRASE or NEAR; its documents differ from the model in %d\n", ranking_differs, optional_differs, xapian_differs);
+	build("two", 2, 50, 2, strata, model);
+	random_queries(strata, model, 2, 11, 300, true);
+	random_queries(strata, model, 2, 12, 300, false);
+	random_queries(strata, model, 1, 13, 50, true);
 }
 
 // A spy is shown every match once, with its id in its shard, its data and its weight, whatever window or
 // order the request asks for and whether or not any hit is wanted.
 void test_spy_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("spy", 3, 30, 2, xapian, strata, model);
+	build("spy", 3, 30, 2, strata, model);
 	const auto query = Query::combine(Op::OR, Query::term("f", "w1"), Query::term("f", "tag2"));
 	const auto expected = model_hits(model, query, 3);
 	// What the spy must be shown: the (id in its shard, weight) of every match, sorted.
@@ -836,32 +732,29 @@ void test_spy_impl() {
 	for (const auto& [id, weight] : expected) { want.emplace_back(static_cast<engine::docid>((id - 1) / 3 + 1), weight); }
 	std::sort(want.begin(), want.end());
 	struct Variant { engine::doccount first, maxitems; engine::DocidOrder order; };
-	for (auto* index : {&xapian, &strata}) {
-		for (const auto& variant : {Variant{0, 3, engine::DocidOrder::ascending}, Variant{0, 0, engine::DocidOrder::ascending}, Variant{2, 4, engine::DocidOrder::descending}}) {
-			if (index == &xapian && variant.maxitems == 0) { continue; }   // Xapian shows a spy nothing when no hit is wanted
-			CountingSpy spy;
-			auto prepared = engine::prepare(query);
-			engine::SearchRequest request;
-			request.query = prepared.get();
-			request.first = variant.first;
-			request.maxitems = variant.maxitems;
-			request.order = variant.order;
-			request.check_at_least = 100000;   // Xapian shows its spies only the documents it examines
-			request.spy = &spy;
-			const auto result = engine::sync_wait(engine::search(index->shards(3), request));
-			CHECK_EQ(spy.seen.size(), expected.size());
-			CHECK_EQ(result.estimated, expected.size());
-			std::vector<std::pair<engine::docid, double>> got;
-			for (std::size_t i = 0; i < spy.seen.size(); ++i) {
-				CHECK_EQ(spy.data[i], "d" + std::to_string(spy.seen[i]));
-				got.emplace_back(spy.seen[i], spy.weights[i]);
-			}
-			std::sort(got.begin(), got.end());
-			REQUIRE_EQ(got.size(), want.size());
-			for (std::size_t i = 0; i < got.size(); ++i) {
-				CHECK_EQ(got[i].first, want[i].first);
-				CHECK_TRUE(close(got[i].second, want[i].second));
-			}
+	for (const auto& variant : {Variant{0, 3, engine::DocidOrder::ascending}, Variant{0, 0, engine::DocidOrder::ascending}, Variant{2, 4, engine::DocidOrder::descending}}) {
+		CountingSpy spy;
+		auto prepared = engine::prepare(query);
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		request.first = variant.first;
+		request.maxitems = variant.maxitems;
+		request.order = variant.order;
+		request.check_at_least = 100000;
+		request.spy = &spy;
+		const auto result = engine::sync_wait(engine::search(strata.shards(3), request));
+		CHECK_EQ(spy.seen.size(), expected.size());
+		CHECK_EQ(result.estimated, expected.size());
+		std::vector<std::pair<engine::docid, double>> got;
+		for (std::size_t i = 0; i < spy.seen.size(); ++i) {
+			CHECK_EQ(spy.data[i], "d" + std::to_string(spy.seen[i]));
+			got.emplace_back(spy.seen[i], spy.weights[i]);
+		}
+		std::sort(got.begin(), got.end());
+		REQUIRE_EQ(got.size(), want.size());
+		for (std::size_t i = 0; i < got.size(); ++i) {
+			CHECK_EQ(got[i].first, want[i].first);
+			CHECK_TRUE(close(got[i].second, want[i].second));
 		}
 	}
 	// A deleted document is not shown: the common term matches every live document of the three shards.
@@ -879,11 +772,11 @@ void test_spy_impl() {
 }
 
 void test_five_shards_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("five", 5, 40, 2, xapian, strata, model);
-	random_queries(xapian, strata, model, 5, 17, 200, true);
-	random_queries(xapian, strata, model, 5, 18, 200, false);
+	build("five", 5, 40, 2, strata, model);
+	random_queries(strata, model, 5, 17, 200, true);
+	random_queries(strata, model, 5, 18, 200, false);
 	// Ties go to the lower id: match_all weighs every document alike.
 	const auto all = run(strata, 5, Query::match_all(), 0, 1000);
 	REQUIRE_EQ(all.hits.size(), 200u);
@@ -898,19 +791,17 @@ void test_five_shards_impl() {
 }
 
 void test_no_shards_and_empty_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("empty", 1, 4, 1, xapian, strata, model);
-	for (auto* index : {&xapian, &strata}) {
-		auto none = engine::prepare(Query());
-		engine::SearchRequest request;
-		request.query = none.get();
-		CHECK_EQ(engine::sync_wait(engine::search(index->shards(1), request)).hits.size(), 0u);
-		auto some = engine::prepare(Query::match_all());
-		request.query = some.get();
-		CHECK_EQ(engine::sync_wait(engine::search(std::span<engine::Shard* const>{}, request)).hits.size(), 0u);
-		CHECK_EQ(engine::sync_wait(engine::search(index->shards(1), request)).hits.size(), 4u);
-	}
+	build("empty", 1, 4, 1, strata, model);
+	auto none = engine::prepare(Query());
+	engine::SearchRequest request;
+	request.query = none.get();
+	CHECK_EQ(engine::sync_wait(engine::search(strata.shards(1), request)).hits.size(), 0u);
+	auto some = engine::prepare(Query::match_all());
+	request.query = some.get();
+	CHECK_EQ(engine::sync_wait(engine::search(std::span<engine::Shard* const>{}, request)).hits.size(), 0u);
+	CHECK_EQ(engine::sync_wait(engine::search(strata.shards(1), request)).hits.size(), 4u);
 }
 
 
@@ -938,64 +829,61 @@ engine::SearchResult search_with(const Index& index, const Query& query, const s
 // Writes become visible to a search with no commit, deletes and replacements are honoured, and a
 // replaced document is found once, under its old id.
 void test_writes_and_deletes_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("writes", 1, 40, 2, xapian, strata, model);
+	build("writes", 1, 40, 2, strata, model);
 	std::mt19937 rng(99);
-	for (auto* index : {&xapian, &strata}) {
-		auto& shard = *index->owned[0];
-		// A write with no commit: searched at once.
-		auto added = random_doc(rng, 41);
-		added.terms.insert("fresh");
-		added.wdf["fresh"] = 1;
-		added.length += 1;
-		auto doc = make(index->kind, 0, 41, added);
-		engine::sync_wait(shard.add(doc, {}));
-		CHECK_EQ(run(*index, 1, Query::term("f", "fresh"), 0, 10).estimated, 1u);
-		CHECK_EQ(run(*index, 1, Query::term("f", "common"), 0, 10).estimated, 41u);
-		// A delete.
-		engine::sync_wait(shard.erase_by_key("Q0_5", true, std::nullopt));
-		CHECK_EQ(run(*index, 1, Query::term("f", "common"), 0, 100).estimated, 40u);
-		CHECK_EQ(run(*index, 1, Query::term("f", "common"), 0, 100).hits.size(), 40u);
-		const auto gone = engine::sync_wait(shard.find_key("Q0_5"));
-		CHECK_EQ(gone, 0u);
-		for (const auto& hit : run(*index, 1, Query::term("f", "common"), 0, 100).hits) {
-			CHECK_NE(hit.did, 5u);
-		}
-		// A replacement: new content under the key, found once.
-		engine::Document replacement(index->kind);
-		replacement.set_key("Q0_7");
-		replacement.add_posting(replacement.field("f"), "renewed", 1);
-		replacement.add_posting(replacement.field("f"), "common", 2);
-		engine::sync_wait(shard.replace_by_key("Q0_7", replacement, {}));
-		const auto renewed = run(*index, 1, Query::term("f", "renewed"), 0, 10);
-		CHECK_EQ(renewed.estimated, 1u);
-		REQUIRE_EQ(renewed.hits.size(), 1u);
-		CHECK_EQ(renewed.hits[0].did, engine::sync_wait(shard.find_key("Q0_7")));
-		CHECK_EQ(run(*index, 1, Query::term("f", "common"), 0, 100).estimated, 40u);
-		// The old content of the replaced document is gone from the terms it no longer has.
-		std::size_t had = 0;
-		for (const auto& term : model.shards[0][6].terms) {
-			if (term.starts_with("tag")) {
-				++had;
-				const auto found = run(*index, 1, Query::term("f", term), 0, 100);
-				for (const auto& hit : found.hits) {
-					CHECK_NE(hit.did, engine::sync_wait(shard.find_key("Q0_7")));
-				}
+	auto& shard = *strata.owned[0];
+	// A write with no commit: searched at once.
+	auto added = random_doc(rng, 41);
+	added.terms.insert("fresh");
+	added.wdf["fresh"] = 1;
+	added.length += 1;
+	auto doc = make(0, 41, added);
+	engine::sync_wait(shard.add(doc, {}));
+	CHECK_EQ(run(strata, 1, Query::term("f", "fresh"), 0, 10).estimated, 1u);
+	CHECK_EQ(run(strata, 1, Query::term("f", "common"), 0, 10).estimated, 41u);
+	// A delete.
+	engine::sync_wait(shard.erase_by_key("Q0_5", true, std::nullopt));
+	CHECK_EQ(run(strata, 1, Query::term("f", "common"), 0, 100).estimated, 40u);
+	CHECK_EQ(run(strata, 1, Query::term("f", "common"), 0, 100).hits.size(), 40u);
+	const auto gone = engine::sync_wait(shard.find_key("Q0_5"));
+	CHECK_EQ(gone, 0u);
+	for (const auto& hit : run(strata, 1, Query::term("f", "common"), 0, 100).hits) {
+		CHECK_NE(hit.did, 5u);
+	}
+	// A replacement: new content under the key, found once.
+	engine::Document replacement;
+	replacement.set_key("Q0_7");
+	replacement.add_posting(replacement.field("f"), "renewed", 1);
+	replacement.add_posting(replacement.field("f"), "common", 2);
+	engine::sync_wait(shard.replace_by_key("Q0_7", replacement, {}));
+	const auto renewed = run(strata, 1, Query::term("f", "renewed"), 0, 10);
+	CHECK_EQ(renewed.estimated, 1u);
+	REQUIRE_EQ(renewed.hits.size(), 1u);
+	CHECK_EQ(renewed.hits[0].did, engine::sync_wait(shard.find_key("Q0_7")));
+	CHECK_EQ(run(strata, 1, Query::term("f", "common"), 0, 100).estimated, 40u);
+	// The old content of the replaced document is gone from the terms it no longer has.
+	std::size_t had = 0;
+	for (const auto& term : model.shards[0][6].terms) {
+		if (term.starts_with("tag")) {
+			++had;
+			const auto found = run(strata, 1, Query::term("f", term), 0, 100);
+			for (const auto& hit : found.hits) {
+				CHECK_NE(hit.did, engine::sync_wait(shard.find_key("Q0_7")));
 			}
 		}
-		CHECK_GT(had, 0u);
 	}
+	CHECK_GT(had, 0u);
 }
 
 // A PHRASE or NEAR whose positions hold alternatives (a wildcard or edit-distance expansion, an OR or a
-// SYNONYM of words, an expansion beside a word as a partial word reads) is searched by the strata engine only:
-// the documents, their weights (the positions' weights summed) and their order are the model's, over one
-// to five shards and several segments; the Xapian engine answers a client error.
+// SYNONYM of words, an expansion beside a word as a partial word reads): the documents, their weights (the
+// positions' weights summed) and their order are the model's, over one to five shards and several segments.
 void test_phrase_alternatives_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("alternatives", 5, 150, 3, xapian, strata, model);
+	build("alternatives", 5, 150, 3, strata, model);
 	const auto t = [](const char* w) { return Query::term("f", w); };
 	const auto word = [&](int k) { return t(("w" + std::to_string(k)).c_str()); };
 	const auto any = [&](int a, int b) { return Query::combine(Op::OR, word(a), word(b)); };
@@ -1045,35 +933,23 @@ void test_phrase_alternatives_impl() {
 	}
 	CHECK_GT(shapes_found, 100);
 	CHECK_GT(near_found, 50);
-	// The Xapian engine does not search them, and says so as a client error.
+	// The query is a valid one: the engine prepares it.
 	{
-		const auto query = Query::combine(Op::PHRASE, {word(1), any(2, 3)});
-		auto prepared = engine::prepare(query);
+		auto prepared = engine::prepare(Query::combine(Op::PHRASE, {word(1), any(2, 3)}));
 		CHECK_FALSE(prepared->empty());
-		engine::SearchRequest request;
-		request.query = prepared.get();
-		CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(xapian.shards(1), request)); }), engine::errc::syntax);
 	}
 }
 
 void test_refusals_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("refusals", 1, 10, 1, xapian, strata, model);
+	build("refusals", 1, 10, 1, strata, model);
 	const auto t = [](const char* w) { return Query::term("f", w); };
 	const auto none = [](engine::SearchRequest&) { };
 	const auto syntax = engine::errc::syntax;
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	// A PHRASE with a window answers rather than refusing (strata reads its terms' positions, not the window).
 	search_with(strata, Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5), none);
-	// A search over the two engines is refused, and a query nested too deeply.
-	{
-		auto prepared = engine::prepare(t("w1"));
-		engine::SearchRequest request;
-		request.query = prepared.get();
-		std::vector<engine::Shard*> both{xapian.owned[0].get(), strata.owned[0].get()};
-		CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(both, request)); }), engine::errc::invalid);
-	}
 	// A tree nested past the cap is refused when it is built, before any engine sees it.
 	CHECK_EQ(error_kind([&] {
 		Query deep = t("w1");
@@ -1142,46 +1018,44 @@ void test_invalid_shapes_impl() {
 // marker term (a field with an empty term) matches the documents that have the field, not every
 // document, and a phrase reads its words under their field. Both engines agree.
 void test_fields_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
-	for (auto* index : {&xapian, &strata}) {
-		auto opened = engine::sync_wait(engine::open_local(index->kind, path_of("fields", index->kind, 0), true, true));
-		index->owned.clear();
-		index->owned.push_back(std::move(opened.shard));
-		auto& shard = *index->owned[0];
-		const auto add = [&](const char* key, const std::function<void(engine::Document&)>& fill) {
-			engine::Document doc(index->kind);
-			doc.set_key(key);
-			fill(doc);
-			doc.set_data(key);
-			engine::sync_wait(shard.add(doc, {}));
-		};
-		add("Q1", [](engine::Document& d) {   // title: same, "first second"; the tags marker
-			const auto title = d.field("title"), tags = d.field("tags");
-			d.add_term(title, "same");
-			d.add_posting(title, "first", 1);
-			d.add_posting(title, "second", 2);
-			d.add_term(tags, "");
-		});
-		add("Q2", [](engine::Document& d) {   // body: same, "first second" in the other order
-			const auto body = d.field("body");
-			d.add_term(body, "same");
-			d.add_posting(body, "second", 1);
-			d.add_posting(body, "first", 2);
-		});
-		add("Q3", [](engine::Document& d) {   // both fields, the words split across fields
-			const auto title = d.field("title"), body = d.field("body");
-			d.add_term(title, "same");
-			d.add_term(body, "same");
-			d.add_posting(title, "first", 1);
-			d.add_posting(body, "second", 1);
-		});
-		add("Q4", [](engine::Document& d) {   // gap: "first" at 1 and "second" at 3, a stop word between
-			const auto gap = d.field("gap");
-			d.add_posting(gap, "first", 1);
-			d.add_posting(gap, "second", 3);
-		});
-		engine::sync_wait(shard.commit(engine::Transaction::none));
-	}
+	Index strata;
+	auto opened = engine::sync_wait(engine::open_local(path_of("fields", 0), true, true));
+	strata.owned.clear();
+	strata.owned.push_back(std::move(opened.shard));
+	auto& shard = *strata.owned[0];
+	const auto add = [&](const char* key, const std::function<void(engine::Document&)>& fill) {
+		engine::Document doc;
+		doc.set_key(key);
+		fill(doc);
+		doc.set_data(key);
+		engine::sync_wait(shard.add(doc, {}));
+	};
+	add("Q1", [](engine::Document& d) {   // title: same, "first second"; the tags marker
+		const auto title = d.field("title"), tags = d.field("tags");
+		d.add_term(title, "same");
+		d.add_posting(title, "first", 1);
+		d.add_posting(title, "second", 2);
+		d.add_term(tags, "");
+	});
+	add("Q2", [](engine::Document& d) {   // body: same, "first second" in the other order
+		const auto body = d.field("body");
+		d.add_term(body, "same");
+		d.add_posting(body, "second", 1);
+		d.add_posting(body, "first", 2);
+	});
+	add("Q3", [](engine::Document& d) {   // both fields, the words split across fields
+		const auto title = d.field("title"), body = d.field("body");
+		d.add_term(title, "same");
+		d.add_term(body, "same");
+		d.add_posting(title, "first", 1);
+		d.add_posting(body, "second", 1);
+	});
+	add("Q4", [](engine::Document& d) {   // gap: "first" at 1 and "second" at 3, a stop word between
+		const auto gap = d.field("gap");
+		d.add_posting(gap, "first", 1);
+		d.add_posting(gap, "second", 3);
+	});
+	engine::sync_wait(shard.commit(engine::Transaction::none));
 	const auto ids = [](const Index& index, const Query& query) {
 		std::set<engine::docid> found;
 		for (const auto& hit : run(index, 1, query, 0, 100).hits) { found.insert(hit.did); }
@@ -1223,14 +1097,12 @@ void test_fields_impl() {
 		{Query::field("body"), {2, 3}},
 		{Query::field("nothing"), {}},
 	};
-	for (const auto* index : {&xapian, &strata}) {
-		for (const auto& [query, expected] : cases) {
-			const int before = testh::failures;
-			CHECK_TRUE(ids(*index, query) == expected);
-			if (testh::failures != before) { std::fprintf(stderr, "  %s: %s\n", engine::to_string(index->kind), query.description().c_str()); }
-		}
+	for (const auto& [query, expected] : cases) {
+		const int before = testh::failures;
+		CHECK_TRUE(ids(strata, query) == expected);
+		if (testh::failures != before) { std::fprintf(stderr, "  %s\n", query.description().c_str()); }
 	}
-	// Strata matches a PHRASE's terms at exactly their relative query positions (Xapian's window is looser).
+	// A PHRASE's terms match at exactly their relative query positions.
 	const auto at = [](const char* w, engine::termpos pos) { return Query::term("gap", w, 1, pos); };
 	const auto phrase = [&](engine::termpos a, engine::termpos b) { return Query::combine(Op::PHRASE, {at("first", a), at("second", b)}); };
 	CHECK_TRUE(ids(strata, phrase(1, 3)) == Set{4});
@@ -1265,9 +1137,9 @@ void check_against_model(const Index& index, const Model& model, std::size_t sha
 // Long chains of appends are built, run and freed without recursion that grows with the chain: the
 // scorers of a run of one operator are one flat scorer, as the query tree frees iteratively.
 void test_long_chains_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("chains", 2, 40, 2, xapian, strata, model);
+	build("chains", 2, 40, 2, strata, model);
 	const auto t = [](const char* w) { return Query::term("f", w); };
 	const int kChain = static_cast<int>(engine::MAX_QUERY_CLAUSES) - 100;   // the longest chain a query may hold
 	Query ors = t("w1");
@@ -1300,9 +1172,9 @@ void test_long_chains_impl() {
 
 // Searches that name the same shards in opposite orders, with writers, neither deadlock nor lose a document.
 void test_concurrent_searches_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("threads", 2, 40, 2, xapian, strata, model);
+	build("threads", 2, 40, 2, strata, model);
 	std::atomic<bool> stop{false};
 	std::atomic<int> failures{0};
 	const auto searcher = [&](bool reversed) {
@@ -1321,7 +1193,7 @@ void test_concurrent_searches_impl() {
 		std::mt19937 rng(5);
 		for (int i = 0; i < 100 && !stop; ++i) {
 			auto doc = random_doc(rng, 1000 + i);
-			auto written = make(Kind::strata, 1, 1000 + i, doc);
+			auto written = make(1, 1000 + i, doc);
 			engine::sync_wait(strata.owned[i % 2]->add(written, {}));
 		}
 	});
@@ -1359,9 +1231,9 @@ double weight_in(std::size_t n, const Model::Doc& doc) {
 // reads any, so what it finds is one of them: the same documents in every shard as of one moment, with the
 // statistics (and so the weights) of exactly those documents. Searches name the shards in opposite orders.
 void test_snapshot_consistency_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("snapshot", 3, 0, 1, xapian, strata, model);
+	build("snapshot", 3, 0, 1, strata, model);
 	Model::Doc doc;
 	doc.live = true;
 	doc.terms = {"common", "pad"};
@@ -1427,7 +1299,7 @@ void test_snapshot_consistency_impl() {
 	std::thread writer([&] {
 		for (int g = 1; g <= generations; ++g) {
 			for (std::size_t s = 0; s < 3; ++s) {
-				auto written = make(Kind::strata, static_cast<int>(s), g, doc);
+				auto written = make(static_cast<int>(s), g, doc);
 				engine::sync_wait(strata.owned[s]->add(written, {}));
 				if (g % 7 == 0) { engine::sync_wait(strata.owned[s]->commit(engine::Transaction::none)); }
 			}
@@ -1474,9 +1346,9 @@ public:
 // While a spy is inside see(), every shard's lock is held: a write, a commit and a delete on each shard (the
 // one pinned last included) wait until the search ends, and the search sees the state before them.
 void test_pin_holds_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("pin_holds", 3, 20, 2, xapian, strata, model);
+	build("pin_holds", 3, 20, 2, strata, model);
 	std::promise<void> release;
 	BlockingSpy spy;
 	spy.gate = release.get_future().share();
@@ -1496,7 +1368,7 @@ void test_pin_holds_impl() {
 	std::vector<std::thread> writers;
 	for (std::size_t s = 0; s < 3; ++s) {
 		writers.emplace_back([&, s] {
-			auto doc = make(Kind::strata, static_cast<int>(s), 777, model.shards[0][0]);
+			auto doc = make(static_cast<int>(s), 777, model.shards[0][0]);
 			engine::sync_wait(strata.owned[s]->add(doc, {}));
 			++finished;
 		});
@@ -1527,12 +1399,12 @@ void test_pin_after_failed_reopen_impl() {
 	if (::geteuid() == 0) {
 		return;
 	}
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("pin_failed", 2, 20, 1, xapian, strata, model);
+	build("pin_failed", 2, 20, 1, strata, model);
 	auto& broken = *strata.owned[0];
 	engine::sync_wait(broken.begin_transaction(true));
-	auto pending = make(Kind::strata, 0, 556, model.shards[0][0]);
+	auto pending = make(0, 556, model.shards[0][0]);
 	engine::sync_wait(broken.add(pending, {}));
 	// path_of() clears the path it names; this is the directory build() made for shard 0.
 	const auto dir = (std::filesystem::current_path() / "engine_search_strata_pin_failed_strata0.db" / "strata").string();
@@ -1547,7 +1419,7 @@ void test_pin_after_failed_reopen_impl() {
 	CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(strata.shards(2), request)); }), engine::errc::database);
 	CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(strata.shards(1), request)); }), engine::errc::database);
 	// The other shard's lock was released with the failed search: a write to it goes through.
-	auto doc = make(Kind::strata, 1, 555, model.shards[1][0]);
+	auto doc = make(1, 555, model.shards[1][0]);
 	engine::sync_wait(strata.owned[1]->add(doc, {}));
 	CHECK_EQ(engine::sync_wait(engine::search(std::vector<engine::Shard*>{strata.owned[1].get()}, request)).hits.size(), 21u);
 
@@ -1558,9 +1430,9 @@ void test_pin_after_failed_reopen_impl() {
 // A window larger than the index is clamped to it: it answers as a window of the index's size does, at
 // once, and holds no memory for the number asked.
 void test_huge_window_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("huge_window", 2, 40, 2, xapian, strata, model);
+	build("huge_window", 2, 40, 2, strata, model);
 	const auto query = Query::term("f", "common");
 	const auto all = run(strata, 2, query, 0, 1000);
 	CHECK_EQ(all.hits.size(), 80u);
@@ -1593,9 +1465,9 @@ void test_huge_window_impl() {
 // A hit's percent stays in [0, 100] when the top weight overflows to infinity: the infinite hits are 100, the
 // rest 0 (a finite weight against an infinite top).
 void test_percent_infinite_impl() {
-	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Index strata;
 	Model model;
-	build("percent", 2, 40, 2, xapian, strata, model);
+	build("percent", 2, 40, 2, strata, model);
 	const auto query = Query::combine(Op::OR, Query::scale(Query::term("f", "w1"), HUGE_VAL), Query::term("f", "w2"));
 	for (const bool spied : {false, true}) {
 		CountingSpy spy;
@@ -1638,14 +1510,8 @@ private:
 
 // Collapse keeps the best `collapse_max` hits per value of slot 2 and never collapses a document
 // without the value. The strata engine's answer is checked against an oracle (the uncollapsed ranking,
-// cut to the first `collapse_max` of each group), and against Xapian's: with collapse_max 1 the two
-// engines return the same hits in the same order with the same ranks, over one shard and several, for
-// each docid order, with and without a sorter, and show the spy the same documents. With a larger
-// collapse_max Xapian keeps the same number of documents per group and the same estimate but not always
-// the best ones, so only those are compared. Windows are slices of the full answer; Xapian is compared
-// on a window only where its answer is exact (a window too small for its collapse table can return a
-// document of a group whose better one it pushed out, and one that starts past the last hit, with a
-// check_at_least this large, crashes it).
+// cut to the first `collapse_max` of each group), over one shard and several, for each docid order, with
+// and without a sorter, and the spy is shown every match. Windows are slices of the full answer.
 void test_collapse_impl() {
 	const SlotKey by_slot(3);
 	const std::vector<Query> queries{
@@ -1663,8 +1529,7 @@ void test_collapse_impl() {
 		request.maxitems = window.maxitems;
 		request.check_at_least = 100000;
 		request.order = order;
-		request.origin = "test";
-		request.collapse_key = 2;
+			request.collapse_key = 2;
 		request.collapse_max = collapse_max;
 		request.sorter = sorted ? &by_slot : nullptr;
 		request.spy = spy;
@@ -1675,18 +1540,17 @@ void test_collapse_impl() {
 		const std::size_t shard = (did - 1) % shards, i = (did - 1) / shards + 1;
 		return i % 7 == 0 ? -1 : static_cast<int>((shard * 3 + i) % 4);
 	};
-	std::size_t compared = 0, collapsed_away = 0, windows = 0, xapian_other = 0;
+	std::size_t compared = 0, collapsed_away = 0;
 	for (const std::size_t shards : {1u, 2u, 5u}) {
-		Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+		Index strata;
 		Model model;
-		build("collapse", static_cast<int>(shards), 40, 2, xapian, strata, model);
+		build("collapse", static_cast<int>(shards), 40, 2, strata, model);
 		for (const auto& query : queries) {
 			for (const auto order : {engine::DocidOrder::ascending, engine::DocidOrder::descending}) {
 				for (const bool sorted : {false, true}) {
 					const auto all = search(strata, shards, query, 0, order, sorted, {0, 1000}, nullptr);
 					for (const engine::doccount collapse_max : {1u, 2u, 3u}) {
-						CountingSpy spy_x, spy_s;
-						const auto x = search(xapian, shards, query, collapse_max, order, sorted, {0, 1000}, &spy_x);
+						CountingSpy spy_s;
 						const auto s = search(strata, shards, query, collapse_max, order, sorted, {0, 1000}, &spy_s);
 						// The oracle: walk the full ranking, keep the first collapse_max of each group.
 						std::vector<engine::docid> want;
@@ -1697,30 +1561,14 @@ void test_collapse_impl() {
 						}
 						REQUIRE_EQ(s.hits.size(), want.size());
 						CHECK_EQ(s.estimated, want.size());
-						CHECK_EQ(x.estimated, want.size());
 						for (std::size_t i = 0; i < want.size(); ++i) {
 							CHECK_EQ(s.hits[i].did, want[i]);
 							CHECK_EQ(s.hits[i].rank, i);
 						}
-						REQUIRE_EQ(s.hits.size(), x.hits.size());
-						std::map<int, int> per_x, per_s;
-						for (std::size_t i = 0; i < s.hits.size(); ++i) {
-							++per_x[group_of(x.hits[i].did, shards)];
-							++per_s[group_of(s.hits[i].did, shards)];
-						}
-						CHECK_TRUE(per_x == per_s);
-						if (collapse_max == 1) {
-							for (std::size_t i = 0; i < s.hits.size(); ++i) {
-								CHECK_EQ(s.hits[i].did, x.hits[i].did);
-								CHECK_TRUE(close(s.hits[i].weight, x.hits[i].weight));
-							}
-						} else {
-							for (std::size_t i = 0; i < s.hits.size(); ++i) { xapian_other += s.hits[i].did != x.hits[i].did; }
-						}
-						auto seen_x = spy_x.seen, seen_s = spy_s.seen;
-						std::sort(seen_x.begin(), seen_x.end());
+						// The spy is shown every match, collapsed away or not.
+						auto seen_s = spy_s.seen;
 						std::sort(seen_s.begin(), seen_s.end());
-						CHECK_TRUE(seen_x == seen_s);
+						CHECK_EQ(seen_s.size(), all.hits.size());
 						++compared;
 						if (s.hits.size() < seen_s.size()) { ++collapsed_away; }
 						for (const auto window : {Window{0, 3}, Window{2, 4}, Window{5, 1000}, Window{1000, 5}, Window{0, 0}}) {
@@ -1732,14 +1580,6 @@ void test_collapse_impl() {
 							for (std::size_t i = begin; i < end; ++i) {
 								CHECK_EQ(got.hits[i - begin].did, s.hits[i].did);
 								CHECK_EQ(got.hits[i - begin].rank, i);
-							}
-							if (collapse_max == 1 && window.first < s.hits.size() && window.first + window.maxitems >= s.hits.size()) {
-								const auto other = search(xapian, shards, query, collapse_max, order, sorted, window, nullptr);
-								REQUIRE_EQ(other.hits.size(), got.hits.size());
-								for (std::size_t i = 0; i < got.hits.size(); ++i) {
-									CHECK_EQ(other.hits[i].did, got.hits[i].did);
-								}
-								++windows;
 							}
 						}
 					}
@@ -1754,8 +1594,6 @@ void test_collapse_impl() {
 	}
 	CHECK_GT(compared, 100u);
 	CHECK_GT(collapsed_away, 50u);
-	CHECK_GT(windows, 20u);
-	CHECK_GT(xapian_other, 0u);
 }
 
 // Reports an engine error with its text, which the bare terminate message of an uncaught one lacks.
