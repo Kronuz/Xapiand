@@ -1409,7 +1409,8 @@ private:
 // collapse_max Xapian keeps the same number of documents per group and the same estimate but not always
 // the best ones, so only those are compared. Windows are slices of the full answer; Xapian is compared
 // on a window only where its answer is exact (a window too small for its collapse table can return a
-// document of a group whose better one it pushed out, and one that starts past the last hit crashes it).
+// document of a group whose better one it pushed out, and one that starts past the last hit, with a
+// check_at_least this large, crashes it).
 void test_collapse_impl() {
 	const SlotKey by_slot(3);
 	const std::vector<Query> queries{
