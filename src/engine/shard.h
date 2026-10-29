@@ -32,7 +32,6 @@
 
 #include "engine/doc_view.h"       // for DocView
 #include "engine/document.h"       // for Document
-#include "engine/kind.h"           // for Kind
 #include "engine/types.h"          // for docid, rev, termcount, WriteResult
 #include "task.hh"                 // for task::task
 
@@ -127,17 +126,6 @@ public:
 	// A metadata value (empty when absent) and every metadata key.
 	virtual task::task<std::string> metadata(const std::string& key) = 0;
 	virtual task::task<std::vector<std::string>> metadata_keys() = 0;
-
-	// The implementation behind the seam, for the code that speaks its protocol (the Xapian
-	// remote server and replication). Raises std::bad_cast when the shard is another engine's.
-	// Hold nothing it returns (or `engine()`'s shard) across a reopen, close or checkin.
-	template <typename T>
-	T& native() {
-		return dynamic_cast<T&>(*this);
-	}
-
-	// The engine this shard belongs to.
-	virtual Kind kind() const noexcept = 0;
 
 	// Cheap state of a local shard, read from memory.
 	virtual rev revision() const = 0;

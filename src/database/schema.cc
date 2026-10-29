@@ -41,13 +41,12 @@
 #include "base_x.hh"                              // for Base64
 #include "cast.h"                                 // for Cast
 #include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialise
-#include "engine/kind.h"                          // for engine::kind_of
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
 #include "datetime.h"                             // for isDate, isDatetime, tm_t
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
-#include "exception_xapian.h"                     // for ClientError, SerialisationError
+#include "exception_engine.h"                     // for ClientError, SerialisationError
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
@@ -1906,7 +1905,6 @@ required_spc_t::flags_t::flags_t()
 	  is_namespace(false),
 	  ngram(false),
 	  cjk_ngram(false),
-	  cjk_words(false),
 	  field_found(true),
 	  concrete(false),
 	  complete(false),
@@ -2083,7 +2081,6 @@ required_spc_t::to_obj() const
 	obj_flags["static_foreign"] = flags.static_foreign;
 	obj_flags["ngram"] = flags.ngram;
 	obj_flags["cjk_ngram"] = flags.cjk_ngram;
-	obj_flags["cjk_words"] = flags.cjk_words;
 
 	auto& obj_accuracy = obj["accuracy"] = MsgPack::ARRAY();
 	for (const auto& a : accuracy) {
@@ -2593,7 +2590,6 @@ Schema::restart_specification()
 
 	specification.flags.ngram                = default_spc.flags.ngram;
 	specification.flags.cjk_ngram            = default_spc.flags.cjk_ngram;
-	specification.flags.cjk_words            = default_spc.flags.cjk_words;
 	specification.language                   = default_spc.language;
 	specification.stop_strategy              = default_spc.stop_strategy;
 	specification.stem_strategy              = default_spc.stem_strategy;
@@ -2974,7 +2970,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			version_field = &fields.back();
 		}
 
-		engine::Document doc(db_handler.endpoints.empty() ? engine::default_kind() : engine::kind_of(db_handler.endpoints[0].path));
+		engine::Document doc;
 		MsgPack data_obj;
 
 		auto data_ptr = &data_obj;
@@ -4986,7 +4982,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		case FieldType::text:
 			mut_properties[RESERVED_NGRAM] = static_cast<bool>(specification.flags.ngram);
 			mut_properties[RESERVED_CJK_NGRAM] = static_cast<bool>(specification.flags.cjk_ngram);
-			mut_properties[RESERVED_CJK_WORDS] = static_cast<bool>(specification.flags.cjk_words);
 
 			// Language could be needed, for soundex.
 			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
@@ -5633,7 +5628,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 						g_specification.prefix.field + g_specification.get_ctype(), ser_value,
 						g_specification.positions[getPos(pos, g_specification.positions.size())],
 						g_specification.flags.bool_term ? 0 : g_specification.weight[getPos(pos, g_specification.weight.size())],
-						g_specification.flags.cjk_ngram, g_specification.flags.cjk_words,
+						g_specification.flags.cjk_ngram,
 						g_specification.language, g_specification.stem_language,
 						getGeneratorStopStrategy(g_specification.stop_strategy),
 						getGeneratorStemStrategy(g_specification.stem_strategy));
@@ -5665,7 +5660,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 						g_specification.prefix.field + g_specification.get_ctype(), ser_value,
 						g_specification.positions[getPos(pos, g_specification.positions.size())],
 						g_specification.flags.bool_term ? 0 : g_specification.weight[getPos(pos, g_specification.weight.size())],
-						g_specification.flags.cjk_ngram, g_specification.flags.cjk_words,
+						g_specification.flags.cjk_ngram,
 						g_specification.language, g_specification.stem_language,
 						getGeneratorStopStrategy(g_specification.stop_strategy),
 						getGeneratorStemStrategy(g_specification.stem_strategy));
@@ -5675,7 +5670,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 						specification.prefix.field + specification.get_ctype(), ser_value,
 						specification.positions[getPos(pos, specification.positions.size())],
 						specification.flags.bool_term ? 0 : specification.weight[getPos(pos, specification.weight.size())],
-						specification.flags.cjk_ngram, specification.flags.cjk_words,
+						specification.flags.cjk_ngram,
 						specification.language, specification.stem_language,
 						getGeneratorStopStrategy(specification.stop_strategy),
 						getGeneratorStemStrategy(specification.stem_strategy));
@@ -6185,7 +6180,6 @@ Schema::_dispatch_feed_properties(uint64_t key, const MsgPack& value)
 		hh(RESERVED_ACC_PREFIX),
 		hh(RESERVED_NGRAM),
 		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_STOP_STRATEGY),
 		hh(RESERVED_STEM_STRATEGY),
@@ -6283,9 +6277,6 @@ Schema::_dispatch_feed_properties(uint64_t key, const MsgPack& value)
 		case _.fhh(RESERVED_CJK_NGRAM):
 			Schema::feed_cjk_ngram(value);
 			return true;
-		case _.fhh(RESERVED_CJK_WORDS):
-			Schema::feed_cjk_words(value);
-			return true;
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::feed_language(value);
 			return true;
@@ -6331,7 +6322,6 @@ has_dispatch_process_properties(uint64_t key)
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_NGRAM),
 		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_PREFIX),
 		hh(RESERVED_SLOT),
@@ -6357,7 +6347,6 @@ Schema::_dispatch_process_properties(uint64_t key, std::string_view prop_name, c
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_NGRAM),
 		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_PREFIX),
 		hh(RESERVED_SLOT),
@@ -6378,9 +6367,6 @@ Schema::_dispatch_process_properties(uint64_t key, std::string_view prop_name, c
 			return true;
 		case _.fhh(RESERVED_CJK_NGRAM):
 			Schema::process_cjk_ngram(prop_name, value);
-			return true;
-		case _.fhh(RESERVED_CJK_WORDS):
-			Schema::process_cjk_words(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::process_language(prop_name, value);
@@ -6470,7 +6456,6 @@ has_dispatch_process_concrete_properties(uint64_t key)
 		hh(RESERVED_SLOT),
 		hh(RESERVED_NGRAM),
 		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_STOP_STRATEGY),
 		hh(RESERVED_STEM_STRATEGY),
@@ -6547,7 +6532,6 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 		hh(RESERVED_SLOT),
 		hh(RESERVED_NGRAM),
 		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_STOP_STRATEGY),
 		hh(RESERVED_STEM_STRATEGY),
@@ -6701,9 +6685,6 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 			return true;
 		case _.fhh(RESERVED_CJK_NGRAM):
 			Schema::consistency_cjk_ngram(prop_name, value);
-			return true;
-		case _.fhh(RESERVED_CJK_WORDS):
-			Schema::consistency_cjk_words(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::consistency_language(prop_name, value);
@@ -7050,19 +7031,6 @@ Schema::feed_cjk_ngram(const MsgPack& prop_obj)
 		specification.flags.cjk_ngram = prop_obj.boolean();
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_CJK_NGRAM, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-	}
-}
-
-
-void
-Schema::feed_cjk_words(const MsgPack& prop_obj)
-{
-	L_CALL("Schema::feed_cjk_words({})", repr(prop_obj.to_string()));
-
-	if (prop_obj.is_boolean()) {
-		specification.flags.cjk_words = prop_obj.boolean();
-	} else {
-		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_CJK_WORDS, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
@@ -7957,20 +7925,6 @@ Schema::process_cjk_ngram(std::string_view prop_name, const MsgPack& prop_obj)
 
 
 void
-Schema::process_cjk_words(std::string_view prop_name, const MsgPack& prop_obj)
-{
-	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_cjk_words({})", repr(prop_obj.to_string()));
-
-	if (prop_obj.is_boolean()) {
-		specification.flags.cjk_words = prop_obj.boolean();
-	} else {
-		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
-	}
-}
-
-
-void
 Schema::process_language(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
@@ -8578,22 +8532,6 @@ Schema::consistency_cjk_ngram(std::string_view prop_name, const MsgPack& prop_ob
 	}
 }
 
-
-inline void
-Schema::consistency_cjk_words(std::string_view prop_name, const MsgPack& prop_obj)
-{
-	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_cjk_words({})", repr(prop_obj.to_string()));
-
-	if (prop_obj.is_boolean()) {
-		const auto cjk_words = prop_obj.boolean();
-		if (specification.flags.cjk_words != cjk_words) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.cjk_words), cjk_words, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-	} else {
-		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
-	}
-}
 
 
 inline void
@@ -9597,10 +9535,6 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				if (cjk_ngram_it != it_e) {
 					res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
 				}
-				auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
-				if (cjk_words_it != it_e) {
-					res.flags.cjk_words = cjk_words_it.value().boolean();
-				}
 				auto language_it = properties.find(RESERVED_LANGUAGE);
 				if (language_it != it_e) {
 					res.language = language_it.value().str();
@@ -9655,10 +9589,6 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				auto cjk_ngram_it = properties.find(RESERVED_CJK_NGRAM);
 				if (cjk_ngram_it != it_e) {
 					res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
-				}
-				auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
-				if (cjk_words_it != it_e) {
-					res.flags.cjk_words = cjk_words_it.value().boolean();
 				}
 				auto language_it = properties.find(RESERVED_LANGUAGE);
 				if (language_it != it_e) {
@@ -9759,10 +9689,6 @@ Schema::get_slot_field(std::string_view field_name) const
 			auto cjk_ngram_it = properties.find(RESERVED_CJK_NGRAM);
 			if (cjk_ngram_it != it_e) {
 				res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
-			}
-			auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
-			if (cjk_words_it != it_e) {
-				res.flags.cjk_words = cjk_words_it.value().boolean();
 			}
 			auto language_it = properties.find(RESERVED_LANGUAGE);
 			if (language_it != it_e) {

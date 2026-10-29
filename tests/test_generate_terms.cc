@@ -47,7 +47,7 @@
 #include "engine/xapian/xapian.h"
 #include "multivalue/generate_terms.h"
 #include "multivalue/range.h"
-#include "exception_xapian.h"
+#include "exception_engine.h"
 #include "msgpack.h"
 #include "utype.hh"
 

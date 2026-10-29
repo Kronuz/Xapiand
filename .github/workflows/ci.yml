@@ -24,21 +24,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Seam check (Xapian stays behind the engine seam)
-        run: harness/seam_check.sh
       - name: Install build deps
         run: |
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config perl tcl \
-            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+            g++-13 cmake ninja-build pkg-config \
+            libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Build (RelWithDebInfo, tests + asserts on)
         run: |
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DBUILD_TESTS=ON -DASSERTS=ON -DXAPIAN_ASSERTS=ON -DLTO=OFF
+            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
           ninja -C build
       - name: Unit tests (ctest)
         run: ctest --test-dir build --output-on-failure
@@ -53,8 +51,8 @@ jobs:
     # -DASSERTS=ON: asserts are an internal-invariant check covered by the smoke/load
     # and sanitizer jobs, and running the release-shaped binary here also matches how
     # the server runs in production. (A known pre-existing assertion on the restore
-    # write path, SI/Xapian-2.0.0 migration, otherwise aborts "Load sample data" under
-    # -DASSERTS=ON; that is tracked separately.)
+    # write path otherwise aborts "Load sample data" under -DASSERTS=ON; that is tracked
+    # separately.)
     steps:
       - uses: actions/checkout@v4
       - name: Install build deps
@@ -62,8 +60,8 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config perl tcl \
-            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+            g++-13 cmake ninja-build pkg-config \
+            libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Build (RelWithDebInfo, asserts off)
         run: |
           set -eux
@@ -113,8 +111,8 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config perl tcl \
-            libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+            g++-13 cmake ninja-build pkg-config \
+            libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Build (${{ matrix.name }})
         run: |
           set -eux

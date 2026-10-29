@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # strata_write_check.sh -- the strata engine's write slice through the server, on a single node.
 #
-# Runs a node with XAPIAND_ENGINE=strata (the index is created on strata; the registry stays Xapian) and
+# Runs a node with (the index is created on strata; the registry stays Xapian) and
 # checks what the write slice serves without search (S2): documents by id, versions, deletes, and WAL
 # replay after kill -9 (the strata variant of wal_replay_check.sh, which asserts through search).
 #   write     PUT, GET, replace (version 2), DELETE; the shard is a strata directory
@@ -37,7 +37,7 @@ start_node() {  # start_node LOG
 	local log="$RUNDIR/$1"
 	(
 		exec > >(cat >>"$log") 2>&1
-		XAPIAND_STRATA_CRASH="${HOOK:-}" XAPIAND_ENGINE="${ENGINE:-strata}" exec "$BIN" --port "$PORT" --solo --name strataw --verbosity 3 -D "$RUNDIR/n"
+		XAPIAND_STRATA_CRASH="${HOOK:-}" exec "$BIN" --port "$PORT" --name strataw --verbosity 3 -D "$RUNDIR/n"
 	) &
 	PID=$!
 	for _ in $(seq 80); do

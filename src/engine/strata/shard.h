@@ -76,7 +76,6 @@ public:
 	Shard(std::unique_ptr<Handle> handle, bool writable, task::scheduler_ref on = {});
 	~Shard() override;
 
-	Kind kind() const noexcept override { return Kind::strata; }
 
 	task::task<WriteResult> add(Document& doc, WriteArgs args) override;
 	task::task<WriteResult> replace(docid did, Document& doc, WriteArgs args) override;

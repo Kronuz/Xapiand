@@ -25,9 +25,7 @@ Xapiand
 │                located-exception, perfect-hash, hashes, repr, rapidjson*
 ├── http ─────── radix-router, http-parser, compressors, reactor, asio*
 │   └── reactor ──── asio*
-├── cluster ──── reactor ──── asio*
 ├── storage ──── compressors, errno-names, strict-stox, stringified
-├── flume ────── compressors
 └── (50+ leaf libraries consumed directly — see the tables below)
 
 *  third-party, reached only transitively:
@@ -52,7 +50,7 @@ abstraction.
 | [system](https://github.com/Kronuz/system) | OS abstraction (fd limits, CPU count, RSS/VSZ) |
 | [cuuid](https://github.com/Kronuz/cuuid) | UUID generation and parsing |
 
-## Network, Serialization & Clustering
+## Network & Serialization
 
 | Library | Purpose |
 |---------|---------|
@@ -62,8 +60,6 @@ abstraction.
 | [radix-router](https://github.com/Kronuz/radix-router) | Radix-tree HTTP path router |
 | [msgpack](https://github.com/Kronuz/msgpack) | MessagePack + RapidJSON adaptor + JSON-Patch |
 | [url-parser](https://github.com/Kronuz/url-parser) | URL / URI parsing |
-| [cluster](https://github.com/Kronuz/cluster) | Cluster membership and coordination |
-| [flume](https://github.com/Kronuz/flume) | Message streaming / fan-out between nodes |
 
 ## Search & Text Metrics
 

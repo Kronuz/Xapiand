@@ -55,15 +55,13 @@ struct IndexSettings {
 	bool saved;
 	bool modified;
 
-	std::chrono::steady_clock::time_point stalled;
-
 	size_t num_shards;
 	size_t num_replicas_plus_master;
 	std::vector<IndexSettingsShard> shards;
 
 	IndexSettings();
 
-	IndexSettings(engine::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
+	IndexSettings(engine::rev version, bool loaded, bool saved, bool modified, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
 
 	std::string __repr__() const;
 };
@@ -74,8 +72,8 @@ class IndexResolverLRU {
 public:
 	IndexResolverLRU(ssize_t resolver_cache_size, std::chrono::milliseconds resolver_cache_timeout);
 
-	IndexSettings resolve_index_settings(std::string_view normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear);
-	Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings);
+	IndexSettings resolve_index_settings(std::string_view normalized_slashed_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear);
+	Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable, const MsgPack* settings);
 
 	void invalidate_settings(const std::string& uri);
 

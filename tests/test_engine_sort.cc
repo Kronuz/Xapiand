@@ -44,7 +44,7 @@
 #include "aggregations/exception.h"
 #include "database/schema.h"
 #include "engine/xapian/convert.h"
-#include "exception_xapian.h"
+#include "exception_engine.h"
 #include "msgpack.h"
 #include "multivalue/keymaker.h"
 #include "serialise.h"

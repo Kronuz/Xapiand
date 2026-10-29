@@ -17,11 +17,8 @@ RUN set -ex \
     cmake \
     ninja-build \
     pkg-config \
-    perl \
-    tcl \
     libasio-dev \
     libzstd-dev \
-    libicu-dev \
     uuid-dev \
     zlib1g-dev \
     libcap-dev \
@@ -53,7 +50,6 @@ RUN set -ex \
   && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
-    libicu74 \
     libuuid1 \
     zlib1g \
     libzstd1 \

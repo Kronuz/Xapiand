@@ -23,8 +23,6 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_REMOTE_SERVERPORT
-
 #include <atomic>               // for std::atomic_bool
 #include <chrono>               // for std::chrono, std::chrono::steady_clock
 #include <cstring>              // for size_t
@@ -53,7 +51,6 @@ class Shard;
 class Database;
 class DatabasePool;
 class ReferencedShardEndpoint;
-struct IndexSettings;
 
 
 /*
@@ -81,9 +78,7 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool finished;
 
 	std::atomic_bool locked;
-	mutable std::mutex revisions_mtx;
-	std::unordered_map<std::string, engine::rev> revisions;
-	std::atomic<engine::rev> pending_revision;
+	std::atomic<engine::rev> revision;
 	std::chrono::steady_clock::time_point renew_time;
 
 	std::shared_ptr<Shard> writable;
@@ -100,9 +95,6 @@ class ShardEndpoint : public Endpoint
 	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, std::chrono::steady_clock::time_point now, std::unique_lock<std::mutex>& lk);
 	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, std::chrono::steady_clock::time_point now, std::unique_lock<std::mutex>& lk);
 
-	IndexSettings _get_pending_index_settings() const;
-	bool _is_pending(const IndexSettings& index_settings) const;
-
 public:
 	ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
 
@@ -118,9 +110,7 @@ public:
 
 	std::pair<size_t, size_t> count();
 
-	engine::rev get_revision(const std::string& lower_name) const;
 	engine::rev get_revision() const;
-	void set_revision(const std::string& lower_name, engine::rev revision);
 	void set_revision(engine::rev revision);
 
 	bool is_locked() const {
@@ -132,9 +122,6 @@ public:
 	}
 
 	bool is_used() const;
-
-	bool is_pending(bool notify = false) const;
-	bool is_pending(const IndexSettings& index_settings, bool notify = false) const;
 
 	std::string __repr__() const;
 	std::string dump_databases(int level) const;
@@ -205,11 +192,9 @@ public:
 		return join(std::chrono::steady_clock::now() + timeout);
 	}
 
-	void cleanup(bool immediate = false, bool notify = true);
+	void cleanup(bool immediate = false);
 
 	bool clear();
-
-	bool is_pending(bool notify = false) const;
 
 	std::pair<size_t, size_t> count();
 

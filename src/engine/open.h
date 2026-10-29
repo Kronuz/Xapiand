@@ -26,7 +26,6 @@
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::string
 
-#include "engine/kind.h"           // for Kind
 #include "engine/shard.h"          // for Shard
 #include "task.hh"                 // for task::task, task::scheduler_ref
 
@@ -38,12 +37,11 @@ struct Opened {
 	bool created = false;
 };
 
-// Opens (or, when create_missing, creates) the local shard at `path` of the given engine. The shard
-// hops onto `on` for each call, as the engines' own openers do.
-task::task<Opened> open_local(Kind kind, const std::string& path, bool writable, bool create_missing, task::scheduler_ref on = {});
+// Opens (or, when create_missing, creates) the local shard at `path`. The shard hops onto `on` for
+// each call, as the engine's own opener does.
+task::task<Opened> open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on = {});
 
-// The engine's own integrity check of the shard at `path`, by the engine whose files are there
-// (kind_of). `errors` counts what the check found; `failure` says why the check could not run or
+// The engine's own integrity check of the shard at `path`. `errors` counts what the check found; `failure` says why the check could not run or
 // did not pass.
 struct CheckResult {
 	std::size_t errors = 0;

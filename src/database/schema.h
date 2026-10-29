@@ -315,7 +315,6 @@ struct required_spc_t {
 		bool is_namespace:1;
 		bool ngram:1;
 		bool cjk_ngram:1;
-		bool cjk_words:1;
 
 		// Auxiliar variables.
 		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
@@ -775,7 +774,6 @@ class Schema {
 	void feed_positions(const MsgPack& prop_obj);
 	void feed_ngram(const MsgPack& prop_obj);
 	void feed_cjk_ngram(const MsgPack& prop_obj);
-	void feed_cjk_words(const MsgPack& prop_obj);
 	void feed_language(const MsgPack& prop_obj);
 	void feed_stop_strategy(const MsgPack& prop_obj);
 	void feed_stem_strategy(const MsgPack& prop_obj);
@@ -855,7 +853,6 @@ class Schema {
 	void process_positions(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_ngram(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_cjk_ngram(std::string_view prop_name, const MsgPack& prop_obj);
-	void process_cjk_words(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_language(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_prefix(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_slot(std::string_view prop_name, const MsgPack& prop_obj);
@@ -883,7 +880,6 @@ class Schema {
 	void consistency_slot(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_ngram(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_cjk_ngram(std::string_view prop_name, const MsgPack& prop_obj);
-	void consistency_cjk_words(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_language(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_stop_strategy(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_stem_strategy(std::string_view prop_name, const MsgPack& prop_obj);

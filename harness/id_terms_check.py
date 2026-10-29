@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """id_terms_check.py BIN [--census] -- the accuracy terms of a numeric _id and range queries over it.
 
-Starts BIN (--solo, a fresh data directory, hard timeout), gives an index an integer `_id` through its schema,
+Starts BIN (a fresh data directory, hard timeout), gives an index an integer `_id` through its schema,
 restores documents with ids at several magnitudes, and checks every range query over `_id` against a brute-force
 answer. With --census (BIN built with -DENGINE_CENSUS=ON) it also checks that no written document has more than
 one term leading with Q (gate row T5: the id term is the only one).
@@ -43,7 +43,7 @@ def main():
     if CENSUS:
         env["XAPIAND_ENGINE_CENSUS"] = census
     node = subprocess.Popen(
-        ["timeout", "240", BIN, "--port", str(PORT), "--name", "benchnode", "--solo", "-D", data_dir],
+        ["timeout", "240", BIN, "--port", str(PORT), "--name", "benchnode", "-D", data_dir],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     failures = []
     try:

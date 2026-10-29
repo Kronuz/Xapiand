@@ -35,7 +35,6 @@
 #include <unordered_map>          // for std::unordered_map
 #include <utility>                 // for std::move
 
-#include "engine/kind.h"           // for Kind
 #include "engine/types.h"          // for docid, termcount, termpos, valueno
 
 
@@ -68,12 +67,11 @@ struct FieldRef {
 };
 
 // A document under construction: its terms, values and stored data, owned by the caller. A term
-// is a field and the bytes under it; each add_* call has the semantics of the Xapian call it
-// replaces, so building one is the same as building that engine's document.
+// is a field and the bytes under it.
 //
-// The document is built straight into the engine's own representation (a Xapian document for the
-// Xapian engine), so a shard writes it without converting it and nothing is built twice. The
-// representation is opaque here; the engine that made it is the only one that reads it back.
+// The document is built straight into the engine's own representation, so a shard writes it
+// without converting it and nothing is built twice. The representation is opaque here; the engine
+// that made it is the only one that reads it back.
 class Document {
 public:
 	// The engine's side of a document: the calls below, over its own storage. The engine defines it.
@@ -98,9 +96,8 @@ public:
 #endif
 	};
 
-	// An empty document of the default engine, or of the given one. Defined in document.cc.
+	// An empty document. Defined in document.cc.
 	Document();
-	explicit Document(Kind kind);
 	explicit Document(std::unique_ptr<Native> native) : native_(std::move(native)) { }
 
 	// The field of this name, declared by the first call; a later call with a wider kind widens it.
@@ -156,7 +153,6 @@ public:
 		return native_->serialise();
 	}
 	static Document unserialise(std::string_view serialised);
-	static Document unserialise(Kind kind, std::string_view serialised);
 
 private:
 	// The field a ref names; a ref from another document, or a default one on an empty document, is

@@ -37,11 +37,8 @@
 #include "engine/document.h"      // for engine::Document
 #include "engine/doc_view.h"      // for engine::DocView
 #include "engine/error.h"         // for engine::Error
-#include "engine/kind.h"          // for engine::Kind
 #include "engine/shard.h"         // for engine::Shard
 #include "engine/types.h"         // for engine::WriteResult
-#include "engine/xapian/shard.h"   // for engine::xapian::Shard
-#include "engine/xapian/xapian.h"  // for Xapian::Document, Xapian::DocumentInfo
 
 
 class Node;
@@ -106,9 +103,6 @@ public:
 	ShardEndpoint& endpoint;
 	int flags;
 
-	// The engine of this shard: its own once open, else the one its files are.
-	engine::Kind kind() const;
-
 	bool is_local() const {
 		return _local.load(std::memory_order_relaxed);
 	}
@@ -127,10 +121,6 @@ public:
 
 	bool is_writable() const {
 		return has_db_writable(flags);
-	}
-
-	bool is_replica() const {
-		return has_db_replica(flags);
 	}
 
 	bool is_restore() const {
@@ -197,7 +187,7 @@ public:
 	void close();
 
 	static void autocommit(const std::shared_ptr<Shard>& shard);
-	bool commit(bool wal_ = true, bool send_update = true);
+	bool commit(bool wal_ = true);
 
 	void begin_transaction(bool flushed = true);
 	void commit_transaction();
@@ -209,11 +199,6 @@ public:
 	engine::WriteResult add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	engine::WriteResult replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-
-	// The Xapian remote server's entry points: it speaks Xapian's document and result types.
-	Xapian::DocumentInfo add_document(Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	Xapian::DocumentInfo replace_document(engine::docid shard_did, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	Xapian::DocumentInfo replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	void add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	engine::termcount remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);

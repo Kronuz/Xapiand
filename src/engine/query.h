@@ -90,16 +90,15 @@ inline constexpr unsigned PATTERN_MULTI  = 2;   // '*' matches any run anywhere 
 struct QueryNode;
 
 // The largest query a factory builds: levels of nested operators and nodes in all. A larger one
-// throws QueryDepthError (a 400). Both bound every recursion over a tree, Xapian's matcher's included.
+// throws QueryDepthError (a 400). Both bound every recursion over a tree, the matcher's included.
 inline constexpr unsigned MAX_QUERY_DEPTH = 100;
 inline constexpr unsigned MAX_QUERY_CLAUSES = 4096;
-// Xapian's matcher recurses once per phrase or near group that an AND (or FILTER) joins, however flat the
+// The matcher recurses once per phrase or near group that an AND (or FILTER) joins, however flat the
 // query is, so the number it joins is bounded apart from the clause count. See Query::chain().
 inline constexpr unsigned MAX_QUERY_CHAIN = 256;
 
-// A query, as a value: an immutable tree that shares its subtrees when copied. Each factory
-// has the semantics of the constructor of the same shape in Xapian's Query, so a tree built here
-// translates to the Xapian tree it replaces. A default Query matches nothing.
+// A query, as a value: an immutable tree that shares its subtrees when copied. A default Query
+// matches nothing.
 //
 // A factory refuses a shape that is not a valid query with a QueryParserError (a 400): a PHRASE or NEAR
 // whose positions are anything but words and their alternatives (a wildcard or edit-distance expansion,
@@ -135,15 +134,13 @@ public:
 	// the pattern on).
 	static Query edit_distance(std::string field, std::string pattern, termcount max_expansion, Expansion limit, Op combiner, unsigned distance, std::size_t prefix_length);
 
-	// Documents with any term in the field. The Xapian engine reads the name as a prefix, so it also
-	// reaches the fields whose names extend it: the query `field: "*"` over an object relies on that
-	// until the strata adapter builds that case from the schema.
+	// Documents with any term in the field.
 	static Query field(std::string field);
 
 	// Documents a value source accepts. The query keeps the source and hands each engine a clone.
 	static Query source(std::unique_ptr<PostingSource> source);
 
-	// True for a query that matches nothing by its structure, with the simplifications Xapian makes:
+	// True for a query that matches nothing by its structure, with these simplifications:
 	// an AND with a subquery that matches nothing matches nothing, an OR of such subqueries too,
 	// and so on.
 	bool empty() const noexcept;

@@ -140,8 +140,8 @@ jobs:
           set -eux
           dnf -y install dnf-plugins-core epel-release
           dnf config-manager --set-enabled crb
-          dnf -y install gcc-toolset-13 cmake ninja-build git perl tcl tar \
-            pkgconf-pkg-config libzstd-devel libicu-devel libuuid-devel \
+          dnf -y install gcc-toolset-13 cmake ninja-build git tar \
+            pkgconf-pkg-config libzstd-devel libuuid-devel \
             zlib-devel libcap-devel openssl-devel rpm-build ruby ruby-devel make
           gem install --no-document fpm
           # Standalone Asio (header-only). EPEL's asio-devel predates the C++20
@@ -181,7 +181,7 @@ jobs:
             --license MIT \
             --description "Xapiand: a RESTful search engine" \
             --url "https://github.com/Kronuz/Xapiand" \
-            --depends libicu --depends libuuid --depends zlib \
+            --depends libuuid --depends zlib \
             --depends libzstd --depends libcap --depends openssl-libs \
             -C stage usr
           echo "rpm=$(ls xapiand-*.rpm | head -1)" >> "$GITHUB_OUTPUT"
@@ -212,8 +212,8 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config perl tcl \
-            libasio-dev libzstd-dev libicu-dev uuid-dev zlib1g-dev libcap-dev libssl-dev \
+            g++-13 cmake ninja-build pkg-config \
+            libasio-dev libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev \
             ruby ruby-dev
           sudo gem install --no-document fpm
 
@@ -247,7 +247,7 @@ jobs:
             --license MIT \
             --description "Xapiand: a RESTful search engine" \
             --url "https://github.com/Kronuz/Xapiand" \
-            --depends libicu74 --depends libuuid1 --depends zlib1g \
+            --depends libuuid1 --depends zlib1g \
             --depends libzstd1 --depends libcap2 --depends 'libssl3t64 | libssl3' \
             -C stage usr
           echo "deb=$(ls xapiand_*.deb | head -1)" >> "$GITHUB_OUTPUT"

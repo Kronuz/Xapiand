@@ -90,7 +90,7 @@ namespace GenerateTerms {
 	void text(engine::Document& doc,
 		const std::string& prefix, const std::string& value,
 		bool positions, engine::termcount weight,
-		bool cjk_ngram, bool cjk_words,
+		bool cjk_ngram,
 		const std::string& language, const std::string& stem_language,
 		analysis::stop_strategy stop_strategy,
 		analysis::stem_strategy stem_strategy);

@@ -23,7 +23,7 @@
 
 #include "search_views.h"
 
-#include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_LUA, XAPIAND_DATABASE_WAL
+#include "config.h"                         // for XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
 #include <cassert>                          // for assert
 #include <charconv>                         // for std::from_chars (indent param)
@@ -34,10 +34,6 @@
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <utility>                          // for std::move
-
-#ifdef USE_ICU
-#include <unicode/uvernum.h>
-#endif
 
 #ifdef XAPIAND_LUA
 #include <lua.h>                              // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
@@ -51,7 +47,7 @@
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
-#include "exception_xapian.h"               // for Exception, SerialisationError
+#include "exception_engine.h"               // for Exception, SerialisationError
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
@@ -67,9 +63,8 @@
 #include "mime_types.h"                    // for mime_type
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "engine/query.h"                   // for engine::Query
-#include "engine/xapian/query.h"            // for engine::xapian::to_xapian
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
-#include "node.h"                           // for Node::local_node, Node::leader_node
+#include "node.h"                           // for Node::local_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
 #include "phf.hh"                           // for phf::*
@@ -82,7 +77,6 @@
 #include "serialise.h"                      // for Serialise::boolean
 #include "xapiand_strings.hh"                       // for strings::from_delta
 #include "system.hh"                        // for check_compiler, check_OS, check_architecture
-#include "engine/xapian/convert.h"              // for engine::xapian::version
 
 
 // #undef L_DEBUG
@@ -721,22 +715,10 @@ node_obj()
 {
 	L_CALL("node_obj()");
 
-	Endpoints endpoints;  // local scratch for the nodes lookup (was the HttpClient member)
-	endpoints.clear();
-	auto leader_node = Node::get_leader_node();
-	endpoints.add(Endpoint{".xapiand/nodes", leader_node});
-
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
-
 	auto local_node = Node::get_local_node();
-	auto document = db_handler.get_document(local_node->lower_name());
 
-	auto obj = document.get_obj();
-
-	obj.update(MsgPack({
-#ifdef XAPIAND_CLUSTERING
-		{ "cluster_name", opts.cluster_name },
-#endif
+	MsgPack obj({
+		{ "name", local_node->name() },
 		{ "server", {
 			{ "name", Package::NAME },
 			{ "url", Package::URL },
@@ -750,12 +732,8 @@ node_obj()
 		} },
 		{ "versions", {
 			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : strings::format("{}_{}", Package::VERSION, Package::REVISION) },
-			{ "Xapian", engine::xapian::version() },
 #ifdef XAPIAND_LUA
 			{ "Lua", LUA_VERSION_MAJOR "." LUA_VERSION_MINOR },
-#endif
-#ifdef USE_ICU
-			{ "ICU", strings::format("{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM) },
 #endif
 		} },
 		{ "options", {
@@ -769,34 +747,20 @@ node_obj()
 				{ "database_pool_size", opts.database_pool_size },
 				{ "schema_pool_size", opts.schema_pool_size },
 				{ "scripts_cache_size", opts.scripts_cache_size },
-#ifdef XAPIAND_CLUSTERING
-				{ "resolver_cache_size", opts.resolver_cache_size },
-#endif
 			} },
 			{ "thread_pools", {
 				{ "num_shards", opts.num_shards },
 				{ "num_replicas", opts.num_replicas },
 				{ "num_http_servers", opts.num_http_servers },
 				{ "num_http_clients", opts.num_http_clients },
-#ifdef XAPIAND_CLUSTERING
-				{ "num_remote_servers", opts.num_remote_servers },
-				{ "num_remote_clients", opts.num_remote_clients },
-				{ "num_replication_servers", opts.num_replication_servers },
-				{ "num_replication_clients", opts.num_replication_clients },
-#endif
 				{ "num_async_wal_writers", opts.num_async_wal_writers },
-				{ "num_doc_matchers", opts.num_doc_matchers },
 				{ "num_doc_preparers", opts.num_doc_preparers },
 				{ "num_doc_indexers", opts.num_doc_indexers },
 				{ "num_committers", opts.num_committers },
 				{ "num_fsynchers", opts.num_fsynchers },
-#ifdef XAPIAND_CLUSTERING
-				{ "num_replicators", opts.num_replicators },
-				{ "num_discoverers", opts.num_discoverers },
-#endif
 			} },
 		} },
-	}));
+	});
 
 	return obj;
 }
@@ -1264,33 +1228,6 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		}
 	}
 
-#ifdef XAPIAND_CLUSTERING
-	auto nodes = MsgPack::ARRAY();
-	if (is_root) {
-		for (auto& node : Node::nodes()) {
-			auto node_obj = MsgPack::MAP();
-			node_obj["name"] = node->name();
-			if (node->is_active()) {
-				node_obj["active"] = true;
-				if (!opts.solo) {
-					node_obj["leader"] = node->is_leader();
-					node_obj["local"] = node->is_local();
-				}
-				node_obj["host"] = node->host();
-				node_obj["http_port"] = node->http_port;
-				node_obj["remote_port"] = node->remote_port;
-				node_obj["replication_port"] = node->replication_port;
-			} else {
-				node_obj["active"] = false;
-			}
-			nodes.push_back(node_obj);
-		}
-
-		if (selector == "nodes") {
-			return nodes;
-		}
-	}
-#endif
 
 	auto obj = MsgPack::MAP();
 
@@ -1360,9 +1297,6 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 	// Add node information for '/':
 	if (is_root) {
 		obj.update(node_obj());
-#ifdef XAPIAND_CLUSTERING
-		obj["nodes"] = nodes;
-#endif
 		auto manager = XapiandManager::manager();
 		if (manager) {
 			obj["state"] = enum_name(manager->state.load());
@@ -1516,7 +1450,7 @@ flush_view(Request& request)
 	request.query_parser.rewind();
 	int flush_clients = request.query_parser.next("clients");
 	if (flush_databases != -1 || flush_clients == -1) {
-		XapiandManager::manager(true)->database_pool->cleanup(true, false);
+		XapiandManager::manager(true)->database_pool->cleanup(true);
 	}
 	if (flush_clients != -1 || flush_databases == -1) {
 		XapiandManager::manager(true)->shutdown(0, 0);
@@ -1987,7 +1921,7 @@ search_view(Request& request)
 	obj[RESPONSE_HITS] = MsgPack::ARRAY();
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = query.alternatives() ? query.description() : engine::xapian::to_xapian(query).get_description();
+		obj["#engine_query"] = query.description();
 	}
 	obj[RESPONSE_COUNT] = mset.size();
 	obj[RESPONSE_TOTAL] = mset.estimated;
@@ -2118,7 +2052,7 @@ count_view(Request& request)
 	MsgPack obj;
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = query.alternatives() ? query.description() : engine::xapian::to_xapian(query).get_description();
+		obj["#engine_query"] = query.description();
 	}
 	obj[RESPONSE_TOTAL] = mset.estimated;
 
@@ -2283,42 +2217,7 @@ expand_paths(Request& request)
 		index_path.append(pth);
 
 
-#ifdef XAPIAND_CLUSTERING
-		engine::SearchResult mset;
-		if (strings::endswith(index_path, '*')) {
-			index_path.pop_back();
-			auto stripped_index_path = index_path;
-			if (strings::endswith(stripped_index_path, '/')) {
-				stripped_index_path.pop_back();
-			}
-			Endpoints index_endpoints;
-			for (auto& node : Node::nodes()) {
-				index_endpoints.add(Endpoint(strings::format(".xapiand/nodes/{}", node->lower_name())));
-			}
-			DatabaseHandler db_handler;
-			db_handler.reset(index_endpoints);
-			if (stripped_index_path.empty()) {
-				mset = db_handler.get_mset(engine::Query::match_all(), 0, 100);
-			} else {
-				auto query = engine::Query::combine(engine::Op::AND_NOT,
-					engine::Query::combine(engine::Op::OR,
-							engine::Query::wildcard(std::string(engine::KEY_FIELD), document_key(index_path, KEYWORD_CHAR)),
-							engine::Query::term(std::string(engine::KEY_FIELD), document_key(stripped_index_path, KEYWORD_CHAR))),
-					engine::Query::wildcard(std::string(engine::KEY_FIELD), document_key(index_path + "/.", KEYWORD_CHAR))
-				);
-				mset = db_handler.get_mset(query, 0, 100);
-			}
-			for (const auto& hit : mset.hits) {
-				auto document = db_handler.get_document(hit.did);
-				index_path = document.get_value(DB_SLOT_ID);
-				paths.push_back(std::move(index_path));
-			}
-		} else {
-#endif
 			paths.push_back(std::move(index_path));
-#ifdef XAPIAND_CLUSTERING
-		}
-#endif
 	}
 
 	return paths;

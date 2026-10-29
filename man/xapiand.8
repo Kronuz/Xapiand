@@ -25,15 +25,13 @@
 .Os
 .Sh NAME
 .Nm xapiand
-.Nd "RESTful search engine built on top of Xapian"
+.Nd "RESTful search and storage engine"
 .Sh SYNOPSIS
 .Nm
 .Op Fl D Ar path
-.Op Fl Fl cluster Ar name
 .Op Fl Fl name Ar node
 .Op Fl Fl port Ar port
 .Op Fl Fl bind-address Ar addr
-.Op Fl Fl solo
 .Op Fl d
 .Op Fl Fl strict
 .Op Fl L Ar file
@@ -47,12 +45,8 @@
 .Op Fl i Ar file
 .Sh DESCRIPTION
 .Nm
-is a highly available, distributed, RESTful search and storage engine built for
-the cloud and with data locality, on top of a customized in-tree fork of Xapian.
-A single node exposes a schemaless document store and full-text search over a
-JSON / MessagePack REST API; several nodes sharing a
-.Fl Fl cluster
-name form a cluster that discovers its peers and replicates indexes.
+is a RESTful search and storage engine. A node exposes a schemaless document
+store and full-text search over a JSON / MessagePack REST API.
 .Pp
 Run with no arguments,
 .Nm
@@ -71,8 +65,6 @@ Display version information and exit.
 Path to the root of the node (the data directory).
 .It Fl d , Fl Fl detach
 Detach and run in the background as a daemon.
-.It Fl Fl solo
-Run as a solo node: no discovery and no replication.
 .It Fl v , Fl Fl verbose
 Increase verbosity; may be given multiple times.
 .It Fl Fl verbosity Ar level
@@ -84,18 +76,10 @@ Force using
 .Ar path
 as the root of the node even if it looks unsafe.
 .El
-.Ss Node and cluster
+.Ss Node
 .Bl -tag -width ".Fl Fl database Ar path"
-.It Fl Fl cluster Ar name
-Cluster name to join.
 .It Fl Fl name Ar node
 Node name (defaults to a name derived from the host).
-.It Fl Fl primary-node Ar node
-Name of the primary node (the one holding the primary cluster database).
-.It Fl Fl replicas Ar n
-Default number of replicas per index.
-.It Fl Fl shards Ar n
-Default number of shards per index.
 .It Fl Fl uuid Ar mode ...
 UUID modes:
 .Ar vanilla , compact , encoded ,
@@ -109,19 +93,6 @@ and
 TCP port for the HTTP REST API.
 .It Fl Fl bind-address Ar addr
 Address to bind the listeners to.
-.It Fl Fl xapian-port Ar port
-TCP port for the Xapian binary (remote) protocol.
-.It Fl Fl replica-port Ar port
-TCP port for the replication protocol.
-.It Fl Fl discovery-port Ar port
-UDP port for cluster discovery.
-.It Fl Fl discovery-group Ar group
-Multicast group name for discovery.
-.It Fl Fl discovery-interface Ar addr
-Local interface address for discovery multicast (send + join); empty selects the
-default route.  Pin it (for example
-.Ar 127.0.0.1 )
-on a multi-homed or VPN host whose default interface cannot multicast.
 .El
 .Ss Logging, output and privileges
 .Bl -tag -width ".Fl Fl database Ar path"
@@ -134,9 +105,9 @@ Write the process id to
 .It Fl Fl log Ar setting ...
 Enable logging settings:
 .Ar epoch , iso8601 , timeless , seconds , milliseconds , microseconds ,
-.Ar thread-names , locations ,
+.Ar thread-names ,
 and
-.Ar replicas .
+.Ar locations .
 .It Fl Fl color Ar mode
 When to colorize console output:
 .Ar auto , always , never , truecolor , 256 ,
@@ -180,8 +151,8 @@ Input filename for
 .Fl Fl restore .
 .El
 .Pp
-Numerous additional options tune the thread pools (matchers, committers, bulk
-preparers and indexers, HTTP / remote / replication clients and servers, ...) and
+Numerous additional options tune the thread pools (committers, bulk
+preparers and indexers, HTTP clients and servers, ...) and
 the pool and cache sizes (database pool, schema pool, resolver cache, ...); see
 .Nm Fl Fl help .
 .Sh EXIT STATUS

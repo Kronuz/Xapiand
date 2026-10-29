@@ -32,7 +32,7 @@
 #include "opts.h"                                 // for opts
 #include "serialise.h"                            // for UUIDRepr, Serialise
 #include "xapiand_strings.hh"                             // for strings::format
-#include "exception_xapian.h"                     // for SerialisationError
+#include "exception_engine.h"                     // for SerialisationError
 
 
 static inline std::string
@@ -224,14 +224,6 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 				if (uri_node) {
 					node_name = uri_node->lower_name();
 				}
-			} else {
-				auto remote_port = strict_stoi(nullptr, _port);
-				for (auto& uri_node : Node::nodes()) {
-					if (uri_node->host() == uri && uri_node->remote_port == remote_port) {
-						node_name = uri_node->lower_name();
-						break;
-					}
-				}
 			}
 		}
 		query = _query;
@@ -306,7 +298,7 @@ Endpoint::to_string() const
 	std::string ret;
 	if (!path.empty()) {
 		ret.reserve(node_name.size() + path.size() + query.size() + 11);
-		ret.append("xapian://");
+		ret.append("xapiand://");
 		ret.append(node_name);
 		ret.push_back('/');
 		ret.append(path);

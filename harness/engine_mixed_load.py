@@ -4,7 +4,7 @@ engine_mixed_load.py -- concurrent index and search on one single-shard index, f
 
   engine_mixed_load.py BIN OUTDIR [--engine strata] [--secs 600] [--writers 3] [--searchers 4] [--port 18990]
 
-Starts one --solo node (XAPIAND_ENGINE picks the engine of the index), creates /mix/ with one shard, then for --secs seconds
+Starts one node, creates /mix/ with one shard, then for --secs seconds
   writers    PUT single documents, RESTORE batches of 50, replace a known id, DELETE a known id; every acknowledged write
              updates a model {id: accountNumber}; ids are disjoint per writer
   searchers  SEARCH /mix/ with the loadtest query mix plus a text query, a sorted query and an aggregation
@@ -35,13 +35,13 @@ for f in os.listdir(a.out):
     if f.startswith('san.'): os.unlink(os.path.join(a.out, f))
 rows = [json.loads(l) for l in open(os.path.join(HERE, '..', 'docs/public/assets/accounts.ndjson')) if l.strip()]
 
-env = dict(os.environ, XAPIAND_ENGINE=a.engine)
+env = dict(os.environ)
 san = os.path.join(a.out, 'san')
 env.setdefault('TSAN_OPTIONS', f'log_path={san} second_deadlock_stack=1 history_size=4')
 env.setdefault('ASAN_OPTIONS', f'log_path={san} detect_leaks=0')
 env.setdefault('UBSAN_OPTIONS', f'log_path={san} print_stacktrace=1')
 log = open(os.path.join(a.out, 'node.log'), 'wb')
-node = subprocess.Popen([a.bin, '--port', str(a.port), '--solo', '--name', 'mix', '-D', data], stdout=log, stderr=log, env=env)
+node = subprocess.Popen([a.bin, '--port', str(a.port), '--name', 'mix', '-D', data], stdout=log, stderr=log, env=env)
 
 
 def conn(): return http.client.HTTPConnection('localhost', a.port, timeout=120)

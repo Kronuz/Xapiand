@@ -147,7 +147,7 @@ void test_concurrent_cleanup() {
 	for (int t = 0; t < 4; ++t) {
 		threads.emplace_back([&] {
 			while (!stop) {
-				pool.cleanup(true, false);
+				pool.cleanup(true);
 			}
 		});
 	}
@@ -241,7 +241,7 @@ void test_checkin_drop_races_cleanup() {
 	for (int t = 0; t < 3; ++t) {
 		threads.emplace_back([&] {
 			while (!stop) {
-				pool.cleanup(true, false);
+				pool.cleanup(true);
 			}
 		});
 	}

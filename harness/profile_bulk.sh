@@ -35,7 +35,7 @@ data = os.path.join(a.out, f'{a.label}.data')
 
 def start():
     shutil.rmtree(data, ignore_errors=True); os.makedirs(data)
-    p = subprocess.Popen([a.bin, '--port', str(a.port), '--name', 'benchnode', '--solo', '-D', data],
+    p = subprocess.Popen([a.bin, '--port', str(a.port), '--name', 'benchnode', '-D', data],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(240):
         try:

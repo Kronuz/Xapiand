@@ -280,13 +280,6 @@ test_unreadable_settings_are_invalid()
 }
 
 void
-test_word_breaks_are_not_read()
-{
-	// WORD_BREAKS is ignored: the text reads as it does without it.
-	CHECK_EQ(described("quick brown", config(base | text::WORD_BREAKS)), described("quick brown", config(base)));
-}
-
-void
 test_text_without_words_matches_nothing()
 {
 	CHECK_TRUE(engine::parse_text("", config(base)).empty());
@@ -608,4 +601,4 @@ test_body_depth_per_format()
 	}
 }
 
-TEST_MAIN(test_hate_groups_terminate, test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_stems_are_terms_of_the_stem_field, test_wildcard_pattern_flags, test_all_wildcard_patterns)
+TEST_MAIN(test_hate_groups_terminate, test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_stems_are_terms_of_the_stem_field, test_wildcard_pattern_flags, test_all_wildcard_patterns)

@@ -5,8 +5,8 @@
 # that are not valid queries (a `_synonym` over a wildcard, a fuzzy word or a bracketed group, a `_phrase` or `_near` over a
 # wildcard, a fuzzy word or a bracketed group, `_scale_weight` or `_wildcard` given a list) are 400 saying so.
 BIN=$1; PORT=${PORT:-18820}; D=$(mktemp -d "${TMPDIR:-/tmp}/removed.XXXXXX"); HERE="$(cd "$(dirname "$0")/.." && pwd)"; rc=0
-for ENG in xapian strata; do
-  XAPIAND_ENGINE=$ENG "$BIN" --port $PORT --solo --name rf -D "$D/$ENG" >"$D/$ENG.log" 2>&1 & P=$!
+for ENG in strata; do
+  "$BIN" --port $PORT --name rf -D "$D/$ENG" >"$D/$ENG.log" 2>&1 & P=$!
   for _ in $(seq 60); do curl -s -m2 -o /dev/null localhost:$PORT/ && break; sleep .5; done
   U=localhost:$PORT
   curl -s -o /dev/null -XRESTORE "$U/bank/" -H 'Content-Type: application/x-ndjson' --data-binary @"$HERE/docs/public/assets/accounts.ndjson"

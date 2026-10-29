@@ -31,35 +31,6 @@ Both consume two newman JSON reports (`newman run … --reporters json
   improved / regressed / within-noise. The noise band is widened by the observed
   trial spread so jitter doesn't read as regression.
 
-## Cluster lane
-
-The correctness + performance lanes both run a single **`--solo`** node, so
-**Discovery, the Remote protocol, and Replication are never exercised** by them.
-`cluster_check.sh` is the missing net for that data plane — the prerequisite
-before migrating those services off libev (onto the Asio runtime, Kronuz/reactor).
-
-- **`cluster_check.sh [N]`** — spins an N-node (default 2) localhost cluster and
-  asserts the three things `--solo` can't:
-  1. **Discovery** — every node converges on the full membership and one leader is
-     elected (`GET /` `nodes[]`).
-  2. **Replication / Remote** — a doc written on node1 becomes readable from every
-     other node (shards are distributed across nodes and reached over the Remote
-     protocol / replicated; the read is eventually-consistent so it polls).
-  3. **Distributed search** — a `SEARCH` on the last node gathers hits across all
-     nodes' shards.
-
-  Unlike the correctness lane this is **not** baseline-differential — it's a
-  self-checking GREEN/RED liveness assertion of the cluster data plane (exit 0 =
-  all checks passed). Nodes share one discovery port (multicast, `IP_MULTICAST_LOOP`)
-  but each takes its own http/xapian/replica TCP ports; cluster settle and the
-  first cross-node write are slow (first-touch shard creation), so timeouts are
-  deliberately generous. Needs a multicast-capable interface up.
-
-  ```sh
-  harness/cluster_check.sh        # 2 nodes
-  harness/cluster_check.sh 3      # 3 nodes
-  ```
-
 ## Capture a baseline + compare (the loop)
 
 ```sh
@@ -75,20 +46,12 @@ python3 harness/loadtest.py --datadir <dir> --label ours     --out harness/resul
 python3 harness/perfdiff.py harness/results/baseline.json harness/results/ours.json
 ```
 
-## Baseline + current status (2026-07-05)
+## Baseline
 
-The e2e baseline was originally build `7bd295b` (earliest commit that builds on Apple
-Silicon; pristine `origin/master` does not — its toolchain modernization is entangled
-with de-vendoring), and the de-vendored + Xapian 2.0.0 migration was validated **green
-vs that oracle**: 0 assertion regressions, 0 status diffs, body divergences only in
-volatile fields, performance at parity.
-
-That migration has landed, so the baseline is now **refreshed to this project's own
-build at `23e1e4540`** (post native multi-db distributed match). `e2e_check.sh` diffs a
-fresh capture against it: assertion parity is GREEN, and the only body divergences are
-the genuinely run-to-run volatile fields (the POST auto-id and the `/:metrics`
-counters). The check is now a forward-looking regression net for the current
-architecture rather than a migration oracle.
+`e2e_check.sh` diffs a fresh capture against a saved report of the doc suite: assertion
+parity is green, and the only body divergences are the genuinely run-to-run volatile
+fields (the POST auto-id and the `/:metrics` counters). `e2e_assert.py` is the gate on
+its own: every documented assertion must pass.
 
 ## Known refinements
 

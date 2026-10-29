@@ -36,12 +36,10 @@ const int DB_OPEN                       = engine::DB_OPEN;                      
 
 const int DB_WRITABLE                   = 0x00010000;  // Opens as writable.
 const int DB_RESTORE                    = 0x00020000;  // Flag database as being restored
-const int DB_REPLICA                    = 0x00040000;  // Flag database as being replicated
 const int DB_DISABLE_AUTOCOMMIT         = 0x00080000;  // Disable autocommit
 const int DB_DISABLE_WAL                = 0x00100000;  // Disable open WAL file
 const int DB_DISABLE_WRITES             = 0x00200000;  // Disable write operations
 const int DB_SYNCHRONOUS_WAL            = 0x00400000;  // Using synchronous WAL
-const int DB_TRIGGER_REPLICATION        = 0x00800000;  // Allow trigger replication
 
 const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a shard or document
 
@@ -74,10 +72,6 @@ inline bool has_db_restore(int flags) {
 	return (flags & DB_RESTORE) == DB_RESTORE;
 }
 
-inline bool has_db_replica(int flags) {
-	return (flags & DB_REPLICA) == DB_REPLICA;
-}
-
 inline bool has_db_disable_autocommit(int flags) {
 	return (flags & DB_DISABLE_AUTOCOMMIT) == DB_DISABLE_AUTOCOMMIT;
 }
@@ -94,10 +88,6 @@ inline bool has_db_synchronous_wal(int flags) {
 	return (flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL;
 }
 
-inline bool has_db_trigger_replication(int flags) {
-	return (flags & DB_TRIGGER_REPLICATION) == DB_TRIGGER_REPLICATION;
-}
-
 inline std::string readable_flags(int flags) {
 	std::vector<std::string> values;
 	if (has_db_create_or_open(flags)) values.push_back("DB_CREATE_OR_OPEN");
@@ -106,7 +96,6 @@ inline std::string readable_flags(int flags) {
 	if (has_db_open(flags)) values.push_back("DB_OPEN");
 	if (has_db_writable(flags)) values.push_back("DB_WRITABLE");
 	if (has_db_restore(flags)) values.push_back("DB_RESTORE");
-	if (has_db_replica(flags)) values.push_back("DB_REPLICA");
 	if (has_db_disable_autocommit(flags)) values.push_back("DB_DISABLE_AUTOCOMMIT");
 	if (has_db_disable_wal(flags)) values.push_back("DB_DISABLE_WAL");
 	if (has_db_disable_writes(flags)) values.push_back("DB_DISABLE_WRITES");

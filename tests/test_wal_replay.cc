@@ -55,7 +55,7 @@ std::string fresh(const char* name) {
 	return p;
 }
 std::string run(DatabaseWAL& wal, const std::string& line) {
-	try { wal.execute_line(line, false, false); return "ok"; }
+	try { wal.execute_line(line, false); return "ok"; }
 	catch (const engine::Error& e) { return std::string("engine::Error ") + engine::to_string(e.kind) + ": " + e.description(); }
 	catch (const std::exception& e) { return std::string("exception: ") + e.what(); }
 }

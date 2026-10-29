@@ -128,11 +128,8 @@ struct FieldTerm {
 FieldTerm field_term(std::string_view field_prefix, char field_type, std::string_view term);
 // The engine field of a whole field prefix: the key field for the id field's.
 std::string_view query_field(std::string_view field_prefix);
-// The key of an id term as the Xapian remote protocol carries it ('Q' and the key): for the requests a
-// remote node makes of this one.
-std::string key_of_term(std::string_view id_term);
-// Which of a multi-shard index's shards holds a key. The hash is of the key's id term as the Xapian
-// engine has always spelled it ('Q' and the key), so an index keeps its documents on the same shards.
+// Which of a multi-shard index's shards holds a key. The hash is of the key's id term
+// spelled 'Q' and the key, so an index keeps its documents on the same shards.
 std::uint64_t key_placement_hash(std::string_view key);
 engine::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);

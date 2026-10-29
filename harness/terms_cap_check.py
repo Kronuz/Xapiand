@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""terms_cap_check.py BIN -- a `_terms` over 200,000 distinct values holds a bounded number of buckets, on both engines.
+"""terms_cap_check.py BIN -- a `_terms` over 200,000 distinct values holds a bounded number of buckets.
 
-Starts BIN twice (--solo, one engine each, hard timeout), loads documents whose `m` (keyword) and `n` (integer) have
+Starts BIN twice (one engine each, hard timeout), loads documents whose `m` (keyword) and `n` (integer) have
 DISTINCT unique values and 10 hot values (3% to 6% of the documents each), and asks for the top 10 of each with
 `_shard_size` 100. The answer must hold the true top 10 with counts within 1% (the cap makes counts approximate past
 it), and the strata server's resident size must not grow by more than MAX_GROWTH_MB (default 40) while it answers (the
@@ -78,12 +78,12 @@ def main():
     want = {"m": collections.Counter(v[0] for v in values).most_common(10), "n": collections.Counter(v[1] for v in values).most_common(10)}
     nodes, bad = {}, 0
     try:
-        for k, engine in enumerate(("xapian", "strata")):
+        for k, engine in enumerate(("strata",)):
             port = BASE + k
             data = os.path.join(SCRATCH, "data_" + engine)
             shutil.rmtree(data, ignore_errors=True)
-            nodes[engine] = subprocess.Popen(["timeout", "1800", BIN, "--port", str(port), "--name", "cap" + engine, "--solo", "-D", data],
-                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=dict(os.environ, XAPIAND_ENGINE=engine))
+            nodes[engine] = subprocess.Popen(["timeout", "1800", BIN, "--port", str(port), "--name", "cap" + engine, "-D", data],
+                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             for _ in range(240):
                 try:
                     if call(port, "GET", "/")[0] == 200:

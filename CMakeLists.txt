@@ -51,13 +51,11 @@ option(CPPLINT              "Enable CppLint"                        OFF)
 option(BUILD_TESTS "Build all tests"                                OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
-option(CLUSTERING    "Enable remote clustering"                      ON)
 option(TLS           "Enable HTTPS for the REST API (needs OpenSSL 3)" ON)
 option(DATABASE_WAL  "Enable database write ahead log (WAL)"         ON)
 option(DATA_STORAGE  "Enable data storage"                           ON)
 option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
-option(XAPIAN_ASSERTS "Enable the vendored Xapian's own assertions in asserts builds (always on in Debug)" OFF)
 option(TRACKED_MEM   "Enable tracked memory allocator"              OFF)
 option(CHECK_IO_FDES "Check file descriptors"                       OFF)
 option(LUA           "Enable Lua scripting engine"               ON)
@@ -72,7 +70,7 @@ option(CRASH_POINTS   "Let XAPIAND_STRATA_CRASH=point:n kill the process at a st
 option(ENGINE_CENSUS  "Count the facilities each request uses at the engine seam (XAPIAND_ENGINE_CENSUS=file)" OFF)
 
 
-foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
+foreach (opt DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -85,14 +83,6 @@ if (CRASH_POINTS)
 	message(STATUS "Option CRASH_POINTS - on")
 	add_compile_definitions(XAPIAND_CRASH_POINTS)
 endif ()
-string(TOUPPER "${CMAKE_BUILD_TYPE}" _XAPIAN_BUILD_TYPE)
-if (XAPIAN_ASSERTS OR _XAPIAN_BUILD_TYPE STREQUAL "DEBUG")
-	set (XAPIAND_XAPIAN_ASSERTIONS 1)
-else ()
-	set (XAPIAND_XAPIAN_ASSERTIONS 0)
-endif ()
-add_compile_definitions(XAPIAND_XAPIAN_ASSERTIONS=${XAPIAND_XAPIAN_ASSERTIONS})
-
 if (ENGINE_CENSUS)
 	message(STATUS "Option ENGINE_CENSUS - on")
 	add_compile_definitions(ENGINE_CENSUS)
@@ -102,10 +92,7 @@ if (APPLE)
 	set (CMAKE_FIND_FRAMEWORK "LAST")
 	# Homebrew lives at /opt/homebrew on Apple Silicon and /usr/local on Intel.
 	# Detect its prefix (HOMEBREW_PREFIX env, then `brew --prefix`, then the two
-	# well-known paths) so HOMEBREW_OPT_DIR -- and thus ICU_ROOT below -- points at
-	# the real keg. A hardcoded /usr/local/opt silently disabled ICU on Apple
-	# Silicon (ICU_ROOT pointed at a nonexistent path, so find_package(ICU) failed
-	# and USE_ICU fell back to 0).
+	# well-known paths) so HOMEBREW_OPT_DIR points at the real keg.
 	if (DEFINED ENV{HOMEBREW_PREFIX})
 		set (HOMEBREW_OPT_DIR "$ENV{HOMEBREW_PREFIX}/opt")
 	else ()
@@ -396,15 +383,6 @@ elseif (UUID_CFUUID)
 endif ()
 
 
-########################################################################
-# ICU Library
-########################################################################
-# ICU's UTF-8 word boundary code was broken before 54.1.
-
-if (APPLE AND NOT ICU_ROOT)
-  set (ICU_ROOT "${HOMEBREW_OPT_DIR}/icu4c")
-endif ()
-
 # OpenSSL 3, for TLS: found before reactor is fetched, so reactor builds its TLS layer
 # (reactor::tls) against the same library.
 if (TLS)
@@ -412,12 +390,6 @@ if (TLS)
 		set (OPENSSL_ROOT_DIR "${HOMEBREW_OPT_DIR}/openssl@3")
 	endif ()
 	find_package(OpenSSL 3.0 REQUIRED)
-endif ()
-find_package(ICU 54.1 COMPONENTS uc)
-if (ICU_FOUND)
-	set (USE_ICU 1)
-else ()
-	set (USE_ICU 0)
 endif ()
 
 
@@ -440,18 +412,8 @@ set (XAPIAND_DATA_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand")
 include_directories(
 	"${PROJECT_SOURCE_DIR}/src"
 	"${PROJECT_BINARY_DIR}/src"
-	# Generated Snowball stemmers (build/.../languages/algorithms/*.cc) emit a bare
-	# #include "snowball_runtime.h"; upstream resolves it with -I.../languages, so
-	# put both the source and generated languages dirs on the include path.
-	"${PROJECT_SOURCE_DIR}/src/xapian/languages"
-	"${PROJECT_BINARY_DIR}/src/xapian/languages"
 	${LIBCPP_INCLUDE_DIRS}
 )
-
-# msgpack.h used to include generated config.h before most Xapian headers. Now
-# that MsgPack is standalone, define this explicitly so Xapiand can still use
-# Xapian's internal database action mask from its own flag helpers.
-add_compile_definitions(XAPIAN_LIB_BUILD=1)
 
 link_libraries(
 	${CMAKE_THREAD_LIBS_INIT}
@@ -660,7 +622,7 @@ FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
 	CUUID_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_trace.h"
-	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_xapian.h"
+	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_engine.h"
 	CUUID_NODE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_node.h"
 )
 
@@ -755,8 +717,7 @@ include_directories(
 # analysis: Xapian-exact text analysis (words, case folding, Z-prefixed stems, stop words,
 # CJK n-grams, wdf, positions) behind GenerateTerms::text, with the snowball stemmers and
 # the unicode tables it builds on. Header-only analysis; snowball is a small static C
-# library. Pinned on the commits analysis itself pins. Xapian's own snowball compiler
-# target is named snowball_compiler so the library can own the name snowball.
+# library. Pinned on the commits analysis itself pins. The library owns the name snowball.
 FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG c93026cedf9124421886d449528dd6edb16e5ed3)
 FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 570a0b78fc2967f9ec6a0ec005547d20fcf32b61)
 FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG 991ff3349d7e7d834b331c4b406139e76c76b24e)
@@ -837,7 +798,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
-# reactor is declared before http and cluster so this pin wins over theirs (first declaration wins).
+# reactor is declared before http so this pin wins over its (first declaration wins).
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 0c04d0d3dafbbe91906d236cc1a52ecb26cfed2c)  # reactor main
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG dc3be77028d13aca66d20648d498301c9d745968)
 FetchContent_MakeAvailable(http_lib)
@@ -863,27 +824,6 @@ include_directories("${http_log_SOURCE_DIR}")
 # http_asio.h does #include "reactor.h".
 FetchContent_MakeAvailable(reactor)
 include_directories("${reactor_SOURCE_DIR}")
-
-# cluster: the UDP-multicast cluster substrate (Kronuz/cluster) -- cluster::Bus (transport)
-# + cluster::Raft (consensus) that Discovery rides on, replacing the libev UDP + the in-tree
-# Raft. Header-only; needs only reactor (above) + Asio (below). The membership gossip + the
-# Node registry + the join state machine stay app-side (fed to Raft via a RaftDelegate).
-FetchContent_Declare(cluster GIT_REPOSITORY https://github.com/Kronuz/cluster.git GIT_TAG 84e6b016406b9f16a6dd78882dabd0dcdf63deff)
-FetchContent_MakeAvailable(cluster)
-include_directories("${cluster_SOURCE_DIR}")
-# cluster's length.h includes <varint.hh> since it fetches varint itself (Kronuz/varint);
-# the pinned cluster predates that.
-if(varint_SOURCE_DIR)
-	include_directories("${varint_SOURCE_DIR}")
-endif()
-
-# flume: the compressed, framed, integrity-checked file-transfer conduit (Kronuz/flume) --
-# the FILE_FOLLOWS codec for the Remote/Replication Asio migration, replacing the libev
-# ClientLZ4Compressor/Decompressor. Header-only; rides the compressors buffer-core (Zstd L6
-# by default -- ~48% fewer bytes than the classic LZ4 at line-rate).
-FetchContent_Declare(flume GIT_REPOSITORY https://github.com/Kronuz/flume.git GIT_TAG 113f421a8b057164aa63ffe0e1fdf7dc98c0001a)
-FetchContent_MakeAvailable(flume)
-include_directories("${flume_SOURCE_DIR}")
 
 # Asio (standalone, header-only): the runtime + transport substrate the HTTP path
 # now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
@@ -1126,218 +1066,6 @@ endif()
 
 
 ########################################################################
-# Xapian library target
-########################################################################
-
-# Xapian Exceptions
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian")
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/error.h" "${PROJECT_BINARY_DIR}/src/xapian/errordispatch.h"
-	COMMAND perl
-		-w
-		-I "${PROJECT_SOURCE_DIR}/src/xapian"
-		"${PROJECT_SOURCE_DIR}/src/xapian/generate-exceptions"
-	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/src"
-	DEPENDS
-		"${PROJECT_SOURCE_DIR}/src/xapian/generate-exceptions"
-		"${PROJECT_SOURCE_DIR}/src/xapian/exception_data.pm"
-)
-list(APPEND XAPIAN_H_LIST "${PROJECT_BINARY_DIR}/src/xapian/error.h" "${PROJECT_BINARY_DIR}/src/xapian/errordispatch.h")
-
-# TfIdf normalisation dispatch headers (new in Xapian 2.0.0).  Generated by
-# perl from the normalisation tables, like the snowball sbl-dispatch header.
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/weight")
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/weight/idf-norm-dispatch.h"
-	COMMAND perl
-		-I "${PROJECT_SOURCE_DIR}/src/xapian/common"
-		"${PROJECT_SOURCE_DIR}/src/xapian/weight/collate-idf-norm"
-		"${PROJECT_SOURCE_DIR}/src/xapian"
-	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian"
-	DEPENDS
-		"${PROJECT_SOURCE_DIR}/src/xapian/weight/collate-idf-norm"
-		"${PROJECT_SOURCE_DIR}/src/xapian/common/Tokeniseise.pm"
-)
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/weight/wdf-norm-dispatch.h"
-	COMMAND perl
-		-I "${PROJECT_SOURCE_DIR}/src/xapian/common"
-		"${PROJECT_SOURCE_DIR}/src/xapian/weight/collate-wdf-norm"
-		"${PROJECT_SOURCE_DIR}/src/xapian"
-	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian"
-	DEPENDS
-		"${PROJECT_SOURCE_DIR}/src/xapian/weight/collate-wdf-norm"
-		"${PROJECT_SOURCE_DIR}/src/xapian/common/Tokeniseise.pm"
-)
-list(APPEND XAPIAN_H_LIST "${PROJECT_BINARY_DIR}/src/xapian/weight/idf-norm-dispatch.h" "${PROJECT_BINARY_DIR}/src/xapian/weight/wdf-norm-dispatch.h")
-
-# Snowball
-
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/languages")
-# Xapian 2.0.0 moved the Snowball algorithm sources under languages/algorithms/;
-# the generated stemmers (english.cc/.h ...) land in a matching build subdir.
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/languages/algorithms")
-
-file(GLOB SNOWBALL_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/xapian/languages/compiler/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/languages/compiler/*.h*"
-)
-add_executable(snowball_compiler EXCLUDE_FROM_ALL ${SNOWBALL_SRC_LIST})
-set_target_properties(snowball_compiler PROPERTIES OUTPUT_NAME snowball COMPILE_FLAGS "-DDISABLE_CSHARP -DDISABLE_GO -DDISABLE_JAVA -DDISABLE_JS -DDISABLE_PASCAL -DDISABLE_PYTHON -DDISABLE_RUST")
-
-file(GLOB LANGUAGES_SBL_LIST CONFIGURE_DEPENDS
-	"${PROJECT_SOURCE_DIR}/src/xapian/languages/algorithms/*.sbl"
-)
-# Guard against the silent failure mode that a Xapian upgrade can reintroduce: if
-# the glob path is wrong (2.0.0 moved these from languages/ to languages/algorithms/),
-# file(GLOB) matches nothing WITHOUT erroring, so no stemmers get compiled, the build
-# still goes green, and every language dies only at runtime with
-# "Language code <x> unknown" from Xapian::Stem. Fail loudly at configure time instead.
-# english.sbl must exist (it is the default analyzer language); the count floor catches
-# a partial relocation. CONFIGURE_DEPENDS above re-runs the glob when the dir changes.
-list(LENGTH LANGUAGES_SBL_LIST _n_sbl)
-if(_n_sbl LESS 30 OR NOT EXISTS "${PROJECT_SOURCE_DIR}/src/xapian/languages/algorithms/english.sbl")
-	message(FATAL_ERROR
-		"Found only ${_n_sbl} Snowball stemmer source(s) under "
-		"src/xapian/languages/algorithms/ (expected ~35, incl. english.sbl). A Xapian "
-		"upgrade likely relocated the *.sbl algorithms; fix the glob path, or every "
-		"language stem will be missing and Xapian::Stem will throw \"Language code ... "
-		"unknown\" at runtime while the build stays green.")
-endif()
-foreach (language_sbl ${LANGUAGES_SBL_LIST})
-	string(REGEX REPLACE "^${PROJECT_SOURCE_DIR}/(.*).sbl" "${PROJECT_BINARY_DIR}/\\1" language "${language_sbl}")
-	# Run snowball command.  Match Xapian 2.0.0's invocation (languages/Makefile.mk
-	# .sbl.cc rule): the stemmer classes must land in namespace
-	# Xapian::Internal::Snowball deriving from Xapian::StemImplementation so the
-	# generated sbl-dispatch.h (new Xapian::Internal::Snowball::English, ...) links.
-	# With no -n, the class name defaults to the capitalised output leaf
-	# (arabic -> Arabic, dutch_porter -> DutchPorter), which is what collate-sbl
-	# expects.  -hheader pulls in xapian/stem.h for the base class; -cheader pulls
-	# in config.h.  We omit upstream's -r 'languages/' prefix and instead resolve the
-	# bare runtime includes (api.h, snowball_runtime.h) via the languages dir added
-	# to the include path above.
-	add_custom_command(
-		OUTPUT "${language}.cc" "${language}.h"
-		COMMAND snowball_compiler ${language_sbl} -o ${language} -c++ -u
-			-p "Xapian::StemImplementation"
-			-P "Xapian::Internal::Snowball"
-			-cheader "config.h"
-			-hheader "xapian/stem.h"
-		DEPENDS snowball_compiler ${language_sbl}
-	)
-	list(APPEND LANGUAGES_SRC_LIST "${language}.cc" "${language}.h")
-	# collate-sbl reads each algorithm's "// Alias:" line via "$srcdir/$_", so it
-	# needs the .sbl paths relative to the xapian source root plus that root as srcdir.
-	file(RELATIVE_PATH language_sbl_rel "${PROJECT_SOURCE_DIR}/src/xapian" "${language_sbl}")
-	list(APPEND LANGUAGES_SBL_REL "${language_sbl_rel}")
-endforeach ()
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/languages/allsnowballheaders.h" "${PROJECT_BINARY_DIR}/src/xapian/languages/sbl-dispatch.h"
-	COMMAND perl
-		-I "${PROJECT_SOURCE_DIR}/src/xapian/common"
-		-I "${PROJECT_SOURCE_DIR}/src/xapian/languages"
-		"${PROJECT_SOURCE_DIR}/src/xapian/languages/collate-sbl"
-		"${PROJECT_SOURCE_DIR}/src/xapian"
-		${LANGUAGES_SBL_REL}
-	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian"
-	DEPENDS ${LANGUAGES_SBL_LIST}
-)
-list(APPEND LANGUAGES_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/languages/allsnowballheaders.h" "${PROJECT_BINARY_DIR}/src/xapian/languages/sbl-dispatch.h")
-
-# Unicode
-
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/unicode")
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/unicode/unicode-data.cc"
-	COMMAND tclsh
-		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/uniParse.tcl"
-		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/UnicodeData.txt" 11.0.0
-		"${PROJECT_BINARY_DIR}/src/xapian/unicode/unicode-data.cc"
-	DEPENDS
-		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/uniParse.tcl"
-		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/UnicodeData.txt"
-)
-list(APPEND UNICODE_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/unicode/unicode-data.cc")
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/unicode/c_istab.h"
-	COMMAND perl
-		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/gen_c_istab"
-		"${PROJECT_BINARY_DIR}/src/xapian/unicode/c_istab.h"
-	DEPENDS
-		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/gen_c_istab"
-)
-list(APPEND UNICODE_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/unicode/c_istab.h")
-
-# QueryParser
-
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/queryparser")
-
-add_executable(lemon EXCLUDE_FROM_ALL "${PROJECT_SOURCE_DIR}/src/xapian/queryparser/lemon.c")
-
-add_custom_command(
-	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_internal.cc" "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_token.h"
-	COMMAND lemon -q
-		-o"${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_internal.cc"
-		-h"${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_token.h"
-		"${PROJECT_SOURCE_DIR}/src/xapian/queryparser/queryparser.lemony"
-	DEPENDS lemon "${PROJECT_SOURCE_DIR}/src/xapian/queryparser/queryparser.lemony"
-)
-list(APPEND QUERYPARSER_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_internal.cc" "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_token.h")
-
-# Xapian
-
-file(GLOB XAPIAN_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/xapian/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/weight/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/weight/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/cluster/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/cluster/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/queryparser/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/queryparser/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/expand/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/expand/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/net/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/net/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/unicode/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/unicode/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/backends/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/backends/multi/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/multi/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/backends/glass/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/glass/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/backends/inmemory/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/inmemory/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/backends/remote/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/remote/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/languages/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/languages/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/matcher/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/matcher/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/common/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/common/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/diversify/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/diversify/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/api/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/api/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xapian/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/geospatial/*.h*"
-)
-list(REMOVE_ITEM XAPIAN_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/xapian/version_h.cc"
-	"${PROJECT_SOURCE_DIR}/src/xapian/queryparser/lemon.c"
-)
-list(APPEND XAPIAN_SRC_LIST ${XAPIAN_H_LIST})
-list(APPEND XAPIAN_SRC_LIST ${LANGUAGES_SRC_LIST})
-list(APPEND XAPIAN_SRC_LIST ${UNICODE_SRC_LIST})
-list(APPEND XAPIAN_SRC_LIST ${QUERYPARSER_SRC_LIST})
-add_library(XAPIAN_OBJ OBJECT ${XAPIAN_SRC_LIST})
-
-# The vendored sources include "xapian.h", the umbrella header that lives under src/engine/xapian.
-target_include_directories(XAPIAN_OBJ AFTER PRIVATE "${PROJECT_SOURCE_DIR}/src/engine/xapian")
-target_include_directories(XAPIAN_OBJ PUBLIC
-	${ZLIB_INCLUDE_DIRS}
-	${UUID_INCLUDE_DIRS}
-	${ICU_INCLUDE_DIRS}
-)
-
-target_link_libraries(XAPIAN_OBJ PUBLIC
-	${ZLIB_LIBRARIES}
-	${UUID_LIBRARIES}
-	${ICU_LIBRARIES}
-)
-
-
-########################################################################
 # Boolean parser library target
 ########################################################################
 
@@ -1348,10 +1076,8 @@ add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 
 ########################################################################
-# Libev library target -- RETIRED. Xapiand ran its reactors on libev; every one of
-# them (HTTP, Remote, Replication, Discovery, and the XapiandManager control plane)
-# has since moved onto the std-Asio Kronuz/reactor runtime, so the vendored libev
-# under src/ev/ was deleted and its object library dropped from every link line.
+# Libev library target -- RETIRED. The reactors (HTTP and the XapiandManager control
+# plane) run on the std-Asio Kronuz/reactor runtime; there is no libev.
 ########################################################################
 
 
@@ -1362,7 +1088,6 @@ add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 file(GLOB LZ4_SRC_LIST
 	"${lz4_SOURCE_DIR}/lib/*.c"
 )
-list(APPEND LZ4_SRC_LIST ${XAPIAN_H_LIST})
 add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
@@ -1396,7 +1121,6 @@ target_compile_definitions(YAML_OBJ PRIVATE
 ########################################################################
 
 list(APPEND XAPIAND_PACKAGE_SRC_LIST "${PROJECT_SOURCE_DIR}/src/package.cc")
-list(APPEND XAPIAND_PACKAGE_SRC_LIST ${XAPIAN_H_LIST})
 add_library(XAPIAND_PACKAGE_OBJ OBJECT ${XAPIAND_PACKAGE_SRC_LIST})
 
 
@@ -1409,7 +1133,6 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/lua/*.c*" "${PROJECT_SOURCE_DIR}/src/lua/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/engine/xapian/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/xapian/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/strata/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/strata/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h*"
@@ -1439,7 +1162,6 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/compressor_lz4.cc"
 "${PROJECT_SOURCE_DIR}/src/traceback.cc"
 )
-list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
 # Xapiand (C++20 + std::format), instead of linking its standalone target.
 list(APPEND XAPIAND_SRC_LIST "${located_exception_SOURCE_DIR}/exception.cc")
@@ -1494,8 +1216,8 @@ list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/cuuid_v6.cc")
 list(APPEND XAPIAND_SRC_LIST "${msgpack_SOURCE_DIR}/msgpack_patcher.cc")
 # The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
-# (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
-# control plane, so none of its translation units (nor libev) are linked anymore.
+# (Asio) runtime across HTTP and the XapiandManager control plane, so none of its
+# translation units (nor libev) are linked anymore.
 # The extracted utilities' out-of-line implementations, in place of the removed
 # src/{repr,times,strings,url_parser}.cc (endian is header-only).
 list(APPEND XAPIAND_SRC_LIST "${repr_SOURCE_DIR}/repr.cc")
@@ -1528,7 +1250,6 @@ add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 target_include_directories(XAPIAND_OBJ PUBLIC
 	${ZLIB_INCLUDE_DIRS}
 	${UUID_INCLUDE_DIRS}
-	${ICU_INCLUDE_DIRS}
 )
 
 if (TLS)
@@ -1561,7 +1282,6 @@ add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/main.cc")
 target_link_libraries(${PROJECT_NAME}
 	XAPIAND_PACKAGE_OBJ
 	XAPIAND_OBJ
-	XAPIAN_OBJ
 	BOOLEAN_PARSER_OBJ
 	LZ4_OBJ
 	prometheus-cpp::core
@@ -1832,7 +1552,7 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 
 
 ########################################################################
-# xapian Flags
+# Platform checks
 ########################################################################
 
 check_symbol_exists(exp10 "math.h" HAVE_DECL_EXP10)
@@ -2189,7 +1909,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_shard engine_read engine_search engine_search_strata engine_callbacks engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata wal_replay pool blocking_guard offload_followups)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2198,8 +1918,7 @@ if (BUILD_TESTS)
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ
-				XAPIAN_OBJ
-				BOOLEAN_PARSER_OBJ
+							BOOLEAN_PARSER_OBJ
 				LZ4_OBJ
 				prometheus-cpp::core
 				YAML_OBJ
@@ -2213,8 +1932,6 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
-		add_test(NAME test_wal_replay_xapian COMMAND ${PROJECT_NAME}_test_wal_replay)
-		set_tests_properties(test_wal_replay_xapian PROPERTIES ENVIRONMENT "XAPIAND_ENGINE=xapian")
 
 	# libFuzzer targets: standalone (they link only the code they fuzz), built with -DFUZZ=ON.
 	if (FUZZ)
@@ -2245,7 +1962,7 @@ if (BUILD_TESTS)
 			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
 		)
 		target_link_libraries(${PROJECT_NAME}_test_text PRIVATE
-			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
 			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 		)
@@ -2261,7 +1978,7 @@ if (BUILD_TESTS)
 			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
 		)
 		target_link_libraries(${PROJECT_NAME}_fuzz_text PRIVATE
-			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
 			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 		)
@@ -2274,7 +1991,7 @@ if (BUILD_TESTS)
 			"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
 		)
 		target_link_libraries(${PROJECT_NAME}_fuzz_body PRIVATE
-			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ XAPIAN_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+			XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
 			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 		)
@@ -2288,8 +2005,8 @@ if (BUILD_TESTS)
 	if (BUILD_LEGACY_TESTS)
 		### OLD:
 		foreach (VAR_TEST
-			endpoint fieldparser generate_terms geospatial geospatial_query
-			patcher query serialise serialise_list sort wal
+			endpoint fieldparser generate_terms geospatial
+			patcher serialise serialise_list
 		)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
@@ -2300,8 +2017,7 @@ if (BUILD_TESTS)
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ
-				XAPIAN_OBJ
-				BOOLEAN_PARSER_OBJ
+							BOOLEAN_PARSER_OBJ
 				LZ4_OBJ
 				prometheus-cpp::core
 				YAML_OBJ
@@ -2326,6 +2042,6 @@ endif ()
 # Benchmarking
 # ------------
 # Micro-benchmarks used to live in benchmarks/ (a single std::string-copy stub);
-# performance work now lives in harness/ (cluster_bench.sh, es_loadtest.py, the
+# performance work now lives in harness/ (es_loadtest.py, the
 # e2e capture/diff tooling), which exercises the running server end to end.
 

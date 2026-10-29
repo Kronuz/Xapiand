@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """numeric_range_check.py BIN -- range queries over integer, positive, floating and datetime fields against brute force.
 
-Starts BIN (--solo, a fresh data directory, hard timeout), restores documents whose values sit around powers of two
+Starts BIN (a fresh data directory, hard timeout), restores documents whose values sit around powers of two
 and ten, accuracy edges, zero, negatives and (for datetime) 1970 and 2038, then runs closed and half-open
 `_range` queries and compares each answer with the brute-force one. Exit 1 on any wrong range.
 
@@ -38,7 +38,7 @@ def main():
     data_dir = os.path.join(SCRATCH, "data")
     shutil.rmtree(data_dir, ignore_errors=True)
     node = subprocess.Popen(
-        ["timeout", "400", BIN, "--port", str(PORT), "--name", "numrange", "--solo", "-D", data_dir],
+        ["timeout", "400", BIN, "--port", str(PORT), "--name", "numrange", "-D", data_dir],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     bad = 0
     total = 0

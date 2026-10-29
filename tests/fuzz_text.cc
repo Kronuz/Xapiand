@@ -123,7 +123,7 @@ random_config(Rng& rng)
 {
 	static const unsigned bits[] = {
 		engine::text::BOOLEAN, engine::text::PHRASE, engine::text::LOVEHATE, engine::text::WILDCARD, engine::text::WILDCARD_SINGLE,
-		engine::text::WILDCARD_MULTI, engine::text::PARTIAL, engine::text::FUZZY, engine::text::CJK_NGRAM, engine::text::WORD_BREAKS,
+		engine::text::WILDCARD_MULTI, engine::text::PARTIAL, engine::text::FUZZY, engine::text::CJK_NGRAM,
 	};
 	static const engine::Op ops[] = {
 		engine::Op::INVALID, engine::Op::AND, engine::Op::OR, engine::Op::XOR, engine::Op::AND_MAYBE, engine::Op::NEAR,

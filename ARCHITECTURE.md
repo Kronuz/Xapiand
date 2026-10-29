@@ -5,31 +5,25 @@ self-contained enough to extract and reuse, and a catalog of the bugs and risks
 found while reading the source. Written from a close read of the code; every
 claim cites `file:line` so you can check it.
 
-> This document describes Xapiand's *own* code. The `src/` tree still carries a
-> vendored core: the Xapian fork. Every other library, libyaml and Lua included,
-> arrives through CMake `FetchContent`. See [Code map](#code-map)
-> for the split.
->
-> Xapian is on its way out. [strata](https://github.com/Kronuz/strata) is an MIT
-> engine built to replace it: an engine seam first routes every Xapian call through
-> an interface, strata then moves in behind that seam, and `src/xapian/` is removed
-> last ([plan](https://github.com/Kronuz/strata/blob/main/docs/PLAN.md)). With Xapian
-> gone, the name "Xapiand" no longer fits, so the project is renamed at that point.
+> This document describes Xapiand's own code. Every library, libyaml and Lua included,
+> arrives through CMake `FetchContent`. The search engine is
+> [strata](https://github.com/Kronuz/strata), an MIT engine behind the engine seam
+> (`src/engine/`); the Xapian fork, the remote and replication protocols, and cluster
+> membership are removed, and the cluster returns with the next phase of the
+> [plan](https://github.com/Kronuz/strata/blob/main/docs/PLAN.md). See [Code map](#code-map).
 
 ---
 
 ## Code map
 
-The `src/` tree is much thinner than the pre-extraction snapshot. It now splits
-between Xapiand's application code, a customized Xapian fork, and a small YAML
-island. The old utility, wire-format, HTTP-parser, compression, and metrics
-bundles are pulled by CMake `FetchContent` instead of living under `src/`.
+The `src/` tree is Xapiand's application code and a small YAML island. The old
+utility, wire-format, HTTP-parser, compression, and metrics bundles are pulled by CMake
+`FetchContent` instead of living under `src/`.
 
 **Bundled / vendored (don't look here for original work):**
 
 | Path | What it is |
 |---|---|
-| `src/xapian/` | A heavily customized fork of the Xapian search library (the matcher, the glass/honey backends, the weighting schemes). GPL. |
 | `src/y2j/` | Xapiand's YAML-to-JSON bridge over libyaml (fetched by CMake). |
 
 > The old in-tree copies of `src/cuuid/`, `src/msgpack*`, `src/xchange/`,
@@ -43,10 +37,9 @@ bundles are pulled by CMake `FetchContent` instead of living under `src/`.
 
 | Area | Where | One line |
 |---|---|---|
-| Storage engine | `src/storage.h`, `src/database/` | Haystack-style append-only volumes, WAL, schema cache, sharding. |
+| Storage engine | `src/storage.h`, `src/database/`, `src/engine/` | Haystack-style append-only volumes, WAL, schema cache, sharding, and the engine seam over strata. |
 | Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` pools; blocking work offloaded to bounded thread-pools. No libev. |
-| Clustering | `src/server/discovery.*`, `src/server/replication_protocol_service.*`, `src/server/replication_protocol_views.*`, `src/server/remote_protocol_service.h`, `src/server/remote_protocol_views.*`, `src/manager.*`, `src/node.*` | Raft control plane + asynchronous pull-based data replication. |
-| Search / query | `src/query_dsl.*`, `src/booleanParser/`, `src/aggregations/`, `src/multivalue/` | JSON/MsgPack DSL and a boolean string language, both compiling to Xapian queries; ES-style aggregations. |
+| Search / query | `src/query_dsl.*`, `src/aggregations/`, `src/multivalue/`, `src/engine/` | JSON/MsgPack DSL and a boolean string language, both compiling to engine queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
 | Serialization | `src/serialise*.{cc,h}`, `src/sortable_serialise.*`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
 | Logging | `src/log.h`, `src/logger_fwd.h`, `src/colors.h`, `Kronuz/logger`, `Kronuz/traceback` | A custom async logger with lazy args, compile-time colors, timing, and exception backtraces. |
@@ -66,8 +59,8 @@ on. The precedent this started from was
 ## Runtime architecture
 
 Xapiand no longer uses libev. The whole process runs on the standalone-Asio
-[reactor](https://github.com/Kronuz/reactor) runtime: the control plane, all three
-network services, and clustering are Asio `io_context` loops; the remaining moving
+[reactor](https://github.com/Kronuz/reactor) runtime: the control plane and the HTTP
+service are Asio `io_context` loops; the remaining moving
 parts are plain `std::thread`s, `Thread<>` pools, and debouncers. There is no
 `Worker` tree and no shared event loop anymore.
 
@@ -80,7 +73,7 @@ parts are plain `std::thread`s, `Thread<>` pools, and debouncers. There is no
 # Xapiand runtime topology: what runs on which thread, post-libev.
 direction: down
 
-clients: "clients (HTTP / Xapian remote / peer nodes)" {
+clients: "HTTP clients" {
   style.fill: "#faf3e6"
 }
 
@@ -89,31 +82,21 @@ main: "main thread" {
   manager: "XapiandManager\n(reactor::Reactor control-plane loop)" {
     tsi: "PeriodicTimer\n(try_shutdown, 5s)"
     sig: "self-pipe\n(async-signal-safe SIGINT/TERM)"
-    asy: "Signals\n(setup_node / ready / dispatch_command)"
+    asy: "Signals\n(setup_node / ready)"
   }
 }
 
-svc: "client-facing services  —  each = a reactor pool (N loops) + a bounded offload thread-pool" {
+svc: "HTTP service  -  a reactor pool (N loops) + a bounded offload thread-pool" {
   style.fill: "#e8f5ee"
   http: "HTTP\n(http::HttpAsioService)"
-  remote: "Remote\n(Xapian backend protocol)"
-  repl: "Replication\n(whole-DB streaming via flume)"
 }
 
-clu: "clustering" {
-  style.fill: "#e8f5ee"
-  disc: "Discovery"
-  bus: "cluster::Bus\n(multicast gossip)"
-  raft: "cluster::Raft\n(leader / consensus)"
-  disc -> bus; disc -> raft
-}
-
-wrk: "background worker threads (no libev; plain std::thread / Thread<> / debouncers)" {
+wrk: "background worker threads (plain std::thread / Thread<> / debouncers)" {
   style.fill: "#eef2f7"
   cl: "DatabaseCleanup\n(std::thread, 60s)"
   wal: "WAL writers\n(Thread<> pool + queue)"
   doc: "doc preparers / indexers\n(ThreadPools)"
-  deb: "committer / fsyncher / updaters\n(debouncers)"
+  deb: "committer / fsyncher\n(debouncers)"
 }
 
 store: "storage" {
@@ -124,10 +107,7 @@ store: "storage" {
 }
 
 clients -> svc: "accept" {style.stroke-dash: 3}
-clients -> clu.disc: "UDP gossip" {style.stroke-dash: 3}
-svc -> store: "offloaded blocking\nXapian/IO work"
-svc.repl -> wrk.wal
-clu -> main.manager: "commands\n(RAFT_*, setup)"
+svc -> store: "offloaded blocking\nIO work"
 main.manager -> svc: "start on READY"
 wrk.cl -> store.dbp
 ```
@@ -136,18 +116,17 @@ wrk.cl -> store.dbp
 The rules that hold the topology together:
 
 - **One control-plane loop on the main thread.** `XapiandManager` owns a single
-  `reactor::Reactor`; its callbacks (node setup, "cluster ready", the manager command
-  queue, the shutdown-retry timer) run inline on that loop. Signals reach it through a
+  `reactor::Reactor`; its callbacks (node setup, "ready", the shutdown-retry timer) run
+  inline on that loop. Signals reach it through a
   **self-pipe** (a POSIX handler does one async-signal-safe `write()`; the loop drains
   it) — never `asio::post`, which is not async-signal-safe.
-- **Each network service is a shared-nothing reactor pool + a bounded offload pool.**
-  Accepted connections are served by per-connection coroutines; the blocking, Xapian-
-  and IO-bound work is `co_await`ed onto the offload pool so the reactor thread never
-  blocks. HTTP/Remote start when the node reaches `READY`; Replication starts at
-  construction (a joining node fetches the cluster DB *during* setup).
+- **The HTTP service is a shared-nothing reactor pool + a bounded offload pool.**
+  Accepted connections are served by per-connection coroutines; the blocking, IO-bound
+  work is `co_await`ed onto the offload pool so the reactor thread never blocks. HTTP
+  starts when the node reaches `READY`.
 - **Background work is off-loop.** `DatabaseCleanup` is a bare `std::thread` on a 60 s
   cadence; the WAL writers are a `Thread<>` pool draining a concurrent queue;
-  committers/fsynchers/updaters are debouncers. None of them touch the control loop.
+  committers/fsynchers are debouncers. None of them touch the control loop.
 
 ---
 
@@ -163,9 +142,7 @@ reads "depends on"):
 Xapiand  (the app)
 │
 ├── reactor       → asio*
-├── cluster       → reactor
 ├── http          → reactor · compressors · http-parser · radix-router
-├── flume         → compressors
 ├── storage       → compressors · errno-names · strict-stox · stringified
 ├── msgpack       → msgpack-c* (bundled inside Kronuz/msgpack)
 ├── cuuid         → endian · char-classify
@@ -195,9 +172,8 @@ Every dependency CMake pulls, grouped by role. Most `Kronuz/*` repositories trac
 `main`; a few older ones still track `master`, matching the CMake file.
 
 - **Runtime & network subsystems:** `reactor` (the shared-nothing Asio server
-  runtime), `cluster` (Bus gossip + Raft), `http` (the HTTP transport),
-  `http-parser` (the custom-verb parser), `radix-router` (route dispatch), `flume`
-  (framed, compressed file transfer), `io` (EINTR-safe POSIX I/O), `fs`
+  runtime), `http` (the HTTP transport),
+  `http-parser` (the custom-verb parser), `radix-router` (route dispatch), `io` (EINTR-safe POSIX I/O), `fs`
   (filesystem helpers), `system` (resource introspection), `storage`
   (append-only blob store).
 - **Serialization, identity & time:** `msgpack` (bundled msgpack-c v1.3.0 + the COW
@@ -251,7 +227,7 @@ There is **no mmap** anywhere — all `pread`/`pwrite`/`lseek`, which sidesteps
 SIGBUS-on-truncation hazards. Payloads over 100 bytes are optionally LZ4-framed.
 
 This is recognizably Haystack: one append-only file per volume, an in-file write
-cursor, logical→physical lookup by `(volume, offset)` stored in the Xapian
+cursor, logical→physical lookup by `(volume, offset)` stored in the
 document's `Locator` (`data.cc`), soft deletes via a header flag. It differs in
 having no separate in-memory index file and — see [Bugs](#bugs--risks) — in
 having the per-record checksum defined but, for documents, disabled.
@@ -259,12 +235,11 @@ having the per-record checksum defined but, for documents, disabled.
 The **WAL** (`wal.cc`) is a second `Storage` instance per shard. Its header
 carries a `slot[1016]` array recording the byte offset where each revision
 begins (`wal.cc:716`), giving O(1) seek to any revision. Replay walks volumes
-from a starting revision and re-applies operations to Xapian. On corruption the
+from a starting revision and re-applies operations to the engine. On corruption the
 WAL files are **quarantined, not deleted** (`wal.cc:269,737`) — the right
-instinct for a durability subsystem. Durability model: Xapian is opened
-`DB_NO_SYNC` (`shard.cc:78`) and the WAL is meant to be the anchor, but the WAL
-fsync is *asynchronous by default* (`WAL_SYNC_MODE = STORAGE_ASYNC_SYNC`,
-`wal.cc:67`); more on that below.
+instinct for a durability subsystem. Durability model: the WAL is meant to be the
+anchor, but the WAL fsync is *asynchronous by default*
+(`WAL_SYNC_MODE = STORAGE_ASYNC_SYNC`, `wal.cc:67`); more on that below.
 
 **Schemas** are MsgPack objects in an `aging_lru` keyed by path, with CAS-style
 reconciliation on write and support for "foreign" schemas that point at another
@@ -285,8 +260,7 @@ round-robin where `SO_REUSEPORT` is unavailable).
 
 The per-connection model is a coroutine, not a state machine: each accepted socket is
 served to completion by `co_await`-driven code that reads framed messages
-(`[type][len][body]`, or a `flume` file stream), and offloads the blocking, Xapian- and
-IO-bound handler onto the reactor's `thread_pool` via `co_await co_spawn(pool)`. The
+(`[type][len][body]`), and offloads the blocking, IO-bound handler onto the reactor's `thread_pool` via `co_await co_spawn(pool)`. The
 reactor thread itself never blocks. Backpressure is the offload gate's bounded queue;
 shutdown is `io_context::stop()` plus a registry of "abortables" (tracked sockets) that
 get shut to unwedge any in-flight blocking write.
@@ -301,49 +275,21 @@ A safety touch that survived the migration: a service stopping shuts each tracke
 socket's fd (`shutdown()`), rather than racing a bare `close()`, so a coroutine blocked
 in a write returns instead of hanging on a fd another thread may reuse.
 
-The `src/server/` names now follow the same two-layer shape for every request-
-facing domain. `<domain>_service` is the enabling transport layer;
-`<domain>_views` is the handler layer. Remote uses `remote_protocol_service.h` +
-`remote_protocol_views.{cc,h}` (`RemoteProtocolViews`). Replication uses
-`replication_protocol_service.{cc,h}` + `replication_protocol_views.{cc,h}`
-(`ReplicationProtocolViews`). Search uses `search_service.{cc,h}`
-(`SearchService : http::HttpHandler`) + `search_views.{cc,h}` (the `Request`
-extension and the `*_view` handlers). `discovery.{cc,h}` stays standalone because
-it is the membership peer, not a request-view pair, and the old `mime_types.hh`
-name is gone in favor of `mime_types.h`.
+The `src/server/` names follow a two-layer shape. `<domain>_service` is the enabling
+transport layer; `<domain>_views` is the handler layer. Search uses
+`search_service.{cc,h}` (`SearchService : http::HttpHandler`) +
+`search_views.{cc,h}` (the `Request` extension and the `*_view` handlers).
 
-### Clustering (`src/server/discovery.*`, `replication_protocol*`, `remote_protocol*`)
+### Clustering
 
-This is the part the public description ("async replication") undersells. Two
-distinct mechanisms:
+This release has no cluster. The remote and replication protocols, Raft-based primary
+election, and multicast discovery were removed with the Xapian engine; the single-node
+release serves one node, and the cluster returns with the next phase of the
+[plan](https://github.com/Kronuz/strata/blob/main/docs/PLAN.md). `src/node.*` keeps the
+local node's identity (name, address, HTTP port), and an index's settings
+(`number_of_shards`, `number_of_replicas`) are stored in `.xapiand/indexes`.
 
-**Control plane — Raft over multicast gossip.** Despite the "discovery" name,
-`discovery.cc` drives a full Raft: terms, leader election with the §5.4
-up-to-date-log check, `AppendEntries` with `nextIndex`/`matchIndex`, commit-on-
-majority, and randomized election timeouts. The transport is now
-[`cluster::Bus`](https://github.com/Kronuz/cluster) (multicast gossip) and the consensus
-core is `cluster::Raft`, both on the reactor runtime — the in-tree libev UDP transport
-is gone. What Raft governs is *cluster membership* and *per-shard primary election*
-(`ELECT_PRIMARY`) — **not** user data. It is the control plane that guarantees a single
-agreed primary per shard, the main defense against split-brain.
-
-**Data plane — asynchronous, pull-based replication.** When a node commits a
-local change it multicasts `DB_UPDATED` (debounced). Receivers that hold a
-replica schedule a pull after a random 0–3000 ms delay. The pull
-(`replication_protocol_views.cc`) is a one-way TCP changeset transfer: the replica
-requests changesets from its current revision, and the source either streams WAL
-changesets or, if the replica is too far behind, ships a whole-database file copy — the
-glass files stream through [`flume`](https://github.com/Kronuz/flume) (framed,
-integrity-checked, Zstd-compressed) into a temp dir, then an atomic swap.
-
-So the real consistency model is **leader-based primary-copy with asynchronous
-followers**: a write is durable on the primary at commit, replicas converge
-later, there is no quorum write and no read-repair. That implies a real
-acknowledged-but-lost-write window if a primary crashes before any replica pulls
-(see Bugs). Writes to a non-primary node are forwarded to the primary over
-Xapian's remote-backend RPC (`remote_protocol_views.cc`).
-
-### Search & query (`src/query_dsl.*`, `src/booleanParser/`, `src/aggregations/`)
+### Search & query (`src/query_dsl.*`, `src/aggregations/`, `src/engine/`)
 
 Two query languages converge on one engine. The **JSON/MsgPack DSL** is consumed
 by a single recursive `QueryDSL::process` (`query_dsl.cc:188`) that dispatches
@@ -351,17 +297,17 @@ reserved names (`_and`, `_or`, `_not`, `_near`, `_phrase`, `_wildcard`,
 `_edit_distance`, …) through a compile-time perfect-hash table. The same
 reserved word means different things by value shape: `_or` is a compound
 operator when its value is an array, a default-operator modifier when scalar
-(`query_dsl.cc:268` vs `314`). Field leaves resolve through the schema to a
-Xapian term/range query; `text` fields go through a real `Xapian::QueryParser`
-with stemmer/stopper/CJK flags. The **boolean string language**
-(`booleanParser/`) is a classic three-stage pipeline (char reader → state-machine
-lexer → shunting-yard to RPN/AST), and `make_dsl_query` (`query_dsl.cc:962`)
+(`query_dsl.cc:268` vs `314`). Field leaves resolve through the schema to an engine term/range query
+(`engine::Query`); `text` fields go through the `queryparser` library with
+stemmer/stopper/CJK flags. The **boolean string language**
+(the `boolean-parser` library) is a classic three-stage pipeline (char reader →
+state-machine lexer → shunting-yard to RPN/AST), and `make_dsl_query` (`query_dsl.cc:962`)
 reconstructs a DSL tree from its RPN so both languages share `process()`.
 
 **Aggregations** (`aggregations/`) are deliberately Elasticsearch-shaped
 (`_count`, `_sum`, `_avg`, `_stats`, `_terms`, `_histogram`, `_range`, …), built
-as a tree of `BaseAggregation` run as a `Xapian::MatchSpy` and **mergeable across
-shards** via serialise/merge — which is how distributed aggregation works. Many
+as a tree of `BaseAggregation` run as a match spy over the engine's matches and
+**mergeable across shards** via serialise/merge. Many
 ES agg types are scaffolded but commented out, so the framework is broader than
 what's wired up.
 
@@ -373,8 +319,8 @@ children down to level 25 (~30 cm on Earth). The load-bearing insight: a trixel
 id is built by shifting in **2 bits per level**, so *all descendants of a trixel
 form a contiguous integer interval* (`getRange`, `htm.cc:679`). A region on the
 sphere therefore becomes a set of `[start, end]` ranges of 54-bit integers, and
-spherical containment becomes a numeric range query — the exact machinery Xapian
-already has.
+spherical containment becomes a numeric range query — the machinery the
+engine already has for numbers.
 
 A shape (`Circle`, `Convex`, `Polygon`/convex-hull, `Collection`, the `Multi*`
 variants) is intersected against the trixel tree top-down, classifying each
@@ -390,8 +336,9 @@ order matches their integer order.
 
 The linchpin is `sortable_serialise` (`sortable_serialise.cc:43`): it maps a
 `long double` to a byte string whose `memcmp` order matches numeric order, so
-Xapian value-range queries and slot-based sorting work directly on serialized
-bytes. (It's Olly Betts' Xapian routine, extended here to `long double`.) For
+value-range queries and slot-based sorting work directly on serialized
+bytes. (It's Olly Betts' Xapian routine, extended here to `long double`; it stays
+until the value encoding is replaced.) For
 negatives the mantissa is negated rather than bit-flipped, which saves trailing
 bytes while still reversing order — and the header comment documents the bit
 layout unusually completely. Length/varint encoding comes in two flavors
@@ -520,26 +467,19 @@ included so each is checkable.
   disk advertising data that isn't there yet — silent corruption for the
   document store (whose footer validation is inert).
 - **WAL durability is async by default.** `WAL_SYNC_MODE = STORAGE_ASYNC_SYNC`
-  (`wal.cc:67`) debounces the fsync to a background thread and returns; combined
-  with Xapian `DB_NO_SYNC` (`shard.cc:78`), a crash in the window can lose
-  acknowledged writes from both the DB and its WAL. Only shards explicitly
+  (`wal.cc:67`) debounces the fsync to a background thread and returns; a crash in
+  the window can lose acknowledged writes from the WAL. Only shards explicitly
   flagged synchronous escape this.
 - **`Data::get_accepted` can dereference null.** `accepted_by` may stay
   `nullptr` if no locator matched, but the trailing `L_DEBUG` dereferences it
   unconditionally (`data.cc:574`). Crash-on-no-acceptable-type.
 
-**Clustering:**
+**Request intake:**
 
-- **Acknowledged-but-lost writes on primary failure** (by design). `msg_commit`
-  returns `REPLY_DONE` after a *local* commit with no replica ack
-  (`remote_protocol_views.cc:1138`); replication is a debounced async pull
-  (`discovery.cc:1159`). A primary crash before any replica pulls loses the
-  write. Worth stating plainly in operational docs.
 - **Request intake caps need a fresh audit after the HTTP swap.** The old
   libev HTTP client (`http_client.cc`) is gone, so the previous `reserve()` finding
-  no longer points at live code. The remote protocol still reads length-prefixed
-  messages in `remote_protocol_service.h`; treat read-side limits as unproven until
-  the `Kronuz/http` path and remote framing are checked end-to-end.
+  no longer points at live code; treat read-side limits as unproven until the
+  `Kronuz/http` path is checked end-to-end.
 
 **Geospatial math:**
 
@@ -597,14 +537,6 @@ included so each is checkable.
 - **`field_parser` level bound is off by one** relative to its `LVL_MAX`-sized
   arrays (`field_parser.h:50`): the throw fires *after* the increment, allowing
   an index of `LVL_MAX`.
-- **Raft single-node cold-start** unconditionally self-promotes at term 0
-  (`discovery.cc:1523`); under a UDP-multicast partition two nodes can briefly
-  both be term-1 leaders until they discover each other. Name-gating mitigates;
-  worth a partition test.
-- **Client teardown idle-check race**: `is_idle()` reads four sub-states without
-  one covering lock (`replication_protocol_views.cc:879`); the `share_this()`
-  refcount prevents a hard UAF but a message can be dropped or a
-  about-to-run client detached. Hold `runner_mutex` in the idle check.
 - **Scheduler "earliest wakeup" CAS** is a multi-step non-atomic update
   (`scheduler.h:234`); masked by periodic re-peeks, so a task fires late, not
   never.
@@ -613,9 +545,6 @@ included so each is checkable.
   pattern recurs and is fragile if reused.
 - **`Lexer` length cap only guards one state transition** (`Lexer.cc:111`), not
   token/quoted-string accumulation — unbounded token growth.
-- **`Node` mutable atomics feed quorum math via lock-free reads** while
-  membership counts are recomputed under a lock (`node.cc:299`); likely benign
-  (Raft tolerates transient disagreement) but real.
 - **WAL replay re-pushes blobs at new offsets**, orphaning the old ones
   (`shard.cc:1242`) — correct but storage-amplifying on every recovery.
 - **`realloc`/`free` interposition** in the debug allocator uses a hand-rolled
@@ -685,10 +614,9 @@ history is discoverable and a feature can be revived from the exact commit if ne
 
 ## Licensing note
 
-Xapiand itself is MIT (Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC). However, `src/xapian/`
-is a fork of Xapian, which is **GPL**, and a few helpers were taken from it —
-notably `sortable_serialise.*`. The combined binary is effectively bound by the
-GPL. If you extract a component to reuse elsewhere, check its provenance first:
-the geospatial code, the utility headers, the logging system, and the storage
-engine are Xapiand's own MIT code, but `sortable_serialise` and anything under
-`src/xapian/` are not.
+Xapiand itself is MIT (Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC). However,
+`sortable_serialise.*` is Olly Betts' Xapian routine and stays **GPL** until the value
+encoding is replaced. If you extract a component to reuse elsewhere, check its
+provenance first: the geospatial code, the utility headers, the logging system, and the
+storage engine are Xapiand's own MIT code, but `sortable_serialise` is not, and the
+combined binary is bound by it.

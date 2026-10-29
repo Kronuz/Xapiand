@@ -221,7 +221,7 @@ static void test_translation() {
 	// An engine error passes through unchanged, and what is not Xapian's is not touched.
 	bool unchanged = false;
 	try {
-		translate(engine::xapian::Network("net"));
+		translate(engine::Error(engine::errc::network, "net"));
 	} catch (const engine::xapian::Network&) {
 		unchanged = true;
 	}

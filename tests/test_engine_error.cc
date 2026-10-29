@@ -44,7 +44,7 @@
 #include "engine/xapian/errors.h"
 #include "engine/xapian/shard.h"
 #include "engine/xapian/xapian.h"
-#include "exception_xapian.h"
+#include "exception_engine.h"
 #include "hashes.hh"
 #include "http_parser.h"
 #include "log.h"

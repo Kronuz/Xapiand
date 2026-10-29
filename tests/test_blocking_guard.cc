@@ -135,7 +135,7 @@ void release_after_cancel(bool keep_hop) {
 
 void cleanup() {
 	DatabasePool pool(8, 1);
-	pool.cleanup(true, false);
+	pool.cleanup(true);
 }
 
 void wait_answer() {

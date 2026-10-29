@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "config.h"                         // for XAPIAND_REMOTE_SERVERPORT
+#include "config.h"                         // for XAPIAND_DATABASE_WAL
 
 #if XAPIAND_DATABASE_WAL
 
@@ -171,8 +171,8 @@ public:
 
 	bool init_database();
 	bool execute();
-	bool execute_line(std::string_view line, bool wal_, bool send_update);
-	void write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data, bool send_update);
+	bool execute_line(std::string_view line, bool wal_);
+	void write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data);
 
 	MsgPack to_string(engine::rev start_revision, engine::rev end_revision, bool unserialised);
 
@@ -274,7 +274,6 @@ class DatabaseWALWriterTask {
 	std::string term_word_val;
 	engine::termcount freq{};
 	engine::docid did{};
-	bool send_update{};
 
 	void write_commit(DatabaseWALWriterThread& thread);
 	void write_replace_document(DatabaseWALWriterThread& thread);
@@ -353,7 +352,7 @@ public:
 
 	std::size_t running_size();
 
-	void write_commit(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, bool send_update);
+	void write_commit(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision);
 	void write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, engine::docid did, engine::Document&& doc);
 	void write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, engine::docid did);
 	void write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, const std::string& key, const std::string& val);

@@ -25,7 +25,7 @@ import OSDetect from '../../components/OSDetect.astro';
 	</div>
 	<div class="kz-feature">
 		<h2>🚀 Fast</h2>
-		<p>Xapiand is <em>fast</em>, it relies on the <a href="https://xapian.org">Xapian</a> search engine, a proven library with many years of optimizations.</p>
+		<p>Xapiand is <em>fast</em>, it searches with <a href="https://github.com/Kronuz/strata">strata</a>, its own MIT&#8209;licensed search engine.</p>
 		<a href="/Xapiand/benchmarks/">Benchmarks →</a>
 	</div>
 </div>
@@ -80,9 +80,9 @@ docker run -p 8880:8880 --rm \
 		<a href="/Xapiand/benchmarks/#results">Memory Usage →</a>
 	</div>
 	<div class="kz-feature">
-		<h2>⚖️ Scalable</h2>
-		<p>Provides <em>high availability</em> with replicated indexing and federated search across several <em>Nodes</em> in a <em>Cluster</em>.</p>
-		<a href="/Xapiand/clustering/">Clustering →</a>
+		<h2>⚖️ Sharded</h2>
+		<p>Splits each index into <em>Shards</em> on a single <em>Node</em>, and keeps a <em>Write&#8209;Ahead Log</em> for recovery.</p>
+		<a href="/Xapiand/basics/#shard">Shards →</a>
 	</div>
 	<div class="kz-feature">
 		<h2>🌎 Geo-spatial</h2>

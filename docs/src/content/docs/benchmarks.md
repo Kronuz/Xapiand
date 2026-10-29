@@ -62,37 +62,9 @@ The current release against the previous one (0.40.0), same measurement:
 The modernization indexes faster, stores smaller, and above all runs far leaner:
 the current release uses about **a third of the memory** the previous one did.
 
-## Cluster
-
-The numbers above are single-node. Across a cluster the two levers that matter are
-replica placement and how a distributed search fans out to the shards.
-
-**Replicas serve reads locally.** With a replica of every shard on every node, each
-node answers searches from its own copy and serves at single-node speed
-(**~11,600 qps, p50 1.25 ms** on a two-node cluster). A node that does not hold a
-copy of a shard reads it from a holder over the internal protocol instead, so the
-more replicas a shard has, the more nodes can serve it locally.
-
-**Overlapped shard fan-out.** A distributed search feeds every shard into one
-native match that sends all the shard queries up front and collects the replies in
-readiness order, rather than querying the shards one after another. Single-query
-latency therefore stays nearly flat as the shard count grows, instead of climbing
-with it:
-
-| shards | serial, one-by-one | overlapped fan-out | speedup |
-| ---: | ---: | ---: | ---: |
-| 2 | 0.80 ms | 0.79 ms | ~1x |
-| 4 | 0.93 ms | 0.83 ms | 1.12x |
-| 8 | 1.13 ms | 0.87 ms | 1.30x |
-| 16 | 1.67 ms | 1.00 ms | **1.67x** |
-
-The gap widens with both shard count and network latency, so on a real cluster with
-millisecond links the overlapped curve stays flat while the serial one climbs `K`
-times steeper.
-
 ## Methodology
 
-- **Dataset.** The bundled `accounts` set (1,000 nested account records) replicated
+- **Dataset.** The bundled `accounts` set (1,000 nested account records) repeated
   to 20,000 documents.
 - **Query mix.** Seven queries covering the common ground: `match_all`, a term
   filter, a nested match, two numeric range filters, a keyword term, and a boolean
@@ -116,7 +88,7 @@ Build Xapiand Release with LTO, start a node, and run the driver:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLTO=ON && cmake --build build --target xapiand -j
-build/bin/xapiand --port 8880 --name benchnode --solo --shards 1 -D /tmp/xap_bench &
+build/bin/xapiand --port 8880 --name benchnode -D /tmp/xap_bench &
 python3 harness/loadtest.py \
     --target localhost:8880 --dataset docs/assets/accounts.ndjson \
     --replicate 20 --concurrency 16 --duration 5 --trials 3 \
@@ -124,13 +96,11 @@ python3 harness/loadtest.py \
 ```
 
 Run Elasticsearch natively from the official distribution and point the matching
-driver at it (`NUM_SHARDS` matches Xapiand's `--shards`):
+driver at it (`NUM_SHARDS=1` matches Xapiand's default of one shard):
 
 ```sh
 ES_JAVA_OPTS="-Xms1g -Xmx1g" elasticsearch-8.15.3/bin/elasticsearch &   # wait for a green /_cluster/health
 NUM_SHARDS=1 REPLICATE=20 CONCURRENCY=16 DURATION=5 TRIALS=3 python3 harness/es_loadtest.py
 ```
-
-The two-node cluster figures come from `harness/cluster_bench.sh`.
 
 <div style="min-height: 100px"></div>

@@ -28,9 +28,6 @@ export const sidebar = [
             "slug": "exploration"
           },
           {
-            "slug": "clustering"
-          },
-          {
             "slug": "next"
           }
         ]
@@ -100,9 +97,6 @@ export const sidebar = [
             "attrs": {
               "data-overview": ""
             }
-          },
-          {
-            "slug": "reference-guide/indexes/replication"
           },
           {
             "slug": "reference-guide/indexes/create-api"
@@ -409,9 +403,6 @@ export const sidebar = [
             ]
           }
         ]
-      },
-      {
-        "slug": "reference-guide/cluster"
       }
     ]
   },

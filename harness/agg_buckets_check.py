@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""agg_buckets_check.py BIN -- nested `_terms` over a multi-valued field stays bounded, on both engines.
+"""agg_buckets_check.py BIN -- nested `_terms` over a multi-valued field stays bounded.
 
-Starts BIN (--solo, one engine each, hard timeout) and loads 300 documents whose `v` holds the same 7 values, so a
+Starts BIN (hard timeout) and loads 300 documents whose `v` holds the same 7 values, so a
 `_terms` nested L deep over `v` makes 7**L buckets. Prints seconds, resident MB and status per depth. With CHECK=1
 exits 1 unless: depth 2 answers 200 with 7 buckets per level; a depth that would pass MAX_BUCKETS answers a client
 error naming the bucket limit in under 10 s with growth under 300 MB; nesting past MAX_DEPTH is refused at once.
@@ -41,9 +41,8 @@ def nest(levels, depth_key="v"):
 def run(engine, port):
     d = os.path.join(SCRATCH, engine)
     os.makedirs(d)
-    env = dict(os.environ, XAPIAND_ENGINE=engine)
-    p = subprocess.Popen([BIN, "--port", str(port), "--name", "n" + engine, "--solo", "-D", d],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, start_new_session=True)
+    p = subprocess.Popen([BIN, "--port", str(port), "--name", "n" + engine, "-D", d],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         for _ in range(120):
             try:
@@ -97,7 +96,7 @@ def run(engine, port):
 
 
 try:
-    for i, e in enumerate(("xapian", "strata")):
+    for i, e in enumerate(("strata",)):
         run(e, BASE + i)
 finally:
     shutil.rmtree(SCRATCH, ignore_errors=True)

@@ -76,6 +76,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   used to search a `_synonym` over such text. A `_phrase` or `_near` over anything but words (a wildcard, a
   fuzzy word, a bracketed group) says so too, where it used to say that only leaf subqueries are supported
   "currently".
+- **The Xapian engine.** strata is the only search engine, with no option to choose one (`XAPIAND_ENGINE` is
+  gone), and an index lives in strata's files. Databases in Xapian's format are not read: dump them with
+  the final Xapian-only release (the `xapiand` branch) and restore them into this one.
+- **The cluster, until it returns.** This release runs on one node. The remote protocol, the replication
+  protocol, primary election over Raft, multicast discovery and distributed search are gone, with their
+  options (`--solo`, `--cluster`, `--discovery-port`, `--discovery-group`, `--discovery-interface`,
+  `--xapian-port`, `--replica-port`, `--primary-node`, `--matchers`, `--flush-threshold`), the `cluster_name`
+  and `nodes` of `GET /`, the `replication` log category, the replication and remote-protocol metrics, and
+  the Kubernetes guide. The `.xapiand/nodes` cluster database is no longer created.
+- **The `_cjk_words` field property** (ICU word-break segmentation of CJK text), which only Xapian served;
+  `_cjk_ngram` is unchanged. ICU is no longer a dependency.
+- **The `Xapian` and `ICU` entries of `GET /`'s `versions`**, and the `#xapian_query` debug field of a
+  verbose search, now `#engine_query`.
 
 ## [1.0.0-alpha.10] - 2026-10-28
 
