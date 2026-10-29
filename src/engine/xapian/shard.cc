@@ -78,16 +78,13 @@ Shard::writable() const
 std::optional<rev>
 Shard::stored_version(docid did) const
 {
-	const auto prefix = "V" + serialise_length(did);
-	auto& db = writable();
-	const auto end = db.allterms_end(prefix);
-	for (auto it = db.allterms_begin(prefix); it != end; ++it) {
-		std::string term = *it;
-		std::string_view stored(term);
-		stored.remove_prefix(prefix.size());
+	// The value slot is the record; the "V" terms share their prefix with the schema's `_version` field terms.
+	try {
+		const auto stored = writable().get_document(did).get_value(DB_SLOT_VERSION);
 		if (!stored.empty()) {
 			return static_cast<rev>(sortable_unserialise(stored));
 		}
+	} catch (const Xapian::DocNotFoundError&) {
 	}
 	return std::nullopt;
 }
