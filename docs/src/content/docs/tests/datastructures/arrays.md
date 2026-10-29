@@ -64,6 +64,33 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search single array
+
+```rest
+SEARCH /test/array_single/
+
+{
+  "_query": {
+    "types": "A"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The array value is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
 ## Simple Array
 
 #### Index Array
@@ -126,6 +153,58 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
+});
+```
+e2e:end -->
+
+#### Search array
+
+```rest
+SEARCH /test/array/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types": "A"
+      },
+      {
+        "types": "B"
+      },
+      {
+        "types": "C"
+      },
+      {
+        "types": "D"
+      },
+      {
+        "types": "E"
+      },
+      {
+        "types": "F"
+      },
+      {
+        "types": "G"
+      },
+      {
+        "types": "H"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every element of the array is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->
@@ -196,6 +275,58 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Array of Arrays
+
+```rest
+SEARCH /test/array-of-array/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types": "A"
+      },
+      {
+        "types": "B"
+      },
+      {
+        "types": "C"
+      },
+      {
+        "types": "D"
+      },
+      {
+        "types": "E"
+      },
+      {
+        "types": "F"
+      },
+      {
+        "types": "G"
+      },
+      {
+        "types": "H"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every element of the nested arrays is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
 ## Array of Array of Arrays
 
 ####  Index Array of Arrays of Arrays
@@ -262,6 +393,58 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Array of Arrays of Arrays
+
+```rest
+SEARCH /test/array-of-arrays-of-arrays/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types": "A"
+      },
+      {
+        "types": "B"
+      },
+      {
+        "types": "C"
+      },
+      {
+        "types": "D"
+      },
+      {
+        "types": "E"
+      },
+      {
+        "types": "F"
+      },
+      {
+        "types": "G"
+      },
+      {
+        "types": "H"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every element of the deeply nested arrays is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
 ## Array Mixed With Text
 
 #### Index Arrays mixed with text
@@ -323,6 +506,76 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H\u0001I\u0001J\u0001K\u0001L\u0001M\u0001N'});
+});
+```
+e2e:end -->
+
+#### Search Arrays mixed with text
+
+```rest
+SEARCH /test/arrays/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types": "A"
+      },
+      {
+        "types": "B"
+      },
+      {
+        "types": "C"
+      },
+      {
+        "types": "D"
+      },
+      {
+        "types": "E"
+      },
+      {
+        "types": "F"
+      },
+      {
+        "types": "G"
+      },
+      {
+        "types": "H"
+      },
+      {
+        "types": "I"
+      },
+      {
+        "types": "J"
+      },
+      {
+        "types": "K"
+      },
+      {
+        "types": "L"
+      },
+      {
+        "types": "M"
+      },
+      {
+        "types": "N"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every element of the mixed arrays is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->
@@ -420,6 +673,82 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1666287912','3452157842']);
+});
+```
+e2e:end -->
+
+#### Search Array of Objects
+
+```rest
+SEARCH /test/array_of_objects/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types.property": "A"
+      },
+      {
+        "types.property": "B"
+      },
+      {
+        "types.property": "C"
+      },
+      {
+        "types.property": "D"
+      },
+      {
+        "types.property": "E"
+      },
+      {
+        "types.property": "F"
+      },
+      {
+        "types.property": "G"
+      },
+      {
+        "types.property": "H"
+      },
+      {
+        "types.number": 1
+      },
+      {
+        "types.number": 2
+      },
+      {
+        "types.number": 3
+      },
+      {
+        "types.number": 4
+      },
+      {
+        "types.number": 5
+      },
+      {
+        "types.number": 6
+      },
+      {
+        "types.number": 7
+      },
+      {
+        "types.number": 8
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The properties and numbers of every object are searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->

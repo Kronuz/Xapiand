@@ -70,6 +70,125 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Mixed Objects
+
+```rest
+SEARCH /test/mixed_objects/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types.type": "human"
+      },
+      {
+        "types.legs": 2
+      },
+      {
+        "types.arms": 2
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The text and numbers of the object are searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Mixed Objects by range
+
+```rest
+SEARCH /test/mixed_objects/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "types.legs": {
+          "_in": {
+            "_range": {
+              "_from": 1,
+              "_to": 3
+            }
+          }
+        }
+      },
+      {
+        "types.arms": {
+          "_in": {
+            "_range": {
+              "_from": 1,
+              "_to": 3
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The numbers of the object are found by range", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Mixed Objects out of range
+
+```rest
+SEARCH /test/mixed_objects/
+
+{
+  "_query": {
+    "types.arms": {
+      "_in": {
+        "_range": {
+          "_from": 5,
+          "_to": 9
+        }
+      }
+    }
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A range that does not hold the number finds nothing", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+});
+```
+e2e:end -->
+
 ## Value With Nested Object
 
 #### Index value with nested object
@@ -173,6 +292,70 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Object
+
+```rest
+SEARCH /test/object/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "name.first": "john"
+      },
+      {
+        "name.middle": "r"
+      },
+      {
+        "name.last": "doe"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The words of the object are searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Object for another name
+
+```rest
+SEARCH /test/object/
+
+{
+  "_query": {
+    "name.first": "jane"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A word the object does not hold finds nothing", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+});
+```
+e2e:end -->
+
 ## Nested Object
 
 #### Index Nested Object
@@ -216,6 +399,43 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData._type).to.equal('object');
+});
+```
+e2e:end -->
+
+#### Search Nested Object
+
+```rest
+SEARCH /test/nested_object/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "name.first": "john"
+      },
+      {
+        "name.middle": "r"
+      },
+      {
+        "name.last": "doe"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The words of the nested object are searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->
@@ -329,48 +549,234 @@ pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+e2e:end -->
+
+#### Search Complex Object
+
+```rest
+SEARCH /test/complex_object/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "personality": "behavior"
+      },
+      {
+        "personality": "cherish"
+      },
+      {
+        "personality": "elegant"
+      },
+      {
+        "personality": "flaw"
+      },
+      {
+        "personality": "disrupt"
+      },
+      {
+        "personality": "insulting"
+      },
+      {
+        "contact.address": "630"
+      },
+      {
+        "contact.address": "victor"
+      },
+      {
+        "contact.address": "road"
+      },
+      {
+        "contact.city": "leyner"
+      },
+      {
+        "contact.email": "michael"
+      },
+      {
+        "contact.email": "globoil"
+      },
+      {
+        "contact.email": "uk"
+      },
+      {
+        "contact.phone": "594"
+      },
+      {
+        "contact.phone": "3216"
+      },
+      {
+        "contact.postcode": "61952"
+      },
+      {
+        "contact.state": "indiana"
+      },
+      {
+        "employer": "globoil"
+      },
+      {
+        "eyeColor": "blue"
+      },
+      {
+        "favoriteFruit": "lemon"
+      },
+      {
+        "gender": "male"
+      },
+      {
+        "name.firstName": "michael"
+      },
+      {
+        "name.lastName": "lee"
+      },
+      {
+        "style.clothing.pants": "khakis"
+      },
+      {
+        "style.clothing.shirt": "shirt"
+      },
+      {
+        "style.hairstyle": "slick"
+      },
+      {
+        "style.hairstyle": "back"
+      },
+      {
+        "style.pants": "khakis"
+      },
+      {
+        "style.shirt": "shirt"
+      },
+      {
+        "accountNumber": 121931
+      },
+      {
+        "age": 24
+      },
+      {
+        "balance": 221.46
+      },
+      {
+        "accountNumber": {
+          "_in": {
+            "_range": {
+              "_from": 100000,
+              "_to": 130000
+            }
+          }
+        }
+      },
+      {
+        "age": {
+          "_in": {
+            "_range": {
+              "_from": 20,
+              "_to": 30
+            }
+          }
+        }
+      },
+      {
+        "balance": {
+          "_in": {
+            "_range": {
+              "_from": 200,
+              "_to": 250
+            }
+          }
+        }
+      },
+      {
+        "checkin": {
+          "_point": {
+            "_longitude": -95.63079,
+            "_latitude": 31.76212
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
 
 ```js
-pm.test("Values are valid", function() {
+pm.test("Every field of the object is searchable, the personality by the stems of its words", function() {
   var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
 
+#### Search Complex Object for words that are not indexed
 
-  var t1 = 'N\ufffda\ufffd';
-  var t2 = 'N\ufffdu0';
-  var t3 = 'N\ufffdv*';
-  var t4 = 'N\ufffd';
-  var t5 = 'N\ufffdw\u000b';
-  var t6 = 'N\ufffd';
-  var t7 = 'N\ufffdw\u0012\ufffd';
+```rest
+SEARCH /test/complex_object/
 
+{
+  "_query": {
+    "_and": [
+      {
+        "personality": "behavior"
+      },
+      {
+        "personality": "the"
+      }
+    ]
+  }
+}
+```
 
-  t1 = 'N\ufffd';
-  t2 = 'N\ufffd';
-  t3 = 'N\ufffd';
-  t4 = 'N\ufffd';
-  t5 = 'N\ufffd';
-  t6 = 'N\ufffd';
-  t7 = 'N\ufffd\u0020';
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
 
+```js
+pm.test("A stop word of the personality is not indexed", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+});
+```
+e2e:end -->
 
-  t1 = 'N\ufffd';
-  t2 = 'N\ufffd';
-  t3 = 'N\ufffd';
-  t4 = 'N\ufffd';
-  t5 = 'N\ufffd$';
-  t6 = 'N\ufffd';
-  t7 = 'N\ufffd';
-  var t8 = '\ufffd\ufffdG\ufffd\u0014|';
+#### Search Complex Object out of range
 
+```rest
+SEARCH /test/complex_object/
 
-  t1 = 'G\ufffd\ufffd\ufffd';
-  t2 = 'G\ufffd\ufffd\ufffd';
-  t3 = 'G\ufffd\u0008\ufffd@';
-  t4 = 'G\ufffd\u0008\ufffdG';
-  t5 = 'G\ufffd\u0008\ufffdG(';
-  t6 = 'G\u0188\ufffdG(`';
+{
+  "_query": {
+    "age": {
+      "_in": {
+        "_range": {
+          "_from": 30,
+          "_to": 40
+        }
+      }
+    }
+  }
+}
+```
 
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
 
+```js
+pm.test("A range that does not hold the age finds nothing", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
 });
 ```
 e2e:end -->
