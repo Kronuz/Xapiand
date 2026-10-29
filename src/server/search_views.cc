@@ -1987,7 +1987,7 @@ search_view(Request& request)
 	obj[RESPONSE_HITS] = MsgPack::ARRAY();
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
+		obj["#xapian_query"] = query.alternatives() ? query.description() : engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_COUNT] = mset.size();
 	obj[RESPONSE_TOTAL] = mset.estimated;
@@ -2118,7 +2118,7 @@ count_view(Request& request)
 	MsgPack obj;
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
+		obj["#xapian_query"] = query.alternatives() ? query.description() : engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_TOTAL] = mset.estimated;
 
@@ -2446,81 +2446,6 @@ query_field_maker(Request& request, int flags)
 		request.query_parser.rewind();
 		if (request.query_parser.next("collapse") != -1) {
 			query_field.collapse = request.query_parser.get();
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("fuzzy") != -1) {
-			query_field.is_fuzzy = true;
-			if (request.query_parser.len != 0u) {
-				try {
-					query_field.is_fuzzy = Serialise::boolean(request.query_parser.get()) == "t";
-				} catch (const Exception&) { }
-			}
-		}
-
-		if (query_field.is_fuzzy) {
-			request.query_parser.rewind();
-			if (request.query_parser.next("fuzzy.n_rset") != -1) {
-				query_field.fuzzy.n_rset = strict_stou(nullptr, request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			if (request.query_parser.next("fuzzy.n_eset") != -1) {
-				query_field.fuzzy.n_eset = strict_stou(nullptr, request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			if (request.query_parser.next("fuzzy.n_term") != -1) {
-				query_field.fuzzy.n_term = strict_stou(nullptr, request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			while (request.query_parser.next("fuzzy.field") != -1) {
-				query_field.fuzzy.field.emplace_back(request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			while (request.query_parser.next("fuzzy.type") != -1) {
-				query_field.fuzzy.type.emplace_back(request.query_parser.get());
-			}
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("nearest") != -1) {
-			query_field.is_nearest = true;
-			if (request.query_parser.len != 0u) {
-				try {
-					query_field.is_nearest = Serialise::boolean(request.query_parser.get()) == "t";
-				} catch (const Exception&) { }
-			}
-		}
-
-		if (query_field.is_nearest) {
-			query_field.nearest.n_rset = 5;
-			request.query_parser.rewind();
-			if (request.query_parser.next("nearest.n_rset") != -1) {
-				query_field.nearest.n_rset = strict_stoul(nullptr, request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			if (request.query_parser.next("nearest.n_eset") != -1) {
-				query_field.nearest.n_eset = strict_stoul(nullptr, request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			if (request.query_parser.next("nearest.n_term") != -1) {
-				query_field.nearest.n_term = strict_stoul(nullptr, request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			while (request.query_parser.next("nearest.field") != -1) {
-				query_field.nearest.field.emplace_back(request.query_parser.get());
-			}
-
-			request.query_parser.rewind();
-			while (request.query_parser.next("nearest.type") != -1) {
-				query_field.nearest.type.emplace_back(request.query_parser.get());
-			}
 		}
 	}
 

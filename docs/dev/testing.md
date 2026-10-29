@@ -114,15 +114,17 @@ binary and diff it with the optional explorers `e2e_check.sh` / `e2e_diff.py` /
 
 ### Text analysis differential
 
-The doc suite barely touches text analysis, so `harness/terms_diff.py` and `harness/vocab_diff.py`
-index a mixed corpus under about 130 analysis configurations (language, stem and stop strategies,
-positions, weight, CJK n-grams) and each language's Snowball sample vocabulary, then dump every
-document's `INFO` terms (wdf and positions). Run each against two builds on separate data dirs
-and diff the two JSON files; any difference in a term, wdf, or position is a change in analysis.
+The doc suite barely touches text analysis, so `harness/analysis_diff.py` and `harness/stem_diff.py` index a
+mixed corpus under about 130 analysis configurations (language, stem and stop strategies, positions, weight,
+CJK n-grams) and each language's Snowball sample vocabulary (500 words, one document each), then record what
+searches find: for every word of the corpus, and every pair of adjacent words as a phrase, the ids of the
+documents that match (`analysis_diff.py`); for every vocabulary word, the words that stem alike
+(`stem_diff.py`). Run each against two builds, or both engines, on separate data dirs and diff the two JSON
+files; any difference is a change in how text is analysed at index or query time.
 
 ```sh
-python3 harness/terms_diff.py 8891 base-terms.json               # node on :8891
-python3 harness/vocab_diff.py 8891 base-vocab.json ~/code/Kronuz/snowball/test/vectors
+python3 harness/analysis_diff.py 8891 base-analysis.json         # node on :8891
+python3 harness/stem_diff.py 8891 base-stem.json ~/code/Kronuz/snowball/test/vectors
 ```
 
 ### Over HTTPS

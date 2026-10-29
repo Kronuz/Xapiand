@@ -126,7 +126,7 @@ takes every field of the snapshot whose name starts with the node's. The group's
 ## Not built
 
 - Term lists: not offered (R-P2), above.
-- Collapse, weight cutoffs, `nearest` and `fuzzy` are still refused (not in S3's row).
+- Collapse is served (below); weight cutoffs, `nearest` and `fuzzy` are removed from Xapiand, not refused (R-RM).
 
 ## Code
 

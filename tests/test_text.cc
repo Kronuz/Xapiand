@@ -134,13 +134,16 @@ rows(const char* file)
 }  // namespace
 
 
+// The recorded rows that lower to a SYNONYM of anything but words.
+constexpr std::size_t INVALID_ROWS = 4;
+
 void
 test_ab_decisions_stand()
 {
 	// Every recorded decision, through the lowering and into Xapian's description format.
 	auto all = rows("parse-ab.jsonl");
 	REQUIRE_EQ(all.size(), 706U);
-	std::size_t errors = 0;
+	std::size_t errors = 0, invalid = 0;
 	for (auto& r : all) {
 		engine::TextConfig c;
 		if (r["default_op"] == "elite_set") {
@@ -148,7 +151,14 @@ test_ab_decisions_stand()
 		}
 		REQUIRE(row_config(r, c));
 		if (r["error"].empty()) {
-			CHECK_EQ(described(r["query"], c), r["description"]);
+			try {
+				CHECK_EQ(described(r["query"], c), r["description"]);
+			} catch (const QueryParserError& exc) {
+				// A SYNONYM of anything but words is not a valid query, whatever the library records.
+				CHECK_TRUE(exc.kind == engine::errc::syntax);
+				CHECK_TRUE(exc.reason().find("is not a valid query") != std::string::npos);
+				++invalid;
+			}
 		} else {
 			++errors;
 			std::string message;
@@ -158,10 +168,13 @@ test_ab_decisions_stand()
 				CHECK_TRUE(exc.kind == engine::errc::syntax);
 				message = exc.reason();
 			}
-			CHECK_EQ(message, r["error"]);
+			// The one operand queryparser cannot take is reported as not a valid query.
+			const bool operand = r["error"] == "OP_NEAR and OP_PHRASE only currently support leaf subqueries";
+			CHECK_EQ(message, operand ? "A PHRASE or NEAR of anything but words is not a valid query" : r["error"]);
 		}
 	}
 	CHECK_EQ(errors, 25U);
+	CHECK_EQ(invalid, INVALID_ROWS);
 }
 
 void
@@ -209,6 +222,16 @@ test_errors_are_engine_errors()
 		CHECK_TRUE(false);
 	} catch (const QueryParserError& exc) {
 		CHECK_TRUE(exc.kind == engine::errc::syntax);
+		CHECK_EQ(exc.reason(), "A PHRASE or NEAR of anything but words is not a valid query");
+	}
+	// So is a PHRASE over a wildcard or a fuzzy word, which only a Query built by its factories can reach.
+	for (const char* text : { "first se*", "first seen~" }) {
+		try {
+			engine::parse_text(text, config(base | text::WILDCARD | text::FUZZY, Op::PHRASE));
+			CHECK_TRUE(false);
+		} catch (const QueryParserError& exc) {
+			CHECK_EQ(exc.reason(), "A PHRASE or NEAR of anything but words is not a valid query");
+		}
 	}
 }
 

@@ -66,11 +66,71 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  var field_name = '';
-  field_name = '\u0001P\ufffd\ufffd\u000bkvH\'\ufffd\u0005\ufffd^\ufffd\ufffd\ufffdSsecond';
-  field_name =  '\u0001\ufffd=_\ufffd)\ufffdN\ufffd\ufffd_\ufffdA]\u0016mSthird';
-  field_name = '\u0001\ufffd\ufffdR\ufffd\ufffd\ufffdC\ufffd\ufffdq\u07357]lSfirst';
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '3856745852']);
+});
+```
+e2e:end -->
+
+#### Search uuid field with default
+
+```rest
+SEARCH /test/uuid/uuid/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "uuids.cfe052b3-c9d6-43b5-b971-7fdcb5375d6c": "first"
+      },
+      {
+        "uuids.50ffd30b-6b76-4827-b805-f37f5e95f093": "second"
+      },
+      {
+        "uuids.b63d5fc1-29ff-4ef0-835f-b5415d7f166d": "third"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Each uuid key is a field of its own", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search uuid field with default by the uuid field
+
+```rest
+SEARCH /test/uuid/uuid/
+
+{
+  "_query": {
+    "uuids.<uuid_field>": "first"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("No shared uuid field is indexed", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
 });
 ```
 e2e:end -->
@@ -132,9 +192,71 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  var field_name = '';
-
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '2761136387']);
+});
+```
+e2e:end -->
+
+#### Search uuid field with uuid_field
+
+```rest
+SEARCH /test/uuid/uuid_field/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "uuids.<uuid_field>": "first"
+      },
+      {
+        "uuids.<uuid_field>": "second"
+      },
+      {
+        "uuids.<uuid_field>": "third"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every uuid key is indexed under the shared uuid field", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search uuid field with uuid_field by the uuid
+
+```rest
+SEARCH /test/uuid/uuid_field/
+
+{
+  "_query": {
+    "uuids.cfe052b3-c9d6-43b5-b971-7fdcb5375d6c": "first"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("No field of its own is indexed for each uuid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
 });
 ```
 e2e:end -->
@@ -196,11 +318,80 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  var field_name = '';
-  field_name = '\u0001P\ufffd\ufffd\u000bkvH\'\ufffd\u0005\ufffd^\ufffd\ufffd\ufffdSsecond';
-  field_name = '\u0001\ufffd=_\ufffd)\ufffdN\ufffd\ufffd_\ufffdA]\u0016mSthird';
-  field_name = '\u0001\ufffd\ufffdR\ufffd\ufffd\ufffdC\ufffd\ufffdq\u07357]lSfirst';
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '2761136387', '3856745852']);
+});
+```
+e2e:end -->
+
+#### Search uuid field with both
+
+```rest
+SEARCH /test/uuid/both/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "uuids.cfe052b3-c9d6-43b5-b971-7fdcb5375d6c": "first"
+      },
+      {
+        "uuids.50ffd30b-6b76-4827-b805-f37f5e95f093": "second"
+      },
+      {
+        "uuids.b63d5fc1-29ff-4ef0-835f-b5415d7f166d": "third"
+      },
+      {
+        "uuids.<uuid_field>": "first"
+      },
+      {
+        "uuids.<uuid_field>": "second"
+      },
+      {
+        "uuids.<uuid_field>": "third"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every uuid key is indexed both ways", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search uuid field with both for a word of another uuid
+
+```rest
+SEARCH /test/uuid/both/
+
+{
+  "_query": {
+    "uuids.50ffd30b-6b76-4827-b805-f37f5e95f093": "first"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A uuid key finds only its own word", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
 });
 ```
 e2e:end -->

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
 
 ### Changed
+- **`collapse_max` above 1 returns the best documents of each group** on the strata engine: for each group,
+  the best `collapse_max` documents of the window. The Xapian engine returns lower-ranked documents of a
+  group when a better one fell outside its window (the bank's `?collapse=age&limit=5` answers accounts 6,
+  11, 16, 21 and 1000 on Xapian and the five best, 1 to 5, on strata). `collapse_max` 1 is the same on both.
 - **Queries have size limits.** A query nests at most 100 levels of operators and holds at most 4096
   terms and operators; the query DSL allows 45 levels of nested clauses, and a JSON, YAML or MessagePack
   body 200 levels. A YAML body may not use anchors or aliases (`&name`, `*name`): they answer `400`.
@@ -58,6 +62,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   positions). `INFO` still reports the document's id, version, data and values.
 - **The `_terms` aggregation over an analysed `text` field**, which counted index words. A `_terms` on a
   field without stored values answers `400`; keyword, numeric, boolean and date fields are unchanged.
+- **The `nearest` and `fuzzy` search parameters** (similar documents: the terms of the top hits
+  expanded into a second query), with their `n_rset`, `n_eset`, `n_term`, `field` and `type` settings.
+  A search that carries them is an ordinary search now. The `_fuzzy` query (edit distance) is
+  unchanged.
+- **The weight cutoffs** (`percent_threshold`, `weight_threshold`), which no request could set.
+- **Query shapes that are not valid queries.** A `_synonym` over anything but words (a wildcard, a fuzzy
+  word or a bracketed group in its text) and an operator that cannot take a list (`_scale_weight`,
+  `_wildcard`, `_edit_distance` given an array) answer `400` and say the query is not valid. The Xapian engine
+  used to search a `_synonym` over such text. A `_phrase` or `_near` over anything but words (a wildcard, a
+  fuzzy word, a bracketed group) says so too, where it used to say that only leaf subqueries are supported
+  "currently".
 
 ## [1.0.0-alpha.10] - 2026-10-28
 

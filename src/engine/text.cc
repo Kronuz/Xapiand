@@ -309,6 +309,9 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 		if (parsed.err->kind == queryparser::error_kind::out_of_memory) {
 			throw std::bad_alloc();
 		}
+		if (parsed.err->kind == queryparser::error_kind::unsupported) {
+			throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "A PHRASE or NEAR of anything but words is not a valid query");
+		}
 		throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "{}", parsed.err->message);
 	}
 	if (description != nullptr) {

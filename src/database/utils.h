@@ -74,18 +74,6 @@ constexpr const engine::rev UNKNOWN_REVISION = std::numeric_limits<engine::rev>:
 enum class FieldType : uint8_t;
 
 
-struct similar_field_t {
-	unsigned n_rset;
-	unsigned n_eset;
-	unsigned n_term; // If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
-	std::vector<std::string> field;
-	std::vector<std::string> type;
-
-	similar_field_t()
-		: n_rset(5), n_eset(32), n_term(10) { }
-};
-
-
 struct query_field_t {
 	engine::rev version = UNKNOWN_REVISION;
 	engine::doccount offset = 0;
@@ -97,14 +85,10 @@ struct query_field_t {
 	bool synonyms = false;
 	bool commit = false;
 	bool unique_doc = false;
-	bool is_fuzzy = false;
-	bool is_nearest = false;
 	std::string collapse;
 	engine::doccount collapse_max = 1;
 	std::vector<std::string> query;
 	std::vector<std::string> sort;
-	similar_field_t fuzzy;
-	similar_field_t nearest;
 	std::string time;
 	std::string period;
 	std::string selector;

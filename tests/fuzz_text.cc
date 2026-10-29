@@ -194,8 +194,9 @@ reading(const std::string& text, const engine::TextConfig& c)
 	Reading r;
 	try {
 		const auto query = engine::parse_text(text, c, &r.tree);
-		r.lowered = engine::xapian::to_xapian(query).get_description();
 		r.tree = match_all_wildcards(r.tree);
+		// Xapian has no form for a phrase over alternatives; the strata engine reads the query itself.
+		r.lowered = query.alternatives() ? r.tree : engine::xapian::to_xapian(query).get_description();
 	} catch (const QueryParserError& exc) {
 		r.error = "syntax: " + exc.reason();
 	} catch (const InvalidTextConfigError& exc) {

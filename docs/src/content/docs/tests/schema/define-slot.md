@@ -75,3 +75,64 @@ pm.test("Value is valid", function() {
 });
 ```
 e2e:end -->
+
+#### Search document with _slot by its id
+
+```rest
+SEARCH /test/define-slot/
+
+{
+  "_query": {
+    "_id": "doc"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The document is found by its id", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search document with _slot by a range of its value
+
+```rest
+SEARCH /test/define-slot/
+
+{
+  "_query": {
+    "foo": {
+      "_in": {
+        "_range": {
+          "_from": "foo and bar",
+          "_to": "foo and bar"
+        }
+      }
+    }
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The value in the slot is found by range", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->

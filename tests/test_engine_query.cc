@@ -75,7 +75,7 @@ struct Pair {
 };
 
 constexpr Op binary_ops[] = { Op::AND, Op::OR, Op::AND_NOT, Op::XOR, Op::AND_MAYBE, Op::FILTER };
-constexpr Op list_ops[] = { Op::AND, Op::OR, Op::SYNONYM, Op::MAX, Op::XOR };
+constexpr Op list_ops[] = { Op::AND, Op::OR, Op::MAX, Op::XOR };
 
 Xapian::Query::op xop(Op op) {
 	return to_xapian(op);
@@ -116,14 +116,18 @@ Pair random_pair(Lcg& rng, int depth) {
 			return { Query::scale(a.seam, factor), Xapian::Query(Xapian::Query::OP_SCALE_WEIGHT, a.xapian, factor) };
 		}
 		case 6: {
+			// A MAX takes any queries; a SYNONYM takes words.
+			const bool synonym = rng.next(2) != 0;
 			std::vector<Query> seam;
 			std::vector<Xapian::Query> xapian;
 			for (auto n = rng.next(5); n > 0; --n) {
-				auto p = random_pair(rng, 0);
+				auto term = "t" + std::to_string(rng.next(6));
+				auto p = synonym ? Pair{ Query::term("", term), Xapian::Query(term) } : random_pair(rng, 0);
 				seam.push_back(p.seam);
 				xapian.push_back(p.xapian);
 			}
-			return { Query::combine(Op::MAX, seam), Xapian::Query(Xapian::Query::OP_MAX, xapian.begin(), xapian.end()) };
+			const auto op = synonym ? Op::SYNONYM : Op::MAX;
+			return { Query::combine(op, seam), Xapian::Query(xop(op), xapian.begin(), xapian.end()) };
 		}
 		case 7: {
 			// append skips an accumulated query that matches nothing, once Xapian has simplified it.
@@ -999,7 +1003,7 @@ static void test_chain_cap() {
 	CHECK_EQ(Query::combine(Op::AND, terms).chain(), 0U);
 
 	// Other operators run their operands apart: an OR of thousands of phrases is no deeper than one.
-	for (const auto op : { Op::OR, Op::XOR, Op::AND_MAYBE, Op::AND_NOT, Op::SYNONYM, Op::MAX }) {
+	for (const auto op : { Op::OR, Op::XOR, Op::AND_MAYBE, Op::AND_NOT, Op::MAX }) {
 		CHECK_EQ(Query::combine(op, many(1000), 5).chain(), 1U);
 	}
 	CHECK_EQ(Query::combine(Op::AND_NOT, Query::combine(Op::AND, many(cap)), Query::combine(Op::AND, many(cap))).chain(), cap);

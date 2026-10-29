@@ -76,3 +76,40 @@ pm.test("Value is valid", function() {
 });
 ```
 e2e:end -->
+
+#### Search document with _prefix
+
+```rest
+SEARCH /test/define-prefix/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "foo": "foo"
+      },
+      {
+        "foo": "and"
+      },
+      {
+        "foo": "bar"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The words of the text are searchable under the field", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->

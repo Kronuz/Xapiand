@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""terms_diff.py PORT OUT.json: index a text corpus under many analysis configs and dump the
-INFO terms. Run against two builds and diff the files; compare with e2e_diff.py/bodydiff.py."""
-import json, sys, urllib.request, urllib.error, itertools
+"""analysis_diff.py PORT OUT.json: index a text corpus under many analysis configs and dump what
+searches find. Per config and per probe (each word of the corpus, and each pair of adjacent words as a
+phrase) it records the ids of the documents that match. Run against two builds (or engines) on separate
+data dirs and diff the files: a difference is a change in how text is analysed, at index or query time."""
+import json, re, sys, urllib.request, urllib.error, itertools
 
 port, out = sys.argv[1], sys.argv[2]
 base = f"http://localhost:{port}"
@@ -27,6 +29,9 @@ CORPUS = [
 LANGS = [("", ""), ("en", ""), ("fr", ""), ("ru", ""), ("es", ""), ("tr", ""), ("hy", ""), ("eu", ""), ("ca", ""), ("no", ""), ("nl", ""), ("sv", ""), ("it", ""), ("pt", ""), ("ro", ""), ("hu", ""), ("fi", ""), ("da", ""), ("en", "fr"), ("", "en"), ("fr", "en"), ("de", ""), ("basque", "")]
 STEMS = ["stem_none", "stem_some", "stem_all", "stem_all_z"]
 STOPS = ["stop_none", "stop_all", "stop_stemmed"]
+
+WORDS = [re.findall(r"\w+", text) for text in CORPUS]
+PROBES = sorted({w for words in WORDS for w in words} | {f"\"{a} {b}\"" for words in WORDS for a, b in zip(words, words[1:])})
 
 def req(method, path, body=None):
     data = json.dumps(body).encode() if body is not None else None
@@ -68,13 +73,10 @@ for (lang, slang), stem, stop, positions, cjk in itertools.product(LANGS, STEMS,
         f = dict(field); f["_value"] = text
         s, b = req("PUT", f"{idx}{i}?commit=true", {"t": f})
         if s >= 300:
-            res[str(i)] = ["PUT", s, (b or {}).get("message") if isinstance(b, dict) else b]
-            continue
-        s, b = req("INFO", f"{idx}{i}")
-        if s >= 300:
-            res[str(i)] = ["INFO", s, (b or {}).get("message") if isinstance(b, dict) else b]
-            continue
-        res[str(i)] = b.get("terms")
+            res[f"doc{i}"] = ["PUT", s, (b or {}).get("message") if isinstance(b, dict) else b]
+    for probe in PROBES:
+        s, b = req("SEARCH", f"{idx}", {"_query": {"t": probe}, "_limit": 100})
+        res[probe] = sorted(h["_id"] for h in b["hits"]) if s < 300 and isinstance(b, dict) and "hits" in b else ["SEARCH", s]
     results[key] = res
 json.dump(results, open(out, "w"), indent=1, sort_keys=True, ensure_ascii=False)
 print("configs", n)

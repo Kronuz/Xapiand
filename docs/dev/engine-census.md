@@ -99,7 +99,7 @@ counts of the seam call.
 | `check_at_least` set | 82 |
 | key maker `Multi_MultiValueKeyMaker` as the sorter | 24 |
 | `first` above 0 | 1 |
-| collapse, percent threshold, weight threshold, `fuzzy`, `nearest` | 0 |
+| collapse | 0 |
 | docid order other than ascending | 0 |
 
 ### Host callbacks

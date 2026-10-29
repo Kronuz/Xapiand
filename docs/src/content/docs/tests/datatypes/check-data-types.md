@@ -242,15 +242,238 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-
-
-
-
-
-
-
-
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '318005193', '774410579', '1446142349', '1627686662', '1998353627', '2090108769', '2153937510', '2668794980', '3480268142', '3547094521', '3917830578']);
+});
+```
+e2e:end -->
+
+#### Search Datatypes
+
+```rest
+SEARCH /test/types/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "positive": 123456
+      },
+      {
+        "integer": 123456
+      },
+      {
+        "floating": 123456
+      },
+      {
+        "boolean": true
+      },
+      {
+        "keyword": "true"
+      },
+      {
+        "text": "this field is text"
+      },
+      {
+        "text": "field"
+      },
+      {
+        "date": "2019-05-17"
+      },
+      {
+        "datetime": "2019-05-17T10:12:12.123"
+      },
+      {
+        "time": "10:12:12.123"
+      },
+      {
+        "timedelta": "+10:12:12.123"
+      },
+      {
+        "uuid": "22214800-78c7-11e9-b7d0-e5256ff63dab"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every field is found by its value", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Datatypes by range
+
+```rest
+SEARCH /test/types/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "positive": {
+          "_in": {
+            "_range": {
+              "_from": 100000,
+              "_to": 200000
+            }
+          }
+        }
+      },
+      {
+        "integer": {
+          "_in": {
+            "_range": {
+              "_from": 100000,
+              "_to": 200000
+            }
+          }
+        }
+      },
+      {
+        "floating": {
+          "_in": {
+            "_range": {
+              "_from": 100000,
+              "_to": 200000
+            }
+          }
+        }
+      },
+      {
+        "date": {
+          "_in": {
+            "_range": {
+              "_from": "2019-05-01",
+              "_to": "2019-05-31"
+            }
+          }
+        }
+      },
+      {
+        "datetime": {
+          "_in": {
+            "_range": {
+              "_from": "2019-05-17T00:00:00",
+              "_to": "2019-05-17T23:59:59"
+            }
+          }
+        }
+      },
+      {
+        "time": {
+          "_in": {
+            "_range": {
+              "_from": "10:00:00",
+              "_to": "11:00:00"
+            }
+          }
+        }
+      },
+      {
+        "timedelta": {
+          "_in": {
+            "_range": {
+              "_from": "+10:00:00",
+              "_to": "+11:00:00"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every field is found by a range around its value", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Datatypes by a near miss
+
+```rest
+SEARCH /test/types/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "integer": 123457
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A value next to the integer finds nothing", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+});
+```
+e2e:end -->
+
+#### Search Datatypes out of range
+
+```rest
+SEARCH /test/types/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "date": {
+          "_in": {
+            "_range": {
+              "_from": "2018-01-01",
+              "_to": "2018-12-31"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A range that does not hold the date finds nothing", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
 });
 ```
 e2e:end -->

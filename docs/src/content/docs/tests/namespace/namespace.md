@@ -71,6 +71,52 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Namespace
+
+```rest
+SEARCH /test/namespace/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "style.clothing.pants": "khakis"
+      },
+      {
+        "style.clothing.shirt": "shirt"
+      },
+      {
+        "style.hairstyle": "slick"
+      },
+      {
+        "style.hairstyle": "back"
+      },
+      {
+        "style.pants": "khakis"
+      },
+      {
+        "style.shirt": "shirt"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Each path and its partial paths are searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
 ## Namespace No Partial Paths
 
 #### Index Namespace No Partial Paths
@@ -142,6 +188,73 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Namespace No Partial Paths
+
+```rest
+SEARCH /test/namespace/no_partial_paths/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "style.clothing.footwear": "casual"
+      },
+      {
+        "style.clothing.footwear": "shoes"
+      },
+      {
+        "style.clothing.pants": "khakis"
+      },
+      {
+        "style.hairstyle": "afro"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Each full path is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Namespace No Partial Paths by a partial path
+
+```rest
+SEARCH /test/namespace/no_partial_paths/
+
+{
+  "_query": {
+    "style.pants": "khakis"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A partial path is not indexed", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+});
+```
+e2e:end -->
+
 ## Namespace with Key _index
 
 #### Index Namespace With Key _index
@@ -207,6 +320,43 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '271287252', '439783812', '1032232283', '2277530749', '2821621140']);
+});
+```
+e2e:end -->
+
+#### Search Namespace With Key _index
+
+```rest
+SEARCH /test/namespace/index_namespace/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "style.clothing.pants": "khakis"
+      },
+      {
+        "style.pants": "khakis"
+      },
+      {
+        "style.hairstyle": "slick"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Each path and its partial paths are searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->
@@ -285,6 +435,40 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Strict Namespace
+
+```rest
+SEARCH /test/namespace/strict_namespace/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "tags.field.subfield": "value"
+      },
+      {
+        "tags.subfield": "value"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The keyword is searchable under the path and its partial path", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
 ## Strict Namespace Array
 
 #### Index Strict Namespace Array
@@ -349,6 +533,52 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
+});
+```
+e2e:end -->
+
+#### Search Strict Namespace Array
+
+```rest
+SEARCH /test/namespace/strict_namespace_array/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "tags.field.subfield": "value1"
+      },
+      {
+        "tags.subfield": "value1"
+      },
+      {
+        "tags.field.subfield": "value2"
+      },
+      {
+        "tags.subfield": "value2"
+      },
+      {
+        "tags.field.subfield": "value3"
+      },
+      {
+        "tags.subfield": "value3"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every keyword of the array is searchable under the path and its partial path", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->
@@ -463,6 +693,49 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
+#### Search Namespace Text Type
+
+```rest
+SEARCH /test/namespace/namespace_text/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "tags.field.subfield": "this"
+      },
+      {
+        "tags.field.subfield": "is"
+      },
+      {
+        "tags.field.subfield": "a"
+      },
+      {
+        "tags.field.subfield": "value"
+      },
+      {
+        "tags.subfield": "value"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every word of the text is searchable under the path and its partial path", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
 ## Namespace datetime type
 
 #### Index Namespace Datetime Type
@@ -535,23 +808,124 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  var field_name = '';
-  field_name = 'D\u0170\u0687';
-  field_name = 'D\u0176\u0018\ufffd';
-  field_name = 'D\u0174\ufffd\ufffd';
-  field_name = 'D\u0175\ufffd\ufffd';
-  field_name = 'D\u0170\u0687';
-  field_name = 'D\u0176\u0019\ufffd@';
-  field_name = 'D\u0176\u0019\u02aa>\ufffd\ufffd';
-  field_name = 'D\u0170\u0687';
-  field_name = 'D\u0176\u0018\ufffd';
-  field_name = 'D\u0174\ufffd\ufffd';
-  field_name = 'D\u0175\ufffd\ufffd';
-  field_name = 'D\u0170\u0687';
-  field_name = 'D\u0176\u0019\ufffd@';
-  field_name = 'D\u0176\u0019\u02aa>\ufffd\ufffd';
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '760467980', '2973955702']);
   });
+```
+e2e:end -->
+
+#### Search Namespace Datetime Type
+
+```rest
+SEARCH /test/namespace/namespace_datetime/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "tags.field.subfield": "2001-05-24T10:41:25.123Z"
+      },
+      {
+        "tags.subfield": "2001-05-24T10:41:25.123Z"
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The datetime is searchable under the path and its partial path", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Namespace Datetime Type by range
+
+```rest
+SEARCH /test/namespace/namespace_datetime/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "tags.field.subfield": {
+          "_in": {
+            "_range": {
+              "_from": "2001-05-01",
+              "_to": "2001-05-31"
+            }
+          }
+        }
+      },
+      {
+        "tags.subfield": {
+          "_in": {
+            "_range": {
+              "_from": "2001-01-01",
+              "_to": "2001-12-31"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The datetime is found by ranges around it", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Namespace Datetime Type out of range
+
+```rest
+SEARCH /test/namespace/namespace_datetime/
+
+{
+  "_query": {
+    "tags.field.subfield": {
+      "_in": {
+        "_range": {
+          "_from": "2002-01-01",
+          "_to": "2002-12-31"
+        }
+      }
+    }
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("A range that does not hold the datetime finds nothing", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+});
 ```
 e2e:end -->
 
@@ -629,48 +1003,108 @@ pm.test("Value is valid", function() {
     return buff;
   }
 
-  var field_name = '';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffdd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\u0072';
-
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\ufffd';
-
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffdd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\u0072';
-
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\ufffd';
-
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\ufffd\ufffd';
-  field_name = 'N\ufffd';
-  field_name = 'N\ufffd\ufffd\ufffd';
-
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '328441664', '1844154444', '2306662042', '2533366391', '3009507063']);
+});
+```
+e2e:end -->
+
+#### Search Namespace Numeric Type by every path
+
+```rest
+SEARCH /test/namespace/types/integer/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "style.clothing.pants": 123
+      },
+      {
+        "style.clothing.footwear": 456
+      },
+      {
+        "style.hairstyle": 789
+      },
+      {
+        "style.pants": 123
+      },
+      {
+        "style.footwear": 456
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every path and partial path finds its number", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+});
+```
+e2e:end -->
+
+#### Search Namespace Numeric Type by partial path ranges
+
+```rest
+SEARCH /test/namespace/types/integer/
+
+{
+  "_query": {
+    "_and": [
+      {
+        "style.pants": {
+          "_in": {
+            "_range": {
+              "_from": 100,
+              "_to": 200
+            }
+          }
+        }
+      },
+      {
+        "style.footwear": {
+          "_in": {
+            "_range": {
+              "_from": 450,
+              "_to": 460
+            }
+          }
+        }
+      },
+      {
+        "style.hairstyle": {
+          "_in": {
+            "_range": {
+              "_from": 700,
+              "_to": 800
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Every partial path finds its number by range", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->
@@ -815,6 +1249,38 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3171062315']);
+});
+```
+e2e:end -->
+
+#### Search Namespace Geospatial Type
+
+```rest
+SEARCH /test/namespace/types/geospatial/
+
+{
+  "_query": {
+    "tags.field": {
+      "_point": {
+        "_longitude": -80.31727,
+        "_latitude": 25.67927
+      }
+    }
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The point is searchable", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
 });
 ```
 e2e:end -->

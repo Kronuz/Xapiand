@@ -28,8 +28,9 @@ lowers the returned tree with an explicit stack: the call stack does not grow wi
 Nodes become `Query::term` (the field's name and the rest of the term, split where the text leads with the field), `wildcard`, `edit_distance`, `scale` and `combine`; a binary AND, OR, AND_NOT, XOR
 or AND_MAYBE is built as a binary combine, the rest as a list with the window of NEAR and PHRASE.
 
-Errors: a syntax error, an operator that cannot take its operand (NEAR and PHRASE take terms only) and an
-over-long text raise `QueryParserError` (`src/exception_engine.h`): a `ClientError` (HTTP 400) that is also an
+Errors: a syntax error, an operator that cannot take its operand (NEAR and PHRASE take words only, reported as
+"A PHRASE or NEAR of anything but words is not a valid query"; SYNONYM takes words, which the factories of
+`engine::Query` check) and an over-long text raise `QueryParserError` (`src/exception_engine.h`): a `ClientError` (HTTP 400) that is also an
 `engine::Error` of kind `syntax`. Settings the parser cannot read raise `InvalidTextConfigError` (kind
 `invalid`). Memory exhaustion is `std::bad_alloc`. A text without words (empty, or only punctuation) lowers to a query that
 matches nothing; a group of only stop words keeps its words, as Xapian's parser kept them.

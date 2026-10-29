@@ -297,10 +297,6 @@ search(const SearchRequest& request, std::size_t shards)
 	if (request.sorter != nullptr) { add(s, join("search.sorter.", request.sorter->name()), 1); }
 	if (request.spy != nullptr) { add(s, join("search.spy.", request.spy->name()), 1); }
 	if (request.collapse_key != BAD_VALUENO) { add(s, "search.collapse", 1); }
-	if (request.percent_threshold != 0) { add(s, "search.percent_threshold", 1); }
-	if (request.weight_threshold != 0) { add(s, "search.weight_threshold", 1); }
-	if (request.fuzzy) { add(s, "search.fuzzy", 1); }
-	if (request.nearest) { add(s, "search.nearest", 1); }
 }
 
 

@@ -26,7 +26,6 @@
 #include <cstdint>                 // for std::uint8_t
 #include <limits>                  // for std::numeric_limits
 #include <memory>                  // for std::unique_ptr
-#include <optional>                // for std::optional
 #include <span>                    // for std::span
 #include <string>                  // for std::string
 #include <utility>                 // for std::move
@@ -70,16 +69,6 @@ enum class DocidOrder : std::uint8_t {
 	dont_care,
 };
 
-// "More like these": the terms that best set the top hits apart are added to the query.
-// The top hits are taken by relevance over all documents, in ascending docid order: the request's window, collapse,
-// cutoffs, sorter, spy and docid order do not apply to them. `nearest` and `fuzzy` each use their own settings.
-struct Similar {
-	doccount n_rset = 5;                  // top hits taken as relevant
-	doccount n_eset = 32;                 // terms picked from them
-	termcount n_term = 10;                // terms of the added query that must match (an elite set)
-	std::vector<std::string> prefixes;    // only terms with one of these prefixes; empty allows all
-};
-
 // A `check_at_least` that asks the engine to look at every matching document.
 inline constexpr doccount CHECK_ALL = std::numeric_limits<doccount>::max();
 
@@ -94,13 +83,8 @@ struct SearchRequest {
 	const KeyMaker* sorter = nullptr;     // orders hits by key, then by relevance; borrowed
 	valueno collapse_key = BAD_VALUENO;   // keeps `collapse_max` hits per value of this slot
 	doccount collapse_max = 0;
-	double percent_threshold = 0;         // drops hits under this percent of the best weight
-	double weight_threshold = 0;          // drops hits under this weight
 	DocidOrder order = DocidOrder::ascending;
 	MatchSpy* spy = nullptr;              // sees the matching documents; borrowed, holds its results afterwards
-
-	std::optional<Similar> fuzzy;         // adds an elite set of the top hits' terms to the query (OR)
-	std::optional<Similar> nearest;       // replaces the query by an elite set of the top hits' terms
 
 	// Names this node in the ids that correlate the phases of a search across nodes.
 	std::string origin;

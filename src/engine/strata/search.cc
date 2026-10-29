@@ -40,6 +40,7 @@
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
+#include "prospect/collapse.hh"    // for prospect::collapse::collapser
 #include "prospect/index.hh"       // for prospect::index
 #include "prospect/operators.hh"   // for prospect::scale_scorer
 #include "prospect/searcher.hh"    // for prospect::term_table
@@ -62,12 +63,6 @@ namespace p = ::prospect;
 
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
-
-[[noreturn]] void
-unsupported(const std::string& what)
-{
-	throw Error(errc::syntax, "The strata engine does not search " + what + " yet");
-}
 
 // A hit's weight as a percentage of the top weight, in [0, 100]. Against an infinite top weight (an
 // overflowed or infinite scale factor) a hit is 100 if it is infinite too and 0 otherwise.
@@ -122,110 +117,6 @@ bool
 is_match_all(const QueryNode& node)
 {
 	return node.field.empty() && node.str.empty();
-}
-
-
-bool
-is_term(const Query& query)
-{
-	const auto* leaf = query.node();
-	return leaf != nullptr && leaf->kind == QueryKind::term && !is_match_all(*leaf);
-}
-
-// Whether the operator joins two scorers (the rest take a list of terms).
-bool
-is_joining(Op op)
-{
-	switch (op) {
-		case Op::AND:
-		case Op::OR:
-		case Op::AND_NOT:
-		case Op::AND_MAYBE:
-		case Op::FILTER:
-		case Op::XOR:
-		case Op::MAX:
-			return true;
-		default:
-			return false;
-	}
-}
-
-// Refuses, before any segment is read, what the engine does not search yet, so the answer does not
-// depend on which segments a short-circuited operator reaches.
-void
-validate(const Query& query, int depth)
-{
-	if (depth > max_depth) {
-		throw Error(errc::syntax, "The query is nested too deeply");
-	}
-	const auto* node = query.node();
-	if (node == nullptr) {
-		return;
-	}
-	switch (node->kind) {
-		case QueryKind::term:
-			return;
-		case QueryKind::combine:
-			switch (node->op) {
-				case Op::PHRASE:
-				case Op::NEAR: {
-					for (const auto& sub : node->subqueries) {
-						if (!is_term(sub)) {
-							unsupported(std::string(to_string(node->op)) + " of anything but terms");
-						}
-					}
-					return;
-				}
-				case Op::SYNONYM:
-					for (const auto& sub : node->subqueries) {
-						if (!is_term(sub)) {
-							unsupported(std::string(to_string(node->op)) + " of anything but terms");
-						}
-					}
-					return;
-				default:
-					if (!is_joining(node->op)) {
-						unsupported(std::string("the ") + to_string(node->op) + " operator");
-					}
-			}
-			for (const auto& sub : node->subqueries) {
-				validate(sub, depth + 1);
-			}
-			return;
-		case QueryKind::append: {
-			// A chain of appends is walked along its spine, so its length costs no stack.
-			const Query* spine = &query;
-			while (spine->node() != nullptr && spine->node()->kind == QueryKind::append) {
-				// An append onto an empty accumulation is just the next query, whatever its operator.
-				const Op op = spine->node()->op;
-				if (!spine->node()->subqueries[0].empty() && !is_joining(op)) {
-					unsupported(std::string("the ") + to_string(op) + " operator");
-				}
-				validate(spine->node()->subqueries[1], depth + 1);
-				spine = &spine->node()->subqueries[0];
-			}
-			validate(*spine, depth + 1);
-			return;
-		}
-		case QueryKind::scale:
-			validate(node->subqueries[0], depth + 1);
-			return;
-		case QueryKind::wildcard:
-		case QueryKind::edit_distance:
-			switch (node->op) {
-				case Op::SYNONYM:
-				case Op::OR:
-				case Op::MAX:
-					return;
-				default:
-					unsupported(std::string("expansions combined by ") + to_string(node->op));
-			}
-		case QueryKind::source:
-			if (node->src == nullptr) {
-				throw Error(errc::invalid, "A source node has no source");
-			}
-			return;
-	}
 }
 
 
@@ -447,12 +338,79 @@ build_group(const QueryNode& node, const Builder& b)
 	return std::make_unique<p::disjunction_scorer>(std::move(children));
 }
 
+// The terms a position of a phrase can hold, in this segment: a word, an expansion, or an OR or SYNONYM of those.
+void
+alternatives_of(const Query& query, const Builder& b, std::vector<Group::Member>& out)
+{
+	const auto* node = query.node();
+	if (node == nullptr) {
+		return;
+	}
+	switch (node->kind) {
+		case QueryKind::term:
+			out.push_back({node->field, node->str, node->wqf});
+			return;
+		case QueryKind::wildcard:
+		case QueryKind::edit_distance:
+			for (const auto& member : group_of(*node, b).members) {
+				out.push_back(member);
+			}
+			return;
+		default:
+			for (const auto& sub : node->subqueries) {
+				alternatives_of(sub, b, out);
+			}
+	}
+}
+
+// A phrase with a position that holds alternatives: the documents where every position is met by one of
+// its terms, scored as the positions score alone. Alternatives carry no position of their own, so the
+// positions are consecutive.
+Scorer
+build_alternatives(const QueryNode& node, const Builder& b)
+{
+	std::vector<p::phrase_slot> slots;
+	slots.reserve(node.subqueries.size());
+	std::optional<std::string> field;
+	for (const auto& sub : node.subqueries) {
+		std::vector<Group::Member> members;
+		alternatives_of(sub, b, members);
+		p::phrase_slot slot;
+		for (const auto& member : members) {
+			// Positions are per field and document, so a phrase of terms from two fields matches nothing.
+			if (!field) {
+				field = member.field;
+			} else if (member.field != *field) {
+				return nullptr;
+			}
+			if (const auto* info = b.info(member.field, member.term)) {
+				const auto same = [&](const p::format::term_info& other) { return other.postings == info->postings && other.positions == info->positions; };
+				if (std::none_of(slot.terms.begin(), slot.terms.end(), same)) {
+					slot.terms.push_back(*info);
+				}
+			}
+		}
+		slot.scorer = build(sub, b, 0);
+		if (!slot.scorer || slot.terms.empty()) {
+			return nullptr;
+		}
+		slots.push_back(std::move(slot));
+	}
+	const std::uint32_t window = node.op == Op::NEAR ? (node.parameter != 0 ? node.parameter : static_cast<std::uint32_t>(slots.size())) : 0;
+	return std::make_unique<p::multi_phrase_scorer>(b.reader(), std::move(slots), window);
+}
+
 Scorer
 build_positional(const QueryNode& node, const Builder& b)
 {
 	const std::size_t n = node.subqueries.size();
 	if (n == 1) {
 		return build(node.subqueries[0], b, 0);
+	}
+	for (const auto& sub : node.subqueries) {
+		if (sub.node()->kind != QueryKind::term) {
+			return build_alternatives(node, b);
+		}
 	}
 	for (const auto& sub : node.subqueries) {
 		// Positions are per field and document, so a phrase of terms from two fields matches nothing.
@@ -646,6 +604,23 @@ build(const Query& query, const Builder& b, int depth)
 }
 
 
+// A match under a collapse: what ranks it, and the id to return.
+struct Ranked {
+	docid did;
+	double weight;
+	std::string key;   // the sorter's key; empty without a sorter
+};
+
+// Hits rank by sorter key, then weight (heavier first), then docid in the request's order.
+struct RanksAbove {
+	bool descending;
+	bool operator()(const Ranked& a, const Ranked& b) const {
+		if (const int c = a.key.compare(b.key); c != 0) { return c < 0; }
+		if (a.weight != b.weight) { return a.weight > b.weight; }
+		return descending ? a.did > b.did : a.did < b.did;
+	}
+};
+
 SearchResult
 run(std::span<engine::Shard* const> shards, const SearchRequest& request, CallbackGuard& guarded)
 {
@@ -653,16 +628,6 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	if (shards.empty() || request.query->empty()) {
 		return {};
 	}
-	if (request.collapse_key != BAD_VALUENO) {
-		unsupported("collapsed results");
-	}
-	if (request.fuzzy || request.nearest) {
-		unsupported("similar documents");
-	}
-	if (request.percent_threshold != 0 || request.weight_threshold != 0) {
-		unsupported("weight cutoffs");
-	}
-	validate(source, 0);
 
 	// Pin every distinct index once, in a fixed order, so searches that share indexes cannot deadlock.
 	std::vector<Shard*> mine;
@@ -706,32 +671,56 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	p::term_table terms(snapshot.segments());
 	Plan plan{snapshot.segments(), terms, {}};
 
+	// Collapse keeps `collapse_max` hits per value of the slot, the best ranked; a document without the value never collapses.
+	const bool collapse = request.collapse_key != BAD_VALUENO && request.collapse_max != 0;
+	const bool descending = request.order == DocidOrder::descending;
+	p::collapse::collapser<Ranked, RanksAbove> collapsed(collapse ? request.collapse_max : 1, RanksAbove{descending});
+
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	p::search_options options;
 	// A window cannot return more than the snapshot holds, so k (which sizes the collector) never exceeds it.
-	options.k = static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
+	// A collapse keeps its own hits, so the search is asked for none.
+	options.k = collapse ? 0 : static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
 	options.count = true;
-	options.order = request.order == DocidOrder::descending ? p::docid_order::descending : p::docid_order::ascending;
-	// The heaviest match, when a key or a spy makes the search visit every match (the first hit is then not the heaviest).
+	options.order = descending ? p::docid_order::descending : p::docid_order::ascending;
+	// The heaviest match, when a key, a spy or a collapse makes the search visit every match (the first hit is then not the heaviest).
 	double heaviest = 0;
-	if (request.sorter != nullptr) {
+	if (request.sorter != nullptr && !collapse) {
 		options.key = [&](const p::match& m) { return guarded([&] { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); }); };
 	}
-	if (request.sorter != nullptr || request.spy != nullptr) {
+	if (request.sorter != nullptr || request.spy != nullptr || collapse) {
 		// The spy sees every match once, as Xapian shows it the documents it examines.
 		options.visit = [&](const p::match& m) {
 			const double weight = m.score();
 			heaviest = std::max(heaviest, weight);
+			const SegmentDocView view(static_cast<docid>(m.did), *m.seg, m.ord);
 			if (request.spy != nullptr) {
-				guarded([&] { request.spy->see(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord), weight); });
+				guarded([&] { request.spy->see(view, weight); });
+			}
+			if (collapse) {
+				if (m.docid > std::numeric_limits<docid>::max()) {
+					throw Error(errc::internal, "A document id does not fit across the shards");
+				}
+				Ranked ranked{static_cast<docid>(m.docid), weight, request.sorter != nullptr ? guarded([&] { return request.sorter->key(view); }) : std::string()};
+				std::string value = view.value(request.collapse_key);
+				collapsed.add(std::move(ranked), value.empty() ? std::nullopt : std::optional<std::string>(std::move(value)));
 			}
 		};
 	}
 	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options);
 
 	SearchResult result;
-	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
 	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
+	if (collapse) {
+		const auto kept = std::move(collapsed).take();
+		result.estimated = static_cast<doccount>(std::min<std::uint64_t>(kept.items.size(), std::numeric_limits<doccount>::max()));
+		for (std::size_t i = request.first; i < kept.items.size() && i < window; ++i) {
+			const auto& item = kept.items[i].item;
+			result.hits.push_back({item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top)});
+		}
+		return result;
+	}
+	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
 	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
 		const auto& found_hit = found.hits[i];
 		if (found_hit.docid > std::numeric_limits<docid>::max()) {
