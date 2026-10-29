@@ -4,8 +4,7 @@
 
 ## State
 
-L1 and C3 are done on the branch; ctest, the docs E2E on both engines and the removed-features check are green. ASan and UBSan
-results are in the Proof section when they finish. Nothing is pushed.
+L1 and C3 are done on the branch; ctest, the docs E2E on both engines, the removed-features check and ASan+UBSan on the engine search tests are green. Nothing is pushed.
 
 ## Rulings applied (lead, 2026-10-29)
 
@@ -48,7 +47,9 @@ search finds (the words that stem alike). `docs/dev/testing.md` describes both.
   C weight order reversed (2477), D documents without the value collapsed together (fails).
 - `analysis_diff.py` and `stem_diff.py` on one node per engine: byte-identical dumps (42,798 probes, 22,974 with hits, 53 distinct dumps across the 130 configs;
   18,006 stem probes, 84 conflating); 28 PUTs fail the same way on both (a `_language` change on an existing index in the basque config).
-- ASan+UBSan: see below.
+- ASan+UBSan (Homebrew LLVM 22, `-fsanitize=address,undefined -fno-sanitize-recover=undefined`, RelWithDebInfo): `test_engine_search_strata` (168,970 checks, including
+  `test_collapse` against Xapian), `test_engine_search` (1,786), `test_engine_callbacks` (922) and `test_engine_query` (22,440) pass with no report. `test_engine_sort` aborts
+  on the known RapidJSON `Stack::Push` null-offset finding (`rapidjson/internal/stack.h:117`, recorded in `gate7a-fixes.md`), not in this branch's code.
 
 ## Findings
 
