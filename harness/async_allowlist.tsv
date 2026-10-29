@@ -1,0 +1,63 @@
+# async_check.py allowlist. Columns (tab separated): file, rule, anchor regex, class, count, note.
+# allow: cheap or off-reactor, with the reason. owed: the decision or step that removes it. compiled_out: the switch.
+src/database/cleanup.cc	mutex	.	owed	3	D13: autocommit and idle-close tasks on the control loop replace the cleanup thread
+src/database/cleanup.cc	wait	.	owed	1	D13: the cleanup thread's 60 s wait becomes a timer task
+src/database/handler.cc	sync_wait	check\(	owed	1	D3: DatabaseHandler::check becomes an awaited task (X2)
+src/database/handler.cc	sync_wait	.	owed	6	D3: handler operations become awaited tasks (X2)
+src/database/handler.cc	pool	lock_shard	owed	25	D5: the registry's lease turn replaces the shard checkout (X2)
+src/database/handler.cc	pool	checkout\(	owed	1	D5: the multi-endpoint checkout becomes lease turns (X2)
+src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and restore_documents(fd) serve the CLI --dump and --restore on the main thread (check_may_block guards it)
+src/database/handler.cc	mutex	_results_mtx	owed	2	D12: DocIndexer's result queue goes with the parse-ahead chore (X3)
+src/database/handler.cc	mutex	cond_lk	owed	1	D12: DocIndexer::wait becomes an awaited event (X3)
+src/database/handler.cc	wait	.	owed	3	D12: DocIndexer::wait becomes an awaited event (X3)
+src/database/handler.cc	mutex	weak_shard\.lock	allow	1	weak_ptr promotion, not a mutex
+src/database/lock.h	pool	lock_shard|checkout	owed	1	D5: lock_shard is replaced by the lease (X2)
+src/database/pool.cc	mutex	.	owed	33	D5: DatabasePool becomes the registry; its mutexes, waits and checkouts go (X2, X6)
+src/database/pool.cc	wait	.	owed	7	D5: the checkout waits become awaited lease turns (X2)
+src/database/pool.cc	pool	.	owed	5	D5: the pool checkout is replaced by the lease (X2)
+src/database/pool.h	mutex	checkout	owed	2	D5: the pool's checkout API goes (X6)
+src/database/pool.h	pool	checkout	owed	5	D5: the pool's checkout API goes (X6)
+src/database/schema.cc	pool	lock_shard	owed	2	D5: the schema's shard locks become lease turns (X5)
+src/database/schemas_lru.cc	mutex	.	allow	19	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11)
+src/database/shard.cc	sync_wait	.	owed	26	D3: shard operations become awaited tasks (X2)
+src/database/shard.cc	pool	storage_commit	owed	2	D7: storage_commit runs first in the commit chore
+src/database/shard.cc	pool	storage->read	owed	2	D9: DataStorage reads run as query chores
+src/database/shard.cc	pool	writable_storage->	owed	10	D9: DataStorage writes run as flush chores
+src/database/utils.cc	file	.	owed	4	X1: read_uuid reads the Xapian iamglass file; the Xapian path goes with X1
+src/database/wal.cc	file	.	owed	11	X1: the WAL writes Xapian iamglass files on replay; the Xapian engine goes with X1
+src/engine/census.cc	mutex	.	compiled_out	9	ENGINE_CENSUS is OFF in gate builds (D1)
+src/engine/census.cc	file	.	compiled_out	4	ENGINE_CENSUS is OFF in gate builds (D1)
+src/engine/kind.cc	mutex	.	owed	2	D1: kind_of returns strata's kind with no probe after X1
+src/engine/kind.cc	file	.	owed	3	D1: kind_of returns strata's kind with no probe after X1
+src/engine/strata/pin.h	mutex	.	owed	2	D6: Pinned and its lock are deleted
+src/engine/strata/shard.cc	mutex	registry_mutex	allow	1	map lookup and insert of the open-core registry; moves to D5's registry
+src/engine/strata/shard.cc	mutex	entry->	owed	3	D5: the entry's lock becomes the lease turn (X2)
+src/engine/strata/shard.cc	mutex	core\.mtx|Pinned	owed	22	D6: core.mtx and Pinned are deleted; the lease turn replaces them (X2)
+src/engine/strata/shard.cc	file	.	owed	4	D4: opening a core is an open chore under the lease (X2)
+src/engine/sync.cc	mutex	.	allow	1	check_may_block's own diagnostics lock, taken only when a guard trips
+src/engine/sync.h	sync_wait	.	allow	2	the bridge itself; every call is guarded by check_may_block (D14)
+src/index_resolver_lru.cc	mutex	.	owed	3	D11: the resolver map lock is not held across a load
+src/length.cc	file	.	allow	6	fd serialisers used only by --dump and --restore on the CLI main thread
+src/lua/processor.cc	mutex	mtx	owed	2	D10: a call gets its own environment; the state lock goes
+src/lua/processor.cc	mutex	script_params\.lock	allow	1	weak_ptr promotion, not a mutex
+src/main.cc	file	.	allow	25	process startup, signal handlers and the CLI --dump and --restore, before or beside the loops and never on a reactor
+src/main.cc	sleep	.	allow	1	CLI main thread waits for the node to settle (check_may_block guards it)
+src/manager.cc	file	fcntl|sig_pipe	allow	4	the signal self-pipe: nonblocking descriptor setup and one-byte writes
+src/manager.cc	file	\.xapiand/node|io::(read|write|close)\(fd	allow	6	the node-name file is read and written once during node setup, before the listeners open
+src/manager.cc	file	ignore_eintr	allow	2	an atomic flag, not I/O
+src/manager.cc	sleep	.	owed	1	D13: the setup retry awaits a timer
+src/net.hh	file	.	allow	4	setsockopt on an accepted socket: one syscall, no wait
+src/node.cc	mutex	.	allow	7	the node map under _nodes_mtx: lookup and insert, O(log n)
+src/server/discovery.cc	pool	lock_shard	owed	1	D5: the cluster database's shard lock becomes a lease turn (X5)
+src/server/mime_types.cc	file	.	owed	2	D1: mime.types loads at startup before the listeners open
+src/server/search_views.cc	mutex	objects_mtx	owed	5	D12: the streamed restore's object queue goes with the parse-ahead chore (X3)
+src/stopper.cc	mutex	.	owed	1	D1: stop words load at startup before the listeners open
+src/stopper.cc	file	.	owed	1	D1: stop words load at startup before the listeners open
+src/tls.cc	file	.	allow	1	stat of --tls-key while the TLS context is built, before the listeners open
+src/xapiand_fsyncher.h	file	.	allow	2	runs on the FS debouncer thread (D8, until 7b), never on a reactor
+src/xapiand_storage_io.h	file	.	allow	11	Storage IO policy wrappers; their callers are chores (D9) or the WL thread (D8)
+strata/include/strata/core/index.hh	sleep	yield	owed	1	D1: published_position is replaced by try_published_position and an awaited retry
+src/database/shard.h	pool	storage_commit	owed	1	D7: storage_commit runs first in the commit chore
+src/lua/processor.cc	mutex	lk\.lock	owed	1	D10: a call gets its own environment; the state lock goes
+strata/include/strata/core/index.hh	wait	try_grow\(.*drain\(\)	owed	3	D6: L5 defer_io returns drain_owed instead of draining on the caller
+strata/include/strata/core/index.hh	wait	bool drain\(\)	owed	1	D6: L5 defer_io returns drain_owed instead of draining on the caller

@@ -219,6 +219,7 @@ private:
 	void invalidate_settings_impl(const std::string& uri);
 
 	std::string server_metrics_impl();
+	std::string reactor_lag_metrics() const;
 
 	void try_shutdown_impl(bool always) {
 		if (always || _shutdown_asap) {
