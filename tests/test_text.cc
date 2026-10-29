@@ -192,6 +192,22 @@ test_lowering_is_the_tree()
 }
 
 void
+test_hate_groups_terminate()
+{
+	// With LOVEHATE and no BOOLEAN, queryparser linked a hated bracket group's last node to itself and the lowering never ended
+	// (memory growing); it now ends, with a query or a client error.
+	for (const char* text : { "-(a b) -c", "x -(a b) -c", "-(a b c) -d -e" }) {
+		for (auto op : { Op::OR, Op::AND }) {
+			try {
+				engine::parse_text(text, config(text::LOVEHATE, op));
+			} catch (const QueryParserError& exc) {
+				CHECK_TRUE(exc.kind == engine::errc::syntax);
+			}
+		}
+	}
+}
+
+void
 test_errors_are_engine_errors()
 {
 	// A syntax error is a client error of kind syntax, with queryparser's message.
@@ -561,4 +577,4 @@ test_body_depth_per_format()
 	}
 }
 
-TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_stems_are_terms_of_the_stem_field, test_wildcard_pattern_flags, test_all_wildcard_patterns)
+TEST_MAIN(test_hate_groups_terminate, test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_stems_are_terms_of_the_stem_field, test_wildcard_pattern_flags, test_all_wildcard_patterns)

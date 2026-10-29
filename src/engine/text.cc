@@ -234,9 +234,13 @@ convert(const queryparser::query& tree, const Fields& field)
 	std::vector<Frame> stack;
 	stack.push_back({ tree.root(), tree.at(tree.root()).first, {} });
 	Query result;
+	auto budget = 2 * tree.size();  // every node is read once; a list that links back on itself never ends
 	while (!stack.empty()) {
 		auto& frame = stack.back();
 		if (frame.cursor != no_node) {
+			if (budget-- == 0) {
+				throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "The parsed query tree is malformed");
+			}
 			const auto child = frame.cursor;
 			const auto& n = tree.at(child);
 			frame.cursor = n.next;
@@ -311,14 +315,15 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 		}
 		throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "{}", parsed.err->message);
 	}
-	if (description != nullptr) {
-		*description = parsed.tree.describe();
-	}
 	Fields fields{config.field, std::string()};
 	if (!config.field.empty() && !config.stem_language.empty() && (cfg.stem == analysis::stem_strategy::some || cfg.stem == analysis::stem_strategy::all_z)) {
 		fields.stem = "Z" + config.field;  // as the index side names the stems' field (generate_terms.cc)
 	}
-	return convert(parsed.tree, fields);
+	auto query = convert(parsed.tree, fields);
+	if (description != nullptr) {
+		*description = parsed.tree.describe();
+	}
+	return query;
 }
 
 }  // namespace engine
