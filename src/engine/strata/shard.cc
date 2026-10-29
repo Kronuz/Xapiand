@@ -185,10 +185,10 @@ struct Core {
 	std::atomic<std::uint64_t> epoch{0};  // bumped whenever the index is replaced: writes it held are gone
 
 	~Core() {
-		// A transaction that is still open is discarded, as a Xapian writer discards it.
+		// A transaction that is still open is discarded.
 		if (index && pending && !transaction) {
 			try {
-				index->commit();  // a dropped writer keeps its work, as a Xapian writer does
+				index->commit();  // a dropped writer keeps its work
 			} catch (const std::exception& exc) {
 				L_ERR("strata: the commit on closing {} failed: {}", dir, exc.what());
 			} catch (...) {
@@ -444,7 +444,7 @@ check_version(const std::optional<rev>& expected, const std::optional<rev>& stor
 }
 
 // Stamps the version a write lands at: on the document, and in the version slot the host reads back to
-// check a later write (Xapian's adapter does the same), so the slot is never the version the caller expected.
+// check a later write, so the slot is never the version the caller expected.
 void
 stamp_version(StrataDocument& native, rev version)
 {
@@ -819,7 +819,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 
 // A transaction here is a point the index returns to: the strata index has no rollback, so a cancel
 // reopens it from its last commit. Opening a flushed transaction commits first, so a cancel loses only
-// what the transaction wrote; an unflushed one takes the pending writes with it, as Xapian does.
+// what the transaction wrote; an unflushed one takes the pending writes with it.
 task::task<void>
 Shard::commit(Transaction transaction)
 {

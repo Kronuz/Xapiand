@@ -85,9 +85,6 @@ struct SearchRequest {
 	doccount collapse_max = 0;
 	DocidOrder order = DocidOrder::ascending;
 	MatchSpy* spy = nullptr;              // sees the matching documents; borrowed, holds its results afterwards
-
-	// Names this node in the ids that correlate the phases of a search across nodes.
-	std::string origin;
 };
 
 struct Hit {

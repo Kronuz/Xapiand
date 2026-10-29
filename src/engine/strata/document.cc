@@ -567,7 +567,7 @@ StrataDocument::unserialise_from(std::string_view serialised)
 void
 StrataDocument::census_terms(const std::function<void(std::string_view, termcount, std::size_t)>& visit) const
 {
-	// Diagnostic only: the Xapian spelling, a field's name followed by the term.
+	// Diagnostic only: a field's name followed by the term.
 	std::map<std::string, const DocTerm*> sorted;
 	for (const auto& info : terms_) {
 		sorted.emplace(fields_[info.field].name + std::string(term_bytes(info)), &info);

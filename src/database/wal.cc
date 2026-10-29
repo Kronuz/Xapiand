@@ -99,7 +99,7 @@ WalHeader::validate(void* param, void* /*unused*/)
 		UUID u(uuid);
 		if (!wal->get_uuid().empty()) {
 			if (u != wal->get_uuid()) {
-				// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
+				// A WAL written under FreeBSD stores UUIDs in native order (could be little endian)
 				if (u != wal->get_uuid_le()) {
 					THROW(StorageCorruptWAL, "WAL UUID mismatch");
 				}

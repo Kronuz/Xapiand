@@ -5293,7 +5293,7 @@ Schema::index_term(engine::Document& doc, std::string_view field, std::string_vi
 		return;
 	}
 
-	// The Xapian engine's limit is on the whole term, the field's name included.
+	// The limit is on the whole term, the field's name included.
 	if (field.size() + term.size() > 245) {
 		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::keyword) {
 			THROW(ClientError, "Keyword too long");

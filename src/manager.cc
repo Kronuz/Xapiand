@@ -683,7 +683,7 @@ XapiandManager::run()
 
 	try {
 		if (node_name == "~") {
-			L_CRIT("Node name {} doesn't match with the one in the cluster's database!", opts.node_name);
+			L_CRIT("Node name {} doesn't match the one saved in the node's directory!", opts.node_name);
 			throw SystemExit(EX_CONFIG);
 		}
 
@@ -778,7 +778,7 @@ XapiandManager::make_servers()
 	// (num_http_servers) share the listen port via SO_REUSEPORT, each with its own
 	// offload pool for the blocking work. The configured client (offload)
 	// threads are spread across the reactors so the total tracks num_http_clients. The
-	// service binds + starts later, when the cluster database is ready (like http->start).
+	// service binds + starts later, when the node is ready (like http->start).
 	{
 		std::size_t reactors = opts.num_http_servers > 0 ? static_cast<std::size_t>(opts.num_http_servers) : 1;
 		std::size_t workers = opts.num_http_clients > 0

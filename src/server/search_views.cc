@@ -2595,9 +2595,8 @@ Request::Request() :
 	begins(std::chrono::steady_clock::now())
 {
 	// Count this as an in-flight HTTP request so a graceful shutdown waits for it
-	// to finish (ready_to_end_http() == !http_clients). Mirrors remote_clients /
-	// replication_clients; the HTTP counter was left unwired by the reactor
-	// migration, so a single SIGINT/SIGTERM no longer drained active requests.
+	// to finish (ready_to_end_http() == !http_clients). The counter must stay wired,
+	// or a single SIGINT/SIGTERM drops active requests.
 	if (auto manager = XapiandManager::manager()) {
 		++manager->http_clients;
 	}
@@ -2967,7 +2966,7 @@ SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 	request.received = std::chrono::steady_clock::now();
 
 	// Dispatch, then feed the body (if not streamed) and run the selected view.
-	// Xapian/ClientError exceptions propagate to the connection, which calls
+	// Engine and ClientError exceptions propagate to the connection, which calls
 	// SearchService::on_error() -- the app's error-to-status mapping.
 	if (dispatch_request(request) == 0 && request.view != nullptr) {
 		// A FULL request reads its body straight from http_req (via body_view() /
@@ -2994,7 +2993,7 @@ SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 
 // The application's error-to-status mapping, invoked by the http::HttpConnection when
 // handle() throws without having answered (the library owns only the generic 500
-// fallback). Rethrow to inspect the type; catch_http_errors maps Xapian / ClientError /
+// fallback). Rethrow to inspect the type; catch_http_errors maps engine / ClientError /
 // Datetime / Cartesian to the right status, then write_status_response emits it -- the
 // same mapping handled_errors did on the legacy path.
 void

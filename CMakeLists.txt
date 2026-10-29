@@ -714,7 +714,7 @@ include_directories(
 	"${iterators_SOURCE_DIR}"
 )
 
-# analysis: Xapian-exact text analysis (words, case folding, Z-prefixed stems, stop words,
+# analysis: text analysis (words, case folding, Z-prefixed stems, stop words,
 # CJK n-grams, wdf, positions) behind GenerateTerms::text, with the snowball stemmers and
 # the unicode tables it builds on. Header-only analysis; snowball is a small static C
 # library. Pinned on the commits analysis itself pins. The library owns the name snowball.

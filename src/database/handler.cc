@@ -1146,12 +1146,9 @@ DatabaseHandler::match(
 	request.order = order;
 	request.spy = aggs;
 
-	// The engine feeds every shard into one search: remote shards' round trips overlap, and it
-	// merges the per-shard results and unshards the docids itself. The ids that correlate its two
-	// phases carry the node's name, so co-located shards don't collide in the remote server's
-	// process-global pending map.
+	// The engine feeds every shard into one search, merges the per-shard results and unshards the
+	// docids itself.
 	auto manager = XapiandManager::manager();
-	request.origin = Node::get_local_node()->lower_name();
 
 	engine::SearchResult result;
 

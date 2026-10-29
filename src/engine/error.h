@@ -33,7 +33,7 @@ enum class errc {
 	opening,           // the shard could not be opened (yet)
 	closed,            // the shard was closed under the operation
 	not_found,         // the shard does not exist
-	not_available,     // the shard exists but cannot serve now (no quorum, remote down)
+	not_available,     // the shard exists but cannot serve now
 	network,           // a transport failure
 	timeout,           // a transport timeout
 	doc_not_found,     // no such document
