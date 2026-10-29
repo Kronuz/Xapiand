@@ -764,7 +764,7 @@ FetchContent_MakeAvailable(unicode snowball analysis)
 
 # queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the
 # host, whatever engine runs the query. It pins analysis itself; the pin above is declared first and wins.
-FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG 09a4ea6863d4576e08e28749711bb72b7b114056)
+FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG 8a9798f22065cba082db4b8e10df6e55d0902519)
 FetchContent_MakeAvailable(queryparser)
 
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation

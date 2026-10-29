@@ -313,6 +313,10 @@ on every text query and BOOLEAN only for the AND and OR operators.
   cannot hang. `test_hate_groups_terminate` (`tests/test_text.cc`) hangs without the change (killed at 20 s) and passes with it (13200
   checks). The cycle itself stays in queryparser: the lead should have `Kronuz/queryparser` fixed and re-pinned (owner: lead; the library
   has no check of its own for a list that revisits a node, which is a missing oracle in its fuzz target).
+- Closed in the library: `Kronuz/queryparser@8a9798f` builds a group's nodes only after deciding whether it is read again (the first pass had folded
+  the hated items in place, and the second added them to the same parent a second time), and its checked builds abort on a node added twice.
+  Pinned here; `-(a b) -c`, `x -(a b) -c` and `-a -b` answer `200` with the same hits on both engines as on the pre-queryparser build
+  (`v1.0.0-alpha.9-39`). The `convert` bound stays as a guard.
 - Replay: `FUZZ_TEXT_REPLAY=$'-(a b) -c\t4\t2\tXTfield\t\t\t0\t0\t0' xapiand_fuzz_text 1 1` (text, flags, operator number, field, stop language,
   stem language, stem strategy, partial and fuzzy expansion, tab separated) prints the timing of one case. Both fuzz drivers now stop a
   case that takes over 30 s and print it.
