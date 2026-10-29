@@ -20,45 +20,43 @@
  * THE SOFTWARE.
  */
 
-// Unit tests for the engine seam's Document: it must build the same document as the Xapian
-// calls it replaces (same serialised bytes, so old write-ahead log lines stay readable),
-// and Xapian's exceptions must classify into the seam's error kinds.
+// Unit tests for the engine seam's Document: the calls build the terms, values and data they
+// describe (checked against a model), and the serialised form reads back as the same document.
 
 #include "test_harness.h"
 
 #include <cstdint>
-#include <stdexcept>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
-#include "config.h"
-#include "engine/xapian/convert.h"
-#include "engine/xapian/errors.h"
-#include "multivalue/generate_terms.h"
-#include "engine/xapian/xapian.h"
+#include "engine/document.h"
+#include "engine/strata/document.h"
 
 namespace {
+
+using engine::strata::DocTerm;
+using engine::strata::StrataDocument;
+
+const StrataDocument& strata_of(const engine::Document& doc) {
+	return static_cast<const StrataDocument&>(doc.native());
+}
 
 bool same(const engine::Document& a, const engine::Document& b) {
 	return a.serialise() == b.serialise();
 }
 
-// The within-document frequency and positions of a term in the document, by Xapian's own view of it.
+// The within-document frequency of a term of the field "f", 0 when the document has no such term.
 engine::termcount wdf_of(const engine::Document& doc, const std::string& name) {
-	const auto& xdoc = engine::xapian::xapian_document(doc);
-	auto it = xdoc.termlist_begin();
-	it.skip_to(name);
-	return it != xdoc.termlist_end() && *it == name ? it.get_wdf() : 0;
+	const auto* term = strata_of(doc).find_term("f", name);
+	return term ? term->wdf : 0;
 }
 
 std::size_t positions_of(const engine::Document& doc, const std::string& name) {
-	const auto& xdoc = engine::xapian::xapian_document(doc);
-	auto it = xdoc.termlist_begin();
-	it.skip_to(name);
-	if (it == xdoc.termlist_end() || *it != name) {
-		return 0;
-	}
-	return it.positionlist_count();
+	const auto& native = strata_of(doc);
+	const auto* term = native.find_term("f", name);
+	return term ? native.positions_of(*term).size() : 0;
 }
 
 // A small deterministic generator, so a failure reproduces.
@@ -82,202 +80,97 @@ static void test_values() {
 	doc.add_value(5, "");  // removes
 	CHECK_EQ(doc.get_value(5), "");
 	CHECK_TRUE(doc.serialise() == engine::Document().serialise());
-
-	// Xapian agrees that an empty value removes the slot.
-	Xapian::Document xdoc;
-	xdoc.add_value(5, "x");
-	xdoc.add_value(5, "");
-	CHECK_EQ(xdoc.values_count(), 0u);
 }
 
 static void test_terms() {
 	engine::Document doc;
-	doc.add_term(doc.field(""), "a", 2);
-	doc.add_term(doc.field(""), "a", 3);
+	doc.add_term(doc.field("f"), "a", 2);
+	doc.add_term(doc.field("f"), "a", 3);
 	CHECK_EQ(wdf_of(doc, "a"), 5u);
-	doc.add_boolean_term(doc.field(""), "a");  // keeps the frequency
+	doc.add_boolean_term(doc.field("f"), "a");  // keeps the frequency
 	CHECK_EQ(wdf_of(doc, "a"), 5u);
-	doc.add_boolean_term(doc.field(""), "b");
+	doc.add_boolean_term(doc.field("f"), "b");
 	CHECK_EQ(wdf_of(doc, "b"), 0u);
 	CHECK_EQ(positions_of(doc, "b"), 0u);
-	doc.add_posting(doc.field(""), "c", 7, 2);
-	doc.add_posting(doc.field(""), "c", 7, 1);  // the same position once, the frequency twice
-	doc.add_posting(doc.field(""), "c", 3, 0);
+	CHECK_TRUE(strata_of(doc).find_term("f", "b") != nullptr);
+	CHECK_TRUE(strata_of(doc).find_term("f", "absent") == nullptr);
+	doc.add_posting(doc.field("f"), "c", 7, 2);
+	doc.add_posting(doc.field("f"), "c", 7, 1);  // the same position once, the frequency twice
+	doc.add_posting(doc.field("f"), "c", 3, 0);
 	CHECK_EQ(wdf_of(doc, "c"), 3u);
 	CHECK_EQ(positions_of(doc, "c"), 2u);
+	const auto positions = strata_of(doc).positions_of(*strata_of(doc).find_term("f", "c"));
+	CHECK_TRUE((positions == std::vector<engine::termpos>{3, 7}));
 }
 
-static void test_matches_xapian() {
+// Random calls against a model of what they mean; then the serialised form reads back the same.
+static void test_matches_model() {
+	struct Term {
+		engine::termcount wdf = 0;
+		std::set<engine::termpos> positions;
+	};
 	for (std::uint64_t seed = 1; seed <= 200; ++seed) {
 		Lcg rng{seed};
 		engine::Document doc;
-		Xapian::Document xdoc;
+		std::map<std::string, Term> terms;
+		std::map<engine::valueno, std::string> values;
+		std::string data;
 		const int ops = 1 + static_cast<int>(rng.next(40));
 		for (int i = 0; i < ops; ++i) {
 			const std::string term = "t" + std::to_string(rng.next(8));
 			const auto n = rng.next(6);
 			if (n == 0) {
 				const auto wdf = rng.next(4);
-				doc.add_term(doc.field(""), term, wdf);
-				xdoc.add_term(term, wdf);
+				doc.add_term(doc.field("f"), term, wdf);
+				terms[term].wdf += wdf;
 			} else if (n == 1) {
-				doc.add_boolean_term(doc.field(""), term);
-				xdoc.add_boolean_term(term);
+				doc.add_boolean_term(doc.field("f"), term);
+				terms[term];
 			} else if (n == 2) {
 				const auto pos = 1 + rng.next(6);
 				const auto wdf = rng.next(3);
-				doc.add_posting(doc.field(""), term, pos, wdf);
-				xdoc.add_posting(term, pos, wdf);
+				doc.add_posting(doc.field("f"), term, pos, wdf);
+				terms[term].wdf += wdf;
+				terms[term].positions.insert(pos);
 			} else if (n == 3) {
 				const auto slot = rng.next(5);
 				const std::string value = rng.next(3) == 0 ? std::string() : "v" + std::to_string(rng.next(100));
 				doc.add_value(slot, value);
-				xdoc.add_value(slot, value);
+				if (value.empty()) {
+					values.erase(slot);
+				} else {
+					values[slot] = value;
+				}
 			} else if (n == 4) {
-				const std::string data = "d" + std::to_string(rng.next(100));
+				data = "d" + std::to_string(rng.next(100));
 				doc.set_data(data);
-				xdoc.set_data(data);
 			}
 		}
 
-		// Same stored bytes as the Xapian document built by the same calls.
-		CHECK_EQ(doc.serialise(), xdoc.serialise());
+		const auto check = [&](const engine::Document& d) {
+			const auto& native = strata_of(d);
+			CHECK_EQ(native.terms().size(), terms.size());
+			for (const auto& [name, term] : terms) {
+				CHECK_EQ(wdf_of(d, name), term.wdf);
+				const auto* found = native.find_term("f", name);
+				CHECK_TRUE(found != nullptr);
+				if (found) {
+					const auto positions = native.positions_of(*found);
+					CHECK_TRUE((std::set<engine::termpos>(positions.begin(), positions.end()) == term.positions));
+				}
+			}
+			CHECK_TRUE(native.values() == values);
+			CHECK_EQ(d.get_data(), data);
+		};
+		check(doc);
 
 		// And back: the stored form reads as the same document.
-		CHECK_TRUE(same(engine::Document::unserialise(xdoc.serialise()), doc));
-		CHECK_TRUE(same(engine::xapian::from_xapian(xdoc), doc));
+		const auto bytes = doc.serialise();
+		const auto back = engine::Document::unserialise(bytes);
+		check(back);
+		CHECK_EQ(back.serialise(), bytes);
+		CHECK_TRUE(same(back, doc));
 	}
 }
 
-template<typename E>
-static engine::errc classified(const E& error) {
-	try {
-		throw error;
-	} catch (...) {
-		return engine::xapian::classify_current();
-	}
-}
-
-static void test_classify() {
-	using engine::errc;
-	CHECK_TRUE(classified(Xapian::DatabaseNotFoundError("x")) == errc::not_found);
-	CHECK_TRUE(classified(Xapian::DatabaseNotAvailableError("x")) == errc::not_available);
-	CHECK_TRUE(classified(Xapian::DatabaseModifiedError("x")) == errc::reopen);
-	CHECK_TRUE(classified(Xapian::DatabaseCorruptError("x")) == errc::corrupt);
-	CHECK_TRUE(classified(Xapian::DatabaseOpeningError("x")) == errc::opening);
-	CHECK_TRUE(classified(Xapian::DatabaseClosedError("x")) == errc::closed);
-	CHECK_TRUE(classified(Xapian::NetworkTimeoutError("x")) == errc::timeout);
-	CHECK_TRUE(classified(Xapian::NetworkError("x")) == errc::network);
-	CHECK_TRUE(classified(Xapian::DocNotFoundError("x")) == errc::doc_not_found);
-	CHECK_TRUE(classified(Xapian::DocVersionConflictError("x")) == errc::version_conflict);
-	CHECK_TRUE(classified(Xapian::InvalidArgumentError("x")) == errc::invalid);
-	CHECK_TRUE(classified(Xapian::InvalidOperationError("x")) == errc::invalid);
-	CHECK_TRUE(classified(Xapian::QueryParserError("x")) == errc::syntax);
-	CHECK_TRUE(classified(Xapian::DatabaseError("x")) == errc::database);
-	CHECK_TRUE(classified(Xapian::InternalError("x")) == errc::internal);
-	CHECK_TRUE(classified(std::runtime_error("x")) == errc::internal);
-
-	CHECK_TRUE(classified(Xapian::DatabaseLockError("x")) == errc::database);
-}
-
-template<typename E>
-static void translate(const E& error) {
-	try {
-		throw error;
-	} catch (...) {
-		engine::xapian::rethrow_translated();
-	}
-}
-
-static void test_translation() {
-	using engine::errc;
-
-	// A Xapian failure comes out as an engine error of its kind that is still the Xapian exception.
-	bool as_engine = false;
-	try {
-		translate(Xapian::DocNotFoundError("no such doc"));
-	} catch (const engine::Error& error) {
-		as_engine = error.kind == errc::doc_not_found && error.reason().find("no such doc") != std::string::npos;
-	}
-	CHECK_TRUE(as_engine);
-
-	bool as_xapian = false;
-	try {
-		translate(Xapian::DatabaseNotFoundError("gone"));
-	} catch (const Xapian::DatabaseOpeningError&) {  // a not-found is an opening failure
-		as_xapian = true;
-	}
-	CHECK_TRUE(as_xapian);
-
-	// Any other database failure is a database error.
-	errc kind = errc::internal;
-	try {
-		translate(Xapian::DatabaseLockError("locked"));
-	} catch (const engine::Error& error) {
-		kind = error.kind;
-	}
-	CHECK_TRUE(kind == errc::database);
-
-	// An engine error passes through unchanged, and what is not Xapian's is not touched.
-	bool unchanged = false;
-	try {
-		translate(engine::Error(engine::errc::network, "net"));
-	} catch (const engine::xapian::Network&) {
-		unchanged = true;
-	}
-	CHECK_TRUE(unchanged);
-
-	bool foreign = false;
-	try {
-		translate(std::runtime_error("other"));
-	} catch (const std::runtime_error&) {
-		foreign = true;
-	}
-	CHECK_TRUE(foreign);
-}
-
-static void test_view() {
-	Xapian::Document xdoc;
-	xdoc.set_data("payload");
-	xdoc.add_value(3, "three");
-	xdoc.add_term("Aone", 2);
-	xdoc.add_term("Atwo", 1);
-	xdoc.add_term("Bthree", 4);
-
-	auto view = engine::xapian::make_view(xdoc);
-	CHECK_EQ(view->data(), "payload");
-	CHECK_EQ(view->value(3), "three");
-	CHECK_EQ(view->value(4), "");
-	CHECK_EQ(view->version(), 0u);
-
-}
-
-#ifdef USE_ICU
-// The word-break path runs Xapian's term generator on a Xapian document and merges the result.
-static void test_word_breaks() {
-	const std::string text = "Hello world, hello 我爱北京天安门 and 東京都";
-	for (bool positions : {true, false}) {
-		engine::Document doc;
-		GenerateTerms::text(doc, "Zt", text, positions, 3, false, true, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none);
-
-		Xapian::Document xdoc;
-		Xapian::TermGenerator generator;
-		generator.set_flags(Xapian::TermGenerator::FLAG_WORD_BREAKS);
-		generator.set_document(xdoc);
-		if (positions) {
-			generator.index_text(text, 3, "Zt");
-		} else {
-			generator.index_text_without_positions(text, 3, "Zt");
-		}
-
-		CHECK_TRUE(engine::xapian::xapian_document(doc).termlist_count() > 0);
-		CHECK_TRUE(same(doc, engine::xapian::from_xapian(xdoc)));
-	}
-}
-#endif
-
-#ifdef USE_ICU
-TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_translation, test_view, test_word_breaks)
-#else
-TEST_MAIN(test_values, test_terms, test_matches_xapian, test_classify, test_translation, test_view)
-#endif
+TEST_MAIN(test_values, test_terms, test_matches_model)

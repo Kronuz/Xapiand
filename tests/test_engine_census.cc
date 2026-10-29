@@ -41,7 +41,7 @@
 #include "engine/query.h"
 #include "engine/search.h"
 #include "engine/sync.h"
-#include "engine/xapian/shard.h"
+#include "engine/open.h"
 
 #ifdef ENGINE_CENSUS
 
@@ -197,7 +197,7 @@ void test_shard_search_and_views() {
 	census::reset("");
 	const auto path = path_of("engine_census.db");
 	std::filesystem::remove_all(path);
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto opened = engine::sync_wait(engine::open_local(path, true, true));
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= 3; ++i) {
 		engine::Document doc;
