@@ -43,7 +43,7 @@
 #include "engine/callbacks.h"                // for engine::KeyMaker, engine::MatchSpy
 #include "engine/document.h"                 // for engine::Document
 #include "engine/query.h"                    // for engine::Query
-#include "engine/search.h"                   // for engine::SearchRequest, SearchResult, Similar
+#include "engine/search.h"                   // for engine::SearchRequest, SearchResult
 #include "engine/types.h"                    // for engine::WriteResult
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
