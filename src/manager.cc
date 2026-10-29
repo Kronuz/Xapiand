@@ -111,6 +111,14 @@
 #define NODE_LABEL "node"
 #define CLUSTER_LABEL "cluster"
 
+// XAPIAND_LAG_PROBE=0 turns the loop probes off (to profile or measure without them).
+static bool
+lag_probe_enabled()
+{
+	const char* value = std::getenv("XAPIAND_LAG_PROBE");
+	return !(value && std::string_view(value) == "0");
+}
+
 #define L_MANAGER_TIMED_CLEAR() { \
 	if (log) { \
 		log->clear(); \
@@ -449,7 +457,7 @@ XapiandManager::run_loop()
 	arm_signal_reader();
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
-	_rx->reactor.lag().start();
+	if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
 	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
 	_running_loop.store(false, std::memory_order_release);
 }
@@ -1070,7 +1078,7 @@ XapiandManager::make_servers()
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;
 		http_service->set_bind_options(bind_options);
-		http_service->enable_lag_probe();
+		if (lag_probe_enabled()) { http_service->enable_lag_probe(); }
 		http_service->enable_compression(search_compression());
 	}
 	this->http_port = http_port;

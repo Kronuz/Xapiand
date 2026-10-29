@@ -43,20 +43,23 @@ DATASET = os.path.join(REPO, "docs", "public", "assets", "accounts.ndjson")
 GROUPS = ("hop", "scheduler", "engine", "http", "other")
 
 IDLE = re.compile(
-    r"psynch_cvwait|^kevent|mach_msg|semwait|__select|nanosleep|semaphore_wait|^poll|__sigwait|psynch_mutexwait|ulock_wait|futex_wait"
+    r"psynch_cvwait|^kevent|mach_msg|semwait|__select|nanosleep|semaphore_wait|^poll|__sigwait|psynch_mutexwait|"
+    r"ulock_wait|futex_wait|_pthread_cond_wait|do_timed_wait|gettimeofday|mach_timebase_info|clock_gettime"
 )
+# A frame decides the group when it is the nearest to the leaf that matches one of these (leaf to root).
 ENGINE = re.compile(
     r"engine::|\bstrata::|\bprospect::|DatabaseHandler|Shard::|Schema::|MsgPack|msgpack::|lock_shard|DatabasePool|ShardEndpoint"
 )
-HTTP = re.compile(
-    r"http::|\bHttp|llhttp|http_parser|AsioResponseWriter|search_views|SearchService|query_dsl|rapidjson|Request::|Response"
-)
 HOP = re.compile(
-    r"co_spawn|thread_pool|scheduler::(do_run_one|post|post_immediate|wake_one_thread)|executor_op|completion_handler|"
-    r"posix_event|kqueue_reactor|epoll_reactor::interrupt|signal_blocker|psynch_cvsignal|cond_signal|cond_broadcast|"
-    r"invoke_handler|asio::post|asio::dispatch|work_dispatcher|wait_handler"
+    r"thread_pool|psynch_cvsignal|cond_signal|cond_broadcast|wake_one|post_immediate|post_deferred|asio::post|"
+    r"asio::dispatch|work_dispatcher|signal_blocker|trace_hop|posix_event|\bco_spawn\b|co_spawn_async"
 )
 SCHED = re.compile(r"\btask::|WorkPool|threadpool::|WorkGroup|budget")
+HTTP = re.compile(
+    r"http::|\bHttp|llhttp|http_parser|AsioResponseWriter|search_views|SearchService|query_dsl|rapidjson|Request::|Response|"
+    r"kqueue_reactor|epoll_reactor|reactive_socket|descriptor_ops|socket_ops|Reactor::run"
+)
+POOL = re.compile(r"asio::thread_pool|thread_pool::thread_function")
 SAMPLE_LINE = re.compile(r"^([ +!:|]*?)(\d+) (.*)$")
 
 
@@ -103,18 +106,20 @@ def parse_sample(path: str) -> tuple[list[tuple[str, list[str], int]], int]:
 
 
 def classify(frames: list[str]) -> str | None:
-    """The group of a busy stack, or None for an idle one."""
+    """The group of a busy stack, or None for an idle one; the frame nearest the leaf that names a group decides."""
     if IDLE.search(frames[-1]):
         return None
-    if any(ENGINE.search(f) for f in frames):
-        return "engine"
-    if any(HOP.search(f) for f in frames):
-        return "hop"
-    if any(SCHED.search(f) for f in frames):
-        return "scheduler"
-    if any(HTTP.search(f) for f in frames):
-        return "http"
-    return "other"
+    for frame in reversed(frames):
+        if ENGINE.search(frame):
+            return "engine"
+        if HOP.search(frame):
+            return "hop"
+        if SCHED.search(frame):
+            return "scheduler"
+        if HTTP.search(frame):
+            return "http"
+    # Nothing names a group: asio plumbing on a pool worker is the dequeue side of the hop.
+    return "hop" if any(POOL.search(f) for f in frames) else "other"
 
 
 def cpu_groups(rows: list[tuple[str, list[str], int]]) -> dict[str, int]:
@@ -165,7 +170,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     os.makedirs(os.path.join(work, "data"))
     trace = os.path.join(work, "hop.csv")
     raw = os.path.join(out_dir, f"{args.label}.sample.txt")
-    env = dict(os.environ, XAPIAND_ENGINE="strata", HTTP_TRACE_HOP_OUT=trace)
+    env = dict(os.environ, XAPIAND_ENGINE="strata", HTTP_TRACE_HOP_OUT=trace, XAPIAND_LAG_PROBE="0")
     with socket.socket() as probe:
         probe.settimeout(1)
         if probe.connect_ex(("127.0.0.1", args.port)) == 0:
@@ -223,14 +228,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         while time.perf_counter() < warm_end:
             one()
             warm += 1
-        sampler = subprocess.Popen(["sample", str(proc.pid), str(args.secs), "-file", raw], stdout=subprocess.DEVNULL)
-        time.sleep(0.5)  # sample spends this attaching
-        latencies: list[float] = []
-        t_end = time.perf_counter() + args.secs - 1.0
+        sampler = subprocess.Popen(
+            ["sample", str(proc.pid), str(args.secs), "-file", raw],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(1.5)  # `sample` suspends the node while it attaches and loads symbols
+        # ab, one keep-alive connection: a C client, so the server sets the pace and the samples see its work.
         t0 = time.perf_counter()
-        while time.perf_counter() < t_end:
-            latencies.append(one())
+        ab = subprocess.run(
+            ["ab", "-q", "-k", "-c", "1", "-n", "100000000", "-t", str(args.secs - 3),
+             f"http://127.0.0.1:{args.port}/accounts/{args.docs // 2}"],
+            capture_output=True, text=True, check=False,
+        )  # fmt: skip
         wall = time.perf_counter() - t0
+        done = re.search(r"Complete requests:\s+(\d+)", ab.stdout)
+        failed = re.search(r"Failed requests:\s+(\d+)", ab.stdout)
+        mean_ms = re.search(r"Time per request:\s+([\d.]+) \[ms\] \(mean\)", ab.stdout)
+        if not done or int(done.group(1)) == 0 or (failed and int(failed.group(1)) > 0) or not mean_ms:
+            raise SystemExit(f"ab failed: {ab.stdout[-400:]} {ab.stderr[-200:]}")
         sampler.wait()
         sampler = None
     finally:
@@ -245,12 +261,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 os.killpg(proc.pid, signal.SIGKILL)
         logf.close()
 
-    rows, _busiest = parse_sample(raw)
+    rows, per_thread = parse_sample(raw)
     groups = cpu_groups(rows)
-    n = len(latencies)
+    n = int(done.group(1))
     busy = sum(groups.values())
-    # The sampler sees `secs` of wall but the client ran for `wall`; samples outside it are attach and detach.
-    cpu_ms_per_request = {g: groups[g] / n for g in GROUPS}  # 1 sample = 1 ms
+    # `sample` takes about one sample per thread every few ms, not every ms: a sample stands for the window over the
+    # samples one thread got, and a thread caught busy in k of them used k such intervals of CPU.
+    ms_per_sample = args.secs * 1000.0 / per_thread
+    cpu_ms_per_request = {g: groups[g] * ms_per_sample / n for g in GROUPS}
     # The measured requests are the last n offloaded ones in the trace: nothing is served after the client stops.
     wall_stats = wall_hop(trace, tail=n)
     result: dict[str, Any] = {
@@ -263,15 +281,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "client_requests": n,
         "client_wall_s": round(wall, 3),
         "latency_us": {
-            "p50": statistics.median(latencies) * 1e6,
-            "p99": sorted(latencies)[min(n - 1, int(0.99 * n))] * 1e6,
-            "mean": statistics.fmean(latencies) * 1e6,
+            "mean": float(mean_ms.group(1)) * 1e3,
         },
+        "ms_per_sample": round(ms_per_sample, 3),
         "cpu_samples": groups,
         "cpu_ms_per_request": {g: round(v, 5) for g, v in cpu_ms_per_request.items()},
-        "cpu_ms_per_request_total": round(busy / n, 5),
+        "cpu_ms_per_request_total": round(busy * ms_per_sample / n, 5),
         "hop_cpu_share": round(groups["hop"] / busy, 4) if busy else None,
-        "dispatch_cpu_ms_per_request": round((groups["hop"] + groups["scheduler"]) / n, 5),
+        "dispatch_cpu_ms_per_request": round((groups["hop"] + groups["scheduler"]) * ms_per_sample / n, 5),
         "wall": wall_stats,
         "dispatch_wall_us_median": wall_stats["hop_wall_us_median"] if wall_stats else None,
         "hop_wall_share": wall_stats["hop_share_of_offloaded_wall"] if wall_stats else None,
@@ -280,7 +297,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         json.dump(result, fh, indent=1)
     shutil.rmtree(work, ignore_errors=True)
     log(
-        f"{args.label}: {n} requests, p50 {result['latency_us']['p50']:.0f} us; CPU ms/request "
+        f"{args.label}: {n} requests, mean {result['latency_us']['mean']:.0f} us; CPU ms/request "
         + ", ".join(f"{g} {cpu_ms_per_request[g]:.4f}" for g in GROUPS)
         + f"; hop CPU share {result['hop_cpu_share']}, hop wall share {result['hop_wall_share']}"
     )
