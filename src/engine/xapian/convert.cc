@@ -332,51 +332,12 @@ public:
 		});
 	}
 
-	void terms(std::string_view prefix, const TermSink& sink) const override {
-		ENGINE_CENSUS_DOCVIEW("terms");
-		guarded([&] {
-			// A termlist is sorted, so the terms with a prefix are contiguous.
-			const auto end = doc_.termlist_end();
-			auto it = doc_.termlist_begin();
-			it.skip_to(std::string(prefix));
-			for (; it != end; ++it) {
-				auto name = *it;
-				if (name.compare(0, prefix.size(), prefix) != 0) {
-					break;
-				}
-				sink(name, it.get_wdf());
-			}
-		});
-	}
-
 	void values(const ValueSink& sink) const override {
 		ENGINE_CENSUS_DOCVIEW("values");
 		guarded([&] {
 			const auto end = doc_.values_end();
 			for (auto it = doc_.values_begin(); it != end; ++it) {
 				sink(it.get_valueno(), *it);
-			}
-		});
-	}
-
-	void term_details(const TermDetailSink& sink) const override {
-		ENGINE_CENSUS_DOCVIEW("term_details");
-		guarded([&] {
-			const auto end = doc_.termlist_end();
-			for (auto it = doc_.termlist_begin(); it != end; ++it) {
-				TermDetail detail;
-				auto name = *it;
-				detail.term = name;
-				detail.wdf = it.get_wdf();
-				try {
-					detail.termfreq = it.get_termfreq();
-				} catch (const Xapian::InvalidOperationError&) { }  // not tied to a database
-				const auto pend = it.positionlist_end();
-				detail.positions.reserve(it.positionlist_count());
-				for (auto pit = it.positionlist_begin(); pit != pend; ++pit) {
-					detail.positions.push_back(*pit);
-				}
-				sink(detail);
 			}
 		});
 	}

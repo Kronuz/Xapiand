@@ -1759,7 +1759,6 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 		}
 	}
 
-	info[RESPONSE_TERMS] = document.get_terms();
 	info[RESPONSE_VALUES] = document.get_values();
 
 	return info;
@@ -2470,64 +2469,6 @@ Document::validate()
 
 
 MsgPack
-Document::get_terms()
-{
-	L_CALL("get_terms()");
-
-	MsgPack terms;
-
-	if (db_handler == nullptr) {
-		return terms;
-	}
-
-	if (did == 0u) {
-		throw engine::Error(engine::errc::doc_not_found, "Document not found");
-	}
-
-	int flags = db_handler->flags;
-	auto& endpoints = db_handler->endpoints;
-	assert(!endpoints.empty());
-	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-	auto& endpoint = endpoints[shard_num];
-
-	lock_shard lk_shard(endpoint, flags);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto doc = lk_shard->get_view(shard_did);
-			doc->term_details([&](const engine::TermDetail& detail) {
-				Split<std::string_view> term_split(detail.term, '.');
-				auto* term_ptr = &terms;
-				for (const auto& term_part : term_split) {
-					term_ptr = &term_ptr->get(term_part);
-				}
-				auto& term = *term_ptr;
-				term[RESPONSE_WDF] = detail.wdf;  // The within-document-frequency of the current term in the current document.
-				if (detail.termfreq) {
-					term[RESPONSE_TERM_FREQ] = *detail.termfreq;  // The number of documents which this term indexes.
-				}
-				if (!detail.positions.empty()) {
-					auto& term_pos = term[RESPONSE_POS];
-					term_pos.reserve(detail.positions.size());
-					for (auto pos : detail.positions) {
-						term_pos.push_back(pos);
-					}
-				}
-			});
-			break;
-		} catch (const engine::Error& error) {
-			lk_shard->retry_read(error, t);
-		}
-		lk_shard->reopen();
-	}
-
-	return terms;
-}
-
-
-MsgPack
 Document::get_values()
 {
 	L_CALL("get_values()");
@@ -2619,55 +2560,6 @@ Document::get_field(std::string_view slot_name, const MsgPack& obj)
 	}
 
 	return MsgPack::NIL();
-}
-
-
-uint64_t
-Document::hash()
-{
-	uint64_t hash_value = 0;
-	if (db_handler == nullptr) {
-		return hash_value;
-	}
-
-	if (did == 0u) {
-		throw engine::Error(engine::errc::doc_not_found, "Document not found");
-	}
-
-	int flags = db_handler->flags;
-	auto& endpoints = db_handler->endpoints;
-	assert(!endpoints.empty());
-	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-	auto& endpoint = endpoints[shard_num];
-
-	lock_shard lk_shard(endpoint, flags);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto doc = lk_shard->get_view(shard_did);
-			// Add hash of values
-			doc->values([&](engine::valueno slot, std::string_view value) {
-				hash_value ^= xxh64::hash(value) * slot;
-			});
-			// Add hash of terms
-			doc->term_details([&](const engine::TermDetail& detail) {
-				hash_value ^= xxh64::hash(detail.term) * detail.wdf;
-				for (auto pos : detail.positions) {
-					hash_value ^= pos;
-				}
-			});
-			// Add hash of data
-			hash_value ^= xxh64::hash(doc->data());
-			break;
-		} catch (const engine::Error& error) {
-			lk_shard->retry_read(error, t);
-		}
-		lk_shard->reopen();
-	}
-
-	return hash_value;
 }
 
 

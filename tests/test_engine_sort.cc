@@ -472,28 +472,6 @@ static void test_adapter_ownership() {
 	CHECK_EQ(CountedSpy::live, 0);
 }
 
-// The terms of a DocView with a prefix are the terms the full list gives, in order, with their wdf.
-static void test_doc_view_terms() {
-	Xapian::Document doc;
-	const char* names[] = { "A1", "Aa", "B", "Ba", "Bb", "C1", "a", "ab", "b" };
-	Lcg rng{3};
-	for (const auto* name : names) {
-		doc.add_term(name, 1 + rng.next(5));
-	}
-	auto view = engine::xapian::make_view(doc);
-	for (std::string prefix : { "", "A", "B", "Ba", "C", "D", "a", "ab", "abc", "b", "c", "\xff" }) {
-		std::vector<std::pair<std::string, engine::termcount>> got;
-		view->terms(prefix, [&](std::string_view term, engine::termcount wdf) { got.emplace_back(term, wdf); });
-		std::vector<std::pair<std::string, engine::termcount>> expected;
-		for (auto it = doc.termlist_begin(); it != doc.termlist_end(); ++it) {
-			if ((*it).compare(0, prefix.size(), prefix) == 0) {
-				expected.emplace_back(*it, it.get_wdf());
-			}
-		}
-		CHECK_EQ(got, expected);
-	}
-}
-
 
 namespace {
 
@@ -887,7 +865,6 @@ GUARDED(test_sort_integer_extremes)
 GUARDED(test_key_maker_unserialise_garbage)
 GUARDED(test_key_maker_corrupt_values)
 GUARDED(test_adapter_ownership)
-GUARDED(test_doc_view_terms)
 GUARDED(test_unserialise_saturates)
 GUARDED(test_aggregation_spy)
 GUARDED(test_aggregation_spy_garbage)
@@ -896,4 +873,4 @@ GUARDED(test_aggregation_bucket_budget)
 GUARDED(test_aggregation_depth_cap)
 GUARDED(test_aggregation_multivalued_counts_each_bucket)
 
-TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_doc_view_terms_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)
+TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)

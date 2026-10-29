@@ -98,7 +98,7 @@ def misuse():
     a = lambda agg: {"_query": "*", "_limit": 0, "_check_at_least": 1000, "_aggs": {"a": agg}}
     return [("_sum over keyword", a({"_sum": {"_field": "state"}})), ("_avg over geo", a({"_avg": {"_field": "loc"}})),
             ("_avg over boolean", a({"_avg": {"_field": "flag"}})), ("_terms with an unknown _sort field", a({"_terms": {"_field": "state", "_sort": {"zzz": "asc"}}})),
-            ("_terms over geo", a({"_terms": {"_field": "loc"}})), ("_values over geo", a({"_values": {"_field": "loc"}})),
+            ("_terms over geo", a({"_terms": {"_field": "loc"}})), ("_terms over text", a({"_terms": {"_field": "note"}})), ("_values over geo", a({"_values": {"_field": "loc"}})),
             ("_histogram over keyword", a({"_histogram": {"_field": "state", "_interval": 5}})),
             ("_terms with no field", a({"_terms": {}})), ("sort order that is not asc or desc", {"_query": "*", "_sort": {"age": "sideways"}}),
             ("sort order that is a number", {"_query": "*", "_sort": {"age": 3}})]
@@ -171,16 +171,15 @@ def main():
                 if status != 400:
                     bad += 1
                     print("NOT 400 %s on %s: %s %s" % (name, engine, status, data[:160]))
-        # The strata engine keeps no term lists: `_terms` over analysed text and a document's `:info` are refused.
-        refused = call(BASE + 1, "SEARCH", "/cb/?volatile", json.dumps({"_query": "*", "_limit": 0, "_check_at_least": 1000, "_aggs": {"a": {"_terms": {"_field": "note"}}}}))
+        # A document's INFO answers the same on both engines and lists no terms.
         listed = call(BASE + 1, "SEARCH", "/cb/?volatile", json.dumps({"_query": "*", "_limit": 1}))[1]
         first = json.loads(listed)["hits"][0]["_id"] if json.loads(listed).get("hits") else print("NO HITS", listed[:200]) or "doc1"
-        info = call(BASE + 1, "INFO", "/cb/" + first)
-        for what, (status, data) in (("_terms over text", refused), ("document :info", info)):
+        for k, engine in enumerate(("xapian", "strata")):
             total += 1
-            if status != 400 or b"term lists" not in data:
+            status, data = call(BASE + k, "INFO", "/cb/" + first)
+            if status != 200 or b'"terms"' in data:
                 bad += 1
-                print("NOT REFUSED %s: %s %s" % (what, status, data[:160]))
+                print("BAD INFO on %s: %s %s" % (engine, status, data[:160]))
         print("searches %d, different %d" % (total, bad))
         sys.exit(1 if bad else 0)
     finally:

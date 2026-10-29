@@ -550,14 +550,11 @@ void test_spy() {
 			CHECK_EQ(from_strata.ids.size(), static_cast<std::size_t>(shard_count * 60));
 			CHECK_EQ(from_strata.ids.count(1), static_cast<std::size_t>(shard_count));
 		}
-		// A spy that asks for the document's terms, term details or serialisation is refused: the strata engine keeps no term lists.
-		for (const int ask : {0, 1, 2}) {
+		// A spy that asks for the document's serialisation is refused: the strata engine keeps no term lists.
+		{
 			struct TermsSpy final : engine::MatchSpy {
-				int ask = 0;
 				void see(const engine::DocView& doc, double) override {
-					if (ask == 0) { doc.terms("", [](std::string_view, engine::termcount) { }); }
-					if (ask == 1) { doc.term_details([](const engine::TermDetail&) { }); }
-					if (ask == 2) { (void)doc.serialise(); }
+					(void)doc.serialise();
 				}
 				std::unique_ptr<engine::MatchSpy> clone() const override { return nullptr; }
 				std::string name() const override { return "TermsSpy"; }
@@ -567,7 +564,6 @@ void test_spy() {
 				void merge_results(std::string_view) override { }
 				std::string description() const override { return "TermsSpy"; }
 			} asking;
-			asking.ask = ask;
 			CHECK_TRUE(error_kind([&] { run(corpus.strata, n, t("common"), [&](engine::SearchRequest& r) { r.spy = &asking; }); }) == engine::errc::syntax);
 		}
 		// A spy that throws fails the search; the next one is unaffected.
@@ -730,11 +726,6 @@ void test_operators() {
 			{"max of scale", Query::combine(Op::MAX, Query::scale(t("apple"), 2.0), t("band"))},
 			{"max of synonym", Query::combine(Op::MAX, syn({t("apple"), t("cat")}), t("band"))},
 			{"max appended", Query::append(Op::MAX, t("apple"), t("band"))},
-			{"elite", Query::combine(Op::ELITE_SET, {t("common"), t("even"), t("band"), t("apple"), t("cat")}, 2)},
-			{"elite all", Query::combine(Op::ELITE_SET, {t("band"), t("apple")}, 5)},
-			{"elite default", Query::combine(Op::ELITE_SET, {t("band"), t("apple"), t("cat")})},
-			{"elite absent", Query::combine(Op::ELITE_SET, {t("absent"), t("band"), t("apple")}, 2)},
-			{"elite and", Query::combine(Op::AND, Query::combine(Op::ELITE_SET, {t("band"), t("apple"), t("cat"), t("coat")}, 2), t("common"))},
 			{"scale", Query::scale(Query::combine(Op::OR, t("apple"), t("band")), 2.5)},
 			{"scale zero", Query::scale(t("apple"), 0.0)},
 			{"scale synonym", Query::scale(syn({t("apple"), t("cat")}), 3.0)},

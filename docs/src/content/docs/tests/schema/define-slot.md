@@ -70,7 +70,6 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.terms).to.have.property('QKdoc');
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '100']);
    pm.expect(jsonData.values['100']).to.equal('foo and bar');
 });

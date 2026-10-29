@@ -45,9 +45,7 @@ public:
 	std::string data() const override;
 	std::string value(valueno slot) const override;
 	rev version() const override;
-	void terms(std::string_view prefix, const TermSink& sink) const override;
 	void values(const ValueSink& sink) const override;
-	void term_details(const TermDetailSink& sink) const override;
 	std::string serialise() const override;
 
 private:
@@ -67,9 +65,7 @@ public:
 	std::string data() const override { return data_; }
 	std::string value(valueno slot) const override;
 	rev version() const override { return version_; }
-	void terms(std::string_view prefix, const TermSink& sink) const override;
 	void values(const ValueSink& sink) const override;
-	void term_details(const TermDetailSink& sink) const override;
 	std::string serialise() const override;
 
 private:

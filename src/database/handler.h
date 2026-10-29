@@ -330,15 +330,12 @@ public:
 	std::string serialise();
 	std::string get_value(engine::valueno slot);
 	std::string get_data();
-	MsgPack get_terms();
 	MsgPack get_values();
 
 	MsgPack get_value(std::string_view slot_name);
 	MsgPack get_obj();
 	MsgPack get_field(std::string_view slot_name);
 	static MsgPack get_field(std::string_view slot_name, const MsgPack& obj);
-
-	uint64_t hash();
 };
 
 

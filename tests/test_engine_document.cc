@@ -250,13 +250,6 @@ static void test_view() {
 	CHECK_EQ(view->value(4), "");
 	CHECK_EQ(view->version(), 0u);
 
-	std::vector<std::string> seen;
-	view->terms("A", [&](std::string_view term, engine::termcount wdf) {
-		seen.push_back(std::string(term) + ":" + std::to_string(wdf));
-	});
-	CHECK_EQ(seen.size(), 2u);
-	CHECK_EQ(seen[0], "Aone:2");
-	CHECK_EQ(seen[1], "Atwo:1");
 }
 
 #ifdef USE_ICU

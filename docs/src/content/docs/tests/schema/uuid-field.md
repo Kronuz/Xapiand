@@ -67,13 +67,9 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   var field_name = '';
-  pm.expect(jsonData.terms).to.have.property('QKdoc');
   field_name = '\u0001P\ufffd\ufffd\u000bkvH\'\ufffd\u0005\ufffd^\ufffd\ufffd\ufffdSsecond';
-  pm.expect(jsonData.terms.uuids).to.have.property(field_name);
   field_name =  '\u0001\ufffd=_\ufffd)\ufffdN\ufffd\ufffd_\ufffdA]\u0016mSthird';
-  pm.expect(jsonData.terms.uuids).to.have.property(field_name);
   field_name = '\u0001\ufffd\ufffdR\ufffd\ufffd\ufffdC\ufffd\ufffdq\u07357]lSfirst';
-  pm.expect(jsonData.terms.uuids).to.have.property(field_name);
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '3856745852']);
 });
 ```
@@ -138,10 +134,6 @@ pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   var field_name = '';
 
-  pm.expect(jsonData.terms).to.have.property('QKdoc');
-  pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Sfirst');
-  pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Ssecond');
-  pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Sthird');
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '2761136387']);
 });
 ```
@@ -205,16 +197,9 @@ pm.test("Response is success", function() {
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   var field_name = '';
-  pm.expect(jsonData.terms).to.have.property('QKdoc');
   field_name = '\u0001P\ufffd\ufffd\u000bkvH\'\ufffd\u0005\ufffd^\ufffd\ufffd\ufffdSsecond';
-  pm.expect(jsonData.terms.uuids).to.have.property(field_name);
   field_name = '\u0001\ufffd=_\ufffd)\ufffdN\ufffd\ufffd_\ufffdA]\u0016mSthird';
-  pm.expect(jsonData.terms.uuids).to.have.property(field_name);
   field_name = '\u0001\ufffd\ufffdR\ufffd\ufffd\ufffdC\ufffd\ufffdq\u07357]lSfirst';
-  pm.expect(jsonData.terms.uuids).to.have.property(field_name);
-  pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Sfirst');
-  pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Ssecond');
-  pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Sthird');
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '2761136387', '3856745852']);
 });
 ```

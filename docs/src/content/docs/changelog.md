@@ -23,8 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Elasticsearch's defaults are 30 levels and 4096 clauses.
 - **`_terms` counts a field's stored values** (as Elasticsearch's terms aggregation reads doc
   values), once per document and distinct value. Keyword buckets keep their case (`Red` and
-  `red` are two buckets). The words of an analysed `text` field, or of a field indexed without
-  values, are still counted from the index terms.
+  `red` are two buckets).
 
 - **`_terms` and `_values` keep a bounded number of buckets** while they collect: at most about
   `_limit * 1.5 + 10` (Elasticsearch's `shard_size`, settable with `_shard_size`), dropping the
@@ -51,6 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as on the Xapian engine (it answered 500).
 - **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
   among the values; it now returns the values.
+
+### Removed
+- **The `_elite_set` operator** (query DSL, default operator and the engine's ELITE_SET). A query with it
+  answers `400` ("Invalid operator").
+- **The `terms` of `INFO` on a document** (every term the document indexes, with its frequency and
+  positions). `INFO` still reports the document's id, version, data and values.
+- **The `_terms` aggregation over an analysed `text` field**, which counted index words. A `_terms` on a
+  field without stored values answers `400`; keyword, numeric, boolean and date fields are unchanged.
 
 ## [1.0.0-alpha.10] - 2026-10-28
 
