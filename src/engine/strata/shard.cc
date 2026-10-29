@@ -211,7 +211,12 @@ struct Core {
 		pending = dirty = transaction = false;
 		index.reset();
 		index.emplace(prospect::index::open(*io, index_options()));
-		verify_fields();
+		try {
+			verify_fields();
+		} catch (...) {
+			index.reset();  // a failed check leaves no index, as a failed open does
+			throw;
+		}
 		fenced = false;
 	}
 
