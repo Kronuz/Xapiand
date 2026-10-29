@@ -1,399 +1,510 @@
-> Status: DRAFT (2026-10-29) Revision 1, designing (ready for preliminary review). Ledger:
-> `docs/status/phase7c.md`.
+> Status: DRAFT (2026-10-29) Revision 2, designing (ready for the architect's re-check): closes R1 to
+> R7 and folds C1 to C10 of `docs/reviews/phase7c-design.md`. Ledger: `docs/status/phase7c.md`.
 
 # Phase 7c: Xapiand that never blocks a reactor
 
-Reads Xapiand master `3b0dc433f`; strata `d93bf7d` and its `design/write-modes` branch (`ae2cf70`,
-`docs/design/write-buffer.md`); prospect `b3ad3e3` (Xapiand pins `14dbbbb`); task `aa447e7`; reactor
-`0c04d0d`; http `6a07f99` (Xapiand pins `dc3be77`); completion `03cef1d`; journal `9c87929`; threadpool
-`main` `394aaea` and `feature/scheduler` `5caedce`; Detent `main`. Clean room: nothing under
-`src/xapian/`, no `sortable_serialise` file and not `src/server/remote_protocol_views.cc` was opened;
-the replication rows below come from `replication_protocol_{service,views}.{h,cc}` (MIT).
+Reads Xapiand master `3b0dc433f`; strata `d93bf7d` (its `include/` is unchanged at `5b0e6ed`) and
+`design/write-modes` `ae2cf70`; prospect `b3ad3e3`; task `aa447e7`; reactor `0c04d0d`; http `6a07f99`
+(Xapiand pins `dc3be77`); threadpool `feature/scheduler` `5caedce`; storage `671eaac`; Lua 5.4.7 as
+fetched (`CMakeLists.txt:1100`). Clean room: `src/xapian/`, `src/sortable_serialise.{cc,h}` and
+`src/server/remote_protocol_views.cc` were not opened.
 
-Phase 7's single-node gate is 7a (passed, `docs/gates/phase7a.md`) plus 7c (strata `docs/PLAN.md:651-674`,
-owner, 2026-10-29). 7c's scope: Xapiand's blocking primitives become asynchronous (pool checkout,
-storage reads, fsyncs, schema locks, Lua) and the offload pools are removed. This design covers the
-strata path only; the Xapian path goes at 7c's start or in Phase 8 (Q1) and the offload bridges are replaced, so neither is
-preserved or tuned.
+Phase 7's single-node gate is 7a (passed, `docs/gates/phase7a.md`) plus 7c (strata `docs/PLAN.md:651-674`).
+7c makes Xapiand's blocking primitives asynchronous and removes the offload pools. The owner ruled
+on revision 1 (strata `docs/status/xapiand-on-strata.md`, "Owner answers on the 7c design"): the
+Xapian path goes first (X1), the WAL stays until 7b, http drops its offload path entirely, blob
+storage is not decided and stays `DataStorage` with its I/O in chores, the 2x-RAM fault row gates at
+Phase 6, and read-your-writes stays the default.
 
 ## Summary
 
-1. Every request runs as a `task::task` on the reactor that accepted it, sliced by a cycle-counter
-   budget and scheduled least-attained-service by Kronuz/task's `asio_scheduler` (D2, D3). Nothing on a
-   reactor waits: no condition variable, no lock held across I/O, no sleep, no file syscall (D1).
-2. The one place work leaves a reactor is an **index chore** on one host `WorkPool` (Kronuz/threadpool
-   `feature/scheduler`): open, flush, commit, close, merge, reclaim, check, and document parse-ahead,
-   per index in its own `WorkGroup`, awaited by the request and resumed on its reactor (D4). Fsyncs run
-   only there (D7).
-3. `DatabasePool` checkout becomes an index registry that never waits plus an awaitable per-index
-   write lease; reads use strata's `reader_handle`, which never blocks (D5, D6).
-4. The reactors' offload pools, the control-plane worker, and the DP, DI, AC and cleanup threads are
-   deleted with their options, no switch kept (D4, D13, D15). Lua runs in a yielding Lua coroutine
-   (D10); schema and settings caches hold no lock across I/O (D11).
-5. Step 1 builds the gate tooling (a reactor lag probe, the mixed-load driver, a thread census, a
-   static check, a light-request profile) so the lead measures the pre-7c offload baseline before
-   anything changes. It needs no owner answer.
+1. Every request is a `task::task` on the reactor that accepted it. A budget bounds each continuous
+   run (a slice restarts on every resume), and a two-level scheduler runs fresh work ahead of
+   demoted work (D2). An admission gate bounds in-flight requests per reactor (D2). Nothing on a
+   reactor waits (D1).
+2. The only work that leaves a reactor is an **index chore** on one host `WorkPool`: open, refresh,
+   commit, close, merge, reclaim, check, blob I/O and parse-ahead (D4, D9).
+3. `DatabasePool` becomes a registry that never waits. Every lease operation, timers included,
+   is a turn of a per-index async mutex with a deadline, and a task holds at most one turn (D5).
+   strata runs in a host mode where a writer call does no I/O (D6).
+4. http's handlers become coroutines, with an awaitable body, a disconnect cancel and a lifetime
+   rule. The offload pools, the control-plane worker, DP, DI, AC and the cleanup thread are deleted
+   (D3, D4, D13, D16). Lua runs each call in its own environment and yields (D10).
+5. S1 builds the gate tooling and the pre-7c baseline, and X1 deletes the Xapian path. Both start
+   now; neither needs anything else in this design.
 
 ## What this depends on and changes
 
 | Document | Relation |
 |---|---|
-| strata `docs/PLAN.md` Phase 6 (`:640-649`), Phase 7 (`:651-674`) | Gates 7c with Phase 6's reactor rows (T4, T5, T6); the light-query baseline Phase 0 owed (strata `docs/gates/phase-1.md:60`, "Open") is measured by step 1 |
-| strata `docs/ARCHITECTURE.md:163-185` ("Concurrency and async") | Implements its scheduler, budget and guarantee on Xapiand's reactors |
-| strata `write-buffer.md` (`design/write-modes` `ae2cf70`) D2 (`:197`), D8 (`:621`), D11 (`:765`), D12 (`:797`) | Depends: checkout never waits, flush on a pool thread, coalesced freeze for search, writes as tasks. 7c runs before steps 2 to 4 land with host-side stand-ins that those steps delete (D5, D6) |
-| strata `xapiand-on-strata.md` D7 (`:210`), D11 (`:233`), D13 (`:242-264`) | D7 kept (read-your-writes through an awaited, coalesced refresh). D13's bridge (`sync_wait` on an offload thread) retires; its blocking rule becomes D1 |
-| `docs/reviews/engine-offload-architect.md` C7 | Changed: no coroutine hops to the reactor's `pool()`; the only hop is D4's chore into the index's `WorkGroup`. Q1 (a separate Xapian I/O cap) is moot with Xapian gone |
-| `docs/status/offload-bridge.md` | The guard (`engine::check_may_block`) and its tests are kept and widened (D14); C7 lands here |
-| threadpool `docs/research/scheduler.md` R1 to R3 (`:673-728`), API sketch (`:730-790`) | Depends: `WorkPool`, `WorkGroup`, classes and reserve. Changes its "an offload is a `WorkItem`" (`:786-789`): no request offload remains |
-| `docs/gates/phase7a.md` T6, T8, T11 | Baselines for T2, T3, T12 |
-| Detent `src/detentd/detentd.cc:125`, `src/detentd/main.cc:278-284`, `src/detent_relay/host.cc:243` | Detent uses http's offload; Q3 decides whether the libraries drop it now |
+| strata `docs/PLAN.md` Phases 6 (`:640-649`), 7 (`:651-674`), 8 | Gates 7c with Phase 6's reactor rows; T6 gates at Phase 6 (owner). X1 moves Phase 8's Xapian code removal to 7c's start |
+| strata `ARCHITECTURE.md:163-185` | Implements its budget and guarantee; its "least-attained service" is two-level here (D2) |
+| strata `write-buffer.md` (`ae2cf70`) D2, D8, D11, D12 | Depends; D5 and D6 stand in until write-buffer steps 2 to 4 land, then are deleted |
+| strata `xapiand-on-strata.md` D7, D13 | D7 kept (read-your-writes). D13's bridge rule is replaced by D1 |
+| `docs/reviews/engine-offload-architect.md` C7 | Changed: the only hop is a chore. Its V2 and V5 negative tests carry forward (D4) |
+| `docs/reviews/phase7c-design.md` | R1 to R7 and C1 to C10 closed below; each names its decision, row or criterion |
+| threadpool `docs/research/scheduler.md` (`:673-790`) | Depends on `WorkPool`; adds a merge aging rule (D4); keeps the gate as admission (`:786-789`) |
+| http, reactor, prism, Detent | http loses its worker pool, `should_offload` and the body hand-off (owner, Q3); prism migrates in L3; Detent migrates separately and keeps its http pin until then |
 
 ## 1. Inventory: blocking primitives on reactor-reachable paths
 
-After 7c every HTTP view runs on its reactor, so everything a view reaches is reactor-reachable:
-`search_views.cc`, `DatabaseHandler`, `Shard`, the strata adapter, schemas, the index resolver, Lua,
-and the control loop. Counts are greps on `3b0dc433f` (rerun: `harness/async_check.sh`, step 1, K5).
+After 7c every view runs on its reactor, so everything a view reaches is reactor-reachable. Counts
+are greps on `3b0dc433f`; `harness/async_check.sh` (S1) classifies every hit (D14).
 
-**A. Engine bridges, 33 sites.** `engine::sync_wait` (`src/engine/sync.h:44-48`) at `handler.cc:271, 772,
-814, 1178, 1425, 1727, 1759` (7) and `database/shard.cc:438, 446, 459, 552, 568, 600, 716, 973, 1034,
-1052, 1070, 1105, 1171, 1339, 1449, 1542, 1553, 1555, 1559, 1628, 1691, 1745, 1778, 1821, 1852, 1894`
-(26; `:438`, `:552`, `:568` are Xapian-only). CLI-only callers in `main.cc:836`, `:872` reach the same
-handler.
+**A. Engine bridges, 33 sites (30 after X1).** `engine::sync_wait` (`src/engine/sync.h:44-48`) at
+`handler.cc:271, 772, 814, 1178, 1425, 1727, 1759` and `database/shard.cc:438, 446, 459, 552, 568, 600, 716,
+973, 1034, 1052, 1070, 1105, 1171, 1339, 1449, 1542, 1553, 1555, 1559, 1628, 1691, 1745, 1778, 1821, 1852,
+1894`; `:438`, `:552`, `:568` are Xapian-only. `main.cc:836`, `:872` (CLI) reach the same handler.
 
-**B. Pool checkout, 36 sites.** Seven condition-variable waits in `pool.cc` (`:191`, `:198` writable;
-`:295`, `:302` readable; `:816`, `:820` lockable; `:1088` checkin-clears). `DatabasePool::cleanup` holds
-`cleanup_mtx` across every commit it runs (`pool.cc:1103`, review EO3). Callers on strata paths: 25
-`lock_shard` in `handler.cc` (`:766` to `:2524`), the multi-endpoint checkout and checkins
-(`handler.cc:1160`, `:1208`, `:1211`), `schema.cc:2778`, `:2844`, `discovery.cc:710`; 29 in all. Six
-replication sites are Xapian-only (`replication_protocol_service.cc:143`, `:160`, `:173`,
-`replication_protocol_views.cc:516`, `:682`, `:986`).
+**B. Pool checkout, 36 sites (30 after X1).** Seven condition-variable waits in `pool.cc` (`:191`,
+`:198`, `:295`, `:302`, `:816`, `:820`, `:1088`, each with a `timeout_tp`); `cleanup_mtx` held across
+commits (`:1103`); 26 `lock_shard` in `handler.cc`, the multi-endpoint checkout (`:1160`, `:1208`,
+`:1211`), `schema.cc:2778`, `:2844`, `discovery.cc:710`. Six replication sites leave with X1
+(`replication_protocol_service.cc:143`, `:160`, `:173`, `replication_protocol_views.cc:516`, `:682`, `:986`).
 
-**C. The strata adapter and strata itself, 41 adapter sites.** `engine/strata/shard.cc`: 27
-`core.mtx` lock sites; `registry_mutex` (`:274-280`); six refresh-before-read sites that may write a
-segment (`:395`, `:987`, `:1057`, `:1142`, `:1196`, `:1234`, through `:225-228`); four commits that
-fsync (`:191` on close, `:832`, `:854`, `:876`, through `:232-239`); three opens that read files
-(`:215`, `:348`, `:353`). A search pins every shard it reads, holding each shard's mutex for the
-whole search (`pin.h:33-55`, `shard.cc:1189-1205`, `search.cc:632-650`). Inside strata, on the caller's
-thread: `apply` flushes the buffer inline when it is full (`index.hh:691`); with no host executor,
-`maybe_merge` runs merges inline (`index.hh:845-858`; Xapiand passes none, `shard.cc:162-169`); a lease
-taker waits on a check-in's chores (`owner.hh:120-123`).
+**C. The strata adapter and strata, 41 adapter sites plus 5 inside strata.** `engine/strata/shard.cc`:
+27 `core.mtx` sites; `registry_mutex` (`:274-280`); six refresh-before-read sites that may write a
+segment (`:395`, `:987`, `:1057`, `:1142`, `:1196`, `:1234`); four commits that fsync (`:191`, `:832`,
+`:854`, `:876`); three opens (`:215`, `:348`, `:353`); the per-search pins (`pin.h:33-55`,
+`search.cc:632-650`). Inside strata (`index.hh`), on the caller's thread: `apply` refreshes inline
+(`:691`); admission drains (`:705`, and `install` at `:1472`: reclaim, `finish_deletes`, `sync_dir`,
+`:3531-3545`); `apply` and `writer_scope` run owed chores (`:747`, `:2570`: `publish_merges`, `retain`); a lease
+taker waits on a check-in's chores (`owner.hh:120-123`); `evaluate` faults on mapped segments.
 
-**D. Storage and fsync, 16 sites.** Blob reads from `DataStorage` volumes (`shard.cc:1208-1227`,
-reached from `handler.cc:717` and `:1793-1803`); blob writes (`shard.cc:1317`, `:1426`, `:1515` into
-`:1230-1280`); the volume commit fsync (`shard.cc:969`, `:1283-1290`, `STORAGE_FULL_SYNC` at `:174`).
-Nine WAL appends (`shard.cc:993, 1115, 1181, 1354, 1464, 1575, 1638, 1701, 1904`) queue to the WL
-threads (`wal.cc:942-951`), or write and sync inline when the WAL is synchronous (`wal.cc:932-938`,
-replica only); the WAL's fsync goes to the FS debouncer (`wal.cc:116`, `:131`).
+**D. Storage and fsync, 16 sites.** `DataStorage` reads (`shard.cc:1208-1227`, from `handler.cc:717`,
+`:1793-1803`), writes (`:1317`, `:1426`, `:1515` into `:1230-1280`), and the volume fsync
+(`storage_commit`, `:969`, `:1283-1290`). Nine WAL appends queue to WL (`wal.cc:942-951`); its fsync is
+the FS debouncer's (`wal.cc:116`, `:131`).
 
-**E. Locks and waits in request code, 42 sites.** `schemas_lru.cc`: 19 lock sites and four nested
-cross-index database calls (`:110`, `:163`, `:277`, `:338`). `index_resolver_lru.cc`: two locks
-(`:579`, `:868`) and four database calls (`:252`, `:299`, `:399`, `:436`). Lua (`lua/processor.cc`): the
-compile cache lock (`:190`), the per-script lock held for the whole script run (`:304` across `:318`),
-and a foreign-script document read (`:247-251`). `DocIndexer::wait` blocks the request thread on three
-condition-variable waits (`handler.cc:2199`, `:2210`, `:2214`); DI threads wait on their queues
-(`:2059`). The streamed restore body: five `objects_mtx` sites (`search_views.cc:2870-2961`) and the
-blocking `body_reader->read` (`:2957`).
+**E. Locks and waits in request code, 42 sites.** `schemas_lru.cc` (19 locks; nested database calls
+at `:110`, `:163`, `:277`, `:338`); `index_resolver_lru.cc` (`:579`, `:868`; calls at `:252`, `:299`, `:399`,
+`:436`); Lua (`processor.cc:155`, `:190`, `:304` held across `:318`, foreign read `:247-251`);
+`DocIndexer::wait` (`handler.cc:2199`, `:2210`, `:2214`; DI queues `:2059`); the streamed restore
+(`objects_mtx`, `search_views.cc:2870-2961`; blocking `body_reader->read`, `:2957`).
 
-**F. Sleeps, 1 site.** `manager.cc:834`, a 100 ms retry in node setup. (`main.cc:807` runs before any
-loop.)
+**F. Sleeps, 1 site.** `manager.cc:834`.
 
-**G. Unbounded CPU on one request, 5 kinds.** prospect's search loops yield nowhere
-(`prospect/shards.hh:237`, `:279`); the host callbacks inside them (sort keys, spies, collapse,
-`engine/strata/search.cc:689-711`); a Lua script, with no hook or limit (`processor.cc:318`); scans for
-dumps (`handler.cc:772`, `:814`); decoding a buffered request body, which has no size cap (only a
-reserve cap, http `http_request_parser.h:170`, `:240`).
+**G. Unbounded CPU on one request, 5 kinds.** prospect's search loops (`shards.hh:237`, `:279`) and the
+host callbacks in them (`engine/strata/search.cc:689-711`); a Lua script (`processor.cc:318`); dump
+scans (`handler.cc:772`, `:814`); decoding a buffered body of any size (http `http_request_parser.h:170`).
 
-**H. Threads and hops that run blocking work for someone else, 11 kinds.** The HTTP reactors' `asio::thread_pool`s
-(`manager.cc:1059`, `:1066`; `ceil(1.5 x CPUs)` threads, `opts.cc:59-61`); the control-plane worker
-(`manager.cc:156`, `control_offload` `:467-488`, used at `:643`, `:825`, `:1576`); the remote and
-replication pools (`remote_protocol_service.h:179-186`, `replication_protocol_service.h:180-182`,
-`:245`), Xapian-only; `engine::release_on_pool` (`release.h:40-55`); DP and DI (`manager.cc:240-241`);
-AC committers (`handler.h:335`); FS fsynchers (`xapiand_fsyncher.h:52`); WL writers (`manager.cc:236`,
-`wal.h:305`); `DatabaseCleanup` (`cleanup.h:41`, `cleanup.cc:80`). Cluster-only and 7b's: TR
-(`manager.h:334`) and DU, SU, IU, PU (`discovery.h:194-218`). In the libraries: http's offload and
-streamed-body worker (`http_asio.h:633-719`, `:780-790`), `HttpHandler::handle` being synchronous
-(`http_handler.h:190`), and `Reactor::pool_` with `OffloadGate` (`reactor.h:99-129`, `:167-168`).
+**H. Threads and hops, 11 kinds.** The reactors' `asio::thread_pool`s (`manager.cc:1059`, `:1066`); the
+control-plane worker (`manager.cc:156`, `:467-488`); the remote and replication pools (leave with
+X1); `engine::release_on_pool` (`release.h:40-55`); DP and DI (`manager.cc:240-241`); AC (`handler.h:335`);
+FS (`xapiand_fsyncher.h:52`); WL (`manager.cc:236`); `DatabaseCleanup` (`cleanup.cc:80`); TR, DU, SU, IU,
+PU (7b's). In the libraries: http's offload and streamed-body worker (`http_asio.h:633-756`,
+`:780-790`), the synchronous `HttpHandler::handle` (`http_handler.h:190`), `Reactor::pool_`
+(`reactor.h:116-128`).
 
-**I. Destructors that reach database work, 3.** `~DocIndexer` commits (`handler.cc:1920`); `~Request`
-drops the last indexer (`search_views.cc:2719`); a strata core commits when its last writer drops
-(`engine/strata/shard.cc:186-196`).
+**I. Destructors that reach database work, 3.** `~DocIndexer` (`handler.cc:1920`), `~Request`
+(`search_views.cc:2719`), the strata core's closing commit (`engine/strata/shard.cc:186-196`).
 
-Totals: 169 call sites (A 33, B 36, C 41, D 16, E 42, F 1), 5 kinds of unbounded CPU, 11 kinds of
-blocking-work mechanisms (8 on the single-node path), 3 destructors.
+**J. First-use loads and spins, 5 (review F8).** `engine::kind_of` (`kind.cc:59-89`: a global mutex,
+then two `fs::exists`, uncached on a double miss; from `schema.cc:2977`, `database/shard.cc:384`);
+`getStopWordsEntry` (`stopper.cc:48-67`: a global mutex across reading the file; from
+`multivalue/generate_terms.cc:545`, `engine/text.cc:295`); `mime_type` (`server/mime_types.cc:120`, a
+static that reads `mime.types` at `:54`); the census (`census.cc:139-146`, `ENGINE_CENSUS` builds);
+`reader_handle::published_position` (strata `index.hh:1257-1262`, spins then `yield`).
 
 ## 2. The end state
 
 ```
- HTTP reactor r (one per core)                    WorkPool (one per host; R1-R3)
-  ├ asio_scheduler + budget: request tasks  ──chore──▶ WorkGroup per open index
-  ├ index registry lookup (never waits)     ◀─resume─┤  open, flush, commit, close,
-  ├ lease turns: apply, get (inline)                 │  merge, reclaim, check, parse-ahead
-  └ lag probe                                        └ strata's executor binds here
- control loop: setup, timers (autocommit, cleanup), shutdown, all coroutines
+ HTTP reactor r (one per CPU)                    WorkPool (one per host)
+  ├ admission gate, scheduler, budget  ──chore──▶ WorkGroup per open index (+ per upload, RESTORE)
+  ├ registry lookup (never waits)      ◀─post()──┤  query: read refresh, open, blob read
+  ├ lease turns: apply (no I/O)                  │  flush: commit, close, check, blob write, parse
+  └ lag probe                                    └  merge: merges, reclaim (strata's executor)
+ control loop: setup, autocommit and idle-close tasks, shutdown
 ```
 
 Threads left on the single-node path: the HTTP loops, the control loop, the `WorkPool` workers, the
-logger thread, the debouncer wheel thread, completion's bounded fallback worker for operations a
-kernel cannot run asynchronously (completion `ARCHITECTURE.md:3`), and WL and FS while Q2's (a)
-holds.
+logger, the debouncer wheel, completion's bounded fallback worker, and WL and FS until 7b (D8).
 
 ## 3. Decisions
 
-**D1. The rule.** No reactor thread waits. A reactor never calls `sync_wait`, waits on a condition
-variable, sleeps, issues a file syscall, or takes a lock whose critical section does I/O, waits, or
-runs unbounded work. A lock taken on a reactor guards O(1) to O(log n) work on in-memory maps, is listed
-in `harness/async_check.sh`'s allowlist with its file:line, and its hold time falls under T4. Work that
-must wait suspends its coroutine. The rule replaces D13's bridge rule
-(`xapiand-on-strata.md:255-264`) on landing.
+**D1. The rule.** No reactor thread waits: no `sync_wait`, condition variable, sleep, file syscall,
+`yield`, or lock whose critical section does I/O, waits or runs unbounded work. A lock taken on a
+reactor guards O(1) to O(log n) work on an in-memory map and is allowlisted with its file:line and
+reason (D14). Work that must wait suspends its coroutine. Inventory J: with one engine after X1,
+`kind_of` returns strata's kind with no probe; stop words and `mime.types` load at startup before the
+listeners open; `published_position` is replaced by `try_published_position` (`index.hh:1264`), and a
+read that gets none awaits `task::yield()` and retries; the census is compiled out of every gate
+build (`ENGINE_CENSUS` OFF, `CMakeLists.txt:72`) and classed as such.
 
-**D2. One scheduler per reactor; requests are tasks with a budget.** Each HTTP reactor and the control
-loop own a `task::asio_scheduler` on their `io_context` (`task_asio.hh:43-83`; `TASK_ASIO` turns on,
-`CMakeLists.txt:773`). A request is a `task::task<void>` with a `task::budget` (slice 200 µs, an estimate
-T4 tunes; strata ARCHITECTURE's 100-250 µs) and the connection's `cancel_token`, so a client that goes
-away ends its search at the next checkpoint (T9). A spent slice demotes the task (least-attained
-service: light requests run ahead of demoted heavy ones). Each reactor caps its demoted tasks; at the
-cap a new request gets 503 instead of a queue (T8). Kronuz/task gains the demoted count the cap reads
-(`asio_scheduler::demoted()`); nothing else in it changes.
+**D2. Scheduling and admission.** Each HTTP reactor and the control loop own a
+`task::asio_scheduler` (`task_asio.hh:43-88`; `TASK_ASIO` turns on at `CMakeLists.txt:773`, and the
+comment at `:770-772` says the Asio binding runs the views). A request is a `task::task<void>` with
+a `task::budget` (slice 200 µs, an estimate T4 tunes).
 
-**D3. HTTP handlers are coroutines.** Kronuz/http's `HttpHandler::handle` (`http_handler.h:190`)
-becomes `asio::awaitable<void> handle(const Request&, ResponseWriter&)`, awaited on the connection's
-own executor where `invoke_handler` is awaited today (`http_asio.h:611-613`, `:780-790`); the request and
-writer stay valid until it completes. A streamed body is read with `co_await body.read(chunk)` on the
-same loop instead of a worker pulling from `body_reader` (`http_asio.h:633-719`). `SearchService`
-(`search_service.h`) wraps each view's task in `task::as_awaitable(scheduler, ...)`, the one bridge
-from Asio to task. Xapiand constructs the service with zero workers and deletes `should_offload`
-(`search_service.cc:28-37`); prism's demo handler migrates (`prism/src/main.cc:182`). Whether the
-libraries drop the offload path itself is Q3.
+- *A slice is a continuous run (R2).* `budget` today sets its deadline when the slice starts, so time
+  suspended counts (`task.hh:608-633`; the review's `budget_probe`). Kronuz/task changes it: each
+  `running_on` scope, which every scheduler wraps around a resume (`task.hh:106-115`), stamps a
+  thread-local slice start and restores the outer one on exit; `exhausted()` compares against it. A
+  task resumed after a chore, a turn, an event or a body read starts a fresh slice; only a run
+  longer than the slice is demoted. `budget_probe` becomes L1's test (0 demotions; 1 with the
+  stamp removed).
+- *The policy is two-level*, as `asio_scheduler` implements it: ordinary posts in FIFO order, demoted
+  handles one per drain pass between them. No attained-service counter exists or is added.
+- *Admission (R3).* Each reactor keeps two counters, each with its own cap and its own 503 (with
+  `Retry-After: 1`): in-flight requests, counted from headers complete to response settled (cap
+  1,000, today's offload queue limit, `manager.cc:1059`); and `asio_scheduler::demoted()` (cap 256,
+  an estimate). Admission checks both at headers complete. reactor's `OffloadGate` (`reactor.h:99-112`)
+  stays as this gate, renamed `reactor::AdmissionGate`, since nothing is offloaded. The io_context
+  queue is bounded by the gate: each admitted task has at most one handle queued, and idle
+  connections post nothing.
+- *Reactor count (C5).* One reactor per CPU. `MAX_HTTP_SERVERS` (`opts.cc:57`, `:525`) and
+  `--http-servers` go (PLAN, "Parallelism adapts"): request CPU now runs only on reactors.
+
+**D3. HTTP handlers are coroutines; http has no offload path.** Kronuz/http deletes the worker pool,
+`should_offload`, `wants_body_stream`'s worker and `ChannelBodyReader`'s blocking read
+(`http_asio.h:344`, `:675-756`, `:780-790`; `http_handler.h:165-224`); reactor deletes `Reactor::pool_`.
+`HttpHandler::handle` becomes `asio::awaitable<void> handle(Request&, ResponseWriter&)`, awaited on
+the connection's executor. `SearchService` wraps each view's task in `task::as_awaitable`
+(`task_asio.hh:92-107`); prism (`src/main.cc:317`, `:325`) migrates in L3.
+
+- *Body bridge (R6.1).* A streamed body is a `BodyStream` whose `async_read(std::string&, token)` is an
+  Asio operation over a bounded `asio::experimental::channel` that the connection coroutine feeds
+  (today's `feed`, `http_asio.h:688-707`, kept). Kronuz/task gains the reverse bridge in
+  `task_asio.hh`: `task::await_asio<Sig>(init)`, an awaiter that starts an Asio operation with a
+  handler that stores its results and resumes the task through `scheduler_ref::post` on the
+  scheduler it suspended on. RESTORE reads with `co_await task::await_asio<...>(...)`, and its
+  `objects_mtx` goes: the parser state lives in the task.
+- *Cancel (R6.2).* For each request, http arms `ConnectionInput::monitor` (`http_asio.h:455-480`)
+  for the handler's whole run. That is the one-byte read it already keeps for deferred replies;
+  pipelined bytes stay buffered for the parser. The monitor takes a callback, which requests the
+  request's `task::cancel_source` on EOF or on a read error. Reads (search, GET, scans, dumps) pass
+  the token to their budget and stop at the next checkpoint. Writes take no token: once admitted,
+  a write completes and its response is attempted, so a client that half-closes after a PUT still
+  gets its answer. The token is a flag, so a task queued on a turn, an event or a chore stays
+  queued until it resumes. Each of those waits is bounded (D5, D4) and checks the token when it
+  resumes.
+- *Lifetime (R6.3).* The connection coroutine owns `request` and `writer`. Before it awaits the
+  handler, it disables Asio cancellation and then awaits completion, as the streamed path already
+  does (`http_asio.h:735`). A cancellation that arrives meanwhile becomes `cancel_source.request()`.
+  Frames end only by completing: nothing calls `destroy()` on a suspended task. The destructors of
+  `task::event`, `task::async_mutex` and `asio_scheduler` assert that no waiters or demoted
+  handles remain. The shutdown order is D16.
 
 **D4. Index chores: the only work that leaves a reactor.** A chore is index work that may wait on a
-device or run long: open, refresh (flush), commit, close, merge publication, reclaim, check, and
-parse-ahead (decoding and preparing a large document or a RESTORE batch, a function of its inputs that
-does no I/O and takes no lock). Chores run on one host `WorkPool` (threadpool `feature/scheduler`:
-futex-parked workers, R1; per-group deficit round robin, R2; classes with a reserve, R3), each open
-index owning a `WorkGroup` (128 bytes, research `:688-708`). `co_await chore(index, cls, fn)` posts a
-`WorkItem` into the index's group and resumes the awaiter on its own reactor (Kronuz/task's affinity
-rule). Classes: `flush` for open, refresh, commit, close, check and parse-ahead; `merge` for merges and
-reclaim. strata's executor binds to the same pool (`include/strata/core/executor.hh`'s `group` over a
-`WorkGroup`, the research's `work_executor.hh`), so merges and reclaim deletes leave the commit path.
-A chore that waits for its own index's background work (a close waits for posted deletes,
-`executor.hh:27-33`) waits in `WorkGroup::wait`, which runs queued items when called on a worker
-(research `:762`, `:772`), so no worker waits on work only it could run (review EO4's V2 shape).
-Request logic (routing, schema mapping of small documents, response encoding) never runs in a chore.
-Deleted: the HTTP reactors' pools, `engine::release_on_pool`, DP, DI, the AC pool and the cleanup
-thread; there is no thread setting (PLAN, "Parallelism adapts").
+device or run long. `co_await chore(group, cls, fn)` posts a `WorkItem` (threadpool
+`feature/scheduler`, `work_pool.hh:85-95`) and resumes the awaiter with `asio_scheduler::post()`, the
+one thread-safe entry (`task_asio.hh:43-54`), never `post_demoted` (C10.1). Each open index owns a
+`WorkGroup`; each RESTORE and each streamed upload owns its own group for its lifetime. Groups have
+one lane per class (`work_pool.hh:1110-1128`), so classes do not queue behind each other in a group.
 
-**D5. Checkout never waits.** `DatabasePool` becomes an index registry: a map from path to an open
-index entry (strata reader handle, lease, `WorkGroup`, revision, idle time). A miss single-flights one
-open chore; concurrent requests for the same path await one `task::event` (new in Kronuz/task: a
-one-shot completion that resumes each waiter on its own scheduler, the waiter's node in its frame).
-Readers take no checkout: they use the entry's `reader_handle`, which never blocks
-(strata `index.hh:1245-1295`). Lease operations (apply, refresh, commit, close, merge publication) are
-turns of a per-index `task::async_mutex` (new in Kronuz/task: FIFO, no thread waits, the waiter's node in
-its frame): cheap turns run inline on the caller's reactor, flush and commit turns run as chores holding
-the lease. This is strata's write-buffer D2 with one writer per turn; when write-buffer step 2 lands
-(write groups, `:988`), writers link into strata's group and the host mutex is deleted. Idle indexes close
-through a control-loop timer that posts close chores (replaces `cleanup.cc:64-80`); `FLUSH` awaits the
-close chores of every open index. Deleted: the seven condition-variable waits, readable pooling and
-`max_database_readers`, `lockable_cond` (replication only), `cleanup_mtx`.
+| Class | Chores | Why |
+|---|---|---|
+| `query` | read-your-writes refresh, open, blob read | A request waits on it; the reserve worker (`reserve = 1`, `:673`) keeps one free for them (C8.1, C8.3) |
+| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead | Throughput work; parse-ahead in its own group, so DRR splits service with the index's group (C8.1) |
+| `merge` | merges, reclaim deletes (strata's executor binds here) | Background; at most `merge_cap` workers |
 
-**D6. The strata adapter holds no lock.** `core.mtx`, `registry_mutex` (moved to D5's registry),
-`Pinned` (`pin.h`), the shard ordering in `search.cc:632-650`, and `Hop` with every `scheduler_ref on`
-parameter (`engine/strata/shard.cc:62-68`, `engine/open.h:43`, `:52`) are deleted. A search takes one
-view guard per shard (`reader_handle::acquire`, never blocks) after awaiting `publish_through(p)` as a
-chore when the shard's view is behind the request's read position, coalesced so the searches queued
-behind one refresh reuse it (`index.hh:1312-1318`). That keeps 7a's D7 (reads see every acknowledged
-write) without a reactor flushing. Until write-buffer D11 lets prospect read frozen buffers in memory,
-that refresh writes a segment; Q6 asks whether the default stays read-your-writes. Writes apply in a
-lease turn on the reactor; when strata reports the buffer must flush first (the `index.hh:691`
-condition, exposed as `flush_owed(const transaction&)`, a strata change), the turn runs the flush as a
-chore before applying. Write-buffer D8's background flush deletes that step when it lands.
+Aging (C8.2, threadpool L2): a merge lane that has waited longer than 100 ms (an estimate) takes the
+next background pick ahead of `flush`, so sustained bulk load cannot starve merges. T5 reports the
+merge backlog. A chore that waits for its own index's work calls `WorkGroup::wait`, which helps on a
+worker. L2 carries the offload review's negative tests: V2's shape (a worker waits on work queued
+only in its own group) completes, and V5's shape (a reactor calls a waiting entry) hits
+`engine::check_may_block` (C8.4). Deleted: the reactors' pools, `release_on_pool`, DP, DI, AC and
+the cleanup thread.
 
-**D7. Fsyncs and durability.** Every fsync, `F_FULLFSYNC` and directory barrier runs inside a chore
-(strata commits through completion's `PosixIO::sync_files`). `?commit=true`, `COMMIT` and `FLUSH` await
-their commit chores. Autocommit keeps its throttle and debounce values (`handler.h:335`), on Kronuz/
-scheduler's inline-runner debouncer: the wheel thread fires and only posts a commit chore, so the AC
-pool goes. A commit that fails returns the error to every request awaiting it.
+**D5. The registry and the lease.** `DatabasePool` becomes a map from path to an entry: the reader
+handle, the lease turn, the `WorkGroup`, the revision, a use count, the idle time, and a state
+(`opening`, `open`, `closing`). A miss single-flights one open chore, and concurrent requests await
+one `task::event` (Kronuz/task, new: a one-shot completion that resumes each waiter through its own
+scheduler's `post()`). Readers take no checkout: they use the entry's `reader_handle`.
 
-**D8. Xapiand's WAL is untouched until 7b** (Q2, recommendation (a)). Its appends already queue to WL
-without waiting (`wal.cc:942-951`) and its fsync is the FS debouncer's; neither is an offload pool and no
-reactor waits on them. The synchronous mode is the replica's (`replication_protocol_views.cc:986`) and
-goes with replication (Q1). 7b replaces both with the journal.
+- *Every lease operation is a turn (R4.1).* apply, refresh, commit, close, merge publication and
+  blob writes enter the entry's `task::async_mutex` (Kronuz/task, new: FIFO, waiter nodes in frames,
+  the next holder resumed through its scheduler's `post()`). A chore that needs the lease (flush,
+  commit, close) runs while its awaiter holds the turn. The autocommit debouncer's wheel thread and
+  the idle-close timer only `asio::post` a task onto the control loop; that task awaits the turn
+  and then the chore. Nothing calls strata off a turn, so `owner_break` (`owner.hh:124`) stays
+  unreachable.
+- *Close (R4.2).* The idle-close task picks entries with a zero use count. Under the map lock it
+  marks them `closing`, then takes the turn and runs the close chore. A lookup that finds a
+  `closing` entry awaits that entry's `closed` event, then single-flights a new open. A reader
+  whose `acquire` throws `index_closed` (strata `index.hh:1250-1253`) retries through the registry
+  once. A writer that gets the turn of a `closing` entry releases it and retries. `FLUSH` spawns
+  one close task per open index and awaits them all, holding no turn itself.
+- *One turn per task, and a deadline (R4.3).* A task holds at most one turn. Schema and
+  index-settings writes (D11) complete, and release their turn, before the document's turn
+  begins: a schema only grows, so a document that then fails leaves harmless fields. Xapiand's
+  `IndexTurn` guard counts turns in the request context and asserts at most one in debug
+  builds. Each wait also has a deadline: `async_mutex::lock_until(asio_scheduler&, deadline)`
+  (in `task_asio.hh`) arms a `steady_timer`, and the grant and the timeout settle the waiter
+  node with one compare-exchange; a timed-out node is skipped at handoff. The deadline is the
+  request's remaining timeout, or 30 s (an estimate). Past it the request gets 503.
+- *Write unit (C6).* The turn covers the apply, the revision update and the WAL enqueue as one unit.
+  `add` enqueues at `database/shard.cc:1339` before `:1354`'s engine call, and commit enqueues at
+  `:993` after `:973`; both stay inside the turn, so WAL order equals apply order across reactors.
 
-**D9. Blobs live in strata's stored record** (Q4, recommendation (a)). A `stored` locator's bytes are
-kept in-place in the document's stored record (strata's cap is 64 MiB a record, `limits.md:23`), so a
-blob read is a strata read under D6 and its I/O rules (Q5). `DataStorage` (`shard.cc:191-342`,
-`:1206-1291`) leaves the strata path; with Q1's (a) it is deleted.
+Deleted: the seven condition-variable waits, readable pooling, `max_database_readers`,
+`lockable_cond`, `cleanup_mtx`, `cleanup.cc:64-80`. When write-buffer step 2 lands, writers join
+strata's write group and the host mutex goes.
 
-**D10. Lua yields.** Each reactor keeps its own compiled-script cache (thread-local; the locks at
-`processor.cc:155`, `:190`, `:304` go). A call runs in a Lua coroutine (`lua_newthread`) with a count hook
-(`lua_sethook`, `LUA_MASKCOUNT`, every 10,000 instructions, an estimate) that calls `lua_yield(L, 0)` when
-the request's slice is spent, which Lua 5.4 allows from count hooks (pinned 5.4.7, `CMakeLists.txt:1100`);
-the task awaits `budget.checkpoint()` and calls `lua_resume`. An instruction cap (10^8, an estimate) and
-an allocation cap through `lua_Alloc` end a runaway script with a 4xx (T10). Foreign scripts load through
-an awaited handler read (`processor.cc:247-251`). Scripts run wherever the document is prepared: on the
-reactor, or in a parse-ahead chore (D12).
+**D6. The strata adapter holds no lock; strata runs in host mode.** `core.mtx`, `registry_mutex` (moved
+to D5), `Pinned`, the shard ordering in `search.cc:632-650`, and `Hop` with every `scheduler_ref on`
+parameter are deleted. A search takes one view guard per shard, after it awaits
+`publish_through(p)` as a `query` chore when the shard's view is behind its read position. That
+refresh is coalesced (`index.hh:1312-1318`), which keeps 7a's D7. Host mode closes R5:
 
-**D11. Schema and index-settings caches hold no lock across I/O.** The nested cross-index reads and
-writes (`schemas_lru.cc:110`, `:163`, `:277`, `:338`; `index_resolver_lru.cc:252`, `:299`, `:399`, `:436`)
-become awaited handler operations. A cache miss single-flights one load per path (`task::event`), and the
-waiters reuse its result. The maps' own critical sections (`schemas_mtx`, `versions_mtx`,
-`resolve_index_lru_mtx`) do no I/O and are allowlisted under D1; updates keep their version
-compare-and-swap.
+1. Xapiand never calls `check_out()` (`index.hh:762-776`). Then nothing sets `chores_owed_` (only
+   `check_in()` does, `:787-801`), and neither `apply`'s `run_chores` (`:747`) nor `writer_scope`'s
+   handoff (`:2570`) nor the chore-bit wait (`owner.hh:120-123`) can run. Finished merges publish
+   inside refresh and commit chores (`:807-813`, `:884-895`). The idle task also runs a refresh
+   chore on an index with `merges_pending() > 0`. Debug builds assert `!chores_owed()` after
+   every turn.
+2. strata gains `index_options::defer_io` (L5). When it is set, `apply` neither refreshes (`:691`) nor
+   drains (`:705`). It returns `verdict::flush_owed` or `verdict::drain_owed` before stage 1, with
+   nothing applied. The turn runs `refresh()` or a new public `reclaim_for_space()` as a chore, then
+   retries the apply once more. `install` (`:1472`, which 7c does not call) defers its drain the
+   same way. Xapiand sets no storage permit in 7c, so strata's fault tests cover `drain_owed`.
+3. `evaluate`'s page faults on mapped segments are T6's subject, reported at 7c and gated at Phase 6
+   (owner).
 
-**D12. CPU on a reactor is sliced.** prospect's search becomes a task that awaits
-`budget.checkpoint()` at every window boundary and every 4,096 ordinals of the exhaustive loop
-(`shards.hh:237`), a prospect change; host callbacks run inside those slices. Scans for dumps await a
-checkpoint every 64 documents. A buffered body gets a cap (16 MiB by default, an estimate; strata's
-record cap is 64 MiB) enforced by http before decoding. Documents larger than 64 KiB (an estimate) and
-RESTORE batches are prepared in parse-ahead chores, so one bulk load still uses every idle core, as DP
-and DI did; smaller single documents are prepared inline.
+*Readers (C9).* One host `reader_registry` is shared by every index, which strata documents
+(`index.hh:466-469`). Its records number reactors x the in-flight cap x the default shard count
+(`opts.cc:44`). `too_many_readers` (`hazard.hh:47`, `:211`) maps to 503. T8 tests that with a
+16-record registry, and T13 states the registry's bytes and the commit's scan cost over it.
 
-**D13. The control plane is coroutines on its loop.** `control_offload` and the control reactor's worker
-are deleted (`manager.cc:156`, `:467-488`, `:1227-1230`). Node setup, `load_nodes`, `new_leader`, the
-election's shard lookup and the shutdown readiness checks are tasks on the control loop's scheduler that
-await handler operations; their order is the loop's arrival order, which the one worker gave before. The
-setup retry awaits a timer instead of sleeping (`manager.cc:834`). The bounded command drain stays
-(`engine/drain.h`).
+**D7. Fsyncs and durability.** Every fsync, `F_FULLFSYNC` and directory barrier runs inside a chore:
+strata's commit through completion's `PosixIO::sync_files`, and `storage_commit`
+(`database/shard.cc:1283-1290`), which runs first in the same commit chore, as `:969` orders it today
+(R7.2). `?commit=true`, `COMMIT` and `FLUSH` await their commit. *Coalescing by position (C7):* a
+commit captures the applied position when its chore starts under the turn. A waiter whose write is
+at or below that position joins it. A later write waits for the next commit, and a failure reaches
+exactly the waiters joined to the commit that failed. Autocommit keeps its throttle and debounce
+values (`handler.h:335`) and fires as D5's control-loop task.
 
-**D14. Enforcement.** `engine::check_may_block` stays (`engine/sync.cc:48-71`) and guards every
-remaining blocking entry: the CLI's `sync_wait` (the only one left, `main.cc`), `WorkGroup::wait`, and the
-registry's close-all at shutdown. Kronuz/reactor gains `reactor::LagProbe`: a periodic timer per loop that
-records its own lateness in a fixed log2 histogram, allocation-free after start; Xapiand exports it per
-loop in `:metrics`. No destructor does database work: `~DocIndexer`, `~Request` and the strata core's
-closing commit become explicit awaited closes, and their destructors assert the close ran.
-`harness/async_check.sh --strict` runs in CI.
+**D8. Xapiand's WAL is untouched until 7b** (owner). Appends queue to WL without waiting
+(`wal.cc:942-951`), inside the turn (D5). The synchronous mode belonged to the replica and goes with
+X1. 7b replaces the WAL with the journal.
 
-**D15. Removed options.** `--http-clients`, `--bulk-preparers`, `--bulk-indexers`, `--committers`,
-`--fsynchers` (`opts.cc:237-288`) go, with a changelog bullet; `--writers` stays while D8 holds.
+**D9. Blob I/O runs in chores over the existing `DataStorage` (R7).** No blob format changes, and Q4
+stays open.
 
-Extraction ledger rows owed (`docs/dev/extraction-ledger.md`): `task::event`, `task::async_mutex` and the
-demoted count (Kronuz/task), `LagProbe` (Kronuz/reactor), the coroutine handler and awaitable body
-(Kronuz/http), `WorkPool` (Kronuz/threadpool); in Xapiand, the deleted pools, `control_offload`,
-`release_on_pool`, the cleanup thread and `DataStorage`. How-it-works notes owed on landing: the request
-scheduler (D2), index chores (D4), the registry and lease (D5), Lua slicing (D10).
+- *Buffered blobs* (a stored body up to the cap, D12): `storage_push_blobs` (`shard.cc:1230-1280`) runs
+  as a `flush` chore inside the document's turn, before the apply, so the locator and the document
+  land in one turn.
+- *Streamed uploads* (`stored` with `Content-Length` above the cap; `stored` is decided by
+  `search_views.cc:892`): the headers-complete hook picks the stream path. The upload reserves a
+  fresh volume number from the entry's atomic `next_volume`. The shared writer's rollover
+  (`shard.cc:1254`, `:1260`, `:1266`) also takes from `next_volume`, so no other writer appends to
+  that volume. The body goes through Kronuz/storage's new streamed record write (L6:
+  `begin(size)`, `append(chunk)`, `end()`, the XXH32 carried to the footer as `write` does,
+  `storage.h:822`) in `flush` chores on the upload's own group, 1 MiB per chore (an estimate). The
+  last chore syncs the volume. The document then applies with its locator in a normal turn, so no
+  turn is held during the upload. A disconnect removes the volume in a chore. A body above the cap
+  with no `Content-Length` gets 411.
+- *Reads:* `storage_get_stored` (`shard.cc:1208-1227`) opens its own reader in a `query` chore. A blob
+  above the cap streams out through `ResponseWriter::stream` (`http_handler.h:97`), one chore per
+  chunk, using the library's chunked `read` (`storage.h:972`).
+
+**D10. Lua: a call's own environment, yields, and bounds (R1).** Each thread that runs scripts (a
+reactor, or a worker in a parse-ahead chore) keeps its own compiled-script cache, and the locks at
+`processor.cc:155`, `:190`, `:304` go.
+
+- *Isolation.* A script compiles once as `local _ENV = ...; <body>` on one line, so line numbers hold.
+  Each call creates a table holding `_method`, `_doc`, `_old_doc` and the params, with metatable
+  `{__index = base}` (base holds the opened libraries), and runs `func(env)` in its own
+  `lua_newthread`. Interleaved calls on one script share no globals. A global a script sets lives
+  for that call only; today it persists, serialized by the per-script lock.
+- *Yields.* A count hook (`LUA_MASKCOUNT`, every 10,000 instructions, an estimate) yields when the
+  slice is spent and `lua_isyieldable(L)` holds. The task awaits `budget.checkpoint()`, then calls
+  `lua_resume`. When the call is not yieldable (inside a C call such as a `table.sort`
+  comparator), the hook keeps counting: past 100 consecutive hook calls (10^6 instructions, an
+  estimate) without a yield point, the call ends with an error. That bounds a comparator or a
+  `gsub` callback that never returns.
+- *Bounds.* An instruction cap (10^8 per call, an estimate), checked in the hook. A live-byte cap
+  per script state (64 MiB, an estimate), enforced by `lua_Alloc`. Code with no Lua instructions
+  (sort without a comparator, `rep`, `concat`, `format`) is bounded by that cap's sizes. Lua's
+  pattern matcher has a depth cap (`lstrlib.c` `MAXCCALLS`, 200) but no step cap, so the build
+  carries one patch generated from 5.4.7: a per-call step budget in `match`, max(10^5, 8 x subject
+  length) (an estimate), past which the call raises "pattern too complex". A drift test checks
+  that the patch applies to the pinned tarball's hash, and the patch is listed in
+  `docs/dev/patches.md`.
+- Each bound returns a 4xx. Foreign scripts load through an awaited handler read
+  (`processor.cc:247-251`).
+
+**D11. Schema and settings caches hold no lock across I/O.** The nested reads and writes
+(`schemas_lru.cc:110`, `:163`, `:277`, `:338`; `index_resolver_lru.cc:252`, `:299`, `:399`, `:436`) become
+awaited operations, and each completes before any document turn (D5). A miss single-flights one
+load per path (`task::event`). The maps' own critical sections are allowlisted (D1), and updates keep
+their version compare-and-swap.
+
+**D12. CPU on a reactor is sliced.** prospect's search awaits `budget.checkpoint()` at every window
+boundary and every 4,096 ordinals of the exhaustive loop (`shards.hh:237`, L4); host callbacks run
+inside those slices. Dump scans check every 64 documents. A buffered body has a cap (16 MiB, an
+estimate), which http enforces at headers complete from `Content-Length`, or as bytes arrive.
+Above it, a `stored` upload streams (D9), RESTORE streams as today, and anything else gets 413.
+Documents above 64 KiB (an estimate) and RESTORE batches are prepared in parse-ahead chores.
+
+**D13. The control plane is coroutines on its loop.** `control_offload` and the control reactor's
+worker are deleted (`manager.cc:156`, `:467-488`). Node setup, `load_nodes`, `new_leader` and the
+shutdown checks are tasks on the control loop, which await handler operations. The setup retry
+awaits a timer (`manager.cc:834`).
+
+**D14. Enforcement.** `engine::check_may_block` (`engine/sync.cc:48-71`) guards every remaining
+blocking entry: the CLI's `sync_wait`, `WorkGroup::wait` and the registry's close-all at shutdown.
+`reactor::LagProbe` records each loop's lateness. It runs at 1 ms while the loop served a request in
+the last second and at 100 ms otherwise, so an idle loop wakes 10 times a second. Its log2 µs
+buckets have 4 sub-buckets each, and T4 reads a percentile as its bucket's upper edge: "1 ms" means
+the 1,024 µs edge. Destructors do no database work: `~DocIndexer`, `~Request` and the core's
+closing commit become awaited closes, and their destructors assert that the close ran.
+`harness/async_check.sh --strict` runs in CI. Every hit is in one of four classes: allowlisted
+(file:line, reason), owed (the decision that removes it), compiled out of gate builds, or
+unclassified. `--strict` fails on unclassified hits, and on owed hits once X6 lands.
+
+**D15. Removed options.** `--http-clients`, `--http-servers`, `--bulk-preparers`, `--bulk-indexers`,
+`--committers`, `--fsynchers` (`opts.cc:237-288`), and with X1 the remote and replication options
+(`opts.cc:262-301`), each with a changelog bullet. `--writers` stays while D8 holds.
+
+**D16. Shutdown order (R6.3).**
+
+1. Close the acceptors.
+2. `abort_all()` on each reactor (`reactor.h:145`) requests every live request's cancel source;
+   http registers one `Abortable` per request through `Reactor::track` (`:132`).
+3. Reads end at their next checkpoint, and writes finish. The loops keep running.
+4. The main thread waits in `wait_sessions()` (`:159`), which is not a reactor.
+5. Close every open index: its turn, then its close chore. Then `WorkGroup::wait` runs off-reactor.
+6. Stop the `WorkPool`, then the loops.
+
+T7 runs this under load on ASan and TSan builds.
+
+Extraction ledger rows owed: `task::event`, `async_mutex`, `lock_until`, `await_asio`, the
+per-resume slice and `demoted()` (Kronuz/task); `AdmissionGate`, `LagProbe` and the removed pool
+(Kronuz/reactor); coroutine handlers, `BodyStream`, the disconnect monitor and the removed offload
+(Kronuz/http); `WorkPool` and aging (Kronuz/threadpool); `defer_io` (strata); the streamed record write
+(Kronuz/storage); in Xapiand, the deleted pools, `control_offload`, `release_on_pool`, the cleanup
+thread, the Xapian engine and the remote and replication services. How-it-works notes owed: the
+scheduler and admission (D2), chores (D4), the registry and lease (D5), Lua (D10), shutdown (D16).
 
 ## 4. Gate rows
 
-Timing rows (T4, T5, T6, T11, T12) are the lead's, on `main`, five interleaved trials with the 95%
-bootstrap interval (strata PLAN, "Passing"), smoke then confirm under `quiet exclusive`; branches make
-functional claims only. Heavy load: concurrent exhaustive searches with aggregations, wildcard and phrase
-searches, and a RESTORE stream, at 4x the reactor count in clients. Light load: open-loop GET by id and
-single-term searches at a fixed rate. Index: `accounts` replicated to 1,000,000 documents
-(`loadtest.py --replicate`). Each run records its phase times.
+Timing rows (T4, T5, T11, T12) are the lead's, on `main`: five interleaved trials, 95% bootstrap
+interval, smoke then confirm under `quiet exclusive`. Branches make functional claims only. Load
+(S1's K3): heavy is concurrent exhaustive searches with aggregations, wildcard and phrase
+searches, and a RESTORE stream into its own index `restore-target`, at 4x the reactor count in
+clients. Light is open loop at a fixed rate: GET by id and single-term searches on `accounts`, plus
+10% write-then-GET pairs on `accounts` (each awaits a refresh, R2). `accounts` is replicated to
+1,000,000 documents. Every run records phase times, segment count and merge backlog.
 
 | Row | Target | Procedure |
 |---|---|---|
-| **T1** no offload pool | The thread census under T4's load lists only section 2's threads: none of inventory H on the single-node path except WL and FS while Q2's (a) holds | `harness/thread_census.sh` during `stall_load.py`; `harness/async_check.sh --strict` exits 0 |
-| **T2** E2E on strata | Zero assertion regressions against gate 7a's rerun (566 of 566, `docs/gates/phase7a.md`); 0 guard hits, 0 ASan reports | 7a's T6 procedure (`e2e_capture.sh`, `e2e_diff.py`) on a Debug ASan build with the guard armed |
-| **T3** recovery | `wal_recovery_check.sh` and `engine_crash_check.sh` pass on strata | Run as written, `XAPIAND_ENGINE=strata` |
-| **T4** reactor stall | p99 lag ≤ 1 ms on every loop under the mixed heavy and light load (PLAN Phase 6, `:645`); p99.9 and max reported | `harness/stall_load.py --phase loaded`; the lag histograms' deltas from `:metrics` |
-| **T5** light-query p99 | Under heavy load ≤ 2x its unloaded p99 + 1 ms (PLAN `:645-647`), and below the pre-7c offload baseline step 1 measures | `stall_load.py`, phases `unloaded` then `loaded`, same binary and index |
-| **T6** reactor faults | Major page faults on reactor threads per 1,000 queries ≤ 1, index at 2x RAM (PLAN `:647-648`); gating per Q5 | Linux gate VM, per-thread `getrusage(RUSAGE_THREAD)` sampled by the lag probe's loops, `stall_load.py --index-size 2xram` |
-| **T7** concurrency | 0 TSan reports; the final dump equals the model | `engine_mixed_load.py BIN OUT --engine strata --secs 600` on a TSan build, and on an ASan build |
-| **T8** overload | Past the demoted cap new requests get 503 within one slice; no request waits unbounded; RSS stays within 10% of the T4 run (an estimate to confirm) | `stall_load.py --overload 4` (four times the saturating light rate) |
-| **T9** cancellation | A client that disconnects mid-search frees its reactor within one slice; the cancel counter rises | Functional test: a heavy search, disconnect after 50 ms, lag histogram and counter checked |
-| **T10** Lua bounds | An infinite-loop script returns 4xx at the instruction cap; T4 holds with four such scripts running | Unit test plus `stall_load.py --lua-loop 4` |
-| **T11** replaced layer wins by a lot | The dispatch cost per light request (pre-7c: the offload hop's post, wake, run and return; 7c: the scheduler's post and resume) is at most half of the offload hop's, in CPU and wall; parity fails the row (owner, 2026-10-27) | `harness/profile_light.sh` on both binaries, frames attributed by name at concurrency 1 |
-| **T12** no throughput loss | One RESTORE's docs/s (`profile_bulk.sh`, 20,000 accounts) and saturated query QPS (`loadtest.py`) each at least 1.0x the pre-7c `main` | Interleaved runs of both binaries |
-| **T13** every gate | ASan and UBSan, TSan; coverage of changed files at TESTING.md's targets; the restore decoders' corpora replayed; per-open-index cost (registry entry, lease, `WorkGroup`) measured at 10,000 open indexes and stated | strata PLAN, "Every gate"; `small-indexes.md`'s open-index rows |
+| **T1** no offload pool | The census lists only section 2's threads; WL and FS stay until 7b | `harness/thread_census.sh` during `stall_load.py`; `async_check.sh --strict` exits 0 |
+| **T2** E2E on strata | 0 assertion regressions against 7a's rerun (566 of 566); 0 guard hits, 0 ASan reports; a `stored` upload of 2x the body cap, and one just under it, read back byte-equal | 7a's T6 procedure (`e2e_capture.sh`, `e2e_diff.py`) on a Debug ASan build; `harness/stored_stream.sh` |
+| **T3** recovery | `wal_recovery_check.sh` and `engine_crash_check.sh` pass; writers on two reactors into one index, killed mid-run, replay to the model | As written, `XAPIAND_ENGINE=strata`; `engine_crash_check.sh --reactors 2` |
+| **T4** reactor stall | p99 lag ≤ 1 ms (the 1,024 µs edge, D14) on every loop under the mixed load; p99.9 and max reported | `stall_load.py --phase loaded`; lag-histogram deltas from `:metrics` |
+| **T5** light-query p99 | Under heavy load ≤ 2x its unloaded p99 + 1 ms (PLAN `:645-647`), and below the pre-7c baseline; a same-index run (RESTORE into `accounts`) reported as Q6's cost | `stall_load.py`, `unloaded` then `loaded`, then `--restore-into accounts` |
+| **T6** reactor faults | Major faults on reactor threads per 1,000 queries ≤ 1 at 2x RAM: reported at 7c, gated at Phase 6 (owner) | Linux gate VM, `getrusage(RUSAGE_THREAD)` per loop, `stall_load.py --index-size 2xram` |
+| **T7** concurrency and shutdown | 0 TSan and 0 ASan reports; the final dump equals the model; a SIGTERM at 300 s exits 0 with every acknowledged write durable | `engine_mixed_load.py BIN OUT --engine strata --secs 600 --term-at 300` on TSan and on ASan builds |
+| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record reader registry gives 503s, not errors | `stall_load.py --overload light 4` and `--overload heavy 4` (4x the saturating rate, K3); `test_readers_cap` |
+| **T9** cancellation | A read whose client disconnects frees its reactor within one slice, and the cancel counter rises; a write whose client half-closes completes and is durable | Functional tests: a heavy search disconnected after 50 ms; a PUT then `shutdown(SHUT_WR)` |
+| **T10** Lua bounds | Two calls interleaved on one script keep their own `_doc`; an infinite loop ends at the instruction cap; one inside a `table.sort` comparator ends at the non-yieldable bound; an exponential pattern and an allocation past the cap each end; all 4xx; T4 holds with four looping scripts | Unit tests (the review's `lua_yield_probe` cases among them) plus `stall_load.py --lua-loop 4` |
+| **T11** replaced layer wins by a lot | Dispatch cost per light request is at most half the offload hop's, in CPU and in wall; parity fails (owner, 2026-10-27) | `harness/profile_light.sh` on both binaries at concurrency 1: CPU from frames, wall from K6's timestamps |
+| **T12** no throughput loss | RESTORE docs/s (20,000 accounts) and saturated query QPS each ≥ 1.0x pre-7c `main`, on a host with more than 10 CPUs; the row states its CPU count | `profile_bulk.sh`, `loadtest.py`, interleaved |
+| **T13** every gate | ASan, UBSan, TSan; coverage at TESTING.md's targets; restore corpora replayed; per-open-index cost (entry, turn, `WorkGroup`, strata's three groups, a `DataStorage` handle) at 10,000 open indexes, and the shared reader registry's bytes, stated | strata PLAN, "Every gate"; `small-indexes.md`'s open-index rows |
 
 ## 5. Steps
 
 ```
- S1 tooling + pre-7c baseline ───────────────────────────────────────────────┐
- L1 task: event, async_mutex, demoted() ─┐                                   │
- L2 threadpool: land WorkPool ───────────┼─> X2 registry, lease, chores ─> X3 HTTP on reactor ─> X6 deletions ─> X7 gate
- L3 http: coroutine handler, body cap ───┘        ▲          ▲     X4 Lua ──┤
- L4 prospect: sliced search ──────────────────────┼──────────┘     X5 schema, resolver, control ┘
- L5 strata: flush_owed, executor binding ─────────┘
- X1 delete the Xapian path (Q1) ─> X2
+ S1 tooling + baseline ──────────────────────────────────────────┐
+ X1 drop Xapian ──────────────┐                                  │
+ L1 task, L2 threadpool ──────┼─> X2 registry, lease ─> X3 views ─┼─> X6 ─> X7
+ L3 http, L4 prospect ────────┤                  X4 Lua, X5 ─────┘
+ L5 strata, L6 storage ───────┘
 ```
 
-1. **S1, tooling and baseline (step 1, below).** No owner answer needed.
-2. **L1 to L5, the library pieces**, each on its own branch in its own repository, parallel with S1:
-   L1 `task::event`, `task::async_mutex`, `asio_scheduler::demoted()`; L2 finish `feature/scheduler`
-   (its ledger's open items: sanitizers and CI on the rebased branch, K1 to K3 reruns, consumer builds);
-   L3 the coroutine `handle`, the awaitable body, the buffered-body cap (D3, D12); L4 prospect's search as
-   a task with checkpoints (D12); L5 strata's `flush_owed` and the `WorkPool` executor binding (D4, D6).
-3. **X1** (after Q1): delete the Xapian engine, the remote and replication services, and `DataStorage`.
-4. **X2**: `DatabaseHandler` and `Shard` operations become tasks; the registry and lease (D5); the
-   adapter without locks (D6); chores (D4, D7). `sync_wait` leaves every server path.
-5. **X3**: views as tasks on the reactors (D2, D3); `FLUSH`, `RESTORE` with parse-ahead (D12).
-6. **X4** Lua (D10); **X5** schema, resolver and control plane (D11, D13).
-7. **X6**: the deletions (D4, D13, D15), destructor asserts (D14), `async_check.sh --strict` in CI.
-8. **X7**: the lead runs T1 to T13 on `main`.
+1. **S1, tooling and baseline**, and **X1, the Xapian deletion**, start now, in parallel.
+2. **L1 to L6**, each on its own branch in its own repository, start now:
+   - L1 task: `event`, `async_mutex` with `lock_until`, `await_asio`, the per-resume slice,
+     `demoted()`, and the destructor asserts.
+   - L2 threadpool: land `feature/scheduler` (sanitizers and CI on the rebased branch, K1 to K3
+     reruns, consumer builds), plus merge aging and the V2 and V5 tests.
+   - L3 http and reactor: the offload removal, coroutine `handle`, `BodyStream`, the disconnect
+     monitor callback, `AdmissionGate`, and the body cap; prism migrates.
+   - L4 prospect: sliced search.
+   - L5 strata: `defer_io` and the `WorkPool` executor binding.
+   - L6 storage: the streamed record write.
+3. **X2**: handler and shard operations as tasks; the registry and lease (D5); host mode (D6); chores
+   (D4, D7, D9). `sync_wait` leaves every server path.
+4. **X3**: views on the reactors (D2, D3); `FLUSH`, RESTORE parse-ahead, streamed uploads (D9, D12).
+5. **X4** Lua (D10); **X5** schema, resolver and control plane (D11, D13); inventory J (D1).
+6. **X6**: deletions (D4, D13, D15), destructor asserts, shutdown (D16), `--strict` with owed hits.
+7. **X7**: the lead runs T1 to T13 on `main`.
 
-**Step 1 (S1).** Branch `phase7c/tooling` in `Xapiand-wt/phase7c-tooling`, plus `feat/lag-probe` in
-Kronuz/reactor. Done criteria, for the lead to set:
+**S1 (step 1).** Branch `phase7c/tooling` in `Xapiand-wt/phase7c-tooling`, plus `feat/lag-probe` in
+Kronuz/reactor. Done criteria:
 
-- K1 Kronuz/reactor: `reactor::LagProbe` per loop (interval 1 ms), log2 buckets in µs, no allocation
-  after start, a `snapshot()`; a test where a handler busy-waits 5 ms lands in the ≥ 4,096 µs bucket, and
-  fails with rearming removed; ASan, UBSan and TSan clean; CI green on every platform.
+- K1 Kronuz/reactor `reactor::LagProbe` (D14 intervals and buckets) with a `snapshot()`. Tests:
+  a 5 ms busy handler lands in the ≥ 4,096 µs bucket and fails with rearming removed; a counting
+  allocator sees zero allocations after `start()`; after 1 s idle the wake rate drops to 10 per
+  second. ASan, UBSan and TSan clean, CI green on every platform (C4).
 - K2 Xapiand: every HTTP loop and the control loop run a probe; `:metrics` exports
-  `xapiand_reactor_lag_seconds` per loop; the reactor pin moves; docs E2E on strata 566 of 566, 0
-  regressions.
-- K3 `harness/stall_load.py`: phases `unloaded` and `loaded`, the heavy and light loads above, options
-  `--overload`, `--lua-loop` (later steps fill them) and `--index-size`; prints and asserts its effective
-  configuration and non-zero counts; writes light p50, p99 and p99.9 per phase, lag deltas per loop,
-  503 and error counts, and phase times as JSON; a 20,000-document dry run gives non-empty results.
-- K4 `harness/thread_census.sh`: thread names and counts by prefix for a running node (macOS `ps -M`,
-  Linux `/proc/PID/task/*/comm`); its dry run lists today's pools.
-- K5 `harness/async_check.sh`: section 1's greps as rules with a file:line allowlist; by default it
-  prints counts that match section 1's totals on `3b0dc433f`; `--strict` exits non-zero on any hit
-  outside the allowlist.
-- K6 `harness/profile_light.sh`: samples a node at concurrency 1 on the light mix and attributes CPU
-  and wall per request to named frame groups (offload hop, scheduler, engine, HTTP), like
-  `profile_bulk.sh`; dry run on `3b0dc433f`.
-- K7 The ledger names the commands the lead runs for the pre-7c baseline (T5, T11, T12); the developer
-  makes no timing claim.
+  `xapiand_reactor_lag_seconds` per loop; the reactor pin moves; docs E2E on strata 566 of 566.
+- K3 `harness/stall_load.py` (C3):
+  - the RESTORE writes `restore-target`, and `--restore-into accounts` gives the same-index run;
+  - light latency is measured from each request's scheduled send time, and the achieved and
+    target rates are printed and asserted within 5%;
+  - `--saturate` finds the saturating light rate by doubling the rate until p99 exceeds 10x the
+    unloaded p99, then bisecting, and `--overload light|heavy N` uses it;
+  - every phase writes light p50, p99 and p99.9, lag deltas per loop, 503 and error counts,
+    in-flight and demoted peaks, segment count, merge backlog and phase times as JSON;
+  - `--lua-loop` and `--index-size` are present (later steps fill them);
+  - a 20,000-document dry run gives non-empty results.
+- K4 `harness/thread_census.sh`: names and counts by prefix (macOS `ps -M`, Linux `/proc/PID/task/*/comm`);
+  its dry run lists today's pools.
+- K5 `harness/async_check.sh` (C1). Rules for file syscalls, `std::ifstream`, `fopen`, mutexes,
+  `yield`, sleeps, and the condition-variable and `sync_wait` families. Every hit is in one of
+  D14's classes, owed hits name their decision, and inventory J is among the hits. Done is zero
+  unclassified hits on `3b0dc433f`.
+- K6 `harness/profile_light.sh` (C2): CPU per request from frame samples, by named group (offload
+  hop, scheduler, engine, HTTP); wall from timestamps at the post, the start of the run and the
+  resume on the loop. These are taken by an http branch `trace/hop` that records them under a
+  macro around the offload `co_spawn` (`http_asio.h:779-789` at `dc3be77`), used only for this
+  baseline build. The dry run on `3b0dc433f` shows a non-zero hop share in CPU and in wall.
+- K7: the ledger names the commands the lead runs for the pre-7c baseline (T5, T11, T12) on master
+  before X2 lands; the developer makes no timing claim.
 
-## 6. Open questions for the owner
+**X1, the Xapian deletion.** Branch `phase7c/drop-xapian`. Delete `src/xapian/`, `src/engine/xapian/`,
+the `XAPIAN_OBJ` target and engine selection, the remote and replication services (`src/server/`
+`remote_protocol_*`, `replication_protocol_*`, by `git rm`, unopened), their options (D15), the Xapian-only
+tests (`test_wal_replay_xapian`, `CMakeLists.txt:2217`), and the Xapian-only inventory sites (A 3, B 6).
+`sortable_serialise` stays: strata paths use it (`engine/strata/shard.cc`, `serialise.cc`), and Phase 8
+removes it. `DataStorage` stays (D9). Done criteria:
 
-**Q1. When does the Xapian path go?** 7c removes the pools Xapian's synchronous calls need. (a) Delete
-the Xapian engine, remote protocol, replication and `DataStorage` at 7c's start (X1), moving Phase 8's
-code removal first; Phase 8's closing benchmark compares against the final Xapian-only release built from
-the `xapiand` branch, which is what users upgrade from. (b) Keep Xapian until Phase 8 behind a private
-engine-internal thread, an interim bridge Phase 8 deletes. (c) Keep it on the reactor pools; the "no
-offload pool" row then holds only for a strata-only build. Recommendation: (a). It blocks X1 and X2's
-scope, not S1 or L1 to L5.
+- The lead confirms that the final Xapian-only release branch (`xapiand`) exists before X1 lands.
+- No reference to `xapian.h`, `engine/xapian`, `remote_protocol` or `replication_protocol` remains
+  outside the changelog and docs history, by grep.
+- Debug ASan and Release builds pass, and CI is green on every platform. Docs E2E on strata gives
+  566 of 566 with 0 regressions; T3's checks pass.
+- The changelog's `Removed` lists the engine, the protocols and the options. ARCHITECTURE,
+  AGENTS and the licensing note say the binary stays GPL until Phase 8 removes `sortable_serialise`.
+  The extraction ledger has its row. Cluster mode has no replication from X1 until 7b, and the
+  changelog says so.
 
-**Q2. Xapiand's WAL in the single-node release.** (a) Unchanged until 7b: WL and FS stay as background
-writers no reactor waits on (D8). (b) Pull `kronuz::journal` forward as each strata index's log at
-`rf = 1`, moving 7b's "the journal replaces the WAL" into 7c with its own design. (c) Move WAL writes and
-fsyncs into chores. Recommendation: (a): it touches no code 7b deletes and passes the gate as written.
-Blocks nothing before X6.
+## 6. Owner answers and open questions
 
-**Q3. Do the libraries drop their offload path now?** Detent's distributor uses http's `should_offload`
-and workers (`detentd.cc:125`, `main.cc:278-284`, `host.cc:243`). (a) Xapiand stops using it in 7c; the
-library removal is a separate change coordinated with Detent's agent. (b) Remove it from http and
-reactor in 7c and migrate Detent in the same series. Recommendation: (a). Blocks L3's scope only.
+Answered (2026-10-29): Q1 (a), delete the Xapian path at 7c's start (X1). Q2 (a), the WAL stays
+until 7b (D8). Q3, http drops its offload path entirely; Xapiand, prism and Detent migrate, Detent
+separately (D3). Q4 is not decided and is out of 7c: blobs stay in `DataStorage`, with I/O in
+chores (D9). Q5, T6 gates at Phase 6. Q6, read-your-writes stays the default (D6).
 
-**Q4. Where do blobs live?** (a) In-place in strata's stored record (D9), up to 64 MiB, merges rewriting
-them; the `stored` type of the store API (`docs/src/content/docs/reference-guide/documents/store-api.md:268`)
-is removed under R-RM or kept as a label. (b) Keep `DataStorage` with its I/O in chores. (c) A strata
-large-value section (format work). Recommendation: (a), removing the `stored` type. Blocks X1's
-`DataStorage` deletion.
+No new question blocks a step. Three choices are made here and are reversible:
 
-**Q5. Does T6 (faults at 2x RAM) gate 7c?** Passing it needs residency prefetch from each query plan and
-the asynchronous residency backends (residency ships only `madvise`), which is Phase 6's work. (a) Gate it
-at 7c, pulling that in. (b) Report it at 7c and gate it at Phase 6, as a carried row. Recommendation: (b).
-Blocks nothing.
-
-**Q6. Search visibility by default.** (a) Keep read-your-writes (D6): a search after a write awaits a
-coalesced refresh, a segment write until write-buffer D11 lands. (b) A periodic refresh with an explicit
-wait option, as Elasticsearch's `refresh` and 7b's API do. Recommendation: (a) for 7c, since the E2E
-suite asserts it; T5's mixed load reports its cost, and 7b decides the default. Blocks nothing.
+1. EOF cancels reads but not writes (D3).
+2. A streamed upload needs `Content-Length` (D9).
+3. Lua's matcher carries a step-budget patch (D10).
 
 ## 7. Risks and what is not covered
 
-- **Library steps on the path.** L2 (paused `feature/scheduler`), L4 (prospect's sliced search) and L5
-  gate X2 and X3; write-buffer steps 2 to 4 are not required (D5, D6 stand in) but delete the stand-ins.
-- **One large document.** Parse-ahead bounds it off the reactor; the buffered-body cap is new behavior for
-  clients that send larger bodies.
-- **Locks left on reactors.** D1's allowlist keeps short map locks; under contention a reactor can park
-  on one for a wake's latency (research `:50-92`: about 10 µs p50, 63 to 77 µs p99 on the Mac). T4
-  catches it.
-- **Cluster mode.** The control-plane commands become coroutines (D13), but cluster mode is 7b's gate;
-  T1 to T13 run `--solo`.
-- **Not read:** `schema.cc` beyond the cited ranges, `discovery.cc` beyond the cited line, and Detent beyond
-  the three cited files.
+- **Library steps on the path.** L1 to L6 gate X2 and X3. Write-buffer steps 2 to 4 are not
+  required, but they delete D5 and D6's stand-ins.
+- **Threads.** Reactors and `WorkPool` workers are both one per CPU. Chores are mostly device waits
+  and parked workers use no CPU, but T12 shows whether the CPU-bound parse-ahead competes with the
+  reactors.
+- **Per-shard streamed volumes.** Each upload above the cap gets its own volume file, until the
+  owner decides Q4.
+- **Locks left on reactors.** Allowlisted map locks can park a reactor for a wake's latency (research
+  `:50-92`, about 10 µs p50 on the Mac); T4 catches it.
+- **Cluster mode** is 7b's gate. T1 to T13 run `--solo`.
+- **Not read:** `schema.cc` beyond the cited ranges, `discovery.cc` beyond `:710`, and Detent.
