@@ -22,7 +22,7 @@ search; docid tie-break; the default node's five shards searched as one index.
 5. Ties by docid in the requested order (ascending, descending).
 6. Refused with a client error that names it (`errc::syntax`, so the handler does not retry): sorter, collapse,
    similar documents, cutoffs, XOR, MAX, SYNONYM, ELITE_SET, wildcard, edit distance, posting sources, query text,
-   a PHRASE over anything but terms or with a window other than its length.
+   a PHRASE over anything but terms. A PHRASE keeps its terms' query positions as offsets (gaps where stop words stood) and matches the terms at exactly those relative positions.
 7. A spy is shown every live match once (pulled forward from S3, see below).
 8. Tests shared with Xapian; docs suite; ASan and UBSan; mutants; smoke. `docs/mechanisms/strata-search.md`.
 
