@@ -19,7 +19,7 @@ after this one are the first run on `9fa890ecc`, kept as history.
 | T6 E2E on strata | Zero assertion regressions against the Xapian baseline | Xapian 566/566, strata 566/566 (335 requests, 0 uncovered); 0 regressions, 0 HTTP status differences on 335 matched requests | PASS |
 | T7 bodies | Every difference listed and justified | 5 of 335 bodies differ (listed below), all justified. Hit order, scores, `total` and `count` identical on all 92 responses with hits (`search_order_diff.py`) | PASS |
 | T8 crash recovery | Same document set as Xapian after `kill -9`; strata digest check passes | A: 50 PUTs without a commit, `kill -9`: both engines recover the same 50 documents, every `n` right, the restart logs the WAL replay. B: sequential PUTs, `kill -9` after 4 s: Xapian recovered 6063 of 6063 acknowledged writes, strata 4592 of 4592; none lost, none duplicated, all intact. The strata check (`index::check`) passes on all 5 shards right after each kill and after each restart and second kill (4 runs of 5 shards) | PASS |
-| T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
+| T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4, cause and alpha.9 control in "D4: why `_version` is 2"). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
 | Unit tests | All pass | `ctest`: 28 of 28 pass (engine_document, engine_fields, engine_census, engine_query, engine_sort, engine_shard, engine_read, engine_search, engine_search_strata, engine_callbacks, engine_error, engine_replay, engine_strata, wal_replay, pool, blocking_guard, offload_followups, serialise, text and the rest) | PASS |
 | T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides. Corrected (gate review F1): the estimator counted device-flush wait as CPU; on CPU the row is 0.414x, PASS (see the closing run, "What moved") |
 
@@ -182,7 +182,7 @@ divergences and now prints all; `profile_bulk.sh` gained the strata layer and th
 | D1 | `:check` is not engine-aware: on strata it reports every shard as not a Xapian database | None. A seam gap (X4 "get/find_key/stats/metadata/check"); the lead decides |
 | D2 | `_terms` aggregation over a text field refused | R-P2 covers the `INFO` views; for `_terms` it says "served from stored values", which a text field has no equivalent of. Needs a ruling: refuse for text fields on strata, or serve from the dictionary |
 | D3 | `doc_len_lower` / `doc_len_upper` of database info are 0 on strata | None. Xapian's lower bound is a wrapped value, so a plain match is not wanted; decide the field |
-| D4 | `RESTORE` of a dump into Xapian bumps `_version` of 5 of 1000 documents to 2 (also Xapian to Xapian) | Pre-existing Xapian behaviour, not strata's; T9 compares strata's dumps strictly and the round trip ignoring `_version`, with the control |
+| D4 | `RESTORE` of a dump into Xapian bumps `_version` of 5 of 1000 documents to 2 (also Xapian to Xapian) | Pre-existing Xapian behaviour (reproduced on `v1.0.0-alpha.9`), not strata's; cause and fix in "D4: why `_version` is 2". T9 compares strata's dumps strictly and the round trip ignoring `_version`, with the control |
 | D5 | PHRASE, NEAR and ELITE_SET over text refused (14 assertions, 4 searches) | None found. Design S2/S3/S4 deliver them; `strata-engine-text.md` decision 1 and `search.cc` validate show the refusal |
 | D6 | 404 wording for a missing database | D9 (errors are engine kinds) |
 
@@ -211,6 +211,48 @@ BIN=.scratch/build/bin/xapiand harness/engine_crash_check.sh          # T8 (CHEC
 BIN=.scratch/build/bin/xapiand harness/engine_migration_check.sh      # T9
 XAPIAND_ENGINE=strata harness/profile_bulk.sh BIN OUT --label strata_1 --port 18990   # T11, under quiet exclusive
 ```
+
+## D4: why `_version` is 2 on ids 386 to 390 (gate review F5, C4)
+
+Traced and settled on 2026-10-29 (workstream gate7a-l2). Settled "pre-existing", with the cause; fixed on the Xapian engine adapter.
+
+Cause. The Xapian adapter keeps a document's version twice: the value slot `DB_SLOT_VERSION` and a boolean term under the prefix `V`,
+`"V" + serialise_length(docid) + sortable_serialise(version)` (`stamp`, `src/engine/xapian/shard.cc:61-66`, at `Xapiand:3bc11f31f`). To find the stored version of
+a document it scanned every term that begins with `"V" + serialise_length(docid)` (`stored_version`, `src/engine/xapian/shard.cc:79-93`,
+before the fix). The schema indexes a record's own `_version` field under the same prefix (`DOCUMENT_VERSION_TERM_PREFIX` is `"V"`,
+`src/database/utils.h:65`, `Schema::set_default_spc_version`, `src/database/schema.cc:9198-9207`), as `"V" + "N" + sortable_serialise(v)`
+(the `N` is the numeric type marker), the same bytes as the version term of the document at docid 78 when its version is `v`. A dump record carries `_version`, and `RESTORE` indexes the body as it is
+(`DatabaseHandler::prepare_document`, `src/database/handler.cc:913-960`, leaves `_version` in the body). For the document with shard-local
+docid 78 the prefix is `"V" + 0x4E`, and `0x4E` is `N`: the scan matches the `_version` field terms of the documents written before it,
+reads the body's own `_version` as the stored version, and the write lands at that value plus one. No other docid collides (a single
+length byte other than 78 never equals `N`).
+
+Evidence (probes in `.scratch/probes/`, `c4_bisect.sh`, `c4_predict.sh`, kept in the worktree):
+
+- Only records that carry `_version` are affected: the 1000-record dump restored as is, reversed, or sorted bumps ids 386 to 390; with
+  `_version` stripped it bumps none.
+- The bumped value follows the body: with `_version` set to 1, 2, 3, 5, 10, 100 on ids 300 to 399 the dump has 2, 3, 4, 6, 11, 101 on
+  ids 386 to 390 and 1 elsewhere.
+- Only shard-local docid 78 is hit, whatever the shard count: one shard bumps id 78; three shards bump 232, 233, 234 (local docid 78 of
+  each); five shards bump 386 to 390; five shards with ids 1 to 380 bump none. A debugger breakpoint on `stored_version` during a
+  restore sees the call with docid 0x4E on exactly the bumped writes.
+- The terms of a restored one-shard index (`.scratch/probes/test_probe_c4.cc`, a probe over the shard's `allterms("V")`): the term
+  `564ebe` (`"V"`, `N`, `sortable_serialise(1.0)`) is in 118 of 120 documents, and document 78 holds it beside its own version term
+  `564ebe40` (docid 78, version 2); documents 77 and 79 hold `564dbe` and `564fbe`, their own version terms at version 1.
+- The ids are consecutive because ids map to shard-local docids by `(id - 1) / shards + 1`, so ids 386 to 390 are docid 78 of the five shards.
+
+Control. The pre-seam binary, `v1.0.0-alpha.9` (`Xapiand:6961bb98c`, built Release in its own worktree; the same prefix scan lives in
+`src/database/shard.cc` there, `ver_prefix = "V" + serialise_length(info.did)`), restoring the same dump gives the same result: one shard
+bumps id 78, three bump 232 to 234, five bump 386 to 390 (5 of 1000 with `_version` 2), none with ids 1 to 380. The behavior predates the
+engine seam; strata keeps the version in its own record and is right (version 1 everywhere). Impact: any `RESTORE` or `PUT` whose body
+carries `_version` writes the document at shard-local docid 78 with the wrong version on the Xapian engine, which is the migration case
+(T9); a client that sends `?version` for such a document gets a spurious conflict.
+
+Fix. `stored_version` reads the document's version value slot instead of scanning terms, so the term namespace is no longer shared
+(`src/engine/xapian/shard.cc`); the test `version_term_collision` in `tests/test_engine_shard.cc` writes 77 documents that carry the
+colliding term and then document 78: it fails 3 checks without the fix and passes with it. The remaining overlap, a body that carries
+`_version` being indexed as a field, is the host's (`handler.cc`, outside this fix); removing `_version` from a `RESTORE` body in
+`prepare_document` would make the schema stop indexing it.
 
 ## Closing run
 
