@@ -838,8 +838,8 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http and cluster so this pin wins over theirs (first declaration wins).
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 0c04d0d3dafbbe91906d236cc1a52ecb26cfed2c)  # reactor main
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG dc3be77028d13aca66d20648d498301c9d745968)
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 3041327b695f3071f740030f6b7e337b5c187154)  # reactor phase7c/s1-lag-probe (LagProbe)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG e3d52369b0d4cb0029cb6c3dc9d2729552a3eb31)  # http phase7c/s1-lag-probe (enable_lag_probe)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 

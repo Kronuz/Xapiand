@@ -80,6 +80,7 @@
 #include "tls.h"                                 // for tls_context
 #endif
 #include "reactor.h"                             // Kronuz/reactor: reactor::Reactor (the control-plane loop)
+#include "reactor_lag.h"                         // Kronuz/reactor: reactor::LagProbe, LagSnapshot
 #include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
 #include "server/remote_protocol_service.h"         // remote::RemoteProtocolService (the Asio transport)
 #include "server/replication_protocol_service.h"    // replication::ReplicationProtocolService (the Asio transport)
@@ -448,6 +449,7 @@ XapiandManager::run_loop()
 	arm_signal_reader();
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
+	_rx->reactor.lag().start();
 	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
 	_running_loop.store(false, std::memory_order_release);
 }
@@ -1068,6 +1070,7 @@ XapiandManager::make_servers()
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;
 		http_service->set_bind_options(bind_options);
+		http_service->enable_lag_probe();
 		http_service->enable_compression(search_compression());
 	}
 	this->http_port = http_port;
@@ -1846,7 +1849,42 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_endpoints.Set(count.first);
 	metrics.xapiand_databases.Set(count.second);
 
-	return metrics.serialise();
+	return metrics.serialise() + reactor_lag_metrics();
+}
+
+
+// xapiand_reactor_lag_seconds: one histogram per loop ("http0", ..., "control"), fed by
+// reactor::LagProbe. Bucket edges are the probe's (log2 microseconds, 4 sub-buckets each), so a
+// percentile reads as the upper edge of its bucket; `le` is that edge in seconds.
+std::string
+XapiandManager::reactor_lag_metrics() const
+{
+	std::vector<std::pair<std::string, reactor::LagSnapshot>> loops;
+	if (http_service) {
+		for (std::size_t i = 0; i < http_service->reactors(); ++i) {
+			loops.emplace_back("http" + std::to_string(i), http_service->reactor(i).lag().snapshot());
+		}
+	}
+	loops.emplace_back("control", _rx->reactor.lag().snapshot());
+
+	const auto node = Node::get_local_node();
+	const std::string labels = strings::format("cluster=\"{}\",node=\"{}\"", opts.cluster_name, node ? node->name() : std::string());
+	std::string out = "# HELP xapiand_reactor_lag_seconds How late a reactor loop ran its probe timer\n"
+		"# TYPE xapiand_reactor_lag_seconds histogram\n";
+	for (const auto& [loop, snap] : loops) {
+		std::uint64_t running = 0;
+		for (std::size_t i = 0; i < reactor::LagSnapshot::buckets; ++i) {
+			running += snap.count[i];
+			if (i + 1 == reactor::LagSnapshot::buckets || snap.count[i] != 0 || (i < 120 && (i % 4) == 3)) {
+				const auto edge = i + 1 == reactor::LagSnapshot::buckets ? std::string("+Inf") : strings::format("{}", static_cast<double>(reactor::LagSnapshot::upper_us(i)) / 1e6);
+				out += strings::format("xapiand_reactor_lag_seconds_bucket{{{},loop=\"{}\",le=\"{}\"}} {}\n", labels, loop, edge, running);
+			}
+		}
+		out += strings::format("xapiand_reactor_lag_seconds_sum{{{},loop=\"{}\"}} {}\n", labels, loop, static_cast<double>(snap.sum_us) / 1e6);
+		out += strings::format("xapiand_reactor_lag_seconds_count{{{},loop=\"{}\"}} {}\n", labels, loop, snap.wakes);
+		out += strings::format("xapiand_reactor_lag_max_seconds{{{},loop=\"{}\"}} {}\n", labels, loop, static_cast<double>(snap.max_us) / 1e6);
+	}
+	return out;
 }
 
 
