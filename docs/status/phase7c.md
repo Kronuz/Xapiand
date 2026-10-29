@@ -14,7 +14,7 @@ done criteria, Q1 to Q6. No build, probe or measurement was run.
 
 ## Done
 
-- Revision 1 of `docs/design/phase7c.md` and this ledger (this commit).
+- Revision 1 of `docs/design/phase7c.md` and this ledger: `Xapiand:0a8d235b8`.
 
 ## Next
 
