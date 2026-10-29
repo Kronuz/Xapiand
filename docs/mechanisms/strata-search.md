@@ -5,9 +5,11 @@
 `engine::search` (`src/engine/search.cc`) sends a search to the engine that owns the shards: Xapian's
 `Enquire`, or `engine::strata::search` (`src/engine/strata/search.cc`), which runs the query over the
 segments of every shard as one index. The strata side covers terms, `match_all`, AND, OR, AND_NOT,
-AND_MAYBE, FILTER, SCALE_WEIGHT, PHRASE and NEAR over terms, append chains, sorting, collapse, aggregations
-through the spy, wildcard and edit-distance expansions, posting sources and query text. A query shape it does
-not run is refused with a client error that names it (`errc::syntax`).
+AND_MAYBE, FILTER, SCALE_WEIGHT, PHRASE and NEAR over terms and over alternatives, append chains, sorting,
+collapse, aggregations through the spy, wildcard and edit-distance expansions, posting sources and query text.
+Every shape a `Query` factory builds is searched: a shape that is not a valid query is refused when the query is
+built (`src/engine/query.h`), by both engines, and the Xapian engine alone does not search a PHRASE or NEAR over
+alternatives.
 
 ## How
 
@@ -39,7 +41,12 @@ strata::search
    `conjunction_scorer`, OR `disjunction_scorer`, AND_NOT `exclusion_scorer`, AND_MAYBE
    `required_optional_scorer`, FILTER an AND with the right side scaled by 0 (`scale_scorer`, prospect's
    `operators.hh`); PHRASE is a `phrase_scorer` over consecutive positions (window equal to the term count)
-   and NEAR the same with a window. A scorer is null where a segment cannot match, and the operators treat a
+   and NEAR the same with a window. A PHRASE or NEAR with a position that holds alternatives (a wildcard or
+   edit-distance expansion, an OR or SYNONYM of words) is a `multi_phrase_scorer`: each position is the scorer
+   of its alternatives, and its terms' positions are merged to find the phrase (the positions are consecutive,
+   as an expansion carries none of its own); a document scores the positions' scores summed. The query text
+   parser (`queryparser`) takes only words as the operands of NEAR and PHRASE, so only a `Query` built by its
+   factories reaches this scorer. A scorer is null where a segment cannot match, and the operators treat a
    null as Xapian treats a subquery that matches nothing.
 6. **Collection.** `prospect::search` keeps the `first + maxitems` best: the pruned collector for ascending ids
    without a spy, the exhaustive one (which scores every match) for a spy or `DocidOrder::descending`. A spy

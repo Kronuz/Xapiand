@@ -1,10 +1,10 @@
-> Status: CURRENT (2026-10-29) gate 7a blocker L1 and condition C3, branch `phase7a/gate-l1` (from master `Xapiand:3bc11f31f`); workstream gate7a-l1, developer.
+> Status: CURRENT (2026-10-29) gate 7a blocker L1 and condition C3, branch `phase7a/gate-l1` (from master `Xapiand:3bc11f31f`); workstream gate7a-l1, developer. Round 2 (the remaining refusals) is below.
 
 # Gate 7a L1 and C3
 
 ## State
 
-L1 and C3 are done on the branch; ctest, the docs E2E on both engines, the removed-features check and ASan+UBSan on the engine search tests are green. Nothing is pushed.
+L1 and C3 are done on the branch, and the remaining refusals are closed (round 2 below); ctest, the docs E2E on both engines, the removed-features check and ASan+UBSan on the engine search tests are green. Xapiand is not pushed; prospect `phase8/phrase-alternatives` is.
 
 ## Rulings applied (lead, 2026-10-29)
 
@@ -65,30 +65,73 @@ search finds (the words that stem alike). `docs/dev/testing.md` describes both.
 4. `percent_threshold` and `weight_threshold` have no remaining reader except the Xapian remote protocol (`remote_protocol_views.cc`, which decodes them from the wire and
    which I did not read or change).
 
-## Remaining refusals in `src/engine/strata` (listed, not fixed)
+## Remaining refusals (round 2, 2026-10-29): closed
 
-`grep -n "unsupported("` finds the five uses in `validate` (`search.cc:175-222`), all of query shapes Xapian serves:
+`grep -n "unsupported(" src/engine/strata` finds nothing; `validate` and the helper are deleted. Every shape is either searched or refused when
+the `Query` is built (`src/engine/query.cc`), by both engines, with a 400 that says the query is not valid.
 
-1. PHRASE or NEAR of anything but terms (`search.cc:175`)
-2. SYNONYM of anything but terms (`search.cc:183`)
-3. an operator that does not join, as a combine operator (`search.cc:189`) and as an append operator onto a non-empty accumulation (`search.cc:203`)
-4. a wildcard or edit-distance expansion combined by an operator other than SYNONYM, OR or MAX (`search.cc:222`)
+### Reachability (probed on both engines before the change; bank, `personality` is a text field)
 
-Their message is "The strata engine does not search ... yet". Whether each is reachable from the HTTP query DSL is not checked here.
+| Shape (strata refusal) | From HTTP? | Request, and the answer before |
+|---|---|---|
+| PHRASE/NEAR of non-terms (`search.cc:175`) | No. `queryparser` refuses a NEAR/PHRASE operand that is not a term (`queryparser.cc:1087`, kind `unsupported`, Xapian's text) | `{"personality":{"_phrase":"first se*"}}`, `"first seen~"`, `"hard (to too) describe"`, `_near` likewise: 400 "OP_NEAR and OP_PHRASE only currently support leaf subqueries" on both engines; the strata check was dead code. Only a `Query` built by the factories (the tests) reaches it |
+| SYNONYM of non-terms (`:183`) | Yes | `{"personality":{"_synonym":"hard desc*"}}` (also `hard descr~`, `hard (to too) describe`): Xapian 200 (77 hits for the first), strata 400 "does not search SYNONYM of anything but terms yet" |
+| Non-joining operator as a combine operator (`:189`) | Only as an array: `{"_query":{"_scale_weight":[{"personality":"kind"},2]}}`, `_wildcard`, `_edit_distance` lists | 400 "InvalidArgumentError: op not valid with a list of subqueries" on both engines (Xapian's constructor, which `engine::prepare` runs for every engine); the strata check was dead code |
+| Non-joining operator as an append operator onto a query (`:203`) | No: the DSL appends with a non-joining operator only onto nothing (leaf maps) | |
+| Expansion combined by anything but SYNONYM/OR/MAX (`:222`) | No: the DSL and the parser build every wildcard and edit distance with SYNONYM | |
+
+`engine::prepare` converts every query to a Xapian query first, whatever the engine, so a shape Xapian's constructor refuses never reached strata's `validate`.
+
+### Rulings applied
+
+- Served: PHRASE/NEAR whose positions hold alternatives (a wildcard or edit-distance expansion, an OR or SYNONYM of words), by the strata engine, with
+  prospect's new `multi_phrase_scorer` (`prospect:14dbbbb`, branch `phase8/phrase-alternatives`, pushed, Xapiand repinned): each position is the scorer
+  of its alternatives, the phrase is found on the merged positions of their terms, and a document scores the positions' scores summed. The Xapian engine
+  does not search them (its matcher takes terms only, which is why the premise "Xapian serves them" did not hold): `engine::prepare` skips the Xapian
+  conversion for them and `xapian::search` answers a client error. Since `queryparser` hands PHRASE/NEAR terms only, these are not reachable over HTTP
+  until the parser lets a wildcard, fuzzy or partial word through (see Blocked on).
+- Removed, from both engines: SYNONYM of anything but words (the Xapian engine used to search it), PHRASE/NEAR of anything but words and their
+  alternatives, SCALE_WEIGHT/WILDCARD/EDIT_DISTANCE/INVALID over a list, an append of a non-joining operator onto a query, an expansion combined by
+  anything else. The factories throw `QueryParserError` (400) "... is not a valid query"; `parse_text` reports queryparser's unsupported-operand error in
+  the same words ("A PHRASE or NEAR of anything but words is not a valid query"). Changelog: Removed.
+- Justified T7 difference: strata's `collapse_max` above 1 is exact (the best `collapse_max` documents of each group within the window); Xapian's
+  returns lower-ranked documents of a group whose better one fell outside its window (bank `?collapse=age&limit=5`: Xapian accounts 6, 11, 16, 21, 1000;
+  strata 1 to 5). The lead keeps strata's behaviour. Changelog: Changed.
+
+### Proof (RelWithDebInfo, Apple clang, one binary for both engines)
+
+- ctest 28 of 28 (`.scratch/ctest.log`). `test_engine_search_strata` 477,059 checks: `test_invalid_shapes` (every invalid shape refused at construction, every valid
+  neighbour built, `alternatives()`), `test_phrase_alternatives` (9 shapes x PHRASE and NEAR windows 3 and 6 x alone, under AND and under OR x 1, 2 and 5 shards x
+  3 segments: documents, weights and order equal a model written from the definition; there is no Xapian oracle, its matcher refuses them, so the model is
+  the oracle), the Xapian engine answers `syntax`. `test_text` (the 4 recorded SYNONYM rows, the PHRASE/NEAR message), `test_engine_query` (SYNONYM only over words).
+- `harness/engine_e2e.sh`: Xapian 649 of 649, strata 649 of 649, 377 requests, 0 regressions, 0 status differences; `bodydiff.py` the same 5 of 377;
+  `search_order_diff.py` 134 of 134 identical.
+- `removed_features_check.sh` (extended): 10 more checks per engine, all ok (`_synonym` over a wildcard, a fuzzy word and a bracketed group; `_phrase`/`_near` over a
+  bracketed group, a wildcard, a fuzzy word; `_scale_weight` and `_wildcard` given a list: 400 "not a valid query"). Before the change (probed above) the answers differ:
+  Xapian 200 for the `_synonym` ones, strata "does not search ... yet", both engines Xapian's own messages for the rest.
+- Revert checks and mutants (`.scratch/mutant_alt.sh`), each killed by `test_engine_search_strata`: no edit-distance alternatives, no wildcard alternatives, no OR/SYNONYM
+  alternatives (these three are the served-shape revert checks), NEAR read as PHRASE, alternatives not served at all, PHRASE accepting an AND, SYNONYM accepting anything,
+  any wildcard combiner accepted, any append operator accepted. prospect: `.scratch/mutants.sh`, 7 of 7 killed by `multi_phrase_test` (offset, NEAR window, distinct positions,
+  score, confirmation, merged slot terms, first term only), ASan+UBSan clean.
+- `fuzz_text` 90 s: 3,876,800 texts, 2,932,131 parsed, 944,669 rejected, no violation (a phrase over alternatives stands for its tree there).
 
 ## Done (commits, Xapiand)
 
 - Xapiand:1b8954691 delete the nearest and fuzzy parameters and the weight cutoffs
 - Xapiand:985417616 serve collapse on the strata engine
 - Xapiand:22e56602a check the generated terms with searches (C3)
-
-(later commits on the branch: the census and handler-include follow-up, the quiet removed-features check, this ledger)
+- (the census and handler-include follow-up, the quiet removed-features check, the round 1 ledger)
+- Xapiand:3956598af pin prospect with the multi-phrase scorer
+- Xapiand:5a261e358 refuse invalid query shapes when the query is built (round 2)
+- prospect:14dbbbb `multi_phrase_scorer` (branch `phase8/phrase-alternatives`, pushed)
 
 ## Next
 
-- Lead: read the findings (collapse_max above 1; the remaining refusals); decide whether Xapian's `collapse_max` above 1 stays as is.
+- Lead: the Blocked-on decision below.
 - Re-check of L1 by `probes/refusals.sh` and `removed_features_check.sh` on the branch head.
 
 ## Blocked on
 
-Nothing.
+- Whether `queryparser` should hand a wildcard, edit-distance or partial word to PHRASE/NEAR (Lucene's match_phrase_prefix: `{"_phrase": "first se**"}`). Today the
+  parser refuses them (`queryparser.cc:1087`, Xapian's behaviour, pinned by the 25 error rows of `parse-ab.jsonl`), so the engine support above is not reachable over HTTP.
+  Changing it is a grammar decision in another repository with recorded vectors, so I stopped there. The engine side is ready: the test builds the queries by hand.
