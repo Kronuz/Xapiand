@@ -518,10 +518,15 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 			t.fields.push_back({name, ::strata::field_role::indexed, postings_of(field.kind), false});
 		}
 		part.terms.reserve(field.terms.size());
+		bool within = true;
 		for (const auto& info : field.terms) {
 			part.terms.push_back({info.term, info.wdf, info.positions});
 			part.length += info.wdf;
+			within = within && info.term.size() <= ::strata::format::max_term_bytes;
 		}
+		// The terms are unique by construction and their positions strictly increase (normalise): only the
+		// size is left for the index to check.
+		part.checked = within;
 		length += part.length;
 		out.fields.push_back(std::move(part));
 	}
