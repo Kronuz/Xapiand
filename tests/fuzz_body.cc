@@ -31,11 +31,14 @@
 // Exits non-zero on the first violation. Under -fsanitize it finds the memory errors and overflows.
 
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
 #include <string>
+
+#include <unistd.h>
 
 #include "database/utils.h"
 
@@ -166,6 +169,7 @@ main(int argc, char** argv)
 #ifdef FUZZ_BODY_DEATH_CALLBACK
 	__sanitizer_set_death_callback(show_current);
 #endif
+	std::signal(SIGALRM, [](int) { std::fprintf(stderr, "HANG: a body took more than 30 s; "); show_current(); ::_exit(3); });
 	while (std::chrono::steady_clock::now() < end) {
 		for (int i = 0; i < 50; ++i, ++runs) {
 			const auto format = rng.below(3);
@@ -175,6 +179,7 @@ main(int argc, char** argv)
 			}
 			current = body;
 			current_format = static_cast<int>(format);
+			::alarm(30);
 			try {
 				if (format == 2) {
 					msgpack_load(body);
@@ -189,6 +194,7 @@ main(int argc, char** argv)
 				++decoded;
 			} catch (const std::exception&) {
 			}
+			::alarm(0);
 		}
 	}
 	std::printf("%zu bodies, %zu decoded, %zu refused\n", runs, decoded, runs - decoded);

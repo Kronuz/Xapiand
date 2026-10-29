@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
+- **`RESTORE` of a dump no longer bumps one document per shard.** A record that carries `_version`, as every
+  dump record does, was stored one version too high when it landed at docid 78 of its shard (ids 386 to 390
+  of a five-shard dump).
 - **A deeply nested or very wide query no longer crashes the node.** A text of thousands of nested
   brackets or tens of thousands of words, and a query DSL nested a few hundred levels, overflowed the
   stack of the thread that ran the search.

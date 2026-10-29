@@ -70,6 +70,37 @@ cmake --build build --target check         # builds + runs via ctest
 configured, telling you to reconfigure. The `oldtests/` suite is wired but marked
 legacy in `CMakeLists.txt`; re-enable modules there as they're brought current.
 
+### Sanitizers locally, and the T10 mixed load
+
+The `SANITIZE_*` CMake options did not instrument the local build; use raw flags with Homebrew LLVM. On macOS the SDK's `usr/include` must not reach the compiler as an `-I`, so point the two cache entries
+that name it at a directory of symlinks:
+
+```sh
+cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+  -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1" \
+  -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g1" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++" \
+  -DZLIB_INCLUDE_DIR=$PWD/sdkinc -DUUID_INCLUDE_DIR=$PWD/sdkinc      # sdkinc: symlinks to zlib.h, zconf.h, uuid/
+```
+
+For TSan use `-fsanitize=thread`. The pinned RapidJSON v1.1.0 needs two local edits with this clang, kept in a copy passed as
+`-DFETCHCONTENT_SOURCE_DIR_RAPIDJSON`: `GenericStringRef::operator=` assigns a `const` member (`document.h:319`, a hard error), and
+`Stack::Reserve` adds an offset to a null pointer (`internal/stack.h:117`, a UBSan abort in `Writer`, so the server dies on its first
+JSON response). Then:
+
+```sh
+(cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3)
+harness/engine_e2e.sh build-asan/bin/xapiand OUT                         # the docs E2E on both engines
+TSAN_OPTIONS=log_path=OUT/san python3 harness/engine_mixed_load.py build-tsan/bin/xapiand OUT --secs 600   # T10
+```
+
+`engine_mixed_load.py` runs writers (PUT, RESTORE batches, replace, DELETE against a model) and searchers on one single-shard
+strata index for the stated time, then compares the final `DUMP` with the model; it exits 0 only when nothing failed and the
+sanitizer wrote no report. `xapiand_fuzz_text SECONDS [SEED]` and `xapiand_fuzz_body SECONDS [SEED]` are built with the tests;
+the two libFuzzer targets (`fuzz_strata_document`, `fuzz_strata_pattern`) build with `-DFUZZ=ON` or by hand
+(`clang++ -fsanitize=fuzzer,address,undefined -Isrc tests/fuzz_X.cc src/engine/strata/X.cc`).
+
 ---
 
 ## Functional E2E (the docs are the test suite)

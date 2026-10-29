@@ -19,9 +19,9 @@ after this one are the first run on `9fa890ecc`, kept as history.
 | T6 E2E on strata | Zero assertion regressions against the Xapian baseline | Xapian 566/566, strata 566/566 (335 requests, 0 uncovered); 0 regressions, 0 HTTP status differences on 335 matched requests | PASS |
 | T7 bodies | Every difference listed and justified | 5 of 335 bodies differ (listed below), all justified. Hit order, scores, `total` and `count` identical on all 92 responses with hits (`search_order_diff.py`) | PASS |
 | T8 crash recovery | Same document set as Xapian after `kill -9`; strata digest check passes | A: 50 PUTs without a commit, `kill -9`: both engines recover the same 50 documents, every `n` right, the restart logs the WAL replay. B: sequential PUTs, `kill -9` after 4 s: Xapian recovered 6063 of 6063 acknowledged writes, strata 4592 of 4592; none lost, none duplicated, all intact. The strata check (`index::check`) passes on all 5 shards right after each kill and after each restart and second kill (4 runs of 5 shards) | PASS |
-| T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
+| T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4, cause and alpha.9 control in "D4: why `_version` is 2"). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
 | Unit tests | All pass | `ctest`: 28 of 28 pass (engine_document, engine_fields, engine_census, engine_query, engine_sort, engine_shard, engine_read, engine_search, engine_search_strata, engine_callbacks, engine_error, engine_replay, engine_strata, wal_replay, pool, blocking_guard, offload_followups, serialise, text and the rest) | PASS |
-| T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides |
+| T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides. Corrected (gate review F1): the estimator counted device-flush wait as CPU; on CPU the row is 0.414x, PASS (see the closing run, "What moved") |
 
 ### T11 detail
 
@@ -67,8 +67,10 @@ the `RESTORE /twitter/tweets/` failure R1) no longer appear in the diff.
    and the status is FAIL by the estimator the T11 record names. The lead rules on which estimator the row means, or on the
    open item in `docs/perf/t11/README.md` (fold the first directory barrier of a commit into the data batch), which targets
    the `commit_files` wait.
+   Superseded (gate review F1): the estimator counted device-flush wait as CPU, which inflated strata alone; on CPU the row
+   is 0.414x (closing run, "What moved"), and the item in `docs/perf/t11/README.md` is not needed for the row.
 2. T11 was measured on macOS x86_64, APFS, only; the numbers expire with this commit and this machine. Whether
-   `F_FULLFSYNC` waits count as engine CPU is a property of this harness on macOS; Linux, FreeBSD and arm64 are not measured.
+   `F_FULLFSYNC` waits counted as engine CPU was a property of this harness on macOS (now reported apart); Linux, FreeBSD and arm64 are not measured.
 3. The assertion count is 566 here against 576 in the first run; the suite changed between the two runs and the
    difference was not traced. Both engines pass the same 566.
 4. T8 B measures acknowledged writes against the async WAL window (2 s grace; 0 older and 0 newer writes missing in this
@@ -180,7 +182,7 @@ divergences and now prints all; `profile_bulk.sh` gained the strata layer and th
 | D1 | `:check` is not engine-aware: on strata it reports every shard as not a Xapian database | None. A seam gap (X4 "get/find_key/stats/metadata/check"); the lead decides |
 | D2 | `_terms` aggregation over a text field refused | R-P2 covers the `INFO` views; for `_terms` it says "served from stored values", which a text field has no equivalent of. Needs a ruling: refuse for text fields on strata, or serve from the dictionary |
 | D3 | `doc_len_lower` / `doc_len_upper` of database info are 0 on strata | None. Xapian's lower bound is a wrapped value, so a plain match is not wanted; decide the field |
-| D4 | `RESTORE` of a dump into Xapian bumps `_version` of 5 of 1000 documents to 2 (also Xapian to Xapian) | Pre-existing Xapian behaviour, not strata's; T9 compares strata's dumps strictly and the round trip ignoring `_version`, with the control |
+| D4 | `RESTORE` of a dump into Xapian bumps `_version` of 5 of 1000 documents to 2 (also Xapian to Xapian) | Pre-existing Xapian behaviour (reproduced on `v1.0.0-alpha.9`), not strata's; cause and fix in "D4: why `_version` is 2". T9 compares strata's dumps strictly and the round trip ignoring `_version`, with the control |
 | D5 | PHRASE, NEAR and ELITE_SET over text refused (14 assertions, 4 searches) | None found. Design S2/S3/S4 deliver them; `strata-engine-text.md` decision 1 and `search.cc` validate show the refusal |
 | D6 | 404 wording for a missing database | D9 (errors are engine kinds) |
 
@@ -210,6 +212,153 @@ BIN=.scratch/build/bin/xapiand harness/engine_migration_check.sh      # T9
 XAPIAND_ENGINE=strata harness/profile_bulk.sh BIN OUT --label strata_1 --port 18990   # T11, under quiet exclusive
 ```
 
+## Every-gate checks (gate review F6, L2)
+
+Run 2026-10-29 by workstream gate7a-l2 (`docs/status/gate7a-l2.md`), on macOS 15.8.1 x86_64 (16 logical CPUs), Homebrew LLVM 22.1.8 (clang++,
+libc++), RelWithDebInfo, `-DBUILD_TESTS=ON -DLTO=OFF`, raw flags in `CMAKE_CXX_FLAGS` (`-fsanitize=address,undefined
+-fno-sanitize-recover=undefined`; `-fsanitize=thread`; `-fprofile-instr-generate -fcoverage-mapping`), because the `SANITIZE_*` options did not
+instrument the local build; every target's `flags.make` carries the flag (checked: 40 of 40). The engine code under test is `Xapiand:3bc11f31f`;
+the branch adds only harness, docs and the C4 fix (`Xapiand:1839276a4`, `src/engine/xapian/shard.cc`), which entered after the sanitizer runs
+below (rerun on the fixed tree where stated). Recipe: `docs/dev/testing.md`, "Sanitizers locally". Build workarounds, none committed: a copy
+of RapidJSON v1.1.0 passed as `FETCHCONTENT_SOURCE_DIR_RAPIDJSON` with `document.h:319` fixed (clang 22 rejects the `const` member
+assignment) and, for the second ASan tree, `internal/stack.h:117` fixed; `ZLIB_INCLUDE_DIR` and `UUID_INCLUDE_DIR` pointed at a directory of
+symlinks (the SDK's `usr/include` as an `-I` precedes libc++'s and breaks `<cstddef>`).
+
+| Check | Result | Where |
+|---|---|---|
+| T10: TSan, mixed index and search on one single-shard strata index | **Clean.** Run 1: 611 s, 3 writers and 4 searchers, 2172 writes (1012 PUT, 325 replace, 310 DELETE, 525 RESTORE of 50 documents) and 7678 searches, 0 failures, 0 ThreadSanitizer reports; the final `DUMP` equals the model (26859 documents). Run 2: 307 s, 6 writers and 8 searchers, 942 writes, 7527 searches, 12450 documents, 0 reports. The binary carries the TSan runtime (42 `__tsan_` symbols), and a 3-line racy program built the same way reports | `harness/engine_mixed_load.py`; `.scratch/t10/`, `.scratch/t10b/` |
+| ctest under TSan | 28 of 28 pass (104 s), 0 reports | `.scratch/ctest-tsan.log` |
+| ctest under ASan+UBSan, stock RapidJSON | 26 of 28: `test_engine_sort` and `test_text` abort on UBSan `pointer-overflow` at `rapidjson/internal/stack.h:117` ("applying non-zero offset 16 to null pointer"); 0 AddressSanitizer reports | `.scratch/ctest-asan.log` |
+| ctest under ASan+UBSan, `stack.h:117` fixed | 28 of 28 pass (80 s), 0 reports | `.scratch/ctest-asan2.log` |
+| Docs E2E under ASan+UBSan (`engine_e2e.sh`, both engines) | Xapian 566 of 566, strata 566 of 566, 335 requests, 0 regressions, 0 status differences, 0 sanitizer reports. With stock RapidJSON the node aborts on its first JSON response (`Writer::StartObject`), so this needs the fixed copy | `.scratch/e2e-asan2/` |
+| After the C4 fix and the lowering guard, ASan+UBSan, branch head `Xapiand:0e01adabc` | ctest 28 of 28 (37 s) and the docs E2E on both engines 566 of 566 (335 requests, 0 regressions, 0 status differences), 0 sanitizer reports; `test_engine_shard` 135 checks; T9 (`engine_migration_check.sh` on the ASan binary) has 0 `_version` differences | `.scratch/ctest-asan2-head.log`, `.scratch/e2e-asan2-head/`, `.scratch/c4-test-fix.log`, `.scratch/probes/t9fix.run` |
+| Fuzz, `fuzz_strata_document` (libFuzzer + ASan + UBSan, `-fno-sanitize-recover=all`, timeout 10 s, new target of 7a) | 2 x 30 min = 1 CPU-hour, 65.7 million executions (33.8 + 32.0), coverage 632 edges, 0 findings, 0 timeouts, peak 623 MB | `.scratch/fuzz/run_document.log`, `run2_document.log` |
+| Fuzz, `fuzz_strata_pattern` (same, new target of 7a) | 2 x 30 min = 1 CPU-hour, 13.2 million executions (5.5 + 7.7), coverage 433 edges, 0 findings, 0 timeouts | `run_pattern.log`, `run2_pattern.log` |
+| Fuzz, `xapiand_fuzz_text` (timed driver, ASan+UBSan; new in 7a) | Seeds 7 and 9, 30 min each = 1 CPU-hour clean: 15.69 and 15.74 million texts, 0 violations. **Seed 8 found a hang** (below): a 9-byte text that never finishes, 100% of a core and 11 GB on a live server; with the guard of that section seed 8 runs 15 min (8.35 million texts) with 0 violations | `.scratch/fuzz/drv/text*.log` |
+| Fuzz, `xapiand_fuzz_body` (timed driver, ASan+UBSan; changed by SR3) | Seeds 7 and 8, 30 min each = 1 CPU-hour: 2.28 and 2.15 million bodies (JSON, YAML, MessagePack; 0.58 and 0.55 million decoded, the rest refused), 0 findings, no run overran its deadline | `.scratch/fuzz/drv/body*.log` |
+| Coverage (`llvm-cov`) of the engine code: ctest (28 tests) plus the docs E2E on both engines, at `Xapiand:e17bfc501` (3bc11f31f plus the C4 fix and harness) | Lines 91.6%, branches 89.1% over `src/engine/*.cc`, `strata/*.cc`, `xapian/*.cc` (21 files; unit tests alone: 91.0% and 88.2%); per-file table below, missed lines in `docs/gates/phase7a-coverage.txt` | `.scratch/cov-prof/`, `.scratch/cov-report.sh` |
+| Readers reject unknown format versions | The engine document reader rejects an unknown serial version (`src/engine/strata/document.cc:497-498`, test `tests/test_engine_strata.cc:1088`). The strata and prospect readers are covered by their own corpus replay (below). Fixtures per format change: not examined here | |
+
+Linux CI at this commit does not exist yet: `Xapiand:3bc11f31f` is local and `.github/workflows/ci.yml` runs on `master`, `xapiand`
+and `fix/**` only (not `phase*/**`), so the branch `phase7a/gate-l2` gets no CI when pushed. What CI would provide once on master: Xapiand's
+`sanitizers` job builds ASan+UBSan and TSan with gcc-13 on Linux and runs smoke, load and the docs E2E (plain and HTTPS) under each on
+the default (Xapian) engine; it has no schedule, runs no ctest under a sanitizer, runs the strata engine under none, and builds no
+fuzz target. strata and prospect (`.github/workflows/ci.yml` -> `cpp-libraries/.github/workflows/cmake.yml`, green on `prospect:828cd4a` run
+40882240080 and `strata:4a9f52e` run 40882234149): all ctests on Linux gcc and clang, macOS arm64 and x86_64, FreeBSD and Linux arm64, plus
+`linux-asan-ubsan` (120 min timeout, `-O1`) and `linux-tsan` jobs, on every push to main and nightly (cron 07:23 UTC). Their fuzz targets
+(`fuzz_files`, `fuzz_fields`, `fuzz_stored` in strata; `fuzz_fielddict`, `fuzz_postings`, `fuzz_segment`, `fuzz_values` in prospect) run as
+corpus replay tests (`fuzz_*_replay`) in every one of those jobs; the libFuzzer binaries build only with `-D{STRATA,PROSPECT}_FUZZ=ON`, so
+no CI or nightly job fuzzes for CPU time. Neither repository measures coverage in CI.
+
+Coverage of the engine code against `strata/docs/TESTING.md` (decoders and parsers 98% lines and 95% branches; everything else 90% and 80%):
+
+| File | Lines | Branches | Against its target |
+|---|---|---|---|
+| `strata/document.cc` (decoder) | 95.1% | 90.4% | below (98/95) |
+| `strata/pattern.cc` (parser) | 97.8% | 90.0% | lines below 98, branches below 95 |
+| `strata/shard.cc` | 91.4% | 82.6% | met |
+| `strata/search.cc` | 94.9% | 92.9% | met |
+| `strata/expand.cc`, `strata/doc_view.cc` | 97.5%, 100% | 94.4%, 100% | met |
+| `query.cc`, `text.cc`, `kind.cc`, `open.cc`, `document.cc`, `search.cc` (seam) | 94.2%, 94.5%, 97.9%, 100%, 100%, 100% | 89.4%, 92.8%, 94.4%, 100%, 100%, 100% | met |
+| `sync.cc` | 90.0% | 66.7% | branches below 80 |
+| `xapian/shard.cc` | 79.0% | 82.7% | lines below 90 (85 lines missed, mostly error-translating `catch` blocks and rarely used calls) |
+| `xapian/callbacks.cc` | 83.8% | 57.1% | below |
+| `xapian/text.cc` | 75.4% | 73.9% | below |
+| `xapian/stopper.cc` | 0% | 0% | not reached by any test |
+| `xapian/convert.cc`, `query.cc`, `search.cc`, `codec.cc` | 95.3%, 93.0%, 97.6%, 100% | 100%, 91.5%, 95.0%, - | met |
+
+The `xapian/` files are the layer strata replaces, so their gaps are not worked down. The uncovered lines of the other files are listed with
+their line numbers in `docs/gates/phase7a-coverage.txt`; the reasons are not yet written (the gate's rule asks for one per line). `llvm-cov`
+warned that 164 functions have mismatched data when the unit and E2E profiles were merged (the same function inlined differently in
+different binaries); the figures are from the merge and are lower bounds for those functions.
+
+New finding, fixed here at the lowering; the cause is in queryparser: see "A text query that never finishes". Pre-existing, not new. The one sanitizer finding is RapidJSON v1.1.0's `Stack::Reserve` adding an offset to a null pointer
+(`internal/stack.h:117`): a short program using only the pinned RapidJSON (`Writer::StartObject` on a `StringBuffer`) reproduces it under
+`-fsanitize=undefined`, and `-fno-sanitize=pointer-overflow` silences it; it was already recorded on `phase7a/gate-fixes`
+(`docs/status/gate7a-fixes.md`). It is in a third-party header, not in Xapiand's code; the server dies on its first JSON response in a build
+with `-fno-sanitize-recover=undefined`. No new finding: 0 AddressSanitizer reports, 0 UBSan reports beyond that one, 0 ThreadSanitizer reports.
+
+Not run here, with reason, owner and phase:
+
+| Item | Reason | Owner | Lands |
+|---|---|---|---|
+| Linux TSan of the strata engine under the T10 load (and ASan+UBSan of the strata E2E) | The calibration row of 2026-10-29: a local macOS TSan pass is not evidence for struct-copy races; Linux CI TSan is the authority. Xapiand's CI runs the strata engine under no sanitizer, and its triggers miss `phase*/**` | lead: add `XAPIAND_ENGINE=strata`, `engine_e2e.sh` and `engine_mixed_load.py` to the `sanitizers` job and `phase*/**` to the push triggers | before gate 7b |
+| Fixing RapidJSON's `stack.h:117` and `document.h:319` for sanitizer and newer-clang builds | Third-party v1.1.0; the pin needs a newer upstream commit or a local patch | lead (pins) | with the next dependency refresh |
+| Regression corpus for the four Xapiand fuzz targets | `fuzz_strata_document` and `fuzz_strata_pattern` have no checked-in corpus and no replay test; `xapiand_fuzz_text` and `xapiand_fuzz_body` generate their inputs. The 30-minute libFuzzer corpora were saved with this run (`.scratch/fuzz/c_doc`, `c_pat`, copied to the main checkout's `.scratch/gate7a-l2/fuzz/`) | developer of the next strata engine step | 7b gate (the rule: every other decoder's corpus replayed as a test) |
+| Reasons for the uncovered lines of `strata/*` and the seam, and tests for `strata/document.cc` and `strata/pattern.cc` up to 98/95 | The coverage run is new; classifying about 150 lines is a review item | developer of S1/S2 | 7b gate |
+| Linux, FreeBSD and macOS arm64 sanitizer and TSan runs of the Xapiand tests | The host is macOS x86_64; strata and prospect CI cover their own libraries on all of them | lead (CI) | 7b gate |
+| Test-parity rows of the phase and the scale statement for the components 7a adds | Not part of this run; 7a is one node at rf = 1 (`xapiand-on-strata.md` Q1), so the scale behavior belongs to the distribution gate | lead | 7b gate |
+| CR6 of the S2 code review: search holds every shard lock, T10 replaces it with a snapshot | A design question for the architect; T10 above shows the present locking is race-free under this load, which does not decide it | architect | 7b |
+
+## A text query that never finishes (fuzz finding, 2026-10-29)
+
+`xapiand_fuzz_text` seed 8 stopped answering. The case: the text `-(a b) -c`, flags LOVEHATE only (no BOOLEAN), default operator OR, no stop
+language. It is not a corner of the fuzzer: a text field's default `_language` is `"none"` (no stop words), and the query DSL sets LOVEHATE
+on every text query and BOOLEAN only for the AND and OR operators.
+
+- Live server, build of `Xapiand:3bc11f31f` (the closing run's binary, Xapian engine; the text parser is the same on both engines): index a
+  document with a default text field `t`, then `SEARCH /h/ {"_query": {"t": "-(a b) -c"}}`: no answer in 20 s, one core at 98%, resident
+  memory 11 GB and growing. Any client that may search can wedge a thread and exhaust memory with one 9-byte request. `-alpha` answers
+  normally on the same server, and `queryparser::parse` alone builds sound trees for `x -a`, `alpha -(a b) -c`, `a b -c` and `a -(b c)`.
+- Control: `v1.0.0-alpha.9` (rebuilt in its own worktree) answers `-(a b) -c`, `-a -b` and `x -(a b) -c` in about a millisecond. The hang is
+  new since the queryparser library replaced Xapian's query parser in the seam (`src/engine/text.cc`).
+- Cause, by reading and a probe (`.scratch/qp/probe.cc`, calling `queryparser::parse` alone at `Kronuz/queryparser@09a4ea6`, the pin): for
+  `-(a b) -c` with `flag::lovehate` the tree's last node has `next` equal to its own id (`node 3 kind=0 first=-1 last=-1 next=3`). A list
+  that links to itself is what `builder::add` produces when it is handed the node that is already its parent's last child
+  (`queryparser.cc:189-199` clears the child's `next`, then sets `nodes_[p.last].next = c`); which caller adds a node twice is for the
+  library's owner to find. `engine::convert` (`src/engine/text.cc`) walks each node's children by `first` and `next`, so it read the list
+  for ever and appended to a vector; `query::describe()` (used by the fuzzer and `test_text`) loops the same way.
+- Fix here: `convert` reads at most twice the tree's size in nodes and otherwise fails the text with a `QueryParserError` ("The parsed query
+  tree is malformed"); the same request now answers `400` in 1.6 ms. The description for the tests is built after the lowering, so it
+  cannot hang. `test_hate_groups_terminate` (`tests/test_text.cc`) hangs without the change (killed at 20 s) and passes with it (13200
+  checks). The cycle itself stays in queryparser: the lead should have `Kronuz/queryparser` fixed and re-pinned (owner: lead; the library
+  has no check of its own for a list that revisits a node, which is a missing oracle in its fuzz target).
+- Replay: `FUZZ_TEXT_REPLAY=$'-(a b) -c\t4\t2\tXTfield\t\t\t0\t0\t0' xapiand_fuzz_text 1 1` (text, flags, operator number, field, stop language,
+  stem language, stem strategy, partial and fuzzy expansion, tab separated) prints the timing of one case. Both fuzz drivers now stop a
+  case that takes over 30 s and print it.
+
+## D4: why `_version` is 2 on ids 386 to 390 (gate review F5, C4)
+
+Traced and settled on 2026-10-29 (workstream gate7a-l2). Settled "pre-existing", with the cause; fixed on the Xapian engine adapter.
+
+Cause. The Xapian adapter keeps a document's version twice: the value slot `DB_SLOT_VERSION` and a boolean term under the prefix `V`,
+`"V" + serialise_length(docid) + sortable_serialise(version)` (`stamp`, `src/engine/xapian/shard.cc:61-66`, at `Xapiand:3bc11f31f`). To find the stored version of
+a document it scanned every term that begins with `"V" + serialise_length(docid)` (`stored_version`, `src/engine/xapian/shard.cc:79-93`,
+before the fix). The schema indexes a record's own `_version` field under the same prefix (`DOCUMENT_VERSION_TERM_PREFIX` is `"V"`,
+`src/database/utils.h:65`, `Schema::set_default_spc_version`, `src/database/schema.cc:9198-9207`), as `"V" + "N" + sortable_serialise(v)`
+(the `N` is the numeric type marker), the same bytes as the version term of the document at docid 78 when its version is `v`. A dump record carries `_version`, and `RESTORE` indexes the body as it is
+(`DatabaseHandler::prepare_document`, `src/database/handler.cc:913-960`, leaves `_version` in the body). For the document with shard-local
+docid 78 the prefix is `"V" + 0x4E`, and `0x4E` is `N`: the scan matches the `_version` field terms of the documents written before it,
+reads the body's own `_version` as the stored version, and the write lands at that value plus one. No other docid collides (a single
+length byte other than 78 never equals `N`).
+
+Evidence (probes in `.scratch/probes/`, `c4_bisect.sh`, `c4_predict.sh`, kept in the worktree):
+
+- Only records that carry `_version` are affected: the 1000-record dump restored as is, reversed, or sorted bumps ids 386 to 390; with
+  `_version` stripped it bumps none.
+- The bumped value follows the body: with `_version` set to 1, 2, 3, 5, 10, 100 on ids 300 to 399 the dump has 2, 3, 4, 6, 11, 101 on
+  ids 386 to 390 and 1 elsewhere.
+- Only shard-local docid 78 is hit, whatever the shard count: one shard bumps id 78; three shards bump 232, 233, 234 (local docid 78 of
+  each); five shards bump 386 to 390; five shards with ids 1 to 380 bump none. A debugger breakpoint on `stored_version` during a
+  restore sees the call with docid 0x4E on exactly the bumped writes.
+- The terms of a restored one-shard index (`.scratch/probes/test_probe_c4.cc`, a probe over the shard's `allterms("V")`): the term
+  `564ebe` (`"V"`, `N`, `sortable_serialise(1.0)`) is in 118 of 120 documents, and document 78 holds it beside its own version term
+  `564ebe40` (docid 78, version 2); documents 77 and 79 hold `564dbe` and `564fbe`, their own version terms at version 1.
+- The ids are consecutive because ids map to shard-local docids by `(id - 1) / shards + 1`, so ids 386 to 390 are docid 78 of the five shards.
+
+Control. The pre-seam binary, `v1.0.0-alpha.9` (`Xapiand:6961bb98c`, built Release in its own worktree; the same prefix scan lives in
+`src/database/shard.cc` there, `ver_prefix = "V" + serialise_length(info.did)`), restoring the same dump gives the same result: one shard
+bumps id 78, three bump 232 to 234, five bump 386 to 390 (5 of 1000 with `_version` 2), none with ids 1 to 380. The behavior predates the
+engine seam; strata keeps the version in its own record and is right (version 1 everywhere). Impact: any `RESTORE` or `PUT` whose body
+carries `_version` writes the document at shard-local docid 78 with the wrong version on the Xapian engine, which is the migration case
+(T9); a client that sends `?version` for such a document gets a spurious conflict.
+
+Fix. `stored_version` reads the document's version value slot instead of scanning terms, so the term namespace is no longer shared
+(`src/engine/xapian/shard.cc`); the test `version_term_collision` in `tests/test_engine_shard.cc` writes 77 documents that carry the
+colliding term and then document 78: it fails 3 checks without the fix and passes with it. The remaining overlap, a body that carries
+`_version` being indexed as a field, is the host's (`handler.cc`, outside this fix); removing `_version` from a `RESTORE` body in
+`prepare_document` would make the schema stop indexing it.
+
 ## Closing run
 
 Run on Xapiand master `7125dfc28` (the merge of `phase7a/t11-barriers`: one ordering point and one flush per commit), 2026-10-29,
@@ -236,20 +385,37 @@ Spread is (max - min) / mean over the ten runs. Raw: `.scratch/h1`, `.scratch/h2
 | Wall of the 20000-document RESTORE (s) | 4.51 | 2.63 | 0.583 (pairs 0.57 to 0.60) |
 | Peak RSS (MB, 3 runs each, `ru_maxrss`) | 908 to 926 | 863 to 883 | 0.95 |
 
-Hold 1's first Xapian run (round 1) was an outlier in the profile (sample-count CPU and critical thread far off the
-other nine; its smoke CPU was normal), which gives the 60% and 90% spreads and the two outlier pairs. The gate's
-estimator uses the smoke CPU and is not affected: its worst pair is 0.437, and all ten are under 0.5.
+Hold 1's first Xapian run (`xapian_1`) is invalid: its profile has 1208 wall samples where the other 19 have 5362 to 5835 (10.1
+busy cores against 4.1 to 4.4), so `sample(1)` caught about a fifth of the load (gate review F2, `drop_invalid.py`). It is the source of
+the 60% and 90% spreads and the two outlier pairs, and it is not "unaffected": the gate estimator takes its engine share. Without it
+and its strata partner: 0.384x on the estimator as committed, 0.354x by sample count, 0.208x on the critical path; the verdict does not
+move. `harness/profile_bulk.sh` now marks such a profile invalid and exits 3 (below the sampling window's 25% at 1 ms, or half the
+median wall samples of the other profiles in the output directory); on this hold's raw samples `xapian_1` is rejected and the other 19 pass.
 
-What moved since the Rerun (0.515x on the same estimator): the gain is flush-wait time, not CPU. The commit now does one full
-flush and one barrier where it did four full flushes, and the profile counts the `F_FULLFSYNC` wait under `commit_files` as
-busy, so the engine row and the wall fall while whole-process CPU per document stays where it was (0.803 in the Rerun, 0.768
-here for strata, 1.166 and 1.140 for Xapian: within the spread, the same 31 to 33% less than Xapian's). The honest saving
-is 17 to 20% less wall per bulk load and a commit that blocks its writer for less time, not CPU-hours.
+What moved since the Rerun (0.515x on the same estimator): the gain is flush-wait time, not CPU, and the estimator was biased against
+strata. A thread blocked in `__fcntl(F_FULLFSYNC)` or `fsync` burns no CPU, but the harness counted it as busy, in strata's engine row and in
+the denominator; Xapian runs `DB_NO_SYNC`, so the inflation was strata's alone (under `commit_files`, the leaves of one run are `__fcntl`
+153, `fsync` 41, `__openat` 20, `pwrite` 16 of 233 samples). `profile_bulk.sh` now reports that wait as its own blocked line
+("Device-flush wait", samples and ms per document, with how much sits in the engine rows) and keeps it out of every CPU share; it stays in
+the critical thread's timeline, where it is real waiting. Reanalysing the raw samples of both runs with the new harness (`--reanalyze`; it
+reproduces the as-committed figures when the wait is counted):
+
+| Run | Gate estimator as committed | On CPU (flush wait out) | Sample count, on CPU | Critical path |
+|---|---|---|---|---|
+| Rerun (`8f6332a01`) | 0.515x (FAIL) | 0.414x (0.1585 against 0.3824 ms; pairs 0.398 to 0.442, 10 of 10 at or under 0.5; holds 0.413, 0.415) | 0.347x | 0.213x |
+| Closing (`7125dfc28`) | 0.387x | 0.357x (0.1345 against 0.3763 ms; pairs 0.325 to 0.401, 10 of 10; holds 0.365, 0.349) | 0.339x | 0.226x |
+
+Strata's flush wait is 0.0479 ms per document in the Rerun and 0.0135 in the closing run, all of it in the engine rows; Xapian's is 0.0008 and
+0.0006. So the Rerun's FAIL on CPU came from the estimator, not the engine: on CPU strata's engine share was already under half of Xapian's
+before the commit barriers. The barrier change's real effect is the one `docs/perf/t11-barriers/README.md` states: less wall (17 to 20% per
+bulk load) at flat CPU (whole process 0.803 against 0.768 ms per document for strata, 1.166 against 1.140 for Xapian: within the spread, the
+same 31 to 33% less than Xapian's). The critical-path row (0.226x) includes the wait and passes either way.
 
 ### Deviations and residuals of the closing run
 
-1. The T11 CPU row passes on the gate's estimator because it counts device-flush wait as engine CPU (a property of this harness on
-   macOS). The barrier path relies on `F_BARRIERFSYNC`, which Apple guarantees only on Apple SSDs (`docs/perf/t11-barriers/README.md`).
+1. The T11 CPU row is measured on CPU: device-flush wait is reported apart (see "What moved"), 0.357x on the closing run and 0.414x on the
+   Rerun. The as-committed figures (0.387x, 0.515x) counted the wait as engine CPU, which inflated strata's share only. The barrier path
+   relies on `F_BARRIERFSYNC`, which Apple guarantees only on Apple SSDs (`docs/perf/t11-barriers/README.md`).
 2. macOS x86_64, APFS only. Linux, FreeBSD and arm64 are not measured; on Linux and FreeBSD the commit falls back to the old two-step sync.
 3. T8 uses `kill -9`, which leaves the page cache intact: it exercises atomicity, not device ordering under power loss. B's counts
    (6766, 7344) depend on the cut point and are not comparable across engines.

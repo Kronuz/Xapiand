@@ -23,7 +23,9 @@ ap.add_argument('--port', type=int, default=18990)
 ap.add_argument('--dataset', default=None)
 ap.add_argument('--sample-secs', type=int, default=0)
 ap.add_argument('--reanalyze', action='store_true', help='skip the runs; redo the analysis from OUT/<label>.sample.txt and .json')
-a = ap.parse_args(); a.bin = os.path.abspath(a.bin); a.out = os.path.abspath(a.out)
+ap.add_argument('--min-sample-frac', type=float, default=0.25, help='invalid below this fraction of the sampling window at 1 ms (a healthy run is about 0.55)')
+ap.add_argument('--min-sibling-frac', type=float, default=0.5, help='invalid below this fraction of the median wall samples of the other profiles in OUTDIR')
+a = ap.parse_args(); MIN_FRAC = a.min_sample_frac; MIN_FRAC2 = a.min_sibling_frac; a.bin = os.path.abspath(a.bin); a.out = os.path.abspath(a.out)
 repo = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
 ds = a.dataset or os.path.join(repo, 'docs/public/assets/accounts.ndjson')
 lines = [l for l in open(ds, 'rb').read().split(b'\n') if l.strip()]
@@ -106,6 +108,8 @@ def tgroup(th):
     m = re.search(r'Thread_\d+\s*:?\s*(.*)$', th); n = m.group(1).strip() if m else th
     return 'main' if 'main-thread' in n else (re.sub(r'\d+$', '', n) or 'unnamed')
 IDLE = re.compile(r'psynch_cvwait|^kevent|mach_msg|semwait|__select|nanosleep|semaphore_wait|^poll|__sigwait')
+# A thread blocked in a device flush (F_FULLFSYNC and F_BARRIERFSYNC are __fcntl, plus fsync) burns no CPU: its own line.
+FLUSH = re.compile(r'^(__fcntl|fsync|fdatasync|__fsync_nocancel|fsync_nocancel)\b')
 LOCK = re.compile(r'psynch_mutexwait|ulock_wait|psynch_rw')
 
 # layer -> (replaced?, regex over a frame); first frame matching, scanning leaf to root, wins
@@ -124,10 +128,11 @@ LAYERS = [
 ]
 LAYERS = [(n, r, re.compile(p)) for n, r, p in LAYERS]
 DATA_RX = re.compile(r'Data::|Locator|finalise_write')
-def classify(frames):
+def classify(frames, flush=True):
     leaf = frames[-1]
     if IDLE.search(leaf):
         return 'LOCKWAIT:shard writable checkout' if any('_writable_checkout' in f or 'ShardEndpoint' in f for f in frames) else 'IDLE'
+    if flush and FLUSH.search(leaf): return 'FLUSHWAIT'
     for f in reversed(frames):
         for n, r, rx in LAYERS:
             if rx.search(f):
@@ -136,11 +141,14 @@ def classify(frames):
     return 'other/unattributed (malloc, libc, runtime)'
 cnt = collections.Counter(); tfun = collections.defaultdict(collections.Counter)
 tg = collections.defaultdict(lambda: collections.Counter())
+flush_by = collections.Counter()
 perthread = collections.defaultdict(collections.Counter)
 for th, fr, s in rows:
     cl = classify(fr); g = tgroup(th)
     if cl == 'IDLE': tg[g]['idle'] += s; continue
     if cl.startswith('LOCKWAIT'): tg[g]['lockwait'] += s; perthread[th]['lockwait'] += s; cnt[cl] += s; continue
+    if cl == 'FLUSHWAIT':
+        tg[g]['flushwait'] += s; perthread[th]['flushwait'] += s; cnt[cl] += s; fl = classify(fr, flush=False); flush_by[fl] += s; continue
     if LOCK.search(fr[-1]): tg[g]['lock'] += s
     tg[g]['busy'] += s; perthread[th]['busy'] += s
     cnt[cl] += s
@@ -148,10 +156,10 @@ for th, fr, s in rows:
     for f in reversed(fr):
         if cl in [n for n, r, rx in LAYERS] and dict((n, rx) for n, r, rx in LAYERS)[cl].search(f): tfun[cl][f] += s; break
     else: tfun[cl][fr[-1]] += s
-busy_total = sum(v for k, v in cnt.items() if not k.startswith('LOCKWAIT'))
+busy_total = sum(v for k, v in cnt.items() if not k.startswith(('LOCKWAIT', 'FLUSHWAIT')))
 # busiest shard-writer thread: busy + lock wait = its critical-path timeline
 dis = {th: v for th, v in perthread.items() if 'DI' in th}
-worst = max(dis.items(), key=lambda kv: kv[1]['busy'] + kv[1]['lockwait']) if dis else None
+worst = max(dis.items(), key=lambda kv: kv[1]['busy'] + kv[1]['lockwait'] + kv[1]['flushwait']) if dis else None
 layer_rows = []
 for n, rep, _ in LAYERS + [('other/unattributed (malloc, libc, runtime)', 'stays', None)]:
     c = cnt.get(n, 0)
@@ -159,13 +167,14 @@ for n, rep, _ in LAYERS + [('other/unattributed (malloc, libc, runtime)', 'stays
                        'cores': c / total_samples if total_samples else 0,
                        'top_functions': [[f, v] for f, v in tfun[n].most_common(3)]})
 # critical path: layer split of the busiest shard-writer thread
-crit = collections.Counter()
+crit = collections.Counter(); crit_flush = 0
 if worst:
     for th, fr, s in rows:
         if th != worst[0]: continue
-        cl = classify(fr)
+        cl = classify(fr, flush=False)  # the critical thread's timeline keeps its flush wait
         if cl == 'IDLE': continue
         crit[cl] += s
+        if FLUSH.search(fr[-1]): crit_flush += s
 ctot = sum(crit.values())
 for r in layer_rows: r['critical_pct'] = 100.0 * crit.get(r['layer'], 0) / ctot if ctot else 0
 res['critical_lockwait_pct'] = 100.0 * crit.get('LOCKWAIT:shard writable checkout', 0) / ctot if ctot else 0
@@ -174,6 +183,10 @@ res['profile'] = {'wall_samples': total_samples, 'busy_samples': busy_total, 'bu
                   'critical_thread': worst[0] if worst else None, 'dir_count_in_data': shards}
 rep_pct = sum(r['cpu_pct'] for r in layer_rows if r['status'].startswith('replaced'))
 res['profile']['replaced_cpu_pct'] = rep_pct
+flush_total = cnt.get('FLUSHWAIT', 0)
+flush_engine = sum(v for k, v in flush_by.items() if k in [n for n, r, rx in LAYERS if r == 'replaced S1'])
+res['profile']['flush_wait'] = {'samples': flush_total, 'ms_per_doc': flush_total / ndocs, 'engine_rows_samples': flush_engine,
+    'engine_rows_ms_per_doc': flush_engine / ndocs, 'by_layer': dict(flush_by), 'note': 'blocked in a device flush; not in busy samples or any CPU share'}
 # The engine share (rows 'replaced S1'): CPU and critical-path time per document. A sample is 1 ms of one thread (sample(1) default).
 s1 = [r for r in layer_rows if r['status'] == 'replaced S1']
 engine_cpu_ms_doc = sum(r['samples'] for r in s1) / ndocs
@@ -194,11 +207,23 @@ res['amdahl'] = {
   'docs_per_s_cpu_bound_without_xapian_only': ncore * 1000 / (cpu * (100 - pct(lambda r: r['status'] == 'replaced S1')) / 100),
   'single_thread_front_end_ms_per_doc': front, 'docs_per_s_front_end_one_thread': 1000 / front if front else None,
   'note': 'CPU-bound estimates: cores x 1000 / remaining CPU ms per doc, assuming the remaining stages scale across cores'}
+# A profile whose wall samples fall far short is truncated (sample(1) caught a fraction of the load): flag it invalid.
+res['sample_secs'] = res.get('sample_secs') or (a.sample_secs or max(8, int(ndocs / 3000) + 4))
+sib = sorted(j['profile']['wall_samples'] for f in os.listdir(a.out) if f.endswith('.json') and f != f'{a.label}.json'
+             for j in [json.load(open(os.path.join(a.out, f)))] if isinstance(j, dict) and j.get('profile', {}).get('wall_samples') and not j.get('invalid') and j.get('docs') == ndocs)
+invalid = []
+if total_samples < MIN_FRAC * res['sample_secs'] * 1000:
+    invalid.append(f"{total_samples} wall samples is under {MIN_FRAC:.0%} of the {res['sample_secs']} s window at 1 ms")
+if len(sib) >= 2 and total_samples < MIN_FRAC2 * sib[len(sib) // 2]:
+    invalid.append(f"{total_samples} wall samples is under {MIN_FRAC2:.0%} of its siblings' median {sib[len(sib) // 2]} ({len(sib)} siblings)")
+res['invalid'] = '; '.join(invalid) or None
 json.dump(res, open(os.path.join(a.out, f'{a.label}.json'), 'w'), indent=1)
+layer_rows.append({'layer': 'Device-flush wait (blocked, not CPU)', 'status': 'blocked', 'samples': flush_total, 'cpu_pct': 0.0, 'cores': 0, 'critical_pct': 100.0 * crit_flush / ctot if ctot else 0, 'top_functions': []})
 layer_rows.append({'layer': 'Shard writable-checkout wait (blocked, not CPU)', 'status': 'replaced 7c', 'samples': cnt.get('LOCKWAIT:shard writable checkout', 0), 'cpu_pct': 0.0, 'cores': 0, 'critical_pct': res['critical_lockwait_pct'], 'top_functions': []})
 md = [f"# {a.label}", '', f"{ndocs} docs, binary `{a.bin}`", '',
       f"smoke: {sm_['docs_per_s']:.0f} docs/s, wall {sm_['wall_s']:.2f} s, user {sm_['user_s']:.2f} s, sys {sm_['sys_s']:.2f} s ({sm_['cpu_ms_per_doc']:.3f} ms CPU/doc)", '',
-      f"profile: {res['profile']['busy_cores']:.2f} busy cores over {total_samples} samples; critical thread {res['profile']['critical_thread']}, lock wait {res['critical_lockwait_pct']:.1f}% of its timeline", '',
+      *([f"INVALID PROFILE: {res['invalid']}", ''] if res['invalid'] else []),
+      f"profile: {res['profile']['busy_cores']:.2f} busy cores over {total_samples} samples; device-flush wait {flush_total} samples ({flush_total / ndocs:.4f} ms/doc, {flush_engine / ndocs:.4f} in the engine rows), kept out of the CPU shares; critical thread {res['profile']['critical_thread']}, lock wait {res['critical_lockwait_pct']:.1f}% of its timeline", '',
       '| layer | status | % of CPU | % of critical thread | top 3 functions |', '|---|---|---:|---:|---|']
 for r in layer_rows:
     md.append(f"| {r['layer']} | {r['status']} | {r['cpu_pct']:.1f} | {r['critical_pct']:.1f} | " + '; '.join(f"`{f[:60]}` {v}" for f, v in r['top_functions']) + ' |')
@@ -208,4 +233,5 @@ for g, c in sorted(tg.items(), key=lambda kv: -kv[1]['busy']):
     if c['busy'] or c['lockwait']: md.append(f"- {g}: {c['busy']} / {c['lockwait']} / {c['idle']}")
 open(os.path.join(a.out, f'{a.label}.md'), 'w').write('\n'.join(md) + '\n')
 print('\n'.join(md))
+if res['invalid']: print(f"profile_bulk.sh: {a.label}: INVALID PROFILE ({res['invalid']}); discard this run", file=sys.stderr); sys.exit(3)
 PY

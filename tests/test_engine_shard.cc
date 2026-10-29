@@ -38,6 +38,8 @@
 
 #include "engine/sync.h"
 #include "engine/xapian/convert.h"
+#include "length.h"
+#include "sortable_serialise.h"
 #include "engine/xapian/errors.h"
 #include "engine/xapian/shard.h"
 #include "task.hh"
@@ -218,9 +220,43 @@ void run(bool offload) {
 	std::filesystem::remove_all(path);
 }
 
+// The schema indexes a document's own `_version` field under the same "V" prefix as the version terms, so another
+// document can carry the term "V" + length(78) + version. That is not the stored version of document 78.
+static void test_version_term_collision() {
+	const auto path = (std::filesystem::current_path() / "engine_shard_test_collision.db").string();
+	std::filesystem::remove_all(path);
+	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto& shard = *opened.shard;
+
+	const std::string foreign = serialise_length(78) + sortable_serialise(1.0);
+	engine::WriteArgs plain;
+	for (int i = 1; i <= 77; ++i) {
+		auto doc = make("Q" + std::to_string(i), "other");
+		doc.add_boolean_term(doc.field("V", engine::FieldKind::boolean), foreign);
+		CHECK_EQ(engine::sync_wait(shard.add(doc, plain)).did, static_cast<engine::docid>(i));
+	}
+
+	// Document 78 is new: version 1, then 2, then 3, whatever the other documents carry.
+	auto doc78 = make("Q78", "new");
+	CHECK_EQ(engine::sync_wait(shard.replace(78, doc78, plain)).version, 1u);
+	auto again = make("Q78", "again");
+	CHECK_EQ(engine::sync_wait(shard.replace(78, again, plain)).version, 2u);
+	auto third = make("Q78", "third");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Q78", third, plain)).version, 3u);
+	engine::WriteArgs stale;
+	stale.expected_version = 1;
+	auto conflicting = make("Q78", "stale");
+	CHECK_TRUE(kind_of([&] { engine::sync_wait(shard.replace(78, conflicting, stale)); }) == engine::errc::version_conflict);
+
+	opened.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
 }  // namespace
 
 static void test_inline() { run(false); }
 static void test_offload() { run(true); }
 
-TEST_MAIN(test_inline, test_offload)
+static void test_collision() { test_version_term_collision(); }
+
+TEST_MAIN(test_inline, test_offload, test_collision)

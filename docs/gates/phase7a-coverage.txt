@@ -1,0 +1,22 @@
+Lines never executed by ctest (28 tests) plus the docs E2E on both engines, at Xapiand:e17bfc501, which is 3bc11f31f plus the C4 fix and harness (RelWithDebInfo, llvm-cov lcov export; a line is a DA record).
+src/engine/document.cc: 0 of 22 lines missed: 
+src/engine/kind.cc: 1 of 44 lines missed: 43
+src/engine/open.cc: 0 of 26 lines missed: 
+src/engine/query.cc: 15 of 233 lines missed: 284-291,298-299,301-302,312,333-334
+src/engine/search.cc: 0 of 14 lines missed: 
+src/engine/sync.cc: 2 of 20 lines missed: 67-68
+src/engine/text.cc: 12 of 219 lines missed: 79-80,99,108,111,161,184-185,212,257,310-311
+src/engine/strata/doc_view.cc: 0 of 35 lines missed: 
+src/engine/strata/document.cc: 20 of 406 lines missed: 78-79,236-237,405-407,506-507,531-532,541-542,546-547,553-554,614-616
+src/engine/strata/expand.cc: 3 of 96 lines missed: 81-82,147
+src/engine/strata/pattern.cc: 2 of 89 lines missed: 112-113
+src/engine/strata/search.cc: 30 of 556 lines missed: 100-101,103,105-106,159-160,188-189,220-221,225-226,332-333,364-365,403-404,455-456,499-500,643-644,673-674,692,738-739
+src/engine/strata/shard.cc: 75 of 861 lines missed: 66,109,114-116,120,125,193-196,219-221,355-359,457-470,491,569-570,578-579,588-589,737-738,767-768,775-776,809-810,851-852,859-860,874-875,880-881,895-896,912-913,926-927,931-932,946-949,1121-1122,1156-1158,1238-1239
+src/engine/xapian/callbacks.cc: 18 of 108 lines missed: 81-88,96-97,101-102,187-189,223-225
+src/engine/xapian/codec.cc: 0 of 10 lines missed: 
+src/engine/xapian/convert.cc: 10 of 197 lines missed: 175-177,182-188
+src/engine/xapian/query.cc: 8 of 114 lines missed: 62,73-75,77,118,120-121
+src/engine/xapian/search.cc: 3 of 123 lines missed: 103,218-219
+src/engine/xapian/shard.cc: 85 of 404 lines missed: 111-113,125-126,139-141,169-171,204-205,223-225,275-276,289-290,303-304,317-318,324-333,338-346,357-358,380-381,395-396,441-442,459-460,484-485,495-496,506-507,513-515,560-570,575-586
+src/engine/xapian/stopper.cc: 16 of 16 lines missed: 39,41-43,51-62
+src/engine/xapian/text.cc: 14 of 57 lines missed: 42-49,61,78-79,83-85

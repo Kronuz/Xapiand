@@ -32,13 +32,17 @@
 
 #include <algorithm>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <new>
 #include <string>
 #include <vector>
+
+#include <unistd.h>
 
 #include "engine/query.h"
 #include "engine/text.h"
@@ -207,6 +211,20 @@ reading(const std::string& text, const engine::TextConfig& c)
 	return r;
 }
 
+// The case being read, printed when one takes longer than HANG_SECONDS (a hang is a finding).
+constexpr unsigned HANG_SECONDS = 30;
+char hang_case[1 << 14];
+
+void
+on_hang(int)
+{
+	static const char head[] = "HANG: a case took more than 30 s: ";
+	[[maybe_unused]] auto w = ::write(2, head, sizeof head - 1);
+	w = ::write(2, hang_case, std::strlen(hang_case));
+	w = ::write(2, "\n", 1);
+	::_exit(3);
+}
+
 }  // namespace
 
 
@@ -216,6 +234,38 @@ main(int argc, char** argv)
 	::setenv("XAPIAND_DATA_PATH", XAPIAND_SOURCE_DIR, 1);
 	const double seconds = argc > 1 ? std::atof(argv[1]) : 10;
 	Rng rng{argc > 2 ? std::strtoull(argv[2], nullptr, 10) : 1};
+	std::signal(SIGALRM, on_hang);
+
+	// FUZZ_TEXT_REPLAY="text<TAB>flags<TAB>opnum<TAB>field<TAB>stop<TAB>stem<TAB>stemkind<TAB>partial<TAB>fuzzy": one case, timed with and without the description.
+	if (const char* replay = std::getenv("FUZZ_TEXT_REPLAY")) {
+		std::vector<std::string> f{ std::string() };
+		for (const char* p = replay; *p; ++p) {
+			if (*p == '\t') f.emplace_back(); else f.back() += *p;
+		}
+		f.resize(9);
+		engine::TextConfig c;
+		c.flags = static_cast<unsigned>(std::stoul(f[1]));
+		c.default_op = static_cast<engine::Op>(std::atoi(f[2].c_str()));
+		c.field = f[3]; c.stop_language = f[4]; c.stem_language = f[5];
+		c.stem = static_cast<engine::Stem>(std::atoi(f[6].c_str()));
+		c.partial_max_expansion = static_cast<engine::termcount>(std::atoi(f[7].c_str()));
+		c.fuzzy_max_expansion = static_cast<engine::termcount>(std::atoi(f[8].c_str()));
+		std::snprintf(hang_case, sizeof hang_case, "replay");
+		for (bool describe : { false, true }) {
+			::alarm(HANG_SECONDS);
+			const auto t0 = std::chrono::steady_clock::now();
+			std::string tree;
+			try {
+				engine::parse_text(f[0], c, describe ? &tree : nullptr);
+			} catch (const std::exception& exc) {
+				std::printf("  threw: %s\n", exc.what());
+			}
+			std::printf("describe=%d: %.3f s, tree %zu bytes\n", describe, std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(), tree.size());
+			std::fflush(stdout);
+		}
+		::alarm(0);
+		return 0;
+	}
 
 	std::vector<std::string> corpus;
 #ifdef QUERYPARSER_VECTORS
@@ -233,8 +283,13 @@ main(int argc, char** argv)
 		for (int i = 0; i < 200; ++i, ++runs) {
 			const auto text = random_text(rng, corpus);
 			const auto c = random_config(rng);
+			std::snprintf(hang_case, sizeof hang_case, "seed=%s text=\"%s\" flags=%u op=%s stop=%s stem=%s/%d prefix=%s partial=%u fuzzy=%u opnum=%d",
+				argc > 2 ? argv[2] : "1", show(text).c_str(), c.flags, engine::to_string(c.default_op), c.stop_language.c_str(),
+				c.stem_language.c_str(), static_cast<int>(c.stem), c.field.c_str(), static_cast<unsigned>(c.partial_max_expansion), static_cast<unsigned>(c.fuzzy_max_expansion), static_cast<int>(c.default_op));
+			::alarm(HANG_SECONDS);
 			const auto first = reading(text, c);
 			const auto second = reading(text, c);
+			::alarm(0);
 			bool bad = first.lowered != second.lowered || first.error != second.error;
 			if (first.error.empty()) {
 				++parsed;
