@@ -1255,8 +1255,7 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 	auto id = std::string(request.endpoints.size() == 1 ? request.endpoints[0].path : unsharded_path(request.endpoints[0].path).first);
 	request.endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/indexes"},
-		query_field.writable,
-		query_field.primary);
+		query_field.writable);
 
 	try {
 		DatabaseHandler db_handler;
@@ -2182,7 +2181,6 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 		auto index_endpoints = XapiandManager::resolve_index_endpoints(
 			Endpoint(path),
 			query_field.writable,
-			query_field.primary,
 			settings);
 		if (index_endpoints.empty()) {
 			throw engine::Error(engine::errc::network, "Endpoint node not available");

@@ -169,6 +169,8 @@ parseOptions(int argc, char** argv)
 		std::string node_name;
 		app.add_option("--name", node_name, "Node name.");
 
+		std::size_t num_shards = NUM_SHARDS;
+		app.add_option("--shards", num_shards, "Default number of database shards per index.");
 #if XAPIAND_DATABASE_WAL
 		std::size_t num_async_wal_writers = 0;
 		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
@@ -390,6 +392,7 @@ parseOptions(int argc, char** argv)
 		o.scripts_cache_size = scripts_cache_size;
 		o.resolver_cache_size = resolver_cache_size;
 		o.wal_writer_cache_size = wal_writer_cache_size;
+		o.num_shards = num_shards;
 #if XAPIAND_DATABASE_WAL
 		o.num_async_wal_writers = fallback(num_async_wal_writers, std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif

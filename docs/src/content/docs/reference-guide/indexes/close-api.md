@@ -8,7 +8,7 @@ This feature hasn't yet been implemented...
 :::
 
 The _Open / Close Index APIs_ allow to close an index, and later on opening it.
-A closed index has almost _no overhead_ on the cluster, and is blocked for
+A closed index has almost _no overhead_ on the node, and is blocked for
 read/write operations. A closed index can be opened which will then go through
 the normal recovery process.
 

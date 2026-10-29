@@ -32,6 +32,32 @@
 
 namespace engine {
 
+namespace {
+
+class Prepared final : public PreparedQuery {
+public:
+	explicit Prepared(const Query& source) : PreparedQuery(source) { }
+
+	bool empty() const override {
+		return source().empty();
+	}
+
+	std::string description() const override {
+		return source().description();
+	}
+};
+
+}  // namespace
+
+
+std::unique_ptr<PreparedQuery>
+prepare(const Query& query)
+{
+	ENGINE_CENSUS_QUERY(query);
+	return std::make_unique<Prepared>(query);
+}
+
+
 task::task<SearchResult>
 search(std::span<Shard* const> shards, const SearchRequest& request)
 {

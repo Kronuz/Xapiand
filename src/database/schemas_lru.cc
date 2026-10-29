@@ -155,7 +155,7 @@ save_shared(std::string_view id, const MsgPack& schema, engine::rev version, con
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
 	try {
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true, false, &non_strict);
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true, &non_strict);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}

@@ -18,15 +18,6 @@ uncleanly before that commit, it recovers on startup by replaying the WAL from t
 last committed revision forward, re-applying exactly the operations that had not
 yet made it into the database.
 
-## The WAL and replication
-
-The same replayable history is what
-[data replication](/Xapiand/reference-guide/indexes/replication)
-is built on. Once a replica holds a copy of a shard at some revision, it stays in
-sync by replaying the primary's WAL entries recorded after that revision, rather
-than copying the whole database again. Only a brand-new or far-behind replica
-needs a full copy of the database files to seed from.
-
 ## Writing the log
 
 WAL entries are written by a pool of asynchronous writer threads so that logging a
@@ -36,5 +27,5 @@ change stays off the request's critical path. Two options tune this pool:
 - `--wal-writer-cache-size` sets the writer's cache size.
 
 The WAL is enabled by default. Certain internal paths that manage their own
-durability write with it disabled, most notably a replica being seeded from a full
-database copy, which does not need to log operations it is receiving wholesale.
+durability write with it disabled, most notably a command-line restore
+(`xapiand --restore`), which loads its documents straight into the shards.

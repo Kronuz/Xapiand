@@ -52,7 +52,7 @@ are all randomly generated.
 ## Loading the Sample Dataset
 
 After downloading the [sample dataset](/Xapiand/assets/accounts.ndjson),
-let's load it into our cluster as follows:
+let's load it into our node as follows:
 
 ```rest
 RESTORE /bank/

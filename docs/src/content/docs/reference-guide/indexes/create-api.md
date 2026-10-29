@@ -51,14 +51,13 @@ PUT /twitter/tweet_sharded/
 }
 ```
 
-The default for `number_of_shards` is `5`, and the default for
-`number_of_replicas` is `1` (ie one replica for each primary shard), the above
-command creates an index with `3` shards and `2` replicas.
+The default for `number_of_shards` is `5`; the above command creates an index
+with `3` shards. `number_of_replicas` is accepted and stored, but has no effect
+on a single node.
 
 :::hint[Only for New Indexes]{.info}
-`number_of_shards` and `number_of_replicas` can be specified like this only
-for new indexes and any attempt to change the values during an update will
-result in a Bad Request error.
+`number_of_shards` can be specified like this only for new indexes and any
+attempt to change the value during an update will result in a Bad Request error.
 :::
 
 ## Schemas

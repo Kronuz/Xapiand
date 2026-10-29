@@ -43,7 +43,7 @@ the word _"happiness"_ are converted to the form _"happi"_, so if a document
 contained _"happiness"_, a search for _"happy"_ would find that document.
 
 The rules applied by a stemmer are dependent on the language of the text;
-Xapian includes stemmers for more than a dozen languages (and for some languages
+Xapiand includes stemmers for more than a dozen languages (and for some languages
 there is a choice of stemmers), built using the **Snowball** language. We'd like to
 add stemmers for more languages - see the [Snowball]
 site for information on how to contribute.
@@ -95,6 +95,6 @@ The following parameters are accepted by _Text_ fields:
 | `_weight`                             | The weight the term is going to be indexed with.                                        |
 
 [Snowball]: http://snowballstem.org
-[stopper strategy]: https://xapian.org/docs/apidoc/html/classXapian_1_1TermGenerator.html#aec58751aec187d8b2647579c150667c2
-[stemming language]: https://xapian.org/docs/apidoc/html/classXapian_1_1Stem.html#a6c46cedf2047b159a7e4c9d4468242b1
-[stemming strategy]: https://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html#ac7dc3b55b6083bd3ff98fc8b2726c8fd
+[stopper strategy]: #stop-strategy
+[stemming language]: #stemmers
+[stemming strategy]: #stem-strategy

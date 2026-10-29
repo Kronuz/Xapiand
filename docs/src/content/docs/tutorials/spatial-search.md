@@ -12,7 +12,7 @@ The population and location data used in this example is from
 [OpenDataSoft](https://public.opendatasoft.com/explore/dataset/1000-largest-us-cities-by-population-with-geographic-coordinates).
 
 You can download the [sample dataset](/Xapiand/assets/cities.ndjson).
-Extract it to our current directory and let's load it into our cluster as follows:
+Extract it to our current directory and let's load it into our node as follows:
 
 ```rest
 RESTORE /cities/

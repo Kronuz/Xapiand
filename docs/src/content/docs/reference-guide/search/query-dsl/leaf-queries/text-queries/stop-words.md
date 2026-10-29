@@ -2,7 +2,7 @@
 title: "Stop Words"
 ---
 
-Xapian supports a stop word list, which allows you to specify what words
+Xapiand supports a stop word list, which allows you to specify what words
 should be removed from a query before processing. This list can be overridden
 or stop words can still be searched for if desired, but by default any words
 in the active stop words list will not be searched for.

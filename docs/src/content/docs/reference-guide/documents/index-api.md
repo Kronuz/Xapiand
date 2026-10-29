@@ -99,9 +99,7 @@ current document version matches the passed `version` in the query param. If a
 mismatch is detected, the operation will result in a `409 Conflict` HTTP response
 code. See [Versioning](../versioning) for more details.
 
-## Replication
+## Routing
 
-The index operation is directed to the primary shard based on the hash of its ID
-and performed on the actual node containing this shard. After the primary shard
-completes the operation, if needed, the update is synchronized to all applicable
-replicas.
+The index operation is directed to one of the index's shards based on the hash of
+its ID.

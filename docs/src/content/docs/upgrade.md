@@ -13,7 +13,7 @@ Xapiand runs as a single node; the cluster returns in a later release.
 1.0.0 reads only indexes that the strata engine wrote. An index written by 0.40.0
 (or by an earlier 1.0.0 alpha on its default Xapian engine) holds Xapian's on-disk
 format, which 1.0.0 cannot open. Carry the documents over instead: dump each index
-with the old release and restore it into 1.0.0.
+with the final Xapian-only release (the `xapiand` branch) and restore it into 1.0.0.
 
 A dump holds every document's data with its `_id` and `_version`. Index settings
 and explicit schemas are set again on the new node, before the restore (see [Restore using different schema](/Xapiand/reference-guide/indexes/backups#restore-using-different-schema)).
@@ -49,8 +49,9 @@ documents so their ids are re-minted as v6.
 
 ## Migrating a single node
 
-1. With 0.40.0 still running, dump every index (`DUMP`, or `xapiand --dump` with
-   the server's parameters; see [Backups](/Xapiand/reference-guide/indexes/backups)).
+1. Run the final Xapian-only release (the `xapiand` branch) against the 0.40.0 data
+   directory and dump every index (`DUMP`, or `xapiand --dump` with the server's
+   parameters; see [Backups](/Xapiand/reference-guide/indexes/backups)).
 2. Stop the node and let it shut down cleanly.
 3. Start the 1.0.0 binary against a **new, empty** data directory (`-D`), and keep
    the old one untouched.

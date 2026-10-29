@@ -45,6 +45,7 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 - `-D`, `--database` sets the path to the root of the node, where all index data
   lives.
 - `--name` sets the node name.
+- `--shards` sets the default number of shards per index (5).
 - `--port` sets the HTTP REST API port.
 - `-d`, `--detach` runs the process in the background.
 

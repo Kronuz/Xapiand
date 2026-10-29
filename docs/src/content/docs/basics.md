@@ -55,7 +55,7 @@ with `number_of_shards`. The number of shards is fixed once the index is
 created, so pre-planning the correct number of shards ahead of time is the
 optimal approach.
 
-By default, each index in Xapiand is allocated 1 shard.
+By default, each index in Xapiand is allocated 5 shards.
 
 ## Near Realtime (NRT)
 
