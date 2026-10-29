@@ -17,7 +17,7 @@ answers to Q1 to Q6. No build, probe or measurement was run for revision 2.
 
 - Revision 1 of the design and this ledger: `Xapiand:0a8d235b8`, `Xapiand:fdcc91862`.
 - Architect's preliminary review, APPROVE WITH CONDITIONS for S1 only: `Xapiand:e30a844ff`.
-- Revision 2 (see the log for how each finding closed): the commit that carries this line.
+- Revision 2 (see the log for how each finding closed): `Xapiand:2d8c2daab`.
 
 ## Next
 
