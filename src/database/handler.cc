@@ -51,10 +51,10 @@
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
+#include "engine/open.h"                    // for engine::check
 #include "engine/search.h"                  // for engine::search, prepare
 #include "engine/sync.h"                    // for engine::sync_wait
 #include "engine/xapian/errors.h"          // for engine::xapian::DatabaseFailure
-#include "engine/xapian/shard.h"           // for engine::xapian::check
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -268,7 +268,7 @@ DatabaseHandler::check()
 	MsgPack errors = MsgPack::MAP();
 	for (auto& endpoint : endpoints) {
 		try {
-			auto result = engine::sync_wait(engine::xapian::check(endpoint.path));
+			auto result = engine::sync_wait(engine::check(endpoint.path));
 			if (result.failure.empty()) {
 				errors[endpoint.path] = result.errors;
 			} else {

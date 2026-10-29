@@ -44,4 +44,20 @@ open_local(Kind kind, const std::string& path, bool writable, bool create_missin
 	co_return result;
 }
 
+task::task<CheckResult>
+check(const std::string& path, task::scheduler_ref on)
+{
+	CheckResult result;
+	if (kind_of(path) == Kind::strata) {
+		auto checked = co_await strata::check(path, on);
+		result.errors = checked.errors;
+		result.failure = std::move(checked.failure);
+	} else {
+		auto checked = co_await xapian::check(path, on);
+		result.errors = checked.errors;
+		result.failure = std::move(checked.failure);
+	}
+	co_return result;
+}
+
 }  // namespace engine

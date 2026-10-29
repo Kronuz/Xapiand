@@ -43,7 +43,9 @@
 #include "prospect/index.hh"       // for prospect::index
 
 #include "log.h"                   // for L_ERR
+#include "sortable_serialise.h"    // for sortable_serialise
 
+#include "database/utils.h"        // for DB_SLOT_VERSION
 #include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for StrataDocument
@@ -428,6 +430,15 @@ check_version(const std::optional<rev>& expected, const std::optional<rev>& stor
 	}
 }
 
+// Stamps the version a write lands at: on the document, and in the version slot the host reads back to
+// check a later write (Xapian's adapter does the same), so the slot is never the version the caller expected.
+void
+stamp_version(StrataDocument& native, rev version)
+{
+	native.stamp(version);
+	native.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(version)));
+}
+
 [[noreturn]] void
 reject(const ::strata::verdict& verdict)
 {
@@ -591,7 +602,7 @@ Shard::add(Document& doc, WriteArgs args)
 		auto& op = t.ops.emplace_back();
 		op.type = prospect::operation::add;
 		auto& native = native_of(doc);
-		native.stamp(info.version);
+		stamp_version(native, info.version);
 		fill(t, op.doc, native, core.index->fields());
 		co_return apply(core, t, info);
 	} catch (...) {
@@ -647,7 +658,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 			args.finalise(doc, info);
 		}
 		ENGINE_CENSUS_DOCUMENT(doc, info.term);
-		native.stamp(info.version);
+		stamp_version(native, info.version);
 		prospect::transaction t;
 		auto& op = t.ops.emplace_back();
 		op.type = prospect::operation::replace_docid;
@@ -699,7 +710,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		if (native.key() != key) {
 			native.set_key(key);
 		}
-		native.stamp(info.version);
+		stamp_version(native, info.version);
 		prospect::transaction t;
 		auto& op = t.ops.emplace_back();
 		op.type = prospect::operation::replace_key;
@@ -955,7 +966,15 @@ Shard::stats()
 		stats.lastdocid = static_cast<docid>(manifest.last_docid);
 		stats.doc_count = live_count(core);
 		stats.total_length = manifest.live_length;
-		// TODO(P4): the document-length bounds; until then they are unknown.
+		// The bounds are over every stored document of the segments that hold any, deleted ones included.
+		bool any = false;
+		for (const auto& view : core.index->segments()) {
+			if (!view.seg()->core().doc_count()) { continue; }
+			const auto& inverted = view.seg()->get<prospect::inverted_plugin>();
+			stats.doclen_lower = any ? std::min<termcount>(stats.doclen_lower, inverted.min_length()) : inverted.min_length();
+			stats.doclen_upper = std::max<termcount>(stats.doclen_upper, inverted.max_length());
+			any = true;
+		}
 		stats.avlength = stats.doc_count ? static_cast<double>(stats.total_length) / stats.doc_count : 0;
 		stats.has_positions = true;
 		co_return stats;

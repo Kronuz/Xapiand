@@ -32,6 +32,7 @@
 #include <atomic>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <map>
 #include <random>
@@ -49,6 +50,7 @@
 #include "engine/strata/document.h"
 #include "engine/strata/shard.h"
 #include "engine/sync.h"
+#include "sortable_serialise.h"
 
 namespace {
 
@@ -490,9 +492,11 @@ void values_stored() {
 	CHECK_EQ(view->value(7), "");
 	std::vector<std::pair<engine::valueno, std::string>> seen;
 	view->values([&](engine::valueno slot, std::string_view bytes) { seen.emplace_back(slot, std::string(bytes)); });
-	CHECK_EQ(seen.size(), 2u);
-	CHECK_EQ(seen[0].first, 2u);
-	CHECK_EQ(seen[1].first, 9u);
+	// The version slot (1) is stamped by the shard, as Xapian's adapter does.
+	CHECK_EQ(seen.size(), 3u);
+	CHECK_EQ(seen[0].first, 1u);
+	CHECK_EQ(seen[1].first, 2u);
+	CHECK_EQ(seen[2].first, 9u);
 
 	// A replacement carries its own values only.
 	auto again = make(Kind::strata, "Qv", "e");
@@ -1090,6 +1094,91 @@ void old_format() {
 	CHECK_EQ(static_cast<unsigned char>(doc.serialise()[0]), 3u);
 }
 
+// The version slot the host reads back to check a write holds the version the write landed at, whatever
+// the caller put there to ask for a version (R1: a stale slot made every later versioned write conflict).
+void version_slot(Kind kind) {
+	const auto path = scratch("version_slot", kind);
+	auto opened = open_shard(kind, path);
+	auto& shard = *opened.shard;
+	const auto slot = [&](engine::docid did) { return engine::sync_wait(shard.get(did))->value(1); };
+	engine::WriteArgs plain;
+	auto doc = make(kind, "Qa", "one");
+	doc.add_value(1, sortable_serialise(0.0));   // what the host asks for on a new document
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Qa", doc, plain)).version, 1u);
+	CHECK_EQ(slot(1), sortable_serialise(1.0));
+	for (engine::rev v = 1; v < 4; ++v) {
+		engine::WriteArgs expect;
+		expect.expected_version = v;
+		auto next = make(kind, "Qa", "again");
+		next.add_value(1, sortable_serialise(static_cast<double>(v)));
+		CHECK_EQ(engine::sync_wait(shard.replace(1, next, expect)).version, v + 1);
+		CHECK_EQ(slot(1), sortable_serialise(static_cast<double>(v + 1)));
+	}
+	auto added = make(kind, "Qb", "b");
+	CHECK_EQ(engine::sync_wait(shard.add(added, plain)).version, 1u);
+	CHECK_EQ(slot(2), sortable_serialise(1.0));
+}
+
+// The stats report the shortest and longest document length of the shard (D3).
+void length_bounds() {
+	const auto path = scratch("length_bounds", Kind::strata);
+	auto opened = open_shard(Kind::strata, path);
+	auto& shard = *opened.shard;
+	CHECK_EQ(engine::sync_wait(shard.stats()).doclen_upper, 0u);
+	engine::WriteArgs plain;
+	for (const auto& [key, wdf] : {std::pair{"Qa", 3u}, {"Qb", 9u}, {"Qc", 5u}}) {
+		engine::Document doc(Kind::strata);
+		doc.set_key(key);
+		doc.add_term(doc.field("f"), "t", wdf);
+		engine::sync_wait(shard.add(doc, plain));
+	}
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	const auto stats = engine::sync_wait(shard.stats());
+	CHECK_EQ(stats.doclen_lower, 3u);
+	CHECK_EQ(stats.doclen_upper, 9u);
+	CHECK_EQ(stats.total_length, 17u);
+}
+
+// The integrity check runs the check of the engine whose files are at the path, and a flipped byte fails it.
+void check_by_kind(Kind kind) {
+	const auto path = scratch("check", kind);
+	{
+		auto opened = open_shard(kind, path);
+		engine::WriteArgs plain;
+		auto doc = make(kind, "Qa", std::string(4000, 'x'));
+		engine::sync_wait(opened.shard->add(doc, plain));
+		engine::sync_wait(opened.shard->commit(engine::Transaction::none));
+	}
+	const auto good = engine::sync_wait(engine::check(path));
+	CHECK_EQ(good.errors, 0u);
+	CHECK_EQ(good.failure, "");
+	if (kind != Kind::strata) {
+		return;
+	}
+	// Flips one byte in the largest file under the shard.
+	namespace fs = std::filesystem;
+	fs::path biggest;
+	std::uintmax_t size = 0;
+	for (const auto& entry : fs::recursive_directory_iterator(path)) {
+		if (entry.is_regular_file() && entry.file_size() > size && entry.path().filename() != "LOCK") {
+			biggest = entry.path();
+			size = entry.file_size();
+		}
+	}
+	CHECK_TRUE(size > 64);
+	{
+		std::fstream f(biggest, std::ios::in | std::ios::out | std::ios::binary);
+		f.seekg(static_cast<std::streamoff>(size / 2));
+		char c = 0;
+		f.get(c);
+		f.seekp(static_cast<std::streamoff>(size / 2));
+		f.put(static_cast<char>(c ^ 0x5a));
+	}
+	const auto bad = engine::sync_wait(engine::check(path));
+	CHECK_TRUE(bad.errors != 0 || !bad.failure.empty());
+	CHECK_TRUE(bad.failure.find("Xapian") == std::string::npos);
+}
+
 }  // namespace
 
 // An engine error that escapes a test is a failure with its text, not an abort.
@@ -1121,6 +1210,11 @@ static void test_fenced_reopen() { guarded("fenced reopen", [] { fenced_recovers
 static void test_fenced_writer_notified() { guarded("fenced writer notified", [] { fenced_writer_notified(); }); }
 static void test_replay_idempotent() { guarded("replay idempotent", [] { replay_idempotent(); }); }
 static void test_old_format() { guarded("old format", [] { old_format(); }); }
+static void test_check_xapian() { guarded("check xapian", [] { check_by_kind(Kind::xapian); }); }
+static void test_check_strata() { guarded("check strata", [] { check_by_kind(Kind::strata); }); }
+static void test_version_slot_xapian() { guarded("version slot xapian", [] { version_slot(Kind::xapian); }); }
+static void test_version_slot_strata() { guarded("version slot strata", [] { version_slot(Kind::strata); }); }
+static void test_length_bounds() { guarded("length bounds", [] { length_bounds(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format, test_check_xapian, test_check_strata, test_version_slot_xapian, test_version_slot_strata, test_length_bounds)
