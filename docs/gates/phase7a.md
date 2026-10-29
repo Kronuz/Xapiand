@@ -21,7 +21,7 @@ after this one are the first run on `9fa890ecc`, kept as history.
 | T8 crash recovery | Same document set as Xapian after `kill -9`; strata digest check passes | A: 50 PUTs without a commit, `kill -9`: both engines recover the same 50 documents, every `n` right, the restart logs the WAL replay. B: sequential PUTs, `kill -9` after 4 s: Xapian recovered 6063 of 6063 acknowledged writes, strata 4592 of 4592; none lost, none duplicated, all intact. The strata check (`index::check`) passes on all 5 shards right after each kill and after each restart and second kill (4 runs of 5 shards) | PASS |
 | T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
 | Unit tests | All pass | `ctest`: 28 of 28 pass (engine_document, engine_fields, engine_census, engine_query, engine_sort, engine_shard, engine_read, engine_search, engine_search_strata, engine_callbacks, engine_error, engine_replay, engine_strata, wal_replay, pool, blocking_guard, offload_followups, serialise, text and the rest) | PASS |
-| T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides |
+| T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides. Corrected (gate review F1): the estimator counted device-flush wait as CPU; on CPU the row is 0.414x, PASS (see the closing run, "What moved") |
 
 ### T11 detail
 
@@ -67,8 +67,10 @@ the `RESTORE /twitter/tweets/` failure R1) no longer appear in the diff.
    and the status is FAIL by the estimator the T11 record names. The lead rules on which estimator the row means, or on the
    open item in `docs/perf/t11/README.md` (fold the first directory barrier of a commit into the data batch), which targets
    the `commit_files` wait.
+   Superseded (gate review F1): the estimator counted device-flush wait as CPU, which inflated strata alone; on CPU the row
+   is 0.414x (closing run, "What moved"), and the item in `docs/perf/t11/README.md` is not needed for the row.
 2. T11 was measured on macOS x86_64, APFS, only; the numbers expire with this commit and this machine. Whether
-   `F_FULLFSYNC` waits count as engine CPU is a property of this harness on macOS; Linux, FreeBSD and arm64 are not measured.
+   `F_FULLFSYNC` waits counted as engine CPU was a property of this harness on macOS (now reported apart); Linux, FreeBSD and arm64 are not measured.
 3. The assertion count is 566 here against 576 in the first run; the suite changed between the two runs and the
    difference was not traced. Both engines pass the same 566.
 4. T8 B measures acknowledged writes against the async WAL window (2 s grace; 0 older and 0 newer writes missing in this
@@ -236,20 +238,37 @@ Spread is (max - min) / mean over the ten runs. Raw: `.scratch/h1`, `.scratch/h2
 | Wall of the 20000-document RESTORE (s) | 4.51 | 2.63 | 0.583 (pairs 0.57 to 0.60) |
 | Peak RSS (MB, 3 runs each, `ru_maxrss`) | 908 to 926 | 863 to 883 | 0.95 |
 
-Hold 1's first Xapian run (round 1) was an outlier in the profile (sample-count CPU and critical thread far off the
-other nine; its smoke CPU was normal), which gives the 60% and 90% spreads and the two outlier pairs. The gate's
-estimator uses the smoke CPU and is not affected: its worst pair is 0.437, and all ten are under 0.5.
+Hold 1's first Xapian run (`xapian_1`) is invalid: its profile has 1208 wall samples where the other 19 have 5362 to 5835 (10.1
+busy cores against 4.1 to 4.4), so `sample(1)` caught about a fifth of the load (gate review F2, `drop_invalid.py`). It is the source of
+the 60% and 90% spreads and the two outlier pairs, and it is not "unaffected": the gate estimator takes its engine share. Without it
+and its strata partner: 0.384x on the estimator as committed, 0.354x by sample count, 0.208x on the critical path; the verdict does not
+move. `harness/profile_bulk.sh` now marks such a profile invalid and exits 3 (below the sampling window's 25% at 1 ms, or half the
+median wall samples of the other profiles in the output directory); on this hold's raw samples `xapian_1` is rejected and the other 19 pass.
 
-What moved since the Rerun (0.515x on the same estimator): the gain is flush-wait time, not CPU. The commit now does one full
-flush and one barrier where it did four full flushes, and the profile counts the `F_FULLFSYNC` wait under `commit_files` as
-busy, so the engine row and the wall fall while whole-process CPU per document stays where it was (0.803 in the Rerun, 0.768
-here for strata, 1.166 and 1.140 for Xapian: within the spread, the same 31 to 33% less than Xapian's). The honest saving
-is 17 to 20% less wall per bulk load and a commit that blocks its writer for less time, not CPU-hours.
+What moved since the Rerun (0.515x on the same estimator): the gain is flush-wait time, not CPU, and the estimator was biased against
+strata. A thread blocked in `__fcntl(F_FULLFSYNC)` or `fsync` burns no CPU, but the harness counted it as busy, in strata's engine row and in
+the denominator; Xapian runs `DB_NO_SYNC`, so the inflation was strata's alone (under `commit_files`, the leaves of one run are `__fcntl`
+153, `fsync` 41, `__openat` 20, `pwrite` 16 of 233 samples). `profile_bulk.sh` now reports that wait as its own blocked line
+("Device-flush wait", samples and ms per document, with how much sits in the engine rows) and keeps it out of every CPU share; it stays in
+the critical thread's timeline, where it is real waiting. Reanalysing the raw samples of both runs with the new harness (`--reanalyze`; it
+reproduces the as-committed figures when the wait is counted):
+
+| Run | Gate estimator as committed | On CPU (flush wait out) | Sample count, on CPU | Critical path |
+|---|---|---|---|---|
+| Rerun (`8f6332a01`) | 0.515x (FAIL) | 0.414x (0.1585 against 0.3824 ms; pairs 0.398 to 0.442, 10 of 10 at or under 0.5; holds 0.413, 0.415) | 0.347x | 0.213x |
+| Closing (`7125dfc28`) | 0.387x | 0.357x (0.1345 against 0.3763 ms; pairs 0.325 to 0.401, 10 of 10; holds 0.365, 0.349) | 0.339x | 0.226x |
+
+Strata's flush wait is 0.0479 ms per document in the Rerun and 0.0135 in the closing run, all of it in the engine rows; Xapian's is 0.0008 and
+0.0006. So the Rerun's FAIL on CPU came from the estimator, not the engine: on CPU strata's engine share was already under half of Xapian's
+before the commit barriers. The barrier change's real effect is the one `docs/perf/t11-barriers/README.md` states: less wall (17 to 20% per
+bulk load) at flat CPU (whole process 0.803 against 0.768 ms per document for strata, 1.166 against 1.140 for Xapian: within the spread, the
+same 31 to 33% less than Xapian's). The critical-path row (0.226x) includes the wait and passes either way.
 
 ### Deviations and residuals of the closing run
 
-1. The T11 CPU row passes on the gate's estimator because it counts device-flush wait as engine CPU (a property of this harness on
-   macOS). The barrier path relies on `F_BARRIERFSYNC`, which Apple guarantees only on Apple SSDs (`docs/perf/t11-barriers/README.md`).
+1. The T11 CPU row is measured on CPU: device-flush wait is reported apart (see "What moved"), 0.357x on the closing run and 0.414x on the
+   Rerun. The as-committed figures (0.387x, 0.515x) counted the wait as engine CPU, which inflated strata's share only. The barrier path
+   relies on `F_BARRIERFSYNC`, which Apple guarantees only on Apple SSDs (`docs/perf/t11-barriers/README.md`).
 2. macOS x86_64, APFS only. Linux, FreeBSD and arm64 are not measured; on Linux and FreeBSD the commit falls back to the old two-step sync.
 3. T8 uses `kill -9`, which leaves the page cache intact: it exercises atomicity, not device ordering under power loss. B's counts
    (6766, 7344) depend on the cut point and are not comparable across engines.
