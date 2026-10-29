@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -207,15 +208,22 @@ test_lowering_is_the_tree()
 void
 test_hate_groups_terminate()
 {
-	// With LOVEHATE and no BOOLEAN, queryparser linked a hated bracket group's last node to itself and the lowering never ended
-	// (memory growing); it now ends, with a query or a client error.
-	for (const char* text : { "-(a b) -c", "x -(a b) -c", "-(a b c) -d -e" }) {
+	// With LOVEHATE and no BOOLEAN, a group of only hated items is read again as if none were marked; that once
+	// linked the group's last node to itself and the lowering never ended. Each text now reads as plain words.
+	struct Case { const char* text; const char* or_tree; const char* and_tree; };
+	for (const auto& c : {
+		Case{ "-(a b) -c", "Query((XTfielda@1 OR XTfieldb@2 OR XTfieldc@3))", "Query((XTfielda@1 AND XTfieldb@2 AND XTfieldc@3))" },
+		Case{ "x -(a b) -c", "Query((XTfieldx@1 AND_NOT (XTfielda@2 OR XTfieldb@3 OR XTfieldc@4)))",
+		      "Query((XTfieldx@1 AND_NOT ((XTfielda@2 AND XTfieldb@3) OR XTfieldc@4)))" },
+		Case{ "-(a b c) -d -e", "Query((XTfielda@1 OR XTfieldb@2 OR XTfieldc@3 OR XTfieldd@4 OR XTfielde@5))",
+		      "Query((XTfielda@1 AND XTfieldb@2 AND XTfieldc@3 AND XTfieldd@4 AND XTfielde@5))" },
+	}) {
 		for (auto op : { Op::OR, Op::AND }) {
-			try {
-				engine::parse_text(text, config(text::LOVEHATE, op));
-			} catch (const QueryParserError& exc) {
-				CHECK_TRUE(exc.kind == engine::errc::syntax);
-			}
+			std::string tree;
+			engine::parse_text(c.text, config(text::LOVEHATE, op), &tree);
+			const std::string want = op == Op::OR ? c.or_tree : c.and_tree;
+			CHECK_TRUE(tree == want);
+			if (tree != want) { std::fprintf(stderr, "%s: got %s, want %s\n", c.text, tree.c_str(), want.c_str()); }
 		}
 	}
 }
