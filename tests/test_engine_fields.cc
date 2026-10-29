@@ -38,6 +38,8 @@
 
 #include "analysis.hh"
 #include "config.h"
+#include "database/utils.h"
+#include "hashes.hh"
 #include "engine/document.h"
 #include "engine/query.h"
 #include "engine/text.h"
@@ -292,6 +294,26 @@ static void test_word_break_fields() {
 #endif
 }
 
+// The host's id key: the type character and the id's bytes, no 'Q'; the id field's terms are the key field's;
+// placement still hashes the Xapian spelling, so a shard keeps its documents.
+static void test_host_keys() {
+	CHECK_EQ(document_key("abc", 'K'), "Kabc");
+	CHECK_EQ(document_key(std::string("\x81\x40", 2), 'N'), std::string("N\x81\x40", 3));
+	CHECK_EQ(key_of_term("QKabc"), "Kabc");
+	CHECK_EQ(key_placement_hash("Kabc"), fnv1ah64::hash("QKabc"));
+	CHECK_EQ(key_placement_hash("N\x80"), fnv1ah64::hash(std::string("QN\x80")));
+	const auto id = field_term("Q", 'K', "abc");
+	CHECK_EQ(id.field, std::string(engine::KEY_FIELD));
+	CHECK_EQ(id.term, "Kabc");
+	const auto other = field_term("name.", 'S', "abc");
+	CHECK_EQ(other.field, "name.S");
+	CHECK_EQ(other.term, "abc");
+	CHECK_EQ(std::string(query_field("Q")), std::string(engine::KEY_FIELD));
+	CHECK_EQ(std::string(query_field("name.")), "name.");
+	// The accuracy terms of a numeric id lead with 'A', not the id prefix: they are an ordinary field.
+	CHECK_EQ(std::string(query_field(acc_term_prefix("Q"))), "A");
+}
+
 // The key field's terms are the Xapian engine's id terms: a 'Q', the id's type character and its bytes.
 static void test_key_field() {
 	engine::Document doc;
@@ -385,4 +407,4 @@ void test_foreign_ref_asserts() {
 void test_foreign_ref_asserts() { }
 #endif
 
-TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_key_field, test_strata_fields)
+TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_key_field, test_host_keys, test_strata_fields)
