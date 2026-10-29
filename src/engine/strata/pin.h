@@ -45,8 +45,13 @@ public:
 
 	std::span<const segment_view> segments() const noexcept { return {segments_.data(), segments_.size()}; }
 
+	// The field table of the shard's index: the names the segments' terms are filed under. It lives as long as
+	// the pin holds the shard's lock.
+	const ::strata::field_table& fields() const noexcept { return *fields_; }
+
 	// The Shard::pin() that made it fills these.
 	segment_list segments_;
+	const ::strata::field_table* fields_ = nullptr;
 	const void* identity_ = nullptr;
 
 private:

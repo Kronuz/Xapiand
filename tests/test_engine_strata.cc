@@ -47,6 +47,7 @@
 #include "engine/open.h"
 #include "engine/search.h"
 #include "engine/strata/document.h"
+#include "engine/strata/shard.h"
 #include "engine/sync.h"
 
 namespace {
@@ -62,9 +63,9 @@ std::string scratch(const char* name, Kind kind) {
 engine::Document make(Kind kind, const std::string& key, const std::string& data) {
 	engine::Document doc(kind);
 	doc.set_key(key);
-	doc.add_term(doc.field(""), "body", 2);
-	doc.add_posting(doc.field(""), "word", 1);
-	doc.add_posting(doc.field(""), "word", 3);
+	doc.add_term(doc.field("f"), "body", 2);
+	doc.add_posting(doc.field("f"), "word", 1);
+	doc.add_posting(doc.field("f"), "word", 3);
 	doc.set_data(data);
 	return doc;
 }
@@ -99,7 +100,7 @@ void shared(Kind kind) {
 	args.finalise = [&](engine::Document& doc, engine::WriteResult& result) {
 		hooked_did = result.did;
 		hooked_version = result.version;
-		doc.add_term(doc.field(""), "stamped");
+		doc.add_term(doc.field("f"), "stamped");
 	};
 	auto doc = make(kind, "Qa", "one");
 	auto added = engine::sync_wait(shard.add(doc, args));
@@ -309,6 +310,73 @@ void replay(Kind kind) {
 	std::filesystem::remove_all(path);
 }
 
+// The field table a strata shard keeps: a field is declared by the first document that names it, with the
+// kind that document asked for (what its postings hold), the key field once; a later document of another
+// kind reuses the declaration.
+void declared() {
+	const auto kind = Kind::strata;
+	const auto path = scratch("declared", kind);
+	auto opened = open_shard(kind, path);
+	auto& shard = dynamic_cast<engine::strata::Shard&>(*opened.shard);
+	CHECK_EQ(shard.declared_fields().size(), 0u);
+
+	using engine::FieldKind;
+	engine::WriteArgs plain;
+	engine::Document one(kind);
+	one.set_key("Kone");
+	one.add_posting(one.field("a.S", FieldKind::text), "x", 1);
+	one.add_term(one.field("b.N", FieldKind::terms), "y", 2);
+	one.add_boolean_term(one.field("c.", FieldKind::boolean), "");
+	engine::sync_wait(shard.add(one, plain));
+
+	const auto fields = shard.declared_fields();
+	CHECK_EQ(fields.size(), 4u);
+	const auto find = [&](const std::string& name) -> const engine::strata::DeclaredField* {
+		for (const auto& field : fields) {
+			if (field.name == name) { return &field; }
+		}
+		return nullptr;
+	};
+	CHECK_TRUE(find("a.S") && find("a.S")->kind == FieldKind::text && !find("a.S")->key);
+	CHECK_TRUE(find("b.N") && find("b.N")->kind == FieldKind::terms && !find("b.N")->key);
+	CHECK_TRUE(find("c.") && find("c.")->kind == FieldKind::boolean && !find("c.")->key);
+	CHECK_TRUE(find(std::string(engine::KEY_FIELD)) && find(std::string(engine::KEY_FIELD))->key);
+
+	// A later document: the known fields keep their declarations whatever kind it asks for, a new field is declared
+	// after them, and the key field is not declared again.
+	engine::Document two(kind);
+	two.set_key("Ktwo");
+	two.add_term(two.field("a.S", FieldKind::boolean), "z", 1);
+	two.add_posting(two.field("d.S", FieldKind::text), "w", 1);
+	engine::sync_wait(shard.add(two, plain));
+	const auto later = shard.declared_fields();
+	CHECK_EQ(later.size(), 5u);
+	for (std::size_t i = 0; i < fields.size(); ++i) {
+		CHECK_EQ(later[i].name, fields[i].name);
+		CHECK_TRUE(later[i].kind == fields[i].kind);
+	}
+	CHECK_EQ(later[4].name, "d.S");
+	CHECK_TRUE(later[4].kind == FieldKind::text);
+
+	// The declarations survive a commit and a reopen, and a replayed log line re-declares nothing.
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	opened.shard.reset();
+	auto again = open_shard(kind, path, true, false);
+	auto& reopened = dynamic_cast<engine::strata::Shard&>(*again.shard);
+	const auto kept = reopened.declared_fields();
+	CHECK_EQ(kept.size(), 5u);
+	for (std::size_t i = 0; i < kept.size(); ++i) {
+		CHECK_EQ(kept[i].name, later[i].name);
+		CHECK_TRUE(kept[i].kind == later[i].kind);
+		CHECK_EQ(kept[i].key, later[i].key);
+	}
+	auto line = engine::Document::unserialise(kind, one.serialise());
+	engine::sync_wait(reopened.replace_by_key("Kone", line, plain));
+	CHECK_EQ(reopened.declared_fields().size(), 5u);
+	again.shard.reset();
+	std::filesystem::remove_all(path);
+}
+
 // The strata engine's own behavior.
 void strata_only() {
 	const auto kind = Kind::strata;
@@ -317,24 +385,25 @@ void strata_only() {
 	auto& shard = *opened.shard;
 	engine::WriteArgs plain;
 
-	// A term that starts like an id term ("Q...") is an ordinary term, not the key: a field called
-	// "Quote" must index.
-	auto doc = make(kind, "QKone", "d");
-	doc.add_term(doc.field(""), "Quote.word");
-	CHECK_EQ(engine::sync_wait(shard.replace_by_key("QKone", doc, plain)).did, 1u);
-	CHECK_EQ(engine::sync_wait(shard.find_key("QKone")), 1u);
+	// A field or a term that looks like a key is an ordinary one, and a key is not a term: a field called
+	// "Quote" must index, and its terms are not keys.
+	auto doc = make(kind, "Kone", "d");
+	doc.add_term(doc.field("Quote."), "word");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kone", doc, plain)).did, 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kone")), 1u);
 	CHECK_EQ(engine::sync_wait(shard.find_key("Quote.word")), 0u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("word")), 0u);
 
 	// A document without a key is refused: its version would have no key to belong to.
 	engine::Document keyless(kind);
-	keyless.add_term(keyless.field(""), "x");
+	keyless.add_term(keyless.field("f"), "x");
 	keyless.set_data("k");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(keyless, plain)); }) == engine::errc::invalid);
-	auto other = make(kind, "QKtwo", "t");
+	auto other = make(kind, "Ktwo", "t");
 	CHECK_EQ(engine::sync_wait(shard.add(other, plain)).did, 2u);
 
 	// A key that belongs to another document cannot be replaced by id.
-	auto clash = make(kind, "QKone", "c");
+	auto clash = make(kind, "Kone", "c");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.replace(2, clash, plain)); }) == engine::errc::invalid);
 	{
 		// The shard says why itself; the index would refuse the write too, with its own words.
@@ -350,20 +419,20 @@ void strata_only() {
 	CHECK_EQ(engine::sync_wait(shard.get(2))->data(), "t");
 	CHECK_EQ(engine::sync_wait(shard.get(1))->version(), 1u);
 	CHECK_EQ(engine::sync_wait(shard.get(2))->version(), 1u);
-	CHECK_EQ(engine::sync_wait(shard.find_key("QKone")), 1u);
-	CHECK_EQ(engine::sync_wait(shard.find_key("QKtwo")), 2u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kone")), 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Ktwo")), 2u);
 	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 2u);
 
 	// A document built for the other engine is refused.
 	engine::Document foreign(Kind::xapian);
-	foreign.add_term(foreign.field(""), "x");
+	foreign.add_term(foreign.field("f"), "x");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(foreign, plain)); }) == engine::errc::invalid);
 
 	// The readable handle of a shard in this process shares the writable one's index and sees its
 	// writes before any commit; it cannot write.
 	auto readable = open_shard(kind, path, false, false);
 	CHECK_EQ(engine::sync_wait(readable.shard->get(1))->data(), "d");
-	CHECK_EQ(engine::sync_wait(readable.shard->find_key("QKone")), 1u);
+	CHECK_EQ(engine::sync_wait(readable.shard->find_key("Kone")), 1u);
 	CHECK_TRUE(error_kind([&] {
 		auto other = make(kind, "Qz", "z");
 		engine::sync_wait(readable.shard->add(other, plain));
@@ -449,10 +518,13 @@ void codec() {
 	using engine::strata::StrataDocument;
 	engine::Document doc(Kind::strata);
 	doc.set_key("Qk");
-	doc.add_term(doc.field(""), "a", 3);
-	doc.add_posting(doc.field(""), "b", 9);
-	doc.add_posting(doc.field(""), "b", 2);
-	doc.add_posting(doc.field(""), "b", 9);
+	doc.add_term(doc.field("f"), "a", 3);
+	doc.add_posting(doc.field("f"), "b", 9);
+	doc.add_posting(doc.field("f"), "b", 2);
+	doc.add_posting(doc.field("f"), "b", 9);
+	doc.add_posting(doc.field("g.S", engine::FieldKind::text), "c", 4);
+	doc.add_term(doc.field("g.S"), "", 0);
+	doc.add_term(doc.field(engine::KEY_FIELD), "Kk", 2);
 	doc.add_value(1, "x");
 	doc.add_value(0xfffffffe, std::string(300, 'y'));
 	doc.set_data(std::string("bin\0data", 8));
@@ -460,9 +532,15 @@ void codec() {
 	auto back = engine::Document::unserialise(Kind::strata, bytes);
 	CHECK_EQ(back.serialise(), bytes);
 	CHECK_EQ(back.get_data(), std::string("bin\0data", 8));
-	const auto& terms = engine::strata::strata_document(back).terms();
+	const auto& terms = engine::strata::strata_document(back).fields().at("f").terms;
 	CHECK_EQ(terms.at("b").positions.size(), 2u);  // sorted and unique in the serialised form
 	CHECK_EQ(terms.at("a").wdf, 3u);
+	const auto& g = engine::strata::strata_document(back).fields().at("g.S");
+	CHECK_TRUE(g.kind == engine::FieldKind::text);
+	CHECK_EQ(g.terms.size(), 2u);
+	CHECK_EQ(g.terms.at("").wdf, 0u);  // the empty term is a term
+	CHECK_EQ(engine::strata::strata_document(back).key_wdf(), 2u);  // the key field's frequency, kept apart from the terms
+	CHECK_EQ(engine::strata::strata_document(back).fields().size(), 2u);
 
 	// The version the shard stamped is what the log keeps and replay reads; a fresh document has none.
 	CHECK_EQ(engine::strata::strata_document(back).version(), 0u);
@@ -480,9 +558,11 @@ void codec() {
 	}
 	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, bytes + "x"); }) == engine::errc::syntax);
 	// A count larger than the input could hold is refused before anything is allocated for it.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x02\x00\x00\x00\xff\xff\xff\xff\x0f", 9)); }) == engine::errc::syntax);
-	// A key that is not one of the terms is refused.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x02\x00\x01Q\x00\x00\x00", 7)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x03\x00\x00\x00\x00\xff\xff\xff\xff\x0f", 10)); }) == engine::errc::syntax);
+	// A field named like the key field holds no terms of its own: it is refused.
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x03\x00\x00\x00\x00\x00\x01\x03_id\x00\x00", 13)); }) == engine::errc::syntax);
+	// Formats 1 and 2 are named and refused.
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(Kind::strata, std::string("\x02\x00\x00\x00\x00\x00", 6)); }) == engine::errc::syntax);
 
 	// Random single-byte damage never crashes: it either decodes or raises a syntax error.
 	std::mt19937 random(42);
@@ -987,15 +1067,17 @@ void replay_idempotent() {
 	CHECK_EQ(engine::sync_wait(fresh.shard->stats()).doc_count, 0u);
 }
 
-// A log line from before the version stamp (format 1) is named as such; the current format is 2.
+// A log line from before fields (formats 1 and 2) is named as such; the current format is 3.
 void old_format() {
 	const auto old_line = std::string("\x01\x01Qk\x01x\x00\x00", 8);
-	try {
-		engine::Document::unserialise(Kind::strata, old_line);
-		CHECK_TRUE(false);
-	} catch (const engine::Error& error) {
-		CHECK_TRUE(error.kind == engine::errc::syntax);
-		CHECK_TRUE(error.description().find("predates the version stamp") != std::string::npos);
+	for (const auto& line : {old_line, std::string("\x02\x00\x00\x00\x00\x00", 6)}) {
+		try {
+			engine::Document::unserialise(Kind::strata, line);
+			CHECK_TRUE(false);
+		} catch (const engine::Error& error) {
+			CHECK_TRUE(error.kind == engine::errc::syntax);
+			CHECK_TRUE(error.description().find("predate fields") != std::string::npos);
+		}
 	}
 	try {
 		engine::Document::unserialise(Kind::strata, std::string("\x09", 1));
@@ -1005,7 +1087,7 @@ void old_format() {
 	}
 	engine::Document doc(Kind::strata);
 	doc.set_key("Qk");
-	CHECK_EQ(static_cast<unsigned char>(doc.serialise()[0]), 2u);
+	CHECK_EQ(static_cast<unsigned char>(doc.serialise()[0]), 3u);
 }
 
 }  // namespace
@@ -1025,6 +1107,7 @@ static void test_shared_xapian() { guarded("shared xapian", [] { shared(Kind::xa
 static void test_shared_strata() { guarded("shared strata", [] { shared(Kind::strata); }); }
 static void test_replay_xapian() { guarded("replay xapian", [] { replay(Kind::xapian); }); }
 static void test_replay_strata() { guarded("replay strata", [] { replay(Kind::strata); }); }
+static void test_declared() { guarded("declared fields", [] { declared(); }); }
 static void test_strata_only() { guarded("strata only", [] { strata_only(); }); }
 static void test_values_stored() { guarded("values stored", [] { values_stored(); }); }
 static void test_fresh_reads() { guarded("fresh reads", [] { fresh_reads(); }); }
@@ -1040,4 +1123,4 @@ static void test_replay_idempotent() { guarded("replay idempotent", [] { replay_
 static void test_old_format() { guarded("old format", [] { old_format(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format)
+TEST_MAIN(test_shared_xapian, test_shared_strata, test_replay_xapian, test_replay_strata, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction_xapian, test_drop_mid_transaction_strata, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format)

@@ -21,8 +21,6 @@
  */
 
 #include "engine/strata/document.h"
-#include "engine/strata/interim_terms.h"  // for interim::flat_term
-
 #include <algorithm>               // for std::sort, std::unique
 #include <cstdint>                 // for std::uint8_t, std::uint64_t
 
@@ -33,8 +31,8 @@ namespace engine::strata {
 
 namespace {
 
-// Format 1 (before the version stamp) is named but no longer read.
-constexpr std::uint8_t serial_version = 2;
+// Formats 1 and 2 (a flat term, no fields) are named but no longer read.
+constexpr std::uint8_t serial_version = 3;
 
 void
 put(std::string& out, std::uint64_t value)
@@ -124,20 +122,30 @@ private:
 
 
 DocTerm&
-StrataDocument::flat(std::string_view term)
+StrataDocument::term_of(const Field& field, std::string_view term)
 {
-	auto it = terms_.find(term);
-	if (it == terms_.end()) {
-		it = terms_.emplace(std::string(term), DocTerm{}).first;
+	auto it = fields_.find(field.name);
+	if (it == fields_.end()) {
+		it = fields_.emplace(field.name, DocField{}).first;
 	}
-	return it->second;
+	it->second.kind = std::max(it->second.kind, field.kind);
+	auto& terms = it->second.terms;
+	auto found = terms.find(term);
+	if (found == terms.end()) {
+		found = terms.emplace(std::string(term), DocTerm{}).first;
+	}
+	return found->second;
 }
 
 
 void
 StrataDocument::add_term(const Field& field, std::string_view term, termcount wdf_inc)
 {
-	flat(interim::flat_term(field.name, term)).wdf += wdf_inc;
+	if (field.name == KEY_FIELD) {
+		key_wdf_ += wdf_inc;
+		return;
+	}
+	term_of(field, term).wdf += wdf_inc;
 }
 
 
@@ -152,14 +160,17 @@ void
 StrataDocument::set_key(std::string_view key)
 {
 	key_.assign(key);
-	flat(key);
 }
 
 
 void
 StrataDocument::add_posting(const Field& field, std::string_view term, termpos position, termcount wdf_inc)
 {
-	auto& entry = flat(interim::flat_term(field.name, term));
+	if (field.name == KEY_FIELD) {
+		key_wdf_ += wdf_inc;
+		return;
+	}
+	auto& entry = term_of(field, term);
 	entry.wdf += wdf_inc;
 	entry.positions.push_back(position);
 }
@@ -201,17 +212,20 @@ StrataDocument::get_data() const
 void
 StrataDocument::normalise()
 {
-	for (auto& entry : terms_) {
-		auto& positions = entry.second.positions;
-		if (!std::is_sorted(positions.begin(), positions.end()) || std::adjacent_find(positions.begin(), positions.end()) != positions.end()) {
-			std::sort(positions.begin(), positions.end());
-			positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
+	for (auto& field : fields_) {
+		for (auto& entry : field.second.terms) {
+			auto& positions = entry.second.positions;
+			if (!std::is_sorted(positions.begin(), positions.end()) || std::adjacent_find(positions.begin(), positions.end()) != positions.end()) {
+				std::sort(positions.begin(), positions.end());
+				positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
+			}
 		}
 	}
 }
 
 
-// format, written version, key, data, values (slot, bytes), terms (term, wdf, positions as increasing deltas).
+// format, written version, key, key frequency, data, values (slot, bytes), fields (name, kind, terms (term, wdf,
+// positions as increasing deltas)).
 std::string
 StrataDocument::serialise() const
 {
@@ -219,24 +233,30 @@ StrataDocument::serialise() const
 	out.push_back(static_cast<char>(serial_version));
 	put(out, version_);
 	put(out, key_);
+	put(out, key_wdf_);
 	put(out, data_);
 	put(out, values_.size());
 	for (const auto& [slot, value] : values_) {
 		put(out, slot);
 		put(out, value);
 	}
-	put(out, terms_.size());
-	for (const auto& [term, info] : terms_) {
-		put(out, term);
-		put(out, info.wdf);
-		std::vector<termpos> positions = info.positions;
-		std::sort(positions.begin(), positions.end());
-		positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
-		put(out, positions.size());
-		termpos previous = 0;
-		for (auto position : positions) {
-			put(out, position - previous);
-			previous = position;
+	put(out, fields_.size());
+	for (const auto& [name, field] : fields_) {
+		put(out, name);
+		out.push_back(static_cast<char>(field.kind));
+		put(out, field.terms.size());
+		for (const auto& [term, info] : field.terms) {
+			put(out, term);
+			put(out, info.wdf);
+			std::vector<termpos> positions = info.positions;
+			std::sort(positions.begin(), positions.end());
+			positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
+			put(out, positions.size());
+			termpos previous = 0;
+			for (auto position : positions) {
+				put(out, position - previous);
+				previous = position;
+			}
 		}
 	}
 	return out;
@@ -248,8 +268,8 @@ StrataDocument::unserialise_from(std::string_view serialised)
 {
 	Cursor in(serialised);
 	const auto format = in.byte();
-	if (format == 1) {
-		malformed("format 1 predates the version stamp and is no longer read");
+	if (format == 1 || format == 2) {
+		malformed("formats 1 and 2 predate fields and are no longer read");
 	}
 	if (format != serial_version) {
 		malformed("unknown version");
@@ -258,6 +278,11 @@ StrataDocument::unserialise_from(std::string_view serialised)
 	result.version_ = in.number();
 	result.replayed_ = result.version_ != 0;
 	result.key_.assign(in.bytes());
+	const auto key_wdf = in.number();
+	if (key_wdf > 0xffffffffULL) {
+		malformed("key frequency out of range");
+	}
+	result.key_wdf_ = static_cast<termcount>(key_wdf);
 	result.data_.assign(in.bytes());
 	for (auto n = in.count(2); n; --n) {
 		const auto slot = in.number();
@@ -270,28 +295,44 @@ StrataDocument::unserialise_from(std::string_view serialised)
 		}
 		result.values_[static_cast<valueno>(slot)] = std::move(value);
 	}
-	for (auto n = in.count(3); n; --n) {
-		auto term = std::string(in.bytes());
-		auto& info = result.terms_[std::move(term)];
-		const auto wdf = in.number();
-		if (wdf > 0xffffffffULL) {
-			malformed("wdf out of range");
+	for (auto f = in.count(3); f; --f) {
+		auto name = std::string(in.bytes());
+		const auto kind = in.byte();
+		if (name.empty() || name == KEY_FIELD) {
+			malformed("field name");
 		}
-		info.wdf = static_cast<termcount>(wdf);
-		std::uint64_t position = 0;
-		for (auto p = in.count(); p; --p) {
-			position += in.number();
-			if (position > 0xffffffffULL) {
-				malformed("position out of range");
+		if (kind > static_cast<std::uint8_t>(FieldKind::text)) {
+			malformed("field kind");
+		}
+		const auto added = result.fields_.emplace(std::move(name), DocField{static_cast<FieldKind>(kind), {}});
+		if (!added.second) {
+			malformed("field twice");
+		}
+		auto& terms = added.first->second.terms;
+		for (auto n = in.count(3); n; --n) {
+			auto term = std::string(in.bytes());
+			const auto wdf = in.number();
+			if (wdf > 0xffffffffULL) {
+				malformed("wdf out of range");
 			}
-			info.positions.push_back(static_cast<termpos>(position));
+			const auto entry = terms.emplace(std::move(term), DocTerm{});
+			if (!entry.second) {
+				malformed("term twice");
+			}
+			auto& info = entry.first->second;
+			info.wdf = static_cast<termcount>(wdf);
+			std::uint64_t position = 0;
+			for (auto p = in.count(); p; --p) {
+				position += in.number();
+				if (position > 0xffffffffULL) {
+					malformed("position out of range");
+				}
+				info.positions.push_back(static_cast<termpos>(position));
+			}
 		}
 	}
 	if (!in.done()) {
 		malformed("trailing bytes");
-	}
-	if (!result.key_.empty() && !result.terms_.contains(result.key_)) {
-		malformed("key is not a term");
 	}
 	*this = std::move(result);
 }
@@ -301,8 +342,11 @@ StrataDocument::unserialise_from(std::string_view serialised)
 void
 StrataDocument::census_terms(const std::function<void(std::string_view, termcount, std::size_t)>& visit) const
 {
-	for (const auto& [term, info] : terms_) {
-		visit(term, info.wdf, info.positions.size());
+	// Diagnostic only: the Xapian spelling, a field's name followed by the term.
+	for (const auto& [name, field] : fields_) {
+		for (const auto& [term, info] : field.terms) {
+			visit(name + term, info.wdf, info.positions.size());
+		}
 	}
 }
 

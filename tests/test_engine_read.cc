@@ -63,7 +63,7 @@ std::unique_ptr<engine::xapian::Shard> build(const std::string& path) {
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= kDocs; ++i) {
 		engine::Document doc;
-		doc.add_boolean_term(doc.field(""), "Q" + std::to_string(i));
+		doc.set_key("Q" + std::to_string(i));
 		doc.add_posting(doc.field(""), "alpha", 1, 2);
 		doc.add_posting(doc.field(""), "alpha", 5);
 		doc.add_posting(doc.field(""), "beta" + std::to_string(i % 3), 2, 3);
@@ -158,7 +158,7 @@ void test_find_key_and_get() {
 	bool saw_alpha = false;
 	view->term_details([&](const engine::TermDetail& d) {
 		if (d.term == "alpha") { saw_alpha = d.positions == std::vector<engine::termpos>{1, 5}; }
-		if (d.term == "Q1") { CHECK_TRUE(d.positions.empty()); }
+		if (d.term == "QQ1") { CHECK_TRUE(d.positions.empty()); }
 	});
 	CHECK_TRUE(saw_alpha);
 }

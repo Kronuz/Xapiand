@@ -302,6 +302,38 @@ test_near_of_a_boolean_expression()
 		"Query(((XTfieldbarack@1 OR XTfieldmichelle@2) AND XTfieldobama@3))");
 }
 
+// A stem is a term of the stems' field ('Z' and the name), whatever the engine: the parser leads it with the
+// 'Z' and the field's name, and the seam takes the field apart from the stem.
+void
+test_stems_are_terms_of_the_stem_field()
+{
+	for (const auto strategy : { Stem::some, Stem::all_z }) {
+		auto cfg = config(base, Op::INVALID, "en", "en", strategy);
+		const auto query = engine::parse_text("running", cfg);
+		const auto* node = query.node();
+		CHECK_TRUE(node != nullptr);
+		if (node == nullptr) { continue; }
+		// "running" stems to "run": the stem is under the stems' field, bare.
+		std::vector<std::pair<std::string, std::string>> seen;
+		if (node->kind == engine::QueryKind::term) {
+			seen.emplace_back(node->field, node->str);
+		} else {
+			for (const auto& sub : node->subqueries) { seen.emplace_back(sub.node()->field, sub.node()->str); }
+		}
+		bool stem_found = false;
+		for (const auto& [field, bytes] : seen) {
+			if (field == "ZXTfield") { stem_found = true; CHECK_EQ(bytes, "run"); }
+			else { CHECK_EQ(field, "XTfield"); }
+		}
+		CHECK_TRUE(stem_found);
+		// The Xapian engine joins them back into the term Xapian has always had.
+		CHECK_TRUE(described("running", cfg).find("ZXTfieldrun") != std::string::npos);
+	}
+	// Without a stemmer no field but the word's.
+	const auto plain = engine::parse_text("running", config(base));
+	CHECK_EQ(plain.node()->field, "XTfield");
+}
+
 void
 test_wildcard_pattern_flags()
 {
@@ -526,4 +558,4 @@ test_body_depth_per_format()
 	}
 }
 
-TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_wildcard_pattern_flags, test_all_wildcard_patterns)
+TEST_MAIN(test_ab_decisions_stand, test_lowering_is_the_tree, test_errors_are_engine_errors, test_unreadable_settings_are_invalid, test_word_breaks_are_not_read, test_text_without_words_matches_nothing, test_nesting_is_not_recursive, test_json_depth_matches_the_document, test_body_depth_per_format, test_near_of_a_boolean_expression, test_stems_are_terms_of_the_stem_field, test_wildcard_pattern_flags, test_all_wildcard_patterns)

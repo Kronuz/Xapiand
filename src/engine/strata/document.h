@@ -44,8 +44,14 @@ struct DocTerm {
 	std::vector<termpos> positions;
 };
 
-// The document of the strata implementation: its terms, values, stored data and key, held in memory
-// until the shard hands them to the index.
+// The terms of one field of a document, and the widest kind the document asked for.
+struct DocField {
+	FieldKind kind = FieldKind::boolean;
+	std::map<std::string, DocTerm, std::less<>> terms;
+};
+
+// The document of the strata implementation: its terms by field, values, stored data and key, held in
+// memory until the shard hands them to the index.
 class StrataDocument final : public Document::Native {
 public:
 	void add_term(const Field& field, std::string_view term, termcount wdf_inc) override;
@@ -62,10 +68,14 @@ public:
 	std::size_t census_values() const override;
 #endif
 
-	// The term that names the document, empty when it has none.
+	// The key that names the document, empty when it has none.
 	const std::string& key() const noexcept { return key_; }
+	// The frequencies the host gave the key field's terms: they count in the document's length but are
+	// not postings (the key is the index's, not a term).
+	termcount key_wdf() const noexcept { return key_wdf_; }
 	const std::string& data() const noexcept { return data_; }
-	const std::map<std::string, DocTerm, std::less<>>& terms() const noexcept { return terms_; }
+	// The fields that have terms, by name.
+	const std::map<std::string, DocField, std::less<>>& fields() const noexcept { return fields_; }
 	const std::map<valueno, std::string>& values() const noexcept { return values_; }
 
 	// The version this document was written at: the shard stamps it when it writes, the log keeps it,
@@ -84,13 +94,14 @@ public:
 	void unserialise_from(std::string_view serialised);
 
 private:
-	// Adds to a term by its whole bytes: the interim flat term (interim_terms.h), or one read from the log.
-	DocTerm& flat(std::string_view term);
+	// The term under a field, created empty when absent; the field's kind widens to the call's.
+	DocTerm& term_of(const Field& field, std::string_view term);
 
-	std::map<std::string, DocTerm, std::less<>> terms_;
+	std::map<std::string, DocField, std::less<>> fields_;
 	std::map<valueno, std::string> values_;
 	std::string data_;
 	std::string key_;
+	termcount key_wdf_ = 0;
 	rev version_ = 0;
 	bool replayed_ = false;
 };

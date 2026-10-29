@@ -23,6 +23,7 @@
 #include "engine/xapian/convert.h"
 
 #include "engine/xapian/errors.h"      // for the Failure types
+#include "engine/xapian/legacy_terms.h"  // for join_into, key_term
 #include "engine/census.h"         // for ENGINE_CENSUS_DOCVIEW
 
 #include <atomic>                // for std::atomic
@@ -53,8 +54,8 @@ namespace engine::xapian {
 const std::string&
 XapianDocument::join(const Field& field, std::string_view term)
 {
-	scratch_.assign(field.name).append(term);
-	return scratch_;
+	scratch_.clear();
+	return join_into(scratch_, field.name, term);
 }
 
 
@@ -75,7 +76,7 @@ XapianDocument::add_boolean_term(const Field& field, std::string_view term)
 void
 XapianDocument::set_key(std::string_view key)
 {
-	doc_.add_boolean_term(key);
+	doc_.add_boolean_term(key_term(key));
 }
 
 

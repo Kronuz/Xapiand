@@ -22,35 +22,48 @@
 
 #pragma once
 
+#include <cstddef>                 // for std::size_t
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
 
+#include "engine/document.h"       // for KEY_FIELD
 
-// The key adapter of the strata engine: how a document's id term becomes the index's key. This is the
-// one place that names the key lead byte; the fields-and-keys design (no key prefix) replaces the
-// three functions below and nothing else.
-namespace engine::strata::keys {
 
-// A key leads with a byte no term can start with (terms are UTF-8 text), so a field named "Quote"
-// never collides with the key prefix; the term follows it unchanged.
-inline constexpr char lead = '\xff';
+// How the Xapian engine spells the seam's (field, term) and key: the one place that knows Xapian's
+// flat terms. A field's name leads its terms; the key field's terms (the id's type character and its
+// bytes) lead with 'Q', so a Xapian index holds the same terms as before the seam named fields.
+namespace engine::xapian {
 
-// The index's key for a document's id term.
-inline std::string
-engine_key(std::string_view term)
+inline constexpr std::string_view id_prefix = "Q";
+
+// The field's prefix in a Xapian term.
+inline std::string_view
+term_prefix(std::string_view field)
 {
-	std::string key;
-	key.reserve(term.size() + 1);
-	key.push_back(lead);
-	key.append(term);
-	return key;
+	return field == KEY_FIELD ? id_prefix : field;
 }
 
-// The key prefix the index is opened with.
-inline std::string
-key_prefix()
+// Appends the Xapian term of `term` under `field` to `out`.
+inline std::string&
+join_into(std::string& out, std::string_view field, std::string_view term)
 {
-	return std::string(1, lead);
+	out.append(term_prefix(field)).append(term);
+	return out;
 }
 
-}  // namespace engine::strata::keys
+inline std::string
+join(std::string_view field, std::string_view term)
+{
+	std::string out;
+	out.reserve(field.size() + term.size());
+	return join_into(out, field, term);
+}
+
+// The Xapian term that names a document: the id term of its key.
+inline std::string
+key_term(std::string_view key)
+{
+	return join(KEY_FIELD, key);
+}
+
+}  // namespace engine::xapian

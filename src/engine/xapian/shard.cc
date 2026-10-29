@@ -32,6 +32,7 @@
 #include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/xapian/convert.h" // for to_xapian, from_xapian
 #include "engine/xapian/errors.h"  // for rethrow_translated, VersionConflict, DocNotFound
+#include "engine/xapian/legacy_terms.h"  // for join_into, key_term
 #include "length.h"                // for serialise_length
 #include "sortable_serialise.h"    // for sortable_serialise, sortable_unserialise
 
@@ -119,7 +120,7 @@ Shard::add(Document& doc, WriteArgs args)
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
-		ENGINE_CENSUS_DOCUMENT(doc, info.term);
+		ENGINE_CENSUS_DOCUMENT(doc, info.term.empty() ? info.term : key_term(info.term));
 		stamp(doc, info);
 		db.replace_document(info.did, xapian_document(doc));
 		co_return info;
@@ -148,7 +149,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
-		ENGINE_CENSUS_DOCUMENT(doc, info.term);
+		ENGINE_CENSUS_DOCUMENT(doc, info.term.empty() ? info.term : key_term(info.term));
 		stamp(doc, info);
 		db.replace_document(did, xapian_document(doc));
 		co_return info;
@@ -166,14 +167,15 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 	try {
 		auto& db = writable();
 		WriteResult info;
+		const auto term = key_term(key);
 		if (!args.local) {
-			ENGINE_CENSUS_DOCUMENT(doc, key);
-			co_return from_xapian(db.replace_document(key, xapian_document(doc)));
+			ENGINE_CENSUS_DOCUMENT(doc, term);
+			co_return from_xapian(db.replace_document(term, xapian_document(doc)));
 		}
 		info.term = key;
 		std::optional<rev> stored;
-		const auto it = db.postlist_begin(key);
-		if (it == db.postlist_end(key)) {
+		const auto it = db.postlist_begin(term);
+		if (it == db.postlist_end(term)) {
 			info.did = db.get_lastdocid() + 1;
 		} else {
 			info.did = *it;
@@ -184,7 +186,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		if (args.finalise) {
 			args.finalise(doc, info);
 		}
-		ENGINE_CENSUS_DOCUMENT(doc, info.term);
+		ENGINE_CENSUS_DOCUMENT(doc, key_term(info.term));
 		stamp(doc, info);
 		db.replace_document(info.did, xapian_document(doc));
 		co_return info;
@@ -219,12 +221,13 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 	ENGINE_CENSUS_COUNT("shard.erase_by_key");
 	try {
 		auto& db = writable();
+		const auto term = key_term(key);
 		if (!local) {
-			db.delete_document(key);
+			db.delete_document(term);
 			co_return 0;
 		}
-		const auto it = db.postlist_begin(key);
-		if (it == db.postlist_end(key)) {
+		const auto it = db.postlist_begin(term);
+		if (it == db.postlist_end(term)) {
 			throw DocNotFound("Document not found");
 		}
 		const docid did = *it;
@@ -388,8 +391,9 @@ Shard::find_key(const std::string& key)
 	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.find_key");
 	try {
-		auto it = database_->postlist_begin(key);
-		co_return it == database_->postlist_end(key) ? 0 : *it;
+		const auto term = key_term(key);
+		auto it = database_->postlist_begin(term);
+		co_return it == database_->postlist_end(term) ? 0 : *it;
 	} catch (...) {
 		rethrow_translated();
 	}

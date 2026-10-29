@@ -129,19 +129,29 @@ stemmer_for(const std::string& language)
 }
 
 
+// The fields a parsed term can lead with: the default field's name, and the stems' field ('Z' and the name)
+// when the stem strategy marks stems with a 'Z'.
+struct Fields {
+	std::string word;
+	std::string stem;
+};
+
 // The parser leads a term with the field's name; the seam takes the two apart.
 std::pair<std::string, std::string>
-split_field(const std::string& field, std::string_view text)
+split_field(const Fields& fields, std::string_view text)
 {
-	if (!field.empty() && text.starts_with(field)) {
-		return { field, std::string(text.substr(field.size())) };
+	if (!fields.word.empty() && text.starts_with(fields.word)) {
+		return { fields.word, std::string(text.substr(fields.word.size())) };
+	}
+	if (!fields.stem.empty() && text.starts_with(fields.stem)) {
+		return { fields.stem, std::string(text.substr(fields.stem.size())) };
 	}
 	return { std::string(), std::string(text) };
 }
 
 
 Query
-leaf(const queryparser::query& tree, const queryparser::node& n, const std::string& field)
+leaf(const queryparser::query& tree, const queryparser::node& n, const Fields& field)
 {
 	using queryparser::kind;
 	switch (n.k) {
@@ -208,7 +218,7 @@ op_of(queryparser::kind k)
 
 // The tree as an engine query, bottom-up on an explicit stack: nesting is as deep as the text.
 Query
-convert(const queryparser::query& tree, const std::string& field)
+convert(const queryparser::query& tree, const Fields& field)
 {
 	using queryparser::kind;
 	using queryparser::no_node;
@@ -306,7 +316,11 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 	if (description != nullptr) {
 		*description = parsed.tree.describe();
 	}
-	return convert(parsed.tree, config.field);
+	Fields fields{config.field, std::string()};
+	if (!config.field.empty() && !config.stem_language.empty() && (cfg.stem == analysis::stem_strategy::some || cfg.stem == analysis::stem_strategy::all_z)) {
+		fields.stem = "Z" + config.field;  // as the index side names the stems' field (generate_terms.cc)
+	}
+	return convert(parsed.tree, fields);
 }
 
 }  // namespace engine

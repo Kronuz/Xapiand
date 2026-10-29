@@ -33,7 +33,9 @@
 #include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
 #include "database/schema.h"                         // for FieldType
+#include "exception_xapian.h"                         // for SerialisationError
 #include "xapiand_exception.h"                               // for ClientError, MSG_ClientError
+#include "hashes.hh"                                // for fnv1ah64
 #include "io.hh"                                     // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
 #include "log.h"                                     // for L_DATABASE
@@ -63,6 +65,50 @@ std::string flat_term(std::string_view term, std::string_view field_prefix, char
 	result.assign(field_prefix).push_back(field_type);
 	result.append(term);
 	return result;
+}
+
+
+std::string document_key(std::string_view serialised_id, char field_type)
+{
+	std::string result;
+	result.reserve(serialised_id.size() + 1);
+	result.push_back(field_type);
+	result.append(serialised_id);
+	return result;
+}
+
+
+FieldTerm field_term(std::string_view field_prefix, char field_type, std::string_view term)
+{
+	if (field_prefix == DOCUMENT_ID_TERM_PREFIX) {
+		return {std::string(engine::KEY_FIELD), document_key(term, field_type)};
+	}
+	return {field_name(field_prefix, field_type), std::string(term)};
+}
+
+
+std::string_view query_field(std::string_view field_prefix)
+{
+	return field_prefix == DOCUMENT_ID_TERM_PREFIX ? engine::KEY_FIELD : field_prefix;
+}
+
+
+std::string key_of_term(std::string_view id_term)
+{
+	if (!id_term.starts_with(DOCUMENT_ID_TERM_PREFIX)) {
+		THROW(SerialisationError, "Term cannot be unserialised");
+	}
+	id_term.remove_prefix(std::string_view(DOCUMENT_ID_TERM_PREFIX).size());
+	return std::string(id_term);
+}
+
+
+std::uint64_t key_placement_hash(std::string_view key)
+{
+	std::string term;
+	term.reserve(key.size() + 1);
+	term.assign(DOCUMENT_ID_TERM_PREFIX).append(key);
+	return fnv1ah64::hash(term);
 }
 
 

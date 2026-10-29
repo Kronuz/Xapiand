@@ -26,11 +26,9 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
    shard opens through `engine::open_local(kind, ...)`, and `DatabaseWAL` unserialises with the shard's
    kind (the `:wal` dump has no shard and takes it from the log's files). The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
    takes the process default.
-2. **The key is explicit.** `Document::set_key(term)` names the id term (D5); a Xapian document takes it as
-   a boolean term, a strata document also remembers it. The index key is `\xff` followed by the term. The
-   design's key prefix `Q` cannot be the index's key prefix: strata refuses any term that starts with it, and
-   a field named `Quote` indexes terms `Quote.word`. No term starts with a byte that UTF-8 never produces.
-   The id term stays an ordinary term too, so queries on it work.
+2. **The key is explicit.** `Document::set_key(key)` names the document; the key is the id's type character and its
+   encoded bytes, apart from the document's terms. The index is created keyed (`index_options::keyed`, fixed at creation) and holds the key as given; the id field's terms are the key field's, so a query for an id is a key leaf.
+   `strata-fields.md` has the whole path.
 3. **Versions.** A version belongs to a key in strata and the engine checks it itself under the shard's
    mutex, because a delete by docid carries no key and the check needs the stored version either way:
    `find_key` for a key, `locate(did)` for an id. `add` is version 1, a replace is the stored version plus 1.
@@ -85,7 +83,7 @@ starts from the committed state.
 2. A shard is used by one task at a time; the shard's mutex serialises the handles that share an index.
 3. A write that the index rejects leaves no trace; a version or key conflict is `errc::version_conflict`,
    an invalid document `errc::invalid`.
-4. The stored form of a document is the engine's own (`StrataDocument::serialise`, format byte 2; a format 1 line, written before the version stamp, is named as such); a line
+4. The stored form of a document is the engine's own (`StrataDocument::serialise`, format byte 3; lines of formats 1 and 2, written before fields, are named as such); a line
    that does not decode is `errc::syntax`.
 
 ## Code

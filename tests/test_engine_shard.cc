@@ -95,7 +95,7 @@ private:
 
 engine::Document make(const std::string& key, const std::string& data) {
 	engine::Document doc;
-	doc.add_boolean_term(doc.field(""), key);
+	doc.set_key(key);
 	doc.add_term(doc.field(""), "body", 2);
 	doc.set_data(data);
 	return doc;
