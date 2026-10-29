@@ -39,10 +39,11 @@
 // The strata implementation of the engine seam. Only files in this directory name strata or prospect.
 namespace engine::strata {
 
-// One term of a document: its bytes in the document's arena, its within-document frequency, and its positions
-// as a chain through the document's position nodes, in arrival order.
+// One term of a document: its field, its bytes in the document's arena, its within-document frequency, and its
+// positions as a chain through the document's position nodes, in arrival order.
 struct DocTerm {
 	static constexpr std::uint32_t none = 0xffffffffu;
+	std::uint32_t field = 0;       // index into the document's fields
 	std::uint32_t offset = 0;
 	std::uint32_t size = 0;
 	termcount wdf = 0;
@@ -52,14 +53,11 @@ struct DocTerm {
 	std::uint32_t count = 0;
 };
 
-// The terms of one field of a document, in the order they first arrived, and the widest kind the document
-// asked for. A field with more than a few terms finds a term by an open-addressing table over their hashes:
-// slots hold a term's index plus one, 0 when empty, and the size is a power of two at least twice the terms.
+// A field of a document: its name, the widest kind the document asked for, and how many terms it has.
 struct DocField {
 	std::string name;
 	FieldKind kind = FieldKind::boolean;
-	std::vector<DocTerm> terms;
-	std::vector<std::uint32_t> table;
+	std::uint32_t term_count = 0;
 };
 
 // The document of the strata implementation: its terms by field, values, stored data and key, held in
@@ -88,6 +86,15 @@ public:
 	const std::string& data() const noexcept { return data_; }
 	// The fields that have terms, in the order they first arrived.
 	const std::vector<DocField>& fields() const noexcept { return fields_; }
+	// Every term of every field, in the order they first arrived.
+	const std::vector<DocTerm>& terms() const noexcept { return terms_; }
+	// The terms grouped by field: order[starts[f] .. starts[f + 1]) are the indexes into terms() of field f's, in the
+	// order they arrived.
+	struct Grouped {
+		std::vector<std::uint32_t> order;
+		std::vector<std::uint32_t> starts;
+	};
+	void group(Grouped& out) const;
 	// The field of this name, or null.
 	const DocField* field(std::string_view name) const noexcept;
 	// The term under a field, or null.
@@ -114,12 +121,14 @@ public:
 private:
 	// The term under a field, created empty when absent; the field's kind widens to the call's.
 	DocTerm& term_of(const Field& field, std::string_view term);
-	DocField& field_of(const Field& field);
-	DocTerm& intern(DocField& field, std::string_view bytes);
-	void rebuild(DocField& field, std::size_t slots) const;
+	std::size_t field_of(const Field& field);
+	DocTerm& intern(std::size_t field, std::string_view bytes);
+	void rebuild(std::size_t slots);
 	void push_position(DocTerm& term, termpos position);
 
 	std::vector<DocField> fields_;
+	std::vector<DocTerm> terms_;
+	std::vector<std::uint32_t> table_;  // open addressing over (field, bytes): a term's index plus one, 0 when empty
 	std::string bytes_;                // the bytes of every term
 	struct Node {
 		termpos position;

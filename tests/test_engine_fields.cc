@@ -356,7 +356,7 @@ static void test_strata_fields() {
 	CHECK_EQ(native.fields().size(), 2u);
 	const auto& text = *native.field("title.S");
 	CHECK_TRUE(text.kind == FieldKind::text);
-	CHECK_EQ(text.terms.size(), 2u);
+	CHECK_EQ(text.term_count, 2u);
 	CHECK_EQ(native.find_term("title.S", "bob")->wdf, 5u);
 	CHECK_EQ(native.find_term("title.S", "smith")->wdf, 2u);
 	CHECK_EQ(native.positions_of(*native.find_term("title.S", "smith")), (std::vector<engine::termpos>{ 2, 4 }));
@@ -384,8 +384,8 @@ static void test_strata_many_terms() {
 		}
 	}
 	auto& native = engine::strata::strata_document(doc);
-	CHECK_EQ(native.field("a.S")->terms.size(), 300u);
-	CHECK_EQ(native.field("b")->terms.size(), 40u);
+	CHECK_EQ(native.field("a.S")->term_count, 300u);
+	CHECK_EQ(native.field("b")->term_count, 40u);
 	for (int i = 0; i < 300; ++i) {
 		const auto* term = native.find_term("a.S", "term" + std::to_string(i));
 		CHECK_TRUE(term != nullptr);
@@ -396,7 +396,7 @@ static void test_strata_many_terms() {
 	CHECK_TRUE(native.find_term("b", "x40") == nullptr);
 	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
 	CHECK_EQ(back.serialise(), doc.serialise());
-	CHECK_EQ(engine::strata::strata_document(back).field("a.S")->terms.size(), 300u);
+	CHECK_EQ(engine::strata::strata_document(back).field("a.S")->term_count, 300u);
 
 	// Two fields given the same id by hand are still two fields.
 	engine::strata::StrataDocument raw;

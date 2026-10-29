@@ -153,17 +153,30 @@ constexpr std::size_t linear_terms = 8;
 }  // namespace
 
 
-void
-StrataDocument::rebuild(DocField& field, std::size_t slots) const
+namespace {
+
+// The hash of a term under a field.
+std::uint32_t
+mix(std::uint32_t hash, std::size_t field) noexcept
 {
-	field.table.assign(slots, 0);
+	hash ^= static_cast<std::uint32_t>(field) * 0x9e3779b1u;
+	return hash ^ (hash >> 15);
+}
+
+}  // namespace
+
+
+void
+StrataDocument::rebuild(std::size_t slots)
+{
+	table_.assign(slots, 0);
 	const std::size_t mask = slots - 1;
-	for (std::size_t i = 0; i < field.terms.size(); ++i) {
-		auto at = field.terms[i].hash & mask;
-		while (field.table[at]) {
+	for (std::size_t i = 0; i < terms_.size(); ++i) {
+		auto at = terms_[i].hash & mask;
+		while (table_[at]) {
 			at = (at + 1) & mask;
 		}
-		field.table[at] = static_cast<std::uint32_t>(i + 1);
+		table_[at] = static_cast<std::uint32_t>(i + 1);
 	}
 }
 
@@ -171,19 +184,20 @@ StrataDocument::rebuild(DocField& field, std::size_t slots) const
 const DocTerm*
 StrataDocument::find_term(const DocField& field, std::string_view bytes) const noexcept
 {
-	const auto hash = hash_of(bytes);
-	if (field.table.empty()) {
-		for (const auto& t : field.terms) {
-			if (t.hash == hash && term_bytes(t) == bytes) {
+	const auto index = static_cast<std::size_t>(&field - fields_.data());
+	const auto hash = mix(hash_of(bytes), index);
+	if (table_.empty()) {
+		for (const auto& t : terms_) {
+			if (t.hash == hash && t.field == index && term_bytes(t) == bytes) {
 				return &t;
 			}
 		}
 		return nullptr;
 	}
-	const std::size_t mask = field.table.size() - 1;
-	for (auto at = hash & mask; field.table[at]; at = (at + 1) & mask) {
-		const auto& t = field.terms[field.table[at] - 1];
-		if (t.hash == hash && term_bytes(t) == bytes) {
+	const std::size_t mask = table_.size() - 1;
+	for (auto at = hash & mask; table_[at]; at = (at + 1) & mask) {
+		const auto& t = terms_[table_[at] - 1];
+		if (t.hash == hash && t.field == index && term_bytes(t) == bytes) {
 			return &t;
 		}
 	}
@@ -200,20 +214,20 @@ StrataDocument::find_term(std::string_view field_name, std::string_view bytes) c
 
 
 DocTerm&
-StrataDocument::intern(DocField& field, std::string_view bytes)
+StrataDocument::intern(std::size_t field, std::string_view bytes)
 {
-	const auto hash = hash_of(bytes);
-	if (field.table.empty()) {
-		for (auto& t : field.terms) {
-			if (t.hash == hash && term_bytes(t) == bytes) {
+	const auto hash = mix(hash_of(bytes), field);
+	if (table_.empty()) {
+		for (auto& t : terms_) {
+			if (t.hash == hash && t.field == field && term_bytes(t) == bytes) {
 				return t;
 			}
 		}
 	} else {
-		const std::size_t mask = field.table.size() - 1;
-		for (auto at = hash & mask; field.table[at]; at = (at + 1) & mask) {
-			auto& t = field.terms[field.table[at] - 1];
-			if (t.hash == hash && term_bytes(t) == bytes) {
+		const std::size_t mask = table_.size() - 1;
+		for (auto at = hash & mask; table_[at]; at = (at + 1) & mask) {
+			auto& t = terms_[table_[at] - 1];
+			if (t.hash == hash && t.field == field && term_bytes(t) == bytes) {
 				return t;
 			}
 		}
@@ -221,30 +235,45 @@ StrataDocument::intern(DocField& field, std::string_view bytes)
 	if (bytes_.size() + bytes.size() > 0xfffffff0u) {
 		throw Error(errc::invalid, "The document's terms are too large");
 	}
-	if (bytes_.empty()) {
+	if (terms_.empty()) {
+		terms_.reserve(192);
 		bytes_.reserve(1024);
 	}
-	if (field.terms.empty()) {
-		field.terms.reserve(4);
-	}
-	auto& added = field.terms.emplace_back();
+	auto& added = terms_.emplace_back();
+	added.field = static_cast<std::uint32_t>(field);
 	added.offset = static_cast<std::uint32_t>(bytes_.size());
 	added.size = static_cast<std::uint32_t>(bytes.size());
 	added.hash = hash;
 	bytes_.append(bytes);
-	if (field.terms.size() > linear_terms) {
-		if (field.table.size() < field.terms.size() * 2) {
-			rebuild(field, std::max<std::size_t>(field.table.size() * 2, 32));
+	++fields_[field].term_count;
+	if (terms_.size() > linear_terms) {
+		if (table_.size() < terms_.size() * 2) {
+			rebuild(std::max<std::size_t>(table_.size() * 2, 64));
 		} else {
-			const std::size_t mask = field.table.size() - 1;
+			const std::size_t mask = table_.size() - 1;
 			auto at = hash & mask;
-			while (field.table[at]) {
+			while (table_[at]) {
 				at = (at + 1) & mask;
 			}
-			field.table[at] = static_cast<std::uint32_t>(field.terms.size());
+			table_[at] = static_cast<std::uint32_t>(terms_.size());
 		}
 	}
 	return added;
+}
+
+
+void
+StrataDocument::group(Grouped& out) const
+{
+	out.starts.assign(fields_.size() + 1, 0);
+	for (std::size_t f = 0; f < fields_.size(); ++f) {
+		out.starts[f + 1] = out.starts[f] + fields_[f].term_count;
+	}
+	out.order.resize(terms_.size());
+	std::vector<std::uint32_t> next(out.starts.begin(), out.starts.end() - 1);
+	for (std::size_t i = 0; i < terms_.size(); ++i) {
+		out.order[next[terms_[i].field]++] = static_cast<std::uint32_t>(i);
+	}
 }
 
 
@@ -305,16 +334,13 @@ StrataDocument::field(std::string_view name) const noexcept
 }
 
 
-DocField&
+std::size_t
 StrataDocument::field_of(const Field& field)
 {
 	constexpr std::uint32_t cached_ids = 1024;  // the host numbers a document's fields from 0
 	const auto id = field.id;
-	if (id < slot_.size() && slot_[id]) {
-		auto& known = fields_[slot_[id] - 1];
-		if (known.name == field.name) {
-			return known;
-		}
+	if (id < slot_.size() && slot_[id] && fields_[slot_[id] - 1].name == field.name) {
+		return slot_[id] - 1;
 	}
 	std::size_t index = 0;
 	while (index < fields_.size() && fields_[index].name != field.name) {
@@ -322,7 +348,7 @@ StrataDocument::field_of(const Field& field)
 	}
 	if (index == fields_.size()) {
 		if (fields_.empty()) {
-			fields_.reserve(32);
+			fields_.reserve(64);
 		}
 		fields_.emplace_back();
 		fields_.back().name = field.name;
@@ -333,16 +359,17 @@ StrataDocument::field_of(const Field& field)
 		}
 		slot_[id] = static_cast<std::uint32_t>(index + 1);
 	}
-	return fields_[index];
+	return index;
 }
 
 
 DocTerm&
 StrataDocument::term_of(const Field& field, std::string_view term)
 {
-	auto& f = field_of(field);
+	const auto index = field_of(field);
+	auto& f = fields_[index];
 	f.kind = std::max(f.kind, field.kind);
-	return intern(f, term);
+	return intern(index, term);
 }
 
 
@@ -435,11 +462,15 @@ StrataDocument::serialise() const
 	}
 	put(out, fields_.size());
 	std::vector<termpos> scratch;
-	for (const auto& field : fields_) {
+	Grouped grouped;
+	group(grouped);
+	for (std::size_t f = 0; f < fields_.size(); ++f) {
+		const auto& field = fields_[f];
 		put(out, field.name);
 		out.push_back(static_cast<char>(field.kind));
-		put(out, field.terms.size());
-		for (const auto& info : field.terms) {
+		put(out, field.term_count);
+		for (auto at = grouped.starts[f]; at < grouped.starts[f + 1]; ++at) {
+			const auto& info = terms_[grouped.order[at]];
 			put(out, term_bytes(info));
 			put(out, info.wdf);
 			positions_into(info, scratch);
@@ -499,18 +530,19 @@ StrataDocument::unserialise_from(std::string_view serialised)
 		if (result.field(name)) {
 			malformed("field twice");
 		}
-		auto& field = result.fields_.emplace_back();
-		field.name = std::move(name);
-		field.kind = static_cast<FieldKind>(kind);
+		const auto field = result.fields_.size();
+		auto& added_field = result.fields_.emplace_back();
+		added_field.name = std::move(name);
+		added_field.kind = static_cast<FieldKind>(kind);
 		for (auto n = in.count(3); n; --n) {
 			const auto term = in.bytes();
 			const auto wdf = in.number();
 			if (wdf > 0xffffffffULL) {
 				malformed("wdf out of range");
 			}
-			const auto before = field.terms.size();
+			const auto before = result.terms_.size();
 			auto& info = result.intern(field, term);
-			if (field.terms.size() == before) {
+			if (result.terms_.size() == before) {
 				malformed("term twice");
 			}
 			info.wdf = static_cast<termcount>(wdf);
@@ -537,10 +569,8 @@ StrataDocument::census_terms(const std::function<void(std::string_view, termcoun
 {
 	// Diagnostic only: the Xapian spelling, a field's name followed by the term.
 	std::map<std::string, const DocTerm*> sorted;
-	for (const auto& field : fields_) {
-		for (const auto& info : field.terms) {
-			sorted.emplace(field.name + std::string(term_bytes(info)), &info);
-		}
+	for (const auto& info : terms_) {
+		sorted.emplace(fields_[info.field].name + std::string(term_bytes(info)), &info);
 	}
 	for (const auto& [spelled, info] : sorted) {
 		visit(spelled, info->wdf, positions_of(*info).size());

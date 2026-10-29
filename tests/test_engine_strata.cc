@@ -539,7 +539,7 @@ void codec() {
 	CHECK_EQ(restored.find_term("f", "a")->wdf, 3u);
 	const auto& g = *restored.field("g.S");
 	CHECK_TRUE(g.kind == engine::FieldKind::text);
-	CHECK_EQ(g.terms.size(), 2u);
+	CHECK_EQ(g.term_count, 2u);
 	CHECK_EQ(restored.find_term("g.S", "")->wdf, 0u);  // the empty term is a term
 	CHECK_EQ(engine::strata::strata_document(back).key_wdf(), 2u);  // the key field's frequency, kept apart from the terms
 	CHECK_EQ(engine::strata::strata_document(back).fields().size(), 2u);
