@@ -1407,7 +1407,7 @@ void test_pin_after_failed_reopen_impl() {
 	auto pending = make(0, 556, model.shards[0][0]);
 	engine::sync_wait(broken.add(pending, {}));
 	// path_of() clears the path it names; this is the directory build() made for shard 0.
-	const auto dir = (std::filesystem::current_path() / "engine_search_strata_pin_failed_strata0.db" / "strata").string();
+	const auto dir = (std::filesystem::current_path() / "engine_search_strata_pin_failed_0.db" / "strata").string();
 	::chmod(dir.c_str(), 0000);
 	CHECK_EQ(error_kind([&] { engine::sync_wait(broken.cancel_transaction()); }), engine::errc::database);
 	::chmod(dir.c_str(), 0700);

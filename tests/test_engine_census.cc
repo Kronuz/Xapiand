@@ -80,7 +80,7 @@ public:
 
 class SlotKey final : public engine::KeyMaker {
 public:
-	std::string key(const engine::DocView& doc) const override { return doc.value(1); }
+	std::string key(const engine::DocView& doc) const override { return doc.value(21); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(); }
 	std::string name() const override { return "SlotKey"; }
 	std::string serialise() const override { return ""; }
@@ -201,16 +201,17 @@ void test_shard_search_and_views() {
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= 3; ++i) {
 		engine::Document doc;
-		doc.add_boolean_term(doc.field(""), "_id." + std::to_string(i));
-		doc.add_term(doc.field(""), "word");
-		doc.add_value(1, "k" + std::to_string(4 - i));
+		// The census spells a term as its field's name and its bytes: "_id.1" and "word".
+		doc.add_boolean_term(doc.field("_id."), std::to_string(i));
+		doc.add_term(doc.field("w"), "ord");
+		doc.add_value(21, "k" + std::to_string(4 - i));
 		doc.set_data("d");
 		engine::WriteArgs args;
 		engine::sync_wait(shard.replace_by_key("_id." + std::to_string(i), doc, args));
 	}
 	engine::sync_wait(shard.commit(engine::Transaction::none));
 
-	const auto query = Query::term("", "word");
+	const auto query = Query::term("w", "ord");
 	auto prepared = engine::prepare(query);
 	SlotKey sorter;
 	Spy spy;
