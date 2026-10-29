@@ -209,3 +209,49 @@ BIN=.scratch/build/bin/xapiand harness/engine_crash_check.sh          # T8 (CHEC
 BIN=.scratch/build/bin/xapiand harness/engine_migration_check.sh      # T9
 XAPIAND_ENGINE=strata harness/profile_bulk.sh BIN OUT --label strata_1 --port 18990   # T11, under quiet exclusive
 ```
+
+## Closing run
+
+Run on Xapiand master `7125dfc28` (the merge of `phase7a/t11-barriers`: one ordering point and one flush per commit), 2026-10-29,
+macOS x86_64 only (16 logical CPUs, APFS, disk 94% full). One binary for both engines (`-DCMAKE_BUILD_TYPE=RelWithDebInfo
+-DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer -DLTO=OFF -DBUILD_TESTS=ON`, engine chosen per run by `XAPIAND_ENGINE`). The
+procedure, harnesses and estimator are those of the Rerun; no target and no engine code was changed.
+
+| Row | Target | Result | Status |
+|---|---|---|---|
+| T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two `quiet exclusive` holds of five interleaved rounds (xapian, strata, ...), ten pairs. CPU on the gate's estimator (smoke CPU per document times the engine rows' share): 0.387x (0.1455 against 0.3761 ms; pairs 0.348 to 0.437, 10 of 10 at or under 0.5; hold 1 0.397, hold 2 0.377). CPU from the profile's sample count: 0.375x (0.1430 against 0.3817 ms; hold 1 0.403, hold 2 0.349). Critical path: 0.226x (0.0159 against 0.0702 ms per document; hold 2 0.211, hold 1 0.243 with one Xapian outlier run, see below) | PASS |
+| T8 crash recovery | Same document set as Xapian after `kill -9`; strata digest check passes | A: both engines recover the same 50 documents, every `n` right, the restart logs the WAL replay. B: Xapian 6766 of 6766 acknowledged writes recovered, strata 7344 of 7344; none lost, none duplicated, all intact. `index::check` passes on 5 of 5 shards after each kill and after each restart and second kill. `harness/engine_crash_check.sh` exit 0 on this commit | PASS |
+
+### T11 detail
+
+Spread is (max - min) / mean over the ten runs. Raw: `.scratch/h1`, `.scratch/h2` of the worktree.
+
+| Metric | Xapian, 10 runs | Strata, 10 runs | Strata / Xapian |
+|---|---|---|---|
+| Engine CPU per document, gate estimator (ms) | mean 0.3761, spread 9.3% | mean 0.1455, spread 18.1% | 0.387 (hold 1: 0.397, hold 2: 0.377) |
+| Engine CPU per document, sample count (ms) | mean 0.3817, spread 60.3% | mean 0.1430, spread 22.9% | 0.375 (0.403, 0.349); pairs 0.32 to 0.41 except one 0.761 |
+| Engine on the critical thread per document (ms) | mean 0.0702, spread 90.4% | mean 0.0159, spread 25.5% | 0.226 (0.243, 0.211); pairs 0.18 to 0.24 except one 0.935 |
+| Whole process CPU per document (ms) | mean 1.1404, spread 2.4% | mean 0.7675, spread 11.7% | 0.673 (pairs 0.65 to 0.72) |
+| Bulk docs/s | 4437, spread 7.8% | 7619, spread 11.1% | 1.72x faster (pairs 1.66 to 1.75) |
+| Wall of the 20000-document RESTORE (s) | 4.51 | 2.63 | 0.583 (pairs 0.57 to 0.60) |
+| Peak RSS (MB, 3 runs each, `ru_maxrss`) | 908 to 926 | 863 to 883 | 0.95 |
+
+Hold 1's first Xapian run (round 1) was an outlier in the profile (sample-count CPU and critical thread far off the
+other nine; its smoke CPU was normal), which gives the 60% and 90% spreads and the two outlier pairs. The gate's
+estimator uses the smoke CPU and is not affected: its worst pair is 0.437, and all ten are under 0.5.
+
+What moved since the Rerun (0.515x on the same estimator): the gain is flush-wait time, not CPU. The commit now does one full
+flush and one barrier where it did four full flushes, and the profile counts the `F_FULLFSYNC` wait under `commit_files` as
+busy, so the engine row and the wall fall while whole-process CPU per document stays where it was (0.803 in the Rerun, 0.768
+here for strata, 1.166 and 1.140 for Xapian: within the spread, the same 31 to 33% less than Xapian's). The honest saving
+is 17 to 20% less wall per bulk load and a commit that blocks its writer for less time, not CPU-hours.
+
+### Deviations and residuals of the closing run
+
+1. The T11 CPU row passes on the gate's estimator because it counts device-flush wait as engine CPU (a property of this harness on
+   macOS). The barrier path relies on `F_BARRIERFSYNC`, which Apple guarantees only on Apple SSDs (`docs/perf/t11-barriers/README.md`).
+2. macOS x86_64, APFS only. Linux, FreeBSD and arm64 are not measured; on Linux and FreeBSD the commit falls back to the old two-step sync.
+3. T8 uses `kill -9`, which leaves the page cache intact: it exercises atomicity, not device ordering under power loss. B's counts
+   (6766, 7344) depend on the cut point and are not comparable across engines.
+4. Peak RSS was measured separately (the harness does not record it), three runs per engine, same RESTORE.
+5. Not rerun here: T6, T7, T9 and the unit tests; the commit changes the durability path only.
