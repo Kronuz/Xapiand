@@ -272,15 +272,131 @@ Statistics statistics_of(const Model& model, std::size_t shards) {
 	return st;
 }
 
-double bm25(const Statistics& st, const Model::Doc& doc, const std::string& term, double wqf) {
-	const auto it = doc.wdf.find(term);
-	if (it == doc.wdf.end() || term.empty()) { return 0.0; }
-	const double df = st.df.at(term);
+// Xapian's BM25 weight of a term of document frequency df occurring tf times in the document.
+double bm25_of(const Statistics& st, const Model::Doc& doc, double df, double tf, double wqf) {
 	double tw = (st.docs - df + 0.5) / (df + 0.5);
 	if (tw < 2) { tw = tw * 0.5 + 1; }
 	const double idf = std::log(tw) * 2.0 * wqf / (1.0 + wqf) * 2.0;
 	const double K = 1.0 * (0.5 + 0.5 * std::max(doc.length / (st.length / st.docs), 0.5));
-	return idf * it->second / (K + it->second);
+	return idf * tf / (K + tf);
+}
+
+double bm25(const Statistics& st, const Model::Doc& doc, const std::string& term, double wqf) {
+	const auto it = doc.wdf.find(term);
+	if (it == doc.wdf.end() || term.empty()) { return 0.0; }
+	return bm25_of(st, doc, st.df.at(term), it->second, wqf);
+}
+
+// The terms a SYNONYM counts as one weigh as one term: of the size of their union (as independent sets,
+// rounded), occurring as often as all of them together, at most the document's length.
+double synonym_weight(const Statistics& st, const Model::Doc& doc, const std::vector<std::string>& terms) {
+	double miss = 1, wdf = 0;
+	for (const auto& term : terms) {
+		miss *= 1.0 - st.df.at(term) / st.docs;
+		const auto it = doc.wdf.find(term);
+		wdf += it == doc.wdf.end() ? 0 : it->second;
+	}
+	const double df = terms.size() == 1 ? st.df.at(terms[0]) : std::floor(st.docs * (1.0 - miss) + 0.5);
+	return wdf == 0 ? 0.0 : bm25_of(st, doc, df, std::min<double>(wdf, doc.length), 1.0);
+}
+
+// What fills one position of a phrase: where it occurs in the document and what it weighs.
+struct Slot {
+	std::vector<std::uint32_t> positions;
+	double weight = 0;
+};
+
+std::size_t edit_distance_of(const std::string& a, const std::string& b) {
+	std::vector<std::size_t> row(b.size() + 1);
+	for (std::size_t j = 0; j <= b.size(); ++j) { row[j] = j; }
+	for (std::size_t i = 1; i <= a.size(); ++i) {
+		std::size_t diagonal = row[0];
+		row[0] = i;
+		for (std::size_t j = 1; j <= b.size(); ++j) {
+			const std::size_t up = row[j];
+			row[j] = std::min({row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] == b[j - 1] ? 0 : 1)});
+			diagonal = up;
+		}
+	}
+	return row[b.size()];
+}
+
+void add_positions(const Model::Doc& doc, const std::string& term, std::vector<std::uint32_t>& into) {
+	if (const auto it = doc.positions.find(term); it != doc.positions.end()) {
+		into.insert(into.end(), it->second.begin(), it->second.end());
+	}
+}
+
+// The slot a word, an expansion, or an OR or SYNONYM of those fills.
+Slot slot_in(const Statistics& st, const Model::Doc& doc, const Query& query) {
+	const auto& node = *query.node();
+	Slot slot;
+	std::vector<std::string> members;
+	switch (node.kind) {
+		case engine::QueryKind::term:
+			add_positions(doc, node.str, slot.positions);
+			slot.weight = bm25(st, doc, node.str, node.wqf);
+			break;
+		case engine::QueryKind::wildcard:
+		case engine::QueryKind::edit_distance:
+			for (const auto& [term, df] : st.df) {
+				const bool near = node.kind == engine::QueryKind::wildcard ? term.starts_with(node.str) : edit_distance_of(term, node.str) <= node.distance;
+				if (near) { members.push_back(term); }
+			}
+			break;
+		default:
+			if (node.op == Op::SYNONYM) {
+				for (const auto& sub : node.subqueries) { members.push_back(sub.node()->str); }
+			} else {
+				for (const auto& sub : node.subqueries) {
+					const auto part = slot_in(st, doc, sub);
+					slot.positions.insert(slot.positions.end(), part.positions.begin(), part.positions.end());
+					slot.weight += part.weight;
+				}
+			}
+	}
+	if (!members.empty()) {
+		for (const auto& term : members) { add_positions(doc, term, slot.positions); }
+		if (node.kind == engine::QueryKind::combine || node.op == Op::SYNONYM) {
+			slot.weight = synonym_weight(st, doc, members);
+		} else {
+			for (const auto& term : members) { slot.weight += bm25(st, doc, term, 1); }
+		}
+	}
+	std::sort(slot.positions.begin(), slot.positions.end());
+	slot.positions.erase(std::unique(slot.positions.begin(), slot.positions.end()), slot.positions.end());
+	return slot;
+}
+
+// A phrase over slots: consecutive positions.
+bool phrase_of(const std::vector<Slot>& slots) {
+	for (const auto start : slots[0].positions) {
+		bool all = true;
+		for (std::size_t k = 1; k < slots.size() && all; ++k) {
+			all = std::binary_search(slots[k].positions.begin(), slots[k].positions.end(), start + static_cast<std::uint32_t>(k));
+		}
+		if (all) { return true; }
+	}
+	return false;
+}
+
+// One distinct position per slot, spanning fewer than `window` positions.
+bool near_of(const std::vector<Slot>& slots, std::uint32_t window) {
+	std::vector<std::uint32_t> chosen;
+	std::function<bool(std::size_t)> place = [&](std::size_t k) {
+		if (k == slots.size()) {
+			const auto [lo, hi] = std::minmax_element(chosen.begin(), chosen.end());
+			return *hi - *lo < window;
+		}
+		for (const auto position : slots[k].positions) {
+			if (std::find(chosen.begin(), chosen.end(), position) != chosen.end()) { continue; }
+			chosen.push_back(position);
+			if (place(k + 1)) { return true; }
+			chosen.pop_back();
+		}
+		return false;
+	};
+	return place(0);
 }
 
 // Whether the document matches and, if so, its weight.
@@ -332,6 +448,17 @@ std::pair<bool, double> weigh(const Statistics& st, const Model::Doc& doc, const
 				}
 				case Op::PHRASE:
 				case Op::NEAR: {
+					if (query.alternatives()) {
+						std::vector<Slot> slots;
+						double total = 0;
+						for (const auto& sub : subs) {
+							slots.push_back(slot_in(st, doc, sub));
+							total += slots.back().weight;
+							if (slots.back().positions.empty()) { return {false, 0.0}; }
+						}
+						const auto window = node->parameter ? node->parameter : static_cast<std::uint32_t>(slots.size());
+						return {node->op == Op::PHRASE ? phrase_of(slots) : near_of(slots, window), total};
+					}
 					std::vector<std::string> words;
 					double sum = 0;
 					for (const auto& sub : subs) {
@@ -861,26 +988,84 @@ void test_writes_and_deletes_impl() {
 	}
 }
 
+// A PHRASE or NEAR whose positions hold alternatives (a wildcard or edit-distance expansion, an OR or a
+// SYNONYM of words, an expansion beside a word as a partial word reads) is searched by the strata engine only:
+// the documents, their weights (the positions' weights summed) and their order are the model's, over one
+// to five shards and several segments; the Xapian engine answers a client error.
+void test_phrase_alternatives_impl() {
+	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+	Model model;
+	build("alternatives", 5, 150, 3, xapian, strata, model);
+	const auto t = [](const char* w) { return Query::term("f", w); };
+	const auto word = [&](int k) { return t(("w" + std::to_string(k)).c_str()); };
+	const auto any = [&](int a, int b) { return Query::combine(Op::OR, word(a), word(b)); };
+	const auto together = [&](int a, int b) { return Query::combine(Op::SYNONYM, {word(a), word(b)}); };
+	const auto prefix = [](const char* p) { return Query::wildcard("f", p); };
+	const auto fuzzy = [](const char* p, unsigned distance) { return Query::edit_distance("f", p, 0, engine::Expansion::error, Op::SYNONYM, distance, 0); };
+	// "w1 (w2|w3)", "(w4|w5) w0" as a SYNONYM, "w1 w*", "w2 w1~" and "w0 w*|w4" (a word with a partial word).
+	const std::vector<std::vector<Query>> shapes = {
+		{ word(1), any(2, 3) },
+		{ together(4, 5), word(0) },
+		{ any(0, 1), any(1, 2), together(2, 3) },
+		{ word(1), prefix("w") },
+		{ word(2), fuzzy("w1", 1) },
+		{ fuzzy("w3x", 1), word(0) },
+		{ word(0), Query::combine(Op::OR, prefix("w"), word(4)) },
+		{ prefix("w"), prefix("w") },
+		{ prefix("w1"), Query::combine(Op::OR, any(2, 3), word(5)), word(0) },
+	};
+	int shapes_found = 0, near_found = 0;
+	for (const std::size_t shards : {1u, 2u, 5u}) {
+		for (const auto& slots : shapes) {
+			for (const auto op : {Op::PHRASE, Op::NEAR}) {
+				for (const std::uint32_t window : {0u, 3u, 6u}) {
+					if (op == Op::PHRASE && window != 0) { continue; }
+					const auto query = Query::combine(op, std::vector<Query>(slots), op == Op::NEAR ? window : 0);
+					CHECK_TRUE(query.alternatives());
+					for (const auto& candidate : {query, Query::combine(Op::AND, query, t("common")), Query::combine(Op::OR, query, t("tag1"))}) {
+						const int before = testh::failures;
+						const auto want = model_hits(model, candidate, shards);
+						const auto got = run(strata, shards, candidate, 0, 100000);
+						if (got.hits.size() != want.size() && std::getenv("DIAG")) { std::fprintf(stderr, "got %zu want %zu\n", got.hits.size(), want.size()); }
+						CHECK_EQ(got.hits.size(), want.size());
+						CHECK_EQ(got.estimated, want.size());
+						for (std::size_t i = 0; i < got.hits.size(); ++i) {
+							const auto it = want.find(got.hits[i].did);
+							CHECK_TRUE(it != want.end());
+							if (it != want.end()) { CHECK_TRUE(close(got.hits[i].weight, it->second)); }
+							if (i != 0) { CHECK_GE(got.hits[i - 1].weight + tolerance, got.hits[i].weight); }
+						}
+						shapes_found += !want.empty();
+						near_found += op == Op::NEAR && !want.empty();
+						if (testh::failures != before) { std::fprintf(stderr, "  %zu shards: %s\n", shards, candidate.description().c_str()); }
+					}
+				}
+			}
+		}
+	}
+	CHECK_GT(shapes_found, 100);
+	CHECK_GT(near_found, 50);
+	// The Xapian engine does not search them, and says so as a client error.
+	{
+		const auto query = Query::combine(Op::PHRASE, {word(1), any(2, 3)});
+		auto prepared = engine::prepare(query);
+		CHECK_FALSE(prepared->empty());
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		CHECK_EQ(error_kind([&] { engine::sync_wait(engine::search(xapian.shards(1), request)); }), engine::errc::syntax);
+	}
+}
+
 void test_refusals_impl() {
 	Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
 	Model model;
 	build("refusals", 1, 10, 1, xapian, strata, model);
 	const auto t = [](const char* w) { return Query::term("f", w); };
 	const auto none = [](engine::SearchRequest&) { };
-	const auto kind = [&](const Query& query, const std::function<void(engine::SearchRequest&)>& tweak = [](engine::SearchRequest&) { }) {
-		return error_kind([&] { search_with(strata, query, tweak); });
-	};
 	const auto syntax = engine::errc::syntax;
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
-	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	// A PHRASE with a window answers rather than refusing (strata reads its terms' positions, not the window).
 	search_with(strata, Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5), none);
-	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	// An append of a non-joining operator onto something still refuses.
-	CHECK_EQ(kind(Query::append(Op::PHRASE, t("w1"), t("w2"))), syntax);
-	// A refusal leaves nothing behind: the same shard answers the next search.
-	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	// A search over the two engines is refused, and a query nested too deeply.
 	{
 		auto prepared = engine::prepare(t("w1"));
@@ -896,11 +1081,61 @@ void test_refusals_impl() {
 			deep = Query::combine(Op::AND, deep, t("common"));
 		}
 	}), syntax);
-	// An index with no segment refuses the same: the query is checked before any segment is read.
-	Index xapian_empty{Kind::xapian, {}}, strata_empty{Kind::strata, {}};
-	Model model_empty;
-	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}), none); }), syntax);
+}
+
+// What is not a valid query is refused when the query is built, whatever the engine and the index: a
+// PHRASE or NEAR over anything but words and their alternatives, a SYNONYM of anything but words, an
+// operator that cannot take a list or join a query, and an expansion combined by anything but SYNONYM,
+// OR or MAX.
+void test_invalid_shapes_impl() {
+	const auto t = [](const char* w) { return Query::term("f", w); };
+	const auto syntax = engine::errc::syntax;
+	const auto refused = [&](const std::function<void()>& build) { return error_kind(build) == syntax; };
+	const auto both = Query::combine(Op::AND, t("w1"), t("w2"));
+	const auto either = Query::combine(Op::OR, t("w2"), t("w3"));
+	const auto wildcard = Query::wildcard("f", "w");
+	for (const auto op : {Op::PHRASE, Op::NEAR}) {
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), both}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, {both, t("w1")}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), Query::combine(Op::AND_NOT, t("w2"), t("w3"))}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), Query::combine(Op::PHRASE, t("w2"), t("w3"))}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), Query::combine(Op::OR, either, both)}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), Query::scale(t("w2"), 2)}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), Query::match_all()}); }));
+		// Words, expansions and ORs and SYNONYMs of those are positions.
+		Query::combine(op, {t("w1"), either});
+		Query::combine(op, {t("w1"), wildcard});
+		Query::combine(op, {t("w1"), Query::edit_distance("f", "w1", 0, engine::Expansion::error, Op::SYNONYM, 1, 0)});
+		Query::combine(op, {t("w1"), Query::combine(Op::OR, wildcard, t("w3"))});
+		Query::combine(op, {t("w1"), Query::combine(Op::SYNONYM, t("w2"), t("w3"))});
+		Query::combine(op, {t("w1"), Query::append(Op::OR, Query::append(Op::OR, Query(), t("w2")), t("w3"))});
+		CHECK_FALSE(Query::combine(op, {t("w1"), t("w2")}).alternatives());
+		CHECK_TRUE(Query::combine(op, {t("w1"), either}).alternatives());
+		CHECK_TRUE(Query::combine(Op::AND, Query::combine(op, {t("w1"), wildcard}), t("w3")).alternatives());
+		CHECK_FALSE(Query::combine(Op::AND, either, t("w3")).alternatives());
+	}
+	CHECK_TRUE(refused([&] { Query::combine(Op::SYNONYM, {t("w1"), either}); }));
+	CHECK_TRUE(refused([&] { Query::combine(Op::SYNONYM, {t("w1"), wildcard}); }));
+	CHECK_TRUE(refused([&] { Query::combine(Op::SYNONYM, {t("w1"), Query::match_all()}); }));
+	CHECK_TRUE(refused([&] { Query::combine(Op::SYNONYM, t("w1"), both); }));
+	Query::combine(Op::SYNONYM, {t("w1"), t("w2"), t("w3")});
+	for (const auto op : {Op::SCALE_WEIGHT, Op::WILDCARD, Op::EDIT_DISTANCE, Op::INVALID}) {
+		CHECK_TRUE(refused([&] { Query::combine(op, {t("w1"), t("w2")}); }));
+		CHECK_TRUE(refused([&] { Query::combine(op, t("w1"), t("w2")); }));
+	}
+	// An append of an operator that does not join onto a query; onto nothing it is the next query.
+	for (const auto op : {Op::PHRASE, Op::NEAR, Op::SYNONYM, Op::SCALE_WEIGHT}) {
+		CHECK_TRUE(refused([&] { Query::append(op, t("w1"), t("w2")); }));
+		Query::append(op, Query(), t("w2"));
+	}
+	for (const auto combiner : {Op::AND, Op::AND_NOT, Op::XOR, Op::FILTER, Op::AND_MAYBE, Op::PHRASE, Op::NEAR}) {
+		CHECK_TRUE(refused([&] { Query::wildcard("f", "w", 0, engine::Expansion::error, 0, combiner); }));
+		CHECK_TRUE(refused([&] { Query::edit_distance("f", "w1", 0, engine::Expansion::error, combiner, 1, 0); }));
+	}
+	for (const auto combiner : {Op::SYNONYM, Op::OR, Op::MAX}) {
+		Query::wildcard("f", "w", 0, engine::Expansion::error, 0, combiner);
+		Query::edit_distance("f", "w1", 0, engine::Expansion::error, combiner, 1, 0);
+	}
 }
 
 // A term is looked up under its field: two fields holding the same word are found each under its own, a
@@ -1547,6 +1782,8 @@ void test_five_shards() { guarded("test_five_shards", test_five_shards_impl); }
 void test_no_shards_and_empty() { guarded("test_no_shards_and_empty", test_no_shards_and_empty_impl); }
 void test_writes_and_deletes() { guarded("test_writes_and_deletes", test_writes_and_deletes_impl); }
 void test_refusals() { guarded("test_refusals", test_refusals_impl); }
+void test_invalid_shapes() { guarded("test_invalid_shapes", test_invalid_shapes_impl); }
+void test_phrase_alternatives() { guarded("test_phrase_alternatives", test_phrase_alternatives_impl); }
 void test_long_chains() { guarded("test_long_chains", test_long_chains_impl); }
 void test_snapshot_consistency() { guarded("test_snapshot_consistency", test_snapshot_consistency_impl); }
 void test_concurrent_searches() { guarded("test_concurrent_searches", test_concurrent_searches_impl); }
@@ -1558,4 +1795,4 @@ void test_collapse() { guarded("test_collapse", test_collapse_impl); }
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite, test_collapse)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_invalid_shapes, test_phrase_alternatives, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite, test_collapse)

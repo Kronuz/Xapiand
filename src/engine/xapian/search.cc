@@ -35,6 +35,7 @@
 #include "engine/xapian/query.h"   // for to_xapian
 #include "engine/xapian/search.h"  // for live_search_objects
 #include "engine/xapian/shard.h"   // for Shard
+#include "exception_engine.h"      // for QueryParserError
 #include "xapian.h"                // for Xapian::Enquire, MSet
 
 
@@ -57,11 +58,16 @@ public:
 	Prepared(const Query& source, Xapian::Query query) : PreparedQuery(source), query(std::move(query)) { }
 
 	bool empty() const override {
-		return query.empty();
+		return alternatives() ? source().empty() : query.empty();
 	}
 
 	std::string description() const override {
-		return query.get_description();
+		return alternatives() ? source().description() : query.get_description();
+	}
+
+	// Xapian's phrases take words only, so a query with alternatives has no Xapian form.
+	bool alternatives() const noexcept {
+		return source().alternatives();
 	}
 
 	const Xapian::Query query;
@@ -154,7 +160,7 @@ prepare(const Query& query)
 {
 	ENGINE_CENSUS_QUERY(query);
 	try {
-		return std::make_unique<xapian::Prepared>(query, xapian::to_xapian(query));
+		return std::make_unique<xapian::Prepared>(query, query.alternatives() ? Xapian::Query() : xapian::to_xapian(query));
 	} catch (...) {
 		xapian::rethrow_translated();
 	}
@@ -173,6 +179,9 @@ search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		const auto& prepared = dynamic_cast<const Prepared&>(*request.query);
 		if (shards.empty() || prepared.empty()) {
 			co_return SearchResult{};
+		}
+		if (prepared.alternatives()) {
+			throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "A PHRASE or NEAR over wildcards, fuzzy words or ORs of words is searched by the strata engine only");
 		}
 		co_return run(shards, request, prepared.query);
 	} catch (...) {

@@ -100,6 +100,12 @@ inline constexpr unsigned MAX_QUERY_CHAIN = 256;
 // A query, as a value: an immutable tree that shares its subtrees when copied. Each factory
 // has the semantics of the constructor of the same shape in Xapian's Query, so a tree built here
 // translates to the Xapian tree it replaces. A default Query matches nothing.
+//
+// A factory refuses a shape that is not a valid query with a QueryParserError (a 400): a PHRASE or NEAR
+// whose positions are anything but words and their alternatives (a wildcard or edit-distance expansion,
+// an OR or SYNONYM of those), a SYNONYM of anything but words, a SCALE_WEIGHT, WILDCARD or EDIT_DISTANCE
+// over a list, an append of an operator that does not join onto a query, and an expansion combined by
+// anything but SYNONYM, OR or MAX.
 class Query {
 public:
 	Query() = default;
@@ -148,6 +154,10 @@ public:
 
 	// Readable form, for logs.
 	std::string description() const;
+
+	// Whether a PHRASE or NEAR in the tree has a position that holds alternatives. Only the strata engine
+	// searches those.
+	bool alternatives() const noexcept;
 
 	// Levels of nested operators: a leaf is 1 and a chain of appends adds none.
 	unsigned depth() const noexcept;
@@ -199,6 +209,7 @@ struct QueryNode {
 	std::shared_ptr<const PostingSource> src;     // source
 	bool binary = false;                          // combine: built from two operands
 	bool matches_nothing = false;                 // combine, append, scale: simplified to nothing
+	bool alternatives = false;                    // combine, append, scale: Query::alternatives()
 	unsigned depth = 1;                           // levels of nested operators, at most MAX_QUERY_DEPTH
 	unsigned size = 1;                            // nodes in the tree, shared subtrees counted each time, at most MAX_QUERY_CLAUSES
 	unsigned chain = 0;                           // see Query::chain(), at most MAX_QUERY_CHAIN

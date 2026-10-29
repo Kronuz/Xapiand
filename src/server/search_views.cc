@@ -1987,7 +1987,7 @@ search_view(Request& request)
 	obj[RESPONSE_HITS] = MsgPack::ARRAY();
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
+		obj["#xapian_query"] = query.alternatives() ? query.description() : engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_COUNT] = mset.size();
 	obj[RESPONSE_TOTAL] = mset.estimated;
@@ -2118,7 +2118,7 @@ count_view(Request& request)
 	MsgPack obj;
 	if (request.comments && opts.verbosity >= 3) {
 		obj["#query"] = qdsl;
-		obj["#xapian_query"] = engine::xapian::to_xapian(query).get_description();
+		obj["#xapian_query"] = query.alternatives() ? query.description() : engine::xapian::to_xapian(query).get_description();
 	}
 	obj[RESPONSE_TOTAL] = mset.estimated;
 

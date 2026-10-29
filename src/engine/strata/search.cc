@@ -64,12 +64,6 @@ namespace p = ::prospect;
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
 
-[[noreturn]] void
-unsupported(const std::string& what)
-{
-	throw Error(errc::syntax, "The strata engine does not search " + what + " yet");
-}
-
 // A hit's weight as a percentage of the top weight, in [0, 100]. Against an infinite top weight (an
 // overflowed or infinite scale factor) a hit is 100 if it is infinite too and 0 otherwise.
 int
@@ -123,110 +117,6 @@ bool
 is_match_all(const QueryNode& node)
 {
 	return node.field.empty() && node.str.empty();
-}
-
-
-bool
-is_term(const Query& query)
-{
-	const auto* leaf = query.node();
-	return leaf != nullptr && leaf->kind == QueryKind::term && !is_match_all(*leaf);
-}
-
-// Whether the operator joins two scorers (the rest take a list of terms).
-bool
-is_joining(Op op)
-{
-	switch (op) {
-		case Op::AND:
-		case Op::OR:
-		case Op::AND_NOT:
-		case Op::AND_MAYBE:
-		case Op::FILTER:
-		case Op::XOR:
-		case Op::MAX:
-			return true;
-		default:
-			return false;
-	}
-}
-
-// Refuses, before any segment is read, what the engine does not search yet, so the answer does not
-// depend on which segments a short-circuited operator reaches.
-void
-validate(const Query& query, int depth)
-{
-	if (depth > max_depth) {
-		throw Error(errc::syntax, "The query is nested too deeply");
-	}
-	const auto* node = query.node();
-	if (node == nullptr) {
-		return;
-	}
-	switch (node->kind) {
-		case QueryKind::term:
-			return;
-		case QueryKind::combine:
-			switch (node->op) {
-				case Op::PHRASE:
-				case Op::NEAR: {
-					for (const auto& sub : node->subqueries) {
-						if (!is_term(sub)) {
-							unsupported(std::string(to_string(node->op)) + " of anything but terms");
-						}
-					}
-					return;
-				}
-				case Op::SYNONYM:
-					for (const auto& sub : node->subqueries) {
-						if (!is_term(sub)) {
-							unsupported(std::string(to_string(node->op)) + " of anything but terms");
-						}
-					}
-					return;
-				default:
-					if (!is_joining(node->op)) {
-						unsupported(std::string("the ") + to_string(node->op) + " operator");
-					}
-			}
-			for (const auto& sub : node->subqueries) {
-				validate(sub, depth + 1);
-			}
-			return;
-		case QueryKind::append: {
-			// A chain of appends is walked along its spine, so its length costs no stack.
-			const Query* spine = &query;
-			while (spine->node() != nullptr && spine->node()->kind == QueryKind::append) {
-				// An append onto an empty accumulation is just the next query, whatever its operator.
-				const Op op = spine->node()->op;
-				if (!spine->node()->subqueries[0].empty() && !is_joining(op)) {
-					unsupported(std::string("the ") + to_string(op) + " operator");
-				}
-				validate(spine->node()->subqueries[1], depth + 1);
-				spine = &spine->node()->subqueries[0];
-			}
-			validate(*spine, depth + 1);
-			return;
-		}
-		case QueryKind::scale:
-			validate(node->subqueries[0], depth + 1);
-			return;
-		case QueryKind::wildcard:
-		case QueryKind::edit_distance:
-			switch (node->op) {
-				case Op::SYNONYM:
-				case Op::OR:
-				case Op::MAX:
-					return;
-				default:
-					unsupported(std::string("expansions combined by ") + to_string(node->op));
-			}
-		case QueryKind::source:
-			if (node->src == nullptr) {
-				throw Error(errc::invalid, "A source node has no source");
-			}
-			return;
-	}
 }
 
 
@@ -448,12 +338,79 @@ build_group(const QueryNode& node, const Builder& b)
 	return std::make_unique<p::disjunction_scorer>(std::move(children));
 }
 
+// The terms a position of a phrase can hold, in this segment: a word, an expansion, or an OR or SYNONYM of those.
+void
+alternatives_of(const Query& query, const Builder& b, std::vector<Group::Member>& out)
+{
+	const auto* node = query.node();
+	if (node == nullptr) {
+		return;
+	}
+	switch (node->kind) {
+		case QueryKind::term:
+			out.push_back({node->field, node->str, node->wqf});
+			return;
+		case QueryKind::wildcard:
+		case QueryKind::edit_distance:
+			for (const auto& member : group_of(*node, b).members) {
+				out.push_back(member);
+			}
+			return;
+		default:
+			for (const auto& sub : node->subqueries) {
+				alternatives_of(sub, b, out);
+			}
+	}
+}
+
+// A phrase with a position that holds alternatives: the documents where every position is met by one of
+// its terms, scored as the positions score alone. Alternatives carry no position of their own, so the
+// positions are consecutive.
+Scorer
+build_alternatives(const QueryNode& node, const Builder& b)
+{
+	std::vector<p::phrase_slot> slots;
+	slots.reserve(node.subqueries.size());
+	std::optional<std::string> field;
+	for (const auto& sub : node.subqueries) {
+		std::vector<Group::Member> members;
+		alternatives_of(sub, b, members);
+		p::phrase_slot slot;
+		for (const auto& member : members) {
+			// Positions are per field and document, so a phrase of terms from two fields matches nothing.
+			if (!field) {
+				field = member.field;
+			} else if (member.field != *field) {
+				return nullptr;
+			}
+			if (const auto* info = b.info(member.field, member.term)) {
+				const auto same = [&](const p::format::term_info& other) { return other.postings == info->postings && other.positions == info->positions; };
+				if (std::none_of(slot.terms.begin(), slot.terms.end(), same)) {
+					slot.terms.push_back(*info);
+				}
+			}
+		}
+		slot.scorer = build(sub, b, 0);
+		if (!slot.scorer || slot.terms.empty()) {
+			return nullptr;
+		}
+		slots.push_back(std::move(slot));
+	}
+	const std::uint32_t window = node.op == Op::NEAR ? (node.parameter != 0 ? node.parameter : static_cast<std::uint32_t>(slots.size())) : 0;
+	return std::make_unique<p::multi_phrase_scorer>(b.reader(), std::move(slots), window);
+}
+
 Scorer
 build_positional(const QueryNode& node, const Builder& b)
 {
 	const std::size_t n = node.subqueries.size();
 	if (n == 1) {
 		return build(node.subqueries[0], b, 0);
+	}
+	for (const auto& sub : node.subqueries) {
+		if (sub.node()->kind != QueryKind::term) {
+			return build_alternatives(node, b);
+		}
 	}
 	for (const auto& sub : node.subqueries) {
 		// Positions are per field and document, so a phrase of terms from two fields matches nothing.
@@ -671,7 +628,6 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	if (shards.empty() || request.query->empty()) {
 		return {};
 	}
-	validate(source, 0);
 
 	// Pin every distinct index once, in a fixed order, so searches that share indexes cannot deadlock.
 	std::vector<Shard*> mine;

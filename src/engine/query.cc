@@ -33,6 +33,114 @@ namespace engine {
 
 namespace {
 
+// A word: a term of a field, not the term that matches every document.
+bool
+is_word(const Query& query)
+{
+	const auto* node = query.node();
+	return node != nullptr && node->kind == QueryKind::term && !(node->field.empty() && node->str.empty());
+}
+
+// Whether the query can fill one position of a phrase: a word, an expansion, or an OR or SYNONYM of those.
+bool
+is_alternative(const Query& query)
+{
+	// A chain of appends is walked along its spine, so its length costs no stack.
+	const Query* at = &query;
+	while (at->node() != nullptr && at->node()->kind == QueryKind::append) {
+		const auto& node = *at->node();
+		if (!node.subqueries[0].empty() && node.op != Op::OR) {
+			return false;
+		}
+		if (!is_alternative(node.subqueries[1])) {
+			return false;
+		}
+		at = &node.subqueries[0];
+	}
+	const auto* node = at->node();
+	if (node == nullptr) {
+		return true;
+	}
+	switch (node->kind) {
+		case QueryKind::term:
+			return is_word(*at);
+		case QueryKind::wildcard:
+		case QueryKind::edit_distance:
+			return true;
+		case QueryKind::combine:
+			return (node->op == Op::OR || node->op == Op::SYNONYM) && std::all_of(node->subqueries.begin(), node->subqueries.end(), is_alternative);
+		default:
+			return false;
+	}
+}
+
+// Whether the operator joins queries (the rest take words).
+bool
+is_joining(Op op)
+{
+	switch (op) {
+		case Op::AND:
+		case Op::OR:
+		case Op::AND_NOT:
+		case Op::AND_MAYBE:
+		case Op::FILTER:
+		case Op::XOR:
+		case Op::MAX:
+			return true;
+		default:
+			return false;
+	}
+}
+
+[[noreturn]] void
+invalid(const std::string& what)
+{
+	throw QueryParserError(__func__, __FILE__, __LINE__, "QueryParserError", "{} is not a valid query", what);
+}
+
+// Refuses op applied to the subqueries when it is not a valid query.
+void
+check_combine(Op op, const std::vector<Query>& subqueries)
+{
+	switch (op) {
+		case Op::PHRASE:
+		case Op::NEAR:
+			if (!std::all_of(subqueries.begin(), subqueries.end(), is_alternative)) {
+				invalid(std::string("A ") + to_string(op) + " of anything but words and their alternatives (wildcards, fuzzy words, and ORs of them)");
+			}
+			return;
+		case Op::SYNONYM:
+			if (!std::all_of(subqueries.begin(), subqueries.end(), is_word)) {
+				invalid("A SYNONYM of anything but words");
+			}
+			return;
+		default:
+			if (!is_joining(op)) {
+				invalid(std::string("The ") + to_string(op) + " operator over a list of queries");
+			}
+	}
+}
+
+// Whether a PHRASE or NEAR in the tree has a position that holds alternatives.
+bool
+has_alternatives(const QueryNode& node)
+{
+	if ((node.op == Op::PHRASE || node.op == Op::NEAR) && node.kind == QueryKind::combine &&
+		!std::all_of(node.subqueries.begin(), node.subqueries.end(), [](const Query& sub) { return sub.empty() || is_word(sub); })) {
+		return true;
+	}
+	return std::any_of(node.subqueries.begin(), node.subqueries.end(), [](const Query& sub) { return sub.alternatives(); });
+}
+
+// Refuses a combiner of an expansion other than SYNONYM, OR or MAX.
+void
+check_combiner(Op combiner)
+{
+	if (combiner != Op::SYNONYM && combiner != Op::OR && combiner != Op::MAX) {
+		invalid(std::string("An expansion combined by ") + to_string(combiner));
+	}
+}
+
 // Whether op applied to the subqueries matches nothing, as Xapian simplifies it.
 bool
 combines_to_nothing(Op op, const std::vector<Query>& subqueries)
@@ -89,6 +197,7 @@ set_extent(QueryNode& node, bool operator_node)
 		throw QueryDepthError(__func__, __FILE__, __LINE__, "QueryDepthError", "Query joins too many phrases: the limit is {}", MAX_QUERY_CHAIN);
 	}
 	node.chain = static_cast<unsigned>(links);
+	node.alternatives = has_alternatives(node);
 }
 
 }  // namespace
@@ -144,6 +253,7 @@ Query::combine(Op op, Query left, Query right)
 	node->subqueries.reserve(2);
 	node->subqueries.push_back(std::move(left));
 	node->subqueries.push_back(std::move(right));
+	check_combine(op, node->subqueries);
 	node->matches_nothing = combines_to_nothing(op, node->subqueries);
 	set_extent(*node, true);
 	return Query(std::move(node));
@@ -157,6 +267,7 @@ Query::combine(Op op, std::vector<Query> subqueries, termcount parameter)
 	node->kind = QueryKind::combine;
 	node->op = op;
 	node->parameter = parameter;
+	check_combine(op, subqueries);
 	node->matches_nothing = combines_to_nothing(op, subqueries);
 	node->subqueries = std::move(subqueries);
 	set_extent(*node, true);
@@ -167,6 +278,9 @@ Query::combine(Op op, std::vector<Query> subqueries, termcount parameter)
 Query
 Query::append(Op op, Query accumulated, Query next)
 {
+	if (!accumulated.empty() && !is_joining(op)) {
+		invalid(std::string("The ") + to_string(op) + " operator onto a query");
+	}
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::append;
 	node->op = op;
@@ -195,6 +309,7 @@ Query::scale(Query subquery, double factor)
 Query
 Query::wildcard(std::string field, std::string pattern, termcount max_expansion, Expansion limit, unsigned pattern_flags, Op combiner)
 {
+	check_combiner(combiner);
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::wildcard;
 	node->field = std::move(field);
@@ -210,6 +325,7 @@ Query::wildcard(std::string field, std::string pattern, termcount max_expansion,
 Query
 Query::edit_distance(std::string field, std::string pattern, termcount max_expansion, Expansion limit, Op combiner, unsigned distance, std::size_t prefix_length)
 {
+	check_combiner(combiner);
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::edit_distance;
 	node->field = std::move(field);
@@ -233,10 +349,20 @@ Query::field(std::string field)
 Query
 Query::source(std::unique_ptr<PostingSource> source)
 {
+	if (!source) {
+		throw Error(errc::invalid, "A source node has no source");
+	}
 	auto node = std::make_shared<QueryNode>();
 	node->kind = QueryKind::source;
 	node->src = std::move(source);
 	return Query(std::move(node));
+}
+
+
+bool
+Query::alternatives() const noexcept
+{
+	return node_ && node_->alternatives;
 }
 
 
