@@ -48,7 +48,7 @@ engine::Document::field(std::string_view name, FieldKind kind)
 		return FieldRef{it->second};
 	}
 	const auto id = static_cast<std::uint32_t>(fields_.size());
-	fields_.push_back(Field{std::string(name), kind});
+	fields_.push_back(Field{std::string(name), kind, id});
 	field_ids_.emplace(fields_.back().name, id);
 	return FieldRef{id};
 }

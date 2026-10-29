@@ -351,23 +351,63 @@ static void test_strata_fields() {
 	doc.add_boolean_term(marker, std::string());
 	doc.add_term(doc.field("title.S"), "bob", 3);
 	auto& native = engine::strata::strata_document(doc);
-	native.normalise();
 	CHECK_EQ(native.key(), "Kid");
 	CHECK_EQ(native.key_wdf(), 1u);
 	CHECK_EQ(native.fields().size(), 2u);
-	const auto& text = native.fields().at("title.S");
+	const auto& text = *native.field("title.S");
 	CHECK_TRUE(text.kind == FieldKind::text);
-	CHECK_EQ(text.terms.size(), 2u);
-	CHECK_EQ(text.terms.at("bob").wdf, 5u);
-	CHECK_EQ(text.terms.at("smith").wdf, 2u);
-	CHECK_EQ(text.terms.at("smith").positions, (std::vector<engine::termpos>{ 2, 4 }));
+	CHECK_EQ(text.term_count, 2u);
+	CHECK_EQ(native.find_term("title.S", "bob")->wdf, 5u);
+	CHECK_EQ(native.find_term("title.S", "smith")->wdf, 2u);
+	CHECK_EQ(native.positions_of(*native.find_term("title.S", "smith")), (std::vector<engine::termpos>{ 2, 4 }));
+	CHECK_TRUE(native.find_term("title.S", "jones") == nullptr);
 	// The same bytes under another field are another term; the empty term is a term.
-	CHECK_TRUE(native.fields().at("title.").kind == FieldKind::terms);
-	CHECK_EQ(native.fields().at("title.").terms.at("").wdf, 0u);
+	CHECK_TRUE(native.field("title.")->kind == FieldKind::terms);
+	CHECK_EQ(native.find_term("title.", "")->wdf, 0u);
 
 	// The log line carries the fields: it reads back to the same document.
 	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
 	CHECK_EQ(back.serialise(), doc.serialise());
+}
+
+// A field with many terms finds each by its hash through the growing table, adds repeats to the same term,
+// and survives interleaved fields; a Field built by hand with a repeated id still lands under its name.
+static void test_strata_many_terms() {
+	engine::Document doc(engine::Kind::strata);
+	doc.set_key("Kmany");
+	const auto a = doc.field("a.S", FieldKind::text);
+	const auto b = doc.field("b");
+	for (int round = 0; round < 3; ++round) {
+		for (int i = 0; i < 300; ++i) {
+			doc.add_posting(a, "term" + std::to_string(i), static_cast<engine::termpos>(round * 1000 + i), 1);
+			doc.add_term(b, "x" + std::to_string(i % 40), 2);
+		}
+	}
+	auto& native = engine::strata::strata_document(doc);
+	CHECK_EQ(native.field("a.S")->term_count, 300u);
+	CHECK_EQ(native.field("b")->term_count, 40u);
+	for (int i = 0; i < 300; ++i) {
+		const auto* term = native.find_term("a.S", "term" + std::to_string(i));
+		CHECK_TRUE(term != nullptr);
+		CHECK_EQ(term->wdf, 3u);
+		CHECK_EQ(native.positions_of(*term).size(), 3u);
+	}
+	CHECK_EQ(native.find_term("b", "x7")->wdf, 2u * 3 * 8);  // 300 / 40 rounded: ids 7, 47, ... 287 is 8 hits per round
+	CHECK_TRUE(native.find_term("b", "x40") == nullptr);
+	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
+	CHECK_EQ(back.serialise(), doc.serialise());
+	CHECK_EQ(engine::strata::strata_document(back).field("a.S")->term_count, 300u);
+
+	// Two fields given the same id by hand are still two fields.
+	engine::strata::StrataDocument raw;
+	engine::Field one{"one", FieldKind::terms, 0};
+	engine::Field two{"two", FieldKind::terms, 0};
+	raw.add_term(one, "t", 1);
+	raw.add_term(two, "t", 1);
+	raw.add_term(one, "t", 1);
+	CHECK_EQ(raw.fields().size(), 2u);
+	CHECK_EQ(raw.find_term("one", "t")->wdf, 2u);
+	CHECK_EQ(raw.find_term("two", "t")->wdf, 1u);
 }
 
 // A field ref used on a document that did not declare it trips the debug assert, for each add_*.
@@ -407,4 +447,4 @@ void test_foreign_ref_asserts() {
 void test_foreign_ref_asserts() { }
 #endif
 
-TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_key_field, test_host_keys, test_strata_fields)
+TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_key_field, test_host_keys, test_strata_fields, test_strata_many_terms)

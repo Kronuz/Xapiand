@@ -23,6 +23,7 @@
 #pragma once
 
 #include <cstddef>                 // for std::size_t
+#include <cstdint>                 // for std::uint32_t
 #ifdef ENGINE_CENSUS
 #include <functional>              // for std::function
 #endif
@@ -38,16 +39,25 @@
 // The strata implementation of the engine seam. Only files in this directory name strata or prospect.
 namespace engine::strata {
 
-// One term of a document: its within-document frequency and positions.
+// One term of a document: its field, its bytes in the document's arena, its within-document frequency, and its
+// positions as a chain through the document's position nodes, in arrival order.
 struct DocTerm {
+	static constexpr std::uint32_t none = 0xffffffffu;
+	std::uint32_t field = 0;       // index into the document's fields
+	std::uint32_t offset = 0;
+	std::uint32_t size = 0;
 	termcount wdf = 0;
-	std::vector<termpos> positions;
+	std::uint32_t hash = 0;
+	std::uint32_t first = none;
+	std::uint32_t last = none;
+	std::uint32_t count = 0;
 };
 
-// The terms of one field of a document, and the widest kind the document asked for.
+// A field of a document: its name, the widest kind the document asked for, and how many terms it has.
 struct DocField {
+	std::string name;
 	FieldKind kind = FieldKind::boolean;
-	std::map<std::string, DocTerm, std::less<>> terms;
+	std::uint32_t term_count = 0;
 };
 
 // The document of the strata implementation: its terms by field, values, stored data and key, held in
@@ -74,8 +84,26 @@ public:
 	// not postings (the key is the index's, not a term).
 	termcount key_wdf() const noexcept { return key_wdf_; }
 	const std::string& data() const noexcept { return data_; }
-	// The fields that have terms, by name.
-	const std::map<std::string, DocField, std::less<>>& fields() const noexcept { return fields_; }
+	// The fields that have terms, in the order they first arrived.
+	const std::vector<DocField>& fields() const noexcept { return fields_; }
+	// Every term of every field, in the order they first arrived.
+	const std::vector<DocTerm>& terms() const noexcept { return terms_; }
+	// The terms grouped by field: order[starts[f] .. starts[f + 1]) are the indexes into terms() of field f's, in the
+	// order they arrived.
+	struct Grouped {
+		std::vector<std::uint32_t> order;
+		std::vector<std::uint32_t> starts;
+	};
+	void group(Grouped& out) const;
+	// The field of this name, or null.
+	const DocField* field(std::string_view name) const noexcept;
+	// The term under a field, or null.
+	const DocTerm* find_term(const DocField& field, std::string_view bytes) const noexcept;
+	const DocTerm* find_term(std::string_view field, std::string_view bytes) const noexcept;
+	std::string_view term_bytes(const DocTerm& term) const noexcept { return std::string_view(bytes_).substr(term.offset, term.size); }
+	// Replaces `out` with the term's positions, increasing and without repeats.
+	void positions_into(const DocTerm& term, std::vector<termpos>& out) const;
+	std::vector<termpos> positions_of(const DocTerm& term) const;
 	const std::map<valueno, std::string>& values() const noexcept { return values_; }
 
 	// The version this document was written at: the shard stamps it when it writes, the log keeps it,
@@ -86,9 +114,6 @@ public:
 	// its version.
 	bool replayed() const noexcept { return replayed_; }
 
-	// Sorts and deduplicates every term's positions; the shard calls it before it reads them.
-	void normalise();
-
 	// Replaces this document's content with what `serialised` holds. Raises errc::syntax on bytes
 	// that are not a serialised document.
 	void unserialise_from(std::string_view serialised);
@@ -96,8 +121,21 @@ public:
 private:
 	// The term under a field, created empty when absent; the field's kind widens to the call's.
 	DocTerm& term_of(const Field& field, std::string_view term);
+	std::size_t field_of(const Field& field);
+	DocTerm& intern(std::size_t field, std::string_view bytes);
+	void rebuild(std::size_t slots);
+	void push_position(DocTerm& term, termpos position);
 
-	std::map<std::string, DocField, std::less<>> fields_;
+	std::vector<DocField> fields_;
+	std::vector<DocTerm> terms_;
+	std::vector<std::uint32_t> table_;  // open addressing over (field, bytes): a term's index plus one, 0 when empty
+	std::string bytes_;                // the bytes of every term
+	struct Node {
+		termpos position;
+		std::uint32_t next;
+	};
+	std::vector<Node> nodes_;          // the positions of every term, chained per term
+	std::vector<std::uint32_t> slot_;  // the host's field id to its index in fields_ plus one, 0 when not seen
 	std::map<valueno, std::string> values_;
 	std::string data_;
 	std::string key_;

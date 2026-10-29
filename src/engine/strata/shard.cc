@@ -411,6 +411,19 @@ locate(Core& core, docid did)
 	return std::nullopt;
 }
 
+// The version of the live document with this id, or none. It reads the buffers too, so it flushes nothing.
+std::optional<rev>
+version_of(Core& core, docid did)
+{
+	if (did == 0 || did > core.index->last_docid()) {
+		return std::nullopt;
+	}
+	if (const auto version = core.index->find_docid(did)) {
+		return static_cast<rev>(*version);
+	}
+	return std::nullopt;
+}
+
 // The live documents of the flushed segments (the manifest's count waits for a commit).
 doccount
 live_count(Core& core)
@@ -487,14 +500,18 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 		// A version belongs to a key in strata (a keyless document has none), and every Xapiand document has one.
 		throw Error(errc::invalid, "The document has no key");
 	}
-	doc.normalise();
 	out.key = doc.key();
 	out.stored = doc.data();
 	t.expected_fields = table.mark();
 	out.fields.clear();
 	out.fields.reserve(doc.fields().size());
 	std::uint64_t length = doc.key_wdf();
-	for (const auto& [name, field] : doc.fields()) {
+	// Fields and terms go in the order they arrived: a new field is declared in that order, once.
+	StrataDocument::Grouped grouped;
+	doc.group(grouped);
+	for (std::size_t f = 0; f < doc.fields().size(); ++f) {
+		const auto& field = doc.fields()[f];
+		const auto& name = field.name;
 		prospect::inverted_plugin::field_part part;
 		if (const auto id = table.find(name)) {
 			part.field = ::strata::field_ref::id(*id);
@@ -502,11 +519,20 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 			part.field = ::strata::field_ref::declared(static_cast<std::uint32_t>(t.fields.size()));
 			t.fields.push_back({name, ::strata::field_role::indexed, postings_of(field.kind), false});
 		}
-		part.terms.reserve(field.terms.size());
-		for (const auto& [term, info] : field.terms) {
-			part.terms.push_back({term, info.wdf, info.positions});
+		part.terms.reserve(field.term_count);
+		bool within = true;
+		for (auto at = grouped.starts[f]; at < grouped.starts[f + 1]; ++at) {
+			const auto& info = doc.terms()[grouped.order[at]];
+			auto& entry = part.terms.emplace_back();
+			entry.term.assign(doc.term_bytes(info));
+			entry.wdf = info.wdf;
+			doc.positions_into(info, entry.positions);
 			part.length += info.wdf;
+			within = within && info.size <= ::strata::format::max_term_bytes;
 		}
+		// The terms are unique by construction and positions_into makes theirs strictly increase: only the
+		// size is left for the index to check.
+		part.checked = within;
 		length += part.length;
 		out.fields.push_back(std::move(part));
 	}
@@ -639,11 +665,11 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 					throw Error(errc::invalid, "The key belongs to another document");
 				}
 				stored = static_cast<rev>(found->second);
-			} else if (const auto located = locate(core, did)) {
-				stored = located->version;
+			} else {
+				stored = version_of(core, did);
 			}
-		} else if (const auto located = locate(core, did)) {
-			stored = located->version;
+		} else {
+			stored = version_of(core, did);
 		}
 		WriteResult info;
 		info.did = did;
@@ -733,12 +759,12 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto located = locate(core, did);
-		if (!located) {
+		const auto stored = version_of(core, did);
+		if (!stored) {
 			throw Error(errc::doc_not_found, "Document not found");
 		}
 		if (local && expected_version) {
-			check_version(expected_version, located->version);
+			check_version(expected_version, stored);
 		}
 		prospect::transaction t;
 		t.ops.emplace_back();

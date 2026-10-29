@@ -59,6 +59,7 @@ enum class FieldKind : std::uint8_t {
 struct Field {
 	std::string name;
 	FieldKind kind = FieldKind::terms;
+	std::uint32_t id = 0;  // the FieldRef that names it in its document: a native may index its fields by it
 };
 
 // A field as a document hands it out: valid for the document that made it.
