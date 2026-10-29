@@ -522,6 +522,9 @@ void codec() {
 	doc.add_posting(doc.field("f"), "b", 9);
 	doc.add_posting(doc.field("f"), "b", 2);
 	doc.add_posting(doc.field("f"), "b", 9);
+	doc.add_posting(doc.field("g.S", engine::FieldKind::text), "c", 4);
+	doc.add_term(doc.field("g.S"), "", 0);
+	doc.add_term(doc.field(engine::KEY_FIELD), "Kk", 2);
 	doc.add_value(1, "x");
 	doc.add_value(0xfffffffe, std::string(300, 'y'));
 	doc.set_data(std::string("bin\0data", 8));
@@ -532,6 +535,12 @@ void codec() {
 	const auto& terms = engine::strata::strata_document(back).fields().at("f").terms;
 	CHECK_EQ(terms.at("b").positions.size(), 2u);  // sorted and unique in the serialised form
 	CHECK_EQ(terms.at("a").wdf, 3u);
+	const auto& g = engine::strata::strata_document(back).fields().at("g.S");
+	CHECK_TRUE(g.kind == engine::FieldKind::text);
+	CHECK_EQ(g.terms.size(), 2u);
+	CHECK_EQ(g.terms.at("").wdf, 0u);  // the empty term is a term
+	CHECK_EQ(engine::strata::strata_document(back).key_wdf(), 2u);  // the key field's frequency, kept apart from the terms
+	CHECK_EQ(engine::strata::strata_document(back).fields().size(), 2u);
 
 	// The version the shard stamped is what the log keeps and replay reads; a fresh document has none.
 	CHECK_EQ(engine::strata::strata_document(back).version(), 0u);

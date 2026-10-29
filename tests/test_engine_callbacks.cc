@@ -645,7 +645,7 @@ void test_boolean_terms() {
 			{"or", Query::combine(Op::OR, t("Bg1"), t("Bg2"))},
 			{"filter", Query::combine(Op::FILTER, t("apple"), t("Bg0"))},
 			{"and_not", Query::combine(Op::AND_NOT, t("common"), t("Bg3"))},
-			{"id", t("Q0_5")},
+			{"id", Query::term(std::string(engine::KEY_FIELD), "Q0_5")},
 			{"wildcard", Query::wildcard("f", "Bg", 0, engine::Expansion::error, 0, Op::OR)},
 		};
 		for (const auto& [name, query] : queries) {
@@ -654,7 +654,8 @@ void test_boolean_terms() {
 				CHECK_GT(s.hits.size(), 0u);
 			}
 		}
-		CHECK_EQ(run(corpus.strata, n, t("Q0_5")).hits.size(), 1u);
+		CHECK_EQ(run(corpus.strata, n, Query::term(std::string(engine::KEY_FIELD), "Q0_5")).hits.size(), 1u);
+		CHECK_EQ(run(corpus.strata, n, t("Q0_5")).hits.size(), 0u);  // the key is not a term of the field
 	}
 }
 
