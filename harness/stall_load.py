@@ -201,8 +201,13 @@ class Node:
             self.proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, env=env, start_new_session=True)
             atexit.register(self.stop)
             for sig in (signal.SIGINT, signal.SIGTERM):
-                signal.signal(sig, lambda *_: sys.exit(130))
+                signal.signal(sig, self._die)
             self.wait_up()
+
+    def _die(self, *_: object) -> None:
+        # Stopping the node first: an exception raised from a signal handler can be swallowed by a task.
+        self.stop()
+        os._exit(130)
 
     def wait_up(self) -> None:
         import http.client
@@ -465,6 +470,7 @@ class LightResult:
     target_rate: float
     achieved_rate: float
     window_s: float
+    unfinished: int
 
     def as_dict(self) -> dict[str, Any]:
         everything = [v for vs in self.classes.values() for v in vs]
@@ -477,6 +483,7 @@ class LightResult:
             else None,
             "issued": self.issued,
             "completed": self.completed,
+            "unfinished_at_drain_cutoff": self.unfinished,
             "completed_rate": round(self.completed / self.window_s, 2),
             "window_s": round(self.window_s, 3),
             "all": summarize(everything),
@@ -498,6 +505,7 @@ async def run_light(
     conns: int,
     seed: int,
     warmup: float = 1.0,
+    drain: float = 10.0,
 ) -> LightResult:
     loop = asyncio.get_running_loop()
     rng = random.Random(seed)
@@ -512,8 +520,10 @@ async def run_light(
     t0 = loop.time() + 0.3
     last_done = [t0]
     completed = [0]
+    inflight: dict[int, tuple[float, str]] = {}
 
     async def unit(i: int, sched: float, kind: int, doc_id: int, state: str) -> None:
+        inflight[i] = (sched, ("get", "search", "pair")[kind])
         conn = await pool.get()
         try:
             if kind == 0:
@@ -538,9 +548,11 @@ async def run_light(
                 classes[what].append(int((end - sched) * 1e6))
             completed[0] += 1
             last_done[0] = end
+            inflight.pop(i, None)
         except Exception as e:
             counts.exc(e, "light")
             conn = Conn(host, port)
+            inflight.pop(i, None)
         finally:
             pool.put_nowait(conn)
 
@@ -556,7 +568,16 @@ async def run_light(
             await asyncio.sleep(0)
         tasks.append(loop.create_task(unit(i, sched, kind, rng.randint(1, accounts), rng.choice(rows.states))))
     issue_span = max(1e-9, loop.time() - t0)
-    await asyncio.gather(*tasks)
+    # A saturated server leaves a backlog; wait `drain` seconds for it, then count what is left at its age.
+    _done, pending = await asyncio.wait(tasks, timeout=drain)
+    cutoff = loop.time()
+    for task in pending:
+        task.cancel()
+    await asyncio.gather(*pending, return_exceptions=True)
+    for sched, what in inflight.values():
+        if sched - t0 >= warmup:
+            classes[what].append(int((cutoff - sched) * 1e6))
+    unfinished = len(inflight)
     window = max(1e-9, last_done[0] - t0)
     for _ in range(pool.qsize()):
         await pool.get_nowait().close()
@@ -564,7 +585,7 @@ async def run_light(
     # Achieved is the rate the generator really sent at: units issued over the span it took to issue them. A
     # generator that falls behind its schedule misses the target; a slow server shows in the latencies instead.
     achieved = max(0, total - 1) / issue_span if total > 1 else rate
-    return LightResult(classes, counts, total, completed[0], rate, achieved, window)
+    return LightResult(classes, counts, total, completed[0], rate, achieved, window, unfinished)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -676,7 +697,10 @@ async def run_heavy(
             elif i % 64 == 0:
                 await asyncio.sleep(0)
             tasks.append(loop.create_task(one(i, sched)))
-        await asyncio.gather(*tasks)
+        _done, pending = await asyncio.wait(tasks, timeout=10.0)
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
 
     if open_rate > 0:
         await open_search(open_rate)
@@ -848,6 +872,7 @@ async def saturate(ctx: Ctx) -> dict[str, Any]:
             and e["light"]["rate_error"] is not None
             and e["light"]["rate_error"] <= 0.05
             and not e["light"]["errors"]["http_503"]
+            and e["light"]["unfinished_at_drain_cutoff"] == 0
         )
         trace.append({"rate": rate, "p99_us": q["p99_us"], "good": ok})
         return ok
@@ -915,8 +940,8 @@ async def amain(args: argparse.Namespace) -> int:
         # One load of `accounts` for the whole gate sequence: saturate, T5 (unloaded, loaded, same-index), T8.
         sat = await saturate(ctx)
         extra["saturate"] = sat
-        args.rate = max(50.0, math.floor(sat["saturating_rate"] / 2 / 50) * 50)
-        ctx.args_rate_note = f"light rate {args.rate:.0f}/s is half the saturating rate, rounded down to 50"
+        args.rate = max(10.0, math.floor(sat["saturating_rate"] / 2 / 5) * 5)
+        ctx.args_rate_note = f"light rate {args.rate:.0f}/s is half the saturating rate, rounded down to 5"
         log(ctx.args_rate_note)
         await phase(ctx, "unloaded", args.rate, False, args.duration)
         await phase(ctx, "loaded", args.rate, True, args.duration)
@@ -1093,10 +1118,10 @@ def main() -> int:
         "--suite", action="store_true", help="saturate, unloaded, loaded, same-index and both overloads on one load"
     )
     ap.add_argument("--saturate", action="store_true")
-    ap.add_argument("--saturate-start", type=float, default=250.0)
+    ap.add_argument("--saturate-start", type=float, default=25.0)
     ap.add_argument("--saturate-max", type=float, default=20000.0)
     ap.add_argument("--bisect-steps", type=int, default=4)
-    ap.add_argument("--step-secs", type=float, default=8.0)
+    ap.add_argument("--step-secs", type=float, default=10.0)
     ap.add_argument(
         "--saturating-rate",
         type=float,
