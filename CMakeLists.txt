@@ -777,7 +777,7 @@ FetchContent_MakeAvailable(task)
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 828cd4a7873ff67dd2666bc0bc980e3f1cd71a98)
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 14dbbbb762362edde5bb34ace7019a0b11f088c3)
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
