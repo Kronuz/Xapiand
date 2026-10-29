@@ -113,6 +113,8 @@ the `Query` is built (`src/engine/query.cc`), by both engines, with a 400 that s
   alternatives (these three are the served-shape revert checks), NEAR read as PHRASE, alternatives not served at all, PHRASE accepting an AND, SYNONYM accepting anything,
   any wildcard combiner accepted, any append operator accepted. prospect: `.scratch/mutants.sh`, 7 of 7 killed by `multi_phrase_test` (offset, NEAR window, distinct positions,
   score, confirmation, merged slot terms, first term only), ASan+UBSan clean.
+- ASan+UBSan (Homebrew LLVM 22, `-fsanitize=address,undefined -fno-sanitize-recover=undefined`, RelWithDebInfo, RapidJSON patched as in `gate7a-l2`): `test_engine_search_strata` (477,059
+  checks, with the Xapian comparison on), `test_engine_query` (22,439), `test_text` (13,205) and `test_engine_search` (1,786) pass with no report.
 - `fuzz_text` 90 s: 3,876,800 texts, 2,932,131 parsed, 944,669 rejected, no violation (a phrase over alternatives stands for its tree there).
 
 ## Done (commits, Xapiand)
