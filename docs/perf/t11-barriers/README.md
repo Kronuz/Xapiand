@@ -18,7 +18,8 @@ again (the A/A). One binary build per arm (`RelWithDebInfo`, frame pointers, no 
 | B1 = E1 | strata `0765e28`: directory folded into the data batch | 3 full |
 | B2 = E2 | strata `307d08b`: B1 plus the manifest temporary ordered with a barrier | 2 full, 1 barrier |
 | B3 = E3 | strata `d01a1c4`: one ordering point for data, directory and temporary | 1 full, 1 barrier |
-| F | final heads, pinned through prospect `23207cc` (strata `cccb2f9`, completion `3665ee7`); E3 without the dropped per-file call | 1 full, 1 barrier |
+| F | heads before the TSan fix, pinned through prospect `23207cc` (strata `cccb2f9`, completion `3665ee7`); E3 without the dropped per-file call | 1 full, 1 barrier |
+| F2 | landing heads: prospect `b9b3c02`, strata `e471404` (adds the live-field fix below), completion `3665ee7` | 1 full, 1 barrier |
 
 A is master's code with completion at `main` (it differs from the Xapiand pin `7734544` by CL-2's owner-lock work, which is off this path).
 
@@ -44,12 +45,28 @@ Second grid, base against the final heads F (Xapian mean 0.4203 ms, spread 3.2%)
 | Whole process CPU per doc (ms) | 0.8239, 1.5% | 0.8126, 1.9% | 0.8162, 2.1% | 0.659 (A 0.665): unchanged |
 | Wall of the 20000-document RESTORE (s) | 3.44, 5.1% | 3.42, 1.5% | 2.90, 1.9% | 0.558 (A 0.662): 16% less |
 | Docs/s | 5817 | 5849 | 6893 | 1.79x Xapian's (A 1.51x): 18% more than base |
-| Peak RSS (MB, 3 runs) | 835 to 853 | | 857 to 863 | about +2% (not explained; within a few runs' reach) |
+| Peak RSS (MB, 3 runs) | 835 to 853 | | 857 to 863 | about +2% (not explained) |
 | Index directory after `?commit` (KB, files) | 2196, 60 | | 2124 to 2196, 60 | unchanged |
+
+### Confirm on the landing heads (F2), five valid rounds, a warm-up run first
+
+strata's TSan job found that F's whole-ref update raced with a background merge reading `doc_count` (fixed: the commit now writes only `live`, `live_count`,
+`live_length`, as before). F2 is that fix; the arms were rebuilt and re-measured, the host quieter than in the grid above (everything is faster; the ratios are what compare).
+
+| Metric | A | A2 | F2 | F2 / Xapian (A / Xapian) |
+|---|---|---|---|---|
+| Engine CPU per doc, gate estimator (ms) | 0.1750, spread 8.7% | 0.1798, 6.1% | 0.1400, 13.7% | **0.372** (pairs 0.365 0.368 0.364 0.355 0.408); A 0.465, A2 0.478 (Xapian 0.3763, 2.3%) |
+| Engine CPU per doc, sample count (ms) | 0.1721 | 0.1757 | 0.1381 | 0.349 (A 0.435) |
+| Engine on the critical thread (ms/doc) | 0.0169, 18.1% | 0.0169, 8.9% | 0.0158, 19.3% | 0.212 (A 0.226): unchanged |
+| Whole process CPU per doc (ms) | 0.7763, 3.6% | 0.7699, 3.3% | 0.7581, 1.7% | 0.665 (A 0.681): 2% less, at the edge of the spread |
+| Wall of the RESTORE (s) | 3.12, 2.4% | 3.10, 1.3% | 2.59, 2.4% | 0.580 (A 0.699): 17% less |
+| Docs/s | 6407 | 6455 | 7711 | 1.72x Xapian's (A 1.43x): 20% more than base |
+| Peak RSS (MB, 3 runs) | 838, 856, 847 | | 870, 878, 869 | +3% (25 MB), consistent over six runs of F and F2; cause not found |
+| Index directory after `?commit` (KB, files) | 2196, 60 | | 2124, 60 | unchanged in files |
 
 With the first-exec round kept (five rounds), E1's mean pair is 0.438 (one invalid pair 0.312) and F's 0.362 (one invalid pair 0.221); see `raw/INVALID.md`.
 
-All four axes: time improves (16% less wall, 18% more docs/s), throughput the same figure, memory about +2% RSS (3 runs per arm, unexplained, small), disk unchanged
+All four axes: time improves (16% less wall, 18% more docs/s), throughput the same figure, memory about +3% RSS (3 runs per arm, unexplained, small), disk unchanged
 (same 60 files). What the estimator measures: whole-process CPU did not move (0.824 to 0.816 ms per document), because a flush wait
 is blocked time, not CPU. The engine row falls because the profile counts the wait as busy (the same property the T11 README noted); the
 real effects are 0.54 s less wall per 20000 documents and a commit that blocks its writer for about 25 ms instead of 86 ms (probe).
@@ -97,7 +114,7 @@ the commit is durable; a failed write leaves the next commit to redo it under ne
 ## Correctness
 
 - completion: 16 of 16 tests, including a new model with a barrier call (stage-before-flush, one barrier on the directory's device, full flushes elsewhere, faults and `EINTR` at each call); CI dispatched on `perf/commit-barriers`.
-- strata: 57 of 57 tests; `faultfs` models the ordering point (after a crash, a change made after it survives only if everything staged before it did; both outcomes reachable, 400 seeds). The crash suites (index, lifecycle, directory, background merge, reclaim, retention, fields) enumerate crash points through commits.
+- strata: 57 of 57 tests (macOS Release; the Linux TSan job found the ref race fixed in F2 and is re-run on `e471404`); `faultfs` models the ordering point (after a crash, a change made after it survives only if everything staged before it did; both outcomes reachable, 400 seeds). The crash suites (index, lifecycle, directory, background merge, reclaim, retention, fields) enumerate crash points through commits.
 - Mutants die: with the ordering mark removed from `faultfs`, lifecycle, index and directory fail (E2 and E3 each); with the manifest temporary left out of the ordered call, or the data files left out, the same three fail.
 - prospect, same suites on the search layout: 9 of 9 (`index`, `lifecycle`, `directory`, `background_merge`, `reclaim`, plain and mapped).
 - Xapiand: `ctest` 28 of 28; `harness/engine_crash_check.sh` PASS (T8: Xapian 5581 of 5581 acknowledged writes recovered, strata 6247 of 6247, `index::check` passes on 5 shards after each kill and restart).
@@ -109,4 +126,4 @@ macOS x86_64 APFS only. Linux and FreeBSD: both calls fall back to `sync_files` 
 
 ## Branch heads
 
-completion `perf/commit-barriers` `3665ee7`; strata `perf/commit-barriers` `cccb2f9`; prospect `perf/commit-barriers` `23207cc`; Xapiand `phase7a/t11-barriers` (local, not pushed).
+completion `perf/commit-barriers` `3665ee7`; strata `perf/commit-barriers` `e471404`; prospect `perf/commit-barriers` `b9b3c02`; Xapiand `phase7a/t11-barriers` (local, not pushed; head recorded in the ledger).

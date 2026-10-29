@@ -1,0 +1,383 @@
+{
+ "label": "xapian_3",
+ "docs": 20000,
+ "bin": "/Users/kronuz/code/Kronuz/Xapiand-wt/t11-barriers/.scratch/bin/xapiand.A",
+ "schema": null,
+ "smoke": {
+  "wall_s": 4.474353381898254,
+  "docs_per_s": 4469.919627026633,
+  "user_s": 17.6008,
+  "sys_s": 5.202953,
+  "cpu_ms_per_doc": 1.14018765
+ },
+ "profile_wall_s": 7.794202578952536,
+ "critical_lockwait_pct": 37.07890572009948,
+ "profile": {
+  "wall_samples": 5645,
+  "busy_samples": 24137,
+  "busy_cores": 4.275819309123118,
+  "layers": [
+   {
+    "layer": "WAL (delete/write/replay)",
+    "status": "replaced 7b",
+    "samples": 5002,
+    "cpu_pct": 20.7233707585864,
+    "cores": 0.8860938883968114,
+    "top_functions": [
+     [
+      "delete_files(std::basic_string_view, std::vector const&)",
+      4540
+     ],
+     [
+      "BlockingConcurrentQueue::wait_dequeue_timed(DatabaseWALWriterTask&, long long)",
+      210
+     ],
+     [
+      "DatabaseWALWriter::enqueue(DatabaseWALWriterTask&&)",
+      146
+     ]
+    ],
+    "critical_pct": 0.9947999095636446
+   },
+   {
+    "layer": "Xapian::Document in-memory build",
+    "status": "replaced S1",
+    "samples": 2388,
+    "cpu_pct": 9.89352446451506,
+    "cores": 0.42302922940655446,
+    "top_functions": [
+     [
+      "Xapian::Document::Internal::add_posting(std::basic_string_view, unsigned int, unsigned int)",
+      1162
+     ],
+     [
+      "Xapian::Document::Internal::add_term(std::basic_string_view, unsigned int)",
+      618
+     ],
+     [
+      "Xapian::Document::Internal::~Internal()",
+      306
+     ]
+    ],
+    "critical_pct": 4.273117793352928
+   },
+   {
+    "layer": "Xapian engine (add/replace/commit)",
+    "status": "replaced S1",
+    "samples": 5537,
+    "cpu_pct": 22.93988482412893,
+    "cores": 0.9808680248007086,
+    "top_functions": [
+     [
+      "Inverter::set_positionlist(unsigned int, std::basic_string_view, std::basic_string_view)",
+      1055
+     ],
+     [
+      "io_read_block(int, char*, unsigned long, long long, long long)",
+      905
+     ],
+     [
+      "CompressionStream::compress(char const*, unsigned long*)",
+      533
+     ]
+    ],
+    "critical_pct": 28.826588288491973
+   },
+   {
+    "layer": "Strata engine (add/replace/commit)",
+    "status": "replaced S1",
+    "samples": 0,
+    "cpu_pct": 0.0,
+    "cores": 0.0,
+    "top_functions": [],
+    "critical_pct": 0.0
+   },
+   {
+    "layer": "Shard checkout / sync_wait / lock",
+    "status": "replaced 7c",
+    "samples": 2204,
+    "cpu_pct": 9.131209346646228,
+    "cores": 0.3904340124003543,
+    "top_functions": [
+     [
+      "ShardEndpoint::checkout(int, double, std::packaged_task*)",
+      1458
+     ],
+     [
+      "ShardEndpoint::_writable_checkout(int, double, std::packaged_task*, std::chrono::time_point, std::unique_lock&",
+      246
+     ],
+     [
+      "ShardEndpoint::checkin(std::shared_ptr&)",
+      228
+     ]
+    ],
+    "critical_pct": 12.819353380058784
+   },
+   {
+    "layer": "Term generation (analysis, snowball)",
+    "status": "stays",
+    "samples": 1517,
+    "cpu_pct": 6.284956705472926,
+    "cores": 0.2687333923826395,
+    "top_functions": [
+     [
+      "Schema::index_item(engine::Document&, MsgPack const&, unsigned long)",
+      584
+     ],
+     [
+      "analysis::word_scanner::word(char const*, char const*)",
+      250
+     ],
+     [
+      "analysis::term_generator::emit(std::basic_string const&, bool, GenerateTerms::text(engine::Document&, std::bas",
+      181
+     ]
+    ],
+    "critical_pct": 0.0
+   },
+   {
+    "layer": "Schema processing",
+    "status": "stays",
+    "samples": 2347,
+    "cpu_pct": 9.723660769772549,
+    "cores": 0.4157661647475642,
+    "top_functions": [
+     [
+      "Schema::index_subproperties(MsgPack const*&, MsgPack*&, std::basic_string_view, MsgPack const*, std::deque*)",
+      415
+     ],
+     [
+      "Schema::index_new_object(MsgPack const*&, MsgPack const&, MsgPack*&, engine::Document&, std::basic_string cons",
+      386
+     ],
+     [
+      "Schema::dispatch_process_concrete_properties(MsgPack const&, std::deque&, std::pair**, std::pair**)",
+      207
+     ]
+    ],
+    "critical_pct": 0.0
+   },
+   {
+    "layer": "Data record build (zstd, locator)",
+    "status": "stays",
+    "samples": 2077,
+    "cpu_pct": 8.605046194638936,
+    "cores": 0.3679362267493357,
+    "top_functions": [
+     [
+      "finalise_write(engine::Document&, engine::WriteResult&, std::optional const&)",
+      316
+     ],
+     [
+      "ZSTD_compressBlock_doubleFast @libzstd.1.5.7.dylib",
+      309
+     ],
+     [
+      "HUF_buildCTable_wksp @libzstd.1.5.7.dylib",
+      161
+     ]
+    ],
+    "critical_pct": 8.048835631924034
+   },
+   {
+    "layer": "JSON/MsgPack decode",
+    "status": "stays",
+    "samples": 506,
+    "cpu_pct": 2.0963665741392883,
+    "cores": 0.08963684676705048,
+    "top_functions": [
+     [
+      "msgpack::v1::adaptor::object_with_zone::operator()(msgpack::v1::object::with_zone&, msgpack::v1::object const&",
+      107
+     ],
+     [
+      "rapidjson::GenericReader::ParseString(rapidjson::EncodedInputStream&, rapidjson::GenericDocument&, bool)",
+      94
+     ],
+     [
+      "msgpack::v1::adaptor::object_with_zone::operator()(msgpack::v1::object::with_zone&, rapidjson::GenericValue co",
+      67
+     ]
+    ],
+    "critical_pct": 0.22609088853719195
+   },
+   {
+    "layer": "HTTP/reactor/request parsing",
+    "status": "stays",
+    "samples": 74,
+    "cpu_pct": 0.30658325392550856,
+    "cores": 0.013108945969884853,
+    "top_functions": [
+     [
+      "Request::append(char const*, unsigned long)",
+      18
+     ],
+     [
+      "asio::detail::timer_queue::get_ready_timers(asio::detail::op_queue&)",
+      15
+     ],
+     [
+      "asio::detail::socket_ops::non_blocking_recv1(int, void*, unsigned long, int, bool, std::error_code&, unsigned ",
+      13
+     ]
+    ],
+    "critical_pct": 0.0
+   },
+   {
+    "layer": "Doc pipeline glue (prepare/index)",
+    "status": "stays",
+    "samples": 2451,
+    "cpu_pct": 10.154534532046236,
+    "cores": 0.4341895482728078,
+    "top_functions": [
+     [
+      "DocIndexer::operator()()",
+      1197
+     ],
+     [
+      "engine::Document::field(std::basic_string_view, engine::FieldKind)",
+      285
+     ],
+     [
+      "DatabaseHandler::prepare(MsgPack const&, unsigned long long, MsgPack const&, Data&, unsigned long)",
+      170
+     ]
+    ],
+    "critical_pct": 7.7323083879719645
+   },
+   {
+    "layer": "other/unattributed (malloc, libc, runtime)",
+    "status": "stays",
+    "samples": 34,
+    "cpu_pct": 0.14086257612793637,
+    "cores": 0.006023029229406555,
+    "top_functions": [
+     [
+      "",
+      18
+     ],
+     [
+      "_nanov2_free @libsystem_malloc.dylib",
+      9
+     ],
+     [
+      "__psynch_cvsignal @libsystem_kernel.dylib",
+      1
+     ]
+    ],
+    "critical_pct": 0.0
+   }
+  ],
+  "thread_groups": {
+   "main": {
+    "idle": 5645
+   },
+   "Xapiand:WL": {
+    "idle": 40301,
+    "busy": 4859,
+    "lock": 1
+   },
+   "Xapiand:DP": {
+    "idle": 49223,
+    "lock": 37,
+    "busy": 7196,
+    "lockwait": 31
+   },
+   "Xapiand:DI": {
+    "idle": 151287,
+    "lock": 1104,
+    "busy": 11129,
+    "lockwait": 6934
+   },
+   "unnamed": {
+    "idle": 174388,
+    "lock": 63,
+    "busy": 607
+   },
+   "Xapiand:DBCL": {
+    "idle": 5645
+   },
+   "Xapiand:AC--": {
+    "idle": 5644,
+    "busy": 1
+   },
+   "Xapiand:AC": {
+    "idle": 56263,
+    "lock": 15,
+    "busy": 187
+   },
+   "Xapiand:FS--": {
+    "idle": 5645
+   },
+   "Xapiand:FS": {
+    "idle": 45076,
+    "busy": 84,
+    "lock": 6
+   },
+   "Xapiand:DU--": {
+    "idle": 5645
+   },
+   "Xapiand:DU": {
+    "idle": 22577,
+    "busy": 3,
+    "lock": 1
+   },
+   "Xapiand:SU--": {
+    "idle": 5645
+   },
+   "Xapiand:SU": {
+    "idle": 22576,
+    "busy": 4
+   },
+   "Xapiand:IU--": {
+    "idle": 5645
+   },
+   "Xapiand:SE": {
+    "idle": 22575,
+    "busy": 5,
+    "lock": 2
+   },
+   "Xapiand:PU--": {
+    "idle": 5645
+   },
+   "Xapiand:PU": {
+    "idle": 22572,
+    "busy": 8
+   },
+   "Xapiand:TR--": {
+    "idle": 5645
+   },
+   "Xapiand:TR": {
+    "idle": 45139,
+    "busy": 21,
+    "lock": 10
+   },
+   "Xapiand:LOG": {
+    "idle": 5612,
+    "busy": 33
+   }
+  },
+  "critical_thread": "Thread_83660496: Xapiand:DI13",
+  "dir_count_in_data": 15,
+  "replaced_cpu_pct": 62.68798939387662,
+  "engine_share": {
+   "cpu_ms_per_doc": 0.39625,
+   "critical_thread_ms_per_doc": 0.0732,
+   "cpu_pct": 32.83340928864399,
+   "critical_pct": 33.0997060818449,
+   "cpu_ms_per_doc_by_smoke": 0.3743624777830717
+  }
+ },
+ "amdahl": {
+  "physical_cores": 8,
+  "baseline_docs_per_s": 4469.919627026633,
+  "cpu_ms_per_doc": 1.14018765,
+  "remaining_cpu_ms_per_doc_without_replaced_layers": 0.42542693689770894,
+  "docs_per_s_cpu_bound_without_replaced_layers": 18804.639072310427,
+  "docs_per_s_cpu_bound_without_xapian_only": 10446.248426179849,
+  "single_thread_front_end_ms_per_doc": 0.02739813717529105,
+  "docs_per_s_front_end_one_thread": 36498.83178560942,
+  "note": "CPU-bound estimates: cores x 1000 / remaining CPU ms per doc, assuming the remaining stages scale across cores"
+ }
+}
