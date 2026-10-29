@@ -6,7 +6,81 @@ engine chosen per run by `XAPIAND_ENGINE` (D8's override). newman 6.2.3. Rows ar
 Functional runs under `quiet light`, the T11 timing under `quiet exclusive`. Nothing was fixed; every failure is recorded
 for the lead.
 
-## Results
+## Rerun
+
+Rerun on Xapiand master `8f6332a01` (the merge of `phase7a/t11`; every earlier fix included), 2026-10-29, macOS x86_64 (16
+logical CPUs, APFS), one binary for both engines (`-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer
+-DLTO=OFF -DBUILD_TESTS=ON`, engine chosen per run by `XAPIAND_ENGINE`), newman 6.2.3. Functional rows under `quiet light`,
+T11 under `quiet exclusive`. The harnesses are those of `7d017a818`; nothing was fixed and no target was changed. The sections
+after this one are the first run on `9fa890ecc`, kept as history.
+
+| Row | Target | Result | Status |
+|---|---|---|---|
+| T6 E2E on strata | Zero assertion regressions against the Xapian baseline | Xapian 566/566, strata 566/566 (335 requests, 0 uncovered); 0 regressions, 0 HTTP status differences on 335 matched requests | PASS |
+| T7 bodies | Every difference listed and justified | 5 of 335 bodies differ (listed below), all justified. Hit order, scores, `total` and `count` identical on all 92 responses with hits (`search_order_diff.py`) | PASS |
+| T8 crash recovery | Same document set as Xapian after `kill -9`; strata digest check passes | A: 50 PUTs without a commit, `kill -9`: both engines recover the same 50 documents, every `n` right, the restart logs the WAL replay. B: sequential PUTs, `kill -9` after 4 s: Xapian recovered 6063 of 6063 acknowledged writes, strata 4592 of 4592; none lost, none duplicated, all intact. The strata check (`index::check`) passes on all 5 shards right after each kill and after each restart and second kill (4 runs of 5 shards) | PASS |
+| T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
+| Unit tests | All pass | `ctest`: 28 of 28 pass (engine_document, engine_fields, engine_census, engine_query, engine_sort, engine_shard, engine_read, engine_search, engine_search_strata, engine_callbacks, engine_error, engine_replay, engine_strata, wal_replay, pool, blocking_guard, offload_followups, serialise, text and the rest) | PASS |
+| T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides |
+
+### T11 detail
+
+`harness/profile_bulk.sh` as in the first run (20000 accounts documents by one RESTORE `?commit`, one fresh `--solo` node
+per run, `sample(1)`), five rounds per hold, each round one xapian run then one strata run, under `quiet exclusive`
+(raw `.scratch/t11` and `.scratch/t11b` of the worktree, about 25 s per run). Spread is (max - min) / mean over the ten runs.
+
+| Metric | Xapian, 10 runs | Strata, 10 runs | Strata / Xapian |
+|---|---|---|---|
+| Engine CPU per document, smoke CPU x share (ms) | mean 0.382, spread 7.2% | mean 0.197, spread 16.3% | 0.515 (hold 1: 0.522, hold 2: 0.508) |
+| Engine CPU per document, from samples (ms) | mean 0.422, spread 4.8% | mean 0.195, spread 24.9% | 0.461 (0.478, 0.444) |
+| Engine on the critical thread per document (ms) | mean 0.0799, spread 8.3% | mean 0.0170, spread 10.6% | 0.213 (0.217, 0.208) |
+| Engine share of CPU / of critical thread | 32.8% / 33.8% | 24.5% / 19.8% | 0.75 / 0.59 |
+| Whole process CPU per document (ms) | mean 1.166, spread 2.9% | mean 0.803, spread 3.4% | 0.688 (pairs 0.68 to 0.70) |
+| Bulk docs/s | 4160 | 6097 | 1.47 (pairs 1.43 to 1.49) |
+
+Why the CPU ratio is 0.51 to 0.52 where the T11 branch measured 0.468, on the same code (`8f6332a01` is the T11 merge; no
+engine commit since): strata's engine row is 0.197 ms per document here against 0.176 there, Xapian's 0.382 against 0.375,
+and the whole process is within 3% of the T11 numbers (strata 0.803 against 0.780, Xapian 1.166 against 1.141). The part
+that varies inside strata's row is `strata::basic_index::commit_files()`, which the T11 record attributes to `F_FULLFSYNC`
+waits that the profile counts as busy: 655 to 1154 samples per run (17 to 26% of the row), and it moves with the row total (the runs
+with 1125 and 1154 samples are the 0.216 and 0.213 ms runs, the one with 655 is a 0.184 run). The rest of the row is steady,
+2800 to 3300 samples. This is the observed correlation, not a proven cause. If it holds, the margin to 0.5 depends on the
+device flush latency of the host on the day (the disk is 94% full now); the critical-path and whole-process rows do
+not move with it. Whole-process CPU per document is 31% less than Xapian's (0.803 against 1.166 ms), the figure for what the
+replacement saves.
+
+### T7: the 5 body differences (`harness/bodydiff.py`)
+
+1. `POST /twitter/user/`: generated `_id` (volatile).
+2. `INFO /some/resource/name`, `POST /some/resource/name`, `GET /some/resource/name:info`: both engines answer 404; the
+   message is "No glass database found at path 'some/resource/.__1'" on Xapian and "No such database: some/resource/.__1" on
+   strata (D6/D9: errors are engine kinds). Wording only.
+3. `GET /:metrics`: counters (volatile).
+
+The first run's other differences (refused `INFO` term views and searches, the `doc_len_lower`/`doc_len_upper` bounds,
+the `RESTORE /twitter/tweets/` failure R1) no longer appear in the diff.
+
+### Deviations and residuals of the rerun
+
+1. T11 CPU is 0.515x on the gate's estimator, over the 0.5 target by 3%, and under it (0.461x) on the sample-count
+   estimator; both are in the table because the two estimators sit on either side of the line. The target is unchanged
+   and the status is FAIL by the estimator the T11 record names. The lead rules on which estimator the row means, or on the
+   open item in `docs/perf/t11/README.md` (fold the first directory barrier of a commit into the data batch), which targets
+   the `commit_files` wait.
+2. T11 was measured on macOS x86_64, APFS, only; the numbers expire with this commit and this machine. Whether
+   `F_FULLFSYNC` waits count as engine CPU is a property of this harness on macOS; Linux, FreeBSD and arm64 are not measured.
+3. The assertion count is 566 here against 576 in the first run; the suite changed between the two runs and the
+   difference was not traced. Both engines pass the same 566.
+4. T8 B measures acknowledged writes against the async WAL window (2 s grace; 0 older and 0 newer writes missing in this
+   run); the grace is not a durability claim. The cut point differs per run, so the counts (6063, 4592) are not comparable.
+5. `:check` is still not engine-aware (D1); the strata check ran through `tests/strata_check_tool.cc`, linked against the
+   server's objects.
+6. The benchmarks ran a copy of `bin/xapiand` from a `-DBUILD_TESTS=ON` tree; the unit tests are from the same tree.
+
+## First run (history)
+
+Results of the first run:
+
 
 | Row | Target | Result | Status |
 |---|---|---|---|
