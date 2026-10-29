@@ -411,6 +411,19 @@ locate(Core& core, docid did)
 	return std::nullopt;
 }
 
+// The version of the live document with this id, or none. It reads the buffers too, so it flushes nothing.
+std::optional<rev>
+version_of(Core& core, docid did)
+{
+	if (did == 0 || did > core.index->last_docid()) {
+		return std::nullopt;
+	}
+	if (const auto version = core.index->find_docid(did)) {
+		return static_cast<rev>(*version);
+	}
+	return std::nullopt;
+}
+
 // The live documents of the flushed segments (the manifest's count waits for a commit).
 doccount
 live_count(Core& core)
@@ -641,11 +654,11 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 					throw Error(errc::invalid, "The key belongs to another document");
 				}
 				stored = static_cast<rev>(found->second);
-			} else if (const auto located = locate(core, did)) {
-				stored = located->version;
+			} else {
+				stored = version_of(core, did);
 			}
-		} else if (const auto located = locate(core, did)) {
-			stored = located->version;
+		} else {
+			stored = version_of(core, did);
 		}
 		WriteResult info;
 		info.did = did;
@@ -735,12 +748,12 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto located = locate(core, did);
-		if (!located) {
+		const auto stored = version_of(core, did);
+		if (!stored) {
 			throw Error(errc::doc_not_found, "Document not found");
 		}
 		if (local && expected_version) {
-			check_version(expected_version, located->version);
+			check_version(expected_version, stored);
 		}
 		prospect::transaction t;
 		t.ops.emplace_back();
