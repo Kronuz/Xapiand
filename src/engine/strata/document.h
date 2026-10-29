@@ -39,32 +39,27 @@
 // The strata implementation of the engine seam. Only files in this directory name strata or prospect.
 namespace engine::strata {
 
-// One term of a document: its within-document frequency and positions.
+// One term of a document: its bytes in the document's arena, its within-document frequency, and its positions
+// as a chain through the document's position nodes, in arrival order.
 struct DocTerm {
-	std::string term;
+	static constexpr std::uint32_t none = 0xffffffffu;
+	std::uint32_t offset = 0;
+	std::uint32_t size = 0;
 	termcount wdf = 0;
 	std::uint32_t hash = 0;
-	std::vector<termpos> positions;
+	std::uint32_t first = none;
+	std::uint32_t last = none;
+	std::uint32_t count = 0;
 };
 
 // The terms of one field of a document, in the order they first arrived, and the widest kind the document
-// asked for. A field with more than a few terms finds a term by an open-addressing table over their hashes.
-class DocField {
-public:
+// asked for. A field with more than a few terms finds a term by an open-addressing table over their hashes:
+// slots hold a term's index plus one, 0 when empty, and the size is a power of two at least twice the terms.
+struct DocField {
 	std::string name;
 	FieldKind kind = FieldKind::boolean;
 	std::vector<DocTerm> terms;
-
-	// The term, created empty when absent.
-	DocTerm& term(std::string_view bytes);
-	// The term, or null.
-	const DocTerm* find(std::string_view bytes) const;
-
-private:
-	// Slots hold a term's index plus one, 0 when empty; the size is a power of two at least twice the terms.
-	std::vector<std::uint32_t> table_;
-
-	void rebuild(std::size_t slots);
+	std::vector<std::uint32_t> table;
 };
 
 // The document of the strata implementation: its terms by field, values, stored data and key, held in
@@ -95,6 +90,13 @@ public:
 	const std::vector<DocField>& fields() const noexcept { return fields_; }
 	// The field of this name, or null.
 	const DocField* field(std::string_view name) const noexcept;
+	// The term under a field, or null.
+	const DocTerm* find_term(const DocField& field, std::string_view bytes) const noexcept;
+	const DocTerm* find_term(std::string_view field, std::string_view bytes) const noexcept;
+	std::string_view term_bytes(const DocTerm& term) const noexcept { return std::string_view(bytes_).substr(term.offset, term.size); }
+	// Replaces `out` with the term's positions, increasing and without repeats.
+	void positions_into(const DocTerm& term, std::vector<termpos>& out) const;
+	std::vector<termpos> positions_of(const DocTerm& term) const;
 	const std::map<valueno, std::string>& values() const noexcept { return values_; }
 
 	// The version this document was written at: the shard stamps it when it writes, the log keeps it,
@@ -105,9 +107,6 @@ public:
 	// its version.
 	bool replayed() const noexcept { return replayed_; }
 
-	// Sorts and deduplicates every term's positions; the shard calls it before it reads them.
-	void normalise();
-
 	// Replaces this document's content with what `serialised` holds. Raises errc::syntax on bytes
 	// that are not a serialised document.
 	void unserialise_from(std::string_view serialised);
@@ -116,8 +115,17 @@ private:
 	// The term under a field, created empty when absent; the field's kind widens to the call's.
 	DocTerm& term_of(const Field& field, std::string_view term);
 	DocField& field_of(const Field& field);
+	DocTerm& intern(DocField& field, std::string_view bytes);
+	void rebuild(DocField& field, std::size_t slots) const;
+	void push_position(DocTerm& term, termpos position);
 
 	std::vector<DocField> fields_;
+	std::string bytes_;                // the bytes of every term
+	struct Node {
+		termpos position;
+		std::uint32_t next;
+	};
+	std::vector<Node> nodes_;          // the positions of every term, chained per term
 	std::vector<std::uint32_t> slot_;  // the host's field id to its index in fields_ plus one, 0 when not seen
 	std::map<valueno, std::string> values_;
 	std::string data_;

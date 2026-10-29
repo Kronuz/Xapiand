@@ -351,20 +351,19 @@ static void test_strata_fields() {
 	doc.add_boolean_term(marker, std::string());
 	doc.add_term(doc.field("title.S"), "bob", 3);
 	auto& native = engine::strata::strata_document(doc);
-	native.normalise();
 	CHECK_EQ(native.key(), "Kid");
 	CHECK_EQ(native.key_wdf(), 1u);
 	CHECK_EQ(native.fields().size(), 2u);
 	const auto& text = *native.field("title.S");
 	CHECK_TRUE(text.kind == FieldKind::text);
 	CHECK_EQ(text.terms.size(), 2u);
-	CHECK_EQ(text.find("bob")->wdf, 5u);
-	CHECK_EQ(text.find("smith")->wdf, 2u);
-	CHECK_EQ(text.find("smith")->positions, (std::vector<engine::termpos>{ 2, 4 }));
-	CHECK_TRUE(text.find("jones") == nullptr);
+	CHECK_EQ(native.find_term("title.S", "bob")->wdf, 5u);
+	CHECK_EQ(native.find_term("title.S", "smith")->wdf, 2u);
+	CHECK_EQ(native.positions_of(*native.find_term("title.S", "smith")), (std::vector<engine::termpos>{ 2, 4 }));
+	CHECK_TRUE(native.find_term("title.S", "jones") == nullptr);
 	// The same bytes under another field are another term; the empty term is a term.
 	CHECK_TRUE(native.field("title.")->kind == FieldKind::terms);
-	CHECK_EQ(native.field("title.")->find("")->wdf, 0u);
+	CHECK_EQ(native.find_term("title.", "")->wdf, 0u);
 
 	// The log line carries the fields: it reads back to the same document.
 	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
@@ -385,17 +384,16 @@ static void test_strata_many_terms() {
 		}
 	}
 	auto& native = engine::strata::strata_document(doc);
-	native.normalise();
 	CHECK_EQ(native.field("a.S")->terms.size(), 300u);
 	CHECK_EQ(native.field("b")->terms.size(), 40u);
 	for (int i = 0; i < 300; ++i) {
-		const auto* term = native.field("a.S")->find("term" + std::to_string(i));
+		const auto* term = native.find_term("a.S", "term" + std::to_string(i));
 		CHECK_TRUE(term != nullptr);
 		CHECK_EQ(term->wdf, 3u);
-		CHECK_EQ(term->positions.size(), 3u);
+		CHECK_EQ(native.positions_of(*term).size(), 3u);
 	}
-	CHECK_EQ(native.field("b")->find("x7")->wdf, 2u * 3 * 8);  // 300 / 40 rounded: ids 7, 47, ... 287 is 8 hits per round
-	CHECK_TRUE(native.field("b")->find("x40") == nullptr);
+	CHECK_EQ(native.find_term("b", "x7")->wdf, 2u * 3 * 8);  // 300 / 40 rounded: ids 7, 47, ... 287 is 8 hits per round
+	CHECK_TRUE(native.find_term("b", "x40") == nullptr);
 	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
 	CHECK_EQ(back.serialise(), doc.serialise());
 	CHECK_EQ(engine::strata::strata_document(back).field("a.S")->terms.size(), 300u);
@@ -408,8 +406,8 @@ static void test_strata_many_terms() {
 	raw.add_term(two, "t", 1);
 	raw.add_term(one, "t", 1);
 	CHECK_EQ(raw.fields().size(), 2u);
-	CHECK_EQ(raw.field("one")->find("t")->wdf, 2u);
-	CHECK_EQ(raw.field("two")->find("t")->wdf, 1u);
+	CHECK_EQ(raw.find_term("one", "t")->wdf, 2u);
+	CHECK_EQ(raw.find_term("two", "t")->wdf, 1u);
 }
 
 // A field ref used on a document that did not declare it trips the debug assert, for each add_*.

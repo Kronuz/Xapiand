@@ -534,13 +534,13 @@ void codec() {
 	auto back = engine::Document::unserialise(Kind::strata, bytes);
 	CHECK_EQ(back.serialise(), bytes);
 	CHECK_EQ(back.get_data(), std::string("bin\0data", 8));
-	const auto& f = *engine::strata::strata_document(back).field("f");
-	CHECK_EQ(f.find("b")->positions.size(), 2u);  // sorted and unique in the serialised form
-	CHECK_EQ(f.find("a")->wdf, 3u);
-	const auto& g = *engine::strata::strata_document(back).field("g.S");
+	const auto& restored = engine::strata::strata_document(back);
+	CHECK_EQ(restored.positions_of(*restored.find_term("f", "b")), (std::vector<engine::termpos>{ 2, 9 }));  // sorted and unique
+	CHECK_EQ(restored.find_term("f", "a")->wdf, 3u);
+	const auto& g = *restored.field("g.S");
 	CHECK_TRUE(g.kind == engine::FieldKind::text);
 	CHECK_EQ(g.terms.size(), 2u);
-	CHECK_EQ(g.find("")->wdf, 0u);  // the empty term is a term
+	CHECK_EQ(restored.find_term("g.S", "")->wdf, 0u);  // the empty term is a term
 	CHECK_EQ(engine::strata::strata_document(back).key_wdf(), 2u);  // the key field's frequency, kept apart from the terms
 	CHECK_EQ(engine::strata::strata_document(back).fields().size(), 2u);
 

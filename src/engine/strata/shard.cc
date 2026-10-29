@@ -500,7 +500,6 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 		// A version belongs to a key in strata (a keyless document has none), and every Xapiand document has one.
 		throw Error(errc::invalid, "The document has no key");
 	}
-	doc.normalise();
 	out.key = doc.key();
 	out.stored = doc.data();
 	t.expected_fields = table.mark();
@@ -520,11 +519,14 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 		part.terms.reserve(field.terms.size());
 		bool within = true;
 		for (const auto& info : field.terms) {
-			part.terms.push_back({info.term, info.wdf, info.positions});
+			auto& entry = part.terms.emplace_back();
+			entry.term.assign(doc.term_bytes(info));
+			entry.wdf = info.wdf;
+			doc.positions_into(info, entry.positions);
 			part.length += info.wdf;
-			within = within && info.term.size() <= ::strata::format::max_term_bytes;
+			within = within && info.size <= ::strata::format::max_term_bytes;
 		}
-		// The terms are unique by construction and their positions strictly increase (normalise): only the
+		// The terms are unique by construction and positions_into makes theirs strictly increase: only the
 		// size is left for the index to check.
 		part.checked = within;
 		length += part.length;

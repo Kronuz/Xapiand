@@ -61,13 +61,6 @@ malformed(const char* what)
 }
 
 
-bool
-strictly_increasing(const std::vector<termpos>& positions)
-{
-	return std::adjacent_find(positions.begin(), positions.end(), [](termpos a, termpos b) { return a >= b; }) == positions.end();
-}
-
-
 // A reader over serialised bytes that never reads past the end.
 class Cursor {
 public:
@@ -161,36 +154,36 @@ constexpr std::size_t linear_terms = 8;
 
 
 void
-DocField::rebuild(std::size_t slots)
+StrataDocument::rebuild(DocField& field, std::size_t slots) const
 {
-	table_.assign(slots, 0);
+	field.table.assign(slots, 0);
 	const std::size_t mask = slots - 1;
-	for (std::size_t i = 0; i < terms.size(); ++i) {
-		auto at = terms[i].hash & mask;
-		while (table_[at]) {
+	for (std::size_t i = 0; i < field.terms.size(); ++i) {
+		auto at = field.terms[i].hash & mask;
+		while (field.table[at]) {
 			at = (at + 1) & mask;
 		}
-		table_[at] = static_cast<std::uint32_t>(i + 1);
+		field.table[at] = static_cast<std::uint32_t>(i + 1);
 	}
 }
 
 
 const DocTerm*
-DocField::find(std::string_view bytes) const
+StrataDocument::find_term(const DocField& field, std::string_view bytes) const noexcept
 {
 	const auto hash = hash_of(bytes);
-	if (table_.empty()) {
-		for (const auto& t : terms) {
-			if (t.hash == hash && t.term == bytes) {
+	if (field.table.empty()) {
+		for (const auto& t : field.terms) {
+			if (t.hash == hash && term_bytes(t) == bytes) {
 				return &t;
 			}
 		}
 		return nullptr;
 	}
-	const std::size_t mask = table_.size() - 1;
-	for (auto at = hash & mask; table_[at]; at = (at + 1) & mask) {
-		const auto& t = terms[table_[at] - 1];
-		if (t.hash == hash && t.term == bytes) {
+	const std::size_t mask = field.table.size() - 1;
+	for (auto at = hash & mask; field.table[at]; at = (at + 1) & mask) {
+		const auto& t = field.terms[field.table[at] - 1];
+		if (t.hash == hash && term_bytes(t) == bytes) {
 			return &t;
 		}
 	}
@@ -198,44 +191,105 @@ DocField::find(std::string_view bytes) const
 }
 
 
+const DocTerm*
+StrataDocument::find_term(std::string_view field_name, std::string_view bytes) const noexcept
+{
+	const auto* f = field(field_name);
+	return f ? find_term(*f, bytes) : nullptr;
+}
+
+
 DocTerm&
-DocField::term(std::string_view bytes)
+StrataDocument::intern(DocField& field, std::string_view bytes)
 {
 	const auto hash = hash_of(bytes);
-	if (table_.empty()) {
-		for (auto& t : terms) {
-			if (t.hash == hash && t.term == bytes) {
+	if (field.table.empty()) {
+		for (auto& t : field.terms) {
+			if (t.hash == hash && term_bytes(t) == bytes) {
 				return t;
 			}
 		}
 	} else {
-		const std::size_t mask = table_.size() - 1;
-		for (auto at = hash & mask; table_[at]; at = (at + 1) & mask) {
-			auto& t = terms[table_[at] - 1];
-			if (t.hash == hash && t.term == bytes) {
+		const std::size_t mask = field.table.size() - 1;
+		for (auto at = hash & mask; field.table[at]; at = (at + 1) & mask) {
+			auto& t = field.terms[field.table[at] - 1];
+			if (t.hash == hash && term_bytes(t) == bytes) {
 				return t;
 			}
 		}
 	}
-	if (terms.empty()) {
-		terms.reserve(4);
+	if (bytes_.size() + bytes.size() > 0xfffffff0u) {
+		throw Error(errc::invalid, "The document's terms are too large");
 	}
-	auto& added = terms.emplace_back();
-	added.term.assign(bytes);
+	if (bytes_.empty()) {
+		bytes_.reserve(1024);
+	}
+	if (field.terms.empty()) {
+		field.terms.reserve(4);
+	}
+	auto& added = field.terms.emplace_back();
+	added.offset = static_cast<std::uint32_t>(bytes_.size());
+	added.size = static_cast<std::uint32_t>(bytes.size());
 	added.hash = hash;
-	if (terms.size() > linear_terms) {
-		if (table_.size() < terms.size() * 2) {
-			rebuild(std::max<std::size_t>(table_.size() * 2, 32));
+	bytes_.append(bytes);
+	if (field.terms.size() > linear_terms) {
+		if (field.table.size() < field.terms.size() * 2) {
+			rebuild(field, std::max<std::size_t>(field.table.size() * 2, 32));
 		} else {
-			const std::size_t mask = table_.size() - 1;
+			const std::size_t mask = field.table.size() - 1;
 			auto at = hash & mask;
-			while (table_[at]) {
+			while (field.table[at]) {
 				at = (at + 1) & mask;
 			}
-			table_[at] = static_cast<std::uint32_t>(terms.size());
+			field.table[at] = static_cast<std::uint32_t>(field.terms.size());
 		}
 	}
 	return added;
+}
+
+
+void
+StrataDocument::push_position(DocTerm& term, termpos position)
+{
+	if (nodes_.empty()) {
+		nodes_.reserve(128);
+	}
+	const auto index = static_cast<std::uint32_t>(nodes_.size());
+	nodes_.push_back({position, DocTerm::none});
+	if (term.last == DocTerm::none) {
+		term.first = index;
+	} else {
+		nodes_[term.last].next = index;
+	}
+	term.last = index;
+	++term.count;
+}
+
+
+void
+StrataDocument::positions_into(const DocTerm& term, std::vector<termpos>& out) const
+{
+	out.clear();
+	out.reserve(term.count);
+	bool increasing = true;
+	for (auto at = term.first; at != DocTerm::none; at = nodes_[at].next) {
+		const auto position = nodes_[at].position;
+		increasing = increasing && (out.empty() || out.back() < position);
+		out.push_back(position);
+	}
+	if (!increasing) {
+		std::sort(out.begin(), out.end());
+		out.erase(std::unique(out.begin(), out.end()), out.end());
+	}
+}
+
+
+std::vector<termpos>
+StrataDocument::positions_of(const DocTerm& term) const
+{
+	std::vector<termpos> out;
+	positions_into(term, out);
+	return out;
 }
 
 
@@ -288,7 +342,7 @@ StrataDocument::term_of(const Field& field, std::string_view term)
 {
 	auto& f = field_of(field);
 	f.kind = std::max(f.kind, field.kind);
-	return f.term(term);
+	return intern(f, term);
 }
 
 
@@ -326,7 +380,7 @@ StrataDocument::add_posting(const Field& field, std::string_view term, termpos p
 	}
 	auto& entry = term_of(field, term);
 	entry.wdf += wdf_inc;
-	entry.positions.push_back(position);
+	push_position(entry, position);
 }
 
 
@@ -363,21 +417,6 @@ StrataDocument::get_data() const
 }
 
 
-void
-StrataDocument::normalise()
-{
-	for (auto& field : fields_) {
-		for (auto& entry : field.terms) {
-			auto& positions = entry.positions;
-			if (!std::is_sorted(positions.begin(), positions.end()) || std::adjacent_find(positions.begin(), positions.end()) != positions.end()) {
-				std::sort(positions.begin(), positions.end());
-				positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
-			}
-		}
-	}
-}
-
-
 // format, written version, key, key frequency, data, values (slot, bytes), fields (name, kind, terms (term, wdf,
 // positions as increasing deltas)).
 std::string
@@ -401,18 +440,12 @@ StrataDocument::serialise() const
 		out.push_back(static_cast<char>(field.kind));
 		put(out, field.terms.size());
 		for (const auto& info : field.terms) {
-			put(out, info.term);
+			put(out, term_bytes(info));
 			put(out, info.wdf);
-			const std::vector<termpos>* positions = &info.positions;
-			if (!strictly_increasing(info.positions)) {
-				scratch = info.positions;
-				std::sort(scratch.begin(), scratch.end());
-				scratch.erase(std::unique(scratch.begin(), scratch.end()), scratch.end());
-				positions = &scratch;
-			}
-			put(out, positions->size());
+			positions_into(info, scratch);
+			put(out, scratch.size());
 			termpos previous = 0;
-			for (auto position : *positions) {
+			for (auto position : scratch) {
 				put(out, position - previous);
 				previous = position;
 			}
@@ -476,7 +509,7 @@ StrataDocument::unserialise_from(std::string_view serialised)
 				malformed("wdf out of range");
 			}
 			const auto before = field.terms.size();
-			auto& info = field.term(term);
+			auto& info = result.intern(field, term);
 			if (field.terms.size() == before) {
 				malformed("term twice");
 			}
@@ -487,7 +520,7 @@ StrataDocument::unserialise_from(std::string_view serialised)
 				if (position > 0xffffffffULL) {
 					malformed("position out of range");
 				}
-				info.positions.push_back(static_cast<termpos>(position));
+				result.push_position(info, static_cast<termpos>(position));
 			}
 		}
 	}
@@ -506,11 +539,11 @@ StrataDocument::census_terms(const std::function<void(std::string_view, termcoun
 	std::map<std::string, const DocTerm*> sorted;
 	for (const auto& field : fields_) {
 		for (const auto& info : field.terms) {
-			sorted.emplace(field.name + info.term, &info);
+			sorted.emplace(field.name + std::string(term_bytes(info)), &info);
 		}
 	}
 	for (const auto& [spelled, info] : sorted) {
-		visit(spelled, info->wdf, info->positions.size());
+		visit(spelled, info->wdf, positions_of(*info).size());
 	}
 }
 
