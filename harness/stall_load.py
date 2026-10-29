@@ -432,7 +432,7 @@ def pct(values: list[int], p: float) -> float | None:
     if not values:
         return None
     s = sorted(values)
-    return float(s[min(len(s) - 1, max(0, math.ceil(p / 100.0 * len(s)) - 1))])
+    return float(s[min(len(s) - 1, max(0, math.ceil(round(p / 100.0 * len(s), 9)) - 1))])
 
 
 def summarize(values: list[int]) -> dict[str, Any]:

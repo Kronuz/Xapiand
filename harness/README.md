@@ -117,4 +117,6 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
 - **`profile_light.sh`** -- CPU per light request by group (offload hop, scheduler, engine, HTTP)
   from `sample`, and the hop's wall time from an http `trace/hop` build (`-DHTTP_TRACE_HOP`);
   `--compare PRE POST` is T11.
+- **`baseline_7c.sh`, `baseline_report.py`** -- the pre-7c rows (T4, T5, T8, T11, T12) in one hold, and their tables.
+- **`test_gate_tools.py`** -- unit tests for `async_check` and `stall_load` (no node; `python3 -I harness/test_gate_tools.py`).
 - **`ruff.toml`, `pyrefly.toml`** -- the lint and strict type configuration for these scripts.

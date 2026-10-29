@@ -39,7 +39,7 @@ names() {
 	fi
 }
 
-names | sed -E 's/[-_.]?[0-9]+$//' | sort | uniq -c | sort -k1,1nr -k2 | awk '{ c = $1; $1 = ""; sub(/^ /, ""); print c "\t" $0 }' > "$WORK/census.tsv"
+names | sed -E 's/[-_.]*[0-9]*[-_.]*$//' | sort | uniq -c | sort -k1,1nr -k2 | awk '{ c = $1; $1 = ""; sub(/^ /, ""); print c "\t" $0 }' > "$WORK/census.tsv"
 TOTAL=$(awk -F'\t' '{ s += $1 } END { print s + 0 }' "$WORK/census.tsv")
 PS_TOTAL=""
 if [ ! -d "/proc/$PID/task" ]; then PS_TOTAL=$(ps -M -p "$PID" | awk 'NR > 1 { n++ } END { print n + 0 }'); fi

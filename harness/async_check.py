@@ -173,7 +173,8 @@ def tracked_sources(root: str) -> list[str]:
         ).stdout
         names = out.splitlines()
     except (subprocess.CalledProcessError, FileNotFoundError):
-        names = []
+        names: list[str] = []
+    if not names:  # not a git checkout, or nothing tracked yet
         for base, _dirs, files in os.walk(os.path.join(root, "src")):
             for f in files:
                 names.append(os.path.relpath(os.path.join(base, f), root))
