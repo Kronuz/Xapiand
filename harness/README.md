@@ -98,3 +98,23 @@ architecture rather than a migration oracle.
   negotiation, custom verbs) is not yet generated; today the correctness lane
   reuses the 303-request doc collection. Generating that corpus is the path to
   truly exhaustive coverage (the baseline-as-oracle keeps it cheap).
+
+## Phase 7c gate tooling
+
+Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are in
+`docs/perf/phase7c-baseline.md`. Run the timing tools under `quiet strict` (or `exclusive`).
+
+- **`stall_load.py`** -- light open-loop latency on `accounts` (1,000,000 documents) under heavy
+  load: exhaustive aggregations, wildcard and phrase searches, and a RESTORE stream into
+  `restore-target`. Latency runs from each request's scheduled send time; the achieved rate is
+  asserted within 5% of the target. `--phase unloaded|loaded`, `--restore-into accounts` (Q6's
+  cost), `--saturate`, `--overload light|heavy N`, `--dry-run`. JSON out: light p50/p99/p99.9,
+  per-loop lag deltas from `:metrics`, 503 and error counts, segments and merge backlog, RSS.
+- **`thread_census.sh PID`** -- threads by name prefix (T1); `--allow` fails on any other prefix.
+- **`async_check.sh`** -- every blocking primitive on a reactor-reachable path in one of four
+  classes (D14, T1). `--strict` fails on an unclassified hit; `harness/async_allowlist.tsv` holds
+  the rows (a new hit needs a row naming its reason or the decision that removes it).
+- **`profile_light.sh`** -- CPU per light request by group (offload hop, scheduler, engine, HTTP)
+  from `sample`, and the hop's wall time from an http `trace/hop` build (`-DHTTP_TRACE_HOP`);
+  `--compare PRE POST` is T11.
+- **`ruff.toml`, `pyrefly.toml`** -- the lint and strict type configuration for these scripts.

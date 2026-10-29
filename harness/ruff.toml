@@ -1,0 +1,11 @@
+# Ruff for the harness scripts: a wider line, and the rules that fight a load generator's
+# deliberate broad catches (an error is counted, not raised) are off.
+line-length = 120
+
+[lint]
+extend-ignore = [
+	"BLE001",   # the generators count every failure
+	"ASYNC221", # one blocking git/ps call at the edges of an async main
+	"ASYNC230",
+	"SIM115",   # the node's log stays open for the node's lifetime
+]
