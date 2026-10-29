@@ -42,10 +42,6 @@ struct FieldTerm {
 	bool operator<(const FieldTerm& other) const { return field != other.field ? field < other.field : term < other.term; }
 };
 
-// The bytes the term table looks `term` up by: the key field's terms are keys, which the index holds
-// behind the index's key lead (keys.h); any other field's are as given.
-std::string lookup_bytes(std::string_view field, std::string_view term);
-
 // The terms of the whole index that a wildcard or edit-distance node matches, sorted, after its
 // expansion limit: more than `max_expansion` matches (0 for no limit) fail the search with
 // errc::invalid, keep the first terms, or keep the most frequent ones, as the node says. A term

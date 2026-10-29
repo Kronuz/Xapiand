@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-28) describes `phase7a/strata-fields` (SF); not landed. The key path is interim until F3.
+> Status: CURRENT (2026-10-28) describes `phase7a/strata-fields` (SF); not landed.
 
 # Strata fields and keys: how it works
 
@@ -35,10 +35,9 @@ Schema / QueryDSL          seam                              strata engine      
 5. **The log.** A strata document's WAL line is format 3: the version, the key, the key frequency, the data, the values, then
    the fields with their kinds and terms. Replay re-declares by name, so it never depends on an id a lost commit assigned.
 
-## Interim until F3
+## Keys
 
-Strata's index still takes `index_options::key_prefix` and every key starts with it; `src/engine/strata/keys.h` is the only
-file that knows (`stored`, `host`, `key_prefix`, the lead byte). When F3 lands the file and its callers go, and C2's grep is empty.
+The index is opened with `index_options::keyed` and holds the host's key bytes as given; an index is keyed only if it was created keyed.
 
 ## Invariants
 

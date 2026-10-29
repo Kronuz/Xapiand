@@ -47,7 +47,6 @@
 #include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for StrataDocument
-#include "engine/strata/keys.h"  // for the key adapter
 #include "engine/strata/pin.h"    // for Pinned
 #include "engine/strata/doc_view.h"  // for SegmentDocView, OwnedDocView
 #include "engine/strata/values.h"  // for the value columns
@@ -162,7 +161,7 @@ prospect::index::options
 index_options()
 {
 	prospect::index::options options;
-	options.key_prefix = keys::key_prefix();
+	options.keyed = true;
 	options.auto_merge = true;
 	return options;
 }
@@ -473,7 +472,7 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 		throw Error(errc::invalid, "The document has no key");
 	}
 	doc.normalise();
-	out.key = keys::stored(doc.key());
+	out.key = doc.key();
 	out.stored = doc.data();
 	t.expected_fields = table.mark();
 	out.fields.clear();
@@ -612,7 +611,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		std::optional<rev> stored;
 		if (!native.key().empty()) {
 			// A document with a key is found by it; the id must be the one that holds the key.
-			if (const auto found = core.index->find_key(keys::stored(native.key()))) {
+			if (const auto found = core.index->find_key(native.key())) {
 				if (found->first != did) {
 					if (replayed) {
 						// The key was erased and added again after this line: the index is past it.
@@ -671,7 +670,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto ekey = keys::stored(key);
+		const auto ekey = key;
 		WriteResult info;
 		info.term = key;
 		std::optional<rev> stored;
@@ -751,7 +750,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto ekey = keys::stored(key);
+		const auto ekey = key;
 		const auto found = core.index->find_key(ekey);
 		if (!found) {
 			throw Error(errc::doc_not_found, "Document not found");
@@ -969,7 +968,7 @@ Shard::find_key(const std::string& key)
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		const auto found = core.index->find_key(keys::stored(key));
+		const auto found = core.index->find_key(key);
 		co_return found ? static_cast<docid>(found->first) : docid{0};
 	} catch (...) {
 		rethrow_translated(handle_->core);

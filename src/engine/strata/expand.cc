@@ -33,18 +33,10 @@
 #include "prospect/reader.hh"      // for prospect::inverted_plugin
 
 #include "engine/error.h"          // for Error, errc
-#include "engine/strata/keys.h"  // for keys::stored, host
 #include "engine/strata/pattern.h"  // for wildcard_prefix, wildcard_matches, within_edit_distance, head
 
 
 namespace engine::strata {
-
-std::string
-lookup_bytes(std::string_view field, std::string_view term)
-{
-	return field == KEY_FIELD ? keys::stored(term) : std::string(term);
-}
-
 
 namespace {
 
@@ -100,13 +92,13 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 				continue;
 			}
 			if (snapshot.key_field() == id) {
-				const auto from = keys::stored(prefix);
+				const auto from = prefix;
 				snapshot.seg->get<prospect::keys_plugin>().scan(from, [&](std::string_view key, auto) {
 					if (!key.starts_with(from)) {
 						return false;
 					}
-					if (matches(keys::host(key))) {
-						found.insert({name, std::string(keys::host(key))});
+					if (matches(key)) {
+						found.insert({name, std::string(key)});
 					}
 					return true;
 				});
@@ -137,7 +129,7 @@ expand(const QueryNode& node, std::span<const prospect::segment_snapshot> segmen
 				std::vector<std::pair<std::uint64_t, std::size_t>> by_frequency;
 				by_frequency.reserve(result.size());
 				for (std::size_t i = 0; i < result.size(); ++i) {
-					by_frequency.emplace_back(terms.df(result[i].field, lookup_bytes(result[i].field, result[i].term)), i);
+					by_frequency.emplace_back(terms.df(result[i].field, result[i].term), i);
 				}
 				std::stable_sort(by_frequency.begin(), by_frequency.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
 				by_frequency.resize(limit);

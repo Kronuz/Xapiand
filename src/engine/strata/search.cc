@@ -262,8 +262,8 @@ struct Builder {
 
 	// The term's document frequency over the whole index, its info in this segment and its weight; the key
 	// field's terms are looked up as keys.
-	std::uint64_t df(const std::string& field, const std::string& term) const { return terms.df(field, lookup_bytes(field, term)); }
-	const p::format::term_info* info(const std::string& field, const std::string& term) const { return terms.info(seg, field, lookup_bytes(field, term)); }
+	std::uint64_t df(const std::string& field, const std::string& term) const { return terms.df(field, term); }
+	const p::format::term_info* info(const std::string& field, const std::string& term) const { return terms.info(seg, field, term); }
 	p::weight weight_of(const std::string& field, const std::string& term, termcount wqf = 1) const {
 		return p::weight::bm25_xapian(terms.stats(), df(field, term), wqf);
 	}

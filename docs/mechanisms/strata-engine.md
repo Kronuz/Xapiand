@@ -27,8 +27,7 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
    kind (the `:wal` dump has no shard and takes it from the log's files). The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
    takes the process default.
 2. **The key is explicit.** `Document::set_key(key)` names the document; the key is the id's type character and its
-   encoded bytes, apart from the document's terms. The index holds it behind the interim key lead (`keys.h`, until
-   strata drops the key prefix); the id field's terms are the key field's, so a query for an id is a key leaf.
+   encoded bytes, apart from the document's terms. The index is created keyed (`index_options::keyed`, fixed at creation) and holds the key as given; the id field's terms are the key field's, so a query for an id is a key leaf.
    `strata-fields.md` has the whole path.
 3. **Versions.** A version belongs to a key in strata and the engine checks it itself under the shard's
    mutex, because a delete by docid carries no key and the check needs the stored version either way:
