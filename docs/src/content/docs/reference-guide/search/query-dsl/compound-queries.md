@@ -9,7 +9,6 @@ alter their behaviour.
 * [**_Logical Operators_**](logical-operators)
 * [**_Maybe Operator_**](maybe-operator)
 * [**_Filter Operator_**](filter-operator)
-* [**_Elite Set Operator_**](elite-set-operator)
 * [**_Range Searches_**](range-searches)
 * [**_Geospatial Searches_**](geospatial-searches)
 

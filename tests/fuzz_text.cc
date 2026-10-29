@@ -123,7 +123,7 @@ random_config(Rng& rng)
 	};
 	static const engine::Op ops[] = {
 		engine::Op::INVALID, engine::Op::AND, engine::Op::OR, engine::Op::XOR, engine::Op::AND_MAYBE, engine::Op::NEAR,
-		engine::Op::PHRASE, engine::Op::ELITE_SET, engine::Op::SYNONYM, engine::Op::MAX,
+		engine::Op::PHRASE, engine::Op::SYNONYM, engine::Op::MAX,
 	};
 	engine::TextConfig c;
 	c.field = rng.chance(20) ? "" : (rng.chance(50) ? "XTfield" : "t_some.S");

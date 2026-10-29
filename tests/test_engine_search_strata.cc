@@ -873,13 +873,11 @@ void test_refusals_impl() {
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.nearest = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.fuzzy = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::ELITE_SET, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}, 1)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	// An append of a non-joining operator onto something still refuses, and ELITE_SET stays refused.
+	// An append of a non-joining operator onto something still refuses.
 	CHECK_EQ(kind(Query::append(Op::PHRASE, t("w1"), t("w2"))), syntax);
-	CHECK_EQ(kind(Query::append(Op::ELITE_SET, Query(), Query::combine(Op::ELITE_SET, {t("w1"), t("w2")}, 1))), syntax);
 	// A refusal leaves nothing behind: the same shard answers the next search.
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
 	// A search over the two engines is refused, and a query nested too deeply.

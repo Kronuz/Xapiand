@@ -180,7 +180,6 @@ validate(const Query& query, int depth)
 					return;
 				}
 				case Op::SYNONYM:
-				case Op::ELITE_SET:
 					for (const auto& sub : node->subqueries) {
 						if (!is_term(sub)) {
 							unsupported(std::string(to_string(node->op)) + " of anything but terms");
@@ -200,11 +199,9 @@ validate(const Query& query, int depth)
 			// A chain of appends is walked along its spine, so its length costs no stack.
 			const Query* spine = &query;
 			while (spine->node() != nullptr && spine->node()->kind == QueryKind::append) {
-				// An append onto an empty accumulation is just the next query, whatever its operator (the
-				// owner has not ruled on ELITE_SET over text, which stays refused).
+				// An append onto an empty accumulation is just the next query, whatever its operator.
 				const Op op = spine->node()->op;
-				const bool alone = spine->node()->subqueries[0].empty() && op != Op::ELITE_SET;
-				if (!alone && !is_joining(op)) {
+				if (!spine->node()->subqueries[0].empty() && !is_joining(op)) {
 					unsupported(std::string("the ") + to_string(op) + " operator");
 				}
 				validate(spine->node()->subqueries[1], depth + 1);
@@ -235,7 +232,7 @@ validate(const Query& query, int depth)
 }
 
 
-// The terms that act as one operator: a SYNONYM or an ELITE_SET node's, or the terms a wildcard or
+// The terms that act as one operator: a SYNONYM node's, or the terms a wildcard or
 // edit-distance node expands to.
 struct Group {
 	struct Member {
@@ -283,7 +280,7 @@ combiner_of(const QueryNode& node)
 	return node.op;
 }
 
-// The group of a SYNONYM, ELITE_SET, wildcard or edit-distance node, worked out on first use.
+// The group of a SYNONYM, wildcard or edit-distance node, worked out on first use.
 const Group&
 group_of(const QueryNode& node, const Builder& b)
 {
@@ -301,32 +298,6 @@ group_of(const QueryNode& node, const Builder& b)
 		for (auto& expanded : expand(node, b.plan.segments, b.terms)) {
 			group.members.push_back({std::move(expanded.field), std::move(expanded.term), 1});
 		}
-	}
-	if (node.kind == QueryKind::combine && node.op == Op::ELITE_SET) {
-		// The heaviest terms of the whole index, by idf, in query order; equal weights keep the earlier term.
-		constexpr std::size_t default_size = 10;
-		const std::size_t size = node.parameter != 0 ? node.parameter : default_size;
-		std::vector<std::pair<double, std::size_t>> keyed;
-		for (std::size_t i = 0; i < group.members.size(); ++i) {
-			const auto& member = group.members[i];
-			if (b.df(member.field, member.term) != 0) {
-				keyed.emplace_back(b.weight_of(member.field, member.term, member.wqf).idf, i);
-			}
-		}
-		std::stable_sort(keyed.begin(), keyed.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
-		if (keyed.size() > size) {
-			keyed.resize(size);
-		}
-		std::vector<std::size_t> kept;
-		for (const auto& entry : keyed) {
-			kept.push_back(entry.second);
-		}
-		std::sort(kept.begin(), kept.end());
-		std::vector<Group::Member> members;
-		for (const auto i : kept) {
-			members.push_back(std::move(group.members[i]));
-		}
-		group.members = std::move(members);
 	}
 	if (combiner_of(node) == Op::SYNONYM) {
 		std::vector<std::uint64_t> dfs;
@@ -534,7 +505,7 @@ build(const Query& query, const Builder& b, int depth)
 			if (node->op == Op::PHRASE || node->op == Op::NEAR) {
 				return build_positional(*node, b);
 			}
-			if (node->op == Op::SYNONYM || node->op == Op::ELITE_SET) {
+			if (node->op == Op::SYNONYM) {
 				return build_group(*node, b);
 			}
 			// AND_NOT, AND_MAYBE and FILTER take the first subquery against all the others.

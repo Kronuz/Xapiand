@@ -123,8 +123,7 @@ Pair random_pair(Lcg& rng, int depth) {
 				seam.push_back(p.seam);
 				xapian.push_back(p.xapian);
 			}
-			auto n = rng.next(4);
-			return { Query::combine(Op::ELITE_SET, seam, n), Xapian::Query(Xapian::Query::OP_ELITE_SET, xapian.begin(), xapian.end(), n) };
+			return { Query::combine(Op::MAX, seam), Xapian::Query(Xapian::Query::OP_MAX, xapian.begin(), xapian.end()) };
 		}
 		case 7: {
 			// append skips an accumulated query that matches nothing, once Xapian has simplified it.
@@ -169,8 +168,6 @@ static void test_leaves_and_ops() {
 		Xapian::Query(Xapian::Query::OP_PHRASE, xs.begin(), xs.end(), 5).get_description());
 	CHECK_EQ(to_xapian(Query::combine(Op::NEAR, { a, b }, 3)).get_description(),
 		Xapian::Query(Xapian::Query::OP_NEAR, xs.begin(), xs.begin() + 2, 3).get_description());
-	CHECK_EQ(to_xapian(Query::combine(Op::ELITE_SET, { a, b, c }, 2)).get_description(),
-		Xapian::Query(Xapian::Query::OP_ELITE_SET, xs.begin(), xs.end(), 2).get_description());
 	CHECK_EQ(to_xapian(Query::scale(a, 2.5)).get_description(),
 		Xapian::Query(Xapian::Query::OP_SCALE_WEIGHT, Xapian::Query("a"), 2.5).get_description());
 }
@@ -1002,7 +999,7 @@ static void test_chain_cap() {
 	CHECK_EQ(Query::combine(Op::AND, terms).chain(), 0U);
 
 	// Other operators run their operands apart: an OR of thousands of phrases is no deeper than one.
-	for (const auto op : { Op::OR, Op::XOR, Op::AND_MAYBE, Op::AND_NOT, Op::SYNONYM, Op::MAX, Op::ELITE_SET }) {
+	for (const auto op : { Op::OR, Op::XOR, Op::AND_MAYBE, Op::AND_NOT, Op::SYNONYM, Op::MAX }) {
 		CHECK_EQ(Query::combine(op, many(1000), 5).chain(), 1U);
 	}
 	CHECK_EQ(Query::combine(Op::AND_NOT, Query::combine(Op::AND, many(cap)), Query::combine(Op::AND, many(cap))).chain(), cap);

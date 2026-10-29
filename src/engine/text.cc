@@ -80,7 +80,6 @@ default_op(Op op)
 		case Op::AND_MAYBE: return queryparser::kind::and_maybe;
 		case Op::NEAR: return queryparser::kind::near;
 		case Op::PHRASE: return queryparser::kind::phrase;
-		case Op::ELITE_SET: return queryparser::kind::elite_set;
 		case Op::SYNONYM: return queryparser::kind::synonym;
 		case Op::MAX: return queryparser::kind::max;
 		default: return std::nullopt;
@@ -209,7 +208,6 @@ op_of(queryparser::kind k)
 		case kind::near: return Op::NEAR;
 		case kind::phrase: return Op::PHRASE;
 		case kind::synonym: return Op::SYNONYM;
-		case kind::elite_set: return Op::ELITE_SET;
 		case kind::max: return Op::MAX;
 		default: return Op::INVALID;
 	}
@@ -259,7 +257,7 @@ convert(const queryparser::query& tree, const Fields& field)
 			built = Query::scale(std::move(frame.kids[0]), n.factor);
 		} else {
 			const auto op = op_of(n.k);
-			const bool windowed = n.k == kind::near || n.k == kind::phrase || n.k == kind::elite_set;
+			const bool windowed = n.k == kind::near || n.k == kind::phrase;
 			if (!windowed && frame.kids.size() == 2 && (op == Op::AND || op == Op::OR || op == Op::AND_NOT || op == Op::XOR || op == Op::AND_MAYBE)) {
 				built = Query::combine(op, std::move(frame.kids[0]), std::move(frame.kids[1]));
 			} else {
