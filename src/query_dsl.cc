@@ -82,7 +82,6 @@ inline std::string readable_query_parser_flags(int flags) {
 	if ((flags & engine::text::WILDCARD) == engine::text::WILDCARD) values.push_back("FLAG_WILDCARD");
 	if ((flags & engine::text::PARTIAL) == engine::text::PARTIAL) values.push_back("FLAG_PARTIAL");
 	if ((flags & engine::text::CJK_NGRAM) == engine::text::CJK_NGRAM) values.push_back("FLAG_CJK_NGRAM");
-	if ((flags & engine::text::WORD_BREAKS) == engine::text::WORD_BREAKS) values.push_back("FLAG_CJK_WORDS");
 	if ((flags & engine::text::WILDCARD_MULTI) == engine::text::WILDCARD_MULTI) values.push_back("FLAG_WILDCARD_MULTI");
 	if ((flags & engine::text::WILDCARD_SINGLE) == engine::text::WILDCARD_SINGLE) values.push_back("FLAG_WILDCARD_SINGLE");
 	if ((flags & engine::text::FUZZY) == engine::text::FUZZY) values.push_back("FLAG_FUZZY");
@@ -839,11 +838,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			if (field_spc.flags.cjk_ngram) {
 				flags |= engine::text::CJK_NGRAM;
 			}
-#ifdef USE_ICU
-			if (field_spc.flags.cjk_words) {
-				flags |= engine::text::WORD_BREAKS;
-			}
-#endif
 			flags |= engine::text::PHRASE;
 			flags |= engine::text::LOVEHATE;
 			flags |= engine::text::FUZZY;

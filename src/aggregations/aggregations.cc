@@ -31,7 +31,7 @@
 #include "database/schema.h"                // for Schema
 #include "database/utils.h"                 // for is_valid
 #include "engine/error.h"                   // for Error, errc
-#include "exception_xapian.h"               // for AggregationError, SerialisationError
+#include "exception_engine.h"               // for AggregationError, SerialisationError
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "length.h"                         // for serialise_length

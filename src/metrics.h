@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "config.h"                // for XAPIAND_CLUSTERING
+#include "config.h"                // for XAPIAND_TRACKED_MEM
 
 #include <string>
 #include <memory>
@@ -64,18 +64,6 @@ public:
 	prometheus::Gauge& xapiand_http_clients_capacity;
 	prometheus::Gauge& xapiand_http_clients_pool_size;
 
-#ifdef XAPIAND_CLUSTERING
-	// remote protocol client tasks:
-	prometheus::Gauge& xapiand_remote_clients_running;
-	prometheus::Gauge& xapiand_remote_clients_queue_size;
-	prometheus::Gauge& xapiand_remote_clients_capacity;
-	prometheus::Gauge& xapiand_remote_clients_pool_size;
-	// remote protocol client tasks:
-	prometheus::Gauge& xapiand_replication_clients_running;
-	prometheus::Gauge& xapiand_replication_clients_queue_size;
-	prometheus::Gauge& xapiand_replication_clients_capacity;
-	prometheus::Gauge& xapiand_replication_clients_pool_size;
-#endif
 
 	// server tasks:
 	prometheus::Gauge& xapiand_servers_running;
@@ -99,19 +87,8 @@ public:
 	prometheus::Gauge& xapiand_http_current_connections;
 	prometheus::Counter& xapiand_http_connections;
 
-#ifdef XAPIAND_CLUSTERING
-	prometheus::Gauge& xapiand_remote_current_connections;
-	prometheus::Counter& xapiand_remote_connections;
-	prometheus::Gauge& xapiand_replication_current_connections;
-	prometheus::Counter& xapiand_replication_connections;
-#endif
-
 	prometheus::Counter& xapiand_http_sent_bytes;
 	prometheus::Counter& xapiand_http_received_bytes;
-	prometheus::Counter& xapiand_replication_sent_bytes;
-	prometheus::Counter& xapiand_replication_received_bytes;
-	prometheus::Counter& xapiand_remote_protocol_sent_bytes;
-	prometheus::Counter& xapiand_remote_protocol_received_bytes;
 
 	// file_descriptors:
 	prometheus::Gauge& xapiand_file_descriptors;

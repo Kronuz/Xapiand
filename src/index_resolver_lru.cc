@@ -27,11 +27,10 @@
 #include "database/flags.h"       // for  DB_*
 #include "database/handler.h"     // for DatabaseHandler
 #include "database/utils.h"       // for UNKNOWN_REVISION
-#include "manager.h"              // XapiandManager::dispatch_command, XapiandManager::resolve_index_endpoints
+#include "manager.h"              // XapiandManager::resolve_index_endpoints
 #include "opts.h"                 // for opts::*
 #include "reserved/schema.h"      // RESERVED_*
 #include "reserved/fields.h"      // ID_FIELD_NAME, ...
-#include "server/discovery.h"     // for primary_updater
 #include "serialise.h"            // for KEYWORD_STR
 
 
@@ -55,19 +54,17 @@ IndexSettings::IndexSettings() :
 	loaded(false),
 	saved(false),
 	modified(false),
-	stalled(std::chrono::steady_clock::time_point::min()),
 	num_shards(0),
 	num_replicas_plus_master(0)
 {
 }
 
 
-IndexSettings::IndexSettings(engine::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+IndexSettings::IndexSettings(engine::rev version, bool loaded, bool saved, bool modified, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
 	version(version),
 	loaded(loaded),
 	saved(saved),
 	modified(modified),
-	stalled(stalled),
 	num_shards(num_shards),
 	num_replicas_plus_master(num_replicas_plus_master),
 	shards(shards)
@@ -177,70 +174,6 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 
 
 void
-update_primary(const std::string& unsharded_normalized_path, IndexSettings& index_settings, std::shared_ptr<const Node> primary_node)
-{
-	L_CALL("update_primary({}, <index_settings>)", repr(unsharded_normalized_path));
-
-	auto now = std::chrono::steady_clock::now();
-
-	if (index_settings.stalled > now) {
-		return;
-	}
-
-	bool updated = false;
-	size_t shard_num = 0;
-	for (auto& shard : index_settings.shards) {
-		++shard_num;
-		auto it_b = shard.nodes.begin();
-		auto it_e = shard.nodes.end();
-		auto it = it_b;
-		for (; it != it_e; ++it) {
-			auto node = Node::get_node(*it);
-			if (node && !node->empty()) {
-				if (node->is_active() || (primary_node && *node == *primary_node)) {
-					break;
-				}
-			}
-		}
-		if (it != it_b && it != it_e) {
-			if (primary_node) {
-				auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
-				auto from_node = Node::get_node(*it_b);
-				auto to_node = Node::get_node(*it);
-				L_INFO("Primary shard {} moved from node {}{}" + INFO_COL + " to {}{}",
-					repr(normalized_path),
-					from_node->col().ansi(), from_node->name(),
-					to_node->col().ansi(), to_node->name());
-				std::swap(*it, *it_b);
-				updated = true;
-				shard.modified = true;
-				index_settings.saved = false;
-			} else if (index_settings.stalled == std::chrono::steady_clock::time_point::min()) {
-				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
-				break;
-			} else if (index_settings.stalled <= now) {
-				auto node = Node::get_node(*it_b);
-				if (node->last_seen() <= index_settings.stalled) {
-					auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
-					XapiandManager::dispatch_command(XapiandManager::Command::ELECT_PRIMARY, normalized_path);
-				}
-				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
-			}
-		}
-	}
-
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		if (updated) {
-			index_settings.stalled = std::chrono::steady_clock::time_point::min();
-			primary_updater()->debounce(unsharded_normalized_path, index_settings.shards.size(), unsharded_normalized_path);
-		}
-	}
-#endif
-}
-
-
-void
 save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_plus_master, IndexSettingsShard& shard)
 {
 	L_CALL("save_shards(<shard>)");
@@ -332,13 +265,6 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 		index_settings.saved = true;
 		index_settings.loaded = true;
 	}
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		if (!settings_saved_old && index_settings.saved) {
-			settings_updater()->debounce(unsharded_normalized_path,  index_settings.version, unsharded_normalized_path);
-		}
-	}
-#endif
 }
 
 
@@ -509,9 +435,9 @@ IndexResolverLRU::resolve_nodes(const IndexSettings& index_settings)
 
 
 IndexSettings
-IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear)
+IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
-	L_CALL("IndexResolverLRU::resolve_index_settings({}, {}, {}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", primary_node ? repr(primary_node->to_string()) : "null", reload, rebuild, clear);
+	L_CALL("IndexResolverLRU::resolve_index_settings({}, {}, {}, {}, {}, {})", repr(normalized_path), writable, settings ? settings->to_string() : "null", reload, rebuild, clear);
 
 	auto strict = opts.strict;
 
@@ -541,24 +467,13 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 	IndexSettings index_settings;
 
 	if (strings::startswith(normalized_path, ".xapiand/")) {
-		// Everything inside .xapiand has the primary shard inside
-		// the current leader and replicas everywhere.
+		// Everything inside .xapiand lives on the local node.
 		if (settings) {
 			THROW(ClientError, "Cannot modify settings of cluster indexes.");
 		}
 
-		// Primary databases in .xapiand are always in the master (or local, if master is unavailable)
-		primary_node = Node::get_primary_node();
-		if (!primary_node->is_active()) {
-			L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
-		}
 		IndexSettingsShard shard;
-		shard.nodes.push_back(primary_node->name());
-		for (const auto& node : Node::nodes()) {
-			if (!Node::is_superset(node, primary_node)) {
-				shard.nodes.push_back(node->name());
-			}
-		}
+		shard.nodes.push_back(Node::get_local_node()->name());
 
 		if (normalized_path == ".xapiand/indexes") {
 			// The reserved indexes database has the default number of shards
@@ -577,11 +492,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 	}
 
 	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
-
-	if (primary_node) {
-		reload = true;
-		rebuild = true;
-	}
 
 	auto it_e = resolve_index_lru.end();
 	auto it = it_e;
@@ -717,10 +627,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		}
 		settle_replicas(index_settings, node_nodes, index_settings.num_replicas_plus_master);
 
-		if (writable) {
-			update_primary(unsharded_normalized_path, index_settings, primary_node);
-		}
-
 		store_lru = true;
 	}
 
@@ -739,7 +645,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 				index_settings.loaded,
 				index_settings.saved,
 				index_settings.modified,
-				index_settings.stalled,
 				index_settings.num_shards,
 				index_settings.num_replicas_plus_master,
 				index_settings.shards);
@@ -754,7 +659,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 					index_settings.loaded,
 					index_settings.saved,
 					shard.modified,
-					index_settings.stalled,
 					1,
 					index_settings.num_replicas_plus_master,
 					shard_shards);
@@ -776,7 +680,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 						index_settings.loaded,
 						index_settings.saved,
 						shard.modified,
-						index_settings.stalled,
 						1,
 						index_settings.num_replicas_plus_master,
 						shard_shards);
@@ -794,9 +697,9 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 
 
 Endpoints
-IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings)
+IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writable, const MsgPack* settings)
 {
-	L_CALL("IndexResolverLRU::resolve_index_endpoints({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
+	L_CALL("IndexResolverLRU::resolve_index_endpoints({}, {}, {})", repr(endpoint.to_string()), writable, settings ? settings->to_string() : "null");
 
 	auto unsharded = unsharded_path(endpoint.path);
 	std::string unsharded_normalized_path_holder;
@@ -811,7 +714,7 @@ IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writabl
 		try {
 			Endpoints endpoints;
 
-			auto index_settings = resolve_index_settings(unsharded_normalized_path, writable, primary, settings, nullptr, t != CONFLICT_RETRIES, rebuild, false);
+			auto index_settings = resolve_index_settings(unsharded_normalized_path, writable, settings, t != CONFLICT_RETRIES, rebuild, false);
 			auto nodes = resolve_nodes(index_settings);
 			bool retry = !rebuild;
 			rebuild = false;
@@ -834,10 +737,6 @@ IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writabl
 						} else {
 							if (Node::is_active(node)) {
 								L_SHARDS("Active node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
-								break;
-							}
-							if (primary) {
-								L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 								break;
 							}
 							L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");

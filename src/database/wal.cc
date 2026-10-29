@@ -48,7 +48,6 @@
 #include "repr.hh"                  // for repr
 #include "debounce_or_run.h"        // for debounce_or_run
 #include "xapiand_fsyncher.h"       // for fsyncher, fsyncher_fsync (the WAL's injected async-fsync hook)
-#include "server/discovery.h"       // for db_updater
 #include "xapiand_strings.hh"               // for strings::format
 #include "utype.hh"                 // for toUType
 
@@ -58,8 +57,6 @@
 #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
-// #undef L_REPLICATION
-// #define L_REPLICATION L_ROSY_BROWN
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
 // #undef L_DATABASE_NOW
@@ -102,7 +99,7 @@ WalHeader::validate(void* param, void* /*unused*/)
 		UUID u(uuid);
 		if (!wal->get_uuid().empty()) {
 			if (u != wal->get_uuid()) {
-				// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
+				// A WAL written under FreeBSD stores UUIDs in native order (could be little endian)
 				if (u != wal->get_uuid_le()) {
 					THROW(StorageCorruptWAL, "WAL UUID mismatch");
 				}
@@ -252,7 +249,7 @@ DatabaseWAL::execute()
 			try {
 				while (true) {
 					std::string line = read(end_off);
-					modified = execute_line(line, false, false);
+					modified = execute_line(line, false);
 				}
 			} catch (const StorageEOF& exc) { }
 		}
@@ -287,7 +284,7 @@ DatabaseWAL::to_string_document(std::string_view serialised_document, bool unser
 	}
 
 	// The dump endpoints read a log without opening its shard, so the engine is the one the files are.
-	auto doc = engine::Document::unserialise(_shard ? _shard->kind() : engine::kind_of(base_path), serialised_document);
+	auto doc = engine::Document::unserialise(serialised_document);
 
 	auto data = Data(doc.get_data());
 	auto main_locator = data.get("");
@@ -510,9 +507,9 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
+DatabaseWAL::execute_line(std::string_view line, bool wal_)
 {
-	L_CALL("DatabaseWAL::execute_line(<line>, {}, {})", wal_, send_update);
+	L_CALL("DatabaseWAL::execute_line(<line>, {})", wal_);
 
 	if (!_shard) {
 		THROW(Error, "Database is not defined");
@@ -526,7 +523,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 	auto revision = unserialise_length(&p, p_end);
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
-	L_REPLICATION("EXECUTE LINE: {} ({})", revision, enum_name(type));
+	L_DATABASE_WAL("EXECUTE LINE: {} ({})", revision, enum_name(type));
 
 	if (revision != db_revision) {
 		L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
@@ -548,7 +545,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 
 	switch (type) {
 		case Type::COMMIT:
-			if (!_shard->commit(wal_, send_update)) {
+			if (!_shard->commit(wal_)) {
 				L_DEBUG("WAL commit did nothing for {} at revision {}: line={{revision:{}, type:{}}}", repr(base_path), db_revision, revision, enum_name(type));
 				L_WARNING("WAL commit did nothing");
 			}
@@ -557,7 +554,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
 			document = std::string(p, p_end - p);
-			_shard->replace_document(did, engine::Document::unserialise(_shard->kind(), document), false, wal_, false);
+			_shard->replace_document(did, engine::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
 			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
@@ -662,9 +659,9 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data, [[maybe_unused]] bool send_update)
+DatabaseWAL::write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data)
 {
-	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", repr(uuid.to_string()), revision, enum_name(type), send_update);
+	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>)", repr(uuid.to_string()), revision, enum_name(type));
 
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);
@@ -731,15 +728,6 @@ DatabaseWAL::write_line(const UUID& uuid, engine::rev revision, Type type, std::
 
 			commit();
 
-#ifdef XAPIAND_CLUSTERING
-			if (!opts.solo) {
-				// On COMMIT, let the updaters do their job
-				if (send_update) {
-					auto path = normalize_path(base_path);
-					db_updater()->debounce(path, revision + 1, path);
-				}
-			}
-#endif
 			break;
 		} catch (const StorageException&) {
 			L_EXC("WAL ERROR in {}", repr(base_path));
@@ -1031,7 +1019,7 @@ DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 	L_DATABASE("write_remove_spelling {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line);
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
@@ -1048,7 +1036,7 @@ DatabaseWALWriterTask::write_commit(DatabaseWALWriterThread& thread)
 	L_DATABASE("write_commit {{path:{}, rev:{}}}", repr(path), revision);
 
 	auto& wal = thread.get(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "");
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
@@ -1067,7 +1055,7 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 	L_DATABASE("write_replace_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line);
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
@@ -1085,7 +1073,7 @@ DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
 	L_DATABASE("write_delete_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line);
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
@@ -1104,7 +1092,7 @@ DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
 	L_DATABASE("write_set_metadata {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line);
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
@@ -1123,7 +1111,7 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 	L_DATABASE("write_add_spelling {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line);
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
@@ -1169,7 +1157,7 @@ DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& pa
 
 
 void
-DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision, bool send_update)
+DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const std::string& uuid, engine::rev revision)
 {
 	L_CALL("DatabaseWALWriter::write_commit({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
@@ -1177,7 +1165,6 @@ DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const
 	task.path = path;
 	task.uuid = UUID(uuid);
 	task.revision = revision;
-	task.send_update = send_update;
 	task.dispatcher = &DatabaseWALWriterTask::write_commit;
 
 	if (synchronous) {

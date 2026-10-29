@@ -3,24 +3,14 @@
 Orientation for anyone (human or AI) making changes here. Read
 [ARCHITECTURE.md](ARCHITECTURE.md) first for the *what*; this file is the *how*.
 
-## First, the big split: own code vs. vendored
+## First, the big split: own code vs. libraries
 
-`src/` is Xapiand's own code plus one vendored tree. **Do not "fix" or refactor
-vendored code**; treat it as read-only:
-
-```
-src/xapian/      Xapian fork (GPL): the search core. Large; integration point only.
-```
-
-Everything else that used to be vendored (msgpack-c, fmt, RapidJSON, LZ4, libev, TCLAP,
-cppcodec, ChaiScript, libyaml) and the utility code that grew here now come from the extracted
-`Kronuz/*` libraries via CMake `FetchContent`. A bug in one of those is fixed in its own
-repository, not here; `src/xapiand_*_trace.h` and friends are the seams that wire them
-to Xapiand's logging.
-
-Everything else under `src/` is Xapiand's own. When grepping for a bug or a
-feature, scope to the own-code subsystems unless you're tracing a call *into*
-Xapian.
+`src/` is Xapiand's own code. Everything that used to be vendored (msgpack-c, fmt, RapidJSON,
+LZ4, libev, TCLAP, cppcodec, ChaiScript, libyaml) and the utility code that grew here now come
+from the extracted `Kronuz/*` libraries via CMake `FetchContent`. A bug in one of those is fixed in
+its own repository, not here; `src/xapiand_*_trace.h` and friends are the seams that wire them
+to Xapiand's logging. The search engine is the [strata](https://github.com/Kronuz/strata)
+library behind the seam in `src/engine/`; the Xapian fork is gone.
 
 `docs/discussions/` is a vendored copy of the complete Kronuz Discussions package. Its
 tracked files must remain byte-identical with `~/code/KronuzBlog/Kronuz.github.io/discussions`
@@ -29,26 +19,19 @@ widget, Cloudflare Worker, D1 migrations, tests, and generic documentation. Xapi
 currently mount the comments component. Make package changes in one source tree, synchronize
 the complete directory, and verify all three copies before committing.
 
-`src/xapian/` is special: it's a *fork* (pristine upstream snapshot + a small
-stack of our patches), not a plain read-only bundle. Before upgrading the
-vendored Xapian, reconciling our patches, or touching anything under it, read
-[xapian-fork.md](docs/dev/xapian-fork.md) — the fork model, why each patch exists, and
-the upgrade procedure.
-
 ## Where things live
 
 Documentation outside the root's README, AGENTS, and ARCHITECTURE goes under `docs/`:
 designs in `docs/design/`, their architect reviews in `docs/reviews/`, and developer guides
-(testing, the Xapian fork) in `docs/dev/`. The user-facing site is `docs/src/`, and only
+(testing) in `docs/dev/`. The user-facing site is `docs/src/`, and only
 `docs/src/content/docs/` feeds the docs-as-E2E suite.
 
 | You're touching… | Start in |
 |---|---|
-| On-disk format, durability, volumes | `src/database/{wal,data,shard}.{cc,h}`; the volume engine is the [storage](https://github.com/Kronuz/storage) library (`src/xapiand_storage_*.h` wire it) |
+| On-disk format, durability, volumes | `src/database/{wal,data,shard}.{cc,h}`; the volume engine is the [storage](https://github.com/Kronuz/storage) library (`src/xapiand_storage_*.h` wire it); the index files are strata's (`src/engine/strata/`) |
 | Schema handling, field types | `src/database/schema*.{cc,h}`, `src/reserved/` |
 | HTTP API / request handling | `src/server/search_{service,views}.*`, `src/server/http_utils.h`; transport is the [http](https://github.com/Kronuz/http) library |
 | The event loop / connections | the [reactor](https://github.com/Kronuz/reactor) library; `src/manager.*` owns the services |
-| Clustering, discovery, replication | `src/server/discovery.*`, `src/server/raft_delegate.h`, `src/server/{remote,replication}_protocol_*`, `src/manager.*`, `src/node.*`; bus and Raft come from [cluster](https://github.com/Kronuz/cluster) |
 | Query languages | `src/query_dsl.*` (JSON/MsgPack); the string parser is the [boolean-parser](https://github.com/Kronuz/boolean-parser) library |
 | Aggregations | `src/aggregations/` |
 | Geospatial | `src/geospatial/`, `src/multivalue/geospatialrange.*` |
@@ -67,7 +50,7 @@ mkdir build && cd build && cmake .. && make
 ```
 
 C++20, CMake ≥ 3.12. The feature toggles matter when reproducing behavior:
-`CLUSTERING`, `DATABASE_WAL`, `DATA_STORAGE` (all ON), and `TRACEBACKS` /
+`DATABASE_WAL`, `DATA_STORAGE` (both ON), and `TRACEBACKS` /
 `ASSERTS` (ON in Debug builds). `TRACKED_MEM` swaps in an allocator that
 attributes memory to call sites. Tests/benchmarks are off by default
 (`BUILD_TESTS`, `BUILD_BENCHMARKS`).
@@ -91,7 +74,7 @@ Requirements: `python3` (the script was ported from Python 2), `newman`
 Run it before and after a de-vendor to prove Xapiand still works end-to-end.
 
 This is one of several test layers. For the full picture — unit tests, the functional
-E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and the
+E2E above, load, soak/stress, benchmarks, and the
 `harness/run_all.sh` one-shot runner — see [testing.md](docs/dev/testing.md).
 
 ## Conventions you'll see everywhere
@@ -102,8 +85,8 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   `src/log.h`. To trace a subsystem, flip its category there and rebuild. Log
   arguments are evaluated lazily, so it's fine to pass expensive expressions.
 - **Services on the reactor.** There is no libev and no `Worker` tree any more.
-  `XapiandManager` runs a control-plane `reactor::Reactor`; the HTTP, remote, and
-  replication services run on the [reactor](https://github.com/Kronuz/reactor)
+  `XapiandManager` runs a control-plane `reactor::Reactor`; the HTTP
+  service runs on the [reactor](https://github.com/Kronuz/reactor)
   library's shared-nothing loops, with blocking work offloaded to its worker pool.
   Never block a reactor thread.
 - **MsgPack as the universal value.** JSON, MessagePack, and internal objects are
@@ -131,10 +114,6 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   region is a contiguous integer range and why geo serialization is big-endian
   (the [htm](https://github.com/Kronuz/htm) library, `src/serialise.cc`). Any change to id construction or
   endianness breaks geo indexing silently.
-- **One primary shard per logical shard, elected via Raft** (`discovery.cc`).
-  Data replication is asynchronous and pull-based; do not assume a write is on
-  any replica when it commits. If you touch the commit path, preserve the
-  `DB_UPDATED` multicast that triggers replication.
 - **The storage write cursor lives in the volume header**; bins are 8-byte
   aligned and a volume is capped at 32 GiB. Don't write a bin without going
   through the [storage](https://github.com/Kronuz/storage) library's
@@ -165,7 +144,7 @@ E2E above, the multi-node remote/cluster net, load, soak/stress, benchmarks, and
   layer, and the perfect-hash dispatch. Grep an existing one end-to-end first.
 - If you extract a utility to its own repo (the `base-x` / `uinteger_t` /
   `fantasyname` pattern), check the licensing note in ARCHITECTURE.md —
-  `sortable_serialise` and anything under `src/xapian/` are GPL, the rest is MIT.
+  `sortable_serialise` is GPL (Xapian origin), the rest is MIT.
 - There's no substitute for flipping on the relevant `L_*` category and watching
   the logs; the instrumentation is already there.
 

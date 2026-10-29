@@ -35,21 +35,17 @@
 #include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
-#include "engine/kind.h"            // for engine::kind_of
 #include "engine/open.h"            // for engine::open_local
 #include "engine/sync.h"            // for engine::sync_wait
-#include "engine/xapian/convert.h"  // for engine::xapian::to_xapian, from_xapian
-#include "engine/xapian/errors.h"   // for engine::xapian::NotAvailable, Closed, Opening, DatabaseFailure
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_CALL
-#include "manager.h"              // for XapiandManager, trigger_replication
+#include "manager.h"              // for XapiandManager
 #include "msgpack.h"              // for MsgPack
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
-#include "server/discovery.h"     // for db_updater
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
@@ -378,12 +374,6 @@ Shard::~Shard() noexcept
 	}
 }
 
-engine::Kind
-Shard::kind() const
-{
-	return engine_shard ? engine_shard->kind() : engine::kind_of(endpoint.path);
-}
-
 bool
 Shard::reopen_writable()
 {
@@ -400,7 +390,7 @@ Shard::reopen_writable()
 	bool created = false;
 
 	if (is_closed()) {
-		throw engine::xapian::Closed("Database has been closed");
+		throw engine::Error(engine::errc::closed, "Database has been closed");
 	}
 
 	reset();
@@ -409,41 +399,10 @@ Shard::reopen_writable()
 
 	assert(!endpoint.empty());
 	bool local = false;
-#ifdef XAPIAND_CLUSTERING
-	if (!endpoint.is_local()) {
-		L_DATABASE("Opening remote writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		if (is_replica()) {
-			throw engine::xapian::NotAvailable("Endpoint must be local for replicas");
-		}
-		auto node = endpoint.node();
-		if (!node || node->empty()) {
-			L_DEBUG("Writable endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node is invalid");
-		}
-		if (!node->is_active()) {
-			L_DEBUG("Writable endpoint {} ({}) is inactive.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node is inactive");
-		}
-		auto port = node->remote_port;
-		if (port == 0) {
-			L_DEBUG("Writable endpoint {} ({}) node without a valid port.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node without a valid port");
-		}
-		auto& host = node->host();
-		if (host.empty()) {
-			L_DEBUG("Writable endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
-		}
-		new_database = engine::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, true));
-		// Writable remote databases do not have a local database fallback.
-	}
-	else
-#endif  // XAPIAND_CLUSTERING
 	{
 		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		auto opened = engine::sync_wait(engine::open_local(engine::kind_of(endpoint.path), endpoint.path, true, has_db_create_or_open(flags)));
+		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::opening, "Random Error");
+		auto opened = engine::sync_wait(engine::open_local(endpoint.path, true, has_db_create_or_open(flags)));
 		new_database = std::move(opened.shard);
 		created = opened.created;
 		local = true;
@@ -483,10 +442,10 @@ Shard::reopen_writable()
 		}
 		if (replayed) {
 			_modified.store(true, std::memory_order_relaxed);
-			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line,
-			// replicas are told); a replay inside a transaction stays in it. A failure propagates.
+			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line);
+			// a replay inside a transaction stays in it. A failure propagates.
 			if (!is_transactional()) {
-				commit(true, true);
+				commit(true);
 			}
 		}
 	}
@@ -514,7 +473,7 @@ Shard::reopen_readable()
 	bool created = false;
 
 	if (is_closed()) {
-		throw engine::xapian::Closed("Database has been closed");
+		throw engine::Error(engine::errc::closed, "Database has been closed");
 	}
 
 	reset();
@@ -523,81 +482,10 @@ Shard::reopen_readable()
 
 	assert(!endpoint.empty());
 	bool local = false;
-#ifdef XAPIAND_CLUSTERING
-	if (!endpoint.is_local()) {
-		L_DATABASE("Opening remote shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		if (is_replica()) {
-			throw engine::xapian::NotAvailable("Endpoint must be local for replicas");
-		}
-		auto node = endpoint.node();
-		if (!node || node->empty()) {
-			L_DEBUG("Endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node is invalid");
-		}
-		if (!node->is_active()) {
-			L_DEBUG("Endpoint {} ({}) is inactive.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node is inactive");
-		}
-		auto port = node->remote_port;
-		if (port == 0) {
-			L_DEBUG("Endpoint {} ({}) node without a valid port.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node without a valid port");
-		}
-		auto& host = node->host();
-		if (host.empty()) {
-			L_DEBUG("Endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
-			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
-		}
-		new_database = engine::sync_wait(engine::xapian::open_remote(host, port, flags, endpoint.path, false));
-		// Check for a local database fallback:
-		auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
-		if (index_settings.shards.size() == 1) {
-			auto local_node = Node::get_local_node();
-			auto fallback = false;
-			auto& nodes = index_settings.shards[0].nodes;
-			for (const auto& node_name : nodes) {
-				if (strings::lower(node_name) == local_node->lower_name()) {
-					fallback = true;
-					break;
-				}
-			}
-			if (fallback) {
-				try {
-					RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-					auto same = engine::sync_wait(engine::xapian::open_local_if_same(new_database->native<engine::xapian::Shard>(), endpoint.path));
-					if (same) {
-						L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
-						// Handle remote endpoint and figure out if the endpoint is a local database
-						RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-						new_database = std::move(same);
-						local = true;
-					} else {
-						_incomplete.store(true, std::memory_order_relaxed);
-					}
-				} catch (const engine::Error& error) {
-					if (!is_opening_failure(error.kind)) {
-						throw;
-					}
-					_incomplete.store(true, std::memory_order_relaxed);
-				}
-				if (has_db_trigger_replication(flags)) {
-					if (XapiandManager::get_state() == XapiandManager::State::READY) {
-						// Try triggering replication from primary shard:
-						try {
-							trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, Node::get_node(nodes[0])}, Endpoint{endpoint.path});
-						} catch (...) { }
-					}
-				}
-			}
-		}
-	}
-	else
-#endif  // XAPIAND_CLUSTERING
 	{
 		L_DATABASE("Opening local shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(engine::xapian::Opening, "Random Error");
-		auto opened = engine::sync_wait(engine::open_local(engine::kind_of(endpoint.path), endpoint.path, false, has_db_create_or_open(flags)));
+		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::opening, "Random Error");
+		auto opened = engine::sync_wait(engine::open_local(endpoint.path, false, has_db_create_or_open(flags)));
 		new_database = std::move(opened.shard);
 		created = opened.created;
 		local = true;
@@ -774,7 +662,7 @@ Shard::engine()
 	L_CALL("Shard::engine()");
 
 	if (is_closed()) {
-		throw engine::xapian::Closed("Database has been closed");
+		throw engine::Error(engine::errc::closed, "Database has been closed");
 	}
 
 	if (!engine_shard) {
@@ -934,7 +822,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 
 
 bool
-Shard::commit([[maybe_unused]] bool wal_, bool send_update)
+Shard::commit([[maybe_unused]] bool wal_)
 {
 	L_CALL("Shard::commit({})", wal_);
 
@@ -948,16 +836,11 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 		return false;
 	}
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::commit:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -984,9 +867,6 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				assert(current_revision == prior_revision + 1);
 				L_DATABASE("Commit on shard {}: {} -> {}", repr(endpoint.to_string()), prior_revision, current_revision);
 				endpoint.set_revision(current_revision);
-				if (!is_replica()) {
-					endpoint.pending_revision.store(current_revision, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -994,15 +874,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 						is_synchronous_wal(),
 						endpoint.path,
 						std::move(uuid),
-						prior_revision,
-						send_update);
-				}
-#endif
-#ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					if (send_update) {
-						db_updater()->debounce(endpoint.path, current_revision, endpoint.path);
-					}
+						prior_revision);
 				}
 #endif
 			}
@@ -1028,7 +900,7 @@ Shard::begin_transaction(bool flushed)
 	assert(is_write_active());
 
 	if (!is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 		engine();
 		engine::sync_wait(engine_shard->begin_transaction(flushed));
@@ -1046,7 +918,7 @@ Shard::commit_transaction()
 	assert(is_write_active());
 
 	if (is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 		engine();
 		engine::sync_wait(engine_shard->commit_transaction());
@@ -1064,7 +936,7 @@ Shard::cancel_transaction()
 	assert(is_write_active());
 
 	if (is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 		engine();
 		engine::sync_wait(engine_shard->cancel_transaction());
@@ -1081,16 +953,11 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::delete_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1106,9 +973,6 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1145,16 +1009,11 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::delete_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1172,9 +1031,6 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1299,16 +1155,11 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::add_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::add_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1340,9 +1191,6 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1379,27 +1227,6 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 }
 
 
-Xapian::DocumentInfo
-Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
-{
-	return engine::xapian::to_xapian(add_document(engine::xapian::from_xapian(doc), commit_, wal_, version_));
-}
-
-
-Xapian::DocumentInfo
-Shard::replace_document(engine::docid shard_did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
-{
-	return engine::xapian::to_xapian(replace_document(shard_did, engine::xapian::from_xapian(doc), commit_, wal_, version_));
-}
-
-
-Xapian::DocumentInfo
-Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
-{
-	return engine::xapian::to_xapian(replace_document_term(term, engine::xapian::from_xapian(doc), commit_, wal_, version_));
-}
-
-
 engine::WriteResult
 Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
@@ -1408,16 +1235,11 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::replace_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1450,9 +1272,6 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1497,16 +1316,11 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::replace_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1561,9 +1375,6 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1608,16 +1419,11 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::add_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1629,9 +1435,6 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1669,16 +1472,11 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::remove_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1692,9 +1490,6 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();
@@ -1733,7 +1528,7 @@ Shard::get_docid_term(const std::string& term)
 
 	engine::docid did = 0;
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_docid_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -1744,7 +1539,7 @@ Shard::get_docid_term(const std::string& term)
 		try {
 			did = engine::sync_wait(eng->find_key(term));
 			if (did == 0) {
-				throw engine::xapian::DocNotFound("Document not found");
+				throw engine::Error(engine::errc::doc_not_found, "Document not found");
 			}
 			break;
 		} catch (const engine::Error& error) {
@@ -1766,7 +1561,7 @@ Shard::get_view(engine::docid shard_did)
 
 	std::unique_ptr<engine::DocView> doc;
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_view:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_view:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -1796,7 +1591,7 @@ Shard::get_metadata(const std::string& key)
 
 	std::string value;
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -1840,7 +1635,7 @@ Shard::get_metadata_keys()
 
 	std::vector<std::string> values;
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::get_metadata_keys:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::get_metadata_keys:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
@@ -1874,16 +1669,11 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::xapian::DatabaseFailure, "Random Error");
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
 	L_DATABASE_WRAP_BEGIN("Shard::set_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-#ifdef XAPIAND_CLUSTERING
-	if (!Node::quorum()) {
-		throw engine::xapian::NotAvailable("Cluster has no quorum");
-	}
-#endif
 
 	engine();
 	auto* wdb = engine_shard.get();
@@ -1895,9 +1685,6 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
 				auto prior_revision = wdb->revision();
-				if (!is_replica()) {
-					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
-				}
 #if XAPIAND_DATABASE_WAL
 				if (wal_ && is_wal_active()) {
 					auto uuid = wdb->uuid();

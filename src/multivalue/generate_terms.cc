@@ -42,10 +42,6 @@
 #include "stopper.h"                              // for getStopWords
 #include "utype.hh"                               // for toUType
 
-#ifdef USE_ICU
-#include "engine/xapian/text.h"                   // for engine::xapian::index_text_word_breaks
-#endif
-
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
 // #undef L_CALL
@@ -526,19 +522,11 @@ void
 GenerateTerms::text(engine::Document& doc,
 	const std::string& prefix, const std::string& value,
 	bool positions, engine::termcount weight,
-	bool cjk_ngram, bool cjk_words,
+	bool cjk_ngram,
 	const std::string& language, const std::string& stem_language,
 	analysis::stop_strategy stop_strategy,
 	analysis::stem_strategy stem_strategy)
 {
-#ifdef USE_ICU
-	if (cjk_words) {
-		engine::xapian::index_text_word_breaks(doc, prefix, value, positions, weight, cjk_ngram, language, stem_language, stop_strategy, stem_strategy);
-		return;
-	}
-#else
-	static_cast<void>(cjk_words);
-#endif
 	analysis::term_generator term_generator;
 	term_generator.cjk_ngram = cjk_ngram;
 	if (!language.empty()) {

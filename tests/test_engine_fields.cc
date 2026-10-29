@@ -20,16 +20,18 @@
  * THE SOFTWARE.
  */
 
-// Unit tests for the seam's fields (fields-and-keys X6): a term is a field and the bytes under it.
-// The Xapian engine joins them back into today's term byte for byte, so each test builds the Xapian
-// objects by hand from the joined strings and compares; the strata engine keeps them apart.
+// Unit tests for the seam's fields (fields-and-keys X6): a term is a field and the bytes under it,
+// and the engine keeps them apart.
 
 #include "test_harness.h"
 
 #include <csignal>
-#include <functional>
 #include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -44,10 +46,9 @@
 #include "engine/query.h"
 #include "engine/text.h"
 #include "engine/strata/document.h"
-#include "engine/xapian/convert.h"
-#include "engine/xapian/query.h"
-#include "engine/xapian/text.h"
-#include "engine/xapian/xapian.h"
+#include "engine/open.h"
+#include "engine/search.h"
+#include "engine/sync.h"
 #include "multivalue/generate_terms.h"
 
 namespace {
@@ -55,7 +56,7 @@ namespace {
 using engine::FieldKind;
 using engine::Op;
 using engine::Query;
-using engine::xapian::to_xapian;
+using engine::strata::strata_document;
 
 // A small deterministic generator, so a failure reproduces.
 struct Lcg {
@@ -73,13 +74,17 @@ const std::vector<std::string> field_names = {
 	"N", "QK", std::string("\x01\x80\xff", 3), "",
 };
 
-std::vector<Xapian::docid> run(const Xapian::Database& db, const Xapian::Query& query) {
-	Xapian::Enquire enquire(db);
-	enquire.set_query(query);
-	std::vector<Xapian::docid> dids;
-	auto mset = enquire.get_mset(0, 100, 100);
-	for (auto it = mset.begin(); it != mset.end(); ++it) {
-		dids.push_back(*it);
+// The unique ids of the documents a query finds in a shard.
+std::set<engine::docid> run(engine::Shard& shard, const Query& query) {
+	auto prepared = engine::prepare(query);
+	engine::SearchRequest request;
+	request.query = prepared.get();
+	request.maxitems = 100;
+	request.check_at_least = 100;
+	engine::Shard* shards[] = {&shard};
+	std::set<engine::docid> dids;
+	for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
+		dids.insert(hit.did);
 	}
 	return dids;
 }
@@ -106,122 +111,170 @@ static void test_field_refs() {
 		CHECK_EQ(moved.field("f" + std::to_string(i)).id, refs[i].id);
 	}
 	moved.add_term(refs[7], "x");
-	CHECK_EQ(moved.serialise(), [&] {
-		Xapian::Document x;
-		x.add_term("f7x", 1);
-		return engine::xapian::from_xapian(x).serialise();
-	}());
+	CHECK_EQ(strata_document(moved).find_term("f7", "x")->wdf, 1u);
+	CHECK_TRUE(strata_document(moved).find_term("f8", "x") == nullptr);
 }
 
-// A document built through fields is the Xapian document of the joined terms, serialised byte for byte.
-static void test_xapian_terms_are_joined() {
+// A document built through fields holds each (field, term) once, with the sum of the frequencies and the
+// set of the positions given for it, and its serialised form reads back the same.
+static void test_field_terms_match_model() {
+	struct Term {
+		engine::termcount wdf = 0;
+		std::set<engine::termpos> positions;
+	};
 	Lcg rng{ 7 };
 	for (int round = 0; round < 200; ++round) {
 		engine::Document doc;
-		Xapian::Document xdoc;
+		std::map<std::pair<std::string, std::string>, Term> model;
+		bool used_empty_name = false;
 		for (int i = 0; i < 40; ++i) {
 			const auto& name = field_names[rng.next(static_cast<std::uint32_t>(field_names.size()))];
-			// Empty terms are the field's marker; a field-less empty term is no Xapian term, so skip it.
+			// Empty terms are the field's marker.
 			const std::string term = rng.next(5) == 0 ? std::string() : "t" + std::to_string(rng.next(6));
-			if (name.empty() && term.empty()) {
-				continue;
-			}
+			used_empty_name = used_empty_name || name.empty();
 			const auto field = doc.field(name, static_cast<FieldKind>(rng.next(3)));
+			auto& entry = model[{name, term}];
 			switch (rng.next(3)) {
 				case 0: {
 					const auto wdf = rng.next(4);
 					doc.add_term(field, term, wdf);
-					xdoc.add_term(name + term, wdf);
+					entry.wdf += wdf;
 					break;
 				}
 				case 1:
 					doc.add_boolean_term(field, term);
-					xdoc.add_boolean_term(name + term);
 					break;
 				default: {
 					const auto pos = 1 + rng.next(5);
 					const auto wdf = rng.next(3);
 					doc.add_posting(field, term, pos, wdf);
-					xdoc.add_posting(name + term, pos, wdf);
+					entry.wdf += wdf;
+					entry.positions.insert(pos);
 					break;
 				}
 			}
 		}
-		CHECK_EQ(doc.serialise(), engine::xapian::from_xapian(xdoc).serialise());
+		const auto check = [&](const engine::Document& d) {
+			const auto& native = strata_document(d);
+			CHECK_EQ(native.terms().size(), model.size());
+			for (const auto& [key, term] : model) {
+				const auto* found = native.find_term(key.first, key.second);
+				CHECK_TRUE(found != nullptr);
+				if (found) {
+					CHECK_EQ(found->wdf, term.wdf);
+					const auto positions = native.positions_of(*found);
+					CHECK_TRUE((std::set<engine::termpos>(positions.begin(), positions.end()) == term.positions));
+				}
+			}
+		};
+		check(doc);
+		// The log line names every field, so the empty name does not read back.
+		if (!used_empty_name) {
+			const auto bytes = doc.serialise();
+			const auto back = engine::Document::unserialise(bytes);
+			check(back);
+			CHECK_EQ(back.serialise(), bytes);
+		}
 	}
 }
 
-// The marker term of a null value is the field's name alone; and the Xapian engine, which joins
-// the two, cannot tell ("ab", "c") from ("a", "bc").
-static void test_marker_and_joined_ambiguity() {
+// The marker term of a null value is the field's name with an empty term; ("ab", "c") and ("a", "bc")
+// are different terms of different fields.
+static void test_marker_and_field_boundary() {
 	engine::Document doc;
 	doc.add_boolean_term(doc.field("name."), std::string());
-	Xapian::Document xdoc;
-	xdoc.add_boolean_term("name.");
-	CHECK_EQ(doc.serialise(), engine::xapian::from_xapian(xdoc).serialise());
+	const auto& native = strata_document(doc);
+	CHECK_TRUE(native.find_term("name.", "") != nullptr);
+	CHECK_EQ(native.find_term("name.", "")->wdf, 0u);
+	CHECK_TRUE(native.find_term("name", ".") == nullptr);
 
 	engine::Document joined;
 	joined.add_term(joined.field("ab"), "c", 1);
 	joined.add_term(joined.field("a"), "bc", 2);
-	Xapian::Document one;
-	one.add_term("abc", 3);
-	CHECK_EQ(joined.serialise(), engine::xapian::from_xapian(one).serialise());
+	const auto& two = strata_document(joined);
+	CHECK_EQ(two.terms().size(), 2u);
+	CHECK_EQ(two.find_term("ab", "c")->wdf, 1u);
+	CHECK_EQ(two.find_term("a", "bc")->wdf, 2u);
+	CHECK_TRUE(two.find_term("abc", "") == nullptr);
+	CHECK_TRUE(two.find_term("", "abc") == nullptr);
 }
 
-// A query node names its field apart from its term; the Xapian query is the joined one.
+// A query node names its field apart from its term.
 static void test_query_nodes() {
 	const std::string field = "name.firstName.S";
-	CHECK_EQ(to_xapian(Query::term(field, "bob", 2, 3)).get_description(), Xapian::Query(field + "bob", 2, 3).get_description());
-	CHECK_EQ(to_xapian(Query::term(field, "")).get_description(), Xapian::Query(field).get_description());  // the marker
-	CHECK_EQ(to_xapian(Query::match_all()).get_description(), Xapian::Query::MatchAll.get_description());
-	CHECK_EQ(to_xapian(Query::term("", "")).get_description(), Xapian::Query::MatchAll.get_description());
+	const auto term = Query::term(field, "bob", 2, 3);
+	CHECK_TRUE(term.node() != nullptr && term.node()->kind == engine::QueryKind::term);
+	CHECK_EQ(term.node()->field, field);
+	CHECK_EQ(term.node()->str, "bob");
+	CHECK_EQ(term.node()->wqf, 2u);
+	CHECK_EQ(term.node()->pos, 3u);
+	const auto marker = Query::term(field, "");  // the field's marker, not match-all
+	CHECK_EQ(marker.node()->field, field);
+	CHECK_TRUE(marker.node()->str.empty());
+	CHECK_FALSE(marker.empty());
+	const auto all = Query::term("", "");
+	CHECK_TRUE(all.node()->field.empty() && all.node()->str.empty());
 
-	CHECK_EQ(to_xapian(Query::wildcard(field, "bo", 50, engine::Expansion::most_frequent)).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, field + "bo", 50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::wildcard(field, "b?*", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR)).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, field + "b?*", 7, Xapian::Query::WILDCARD_LIMIT_FIRST | Xapian::Query::WILDCARD_PATTERN_SINGLE | Xapian::Query::WILDCARD_PATTERN_MULTI, Xapian::Query::OP_OR).get_description());
-	// Any term in the field: the Xapian engine reads the name as a prefix.
-	CHECK_EQ(to_xapian(Query::field("name.")).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, "name.", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM).get_description());
+	const auto wildcard = Query::wildcard(field, "b?*", 7, engine::Expansion::first, engine::PATTERN_SINGLE | engine::PATTERN_MULTI, Op::OR);
+	CHECK_TRUE(wildcard.node()->kind == engine::QueryKind::wildcard);
+	CHECK_EQ(wildcard.node()->field, field);
+	CHECK_EQ(wildcard.node()->str, "b?*");
+	CHECK_EQ(wildcard.node()->parameter, 7u);
+	CHECK_TRUE(wildcard.node()->limit == engine::Expansion::first);
+	CHECK_EQ(wildcard.node()->pattern_flags, engine::PATTERN_SINGLE | engine::PATTERN_MULTI);
+	CHECK_TRUE(wildcard.node()->op == Op::OR);
 
-	// The edit distance's prefix length counts from the term: the field's bytes lead the Xapian pattern.
+	// The edit distance's prefix length counts from the term, not from the field.
 	for (std::size_t prefix_length : { 0u, 1u, 3u }) {
-		CHECK_EQ(to_xapian(Query::edit_distance(field, "bobby", 5, engine::Expansion::error, Op::OR, 2, prefix_length)).get_description(),
-			Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, field + "bobby", 5, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_OR, 2, field.size() + prefix_length).get_description());
+		const auto fuzzy = Query::edit_distance(field, "bobby", 5, engine::Expansion::error, Op::OR, 2, prefix_length);
+		CHECK_TRUE(fuzzy.node()->kind == engine::QueryKind::edit_distance);
+		CHECK_EQ(fuzzy.node()->field, field);
+		CHECK_EQ(fuzzy.node()->str, "bobby");
+		CHECK_EQ(fuzzy.node()->distance, 2u);
+		CHECK_EQ(fuzzy.node()->prefix_length, prefix_length);
 	}
 
 	engine::TextConfig config;
 	config.field = field;
-	CHECK_EQ(to_xapian(engine::parse_text("bob smith", config)).get_description(), [&] {
-		Xapian::QueryParser parser;
-		return parser.parse_query("bob smith", 0, field).get_description();
-	}());
+	const auto parsed = engine::parse_text("bob", config);
+	CHECK_TRUE(parsed.node() != nullptr && parsed.node()->kind == engine::QueryKind::term);
+	CHECK_EQ(parsed.node()->field, field);
+	CHECK_EQ(parsed.node()->str, "bob");
 }
 
 // The same word under two fields is two terms: a query on a field finds the documents with that field's
 // term only. A field mapped to the wrong prefix, on either side, breaks this.
 static void test_field_selects_terms() {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+	const auto path = (std::filesystem::current_path() / "engine_fields_select.db").string();
+	std::filesystem::remove_all(path);
+	auto opened = engine::sync_wait(engine::open_local(path, true, true));
+	auto& shard = *opened.shard;
 	const std::vector<std::pair<std::string, std::string>> docs = {
 		{ "title.S", "apple" }, { "body.S", "apple" }, { "title.S", "pear" }, { "body.S", "apple" }, { "title.S", "apple" },
 	};
+	int n = 0;
 	for (const auto& [name, word] : docs) {
 		engine::Document doc;
+		doc.set_key("K" + std::to_string(++n));
 		doc.add_term(doc.field(name), word, 1);
-		db.add_document(engine::xapian::xapian_document(doc));
+		engine::sync_wait(shard.add(doc, {}));
 	}
-	const auto query = [&](const std::string& field, const std::string& word) { return run(db, to_xapian(Query::term(field, word))); };
-	CHECK_EQ(query("title.S", "apple"), (std::vector<Xapian::docid>{ 1, 5 }));
-	CHECK_EQ(query("body.S", "apple"), (std::vector<Xapian::docid>{ 2, 4 }));
-	CHECK_EQ(query("title.S", "pear"), (std::vector<Xapian::docid>{ 3 }));
-	CHECK_EQ(query("body.S", "pear"), (std::vector<Xapian::docid>{}));
-	CHECK_EQ(run(db, to_xapian(Query::wildcard("title.S", "ap"))), (std::vector<Xapian::docid>{ 1, 5 }));
-	CHECK_EQ(run(db, to_xapian(Query::field("body."))), (std::vector<Xapian::docid>{ 2, 4 }));
-	CHECK_EQ(run(db, to_xapian(Query::match_all())).size(), 5u);
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	const auto query = [&](const std::string& field, const std::string& word) { return run(shard, Query::term(field, word)); };
+	CHECK_TRUE((query("title.S", "apple") == std::set<engine::docid>{ 1, 5 }));
+	CHECK_TRUE((query("body.S", "apple") == std::set<engine::docid>{ 2, 4 }));
+	CHECK_TRUE((query("title.S", "pear") == std::set<engine::docid>{ 3 }));
+	CHECK_TRUE(query("body.S", "pear").empty());
+	CHECK_TRUE((run(shard, Query::wildcard("title.S", "ap")) == std::set<engine::docid>{ 1, 5 }));
+	CHECK_TRUE((run(shard, Query::field("body.S")) == std::set<engine::docid>{ 2, 4 }));
+	CHECK_EQ(run(shard, Query::match_all()).size(), 5u);
+	opened.shard.reset();
+	std::filesystem::remove_all(path);
 }
 
 // Text is indexed into the field, and its stems into the field `Z` + name: the document is the one the
-// generator builds with the prefix, for every stem strategy and language.
+// generator builds with the prefix, split into the word field and the stem field, for every stem
+// strategy and language.
 static void test_text_fields() {
 	const std::vector<std::string> texts = {
 		"The quick brown fox jumps over the lazy dog. Running runners ran quickly; Zebras zig-zag.",
@@ -237,10 +290,11 @@ static void test_text_fields() {
 				for (const bool positions : { true, false }) {
 					for (const auto& text : texts) {
 						engine::Document doc;
-						GenerateTerms::text(doc, prefix, text, positions, 2, false, false, language, stem_language, analysis::stop_strategy::none, stem);
+						GenerateTerms::text(doc, prefix, text, positions, 2, false, language, stem_language, analysis::stop_strategy::none, stem);
 
-						// The oracle: the generator with the prefix, terms joined by the generator itself.
-						Xapian::Document xdoc;
+						// The oracle: the generator with the prefix gives the joined terms; a term that leads with
+						// 'Z' + prefix is a stem, under the field of that name, and any other is under the prefix.
+						engine::Document expected;
 						analysis::term_generator generator;
 						std::optional<snowball::stemmer> stemmer;
 						if (!stem_language.empty()) {
@@ -248,14 +302,19 @@ static void test_text_fields() {
 							generator.stemmer = &*stemmer;
 							generator.stem = stem;
 						}
+						const auto kind = positions ? FieldKind::text : FieldKind::terms;
 						generator.index_text(text, [&](std::string_view term, std::uint32_t wdf, std::uint32_t pos) {
+							const std::string stems = "Z" + prefix;
+							const bool is_stem = term.substr(0, stems.size()) == stems;
+							const auto field = expected.field(is_stem ? stems : prefix, kind);
+							term.remove_prefix(is_stem ? stems.size() : prefix.size());
 							if (pos != 0) {
-								xdoc.add_posting(std::string(term), pos, wdf);
+								expected.add_posting(field, term, pos, wdf);
 							} else {
-								xdoc.add_term(std::string(term), wdf);
+								expected.add_term(field, term, wdf);
 							}
 						}, {.wdf_inc = 2, .prefix = prefix, .positions = positions});
-						CHECK_EQ(doc.serialise(), engine::xapian::from_xapian(xdoc).serialise());
+						CHECK_EQ(doc.serialise(), expected.serialise());
 					}
 				}
 			}
@@ -263,43 +322,11 @@ static void test_text_fields() {
 	}
 }
 
-// The same for Xapian's own generator, which splits words by the Unicode word-break rules.
-static void test_word_break_fields() {
-#ifdef USE_ICU
-	const std::vector<std::string> texts = { "The quick brown fox jumps; running runners ran", "Zzz ZZ zealous", "" };
-	for (const auto stem : { analysis::stem_strategy::none, analysis::stem_strategy::some, analysis::stem_strategy::all, analysis::stem_strategy::all_z }) {
-		for (const bool positions : { true, false }) {
-			for (const auto& text : texts) {
-				const std::string prefix = "body.S";
-				engine::Document doc;
-				GenerateTerms::text(doc, prefix, text, positions, 1, false, true, "", "english", analysis::stop_strategy::none, stem);
-
-				Xapian::Document xdoc;
-				Xapian::TermGenerator generator;
-				generator.set_flags(Xapian::TermGenerator::FLAG_WORD_BREAKS);
-				generator.set_document(xdoc);
-				generator.set_stemmer(Xapian::Stem("english"));
-				generator.set_stemming_strategy(stem == analysis::stem_strategy::none ? Xapian::TermGenerator::STEM_NONE
-					: stem == analysis::stem_strategy::some ? Xapian::TermGenerator::STEM_SOME
-					: stem == analysis::stem_strategy::all ? Xapian::TermGenerator::STEM_ALL : Xapian::TermGenerator::STEM_ALL_Z);
-				if (positions) {
-					generator.index_text(text, 1, prefix);
-				} else {
-					generator.index_text_without_positions(text, 1, prefix);
-				}
-				CHECK_EQ(doc.serialise(), engine::xapian::from_xapian(xdoc).serialise());
-			}
-		}
-	}
-#endif
-}
-
 // The host's id key: the type character and the id's bytes, no 'Q'; the id field's terms are the key field's;
-// placement still hashes the Xapian spelling, so a shard keeps its documents.
+// placement hashes the 'Q' spelling, so a shard keeps its documents.
 static void test_host_keys() {
 	CHECK_EQ(document_key("abc", 'K'), "Kabc");
 	CHECK_EQ(document_key(std::string("\x81\x40", 2), 'N'), std::string("N\x81\x40", 3));
-	CHECK_EQ(key_of_term("QKabc"), "Kabc");
 	CHECK_EQ(key_placement_hash("Kabc"), fnv1ah64::hash("QKabc"));
 	CHECK_EQ(key_placement_hash("N\x80"), fnv1ah64::hash(std::string("QN\x80")));
 	const auto id = field_term("Q", 'K', "abc");
@@ -314,33 +341,25 @@ static void test_host_keys() {
 	CHECK_EQ(std::string(query_field(acc_term_prefix("Q"))), "A");
 }
 
-// The key field's terms are the Xapian engine's id terms: a 'Q', the id's type character and its bytes.
+// The key field's terms are the key's: they count in the document's length, they are not terms of it.
 static void test_key_field() {
 	engine::Document doc;
 	doc.set_key("Kid");
 	doc.add_term(doc.field(engine::KEY_FIELD, FieldKind::terms), "Kother", 2);
 	doc.add_term(doc.field("QK"), "plain", 1);  // a field that merely looks like the id term's lead
-	Xapian::Document xdoc;
-	xdoc.add_boolean_term("QKid");
-	xdoc.add_term("QKother", 2);
-	xdoc.add_term("QKplain", 1);
-	CHECK_EQ(doc.serialise(), engine::xapian::from_xapian(xdoc).serialise());
-
-	CHECK_EQ(to_xapian(Query::term(std::string(engine::KEY_FIELD), "Kid")).get_description(), Xapian::Query("QKid").get_description());
-	CHECK_EQ(to_xapian(Query::wildcard(std::string(engine::KEY_FIELD), "Kbo", 50, engine::Expansion::most_frequent)).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, "QKbo", 50, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::Query::OP_SYNONYM).get_description());
-	CHECK_EQ(to_xapian(Query::field(std::string(engine::KEY_FIELD))).get_description(),
-		Xapian::Query(Xapian::Query::OP_WILDCARD, "Q", 0, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_SYNONYM).get_description());
-	for (std::size_t prefix_length : { 0u, 2u }) {
-		CHECK_EQ(to_xapian(Query::edit_distance(std::string(engine::KEY_FIELD), "Kidd", 5, engine::Expansion::error, Op::OR, 1, prefix_length)).get_description(),
-			Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE, "QKidd", 5, Xapian::Query::WILDCARD_LIMIT_ERROR, Xapian::Query::OP_OR, 1, 1 + prefix_length).get_description());
-	}
+	const auto& native = strata_document(doc);
+	CHECK_EQ(native.key(), "Kid");
+	CHECK_EQ(native.key_wdf(), 2u);
+	CHECK_TRUE(native.field(engine::KEY_FIELD) == nullptr);
+	CHECK_TRUE(native.find_term(engine::KEY_FIELD, "Kother") == nullptr);
+	CHECK_EQ(native.terms().size(), 1u);
+	CHECK_EQ(native.find_term("QK", "plain")->wdf, 1u);
 }
 
-// The strata engine holds a document's terms by field, with the frequencies and positions; the key and
+// A document holds its terms by field, with the frequencies and positions; the key and
 // the key field's frequency stay apart from the terms.
 static void test_strata_fields() {
-	engine::Document doc(engine::Kind::strata);
+	engine::Document doc;
 	doc.set_key("Kid");
 	doc.add_term(doc.field(engine::KEY_FIELD, FieldKind::boolean), "Kid", 1);
 	const auto title = doc.field("title.S", FieldKind::text);
@@ -350,7 +369,7 @@ static void test_strata_fields() {
 	doc.add_posting(title, "smith", 2, 1);
 	doc.add_boolean_term(marker, std::string());
 	doc.add_term(doc.field("title.S"), "bob", 3);
-	auto& native = engine::strata::strata_document(doc);
+	auto& native = strata_document(doc);
 	CHECK_EQ(native.key(), "Kid");
 	CHECK_EQ(native.key_wdf(), 1u);
 	CHECK_EQ(native.fields().size(), 2u);
@@ -366,14 +385,14 @@ static void test_strata_fields() {
 	CHECK_EQ(native.find_term("title.", "")->wdf, 0u);
 
 	// The log line carries the fields: it reads back to the same document.
-	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
+	auto back = engine::Document::unserialise(doc.serialise());
 	CHECK_EQ(back.serialise(), doc.serialise());
 }
 
 // A field with many terms finds each by its hash through the growing table, adds repeats to the same term,
 // and survives interleaved fields; a Field built by hand with a repeated id still lands under its name.
 static void test_strata_many_terms() {
-	engine::Document doc(engine::Kind::strata);
+	engine::Document doc;
 	doc.set_key("Kmany");
 	const auto a = doc.field("a.S", FieldKind::text);
 	const auto b = doc.field("b");
@@ -383,7 +402,7 @@ static void test_strata_many_terms() {
 			doc.add_term(b, "x" + std::to_string(i % 40), 2);
 		}
 	}
-	auto& native = engine::strata::strata_document(doc);
+	auto& native = strata_document(doc);
 	CHECK_EQ(native.field("a.S")->term_count, 300u);
 	CHECK_EQ(native.field("b")->term_count, 40u);
 	for (int i = 0; i < 300; ++i) {
@@ -394,9 +413,9 @@ static void test_strata_many_terms() {
 	}
 	CHECK_EQ(native.find_term("b", "x7")->wdf, 2u * 3 * 8);  // 300 / 40 rounded: ids 7, 47, ... 287 is 8 hits per round
 	CHECK_TRUE(native.find_term("b", "x40") == nullptr);
-	auto back = engine::Document::unserialise(engine::Kind::strata, doc.serialise());
+	auto back = engine::Document::unserialise(doc.serialise());
 	CHECK_EQ(back.serialise(), doc.serialise());
-	CHECK_EQ(engine::strata::strata_document(back).field("a.S")->term_count, 300u);
+	CHECK_EQ(strata_document(back).field("a.S")->term_count, 300u);
 
 	// Two fields given the same id by hand are still two fields.
 	engine::strata::StrataDocument raw;
@@ -447,4 +466,4 @@ void test_foreign_ref_asserts() {
 void test_foreign_ref_asserts() { }
 #endif
 
-TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, test_query_nodes, test_field_selects_terms, test_text_fields, test_word_break_fields, test_key_field, test_host_keys, test_strata_fields, test_strata_many_terms)
+TEST_MAIN(test_foreign_ref_asserts, test_field_refs, test_field_terms_match_model, test_marker_and_field_boundary, test_query_nodes, test_field_selects_terms, test_text_fields, test_key_field, test_host_keys, test_strata_fields, test_strata_many_terms)

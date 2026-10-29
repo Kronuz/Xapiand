@@ -20,24 +20,23 @@
  * THE SOFTWARE.
  */
 
-// The engine behavior that WAL replay depends on (docs/mechanisms/wal-replay.md): what dropping a
-// writer handle does to pending work, and how a replay inside a transaction commits. CR1 hid in the
-// first: a replay left pending in the writer is invisible to every other handle.
+// The engine behavior that WAL replay depends on (docs/mechanisms/wal-replay.md): an explicit commit
+// publishes the replay at once and moves the revision on exactly once.
 
 #include "test_harness.h"
 
 #include <filesystem>
 #include <string>
 
+#include "engine/open.h"
 #include "engine/sync.h"
-#include "engine/xapian/errors.h"
-#include "engine/xapian/shard.h"
 
 namespace {
 
 engine::Document make(const std::string& key) {
 	engine::Document doc;
-	doc.add_boolean_term(doc.field(""), key);
+	doc.set_key(key);
+	doc.add_boolean_term(doc.field("f"), key);
 	doc.set_data(key);
 	return doc;
 }
@@ -48,7 +47,7 @@ void put(engine::Shard& shard, const std::string& key) {
 }
 
 engine::doccount visible(const std::string& path) {
-	auto reader = engine::sync_wait(engine::xapian::open_local(path, false, false));
+	auto reader = engine::sync_wait(engine::open_local(path, false, false));
 	return reader.shard->doc_count();
 }
 
@@ -58,22 +57,10 @@ std::string fresh(const char* name) {
 	return path;
 }
 
-// Pending writes are invisible to other handles; dropping the writer flushes them. This flush, once
-// done by a retry loop that opened the shard many times, is what made a replayed WAL visible.
-void test_plain_handle() {
-	const auto path = fresh("engine_replay_plain.db");
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
-	put(*opened.shard, "Qa");
-	CHECK_EQ(visible(path), 0u);
-	opened.shard.reset();
-	CHECK_EQ(visible(path), 1u);
-	std::filesystem::remove_all(path);
-}
-
 // Replay with an explicit commit: visible at once, and the revision moves on exactly once.
 void test_explicit_commit() {
 	const auto path = fresh("engine_replay_commit.db");
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto opened = engine::sync_wait(engine::open_local(path, true, true));
 	auto& shard = *opened.shard;
 	put(shard, "Qa");
 	put(shard, "Qb");
@@ -88,39 +75,6 @@ void test_explicit_commit() {
 	std::filesystem::remove_all(path);
 }
 
-// A writer in a transaction: the plain commit is refused, the transaction's own commit publishes the
-// replay and keeps the transaction open, and dropping the writer discards what the transaction held.
-void transaction_case(bool flushed) {
-	const auto path = fresh(flushed ? "engine_replay_flushed.db" : "engine_replay_unflushed.db");
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
-	auto& shard = *opened.shard;
-	engine::sync_wait(shard.begin_transaction(flushed));
-	put(shard, "Qa");
-	CHECK_EQ(visible(path), 0u);
-	bool refused = false;
-	try {
-		engine::sync_wait(shard.commit(engine::Transaction::none));
-	} catch (const engine::Error&) {
-		refused = true;
-	}
-	CHECK_TRUE(refused);
-	CHECK_EQ(visible(path), 0u);
-
-	// The transaction commit of the shard's own mode publishes the replay and starts the next transaction.
-	engine::sync_wait(shard.commit(flushed ? engine::Transaction::flushed : engine::Transaction::unflushed));
-	CHECK_EQ(visible(path), 1u);
-	put(shard, "Qb");
-	CHECK_EQ(visible(path), 1u);
-
-	// Dropping the writer with the transaction open does not publish what it holds.
-	opened.shard.reset();
-	CHECK_EQ(visible(path), 1u);
-	std::filesystem::remove_all(path);
-}
-
-void test_flushed_transaction() { transaction_case(true); }
-void test_unflushed_transaction() { transaction_case(false); }
-
 }  // namespace
 
-TEST_MAIN(test_plain_handle, test_explicit_commit, test_flushed_transaction, test_unflushed_transaction)
+TEST_MAIN(test_explicit_commit)

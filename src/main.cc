@@ -51,10 +51,6 @@
 #endif
 #endif
 
-#ifdef USE_ICU
-#include <unicode/uvernum.h>
-#endif
-
 #ifdef XAPIAND_LUA
 #include <lua.h>                                  // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
 #endif
@@ -77,7 +73,6 @@
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
 #include "traceback.h"                            // for traceback::{backtrace, traceback, collect_callstack_sig_handler}
 #include "tls.h"                                  // for tls_setup
-#include "engine/xapian/convert.h"                // for engine::xapian::version
 
 #if defined(__linux__) && !defined(__GLIBC__)
 #include <pthread.h>                              // for pthread_attr_t, pthread_setattr_default_np
@@ -750,12 +745,8 @@ void banner() {
 	set_thread_name("MAIN");
 
 	std::vector<std::string> values({
-			strings::format("Xapian v{}", engine::xapian::version()),
 #ifdef XAPIAND_LUA
 			strings::format("Lua v{}.{}", LUA_VERSION_MAJOR, LUA_VERSION_MINOR),
-#endif
-#ifdef USE_ICU
-			strings::format("ICU v{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM),
 #endif
 	});
 
@@ -777,7 +768,7 @@ void banner() {
 			Package::HASH,
 			"v" + Package::VERSION,
 			Package::BUGREPORT,
-			"Using " + strings::join(values, ", ", " and "));
+			values.empty() ? "" : "Using " + strings::join(values, ", ", " and "));
 	}
 
 	L(-LOG_NOTICE, WHITE, "{} (pid:{})", Package::STRING, getpid());

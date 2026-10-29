@@ -33,7 +33,6 @@ extern struct opts_t {
 	double processors = 1;
 	int verbosity = 0;
 	bool detach = false;
-	bool solo = false;
 	bool strict = false;
 	bool force = false;
 	std::string color = "auto";  // --color=<mode>: auto/always/never/truecolor/256/16/stacked
@@ -54,30 +53,17 @@ extern struct opts_t {
 	std::string tls_cert, tls_key;
 	std::size_t tls_max_connections = 1024;
 	unsigned int http_port = XAPIAND_HTTP_SERVERPORT;
-	unsigned int remote_port = XAPIAND_REMOTE_SERVERPORT;
-	unsigned int replication_port = XAPIAND_REPLICATION_SERVERPORT;
-	unsigned int discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
-	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
-	std::string discovery_interface;
 	std::string pidfile = "";
 	std::string logfile = "";
 	std::string uid = "";
 	std::string gid = "";
-	std::string primary_node = "";
 	ssize_t num_http_servers = 1;
 	ssize_t num_http_clients = 1;
-	ssize_t num_remote_servers = 1;
-	ssize_t num_remote_clients = 1;
-	ssize_t num_replication_servers = 1;
-	ssize_t num_replication_clients = 1;
 	ssize_t num_async_wal_writers = 1;
-	ssize_t num_doc_matchers = 1;
 	ssize_t num_doc_preparers = 1;
 	ssize_t num_doc_indexers = 1;
 	ssize_t num_committers = 1;
 	ssize_t num_fsynchers = 1;
-	ssize_t num_replicators = 1;
-	ssize_t num_discoverers = 1;
 	ssize_t database_pool_size = 10;
 	ssize_t schema_pool_size = 30;
 	ssize_t schema_versions_size = 1000;
@@ -87,9 +73,8 @@ extern struct opts_t {
 	ssize_t max_clients = 10;
 	ssize_t max_database_readers = 3;
 	ssize_t max_files = 0;  // (0 = automatic)
-	size_t num_shards = 1;
+	size_t num_shards = 5;
 	size_t num_replicas = 0;
-	int flush_threshold = 100000;
 	bool uuid_compact = false;
 	bool legacy_ids = false;  // pure v1-only codec (mint + decode); no v6
 	uint32_t uuid_repr = 0;
@@ -106,7 +91,6 @@ extern struct opts_t {
 	bool log_microseconds = false;
 	bool log_threads = false;
 	bool log_location = false;
-	bool log_replicas = false;
 	double random_errors_db = 0;
 	double random_errors_io = 0;
 	double random_errors_net = 0;
@@ -122,17 +106,6 @@ extern struct opts_t {
 	unsigned long long fsyncher_debounce_busy_timeout = 500;
 	unsigned long long fsyncher_debounce_min_force_timeout = 500;
 	unsigned long long fsyncher_debounce_max_force_timeout = 500;
-	unsigned long long db_updater_throttle_time = 0;
-	unsigned long long db_updater_debounce_timeout = 1000;
-	unsigned long long db_updater_debounce_busy_timeout = 1000;
-	unsigned long long db_updater_debounce_min_force_timeout = 1000;
-	unsigned long long db_updater_debounce_max_force_timeout = 1000;
-	unsigned long long trigger_replication_throttle_time = 0;
-	unsigned long long trigger_replication_debounce_timeout = 1000;
-	unsigned long long trigger_replication_debounce_busy_timeout = 1000;
-	unsigned long long trigger_replication_debounce_min_force_timeout = 1000;
-	unsigned long long trigger_replication_debounce_max_force_timeout = 1000;
-	unsigned long long database_stall_time = 0;
 } opts;
 
 opts_t parseOptions(int argc, char** argv);

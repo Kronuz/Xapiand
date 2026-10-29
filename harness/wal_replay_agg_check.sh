@@ -3,7 +3,7 @@
 # must see the replayed values without a further write.
 #
 # Steps (exit non-zero on a failed assertion):
-#   1. Start a solo node, RESTORE N docs with a numeric "age" without commit, kill -9.
+#   1. Start a node, RESTORE N docs with a numeric "age" without commit, kill -9.
 #   2. Restart on the same data dir (WAL replay).
 #   3. Assert _avg(age) and _max(age) equal the values computed from the input.
 set -u
@@ -22,7 +22,7 @@ fail() { echo "  FAIL: $*"; fails=$((fails + 1)); }
 pass() { echo "  ok: $*"; }
 
 start_node() {
-	"$BIN" --port "$PORT" --solo --name walaggnode -D "$RUNDIR/n" >>"$RUNDIR/$1" 2>&1 &
+	"$BIN" --port "$PORT" --name walaggnode -D "$RUNDIR/n" >>"$RUNDIR/$1" 2>&1 &
 	PID=$!
 	for _ in $(seq 80); do
 		kill -0 "$PID" 2>/dev/null || return 1

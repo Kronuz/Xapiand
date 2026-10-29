@@ -22,8 +22,9 @@
 
 
 // Fuzzes the text parser (engine::parse_text): grammar-aware and byte-mutated query strings under
-// random settings. Every text must either raise QueryParserError or lower to an engine query whose
-// Xapian description is the one queryparser gives its own tree; a second parse must agree.
+// random settings. Every text must either raise QueryParserError or lower to an engine query with the
+// leaves queryparser's own description of its tree names (a term for each position, a node for each
+// wildcard and each edit-distance expansion); a second parse must agree.
 //
 //   xapiand_fuzz_text SECONDS [SEED]
 //
@@ -46,7 +47,6 @@
 
 #include "engine/query.h"
 #include "engine/text.h"
-#include "engine/xapian/query.h"
 #include "exception_engine.h"
 #include "jsonl.hh"
 
@@ -123,7 +123,7 @@ random_config(Rng& rng)
 {
 	static const unsigned bits[] = {
 		engine::text::BOOLEAN, engine::text::PHRASE, engine::text::LOVEHATE, engine::text::WILDCARD, engine::text::WILDCARD_SINGLE,
-		engine::text::WILDCARD_MULTI, engine::text::PARTIAL, engine::text::FUZZY, engine::text::CJK_NGRAM, engine::text::WORD_BREAKS,
+		engine::text::WILDCARD_MULTI, engine::text::PARTIAL, engine::text::FUZZY, engine::text::CJK_NGRAM,
 	};
 	static const engine::Op ops[] = {
 		engine::Op::INVALID, engine::Op::AND, engine::Op::OR, engine::Op::XOR, engine::Op::AND_MAYBE, engine::Op::NEAR,
@@ -185,7 +185,41 @@ match_all_wildcards(std::string tree)
 	return tree;
 }
 
-// Parses once: the description of the lowered query, an error marker, or the tree's own description.
+// The leaves of a lowered query, and of queryparser's description of the same tree, as text.
+std::string
+leaves_of(const engine::Query& query)
+{
+	std::size_t terms = 0, wildcards = 0, fuzzy = 0;
+	std::vector<const engine::QueryNode*> stack;
+	if (query.node() != nullptr) { stack.push_back(query.node()); }
+	while (!stack.empty()) {
+		const auto* node = stack.back();
+		stack.pop_back();
+		terms += node->kind == engine::QueryKind::term && node->pos != 0;
+		wildcards += node->kind == engine::QueryKind::wildcard;
+		fuzzy += node->kind == engine::QueryKind::edit_distance;
+		for (const auto& sub : node->subqueries) {
+			if (sub.node() != nullptr) { stack.push_back(sub.node()); }
+		}
+	}
+	return "terms=" + std::to_string(terms) + " wildcards=" + std::to_string(wildcards) + " fuzzy=" + std::to_string(fuzzy);
+}
+
+std::size_t
+count_of(const std::string& text, const std::string& what)
+{
+	std::size_t n = 0;
+	for (auto at = text.find(what); at != std::string::npos; at = text.find(what, at + what.size())) { ++n; }
+	return n;
+}
+
+std::string
+leaves_of(const std::string& tree)
+{
+	return "terms=" + std::to_string(count_of(tree, "@")) + " wildcards=" + std::to_string(count_of(tree, "WILDCARD ")) + " fuzzy=" + std::to_string(count_of(tree, "EDIT_DISTANCE "));
+}
+
+// Parses once: the leaves of the lowered query, an error marker, or the tree's own description.
 struct Reading {
 	std::string lowered;
 	std::string tree;
@@ -199,8 +233,7 @@ reading(const std::string& text, const engine::TextConfig& c)
 	try {
 		const auto query = engine::parse_text(text, c, &r.tree);
 		r.tree = match_all_wildcards(r.tree);
-		// Xapian has no form for a phrase over alternatives; the strata engine reads the query itself.
-		r.lowered = query.alternatives() ? r.tree : engine::xapian::to_xapian(query).get_description();
+		r.lowered = leaves_of(query);
 	} catch (const QueryParserError& exc) {
 		r.error = "syntax: " + exc.reason();
 	} catch (const InvalidTextConfigError& exc) {
@@ -293,7 +326,7 @@ main(int argc, char** argv)
 			bool bad = first.lowered != second.lowered || first.error != second.error;
 			if (first.error.empty()) {
 				++parsed;
-				bad = bad || first.lowered != first.tree;
+				bad = bad || first.lowered != leaves_of(first.tree);
 			} else {
 				++rejected;
 			}

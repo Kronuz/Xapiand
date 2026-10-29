@@ -24,16 +24,11 @@
 
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/document.h"  // for engine::strata::new_native, unserialise_document
-#include "engine/xapian/convert.h" // for engine::xapian::new_native, unserialise_document
 
 
 // A document is built in the representation of the engine that will write it (engine-write-path.md).
 
-engine::Document::Document() : Document(default_kind()) { }
-
-
-engine::Document::Document(Kind kind)
-	: native_(kind == Kind::strata ? strata::new_native() : xapian::new_native()) { }
+engine::Document::Document() : native_(strata::new_native()) { }
 
 
 engine::FieldRef
@@ -57,12 +52,5 @@ engine::Document::field(std::string_view name, FieldKind kind)
 engine::Document
 engine::Document::unserialise(std::string_view serialised)
 {
-	return unserialise(default_kind(), serialised);
-}
-
-
-engine::Document
-engine::Document::unserialise(Kind kind, std::string_view serialised)
-{
-	return kind == Kind::strata ? strata::unserialise_document(serialised) : xapian::unserialise_document(serialised);
+	return strata::unserialise_document(serialised);
 }

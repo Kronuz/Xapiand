@@ -33,7 +33,9 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -42,9 +44,8 @@
 #include "database/flags.h"
 #include "database/pool.h"
 #include "database/shard.h"
-#include "engine/xapian/errors.h"
-#include "engine/xapian/shard.h"
-#include "engine/xapian/xapian.h"
+#include "engine/error.h"
+#include "engine/shard.h"
 #include "node.h"
 
 using namespace std::chrono_literals;
@@ -58,7 +59,7 @@ struct PoolTestAccess {
 	static void set_local(Shard& shard) { shard._local = true; }  // as if opened locally
 	static void close(Shard& shard) { shard._closed.store(true); }  // as if closed by a failed commit
 	static bool open(Shard& shard) { return shard.engine_shard != nullptr; }
-	static void replace_engine(Shard& shard, std::unique_ptr<engine::xapian::Shard> engine) { shard.engine_shard = std::move(engine); }
+	static void replace_engine(Shard& shard, std::unique_ptr<engine::Shard> engine) { shard.engine_shard = std::move(engine); }
 };
 
 namespace {
@@ -138,7 +139,8 @@ void test_concurrent_cleanup() {
 					auto shard = pool.checkout(Endpoint("pool_test_cleanup_" + std::to_string((t * 7 + i) % 16)), flags, 5.0);
 					pool.checkin(shard);
 					++checkouts;
-				} catch (const engine::xapian::NotAvailable&) {
+				} catch (const engine::Error& error) {
+					if (error.kind != engine::errc::not_available) { throw; }
 					++timeouts;
 				}
 			}
@@ -147,7 +149,7 @@ void test_concurrent_cleanup() {
 	for (int t = 0; t < 4; ++t) {
 		threads.emplace_back([&] {
 			while (!stop) {
-				pool.cleanup(true, false);
+				pool.cleanup(true);
 			}
 		});
 	}
@@ -190,7 +192,8 @@ void clear_wakes_waiters(int flags) {
 		std::shared_ptr<Shard> shard;
 		try {
 			shard = pool.checkout(endpoint, flags, 0.5);
-		} catch (const engine::xapian::NotAvailable&) {
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::not_available) { throw; }
 			++timeouts;
 			continue;
 		}
@@ -200,7 +203,8 @@ void clear_wakes_waiters(int flags) {
 			try {
 				auto other = pool.checkout(endpoint, flags, 0.5);
 				pool.checkin(other);
-			} catch (const engine::xapian::NotAvailable&) {
+			} catch (const engine::Error& error) {
+				if (error.kind != engine::errc::not_available) { throw; }
 				++timeouts;
 			}
 		});
@@ -241,7 +245,7 @@ void test_checkin_drop_races_cleanup() {
 	for (int t = 0; t < 3; ++t) {
 		threads.emplace_back([&] {
 			while (!stop) {
-				pool.cleanup(true, false);
+				pool.cleanup(true);
 			}
 		});
 	}
@@ -307,9 +311,9 @@ Outcome retry_outcome(engine::errc kind, int t) {
 }
 
 // An engine whose find_key fails `fail_times` times with `kind` and then finds document 7.
-class FailingEngine : public engine::xapian::Shard {
+class FailingEngine final : public engine::Shard {
 public:
-	FailingEngine(engine::errc kind, int fail_times) : engine::xapian::Shard(nullptr), kind(kind), fail_times(fail_times) { }
+	FailingEngine(engine::errc kind, int fail_times) : kind(kind), fail_times(fail_times) { }
 	task::task<engine::docid> find_key(const std::string&) override {
 		++calls;
 		if (calls <= fail_times) {
@@ -319,9 +323,34 @@ public:
 	}
 	task::task<bool> reopen() override { co_return true; }
 	unsigned refs() const override { return 0; }
+
+	task::task<engine::WriteResult> add(engine::Document&, engine::WriteArgs) override { unused(); }
+	task::task<engine::WriteResult> replace(engine::docid, engine::Document&, engine::WriteArgs) override { unused(); }
+	task::task<engine::WriteResult> replace_by_key(const std::string&, engine::Document&, engine::WriteArgs) override { unused(); }
+	task::task<void> erase(engine::docid, bool, std::optional<engine::rev>) override { unused(); }
+	task::task<engine::docid> erase_by_key(const std::string&, bool, std::optional<engine::rev>) override { unused(); }
+	task::task<void> commit(engine::Transaction) override { unused(); }
+	task::task<void> begin_transaction(bool) override { unused(); }
+	task::task<void> commit_transaction() override { unused(); }
+	task::task<void> cancel_transaction() override { unused(); }
+	task::task<void> set_metadata(const std::string&, const std::string&) override { unused(); }
+	task::task<void> add_spelling(const std::string&, engine::termcount) override { unused(); }
+	task::task<engine::termcount> remove_spelling(const std::string&, engine::termcount) override { unused(); }
+	task::task<engine::Stats> stats() override { unused(); }
+	task::task<std::unique_ptr<engine::DocView>> get(engine::docid) override { unused(); }
+	task::task<void> scan(engine::docid, const engine::ScanSink&) override { unused(); }
+	task::task<std::string> metadata(const std::string&) override { unused(); }
+	task::task<std::vector<std::string>> metadata_keys() override { unused(); }
+	engine::rev revision() const override { return 0; }
+	engine::doccount doc_count() const override { return 0; }
+	std::string uuid() const override { return {}; }
+
 	engine::errc kind;
 	int fail_times;
 	int calls = 0;
+
+private:
+	[[noreturn]] static void unused() { throw std::logic_error("FailingEngine: not under test"); }
 };
 
 struct FindOutcome {

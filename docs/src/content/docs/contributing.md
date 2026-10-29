@@ -20,30 +20,10 @@ trackers, chat rooms, and mailing lists is expected to follow the [Code of Condu
 
 # The Road Ahead
 
-This is a To Do list of features that are only partially implemented; but that
-are planned to be supported by Xapiand some time soonish in order to get closer
-to the final product:
-
-* Multi-Partitioning and Distribution Strategies:
-  * Random Consistent Partitioning and Replication.
-
-* Highly Available:
-  * Automatic node operation rerouting.
-  * Replicas exists to maximize high availability *and* data locality.
-  * Read and Search operations performed on any of the replicas.
-  * Reliable, asynchronous replication for long term persistency.
-
-### Multi-Partitioning and Distribution Strategies
-
-To achieve high availability, distribution of data and data locality, Xapiand
-can partition, replicate and distribute indexes across several nodes using
-any of the following partitioning strategies:
-
-#### Random Consistent Partitioning
-
-* Horizontal scaling by distributing indexes among several nodes.
-* Increases data locality by increasing number of read-only replicas.
-* Minimizes network usage when accessing indexes locally available.
+Xapiand runs on a single node. Distribution across nodes (partitioning,
+replicas and failover) is planned in the
+[strata plan](https://github.com/Kronuz/strata/blob/main/docs/PLAN.md), and the
+cluster returns in a later release.
 
 ---
 

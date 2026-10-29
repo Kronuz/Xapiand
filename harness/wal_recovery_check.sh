@@ -13,7 +13,7 @@
 # open-time replay) instead of the long-gone internal classes.
 #
 # Steps (exit non-zero on any failed assertion):
-#   1. Start a solo node on a fresh data dir.
+#   1. Start a node on a fresh data dir.
 #   2. PUT N docs WITHOUT ?commit=true  -> they live in the WAL, not yet in glass.
 #   3. kill -9 the node within ~1s (well before the ~8s timed committer) -> crash.
 #   4. Restart on the SAME data dir     -> WAL replay recovers the writes.
@@ -49,7 +49,7 @@ wait_ready() {
 
 start_node() {  # $1 = log file name under RUNDIR
 	# --verbosity 3 so the WAL replay line (an L_INFO) is captured for step 6.
-	"$BIN" --port "$PORT" --solo --name walrecnode --verbosity 3 -D "$RUNDIR/n" >>"$RUNDIR/$1" 2>&1 &
+	"$BIN" --port "$PORT" --name walrecnode --verbosity 3 -D "$RUNDIR/n" >>"$RUNDIR/$1" 2>&1 &
 	PID=$!
 	wait_ready
 }

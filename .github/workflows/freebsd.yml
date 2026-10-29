@@ -35,8 +35,7 @@ jobs:
           usesh: true
           envs: 'TAG'
           prepare: |
-            pkg install -y cmake ninja git pkgconf perl5 tcl86 icu zstd asio
-            ln -sf /usr/local/bin/tclsh8.6 /usr/local/bin/tclsh
+            pkg install -y cmake ninja git pkgconf zstd asio
           run: |
             set -eux
             cmake -G Ninja -B build \

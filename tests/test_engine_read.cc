@@ -21,23 +21,21 @@
  */
 
 // Unit tests for the read slice of the engine shard (stats, find_key, get, scan, metadata, check)
-// and the DocView it hands out, each compared with what Xapian itself reports.
+// and the DocView it hands out, each compared with what the test stored.
 
 #include "test_harness.h"
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <typeinfo>
 #include <vector>
 
+#include "engine/error.h"
+#include "engine/open.h"
 #include "engine/sync.h"
-#include "engine/xapian/convert.h"
-#include "engine/xapian/errors.h"
-#include "engine/xapian/shard.h"
-#include "engine/xapian/xapian.h"
 
 namespace {
 
@@ -57,18 +55,18 @@ engine::errc kind_of(const std::function<void()>& f) {
 }
 
 // Documents 1..kDocs with a key term, positions, two values and data; every fourth is erased.
-std::unique_ptr<engine::xapian::Shard> build(const std::string& path) {
+std::unique_ptr<engine::Shard> build(const std::string& path) {
 	std::filesystem::remove_all(path);
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto opened = engine::sync_wait(engine::open_local(path, true, true));
 	auto& shard = *opened.shard;
 	for (int i = 1; i <= kDocs; ++i) {
 		engine::Document doc;
 		doc.set_key("Q" + std::to_string(i));
-		doc.add_posting(doc.field(""), "alpha", 1, 2);
-		doc.add_posting(doc.field(""), "alpha", 5);
-		doc.add_posting(doc.field(""), "beta" + std::to_string(i % 3), 2, 3);
+		doc.add_posting(doc.field("f"), "alpha", 1, 2);
+		doc.add_posting(doc.field("f"), "alpha", 5);
+		doc.add_posting(doc.field("f"), "beta" + std::to_string(i % 3), 2, 3);
 		if (i % 2 == 0) {
-			doc.add_term(doc.field(""), "even", 4);
+			doc.add_term(doc.field("f"), "even", 4);
 		}
 		doc.add_value(3, "v3-" + std::to_string(i));
 		doc.add_value(9, std::string("v9\0x", 4) + std::to_string(i));
@@ -86,26 +84,23 @@ std::unique_ptr<engine::xapian::Shard> build(const std::string& path) {
 
 void test_stats() {
 	auto shard = build(path_of("engine_read_stats.db"));
-	auto* db = shard->database();
 	auto stats = engine::sync_wait(shard->stats());
-	CHECK_EQ(stats.uuid, db->get_uuid());
-	CHECK_EQ(stats.revision, db->get_revision());
-	CHECK_EQ(stats.doc_count, db->get_doccount());
-	CHECK_EQ(stats.lastdocid, db->get_lastdocid());
-	CHECK_EQ(stats.total_length, db->get_total_length());
-	CHECK_EQ(stats.doclen_lower, db->get_doclength_lower_bound());
-	CHECK_EQ(stats.doclen_upper, db->get_doclength_upper_bound());
-	CHECK_TRUE(stats.avlength == db->get_avlength());
-	CHECK_EQ(stats.has_positions, db->has_positions());
+	CHECK_FALSE(stats.uuid.empty());
+	CHECK_EQ(stats.uuid, shard->uuid());
+	CHECK_EQ(stats.revision, shard->revision());
 	CHECK_TRUE(stats.has_positions);
 	CHECK_EQ(stats.doc_count, static_cast<engine::doccount>(kDocs - kDocs / 4));
 	CHECK_EQ(stats.lastdocid, static_cast<engine::docid>(kDocs));
 	CHECK_EQ(shard->doc_count(), stats.doc_count);
+	// A live document has alpha (3), beta (3) and, when its id is even, even (4): 6 or 10 terms long.
+	CHECK_EQ(stats.doclen_lower, 6u);
+	CHECK_EQ(stats.doclen_upper, 10u);
+	CHECK_EQ(stats.total_length, 12u * 6 + 6u * 10);
+	CHECK_TRUE(stats.avlength == static_cast<double>(stats.total_length) / stats.doc_count);
 }
 
 void test_find_key_and_get() {
 	auto shard = build(path_of("engine_read_get.db"));
-	auto* db = shard->database();
 	for (int i = 1; i <= kDocs; ++i) {
 		const bool erased = i % 4 == 0;
 		auto did = engine::sync_wait(shard->find_key("Q" + std::to_string(i)));
@@ -115,23 +110,24 @@ void test_find_key_and_get() {
 			continue;
 		}
 		auto view = engine::sync_wait(shard->get(did));
-		auto doc = db->get_document(did);
 		CHECK_EQ(view->did(), did);
-		CHECK_EQ(view->data(), doc.get_data());
-		CHECK_EQ(view->value(3), doc.get_value(3));
-		CHECK_EQ(view->value(9), doc.get_value(9));
+		CHECK_EQ(view->data(), "data " + std::to_string(i));
+		CHECK_EQ(view->value(3), "v3-" + std::to_string(i));
+		CHECK_EQ(view->value(9), std::string("v9\0x", 4) + std::to_string(i));
 		CHECK_EQ(view->value(4), "");
-		CHECK_EQ(view->serialise(), doc.serialise());
 
-		// values: every value, in slot order
+		// values: every value, in slot order (the engine adds its version slot, 1)
 		std::vector<std::pair<engine::valueno, std::string>> values;
-		view->values([&](engine::valueno slot, std::string_view value) { values.emplace_back(slot, std::string(value)); });
-		std::vector<std::pair<engine::valueno, std::string>> want;
-		for (auto it = doc.values_begin(); it != doc.values_end(); ++it) {
-			want.emplace_back(it.get_valueno(), *it);
-		}
+		view->values([&](engine::valueno slot, std::string_view value) {
+			if (slot != 1) {
+				values.emplace_back(slot, std::string(value));
+			}
+		});
+		const std::vector<std::pair<engine::valueno, std::string>> want = {
+			{3, "v3-" + std::to_string(i)}, {9, std::string("v9\0x", 4) + std::to_string(i)},
+		};
 		CHECK_TRUE(values == want);
-		CHECK_GE(values.size(), 2u);  // the engine adds its version slot
+		CHECK_EQ(view->version(), 1u);
 	}
 }
 
@@ -145,40 +141,10 @@ void test_view_outlives_shard() {
 	CHECK_EQ(view->value(3), "v3-2");
 }
 
-// Every view an engine read makes is destroyed: none alive after get, scan (also a scan cut short by
-// a throwing sink and resumed, as the dump retry does) and find_key.
-void test_views_do_not_leak() {
-	auto shard = build(path_of("engine_read_live.db"));
-	CHECK_EQ(engine::xapian::live_views(), 0u);
-
-	// the counter sees a view that is held, and the release of it
-	auto held = engine::sync_wait(shard->get(1));
-	CHECK_EQ(engine::xapian::live_views(), 1u);
-	held.reset();
-	CHECK_EQ(engine::xapian::live_views(), 0u);
-
-	for (int i = 1; i <= kDocs; ++i) {
-		const bool erased = i % 4 == 0;
-		CHECK_EQ(engine::sync_wait(shard->find_key("Q" + std::to_string(i))), erased ? 0u : static_cast<engine::docid>(i));
-		if (!erased) {
-			{ auto view = engine::sync_wait(shard->get(static_cast<engine::docid>(i))); view->data(); }
-		} else {
-			CHECK_TRUE(kind_of([&] { engine::sync_wait(shard->get(static_cast<engine::docid>(i))); }) == engine::errc::doc_not_found);
-		}
-		CHECK_EQ(engine::xapian::live_views(), 0u);
-	}
-
-	// a full scan, with one view alive inside the sink and none after it
-	size_t inside = 0, seen = 0;
-	engine::sync_wait(shard->scan(1, [&](const engine::DocView&) {
-		++seen;
-		inside = engine::xapian::live_views();
-	}));
-	CHECK_EQ(seen, static_cast<size_t>(kDocs - kDocs / 4));
-	CHECK_EQ(inside, 1u);
-	CHECK_EQ(engine::xapian::live_views(), 0u);
-
-	// the retry path: a sink that throws mid-scan, then the scan resumed from the last id
+// A scan cut short by a throwing sink and resumed from the last id, as the dump retry does, sees the
+// documents after the one it stopped at.
+void test_scan_resumes_after_a_throwing_sink() {
+	auto shard = build(path_of("engine_read_resume.db"));
 	engine::docid last = 0;
 	int count = 0;
 	bool thrown = false;
@@ -193,44 +159,25 @@ void test_views_do_not_leak() {
 		thrown = true;
 	}
 	CHECK_TRUE(thrown);
-	CHECK_EQ(engine::xapian::live_views(), 0u);
 	size_t resumed = 0;
 	engine::sync_wait(shard->scan(last, [&](const engine::DocView&) { ++resumed; }));
 	CHECK_EQ(resumed, static_cast<size_t>(kDocs - kDocs / 4) - 2);
-	CHECK_EQ(engine::xapian::live_views(), 0u);
-
-	// a view that outlives its shard is still counted until it goes
-	{
-		auto own = build(path_of("engine_read_live_own.db"));
-		held = engine::sync_wait(own->get(2));
-	}
-	CHECK_EQ(engine::xapian::live_views(), 1u);
-	held.reset();
-	CHECK_EQ(engine::xapian::live_views(), 0u);
 }
 
 void test_scan() {
 	auto shard = build(path_of("engine_read_scan.db"));
-	auto* db = shard->database();
 	for (engine::docid from : {0u, 1u, 2u, 4u, 5u, 23u, 24u, 25u, 1000u}) {
-#if XAPIAND_XAPIAN_ASSERTIONS
-		// Xapian's assertion "old_termfreq == termfreq" fires in skip_to past the last live
-		// document once the highest docid was erased (public API only: postlist_begin("").skip_to).
-		if (from >= kDocs) {
-			continue;
-		}
-#endif
 		std::vector<engine::docid> got, want;
 		std::vector<std::string> data, want_data;
 		engine::sync_wait(shard->scan(from, [&](const engine::DocView& doc) {
 			got.push_back(doc.did());
 			data.push_back(doc.data());
 		}));
-		auto it = db->postlist_begin("");
-		it.skip_to(from);
-		for (; it != db->postlist_end(""); ++it) {
-			want.push_back(*it);
-			want_data.push_back(db->get_document(*it).get_data());
+		for (int i = 1; i <= kDocs; ++i) {
+			if (i % 4 != 0 && static_cast<engine::docid>(i) >= from) {
+				want.push_back(static_cast<engine::docid>(i));
+				want_data.push_back("data " + std::to_string(i));
+			}
 		}
 		CHECK_TRUE(got == want);
 		CHECK_TRUE(data == want_data);
@@ -266,9 +213,6 @@ void test_metadata() {
 	CHECK_EQ(engine::sync_wait(shard->metadata("absent")), "");
 	auto keys = engine::sync_wait(shard->metadata_keys());
 	CHECK_TRUE((keys == std::vector<std::string>{"k1", "k2"}));
-	auto* db = shard->database();
-	std::vector<std::string> want(db->metadata_keys_begin(), db->metadata_keys_end());
-	CHECK_TRUE(keys == want);
 }
 
 void test_check() {
@@ -276,38 +220,15 @@ void test_check() {
 	{
 		auto shard = build(path);
 	}
-	auto good = engine::sync_wait(engine::xapian::check(path));
+	auto good = engine::sync_wait(engine::check(path));
 	CHECK_EQ(good.errors, 0u);
 	CHECK_TRUE(good.failure.empty());
 
-	// a path that is not a database fails with Xapian's own description, as a value
-	auto missing = engine::sync_wait(engine::xapian::check(path + ".missing"));
+	// a path that is not a database fails with a description, as a value
+	auto missing = engine::sync_wait(engine::check(path + ".missing"));
 	CHECK_FALSE(missing.failure.empty());
-	std::string direct;
-	try {
-		Xapian::Database::check(path + ".missing");
-	} catch (const Xapian::Error& error) {
-		direct = error.get_description();
-	}
-	CHECK_EQ(missing.failure, direct);
-}
-
-struct Unrelated { virtual ~Unrelated() = default; };
-
-void test_native() {
-	auto shard = build(path_of("engine_read_native.db"));
-	engine::Shard& seam = *shard;
-	CHECK_TRUE(&seam.native<engine::xapian::Shard>() == shard.get());
-	CHECK_TRUE(seam.native<engine::xapian::Shard>().database() == shard->database());
-	bool refused = false;
-	try {
-		seam.native<Unrelated>();
-	} catch (const std::bad_cast&) {
-		refused = true;
-	}
-	CHECK_TRUE(refused);
 }
 
 }  // namespace
 
-TEST_MAIN(test_stats, test_find_key_and_get, test_view_outlives_shard, test_views_do_not_leak, test_scan, test_metadata, test_check, test_native)
+TEST_MAIN(test_stats, test_find_key_and_get, test_view_outlives_shard, test_scan_resumes_after_a_throwing_sink, test_scan, test_metadata, test_check)

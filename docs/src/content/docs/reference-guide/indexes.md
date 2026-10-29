@@ -2,8 +2,7 @@
 title: "Indexes"
 ---
 
-This section starts with a short introduction to Xapiand [Data Replication](replication),
-followed by a list of available indexes APIs:
+This section lists the available indexes APIs:
 
 Index management:
 

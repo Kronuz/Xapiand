@@ -4,9 +4,9 @@
 BIN=$1; N=${N:-5}; PORT=${PORT:-18810}; rc=0
 S='{"_schema":{"_type":"foreign/object","_foreign":".schemas/00000000-0000-1000-8000-010000000000","_meta":{"description":"Twitter Schema"},"_id":{"_type":"integer"},"user":{"_type":"keyword"},"postDate":{"_type":"datetime"},"message":{"_type":"text"}}}'
 DOCS='[{"user":"Kronuz","postDate":"2016-11-15T13:12:00","message":"Trying out Xapiand","_id":1},{"user":"Kronuz","postDate":"2016-10-15T10:31:18","message":"Another tweet","_id":2}]'
-for ENG in xapian strata; do
+for ENG in strata; do
   D=$(mktemp -d "${TMPDIR:-/tmp}/restore_schema.XXXXXX")
-  XAPIAND_ENGINE=$ENG "$BIN" --port $PORT --solo --name rs -D "$D/n" >"$D/log" 2>&1 & P=$!
+  "$BIN" --port $PORT --name rs -D "$D/n" >"$D/log" 2>&1 & P=$!
   for _ in $(seq 60); do curl -s -m2 -o /dev/null localhost:$PORT/ && break; sleep .5; done
   bad=0
   for i in $(seq $N); do

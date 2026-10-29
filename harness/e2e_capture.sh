@@ -9,7 +9,7 @@
 #     fail to bind (EADDRINUSE) and exit, and newman then silently hits the STALE
 #     node -- which looks like a bogus regression. (This bit us once; see the
 #     `kill -0 $pid` check below: we confirm OUR node is the one serving.)
-#   * --solo (no discovery/replication ports) + a FRESH data dir + a FIXED --name
+#   * (no discovery/replication ports) + a FRESH data dir + a FIXED --name
 #     (so volatile node-identity does not diverge the bodydiff).
 #   * newman exits 1 if ANY assertion fails; in the green state every assertion passes,
 #     so exit 0 is expected. The report is written either way -- judge the run with
@@ -74,7 +74,7 @@ fi
 [ -n "$squatter" ] && kill -9 $squatter 2>/dev/null || true
 sleep 1
 rm -rf "$DATADIR"; mkdir -p "$DATADIR"
-"$BIN" --port "$PORT" --name benchnode --solo -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >$TMPD/xe2e_node.log 2>&1 &
+"$BIN" --port "$PORT" --name benchnode -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >$TMPD/xe2e_node.log 2>&1 &
 pid=$!
 
 for _ in $(seq 1 120); do

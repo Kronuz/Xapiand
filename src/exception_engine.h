@@ -59,3 +59,25 @@ public:
 	template<typename... Args>
 	InvalidTextConfigError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::invalid, message) { }
 };
+
+
+// A client error that is also an engine error of one kind.
+class DocVersionConflictError : public ClientError, public engine::Error {
+public:
+	template<typename... Args>
+	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::version_conflict, message) { }
+};
+
+
+class SerialisationError : public ClientError {
+public:
+	template<typename... Args>
+	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
+class CastError : public ClientError {
+public:
+	template<typename... Args>
+	CastError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};

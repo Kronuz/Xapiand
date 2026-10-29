@@ -2,14 +2,14 @@
 title: "About"
 ---
 
-[Xapian]: https://xapian.org
+[strata]: https://github.com/Kronuz/strata
 [GitHub]: https://github.com/Kronuz/Xapiand
 
 Xapiand is a _fast_, _simple_ and _modern_ search and storage server built for the cloud.
 It features:
 
 ##### Liberal Open Source license:
-  * MIT license *(Note Xapian engine itself is GNU GPL)*.
+  * MIT license (a few files carry their own; see the [Copyright Notice](/Xapiand/copyright)).
   * You can find the source code for Xapiand at [GitHub]
 
 ##### HTTP RESTful API:
@@ -20,7 +20,7 @@ It features:
   * Small footprint with very low memory usage.
 
 ##### Search Server:
-  * Built on top of [Xapian] indexes.
+  * Built on top of [strata] indexes.
 
 ##### Storage Server:
   * Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
@@ -37,7 +37,7 @@ It features:
 
 ##### Efficient and Scalable architecture:
   * (Near) Real Time Search.
-  * Event driven asynchronous architecture using [libev](http://software.schmorp.de/pkg/libev.html).
+  * Event driven asynchronous architecture using the Asio-based [reactor](https://github.com/Kronuz/reactor) library.
   * Written in modern C++.
 
 ##### Geo-spatial support:
@@ -45,14 +45,8 @@ It features:
   * Accepts multiple Coordinate Reference Systems, including WGS84.
   * Implements EWKT.
 
-##### High Availability:
-  * Automatic node operation rerouting.
-  * Replicas exists to maximize high availability *and* data locality.
-  * Read and Search operations performed on any of the replicas.
-  * Reliable, asynchronous replication for long term persistence.
-
-##### Multi-Partitioning and Distribution Strategies:
-  * Random Consistent Partitioning and Replication.
+##### Sharding:
+  * Each index splits into shards on a single node (`number_of_shards`).
 
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf)
 

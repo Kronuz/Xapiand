@@ -12,15 +12,14 @@
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
 #   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, needs newman)
 #   tls      the e2e suite over HTTPS (needs newman 6) and the TLS refusals (tls_check.sh)
-#   cluster  2-node discovery + remote/replication + distributed search (cluster_check.sh)
 #   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
 #   load     quick functional bulk load (index_fortune)
 #   stress   short concurrent soak with read-back verification (stress_fortune)
 #   bench    index/query benchmark (loadtest.py)
 #
 # Usage:
-#   harness/run_all.sh                 # smoke + e2e + tls + cluster + recovery + load + stress + bench
-#   harness/run_all.sh smoke cluster   # just those two
+#   harness/run_all.sh                 # smoke + e2e + tls + recovery + load + stress + bench
+#   harness/run_all.sh smoke e2e       # just those two
 #   BIN=build/bin/xapiand harness/run_all.sh
 #
 # See docs/dev/testing.md for what each layer proves and how to (re)generate baselines.
@@ -31,7 +30,7 @@ REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8899}"
 
-DEFAULT_LAYERS="smoke e2e tls cluster recovery load stress bench"
+DEFAULT_LAYERS="smoke e2e tls recovery load stress bench"
 LAYERS="${*:-$DEFAULT_LAYERS}"
 
 PASS=(); FAIL=(); SKIP=()
@@ -78,7 +77,7 @@ stop_node() { kill "$1" 2>/dev/null; wait "$1" 2>/dev/null; }
 run_smoke() {
 	echo "== [smoke] single-node index + search =="
 	local dir; dir="$(mktemp -d /tmp/xa_smoke.XXXXXX)"
-	"$BIN" --port "$PORT" --name smoke --solo -D "$dir" >"$dir/node.log" 2>&1 &
+	"$BIN" --port "$PORT" --name smoke -D "$dir" >"$dir/node.log" 2>&1 &
 	local pid=$!
 	local ok=1
 	if wait_http "$PORT" 30; then
@@ -154,11 +153,6 @@ run_tls() {
 	if [ "$ok" = 1 ]; then pass "tls"; rm -rf "$dir"; else fail "tls"; fi
 }
 
-run_cluster() {
-	echo "== [cluster] 2-node remote/replication/distributed-search =="
-	if BIN="$BIN" "$HARNESS_DIR/cluster_check.sh" 2; then pass "cluster"; else fail "cluster"; fi
-}
-
 run_recovery() {
 	echo "== [recovery] WAL crash recovery =="
 	if BIN="$BIN" "$HARNESS_DIR/wal_recovery_check.sh"; then pass "recovery"; else fail "recovery"; fi
@@ -167,7 +161,7 @@ run_recovery() {
 run_load() {
 	echo "== [load] index_fortune bulk load =="
 	local dir; dir="$(mktemp -d /tmp/xa_load.XXXXXX)"
-	"$BIN" --port "$PORT" --name load --solo -D "$dir" >"$dir/node.log" 2>&1 &
+	"$BIN" --port "$PORT" --name load -D "$dir" >"$dir/node.log" 2>&1 &
 	local pid=$!
 	local ok=1
 	if wait_http "$PORT" 30; then
@@ -183,7 +177,7 @@ run_load() {
 run_stress() {
 	echo "== [stress] stress_fortune soak =="
 	local dir; dir="$(mktemp -d /tmp/xa_stress.XXXXXX)"
-	"$BIN" --port "$PORT" --name stress --solo -D "$dir" >"$dir/node.log" 2>&1 &
+	"$BIN" --port "$PORT" --name stress -D "$dir" >"$dir/node.log" 2>&1 &
 	local pid=$!
 	local ok=1
 	if wait_http "$PORT" 30; then
@@ -198,7 +192,7 @@ run_stress() {
 run_bench() {
 	echo "== [bench] loadtest.py =="
 	local dir; dir="$(mktemp -d /tmp/xa_bench.XXXXXX)"
-	"$BIN" --port "$PORT" --name bench --solo -D "$dir" >"$dir/node.log" 2>&1 &
+	"$BIN" --port "$PORT" --name bench -D "$dir" >"$dir/node.log" 2>&1 &
 	local pid=$!
 	local ok=1
 	if wait_http "$PORT" 30; then
@@ -220,12 +214,11 @@ for layer in $LAYERS; do
 		unit)    run_unit    ;;
 		e2e)     run_e2e     ;;
 		tls)     run_tls     ;;
-		cluster) run_cluster ;;
 		recovery) run_recovery ;;
 		load)    run_load    ;;
 		stress)  run_stress  ;;
 		bench)   run_bench   ;;
-		*) echo "unknown layer: $layer (valid: smoke unit e2e tls cluster recovery load stress bench)"; exit 2 ;;
+		*) echo "unknown layer: $layer (valid: smoke unit e2e tls recovery load stress bench)"; exit 2 ;;
 	esac
 done
 

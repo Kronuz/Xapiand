@@ -21,9 +21,8 @@
  */
 
 
-// The two control-worker follow-ups to the offload bridge: a bus message refreshes the sender's
-// liveness on the loop even while the worker is busy (Node::touch_sender), and a command drain
-// yields after engine::drain_batch commands so a job queued behind it runs (engine::drain_bounded).
+// The command drain of the offload bridge: it yields after engine::drain_batch commands so a job
+// queued behind it runs (engine::drain_bounded).
 
 #include "test_harness.h"
 
@@ -40,72 +39,7 @@
 
 #include "blocking_concurrent_queue.h"       // for ConcurrentQueue
 #include "engine/drain.h"
-#include "node.h"
 #include "reactor.h"
-
-namespace {
-
-using namespace std::chrono_literals;
-
-Node make_node(const std::string& name) {
-	Node node;
-	node.name(name);
-	node.http_port = 8880;
-	node.remote_port = 8890;
-	node.replication_port = 8891;
-	return node;
-}
-
-// What a DB_UPDATED message carries: the sender, then a revision and a path.
-std::string db_updated_message(const Node& sender) {
-	return sender.serialise() + std::string("\x01", 1) + "index";
-}
-
-}  // namespace
-
-
-// The bus loop refreshes last_seen at message time while the control worker is stuck on a long job.
-static void test_last_seen_refreshes_while_worker_busy() {
-	Node::reset();
-	auto peer = make_node("followup-peer");
-	Node::touch_node(peer, true);
-	auto before = Node::get_node("followup-peer")->last_seen();
-	std::this_thread::sleep_for(20ms);
-
-	// Declared before the reactor so they outlive the pool worker still inside wait().
-	std::promise<void> worker_started, release;
-	auto release_future = release.get_future().share();
-	reactor::Reactor r(1, 1);
-	asio::post(*r.pool(), [&] {
-		worker_started.set_value();
-		release_future.wait();
-	});
-	worker_started.get_future().get();
-
-	std::chrono::steady_clock::time_point during;
-	bool touched = false;
-	asio::post(r.io(), [&] {
-		touched = static_cast<bool>(Node::touch_sender(db_updated_message(peer)));
-		during = Node::get_node("followup-peer")->last_seen();
-		release.set_value();
-	});
-	r.run();
-
-	CHECK(touched);
-	CHECK_GT(during, before);
-	CHECK_GE(during - before, 20ms);
-}
-
-
-// A message from the local node touches nothing.
-static void test_touch_sender_ignores_local() {
-	Node::reset();
-	auto self = make_node("followup-self");
-	Node::set_local_node(self);
-	CHECK(Node::touch_sender(db_updated_message(self)) == nullptr);
-	Node::reset();
-}
-
 
 // Under a flood of commands a job queued behind the drain runs after at most 64 of them.
 static void test_drain_yields_to_queued_job() {
@@ -172,4 +106,4 @@ static void test_drain_bounded_contract() {
 	CHECK_FALSE(engine::drain_bounded<int>(q, 3, [&](int) { }));
 }
 
-TEST_MAIN(test_last_seen_refreshes_while_worker_busy, test_touch_sender_ignores_local, test_drain_yields_to_queued_job, test_drain_bounded_contract)
+TEST_MAIN(test_drain_yields_to_queued_job, test_drain_bounded_contract)

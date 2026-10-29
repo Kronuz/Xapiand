@@ -21,8 +21,7 @@
  */
 
 // The log replay through the real DatabaseWAL::execute_line (wal.cc): a replayed erase of a missing document is
-// a no-op, and replaying a log twice ends in the primary's state (CR4). XAPIAND_ENGINE picks the engine (strata
-// when unset). A shard is opened through the pool, lines are built as DatabaseWALWriterTask builds them.
+// a no-op, and replaying a log twice ends in the primary's state (CR4). A shard is opened through the pool, lines are built as DatabaseWALWriterTask builds them.
 #include "test_harness.h"
 
 #include <cstdio>
@@ -37,14 +36,12 @@
 #include "database/wal.h"
 #include "endpoint.h"
 #include "engine/error.h"
-#include "engine/kind.h"
 #include "engine/sync.h"
 #include "length.h"
 #include "node.h"
 #include "utype.hh"
 
 namespace {
-using engine::Kind;
 
 std::string wal_line(engine::rev rev, DatabaseWAL::Type type, const std::string& data) {
 	return serialise_length(rev) + serialise_length(toUType(type)) + compress_lz4(data);
@@ -55,7 +52,7 @@ std::string fresh(const char* name) {
 	return p;
 }
 std::string run(DatabaseWAL& wal, const std::string& line) {
-	try { wal.execute_line(line, false, false); return "ok"; }
+	try { wal.execute_line(line, false); return "ok"; }
 	catch (const engine::Error& e) { return std::string("engine::Error ") + engine::to_string(e.kind) + ": " + e.description(); }
 	catch (const std::exception& e) { return std::string("exception: ") + e.what(); }
 }
@@ -66,26 +63,24 @@ std::string state(engine::Shard& s) {
 }
 
 void erase_missing() {
-	const auto kind = engine::default_kind();
 	DatabasePool pool(8, 1);
 	Endpoint ep(fresh("test_wal_replay_erase.db"));
 	auto shard = pool.checkout(ep, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, 5.0);
 	DatabaseWAL wal(shard.get());
 	auto rev = shard->engine().revision();
 	auto r = run(wal, wal_line(rev, DatabaseWAL::Type::DELETE_DOCUMENT, serialise_length(7)));
-	std::printf("[%s] replayed erase of a missing document through execute_line: %s\n", engine::to_string(kind), r.c_str());
+	std::printf("replayed erase of a missing document through execute_line: %s\n", r.c_str());
 	CHECK_EQ(r, "ok");
 }
 
 void double_replay() {
-	if (engine::default_kind() != Kind::strata) return;
 	DatabasePool pool(8, 1);
 	Endpoint ep(fresh("test_wal_replay_twice.db"));
 	auto shard = pool.checkout(ep, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, 5.0);
 	DatabaseWAL wal(shard.get());
 	auto& e = shard->engine();
 	const auto rev = e.revision();
-	auto make = [&](const std::string& data) { engine::Document d(Kind::strata); d.set_key("Qa"); d.add_term(d.field("f"), "body", 2); d.set_data(data); return d; };
+	auto make = [&](const std::string& data) { engine::Document d; d.set_key("Qa"); d.add_term(d.field("f"), "body", 2); d.set_data(data); return d; };
 	std::vector<std::string> lines;
 	engine::WriteArgs a;
 	auto d1 = make("a1"); auto r1 = engine::sync_wait(e.replace_by_key("Qa", d1, a));
@@ -104,7 +99,7 @@ void double_replay() {
 		CHECK_EQ(state(e), want);
 	}
 }
-void t_all() { ::setenv("XAPIAND_ENGINE", "strata", 0); Node n; n.name("test"); Node::set_local_node(n); erase_missing(); double_replay();
+void t_all() { Node n; n.name("test"); Node::set_local_node(n); erase_missing(); double_replay();
 	std::filesystem::remove_all("test_wal_replay_erase.db");
 	std::filesystem::remove_all("test_wal_replay_twice.db");
 }

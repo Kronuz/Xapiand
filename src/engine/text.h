@@ -43,7 +43,6 @@ inline constexpr unsigned WILDCARD_MULTI = 1U << 5;   // '*' inside a pattern
 inline constexpr unsigned PARTIAL        = 1U << 6;   // the last word may be incomplete
 inline constexpr unsigned FUZZY          = 1U << 7;   // words ending in '~' match within an edit distance
 inline constexpr unsigned CJK_NGRAM      = 1U << 8;   // CJK text as n-grams
-inline constexpr unsigned WORD_BREAKS    = 1U << 9;   // CJK text split with word-break rules (not read: see parse_text)
 }  // namespace text
 
 // Which words of a query text are stemmed.
@@ -74,10 +73,9 @@ struct TextConfig {
 // Throws QueryParserError (errc::syntax, a client error) for text the parser rejects, including
 // an operator that cannot take its operand, InvalidTextConfigError (errc::invalid) for settings
 // it cannot read (an unknown stemmer language, a default operator the parser has no word for),
-// and std::bad_alloc when memory runs out. WORD_BREAKS is not read: CJK text on such a field is
-// split like any other text.
+// and std::bad_alloc when memory runs out.
 //
-// `description`, when given, receives the tree in Xapian's description format, for tests.
+// `description`, when given, receives a description of the tree, for tests.
 Query parse_text(std::string_view text, const TextConfig& config, std::string* description = nullptr);
 
 }  // namespace engine

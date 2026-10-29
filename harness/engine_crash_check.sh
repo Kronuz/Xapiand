@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# engine_crash_check.sh -- kill -9 during indexing, on both engines, over the same input (gate 7a, T8).
+# engine_crash_check.sh -- kill -9 during indexing, over the same input (gate 7a, T8).
 #
-# For ENGINE in xapian, strata (XAPIAND_ENGINE picks the engine at index creation):
+# On the strata engine:
 #   A. PUT N documents without a commit, kill -9 before the autocommit, restart, "poke" every shard (a write opens a
-#      shard writable and replays its WAL; replay is lazy on both engines), then list the document set.
+#      shard writable and replays its WAL; replay is lazy), then list the document set.
 #   B. A writer PUTs documents one after another (acknowledgement times logged); kill -9 CUT seconds in; restart, poke, list the set.
-#   C. On strata, the engine's own check (index::check: the digest of every file, plus the field table) runs on every shard
-#      after each kill -9 and after the restart, through tests/strata_check_tool.cc (CHECK_TOOL); the server's `:check`
-#      endpoint is hard-wired to the Xapian engine and cannot do it.
-# Compared: A's set is equal across engines and equals the input (N ids, every `n` right). B's set on each engine holds every write
+#   C. The engine's own check (index::check: the digest of every file, plus the field table) runs on every shard
+#      after each kill -9 and after the restart, through tests/strata_check_tool.cc (CHECK_TOOL).
+# Compared: A's set equals the input (N ids, every `n` right). B's set holds every write
 # acknowledged more than GRACE seconds before the kill (the async WAL may lose the last moments), nothing that was not
-# written, every document intact (the cut point differs per run, so equality across engines is not asserted). Exit 0 = all checks passed.
+# written, every document intact (the cut point differs per run). Exit 0 = all checks passed.
 # Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh
 set -u
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,7 +28,7 @@ fail() { echo "  FAIL: $*"; fails=$((fails + 1)); }
 pass() { echo "  ok: $*"; }
 
 start_node() {  # start_node ENGINE LOG
-	XAPIAND_ENGINE="$1" "$BIN" --port "$PORT" --solo --name crashnode --verbosity 3 -D "$RUNDIR/n_$1" >>"$RUNDIR/$2" 2>&1 &
+	"$BIN" --port "$PORT" --name crashnode --verbosity 3 -D "$RUNDIR/n_$1" >>"$RUNDIR/$2" 2>&1 &
 	PID=$!
 	for _ in $(seq 80); do
 		kill -0 "$PID" 2>/dev/null || { echo "  node died during startup"; return 1; }
@@ -70,7 +69,7 @@ check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every f
 	fi
 }
 
-for ENG in xapian strata; do
+for ENG in strata; do
 	echo "== [crash $ENG] A: $NDOCS PUTs without commit, kill -9, restart, replay =="
 	start_node "$ENG" "$ENG.A1.log" || { fail "$ENG startup"; continue; }
 	for i in $(seq 1 "$NDOCS"); do
@@ -132,6 +131,5 @@ PY
 	crash
 	[ "$ENG" != strata ] || check_digest bulk "$ENG after the restart and a second kill (B)"
 done
-if [ -s "$RUNDIR/A_xapian.s" ] && cmp -s "$RUNDIR/A_xapian.s" "$RUNDIR/A_strata.s"; then pass "A: xapian and strata recovered the same document set"; else fail "A: the sets differ between engines"; fi
 if [ "$fails" = 0 ]; then echo "PASS"; else echo "FAIL ($fails)"; fi
 [ "$fails" = 0 ]

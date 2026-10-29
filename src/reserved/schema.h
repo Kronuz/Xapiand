@@ -33,7 +33,6 @@ constexpr const char RESERVED_POSITIONS[]                   = RESERVED__ "positi
 constexpr const char RESERVED_LANGUAGE[]                    = RESERVED__ "language";
 constexpr const char RESERVED_NGRAM[]                       = RESERVED__ "ngram";
 constexpr const char RESERVED_CJK_NGRAM[]                   = RESERVED__ "cjk_ngram";
-constexpr const char RESERVED_CJK_WORDS[]                   = RESERVED__ "cjk_words";
 constexpr const char RESERVED_ACCURACY[]                    = RESERVED__ "accuracy";
 constexpr const char RESERVED_ACC_PREFIX[]                  = RESERVED__ "accuracy_prefix";
 constexpr const char RESERVED_STORE[]                       = RESERVED__ "store";

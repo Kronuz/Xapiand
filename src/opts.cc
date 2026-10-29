@@ -40,9 +40,7 @@
 #define XAPIAND_PID_FILE         "xapiand.pid"
 #define XAPIAND_LOG_FILE         "xapiand.log"
 
-#define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
 #define NUM_SHARDS               5                // Default number of database shards per index
-#define NUM_REPLICAS             1                // Default number of database replicas per index
 
 #define SCRIPTS_CACHE_SIZE           100          // Scripts cache
 #define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache
@@ -61,29 +59,9 @@
 #define MAX_HTTP_CLIENTS              20
 #define MIN_HTTP_CLIENTS               2
 
-#define NUM_REMOTE_SERVERS           1.0          // Number of remote protocol client threads per CPU
-#define MAX_REMOTE_SERVERS            10
-#define MIN_REMOTE_SERVERS             1
-
-#define NUM_REMOTE_CLIENTS           2.0          // Number of remote protocol client threads per CPU
-#define MAX_REMOTE_CLIENTS            20
-#define MIN_REMOTE_CLIENTS             2
-
-#define NUM_REPLICATION_SERVERS      1.0          // Number of replication protocol client threads per CPU
-#define MAX_REPLICATION_SERVERS       10
-#define MIN_REPLICATION_SERVERS        1
-
-#define NUM_REPLICATION_CLIENTS      0.5          // Number of replication protocol client threads per CPU
-#define MAX_REPLICATION_CLIENTS       10
-#define MIN_REPLICATION_CLIENTS        1
-
 #define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
 #define MAX_ASYNC_WAL_WRITERS         10
 #define MIN_ASYNC_WAL_WRITERS          1
-
-#define NUM_DOC_MATCHERS             3.0          // Number of threads handling parallel matching of documents per CPU
-#define MAX_DOC_MATCHERS              30
-#define MIN_DOC_MATCHERS               3
 
 #define NUM_DOC_PREPARERS            1.0          // Number of threads handling bulk documents preparing per CPU
 #define MAX_DOC_PREPARERS             10
@@ -101,14 +79,6 @@
 #define MAX_FSYNCHERS                 10
 #define MIN_FSYNCHERS                  1
 
-#define NUM_REPLICATORS              0.5          // Number of threads handling the replication per CPU
-#define MAX_REPLICATORS               10
-#define MIN_REPLICATORS                1
-
-#define NUM_DISCOVERERS             0.25          // Number of threads handling the discoverers per CPU
-#define MAX_DISCOVERERS                5
-#define MIN_DISCOVERERS                1
-
 #define SCHEMA_POOL_TIMEOUT                          3600000
 #define RESOLVER_CACHE_TIMEOUT                         60000
 
@@ -124,19 +94,6 @@
 #define FSYNCHER_DEBOUNCE_MIN_FORCE_TIMEOUT             2500
 #define FSYNCHER_DEBOUNCE_MAX_FORCE_TIMEOUT             3500
 
-#define DB_UPDATER_THROTTLE_TIME                        1000
-#define DB_UPDATER_DEBOUNCE_TIMEOUT                      100
-#define DB_UPDATER_DEBOUNCE_BUSY_TIMEOUT                 500
-#define DB_UPDATER_DEBOUNCE_MIN_FORCE_TIMEOUT           4900
-#define DB_UPDATER_DEBOUNCE_MAX_FORCE_TIMEOUT           5100
-
-#define TRIGGER_REPLICATION_THROTTLE_TIME               1000
-#define TRIGGER_REPLICATION_DEBOUNCE_TIMEOUT             100
-#define TRIGGER_REPLICATION_DEBOUNCE_BUSY_TIMEOUT        500
-#define TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT  4900
-#define TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT  5100
-
-#define DATABASE_STALL_TIME                              300
 
 
 #define EV_SELECT_NAME  "select"
@@ -209,31 +166,15 @@ parseOptions(int argc, char** argv)
 		app.add_option("--uuid", uuid, "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.")
 			->check(CLI::IsMember(uuid_allowed));
 
-#ifdef XAPIAND_CLUSTERING
-		unsigned int discovery_port = 0;
-		app.add_option("--discovery-port", discovery_port, "Discovery UDP port number to listen on.");
-		std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
-		app.add_option("--discovery-group", discovery_group, "Discovery UDP group name.");
-		std::string discovery_interface;
-		app.add_option("--discovery-interface", discovery_interface, "Local interface address for discovery multicast (send + join); empty = default route. Pin (e.g. 127.0.0.1) on a multi-homed/VPN host where the default interface can't multicast.");
-		std::string cluster_name = XAPIAND_CLUSTER_NAME;
-		app.add_option("--cluster", cluster_name, "Cluster name to join.");
-#endif
 		std::string node_name;
 		app.add_option("--name", node_name, "Node name.");
 
+		std::size_t num_shards = NUM_SHARDS;
+		app.add_option("--shards", num_shards, "Default number of database shards per index.");
 #if XAPIAND_DATABASE_WAL
 		std::size_t num_async_wal_writers = 0;
 		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
 #endif
-#ifdef XAPIAND_CLUSTERING
-		std::size_t num_replicas = NUM_REPLICAS;
-		app.add_option("--replicas", num_replicas, "Default number of database replicas per index.");
-		std::size_t num_shards = NUM_SHARDS;
-		app.add_option("--shards", num_shards, "Default number of database shards per index.");
-#endif
-		std::size_t num_doc_matchers = 0;
-		app.add_option("--matchers", num_doc_matchers, "Number of threads handling parallel document matching.");
 		std::size_t num_doc_preparers = 0;
 		app.add_option("--bulk-preparers", num_doc_preparers, "Number of threads handling bulk documents preparing.");
 		std::size_t num_doc_indexers = 0;
@@ -257,31 +198,10 @@ parseOptions(int argc, char** argv)
 
 		std::size_t num_fsynchers = 0;
 		app.add_option("--fsynchers", num_fsynchers, "Number of threads handling the fsyncs.");
-#ifdef XAPIAND_CLUSTERING
-		std::size_t num_replicators = 0;
-		app.add_option("--replicators", num_replicators, "Number of replicators triggering database replication.");
-		std::size_t num_discoverers = 0;
-		app.add_option("--discoverers", num_discoverers, "Number of discoverers doing cluster discovery.");
-#endif
 
 		std::size_t max_files = 0;
 		app.add_option("--max-files", max_files, "Maximum number of files to open.");
-		std::size_t flush_threshold = FLUSH_THRESHOLD;
-		app.add_option("--flush-threshold", flush_threshold, "Xapian flush threshold.");
 
-#ifdef XAPIAND_CLUSTERING
-		std::size_t num_remote_clients = 0;
-		app.add_option("--remote-clients", num_remote_clients, "Number of remote protocol client threads.");
-		std::size_t num_remote_servers = 0;
-		app.add_option("--remote-servers", num_remote_servers, "Number of remote protocol servers.");
-		std::size_t num_replication_clients = 0;
-		app.add_option("--replication-clients", num_replication_clients, "Number of replication protocol client threads.");
-		std::size_t num_replication_servers = 0;
-		app.add_option("--replication-servers", num_replication_servers, "Number of replication protocol servers.");
-
-		double database_stall_time = DATABASE_STALL_TIME;
-		app.add_option("--database-stall-time", database_stall_time, "Seconds before allowing a shard to be promoted to primary.");
-#endif
 		std::size_t num_http_clients = 0;
 		app.add_option("--http-clients", num_http_clients, "Number of http client threads.");
 		std::size_t num_http_servers = 0;
@@ -292,14 +212,6 @@ parseOptions(int argc, char** argv)
 		double processors = hardware_concurrency;
 		app.add_option("--processors", processors, "Number of processors to use.");
 
-#ifdef XAPIAND_CLUSTERING
-		std::string primary_node;
-		app.add_option("--primary-node", primary_node, "Primary node (the one with the primary cluster database).");
-		unsigned int remote_port = 0;
-		app.add_option("--xapian-port", remote_port, "Xapian binary protocol TCP port number to listen on.");
-		unsigned int replication_port = 0;
-		app.add_option("--replica-port", replication_port, "Xapiand replication protocol TCP port number to listen on.");
-#endif
 		unsigned int http_port = 0;
 		app.add_option("--port", http_port, "TCP HTTP port number to listen on for REST API.");
 
@@ -326,7 +238,6 @@ parseOptions(int argc, char** argv)
 			"microseconds",
 			"thread-names",
 			"locations",
-			"replicas",
 		});
 		std::vector<std::string> log;
 		app.add_option("--log", log, "Enable logging settings.")
@@ -377,10 +288,6 @@ parseOptions(int argc, char** argv)
 
 		bool detach = false;
 		app.add_flag("-d,--detach", detach, "detach process. (run in background)");
-#ifdef XAPIAND_CLUSTERING
-		bool solo = false;
-		app.add_flag("--solo", solo, "Run solo indexer. (no replication or discovery)");
-#endif
 		bool strict = false;
 		app.add_flag("--strict", strict, "Force the user to define the type for each field.");
 		bool force = false;
@@ -400,11 +307,6 @@ parseOptions(int argc, char** argv)
 		o.verbosity = verbosity + verbose;
 		o.detach = detach;
 
-#ifdef XAPIAND_CLUSTERING
-		o.solo = solo;
-#else
-		o.solo = true;
-#endif
 		o.strict = strict;
 		o.force = force;
 
@@ -461,9 +363,6 @@ parseOptions(int argc, char** argv)
 				case fnv1ah32::hash("locations"):
 					o.log_location = true;
 					break;
-				case fnv1ah32::hash("replicas"):
-					o.log_replicas = true;
-					break;
 			}
 		}
 
@@ -483,15 +382,6 @@ parseOptions(int argc, char** argv)
 		o.tls_key = tls_key;
 		o.tls_max_connections = tls_max_connections;
 		o.node_name = node_name;
-#ifdef XAPIAND_CLUSTERING
-		o.primary_node = primary_node;
-		o.cluster_name = cluster_name;
-		o.remote_port = remote_port;
-		o.replication_port = replication_port;
-		o.discovery_port = discovery_port;
-		o.discovery_group = discovery_group;
-		o.discovery_interface = discovery_interface;
-#endif
 		o.pidfile = pidfile;
 		o.logfile = logfile;
 		o.uid = uid;
@@ -502,16 +392,10 @@ parseOptions(int argc, char** argv)
 		o.scripts_cache_size = scripts_cache_size;
 		o.resolver_cache_size = resolver_cache_size;
 		o.wal_writer_cache_size = wal_writer_cache_size;
+		o.num_shards = num_shards;
 #if XAPIAND_DATABASE_WAL
 		o.num_async_wal_writers = fallback(num_async_wal_writers, std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif
-#ifdef XAPIAND_CLUSTERING
-		o.num_shards = num_shards;
-		o.num_replicas = num_replicas;
-		o.num_replicators = fallback(num_replicators, std::max(MIN_REPLICATORS, std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors)))));
-		o.num_discoverers = fallback(num_discoverers, std::max(MIN_DISCOVERERS, std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors)))));
-#endif
-		o.num_doc_matchers = fallback(num_doc_matchers, std::max(MIN_DOC_MATCHERS, std::min(MAX_DOC_MATCHERS, static_cast<int>(std::ceil(NUM_DOC_MATCHERS * o.processors)))));
 		o.num_doc_preparers = fallback(num_doc_preparers, std::max(MIN_DOC_PREPARERS, std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors)))));
 		o.num_doc_indexers = fallback(num_doc_indexers, std::max(MIN_DOC_INDEXERS, std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors)))));
 		o.num_committers = fallback(num_committers, std::max(MIN_COMMITTERS, std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)))));
@@ -520,17 +404,8 @@ parseOptions(int argc, char** argv)
 		o.max_clients = max_clients;
 		o.max_database_readers = max_database_readers;
 		o.max_files = max_files;
-		o.flush_threshold = flush_threshold;
 		o.num_http_clients = fallback(num_http_clients, std::max(MIN_HTTP_CLIENTS, std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)))));
 		o.num_http_servers = fallback(num_http_servers, std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));
-#ifdef XAPIAND_CLUSTERING
-		o.num_remote_clients = fallback(num_remote_clients, std::max(MIN_REMOTE_CLIENTS, std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors)))));
-		o.num_remote_servers = fallback(num_remote_servers, std::max(MIN_REMOTE_SERVERS, std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors)))));
-		o.num_replication_clients = fallback(num_replication_clients, std::max(MIN_REPLICATION_CLIENTS, std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors)))));
-		o.num_replication_servers = fallback(num_replication_servers, std::max(MIN_REPLICATION_SERVERS, std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors)))));
-
-		o.database_stall_time = database_stall_time * 1000.0;
-#endif
 		if (o.detach) {
 			if (o.logfile.empty()) {
 				o.logfile = XAPIAND_ROOT "/var/log/" XAPIAND_LOG_FILE;
@@ -638,17 +513,7 @@ parseOptions(int argc, char** argv)
 	o.fsyncher_debounce_min_force_timeout = FSYNCHER_DEBOUNCE_MIN_FORCE_TIMEOUT;
 	o.fsyncher_debounce_max_force_timeout = FSYNCHER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
-	o.db_updater_throttle_time = DB_UPDATER_THROTTLE_TIME;
-	o.db_updater_debounce_timeout = DB_UPDATER_DEBOUNCE_TIMEOUT;
-	o.db_updater_debounce_busy_timeout = DB_UPDATER_DEBOUNCE_BUSY_TIMEOUT;
-	o.db_updater_debounce_min_force_timeout = DB_UPDATER_DEBOUNCE_MIN_FORCE_TIMEOUT;
-	o.db_updater_debounce_max_force_timeout = DB_UPDATER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
-	o.trigger_replication_throttle_time = TRIGGER_REPLICATION_THROTTLE_TIME;
-	o.trigger_replication_debounce_timeout = TRIGGER_REPLICATION_DEBOUNCE_TIMEOUT;
-	o.trigger_replication_debounce_busy_timeout = TRIGGER_REPLICATION_DEBOUNCE_BUSY_TIMEOUT;
-	o.trigger_replication_debounce_min_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT;
-	o.trigger_replication_debounce_max_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
 	return o;
 }

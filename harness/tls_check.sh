@@ -62,10 +62,10 @@ fail() { echo "  FAIL  $*"; failures=$((failures + 1)); }
 
 node_pid=""
 ok() { [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$@")" = 200 ]; }
-start() {  # start LOG FLAGS...: a solo node, ready when it answers HTTPS with a 200
+start() {  # start LOG FLAGS...: a node, ready when it answers HTTPS with a 200
 	local log="$1"; shift
 	rm -rf "$WORK/data"; mkdir -p "$WORK/data"
-	"$BIN" --port "$PORT" --name tlscheck --solo -D "$WORK/data" "$@" > "$log" 2>&1 &
+	"$BIN" --port "$PORT" --name tlscheck -D "$WORK/data" "$@" > "$log" 2>&1 &
 	node_pid=$!
 	for _ in $(seq 1 120); do
 		kill -0 "$node_pid" 2>/dev/null || return 1

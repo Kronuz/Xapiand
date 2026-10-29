@@ -24,7 +24,7 @@
 // Unit tests for GenerateTerms numeric range-term generation. Revived from the
 // retired oldtests generate_terms suite, re-expressed structurally (does a range
 // produce terms, and when does it collapse to the empty query) instead of pinning
-// the exact Xapian query descriptions, which encode internal term bytes.
+// the exact query descriptions, which encode internal term bytes.
 
 #include "test_harness.h"
 
@@ -43,13 +43,15 @@
 #include "datetime.h"
 #include "engine/search.h"
 #include "engine/sync.h"
-#include "engine/xapian/shard.h"
-#include "engine/xapian/xapian.h"
+#include "engine/open.h"
 #include "multivalue/generate_terms.h"
 #include "multivalue/range.h"
-#include "exception_xapian.h"
+#include "exception_engine.h"
 #include "msgpack.h"
 #include "utype.hh"
+
+// A strata document needs a key; each test document gets its own.
+static std::size_t keys = 0;
 
 static void test_numeric_terms() {
 	const std::vector<uint64_t> accuracy = { 1, 10, 100, 1000, 10000, 100000 };
@@ -119,11 +121,12 @@ static void test_numeric_range_finds_every_value_in_range() {
 
 	const auto path = (std::filesystem::current_path() / "test_generate_terms_shard").string();
 	std::filesystem::remove_all(path);
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto opened = engine::sync_wait(engine::open_local(path, true, true));
 	auto& shard = *opened.shard;
 	for (auto v : values) {
 		engine::Document doc;
 		GenerateTerms::integer(doc, accuracy, prefix, v);
+		doc.set_key("K" + std::to_string(++keys));
 		engine::sync_wait(shard.add(doc, {}));
 	}
 	engine::sync_wait(shard.commit(engine::Transaction::none));
@@ -150,7 +153,6 @@ static void test_numeric_range_finds_every_value_in_range() {
 			request.query = prepared.get();
 			request.maxitems = 1000;
 			request.check_at_least = 1000;
-			request.origin = "test";
 			std::vector<engine::Shard*> shards{&shard};
 			for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
 				found.insert(hit.did);
@@ -192,12 +194,13 @@ static void test_datetime_range_finds_every_value_in_range() {
 			prefix.push_back("D" + std::to_string(i));
 		}
 		std::filesystem::remove_all(path);
-		auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+		auto opened = engine::sync_wait(engine::open_local(path, true, true));
 		auto& shard = *opened.shard;
 		for (auto t : stamps) {
 			engine::Document doc;
 			GenerateTerms::datetime(doc, accuracy, prefix, Datetime::to_tm_t(static_cast<std::time_t>(t)));
-			engine::sync_wait(shard.add(doc, {}));
+			doc.set_key("K" + std::to_string(++keys));
+		engine::sync_wait(shard.add(doc, {}));
 		}
 		engine::sync_wait(shard.commit(engine::Transaction::none));
 
@@ -221,7 +224,6 @@ static void test_datetime_range_finds_every_value_in_range() {
 				request.query = prepared.get();
 				request.maxitems = 1000;
 				request.check_at_least = 1000;
-				request.origin = "test";
 				std::vector<engine::Shard*> shards{&shard};
 				for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
 					found.insert(hit.did);
@@ -258,7 +260,6 @@ static std::set<engine::docid> search_hits(engine::Shard& shard, const engine::Q
 	request.query = prepared.get();
 	request.maxitems = 1000;
 	request.check_at_least = 1000;
-	request.origin = "test";
 	std::vector<engine::Shard*> shards{&shard};
 	for (const auto& hit : engine::sync_wait(engine::search(shards, request)).hits) {
 		found.insert(hit.did);
@@ -279,12 +280,13 @@ static void test_terms_only_numeric_range() {
 	const std::vector<int64_t> values = { -5000000, -1, 0, 99, 100, 5000, 123456, 4000000, 40000000 };
 	const auto path = (std::filesystem::current_path() / "test_generate_terms_shard_terms_only").string();
 	std::filesystem::remove_all(path);
-	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto opened = engine::sync_wait(engine::open_local(path, true, true));
 	auto& shard = *opened.shard;
 	auto spc = make_spc(engine::BAD_VALUENO, FieldType::integer, accuracy);
 	for (auto v : values) {
 		engine::Document doc;
 		GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, v);
+		doc.set_key("K" + std::to_string(++keys));
 		engine::sync_wait(shard.add(doc, {}));
 	}
 	engine::sync_wait(shard.commit(engine::Transaction::none));

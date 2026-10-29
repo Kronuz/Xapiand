@@ -28,15 +28,12 @@
 
 #include "database/flags.h"       // for readable_flags
 #include "engine/sync.h"          // for engine::check_may_block
-#include "engine/xapian/errors.h" // for engine::xapian::NotAvailable, Opening
+#include "engine/error.h"        // for engine::Error, engine::errc
 #include "database/shard.h"       // for Shard
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
-#include "index_resolver_lru.h"   // for IndexSettings
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
-#include "node.h"                 // for Node
 #include "manager.h"              // for XapiandManager
-#include "server/discovery.h"     // for db_updater
 #include "wal.h"                  // for DatabaseWALWriter
 
 
@@ -72,7 +69,6 @@
 	} \
 }
 
-#define REMOTE_DATABASE_UPDATE_TIME 3
 #define LOCAL_DATABASE_UPDATE_TIME 10
 
 
@@ -139,7 +135,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 	refs(0),
 	finished(false),
 	locked(false),
-	pending_revision(0),
+	revision(0),
 	renew_time(std::chrono::steady_clock::now()),
 	readables_available(0)
 {
@@ -162,7 +158,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			throw engine::xapian::NotAvailable("Shard is not available");
+			throw engine::Error(engine::errc::not_available, "Shard is not available");
 		}
 		if (!is_locked()) {
 			if (!writable) {
@@ -192,7 +188,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					throw engine::xapian::NotAvailable("Shard is not available");
+					throw engine::Error(engine::errc::not_available, "Shard is not available");
 				}
 			} else {
 				while (!writable_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -202,7 +198,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				throw engine::xapian::NotAvailable("Shard is not available");
+				throw engine::Error(engine::errc::not_available, "Shard is not available");
 			}
 		}
 	} while (true);
@@ -219,7 +215,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			throw engine::xapian::NotAvailable("Shard is not available");
+			throw engine::Error(engine::errc::not_available, "Shard is not available");
 		}
 		if (!is_locked()) {
 			if (readables_available > 0) {
@@ -296,7 +292,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					throw engine::xapian::NotAvailable("Shard is not available");
+					throw engine::Error(engine::errc::not_available, "Shard is not available");
 				}
 			} else {
 				while (!readables_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -306,7 +302,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				throw engine::xapian::NotAvailable("Shard is not available");
+				throw engine::Error(engine::errc::not_available, "Shard is not available");
 			}
 		}
 	} while (true);
@@ -353,11 +349,6 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 							reopen = true;
 						}
 					}
-				} else {
-					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
-						L_DATABASE("Remote shard is too old, reopen");
-						reopen = true;
-					}
 				}
 			}
 			if (reopen) {
@@ -372,7 +363,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 		shard = shard_ref;
 	}
 
-	L_SHARD_LOG_TIMED(shard->is_replica() ? 81s : shard->is_writable() ? 9s : 3s,
+	L_SHARD_LOG_TIMED(shard->is_writable() ? 9s : 3s,
 		"Checked out shard is taking too long: {} ({})",
 		"Checked out shard was out for too long: {} ({})",
 		repr(shard->to_string()),
@@ -537,68 +528,20 @@ ShardEndpoint::count()
 
 
 engine::rev
-ShardEndpoint::get_revision(const std::string& lower_name) const
-{
-	L_CALL("ShardEndpoint::get_revision({})", repr(lower_name));
-
-	assert(!lower_name.empty());
-
-	std::lock_guard<std::mutex> lk (revisions_mtx);
-
-	auto it = revisions.find(lower_name);
-	if (it != revisions.end()) {
-		return it->second;
-	}
-	return 0;
-}
-
-
-engine::rev
 ShardEndpoint::get_revision() const
 {
 	L_CALL("ShardEndpoint::get_revision()");
 
-	auto local_node = Node::get_local_node();
-	assert(local_node);
-	auto lower_name = local_node->lower_name();
-	assert(!lower_name.empty());
-
-	std::lock_guard<std::mutex> lk (revisions_mtx);
-
-	auto it = revisions.find(lower_name);
-	if (it != revisions.end()) {
-		return it->second;
-	}
-	return 0;
+	return revision.load(std::memory_order_relaxed);
 }
 
 
 void
-ShardEndpoint::set_revision(const std::string& lower_name, engine::rev revision)
+ShardEndpoint::set_revision(engine::rev revision_)
 {
-	L_CALL("ShardEndpoint::set_revision({})", revision);
+	L_CALL("ShardEndpoint::set_revision({})", revision_);
 
-	assert(!lower_name.empty());
-
-	std::lock_guard<std::mutex> lk (revisions_mtx);
-
-	revisions[lower_name] = revision;
-}
-
-
-void
-ShardEndpoint::set_revision(engine::rev revision)
-{
-	L_CALL("ShardEndpoint::set_revision({})", revision);
-
-	auto local_node = Node::get_local_node();
-	assert(local_node);
-	auto lower_name = local_node->lower_name();
-	assert(!lower_name.empty());
-
-	std::lock_guard<std::mutex> lk (revisions_mtx);
-
-	revisions[lower_name] = revision;
+	revision.store(revision_, std::memory_order_relaxed);
 }
 
 
@@ -618,104 +561,11 @@ ShardEndpoint::is_used() const
 }
 
 
-IndexSettings
-ShardEndpoint::_get_pending_index_settings() const
-{
-	L_CALL("ShardEndpoint::_get_pending_index_settings()");
-
-	if (pending_revision.load(std::memory_order_relaxed)) {
-		return XapiandManager::resolve_index_settings(path);
-	}
-	return {};
-}
-
-
-bool
-ShardEndpoint::_is_pending(const IndexSettings& index_settings) const
-{
-	L_CALL("ShardEndpoint::_is_pending(<index_settings>)");
-
-	if (index_settings.shards.size() == 1) {
-		const auto& nodes = index_settings.shards[0].nodes;
-		auto node = Node::get_node(nodes[0]);
-		if (!node || node->is_local()) {
-			size_t total = 0;
-			size_t pending = 0;
-			auto pending_rev = pending_revision.load(std::memory_order_relaxed);
-			for (const auto& node_name : nodes) {
-				node = Node::get_node(node_name);
-				if (node && !node->empty()) {
-					auto rev = get_revision(node->lower_name());
-					if (rev < pending_rev) {
-						++pending;
-					}
-					++total;
-				}
-			}
-			return Node::quorum(total, pending);
-		}
-	}
-	return false;
-}
-
-
-bool
-ShardEndpoint::is_pending(const IndexSettings& index_settings, bool notify) const
-{
-	L_CALL("ShardEndpoint::is_pending()");
-
-	auto pending = _is_pending(index_settings);
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		if (pending && notify) {
-			auto pending_rev = pending_revision.load(std::memory_order_relaxed);
-			db_updater()->debounce(path, pending_rev, path);
-		}
-	}
-#endif
-	return pending;
-}
-
-
-bool
-ShardEndpoint::is_pending(bool notify) const
-{
-	L_CALL("ShardEndpoint::is_pending()");
-
-	return is_pending(_get_pending_index_settings(), notify);
-}
-
-
 std::string
 ShardEndpoint::__repr__() const
 {
-	std::string pending;
-	auto pending_rev = pending_revision.load(std::memory_order_relaxed);
-	if (pending_rev) {
-		auto index_settings = XapiandManager::resolve_index_settings(path);
-		if (index_settings.shards.size() == 1) {
-			const auto& nodes = index_settings.shards[0].nodes;
-			auto node = Node::get_node(nodes[0]);
-			if (!node || node->is_local()) {
-				std::vector<std::string> pending_nodes;
-				for (const auto& node_name : nodes) {
-					node = Node::get_node(node_name);
-					if (node && !node->empty()) {
-						auto rev = get_revision(node->lower_name());
-						if (rev < pending_rev) {
-							pending_nodes.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
-						}
-					}
-				}
-				if (!pending_nodes.empty()) {
-					pending = strings::format(", pending:[{}]", strings::join(pending_nodes, ", "));
-				}
-			}
-		}
-	}
-	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}{}}} {}{}{}>",
+	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {}{}{}>",
 		refs.load(),
-		pending,
 		repr(to_string()),
 		is_locked() ? " " + RED + "(locked)" + STEEL_BLUE : "",
 		is_finished() ? " " + ORANGE + "(finished)" + STEEL_BLUE : "");
@@ -814,12 +664,12 @@ DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
 	if (timeout > 0.0) {
 		auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
 		if (!shard->endpoint.lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
-			throw engine::xapian::NotAvailable("Cannot grant exclusive lock shard");
+			throw engine::Error(engine::errc::not_available, "Cannot grant exclusive lock shard");
 		}
 	} else {
 		while (!shard->endpoint.lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
 			if (shard->endpoint.is_finished()) {
-				throw engine::xapian::NotAvailable("Cannot grant exclusive lock shard");
+				throw engine::Error(engine::errc::not_available, "Cannot grant exclusive lock shard");
 			}
 		}
 	}
@@ -932,24 +782,6 @@ DatabasePool::spawn(const Endpoint& endpoint)
 {
 	L_CALL("DatabasePool::spawn({})", repr(endpoint.to_string()));
 
-	if (!endpoint.is_local()) {
-		auto node = endpoint.node();
-		if (!node || node->empty()) {
-			throw engine::xapian::NotAvailable("Endpoint node is invalid");
-		}
-		if (!node->is_active()) {
-			throw engine::xapian::NotAvailable("Endpoint node is inactive");
-		}
-		auto port = node->remote_port;
-		if (port == 0) {
-			throw engine::xapian::NotAvailable("Endpoint node without a valid port");
-		}
-		auto& host = node->host();
-		if (host.empty()) {
-			throw engine::xapian::NotAvailable("Endpoint node without a valid host");
-		}
-	}
-
 	std::lock_guard<std::mutex> lk(mtx);
 	return _spawn(endpoint);
 }
@@ -1018,7 +850,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 
 	if (endpoints.empty()) {
 		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
-		throw engine::xapian::Opening("Cannot checkout empty database");
+		throw engine::Error(engine::errc::opening, "Cannot checkout empty database");
 	}
 
 	std::vector<std::shared_ptr<Shard>> shards;
@@ -1094,7 +926,7 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 
 
 void
-DatabasePool::cleanup(bool immediate, bool notify)
+DatabasePool::cleanup(bool immediate)
 {
 	L_CALL("DatabasePool::cleanup()");
 
@@ -1113,15 +945,10 @@ DatabasePool::cleanup(bool immediate, bool notify)
 				ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
 				lk.unlock();
 				referenced_database_endpoint->clear();
-				auto index_settings = referenced_database_endpoint->_get_pending_index_settings();
 				lk.lock();
 				referenced_database_endpoint.reset();
 				if (endpoint_database_endpoint.second->is_used()) {
 					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-					return DropAction::leave;
-				}
-				if (endpoint_database_endpoint.second->is_pending(index_settings, notify)) {
-					L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return DropAction::leave;
 				}
 				L_DATABASE("Evict endpoint from full LRU: {}", repr(endpoint_database_endpoint.second->to_string()));
@@ -1134,15 +961,10 @@ DatabasePool::cleanup(bool immediate, bool notify)
 			ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
 			lk.unlock();
 			referenced_database_endpoint->clear();
-			auto index_settings = referenced_database_endpoint->_get_pending_index_settings();
 			lk.lock();
 			referenced_database_endpoint.reset();
 			if (endpoint_database_endpoint.second->is_used()) {
 				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-				return DropAction::leave;
-			}
-			if (endpoint_database_endpoint.second->is_pending(index_settings, notify)) {
-				L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::leave;
 			}
 			L_DATABASE("Evict endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
@@ -1185,24 +1007,6 @@ DatabasePool::clear()
 
 	lru::lru::clear();
 	return true;
-}
-
-
-bool
-DatabasePool::is_pending(bool notify) const
-{
-	L_CALL("DatabasePool::is_pending()");
-
-	bool pending = false;
-	for (auto& referenced_database_endpoint : endpoints()) {
-		if (referenced_database_endpoint->is_pending(notify)) {
-			if (!notify) {
-				return true;
-			}
-			pending = true;
-		}
-	}
-	return pending;
 }
 
 

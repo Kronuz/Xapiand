@@ -16,33 +16,23 @@ Xapiand is written in C++20 and it has the following build requirements:
 * Ninja (optional)
 * A C++20 compiler: Clang >= 14 (Apple Clang >= 14) or GCC >= 13
 * CMake >= 3.14 (FetchContent is used heavily)
-* perl >= 5.6 (for a few building scripts)
-* Tcl >= 8.6  (to generate unicode/unicode-data.cc)
 
 ---
 ### Dependencies
 
-Xapiand makes use of quite a few libraries. Its search engine is a vendored fork
-of [Xapian](https://xapian.org/) 2.0.0, built as part of the tree,
-and most of the remaining building blocks (MessagePack, the storage codecs, logging,
-the Asio-based reactor runtime, the [Lua](https://www.lua.org/)
-scripting engine via sol2, and more) are pulled in automatically at configure time
-through CMake's `FetchContent` from the [standalone Kronuz libraries](/Xapiand/architecture/dependencies), so **a network
-connection is required the first time you configure**. (Earlier releases embedded
-ChaiScript and a libev event loop; those are now Lua and the Asio reactor.)
-
-:::hint{.info}
-The Xapian fork is compiled automatically as part of the Xapiand build, so you
-**don't** need to build or install it yourself. If you want to compile the search
-library standalone (for example, to work on the search core in isolation), see
-[Building the Xapian Library](/Xapiand/building-xapian).
-:::
+Xapiand makes use of quite a few libraries. Its search engine is
+[strata](https://github.com/Kronuz/strata), reached through the
+[prospect](https://github.com/Kronuz/prospect) search layout, and it and the
+remaining building blocks (MessagePack, the storage codecs, logging, the
+Asio-based reactor runtime, the [Lua](https://www.lua.org/) scripting engine via
+sol2, and more) are pulled in automatically at configure time through CMake's
+`FetchContent` from the [standalone Kronuz libraries](/Xapiand/architecture/dependencies), so **a network
+connection is required the first time you configure**.
 
 The only external system dependencies you need to provide are:
 
 * zlib
 * libpthread (internally used by the Standard C++ thread library)
-* ICU >= 54.1 (optional)
 
 ---
 #### macOS
@@ -68,7 +58,6 @@ xcode-select --install
 brew install ninja
 brew install pkg-config
 brew install cmake
-brew install icu
 ```
 
 ---
@@ -124,14 +113,13 @@ telling ninja to use `<number of cores> - 1` jobs. Example, for a system with
 ## Build Options
 
 The build is configured with CMake options, toggled at configure time with
-`-D<OPTION>=ON` / `-D<OPTION>=OFF`. The defaults produce an optimized, clustered
+`-D<OPTION>=ON` / `-D<OPTION>=OFF`. The defaults produce an optimized
 release; you rarely need to change them for a normal build.
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `CMAKE_BUILD_TYPE` | `Release` | Build type (`Release`, `RelWithDebInfo`, `Debug`, …) |
 | `LTO` | `ON` | Link-Time Optimization |
-| `CLUSTERING` | `ON` | Remote clustering |
 | `DATABASE_WAL` | `ON` | Database write-ahead log (WAL) |
 | `DATA_STORAGE` | `ON` | Data storage volumes |
 | `TRACEBACKS` | `OFF` (`ON` in Debug) | Tracebacks in exceptions |
@@ -210,4 +198,3 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DT
 - [Architecture Overview](/Xapiand/architecture) — the layers and how a request flows through them.
 - [Dependencies](/Xapiand/architecture/dependencies) — every fetched library, with links and a transitive tree.
 - [Internals](/Xapiand/architecture/internals) — source layout, conventions, and load-bearing invariants.
-- [Building the Xapian Library](/Xapiand/building-xapian) — compiling the search core standalone.

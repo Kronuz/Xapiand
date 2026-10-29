@@ -44,30 +44,13 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 
 - `-D`, `--database` sets the path to the root of the node, where all index data
   lives.
-- `--name` sets the node name; `--cluster` sets the cluster it joins.
+- `--name` sets the node name.
+- `--shards` sets the default number of shards per index (5).
 - `--port` sets the HTTP REST API port.
 - `-d`, `--detach` runs the process in the background.
-- `--solo` runs a single-node indexer with no replication or discovery, useful for
-  local development and tests.
 
-## Index Defaults
+## Write-Ahead Log
 
-New indexes inherit these unless overridden per index (see
-[Data Replication](/Xapiand/reference-guide/indexes/replication)):
-
-- `--shards` sets the default number of primary shards per index.
-- `--replicas` sets the default number of replicas per index.
-
-## Cluster and Networking
-
-- `--discovery-port`, `--discovery-group` and `--discovery-interface` control the
-  UDP multicast used to discover other nodes. Pin `--discovery-interface` (e.g. to
-  `127.0.0.1`) on a multi-homed or VPN host where the default interface can't
-  multicast.
-- `--replica-port` is the TCP port for the replication protocol.
-- `--primary-node` names the node holding the primary cluster database, and
-  `--database-stall-time` is how long to wait before a shard may be promoted to
-  primary.
 - `--writers` and `--wal-writer-cache-size` tune the
   [WAL](/Xapiand/reference-guide/wal) writer pool.
 
@@ -81,9 +64,7 @@ New indexes inherit these unless overridden per index (see
   fit the open-files limit). Over TLS, a connection idle 75 seconds, headers not done in 30
   seconds, or a request or reply that moves no data for 60 seconds is closed.
 
-HTTPS protects traffic between clients and the node they talk to. It does not protect
-traffic between nodes: the remote and replication protocols and discovery still travel in
-clear, so a cluster needs a network you trust. It does not authenticate clients either:
+HTTPS protects traffic between clients and the node. It does not authenticate clients:
 anyone who can reach the port can use the API.
 
 For the complete, authoritative list, run `xapiand --help`.

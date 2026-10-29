@@ -33,7 +33,7 @@
 #include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
 #include "database/schema.h"                         // for FieldType
-#include "exception_xapian.h"                         // for SerialisationError
+#include "exception_engine.h"                         // for SerialisationError
 #include "xapiand_exception.h"                               // for ClientError, MSG_ClientError
 #include "hashes.hh"                                // for fnv1ah64
 #include "io.hh"                                     // for close, open, read, write
@@ -90,16 +90,6 @@ FieldTerm field_term(std::string_view field_prefix, char field_type, std::string
 std::string_view query_field(std::string_view field_prefix)
 {
 	return field_prefix == DOCUMENT_ID_TERM_PREFIX ? engine::KEY_FIELD : field_prefix;
-}
-
-
-std::string key_of_term(std::string_view id_term)
-{
-	if (!id_term.starts_with(DOCUMENT_ID_TERM_PREFIX)) {
-		THROW(SerialisationError, "Term cannot be unserialised");
-	}
-	id_term.remove_prefix(std::string_view(DOCUMENT_ID_TERM_PREFIX).size());
-	return std::string(id_term);
 }
 
 

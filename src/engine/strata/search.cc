@@ -482,7 +482,7 @@ build(const Query& query, const Builder& b, int depth)
 			Scorer result;
 			bool first = true;
 			std::vector<Scorer> rest;
-			// Xapian reads an OR inside a MAX as more subqueries of the MAX, not as a sum.
+			// An OR inside a MAX is more subqueries of the MAX, not a sum.
 			std::vector<const Query*> flat;
 			for (const auto& sub : node->subqueries) {
 				flatten_or(node->op == Op::MAX, sub, flat, depth);
@@ -658,7 +658,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	};
 
 	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's, and
-	// shard i is the i-th shard asked for (its slot in Xapian's docid interleave).
+	// shard i is the i-th shard asked for (its slot in the docid interleave).
 	std::vector<p::shard_input> inputs(mine.size());
 	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
@@ -689,7 +689,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		options.key = [&](const p::match& m) { return guarded([&] { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); }); };
 	}
 	if (request.sorter != nullptr || request.spy != nullptr || collapse) {
-		// The spy sees every match once, as Xapian shows it the documents it examines.
+		// The spy sees every match once, as it sees the documents the search examines.
 		options.visit = [&](const p::match& m) {
 			const double weight = m.score();
 			heaviest = std::max(heaviest, weight);

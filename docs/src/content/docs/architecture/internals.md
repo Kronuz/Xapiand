@@ -14,15 +14,12 @@ The authoritative, always-current version of this lives in the repository's
 
 ## Source Layout
 
-`src/` mixes Xapiand's own code with a few bundled third-party libraries. The
-first rule of the tree: **don't refactor vendored code**. The search core,
-`src/xapian/`, is special. It's a *fork* (a pristine upstream snapshot plus a
-small stack of patches), not a plain bundle. Before touching anything under it,
-read [xapian-fork.md](https://github.com/Kronuz/Xapiand/blob/master/docs/dev/xapian-fork.md).
-
-Most of the small utilities that used to live in `src/` have been extracted into
-standalone repositories and are pulled back in via `FetchContent` (see
-[Dependencies](/Xapiand/architecture/dependencies)). The entry point is
+`src/` is Xapiand's own code. The libraries it builds on, including the search
+engine, live in standalone repositories and are pulled in via `FetchContent` (see
+[Dependencies](/Xapiand/architecture/dependencies)); a bug in one of them is fixed
+in its own repository. The search engine is
+[strata](https://github.com/Kronuz/strata), behind the engine seam in
+`src/engine/`. The entry point is
 `src/main.cc`, and the process is orchestrated by `XapiandManager`
 (`src/manager.*`).
 
@@ -30,11 +27,10 @@ standalone repositories and are pulled back in via `FetchContent` (see
 
 | You're touching… | Start in |
 |---|---|
-| On-disk format, durability, volumes | `src/storage.h`, `src/database/{wal,data,shard}.{cc,h}` |
+| On-disk format, durability, volumes | `src/database/{wal,data,shard}.{cc,h}`; the index files are strata's (`src/engine/strata/`) |
 | Schema handling, field types | `src/database/schema*.{cc,h}`, `src/reserved/` |
 | HTTP API / request handling | `src/server/http*.{cc,h}`, `src/url_parser.*` |
 | Event loop / client lifecycle | `src/worker.{cc,h}`, `src/server/base_{client,server}.*` |
-| Clustering, discovery, replication | `src/server/discovery.*`, `src/server/replication_protocol*`, `src/manager.*`, `src/node.*` |
 | Query languages | `src/query_dsl.*` (JSON/MsgPack), `src/booleanParser/` (string) |
 | Aggregations | `src/aggregations/` |
 | Geospatial | `src/geospatial/`, `src/multivalue/geospatialrange.*` |
@@ -76,10 +72,6 @@ monotonic.
 copies on mutation, which minimizes copies through the request pipeline and makes
 serialization cheap.
 
-**Async-first replication.** Replication is pull-based and asynchronous. A write
-commits locally first; replicas discover and pull when ready. This decouples
-commit latency from replica sync. A write is *not* on any replica when it commits.
-
 **Shared-nothing reactor pool.** The network transport runs on N independent Asio
 reactors, each owning its own `io_context` and thread. No shared state and no
 locks between them.
@@ -92,9 +84,6 @@ These are not safe to "clean up". Each one is load-bearing:
   *why* a geographic region maps to a contiguous integer range. Any change to id
   construction or endianness breaks geo indexing silently
   (`src/geospatial/htm.cc`, `src/serialise.cc`).
-- **One primary shard per logical shard, elected via Raft** (`discovery.cc`).
-  Replication is asynchronous and pull-based. If you touch the commit path,
-  preserve the `DB_UPDATED` multicast that triggers it.
 - **The storage write cursor lives in the volume header.** Bins are 8-byte
   aligned and a volume is capped near 34 GB. Don't write a bin outside
   `Storage::write` / `write_buffer` (the double-buffer alignment dance).
@@ -107,5 +96,3 @@ These are not safe to "clean up". Each one is load-bearing:
   working guide, including known traps and gotchas.
 - [ARCHITECTURE.md](https://github.com/Kronuz/Xapiand/blob/master/ARCHITECTURE.md)
   — the C++ codebase deep-dive.
-- [xapian-fork.md](https://github.com/Kronuz/Xapiand/blob/master/docs/dev/xapian-fork.md)
-  — the fork model, why each patch exists, and the upgrade procedure.

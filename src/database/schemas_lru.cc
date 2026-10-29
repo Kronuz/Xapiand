@@ -30,10 +30,9 @@
 #include "database/utils.h"                       // for unsharded_path
 #include "log.h"                                  // for L_CALL
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
-#include "opts.h"                                 // for opts.solo
+#include "opts.h"                                 // for opts.schema_versions_size
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_FOREIGN, ...
 #include "serialise.h"                            // for KEYWORD_STR
-#include "server/discovery.h"                     // for schema_updater
 #include "xapiand_strings.hh"                             // for strings::format, strings::replace
 #include "url_parser.h"                           // for urldecode
 
@@ -156,7 +155,7 @@ save_shared(std::string_view id, const MsgPack& schema, engine::rev version, con
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
 	try {
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true, false, &non_strict);
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true, &non_strict);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
@@ -333,7 +332,6 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 
 	// If we still need to save the metadata, we save it:
 	if (writable && schema_ptr->get_flags() == 0) {
-		bool save_metadata = false;
 		try {
 			DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 			// Try writing (only if there's no metadata there alrady)
@@ -348,12 +346,10 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-					save_metadata = true;
 				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
 					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-					save_metadata = true;
 				} else {
 					local_schema_ptr = schema_ptr;
 					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
@@ -382,16 +378,6 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-				save_metadata = true;
-			}
-			if (save_metadata) {
-#ifdef XAPIAND_CLUSTERING
-					if (!opts.solo) {
-						if (schema_ptr->get_flags()) {
-							schema_updater()->debounce(local_schema_path, schema_ptr->get_flags(), local_schema_path);
-						}
-					}
-#endif
 			}
 		} catch (...) {
 			L_EXC("Error saving local schema: endpoint:{}", repr(endpoints.to_string()));
@@ -619,13 +605,6 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						}
 					}
 
-#ifdef XAPIAND_CLUSTERING
-					if (!opts.solo) {
-						if (schema_version) {
-							schema_updater()->debounce(foreign_uri, schema_version, foreign_uri);
-						}
-					}
-#endif
 					L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={} (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 				} catch (const engine::Error& error) {
 					if (error.kind != engine::errc::version_conflict) {

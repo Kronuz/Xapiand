@@ -23,24 +23,17 @@
 #include "engine/open.h"
 
 #include "engine/strata/shard.h"   // for engine::strata::open_local
-#include "engine/xapian/shard.h"   // for engine::xapian::open_local
 
 
 namespace engine {
 
 task::task<Opened>
-open_local(Kind kind, const std::string& path, bool writable, bool create_missing, task::scheduler_ref on)
+open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on)
 {
 	Opened result;
-	if (kind == Kind::strata) {
-		auto opened = co_await strata::open_local(path, writable, create_missing, on);
-		result.shard = std::move(opened.shard);
-		result.created = opened.created;
-	} else {
-		auto opened = co_await xapian::open_local(path, writable, create_missing, on);
-		result.shard = std::move(opened.shard);
-		result.created = opened.created;
-	}
+	auto opened = co_await strata::open_local(path, writable, create_missing, on);
+	result.shard = std::move(opened.shard);
+	result.created = opened.created;
 	co_return result;
 }
 
@@ -48,15 +41,9 @@ task::task<CheckResult>
 check(const std::string& path, task::scheduler_ref on)
 {
 	CheckResult result;
-	if (kind_of(path) == Kind::strata) {
-		auto checked = co_await strata::check(path, on);
-		result.errors = checked.errors;
-		result.failure = std::move(checked.failure);
-	} else {
-		auto checked = co_await xapian::check(path, on);
-		result.errors = checked.errors;
-		result.failure = std::move(checked.failure);
-	}
+	auto checked = co_await strata::check(path, on);
+	result.errors = checked.errors;
+	result.failure = std::move(checked.failure);
 	co_return result;
 }
 

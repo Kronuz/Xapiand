@@ -235,9 +235,6 @@
 #cmakedefine HAVE__BOOL @HAVE__BOOL@
 
 
-/* Enable remote clustering. */
-#cmakedefine XAPIAND_CLUSTERING @XAPIAND_CLUSTERING@
-
 /* Enable database write ahead log (WAL). */
 #cmakedefine XAPIAND_DATABASE_WAL @XAPIAND_DATABASE_WAL@
 
@@ -279,11 +276,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #define XAPIAND_CLUSTER_NAME           "Xapiand"
-#define XAPIAND_DISCOVERY_GROUP        "239.192.168.1" /* Gossip group */
-#define XAPIAND_DISCOVERY_SERVERPORT   58880           /* Gossip port */
 #define XAPIAND_HTTP_SERVERPORT        8880            /* HTTP TCP port */
-#define XAPIAND_REMOTE_SERVERPORT      9880            /* Remote Protocol TCP port */
-#define XAPIAND_REPLICATION_SERVERPORT 7880            /* Replication Protocol TCP port */
 
 /* Enable xxh static linking structures */
 #define XXH_STATIC_LINKING_ONLY  /* empty, as xxhash.c defines it, so both can */
@@ -297,23 +290,11 @@
 #define XAPIAND_TCP_BACKLOG       511
 #endif
 
-////////////////////////////////////////////////////////////////////////////////
-// Xapian specific
-
-/* Force move semantics in xapian */
-#define XAPIAN_MOVE_SEMANTICS 1
-
 /* directory separator(s) as a character or string literal */
 #define DIR_SEPS '/'
 
 /* directory separator(s) as an initialiser list */
 #define DIR_SEPS_LIST { '/' }
-
-/* Define to error out if we try to include GPL code in libxapian */
-/* #undef DISABLE_GPL_LIBXAPIAN */
-
-/* Define to use flock() for flint-compatible locking */
-#define FLINTLOCK_USE_FLOCK 1
 
 /* Define if ftime returns void */
 #cmakedefine FTIME_RETURNS_VOID @FTIME_RETURNS_VOID@
@@ -496,7 +477,7 @@
 #define PACKAGE "xapiand"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "xapian-core 1.5.0"
+#define PACKAGE_STRING "xapiand"
 
 /* explicit prototype needed for pread (if any) */
 #cmakedefine PREAD_PROTOTYPE @PREAD_PROTOTYPE@
@@ -511,9 +492,6 @@
 /* Define to the name of a function implementing snprintf with ISO C99
    semantics (if one exists) */
 #cmakedefine SNPRINTF_ISO @SNPRINTF_ISO@
-
-/* Define to use ICU for CJK segmentation */
-#cmakedefine USE_ICU @USE_ICU@
 
 /* Defined if system uses ieee format to store floating point numbers */
 #cmakedefine FOLLOWS_IEEE @FOLLOWS_IEEE@
@@ -533,17 +511,6 @@
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 /* #  undef WORDS_BIGENDIAN */
-
-/* Define if you want assertions (causes some slow-down) */
-#if !defined(NDEBUG) && @XAPIAND_XAPIAN_ASSERTIONS@
-# define XAPIAN_ASSERTIONS 1
-#endif
-
-/* Define if you want paranoid assertions (causes significant slow-down) */
-/* #undef XAPIAN_ASSERTIONS_PARANOID */
-
-/* Define if you want a log of methods called and other debug messages */
-/* #undef XAPIAN_DEBUG_LOG */
 
 /* Enable large inode numbers on Mac OS X 10.5.  */
 #ifndef _DARWIN_USE_64_BIT_INODE
@@ -588,29 +555,6 @@
 #else
 # define rare(COND) (COND)
 # define usual(COND) (COND)
-#endif
-
-/* Signal we're building the library so it's OK to include headers such as
- * xapian/query.h directly.
- */
-#define XAPIAN_LIB_BUILD 1
-
-/* Mark an expression whose result deliberately relies on well-defined unsigned
- * integer wrapping, so it isn't flagged by
- * -fsanitize=unsigned-integer-overflow.  Xapian 2.0.0 uses this macro across
- * its backends; we don't enable that sanitizer, so it's an identity macro.
- */
-#ifndef UNSIGNED_OVERFLOW_OK
-# define UNSIGNED_OVERFLOW_OK(X) (X)
-#endif
-
-/* Xapian 2.0.0 assigns const pointers to zstream's next_in, which requires
- * zlib's const-correct API.  Defining ZLIB_CONST before <zlib.h> makes
- * next_in a `const Bytef*` (needs zlib >= 1.2.5.2, released 2011).  config.h
- * is included before <zlib.h> in every source file that uses zlib.
- */
-#ifndef ZLIB_CONST
-# define ZLIB_CONST
 #endif
 
 /* With Sun CC 5.13 (Studio 12.4) on Solaris 11.2, <math.h> seems to get

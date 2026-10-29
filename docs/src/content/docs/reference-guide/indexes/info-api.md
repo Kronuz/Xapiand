@@ -27,7 +27,7 @@ and the later will retrieve information about thewhole index `/twitter/tweet/1/`
 
 The response will include the following information about the index:
 
-* `uuid`          - UUID of the xapian database.
+* `uuid`          - UUID of the database (shown only for shard databases).
 * `revision`      - Internal document ID (shown only for shard databases).
 * `doc_count`     - Documents count.
 * `last_id`       - Last used ID.

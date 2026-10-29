@@ -8,7 +8,7 @@
 
 **A RESTful search and storage engine in one binary.** Send it JSON or MessagePack
 documents over HTTP, then search them with full text, geospatial, and range queries.
-It runs on one machine and scales out to a cluster.
+It runs on one machine.
 
 📖 Official site: [kronuz.github.io/Xapiand](https://kronuz.github.io/Xapiand)
 
@@ -43,35 +43,32 @@ searches, aggregations, and geo queries.
 A single C++20 binary that gives you, out of the box:
 
 - A **RESTful HTTP API** over a schemaless document store (JSON or MessagePack in, JSON/MessagePack out).
-- **Full-text search**, built on a customized in-tree fork of [Xapian](https://xapian.org/).
+- **Full-text search** on the [strata](https://github.com/Kronuz/strata) engine.
 - **Geospatial** indexing and queries via a Hierarchical Triangular Mesh (HTM): points, circles, polygons, and collections become numeric range queries on the sphere.
 - **Range and numeric** queries through order-preserving ("sortable") value encoding.
-- **Aggregations** in the Elasticsearch style (buckets + metrics), computed as a match-spy and mergeable across shards.
-- **Clustering**: per-shard primary election over Raft, with asynchronous, pull-based replication between nodes.
+- **Aggregations** in the Elasticsearch style (buckets + metrics), computed per shard and merged across shards.
 - **Durable storage**: a Haystack-inspired append-only volume format with an optional write-ahead log.
 
 The design goal throughout is to keep the moving pieces few and the defaults
-sane: one binary does something useful immediately, and still scales out across
-a cluster when you need it to.
+sane: one binary does something useful immediately.
 
-> **A note on scope.** This repository still vendors the customized Xapian fork
-> under `src/`. The old in-tree copies of cuuid, msgpack, prometheus-cpp, libev,
-> LZ4, RapidJSON, cppcodec, TCLAP, fmt, ChaiScript, and libyaml are gone; CMake now
-> pulls the extracted `Kronuz/*` libraries and the upstream ones with `FetchContent`. See [ARCHITECTURE.md](ARCHITECTURE.md)
-> for the full map.
+> **A note on scope.** This release runs on a single node: the cluster (discovery,
+> replication and distributed search) returns with the next phase of the
+> [plan](https://github.com/Kronuz/strata/blob/main/docs/PLAN.md). CMake pulls the extracted
+> `Kronuz/*` libraries and the upstream ones with `FetchContent`. See
+> [ARCHITECTURE.md](ARCHITECTURE.md) for the full map.
 
 ## 📚 Documentation
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — a deep tour of the subsystems
-  (storage, clustering, search, geospatial, logging, the utility layer), the
+  (storage, search, geospatial, logging, the utility layer), the
   self-contained components worth reusing, and a catalog of bugs and risks
   found while reading the code.
 - **[AGENTS.md](AGENTS.md)** — orientation for anyone (human or AI) working in
   this codebase: where things live, the conventions, the load-bearing
   invariants, and the traps.
 - **[testing.md](docs/dev/testing.md)** — the test layers, from unit tests to the docs-as-E2E
-  suite and cluster soak runs.
-- **[xapian-fork.md](docs/dev/xapian-fork.md)** — the vendored Xapian fork and its patch stack.
+  suite and soak runs.
 - **[scheduler.md](docs/design/scheduler.md)** and **[extraction.md](docs/design/extraction.md)** — the
   (now completed) plans that split the scheduler stack and the rest of the utility
   code into the standalone [Kronuz libraries](https://github.com/Kronuz/cpp-libraries).
@@ -92,7 +89,6 @@ Notable CMake options (all default on unless noted):
 
 | Option | Default | What it does |
 |---|---|---|
-| `CLUSTERING` | ON | Remote clustering (discovery + replication). |
 | `TLS` | ON | HTTPS for the REST API; needs OpenSSL 3. |
 | `DATABASE_WAL` | ON | Per-shard write-ahead log. |
 | `DATA_STORAGE` | ON | Haystack-style document storage volumes. |
@@ -112,9 +108,8 @@ dependency layering diagram, and the **full dependency tree** live in
 [Runtime architecture](ARCHITECTURE.md#runtime-architecture) and
 [Dependencies](ARCHITECTURE.md#dependencies).
 
-The load-bearing pieces: `reactor` (the Asio server runtime), `cluster` (multicast Bus +
-Raft), `http` (HTTP transport), `flume` (framed file transfer), `storage` (append-only
-blob store), `io` / `fs` / `system` (POSIX I/O, filesystem, resource introspection),
+The load-bearing pieces: `reactor` (the Asio server runtime), `http` (HTTP transport),
+`strata` (the search engine), `storage` (append-only blob store), `io` / `fs` / `system` (POSIX I/O, filesystem, resource introspection),
 plus the extracted `cuuid` condensed-UUID value type, the `msgpack` keystone
 (msgpack-c + COW `MsgPack` + `xchange` + patcher), a foundation of `strings` /
 `repr` / `logger` / `traceback` / `compressors`, and the search-domain libraries.
@@ -130,9 +125,9 @@ suite ([testing.md](docs/dev/testing.md)).
 
 [MIT](LICENSE) — Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC.
 
-Note that the bundled Xapian fork under `src/xapian/` carries Xapian's own
-(GPL) license; see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note) before
-reusing code from this tree.
+Note that `src/sortable_serialise.*` carries Xapian's license (GPL) until the
+value encoding is replaced; see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note)
+before reusing code from this tree.
 
 [ci-image]: https://github.com/Kronuz/Xapiand/actions/workflows/ci.yml/badge.svg
 [ci-url]: https://github.com/Kronuz/Xapiand/actions/workflows/ci.yml

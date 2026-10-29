@@ -47,11 +47,6 @@
 #include "engine/error.h"                    // for engine::Error
 
 
-#ifdef XAPIAND_CLUSTERING
-class Discovery;
-namespace remote { class RemoteProtocolService; }
-namespace replication { class ReplicationProtocolService; }
-#endif
 
 class DocPreparer;
 class DocIndexer;
@@ -85,22 +80,7 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 ENUM_CLASS(XapiandManagerState, int,
 	BAD,
 	READY,
-	SETUP,
-	JOINING,
-	WAITING_MORE,
-	WAITING,
 	RESET
-)
-
-
-ENUM_CLASS(XapiandManagerCommand, int,
-	RAFT_APPLY_COMMAND,
-	RAFT_SET_LEADER_NODE,
-	ELECT_PRIMARY,
-	ASYNC_PRIMARY_UPDATED,
-	ASYNC_ELECT_PRIMARY,
-	ASYNC_ELECT_PRIMARY_RESPONSE,
-	ASYNC_DB_UPDATED
 )
 
 
@@ -120,27 +100,16 @@ class XapiandManager {
 	void save_node_name(std::string_view name);
 	std::string set_node_name(std::string_view name);
 
-	void start_discovery();
 	void make_servers();
 
 public:
 	using State = XapiandManagerState;
-	using Command = XapiandManagerCommand;
 
 	std::atomic_int total_clients;
 	std::atomic_int http_clients;
-	std::atomic_int remote_clients;
-	std::atomic_int replication_clients;
 
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
-#ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<remote::RemoteProtocolService> remote_service;
-	int remote_port = 0;
-	std::unique_ptr<replication::ReplicationProtocolService> replication_service;
-	int replication_port = 0;
-	std::shared_ptr<Discovery> discovery;
-#endif
 
 	std::shared_ptr<DatabaseCleanup> database_cleanup;
 
@@ -149,8 +118,6 @@ public:
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
-#ifdef XAPIAND_CLUSTERING
-#endif
 	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> doc_preparer_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> doc_indexer_pool;
 
@@ -165,7 +132,6 @@ private:
 	std::atomic_llong _shutdown_asap;
 	std::atomic_llong _shutdown_now;
 
-	int _new_cluster;
 	std::chrono::steady_clock::time_point _process_start;
 
 	std::atomic_int _try_shutdown;
@@ -179,8 +145,6 @@ private:
 	// Asio -- mirroring how the *AsioService members are forward-declared + unique_ptr'd.
 	struct Reactors;
 	std::unique_ptr<Reactors> _rx;
-
-	ConcurrentQueue<std::pair<Command, std::string>> dispatch_command_args;
 
 	void run_loop();
 	void break_loop();
@@ -197,25 +161,13 @@ private:
 	void setup_node_async_cb();
 	void setup_node_impl();
 
-	void set_cluster_database_ready_async_cb();
-	void set_cluster_database_ready_impl();
-
-	void dispatch_command_async_cb();
-	void dispatch_command_impl(Command command, const std::string& data);
-	void _dispatch_command(Command command, const std::string& data);
+	void set_ready_impl();
 
 	bool is_running_loop() const { return _running_loop.load(std::memory_order_relaxed); }
 
-#ifdef XAPIAND_CLUSTERING
-	void load_nodes();
-	void new_leader();
 
-	void add_node(const std::string& name);
-	void node_added(const std::string& name);
-#endif
-
-	IndexSettings resolve_index_settings_impl(std::string_view normalized_slashed_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
-	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr);
+	IndexSettings resolve_index_settings_impl(std::string_view normalized_slashed_path, bool writable = false, const MsgPack* settings = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
+	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable = false, const MsgPack* settings = nullptr);
 	void invalidate_settings_impl(const std::string& uri);
 
 	std::string server_metrics_impl();
@@ -249,10 +201,6 @@ public:
 	void shutdown(long long asap, long long now, bool async = true);
 
 	bool ready_to_end_http(bool notify = false);
-	bool ready_to_end_remote(bool notify = false);
-	bool ready_to_end_replication(bool notify = false);
-	bool ready_to_end_database_cleanup(bool notify = false);
-	bool ready_to_end_discovery(bool notify = false);
 	bool ready_to_end(bool notify = false);
 
 	std::string __repr__() const;
@@ -281,10 +229,10 @@ public:
 		_manager.reset();
 	}
 
-	static IndexSettings resolve_index_settings(std::string_view normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
+	static IndexSettings resolve_index_settings(std::string_view normalized_path, bool writable = false, const MsgPack* settings = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
 
-	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
-		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, primary, settings);
+	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, const MsgPack* settings = nullptr) {
+		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, settings);
 	}
 
 	static void invalidate_settings(const std::string& uri) {
@@ -295,10 +243,6 @@ public:
 		manager(true)->setup_node_impl();
 	}
 
-	static void dispatch_command(Command command, const std::string& data = "") {
-		manager(true)->dispatch_command_impl(command, data);
-	}
-
 	static std::string server_metrics() {
 		return manager(true)->server_metrics_impl();
 	}
@@ -307,10 +251,6 @@ public:
 		if (_manager) {
 			_manager->try_shutdown_impl(always);
 		}
-	}
-
-	static void set_cluster_database_ready() {
-		manager(true)->set_cluster_database_ready_impl();
 	}
 
 	static bool exchange_state(State from, State to, std::chrono::milliseconds timeout = 0s, std::string_view format_timeout = "", std::string_view format_done = "");
@@ -327,14 +267,3 @@ public:
 };
 
 
-#ifdef XAPIAND_CLUSTERING
-
-void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
-
-inline auto& trigger_replication(bool create = true) {
-	static auto trigger_replication = create ? make_unique_debouncer<std::string, ThreadPolicyType::replication>("TR--", "TR{:02}", opts.num_replicators, trigger_replication_trigger, std::chrono::milliseconds(opts.trigger_replication_throttle_time), std::chrono::milliseconds(opts.trigger_replication_debounce_timeout), std::chrono::milliseconds(opts.trigger_replication_debounce_busy_timeout), std::chrono::milliseconds(opts.trigger_replication_debounce_min_force_timeout), std::chrono::milliseconds(opts.trigger_replication_debounce_max_force_timeout)) : nullptr;
-	assert(!create || trigger_replication);
-	return trigger_replication;
-}
-
-#endif

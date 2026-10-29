@@ -141,7 +141,7 @@ check_combiner(Op combiner)
 	}
 }
 
-// Whether op applied to the subqueries matches nothing, as Xapian simplifies it.
+// Whether op applied to the subqueries matches nothing.
 bool
 combines_to_nothing(Op op, const std::vector<Query>& subqueries)
 {

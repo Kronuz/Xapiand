@@ -4,12 +4,12 @@ How to test **and** stress every layer of Xapiand, what each layer proves, and h
 to run it. The tools live in `harness/`; one command runs them all:
 
 ```sh
-harness/run_all.sh                 # smoke + e2e + cluster + recovery + load + stress + bench
-harness/run_all.sh smoke cluster   # just a subset
+harness/run_all.sh                 # smoke + e2e + tls + recovery + load + stress + bench
+harness/run_all.sh smoke recovery  # just a subset
 ```
 
-Everything here drives the built binary (`build/bin/xapiand`) over its real HTTP /
-binary ports. There is no mocking: a "green" run means the actual server did the
+Everything here drives the built binary (`build/bin/xapiand`) over its real HTTP
+port. There is no mocking: a "green" run means the actual server did the
 work. Build first:
 
 ```sh
@@ -26,23 +26,19 @@ work. Build first:
 | **unit** | `ctest` | C++ units (parsers, serialise, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
 | **functional E2E** | `run_all.sh e2e` | the whole documented HTTP API still behaves (doc-embedded assertions) | `newman` |
 | **TLS** | `run_all.sh tls` | the E2E suite over HTTPS, and every TLS refusal names its reason (`tls_check.sh`) | a `-DTLS=ON` build, `newman` 6 |
-| **remote / cluster** | `cluster_check.sh` | discovery, the Remote protocol, replication, distributed search | a multicast-capable interface |
 | **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
-| **protocol sniff** | `proxy --xapian` | *see* the MSG_/REPLY_ wire between two nodes | two nodes |
 | **load** | `index_fortune` | bulk indexing of many docs | nothing (falls back if no `fortune(6)`) |
 | **stress / soak** | `stress_fortune` | correctness under sustained concurrency | nothing |
 | **benchmark** | `loadtest.py` / `es_loadtest.py` | index throughput + query QPS/latency (vs Elasticsearch) | a dataset (bundled) |
 
-The single-node HTTP E2E is the workhorse for correctness; the **cluster** layer is
-the only one that exercises Discovery / Remote / Replication, so it's the net for
-anything touching the distributed data plane. See `docs/_docs/benchmarks.md` for
+The HTTP E2E is the workhorse for correctness. See `docs/_docs/benchmarks.md` for
 recorded benchmark results.
 
 ---
 
 ## smoke
 
-The cheapest sanity check: boot one `--solo` node, `PUT` a document with
+The cheapest sanity check: boot one node, `PUT` a document with
 `?commit=true`, search for a term in it, expect one hit. No baseline, no
 dependencies. `run_all.sh` runs it first so a broken binary fails fast.
 
@@ -91,7 +87,7 @@ JSON response). Then:
 
 ```sh
 (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3)
-harness/engine_e2e.sh build-asan/bin/xapiand OUT                         # the docs E2E on both engines
+harness/engine_e2e.sh build-asan/bin/xapiand OUT                         # the docs E2E on a fresh node
 TSAN_OPTIONS=log_path=OUT/san python3 harness/engine_mixed_load.py build-tsan/bin/xapiand OUT --secs 600   # T10
 ```
 
@@ -145,17 +141,14 @@ binary and diff it with the optional explorers `e2e_check.sh` / `e2e_diff.py` /
 
 ### Text analysis differential
 
-The doc suite barely touches text analysis, so `harness/analysis_diff.py` and `harness/stem_diff.py` index a
-mixed corpus under about 130 analysis configurations (language, stem and stop strategies, positions, weight,
-CJK n-grams) and each language's Snowball sample vocabulary (500 words, one document each), then record what
-searches find: for every word of the corpus, and every pair of adjacent words as a phrase, the ids of the
-documents that match (`analysis_diff.py`); for every vocabulary word, the words that stem alike
-(`stem_diff.py`). Run each against two builds, or both engines, on separate data dirs and diff the two JSON
+The doc suite barely touches text analysis, so `harness/analysis_diff.py` indexes a mixed corpus under
+about 130 analysis configurations (language, stem and stop strategies, positions, weight, CJK n-grams), then
+records what searches find: for every word of the corpus, and every pair of adjacent words as a phrase, the
+ids of the documents that match. Run it against two builds on separate data dirs and diff the two JSON
 files; any difference is a change in how text is analysed at index or query time.
 
 ```sh
 python3 harness/analysis_diff.py 8891 base-analysis.json         # node on :8891
-python3 harness/stem_diff.py 8891 base-stem.json ~/code/Kronuz/snowball/test/vectors
 ```
 
 ### Over HTTPS
@@ -171,106 +164,14 @@ expired, not-yet-valid, mismatched, or group-readable certificate or key.
 
 ---
 
-## Remote / cluster E2E
-
-`cluster_check.sh` spins an N-node cluster (default 2) on localhost and asserts the
-three things the `--solo` E2E can never reach:
-
-1. **Discovery** — every node converges on the full membership and one leader.
-2. **Remote / replication** — a write on node1 is readable from the other nodes
-   (shards distributed across nodes, reached over the Remote protocol / replicated).
-3. **Distributed search** — a query on one node gathers hits across every node's
-   shards (the two-phase remote match).
-
-```sh
-harness/cluster_check.sh          # 2 nodes
-harness/cluster_check.sh 3        # 3 nodes
-```
-
-Gotchas (documented in the script): the nodes share one multicast discovery port
-but need their own http / xapian(remote) / replica TCP ports; a fresh cluster is
-slow to settle (~8 s/node, and the first write is slower while shards are created);
-and multicast needs a multicast-capable interface up. Offline with no interface,
-discovery can't rendezvous — that's an environment limit, not a bug.
-
-### The Remote protocol 1:1 invariant
-
-The client (`src/xapian/backends/remote/`) and the Xapiand server
-(`src/server/remote_protocol_views.{h,cc}`) speak the same binary protocol, so their
-message/reply tables **must** stay 1:1 with the vendored definition. Three files
-must agree:
-
-- `src/xapian/net/remoteprotocol.h` — the authoritative `message_type` / `reply_type`
-  enums (protocol v47).
-- `src/server/remote_protocol_views.h` — Xapiand's `RemoteMessageType` /
-  `RemoteReplyType`; ordinals must match the above exactly or messages misroute.
-- `harness/proxy` — the sniffer; it **auto-parses** `remoteprotocol.h` at runtime, so
-  it can't drift.
-
-The protocol **version** is deliberately separate. `remote_protocol_views.h` hand-
-maintains `XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION` as an honest assertion of the layout
-this server actually implements — it is **not** re-derived from the vendored header.
-A mismatch then fails loud at the handshake (`Server supports protocol version N -
-client is using M`) instead of silently misparsing a field that moved. Bump it only
-after the layout has actually been reconciled to the new version.
-
-### Sniffing the wire (`harness/proxy`)
-
-`harness/proxy` is a small, dependency-free (stdlib-only) colorizing man-in-the-middle:
-it listens on one TCP port, forwards every byte to a target `host:port`, and prints each
-frame in both directions (`-->` sent, `<--` received). With `--xapian` it *decodes* the
-binary Remote protocol as it passes, so you can watch the actual `MSG_*` / `REPLY_*`
-conversation between two nodes: the two-phase match (`MSG_QUERY` → `REPLY_STATS`,
-`MSG_GETMSET` → `REPLY_RESULTS`), per-document fetches (`MSG_DOCUMENT` → `REPLY_DOCDATA`),
-stats refreshes (`MSG_UPDATE`), reopens (`MSG_REOPEN`), and the handshake. It **auto-parses
-`src/xapian/net/remoteprotocol.h` at startup**, so its decode tables stay 1:1 with the C++
-wire protocol (v47) — there is no second copy to drift.
-
-```
-usage: proxy [--xapian | --http] <listen_port> [<host>:]<target_port>
-             (no flag = raw byte forward, no decode)
-```
-
-Modes: `--xapian` decodes the Remote protocol, `--http` decodes HTTP, and with no flag it
-is a plain forwarder (raw bytes, useful for anything else).
-
-**Worked example — watch one node query another's shards.** A node reaches a remote
-shard over the *other* node's Xapian/Remote port (`--xapian-port`, default `9880`). Put
-the proxy in front of that port and route the client node through it:
-
-```sh
-# 1. Server node holds the shards, Remote port on :9880 (queried by peers):
-build/bin/xapiand --name A --xapian-port 9880 --port 8880 \
-    --discovery-interface 127.0.0.1 -D /tmp/A &
-
-# 2. Sniff its Remote port: listen on :8861, forward to the real :9880
-harness/proxy --xapian 8861 localhost:9880
-
-# 3. Start the client node so the shard it must fetch from A resolves to :8861
-#    instead of :9880 (e.g. run A's advertised xapian-port as 8861, with the real
-#    server behind the proxy), then search the client node and watch the proxy:
-curl -s -XSEARCH localhost:8881/index/ -H 'Content-Type: application/json' \
-    -d '{"_query":{"_match_all":{}}}'
-```
-
-Each line the proxy prints is one framed message, e.g. `A --> client REPLY_STATS <bytes>`
-/ `client --> A MSG_GETMSET <query_id ...>`, so a broken or mismatched protocol shows up
-immediately as an unexpected type, a version mismatch in the opening handshake, or a
-conversation that stalls waiting for a reply that never comes. `Ctrl-C` stops it.
-
-Related low-level probes: `discovery_sniff.py` (decode the multicast Discovery gossip),
-`graceful_shutdown_check.sh` and `signal_check.sh` (signal handling / clean shutdown).
-
----
-
 ## Recovery — `wal_recovery_check.sh`
 
 The durability net for the write-ahead log. Every write is appended to the per-database
-WAL as it happens, *before* the debounced glass commit (the timed committer only forces
-at ~8-10s, the count threshold at 100000). So a crash after some uncommitted writes must
+WAL as it happens, *before* the debounced commit (the timed committer only forces
+at ~8-10s). So a crash after some uncommitted writes must
 be recoverable: reopening the data dir replays the WAL and restores every one of them.
 
-The check makes that concrete: start a solo node, `PUT` N docs **without** `?commit=true`
+The check makes that concrete: start a node, `PUT` N docs **without** `?commit=true`
 (they live only in the WAL), `kill -9` the node within ~1s (a hard crash, well before any
 timed commit), restart on the same data dir, and assert all N docs come back. It also
 greps the restart log for the replay line (`Read and execute operations WAL`) as positive
@@ -288,6 +189,9 @@ actual HTTP → WAL → crash → open-time-replay path end to end. The storage 
 own fault-injection suite (torn writes, truncation, bit rot, a corrupt size field, and the
 guarantee that records committed before any damage stay readable) — see that repo's
 `test/test.cc`.
+
+Related probes: `graceful_shutdown_check.sh` and `signal_check.sh` (signal handling /
+clean shutdown).
 
 ---
 
@@ -331,7 +235,7 @@ original `contrib/bin/stress_fortune`.
 
 ## Benchmarks
 
-`loadtest.py` bulk-loads a dataset (the bundled `accounts` set, replicated) and then
+`loadtest.py` bulk-loads a dataset (the bundled `accounts` set, repeated) and then
 hammers a fixed query mix from many threads, reporting index docs/s and query
 QPS/latency percentiles:
 
@@ -344,20 +248,6 @@ harness/loadtest.py --target localhost:8880 --dataset docs/assets/accounts.ndjso
 (different substrate — read the caveats in `docs/_docs/benchmarks.md`). `perfdiff.py`
 diffs two `loadtest.py` result JSONs.
 
-**Cluster benchmark.** `cluster_bench.sh` runs the *same* load twice — once solo (no
-Remote protocol) and once on a 2-node cluster (index sharded across nodes, so every
-search runs the two-phase Remote match and every write replicates) — and prints both
-sets of numbers with the delta, making the cost of the distributed data plane explicit:
-
-```sh
-harness/cluster_bench.sh
-REPLICATE=20 CONCURRENCY=16 DURATION=5 TRIALS=2 harness/cluster_bench.sh
-```
-
-It needs a multicast-capable interface for discovery (like `cluster_check.sh`); if the
-cluster can't form it still reports the solo numbers. See `docs/_docs/benchmarks.md`
-for recorded solo-vs-cluster results.
-
 ---
 
 ## The unified runner
@@ -368,7 +258,7 @@ Layers whose prerequisites are missing (a baseline, the oracle binary, GTest) ar
 **skipped**, not failed, with a note on how to enable them.
 
 ```sh
-harness/run_all.sh                 # default: smoke e2e cluster recovery load stress bench
+harness/run_all.sh                 # default: smoke e2e tls recovery load stress bench
 harness/run_all.sh smoke stress    # a subset
 BIN=/path/to/xapiand harness/run_all.sh
 ```

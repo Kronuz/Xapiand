@@ -27,28 +27,42 @@
 
 #include "engine/census.h"         // for ENGINE_CENSUS_SEARCH
 #include "engine/error.h"          // for Error, errc
-#include "engine/kind.h"           // for Kind
 #include "engine/strata/search.h"  // for strata::search
-#include "engine/xapian/search.h"  // for xapian::search
 
 
 namespace engine {
+
+namespace {
+
+class Prepared final : public PreparedQuery {
+public:
+	explicit Prepared(const Query& source) : PreparedQuery(source) { }
+
+	bool empty() const override {
+		return source().empty();
+	}
+
+	std::string description() const override {
+		return source().description();
+	}
+};
+
+}  // namespace
+
+
+std::unique_ptr<PreparedQuery>
+prepare(const Query& query)
+{
+	ENGINE_CENSUS_QUERY(query);
+	return std::make_unique<Prepared>(query);
+}
+
 
 task::task<SearchResult>
 search(std::span<Shard* const> shards, const SearchRequest& request)
 {
 	ENGINE_CENSUS_SEARCH(request, shards.size());
-	bool on_strata = false, on_xapian = false;
-	for (const auto* shard : shards) {
-		(shard->kind() == Kind::strata ? on_strata : on_xapian) = true;
-	}
-	if (on_strata && on_xapian) {
-		throw Error(errc::invalid, "A search cannot span indexes of different engines");
-	}
-	if (on_strata) {
-		co_return co_await strata::search(shards, request);
-	}
-	co_return co_await xapian::search(shards, request);
+	co_return co_await strata::search(shards, request);
 }
 
 }  // namespace engine

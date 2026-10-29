@@ -34,8 +34,7 @@
 #include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
-#include "exception_engine.h"                     // for QueryParserError
-#include "exception_xapian.h"                     // for DocVersionConflictError
+#include "exception_engine.h"                     // for QueryParserError, DocVersionConflictError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION
@@ -54,7 +53,6 @@
 #include "engine/open.h"                    // for engine::check
 #include "engine/search.h"                  // for engine::search, prepare
 #include "engine/sync.h"                    // for engine::sync_wait
-#include "engine/xapian/errors.h"          // for engine::xapian::DatabaseFailure
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -1148,12 +1146,9 @@ DatabaseHandler::match(
 	request.order = order;
 	request.spy = aggs;
 
-	// The engine feeds every shard into one search: remote shards' round trips overlap, and it
-	// merges the per-shard results and unshards the docids itself. The ids that correlate its two
-	// phases carry the node's name, so co-located shards don't collide in the remote server's
-	// process-global pending map.
+	// The engine feeds every shard into one search, merges the per-shard results and unshards the
+	// docids itself.
 	auto manager = XapiandManager::manager();
-	request.origin = Node::get_local_node()->lower_name();
 
 	engine::SearchResult result;
 
@@ -1765,7 +1760,7 @@ DatabaseHandler::get_database_info()
 		auto old_total_length = total_length;
 		total_length += stats.total_length;
 		if (total_length < old_total_length) {
-			throw engine::xapian::DatabaseFailure("Total document length overflowed!");
+			throw engine::Error(engine::errc::database, "Total document length overflowed!");
 		}
 		engine::termcount shard_doclength_lower_bound = -stats.doclen_lower;
 		doclength_lower_bound = std::max(doclength_lower_bound, shard_doclength_lower_bound);
@@ -1816,7 +1811,7 @@ DatabaseHandler::commit(bool wal)
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			ret = lk_shard->commit(wal, true) || ret;
+			ret = lk_shard->commit(wal) || ret;
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -2533,10 +2528,6 @@ committer_commit(std::weak_ptr<Shard> weak_shard) {
 
 		if (error.empty()) {
 			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), strings::from_delta(start, end));
-#ifdef XAPIAND_CLUSTERING
-		} else if (!Node::quorum()) {
-			L_DEBUG("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
-#endif
 		} else {
 			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
 		}

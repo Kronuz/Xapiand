@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# strata_search_check.sh -- engine::search on the strata engine through the server, against the Xapian engine.
+# strata_search_check.sh -- engine::search on the strata engine through the server.
 #
-# Boots a single node twice (XAPIAND_ENGINE=xapian, then strata), loads the same integer documents (the index
+# Boots a single node, loads the same integer documents (the index
 # has the default five shards), and runs the queries the strata search covers: term, _and, _or, _and_not,
-# _and_maybe, _filter, _near, _phrase. The documents found must be the same set on both engines, and equal to
+# _and_maybe, _filter, _near, _phrase. The documents found must equal
 # the set Python computes from the documents; the count must match. Weights are not compared here (the unit test
 # test_engine_search_strata compares them against a model); this is the end-to-end screen.
 # Usage: harness/strata_search_check.sh      BIN=build/bin/xapiand PORT=8921 NDOCS=120
@@ -24,7 +24,7 @@ fail() { echo "  FAIL: $*"; fails=$((fails + 1)); }
 start_node() {  # start_node ENGINE
 	(
 		exec > >(cat >>"$RUNDIR/node_$1.log") 2>&1
-		XAPIAND_ENGINE=$1 exec "$BIN" --port "$PORT" --solo --name smoke --verbosity 3 -D "$RUNDIR/data_$1"
+		exec "$BIN" --port "$PORT" --name smoke --verbosity 3 -D "$RUNDIR/data_$1"
 	) &
 	PID=$!
 	for _ in $(seq 120); do
@@ -102,7 +102,7 @@ for q in json.load(open(run + "/queries.json")):
 PY
 }
 
-for engine in xapian strata; do
+for engine in strata; do
 	echo "== $engine"
 	start_node "$engine" || { fail "$engine node did not start"; continue; }
 	load
@@ -114,10 +114,10 @@ python3 - "$RUNDIR" <<'PY' || fails=$((fails + 1))
 import json, sys
 run = sys.argv[1]
 exp = {q["name"]: q["expect"] for q in json.load(open(run + "/queries.json"))}
-res = {e: {r["name"]: r for r in map(json.loads, open(run + "/result_%s.json" % e))} for e in ("xapian", "strata")}
+res = {e: {r["name"]: r for r in map(json.loads, open(run + "/result_%s.json" % e))} for e in ("strata",)}
 bad = 0
 for name, expect in exp.items():
-    for e in ("xapian", "strata"):
+    for e in ("strata",):
         r = res[e].get(name, {})
         if "error" in r or r.get("ids") != expect:
             print("  FAIL: %s on %s: %s" % (name, e, ("error %s %s" % (r.get("error"), r.get("body"))) if "error" in r else "found %d, expected %d" % (len(r.get("ids", [])), len(expect))))

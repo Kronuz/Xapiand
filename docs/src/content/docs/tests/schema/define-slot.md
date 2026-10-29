@@ -47,7 +47,6 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.foo._index).to.equal('field_values');
   pm.expect(jsonData._schema.foo._ngram).to.equal(false);
   pm.expect(jsonData._schema.foo._cjk_ngram).to.equal(false);
-  pm.expect(jsonData._schema.foo._cjk_words).to.equal(false);
   pm.expect(jsonData._schema.foo._slot).to.equal(100);
   pm.expect(jsonData._schema.foo._type).to.equal('text');
 });

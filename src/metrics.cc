@@ -142,64 +142,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	),
-#ifdef XAPIAND_CLUSTERING
-	xapiand_remote_clients_running(
-		AddGauge(registry,
-			"xapiand_remote_clients_running",
-			"Number of remote protocol clients running",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_remote_clients_queue_size(
-		AddGauge(registry,
-			"xapiand_remote_clients_queue_size",
-			"Remote protocol clients in the queue",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_remote_clients_capacity(
-		AddGauge(registry,
-			"xapiand_remote_clients_capacity",
-			"Remote protocol client queue capacity",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_remote_clients_pool_size(
-		AddGauge(registry,
-			"xapiand_clients_pool_size",
-			"Remote protocol client total pool size",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_clients_running(
-		AddGauge(registry,
-			"xapiand_replication_clients_running",
-			"Number of replication protocol clients running",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_clients_queue_size(
-		AddGauge(registry,
-			"xapiand_replication_clients_queue_size",
-			"Replication protocol clients in the queue",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_clients_capacity(
-		AddGauge(registry,
-			"xapiand_replication_clients_capacity",
-			"Replication protocol client queue capacity",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_clients_pool_size(
-		AddGauge(registry,
-			"xapiand_clients_pool_size",
-			"Replication protocol client total pool size",
-			constant_labels)
-		.Add({})
-	),
-#endif
 	xapiand_servers_running(
 		AddGauge(registry,
 			"xapiand_servers_running",
@@ -298,36 +240,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	),
-#ifdef XAPIAND_CLUSTERING
-	xapiand_remote_current_connections(
-		AddGauge(registry,
-			"xapiand_remote_current_connections",
-			"Current remote protocol connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_remote_connections(
-		AddCounter(registry,
-			"xapiand_remote_connections",
-			"Remote protocol connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_current_connections(
-		AddGauge(registry,
-			"xapiand_replication_current_connections",
-			"Current replication connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_connections(
-		AddCounter(registry,
-			"xapiand_replication_connections",
-			"Replication connections",
-			constant_labels)
-		.Add({})
-	),
-#endif
 	xapiand_http_sent_bytes(
 		AddCounter(registry,
 			"xapiand_http_sent_bytes",
@@ -339,34 +251,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 		AddCounter(registry,
 			"xapiand_http_received_bytes",
 			"Bytes received by http connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_sent_bytes(
-		AddCounter(registry,
-			"xapiand_replication_sent_bytes",
-			"Bytes sent by replication connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_replication_received_bytes(
-		AddCounter(registry,
-			"xapiand_replication_received_bytes",
-			"Bytes received by replication connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_remote_protocol_sent_bytes(
-		AddCounter(registry,
-			"xapiand_remote_protocol_sent_bytes",
-			"Bytes sent by remote protocol connections",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_remote_protocol_received_bytes(
-		AddCounter(registry,
-			"xapiand_remote_protocol_received_bytes",
-			"Bytes received by remote protocol connections",
 			constant_labels)
 		.Add({})
 	),

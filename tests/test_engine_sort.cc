@@ -21,7 +21,7 @@
  */
 
 // Unit tests for the engine seam's sort keys and match spies: Xapiand's key maker and
-// aggregation spy read a DocView, and reach Xapian only through the two adapters.
+// aggregation spy read a DocView, here from a strata shard searched through the seam.
 
 #include "test_harness.h"
 
@@ -39,19 +39,22 @@
 
 #include "engine/callbacks.h"
 #include "engine/error.h"
-#include "engine/xapian/callbacks.h"
+#include "engine_support.h"
 #include "aggregations/aggregations.h"
 #include "aggregations/exception.h"
 #include "database/schema.h"
-#include "engine/xapian/convert.h"
-#include "exception_xapian.h"
+#include "exception_engine.h"
 #include "msgpack.h"
 #include "multivalue/keymaker.h"
 #include "serialise.h"
 #include "serialise_list.h"
-#include "engine/xapian/xapian.h"
 
 namespace {
+
+using testsupport::MapView;
+
+// The value slots of the corpus (slot 1 is the shard's own version slot).
+constexpr engine::valueno INTS = 21, REAL = 22, TEXT = 23;
 
 // A small deterministic generator, so a failure reproduces.
 struct Lcg {
@@ -139,51 +142,47 @@ std::vector<Row> make_rows() {
 	return rows;
 }
 
-Xapian::WritableDatabase make_db(const std::vector<Row>& rows) {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+// The seam's corpus: one document per row, all with the term "t".
+std::unique_ptr<engine::Shard> make_db(const std::vector<Row>& rows, const char* name = "engine_sort") {
+	auto shard = testsupport::scratch_shard(name);
+	int n = 0;
 	for (const auto& row : rows) {
-		Xapian::Document doc;
-		doc.add_term("t");
+		engine::Document doc;
+		doc.add_term(doc.field("f"), "t");
 		if (!row.ints.empty()) {
 			std::vector<std::string> values;
-			for (auto n : row.ints) {
-				values.push_back(Serialise::integer(n));
+			for (auto v : row.ints) {
+				values.push_back(Serialise::integer(v));
 			}
-			doc.add_value(1, multi(values));
+			doc.add_value(INTS, multi(values));
 		}
-		doc.add_value(2, Serialise::floating(row.real));
-		doc.add_value(3, row.text);
+		doc.add_value(REAL, Serialise::floating(row.real));
+		doc.add_value(TEXT, row.text);
 		doc.set_data("d");
-		db.add_document(doc);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(++n));
 	}
-	return db;
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	return shard;
 }
 
-std::vector<Xapian::docid> sorted(const Xapian::Database& db, Xapian::KeyMaker* sorter, Xapian::MatchSpy* spy = nullptr) {
-	Xapian::Enquire enquire(db);
-	enquire.set_query(Xapian::Query("t"));
-	if (sorter) {
-		enquire.set_sort_by_key_then_relevance(sorter, false);
-	}
-	if (spy) {
-		enquire.add_matchspy(spy);
-	}
-	std::vector<Xapian::docid> dids;
-	auto mset = enquire.get_mset(0, 20, 20);
-	for (auto it = mset.begin(); it != mset.end(); ++it) {
-		dids.push_back(*it);
-	}
-	return dids;
+// The ids of everything the shard holds, ordered by the sorter, with the spy seeing them.
+std::vector<engine::docid> sorted(engine::Shard& db, const engine::KeyMaker* sorter, engine::MatchSpy* spy = nullptr) {
+	testsupport::Find find;
+	find.maxitems = 20;
+	find.check_at_least = 20;
+	find.sorter = sorter;
+	find.spy = spy;
+	return testsupport::hit_ids(db, engine::Query::term("f", "t"), find);
 }
 
 // The ids ordered by a key (smallest first), ties by id: the order a sort by that key gives.
-std::vector<Xapian::docid> order_by(std::size_t n, const std::function<std::string(std::size_t)>& key) {
-	std::vector<std::pair<std::string, Xapian::docid>> keyed;
+std::vector<engine::docid> order_by(std::size_t n, const std::function<std::string(std::size_t)>& key) {
+	std::vector<std::pair<std::string, engine::docid>> keyed;
 	for (std::size_t i = 0; i < n; ++i) {
-		keyed.emplace_back(key(i), static_cast<Xapian::docid>(i + 1));
+		keyed.emplace_back(key(i), static_cast<engine::docid>(i + 1));
 	}
 	std::stable_sort(keyed.begin(), keyed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-	std::vector<Xapian::docid> dids;
+	std::vector<engine::docid> dids;
 	for (const auto& entry : keyed) {
 		dids.push_back(entry.second);
 	}
@@ -216,9 +215,8 @@ static void test_sort_integer() {
 	for (std::int64_t ref : { -20, 0, 7, 40 }) {
 		for (bool reverse : { false, true }) {
 			Multi_MultiValueKeyMaker maker;
-			maker.add_integer(1, reverse, ref);
-			engine::xapian::KeyMakerAdapter adapter(maker);
-			CHECK_EQ(sorted(db, &adapter), order_by(rows.size(), [&](std::size_t i) { return integer_key(rows[i], ref, reverse); }));
+			maker.add_integer(INTS, reverse, ref);
+			CHECK_EQ(sorted(*db, &maker), order_by(rows.size(), [&](std::size_t i) { return integer_key(rows[i], ref, reverse); }));
 		}
 	}
 }
@@ -229,32 +227,28 @@ static void test_sort_float_text_and_pairs() {
 	auto db = make_db(rows);
 
 	Multi_MultiValueKeyMaker by_float;
-	by_float.add_float(2, false, 1.5);
-	engine::xapian::KeyMakerAdapter float_adapter(by_float);
-	CHECK_EQ(sorted(db, &float_adapter), order_by(rows.size(), [&](std::size_t i) {
+	by_float.add_float(REAL, false, 1.5);
+	CHECK_EQ(sorted(*db, &by_float), order_by(rows.size(), [&](std::size_t i) {
 		char buf[32];
 		std::snprintf(buf, sizeof(buf), "%020.6f", std::fabs(rows[i].real - 1.5));
 		return std::string(buf);
 	}));
 
 	Multi_MultiValueKeyMaker by_text;
-	by_text.add_serialise(3, false);
-	engine::xapian::KeyMakerAdapter text_adapter(by_text);
-	CHECK_EQ(sorted(db, &text_adapter), order_by(rows.size(), [&](std::size_t i) { return rows[i].text; }));
+	by_text.add_serialise(TEXT, false);
+	CHECK_EQ(sorted(*db, &by_text), order_by(rows.size(), [&](std::size_t i) { return rows[i].text; }));
 
 	Multi_MultiValueKeyMaker reversed_text;
-	reversed_text.add_serialise(3, true);
-	engine::xapian::KeyMakerAdapter reversed_adapter(reversed_text);
-	auto forward = sorted(db, &text_adapter);
+	reversed_text.add_serialise(TEXT, true);
+	auto forward = sorted(*db, &by_text);
 	std::reverse(forward.begin(), forward.end());
-	CHECK_EQ(sorted(db, &reversed_adapter), forward);
+	CHECK_EQ(sorted(*db, &reversed_text), forward);
 
 	// The first key decides; the second, descending, breaks its ties.
 	Multi_MultiValueKeyMaker pair;
-	pair.add_integer(1, false, 100);
-	pair.add_serialise(3, true);
-	engine::xapian::KeyMakerAdapter pair_adapter(pair);
-	CHECK_EQ(sorted(db, &pair_adapter), order_by(rows.size(), [&](std::size_t i) {
+	pair.add_integer(INTS, false, 100);
+	pair.add_serialise(TEXT, true);
+	CHECK_EQ(sorted(*db, &pair), order_by(rows.size(), [&](std::size_t i) {
 		std::string complement;
 		for (unsigned char ch : rows[i].text) {
 			complement.push_back(static_cast<char>(255 - ch));
@@ -269,32 +263,21 @@ static void test_key_maker_round_trip() {
 	auto db = make_db(rows);
 
 	Multi_MultiValueKeyMaker maker;
-	maker.add_integer(1, true, 3);
-	maker.add_float(2, false, -2.0);
-	maker.add_bool(1, false, true);
-	maker.add_string_levenshtein(3, false, "b4", true);
-	maker.add_positive(2, false, 9u);
-	maker.add_date(2, false, 1.0);
-	maker.add_serialise(3, false);
-	engine::xapian::KeyMakerAdapter adapter(maker);
-	const auto expected = sorted(db, &adapter);
+	maker.add_integer(INTS, true, 3);
+	maker.add_float(REAL, false, -2.0);
+	maker.add_bool(INTS, false, true);
+	maker.add_string_levenshtein(TEXT, false, "b4", true);
+	maker.add_positive(REAL, false, 9u);
+	maker.add_date(REAL, false, 1.0);
+	maker.add_serialise(TEXT, false);
+	const auto expected = sorted(*db, &maker);
 
 	auto copy = maker.clone();
-	engine::xapian::KeyMakerAdapter copy_adapter(*copy);
-	CHECK_EQ(sorted(db, &copy_adapter), expected);
+	CHECK_EQ(sorted(*db, copy.get()), expected);
 
 	auto rebuilt = Multi_MultiValueKeyMaker().unserialise(maker.serialise());
 	CHECK_EQ(rebuilt->serialise(), maker.serialise());
-	engine::xapian::KeyMakerAdapter rebuilt_adapter(*rebuilt);
-	CHECK_EQ(sorted(db, &rebuilt_adapter), expected);
-
-	// Through a Xapian registry, the way the remote server rebuilds it.
-	Xapian::Registry registry;
-	engine::xapian::register_key_maker(registry, Multi_MultiValueKeyMaker());
-	const auto* prototype = registry.get_key_maker("Multi_MultiValueKeyMaker");
-	CHECK_TRUE(prototype != nullptr);
-	std::unique_ptr<Xapian::KeyMaker> remote(prototype->unserialise(maker.serialise(), registry));
-	CHECK_EQ(sorted(db, remote.get()), expected);
+	CHECK_EQ(sorted(*db, rebuilt.get()), expected);
 }
 
 // Bytes that are not a serialised key maker are an engine error, never a crash.
@@ -375,16 +358,14 @@ static void test_key_maker_corrupt_values() {
 	int decoded = 0;
 	int thrown = 0;
 	for (int i = 0; i < 4000; ++i) {
-		Xapian::Document doc;
 		std::string value;
 		for (auto n = rng.next(24); n > 0; --n) {
 			value.push_back(static_cast<char>(rng.next(256)));
 		}
-		doc.add_value(1, value);
-		auto view = engine::xapian::make_view(doc);
+		const MapView view({ { 1, value } });
 		for (const auto& entry : makers) {
 			try {
-				(void)entry.second->key(*view);
+				(void)entry.second->key(view);
 				++decoded;
 			} catch (const SerialisationError&) {
 				++thrown;
@@ -398,11 +379,13 @@ static void test_key_maker_corrupt_values() {
 	CHECK_GT(thrown, 0);
 }
 
-// Every adapter handed to Xapian frees what it owns. The count of live callbacks is the evidence
-// (this host's AddressSanitizer has no leak checker).
-static void test_adapter_ownership() {
+// A search frees every callback it makes: the count of live callbacks is the evidence (this host's
+// AddressSanitizer has no leak checker).
+static void test_callback_ownership() {
 	const auto rows = make_rows();
 	auto db = make_db(rows);
+	auto second = make_db(rows, "engine_sort_second");
+	auto third = make_db(rows, "engine_sort_third");
 
 	CountedKey::live = 0;
 	CountedSpy::live = 0;
@@ -412,55 +395,36 @@ static void test_adapter_ownership() {
 		CHECK_EQ(CountedKey::live, 1);
 		CHECK_EQ(CountedSpy::live, 1);
 
-		// Borrowed, the way DatabaseHandler hands them to an Enquire.
+		// Borrowed, the way DatabaseHandler hands them to a search, over one shard and over three.
 		for (int i = 0; i < 20; ++i) {
-			engine::xapian::KeyMakerAdapter key_adapter(key);
-			engine::xapian::MatchSpyAdapter spy_adapter(spy);
-			CHECK_EQ(sorted(db, &key_adapter, &spy_adapter).size(), rows.size());
+			CHECK_EQ(sorted(*db, &key, &spy).size(), rows.size());
+			testsupport::Find find;
+			find.sorter = &key;
+			find.spy = &spy;
+			CHECK_EQ(testsupport::search({ db.get(), second.get(), third.get() }, engine::Query::term("f", "t"), find).hits.size(), 3 * rows.size());
 		}
 		CHECK_EQ(CountedKey::live, 1);
 		CHECK_EQ(CountedSpy::live, 1);
-		CHECK_EQ(spy.seen, static_cast<int>(20 * rows.size()));
+		CHECK_EQ(spy.seen, static_cast<int>(20 * 4 * rows.size()));
 
-		// Owning, with Xapian's clone.
+		// Cloned and rebuilt from the serialised form, the copies are the caller's to free.
 		{
-			engine::xapian::KeyMakerAdapter owned_key(key.clone());
-			engine::xapian::MatchSpyAdapter owned_spy(spy.clone());
+			auto key_clone = key.clone();
+			auto spy_clone = spy.clone();
 			CHECK_EQ(CountedKey::live, 2);
 			CHECK_EQ(CountedSpy::live, 2);
-			std::unique_ptr<Xapian::KeyMaker> key_clone(owned_key.clone());
-			std::unique_ptr<Xapian::MatchSpy> spy_clone(owned_spy.clone());
-			CHECK_EQ(CountedKey::live, 3);
-			CHECK_EQ(CountedSpy::live, 3);
-			CHECK_EQ(sorted(db, key_clone.get(), spy_clone.get()).size(), rows.size());
-		}
-		CHECK_EQ(CountedKey::live, 1);
-		CHECK_EQ(CountedSpy::live, 1);
-
-		// Through the registry the remote server rebuilds them from.
-		{
-			Xapian::Registry registry;
-			engine::xapian::register_key_maker(registry, key);
-			engine::xapian::register_match_spy(registry, spy);
-			CHECK_EQ(CountedKey::live, 2);
-			CHECK_EQ(CountedSpy::live, 2);
+			CHECK_EQ(sorted(*db, key_clone.get(), spy_clone.get()).size(), rows.size());
 			for (int i = 0; i < 20; ++i) {
-				std::unique_ptr<Xapian::KeyMaker> rebuilt_key(registry.get_key_maker("CountedKey")->unserialise("k", registry));
-				std::unique_ptr<Xapian::MatchSpy> rebuilt_spy(registry.get_match_spy("CountedSpy")->unserialise("s", registry));
+				auto rebuilt_key = key.unserialise("k");
+				auto rebuilt_spy = spy.unserialise("s");
 				CHECK_EQ(CountedKey::live, 3);
 				CHECK_EQ(CountedSpy::live, 3);
-				CHECK_EQ(sorted(db, rebuilt_key.get(), rebuilt_spy.get()).size(), rows.size());
+				CHECK_EQ(sorted(*db, rebuilt_key.get(), rebuilt_spy.get()).size(), rows.size());
 			}
 			// A malformed serialisation leaks nothing.
 			for (int i = 0; i < 20; ++i) {
-				try {
-					registry.get_key_maker("CountedKey")->unserialise("bad", registry);
-					CHECK_TRUE(false);
-				} catch (const Xapian::NetworkError&) { }
-				try {
-					registry.get_match_spy("CountedSpy")->unserialise("bad", registry);
-					CHECK_TRUE(false);
-				} catch (const Xapian::NetworkError&) { }
+				CHECK_THROW(key.unserialise("bad"), engine::Error);
+				CHECK_THROW(spy.unserialise("bad"), engine::Error);
 			}
 			CHECK_EQ(CountedKey::live, 2);
 			CHECK_EQ(CountedSpy::live, 2);
@@ -493,11 +457,11 @@ MsgPack aggs_config() {
 }
 
 // Documents 1..n of `rows`, with age in slot 1001 and the name in slot 1002.
-Xapian::WritableDatabase make_agg_db(const std::vector<Row>& rows, std::size_t from, std::size_t to) {
-	Xapian::WritableDatabase db(std::string(), Xapian::DB_BACKEND_INMEMORY);
+std::unique_ptr<engine::Shard> make_agg_db(const std::vector<Row>& rows, std::size_t from, std::size_t to, const char* name) {
+	auto shard = testsupport::scratch_shard(name);
 	for (auto i = from; i < to; ++i) {
-		Xapian::Document doc;
-		doc.add_term("t");
+		engine::Document doc;
+		doc.add_term(doc.field("f"), "t");
 		if (!rows[i].ints.empty()) {
 			std::vector<std::string> values;
 			for (auto n : rows[i].ints) {
@@ -507,9 +471,10 @@ Xapian::WritableDatabase make_agg_db(const std::vector<Row>& rows, std::size_t f
 		}
 		doc.add_value(1002, "n" + std::to_string(i % 3));
 		doc.set_data("d");
-		db.add_document(doc);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(i));
 	}
-	return db;
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	return shard;
 }
 
 // Equal results; the order of histogram buckets with equal counts is not part of the result.
@@ -526,9 +491,8 @@ bool same_aggregations(const MsgPack& a, const MsgPack& b) {
 		&& buckets(a) == buckets(b);
 }
 
-std::string run_spy(const Xapian::Database& db, engine::MatchSpy& spy) {
-	engine::xapian::MatchSpyAdapter adapter(spy);
-	return std::to_string(sorted(db, nullptr, &adapter).size());
+std::string run_spy(engine::Shard& db, engine::MatchSpy& spy) {
+	return std::to_string(sorted(db, nullptr, &spy).size());
 }
 
 }  // namespace
@@ -553,9 +517,9 @@ static void test_aggregation_spy() {
 		}
 	}
 
-	auto whole_db = make_agg_db(rows, 0, rows.size());
+	auto whole_db = make_agg_db(rows, 0, rows.size(), "engine_sort_agg_whole");
 	AggregationMatchSpy whole(config, schema);
-	CHECK_EQ(run_spy(whole_db, whole), std::to_string(rows.size()));
+	CHECK_EQ(run_spy(*whole_db, whole), std::to_string(rows.size()));
 	const auto result = whole.get_aggregation();
 	const auto& ages = result.at("_aggregations").at("ages");
 	CHECK_EQ(static_cast<std::int64_t>(ages.at("_count").as_i64()), count);
@@ -569,29 +533,17 @@ static void test_aggregation_spy() {
 	CHECK_EQ(got_max, name_max);
 
 	// Two halves, merged through the serialised results, are the whole.
-	auto first_db = make_agg_db(rows, 0, 6);
-	auto second_db = make_agg_db(rows, 6, rows.size());
+	auto first_db = make_agg_db(rows, 0, 6, "engine_sort_agg_first");
+	auto second_db = make_agg_db(rows, 6, rows.size(), "engine_sort_agg_second");
 	AggregationMatchSpy first(config, schema), second(config, schema);
-	run_spy(first_db, first);
-	run_spy(second_db, second);
+	run_spy(*first_db, first);
+	run_spy(*second_db, second);
 	first.merge_results(second.serialise_results());
 	CHECK_TRUE(same_aggregations(first.get_aggregation(), result));
 
-	// The adapter forwards the merge, which is how Xapian folds in a remote shard's results.
-	AggregationMatchSpy third(config, schema), fourth(config, schema);
-	run_spy(first_db, third);
-	run_spy(second_db, fourth);
-	engine::xapian::MatchSpyAdapter merging(third);
-	merging.merge_results(fourth.serialise_results());
-	CHECK_TRUE(same_aggregations(third.get_aggregation(), result));
-
-	// By name through a registry, the way the remote server rebuilds it.
-	Xapian::Registry registry;
-	engine::xapian::register_match_spy(registry, AggregationMatchSpy());
-	const auto* prototype = registry.get_match_spy("AggregationMatchSpy");
-	CHECK_TRUE(prototype != nullptr);
-	std::unique_ptr<Xapian::MatchSpy> remote(prototype->unserialise(whole.serialise(), registry));
-	CHECK_EQ(sorted(whole_db, nullptr, remote.get()).size(), rows.size());
+	// A spy rebuilt by name from the serialised one sees the same and merges back into the whole.
+	auto remote = AggregationMatchSpy().unserialise(whole.serialise());
+	CHECK_EQ(sorted(*whole_db, nullptr, remote.get()).size(), rows.size());
 	AggregationMatchSpy merged(config, schema);
 	merged.merge_results(remote->serialise_results());
 	CHECK_TRUE(same_aggregations(merged.get_aggregation(), result));
@@ -667,7 +619,6 @@ static void test_aggregation_spy_corrupt_values() {
 	auto schema = make_schema();
 	int seen = 0, thrown = 0;
 	for (int i = 0; i < 2000; ++i) {
-		Xapian::Document doc;
 		std::string age, name;
 		for (auto n = rng.next(20); n > 0; --n) {
 			age.push_back(static_cast<char>(rng.next(256)));
@@ -675,16 +626,12 @@ static void test_aggregation_spy_corrupt_values() {
 		for (auto n = rng.next(10); n > 0; --n) {
 			name.push_back(static_cast<char>(rng.next(256)));
 		}
-		doc.add_value(1001, age);
-		doc.add_value(1002, name);
-		auto view = engine::xapian::make_view(doc);
+		const MapView view({ { 1001, age }, { 1002, name } });
 		AggregationMatchSpy spy(aggs_config(), schema);
 		try {
-			spy.see(*view, 1.0);
+			spy.see(view, 1.0);
 			++seen;
 		} catch (const SerialisationError&) {
-			++thrown;
-		} catch (const Xapian::Error&) {
 			++thrown;
 		} catch (const std::exception&) {
 			++thrown;
@@ -705,12 +652,10 @@ static void test_unserialise_saturates() {
 	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MAX)), INT64_MAX);
 	CHECK_EQ(Unserialise::positive(Serialise::positive(UINT64_MAX)), UINT64_MAX);
 
-	Xapian::Document doc;
-	doc.add_value(1, Serialise::integer(INT64_MIN));
-	auto view = engine::xapian::make_view(doc);
+	const MapView view({ { 1, Serialise::integer(INT64_MIN) } });
 	Multi_MultiValueKeyMaker maker;
 	maker.add_integer(1, false, 5);
-	CHECK_EQ(maker.key(*view), Serialise::integer(INT64_MAX));
+	CHECK_EQ(maker.key(view), Serialise::integer(INT64_MAX));
 }
 
 // Distances of 2^63 or more saturate and sort as the farthest, for single and paired values, in both
@@ -738,9 +683,7 @@ static void test_sort_integer_extremes() {
 						best = reverse ? std::max(best, x) : std::min(best, x);
 					}
 					d.dist = std::min<__int128>(best, INT64_MAX);
-					Xapian::Document doc;
-					doc.add_value(1, StringList::serialise(vs.begin(), vs.end()));
-					d.key = maker.key(*engine::xapian::make_view(doc));
+					d.key = maker.key(MapView({ { 1, StringList::serialise(vs.begin(), vs.end()) } }));
 					docs.push_back(std::move(d));
 				}
 			}
@@ -761,16 +704,13 @@ namespace {
 
 // One document holding `ages` in slot 1001 and `names` in slot 1002, seen by a spy over `config`; returns the result.
 MsgPack see_document(const MsgPack& config, const std::vector<std::int64_t>& ages, const std::vector<std::string>& names) {
-	Xapian::Document doc;
 	std::vector<std::string> values;
 	for (auto n : ages) {
 		values.push_back(Serialise::integer(n));
 	}
-	doc.add_value(1001, multi(values));
-	doc.add_value(1002, multi(names));
-	auto view = engine::xapian::make_view(doc);
+	const MapView view({ { 1001, multi(values) }, { 1002, multi(names) } });
 	AggregationMatchSpy spy(config, make_schema());
-	spy.see(*view, 1.0);
+	spy.see(view, 1.0);
 	return spy.get_aggregation();
 }
 
@@ -841,14 +781,11 @@ static void test_aggregation_multivalued_counts_each_bucket() {
 	}
 }
 
-// Xapian's exceptions are not std::exception: report them as a failure of the test.
+// An engine error that escapes a test is a failure with its text, not an abort.
 #define GUARDED(fn) \
 	static void fn##_guarded() { \
 		try { \
 			fn(); \
-		} catch (const Xapian::Error& exc) { \
-			std::fprintf(stderr, "  FAIL %s: threw %s\n", #fn, exc.get_description().c_str()); \
-			++testh::failures; \
 		} catch (const engine::Error& exc) { \
 			std::fprintf(stderr, "  FAIL %s: threw engine error %s\n", #fn, exc.reason().c_str()); \
 			++testh::failures; \
@@ -864,7 +801,7 @@ GUARDED(test_key_maker_round_trip)
 GUARDED(test_sort_integer_extremes)
 GUARDED(test_key_maker_unserialise_garbage)
 GUARDED(test_key_maker_corrupt_values)
-GUARDED(test_adapter_ownership)
+GUARDED(test_callback_ownership)
 GUARDED(test_unserialise_saturates)
 GUARDED(test_aggregation_spy)
 GUARDED(test_aggregation_spy_garbage)
@@ -873,4 +810,4 @@ GUARDED(test_aggregation_bucket_budget)
 GUARDED(test_aggregation_depth_cap)
 GUARDED(test_aggregation_multivalued_counts_each_bucket)
 
-TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_adapter_ownership_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)
+TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_callback_ownership_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)

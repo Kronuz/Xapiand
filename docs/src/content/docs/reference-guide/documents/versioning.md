@@ -2,11 +2,9 @@
 title: "Versioning"
 ---
 
-Xapiand is distributed. When documents are created, updated, or deleted, the
-new version of the document has to be replicated to other nodes in the cluster.
-Xapiand is also asynchronous and concurrent, meaning that these replication
-requests are sent in parallel, and may arrive at their destination
-_out of sequence_. Xapiand needs a way of ensuring that an older version of a
+Xapiand is asynchronous and concurrent. When documents are created, updated, or
+deleted, several requests can change the same document at once, and they may
+arrive _out of sequence_. Xapiand needs a way of ensuring that an older version of a
 document never overwrites a newer version.
 
 To ensure an older version of a document doesn't overwrite a newer version,

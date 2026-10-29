@@ -1,7 +1,0 @@
-6 src/database/shard.cc
-4 src/database/shard.h
-11 src/exception_xapian.h
-1 src/server/remote_protocol_service.h
-125 src/server/remote_protocol_views.cc
-5 src/server/remote_protocol_views.h
-6 src/server/replication_protocol_views.cc

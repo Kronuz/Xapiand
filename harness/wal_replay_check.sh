@@ -34,7 +34,7 @@ start_node() {
 	(
 		exec > >(cat >>"$log") 2>&1
 		[ -n "$limit" ] && { ulimit -f "$limit"; trap '' XFSZ; }
-		exec "$BIN" --port "$PORT" --solo --name walreplaynode --verbosity 3 -D "$RUNDIR/n"
+		exec "$BIN" --port "$PORT" --name walreplaynode --verbosity 3 -D "$RUNDIR/n"
 	) &
 	PID=$!
 	for _ in $(seq 80); do

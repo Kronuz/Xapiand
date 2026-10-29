@@ -43,8 +43,7 @@ namespace engine::strata::values {
 inline constexpr bool available = true;
 
 // Copies a document's values into the index document. A document holds no empty value (setting one
-// clears the slot, as Xapian's add_value does), and the plugin's reserved slot is Xapian's
-// BAD_VALUENO, which no document carries.
+// clears the slot), and the plugin's reserved slot is BAD_VALUENO, which no document carries.
 inline void
 put(prospect::index::document& out, const StrataDocument& doc)
 {

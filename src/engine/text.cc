@@ -43,7 +43,7 @@ namespace engine {
 
 namespace {
 
-// The queryparser flags for the text:: flags; WORD_BREAKS has none.
+// The queryparser flags for the text:: flags.
 std::uint32_t
 parser_flags(unsigned flags)
 {

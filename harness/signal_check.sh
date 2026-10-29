@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # signal_check.sh -- capture the SIGINT/SIGTERM shutdown behavior of a single
-# --solo node, so the libev->reactor manager migration can be proven to preserve
+# node, so the libev->reactor manager migration can be proven to preserve
 # it. Scenarios: (1) one SIGINT = graceful shutdown; (2) two rapid SIGINT =
 # escalate to "immediate"; (3) three = force. For each: measure wall time from
 # first signal to process exit, and dump the shutdown-relevant log tail.
@@ -16,7 +16,7 @@ cleanup() { [ -n "${PID:-}" ] && kill -9 "$PID" 2>/dev/null; rm -rf "$RUNDIR"; }
 trap cleanup EXIT
 
 start_node() {
-	"$BIN" --port "$PORT" --solo --name signode -D "$RUNDIR/n" \
+	"$BIN" --port "$PORT" --name signode -D "$RUNDIR/n" \
 		>"$RUNDIR/node.log" 2>&1 &
 	PID=$!
 }

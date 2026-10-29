@@ -44,8 +44,7 @@
 #include "stringified.hh"       // for stringified
 
 
-constexpr double HEARTBEAT_TIMEOUT                = 1.0;  // in seconds
-constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 10.0 * 1000.0));  // same as RAFT_LEADER_ELECTION_MIN
+constexpr auto NODE_LIFESPAN = std::chrono::seconds(10);
 
 
 class Node {
@@ -56,13 +55,11 @@ class Node {
 
 public:
 	int http_port;
-	int remote_port;
-	int replication_port;
 
 	mutable std::atomic<bool> activated;
 	mutable std::atomic<std::chrono::steady_clock::time_point> touched;
 
-	Node() : _addr{}, http_port(0), remote_port(0), replication_port(0), activated(false), touched(std::chrono::steady_clock::time_point::min()) { }
+	Node() : _addr{}, http_port(0), activated(false), touched(std::chrono::steady_clock::time_point::min()) { }
 
 	// Move constructor
 	Node(Node&& other) :
@@ -71,8 +68,6 @@ public:
 		_lower_name(std::move(other._lower_name)),
 		_addr(std::move(other._addr)),
 		http_port(std::move(other.http_port)),
-		remote_port(std::move(other.remote_port)),
-		replication_port(std::move(other.replication_port)),
 		activated(other.activated.load(std::memory_order_acquire)),
 		touched(other.touched.load(std::memory_order_acquire)) { }
 
@@ -83,8 +78,6 @@ public:
 		_lower_name(other._lower_name),
 		_addr(other._addr),
 		http_port(other.http_port),
-		remote_port(other.remote_port),
-		replication_port(other.replication_port),
 		activated(other.activated.load(std::memory_order_acquire)),
 		touched(other.touched.load(std::memory_order_acquire)) { }
 
@@ -95,8 +88,6 @@ public:
 		_lower_name = std::move(other._lower_name);
 		_addr = std::move(other._addr);
 		http_port = std::move(other.http_port);
-		remote_port = std::move(other.remote_port);
-		replication_port = std::move(other.replication_port);
 		activated.store(other.activated.load(std::memory_order_acquire), std::memory_order_release);
 		touched.store(other.touched.load(std::memory_order_acquire), std::memory_order_release);
 		return *this;
@@ -109,8 +100,6 @@ public:
 		_lower_name = other._lower_name;
 		_addr = other._addr;
 		http_port = other.http_port;
-		remote_port = other.remote_port;
-		replication_port = other.replication_port;
 		activated.store(other.activated.load(std::memory_order_acquire), std::memory_order_release);
 		touched.store(other.touched.load(std::memory_order_acquire), std::memory_order_release);
 		return *this;
@@ -122,8 +111,6 @@ public:
 		_lower_name.clear();
 		_addr = sockaddr_in{};
 		http_port = 0;
-		remote_port = 0;
-		replication_port = 0;
 		activated.store(false, std::memory_order_release);
 		touched.store(std::chrono::steady_clock::time_point::min(), std::memory_order_release);
 	}
@@ -131,9 +118,6 @@ public:
 	bool empty() const noexcept {
 		return _name.empty();
 	}
-
-	std::string serialise() const;
-	static Node unserialise(const char **p, const char *end);
 
 	std::string __repr__() const;
 
@@ -199,10 +183,6 @@ public:
 
 	bool is_local() const {
 		return is_subset(_local_node.load(std::memory_order_acquire));
-	}
-
-	bool is_leader() const {
-		return is_subset(_leader_node.load(std::memory_order_acquire));
 	}
 
 	bool is_alive() const {
@@ -291,19 +271,6 @@ public:
 	}
 
 
-	static bool is_leader(const std::shared_ptr<const Node>& node) {
-		return node && node->is_leader();
-	}
-
-	static bool is_leader(const Node& node) {
-		return node.is_leader();
-	}
-
-	static bool is_leader(std::string_view node_name) {
-		return Node::is_leader(Node::get_node(node_name));
-	}
-
-
 	static bool is_alive(const std::shared_ptr<const Node>& node) {
 		return node && node->is_alive();
 	}
@@ -331,25 +298,14 @@ public:
 
 	static std::shared_ptr<const Node> get_local_node();
 
-	static std::shared_ptr<const Node> get_leader_node();
-
-	static std::shared_ptr<const Node> get_primary_node();
-
 	static bool set_local_node(std::shared_ptr<const Node> node);
-
-	static bool set_leader_node(std::shared_ptr<const Node> node);
 
 	static bool set_local_node(const Node& node) {
 		return set_local_node(std::make_shared<const Node>(node));
 	}
 
-	static bool set_leader_node(const Node& node) {
-		return set_leader_node(std::make_shared<const Node>(node));
-	}
-
 private:
 	static atomic_shared_ptr<const Node> _local_node;
-	static atomic_shared_ptr<const Node> _leader_node;
 
 	static std::atomic_size_t _total_nodes;
 	static std::atomic_size_t _alive_nodes;
@@ -373,26 +329,9 @@ public:
 		return _active_nodes.load(std::memory_order_acquire);
 	}
 
-	static bool quorum([[maybe_unused]] size_t total, [[maybe_unused]] size_t votes) {
-		return !total || votes > total / 2;
-	}
-
-	static bool quorum([[maybe_unused]] size_t votes) {
-		return Node::quorum(Node::total_nodes(), votes);
-	}
-
-	static bool quorum() {
-		return Node::quorum(Node::total_nodes(), Node::alive_nodes());
-	}
-
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);
 	static std::pair<std::shared_ptr<const Node>, bool> touch_node(const Node& node, bool activate = true, bool touch = true);
-	static void drop_node(std::string_view node_name);
 	static void reset();
-
-	// Refreshes the liveness of the node that opens a bus message (a serialised Node
-	// first). Null when it is the local node or conflicts with an active one.
-	static std::shared_ptr<const Node> touch_sender(std::string_view message);
 
 	static std::vector<std::shared_ptr<const Node>> nodes();
 
