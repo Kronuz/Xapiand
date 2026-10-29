@@ -385,6 +385,23 @@ def segment_files(datadir: str, index: str) -> int | None:
     return sum(1 for _d, _n, files in os.walk(root) for f in files if f.startswith("seg-") and f.endswith(".sx"))
 
 
+async def settle_merges(node: Node, index: str, quiet_s: float = 5.0, limit_s: float = 240.0) -> float:
+    """Seconds spent waiting, after a load, for the index's segment count to hold still (merges done)."""
+    datadir = os.path.join(node.workdir, "data") if node.workdir else ""
+    start = time.monotonic()
+    last = segment_files(datadir, index)
+    if last is None:
+        return 0.0
+    still_since = time.monotonic()
+    while time.monotonic() - start < limit_s and time.monotonic() - still_since < quiet_s:
+        await asyncio.sleep(0.5)
+        now = segment_files(datadir, index)
+        if now != last:
+            last, still_since = now, time.monotonic()
+    log(f"{index}: {last} segments after {time.monotonic() - start:.0f} s of settling")
+    return time.monotonic() - start
+
+
 async def index_stats(node: Node, index: str, settle: bool) -> dict[str, Any]:
     """Segment count at the end of a phase and the merge backlog: the segments merging removes once the load stops.
 
@@ -857,12 +874,22 @@ async def phase(
 
 
 async def saturate(ctx: Ctx) -> dict[str, Any]:
-    """Doubles the light rate from --saturate-start until p99 exceeds 10x the unloaded p99 (or the rate is missed), then bisects."""
+    """The saturating light rate: the highest rate whose query p99 stays within 10x the unloaded p99.
+
+    The unloaded p99 is the lower of the p99s at --saturate-start and twice it (one slow step is not a baseline).
+    The rate doubles from there until a step is bad (p99 over the limit, the rate missed, a 503, or a backlog left
+    at the drain cutoff), then bisects --bisect-steps times between the last good rate and the first bad one.
+    """
     a = ctx.args
-    base = await phase(ctx, "saturate-base", a.saturate_start, False, a.step_secs, settle=False)
-    p99_0 = base["light"]["query"]["p99_us"] or 1.0
+    trace: list[dict[str, Any]] = []
+    refs: list[float] = []
+    for rate in (a.saturate_start, a.saturate_start * 2):
+        e = await phase(ctx, f"saturate-{rate:.0f}", rate, False, a.step_secs, settle=False)
+        p99 = e["light"]["query"]["p99_us"] or 1.0
+        refs.append(p99)
+        trace.append({"rate": rate, "p99_us": p99, "good": True})
+    p99_0 = max(1000.0, min(refs))
     limit = 10.0 * p99_0
-    trace: list[dict[str, Any]] = [{"rate": a.saturate_start, "p99_us": p99_0, "good": True}]
 
     async def good(rate: float) -> bool:
         e = await phase(ctx, f"saturate-{rate:.0f}", rate, False, a.step_secs, assert_rate=False, settle=False)
@@ -877,7 +904,7 @@ async def saturate(ctx: Ctx) -> dict[str, Any]:
         trace.append({"rate": rate, "p99_us": q["p99_us"], "good": ok})
         return ok
 
-    lo = a.saturate_start
+    lo = a.saturate_start * 2
     hi = lo * 2
     while hi <= a.saturate_max and await good(hi):
         lo, hi = hi, hi * 2
@@ -924,6 +951,7 @@ async def amain(args: argparse.Namespace) -> int:
         args.rate = min(args.rate, 200.0)
         args.step_secs = min(args.step_secs, 3.0)
     load_s = await load_accounts(node.host, node.port, rows, args.accounts_docs)
+    settled_s = await settle_merges(node, "accounts")
     metrics = await scrape(ctl)
     reactors = (
         int(metrics["gauges"].get("xapiand_servers_running", 0))
@@ -1014,6 +1042,7 @@ async def amain(args: argparse.Namespace) -> int:
             "argv": sys.argv[1:],
             "started": t_boot,
             "load_accounts_s": round(load_s, 2),
+            "settle_after_load_s": round(settled_s, 2),
             "total_s": round(time.time() - t_boot, 2),
         },
         "phases": ctx.results,

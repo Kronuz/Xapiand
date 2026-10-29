@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **`_sort` takes the order as a string**: `{"balance": "desc"}` and
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
+- **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one
+  series per HTTP loop and the control loop, from a probe that wakes every 1 ms while the loop serves requests
+  and 10 times a second when idle. `XAPIAND_LAG_PROBE=0` starts the node without the probes.
 
 ### Changed
 - **`collapse_max` above 1 returns the best documents of each group** on the strata engine: for each group,
