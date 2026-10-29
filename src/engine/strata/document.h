@@ -23,6 +23,7 @@
 #pragma once
 
 #include <cstddef>                 // for std::size_t
+#include <cstdint>                 // for std::uint32_t
 #ifdef ENGINE_CENSUS
 #include <functional>              // for std::function
 #endif
@@ -40,14 +41,30 @@ namespace engine::strata {
 
 // One term of a document: its within-document frequency and positions.
 struct DocTerm {
+	std::string term;
 	termcount wdf = 0;
+	std::uint32_t hash = 0;
 	std::vector<termpos> positions;
 };
 
-// The terms of one field of a document, and the widest kind the document asked for.
-struct DocField {
+// The terms of one field of a document, in the order they first arrived, and the widest kind the document
+// asked for. A field with more than a few terms finds a term by an open-addressing table over their hashes.
+class DocField {
+public:
+	std::string name;
 	FieldKind kind = FieldKind::boolean;
-	std::map<std::string, DocTerm, std::less<>> terms;
+	std::vector<DocTerm> terms;
+
+	// The term, created empty when absent.
+	DocTerm& term(std::string_view bytes);
+	// The term, or null.
+	const DocTerm* find(std::string_view bytes) const;
+
+private:
+	// Slots hold a term's index plus one, 0 when empty; the size is a power of two at least twice the terms.
+	std::vector<std::uint32_t> table_;
+
+	void rebuild(std::size_t slots);
 };
 
 // The document of the strata implementation: its terms by field, values, stored data and key, held in
@@ -74,8 +91,10 @@ public:
 	// not postings (the key is the index's, not a term).
 	termcount key_wdf() const noexcept { return key_wdf_; }
 	const std::string& data() const noexcept { return data_; }
-	// The fields that have terms, by name.
-	const std::map<std::string, DocField, std::less<>>& fields() const noexcept { return fields_; }
+	// The fields that have terms, in the order they first arrived.
+	const std::vector<DocField>& fields() const noexcept { return fields_; }
+	// The field of this name, or null.
+	const DocField* field(std::string_view name) const noexcept;
 	const std::map<valueno, std::string>& values() const noexcept { return values_; }
 
 	// The version this document was written at: the shard stamps it when it writes, the log keeps it,
@@ -96,8 +115,10 @@ public:
 private:
 	// The term under a field, created empty when absent; the field's kind widens to the call's.
 	DocTerm& term_of(const Field& field, std::string_view term);
+	DocField& field_of(const Field& field);
 
-	std::map<std::string, DocField, std::less<>> fields_;
+	std::vector<DocField> fields_;
+	std::vector<std::uint32_t> slot_;  // the host's field id to its index in fields_ plus one, 0 when not seen
 	std::map<valueno, std::string> values_;
 	std::string data_;
 	std::string key_;

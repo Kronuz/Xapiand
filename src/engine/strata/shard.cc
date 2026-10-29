@@ -494,7 +494,9 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 	out.fields.clear();
 	out.fields.reserve(doc.fields().size());
 	std::uint64_t length = doc.key_wdf();
-	for (const auto& [name, field] : doc.fields()) {
+	// Fields and terms go in the order they arrived: a new field is declared in that order, once.
+	for (const auto& field : doc.fields()) {
+		const auto& name = field.name;
 		prospect::inverted_plugin::field_part part;
 		if (const auto id = table.find(name)) {
 			part.field = ::strata::field_ref::id(*id);
@@ -503,8 +505,8 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 			t.fields.push_back({name, ::strata::field_role::indexed, postings_of(field.kind), false});
 		}
 		part.terms.reserve(field.terms.size());
-		for (const auto& [term, info] : field.terms) {
-			part.terms.push_back({term, info.wdf, info.positions});
+		for (const auto& info : field.terms) {
+			part.terms.push_back({info.term, info.wdf, info.positions});
 			part.length += info.wdf;
 		}
 		length += part.length;
