@@ -93,6 +93,11 @@ engine::Document make(Kind kind, int shard, int i, const Model::Doc& model) {
 	engine::Document doc(kind);
 	const auto key = "Q" + std::to_string(shard) + "_" + std::to_string(i);
 	doc.set_key(key);
+	// Slot 2 groups the documents (every seventh has no group), slot 3 orders them.
+	if (i % 7 != 0) {
+		doc.add_value(2, "g" + std::to_string((shard * 3 + i) % 4));
+	}
+	doc.add_value(3, std::string(1, static_cast<char>('a' + (shard * 5 + i * 3) % 11)));
 	if (model.key_wdf != 0) {
 		// The id term's frequency counts in the document's length on both engines (D5).
 		doc.add_term(doc.field(engine::KEY_FIELD), key, model.key_wdf);
@@ -867,11 +872,6 @@ void test_refusals_impl() {
 	};
 	const auto syntax = engine::errc::syntax;
 	CHECK_EQ(search_with(strata, t("w1"), none).hits.size() > 0, true);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }), syntax);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.percent_threshold = 50; }), syntax);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.weight_threshold = 0.1; }), syntax);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.nearest = engine::Similar{}; }), syntax);
-	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.fuzzy = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	// A PHRASE with a window answers rather than refusing (strata reads its terms' positions, not the window).
 	search_with(strata, Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5), none);
@@ -900,7 +900,7 @@ void test_refusals_impl() {
 	Index xapian_empty{Kind::xapian, {}}, strata_empty{Kind::strata, {}};
 	Model model_empty;
 	build("refusals_empty", 1, 0, 1, xapian_empty, strata_empty, model_empty);
-	CHECK_EQ(error_kind([&] { search_with(strata_empty, t("w1"), [&](engine::SearchRequest& r) { r.collapse_key = 2; r.collapse_max = 1; }); }), syntax);
+	CHECK_EQ(error_kind([&] { search_with(strata_empty, Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))}), none); }), syntax);
 }
 
 // A term is looked up under its field: two fields holding the same word are found each under its own, a
@@ -1387,6 +1387,141 @@ void test_percent_infinite_impl() {
 	}
 }
 
+// Orders hits by the value of a slot.
+class SlotKey final : public engine::KeyMaker {
+public:
+	explicit SlotKey(engine::valueno slot) : slot_(slot) { }
+	std::string key(const engine::DocView& doc) const override { return doc.value(slot_); }
+	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(slot_); }
+	std::string name() const override { return "SlotKey"; }
+	std::string serialise() const override { return ""; }
+	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(slot_); }
+
+private:
+	engine::valueno slot_;
+};
+
+// Collapse keeps the best `collapse_max` hits per value of slot 2 and never collapses a document
+// without the value. The strata engine's answer is checked against an oracle (the uncollapsed ranking,
+// cut to the first `collapse_max` of each group), and against Xapian's: with collapse_max 1 the two
+// engines return the same hits in the same order with the same ranks, over one shard and several, for
+// each docid order, with and without a sorter, and show the spy the same documents. With a larger
+// collapse_max Xapian keeps the same number of documents per group and the same estimate but not always
+// the best ones, so only those are compared. Windows are slices of the full answer; Xapian is compared
+// on a window only where its answer is exact (a window too small for its collapse table can return a
+// document of a group whose better one it pushed out, and one that starts past the last hit crashes it).
+void test_collapse_impl() {
+	const SlotKey by_slot(3);
+	const std::vector<Query> queries{
+		Query::combine(Op::OR, Query::term("f", "w1"), Query::term("f", "tag2")),
+		Query::term("f", "common"),
+		Query::match_all(),
+		Query::term("f", "even"),
+	};
+	struct Window { engine::doccount first, maxitems; };
+	const auto search = [&](const Index& index, std::size_t shards, const Query& query, engine::doccount collapse_max, engine::DocidOrder order, bool sorted, Window window, CountingSpy* spy) {
+		auto prepared = engine::prepare(query);
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		request.first = window.first;
+		request.maxitems = window.maxitems;
+		request.check_at_least = 100000;
+		request.order = order;
+		request.origin = "test";
+		request.collapse_key = 2;
+		request.collapse_max = collapse_max;
+		request.sorter = sorted ? &by_slot : nullptr;
+		request.spy = spy;
+		return engine::sync_wait(engine::search(index.shards(shards), request));
+	};
+	// The group of a hit, as `make` assigns it; -1 for a document without one.
+	const auto group_of = [](engine::docid did, std::size_t shards) {
+		const std::size_t shard = (did - 1) % shards, i = (did - 1) / shards + 1;
+		return i % 7 == 0 ? -1 : static_cast<int>((shard * 3 + i) % 4);
+	};
+	std::size_t compared = 0, collapsed_away = 0, windows = 0, xapian_other = 0;
+	for (const std::size_t shards : {1u, 2u, 5u}) {
+		Index xapian{Kind::xapian, {}}, strata{Kind::strata, {}};
+		Model model;
+		build("collapse", static_cast<int>(shards), 40, 2, xapian, strata, model);
+		for (const auto& query : queries) {
+			for (const auto order : {engine::DocidOrder::ascending, engine::DocidOrder::descending}) {
+				for (const bool sorted : {false, true}) {
+					const auto all = search(strata, shards, query, 0, order, sorted, {0, 1000}, nullptr);
+					for (const engine::doccount collapse_max : {1u, 2u, 3u}) {
+						CountingSpy spy_x, spy_s;
+						const auto x = search(xapian, shards, query, collapse_max, order, sorted, {0, 1000}, &spy_x);
+						const auto s = search(strata, shards, query, collapse_max, order, sorted, {0, 1000}, &spy_s);
+						// The oracle: walk the full ranking, keep the first collapse_max of each group.
+						std::vector<engine::docid> want;
+						std::map<int, engine::doccount> taken;
+						for (const auto& hit : all.hits) {
+							const int group = group_of(hit.did, shards);
+							if (group < 0 || taken[group]++ < collapse_max) { want.push_back(hit.did); }
+						}
+						REQUIRE_EQ(s.hits.size(), want.size());
+						CHECK_EQ(s.estimated, want.size());
+						CHECK_EQ(x.estimated, want.size());
+						for (std::size_t i = 0; i < want.size(); ++i) {
+							CHECK_EQ(s.hits[i].did, want[i]);
+							CHECK_EQ(s.hits[i].rank, i);
+						}
+						REQUIRE_EQ(s.hits.size(), x.hits.size());
+						std::map<int, int> per_x, per_s;
+						for (std::size_t i = 0; i < s.hits.size(); ++i) {
+							++per_x[group_of(x.hits[i].did, shards)];
+							++per_s[group_of(s.hits[i].did, shards)];
+						}
+						CHECK_TRUE(per_x == per_s);
+						if (collapse_max == 1) {
+							for (std::size_t i = 0; i < s.hits.size(); ++i) {
+								CHECK_EQ(s.hits[i].did, x.hits[i].did);
+								CHECK_TRUE(close(s.hits[i].weight, x.hits[i].weight));
+							}
+						} else {
+							for (std::size_t i = 0; i < s.hits.size(); ++i) { xapian_other += s.hits[i].did != x.hits[i].did; }
+						}
+						auto seen_x = spy_x.seen, seen_s = spy_s.seen;
+						std::sort(seen_x.begin(), seen_x.end());
+						std::sort(seen_s.begin(), seen_s.end());
+						CHECK_TRUE(seen_x == seen_s);
+						++compared;
+						if (s.hits.size() < seen_s.size()) { ++collapsed_away; }
+						for (const auto window : {Window{0, 3}, Window{2, 4}, Window{5, 1000}, Window{1000, 5}, Window{0, 0}}) {
+							const auto got = search(strata, shards, query, collapse_max, order, sorted, window, nullptr);
+							CHECK_EQ(got.estimated, s.estimated);
+							const std::size_t begin = std::min<std::size_t>(window.first, s.hits.size());
+							const std::size_t end = std::min<std::size_t>(begin + window.maxitems, s.hits.size());
+							REQUIRE_EQ(got.hits.size(), end - begin);
+							for (std::size_t i = begin; i < end; ++i) {
+								CHECK_EQ(got.hits[i - begin].did, s.hits[i].did);
+								CHECK_EQ(got.hits[i - begin].rank, i);
+							}
+							if (collapse_max == 1 && window.first < s.hits.size() && window.first + window.maxitems >= s.hits.size()) {
+								const auto other = search(xapian, shards, query, collapse_max, order, sorted, window, nullptr);
+								REQUIRE_EQ(other.hits.size(), got.hits.size());
+								for (std::size_t i = 0; i < got.hits.size(); ++i) {
+									CHECK_EQ(other.hits[i].did, got.hits[i].did);
+								}
+								++windows;
+							}
+						}
+					}
+				}
+			}
+		}
+		// One hit per value (collapse_max 1), and every document without the value stays.
+		const auto result = search(strata, shards, Query::match_all(), 1, engine::DocidOrder::ascending, false, {0, 1000}, nullptr);
+		std::size_t loose = 0;
+		for (std::size_t i = 1; i <= 40; ++i) { loose += i % 7 == 0; }
+		CHECK_EQ(result.hits.size(), loose * shards + 4);
+	}
+	CHECK_GT(compared, 100u);
+	CHECK_GT(collapsed_away, 50u);
+	CHECK_GT(windows, 20u);
+	CHECK_GT(xapian_other, 0u);
+}
+
 // Reports an engine error with its text, which the bare terminate message of an uncaught one lacks.
 template <typename F>
 void guarded(const char* name, F&& test) {
@@ -1418,7 +1553,8 @@ void test_pin_holds() { guarded("test_pin_holds", test_pin_holds_impl); }
 void test_pin_after_failed_reopen() { guarded("test_pin_after_failed_reopen", test_pin_after_failed_reopen_impl); }
 void test_huge_window() { guarded("test_huge_window", test_huge_window_impl); }
 void test_percent_infinite() { guarded("test_percent_infinite", test_percent_infinite_impl); }
+void test_collapse() { guarded("test_collapse", test_collapse_impl); }
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite, test_collapse)

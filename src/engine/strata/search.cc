@@ -40,6 +40,7 @@
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
+#include "prospect/collapse.hh"    // for prospect::collapse::collapser
 #include "prospect/index.hh"       // for prospect::index
 #include "prospect/operators.hh"   // for prospect::scale_scorer
 #include "prospect/searcher.hh"    // for prospect::term_table
@@ -646,21 +647,29 @@ build(const Query& query, const Builder& b, int depth)
 }
 
 
+// A match under a collapse: what ranks it, and the id to return.
+struct Ranked {
+	docid did;
+	double weight;
+	std::string key;   // the sorter's key; empty without a sorter
+};
+
+// Hits rank by sorter key, then weight (heavier first), then docid in the request's order.
+struct RanksAbove {
+	bool descending;
+	bool operator()(const Ranked& a, const Ranked& b) const {
+		if (const int c = a.key.compare(b.key); c != 0) { return c < 0; }
+		if (a.weight != b.weight) { return a.weight > b.weight; }
+		return descending ? a.did > b.did : a.did < b.did;
+	}
+};
+
 SearchResult
 run(std::span<engine::Shard* const> shards, const SearchRequest& request, CallbackGuard& guarded)
 {
 	const auto& source = request.query->source();
 	if (shards.empty() || request.query->empty()) {
 		return {};
-	}
-	if (request.collapse_key != BAD_VALUENO) {
-		unsupported("collapsed results");
-	}
-	if (request.fuzzy || request.nearest) {
-		unsupported("similar documents");
-	}
-	if (request.percent_threshold != 0 || request.weight_threshold != 0) {
-		unsupported("weight cutoffs");
 	}
 	validate(source, 0);
 
@@ -706,32 +715,56 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	p::term_table terms(snapshot.segments());
 	Plan plan{snapshot.segments(), terms, {}};
 
+	// Collapse keeps `collapse_max` hits per value of the slot, the best ranked; a document without the value never collapses.
+	const bool collapse = request.collapse_key != BAD_VALUENO && request.collapse_max != 0;
+	const bool descending = request.order == DocidOrder::descending;
+	p::collapse::collapser<Ranked, RanksAbove> collapsed(collapse ? request.collapse_max : 1, RanksAbove{descending});
+
 	const std::uint64_t window = static_cast<std::uint64_t>(request.first) + request.maxitems;
 	p::search_options options;
 	// A window cannot return more than the snapshot holds, so k (which sizes the collector) never exceeds it.
-	options.k = static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
+	// A collapse keeps its own hits, so the search is asked for none.
+	options.k = collapse ? 0 : static_cast<std::size_t>(std::min({window, documents, std::uint64_t{std::numeric_limits<doccount>::max()}}));
 	options.count = true;
-	options.order = request.order == DocidOrder::descending ? p::docid_order::descending : p::docid_order::ascending;
-	// The heaviest match, when a key or a spy makes the search visit every match (the first hit is then not the heaviest).
+	options.order = descending ? p::docid_order::descending : p::docid_order::ascending;
+	// The heaviest match, when a key, a spy or a collapse makes the search visit every match (the first hit is then not the heaviest).
 	double heaviest = 0;
-	if (request.sorter != nullptr) {
+	if (request.sorter != nullptr && !collapse) {
 		options.key = [&](const p::match& m) { return guarded([&] { return request.sorter->key(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord)); }); };
 	}
-	if (request.sorter != nullptr || request.spy != nullptr) {
+	if (request.sorter != nullptr || request.spy != nullptr || collapse) {
 		// The spy sees every match once, as Xapian shows it the documents it examines.
 		options.visit = [&](const p::match& m) {
 			const double weight = m.score();
 			heaviest = std::max(heaviest, weight);
+			const SegmentDocView view(static_cast<docid>(m.did), *m.seg, m.ord);
 			if (request.spy != nullptr) {
-				guarded([&] { request.spy->see(SegmentDocView(static_cast<docid>(m.did), *m.seg, m.ord), weight); });
+				guarded([&] { request.spy->see(view, weight); });
+			}
+			if (collapse) {
+				if (m.docid > std::numeric_limits<docid>::max()) {
+					throw Error(errc::internal, "A document id does not fit across the shards");
+				}
+				Ranked ranked{static_cast<docid>(m.docid), weight, request.sorter != nullptr ? guarded([&] { return request.sorter->key(view); }) : std::string()};
+				std::string value = view.value(request.collapse_key);
+				collapsed.add(std::move(ranked), value.empty() ? std::nullopt : std::optional<std::string>(std::move(value)));
 			}
 		};
 	}
 	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options);
 
 	SearchResult result;
-	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
 	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
+	if (collapse) {
+		const auto kept = std::move(collapsed).take();
+		result.estimated = static_cast<doccount>(std::min<std::uint64_t>(kept.items.size(), std::numeric_limits<doccount>::max()));
+		for (std::size_t i = request.first; i < kept.items.size() && i < window; ++i) {
+			const auto& item = kept.items[i].item;
+			result.hits.push_back({item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top)});
+		}
+		return result;
+	}
+	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
 	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
 		const auto& found_hit = found.hits[i];
 		if (found_hit.docid > std::numeric_limits<docid>::max()) {

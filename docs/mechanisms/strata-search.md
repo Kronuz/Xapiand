@@ -5,9 +5,9 @@
 `engine::search` (`src/engine/search.cc`) sends a search to the engine that owns the shards: Xapian's
 `Enquire`, or `engine::strata::search` (`src/engine/strata/search.cc`), which runs the query over the
 segments of every shard as one index. The strata side covers terms, `match_all`, AND, OR, AND_NOT,
-AND_MAYBE, FILTER, SCALE_WEIGHT, PHRASE and NEAR over terms, and append chains. Sorting, collapse,
-aggregations, similar documents, cutoffs, the other operators, expansions, posting sources and query text
-are refused with a client error that names them (`errc::syntax`); they arrive with S3 and S4.
+AND_MAYBE, FILTER, SCALE_WEIGHT, PHRASE and NEAR over terms, append chains, sorting, collapse, aggregations
+through the spy, wildcard and edit-distance expansions, posting sources and query text. A query shape it does
+not run is refused with a client error that names it (`errc::syntax`).
 
 ## How
 
@@ -45,7 +45,13 @@ strata::search
    without a spy, the exhaustive one (which scores every match) for a spy or `DocidOrder::descending`. A spy
    is the exhaustive collector's visitor and is shown each live match once, whatever the window.
    `percent` is the weight over the best weight, `rank` the position in the full order.
-7. **One snapshot.** A search holds every pinned shard's lock from the first pin to the end, so the documents
+7. **Collapse.** With `collapse_key` and `collapse_max` set, the search visits every match and offers it to
+   prospect's `collapse::collapser`, keyed by the slot's value as the host wrote it (a document without the
+   value is never collapsed). Hits rank by sorter key, then weight, then id in the request's order, as in
+   Xapian; the window applies after the collapse and the estimate is the number of hits kept. The collapser
+   holds one entry per distinct value, so a collapse on a field with millions of values holds millions of
+   entries for the length of the search.
+8. **One snapshot.** A search holds every pinned shard's lock from the first pin to the end, so the documents
    and statistics it reads are the index as of the last pin: no write, commit or merge lands in between.
 
 ## Tests
@@ -54,6 +60,10 @@ strata::search
 five shards, in several commits (several segments), and runs random query trees through `engine::search` on
 both. Each result is checked against a model of the corpus (documents and estimate exact) and against the
 Xapian result (the same ranking up to ties, weights within a relative 1e-9).
+
+`test_collapse` runs the same collapsed searches on both engines (one, two and five shards, `collapse_max` 1 to 3,
+both id orders, with and without a sorter, five windows, a spy) and requires the same hits, order, ranks,
+percents, estimate and spied documents.
 
 `test_snapshot_consistency` searches (in order, in reverse with descending ids, and with a spy) while a
 writer adds a document to shard 0, 1 and 2 in turn and commits: every search must find per-shard counts that
