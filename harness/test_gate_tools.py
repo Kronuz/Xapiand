@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from typing import override
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -23,9 +24,11 @@ import stall_load
 
 
 class AsyncCheck(unittest.TestCase):
+    @override
     def setUp(self) -> None:
         self.roots: list[str] = []
 
+    @override
     def tearDown(self) -> None:
         for root in self.roots:
             shutil.rmtree(root, ignore_errors=True)
