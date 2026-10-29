@@ -373,3 +373,320 @@ so live guards per index equal in-flight searches across all reactors. Condition
 
 Not run: no Xapiand build, server, E2E, cluster, TSan, Linux or FreeBSD run; no benchmark or
 timing; no GPL source opened. The probes ran on macOS arm64 with Apple clang, ASan and UBSan.
+
+## Re-check 1
+
+- Date: 2026-10-29.
+- Reviewed: revision 2, `Xapiand:2d8c2daab` (ledger `Xapiand:ef3f469a0`), as
+  `git diff e30a844ff..ef3f469a0` (`docs/design/phase7c.md`, `docs/status/phase7c.md`).
+- Checked against: R1 to R7 and C1 to C10 above; the owner's rulings in strata
+  `docs/status/xapiand-on-strata.md` (Q1 to Q6, no cluster until 7b); the library code revision 2
+  cites: task `task:aa447e7` (`task.hh`, `task_asio.hh`), reactor `reactor:0c04d0d` (`reactor.h`),
+  http `http:6a07f99` (`http_asio.h`, `http_handler.h`), threadpool `threadpool:5caedce`
+  (`work_pool.hh`), strata `strata:d93bf7d` (`core/index.hh`, `core/owner.hh`, `core/hazard.hh`),
+  storage `storage:671eaac` (`storage.h`); Xapiand `Xapiand:3b0dc433f` (`database/shard.cc`,
+  `lua/processor.cc`, `opts.cc`, `server/search_views.cc`).
+- Checked by: five probes in `.scratch/review-7c/recheck1/`, built with ASan and UBSan by its
+  `build.sh` (Apple clang, under `quiet light`), outputs beside them:
+  - `lua_d10_probe.c` with `lstrlib_budget.c` (D10 as revision 2 words it, and a step-budget
+    mutant of Lua 5.4.7's matcher in two placements); `lua_d10_probe.out`,
+    `lua_d10_probe_reprep.out`.
+  - `budget_probe_r1.cc` against `task_orig/` (`task:aa447e7` as is) and `task_slice/` (the same
+    with D2's per-resume stamp in `running_on`); `budget_probe_slice.out`, `budget_probe_orig.out`.
+  - `lock_until_probe.cc` (D5's `lock_until` protocol as worded, and a fix); `lock_until_probe.out`.
+  - Copies read for citations: `strata-index-d93bf7d.hh`, `shard-3b0dc433f.cc`.
+  - Not run: no Xapiand build, server, E2E, TSan, Linux or FreeBSD; no benchmark or timing.
+    `src/xapian/`, `src/sortable_serialise.{cc,h}` and `src/server/remote_protocol_views.cc` were
+    not opened. One `git grep` over `src` at `3b0dc433f` printed eight lines from
+    `src/xapian/queryparser/` (the identifiers `check_infix` and `check_infix_digit`); no file
+    there was opened, and later greps excluded the tree.
+
+### Verdict
+
+**APPROVE WITH CONDITIONS: GO for L1 to L6 and for X2 onward. R1, R2, R3, R5 and R6 are closed;
+R4 and R7 are partially closed by two mechanisms that do not hold as worded (R8, R9), and each
+must be fixed in the design before the library step that builds it lands (L1, L6).**
+
+What holds, and reproduces:
+
+- Per-call `_ENV` isolates Xapiand's own globals. `lua_d10_probe` L4, with one compiled chunk
+  `local _ENV = ...; ...`, two calls in their own threads and a hook yield between them:
+  `A started with _doc=doc-A, reads _doc=doc-A at its end (isolated)`.
+- The per-resume slice is sound against `task:aa447e7`. Every resume already runs inside its own
+  `running_on` (`task_asio.hh:49-53`, `:74-77`), and `spawn` posts the first run (`task.hh:429-432`).
+  `budget_probe_r1` with the stamp: `suspended 2 ms then ~0 us of work: 0 demotion(s); ran 1 ms
+  continuously: 1 demotion(s)`. Without it: `1 demotion(s); ... 1 demotion(s)`. A task that
+  never suspends is still demoted, so the change does not just switch demotion off.
+- Host mode closes R5's chore paths. Only `check_in()` sets `chores_owed_`
+  (`strata index.hh:787-801`; other uses at `:747`, `:2570`, `:2584`), and only `checkout`'s
+  destructor and `writer_scope` call it (`:769`, `:2570`). A writer call without `check_out` takes
+  and releases the lease per call (`owner.hh:110-139`), so turns that move between threads never
+  meet `owner_break` (`:124`). Finished merges publish in refresh and commit (`index.hh:811`,
+  `:888`).
+- `AdmissionGate` reuses a gate that is already lock-free (`reactor.h:99-111`), with its own
+  counter beside `demoted()` and a 503 for each (design `:148-154`).
+
+What blocks landing (not starting): R8 (`lock_until` frees a waiter node that is still reachable)
+for L1, and R9 (a streamed record cannot be written through `Storage`'s compressed, 32-bit
+header as specified) for L6.
+
+### Status
+
+- **R1 closed** (design `:302-326`, T10 `:402`). Each call gets its own `_ENV` table over a shared
+  base, the hook yields only when `lua_isyieldable` holds, and T10 has the interleave case and the
+  comparator case. The new bounds raise C11 to C13.
+- **R2 closed** (design `:139-147`, rows `:387-388`). The per-resume stamp holds (above), the
+  policy is called two-level, and T5's light mix has write-then-GET pairs that await a refresh.
+- **R3 closed** (design `:148-154`, T8 `:400`). In-flight and demoted caps each have a counter and a
+  503, both checked at headers complete, and T8 drives a light and a heavy overload and asserts
+  503s. The bound on the io_context queue (one handle per admitted task) holds for the task chain.
+  It does not cover `Reactor::track`, which C14 covers.
+- **R4 partially closed** (design `:215-238`). Every lease operation is a turn, timers post a task
+  that awaits the turn, the registry has `closing` with a retry rule, a task holds one turn, and
+  schema writes finish first. `lock_until`'s waiter lifetime fails; see R8.
+- **R5 closed** (design `:244-262`). Revision 2 never calls `check_out` (verified above), and
+  `defer_io` returns owed verdicts instead of refreshing at `index.hh:691` or draining at `:705`.
+  C15 bounds the retry. C16 covers views that host mode leaves unfreed.
+- **R6 closed** (design `:165-186`, `:361-371`, T7 `:399`, T9 `:401`).
+  - `await_asio` resumes through `scheduler_ref::post`, so the resumed run gets its own slice.
+  - The handler await disables Asio cancellation, as the streamed path already does
+    (`http_asio.h:735`), and frames end only by completing.
+  - D16's order uses calls that exist: `abort_all` (`reactor.h:145`), `track` (`:132`) and
+    `wait_sessions` (`:159`, on the main thread).
+  - C14 and C17 add a shutdown bound and two monitor details.
+- **R7 partially closed** (design `:269-272`, `:282-300`, X1 `:473`). `DataStorage` stays,
+  `storage_commit` runs first in the commit chore, buffered blobs are written in a chore inside
+  the turn, and reads run as chores. The streamed write fails as specified; see R9.
+- **C1 closed** (K5 `:456-459`, D14 `:353-355`). There are four classes, done means zero
+  unclassified hits, and inventory J is among them.
+- **C2 closed** (K6 `:460-464`). Wall time comes from timestamps around the offload `co_spawn` on a
+  `trace/hop` branch, and the dry run shows a hop share in both columns.
+- **C3 closed** (K3 `:444-453`, load `:383-389`). The RESTORE writes `restore-target`,
+  `--restore-into accounts` gives the same-index run, latency is open loop, rates are asserted
+  within 5%, `--saturate` is defined, and segment count and merge backlog are recorded.
+- **C4 closed** (K1 `:438-441`, D14 `:348-351`). The tests cover allocation and the idle wake rate,
+  and "1 ms" is read at the 1,024 µs edge with 4 sub-buckets.
+- **C5 closed** (design `:155-156`, T12 `:404`). There is one reactor per CPU,
+  `MAX_HTTP_SERVERS` goes, and T12 runs on a host with more than 10 CPUs and states the count.
+- **C6 closed** (design `:236-238`, T3 `:395`). The turn covers the apply, the revision and the
+  WAL enqueue, and T3 adds `--reactors 2`. The citation is reversed: `:1339` is the engine call
+  (`engine::sync_wait(wdb->add(...))`), and `:1354` is the WAL enqueue
+  (`write_replace_document`). Correct the sentence. The mechanism is unaffected.
+- **C7 partially closed** (design `:272-275`). Coalescing by applied position is specified, but
+  no row or done criterion names its test. Name it, for example in X2's tests: a write applied
+  after a commit chore starts waits for the next commit, and a failed commit reaches only its
+  joined waiters.
+- **C8 closed** (design `:195-206`).
+  - Parse-ahead has its own group. Lanes per class exist (`work_pool.hh:1110-1128`).
+  - Aging is stated (100 ms).
+  - `reserve = 1` (`:673`) now serves `query` chores.
+  - V2 and V5 are in L2.
+- **C9 closed** (design `:264-267`, T8 `:400`, T13 `:405`). `too_many_readers` (`hazard.hh:47`,
+  `:211`) maps to 503 and is tested with 16 records. The sizing is not an upper bound: a
+  multi-index search holds a guard per index and shard, so the 503 path is what bounds it. On a
+  64-CPU host the formula gives 64 x 1,000 x 5 = 320,000 records, and every `free_views` scans
+  all of them. T13 should give that scan's cost as a number, not only state it.
+- **C10 closed** (design `:190-191`, `:135-136`, T6 `:398`, T1 `:393`, inventory `:54-63`).
+
+### Findings
+
+#### F18 (R8). `lock_until`: a timed-out waiter's node is freed while the queue and the timer can still reach it
+
+D5 says waiter nodes live in task frames. It also says "the grant and the timeout settle the
+waiter node with one compare-exchange; a timed-out node is skipped at handoff" (design
+`:216-217`, `:232-234`). That sentence settles which side wins. It does not keep the node alive
+for the loser, and that fails in both orders:
+
+1. **The timeout wins.** The task answers 503 and its frame ends, but the node is still linked
+   in the mutex's queue. The next `unlock` walks to it to skip it. `lock_until_probe A`:
+   `heap-use-after-free ... READ of size 8` in `unlock`.
+2. **The grant wins.** The timer's completion is already queued on the io_context, and
+   `cancel()` cannot recall a completion that is already queued. The task runs its turn and ends,
+   and then the queued timer handler runs its compare-exchange on the dead node.
+   `lock_until_probe B`: `heap-use-after-free ... WRITE of size 4`.
+
+The mutex is taken from every reactor and from the control loop, so both orders occur in practice.
+
+Fix (L1): the waiter's state is a small refcounted block shared by the queue entry, the timer
+handler and the frame. `lock_until_probe C` shows that both orders are then harmless. The
+alternative is a doubly linked queue whose timeout path unlinks under the mutex's internal lock,
+plus a timer handler that holds a reference rather than a pointer into the frame. L1's tests run
+both orders under ASan and TSan.
+
+#### F19 (R9). The streamed record write does not fit `Storage`'s record format as specified
+
+L6 specifies `begin(size)`, `append(chunk)` and `end()` (design `:292-294`). Two constraints in
+the format conflict with that:
+
+1. **Compression.** Xapiand opens `DataStorage` with `STORAGE_COMPRESS_ZSTD`
+   (`database/shard.cc:180`, `:464`). `Storage::write` compresses the whole record before it
+   writes the header, and the header's `size` is the compressed size (`storage.h:854-865`). A
+   streamed record cannot know its compressed size at `begin`. Reads of compressed records also
+   load the whole payload (`storage.h:1000-1004`), so a compressed large blob could not stream
+   back out in chunks either (design `:298-300`).
+2. **Size.** `StorageBinHeader::size` is a `uint32_t` (`storage.h:355`), so a record is under
+   4 GiB. Volumes are capped at 32 GiB. "Very large files" (the owner's intended use for
+   `stored`) needs a stated maximum.
+
+Two smaller points:
+
+1. The record's payload is `serialise_strings({ct_type, raw})` (`shard.cc:1257`), so the
+   streamed path must write the same length-prefixed framing.
+2. A crash between the upload's last chunk and the document's apply leaves an orphan volume.
+   After restart, `get_volumes_range(...).second` (`shard.cc:1254`) opens the highest volume,
+   which can be that orphan, for the shared writer.
+
+Fix (L6, X3): streamed records are written uncompressed (flags 0, which `read` already handles),
+with a streaming XXH32 into the footer. A body at or above 4 GiB minus the framing gets 413. The
+open path sweeps volumes that no committed locator names, or opens the shared writer at the
+highest volume it owns. T2's upload case adds a 413 at the size cap.
+
+#### F20 (C11). The non-yieldable bound fails finite sorts and allows a 10^6-instruction stall
+
+D10 ends a call after 100 consecutive hook calls (10^6 instructions) with no yield point
+(design `:313-316`). `lua_d10_probe` L6, with a finite `table.sort` and a Lua comparator:
+
+| Elements | Result | Longest non-yieldable run |
+|---|---|---|
+| 5,000 | ok | 19 hook calls |
+| 10,000 | ok | 45 |
+| 20,000 | ok | 98 |
+| 50,000 | `non-yieldable bound` | 101 |
+| 100,000 | `non-yieldable bound` | 101 |
+
+A correct script that sorts 50,000 values with a comparator now gets a 4xx, while every
+non-yieldable stretch up to 10^6 instructions still runs on the reactor unsliced.
+
+Condition (X4): give the base a `table.sort` written in Lua (a merge sort), so comparators run
+yieldable and sliced. Keep the bound for the remaining C callbacks (`gsub` with a function,
+`string.format` with `__tostring`). T10 adds a 100,000-element comparator sort that completes and
+an infinite comparator that ends.
+
+#### F21 (C12). The matcher's step budget must span the whole API call, not one start position
+
+`str_find_aux` and `str_gsub` call `reprepstate` once per start position (`lstrlib.c:802`,
+`:964`), and `gmatch_aux` does the same per iteration (`:844`). A budget reset there never trips
+on a quadratic search. Each start position costs at most n steps, below max(10^5, 8n).
+`lua_d10_probe_reprep`: `string.find(rep('a', 20000), '.-b') ... per start position
+(reprepstate): ran to the end (budget never tripped; ~2e8 steps)`. With the budget set in
+`prepstate`: `pattern too complex (step budget)`, and a 1,000,000-byte `gmatch` and `gsub` with a
+simple pattern still pass.
+
+Condition (X4, and the patch's drift test): the budget is set in `prepstate` and counted at each
+`match` entry. The patch's test includes the quadratic `find`.
+
+#### F22 (C13). The per-call `_ENV` does not isolate the base or the library tables
+
+`lua_d10_probe` L5: after call B writes `_G.leak` and `string.leak`, the interleaved call A sees
+both (`shared base: LEAKED`). Today the same writes persist across calls of a script anyway, so
+this is not a regression. D10's sentence "interleaved calls on one script share no globals"
+overstates it, though.
+
+Condition (X4): set each env's `_G` to the env itself, and either make the library tables
+read-only proxies or say that they are shared within a script's state. Two smaller items:
+anchor each call's `lua_newthread` (a registry ref, released at the end), and charge the 64 MiB
+cap to the state's live bytes, with that cap's attribution across interleaved calls stated.
+T10 includes the `_G` case.
+
+#### F23 (C16). Host mode leaves views that readers released unfreed until the next write
+
+Without `check_in`, views that readers still held at a refresh or commit are freed only by the
+next `refresh`, `commit` or `reclaim` (`index.hh:893`, `:906`, `:2591`, `:2619-2623`). strata's
+own comment counts on `reclaim` for "an idle index" (`:899-902`). D6's idle task refreshes only
+when `merges_pending() > 0` (design `:253-254`). A read-mostly index therefore keeps
+merged-away segment files and their mappings until the next write or the idle close.
+
+Condition (X2): the idle task also runs `reclaim()` as a chore under the turn on an entry with
+views not yet freed (the accessor at `index.hh:1320`). A test commits under a held guard,
+releases it, and sees the files reclaimed without another write.
+
+#### F24 (C15). `defer_io`'s owed verdicts must end
+
+`apply` refreshes at `index.hh:691` when `buffer_size() + t.ops.size() > buffered_docs_cap` or
+`!fits(t)`. Both can stay true on an empty buffer (`t.ops.size()` above the cap, or
+`!lane_fits(t)`), and then `:697` answers `invalid`. If `defer_io` returns `flush_owed` on that
+same condition, the retry after the refresh gets `flush_owed` again. Design `:257-259` says
+"retries the apply once more" and does not say what follows. The same holds for `drain_owed`
+when the reclaim frees nothing.
+
+Condition (L5): an owed verdict is returned only when a refresh or a drain can change the
+outcome. That means a non-empty buffer for `flush_owed`, and pending reclaims, deletes or
+unlinks for `drain_owed`. Otherwise `apply` answers `invalid` or `no_space` as today. Tests: an
+oversize transaction and a full disk each end after at most one owed round.
+
+#### F25 (C14). Shutdown waits on writes with no stated bound, and `track` is linear per request
+
+1. **No bound on writes.** D16 step 3 lets writes finish (design `:366`), and writes take no
+   token. A streamed upload or a RESTORE whose client stalls holds shutdown until http's
+   inactivity timeout. A write queued on a turn holds it for up to 30 s. An upload whose body
+   has not fully arrived is not yet an acknowledged write, so shutdown can cancel its body read
+   and remove its volume. Condition (X6): D16 cancels unfinished body reads and states the
+   bound, which is the longer of the turn deadline and a shutdown grace period. T7 measures
+   it.
+2. **`track` per request.** `Reactor::track` takes a `std::mutex` and prunes expired entries with
+   a linear `remove_if` on every call (`reactor.h:132-141`). D16 calls it once per request
+   (design `:364-365`), so each request pays an O(in-flight) scan under a lock on the reactor.
+   D1 allowlists only O(1) to O(log n). Condition (L3): an intrusive per-reactor list touched
+   only on the loop, with `abort_all` posted to each loop, or an allowlist entry with its
+   bound.
+
+#### F26 (C17). The disconnect monitor: EOF, and pipelined input
+
+1. **EOF.** http's current monitor reports a disconnect only on a non-EOF error
+   (`http_asio.h:472`). Revision 2 cancels reads on EOF too (design `:175`). This matches Go's
+   `net/http`, which cancels a request's context when its background read hits EOF, and it is
+   the only way to see a full close. L3 must still make it a separate rule for the per-request
+   monitor, and leave the deferred-reply monitor's EOF rule as it is unless it changes knowingly.
+2. **Pipelining.** The monitor reads one byte (`:469`). When a client pipelines the next
+   request, that byte ends the monitor for the rest of the handler's run, so a later disconnect
+   goes unseen. State it, or re-arm into a buffer handed back to the parser.
+
+T9 adds a read whose client half-closes, which is now expected to cancel.
+
+### The designer's three reversible choices
+
+1. **EOF cancels reads but not writes: agreed.** It is the common server rule (F26). Completing
+   an admitted write keeps "acknowledged means durable" simple. Its cost is that shutdown needs
+   the bound in F25.
+2. **Streamed uploads need `Content-Length`: agreed.** Storage's format forces it anyway: the
+   header carries the size before the payload, and the record carries a length prefix (F19).
+   Lifting it would need a header patched after the payload, which is a format change that Q4
+   should own. A chunked body crosses the cap only after 16 MiB has arrived, so it gets its 411
+   then. That is acceptable, and the changelog should say so.
+3. **A patch to Lua's matcher with a drift test: agreed.** No in-process alternative exists. The
+   count hook does not run inside `lstrlib.c`, and a pattern has no cheap upper bound to check
+   in advance. The patch is small if it follows F21: one field, a count at `match` entry, and
+   the budget set in `prepstate`. The drift test pins the tarball hash. List the patch in
+   `docs/dev/patches.md` as planned.
+
+### New blocking items
+
+These block landing, not starting:
+
+- R8 (blocks L1's landing): `lock_until`'s waiter state outlives both the queue and the timer
+  handler (shared refcounted state, or an unlink under the mutex's lock plus a referenced timer
+  handler). ASan and TSan tests cover both orders of `lock_until_probe` (F18).
+- R9 (blocks L6's landing and X3's streamed uploads): streamed records are uncompressed, their
+  size is capped below 4 GiB with a 413, they use the `serialise_strings` framing, and orphan
+  volumes are handled at open (F19).
+
+### Conditions
+
+- C7 (open): name the coalescing test.
+- C11 (X4): a yieldable `table.sort`; T10 adds a finite 100,000-element comparator sort (F20).
+- C12 (X4): the matcher budget is per API call, set in `prepstate`; the patch test includes the
+  quadratic `find` (F21).
+- C13 (X4): `_G` is the env itself, the library tables are read-only or stated as shared, each
+  thread is anchored, and the byte cap's attribution is stated (F22).
+- C14 (X6, L3): D16 cancels unfinished body reads and states its bound; `track` becomes O(1) on
+  the loop or is allowlisted (F25).
+- C15 (L5): owed verdicts only when a refresh or drain can change the outcome (F24).
+- C16 (X2): the idle task reclaims released views (F23).
+- C17 (L3): the per-request monitor's EOF rule and its pipelining limit are stated; T9 adds a
+  half-closed read (F26).
+- Carried: C6's reversed citation at design `:237`; C9's registry scan cost given as a number in
+  T13.
+
+Not run: no Xapiand build, server, E2E, cluster, TSan, Linux or FreeBSD run; no benchmark or
+timing. The probes ran on macOS x86_64 with Apple clang, ASan and UBSan. No GPL file was opened
+(the one grep that printed `src/xapian/` lines is noted above).
