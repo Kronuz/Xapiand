@@ -19,10 +19,10 @@ for ENG in xapian strata; do
   curl -s "$U/bank/" -XSEARCH -G --data-urlencode 'q=personality:kind' -o "$D/plain"
   for PARAMS in 'fuzzy' 'nearest' 'fuzzy=true&nearest=true' 'nearest&nearest.n_rset=3&nearest.n_eset=10&nearest.n_term=2&nearest.field=personality&nearest.type=text'; do
     curl -s "$U/bank/?$PARAMS" -XSEARCH -G --data-urlencode 'q=personality:kind' -o "$D/with"
-    if python3 -c 'import json,sys; a,b=[json.load(open(f)) for f in sys.argv[1:]]; sys.exit(0 if a["total"]>0 and a["total"]==b["total"] and [h["_id"] for h in a["hits"]]==[h["_id"] for h in b["hits"]] else 1)' "$D/plain" "$D/with"; then echo "ok   $ENG ?$PARAMS changes nothing"; else echo "FAIL $ENG ?$PARAMS changed the answer"; rc=1; fi
+    if python3 -c 'import json,sys; a,b=[json.load(open(f)) for f in sys.argv[1:]]; sys.exit(0 if a["total"]>0 and a["total"]==b["total"] and [h["_id"] for h in a["hits"]]==[h["_id"] for h in b["hits"]] else 1)' "$D/plain" "$D/with" 2>/dev/null; then echo "ok   $ENG ?$PARAMS changes nothing"; else echo "FAIL $ENG ?$PARAMS changed the answer"; rc=1; fi
   done
   curl -s "$U/bank/?collapse=eyeColor" -XSEARCH -o "$D/out"
-  if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["total"]==3 and sorted(h["eyeColor"] for h in d["hits"])==["blue","brown","green"] else 1)' "$D/out"; then echo "ok   $ENG ?collapse=eyeColor keeps one hit per color"; else echo "FAIL $ENG ?collapse"; rc=1; fi
+  if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["total"]==3 and sorted(h["eyeColor"] for h in d["hits"])==["blue","brown","green"] else 1)' "$D/out" 2>/dev/null; then echo "ok   $ENG ?collapse=eyeColor keeps one hit per color"; else echo "FAIL $ENG ?collapse"; rc=1; fi
   kill -9 $P 2>/dev/null; wait $P 2>/dev/null
 done
 rm -rf "$D"; exit $rc
