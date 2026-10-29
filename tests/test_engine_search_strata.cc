@@ -873,7 +873,8 @@ void test_refusals_impl() {
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.nearest = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(t("w1"), [&](engine::SearchRequest& r) { r.fuzzy = engine::Similar{}; }), syntax);
 	CHECK_EQ(kind(Query::combine(Op::SYNONYM, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
-	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5)), syntax);
+	// A PHRASE with a window answers rather than refusing (strata reads its terms' positions, not the window).
+	search_with(strata, Query::combine(Op::PHRASE, {t("w1"), t("w2")}, 5), none);
 	CHECK_EQ(kind(Query::combine(Op::PHRASE, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	CHECK_EQ(kind(Query::combine(Op::NEAR, {t("w1"), Query::combine(Op::OR, t("w2"), t("w3"))})), syntax);
 	// An append of a non-joining operator onto something still refuses.
@@ -939,6 +940,11 @@ void test_fields_impl() {
 			d.add_posting(title, "first", 1);
 			d.add_posting(body, "second", 1);
 		});
+		add("Q4", [](engine::Document& d) {   // gap: "first" at 1 and "second" at 3, a stop word between
+			const auto gap = d.field("gap");
+			d.add_posting(gap, "first", 1);
+			d.add_posting(gap, "second", 3);
+		});
 		engine::sync_wait(shard.commit(engine::Transaction::none));
 	}
 	const auto ids = [](const Index& index, const Query& query) {
@@ -954,7 +960,7 @@ void test_fields_impl() {
 		{t("", "same"), {}},
 		{t("tags", ""), {1}},
 		{t("title", ""), {}},
-		{Query::match_all(), {1, 2, 3}},
+		{Query::match_all(), {1, 2, 3, 4}},
 		{Query::combine(Op::AND, t("title", "same"), t("body", "same")), {3}},
 		{Query::combine(Op::PHRASE, {t("title", "first"), t("title", "second")}), {1}},
 		{Query::combine(Op::PHRASE, {t("body", "second"), t("body", "first")}), {2}},
@@ -967,12 +973,12 @@ void test_fields_impl() {
 		// The key field: a term on it is a key, and a key is never a term of another field.
 		{t(std::string(engine::KEY_FIELD).c_str(), "Q1"), {1}},
 		{t(std::string(engine::KEY_FIELD).c_str(), "Q3"), {3}},
-		{t(std::string(engine::KEY_FIELD).c_str(), "Q4"), {}},
+		{t(std::string(engine::KEY_FIELD).c_str(), "Q5"), {}},
 		{t("title", "Q1"), {}},
 		{t("", "Q1"), {}},
-		{Query::wildcard(std::string(engine::KEY_FIELD), "Q"), {1, 2, 3}},
+		{Query::wildcard(std::string(engine::KEY_FIELD), "Q"), {1, 2, 3, 4}},
 		{Query::wildcard(std::string(engine::KEY_FIELD), "Q2"), {2}},
-		{Query::field(std::string(engine::KEY_FIELD)), {1, 2, 3}},
+		{Query::field(std::string(engine::KEY_FIELD)), {1, 2, 3, 4}},
 		// A wildcard reads its own field only; Query::field takes every field that starts with the name.
 		{Query::wildcard("title", "sec"), {1}},
 		{Query::wildcard("body", "sec"), {2, 3}},
@@ -989,6 +995,14 @@ void test_fields_impl() {
 			if (testh::failures != before) { std::fprintf(stderr, "  %s: %s\n", engine::to_string(index->kind), query.description().c_str()); }
 		}
 	}
+	// Strata matches a PHRASE's terms at exactly their relative query positions (Xapian's window is looser).
+	const auto at = [](const char* w, engine::termpos pos) { return Query::term("gap", w, 1, pos); };
+	const auto phrase = [&](engine::termpos a, engine::termpos b) { return Query::combine(Op::PHRASE, {at("first", a), at("second", b)}); };
+	CHECK_TRUE(ids(strata, phrase(1, 3)) == Set{4});
+	CHECK_TRUE(ids(strata, phrase(5, 7)) == Set{4});
+	CHECK_TRUE(ids(strata, phrase(1, 2)).empty());
+	CHECK_TRUE(ids(strata, phrase(1, 4)).empty());
+	CHECK_TRUE(ids(strata, Query::combine(Op::PHRASE, {at("first", 0), at("second", 0)})).empty());
 }
 
 // A query's whole answer against the model: the documents, their weights and their order (heavier first,

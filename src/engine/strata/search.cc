@@ -31,6 +31,7 @@
 #include <limits>                  // for std::numeric_limits
 #include <memory>                  // for std::make_unique
 #include <optional>                // for std::optional
+#include <span>                    // for std::span
 #include <stdexcept>               // for std::invalid_argument, std::exception
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
@@ -172,10 +173,6 @@ validate(const Query& query, int depth)
 						if (!is_term(sub)) {
 							unsupported(std::string(to_string(node->op)) + " of anything but terms");
 						}
-					}
-					const std::size_t n = node->subqueries.size();
-					if (node->op == Op::PHRASE && node->parameter != 0 && node->parameter != n) {
-						unsupported("a PHRASE with a window other than its length");
 					}
 					return;
 				}
@@ -465,8 +462,10 @@ build_positional(const QueryNode& node, const Builder& b)
 	}
 	std::vector<p::format::term_info> infos;
 	std::vector<p::weight> weights;
+	std::vector<std::uint32_t> offsets;
 	infos.reserve(n);
 	weights.reserve(n);
+	offsets.reserve(n);
 	for (const auto& sub : node.subqueries) {
 		const auto& leaf = *sub.node();
 		const auto* info = b.info(leaf.field, leaf.str);
@@ -475,9 +474,22 @@ build_positional(const QueryNode& node, const Builder& b)
 		}
 		infos.push_back(*info);
 		weights.push_back(b.weight_of(leaf.field, leaf.str, leaf.wqf));
+		offsets.push_back(leaf.pos);
+	}
+	// A PHRASE keeps the terms' positions in the query (gaps where stop words stood); positions
+	// that do not rise leave the terms consecutive.
+	bool rising = node.op == Op::PHRASE;
+	for (std::size_t k = 1; k < n && rising; ++k) {
+		rising = offsets[k] > offsets[k - 1];
+	}
+	for (std::size_t k = n; rising && k-- > 0;) {
+		offsets[k] -= offsets[0];
+	}
+	if (!rising) {
+		offsets.clear();
 	}
 	const std::uint32_t window = node.op == Op::NEAR ? (node.parameter != 0 ? node.parameter : static_cast<std::uint32_t>(n)) : 0;
-	return std::make_unique<p::phrase_scorer>(b.reader(), infos, std::move(weights), window);
+	return std::make_unique<p::phrase_scorer>(b.reader(), infos, std::move(weights), window, nullptr, std::span<const std::uint64_t>{}, offsets);
 }
 
 Scorer
