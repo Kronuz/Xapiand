@@ -107,8 +107,10 @@ manifest or the new one with every file it names intact.
    it. A visible manifest therefore names files and entries that were written first; the final fsync plus full flush is unchanged and is the
    acknowledgement point. A file on another device is flushed in full inside the call, since a barrier orders one device.
 
-What E3 trusts beyond the old protocol: that the drive honors a barrier (as the old one trusted it to honor a flush), and that APFS issues the
-rename's metadata after the barrier call returns (it is issued after, in program order). In-memory state (segment refs, meta, fields) now changes after
+What E3 trusts beyond the old protocol: that the barrier orders. A barrier is not a flush, and Apple guarantees `F_BARRIERFSYNC` only on Apple SSDs (`fcntl(2)`:
+"requires hardware support, which Apple SSDs are guaranteed to provide"); on other storage what APFS does with it is undocumented, and `PosixIOOptions::full_flush_ordering` replaces it with
+`F_FULLFSYNC`. It also trusts that APFS issues the rename's metadata after the barrier call returns (it is issued after, in program order).
+A barrier error other than an unsupported call (`ENOTSUP`, `EOPNOTSUPP`, `ENOTTY`) fails the commit. In-memory state (segment refs, meta, fields) now changes after
 the commit is durable; a failed write leaves the next commit to redo it under new names.
 
 ## Correctness
