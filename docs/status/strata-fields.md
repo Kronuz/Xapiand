@@ -29,23 +29,26 @@
   3. A phrase whose terms are in two fields matches nothing (positions are per field, D9; the existing `test_fields` case expects the empty answer).
   4. The WAL line of a strata document is format 3 (fields, the key apart from the terms); formats 1 and 2 are refused (unreleased engine).
 - Done criteria (the lead's task; ticked with evidence):
-  - [ ] SF1 the strata engine declares its fields through the field table and writes (field, term) postings.
-  - [ ] SF2 `_id` routes through the key field; the host-built key term and the duplicate id term in `inverted` are gone.
-  - [ ] SF3 `interim_terms.h` deleted; `git grep` for the interim join and the 0xff lead: `interim_terms.h` done; `keys.h` waits for F3.
-  - [ ] SF4 engine tests on both engines.
-  - [ ] SF5 `harness/strata_callbacks_check.py`, `numeric_range_check.py`, `query_depth_check.py` on strata.
-  - [ ] SF6 docs E2E on the strata engine (count; zero regressions against Xapian).
-  - [ ] SF7 ASan+UBSan and TSan in their own dirs with their own deps.
-  - [ ] SF8 a mutant per claim (a field resolved to the wrong id; a key written as a term).
-  - [ ] SF9 SR5: `check_fields(table_size, key_field)` wired at segment open, merge and `check_segment`.
-  - [ ] SF10 CR2 (one stem detection), CR4 (a test that fails on a wrong `FieldKind`), CR6 (partial-path fields).
-  - [ ] SF11 how-it-works note.
-- Done: nothing committed yet.
-- Doing: code written for the seam, the Xapian engine, the host and the strata engine; first build and tests.
-- Next: tests on both engines, harnesses, E2E, sanitizers, mutants, note.
-- Blocked on: F3 for deleting `keys.h` and the strata `key_prefix` option (lead has assigned it).
-- Findings folded in: none yet.
-- Last verified: nothing built yet.
+  - [x] SF1 fields declared through the field table, (field, term) postings: `Xapiand:` 46e3bb8df; `declared` in `test_engine_strata` (kinds, key field once, reopen, replay).
+  - [x] SF2 `_id` routes through the key field; no host-built key term, no id term in `inverted` (`fill` writes the key apart; `test_fields` key cases; the key field's frequency counts in the length, M5).
+  - [~] SF3 `interim_terms.h` deleted. `git grep -nE 'interim|key_lead|engine_key|term_key_prefix|key_prefix|\\xff' -- src/engine` leaves `keys.h` (lead byte, `key_prefix()`) and `shard.cc:165` (`options.key_prefix`): F3's. `flat_term` stays only in logs (`generate_terms.cc` L_GREY).
+  - [x] SF4 engine tests on both engines: ctest 28 of 28 (Release, no LTO); `test_engine_fields` 1258, `strata` 9796, `search_strata` 231324 (Xapian compare on), `callbacks` 946, `text` 13252.
+  - [x] SF5 `strata_callbacks_check.py`: 208 searches, 0 different; `numeric_range_check.py` on strata: 797 ranges, 0 wrong (and on Xapian); `query_depth_check.py` on strata: 17 FAIL lines, 16 of them refusals the engine already had (`validate()` in `search.cc`: PHRASE/NEAR/ELITE_SET of text, unchanged by SF) and "node alive 404", which the script prints on the Xapian engine too.
+  - [~] SF6 docs E2E (newman 6.2.3): Xapian engine 576 of 576 (339 requests, none uncovered); strata engine 507 of 576. The 69 failures are 55 INFO requests (term lists, R-P2: "keeps no term lists") and 14 searches the engine refuses (PHRASE 4, NEAR 4, ELITE_SET 6); no wrong answer. Before the stem fix (below) it was 497, with 9 text searches answering 0 hits and one wrong count. Master's strata count was not run (no master build), so "no regression against master-on-strata" rests on those refusals being code SF does not touch.
+  - [x] SF7 ASan+UBSan (`build-asan`, Apple clang, RelWithDebInfo -O1, own `_deps`, `NO_XAPIAN_COMPARE=1`, `ulimit -s 65532`): fields 1258, strata 9796, search_strata 153616, callbacks 946, document 645, query 22442, shard 54, read 657, replay 17, error 244, generate_terms 50, text 13252, wal_replay 5; 0 ASan reports; UBSan only RapidJSON `stack.h:117` (pinned, known). TSan (`build-tsan`, own deps): fields, strata, search_strata 153616, callbacks, shard, replay: 0 warnings.
+  - [x] SF8 mutants, each alone, `.scratch/mutants.py` (copy in the main checkout's `.scratch/strata-fields/`): M1 a field resolved to the wrong id (`strata` 13 checks, `search_strata` aborts); M2 a key written as a term under every field (`search_strata` `test_fields`, 1 check); M3 a kind mapped to the wrong postings (`declared`, 1); M4 the key leaf looked up without the lead (`search_strata`, 5); M5 the key field's frequency left out of the length (2664); M6 `Query::field` exact only (1); M7 the stem field not split off a parsed term (`test_text`, 4). All killed.
+  - [~] SF9 SR5: `check_fields(table_size, key_field)` runs on every segment's dictionary at shard open, after a reopen and in the engine check (`Core::verify_fields`, `shard.cc`). Not at merge: the merge reads its inputs through strata's `open_context`, which carries no table, so only a library change reaches it (the merged output holds only ids of verified inputs). No test: a segment with an id outside the table needs a resealed file; prospect's `fielddict_test` mutants T and U cover the check itself. Cost to measure under T6: the call scans the pool's keys of each segment at every open.
+  - [~] SF10 CR2: no third copy of the stem marker was needed on the write side, but the query side needed one (`engine/text.cc` `split_field`, 'Z' + name), which the `analysis` change removes with the other two. CR4: `declared` fails on a wrong kind (M3). CR6: partial-path fields are fields of kind `terms` with an empty term (`declared`: `c.`); nothing to change.
+  - [x] SF11 how-it-works note `docs/mechanisms/strata-fields.md`; `strata-engine.md`, `strata-callbacks.md` and `seam-fields.md` updated.
+- Done: `Xapiand:` 46e3bb8df (the engine on fields and keys), 89e0b9f7b (stem field of a parsed text), 3bacc26f1 (host key helper test); the ledger and notes with the last commit.
+- Doing: nothing.
+- Next: F3 lands in strata and prospect; then delete `src/engine/strata/keys.h`, `options.key_prefix` and `keys::stored/host` callers (`shard.cc`, `expand.cc`) and run C2's grep (empty) and T7. Repin prospect to main when F2 lands there (pin is `phase8/fields` `1c62009`). Measure `verify_fields` at open (T6). Master-on-strata E2E count if the lead wants the diff.
+- Blocked on: F3 (the lead's separate developer) for C2's empty grep.
+- Findings folded in: X6's for-SF list: CR2 (above), CR4, CR6; the `DocView::terms` item is moot (refused on strata); `field: "*"` over an object is the name-prefix reading of `Query::field` (decision 1), not a schema walk; `index_partial_paths` as above. SR5 as SF9.
+- Last verified (2026-10-28, Apple clang 17, no LTO): see the criteria; ctest 28 of 28; E2E and harnesses on the final binary (`3bacc26f1` plus a comment edit).
 
 ## Log
 - 2026-10-28: branch from master `9e99575fa`; prospect pinned to `phase8/fields`; lead rulings 1 and 2 recorded above.
+- 2026-10-28: first build compiled after two include fixes; tests moved to named fields (the strata engine refuses an empty field name); Xapian-only tests keep bare names and set their keys with `set_key`.
+- 2026-10-28: docs E2E found 9 language-analysed text searches at 0 hits: the parser's stems lead with 'Z' and the field name, which only the Xapian join understood; fixed in `engine/text.cc` (89e0b9f7b), killed by M7.
+- 2026-10-28: the sanitizer builds shared the worktree with the mutant runs; their objects were rebuilt (touched sources) before the runs recorded above.

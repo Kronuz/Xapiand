@@ -43,7 +43,7 @@ struct FieldTerm {
 };
 
 // The bytes the term table looks `term` up by: the key field's terms are keys, which the index holds
-// behind the interim key lead (keys.h); any other field's are as given.
+// behind the index's key lead (keys.h); any other field's are as given.
 std::string lookup_bytes(std::string_view field, std::string_view term);
 
 // The terms of the whole index that a wildcard or edit-distance node matches, sorted, after its
