@@ -35,7 +35,7 @@
 #include "engine/xapian/query.h"   // for to_xapian
 #include "engine/xapian/search.h"  // for live_search_objects
 #include "engine/xapian/shard.h"   // for Shard
-#include "xapian.h"                // for Xapian::Enquire, MSet, RSet, ExpandDecider
+#include "xapian.h"                // for Xapian::Enquire, MSet
 
 
 namespace engine::xapian {
@@ -67,24 +67,6 @@ public:
 	const Xapian::Query query;
 };
 
-// Accepts the terms that start with one of the prefixes, or every term when there are none.
-class PrefixDecider final : public Xapian::ExpandDecider, private Live {
-public:
-	explicit PrefixDecider(const std::vector<std::string>& prefixes) : prefixes_(prefixes) { }
-
-	bool operator()(const std::string& term) const override {
-		for (const auto& prefix : prefixes_) {
-			if (term.starts_with(prefix)) {
-				return true;
-			}
-		}
-		return prefixes_.empty();
-	}
-
-private:
-	const std::vector<std::string>& prefixes_;
-};
-
 // What one search makes: the combined database and the Xapian side of the callbacks.
 struct Scope : private Live {
 	Xapian::Database db;
@@ -111,27 +93,6 @@ next_query_id(const std::string& origin)
 	return origin + ":" + std::to_string(seq.fetch_add(1, std::memory_order_relaxed) + 1);
 }
 
-// The ids of the top hits of the query, as the relevant set.
-Xapian::RSet
-top_hits(const Xapian::Database& db, const Xapian::Query& query, const SearchRequest& request, doccount n)
-{
-	Xapian::Enquire enquire(db);
-	enquire.set_collapse_key(Xapian::BAD_VALUENO, 0);
-	enquire.set_cutoff(0, 0);
-	enquire.set_docid_order(Xapian::Enquire::ASCENDING);
-	enquire.set_query(query);
-	if (!query.empty()) {  // prepare_mset requires a non-empty query; get_mset on an empty one finds nothing
-		enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
-	}
-	auto mset = enquire.get_mset(0, n, Xapian::doccount{0});
-	Xapian::RSet rset;
-	const auto end = mset.end();
-	for (auto it = mset.begin(); it != end; ++it) {
-		rset.add_document(*it);
-	}
-	return rset;
-}
-
 SearchResult
 run(std::span<engine::Shard* const> shards, const SearchRequest& request, const Xapian::Query& query)
 {
@@ -145,17 +106,8 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 		}
 	}
 
-	std::optional<Xapian::RSet> nearest_rset, fuzzy_rset;
-	if (request.nearest) {
-		nearest_rset = top_hits(scope.db, query, request, request.nearest->n_rset);
-	}
-	if (request.fuzzy) {
-		fuzzy_rset = top_hits(scope.db, query, request, request.fuzzy->n_rset);
-	}
-
 	Xapian::Enquire enquire(scope.db);
 	enquire.set_collapse_key(request.collapse_key, request.collapse_max);
-	enquire.set_cutoff(request.percent_threshold, request.weight_threshold);
 	enquire.set_docid_order(to_xapian(request.order));
 	if (request.spy) {
 		scope.spy.emplace(*request.spy);
@@ -166,20 +118,9 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, const 
 		enquire.set_sort_by_key_then_relevance(&*scope.sorter, false);
 	}
 
-	auto final_query = query;
-	if (request.nearest) {
-		PrefixDecider decider(request.nearest->prefixes);
-		auto eset = enquire.get_eset(request.nearest->n_eset, *nearest_rset, &decider);
-		final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), request.nearest->n_term);
-	}
-	if (request.fuzzy) {
-		PrefixDecider decider(request.fuzzy->prefixes);
-		auto eset = enquire.get_eset(request.fuzzy->n_eset, *fuzzy_rset, &decider);
-		final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), request.fuzzy->n_term));
-	}
-	enquire.set_query(final_query);
+	enquire.set_query(query);
 
-	if (!final_query.empty()) {  // as in top_hits
+	if (!query.empty()) {  // prepare_mset requires a non-empty query
 		enquire.prepare_mset(next_query_id(request.origin), nullptr, nullptr);
 	}
 	auto mset = enquire.get_mset(request.first, request.maxitems, request.check_at_least);

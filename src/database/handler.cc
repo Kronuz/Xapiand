@@ -692,33 +692,6 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 }
 
 
-engine::Similar
-DatabaseHandler::get_similar(const similar_field_t& similar)
-{
-	L_CALL("DatabaseHandler::get_similar(...)");
-
-	// Expand Decider filter.
-	engine::Similar result;
-	result.n_rset = similar.n_rset;
-	result.n_eset = similar.n_eset;
-	result.n_term = similar.n_term;
-	auto& prefixes = result.prefixes;
-	prefixes.reserve(similar.type.size() + similar.field.size());
-	for (const auto& sim_type : similar.type) {
-		char type = toUType(Unserialise::get_field_type(sim_type));
-		prefixes.emplace_back(1, type);
-		prefixes.emplace_back(1, tolower(type));
-	}
-	for (const auto& sim_field : similar.field) {
-		auto field_spc = schema->get_data_field(sim_field).first;
-		if (field_spc.get_type() != FieldType::empty) {
-			prefixes.push_back(field_spc.prefix());
-		}
-	}
-	return result;
-}
-
-
 MsgPack
 DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 	auto main_locator = data.get("");
@@ -1101,9 +1074,6 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		collapse_max = query_field.collapse_max;
 	}
 
-	double percent_threshold = 0;
-	double weight_threshold = 0;
-
 	engine::DocidOrder order = engine::DocidOrder::ascending;
 
 	if (aggs) {
@@ -1120,12 +1090,8 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		sorter.get(),
 		collapse_key,
 		collapse_max,
-		percent_threshold,
-		weight_threshold,
 		order,
-		aggs,
-		query_field.is_fuzzy ? &query_field.fuzzy : nullptr,
-		query_field.is_nearest ? &query_field.nearest : nullptr), std::move(qdsl_query), std::move(query));
+		aggs), std::move(qdsl_query), std::move(query));
 }
 
 
@@ -1140,19 +1106,15 @@ DatabaseHandler::get_mset(
 	const engine::KeyMaker* sorter,
 	engine::valueno collapse_key,
 	engine::doccount collapse_max,
-	double percent_threshold,
-	double weight_threshold,
 	engine::DocidOrder order,
-	engine::MatchSpy* aggs,
-	const similar_field_t* fuzzy,
-	const similar_field_t* nearest
+	engine::MatchSpy* aggs
 	)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
 
 	// The engine reads the text of the query here, once, before any database is checked out.
 	auto prepared = engine::prepare(query);
-	return match(*prepared, first, maxitems, check_at_least, sorter, collapse_key, collapse_max, percent_threshold, weight_threshold, order, aggs, fuzzy, nearest);
+	return match(*prepared, first, maxitems, check_at_least, sorter, collapse_key, collapse_max, order, aggs);
 }
 
 
@@ -1165,12 +1127,8 @@ DatabaseHandler::match(
 	const engine::KeyMaker* sorter,
 	engine::valueno collapse_key,
 	engine::doccount collapse_max,
-	double percent_threshold,
-	double weight_threshold,
 	engine::DocidOrder order,
-	engine::MatchSpy* aggs,
-	const similar_field_t* fuzzy,
-	const similar_field_t* nearest
+	engine::MatchSpy* aggs
 	)
 {
 	L_CALL("DatabaseHandler::match({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
@@ -1187,16 +1145,8 @@ DatabaseHandler::match(
 	request.sorter = sorter;
 	request.collapse_key = collapse_key;
 	request.collapse_max = collapse_max;
-	request.percent_threshold = percent_threshold;
-	request.weight_threshold = weight_threshold;
 	request.order = order;
 	request.spy = aggs;
-	if (nearest) {
-		request.nearest = get_similar(*nearest);
-	}
-	if (fuzzy) {
-		request.fuzzy = get_similar(*fuzzy);
-	}
 
 	// The engine feeds every shard into one search: remote shards' round trips overlap, and it
 	// merges the per-shard results and unshards the docids itself. The ids that correlate its two

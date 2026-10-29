@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   positions). `INFO` still reports the document's id, version, data and values.
 - **The `_terms` aggregation over an analysed `text` field**, which counted index words. A `_terms` on a
   field without stored values answers `400`; keyword, numeric, boolean and date fields are unchanged.
+- **The `nearest` and `fuzzy` search parameters** (similar documents: the terms of the top hits
+  expanded into a second query), with their `n_rset`, `n_eset`, `n_term`, `field` and `type` settings.
+  A search that carries them is an ordinary search now. The `_fuzzy` query (edit distance) is
+  unchanged.
+- **The weight cutoffs** (`percent_threshold`, `weight_threshold`), which no request could set.
 
 ## [1.0.0-alpha.10] - 2026-10-28
 

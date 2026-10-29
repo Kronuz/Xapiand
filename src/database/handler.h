@@ -62,7 +62,6 @@ class Schema;
 class SchemasLRU;
 struct ct_type_t;
 struct query_field_t;
-struct similar_field_t;
 
 
 engine::docid to_docid(std::string_view document_id);
@@ -92,8 +91,6 @@ class DatabaseHandler {
 
 	DocumentInfo index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
-	engine::Similar get_similar(const similar_field_t& similar);
-
 	// The match proper, on a query the engine already read.
 	engine::SearchResult match(
 		const engine::PreparedQuery& query,
@@ -103,12 +100,8 @@ class DatabaseHandler {
 		const engine::KeyMaker* sorter,
 		engine::valueno collapse_key,
 		engine::doccount collapse_max,
-		double percent_threshold,
-		double weight_threshold,
 		engine::DocidOrder order,
-		engine::MatchSpy* aggs,
-		const similar_field_t* fuzzy,
-		const similar_field_t* nearest);
+		engine::MatchSpy* aggs);
 
 	bool update_schema();
 
@@ -147,12 +140,8 @@ public:
 		const engine::KeyMaker* sorter = nullptr,
 		engine::valueno collapse_key = engine::BAD_VALUENO,
 		engine::doccount collapse_max = 0,
-		double percent_threshold = 0,
-		double weight_threshold = 0,
 		engine::DocidOrder order = engine::DocidOrder::ascending,
-		engine::MatchSpy* aggs = nullptr,
-		const similar_field_t* fuzzy = nullptr,
-		const similar_field_t* nearest = nullptr);
+		engine::MatchSpy* aggs = nullptr);
 
 	MsgPack dump_document(engine::docid did);
 	MsgPack dump_document(std::string_view document_id);

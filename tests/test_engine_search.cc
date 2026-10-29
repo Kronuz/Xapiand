@@ -197,7 +197,6 @@ Expect reference(const Fixture& fixture, int n, const Query& query, const engine
 	const auto xq = engine::xapian::to_xapian(query);
 	Xapian::Enquire enquire(db);
 	enquire.set_collapse_key(request.collapse_key, request.collapse_max);
-	enquire.set_cutoff(request.percent_threshold, request.weight_threshold);
 	enquire.set_docid_order(request.order == engine::DocidOrder::descending ? Xapian::Enquire::DESCENDING : Xapian::Enquire::ASCENDING);
 	std::optional<engine::xapian::MatchSpyAdapter> spy;
 	std::optional<engine::xapian::KeyMakerAdapter> sorter;
@@ -209,37 +208,7 @@ Expect reference(const Fixture& fixture, int n, const Query& query, const engine
 		sorter.emplace(*request.sorter);
 		enquire.set_sort_by_key_then_relevance(&*sorter, false);
 	}
-	auto rset_of = [&](engine::doccount count) {
-		Xapian::Enquire e(db);
-		e.set_query(xq);
-		Xapian::RSet rset;
-		auto m = e.get_mset(0, count, Xapian::doccount{0});
-		for (auto it = m.begin(); it != m.end(); ++it) {
-			rset.add_document(*it);
-		}
-		return rset;
-	};
-	struct Prefixes final : Xapian::ExpandDecider {
-		std::vector<std::string> list;
-		bool operator()(const std::string& term) const override {
-			for (const auto& p : list) {
-				if (term.compare(0, p.size(), p) == 0) { return true; }
-			}
-			return list.empty();
-		}
-	};
-	auto q = xq;
-	if (request.nearest) {
-		Prefixes d; d.list = request.nearest->prefixes;
-		auto eset = enquire.get_eset(request.nearest->n_eset, rset_of(request.nearest->n_rset), &d);
-		q = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), request.nearest->n_term);
-	}
-	if (request.fuzzy) {
-		Prefixes d; d.list = request.fuzzy->prefixes;
-		auto eset = enquire.get_eset(request.fuzzy->n_eset, rset_of(request.fuzzy->n_rset), &d);
-		q = Xapian::Query(Xapian::Query::OP_OR, q, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), request.fuzzy->n_term));
-	}
-	enquire.set_query(q);
+	enquire.set_query(xq);
 	auto mset = enquire.get_mset(request.first, request.maxitems, request.check_at_least);
 	Expect expect;
 	expect.estimated = mset.get_matches_estimated();
@@ -308,7 +277,7 @@ void test_ranking_and_window() {
 	CHECK_EQ(run(fixture, 2, Query::term("", "Q2_2"), request).hits[0].did, 4u);
 }
 
-void test_sort_collapse_cutoff_order() {
+void test_sort_collapse_order() {
 	Fixture fixture;
 	SlotKey key;
 	for (int n : {1, 2}) {
@@ -328,16 +297,6 @@ void test_sort_collapse_cutoff_order() {
 		CHECK_EQ(agree(fixture, n, some_query(), request), 3u);
 		request.collapse_max = 2;
 		CHECK_EQ(agree(fixture, n, some_query(), request), 6u);
-
-		request = {};
-		request.maxitems = 100;
-		request.percent_threshold = 60;
-		const auto strict = agree(fixture, n, some_query(), request);
-		request.percent_threshold = 0;
-		const auto loose = agree(fixture, n, some_query(), request);
-		CHECK_TRUE(strict > 0 && strict < loose);
-		request.weight_threshold = 1.0;
-		agree(fixture, n, some_query(), request);
 
 		request = {};
 		request.maxitems = 100;
@@ -417,126 +376,6 @@ void test_spy_check_all() {
 }
 
 
-void test_similar() {
-	Fixture fixture;
-	for (int n : {1, 2}) {
-		for (bool filtered : {false, true}) {
-			engine::Similar similar;
-			similar.n_rset = 4;
-			similar.n_eset = 12;
-			similar.n_term = 3;
-			if (filtered) {
-				similar.prefixes = {"Xcolor", "Xshape"};
-			}
-			engine::SearchRequest request;
-			request.maxitems = 100;
-			request.check_at_least = 100;
-			request.nearest = similar;
-			CHECK_TRUE(agree(fixture, n, Query::term("", "t1"), request) > 0);
-			request.nearest.reset();
-			request.fuzzy = similar;
-			CHECK_TRUE(agree(fixture, n, Query::term("", "t1"), request) > 0);
-			request.nearest = similar;
-			CHECK_TRUE(agree(fixture, n, Query::term("", "t1"), request) > 0);
-			request.sorter = nullptr;
-			request.first = 1;
-			request.maxitems = 6;
-			agree(fixture, n, some_query(), request);
-		}
-	}
-	// the prefix filter is observable: the elite set holds only terms with the prefixes
-	engine::Similar only_other;
-	only_other.n_rset = 4;
-	only_other.n_eset = 40;
-	only_other.n_term = 40;
-	only_other.prefixes = {"other"};
-	engine::Similar only_color = only_other;
-	only_color.prefixes = {"Xcolor"};
-	engine::SearchRequest a, b;
-	a.maxitems = b.maxitems = 100;
-	a.nearest = only_other;
-	b.nearest = only_color;
-	auto ra = run(fixture, 1, Query::term("", "t1"), a);
-	auto rb = run(fixture, 1, Query::term("", "t1"), b);
-	bool differ = ra.hits.size() != rb.hits.size();
-	for (size_t i = 0; !differ && i < ra.hits.size(); ++i) {
-		differ = ra.hits[i].did != rb.hits[i].did;
-	}
-	CHECK_TRUE(differ);
-}
-
-// nearest and fuzzy each use their own settings, and the relevant set ignores the request's
-// collapse, cutoffs and docid order.
-void test_similar_relevant_set() {
-	Fixture fixture;
-	for (int n : {1, 2}) {
-		engine::Similar wide, narrow;
-		wide.n_rset = narrow.n_rset = 6;
-		wide.n_eset = narrow.n_eset = 20;
-		wide.n_term = 8;
-		narrow.n_term = 2;
-		engine::SearchRequest request;
-		request.maxitems = 100;
-		request.check_at_least = 100;
-		request.nearest = wide;
-		request.fuzzy = narrow;
-		CHECK_TRUE(agree(fixture, n, some_query(), request) > 0);
-		request.nearest = narrow;
-		request.fuzzy = wide;
-		CHECK_TRUE(agree(fixture, n, some_query(), request) > 0);
-
-		for (auto order : {engine::DocidOrder::descending, engine::DocidOrder::dont_care}) {
-			for (bool both : {false, true}) {
-				request = {};
-				request.maxitems = 100;
-				request.check_at_least = 100;
-				request.nearest = wide;
-				if (both) {
-					request.fuzzy = narrow;
-				}
-				request.collapse_key = 2;
-				request.collapse_max = 1;
-				request.percent_threshold = 60;
-				request.weight_threshold = 1.0;
-				request.order = order;
-				agree(fixture, n, some_query(), request);
-				agree(fixture, n, Query::match_all(), request);
-			}
-		}
-
-		// one class of "other" terms per document: the relevant set decides the hits
-		engine::Similar classes;
-		classes.n_eset = 10;
-		classes.n_term = 10;
-		classes.prefixes = {"other"};
-		const auto hits_of = [&](engine::SearchRequest request) {
-			request.maxitems = 100;
-			request.check_at_least = 100;
-			request.nearest = classes;
-			return agree(fixture, n, some_query(), request);
-		};
-		engine::SearchRequest request2;
-		classes.n_rset = 3;
-		request2.order = engine::DocidOrder::descending;
-		hits_of(request2);
-		// equal weights: the ascending order picks the relevant documents
-		request2.maxitems = request2.check_at_least = 100;
-		request2.nearest = classes;
-		CHECK_TRUE(agree(fixture, n, Query::match_all(), request2) > 0);
-		request2 = {};
-		request2.collapse_key = 2;
-		request2.collapse_max = 1;
-		hits_of(request2);
-		classes.n_rset = 30;
-		request2 = {};
-		request2.percent_threshold = 90;
-		hits_of(request2);
-		request2 = {};
-		request2.weight_threshold = 4.0;
-		hits_of(request2);
-	}
-}
-
 void test_empty_and_errors() {
 	Fixture fixture;
 	engine::SearchRequest request;
@@ -589,16 +428,12 @@ void test_search_does_not_leak() {
 
 	SlotKey key;
 	CountingSpy spy;
-	engine::Similar similar;
-	similar.prefixes = {"X"};
 	for (int n : {1, 2}) {
 		engine::SearchRequest request;
 		request.maxitems = 100;
 		request.sorter = &key;
 		request.spy = &spy;
 		request.check_at_least = 100;
-		request.nearest = similar;
-		request.fuzzy = similar;
 		run(fixture, n, some_query(), request);
 		CHECK_EQ(engine::xapian::live_search_objects(), 0u);
 		request = {};
@@ -611,16 +446,12 @@ void test_search_does_not_leak() {
 	engine::SearchRequest request;
 	request.query = prepared.get();
 	request.maxitems = 10;
-	request.nearest = similar;
-	request.fuzzy = similar;
 	auto shards = fixture.shards(2);
 	engine::sync_wait(engine::search(shards, request));
 	CHECK_EQ(engine::xapian::live_search_objects(), 1u);
 
 	// a search cut short by a callback that throws leaves nothing behind, and the error arrives as thrown
 	ThrowingKey bad_key;
-	request.nearest.reset();
-	request.fuzzy.reset();
 	request.sorter = &bad_key;
 	bool thrown = false;
 	try {
@@ -668,4 +499,4 @@ void test_result_outlives_shards() {
 
 }  // namespace
 
-TEST_MAIN(test_ranking_and_window, test_sort_collapse_cutoff_order, test_spy, test_spy_check_all, test_similar, test_similar_relevant_set, test_empty_and_errors, test_search_does_not_leak, test_result_outlives_shards)
+TEST_MAIN(test_ranking_and_window, test_sort_collapse_order, test_spy, test_spy_check_all, test_empty_and_errors, test_search_does_not_leak, test_result_outlives_shards)
