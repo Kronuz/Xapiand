@@ -368,10 +368,12 @@ void test_a_full_registry_answers_busy() {
 	std::promise<void> release;
 	auto gate = release.get_future().share();
 	std::vector<std::unique_ptr<BlockingSpy>> spies;
-	std::vector<std::thread> searchers;
 	for (int i = 0; i < 2; ++i) {
 		spies.push_back(std::make_unique<BlockingSpy>());
 		spies.back()->gate = gate;
+	}
+	std::vector<std::thread> searchers;
+	for (int i = 0; i < 2; ++i) {
 		searchers.emplace_back([&, i] {
 			auto prepared = engine::prepare(engine::Query::term("f", "body"));
 			engine::SearchRequest request;

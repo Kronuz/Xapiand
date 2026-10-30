@@ -42,7 +42,6 @@
 #include "cast.h"                                 // for Cast
 #include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialise
 #include "database/handler.h"                     // for DatabaseHandler
-#include "engine/sync.h"                    // for engine::sync_wait
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
 #include "datetime.h"                             // for isDate, isDatetime, tm_t
