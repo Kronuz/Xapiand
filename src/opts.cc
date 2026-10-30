@@ -48,7 +48,6 @@
 #define SCHEMA_POOL_SIZE             100          // Maximum number of schemas in schema pool
 #define SCHEMAS_VERSIONS_CACHE_SIZE  100          // Schema versions cache
 #define DATABASE_POOL_SIZE           200          // Maximum number of database endpoints in database pool
-#define MAX_DATABASE_READERS          10          // Maximum number simultaneous readers per database
 #define MAX_CLIENTS                 1000          // Maximum number of open client connections
 
 #define NUM_HTTP_SERVERS             1.0          // Number of servers per CPU
@@ -181,8 +180,6 @@ parseOptions(int argc, char** argv)
 		app.add_option("--bulk-indexers", num_doc_indexers, "Number of threads handling bulk documents indexing.");
 		std::size_t num_committers = 0;
 		app.add_option("--committers", num_committers, "Number of threads handling the commits.");
-		std::size_t max_database_readers = MAX_DATABASE_READERS;
-		app.add_option("--max-database-readers", max_database_readers, "Max number of open databases.");
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
 		std::size_t schema_pool_size = SCHEMA_POOL_SIZE;
@@ -402,7 +399,6 @@ parseOptions(int argc, char** argv)
 		o.num_fsynchers = fallback(num_fsynchers, std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)))));
 
 		o.max_clients = max_clients;
-		o.max_database_readers = max_database_readers;
 		o.max_files = max_files;
 		o.num_http_clients = fallback(num_http_clients, std::max(MIN_HTTP_CLIENTS, std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)))));
 		o.num_http_servers = fallback(num_http_servers, std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));

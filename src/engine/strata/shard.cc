@@ -58,16 +58,6 @@ namespace engine::strata {
 
 namespace {
 
-// Moves the awaiting task onto `on`, when there is one.
-struct Hop {
-	task::scheduler_ref on;
-
-	bool await_ready() const noexcept { return !on; }
-	void await_suspend(std::coroutine_handle<> handle) const { on.post(handle); }
-	void await_resume() const noexcept { }
-};
-
-
 #ifdef XAPIAND_CRASH_POINTS
 // Crash tests only: XAPIAND_STRATA_CRASH=point:n kills the process (SIGKILL) at the n-th pass through
 // that point (commit.before, commit.flushed, commit.after, replay).
@@ -160,11 +150,16 @@ new_uuid()
 constexpr kronuz::journal::PosixIOOptions io_options{true, true};
 
 prospect::index::options
-index_options()
+index_options(const OpenOptions& host)
 {
 	prospect::index::options options;
 	options.keyed = true;
 	options.auto_merge = true;
+	options.defer_io = host.host;
+	options.background = host.background;
+	if (host.buffered_docs_cap != 0) {
+		options.buffered_docs_cap = host.buffered_docs_cap;
+	}
 	return options;
 }
 
@@ -175,13 +170,16 @@ index_options()
 struct Core {
 	std::string dir;
 	std::unique_ptr<kronuz::journal::PosixIO> io;
+	prospect::index::options options;      // how the index is opened, again after a reopen
+	bool host = false;                     // a host serialises the writers and refreshes before it reads
 	std::optional<prospect::index> index;  // empty after a reopen that failed: recover() retries it
 	std::string uuid;
 	std::mutex mtx;
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
-	bool dirty = false;        // applied since the last refresh: reads by id need a refresh first
+	std::atomic<bool> dirty{false};  // applied since the last refresh: reads by id need a refresh first
 	bool pending = false;      // applied since the last commit
 	bool transaction = false;
+	bool closed = false;       // Shard::close released the index on purpose
 	std::atomic<std::uint64_t> epoch{0};  // bumped whenever the index is replaced: writes it held are gone
 
 	~Core() {
@@ -210,9 +208,9 @@ struct Core {
 		if (seen) {
 			*seen = replaced;
 		}
-		pending = dirty = transaction = false;
+		pending = dirty = transaction = closed = false;
 		index.reset();
-		index.emplace(prospect::index::open(*io, index_options()));
+		index.emplace(prospect::index::open(*io, options));
 		try {
 			verify_fields();
 		} catch (...) {
@@ -226,6 +224,13 @@ struct Core {
 		if (dirty) {
 			index->refresh();
 			dirty = false;
+		}
+	}
+
+	// A read's refresh. A host refreshes before it reads, in a chore (Shard::refresh), so a read does no I/O.
+	void refresh_for_read() {
+		if (!host) {
+			refresh();
 		}
 	}
 
@@ -311,6 +316,9 @@ struct Handle {
 void
 Core::check(const Handle& handle) const
 {
+	if (closed) {
+		throw Error(errc::closed, "The strata index is closed");
+	}
 	if (!index) {
 		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
 	}
@@ -325,7 +333,7 @@ namespace {
 // Opens the Core at `path`, or joins the one that is open; null when it does not exist and
 // create_missing is off.
 std::unique_ptr<Handle>
-acquire(const std::string& path, bool create_missing, bool& created)
+acquire(const std::string& path, bool create_missing, bool& created, const OpenOptions& host)
 {
 	namespace fs = std::filesystem;
 	const auto dir = (fs::path(path) / "strata").string();
@@ -342,7 +350,9 @@ acquire(const std::string& path, bool create_missing, bool& created)
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
 		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);
-		const auto options = index_options();
+		core->options = index_options(host);
+		core->host = host.host;
+		const auto& options = core->options;
 		const auto create = [&] {
 			const auto uuid = new_uuid();
 			core->index.emplace(prospect::index::create(*core->io, options, uuid));
@@ -392,7 +402,7 @@ locate(Core& core, docid did)
 	if (did == 0 || did > core.index->last_docid()) {
 		return std::nullopt;
 	}
-	core.refresh();
+	core.refresh_for_read();
 	const auto segments = core.index->segments();
 	for (auto it = segments.end(); it != segments.begin();) {
 		const auto& view = *--it;
@@ -560,15 +570,58 @@ replay_applies(const StrataDocument& native, const std::optional<rev>& stored)
 	return true;
 }
 
-// Applies one operation; its docid and version as the index assigned them.
-WriteResult
-apply(Core& core, prospect::transaction& t, const WriteResult& expected)
+// Applies `t`, which the caller built from the index as it stands. A host serialises its writers (the
+// index's turn) and has let go of core.mtx; a caller that has not (`held` still owns it) applies under
+// it, so building and applying are one step. A host's index owes a flush or a drain before it takes
+// the transaction (nothing was applied): that runs as a chore and the same transaction is applied again.
+// `visible` says the transaction changed documents, so reads need a refresh.
+task::task<::strata::verdict>
+apply_t(Core& core, const Handle& handle, Chores& chores, prospect::transaction& t, bool visible, std::unique_lock<std::mutex>& held)
 {
-	const auto verdict = core.index->apply(t, {});
-	if (verdict.result != ::strata::verdict::accepted) {
-		reject(verdict);
+	constexpr int max_rounds = 4;  // an owed answer ends after one round (strata's contract); a loop is a bug
+	for (int round = 0;; ++round) {
+		::strata::verdict::outcome owed;
+		{
+			std::unique_lock<std::mutex> own;
+			if (!held.owns_lock()) {
+				own = std::unique_lock<std::mutex>(core.mtx);
+			}
+			core.check(handle);
+			auto verdict = core.index->apply(t, {});
+			if (verdict.result == ::strata::verdict::accepted) {
+				core.dirty = core.dirty.load() || visible;
+				core.pending = true;
+				co_return verdict;
+			}
+			if (verdict.result != ::strata::verdict::flush_owed && verdict.result != ::strata::verdict::drain_owed) {
+				reject(verdict);
+			}
+			owed = verdict.result;
+		}
+		if (round >= max_rounds) {
+			throw Error(errc::internal, "The index kept owing I/O before it took a transaction");
+		}
+		if (held.owns_lock()) {
+			held.unlock();  // only a host is owed, and a host does not hold it
+		}
+		// The flush or the drain is a chore; the next round finds room.
+		co_await chores.run(ChoreClass::flush, [&core, &handle, owed] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(handle);
+			if (owed == ::strata::verdict::flush_owed) {
+				core.index->refresh();
+				core.dirty = false;
+			} else {
+				core.index->reclaim_for_space();
+			}
+		});
 	}
-	core.dirty = core.pending = true;
+}
+
+// Reads the id and version the index assigned to a write that apply_t accepted.
+WriteResult
+assigned(const ::strata::verdict& verdict, const WriteResult& expected)
+{
 	WriteResult result = expected;
 	if (!verdict.docids.empty()) {
 		result.did = static_cast<docid>(verdict.docids[0]);
@@ -600,7 +653,8 @@ require_writable(bool writable)
 }  // namespace
 
 
-Shard::Shard(std::unique_ptr<Handle> handle, bool writable, task::scheduler_ref on) : handle_(std::move(handle)), writable_(writable), on_(on) { }
+Shard::Shard(std::unique_ptr<Handle> handle, bool writable, const OpenOptions& options)
+	: handle_(std::move(handle)), writable_(writable), host_(options.host), chores_(options.chores ? options.chores : &inline_chores()) { }
 
 Shard::~Shard() = default;
 
@@ -608,29 +662,33 @@ Shard::~Shard() = default;
 task::task<WriteResult>
 Shard::add(Document& doc, WriteArgs args)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.add");
 	try {
 		require_local(args);
 		require_writable(writable_);
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		check_version(args.expected_version, std::nullopt);
 		WriteResult info;
-		info.did = static_cast<docid>(core.index->last_docid() + 1);
-		info.version = 1;
-		if (args.finalise) {
-			args.finalise(doc, info);
-		}
-		ENGINE_CENSUS_DOCUMENT(doc, info.term);
 		prospect::transaction t;
-		auto& op = t.ops.emplace_back();
-		op.type = prospect::operation::add;
-		auto& native = native_of(doc);
-		stamp_version(native, info.version);
-		fill(t, op.doc, native, core.index->fields());
-		co_return apply(core, t, info);
+		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
+		{
+			core.check(*handle_);
+			check_version(args.expected_version, std::nullopt);
+			info.did = static_cast<docid>(core.index->last_docid() + 1);
+			info.version = 1;
+			if (args.finalise) {
+				args.finalise(doc, info);
+			}
+			ENGINE_CENSUS_DOCUMENT(doc, info.term);
+			auto& op = t.ops.emplace_back();
+			op.type = prospect::operation::add;
+			auto& native = native_of(doc);
+			stamp_version(native, info.version);
+			fill(t, op.doc, native, core.index->fields());
+		}
+		if (host_) {
+			lk.unlock();
+		}
+		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true, lk), info);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -640,57 +698,61 @@ Shard::add(Document& doc, WriteArgs args)
 task::task<WriteResult>
 Shard::replace(docid did, Document& doc, WriteArgs args)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.replace");
 	try {
 		require_local(args);
 		require_writable(writable_);
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
 		auto& native = native_of(doc);
 		const bool replayed = native.replayed();
-		std::optional<rev> stored;
-		if (!native.key().empty()) {
-			// A document with a key is found by it; the id must be the one that holds the key.
-			if (const auto found = core.index->find_key(native.key())) {
-				if (found->first != did) {
-					if (replayed) {
-						// The key was erased and added again after this line: the index is past it.
-						WriteResult skipped;
-						skipped.did = did;
-						skipped.version = static_cast<rev>(found->second);
-						co_return skipped;
+		WriteResult info;
+		prospect::transaction t;
+		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
+		{
+			core.check(*handle_);
+			std::optional<rev> stored;
+			if (!native.key().empty()) {
+				// A document with a key is found by it; the id must be the one that holds the key.
+				if (const auto found = core.index->find_key(native.key())) {
+					if (found->first != did) {
+						if (replayed) {
+							// The key was erased and added again after this line: the index is past it.
+							WriteResult skipped;
+							skipped.did = did;
+							skipped.version = static_cast<rev>(found->second);
+							co_return skipped;
+						}
+						throw Error(errc::invalid, "The key belongs to another document");
 					}
-					throw Error(errc::invalid, "The key belongs to another document");
+					stored = static_cast<rev>(found->second);
+				} else {
+					stored = version_of(core, did);
 				}
-				stored = static_cast<rev>(found->second);
 			} else {
 				stored = version_of(core, did);
 			}
-		} else {
-			stored = version_of(core, did);
+			info.did = did;
+			if (replayed && !replay_applies(native, stored)) {
+				// A log line the index already holds: replaying it again changes nothing.
+				info.version = *stored;
+				co_return info;
+			}
+			check_version(args.expected_version, stored);
+			info.version = stored.value_or(0) + 1;
+			if (args.finalise) {
+				args.finalise(doc, info);
+			}
+			ENGINE_CENSUS_DOCUMENT(doc, info.term);
+			stamp_version(native, info.version);
+			auto& op = t.ops.emplace_back();
+			op.type = prospect::operation::replace_docid;
+			op.docid = did;
+			fill(t, op.doc, native, core.index->fields());
 		}
-		WriteResult info;
-		info.did = did;
-		if (replayed && !replay_applies(native, stored)) {
-			// A log line the index already holds: replaying it again changes nothing.
-			info.version = *stored;
-			co_return info;
+		if (host_) {
+			lk.unlock();
 		}
-		check_version(args.expected_version, stored);
-		info.version = stored.value_or(0) + 1;
-		if (args.finalise) {
-			args.finalise(doc, info);
-		}
-		ENGINE_CENSUS_DOCUMENT(doc, info.term);
-		stamp_version(native, info.version);
-		prospect::transaction t;
-		auto& op = t.ops.emplace_back();
-		op.type = prospect::operation::replace_docid;
-		op.docid = did;
-		fill(t, op.doc, native, core.index->fields());
-		auto result = apply(core, t, info);
+		auto result = assigned(co_await apply_t(core, *handle_, *chores_, t, true, lk), info);
 		if (replayed) {
 			crash_point("replay");
 		}
@@ -704,45 +766,49 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 task::task<WriteResult>
 Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.replace_by_key");
 	try {
 		require_local(args);
 		require_writable(writable_);
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		const auto ekey = key;
 		WriteResult info;
-		info.term = key;
-		std::optional<rev> stored;
-		if (const auto found = core.index->find_key(ekey)) {
-			info.did = static_cast<docid>(found->first);
-			stored = static_cast<rev>(found->second);
-		} else {
-			info.did = static_cast<docid>(core.index->last_docid() + 1);
-		}
-		auto& native = native_of(doc);
-		if (native.replayed() && !replay_applies(native, stored)) {
-			info.version = *stored;
-			co_return info;
-		}
-		check_version(args.expected_version, stored);
-		info.version = stored.value_or(0) + 1;
-		if (args.finalise) {
-			args.finalise(doc, info);
-		}
-		ENGINE_CENSUS_DOCUMENT(doc, info.term);
-		if (native.key() != key) {
-			native.set_key(key);
-		}
-		stamp_version(native, info.version);
 		prospect::transaction t;
-		auto& op = t.ops.emplace_back();
-		op.type = prospect::operation::replace_key;
-		op.key = ekey;
-		fill(t, op.doc, native, core.index->fields());
-		co_return apply(core, t, info);
+		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
+		{
+			core.check(*handle_);
+			const auto ekey = key;
+			info.term = key;
+			std::optional<rev> stored;
+			if (const auto found = core.index->find_key(ekey)) {
+				info.did = static_cast<docid>(found->first);
+				stored = static_cast<rev>(found->second);
+			} else {
+				info.did = static_cast<docid>(core.index->last_docid() + 1);
+			}
+			auto& native = native_of(doc);
+			if (native.replayed() && !replay_applies(native, stored)) {
+				info.version = *stored;
+				co_return info;
+			}
+			check_version(args.expected_version, stored);
+			info.version = stored.value_or(0) + 1;
+			if (args.finalise) {
+				args.finalise(doc, info);
+			}
+			ENGINE_CENSUS_DOCUMENT(doc, info.term);
+			if (native.key() != key) {
+				native.set_key(key);
+			}
+			stamp_version(native, info.version);
+			auto& op = t.ops.emplace_back();
+			op.type = prospect::operation::replace_key;
+			op.key = ekey;
+			fill(t, op.doc, native, core.index->fields());
+		}
+		if (host_) {
+			lk.unlock();
+		}
+		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true, lk), info);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -752,29 +818,29 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 task::task<void>
 Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.erase");
 	try {
 		require_writable(writable_);
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		const auto stored = version_of(core, did);
-		if (!stored) {
-			throw Error(errc::doc_not_found, "Document not found");
-		}
-		if (local && expected_version) {
-			check_version(expected_version, stored);
-		}
 		prospect::transaction t;
-		t.ops.emplace_back();
-		t.ops[0].type = prospect::operation::delete_docid;
-		t.ops[0].docid = did;
-		const auto verdict = core.index->apply(t, {});
-		if (verdict.result != ::strata::verdict::accepted) {
-			reject(verdict);
+		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
+		{
+			core.check(*handle_);
+			const auto stored = version_of(core, did);
+			if (!stored) {
+				throw Error(errc::doc_not_found, "Document not found");
+			}
+			if (local && expected_version) {
+				check_version(expected_version, stored);
+			}
+			t.ops.emplace_back();
+			t.ops[0].type = prospect::operation::delete_docid;
+			t.ops[0].docid = did;
 		}
-		core.dirty = core.pending = true;
+		if (host_) {
+			lk.unlock();
+		}
+		co_await apply_t(core, *handle_, *chores_, t, true, lk);
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -785,32 +851,34 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 task::task<docid>
 Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.erase_by_key");
 	try {
 		require_writable(writable_);
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		const auto ekey = key;
-		const auto found = core.index->find_key(ekey);
-		if (!found) {
-			throw Error(errc::doc_not_found, "Document not found");
-		}
-		if (expected_version) {
-			check_version(expected_version, static_cast<rev>(found->second));
-		}
 		prospect::transaction t;
-		t.ops.emplace_back();
-		t.ops[0].type = prospect::operation::delete_key;
-		t.ops[0].key = ekey;
-		const auto verdict = core.index->apply(t, {});
-		if (verdict.result != ::strata::verdict::accepted) {
-			reject(verdict);
+		docid erased;
+		std::unique_lock<std::mutex> lk(core.mtx);
+		{
+			core.check(*handle_);
+			const auto ekey = key;
+			const auto found = core.index->find_key(ekey);
+			if (!found) {
+				throw Error(errc::doc_not_found, "Document not found");
+			}
+			if (expected_version) {
+				check_version(expected_version, static_cast<rev>(found->second));
+			}
+			t.ops.emplace_back();
+			t.ops[0].type = prospect::operation::delete_key;
+			t.ops[0].key = ekey;
+			erased = static_cast<docid>(found->first);
 		}
-		core.dirty = core.pending = true;
+		if (host_) {
+			lk.unlock();
+		}
+		co_await apply_t(core, *handle_, *chores_, t, true, lk);
 		(void)local;
-		co_return static_cast<docid>(found->first);
+		co_return erased;
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -823,13 +891,14 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 task::task<void>
 Shard::commit(Transaction transaction)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.commit");
 	try {
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		core.commit();
+		co_await chores_->run(ChoreClass::flush, [&core, this] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(*handle_);
+			core.commit();
+		});
 		(void)transaction;
 		co_return;
 	} catch (...) {
@@ -841,19 +910,20 @@ Shard::commit(Transaction transaction)
 task::task<void>
 Shard::begin_transaction(bool flushed)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.begin_transaction");
 	try {
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		if (core.transaction) {
-			throw Error(errc::invalid, "A transaction is already in progress");
-		}
-		if (flushed) {
-			core.commit();
-		}
-		core.transaction = true;
+		co_await chores_->run(ChoreClass::flush, [&core, this, flushed] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(*handle_);
+			if (core.transaction) {
+				throw Error(errc::invalid, "A transaction is already in progress");
+			}
+			if (flushed) {
+				core.commit();
+			}
+			core.transaction = true;
+		});
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -864,17 +934,18 @@ Shard::begin_transaction(bool flushed)
 task::task<void>
 Shard::commit_transaction()
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.commit_transaction");
 	try {
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		if (!core.transaction) {
-			throw Error(errc::invalid, "No transaction is in progress");
-		}
-		core.commit();
-		core.transaction = false;
+		co_await chores_->run(ChoreClass::flush, [&core, this] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(*handle_);
+			if (!core.transaction) {
+				throw Error(errc::invalid, "No transaction is in progress");
+			}
+			core.commit();
+			core.transaction = false;
+		});
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -885,16 +956,17 @@ Shard::commit_transaction()
 task::task<void>
 Shard::cancel_transaction()
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.cancel_transaction");
 	try {
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		if (!core.transaction) {
-			throw Error(errc::invalid, "No transaction is in progress");
-		}
-		core.reopen_index(&handle_->seen);  // when it fails the shard raises on every call until a reopen succeeds
+		co_await chores_->run(ChoreClass::flush, [&core, this] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(*handle_);
+			if (!core.transaction) {
+				throw Error(errc::invalid, "No transaction is in progress");
+			}
+			core.reopen_index(&handle_->seen);  // when it fails the shard raises on every call until a reopen succeeds
+		});
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -905,7 +977,6 @@ Shard::cancel_transaction()
 task::task<void>
 Shard::set_metadata(const std::string& key, const std::string& value)
 {
-	co_await Hop{on_};
 	ENGINE_CENSUS_COUNT("shard.set_metadata");
 	try {
 		if (key.starts_with(reserved_meta_prefix)) {
@@ -913,19 +984,14 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 		}
 		require_writable(writable_);
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
 		prospect::transaction t;
 		t.ops.emplace_back();
 		auto& op = t.ops[0];
 		op.type = value.empty() ? prospect::operation::delete_meta : prospect::operation::set_meta;
 		op.meta_key = key;
 		op.meta_value = value;
-		const auto verdict = core.index->apply(t, {});
-		if (verdict.result != ::strata::verdict::accepted) {
-			reject(verdict);
-		}
-		core.pending = true;
+		std::unique_lock<std::mutex> lk;  // apply_t takes it
+		co_await apply_t(core, *handle_, *chores_, t, false, lk);
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -936,40 +1002,43 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 task::task<void>
 Shard::add_spelling(const std::string&, termcount)
 {
-	co_await Hop{on_};
 	throw Error(errc::not_available, "The strata engine does not keep spellings");
+	co_return;
 }
 
 
 task::task<termcount>
 Shard::remove_spelling(const std::string&, termcount)
 {
-	co_await Hop{on_};
 	throw Error(errc::not_available, "The strata engine does not keep spellings");
+	co_return 0;
 }
 
 
 task::task<bool>
 Shard::reopen()
 {
-	co_await Hop{on_};
 	try {
 		// One index in this process: a handle always sees the latest. Only a fenced or failed index is replaced.
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		const bool stale = writable_ && handle_->seen != core.epoch.load();
-		if (!stale && !core.unusable()) {
-			co_return false;
-		}
-		if (writable_ && (stale || core.fenced.load())) {
-			// The writer's unsaved writes are gone with the index: it must be closed and opened again, which replays the log.
-			if (core.unusable()) {
-				core.reopen_index();
+		bool reopened = false;
+		co_await chores_->run(ChoreClass::flush, [&core, this, &reopened] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			const bool stale = writable_ && handle_->seen != core.epoch.load();
+			if (!stale && !core.unusable()) {
+				return;
 			}
-			throw Error(errc::reopen, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
-		}
-		core.reopen_index(&handle_->seen);
-		co_return true;
+			if (writable_ && (stale || core.fenced.load())) {
+				// The writer's unsaved writes are gone with the index: it must be closed and opened again, which replays the log.
+				if (core.unusable()) {
+					core.reopen_index();
+				}
+				throw Error(errc::reopen, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+			}
+			core.reopen_index(&handle_->seen);
+			reopened = true;
+		});
+		co_return reopened;
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -979,12 +1048,11 @@ Shard::reopen()
 task::task<Stats>
 Shard::stats()
 {
-	co_await Hop{on_};
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		core.refresh();
+		core.refresh_for_read();
 		const auto& manifest = core.index->manifest();
 		Stats stats;
 		stats.uuid = core.uuid;
@@ -1013,7 +1081,6 @@ Shard::stats()
 task::task<docid>
 Shard::find_key(const std::string& key)
 {
-	co_await Hop{on_};
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
@@ -1029,7 +1096,6 @@ Shard::find_key(const std::string& key)
 task::task<std::unique_ptr<DocView>>
 Shard::get(docid did)
 {
-	co_await Hop{on_};
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
@@ -1048,13 +1114,12 @@ Shard::get(docid did)
 task::task<void>
 Shard::scan(docid from, const ScanSink& sink)
 {
-	co_await Hop{on_};
 	CallbackGuard guard;
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
 		core.check(*handle_);
-		core.refresh();
+		core.refresh_for_read();
 		struct Hit {
 			docid did;
 			const prospect::segment* seg;
@@ -1088,7 +1153,6 @@ Shard::scan(docid from, const ScanSink& sink)
 task::task<std::string>
 Shard::metadata(const std::string& key)
 {
-	co_await Hop{on_};
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
@@ -1105,7 +1169,6 @@ Shard::metadata(const std::string& key)
 task::task<std::vector<std::string>>
 Shard::metadata_keys()
 {
-	co_await Hop{on_};
 	try {
 		auto& core = *handle_->core;
 		std::lock_guard<std::mutex> lk(core.mtx);
@@ -1117,6 +1180,95 @@ Shard::metadata_keys()
 			}
 		}
 		co_return keys;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+bool
+Shard::dirty() const noexcept
+{
+	return handle_->core->dirty.load();
+}
+
+
+task::task<void>
+Shard::refresh()
+{
+	try {
+		auto& core = *handle_->core;
+		if (core.dirty) {
+			co_await chores_->run(ChoreClass::query, [&core, this] {
+				std::lock_guard<std::mutex> lk(core.mtx);
+				core.check(*handle_);
+				core.refresh();
+			});
+		}
+		co_return;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+// Publishes the merges that finished and frees what the index queued for removal.
+task::task<void>
+Shard::reclaim()
+{
+	try {
+		auto& core = *handle_->core;
+		co_await chores_->run(ChoreClass::merge, [&core, this] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(*handle_);
+			if (core.index->merges_pending() > 0 || core.dirty) {
+				core.index->refresh();  // publishes the merges that finished
+				core.dirty = false;
+			}
+			core.index->reclaim();
+		});
+		co_return;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+// Background work owed: merges not yet published, files queued for removal, deletes not yet collected.
+std::size_t
+Shard::merges_pending() const noexcept
+{
+	auto& core = *handle_->core;
+	std::lock_guard<std::mutex> lk(core.mtx);
+	return core.index ? core.index->merges_pending() + core.index->reclaim_pending() + core.index->deletes_pending() : 0;
+}
+
+
+void
+Shard::use_chores(Chores* chores) noexcept
+{
+	chores_ = chores ? chores : &inline_chores();
+}
+
+
+task::task<void>
+Shard::close()
+{
+	try {
+		auto& core = *handle_->core;
+		co_await chores_->run(ChoreClass::flush, [&core] {
+			std::lock_guard<std::mutex> lk(core.mtx);
+			if (core.index) {
+				// An open transaction is discarded; pending work is kept.
+				if (core.pending && !core.transaction && !core.fenced.load()) {
+					core.index->commit();
+					core.pending = core.dirty = false;
+				}
+				core.index.reset();
+				core.closed = true;
+			}
+		});
+		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -1139,7 +1291,7 @@ Shard::doc_count() const
 	auto& core = *handle_->core;
 	std::lock_guard<std::mutex> lk(core.mtx);
 	core.check(*handle_);
-	core.refresh();
+	core.refresh_for_read();
 	return live_count(core);
 }
 
@@ -1193,7 +1345,7 @@ Shard::pin()
 	Pinned pinned{std::unique_lock<std::mutex>(core.mtx)};
 	try {
 		core.check(*handle_);
-		core.refresh();
+		core.refresh_for_read();
 		pinned.segments_ = core.index->segments();
 		pinned.fields_ = &core.index->fields();
 		pinned.identity_ = handle_->core;
@@ -1205,14 +1357,16 @@ Shard::pin()
 
 
 task::task<Opened>
-open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on)
+open_local(const std::string& path, bool writable, bool create_missing, OpenOptions options)
 {
-	co_await Hop{on};
 	try {
 		Opened opened;
-		auto handle = acquire(path, create_missing, opened.created);
+		std::unique_ptr<Handle> handle;
+		// Opening reads the manifest and maps the segments: a chore.
+		Chores& chores = options.chores ? *options.chores : inline_chores();
+		co_await chores.run(ChoreClass::query, [&] { handle = acquire(path, create_missing, opened.created, options); });
 		handle->writable = writable;
-		opened.shard = std::make_unique<Shard>(std::move(handle), writable, on);
+		opened.shard = std::make_unique<Shard>(std::move(handle), writable, options);
 		co_return opened;
 	} catch (...) {
 		rethrow_translated();
@@ -1221,19 +1375,21 @@ open_local(const std::string& path, bool writable, bool create_missing, task::sc
 
 
 task::task<CheckResult>
-check(const std::string& path, task::scheduler_ref on)
+check(const std::string& path, OpenOptions options)
 {
-	co_await Hop{on};
 	CheckResult result;
+	Chores& chores = options.chores ? *options.chores : inline_chores();
 	try {
-		bool created = false;
-		auto handle = acquire(path, false, created);
-		auto& core = *handle->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle);
-		core.refresh();
-		core.verify_fields();
-		(void)core.index->check();
+		co_await chores.run(ChoreClass::query, [&] {
+			bool created = false;
+			auto handle = acquire(path, false, created, options);
+			auto& core = *handle->core;
+			std::lock_guard<std::mutex> lk(core.mtx);
+			core.check(*handle);
+			core.refresh();
+			core.verify_fields();
+			(void)core.index->check();
+		});
 	} catch (const Error& error) {
 		result.errors = 1;
 		result.failure = error.description();

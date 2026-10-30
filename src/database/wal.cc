@@ -34,7 +34,7 @@
 
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
 #include "database/pool.h"          // for DatabasePool
-#include "database/shard.h"         // for Shard
+#include "engine/shard.h"            // for engine::Shard
 #include "database/utils.h"         // for read_uuid
 #include "xapiand_exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description
@@ -124,11 +124,11 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 }
 
 
-DatabaseWAL::DatabaseWAL(Shard* shard)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(shard->endpoint.path, this, [](int fd, bool full_fsync) { debounce_or_run(*fsyncher(), fsyncher_fsync, fd, fd, full_fsync); }),
+DatabaseWAL::DatabaseWAL(WalTarget* target)
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(target->path(), this, [](int fd, bool full_fsync) { debounce_or_run(*fsyncher(), fsyncher_fsync, fd, fd, full_fsync); }),
 	  validate_uuid(true),
 	  _revision(0),
-	  _shard(shard)
+	  _shard(target)
 {
 	_uuid = UUID(_shard->engine().uuid());
 	_uuid_le = UUID(_uuid.get_bytes(), true);
@@ -169,7 +169,7 @@ DatabaseWAL::execute()
 		THROW(Error, "Database is not defined");
 	}
 
-	engine::rev revision = _shard->reopen_revision;
+	engine::rev revision = _shard->start_revision();
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 

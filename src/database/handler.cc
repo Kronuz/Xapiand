@@ -86,6 +86,14 @@ constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
 const std::string dump_documents_header("xapiand-dump-docs");
 
 
+// The engine of a shard for a read: the index opened, and anything applied to it refreshed so the read sees it.
+static engine::Shard&
+read_engine(lock_shard& lk_shard)
+{
+	return *engine::sync_wait(lk_shard->engine_for_read());
+}
+
+
 engine::docid
 to_docid(std::string_view document_id)
 {
@@ -767,7 +775,7 @@ DatabaseHandler::dump_documents()
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			engine::docid shard_did = initial;
 			try {
-				engine::sync_wait(lk_shard->engine().scan(initial, [&](const engine::DocView& doc) {
+				engine::sync_wait(read_engine(lk_shard).scan(initial, [&](const engine::DocView& doc) {
 					shard_did = doc.did();
 					engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					docs.push_back(_dump_document(did, Data(doc.data())));
@@ -776,7 +784,7 @@ DatabaseHandler::dump_documents()
 			} catch (const engine::Error& error) {
 				lk_shard->retry_read(error, t);
 			}
-			lk_shard->reopen();
+			engine::sync_wait(lk_shard->reopen());
 			L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 			initial = shard_did;
@@ -809,7 +817,7 @@ DatabaseHandler::dump_documents(int fd)
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			engine::docid shard_did = initial;
 			try {
-				engine::sync_wait(lk_shard->engine().scan(initial, [&](const engine::DocView& doc) {
+				engine::sync_wait(read_engine(lk_shard).scan(initial, [&](const engine::DocView& doc) {
 					shard_did = doc.did();
 					engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					auto obj = _dump_document(did, Data(doc.data()));
@@ -822,7 +830,7 @@ DatabaseHandler::dump_documents(int fd)
 			} catch (const engine::Error& error) {
 				lk_shard->retry_read(error, t);
 			}
-			lk_shard->reopen();
+			engine::sync_wait(lk_shard->reopen());
 			L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 			initial = shard_did;
@@ -1152,58 +1160,58 @@ DatabaseHandler::match(
 
 	engine::SearchResult result;
 
-	auto shards = manager->database_pool->checkout(endpoints, flags);
-	try {
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			try {
-				// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
-				std::vector<engine::Shard*> engines;
-				engines.reserve(shards.size());
-				for (auto& shard : shards) {
-					try {
-						engines.push_back(&shard->engine());
-					} catch (const engine::Error& error) {
-						if (error.kind != engine::errc::not_found) { throw; }
-					}
-				}
-				if (engines.empty()) {
-					break;  // nothing to search -> empty result
-				}
-
-				result = engine::sync_wait(engine::search(engines, request));
-				break;
-			} catch (const QueryParserError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const SerialisationError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const QueryDslError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const engine::Error& error) {
-				switch (error.kind) {
-					case engine::errc::reopen:
-					case engine::errc::opening:
-					case engine::errc::not_found:
-					case engine::errc::not_available:
-					case engine::errc::timeout:
-					case engine::errc::network:
-					case engine::errc::closed:
-						if (t == 0) { throw; }
-						break;
-					case engine::errc::syntax:
-						THROW(ClientError, error.description());
-					default:
-						throw;
+	// One use of each shard for the whole search: the entries stay open, and each engine is refreshed
+	// once, so the search reads what was applied before it.
+	std::vector<lock_shard> shards;
+	shards.reserve(endpoints.size());
+	for (auto& endpoint : endpoints) {
+		shards.emplace_back(endpoint, flags);
+	}
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
+			std::vector<engine::Shard*> engines;
+			engines.reserve(shards.size());
+			for (auto& shard : shards) {
+				try {
+					engines.push_back(&read_engine(shard));
+				} catch (const engine::Error& error) {
+					if (error.kind != engine::errc::not_found) { throw; }
 				}
 			}
-			for (auto& shard : shards) {
-				shard->reopen();
+			if (engines.empty()) {
+				break;  // nothing to search -> empty result
+			}
+
+			result = engine::sync_wait(engine::search(engines, request));
+			break;
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const engine::Error& error) {
+			switch (error.kind) {
+				case engine::errc::reopen:
+				case engine::errc::opening:
+				case engine::errc::not_found:
+				case engine::errc::not_available:
+				case engine::errc::timeout:
+				case engine::errc::network:
+				case engine::errc::closed:
+					if (t == 0) { throw; }
+					break;
+				case engine::errc::syntax:
+					THROW(ClientError, error.description());
+				default:
+					throw;
 			}
 		}
-	} catch (...) {
-		manager->database_pool->checkin(shards);
-		throw;
+		for (auto& shard : shards) {
+			engine::sync_wait(shard->reopen());
+		}
 	}
-	manager->database_pool->checkin(shards);
 
 	return result;
 }
@@ -1265,7 +1273,7 @@ DatabaseHandler::get_metadata_keys()
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			keys = lk_shard->get_metadata_keys();
+			keys = engine::sync_wait(lk_shard->get_metadata_keys());
 			if (!keys.empty()) {
 				break;
 			}
@@ -1293,7 +1301,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			value = lk_shard->get_metadata(key);
+			value = engine::sync_wait(lk_shard->get_metadata(key));
 			if (!value.empty()) {
 				break;
 			}
@@ -1328,7 +1336,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			lk_shard->set_metadata(key, value, commit, wal);
+			engine::sync_wait(lk_shard->set_metadata(key, value, commit, wal));
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -1417,7 +1425,7 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				auto shard_did = engine::sync_wait(lk_shard->engine().find_key(term));
+				auto shard_did = engine::sync_wait(read_engine(lk_shard).find_key(term));
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					return did;
@@ -1430,7 +1438,7 @@ DatabaseHandler::get_docid_term(const std::string& term)
 				lk_shard->retry_read(error, t);
 			}
 			try {
-				lk_shard->reopen();
+				engine::sync_wait(lk_shard->reopen());
 			} catch (const engine::Error& error) {
 				if (error.kind != engine::errc::not_available) { throw; }
 				eptr = std::current_exception(); break;
@@ -1459,7 +1467,7 @@ DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool 
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	lk_shard->delete_document(shard_did, commit, wal, version);
+	engine::sync_wait(lk_shard->delete_document(shard_did, commit, wal, version));
 }
 
 
@@ -1502,7 +1510,7 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	lk_shard->delete_document_term(term, commit, wal, version);
+	engine::sync_wait(lk_shard->delete_document_term(term, commit, wal, version));
 }
 
 
@@ -1526,7 +1534,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 			auto node = lk_shard->node();
 			if (node && node->is_active()) {
 				try {
-					auto doccount = lk_shard->engine().doc_count();
+					auto doccount = read_engine(lk_shard).doc_count();
 					if (min_doccount > doccount) {
 						min_doccount = doccount;
 						shard_num = n;
@@ -1538,7 +1546,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto info = lk_shard->add_document(std::move(doc), commit, wal, version);
+	auto info = engine::sync_wait(lk_shard->add_document(std::move(doc), commit, wal, version));
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	return info;
 }
@@ -1555,7 +1563,7 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto info = lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	auto info = engine::sync_wait(lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version));
 	info.did = did;
 	return info;
 }
@@ -1586,7 +1594,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 					auto node = lk_shard->node();
 					if (node && node->is_active()) {
 						try {
-							auto doccount = lk_shard->engine().doc_count();
+							auto doccount = read_engine(lk_shard).doc_count();
 							if (min_doccount > doccount) {
 								min_doccount = doccount;
 								shard_num = n;
@@ -1615,7 +1623,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto info = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
+	auto info = engine::sync_wait(lk_shard->replace_document_term(term, std::move(doc), commit, wal, version));
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	return info;
 }
@@ -1719,7 +1727,7 @@ DatabaseHandler::get_database_info()
 	if (endpoints.size() == 1) {
 		auto& endpoint = endpoints[0];
 		lock_shard lk_shard(endpoint, flags);
-		auto stats = engine::sync_wait(lk_shard->engine().stats());
+		auto stats = engine::sync_wait(read_engine(lk_shard).stats());
 		return {
 			{ RESPONSE_ENDPOINT, endpoint.path },
 			{ RESPONSE_UUID, stats.uuid },
@@ -1751,7 +1759,7 @@ DatabaseHandler::get_database_info()
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
-		auto stats = engine::sync_wait(lk_shard->engine().stats());
+		auto stats = engine::sync_wait(read_engine(lk_shard).stats());
 		doc_count += stats.doc_count;
 		engine::docid shard_lastdocid = stats.lastdocid;
 		engine::docid did = (shard_lastdocid - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
@@ -1794,7 +1802,7 @@ DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	return lk_shard->storage_get_stored(locator);
+	return engine::sync_wait(lk_shard->storage_get_stored(locator));
 }
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -1811,7 +1819,7 @@ DatabaseHandler::commit(bool wal)
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			ret = lk_shard->commit(wal) || ret;
+			ret = engine::sync_wait(lk_shard->commit(wal)) || ret;
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -1830,21 +1838,10 @@ DatabaseHandler::reopen()
 
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
-		lk_shard->reopen();
+		engine::sync_wait(lk_shard->reopen());
 	}
 }
 
-
-void
-DatabaseHandler::do_close(bool commit_)
-{
-	L_CALL("DatabaseHandler::do_close()");
-
-	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
-		lk_shard->do_close(commit_);
-	}
-}
 
 MsgPack
 DatabaseHandler::unserialise_term_id(std::string_view term_id)
@@ -2283,13 +2280,13 @@ Document::serialise()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = engine::sync_wait(lk_shard->get_view(shard_did));
 			serialised = doc->serialise();
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		engine::sync_wait(lk_shard->reopen());
 	}
 
 	return serialised;
@@ -2323,13 +2320,13 @@ Document::get_value(engine::valueno slot)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = engine::sync_wait(lk_shard->get_view(shard_did));
 			value = doc->value(slot);
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		engine::sync_wait(lk_shard->reopen());
 	}
 
 	return value;
@@ -2363,13 +2360,13 @@ Document::get_data()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = engine::sync_wait(lk_shard->get_view(shard_did));
 			data = doc->data();
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		engine::sync_wait(lk_shard->reopen());
 	}
 
 	return data;
@@ -2401,12 +2398,12 @@ Document::validate()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			lk_shard->get_view(shard_did);
+			engine::sync_wait(lk_shard->get_view(shard_did));
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		engine::sync_wait(lk_shard->reopen());
 	}
 
 	return true;
@@ -2440,7 +2437,7 @@ Document::get_values()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = engine::sync_wait(lk_shard->get_view(shard_did));
 			doc->values([&](engine::valueno slot, std::string_view value) {
 				values[std::to_string(slot)] = value;
 			});
@@ -2448,7 +2445,7 @@ Document::get_values()
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		engine::sync_wait(lk_shard->reopen());
 	}
 
 	return values;
@@ -2509,27 +2506,14 @@ Document::get_field(std::string_view slot_name, const MsgPack& obj)
 
 
 void
-committer_commit(std::weak_ptr<Shard> weak_shard) {
-	if (auto shard = weak_shard.lock()) {
-		auto start = std::chrono::steady_clock::now();
-
-		std::string error;
-
-		try {
-			lock_shard lk_shard(Endpoint(shard->endpoint), DB_OPEN | DB_WRITABLE);
-			lk_shard->commit();
-		} catch (const Exception& exc) {
-			error = exc.get_message();
-		} catch (const engine::Error& exc) {
-			error = exc.description();
-		}
-
-		auto end = std::chrono::steady_clock::now();
-
-		if (error.empty()) {
-			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), strings::from_delta(start, end));
-		} else {
-			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
-		}
+committer_commit(Endpoint endpoint) {
+	// The debouncer's thread only starts the commit: it is a task of the index, and takes its turn.
+	auto manager = XapiandManager::manager();
+	if (!manager || !manager->database_pool) {
+		return;
+	}
+	auto entry = manager->database_pool->get(endpoint);
+	if (entry) {
+		manager->database_pool->run_detached(autocommit(std::move(entry)));
 	}
 }

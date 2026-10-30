@@ -328,7 +328,7 @@ public:
 };
 
 
-void committer_commit(std::weak_ptr<Shard> weak_shard);
+void committer_commit(Endpoint endpoint);
 
 
 inline auto& committer(bool create = true) {

@@ -71,7 +71,6 @@ extern struct opts_t {
 	ssize_t resolver_cache_size = 100;
 	ssize_t wal_writer_cache_size = 100;
 	ssize_t max_clients = 10;
-	ssize_t max_database_readers = 3;
 	ssize_t max_files = 0;  // (0 = automatic)
 	size_t num_shards = 5;
 	size_t num_replicas = 0;

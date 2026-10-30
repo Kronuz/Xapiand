@@ -69,6 +69,7 @@ catch_http_errors(Func&& func)
 				status(HTTP_STATUS_CONFLICT);
 				break;
 			case engine::errc::not_available:
+			case engine::errc::busy:
 			case engine::errc::reopen:
 				status(HTTP_STATUS_SERVICE_UNAVAILABLE);
 				break;

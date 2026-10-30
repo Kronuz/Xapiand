@@ -49,8 +49,29 @@
 
 
 class MsgPack;
-class Shard;
 struct WalHeader;
+
+namespace engine {
+class Shard;
+}
+
+
+// What the log replays into: the index being opened. Replay runs in the open chore, with nobody else
+// on the index, so none of this takes the index's turn.
+class WalTarget {
+public:
+	virtual ~WalTarget() = default;
+
+	virtual const std::string& path() const = 0;
+	virtual engine::Shard& engine() = 0;
+	virtual engine::rev start_revision() const = 0;
+	virtual bool commit(bool wal) = 0;
+	virtual void replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version) = 0;
+	virtual void delete_document(engine::docid did, bool commit, bool wal, bool version) = 0;
+	virtual void set_metadata(const std::string& key, const std::string& value, bool commit, bool wal) = 0;
+	virtual void add_spelling(const std::string& word, engine::termcount freq, bool commit, bool wal) = 0;
+	virtual void remove_spelling(const std::string& word, engine::termcount freq, bool commit, bool wal) = 0;
+};
 
 
 // v2 (dual-meta, crash-safe) WAL header. It begins with the engine-owned
@@ -157,9 +178,9 @@ public:
 	UUID _uuid;
 	UUID _uuid_le;
 	engine::rev _revision;
-	Shard* _shard;
+	WalTarget* _shard;
 
-	DatabaseWAL(Shard* shard);
+	DatabaseWAL(WalTarget* target);
 	DatabaseWAL(std::string_view base_path_);
 
 	iterator begin();

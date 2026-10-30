@@ -1,0 +1,258 @@
+/*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#pragma once
+
+// The schedulers the database layer's tasks run on. A Host is a task scheduler that can also arm a
+// timer, which a turn's deadline needs (task::async_mutex::lock_until). Two exist:
+//
+//   BlockingScheduler  runs a task on the thread that waits for it: every resume (a chore's completion,
+//                      a turn handed over, an event) is posted to that thread's queue and run there, so
+//                      nothing resumes inside another task's call stack. engine::sync_wait uses it.
+//   AsioHost           runs tasks on an Asio executor (the control loop); engine/host_asio.h.
+
+#include <algorithm>               // for std::min_element
+#include <cassert>                 // for assert
+#include <chrono>                  // for std::chrono
+#include <condition_variable>      // for std::condition_variable
+#include <coroutine>               // for std::coroutine_handle
+#include <cstdint>                 // for std::uint64_t
+#include <deque>                   // for std::deque
+#include <exception>               // for std::exception_ptr
+#include <memory>                  // for std::unique_ptr
+#include <mutex>                   // for std::mutex
+#include <optional>                // for std::optional
+#include <type_traits>             // for std::decay_t
+#include <utility>                 // for std::move
+#include <variant>                 // for std::monostate
+#include <vector>                  // for std::vector
+
+#include "task.hh"                 // for task::task, task::spawn
+
+
+namespace engine {
+
+class Host {
+public:
+	// What a timer runs at its deadline. It only posts or settles: it never blocks.
+	struct TimerNode {
+		virtual ~TimerNode() = default;
+		virtual void fire() noexcept = 0;
+	};
+
+	// A timer that has been armed; destroying it cancels it (the node is then destroyed unrun).
+	class Timer {
+	public:
+		virtual ~Timer() = default;
+	};
+
+	virtual ~Host() = default;
+
+	// Thread-safe. The coroutine resumes on this host's thread.
+	virtual void post(std::coroutine_handle<> h) = 0;
+	virtual void post_demoted(std::coroutine_handle<> h) { post(h); }
+
+	// How many index turns the task running here holds, when this host runs one task at a time (a
+	// blocking wait does); null when it interleaves tasks. A task holds one at most (debug builds).
+	virtual int* turns_held() noexcept { return nullptr; }
+
+	// Runs t on this host to its end, with nobody awaiting it. A task that can fail catches its own errors.
+	void spawn(task::task<void> t) {
+		task::spawn(task::scheduler_ref::of(*this), std::move(t), [](std::exception_ptr e) {
+			if (e) { std::terminate(); }
+		});
+	}
+
+	std::uint64_t now() const noexcept {
+		return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+	}
+
+	// Runs f() once at `at` on this host, unless the returned timer is destroyed first.
+	template <typename F>
+	std::unique_ptr<Timer> start_timer(std::chrono::steady_clock::time_point at, F&& f) {
+		struct Node final : TimerNode {
+			std::decay_t<F> fn;
+			explicit Node(F&& f_) : fn(std::forward<F>(f_)) { }
+			void fire() noexcept override { fn(); }
+		};
+		return arm(at, std::make_unique<Node>(std::forward<F>(f)));
+	}
+
+	// The host whose thread is running a task right now (null outside any).
+	static Host* current() noexcept { return current_; }
+
+protected:
+	virtual std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point at, std::unique_ptr<TimerNode> node) = 0;
+
+private:
+	friend class HostScope;
+	static inline thread_local Host* current_ = nullptr;
+};
+
+// Marks the code that runs a resume as running on `host`.
+class HostScope {
+public:
+	explicit HostScope(Host* host) noexcept : previous_(Host::current_) { Host::current_ = host; }
+	~HostScope() { Host::current_ = previous_; }
+	HostScope(const HostScope&) = delete;
+	HostScope& operator=(const HostScope&) = delete;
+
+private:
+	Host* previous_;
+};
+
+
+// A scheduler owned by one waiting thread: run() drives a task there until it ends.
+class BlockingScheduler final : public Host {
+public:
+	BlockingScheduler() = default;
+	BlockingScheduler(const BlockingScheduler&) = delete;
+	BlockingScheduler& operator=(const BlockingScheduler&) = delete;
+	~BlockingScheduler() override {
+		assert(ready_.empty() && timers_.empty());
+	}
+
+	void post(std::coroutine_handle<> h) override {
+		{
+			std::lock_guard<std::mutex> lk(m_);
+			ready_.push_back(h);
+		}
+		cv_.notify_one();
+	}
+
+	int* turns_held() noexcept override { return &turns_; }
+
+	// Runs `t` to its end on the calling thread and returns its value or rethrows its exception. Every
+	// resume of the task, and of anything it awaits that resumes through this host, runs here.
+	template <typename T>
+	T run(task::task<T> t) {
+		std::exception_ptr error;
+		std::optional<std::conditional_t<std::is_void_v<T>, std::monostate, T>> value;
+		bool done = false;
+		auto finished = [this, &done] {
+			{
+				std::lock_guard<std::mutex> lk(m_);
+				done = true;
+			}
+			cv_.notify_one();
+		};
+		if constexpr (std::is_void_v<T>) {
+			task::spawn(task::scheduler_ref::of(*this), std::move(t), [&](std::exception_ptr e) {
+				error = e;
+				finished();
+			});
+		} else {
+			task::spawn(task::scheduler_ref::of(*this), std::move(t), [&](std::exception_ptr e, std::optional<T> v) {
+				error = e;
+				value = std::move(v);
+				finished();
+			});
+		}
+		drive(done);
+		if (error) {
+			std::rethrow_exception(error);
+		}
+		if constexpr (!std::is_void_v<T>) {
+			return std::move(*value);
+		}
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point at, std::unique_ptr<TimerNode> node) override {
+		std::uint64_t id;
+		{
+			std::lock_guard<std::mutex> lk(m_);
+			id = ++last_id_;
+			timers_.push_back({at, id, std::move(node)});
+		}
+		cv_.notify_one();
+		return std::make_unique<Armed>(*this, id);
+	}
+
+private:
+	struct Entry {
+		std::chrono::steady_clock::time_point at;
+		std::uint64_t id;
+		std::unique_ptr<TimerNode> node;
+	};
+
+	// Cancels on destruction. It lives in the frame of the task that armed it, which ends before run() does.
+	class Armed final : public Timer {
+	public:
+		Armed(BlockingScheduler& owner, std::uint64_t id) : owner_(owner), id_(id) { }
+		~Armed() override {
+			std::unique_ptr<TimerNode> dropped;  // destroyed outside the lock
+			std::lock_guard<std::mutex> lk(owner_.m_);
+			const auto it = std::find_if(owner_.timers_.begin(), owner_.timers_.end(), [this](const Entry& e) { return e.id == id_; });
+			if (it != owner_.timers_.end()) {
+				dropped = std::move(it->node);
+				owner_.timers_.erase(it);
+			}
+		}
+
+	private:
+		BlockingScheduler& owner_;
+		std::uint64_t id_;
+	};
+
+	void drive(const bool& done) {
+		std::unique_lock<std::mutex> lk(m_);
+		while (!done) {
+			if (!ready_.empty()) {
+				const auto h = ready_.front();
+				ready_.pop_front();
+				lk.unlock();
+				{
+					task::running_on scope(task::scheduler_ref::of(*this));
+					HostScope host(this);
+					h.resume();
+				}
+				lk.lock();
+				continue;
+			}
+			if (!timers_.empty()) {
+				const auto next = std::min_element(timers_.begin(), timers_.end(), [](const Entry& a, const Entry& b) { return a.at < b.at; });
+				if (next->at <= std::chrono::steady_clock::now()) {
+					auto node = std::move(next->node);
+					timers_.erase(next);
+					lk.unlock();
+					node->fire();  // posts or settles; the node dies here, outside the lock
+					node.reset();
+					lk.lock();
+					continue;
+				}
+				cv_.wait_until(lk, next->at);
+				continue;
+			}
+			cv_.wait(lk);
+		}
+	}
+
+	std::mutex m_;
+	std::condition_variable cv_;
+	std::deque<std::coroutine_handle<>> ready_;
+	std::vector<Entry> timers_;
+	std::uint64_t last_id_ = 0;
+	int turns_ = 0;
+};
+
+}  // namespace engine

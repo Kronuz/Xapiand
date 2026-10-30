@@ -20,488 +20,678 @@
  * THE SOFTWARE.
  */
 
-// Concurrency tests for DatabasePool and ShardEndpoint: wake-ups on checkin and unlock, and
-// concurrent cleanup. Shards here are never opened, so no database is touched.
+// The index registry (docs/design/phase7c.md D5, D6, D7): single-flight opens that never block a
+// thread, the turn every operation on an index takes (timers included), a deadline that answers
+// `busy`, the close protocol and a request racing it, one turn per task, a commit that joins the one in
+// flight, the WAL's order across writers, and the engine in host mode behind all of it. Each test opens
+// real indexes in the working directory.
 
 #include "test_harness.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <functional>
-#include <optional>
-#include <sstream>
-#include <stdexcept>
+#include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "database/flags.h"
+#include "database/handler.h"
+#include "database/lock.h"
 #include "database/pool.h"
 #include "database/shard.h"
+#include "database/wal.h"
+#include "engine/chores.h"
+#include "engine/document.h"
 #include "engine/error.h"
-#include "engine/shard.h"
+#include "engine/sync.h"
+#include "length.h"
 #include "node.h"
+#include "task.hh"
+#include "utype.hh"
 
 using namespace std::chrono_literals;
 
 struct PoolTestAccess {
-	static std::mutex& mtx(ShardEndpoint& endpoint) { return endpoint.mtx; }
-	static std::mutex& mtx(DatabasePool& pool) { return pool.mtx; }
-	static std::atomic_int& locks(DatabasePool& pool) { return pool.locks; }
-	static std::condition_variable& writable_cond(ShardEndpoint& endpoint) { return endpoint.writable_cond; }
-	static std::condition_variable& readables_cond(ShardEndpoint& endpoint) { return endpoint.readables_cond; }
-	static void set_local(Shard& shard) { shard._local = true; }  // as if opened locally
-	static void close(Shard& shard) { shard._closed.store(true); }  // as if closed by a failed commit
-	static bool open(Shard& shard) { return shard.engine_shard != nullptr; }
-	static void replace_engine(Shard& shard, std::unique_ptr<engine::Shard> engine) { shard.engine_shard = std::move(engine); }
+	static std::uint64_t opens(ShardEndpoint& entry) { return entry.opens_.load(); }
+	static ShardEndpoint::State state(ShardEndpoint& entry) { return entry.state(); }
+	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) { entry.chores = std::move(chores); }
+	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
+	static void mark_stale(ShardEndpoint& entry) { entry.mark_stale(); }
+	static std::uint64_t applied(ShardEndpoint& entry) { return entry.applied_.load(); }
 };
 
 namespace {
 
 using A = PoolTestAccess;
 
-// Plays a waiter that has just found the shard unavailable under the endpoint mutex and is about to
-// block, while `release` (on another thread) makes it available. `release` first stops on the pool
-// mutex, past its own endpoint-mutex sections, so the waiter can take the endpoint mutex at the
-// racy point. The waiter must still be woken.
-bool woken_after(DatabasePool& pool, ShardEndpoint& endpoint, std::condition_variable& cond, const std::function<void()>& release) {
-	std::atomic_bool returned{false};
-	std::unique_lock<std::mutex> pool_lk(A::mtx(pool));
-	std::thread releaser([&] {
-		release();
-		returned = true;
-	});
-	std::this_thread::sleep_for(200ms);  // releaser is now blocked on the pool mutex
-	std::unique_lock<std::mutex> lk(A::mtx(endpoint));
-	pool_lk.unlock();
-	for (int i = 0; i < 50 && !returned; ++i) {
-		std::this_thread::sleep_for(10ms);
+std::string fresh(const char* name) {
+	std::string path = std::string("pool_test_") + name + ".db";
+	std::filesystem::remove_all(path);
+	return path;
+}
+
+engine::Document make(const std::string& key, const std::string& data) {
+	engine::Document doc;
+	doc.set_key(key);
+	doc.add_term(doc.field("f"), "body", 2);
+	doc.set_data(data);
+	return doc;
+}
+
+template <typename F>
+engine::errc error_kind(F&& f) {
+	try {
+		f();
+	} catch (const engine::Error& error) {
+		return error.kind;
 	}
-	bool woken = cond.wait_for(lk, 2s) == std::cv_status::no_timeout;
-	lk.unlock();
-	releaser.join();
-	return woken;
+	return engine::errc::internal;
 }
 
-void test_checkin_wakes_writable_waiter() {
-	DatabasePool pool(16, 4);
-	auto shard = pool.checkout(Endpoint("pool_test_writable"), DB_WRITABLE | DB_CREATE_OR_OPEN, 1.0);
-	REQUIRE(shard);
-	auto& endpoint = shard->endpoint;
-	A::locks(pool) += 1;  // makes checkin's notify_lockable take the pool mutex
-	CHECK_TRUE(woken_after(pool, endpoint, A::writable_cond(endpoint), [&] { pool.checkin(shard); }));
-	A::locks(pool) -= 1;
+// Writes without a WAL or an autocommit (those need a manager): the registry's own behaviour.
+constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+
+// Waits for `flag`, up to a few seconds.
+bool eventually(const std::atomic<bool>& flag, std::chrono::milliseconds limit = 5s) {
+	const auto end = std::chrono::steady_clock::now() + limit;
+	while (!flag && std::chrono::steady_clock::now() < end) {
+		std::this_thread::sleep_for(2ms);
+	}
+	return flag.load();
 }
 
-void test_checkin_wakes_readable_waiter() {
-	DatabasePool pool(16, 1);
-	auto shard = pool.checkout(Endpoint("pool_test_readable"), DB_OPEN, 1.0);
-	REQUIRE(shard);
-	auto& endpoint = shard->endpoint;
-	A::locks(pool) += 1;
-	CHECK_TRUE(woken_after(pool, endpoint, A::readables_cond(endpoint), [&] { pool.checkin(shard); }));
-	A::locks(pool) -= 1;
+// Holds an index's turn from a thread of its own until released: the tests then run an operation and see whether it waits.
+class HoldTurn {
+public:
+	HoldTurn(ShardEndpoint& entry, int flags) {
+		thread_ = std::thread([this, &entry, flags] {
+			engine::sync_wait(hold(entry, flags));
+		});
+		wait_until_held();
+	}
+	~HoldTurn() { release(); }
+
+	void release() {
+		release_.set();
+		if (thread_.joinable()) {
+			thread_.join();
+		}
+	}
+
+private:
+	void wait_until_held() { eventually(held_); }
+
+	task::task<void> hold(ShardEndpoint& entry, int flags) {
+		auto turn = co_await entry.take_turn(flags);
+		held_ = true;
+		co_await release_;
+	}
+
+	std::atomic<bool> held_{false};
+	task::event release_;
+	std::thread thread_;
+};
+
+// Runs `op` on a thread of its own, and reports whether it ended: an operation that takes the turn does not end while it is held.
+class Running {
+public:
+	explicit Running(std::function<void()> op) {
+		thread_ = std::thread([this, op = std::move(op)] {
+			try {
+				op();
+			} catch (const engine::Error& error) {
+				kind_ = error.kind;
+				threw_ = true;
+			}
+			done_ = true;
+		});
+	}
+	~Running() { join(); }
+	bool done() const { return done_; }
+	bool threw() const { return threw_; }
+	engine::errc kind() const { return kind_; }
+	void join() {
+		if (thread_.joinable()) {
+			thread_.join();
+		}
+	}
+
+private:
+	std::atomic<bool> done_{false};
+	bool threw_ = false;
+	engine::errc kind_ = engine::errc::internal;
+	std::thread thread_;
+};
+
+// A runner of chores that can hold or fail the next flush-class one: how the tests make a commit slow or broken.
+class GateChores final : public engine::Chores {
+public:
+	explicit GateChores(std::unique_ptr<engine::Chores> inner) : inner_(std::move(inner)) { }
+
+	// The next flush chore waits for release(), then fails when `fail`.
+	void arm(bool fail = false) {
+		std::lock_guard<std::mutex> lk(m_);
+		armed_ = true;
+		fail_ = fail;
+		gate_ = std::make_shared<task::event>();
+		entered_ = false;
+	}
+	const std::atomic<bool>& entered_flag() const { return entered_; }
+	void release() {
+		std::shared_ptr<task::event> gate;
+		{
+			std::lock_guard<std::mutex> lk(m_);
+			gate = gate_;
+		}
+		if (gate) {
+			gate->set();
+		}
+	}
+
+	task::task<void> run(engine::ChoreClass cls, std::function<void()> fn) override {
+		if (cls == engine::ChoreClass::flush) {
+			std::shared_ptr<task::event> gate;
+			bool fail = false;
+			{
+				std::lock_guard<std::mutex> lk(m_);
+				if (armed_) {
+					armed_ = false;
+					gate = gate_;
+					fail = fail_;
+				}
+			}
+			if (gate) {
+				entered_ = true;
+				co_await *gate;
+				if (fail) {
+					throw engine::Error(engine::errc::database, "injected failure of a commit");
+				}
+			}
+		}
+		co_await inner_->run(cls, std::move(fn));
+	}
+
+private:
+	std::unique_ptr<engine::Chores> inner_;
+	std::mutex m_;
+	bool armed_ = false;
+	bool fail_ = false;
+	std::shared_ptr<task::event> gate_;
+	std::atomic<bool> entered_{false};
+};
+
+GateChores& gate_chores(ShardEndpoint& entry) {
+	auto gate = std::make_unique<GateChores>(A::take_chores(entry));
+	auto* raw = gate.get();
+	A::set_chores(entry, std::move(gate));
+	return *raw;
 }
 
-void test_unlock_wakes_readable_waiter() {
-	DatabasePool pool(16, 1);
-	auto shard = pool.checkout(Endpoint("pool_test_unlock"), DB_WRITABLE | DB_CREATE_OR_OPEN, 1.0);
-	REQUIRE(shard);
-	auto& endpoint = shard->endpoint;
-	A::set_local(*shard);
-	pool.lock(shard, 1.0);
-	CHECK_TRUE(endpoint.is_locked());
-	CHECK_TRUE(woken_after(pool, endpoint, A::readables_cond(endpoint), [&] { pool.unlock(shard); }));
-	CHECK_FALSE(endpoint.is_locked());
-	pool.checkin(shard);
+
+// Kills the process when a test hangs: a task that blocks a thread it needed shows as a hang.
+class Watchdog {
+public:
+	explicit Watchdog(const char* name, std::chrono::seconds limit = 60s) : name_(name) {
+		thread_ = std::thread([this, limit] {
+			const auto end = std::chrono::steady_clock::now() + limit;
+			while (!done_ && std::chrono::steady_clock::now() < end) {
+				std::this_thread::sleep_for(20ms);
+			}
+			if (!done_) {
+				std::fprintf(stderr, "  FAIL %s: hung\n", name_);
+				std::_Exit(1);
+			}
+		});
+	}
+	~Watchdog() {
+		done_ = true;
+		thread_.join();
+	}
+
+private:
+	const char* name_;
+	std::atomic<bool> done_{false};
+	std::thread thread_;
+};
+
+// The committed revision of the index a Shard uses.
+engine::rev revision_of(Shard& shard) {
+	engine::sync_wait(shard.ready());
+	return shard.engine().revision();
 }
 
-// Cleanups running at once (concurrent FLUSH) while readers and writers check shards in and out
-// of the same endpoints: no use-after-free in the LRU walk, no checkout of a slot that cleanup is
-// clearing, and no waiter left asleep (a lost wake-up shows as a timeout).
-void test_concurrent_cleanup() {
-	DatabasePool pool(8, 2);
-	std::atomic_bool stop{false};
-	std::atomic_int checkouts{0};
-	std::atomic_int timeouts{0};
+// A write, a read, and a commit through a Shard.
+void test_smoke() {
+	DatabasePool pool(8);
+	Endpoint endpoint(fresh("smoke"));
+	auto entry = pool.spawn(endpoint);
+	Shard shard(*entry.get(), WRITE);
+	auto written = engine::sync_wait(shard.add_document(make("Ka", "a")));
+	CHECK_EQ(written.did, 1u);
+	auto view = engine::sync_wait(shard.get_view(1));  // the read refreshes first: the write is seen
+	CHECK_EQ(view->data(), "a");
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	CHECK_EQ(entry->opens(), 1u);
+}
+
+// Opening never waits on a thread: two uses of one index on one thread open it once and finish, though
+// the second must wait for the first's open. A thread that blocked on the open could not run the chore's
+// completion that the first is waiting for.
+void test_opening_never_waits_on_a_thread() {
+	Watchdog watchdog("opening never waits on a thread");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("nowait")));
+	Shard a(*entry.get(), WRITE);
+	Shard b(*entry.get(), WRITE);
+	std::vector<task::task<void>> both;
+	both.push_back(a.ready());
+	both.push_back(b.ready());
+	engine::sync_wait(task::when_all(std::move(both)));
+	CHECK_EQ(entry->opens(), 1u);
+	CHECK_TRUE(A::state(*entry.get()) == ShardEndpoint::State::open);
+}
+
+// Many users of a new index at once: one open (the single flight), and every user gets the engine.
+void test_concurrent_opens_are_one_flight() {
+	Watchdog watchdog("concurrent opens are one flight");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("flight")));
+	std::vector<std::thread> threads;
+	std::atomic<int> opened{0};
+	for (int t = 0; t < 8; ++t) {
+		threads.emplace_back([&] {
+			Shard shard(*entry.get(), WRITE);
+			engine::sync_wait(shard.ready());
+			if (!shard.engine().uuid().empty()) {
+				++opened;
+			}
+		});
+	}
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	CHECK_EQ(opened.load(), 8);
+	CHECK_EQ(entry->opens(), 1u);
+}
+
+// An open that fails fails every user that awaited it, and the next user tries again.
+void test_a_failed_open_reaches_every_waiter_and_is_retried() {
+	Watchdog watchdog("a failed open");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("missing")));
+	std::atomic<int> not_found{0};
 	std::vector<std::thread> threads;
 	for (int t = 0; t < 4; ++t) {
-		threads.emplace_back([&, t] {
-			int flags = t < 2 ? DB_OPEN : DB_WRITABLE | DB_CREATE_OR_OPEN;
-			for (int i = 0; !stop; ++i) {
-				try {
-					auto shard = pool.checkout(Endpoint("pool_test_cleanup_" + std::to_string((t * 7 + i) % 16)), flags, 5.0);
-					pool.checkin(shard);
-					++checkouts;
-				} catch (const engine::Error& error) {
-					if (error.kind != engine::errc::not_available) { throw; }
-					++timeouts;
+		threads.emplace_back([&] {
+			Shard shard(*entry.get(), DB_OPEN);  // the index does not exist and is not to be created
+			try {
+				engine::sync_wait(shard.ready());
+			} catch (const engine::Error& error) {
+				if (error.kind == engine::errc::not_found) {
+					++not_found;
 				}
 			}
 		});
 	}
-	for (int t = 0; t < 4; ++t) {
-		threads.emplace_back([&] {
-			while (!stop) {
-				pool.cleanup(true);
-			}
-		});
-	}
-	std::this_thread::sleep_for(3s);
-	stop = true;
 	for (auto& thread : threads) {
 		thread.join();
 	}
-	CHECK_GT(checkouts.load(), 0);
-	CHECK_EQ(timeouts.load(), 0);
+	CHECK_EQ(not_found.load(), 4);
+	CHECK_TRUE(A::state(*entry.get()) == ShardEndpoint::State::empty);
+	Shard create(*entry.get(), WRITE);
+	engine::sync_wait(create.ready());
+	CHECK_TRUE(A::state(*entry.get()) == ShardEndpoint::State::open);
 }
 
-// A waiter blocked on a busy shard while clear() takes that shard right after its checkin: clear
-// must wake the waiter when it releases or drops the shard, and must not leave the shard it holds
-// counted as available (a reader at the limit then spins holding the mutex and clear hangs).
-void clear_wakes_waiters(int flags) {
-	std::atomic_bool done{false};
-	std::thread watchdog([&] {
-		for (int i = 0; i < 600 && !done; ++i) {
-			std::this_thread::sleep_for(100ms);
-		}
-		if (!done) {
-			std::fprintf(stderr, "  FAIL clear_wakes_waiters(%d): hung\n", flags);
-			std::_Exit(1);
-		}
-	});
-	DatabasePool pool(8, 1);
-	const Endpoint endpoint("pool_test_clear");
-	std::atomic_bool stop{false};
-	std::atomic_int timeouts{0};
-	auto first = pool.checkout(endpoint, flags, 0.5);
-	ShardEndpoint& shard_endpoint = first->endpoint;  // stays in the pool: nothing evicts here
-	pool.checkin(first);
-	std::thread cleaner([&] {
-		while (!stop) {
-			shard_endpoint.clear();
-		}
-	});
-	for (int i = 0; i < 300; ++i) {
-		std::shared_ptr<Shard> shard;
-		try {
-			shard = pool.checkout(endpoint, flags, 0.5);
-		} catch (const engine::Error& error) {
-			if (error.kind != engine::errc::not_available) { throw; }
-			++timeouts;
-			continue;
-		}
-		std::atomic_bool started{false};
-		std::thread waiter([&] {
-			started = true;
-			try {
-				auto other = pool.checkout(endpoint, flags, 0.5);
-				pool.checkin(other);
-			} catch (const engine::Error& error) {
-				if (error.kind != engine::errc::not_available) { throw; }
-				++timeouts;
-			}
-		});
-		while (!started) {
-			std::this_thread::yield();
-		}
-		std::this_thread::sleep_for(1ms);  // the waiter is (most likely) blocked on the busy shard
-		pool.checkin(shard);
-		waiter.join();
+// Every operation on an index takes its turn: it does not end while another task holds the turn, and it
+// ends once the turn is released.
+template <typename Op>
+void waits_for_the_turn(const char* name, Op op) {
+	Watchdog watchdog(name);
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh(name)));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Kseed", "seed")));  // something to replace, delete and commit
+	{
+		HoldTurn hold(*entry.get(), WRITE);
+		Running running([&] { op(shard); });
+		std::this_thread::sleep_for(150ms);
+		CHECK_FALSE(running.done());
+		hold.release();
+		running.join();
+		CHECK_TRUE(running.done());
+		CHECK_FALSE(running.threw());
 	}
-	stop = true;
-	cleaner.join();
-	done = true;
-	watchdog.join();
-	CHECK_EQ(timeouts.load(), 0);
 }
 
-void test_clear_wakes_writable_waiters() { clear_wakes_waiters(DB_WRITABLE | DB_CREATE_OR_OPEN); }
-void test_clear_wakes_readable_waiters() { clear_wakes_waiters(DB_OPEN); }
+void test_every_operation_takes_the_turn() {
+	waits_for_the_turn("turn_add", [](Shard& s) { engine::sync_wait(s.add_document(make("Kb", "b"))); });
+	waits_for_the_turn("turn_replace", [](Shard& s) { engine::sync_wait(s.replace_document(1, make("Kseed", "again"))); });
+	waits_for_the_turn("turn_replace_term", [](Shard& s) { engine::sync_wait(s.replace_document_term("Kseed", make("Kseed", "term"))); });
+	waits_for_the_turn("turn_delete", [](Shard& s) { engine::sync_wait(s.delete_document(1)); });
+	waits_for_the_turn("turn_delete_term", [](Shard& s) { engine::sync_wait(s.delete_document_term("Kseed")); });
+	waits_for_the_turn("turn_metadata", [](Shard& s) { engine::sync_wait(s.set_metadata("name", "value")); });
+	waits_for_the_turn("turn_commit", [](Shard& s) { engine::sync_wait(s.commit()); });
+	// A read that finds something applied since the last refresh refreshes: a lease operation.
+	waits_for_the_turn("turn_refresh_for_read", [](Shard& s) { engine::sync_wait(s.get_view(1)); });
+}
 
-// Closed writables checked in while cleanups evict their idle endpoint: checkin must not touch
-// the endpoint after dropping the writable (a destroyed mutex aborts the process).
-void test_checkin_drop_races_cleanup() {
-	DatabasePool pool(8, 2);
-	std::atomic_bool stop{false};
-	std::atomic_long checkins{0};
+// A read that has nothing to refresh takes no turn: it does not wait behind a writer.
+void test_a_read_with_nothing_to_refresh_takes_no_turn() {
+	Watchdog watchdog("a read takes no turn");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("readsnoturn")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	engine::sync_wait(shard.engine_for_read());  // refreshes: nothing is owed now
+	HoldTurn hold(*entry.get(), WRITE);
+	Running running([&] { CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a"); });
+	std::this_thread::sleep_for(150ms);
+	CHECK_TRUE(running.done());
+	hold.release();
+}
+
+// The debounced autocommit is a task that takes the turn like any request, and commits what is pending.
+void test_the_autocommit_task_takes_the_turn() {
+	Watchdog watchdog("the autocommit task");
+	DatabasePool pool(8);
+	Endpoint endpoint(fresh("autocommit"));
+	auto entry = pool.spawn(endpoint);
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	const auto revision = revision_of(shard);
+	CHECK_TRUE(entry->is_modified());
+	{
+		HoldTurn hold(*entry.get(), WRITE);
+		auto referenced = pool.get(endpoint);
+		Running running([&] { engine::sync_wait(autocommit(std::move(referenced))); });
+		std::this_thread::sleep_for(150ms);
+		CHECK_FALSE(running.done());
+		hold.release();
+		running.join();
+		CHECK_FALSE(running.threw());
+	}
+	CHECK_FALSE(entry->is_modified());
+	CHECK_EQ(revision_of(shard), revision + 1);
+}
+
+// The idle close takes the turn too: it waits for an operation that holds it, then commits what is pending, and
+// the data is there when the index opens again.
+void test_the_idle_close_takes_the_turn() {
+	Watchdog watchdog("the idle close");
+	DatabasePool pool(8);
+	Endpoint endpoint(fresh("idleclose"));
+	ShardEndpoint* raw;
+	{
+		auto entry = pool.spawn(endpoint);
+		raw = entry.get();
+		Shard shard(*raw, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+	}  // nobody uses the index now
+	{
+		HoldTurn hold(*raw, WRITE);
+		Running running([&] { pool.cleanup(true); });
+		std::this_thread::sleep_for(150ms);
+		CHECK_FALSE(running.done());
+		hold.release();
+		running.join();
+		CHECK_TRUE(running.done());
+	}
+	CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::empty);
+	auto entry = pool.spawn(endpoint);
+	Shard shard(*entry.get(), WRITE);
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
+	CHECK_EQ(entry->opens(), 2u);
+}
+
+// A turn that does not come in time answers `busy` (a 503), and the queue it left is whole.
+void test_a_turn_wait_times_out_with_busy() {
+	Watchdog watchdog("a turn wait times out");
+	DatabasePool pool(8);
+	pool.set_turn_timeout(0.3);
+	auto entry = pool.spawn(Endpoint(fresh("busy")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.ready());
+	{
+		HoldTurn hold(*entry.get(), WRITE);
+		const auto start = std::chrono::steady_clock::now();
+		Running running([&] { engine::sync_wait(shard.add_document(make("Ka", "a"))); });
+		running.join();
+		const auto waited = std::chrono::steady_clock::now() - start;
+		CHECK_TRUE(running.threw());
+		CHECK_TRUE(running.kind() == engine::errc::busy);
+		CHECK_GE(waited, 250ms);
+		CHECK_LT(waited, 5s);
+	}
+	// The timed-out waiter left nothing behind: the next one is served.
+	CHECK_EQ(engine::sync_wait(shard.add_document(make("Kb", "b"))).did, 1u);
+}
+
+// A task that takes a second index's turn while it holds the first would deadlock; debug builds abort.
+task::task<void> two_turns(ShardEndpoint& first, ShardEndpoint& second) {
+	auto one = co_await first.take_turn(WRITE);
+	auto two = co_await second.take_turn(WRITE);
+}
+
+void test_a_task_holds_one_turn_at_most() {
+#ifndef NDEBUG
+	Watchdog watchdog("one turn per task");
+	DatabasePool pool(8);
+	auto first = pool.spawn(Endpoint(fresh("one_a")));
+	auto second = pool.spawn(Endpoint(fresh("one_b")));
+	Shard a(*first.get(), WRITE);
+	Shard b(*second.get(), WRITE);
+	engine::sync_wait(a.ready());
+	engine::sync_wait(b.ready());
+	std::fflush(nullptr);
+	pid_t pid = ::fork();
+	if (pid == 0) {
+		engine::sync_wait(two_turns(*first.get(), *second.get()));
+		::_exit(0);  // not reached when the assertion is on
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK_TRUE(WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT);
+#endif
+}
+
+// A request that finds the index closing awaits the close and then opens it again; it never opens a second
+// engine beside the closing one. What the close committed is there.
+void test_a_request_racing_an_idle_close() {
+	Watchdog watchdog("a request racing an idle close");
+	DatabasePool pool(8);
+	Endpoint endpoint(fresh("race"));
+	ShardEndpoint* raw;
+	{
+		auto entry = pool.spawn(endpoint);
+		raw = entry.get();
+		Shard shard(*raw, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));  // pending: the close commits it
+	}
+	HoldTurn hold(*raw, WRITE);
+	Running closing([&] { pool.cleanup(true); });
+	for (int i = 0; i < 2500 && A::state(*raw) != ShardEndpoint::State::closing; ++i) {
+		std::this_thread::sleep_for(2ms);
+	}
+	CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::closing);
+	auto referenced = pool.spawn(endpoint);
+	Shard late(*referenced.get(), WRITE);
+	Running request([&] { engine::sync_wait(late.add_document(make("Kb", "b"))); });
+	std::this_thread::sleep_for(150ms);
+	CHECK_FALSE(request.done());
+	CHECK_EQ(raw->opens(), 1u);  // it waits for the close: no second engine
+	hold.release();
+	closing.join();
+	request.join();
+	CHECK_FALSE(request.threw());
+	CHECK_EQ(raw->opens(), 2u);
+	CHECK_EQ(engine::sync_wait(late.get_view(1))->data(), "a");
+	CHECK_EQ(engine::sync_wait(late.get_view(2))->data(), "b");
+}
+
+// A writer queued on the turn when a failure marks the engine stale gets the turn of an engine that cannot go
+// on: it gives the turn back, the entry replaces the engine, and the write lands on the new one.
+void test_a_stale_engine_is_replaced_before_a_queued_write() {
+	Watchdog watchdog("a stale engine");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("stale")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	HoldTurn hold(*entry.get(), WRITE);
+	Running queued([&] { engine::sync_wait(shard.add_document(make("Kb", "b"))); });
+	std::this_thread::sleep_for(100ms);
+	A::mark_stale(*entry.get());  // what the holder's failing operation does
+	hold.release();
+	queued.join();
+	CHECK_FALSE(queued.threw());
+	CHECK_EQ(entry->opens(), 2u);
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
+	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
+}
+
+// Commits coalesce by position (C7). A commit in flight is joined by a commit whose writes it covers, which
+// then waits for no commit of its own; a write that arrives while it runs waits for the turn and for the next
+// commit.
+void test_a_commit_joins_the_one_in_flight() {
+	Watchdog watchdog("a commit joins the one in flight");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("coalesce")));
+	auto& gate = gate_chores(*entry.get());
+	Shard s1(*entry.get(), WRITE), s2(*entry.get(), WRITE), s3(*entry.get(), WRITE);
+	engine::sync_wait(s1.add_document(make("Ka", "a")));
+	const auto revision = revision_of(s1);
+	gate.arm();
+	std::atomic<int> changed{0};
+	Running first([&] { changed += engine::sync_wait(s1.commit()) ? 1 : 0; });
+	CHECK_TRUE(eventually(gate.entered_flag()));
+	Running joined([&] { changed += engine::sync_wait(s2.commit()) ? 1 : 0; });  // its write is covered: no turn of its own
+	Running later([&] { engine::sync_wait(s3.add_document(make("Kb", "b"))); });  // needs the turn: waits
+	std::this_thread::sleep_for(150ms);
+	CHECK_FALSE(first.done());
+	CHECK_FALSE(joined.done());
+	CHECK_FALSE(later.done());
+	gate.release();
+	first.join();
+	joined.join();
+	later.join();
+	CHECK_EQ(changed.load(), 2);                  // both saw the one commit
+	CHECK_EQ(revision_of(s1), revision + 1);  // and there was one
+	// The write that waited is not covered: its own commit is the next one.
+	CHECK_TRUE(engine::sync_wait(s3.commit()));
+	CHECK_EQ(revision_of(s1), revision + 2);
+}
+
+// A failed commit reaches the commit that ran it and the waiters that joined it, and no one else: the write
+// that waited for the turn is served on the replacement engine.
+void test_a_failed_commit_reaches_only_the_joined_waiters() {
+	Watchdog watchdog("a failed commit");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("failed")));
+	auto& gate = gate_chores(*entry.get());
+	Shard s1(*entry.get(), WRITE), s2(*entry.get(), WRITE), s3(*entry.get(), WRITE);
+	engine::sync_wait(s1.add_document(make("Ka", "a")));
+	gate.arm(true);
+	Running first([&] { engine::sync_wait(s1.commit()); });
+	CHECK_TRUE(eventually(gate.entered_flag()));
+	Running joined([&] { engine::sync_wait(s2.commit()); });
+	Running later([&] { engine::sync_wait(s3.add_document(make("Kb", "b"))); });
+	std::this_thread::sleep_for(150ms);
+	gate.release();
+	first.join();
+	joined.join();
+	later.join();
+	CHECK_TRUE(first.threw());
+	CHECK_TRUE(first.kind() == engine::errc::database);
+	CHECK_TRUE(joined.threw());
+	CHECK_TRUE(joined.kind() == engine::errc::database);
+	CHECK_FALSE(later.threw());
+	CHECK_EQ(engine::sync_wait(s3.get_view(2))->data(), "b");
+}
+
+// Writers on many threads with a buffer of a few documents: the engine owes a flush all the time, each
+// flush runs as a chore while the writer holds the turn, and the same write is applied after it before any
+// later write: ids are contiguous, none repeats, and each thread's ids rise.
+void test_owed_flushes_do_not_reorder_writers() {
+	Watchdog watchdog("owed flushes", 120s);
+	DatabasePool pool(8);
+	pool.set_buffered_docs_cap(5);
+	auto entry = pool.spawn(Endpoint(fresh("owed")));
+	constexpr int threads_n = 4;
+	constexpr int per_thread = 60;
+	std::vector<std::vector<engine::docid>> got(threads_n);
 	std::vector<std::thread> threads;
-	for (int t = 0; t < 2; ++t) {
+	for (int t = 0; t < threads_n; ++t) {
 		threads.emplace_back([&, t] {
-			while (!stop) {
-				auto shard = pool.checkout(Endpoint("pool_test_drop_" + std::to_string(t)), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
-				A::close(*shard);
-				pool.checkin(shard);
-				++checkins;
+			Shard shard(*entry.get(), WRITE);
+			for (int i = 0; i < per_thread; ++i) {
+				got[t].push_back(engine::sync_wait(shard.add_document(make("K" + std::to_string(t) + "-" + std::to_string(i), "d"))).did);
 			}
 		});
 	}
-	for (int t = 0; t < 3; ++t) {
-		threads.emplace_back([&] {
-			while (!stop) {
-				pool.cleanup(true);
-			}
-		});
-	}
-	std::this_thread::sleep_for(5s);
-	stop = true;
 	for (auto& thread : threads) {
 		thread.join();
 	}
-	CHECK_GT(checkins.load(), 0);
-}
-
-// clear() keeps a shard that something else still references (a committer's weak_ptr lock), and
-// frees it once that reference is gone.
-void clear_keeps_shared_shard(int flags) {
-	DatabasePool pool(8, 2);
-	const Endpoint endpoint("pool_test_clear_shared");
-	auto shard = pool.checkout(endpoint, flags, 1.0);
-	ShardEndpoint& shard_endpoint = shard->endpoint;
-	std::shared_ptr<Shard> extra = shard;
-	pool.checkin(shard);
-	auto cleared = shard_endpoint.clear();
-	CHECK_EQ(cleared.first + cleared.second, 1u);
-	CHECK_FALSE(extra->is_busy());
-	auto again = pool.checkout(endpoint, flags, 1.0);
-	CHECK_TRUE(again.get() == extra.get());
-	pool.checkin(again);
-	again.reset();
-	extra.reset();
-	cleared = shard_endpoint.clear();
-	CHECK_EQ(cleared.first + cleared.second, 0u);
-}
-
-void test_clear_keeps_shared_writable() { clear_keeps_shared_shard(DB_WRITABLE | DB_CREATE_OR_OPEN); }
-void test_clear_keeps_shared_readable() { clear_keeps_shared_shard(DB_OPEN); }
-
-
-// What the read ladders and the fan-out loops do with a failure follows its kind (engine/error.h):
-// whether the call returns (retry or go on) or throws, and whether the shard ends up closed.
-struct Outcome {
-	bool threw = false;
-	bool closed = false;
-	bool collected = false;
-};
-
-Outcome retry_outcome(engine::errc kind, int t) {
-	DatabasePool pool(8, 1);
-	auto shard = pool.checkout(Endpoint("pool_test_policy"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
-	shard->engine();  // opens the database
-	CHECK_TRUE(A::open(*shard));
-	Outcome outcome;
-	try {
-		throw engine::Error(kind, "x");
-	} catch (const engine::Error& error) {
-		try {
-			shard->retry_read(error, t);
-		} catch (const engine::Error&) {
-			outcome.threw = true;
-		}
+	std::set<engine::docid> all;
+	for (int t = 0; t < threads_n; ++t) {
+		CHECK_TRUE(std::is_sorted(got[t].begin(), got[t].end()));
+		all.insert(got[t].begin(), got[t].end());
 	}
-	outcome.closed = !A::open(*shard);
-	pool.checkin(shard);
-	return outcome;
-}
-
-// An engine whose find_key fails `fail_times` times with `kind` and then finds document 7.
-class FailingEngine final : public engine::Shard {
-public:
-	FailingEngine(engine::errc kind, int fail_times) : kind(kind), fail_times(fail_times) { }
-	task::task<engine::docid> find_key(const std::string&) override {
-		++calls;
-		if (calls <= fail_times) {
-			throw engine::Error(kind, "x");
-		}
-		co_return 7;
-	}
-	task::task<bool> reopen() override { co_return true; }
-	unsigned refs() const override { return 0; }
-
-	task::task<engine::WriteResult> add(engine::Document&, engine::WriteArgs) override { unused(); }
-	task::task<engine::WriteResult> replace(engine::docid, engine::Document&, engine::WriteArgs) override { unused(); }
-	task::task<engine::WriteResult> replace_by_key(const std::string&, engine::Document&, engine::WriteArgs) override { unused(); }
-	task::task<void> erase(engine::docid, bool, std::optional<engine::rev>) override { unused(); }
-	task::task<engine::docid> erase_by_key(const std::string&, bool, std::optional<engine::rev>) override { unused(); }
-	task::task<void> commit(engine::Transaction) override { unused(); }
-	task::task<void> begin_transaction(bool) override { unused(); }
-	task::task<void> commit_transaction() override { unused(); }
-	task::task<void> cancel_transaction() override { unused(); }
-	task::task<void> set_metadata(const std::string&, const std::string&) override { unused(); }
-	task::task<void> add_spelling(const std::string&, engine::termcount) override { unused(); }
-	task::task<engine::termcount> remove_spelling(const std::string&, engine::termcount) override { unused(); }
-	task::task<engine::Stats> stats() override { unused(); }
-	task::task<std::unique_ptr<engine::DocView>> get(engine::docid) override { unused(); }
-	task::task<void> scan(engine::docid, const engine::ScanSink&) override { unused(); }
-	task::task<std::string> metadata(const std::string&) override { unused(); }
-	task::task<std::vector<std::string>> metadata_keys() override { unused(); }
-	engine::rev revision() const override { return 0; }
-	engine::doccount doc_count() const override { return 0; }
-	std::string uuid() const override { return {}; }
-
-	engine::errc kind;
-	int fail_times;
-	int calls = 0;
-
-private:
-	[[noreturn]] static void unused() { throw std::logic_error("FailingEngine: not under test"); }
-};
-
-struct FindOutcome {
-	bool threw = false;
-	bool closed = false;
-	engine::docid did = 0;
-	int calls = 0;
-};
-
-FindOutcome find_outcome(engine::errc kind, int fail_times) {
-	DatabasePool pool(8, 1);
-	auto shard = pool.checkout(Endpoint("pool_test_find"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
-	shard->engine();  // opens the database
-	auto engine = std::make_unique<FailingEngine>(kind, fail_times);
-	auto* fake = engine.get();
-	A::replace_engine(*shard, std::move(engine));
-	FindOutcome outcome;
-	try {
-		outcome.did = shard->get_docid_term("key");
-	} catch (const engine::Error&) {
-		outcome.threw = true;
-	}
-	outcome.closed = !A::open(*shard);
-	outcome.calls = fake && A::open(*shard) ? fake->calls : -1;
-	pool.checkin(shard);
-	return outcome;
-}
-
-// Shard::get_docid_term runs the failure policy: a fatal kind closes the shard and throws, a
-// kind that is not retried throws and leaves it open, a stale snapshot reopens and retries.
-void test_get_docid_term_policy() {
-	std::filesystem::remove_all("pool_test_find");
-	using engine::errc;
-	auto corrupt = find_outcome(errc::corrupt, 99);
-	CHECK_TRUE(corrupt.threw && corrupt.closed);
-	auto invalid = find_outcome(errc::invalid, 99);
-	CHECK_TRUE(invalid.threw && !invalid.closed && invalid.calls == 1);
-	auto retried = find_outcome(errc::reopen, 1);
-	CHECK_TRUE(!retried.threw && !retried.closed && retried.did == 7 && retried.calls == 2);
-	auto exhausted = find_outcome(errc::reopen, 99);
-	CHECK_TRUE(exhausted.threw && exhausted.closed);
-	std::filesystem::remove_all("pool_test_find");
-}
-
-std::string handler_source() {
-	std::ifstream in(std::filesystem::path(__FILE__).parent_path().parent_path() / "src/database/handler.cc");
-	std::stringstream all;
-	all << in.rdbuf();
-	return all.str();
-}
-
-// The body of the function that starts at `signature` in handler.cc.
-std::string handler_body(const std::string& text, const std::string& signature) {
-	auto start = text.find(signature);
-	if (start == std::string::npos) { return {}; }
-	return text.substr(start, text.find("\n}\n", start) - start);
-}
-
-// DatabaseHandler needs the manager, so the fan-out call sites are pinned in the source: the
-// write fan-outs treat a stale snapshot as final (writes true); only the two read fan-outs collect it.
-void test_fan_out_call_sites() {
-	const std::string write = "collect_failure(error, eptr, valid, true)";
-	const std::string read = "collect_failure(error, eptr, valid, false)";
-	const auto text = handler_source();
-	CHECK_TRUE(!text.empty());
-	for (const char* signature : {"DatabaseHandler::set_metadata(const std::string& key, const std::string& value", "DatabaseHandler::commit(bool wal)"}) {
-		auto body = handler_body(text, signature);
-		CHECK_TRUE(!body.empty());
-		CHECK_TRUE(body.find(write) != std::string::npos);
-		CHECK_TRUE(body.find(read) == std::string::npos);
-	}
-	size_t reads = 0;
-	for (auto at = text.find(read); at != std::string::npos; at = text.find(read, at + 1)) { ++reads; }
-	CHECK_EQ(reads, size_t(2));
-}
-
-Outcome collect_outcome(engine::errc kind, bool writes) {
-	DatabasePool pool(8, 1);
-	auto shard = pool.checkout(Endpoint("pool_test_policy"), DB_WRITABLE | DB_CREATE_OR_OPEN, 5.0);
-	Outcome outcome;
-	shard->engine();  // opens the database
-	CHECK_TRUE(A::open(*shard));
-	std::exception_ptr eptr;
-	size_t valid = 2;
-	try {
-		throw engine::Error(kind, "x");
-	} catch (const engine::Error& error) {
-		try {
-			shard->collect_failure(error, eptr, valid, writes);
-		} catch (const engine::Error&) {
-			outcome.threw = true;
-		}
-	}
-	outcome.collected = eptr && valid == 1;
-	outcome.closed = !A::open(*shard);
-	pool.checkin(shard);
-	return outcome;
-}
-
-// A writable reopen records its revision under the local node's name.
-void name_local_node() {
-	auto node = std::make_shared<Node>();
-	node->name("pool-test");
-	Node::set_local_node(node);
-}
-
-void test_failure_policy() {
-	std::filesystem::remove_all("pool_test_policy");
-	using engine::errc;
-	for (auto kind : {errc::reopen, errc::opening, errc::not_found, errc::not_available, errc::timeout, errc::network}) {
-		auto more = retry_outcome(kind, 1);
-		CHECK_TRUE(!more.threw && !more.closed);  // reopen and try again
-		auto last = retry_outcome(kind, 0);
-		CHECK_TRUE(last.threw && last.closed);    // final: close the shard and fail
-	}
-	auto closed_more = retry_outcome(errc::closed, 1);
-	CHECK_TRUE(!closed_more.threw && closed_more.closed);  // close, then try again
-	auto closed_last = retry_outcome(errc::closed, 0);
-	CHECK_TRUE(closed_last.threw && closed_last.closed);
-	for (auto kind : {errc::corrupt, errc::database}) {
-		auto o = retry_outcome(kind, 3);
-		CHECK_TRUE(o.threw && o.closed);
-	}
-	for (auto kind : {errc::doc_not_found, errc::version_conflict, errc::invalid, errc::syntax, errc::internal}) {
-		auto o = retry_outcome(kind, 3);
-		CHECK_TRUE(o.threw && !o.closed);
-	}
-
-	// The fan-out loops go on with the next shard instead of retrying; a stale snapshot (reopen) is
-	// collected by a read and final for a write, which must not be retried after a stale read.
-	for (auto kind : {errc::reopen, errc::opening, errc::not_found, errc::not_available, errc::timeout, errc::network}) {
-		auto read = collect_outcome(kind, false);
-		CHECK_TRUE(!read.threw && read.collected && !read.closed);
-		auto write = collect_outcome(kind, true);
-		if (kind == errc::reopen) {
-			CHECK_TRUE(write.threw && write.closed && !write.collected);
-		} else {
-			CHECK_TRUE(!write.threw && write.collected && !write.closed);
-		}
-	}
-	auto closed = collect_outcome(errc::closed, false);
-	CHECK_TRUE(!closed.threw && closed.collected && closed.closed);
-	for (bool writes : {false, true}) {
-		auto corrupt = collect_outcome(errc::corrupt, writes);
-		CHECK_TRUE(corrupt.threw && corrupt.closed && !corrupt.collected);
-		auto invalid = collect_outcome(errc::invalid, writes);
-		CHECK_TRUE(invalid.threw && !invalid.closed && !invalid.collected);
-	}
-	std::filesystem::remove_all("pool_test_policy");
+	CHECK_EQ(all.size(), static_cast<std::size_t>(threads_n * per_thread));
+	CHECK_EQ(*all.begin(), 1u);
+	CHECK_EQ(*all.rbegin(), static_cast<engine::docid>(threads_n * per_thread));
+	Shard reader(*entry.get(), WRITE);
+	CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), static_cast<engine::doccount>(threads_n * per_thread));
 }
 
 }  // namespace
 
-TEST_MAIN(name_local_node, test_failure_policy, test_get_docid_term_policy, test_fan_out_call_sites, test_checkin_wakes_writable_waiter, test_checkin_wakes_readable_waiter, test_unlock_wakes_readable_waiter, test_concurrent_cleanup, test_clear_wakes_writable_waiters, test_clear_wakes_readable_waiters, test_checkin_drop_races_cleanup, test_clear_keeps_shared_writable, test_clear_keeps_shared_readable)
+int main() {
+	struct Case { const char* name; void (*fn)(); };
+	const Case cases[] = {
+		{"test_smoke", test_smoke},
+		{"test_opening_never_waits_on_a_thread", test_opening_never_waits_on_a_thread},
+		{"test_concurrent_opens_are_one_flight", test_concurrent_opens_are_one_flight},
+		{"test_a_failed_open_reaches_every_waiter_and_is_retried", test_a_failed_open_reaches_every_waiter_and_is_retried},
+		{"test_every_operation_takes_the_turn", test_every_operation_takes_the_turn},
+		{"test_a_read_with_nothing_to_refresh_takes_no_turn", test_a_read_with_nothing_to_refresh_takes_no_turn},
+		{"test_the_autocommit_task_takes_the_turn", test_the_autocommit_task_takes_the_turn},
+		{"test_the_idle_close_takes_the_turn", test_the_idle_close_takes_the_turn},
+		{"test_a_turn_wait_times_out_with_busy", test_a_turn_wait_times_out_with_busy},
+		{"test_a_task_holds_one_turn_at_most", test_a_task_holds_one_turn_at_most},
+		{"test_a_request_racing_an_idle_close", test_a_request_racing_an_idle_close},
+		{"test_a_stale_engine_is_replaced_before_a_queued_write", test_a_stale_engine_is_replaced_before_a_queued_write},
+		{"test_a_commit_joins_the_one_in_flight", test_a_commit_joins_the_one_in_flight},
+		{"test_a_failed_commit_reaches_only_the_joined_waiters", test_a_failed_commit_reaches_only_the_joined_waiters},
+		{"test_owed_flushes_do_not_reorder_writers", test_owed_flushes_do_not_reorder_writers},
+	};
+	for (const auto& c : cases) {
+		const int before = testh::failures;
+		try {
+			c.fn();
+		} catch (const engine::Error& error) {
+			std::fprintf(stderr, "  FAIL %s: threw engine::Error %s: %s\n", c.name, engine::to_string(error.kind), error.description().c_str());
+			++testh::failures;
+		} catch (const std::exception& exc) {
+			std::fprintf(stderr, "  FAIL %s: threw %s\n", c.name, exc.what());
+			++testh::failures;
+		}
+		std::fprintf(stderr, "%s %s\n", testh::failures == before ? "ok  " : "FAIL", c.name);
+	}
+	if (testh::failures != 0) {
+		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
+		return 1;
+	}
+	std::printf("OK: %d checks passed\n", testh::checks);
+	return 0;
+}

@@ -25,16 +25,16 @@
 
 #include <algorithm>              // for std::find, std::move
 #include <cassert>                // for assert
+#include <thread>                 // for std::this_thread
 
 #include "database/flags.h"       // for readable_flags
-#include "engine/sync.h"          // for engine::check_may_block
-#include "engine/error.h"        // for engine::Error, engine::errc
 #include "database/shard.h"       // for Shard
-#include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
+#include "engine/error.h"         // for engine::Error, engine::errc
+#include "engine/sync.h"          // for engine::check_may_block, engine::sync_wait
 #include "log.h"                  // for L_CALL
-#include "logger.h"               // for Logging (database->log)
-#include "manager.h"              // for XapiandManager
-#include "wal.h"                  // for DatabaseWALWriter
+#include "strata/core/work_pool_executor.hh"  // for strata::work_pool_executor
+#include "work_pool.hh"           // for WorkPool, WorkGroup, WorkItem
+#include "xapiand_exception.h"    // for THROW, Error, MSG_Error, Exception, DocNot...
 
 
 // #undef L_DEBUG
@@ -45,79 +45,132 @@
 // #define L_DATABASE L_SLATE_BLUE
 
 
-#undef L_POOL_TIMED
-#define L_POOL_TIMED(delay, format_timeout, format_done, ...) { \
-	auto __log_timed = L_DELAYED_BACKTRACE(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
-	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
-}
+/*
+ *  ___           _             ____ _
+ * |_ _|_ __   __| | _____  __ / ___| |__   ___  _ __ ___  ___
+ *  | || '_ \ / _` |/ _ \ \/ /| |   | '_ \ / _ \| '__/ _ \/ __|
+ *  | || | | | (_| |  __/>  < | |___| | | | (_) | | |  __/\__ \.
+ * |___|_| |_|\__,_|\___/_/\_\ \____|_| |_|\___/|_|  \___||___/
+ */
 
-#undef L_SHARD_LOG_TIMED
-#define L_SHARD_LOG_TIMED(delay, format_timeout, format_done, ...) { \
-	if (shard->log) { \
-		shard->log->clear(); \
-		shard->log.reset(); \
-	} \
-	auto __log_timed = L_DELAYED_BACKTRACE(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
-	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
-	shard->log = __log_timed.release(); \
-}
-#undef L_SHARD_LOG_TIMED_CLEAR
-#define L_SHARD_LOG_TIMED_CLEAR() { \
-	if (shard->log) { \
-		shard->log->clear(); \
-		shard->log.reset(); \
-	} \
-}
+namespace {
 
-#define LOCAL_DATABASE_UPDATE_TIME 10
+// One chore: an item of the index's group that runs `fn` on a worker and resumes the awaiting task
+// through the scheduler it suspended on. It lives in the awaiting frame, which the resume keeps
+// alive; nothing touches it after the resume.
+struct ChoreAwaiter final : WorkItem {
+	WorkGroup& group;
+	std::function<void()> fn;
+	std::exception_ptr error;
+	std::coroutine_handle<> handle;
+	task::scheduler_ref sched;
 
-
-class ReferencedShardEndpoint {
-	ShardEndpoint* ptr;
-
-public:
-	ReferencedShardEndpoint(ShardEndpoint* ptr) : ptr(ptr) {
-		if (ptr) {
-			++ptr->refs;
+	ChoreAwaiter(WorkGroup& group_, engine::ChoreClass chore_class, std::function<void()> fn_) : group(group_), fn(std::move(fn_)) {
+		run = &ChoreAwaiter::invoke;
+		switch (chore_class) {
+			case engine::ChoreClass::query: cls = WorkClass::query; break;
+			case engine::ChoreClass::flush: cls = WorkClass::flush; break;
+			case engine::ChoreClass::merge: cls = WorkClass::merge; break;
 		}
 	}
 
-	ReferencedShardEndpoint(const ReferencedShardEndpoint& other) = delete;
-	ReferencedShardEndpoint& operator=(const ReferencedShardEndpoint& other) = delete;
+	bool await_ready() const noexcept { return false; }
 
-	ReferencedShardEndpoint(ReferencedShardEndpoint&& other) : ptr(other.ptr) {
-		other.ptr = nullptr;
+	void await_suspend(std::coroutine_handle<> h) {
+		handle = h;
+		sched = task::current();
+		group.post(*this);  // the chore may finish, and resume h, before this returns
 	}
 
-	ReferencedShardEndpoint& operator=(ReferencedShardEndpoint&& other) {
-		ptr = other.ptr;
-		other.ptr = nullptr;
-		return *this;
-	}
-
-	~ReferencedShardEndpoint() noexcept {
-		if (ptr) {
-			assert(ptr->refs > 0);
-			--ptr->refs;
+	void await_resume() {
+		if (error) {
+			std::rethrow_exception(error);
 		}
 	}
 
-	void reset() {
-		if (ptr) {
-			assert(ptr->refs > 0);
-			--ptr->refs;
-			ptr = nullptr;
+	static void invoke(WorkItem* item) noexcept {
+		auto* self = static_cast<ChoreAwaiter*>(item);
+		try {
+			self->fn();
+		} catch (...) {
+			self->error = std::current_exception();
 		}
-	}
-
-	operator bool() const {
-		return !!ptr;
-	}
-
-	ShardEndpoint* operator->() const {
-		return ptr;
+		const auto h = self->handle;
+		const auto s = self->sched;
+		if (s) {
+			s.post(h);
+		} else {
+			h.resume();
+		}
 	}
 };
+
+}  // namespace
+
+
+IndexChores::IndexChores(WorkPool& pool) : group_(std::make_unique<WorkGroup>(pool))
+{
+}
+
+
+IndexChores::~IndexChores() = default;
+
+
+task::task<void>
+IndexChores::run(engine::ChoreClass cls, std::function<void()> fn)
+{
+	co_await ChoreAwaiter{*group_, cls, std::move(fn)};
+}
+
+
+/*
+ *  _____
+ * |_   _|   _ _ __ _ __
+ *   | || | | | '__| '_ \.
+ *   | || |_| | |  | | | |
+ *   |_| \__,_|_|  |_| |_|
+ */
+
+Turn::Turn(task::async_mutex::guard guard, int* held) noexcept
+	: guard_(std::move(guard)), held_(held)
+{
+}
+
+
+Turn::Turn(Turn&& other) noexcept
+	: guard_(std::move(other.guard_)), held_(std::exchange(other.held_, nullptr))
+{
+}
+
+
+Turn&
+Turn::operator=(Turn&& other) noexcept
+{
+	if (this != &other) {
+		release();
+		guard_ = std::move(other.guard_);
+		held_ = std::exchange(other.held_, nullptr);
+	}
+	return *this;
+}
+
+
+Turn::~Turn()
+{
+	release();
+}
+
+
+void
+Turn::release() noexcept
+{
+	if (held_) {
+		assert(*held_ > 0);
+		--*held_;
+		held_ = nullptr;
+	}
+	guard_.unlock();
+}
 
 
 /*
@@ -129,409 +182,185 @@ public:
  *                                                             |_|
  */
 
-ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint) :
-	Endpoint(endpoint),
-	database_pool(database_pool),
-	refs(0),
-	finished(false),
-	locked(false),
-	revision(0),
-	renew_time(std::chrono::steady_clock::now()),
-	readables_available(0)
+// What the users of an opening index await: the leader's outcome.
+struct ShardEndpoint::OpenFlight {
+	task::event done;
+	std::exception_ptr error;
+};
+
+
+ShardEndpoint::State
+ShardEndpoint::state() const
 {
-}
-
-
-ShardEndpoint::~ShardEndpoint()
-{
-	assert(refs == 0);
-}
-
-
-std::shared_ptr<Shard>&
-ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, std::chrono::steady_clock::time_point now, std::unique_lock<std::mutex>& lk)
-{
-	L_CALL("ShardEndpoint::_writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
-
-	do {
-		if (is_finished()) {
-			if (callback) {
-				callbacks.enqueue(std::move(*callback));
-			}
-			throw engine::Error(engine::errc::not_available, "Shard is not available");
-		}
-		if (!is_locked()) {
-			if (!writable) {
-				writable = std::make_shared<Shard>(*this, flags, false);
-			}
-			if (!writable->_busy.exchange(true)) {
-				if (writable->flags != flags) {
-					if (writable->is_local()) {
-						writable->flags = flags;
-					} else {
-						writable.reset();
-						writable = std::make_shared<Shard>(*this, flags, true);
-					}
-				}
-				assert(writable->flags == flags);
-				assert(writable->is_busy());
-				return writable;
-			}
-		}
-		auto wait_pred = [&]() {
-			return is_finished() || ((!writable || !writable->is_busy()) && !is_locked() && !database_pool.is_locked(*this));
-		};
-		if (timeout) {
-			if (timeout > 0.0) {
-				auto timeout_tp = now + std::chrono::duration<double>(timeout);
-				if (!writable_cond.wait_until(lk, timeout_tp, wait_pred)) {
-					if (callback) {
-						callbacks.enqueue(std::move(*callback));
-					}
-					throw engine::Error(engine::errc::not_available, "Shard is not available");
-				}
-			} else {
-				while (!writable_cond.wait_for(lk, 1s, wait_pred)) {}
-			}
-		} else {
-			if (!wait_pred()) {
-				if (callback) {
-					callbacks.enqueue(std::move(*callback));
-				}
-				throw engine::Error(engine::errc::not_available, "Shard is not available");
-			}
-		}
-	} while (true);
-}
-
-
-std::shared_ptr<Shard>&
-ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, std::chrono::steady_clock::time_point now, std::unique_lock<std::mutex>& lk)
-{
-	L_CALL("ShardEndpoint::_readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
-
-	do {
-		if (is_finished()) {
-			if (callback) {
-				callbacks.enqueue(std::move(*callback));
-			}
-			throw engine::Error(engine::errc::not_available, "Shard is not available");
-		}
-		if (!is_locked()) {
-			if (readables_available > 0) {
-				bool has_empty = false;
-				// Try finding an available readable database with the same flags
-				for (auto& readable : readables) {
-					if (!readable) {
-						has_empty = true;
-					} else if (readable->flags == flags) {
-						if (!readable->_busy.exchange(true)) {
-							--readables_available;
-							return readable;
-						}
-					}
-				}
-				// Or try adding a new database in an empty position
-				if (has_empty) {
-					for (auto& readable : readables) {
-						if (!readable) {
-							readable = std::make_shared<Shard>(*this, flags, true);
-							assert(readable->flags == flags);
-							assert(readable->is_busy());
-							--readables_available;
-							return readable;
-						}
-					}
-				}
-				// Or try upgrading flags of an already taken database
-				if (readables.size() >= database_pool.max_database_readers) {
-					for (auto& readable : readables) {
-						if (readable) {
-							if (!readable->_busy.exchange(true)) {
-								if (readable->flags != flags) {
-									if (readable->is_local()) {
-										readable->flags = flags;
-									} else {
-										readable.reset();
-										readable = std::make_shared<Shard>(*this, flags, true);
-									}
-								}
-								assert(readable->flags == flags);
-								assert(readable->is_busy());
-								--readables_available;
-								return readable;
-							}
-						}
-					}
-				}
-			}
-			// Otherwise add a new database
-			if (readables.size() < database_pool.max_database_readers) {
-				auto new_database = std::make_shared<Shard>(*this, flags, true);
-				auto& readable = *readables.insert(readables.end(), new_database);
-				++readables_available;
-				assert(readable->flags == flags);
-				assert(readable->is_busy());
-				--readables_available;
-				return readable;
-			}
-		}
-		auto wait_pred = [&]() {
-			return is_finished() || (
-				(
-					readables_available > 0 ||
-					readables.size() < database_pool.max_database_readers
-				) &&
-				!is_locked() &&
-				!database_pool.is_locked(*this));
-		};
-		if (timeout) {
-			if (timeout > 0.0) {
-				auto timeout_tp = now + std::chrono::duration<double>(timeout);
-				if (!readables_cond.wait_until(lk, timeout_tp, wait_pred)) {
-					if (callback) {
-						callbacks.enqueue(std::move(*callback));
-					}
-					throw engine::Error(engine::errc::not_available, "Shard is not available");
-				}
-			} else {
-				while (!readables_cond.wait_for(lk, 1s, wait_pred)) {}
-			}
-		} else {
-			if (!wait_pred()) {
-				if (callback) {
-					callbacks.enqueue(std::move(*callback));
-				}
-				throw engine::Error(engine::errc::not_available, "Shard is not available");
-			}
-		}
-	} while (true);
-}
-
-
-std::shared_ptr<Shard>
-ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* callback)
-{
-	L_CALL("ShardEndpoint::checkout({} ({}), {}, {})", repr(to_string()), readable_flags(flags), timeout, callback ? "<callback>" : "null");
-
-	L_POOL_TIMED(3s,
-		"Checking out of shard is taking too long: {} ({})",
-		"Checking out of shard took too long: {} ({})",
-		repr(to_string()),
-		readable_flags(flags));
-
-	auto now = std::chrono::steady_clock::now();
-
-	std::shared_ptr<Shard> shard;
-
-	std::unique_lock<std::mutex> lk(mtx);
-
-	if (has_db_writable(flags)) {
-		shard = _writable_checkout(flags, timeout, callback, now, lk);
-	} else {
-		auto& shard_ref = _readable_checkout(flags, timeout, callback, now, lk);
-		lk.unlock();
-		try {
-			// Reopening of old/outdated (readable) databases:
-			bool reopen = false;
-			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - shard_ref->reopen_time).count();
-			if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
-				L_DATABASE("Shard is just too old, reopen");
-				reopen = true;
-			} else {
-				if (shard_ref->is_local()) {
-					auto referenced_database_endpoint = database_pool.get(*this);
-					if (referenced_database_endpoint) {
-						auto revision = referenced_database_endpoint->get_revision();
-						referenced_database_endpoint.reset();
-						if (revision && revision != shard_ref->engine().revision()) {
-							L_DATABASE("Local writable shard has changed revision");
-							reopen = true;
-						}
-					}
-				}
-			}
-			if (reopen) {
-				// Create a new shard and discard old one
-				auto new_database = std::make_shared<Shard>(*this, flags, true);
-				lk.lock();
-				shard_ref = new_database;
-			}
-		} catch (...) {
-			L_WARNING("WARNING: Readable shard reopening failed: {}", to_string());
-		}
-		shard = shard_ref;
-	}
-
-	L_SHARD_LOG_TIMED(shard->is_writable() ? 9s : 3s,
-		"Checked out shard is taking too long: {} ({})",
-		"Checked out shard was out for too long: {} ({})",
-		repr(shard->to_string()),
-		readable_flags(shard->flags));
-	return shard;
+	std::lock_guard<std::mutex> lk(mtx);
+	return state_;
 }
 
 
 void
-ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
+ShardEndpoint::settle_open(State state, const std::shared_ptr<OpenFlight>& flight, std::exception_ptr error) noexcept
 {
-	L_CALL("ShardEndpoint::checkin({})", shard ? shard->__repr__() : "null");
-
-	assert(shard);
-	assert(shard->is_busy());
-	assert(&shard->endpoint == this);
-	assert(shard->refs() <= 1);
-
-	TaskQueue<std::packaged_task<void()>> pending_callbacks;
 	{
 		std::lock_guard<std::mutex> lk(mtx);
-		std::swap(pending_callbacks, callbacks);
+		state_ = state;
+		flight_.reset();
 	}
+	flight->error = std::move(error);
+	flight->done.set();
+}
 
-	if (shard->is_writable()) {
-		bool drop = is_finished() || database_pool.notify_lockable(*this) || shard->is_closed();
-		if (!drop) {
-			Shard::autocommit(shard);
-			// A failed in-place autocommit closes the shard: drop it.
-			drop = shard->is_closed();
-		}
-#if XAPIAND_DATABASE_WAL
-		// Delete WAL during checking of a restore
-		if (shard->is_restore()) {
-			XapiandManager::manager(true)->wal_writer->delete_wal(
-				shard->is_synchronous_wal(),
-				path
-			);
-		}
-#endif
-		L_SHARD_LOG_TIMED_CLEAR();
-		// One section: the drop, the release and the wake-up. A second lock after the drop
-		// could find the endpoint evicted.
-		std::lock_guard<std::mutex> lk(mtx);
-		if (drop) {
-			writable.reset();
-			database_pool.checkin_clears_cond.notify_all();
-		}
-		shard->_busy.store(false);
-		writable_cond.notify_one();
-	} else {
-		bool drop = is_finished() || database_pool.notify_lockable(*this) || shard->is_closed();
-		L_SHARD_LOG_TIMED_CLEAR();
-		std::lock_guard<std::mutex> lk(mtx);
-		if (drop) {
-			auto it = std::find(readables.begin(), readables.end(), shard);
-			if (it != readables.end()) {
-				readables.erase(it);
-				database_pool.checkin_clears_cond.notify_all();
+
+task::task<void>
+ShardEndpoint::ensure_open(int flags)
+{
+	L_CALL("ShardEndpoint::ensure_open(({}))", readable_flags(flags));
+
+	for (;;) {
+		std::shared_ptr<OpenFlight> flight;
+		std::shared_ptr<task::event> closed;
+		bool leader = false;
+		bool reset = false;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			if (is_finished()) {
+				throw engine::Error(engine::errc::not_available, "Shard is not available");
 			}
+			switch (state_) {
+				case State::open:
+					if (!stale_.load(std::memory_order_acquire)) {
+						co_return;
+					}
+					// A failure told us the engine cannot go on: this task closes it and the loop opens it again.
+					state_ = State::closing;
+					closed_ = std::make_shared<task::event>();
+					reset = true;
+					break;
+				case State::opening:
+					flight = flight_;
+					break;
+				case State::closing:
+					closed = closed_;
+					break;
+				case State::empty:
+					state_ = State::opening;
+					flight_ = flight = std::make_shared<OpenFlight>();
+					leader = true;
+					break;
+			}
+		}
+		if (reset) {
+			co_await close_marked(false);
+			continue;
+		}
+		if (closed) {
+			co_await *closed;
+			continue;
+		}
+		if (!leader) {
+			co_await flight->done;
+			if (flight->error) {
+				std::rethrow_exception(flight->error);
+			}
+			continue;
+		}
+		std::exception_ptr error;
+		try {
+			co_await open_index(flags);
+		} catch (...) {
+			error = std::current_exception();
+		}
+		settle_open(error ? State::empty : State::open, flight, error);
+		if (error) {
+			std::rethrow_exception(error);
+		}
+	}
+}
+
+
+task::task<Turn>
+ShardEndpoint::take_turn(int flags)
+{
+	L_CALL("ShardEndpoint::take_turn(({}))", readable_flags(flags));
+
+	for (;;) {
+		co_await ensure_open(flags);
+
+		task::async_mutex::guard guard;
+		int* held = nullptr;
+		if (auto* host = engine::Host::current()) {
+			const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
+			guard = co_await turn.lock_until(*host, deadline);
+			held = host->turns_held();
 		} else {
-			++readables_available;
+			guard = co_await turn.lock();
 		}
-		shard->_busy.store(false);
-		readables_cond.notify_one();
+		if (!guard) {
+			throw engine::Error(engine::errc::busy, "The index is busy: its turn did not come in time");
+		}
+		if (held) {
+			assert(*held == 0 && "a task holds one index's turn at most");
+			++*held;
+		}
+		Turn mine(std::move(guard), held);
+
+		bool usable;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			usable = state_ == State::open && !stale_.load(std::memory_order_acquire) && engine_;
+		}
+		if (usable) {
+			co_return std::move(mine);
+		}
+		// Closed or replaced while the turn was queued: give it back and look again.
 	}
-
-	// No refs() assertion here. By this point checkin has already cleared the shard's
-	// _busy flag and notified a waiter (writable_cond / readables_cond above), so under
-	// a parallel restore -- which hands the same writable shard to several DocIndexer
-	// workers -- another writer can have re-checked-out this shard and taken a database
-	// reference before we get here. A post-release refs() count is therefore inherently
-	// racy (it was seen at 2-4 during a restore, all benign). Exclusive ownership is
-	// asserted at entry instead, which is the invariant that actually holds.
-
-	shard.reset();
-
-	while (pending_callbacks.call()) {};
 }
 
 
-void
-ShardEndpoint::finish()
+task::task<void>
+ShardEndpoint::fresh(int flags)
 {
-	L_CALL("ShardEndpoint::finish()");
-
-	finished = true;
-	writable_cond.notify_all();
-	readables_cond.notify_all();
+	co_await ensure_open(flags);
+	std::shared_ptr<engine::Shard> eng;
+	{
+		std::lock_guard<std::mutex> lk(mtx);
+		eng = engine_;
+	}
+	if (!eng || !eng->dirty()) {
+		co_return;
+	}
+	auto mine = co_await take_turn(flags);
+	{
+		std::lock_guard<std::mutex> lk(mtx);
+		eng = engine_;
+	}
+	if (eng->dirty()) {
+		co_await eng->refresh();
+	}
 }
 
 
-std::pair<size_t, size_t>
-ShardEndpoint::clear()
+engine::Shard&
+ShardEndpoint::engine()
 {
-	L_CALL("ShardEndpoint::clear()");
-
-	std::unique_lock<std::mutex> lk(mtx);
-
-	// A shard taken here stays in its slot, busy, until it is dropped or released, so no checkout
-	// can fill or reuse the slot meanwhile. Under mtx and busy, nobody else can copy the slot's
-	// pointer, so use_count() == 1 means the slot holds the last reference.
-	std::vector<std::shared_ptr<Shard>> dropped;  // deleted outside mtx
-	if (writable) {
-		if (!writable->_busy.exchange(true)) {
-			lk.unlock();
-			// First try closing internal shard:
-			writable->do_close(true, writable->is_closed(), writable->transactional(), false);
-			lk.lock();
-			if (writable.use_count() == 1) {
-				dropped.push_back(std::move(writable));
-			} else {
-				writable->_busy.store(false);
-			}
-			writable_cond.notify_all();
-		}
-	}
-
-	if (readables_available > 0) {
-		for (auto it = readables.begin(); it != readables.end();) {
-			auto& readable = *it;
-			if (!readable) {
-				--readables_available;
-				it = readables.erase(it);
-			} else if (!readable->_busy.exchange(true)) {
-				--readables_available;
-				lk.unlock();
-				// First try closing internal shard:
-				readable->do_close(true, readable->is_closed(), readable->transactional(), false);
-				lk.lock();
-				if (readable.use_count() == 1) {
-					dropped.push_back(std::move(readable));
-					it = readables.erase(it);
-					readables_cond.notify_all();
-				} else {
-					readable->_busy.store(false);
-					++readables_available;
-					readables_cond.notify_all();
-					++it;
-				}
-			} else {
-				++it;
-			}
-		}
-	}
-
-	auto count = std::make_pair<size_t, size_t>(writable ? 1 : 0, readables.size());
-	lk.unlock();
-	dropped.clear();
-	return count;
-}
-
-
-std::pair<size_t, size_t>
-ShardEndpoint::count()
-{
-	L_CALL("ShardEndpoint::count()");
-
 	std::lock_guard<std::mutex> lk(mtx);
-	return std::make_pair(writable ? 1 : 0, readables.size());
+	if (!engine_) {
+		throw engine::Error(engine::errc::closed, "Database has been closed");
+	}
+	return *engine_;
+}
+
+
+bool
+ShardEndpoint::is_used() const
+{
+	std::lock_guard<std::mutex> lk(mtx);
+	return refs != 0 || state_ != State::empty;
 }
 
 
 engine::rev
 ShardEndpoint::get_revision() const
 {
-	L_CALL("ShardEndpoint::get_revision()");
-
 	return revision.load(std::memory_order_relaxed);
 }
 
@@ -539,35 +368,20 @@ ShardEndpoint::get_revision() const
 void
 ShardEndpoint::set_revision(engine::rev revision_)
 {
-	L_CALL("ShardEndpoint::set_revision({})", revision_);
-
 	revision.store(revision_, std::memory_order_relaxed);
-}
-
-
-bool
-ShardEndpoint::is_used() const
-{
-	L_CALL("ShardEndpoint::is_used()");
-
-	std::lock_guard<std::mutex> lk(mtx);
-
-	return (
-		refs != 0 ||
-		is_locked() ||
-		writable ||
-		!readables.empty()
-	);
 }
 
 
 std::string
 ShardEndpoint::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {}{}{}>",
+	static const char* const names[] = {"empty", "opening", "open", "closing"};
+	std::lock_guard<std::mutex> lk(mtx);
+	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {} ({}){}{}>",
 		refs.load(),
 		repr(to_string()),
-		is_locked() ? " " + RED + "(locked)" + STEEL_BLUE : "",
+		names[static_cast<int>(state_)],
+		stale_.load() ? " " + RED + "(stale)" + STEEL_BLUE : "",
 		is_finished() ? " " + ORANGE + "(finished)" + STEEL_BLUE : "");
 }
 
@@ -579,22 +393,7 @@ ShardEndpoint::dump_databases(int level) const
 	for (int l = 0; l < level; ++l) {
 		indent += "    ";
 	}
-
-	std::lock_guard<std::mutex> lk(mtx);
-
-	std::string ret;
-	if (writable) {
-		ret += indent;
-		ret += writable->__repr__();
-		ret.push_back('\n');
-	}
-
-	for (const auto& readable : readables) {
-		ret += indent;
-		ret += readable->__repr__();
-		ret.push_back('\n');
-	}
-	return ret;
+	return indent + __repr__() + "\n";
 }
 
 
@@ -607,146 +406,42 @@ ShardEndpoint::dump_databases(int level) const
  *
  */
 
-DatabasePool::DatabasePool(size_t database_pool_size, size_t max_database_readers) :
+DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads) :
 	lru::lru(database_pool_size),
-	locks(0),
-	max_database_readers(max_database_readers)
+	finished_(false),
+	control_(nullptr),
+	turn_timeout_(DB_TIMEOUT),
+	buffered_docs_cap_(0),
+	wal_writer_(nullptr)
 {
+	WorkPool::Options options;
+	options.threads = work_threads;
+	options.block_guard = &engine::check_may_block;
+	work_pool_ = std::make_unique<WorkPool>(options);
+	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
 }
 
 
-std::vector<ReferencedShardEndpoint>
-DatabasePool::endpoints() const
+DatabasePool::~DatabasePool()
 {
-	std::vector<ReferencedShardEndpoint> database_endpoints;
-
+	// The entries (their groups, their engines and the merges those run) end before the pool they run on.
 	std::lock_guard<std::mutex> lk(mtx);
-	database_endpoints.reserve(size());
-	for (auto& endpoint_database_endpoint : *this) {
-		database_endpoints.emplace_back(endpoint_database_endpoint.second.get());
-	}
-	return database_endpoints;
+	lru::lru::clear();
 }
 
 
 void
-DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
+DatabasePool::run_detached(task::task<void> t)
 {
-	L_CALL("DatabasePool::lock({}, {})", shard ? shard->__repr__() : "null", timeout);
-
-	assert(shard);
-
-	if (!shard->is_writable() || !shard->is_local()) {
-		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
-		THROW(Error, "Cannot grant exclusive lock shard");
-	}
-
-	++locks;  // This needs to be done before locking
-	if (shard->endpoint.locked.exchange(true)) {
-		assert(locks > 0);
-		--locks;  // revert if failed.
-		L_DEBUG("ERROR: Exclusive lock can be granted only to non-locked databases");
-		THROW(Error, "Cannot grant exclusive lock shard");
-	}
-
-	std::unique_lock<std::mutex> lk(mtx);
-
-	auto is_ready_to_lock = [&] {
-		bool is_ready = true;
-		lk.unlock();
-		auto referenced_database_endpoint = get(shard->endpoint);
-		if (referenced_database_endpoint->clear().second) {
-			is_ready = false;
-		}
-		lk.lock();
-		return is_ready;
-	};
-	if (timeout > 0.0) {
-		auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
-		if (!shard->endpoint.lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
-			throw engine::Error(engine::errc::not_available, "Cannot grant exclusive lock shard");
-		}
+	if (auto* control = control_.load(std::memory_order_acquire)) {
+		control->spawn(std::move(t));
 	} else {
-		while (!shard->endpoint.lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
-			if (shard->endpoint.is_finished()) {
-				throw engine::Error(engine::errc::not_available, "Cannot grant exclusive lock shard");
-			}
+		try {
+			engine::sync_wait(std::move(t));
+		} catch (...) {
+			L_EXC("A detached task failed");
 		}
 	}
-}
-
-
-void
-DatabasePool::unlock(const std::shared_ptr<Shard>& shard)
-{
-	L_CALL("DatabasePool::unlock({})", shard ? shard->__repr__() : "null");
-
-	assert(shard);
-
-	if (!shard->is_writable() || !shard->is_local()) {
-		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
-		THROW(Error, "Cannot grant exclusive lock shard");
-	}
-
-	if (!shard->endpoint.locked.exchange(false)) {
-		L_DEBUG("ERROR: Exclusive lock can be released only from locked databases");
-		THROW(Error, "Cannot release exclusive lock shard");
-	}
-
-	assert(locks > 0);
-	--locks;
-
-	auto referenced_database_endpoint = get(shard->endpoint);
-	{
-		// Orders the unlock with the waiters' predicate checks.
-		std::lock_guard<std::mutex> lk(referenced_database_endpoint->mtx);
-		referenced_database_endpoint->readables_cond.notify_all();
-	}
-	referenced_database_endpoint.reset();
-}
-
-
-bool
-DatabasePool::notify_lockable(const Endpoint& endpoint)
-{
-	L_CALL("DatabasePool::notify_lockable({})", repr(endpoint.to_string()));
-
-	bool locked = false;
-
-	if (locks) {
-		std::lock_guard<std::mutex> lk(mtx);
-
-		auto it = find_and_leave(endpoint);
-		if (it != end()) {
-			auto& database_endpoint = it->second;
-			if (database_endpoint->is_locked()) {
-				database_endpoint->lockable_cond.notify_one();
-				locked = true;
-			}
-		}
-	}
-
-	return locked;
-}
-
-
-bool
-DatabasePool::is_locked(const Endpoint& endpoint) const
-{
-	L_CALL("DatabasePool::is_locked({})", repr(endpoint.to_string()));
-
-	if (locks) {
-		std::lock_guard<std::mutex> lk(mtx);
-
-		auto it = find_and_leave(endpoint);
-		if (it != end()) {
-			if (it->second->is_locked()) {
-				return true;
-			}
-		}
-	}
-
-	return false;
 }
 
 
@@ -814,79 +509,103 @@ DatabasePool::get(const Endpoint& endpoint) const
 }
 
 
-std::shared_ptr<Shard>
-DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std::packaged_task<void()>* callback)
+std::vector<ReferencedShardEndpoint>
+DatabasePool::endpoints() const
 {
-	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoint.to_string()), readable_flags(flags), timeout);
+	std::vector<ReferencedShardEndpoint> database_endpoints;
 
-	engine::check_may_block("DatabasePool::checkout");
-
-	auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
-	assert(shard);
-
-	return shard;
-}
-
-
-void
-DatabasePool::checkin(std::shared_ptr<Shard>& shard)
-{
-	L_CALL("DatabasePool::checkin({})", shard ? shard->__repr__() : "null");
-
-	engine::check_may_block("DatabasePool::checkin");
-
-	assert(shard);
-	shard->endpoint.checkin(shard);
-	shard.reset();
-}
-
-
-std::vector<std::shared_ptr<Shard>>
-DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
-{
-	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoints.to_string()), readable_flags(flags), timeout);
-
-	engine::check_may_block("DatabasePool::checkout");
-
-	if (endpoints.empty()) {
-		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
-		throw engine::Error(engine::errc::opening, "Cannot checkout empty database");
+	std::lock_guard<std::mutex> lk(mtx);
+	database_endpoints.reserve(size());
+	for (auto& endpoint_database_endpoint : *this) {
+		database_endpoints.emplace_back(endpoint_database_endpoint.second.get());
 	}
+	return database_endpoints;
+}
 
-	std::vector<std::shared_ptr<Shard>> shards;
-	shards.reserve(endpoints.size());
+
+// The close of an idle entry, which begin_idle_close marked: a failure is logged, not thrown.
+static task::task<void>
+close_idle(ReferencedShardEndpoint entry)
+{
 	try {
-		for (auto& endpoint : endpoints) {
-			auto shard = spawn(endpoint)->checkout(flags, timeout);
-			assert(shard);
-			shards.emplace_back(std::move(shard));
-		}
-		return shards;
-	} catch (...) {
-		// Unable to checkout all requested shards, checkin
-		checkin(shards);
-		throw;
+		co_await entry->finish_idle_close();
+	} catch (const engine::Error& error) {
+		L_WARNING("Closing idle {} failed: {}", repr(entry->to_string()), error.description());
+	} catch (const std::exception& exc) {
+		L_WARNING("Closing idle {} failed: {}", repr(entry->to_string()), exc.what());
 	}
 }
 
 
 void
-DatabasePool::checkin(std::vector<std::shared_ptr<Shard>>& shards)
+DatabasePool::cleanup(bool immediate)
 {
-	L_CALL("DatabasePool::checkin(<shards>)");
+	L_CALL("DatabasePool::cleanup()");
 
-	engine::check_may_block("DatabasePool::checkin");
+	auto now = std::chrono::steady_clock::now();
 
-	for (auto& shard : shards) {
-		if (shard) {
-			try {
-				shard->endpoint.checkin(shard);
-			} catch (...) {
-				L_EXC("Unable to checkin shard: {}", shard->endpoint.to_string());
+	std::vector<ReferencedShardEndpoint> closing;
+
+	{
+		std::lock_guard<std::mutex> lk(mtx);
+
+		trim_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool overflowed, bool) {
+			auto& entry = *endpoint_database_endpoint.second;
+			const bool idle = immediate || entry.renew_time < now - (overflowed ? 60s : 3600s);
+			if (!idle) {
+				return overflowed ? DropAction::leave : DropAction::stop;
 			}
-		}
+			// Marking is under the map's lock, as every use of the entry is: a use that came first is seen
+			// in refs, and one that comes later awaits the close.
+			if (entry.begin_idle_close()) {
+				closing.emplace_back(&entry);
+			}
+			if (entry.is_used()) {
+				L_DATABASE("Leave used endpoint: {}", repr(entry.to_string()));
+				return DropAction::leave;
+			}
+			L_DATABASE("Evict endpoint: {}", repr(entry.to_string()));
+			return DropAction::evict;
+		});
 	}
-	shards.clear();
+
+	if (immediate) {
+		// An immediate cleanup (FLUSH) returns once the indexes are closed: one close task per open index, awaited together.
+		engine::check_may_block("DatabasePool::cleanup");
+		std::vector<task::task<void>> tasks;
+		tasks.reserve(closing.size());
+		for (auto& entry : closing) {
+			tasks.push_back(close_idle(std::move(entry)));
+		}
+		closing.clear();
+		engine::sync_wait(task::when_all(std::move(tasks)));
+		return;
+	}
+
+	// Each close is a task of its own; this returns without waiting for it.
+	for (auto& entry : closing) {
+		run_detached(close_idle(std::move(entry)));
+	}
+}
+
+
+void
+DatabasePool::housekeeping()
+{
+	for (auto& entry : endpoints()) {
+		if (entry->state() != ShardEndpoint::State::open) {
+			continue;
+		}
+		run_detached([](ReferencedShardEndpoint entry) -> task::task<void> {
+			try {
+				co_await entry->housekeeping();
+			} catch (const engine::Error& error) {
+				L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), error.description());
+			} catch (const std::exception& exc) {
+				L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), exc.what());
+			}
+		}(std::move(entry)));
+	}
 }
 
 
@@ -895,10 +614,12 @@ DatabasePool::finish()
 {
 	L_CALL("DatabasePool::finish()");
 
+	finished_.store(true);
+	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
 	std::lock_guard<std::mutex> lk(mtx);
 
 	for (auto& endpoint_database_endpoint : *this) {
-		endpoint_database_endpoint.second->finish();
+		endpoint_database_endpoint.second->finished.store(true);
 	}
 }
 
@@ -908,71 +629,17 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 {
 	L_CALL("DatabasePool::join(<timeout>)");
 
-	std::unique_lock<std::mutex> lk(mtx);
+	engine::check_may_block("DatabasePool::join");
 
-	auto is_cleared = [&] {
-		lk.unlock();
-		auto cleared = clear();
-		lk.lock();
-		return cleared;
-	};
-
-	if (!checkin_clears_cond.wait_until(lk, wakeup, is_cleared)) {
-		return false;
+	for (;;) {
+		if (clear()) {
+			return true;
+		}
+		if (std::chrono::steady_clock::now() >= wakeup) {
+			return false;
+		}
+		std::this_thread::sleep_for(5ms);
 	}
-
-	return true;
-}
-
-
-void
-DatabasePool::cleanup(bool immediate)
-{
-	L_CALL("DatabasePool::cleanup()");
-
-	engine::check_may_block("DatabasePool::cleanup");
-
-	std::lock_guard<std::mutex> cleanup_lk(cleanup_mtx);
-
-	auto now = std::chrono::steady_clock::now();
-
-	std::unique_lock<std::mutex> lk(mtx);
-
-	trim_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool overflowed, bool) {
-		assert(endpoint_database_endpoint.second);
-		if (overflowed) {
-			if (immediate || endpoint_database_endpoint.second->renew_time < now - 60s) {
-				ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
-				lk.unlock();
-				referenced_database_endpoint->clear();
-				lk.lock();
-				referenced_database_endpoint.reset();
-				if (endpoint_database_endpoint.second->is_used()) {
-					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-					return DropAction::leave;
-				}
-				L_DATABASE("Evict endpoint from full LRU: {}", repr(endpoint_database_endpoint.second->to_string()));
-				return DropAction::evict;
-			}
-			L_DATABASE("Leave recently used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-			return DropAction::leave;
-		}
-		if (immediate || endpoint_database_endpoint.second->renew_time < now - 3600s) {
-			ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
-			lk.unlock();
-			referenced_database_endpoint->clear();
-			lk.lock();
-			referenced_database_endpoint.reset();
-			if (endpoint_database_endpoint.second->is_used()) {
-				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-				return DropAction::leave;
-			}
-			L_DATABASE("Evict endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-			return DropAction::evict;
-		}
-		L_DATABASE("Stop at endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-		return DropAction::stop;
-	});
 }
 
 
@@ -981,14 +648,30 @@ DatabasePool::clear()
 {
 	L_CALL("DatabasePool::clear()");
 
+	engine::check_may_block("DatabasePool::clear");
+
 	bool cleared = true;
 
-	for (auto& referenced_database_endpoint : endpoints()) {
-		auto count = referenced_database_endpoint->clear();
-		referenced_database_endpoint.reset();
-		if (count.first || count.second) {
+	for (auto& entry : endpoints()) {
+		// This reference is one of the entry's refs.
+		bool marked;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			marked = entry->begin_idle_close(1);
+		}
+		if (marked) {
+			try {
+				engine::sync_wait(entry->finish_idle_close());
+			} catch (const engine::Error& error) {
+				L_WARNING("Closing {} failed: {}", repr(entry->to_string()), error.description());
+			} catch (const std::exception& exc) {
+				L_WARNING("Closing {} failed: {}", repr(entry->to_string()), exc.what());
+			}
+		}
+		if (entry->state() != ShardEndpoint::State::empty || entry->refs.load() > 1) {
 			cleared = false;
 		}
+		entry.reset();
 	}
 
 	if (!cleared) {
@@ -999,8 +682,7 @@ DatabasePool::clear()
 	std::lock_guard<std::mutex> lk(mtx);
 
 	for (auto& endpoint_database_endpoint : *this) {
-		auto count = endpoint_database_endpoint.second->count();
-		if (count.first || count.second) {
+		if (endpoint_database_endpoint.second->is_used()) {
 			return false;
 		}
 	}
@@ -1017,10 +699,11 @@ DatabasePool::count()
 
 	size_t endpoints_count = 0;
 	size_t databases_count = 0;
-	for (auto& referenced_database_endpoint : endpoints()) {
+	for (auto& entry : endpoints()) {
 		++endpoints_count;
-		auto count = referenced_database_endpoint->count();
-		databases_count += count.first + count.second;
+		if (entry->state() == ShardEndpoint::State::open) {
+			++databases_count;
+		}
 	}
 	return std::make_pair(endpoints_count, databases_count);
 }
@@ -1029,8 +712,7 @@ DatabasePool::count()
 std::string
 DatabasePool::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<DatabasePool {{locks:{}}}>",
-		locks.load());
+	return strings::format(STEEL_BLUE + "<DatabasePool {{finished:{}}}>", finished_.load());
 }
 
 
@@ -1051,7 +733,6 @@ DatabasePool::dump_databases(int level) const
 		ret += indent + indent;
 		ret += referenced_database_endpoint->__repr__();
 		ret.push_back('\n');
-		ret += referenced_database_endpoint->dump_databases(level + 2);
 		referenced_database_endpoint.reset();
 	}
 	return ret;

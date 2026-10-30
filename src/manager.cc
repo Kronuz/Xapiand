@@ -51,6 +51,7 @@
 #include "database/cleanup.h"                    // for DatabaseCleanup
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
 #include "database/pool.h"                       // for DatabasePool
+#include "engine/host_asio.h"                    // for engine::AsioHost
 #include "database/schemas_lru.h"                // for SchemasLRU
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
@@ -145,6 +146,7 @@ std::shared_ptr<XapiandManager> XapiandManager::_manager;
 // same async-signal-safe mechanism ev::async uses internally -- and drained on the loop.
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
+	engine::AsioHost host;                       // where the index registry's timer-driven tasks run
 	reactor::PeriodicTimer try_shutdown_timer;
 	reactor::Signal setup_node_async;
 	reactor::Signal shutdown_async;
@@ -155,6 +157,7 @@ struct XapiandManager::Reactors {
 
 	Reactors()
 		: reactor(1, 0),
+		  host(reactor.io().get_executor()),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  shutdown_async(reactor.io().get_executor()),
@@ -229,7 +232,7 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	: total_clients(0),
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
-	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
+	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
@@ -247,6 +250,7 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  _rx(std::make_unique<Reactors>()),
 	  atom_sig(0)
 {
+	database_pool->set_control(&_rx->host);
 	_rx->try_shutdown_timer.set_callback([this] { try_shutdown_timer_cb(); });
 	_rx->setup_node_async.set_callback([this] { setup_node_async_cb(); });
 	_rx->shutdown_async.set_callback([this] { shutdown_async_cb(); });

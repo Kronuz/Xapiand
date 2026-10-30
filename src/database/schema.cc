@@ -42,6 +42,7 @@
 #include "cast.h"                                 // for Cast
 #include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialise
 #include "database/handler.h"                     // for DatabaseHandler
+#include "engine/sync.h"                    // for engine::sync_wait
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
 #include "datetime.h"                             // for isDate, isDatetime, tm_t
@@ -2772,8 +2773,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							if (endpoint.is_active()) {
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags, false);
-									lk_shard.lock(0);
-									auto doccount = lk_shard->engine().doc_count();
+									lk_shard.lock();
+									auto doccount = engine::sync_wait(lk_shard->engine_for_read())->doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
 										shard_num = n;
@@ -2838,8 +2839,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							if (endpoint.is_active()) {
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags, false);
-									lk_shard.lock(0);
-									auto doccount = lk_shard->engine().doc_count();
+									lk_shard.lock();
+									auto doccount = engine::sync_wait(lk_shard->engine_for_read())->doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
 										shard_num = n;

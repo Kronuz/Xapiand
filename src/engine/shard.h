@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint8_t
 #include <functional>              // for std::function
 #include <memory>                  // for std::unique_ptr
@@ -30,6 +31,7 @@
 #include <typeinfo>                // for std::bad_cast
 #include <vector>                  // for std::vector
 
+#include "engine/chores.h"         // for Chores
 #include "engine/doc_view.h"       // for DocView
 #include "engine/document.h"       // for Document
 #include "engine/types.h"          // for docid, rev, termcount, WriteResult
@@ -78,8 +80,8 @@ struct Stats {
 using ScanSink = std::function<void(const DocView&)>;
 
 // One shard of an index: the write, read and lifecycle slice. Every operation that can block on I/O
-// returns a task. The referenced arguments must outlive the task. A shard is used by one task at
-// a time.
+// returns a task. The referenced arguments must outlive the task. Writes are made by one task at a
+// time: the host serialises them (the index's turn); reads may overlap them.
 class Shard {
 public:
 	virtual ~Shard() = default;
@@ -126,6 +128,22 @@ public:
 	// A metadata value (empty when absent) and every metadata key.
 	virtual task::task<std::string> metadata(const std::string& key) = 0;
 	virtual task::task<std::vector<std::string>> metadata_keys() = 0;
+
+	// Host mode (a shard opened with a Chores): the device work of a write is a chore, and a read
+	// sees what was applied only after refresh(). dirty() tells whether something was applied since.
+	virtual bool dirty() const noexcept = 0;
+	virtual task::task<void> refresh() = 0;
+
+	// Housekeeping of an idle index: publishes finished merges and frees what is queued for removal.
+	virtual task::task<void> reclaim() = 0;
+	virtual std::size_t merges_pending() const noexcept = 0;
+
+	// Changes where the device work of later calls runs (a host switches from inline to its pool once the
+	// index is opened and its log replayed). Call it when no call is in flight.
+	virtual void use_chores(Chores* chores) noexcept = 0;
+
+	// Commits what is pending and releases the index; later calls raise `closed`.
+	virtual task::task<void> close() = 0;
 
 	// Cheap state of a local shard, read from memory.
 	virtual rev revision() const = 0;

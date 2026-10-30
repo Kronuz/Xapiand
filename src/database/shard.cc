@@ -35,6 +35,7 @@
 #include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
+#include "engine/chores.h"          // for engine::Chores
 #include "engine/open.h"            // for engine::open_local
 #include "engine/sync.h"            // for engine::sync_wait
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -147,26 +148,6 @@ finalise_write(engine::Document& doc, engine::WriteResult& info, const std::opti
 }
 
 
-// The shard could not be opened (yet), or does not exist, or cannot serve now.
-static inline bool
-is_opening_failure(engine::errc kind)
-{
-	return kind == engine::errc::opening || kind == engine::errc::not_found || kind == engine::errc::not_available;
-}
-
-
-// A failure a reopen may recover from by trying again.
-static inline bool
-is_stale_failure(engine::errc kind)
-{
-	return is_opening_failure(kind) ||
-		kind == engine::errc::reopen ||
-		kind == engine::errc::corrupt ||
-		kind == engine::errc::timeout ||
-		kind == engine::errc::network ||
-		kind == engine::errc::closed;
-}
-
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
 
 // Codec for newly written data-store records. Zstandard gives ~2x LZ4's ratio at
@@ -275,11 +256,11 @@ public:
 void
 DataHeaderV1::init(void* param, void* /*unused*/)
 {
-	auto shard = static_cast<Shard*>(param);
+	auto shard = static_cast<ShardEndpoint*>(param);
 	assert(shard);
 
 	head.magic = _LEGACY_STORAGE_MAGIC;
-	strncpy(head.uuid, shard->engine().uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, shard->uuid().c_str(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 }
 
@@ -291,8 +272,8 @@ DataHeaderV1::validate(void* param, void* /*unused*/)
 		THROW(StorageCorruptVolume, "Bad data storage header magic number");
 	}
 
-	auto shard = static_cast<Shard*>(param);
-	if (UUID(head.uuid) != UUID(shard->engine().uuid())) {
+	auto shard = static_cast<ShardEndpoint*>(param);
+	if (UUID(head.uuid) != UUID(shard->uuid())) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
 }
@@ -301,13 +282,13 @@ DataHeaderV1::validate(void* param, void* /*unused*/)
 void
 DataHeaderV2::init(void* param, void* /*unused*/)
 {
-	auto shard = static_cast<Shard*>(param);
+	auto shard = static_cast<ShardEndpoint*>(param);
 	assert(shard);
 
 	// The engine stamps meta (magic/txnid/high-water/checksum); we only carry the
 	// shard uuid so a foreign volume is rejected on open.
 	memset(uuid, 0, sizeof(uuid));
-	strncpy(uuid, shard->engine().uuid().c_str(), sizeof(uuid));
+	strncpy(uuid, shard->uuid().c_str(), sizeof(uuid));
 }
 
 
@@ -316,8 +297,8 @@ DataHeaderV2::validate(void* param, void* /*unused*/)
 {
 	// The engine has already checked the meta magic + whole-block checksum; this
 	// is the shard-domain check.
-	auto shard = static_cast<Shard*>(param);
-	if (UUID(uuid) != UUID(shard->engine().uuid())) {
+	auto shard = static_cast<ShardEndpoint*>(param);
+	if (UUID(uuid) != UUID(shard->uuid())) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
 }
@@ -339,756 +320,732 @@ DataStorage::open(std::string_view relative_path)
 
 
 /*
- *   ____  _                   _
- *  / ___|| |__   __ _ _ __ __| |
- *  \___ \| '_ \ / _` | '__/ _` |
- *   ___) | | | | (_| | | | (_| |
- *  |____/|_| |_|\__,_|_|  \__,_|
- *
+ *  ____        _        _                    _____           _             _       _
+ * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| ____|_ __   __| |_ __   ___ (_)_ __ | |_
+ * | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \  _| | '_ \ / _` | '_ \ / _ \| | '_ \| __|
+ * | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___| | | | (_| | |_) | (_) | | | | | |_
+ * |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| |_|\__,_| .__/ \___/|_|_| |_|\__|
+ *                                                             |_|
+ * the parts that touch the engine, the blob storage and the WAL
  */
-Shard::Shard(ShardEndpoint& endpoint_, int flags_, bool busy_)
-	: reopen_time(std::chrono::steady_clock::now()),
-	  reopen_revision(0),
-	  _busy(busy_),
-	  _local(false),
-	  _closed(false),
-	  _modified(false),
-	  _incomplete(false),
-	  _transaction(Transaction::none),
-	  endpoint(endpoint_),
-	  flags(flags_)
+
+ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint) :
+	Endpoint(endpoint),
+	database_pool(database_pool),
+	refs(0),
+	finished(false),
+	revision(0),
+	renew_time(std::chrono::steady_clock::now()),
+	stale_(false),
+	chores(std::make_unique<IndexChores>(*database_pool.work_pool_)),
+	modified(false),
+	applied_(0),
+	last_flags_(0),
+	opens_(0)
 {
 }
 
 
-Shard::~Shard() noexcept
+ShardEndpoint::~ShardEndpoint()
 {
-	try {
-		do_close(true, true, Shard::Transaction::none, false);
-		if (log) {
-			log->clear();
-			log.reset();
+	assert(refs == 0);
+}
+
+
+DatabaseWALWriter&
+ShardEndpoint::wal_writer() const
+{
+	if (auto* writer = database_pool.wal_writer_.load(std::memory_order_acquire)) {
+		return *writer;
+	}
+	return *XapiandManager::manager(true)->wal_writer;
+}
+
+
+std::shared_ptr<engine::Shard>
+ShardEndpoint::engine_ptr() const
+{
+	std::lock_guard<std::mutex> lk(mtx);
+	return engine_;
+}
+
+
+void
+ShardEndpoint::note_failure(const engine::Error& error) noexcept
+{
+	switch (error.kind) {
+		case engine::errc::closed:
+		case engine::errc::reopen:
+		case engine::errc::corrupt:
+		case engine::errc::database:
+			mark_stale();
+			break;
+		default:
+			break;
+	}
+}
+
+
+// What the log replays into while the index is opened: the engine alone, with chores inline.
+class ReplayTarget final : public WalTarget {
+	ShardEndpoint& entry_;
+	engine::Shard& engine_;
+	int flags_;
+	engine::rev start_revision_;
+
+public:
+	ReplayTarget(ShardEndpoint& entry, engine::Shard& eng, int flags) :
+		entry_(entry), engine_(eng), flags_(flags), start_revision_(eng.revision()) { }
+
+	const std::string& path() const override {
+		return entry_.path;
+	}
+
+	engine::Shard& engine() override {
+		return engine_;
+	}
+
+	engine::rev start_revision() const override {
+		return start_revision_;
+	}
+
+	bool commit(bool wal) override {
+		return engine::sync_wait(entry_.do_commit(engine_, engine::inline_chores(), flags_, wal));
+	}
+
+	void replace_document(engine::docid did, engine::Document&& doc, bool commit_, bool wal, bool version) override {
+		engine::sync_wait(entry_.do_replace(engine_, engine::inline_chores(), flags_, did, std::move(doc), wal, version));
+		if (commit_) {
+			commit(wal);
 		}
-	} catch (...) {
-		L_EXC("Unhandled exception in destructor");
 	}
-}
 
-bool
-Shard::reopen_writable()
+	void delete_document(engine::docid did, bool commit_, bool wal, bool) override {
+		engine::sync_wait(entry_.do_delete(engine_, flags_, did, wal));
+		if (commit_) {
+			commit(wal);
+		}
+	}
+
+	void set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal) override {
+		engine::sync_wait(entry_.do_set_metadata(engine_, flags_, key, value, wal));
+		if (commit_) {
+			commit(wal);
+		}
+	}
+
+	void add_spelling(const std::string& word, engine::termcount freq, bool commit_, bool wal) override {
+		engine::sync_wait(entry_.do_add_spelling(engine_, flags_, word, freq, wal));
+		if (commit_) {
+			commit(wal);
+		}
+	}
+
+	void remove_spelling(const std::string& word, engine::termcount freq, bool commit_, bool wal) override {
+		engine::sync_wait(entry_.do_remove_spelling(engine_, flags_, word, freq, wal));
+		if (commit_) {
+			commit(wal);
+		}
+	}
+};
+
+
+// Opens the engine and the blob storage and replays the WAL, all in one chore: nobody else is on the
+// index (it is `opening`), so replay holds no turn and its writes run their chores inline. The engine
+// then takes the index's chores.
+void
+ShardEndpoint::open_index_blocking(int flags)
 {
-	/*
-	 * __        __    _ _        _     _        ____  ____
-	 * \ \      / / __(_) |_ __ _| |__ | | ___  |  _ \| __ )
-	 *  \ \ /\ / / '__| | __/ _` | '_ \| |/ _ \ | | | |  _ \.
-	 *   \ V  V /| |  | | || (_| | |_) | |  __/ | |_| | |_) |
-	 *    \_/\_/ |_|  |_|\__\__,_|_.__/|_|\___| |____/|____/
-	 *
-	 */
-	L_CALL("Shard::reopen_writable()");
+	L_CALL("ShardEndpoint::open_index_blocking(({}))", readable_flags(flags));
 
-	bool created = false;
+	L_DATABASE("Opening shard {} ({})", repr(to_string()), readable_flags(flags));
 
-	if (is_closed()) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
+	engine::OpenOptions options;
+	options.chores = &engine::inline_chores();
+	options.host = true;
+	options.background = &database_pool.executor();
+	options.buffered_docs_cap = database_pool.buffered_docs_cap_.load(std::memory_order_relaxed);
+	auto opened = engine::sync_wait(engine::open_local(path, true, has_db_create_or_open(flags), options));
+	std::shared_ptr<engine::Shard> eng(std::move(opened.shard));
 
-	reset();
-
-	std::unique_ptr<engine::Shard> new_database;
-
-	assert(!endpoint.empty());
-	bool local = false;
-	{
-		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::opening, "Random Error");
-		auto opened = engine::sync_wait(engine::open_local(endpoint.path, true, has_db_create_or_open(flags)));
-		new_database = std::move(opened.shard);
-		created = opened.created;
-		local = true;
-	}
-
-	_local.store(local, std::memory_order_relaxed);
-	if (local) {
-		reopen_revision = new_database->revision();
-		endpoint.set_revision(reopen_revision);
-	}
-
-	if (is_transactional()) {
-		engine::sync_wait(new_database->begin_transaction(transactional() == Transaction::flushed));
-	}
+	uuid_ = eng->uuid();
+	opens_.fetch_add(1, std::memory_order_relaxed);
+	set_revision(eng->revision());
+	modified.store(false, std::memory_order_relaxed);
 
 #ifdef XAPIAND_DATA_STORAGE
-	if (local) {
-		writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
-		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
-	} else {
-		writable_storage = std::unique_ptr<DataStorage>(nullptr);
-		storage = std::unique_ptr<DataStorage>(nullptr);
-	}
+	writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
 #endif  // XAPIAND_DATA_STORAGE
 
-	engine_shard = std::move(new_database);
-	reopen_time = std::chrono::steady_clock::now();
-
-#ifdef XAPIAND_DATABASE_WAL
-	// If reopen_revision is not available WAL work as a log for the operations
-	if (is_wal_active()) {
-		// WAL wasn't already active for the requested endpoint
-		bool replayed;
-		{
-			DatabaseWAL wal(this);
-			replayed = wal.execute();
-		}
-		if (replayed) {
-			_modified.store(true, std::memory_order_relaxed);
-			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line);
-			// a replay inside a transaction stays in it. A failure propagates.
-			if (!is_transactional()) {
-				commit(true);
-			}
+#if XAPIAND_DATABASE_WAL
+	// A log that is ahead of the committed revision is replayed, whoever opens the index first.
+	if (!has_db_disable_wal(flags)) {
+		ReplayTarget target(*this, *eng, DB_WRITABLE | DB_OPEN);
+		DatabaseWAL wal(&target);
+		if (wal.execute()) {
+			modified.store(true, std::memory_order_relaxed);
+			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line); a failure propagates.
+			target.commit(true);
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
-	// Ends Writable DB
-	////////////////////////////////////////////////////////////////
-
-	return created;
-}
-
-bool
-Shard::reopen_readable()
-{
-	/*
-	 *  ____                _       _     _        ____  ____
-	 * |  _ \ ___  __ _  __| | __ _| |__ | | ___  |  _ \| __ )
-	 * | |_) / _ \/ _` |/ _` |/ _` | '_ \| |/ _ \ | | | |  _ \.
-	 * |  _ <  __/ (_| | (_| | (_| | |_) | |  __/ | |_| | |_) |
-	 * |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
-	 *
-	 */
-	L_CALL("Shard::reopen_readable()");
-
-	bool created = false;
-
-	if (is_closed()) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
-
-	reset();
-
-	std::unique_ptr<engine::Shard> new_database;
-
-	assert(!endpoint.empty());
-	bool local = false;
+	eng->use_chores(chores.get());
 	{
-		L_DATABASE("Opening local shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
-		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::opening, "Random Error");
-		auto opened = engine::sync_wait(engine::open_local(endpoint.path, false, has_db_create_or_open(flags)));
-		new_database = std::move(opened.shard);
-		created = opened.created;
-		local = true;
-	}
-
-	_local.store(local, std::memory_order_relaxed);
-	if (local) {
-		reopen_revision = new_database->revision();
-	}
-
-#ifdef XAPIAND_DATA_STORAGE
-	if (local) {
-		// WAL required on a local database, open it.
-		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
-	} else {
-		storage = std::unique_ptr<DataStorage>(nullptr);
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
-	engine_shard = std::move(new_database);
-	reopen_time = std::chrono::steady_clock::now();
-	// Ends Readable DB
-	////////////////////////////////////////////////////////////////
-
-	return created;
-}
-
-
-void
-Shard::retry_or_throw(const engine::Error& error, int t, bool commit_)
-{
-	// Called from a catch block: closes the shard as the failure demands, and rethrows it
-	// when it is final or not a failure of the shard.
-	switch (error.kind) {
-		case engine::errc::opening:
-		case engine::errc::not_found:
-		case engine::errc::not_available:
-		case engine::errc::timeout:
-		case engine::errc::network:
-			if (t == 0) { do_close(commit_); throw; }
-			return;
-		case engine::errc::closed:
-			do_close(commit_);
-			if (t == 0) { throw; }
-			return;
-		case engine::errc::reopen:
-		case engine::errc::corrupt:
-		case engine::errc::database:
-			do_close(commit_);
-			throw;
-		default:
-			throw;
+		std::lock_guard<std::mutex> lk(mtx);
+		engine_ = std::move(eng);
+		stale_.store(false, std::memory_order_release);
 	}
 }
 
 
-void
-Shard::retry_read(const engine::Error& error, int t)
+task::task<void>
+ShardEndpoint::open_index(int flags)
 {
-	switch (engine::read_fate(error.kind)) {
-		case engine::fate::retry_close:
-			if (t == 0) { do_close(); throw; }
-			return;
-		case engine::fate::close_retry:
-			do_close();
-			if (t == 0) { throw; }
-			return;
-		case engine::fate::close_fail:
-			do_close();
-			throw;
-		case engine::fate::fail:
-			throw;
-	}
-}
-
-
-void
-Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes)
-{
-	auto fate = engine::read_fate(error.kind);
-	if (writes && error.kind == engine::errc::reopen) {
-		fate = engine::fate::close_fail;
-	}
-	switch (fate) {
-		case engine::fate::retry_close:
-			eptr = std::current_exception();
-			--valid;
-			return;
-		case engine::fate::close_retry:
-			do_close();
-			eptr = std::current_exception();
-			--valid;
-			return;
-		case engine::fate::close_fail:
-			do_close();
-			throw;
-		case engine::fate::fail:
-			throw;
-	}
+	co_await chores->run(engine::ChoreClass::query, [this, flags] { open_index_blocking(flags); });
 }
 
 
 bool
-Shard::reopen()
+ShardEndpoint::begin_idle_close(int own_refs)
 {
-	L_CALL("Shard::reopen() {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	L_DATABASE_WRAP_BEGIN("Shard::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::reopen:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	if (engine_shard) {
-		if (!is_incomplete()) {
-			// Try to reopen
-			for (int t = DB_RETRIES; t >= 0; --t) {
-				try {
-					bool ret = engine::sync_wait(engine_shard->reopen());
-					return ret;
-				} catch (const engine::Error& error) {
-					if (!is_stale_failure(error.kind)) {
-						throw;
-					}
-				}
-			}
-		}
-
-		do_close(true);
-	}
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			if (is_writable()) {
-				reopen_writable();
-			} else {
-				reopen_readable();
-			}
-			break;
-		} catch (const engine::Error& error) {
-			switch (error.kind) {
-				case engine::errc::not_found:
-					reset();
-					throw;
-				case engine::errc::reopen:
-				case engine::errc::corrupt:
-				case engine::errc::opening:
-				case engine::errc::not_available:
-				case engine::errc::timeout:
-				case engine::errc::network:
-					if (t == 0) { reset(); throw; }
-					break;
-				case engine::errc::closed:
-				case engine::errc::database:
-					reset();
-					if (t == 0) { throw; }
-					break;
-				default:
-					reset();
-					throw;
-			}
-		} catch (...) {
-			reset();
-			throw;
-		}
-	}
-
-	assert(engine_shard);
-	L_DATABASE("Reopening shard: {}", __repr__());
-	return true;
-}
-
-
-engine::Shard&
-Shard::engine()
-{
-	L_CALL("Shard::engine()");
-
-	if (is_closed()) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
-
-	if (!engine_shard) {
-		reopen();
-	}
-
-	return *engine_shard;
-}
-
-
-unsigned
-Shard::refs() const
-{
-    L_CALL("Shard::refs()");
-
-    if (engine_shard) {
-        return engine_shard->refs();
-    }
-    return 0;
-}
-
-
-std::shared_ptr<const Node>
-Shard::node() const
-{
-	return endpoint.node();
-}
-
-
-void
-Shard::reset() noexcept
-{
-	L_CALL("Shard::reset()");
-
-	try {
-		engine_shard.reset();
-	} catch(...) {}
-	reopen_revision = 0;
-	_local.store(false, std::memory_order_relaxed);
-	_closed.store(false, std::memory_order_relaxed);
-	_modified.store(false, std::memory_order_relaxed);
-	_incomplete.store(false, std::memory_order_relaxed);
-#ifdef XAPIAND_DATA_STORAGE
-	try {
-		storage.reset();
-	} catch(...) {}
-	try {
-		writable_storage.reset();
-	} catch(...) {}
-#endif  // XAPIAND_DATA_STORAGE
-}
-
-
-void
-Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)
-{
-	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, transaction_ == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions, repr(to_string()), engine_shard ? "<database>" : "null", is_modified(), is_closed());
-
-	if (
-		commit_ &&
-		engine_shard &&
-		!is_transactional() &&
-		!is_closed() &&
-		is_modified() &&
-		is_writable() &&
-		is_local()
-
-	) {
-		// Commit only on modified writable databases
-		try {
-			commit();
-		} catch (...) {
-			if (throw_exceptions) {
-				throw;
-			}
-			L_WARNING("WARNING: Commit during close failed!");
-		}
-	}
-
-	if (engine_shard) {
-		try {
-			engine_shard.reset();
-		} catch (...) {
-			if (throw_exceptions) {
-				throw;
-			}
-			L_WARNING("WARNING: Internal database close failed!");
-		}
-	}
-
-	bool local_ = is_local();
-
-	reset();
-
-	_local.store(local_, std::memory_order_relaxed);
-	_closed.store(closed_, std::memory_order_relaxed);
-	_transaction.store(transaction_, std::memory_order_relaxed);
-}
-
-
-void
-Shard::do_close(bool commit_)
-{
-	L_CALL("Shard::do_close()");
-
-	do_close(commit_, is_closed(), transactional(), false);
-}
-
-
-void
-Shard::close()
-{
-	L_CALL("Shard::close()");
-
-	if (is_closed()) {
-		return;
-	}
-
-	do_close(true, true, Transaction::none);
-}
-
-
-void
-Shard::autocommit(const std::shared_ptr<Shard>& shard)
-{
-	L_CALL("Shard::autocommit({})", shard ? shard->__repr__() : "null");
-
-	if (
-		shard->engine_shard &&          // Autocommit only if there is a database
-		!shard->is_transactional() &&   // Autocommit only if there's no transaction active (like during replication)
-		!shard->is_closed() &&          // Autocommit only if database is not closed
-		shard->is_modified() &&         // Autocommit only modified databases
-		shard->is_writable() &&         // Autocommit only writable databases
-		shard->is_local() &&            // Autocommit only local databases
-		shard->is_autocommit_active()   // Data RESTORE doesn't do autocommit
-	) {
-		// Auto commit only on modified writable databases. If the committer
-		// refuses (shutting down, or out of memory), commit now, in place: the
-		// caller (checkin) still holds the shard, so committer_commit would wait
-		// on itself checking it out again.
-		debounce_or_run(*committer(), [&](const std::weak_ptr<Shard>&) {
-			try {
-				shard->commit();
-			} catch (const Exception& exc) {
-				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.get_message());
-			} catch (const engine::Error& exc) {
-				L_WARNING("Autocommit of {} falied: {}", repr(shard->to_string()), exc.description());
-			} catch (const std::exception& exc) {
-				// Runs inside checkin, which is noexcept: nothing may escape.
-				L_ERR("Autocommit of {} falied: {}", repr(shard->to_string()), exc.what());
-			} catch (...) {
-				L_ERR("Autocommit of {} falied: unknown exception", repr(shard->to_string()));
-			}
-		}, shard->endpoint, std::weak_ptr<Shard>(shard));
-	}
-}
-
-
-bool
-Shard::commit([[maybe_unused]] bool wal_)
-{
-	L_CALL("Shard::commit({})", wal_);
-
-	assert(is_writable());
-	assert(is_write_active());
-
-	auto local = is_local();
-
-	if (local && !is_modified()) {
-		L_DATABASE("Commit on shard {} was discarded, because there are not changes", repr(endpoint.to_string()));
+	std::lock_guard<std::mutex> lk(mtx);
+	if (state_ != State::open || refs.load() > own_refs) {
 		return false;
 	}
-
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::commit:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE("Committing shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
-		try {
-#ifdef XAPIAND_DATA_STORAGE
-			storage_commit();
-#endif  // XAPIAND_DATA_STORAGE
-			auto prior_revision = wdb->revision();
-			auto transaction = transactional();
-			engine::sync_wait(wdb->commit(
-				transaction == Transaction::flushed ? engine::Transaction::flushed :
-				transaction == Transaction::unflushed ? engine::Transaction::unflushed :
-				engine::Transaction::none));
-			_modified.store(false, std::memory_order_relaxed);
-			if (local) {
-				auto current_revision = wdb->revision();
-				if (prior_revision == current_revision) {
-					L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(endpoint.to_string()));
-					return false;
-				}
-				assert(current_revision == prior_revision + 1);
-				L_DATABASE("Commit on shard {}: {} -> {}", repr(endpoint.to_string()), prior_revision, current_revision);
-				endpoint.set_revision(current_revision);
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-					XapiandManager::manager(true)->wal_writer->write_commit(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision);
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t, false);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
+	state_ = State::closing;
+	closed_ = std::make_shared<task::event>();
 	return true;
 }
 
-void
-Shard::begin_transaction(bool flushed)
+
+task::task<void>
+ShardEndpoint::finish_idle_close()
 {
-	L_CALL("Shard::begin_transaction({})", flushed);
+	co_await close_marked(true);
+}
 
-	assert(is_writable());
-	assert(is_write_active());
 
-	if (!is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-		engine();
-		engine::sync_wait(engine_shard->begin_transaction(flushed));
-		_transaction.store(flushed ? Transaction::flushed : Transaction::unflushed, std::memory_order_relaxed);
+// The close of an entry that is `closing`: the turn (so no operation is mid-call), a commit of what is
+// pending, the close chore, then `empty` and the event that the users who found it closing await.
+task::task<void>
+ShardEndpoint::close_marked(bool commit_)
+{
+	std::exception_ptr error;
+	{
+		task::async_mutex::guard guard = co_await turn.lock();
+		auto eng = engine_ptr();
+		try {
+			if (eng) {
+				if (commit_ && modified.load() && !stale_.load()) {
+					const int saved = last_flags_.load();
+					co_await do_commit(*eng, *chores, saved ? saved : (DB_WRITABLE | DB_OPEN), true);
+				}
+				co_await eng->close();
+			}
+		} catch (...) {
+			error = std::current_exception();
+		}
+#ifdef XAPIAND_DATA_STORAGE
+		writable_storage.reset();
+#endif  // XAPIAND_DATA_STORAGE
+		modified.store(false, std::memory_order_relaxed);
+		std::shared_ptr<task::event> closed;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			engine_.reset();
+			state_ = State::empty;
+			stale_.store(false, std::memory_order_release);
+			closed = std::move(closed_);
+		}
+		if (closed) {
+			closed->set();
+		}
+	}
+	if (error) {
+		try {
+			std::rethrow_exception(error);
+		} catch (const engine::Error& exc) {
+			L_WARNING("Closing {} failed: {}", repr(to_string()), exc.description());
+		} catch (const std::exception& exc) {
+			L_WARNING("Closing {} failed: {}", repr(to_string()), exc.what());
+		}
 	}
 }
 
 
-void
-Shard::commit_transaction()
+task::task<void>
+ShardEndpoint::housekeeping()
 {
-	L_CALL("Shard::commit_transaction()");
-
-	assert(is_writable());
-	assert(is_write_active());
-
-	if (is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-		engine();
-		engine::sync_wait(engine_shard->commit_transaction());
-		_transaction.store(Transaction::none, std::memory_order_relaxed);
+	auto eng = engine_ptr();
+	if (!eng || eng->merges_pending() == 0 || state() != State::open) {
+		co_return;
 	}
+	auto mine = co_await take_turn(DB_OPEN | DB_WRITABLE);
+	eng = engine_ptr();
+	co_await eng->reclaim();
 }
 
 
-void
-Shard::cancel_transaction()
+/*
+ * Commit: one at a time, coalesced by position.
+ */
+
+struct ShardEndpoint::CommitFlight {
+	std::uint64_t covers = 0;  // the writes applied when the commit started
+	task::event done;
+	std::exception_ptr error;
+	bool changed = false;
+};
+
+
+task::task<bool>
+ShardEndpoint::commit(int flags, bool wal_)
 {
-	L_CALL("Shard::cancel_transaction()");
+	L_CALL("ShardEndpoint::commit(({}), {})", readable_flags(flags), wal_);
 
-	assert(is_writable());
-	assert(is_write_active());
-
-	if (is_transactional()) {
-		RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-		engine();
-		engine::sync_wait(engine_shard->cancel_transaction());
-		_transaction.store(Transaction::none);
+	if (!modified.load()) {
+		L_DATABASE("Commit on shard {} was discarded, because there are not changes", repr(to_string()));
+		co_return false;
 	}
+
+	// The caller's writes were all applied before this call: a commit that began after they were, and has
+	// not finished, covers them. One that began earlier may not, so the caller waits for its own turn.
+	const auto mine = applied_.load();
+	std::shared_ptr<CommitFlight> joined;
+	{
+		std::lock_guard<std::mutex> lk(this->mtx);
+		if (commit_flight_ && commit_flight_->covers >= mine) {
+			joined = commit_flight_;
+		}
+	}
+	if (joined) {
+		co_await joined->done;
+		if (joined->error) {
+			std::rethrow_exception(joined->error);
+		}
+		co_return joined->changed;
+	}
+
+	auto turn_ = co_await take_turn(flags);
+	if (committed_ >= mine || !modified.load()) {
+		co_return false;  // a commit that ran while this one waited covers it
+	}
+	auto eng = engine_ptr();
+	auto flight = std::make_shared<CommitFlight>();
+	flight->covers = applied_.load();
+	{
+		std::lock_guard<std::mutex> lk(this->mtx);
+		commit_flight_ = flight;
+	}
+	std::exception_ptr error;
+	bool changed = false;
+	try {
+		changed = co_await do_commit(*eng, *chores, flags, wal_);
+		committed_ = flight->covers;
+	} catch (const engine::Error& exc) {
+		note_failure(exc);
+		error = std::current_exception();
+	} catch (...) {
+		error = std::current_exception();
+	}
+	{
+		std::lock_guard<std::mutex> lk(this->mtx);
+		commit_flight_.reset();
+	}
+	flight->error = error;
+	flight->changed = changed;
+	flight->done.set();
+	if (error) {
+		std::rethrow_exception(error);
+	}
+	co_return changed;
 }
 
 
-void
-Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+task::task<bool>
+ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags, [[maybe_unused]] bool wal_)
 {
-	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
+	L_CALL("ShardEndpoint::do_commit(({}), {})", readable_flags(flags), wal_);
 
-	assert(is_writable());
-	assert(is_write_active());
+	if (!modified.load()) {
+		co_return false;
+	}
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::delete_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE("Deleting document {} in shard {} {{ try:{} }}", shard_did, repr(endpoint.to_string()), DB_RETRIES - t);
-
-		try {
-			auto local = is_local();
-			engine::sync_wait(wdb->erase(shard_did, local, expected));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-					XapiandManager::manager(true)->wal_writer->write_delete_document(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						shard_did);
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
-	if (commit_) {
-		commit(wal_);
-	}
-}
-
-
-void
-Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[maybe_unused]] bool version_)
-{
-	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
-
-	assert(is_writable());
-	assert(is_write_active());
-
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::delete_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-	engine::docid shard_did = 0;
-	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE("Deleting document {} in shard {{ try:{} }}", repr(term), repr(endpoint.to_string()), DB_RETRIES - t);
-		shard_did = 0;
-
-		try {
-			auto local = is_local();
-			shard_did = engine::sync_wait(wdb->erase_by_key(term, local, expected));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-					XapiandManager::manager(true)->wal_writer->write_delete_document(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						shard_did);
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
-	if (commit_) {
-		commit(wal_);
-	}
-}
-
 
 #ifdef XAPIAND_DATA_STORAGE
-std::string
-Shard::storage_get_stored(const Locator& locator)
-{
-	L_CALL("Shard::storage_get_stored()");
-
-	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored);
-	assert(locator.volume != -1);
-
-	if (storage) {
-		storage->open(strings::format(DATA_STORAGE_PATH "{}", locator.volume));
-		storage->seek(static_cast<uint32_t>(locator.offset));
-		return storage->read();
+	co_await storage_commit(chores_);
+#endif  // XAPIAND_DATA_STORAGE
+	const auto prior_revision = eng.revision();
+	co_await eng.commit(engine::Transaction::none);
+	modified.store(false, std::memory_order_relaxed);
+	const auto current_revision = eng.revision();
+	if (prior_revision == current_revision) {
+		L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(to_string()));
+		co_return false;
 	}
-
-	std::string locator_key;
-	locator_key.push_back('\x00');
-	locator_key.append(serialise_length(locator.volume));
-	locator_key.append(serialise_length(locator.offset));
-	return get_metadata(locator_key);
+	assert(current_revision == prior_revision + 1);
+	L_DATABASE("Commit on shard {}: {} -> {}", repr(to_string()), prior_revision, current_revision);
+	set_revision(current_revision);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+		wal_writer().write_commit(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			prior_revision);
+	}
+#endif
+	co_return true;
 }
 
 
-std::pair<std::string, std::string>
-Shard::storage_push_blobs(std::string&& doc_data)
-{
-	L_CALL("Shard::storage_push_blobs()");
+/*
+ * The writes. Each runs under the index's turn: the engine's apply, the counters and the WAL line are one
+ * unit, so the WAL's order is the apply's order.
+ */
 
-	assert(is_writable());
-	assert(is_write_active());
+task::task<engine::WriteResult>
+ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+{
+	L_CALL("ShardEndpoint::do_add(<doc>, {})", wal_);
+
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+#ifdef XAPIAND_DATA_STORAGE
+	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
+	if (!pushed.first.empty()) {
+		doc.set_data(pushed.first);
+	}
+#else
+	(void)chores_;
+#endif  // XAPIAND_DATA_STORAGE
+
+	engine::WriteArgs args;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, {}); };
+	if (version_) {
+		args.expected_version = expected_version(doc);
+	} else {
+		doc.add_value(DB_SLOT_VERSION, "");
+	}
+
+	engine::WriteResult info;
+	try {
+		info = co_await eng.add(doc, args);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // restore data with blobs
+		}
+#endif  // XAPIAND_DATA_STORAGE
+		wal_writer().write_replace_document(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			info.did,
+			std::move(doc));
+	}
+#else
+	(void)flags;
+#endif
+	co_return info;
+}
+
+
+task::task<engine::WriteResult>
+ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+{
+	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, wal_);
+
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+#ifdef XAPIAND_DATA_STORAGE
+	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
+	if (!pushed.first.empty()) {
+		doc.set_data(pushed.first);
+	}
+#else
+	(void)chores_;
+#endif  // XAPIAND_DATA_STORAGE
+
+	engine::WriteResult info;
+	info.did = shard_did;
+
+	engine::WriteArgs args;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+	if (version_) {
+		args.expected_version = expected_version(doc);
+	} else {
+		doc.add_value(DB_SLOT_VERSION, "");
+	}
+
+	try {
+		info = co_await eng.replace(shard_did, doc, args);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // restore data with blobs
+		}
+#endif  // XAPIAND_DATA_STORAGE
+		wal_writer().write_replace_document(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			info.did,
+			std::move(doc));
+	}
+#else
+	(void)flags;
+#endif
+	co_return info;
+}
+
+
+task::task<engine::WriteResult>
+ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int flags, const std::string& term, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+{
+	L_CALL("ShardEndpoint::do_replace_term({}, <doc>, {}, {})", repr(term), wal_, version_);
+
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+#ifdef XAPIAND_DATA_STORAGE
+	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
+	if (!pushed.first.empty()) {
+		doc.set_data(pushed.first);
+	}
+#else
+	(void)chores_;
+#endif  // XAPIAND_DATA_STORAGE
+
+	engine::WriteArgs args;
+	if (version_) {
+		args.expected_version = expected_version(doc);
+	} else {
+		doc.add_value(DB_SLOT_VERSION, "");
+	}
+
+	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
+
+	engine::WriteResult info;
+	info.term = term;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+	try {
+		if (term[0] == 'N') {
+			assert(term.size() > 1);
+			const char *p = n_shards_ser.data();
+			const char *p_end = p + n_shards_ser.size();
+			size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+			size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
+			auto did = sortable_unserialise(term.substr(1));
+			if (did == 0u) {
+				// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
+				args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
+				info = co_await eng.add(doc, args);
+			} else {
+				info = co_await eng.replace((did - 1) / n_shards + 1, doc, args);  // docid in the multi-db to the docid in the shard
+				info.term = term;
+			}
+		} else {
+			info = co_await eng.replace_by_key(term, doc, args);
+		}
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // restore data with blobs
+		}
+#endif  // XAPIAND_DATA_STORAGE
+		wal_writer().write_replace_document(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			info.did,
+			std::move(doc));
+	}
+#else
+	(void)flags;
+#endif
+	co_return info;
+}
+
+
+task::task<void>
+ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine::docid shard_did, [[maybe_unused]] bool wal_)
+{
+	L_CALL("ShardEndpoint::do_delete({}, {})", shard_did, wal_);
+
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
+	try {
+		co_await eng.erase(shard_did, true, expected);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+		wal_writer().write_delete_document(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			shard_did);
+	}
+#endif
+}
+
+
+task::task<void>
+ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& term, [[maybe_unused]] bool wal_)
+{
+	L_CALL("ShardEndpoint::do_delete_term({}, {})", repr(term), wal_);
+
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
+	[[maybe_unused]] engine::docid shard_did = 0;
+	try {
+		shard_did = co_await eng.erase_by_key(term, true, expected);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+		wal_writer().write_delete_document(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			shard_did);
+	}
+#endif
+}
+
+
+task::task<void>
+ShardEndpoint::do_set_metadata(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& key, const std::string& value, [[maybe_unused]] bool wal_)
+{
+	L_CALL("ShardEndpoint::do_set_metadata({}, {}, {})", repr(key), repr(value), wal_);
+
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+	try {
+		co_await eng.set_metadata(key, value);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+		wal_writer().write_set_metadata(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			key,
+			value);
+	}
+#endif
+}
+
+
+task::task<void>
+ShardEndpoint::do_add_spelling(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& word, engine::termcount freqinc, [[maybe_unused]] bool wal_)
+{
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+	try {
+		co_await eng.add_spelling(word, freqinc);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+		wal_writer().write_add_spelling(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			word,
+			freqinc);
+	}
+#endif
+}
+
+
+task::task<engine::termcount>
+ShardEndpoint::do_remove_spelling(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& word, engine::termcount freqdec, [[maybe_unused]] bool wal_)
+{
+	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
+
+	engine::termcount result = 0;
+	try {
+		result = co_await eng.remove_spelling(word, freqdec);
+	} catch (const engine::Error& error) {
+		note_failure(error);
+		throw;
+	}
+	applied_.fetch_add(1, std::memory_order_relaxed);
+	modified.store(true, std::memory_order_relaxed);
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && has_db_writable(flags) && !has_db_disable_wal(flags)) {
+		wal_writer().write_remove_spelling(
+			has_db_synchronous_wal(flags),
+			path,
+			eng.uuid(),
+			eng.revision(),
+			word,
+			freqdec);
+	}
+#endif
+	co_return result;
+}
+
+
+/*
+ * The data storage: blobs written under the turn, read on readers of their own, all in chores.
+ */
+#ifdef XAPIAND_DATA_STORAGE
+
+std::pair<std::string, std::string>
+ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
+{
+	L_CALL("ShardEndpoint::storage_push_blobs_blocking()");
 
 	std::pair<std::string, std::string> pushed;
 	if (doc_data.empty()) {
@@ -1135,19 +1092,251 @@ Shard::storage_push_blobs(std::string&& doc_data)
 }
 
 
-void
-Shard::storage_commit()
+task::task<std::pair<std::string, std::string>>
+ShardEndpoint::storage_push_blobs(engine::Chores& chores_, std::string doc_data)
 {
-	L_CALL("Shard::storage_commit()");
+	if (doc_data.empty()) {
+		co_return std::pair<std::string, std::string>();
+	}
+	std::pair<std::string, std::string> pushed;
+	co_await chores_.run(engine::ChoreClass::flush, [&] { pushed = storage_push_blobs_blocking(std::move(doc_data)); });
+	co_return pushed;
+}
 
+
+task::task<void>
+ShardEndpoint::storage_commit(engine::Chores& chores_)
+{
 	if (writable_storage) {
-		writable_storage->commit();
+		co_await chores_.run(engine::ChoreClass::flush, [this] { writable_storage->commit(); });
 	}
 }
+
+
+std::string
+ShardEndpoint::storage_read_blocking(const Locator& locator)
+{
+	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored);
+	assert(locator.volume != -1);
+
+	DataStorage reader(path, this, STORAGE_OPEN);
+	reader.open(strings::format(DATA_STORAGE_PATH "{}", locator.volume));
+	reader.seek(static_cast<uint32_t>(locator.offset));
+	return reader.read();
+}
+
+
+std::string
+ShardEndpoint::storage_read_blocking(std::string_view key)
+{
+	const char *p = key.data();
+	const char *p_end = p + key.size();
+	++p;  // the lead byte that says it is a locator
+	ssize_t volume = unserialise_length(&p, p_end);
+	size_t offset = unserialise_length(&p, p_end);
+	DataStorage reader(path, this, STORAGE_OPEN);
+	reader.open(strings::format(DATA_STORAGE_PATH "{}", volume));
+	reader.seek(static_cast<uint32_t>(offset));
+	return reader.read();
+}
+
 #endif  // XAPIAND_DATA_STORAGE
 
 
-engine::WriteResult
+/*
+ *   ____  _                   _
+ *  / ___|| |__   __ _ _ __ __| |
+ *  \___ \| '_ \ / _` | '__/ _` |
+ *   ___) | | | | (_| | | | (_| |
+ *  |____/|_| |_|\__,_|_|  \__,_|
+ *
+ */
+
+Shard::Shard(ShardEndpoint& endpoint_, int flags_)
+	: endpoint(endpoint_),
+	  flags(flags_)
+{
+}
+
+
+std::shared_ptr<const Node>
+Shard::node() const
+{
+	return endpoint.node();
+}
+
+
+void
+Shard::release() noexcept
+{
+#if XAPIAND_DATABASE_WAL
+	// A restore writes no log, so the log of what it replaced must not be replayed over it.
+	if (is_restore() && is_writable()) {
+		try {
+			endpoint.wal_writer().delete_wal(is_synchronous_wal(), endpoint.path);
+		} catch (...) {
+			L_EXC("Unable to delete the WAL of {}", repr(endpoint.to_string()));
+		}
+	}
+#endif
+}
+
+
+task::task<void>
+Shard::ready()
+{
+	co_await endpoint.ensure_open(flags);
+	kept_ = endpoint.engine_ptr();
+	if (!kept_) {
+		throw engine::Error(engine::errc::closed, "Database has been closed");
+	}
+}
+
+
+engine::Shard&
+Shard::engine()
+{
+	if (!kept_) {
+		throw engine::Error(engine::errc::closed, "Database has been closed");
+	}
+	return *kept_;
+}
+
+
+task::task<engine::Shard*>
+Shard::engine_for_read()
+{
+	co_await endpoint.fresh(flags);
+	kept_ = endpoint.engine_ptr();
+	if (!kept_) {
+		throw engine::Error(engine::errc::closed, "Database has been closed");
+	}
+	co_return kept_.get();
+}
+
+
+task::task<bool>
+Shard::reopen()
+{
+	const bool replaced = endpoint.stale_.load(std::memory_order_acquire) || !kept_;
+	co_await ready();
+	co_return replaced;
+}
+
+
+void
+Shard::retry_read(const engine::Error& error, int t)
+{
+	switch (engine::read_fate(error.kind)) {
+		case engine::fate::retry_close:
+			if (t == 0) { endpoint.mark_stale(); throw; }
+			return;
+		case engine::fate::close_retry:
+			endpoint.mark_stale();
+			if (t == 0) { throw; }
+			return;
+		case engine::fate::close_fail:
+			endpoint.mark_stale();
+			throw;
+		case engine::fate::fail:
+			throw;
+	}
+}
+
+
+void
+Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes)
+{
+	auto fate = engine::read_fate(error.kind);
+	if (writes && error.kind == engine::errc::reopen) {
+		fate = engine::fate::close_fail;
+	}
+	switch (fate) {
+		case engine::fate::retry_close:
+			eptr = std::current_exception();
+			--valid;
+			return;
+		case engine::fate::close_retry:
+			endpoint.mark_stale();
+			eptr = std::current_exception();
+			--valid;
+			return;
+		case engine::fate::close_fail:
+			endpoint.mark_stale();
+			throw;
+		case engine::fate::fail:
+			throw;
+	}
+}
+
+
+task::task<bool>
+Shard::commit(bool wal_)
+{
+	L_CALL("Shard::commit({})", wal_);
+
+	assert(is_writable());
+	assert(is_write_active());
+
+	co_return co_await endpoint.commit(flags, wal_);
+}
+
+
+// What follows a write that did not commit: the debounced autocommit.
+static void
+schedule_autocommit(const Shard& shard)
+{
+	if (shard.is_autocommit_active() && shard.endpoint.is_modified()) {
+		debounce_or_run(*committer(), committer_commit, Endpoint(shard.endpoint), Endpoint(shard.endpoint));
+	}
+}
+
+
+task::task<void>
+Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+{
+	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
+
+	assert(is_writable());
+	assert(is_write_active());
+
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		co_await endpoint.do_delete(*eng, flags, shard_did, wal_);
+	}
+	if (commit_) {
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
+	}
+}
+
+
+task::task<void>
+Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+{
+	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
+
+	assert(is_writable());
+	assert(is_write_active());
+
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		co_await endpoint.do_delete_term(*eng, flags, term, wal_);
+	}
+	if (commit_) {
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
+	}
+}
+
+
+task::task<engine::WriteResult>
 Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
@@ -1155,79 +1344,23 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::add_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::add_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = storage_push_blobs(doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
 	engine::WriteResult info;
-
-	engine::WriteArgs args;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, {}); };
-	if (version_) {
-		args.expected_version = expected_version(doc);
-	} else {
-		doc.add_value(DB_SLOT_VERSION, "");
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		info = co_await endpoint.do_add(*eng, *endpoint.chores, flags, std::move(doc), wal_, version_);
 	}
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE("Adding new document to shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
-
-		try {
-			args.local = is_local();
-			const auto local = args.local;
-			info = engine::sync_wait(wdb->add(doc, args));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-#ifdef XAPIAND_DATA_STORAGE
-					if (!pushed.second.empty()) {
-						doc.set_data(pushed.second);  // restore data with blobs
-					}
-#endif  // XAPIAND_DATA_STORAGE
-					XapiandManager::manager(true)->wal_writer->write_replace_document(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						info.did,
-						std::move(doc));
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::add_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
 	if (commit_) {
-		commit(wal_);
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
 	}
-
-	return info;
+	co_return info;
 }
 
 
-engine::WriteResult
+task::task<engine::WriteResult>
 Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
@@ -1235,80 +1368,23 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::replace_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = storage_push_blobs(doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
 	engine::WriteResult info;
-	info.did = shard_did;
-
-	engine::WriteArgs args;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
-	if (version_) {
-		args.expected_version = expected_version(doc);
-	} else {
-		doc.add_value(DB_SLOT_VERSION, "");
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		info = co_await endpoint.do_replace(*eng, *endpoint.chores, flags, shard_did, std::move(doc), wal_, version_);
 	}
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE("Replacing document {} in shard {} {{ try:{} }}", info.did, repr(endpoint.to_string()), DB_RETRIES - t);
-
-		try {
-			args.local = is_local();
-			const auto local = args.local;
-			info = engine::sync_wait(wdb->replace(shard_did, doc, args));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-#ifdef XAPIAND_DATA_STORAGE
-					if (!pushed.second.empty()) {
-						doc.set_data(pushed.second);  // restore data with blobs
-					}
-#endif  // XAPIAND_DATA_STORAGE
-					XapiandManager::manager(true)->wal_writer->write_replace_document(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						info.did,
-						std::move(doc));
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
 	if (commit_) {
-		commit(wal_);
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
 	}
-
-	return info;
+	co_return info;
 }
 
 
-engine::WriteResult
+task::task<engine::WriteResult>
 Shard::replace_document_term(const std::string& term, engine::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
@@ -1316,102 +1392,23 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::replace_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-#ifdef XAPIAND_DATA_STORAGE
-	auto pushed = storage_push_blobs(doc.get_data());
-	if (!pushed.first.empty()) {
-		doc.set_data(pushed.first);
-	}
-#endif  // XAPIAND_DATA_STORAGE
-
 	engine::WriteResult info;
-
-	engine::WriteArgs args;
-	if (version_) {
-		args.expected_version = expected_version(doc);
-	} else {
-		doc.add_value(DB_SLOT_VERSION, "");
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		info = co_await endpoint.do_replace_term(*eng, *endpoint.chores, flags, term, std::move(doc), wal_, version_);
 	}
-
-	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE("Replacing document {} in shard {} {{ try:{} }}", repr(term), repr(endpoint.to_string()), DB_RETRIES - t);
-		info = engine::WriteResult{};
-		info.term = term;
-
-		try {
-			args.local = is_local();
-			const auto local = args.local;
-			args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
-			if (!local) {
-				info = engine::sync_wait(wdb->replace_by_key(term, doc, args));
-			} else if (term[0] == 'N') {
-				assert(term.size() > 1);
-				const char *p = n_shards_ser.data();
-				const char *p_end = p + n_shards_ser.size();
-				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-				auto did = sortable_unserialise(term.substr(1));
-				if (did == 0u) {
-					// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
-					args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
-					info = engine::sync_wait(wdb->add(doc, args));
-				} else {
-					info = engine::sync_wait(wdb->replace((did - 1) / n_shards + 1, doc, args));  // docid in the multi-db to the docid in the shard
-					info.term = term;
-				}
-			} else {
-				info = engine::sync_wait(wdb->replace_by_key(term, doc, args));
-			}
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-#ifdef XAPIAND_DATA_STORAGE
-					if (!pushed.second.empty()) {
-						doc.set_data(pushed.second);  // restore data with blobs
-					}
-#endif  // XAPIAND_DATA_STORAGE
-					XapiandManager::manager(true)->wal_writer->write_replace_document(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						info.did,
-						std::move(doc));
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
 	if (commit_) {
-		commit(wal_);
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
 	}
-
-	return info;
+	co_return info;
 }
 
 
-void
+task::task<void>
 Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool commit_, bool wal_)
 {
 	L_CALL("Shard::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
@@ -1419,52 +1416,21 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::add_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto local = is_local();
-			engine::sync_wait(wdb->add_spelling(word, freqinc));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-					XapiandManager::manager(true)->wal_writer->write_add_spelling(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						word,
-						freqinc);
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		co_await endpoint.do_add_spelling(*eng, flags, word, freqinc, wal_);
 	}
-
 	if (commit_) {
-		commit(wal_);
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
 	}
 }
 
 
-engine::termcount
+task::task<engine::termcount>
 Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_, bool wal_)
 {
 	L_CALL("Shard::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
@@ -1472,89 +1438,45 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 	assert(is_writable());
 	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::remove_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-	engine::termcount result = 0;
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto local = is_local();
-			result = engine::sync_wait(wdb->remove_spelling(word, freqdec));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-					XapiandManager::manager(true)->wal_writer->write_remove_spelling(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						word,
-						freqdec);
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+	engine::termcount result;
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		result = co_await endpoint.do_remove_spelling(*eng, flags, word, freqdec, wal_);
 	}
-
 	if (commit_) {
-		commit(wal_);
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
 	}
-
-	return result;
+	co_return result;
 }
 
 
-engine::docid
-Shard::get_docid_term(const std::string& term)
+task::task<void>
+Shard::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {
-	L_CALL("Shard::get_docid_term({})", repr(term));
+	L_CALL("Shard::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
-	engine::docid did = 0;
+	assert(is_writable());
+	assert(is_write_active());
 
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::get_docid_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	auto* eng = &engine();
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			did = engine::sync_wait(eng->find_key(term));
-			if (did == 0) {
-				throw engine::Error(engine::errc::doc_not_found, "Document not found");
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_read(error, t);
-		}
-		reopen();
-		eng = &engine();
-		L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+	{
+		auto turn = co_await endpoint.take_turn(flags);
+		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
+		auto eng = endpoint.engine_ptr();
+		co_await endpoint.do_set_metadata(*eng, flags, key, value, wal_);
 	}
-
-	return did;
+	if (commit_) {
+		co_await commit(wal_);
+	} else {
+		schedule_autocommit(*this);
+	}
 }
 
 
-std::unique_ptr<engine::DocView>
+task::task<std::unique_ptr<engine::DocView>>
 Shard::get_view(engine::docid shard_did)
 {
 	L_CALL("Shard::get_view({})", shard_did);
@@ -1563,28 +1485,22 @@ Shard::get_view(engine::docid shard_did)
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Shard::get_view:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::get_view:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	auto* eng = &engine();
-
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			doc = engine::sync_wait(eng->get(shard_did));
+			auto* eng = co_await engine_for_read();
+			doc = co_await eng->get(shard_did);
 			break;
 		} catch (const engine::Error& error) {
 			retry_read(error, t);
 		}
-		reopen();
-		eng = &engine();
-		L_DATABASE_WRAP_END("Shard::get_view:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+		co_await reopen();
 	}
 
-	return doc;
+	co_return doc;
 }
 
 
-std::string
+task::task<std::string>
 Shard::get_metadata(const std::string& key)
 {
 	L_CALL("Shard::get_metadata({})", repr(key));
@@ -1593,42 +1509,32 @@ Shard::get_metadata(const std::string& key)
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Shard::get_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::get_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	const char *p = key.data();
-	const char *p_end = p + key.size();
-	if (*p == '\x00') {
-		if (storage) {
-			++p;
-			ssize_t volume = unserialise_length(&p, p_end);
-			size_t offset = unserialise_length(&p, p_end);
-			storage->open(strings::format(DATA_STORAGE_PATH "{}", volume));
-			storage->seek(static_cast<uint32_t>(offset));
-			return storage->read();
-		}
+#ifdef XAPIAND_DATA_STORAGE
+	if (!key.empty() && key[0] == '\x00') {
+		// The locator of a blob: a read of the data storage, in a chore.
+		co_await ready();
+		co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(std::string_view(key)); });
+		co_return value;
 	}
-
-	auto* eng = &engine();
+#endif  // XAPIAND_DATA_STORAGE
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			value = engine::sync_wait(eng->metadata(key));
+			auto* eng = co_await engine_for_read();
+			value = co_await eng->metadata(key);
 			break;
 		} catch (const engine::Error& error) {
 			if (error.kind == engine::errc::invalid) { break; }
 			retry_read(error, t);
 		}
-		reopen();
-		eng = &engine();
-		L_DATABASE_WRAP_END("Shard::get_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+		co_await reopen();
 	}
 
-	return value;
+	co_return value;
 }
 
 
-std::vector<std::string>
+task::task<std::vector<std::string>>
 Shard::get_metadata_keys()
 {
 	L_CALL("Shard::get_metadata_keys()");
@@ -1637,81 +1543,35 @@ Shard::get_metadata_keys()
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Shard::get_metadata_keys:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::get_metadata_keys:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	auto* eng = &engine();
-
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			values = engine::sync_wait(eng->metadata_keys());
+			auto* eng = co_await engine_for_read();
+			values = co_await eng->metadata_keys();
 			break;
 		} catch (const engine::Error& error) {
 			if (error.kind == engine::errc::invalid) { break; }
 			retry_read(error, t);
 		}
-		reopen();
-		eng = &engine();
-		L_DATABASE_WRAP_END("Shard::get_metadata_keys:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-
 		values.clear();
+		co_await reopen();
 	}
 
-	return values;
+	co_return values;
 }
 
 
-void
-Shard::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
+#ifdef XAPIAND_DATA_STORAGE
+task::task<std::string>
+Shard::storage_get_stored(const Locator& locator)
 {
-	L_CALL("Shard::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
+	L_CALL("Shard::storage_get_stored()");
 
-	assert(is_writable());
-	assert(is_write_active());
-
-	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Shard::set_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-
-	engine();
-	auto* wdb = engine_shard.get();
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto local = is_local();
-			engine::sync_wait(wdb->set_metadata(key, value));
-			_modified.store(commit_ || local, std::memory_order_relaxed);
-			if (local) {
-				auto prior_revision = wdb->revision();
-#if XAPIAND_DATABASE_WAL
-				if (wal_ && is_wal_active()) {
-					auto uuid = wdb->uuid();
-					XapiandManager::manager(true)->wal_writer->write_set_metadata(
-						is_synchronous_wal(),
-						endpoint.path,
-						std::move(uuid),
-						prior_revision,
-						key,
-						value);
-				}
-#endif
-			}
-			break;
-		} catch (const engine::Error& error) {
-			retry_or_throw(error, t);
-		}
-		reopen();
-		engine();
-		wdb = engine_shard.get();
-		L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
-	if (commit_) {
-		commit(wal_);
-	}
+	std::string value;
+	co_await ready();
+	co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(locator); });
+	co_return value;
 }
+#endif /* XAPIAND_DATA_STORAGE */
 
 
 std::string
@@ -1724,15 +1584,33 @@ Shard::to_string() const
 std::string
 Shard::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<Shard {} ({}){}{}{}{}{}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<Shard {} ({}){}{}>",
 		repr(to_string()),
 		readable_flags(flags),
 		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "",
-		is_wal_active() ? " " + DARK_STEEL_BLUE + "(active WAL)" + STEEL_BLUE : "",
-		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
-		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "",
-		is_modified() ? " " + LIGHT_STEEL_BLUE + "(modified)" + STEEL_BLUE : "",
-		is_incomplete() ? " " + DARK_STEEL_BLUE + "(incomplete)" + STEEL_BLUE : "",
-		is_busy() ? " " + DARK_ORANGE + "(busy)" + STEEL_BLUE : "",
-		is_transactional() ? " " + DARK_STEEL_BLUE + "(transactional)" + STEEL_BLUE : "");
+		is_wal_active() ? " " + DARK_STEEL_BLUE + "(active WAL)" + STEEL_BLUE : "");
+}
+
+
+// The debounced autocommit of an index: a commit in its own turn.
+task::task<void>
+autocommit(ReferencedShardEndpoint entry)
+{
+	const auto start = std::chrono::steady_clock::now();
+	std::string error;
+	try {
+		co_await entry->commit(DB_OPEN | DB_WRITABLE, true);
+	} catch (const Exception& exc) {
+		error = exc.get_message();
+	} catch (const engine::Error& exc) {
+		error = exc.description();
+	} catch (const std::exception& exc) {
+		error = exc.what();
+	}
+	const auto end = std::chrono::steady_clock::now();
+	if (error.empty()) {
+		L_DEBUG("Autocommit of {} succeeded after {}", repr(entry->to_string()), strings::from_delta(start, end));
+	} else {
+		L_WARNING("Autocommit of {} falied after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
+	}
 }

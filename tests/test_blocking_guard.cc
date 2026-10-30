@@ -21,9 +21,9 @@
  */
 
 
-// The blocking guard (engine::check_may_block): engine::sync_wait and DatabasePool's checkout,
-// checkin and cleanup refuse to run inside a reactor loop's run() or on a task scheduler's thread, and run on
-// a reactor's offload pool, on the loop's thread after run() returns, and on a plain thread.
+// The blocking guard (engine::check_may_block): engine::sync_wait and the registry's waiting entry points
+// (an immediate cleanup, clear) refuse to run inside a reactor loop's run() or on a task scheduler's
+// thread, and run on a reactor's offload pool, on the loop's thread after run() returns, and on a plain thread.
 
 #include "test_harness.h"
 
@@ -79,25 +79,14 @@ void on_loop(const std::function<void()>& fn) {
 	r.run();
 }
 
-void checkout_and_checkin() {
-	DatabasePool pool(8, 1);
-	auto shard = pool.checkout(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN, 0.5);
-	pool.checkin(shard);
-}
-
-// Checks in on the calling thread a shard that was checked out off the loop.
-void checkin_only(bool vector_overload) {
-	DatabasePool pool(8, 1);
-	auto shard = pool.checkout(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN, 0.5);
-	on_loop([&] {
-		if (vector_overload) {
-			std::vector<std::shared_ptr<Shard>> shards{shard};
-			shard.reset();
-			pool.checkin(shards);
-		} else {
-			pool.checkin(shard);
-		}
-	});
+// Opens an index through the registry: a wait for the open.
+void open_through_the_registry() {
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint("blocking_guard_test"));
+	Shard shard(*entry.get(), DB_WRITABLE | DB_CREATE_OR_OPEN);
+	engine::sync_wait(shard.ready());
+	entry.reset();
+	pool.clear();
 }
 
 // An object whose destructor does database work.
@@ -134,8 +123,13 @@ void release_after_cancel(bool keep_hop) {
 }
 
 void cleanup() {
-	DatabasePool pool(8, 1);
+	DatabasePool pool(8);
 	pool.cleanup(true);
+}
+
+void clear() {
+	DatabasePool pool(8);
+	pool.clear();
 }
 
 void wait_answer() {
@@ -147,10 +141,9 @@ void wait_answer() {
 // Forks first, before any test starts a thread.
 static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires([] { on_loop(wait_answer); }));
-	CHECK_TRUE(guard_fires([] { on_loop(checkout_and_checkin); }));
+	CHECK_TRUE(guard_fires([] { on_loop(open_through_the_registry); }));
 	CHECK_TRUE(guard_fires([] { on_loop(cleanup); }));
-	CHECK_TRUE(guard_fires([] { checkin_only(false); }));
-	CHECK_TRUE(guard_fires([] { checkin_only(true); }));
+	CHECK_TRUE(guard_fires([] { on_loop(clear); }));
 	CHECK_TRUE(guard_fires(destroy_on_loop));
 	CHECK_TRUE(guard_fires([] { release_after_cancel(false); }));
 }
@@ -169,8 +162,9 @@ static void test_quiet_off_loop() {
 	CHECK_FALSE(guard_fires([] { release_after_cancel(true); }));
 	CHECK_FALSE(guard_fires([] {
 		on_loop([] { });
-		checkout_and_checkin();  // the loop's thread, after run() returns
+		open_through_the_registry();  // the loop's thread, after run() returns
 		cleanup();
+		clear();
 		wait_answer();
 	}));
 
@@ -178,8 +172,9 @@ static void test_quiet_off_loop() {
 	std::promise<void> done;
 	asio::post(r.io(), [&] {
 		asio::post(*r.pool(), [&] {
-			checkout_and_checkin();
+			open_through_the_registry();
 			cleanup();
+			clear();
 			wait_answer();
 			done.set_value();
 		});

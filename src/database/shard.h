@@ -25,27 +25,23 @@
 
 #include "config.h"               // for XAPIAND_DATA_STORAGE
 
-#include <atomic>                 // for std::atomic_bool
-#include <chrono>                 // for std::chrono
+#include <exception>              // for std::exception_ptr
 #include <memory>                 // for std::shared_ptr
 #include <string>                 // for std::string
-#include <utility>                // for std::pair
 #include <vector>                 // for std::vector
 
-#include "cuuid_v1.hh"                  // for UUID, UUID_LENGTH
 #include "database/flags.h"       // for DB_*
+#include "database/pool.h"        // for ShardEndpoint
 #include "engine/document.h"      // for engine::Document
 #include "engine/doc_view.h"      // for engine::DocView
 #include "engine/error.h"         // for engine::Error
 #include "engine/shard.h"         // for engine::Shard
 #include "engine/types.h"         // for engine::WriteResult
+#include "task.hh"                // for task::task
 
 
 class Node;
 class Locator;
-class Logging;
-class DataStorage;
-class ShardEndpoint;
 
 
 //   ____  _                   _
@@ -54,69 +50,20 @@ class ShardEndpoint;
 //   ___) | | | | (_| | | | (_| |
 //  |____/|_| |_|\__,_|_|  \__,_|
 //
+// One use of an index: its registry entry and the flags the user asked with. Cheap to make and to drop.
+// Every operation that can wait is a task, so the callers decide where it runs; a write takes the
+// index's turn and holds it for its apply, its revision update and its WAL line, nothing longer.
 class Shard {
-	friend class ShardEndpoint;
-	friend class DatabasePool;
-	friend class DatabaseWAL;
-	friend class lock_shard;
-	friend struct PoolTestAccess;  // tests/test_pool.cc
+	std::shared_ptr<engine::Shard> kept_;  // the engine of the last ready(): a replacement cannot free it under a call
 
 public:
-	enum class Transaction : uint8_t {
-		none,
-		flushed,
-		unflushed,
-	};
-
-private:
-	std::chrono::steady_clock::time_point reopen_time;
-	engine::rev reopen_revision;
-
-	std::atomic<bool> _busy;
-	std::atomic<bool> _local;
-	std::atomic<bool> _closed;
-	std::atomic<bool> _modified;
-	std::atomic<bool> _incomplete;
-	std::atomic<Transaction> _transaction;
-
-	std::unique_ptr<engine::Shard> engine_shard;
-
-#ifdef XAPIAND_DATA_STORAGE
-	std::unique_ptr<DataStorage> writable_storage;
-	std::unique_ptr<DataStorage> storage;
-#endif /* XAPIAND_DATA_STORAGE */
-
-	std::shared_ptr<Logging> log;
-
-#ifdef XAPIAND_DATA_STORAGE
-	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
-	void storage_commit();
-#endif /* XAPIAND_DATA_STORAGE */
-
-	void retry_or_throw(const engine::Error& error, int t, bool commit_ = true);
-
-	bool reopen_writable();
-	bool reopen_readable();
-
-public:
-
 	ShardEndpoint& endpoint;
 	int flags;
 
+	Shard(ShardEndpoint& endpoint_, int flags_);
+
 	bool is_local() const {
-		return _local.load(std::memory_order_relaxed);
-	}
-
-	bool is_closed() const {
-		return _closed.load(std::memory_order_relaxed);
-	}
-
-	bool is_modified() const {
-		return _modified.load(std::memory_order_relaxed);
-	}
-
-	bool is_incomplete() const {
-		return _incomplete.load(std::memory_order_relaxed);
+		return true;
 	}
 
 	bool is_writable() const {
@@ -136,82 +83,67 @@ public:
 	}
 
 	bool is_wal_active() const {
-		return is_writable() && is_local() && !has_db_disable_wal(flags);
+		return is_writable() && !has_db_disable_wal(flags);
 	}
 
 	bool is_write_active() const {
 		return !has_db_disable_writes(flags);
 	}
 
-	bool is_busy() const {
-		return _busy.load(std::memory_order_relaxed);
-	}
-
-	Transaction transactional() const {
-		return _transaction.load(std::memory_order_relaxed);
-	}
-
-	bool is_transactional() const {
-		return transactional() != Transaction::none;
-	}
-
-	Shard(ShardEndpoint& endpoint_, int flags_, bool busy_);
-	~Shard() noexcept;
-
-#ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(const Locator& locator);
-#endif /* XAPIAND_DATA_STORAGE */
-
-	bool reopen();
-
-	// The engine shard, opened (or reopened) if need be; raises when the shard is closed.
-	// Valid until the next reopen, close or checkin: hold neither it nor a `native<T>()` across one.
-	engine::Shard& engine();
-
-	unsigned refs() const;
-
 	std::shared_ptr<const Node> node() const;
 
-	void reset() noexcept;
+	// The end of the use: a restore that finishes deletes the log it did not write.
+	void release() noexcept;
 
-	void do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions = true);
-	void do_close(bool commit_ = true);
+	// Opens the index when need be (a missing one is created when the flags say so) and keeps its engine.
+	task::task<void> ready();
 
-	// Called from a catch block of a read ladder: closes the shard as the failure demands and
-	// rethrows when it is final or not a failure of the shard; otherwise the caller reopens.
+	// The engine ready() kept; raises `closed` before one was.
+	engine::Shard& engine();
+
+	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
+	task::task<engine::Shard*> engine_for_read();
+
+	// Replaces an engine a failure marked stale; true when this call opened a new one.
+	task::task<bool> reopen();
+
+	// Called from a catch block of a read ladder: marks the entry as the failure demands and rethrows when
+	// it is final or not a failure of the shard; otherwise the caller reopens.
 	void retry_read(const engine::Error& error, int t);
 
 	// A fan-out over shards: remember a failure of this one so the next can go on, and rethrow what is
 	// final. A write does not treat a stale snapshot as retryable. Called from a catch block.
 	void collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes);
-	void close();
 
-	static void autocommit(const std::shared_ptr<Shard>& shard);
-	bool commit(bool wal_ = true);
+	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
+	task::task<bool> commit(bool wal_ = true);
 
-	void begin_transaction(bool flushed = true);
-	void commit_transaction();
-	void cancel_transaction();
+	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
-	void delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
-	engine::WriteResult add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	engine::WriteResult replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
+	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
 
-	void add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
-	engine::termcount remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
+	task::task<std::unique_ptr<engine::DocView>> get_view(engine::docid shard_did);
 
-	engine::docid get_docid_term(const std::string& term);
+	task::task<std::vector<std::string>> get_metadata_keys();
+	task::task<std::string> get_metadata(const std::string& key);
+	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
 
-	std::unique_ptr<engine::DocView> get_view(engine::docid shard_did);
-
-	std::vector<std::string> get_metadata_keys();
-	std::string get_metadata(const std::string& key);
-	void set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
+#ifdef XAPIAND_DATA_STORAGE
+	// A blob of the index's data storage: its read is a chore, on a reader of its own.
+	task::task<std::string> storage_get_stored(const Locator& locator);
+#endif /* XAPIAND_DATA_STORAGE */
 
 	std::string to_string() const;
 
 	std::string __repr__() const;
 };
+
+
+// The debounced autocommit of an index: a commit in its own turn.
+task::task<void> autocommit(ReferencedShardEndpoint entry);

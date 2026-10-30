@@ -78,6 +78,7 @@ DatabaseCleanup::operator()()
 		auto manager = XapiandManager::manager();
 		if (manager) {
 			manager->database_pool->cleanup();
+			manager->database_pool->housekeeping();
 			manager->schemas->cleanup();
 		}
 		lk.lock();

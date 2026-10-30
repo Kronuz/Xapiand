@@ -741,7 +741,6 @@ node_obj()
 			{ "processors", opts.processors },
 			{ "limits", {
 				// { "max_clients", opts.max_clients },
-				{ "max_database_readers", opts.max_database_readers },
 			} },
 			{ "cache", {
 				{ "database_pool_size", opts.database_pool_size },
