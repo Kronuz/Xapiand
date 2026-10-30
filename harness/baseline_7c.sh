@@ -32,7 +32,7 @@ step "profile_bulk (T12 RESTORE)"; t0=$(T)
 # T12: saturated query QPS (loadtest.py, 16 clients, 3 trials), on a node this script owns.
 step "loadtest (T12 QPS)"; t0=$(T)
 DATA="$OUT/loadtest.data"; rm -rf "$DATA"; mkdir -p "$DATA"
-XAPIAND_ENGINE=strata "$BIN" --port 18993 --solo --name bench -D "$DATA" > "$OUT/loadtest.node.log" 2>&1 &
+"$BIN" --port 18993 --name bench -D "$DATA" > "$OUT/loadtest.node.log" 2>&1 &
 NODE=$!
 cleanup() { kill "$NODE" 2>/dev/null; wait "$NODE" 2>/dev/null; rm -rf "$DATA"; }
 trap cleanup EXIT

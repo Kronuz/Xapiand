@@ -170,14 +170,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     os.makedirs(os.path.join(work, "data"))
     trace = os.path.join(work, "hop.csv")
     raw = os.path.join(out_dir, f"{args.label}.sample.txt")
-    env = dict(os.environ, XAPIAND_ENGINE="strata", HTTP_TRACE_HOP_OUT=trace, XAPIAND_LAG_PROBE="0")
+    env = dict(os.environ, HTTP_TRACE_HOP_OUT=trace, XAPIAND_LAG_PROBE="0")
     with socket.socket() as probe:
         probe.settimeout(1)
         if probe.connect_ex(("127.0.0.1", args.port)) == 0:
             raise SystemExit(f"127.0.0.1:{args.port} is already in use; pick another --port")
     logf = open(os.path.join(work, "node.log"), "wb")
     proc = subprocess.Popen(
-        [binary, "--port", str(args.port), "--solo", "--name", "light", "-D", os.path.join(work, "data")],
+        [binary, "--port", str(args.port), "--name", "light", "-D", os.path.join(work, "data")],
         stdout=logf,
         stderr=logf,
         env=env,

@@ -21,7 +21,7 @@ in-flight and demoted peaks, segment count and merge backlog, RSS and phase time
   stall_load.py --bin BIN --overload light 4  |  --overload heavy 4     T8
   stall_load.py --bin BIN --dry-run                                     20,000 documents, short phases
 
---bin starts a solo node on the strata engine in --workdir and removes it (process and files) on exit;
+--bin starts a node in --workdir and removes it (process and files) on exit;
 --target HOST:PORT uses a node that is already running. Run it under a hold: quiet strict NAME MIN
 "what" -- harness/stall_load.py ...
 """
@@ -186,13 +186,12 @@ class Node:
             self.workdir = os.path.abspath(args.workdir)
             shutil.rmtree(self.workdir, ignore_errors=True)
             os.makedirs(os.path.join(self.workdir, "data"))
-            env = dict(os.environ, XAPIAND_ENGINE=args.engine)
+            env = dict(os.environ)
             logf = open(os.path.join(self.workdir, "node.log"), "wb")
             cmd = [
                 os.path.abspath(args.bin),
                 "--port",
                 str(self.port),
-                "--solo",
                 "--name",
                 "stall",
                 "-D",
@@ -1124,7 +1123,6 @@ def main() -> int:
         default="127.0.0.1:18980",
         help="HOST:PORT (the port --bin listens on)",
     )
-    ap.add_argument("--engine", default="strata")
     ap.add_argument("--workdir", default=os.path.join(REPO, ".scratch", "stall_load"))
     ap.add_argument("--out")
     ap.add_argument("--accounts-docs", type=int, default=1_000_000)
