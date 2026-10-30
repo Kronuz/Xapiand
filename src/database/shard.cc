@@ -465,10 +465,14 @@ ShardEndpoint::open_index_blocking(int flags)
 	options.host = true;
 	options.background = &database_pool.executor();
 	options.buffered_docs_cap = database_pool.buffered_docs_cap_.load(std::memory_order_relaxed);
+	options.readers = database_pool.readers_;
 	auto opened = engine::sync_wait(engine::open_local(path, true, has_db_create_or_open(flags), options));
 	std::shared_ptr<engine::Shard> eng(std::move(opened.shard));
 
-	uuid_ = eng->uuid();
+	{
+		std::lock_guard<std::mutex> lk(mtx);
+		uuid_ = eng->uuid();
+	}
 	opens_.fetch_add(1, std::memory_order_relaxed);
 	set_revision(eng->revision());
 	modified.store(false, std::memory_order_relaxed);
@@ -1292,6 +1296,29 @@ schedule_autocommit(const Shard& shard)
 }
 
 
+// What follows a write: its commit when it asked for one, else the debounced autocommit. The write is applied
+// and logged by now. A commit whose turn times out (busy) does not fail the write, which a client would retry
+// (and an add without an id would then duplicate): the write stands, the autocommit commits it, and the
+// client is told it succeeded.
+task::task<void>
+Shard::finish_write(bool commit_, bool wal_)
+{
+	if (!commit_) {
+		schedule_autocommit(*this);
+		co_return;
+	}
+	try {
+		co_await commit(wal_);
+	} catch (const engine::Error& error) {
+		if (error.kind != engine::errc::busy) {
+			throw;
+		}
+		L_WARNING("The commit of a write on {} waited too long for the index and was left to the autocommit", repr(endpoint.to_string()));
+		schedule_autocommit(*this);
+	}
+}
+
+
 task::task<void>
 Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
 {
@@ -1306,11 +1333,7 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_delete(*eng, flags, shard_did, wal_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 }
 
 
@@ -1328,11 +1351,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_delete_term(*eng, flags, term, wal_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 }
 
 
@@ -1351,11 +1370,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 		auto eng = endpoint.engine_ptr();
 		info = co_await endpoint.do_add(*eng, *endpoint.chores, flags, std::move(doc), wal_, version_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 	co_return info;
 }
 
@@ -1375,11 +1390,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 		auto eng = endpoint.engine_ptr();
 		info = co_await endpoint.do_replace(*eng, *endpoint.chores, flags, shard_did, std::move(doc), wal_, version_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 	co_return info;
 }
 
@@ -1399,11 +1410,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 		auto eng = endpoint.engine_ptr();
 		info = co_await endpoint.do_replace_term(*eng, *endpoint.chores, flags, term, std::move(doc), wal_, version_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 	co_return info;
 }
 
@@ -1422,11 +1429,7 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_add_spelling(*eng, flags, word, freqinc, wal_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 }
 
 
@@ -1445,11 +1448,7 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 		auto eng = endpoint.engine_ptr();
 		result = co_await endpoint.do_remove_spelling(*eng, flags, word, freqdec, wal_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
 	co_return result;
 }
 
@@ -1468,11 +1467,18 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_set_metadata(*eng, flags, key, value, wal_);
 	}
-	if (commit_) {
-		co_await commit(wal_);
-	} else {
-		schedule_autocommit(*this);
-	}
+	co_await finish_write(commit_, wal_);
+}
+
+
+task::task<engine::CheckResult>
+Shard::check()
+{
+	L_CALL("Shard::check()");
+
+	co_await ready();
+	auto turn = co_await endpoint.take_turn(flags);
+	co_return co_await endpoint.engine().check();
 }
 
 

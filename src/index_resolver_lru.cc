@@ -173,14 +173,14 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 }
 
 
-void
+task::task<void>
 save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_plus_master, IndexSettingsShard& shard)
 {
 	L_CALL("save_shards(<shard>)");
 
 	if (shard.modified) {
 		Endpoint endpoint(".xapiand/indexes");
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint, true);
 		assert(!endpoints.empty());
 		DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 		MsgPack obj({
@@ -203,14 +203,14 @@ save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_pl
 				{ RESERVED_VALUE, shard.nodes },
 			} },
 		});
-		auto info = db_handler.update(unsharded_normalized_path, shard.version, false, true, obj, false, msgpack_type).first;
+		auto info = (co_await db_handler.update(unsharded_normalized_path, shard.version, false, true, obj, false, msgpack_type)).first;
 		shard.version = info.version;
 		shard.modified = false;
 	}
 }
 
 
-void
+task::task<void>
 save_settings(const std::string& unsharded_normalized_path, IndexSettings& index_settings)
 {
 	L_CALL("save_settings(<index_settings>)");
@@ -220,14 +220,14 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 	bool settings_saved_old = index_settings.saved;
 
 	if (index_settings.num_shards == 1) {
-		save_shards(unsharded_normalized_path, index_settings.num_replicas_plus_master, index_settings.shards[0]);
+		co_await save_shards(unsharded_normalized_path, index_settings.num_replicas_plus_master, index_settings.shards[0]);
 		index_settings.saved = true;
 		index_settings.loaded = true;
 	} else if (index_settings.num_shards != 0) {
 		if (!index_settings.shards[0].nodes.empty()) {
 			if (index_settings.modified) {
 				Endpoint endpoint(".xapiand/indexes");
-				auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+				auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint, true);
 				assert(!endpoints.empty());
 				DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 				MsgPack obj({
@@ -250,7 +250,7 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 						{ RESERVED_TYPE,  "array/keyword" },
 					} },
 				});
-				auto info = db_handler.update(unsharded_normalized_path, index_settings.version, false, true, obj, false, msgpack_type).first;
+				auto info = (co_await db_handler.update(unsharded_normalized_path, index_settings.version, false, true, obj, false, msgpack_type)).first;
 				index_settings.version = info.version;
 				index_settings.modified = false;
 			}
@@ -259,7 +259,7 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 		for (auto& shard : index_settings.shards) {
 			if (!shard.nodes.empty()) {
 				auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, ++shard_num);
-				save_shards(shard_normalized_path, index_settings.num_replicas_plus_master, shard);
+				co_await save_shards(shard_normalized_path, index_settings.num_replicas_plus_master, shard);
 			}
 		}
 		index_settings.saved = true;
@@ -302,7 +302,7 @@ load_replicas(const Endpoint& endpoint, const MsgPack& obj)
 }
 
 
-IndexSettings
+task::task<IndexSettings>
 load_settings(const std::string& unsharded_normalized_path)
 {
 	L_CALL("load_settings(<index_endpoints>, {})", repr(unsharded_normalized_path));
@@ -316,14 +316,14 @@ load_settings(const std::string& unsharded_normalized_path)
 		try {
 			IndexSettings index_settings;
 
-			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+			auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint, true);
 			if(endpoints.empty()) {
 				continue;
 			}
 
 			DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
-			auto document = db_handler.get_document(unsharded_normalized_path);
-			auto obj = document.get_obj();
+			auto document = co_await db_handler.get_document(unsharded_normalized_path);
+			auto obj = co_await document.get_obj();
 
 			auto it = obj.find(VERSION_FIELD_NAME);
 			if (it != obj.end()) {
@@ -333,7 +333,7 @@ load_settings(const std::string& unsharded_normalized_path)
 				}
 				index_settings.version = version_val.u64();
 			} else {
-				auto version_ser = document.get_value(DB_SLOT_VERSION);
+				auto version_ser = co_await document.get_value(DB_SLOT_VERSION);
 				if (version_ser.empty()) {
 					THROW(Error, "Inconsistency in '{}' configured for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 				}
@@ -359,8 +359,8 @@ load_settings(const std::string& unsharded_normalized_path)
 				size_t replicas_size = 0;
 				for (size_t shard_num = 1; shard_num <= index_settings.num_shards; ++shard_num) {
 					auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, shard_num);
-					auto replica_document = db_handler.get_document(shard_normalized_path);
-					auto shard = load_replicas(endpoint, replica_document.get_obj());
+					auto replica_document = co_await db_handler.get_document(shard_normalized_path);
+					auto shard = load_replicas(endpoint, co_await replica_document.get_obj());
 					auto replicas_size_ = shard.nodes.size();
 					if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
 						THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
@@ -381,14 +381,14 @@ load_settings(const std::string& unsharded_normalized_path)
 			}
 
 			index_settings.loaded = true;
-			return index_settings;
+			co_return index_settings;
 		} catch (const engine::Error& error) {
 			if (engine::is_missing(error.kind)) { break; }
 			if (error.kind != engine::errc::not_available || t == 0) { throw; }
 		}
 	}
 
-	return {};
+	co_return IndexSettings{};
 }
 
 
@@ -434,7 +434,7 @@ IndexResolverLRU::resolve_nodes(const IndexSettings& index_settings)
 }
 
 
-IndexSettings
+task::task<IndexSettings>
 IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
 	L_CALL("IndexResolverLRU::resolve_index_settings({}, {}, {}, {}, {}, {})", repr(normalized_path), writable, settings ? settings->to_string() : "null", reload, rebuild, clear);
@@ -488,7 +488,7 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 			index_settings.num_shards = 1;
 		}
 
-		return index_settings;
+		co_return index_settings;
 	}
 
 	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
@@ -501,7 +501,7 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		if (it != it_e) {
 			index_settings = it->second;
 			if (!writable || index_settings.saved) {
-				return index_settings;
+				co_return index_settings;
 			}
 		}
 	}
@@ -518,14 +518,14 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 	if (it != it_e) {
 		if (clear) {
 			resolve_index_lru.erase(it);
-			return {};
+			co_return IndexSettings{};
 		}
 		index_settings = it->second;
 		lk.unlock();
 		L_SHARDS("Node settings for {} loaded from LRU", unsharded_normalized_path);
 	} else {
 		lk.unlock();
-		index_settings = load_settings(unsharded_normalized_path);
+		index_settings = co_await load_settings(unsharded_normalized_path);
 		store_lru = true;
 		if (!index_settings.shards.empty()) {
 			for (auto& shard : index_settings.shards) {
@@ -632,7 +632,7 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 
 	if (!index_settings.shards.empty()) {
 		if (writable && !index_settings.saved) {
-			save_settings(unsharded_normalized_path, index_settings);
+			co_await save_settings(unsharded_normalized_path, index_settings);
 			store_lru = true;
 		}
 
@@ -689,14 +689,14 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		}
 
 		if (!shard_settings.shards.empty()) {
-			return shard_settings;
+			co_return shard_settings;
 		}
 	}
-	return index_settings;
+	co_return index_settings;
 }
 
 
-Endpoints
+task::task<Endpoints>
 IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writable, const MsgPack* settings)
 {
 	L_CALL("IndexResolverLRU::resolve_index_endpoints({}, {}, {})", repr(endpoint.to_string()), writable, settings ? settings->to_string() : "null");
@@ -714,7 +714,7 @@ IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writabl
 		try {
 			Endpoints endpoints;
 
-			auto index_settings = resolve_index_settings(unsharded_normalized_path, writable, settings, t != CONFLICT_RETRIES, rebuild, false);
+			auto index_settings = co_await resolve_index_settings(unsharded_normalized_path, writable, settings, t != CONFLICT_RETRIES, rebuild, false);
 			auto nodes = resolve_nodes(index_settings);
 			bool retry = !rebuild;
 			rebuild = false;
@@ -750,7 +750,7 @@ IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writabl
 			}
 
 			if (!rebuild) {
-				return endpoints;
+				co_return endpoints;
 			}
 		} catch (const engine::Error& error) {
 			if (error.kind != engine::errc::version_conflict || --t == 0) { throw; }

@@ -33,6 +33,7 @@
 #include "lru.h"                              // for lru::lru
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "node.h"                             // for Node
+#include "task.hh"                            // for task::task
 #include "engine/types.h"                  // for engine::rev, docid
 
 
@@ -72,8 +73,8 @@ class IndexResolverLRU {
 public:
 	IndexResolverLRU(ssize_t resolver_cache_size, std::chrono::milliseconds resolver_cache_timeout);
 
-	IndexSettings resolve_index_settings(std::string_view normalized_slashed_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear);
-	Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable, const MsgPack* settings);
+	task::task<IndexSettings> resolve_index_settings(std::string_view normalized_slashed_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear);
+	task::task<Endpoints> resolve_index_endpoints(const Endpoint& endpoint, bool writable, const MsgPack* settings);
 
 	void invalidate_settings(const std::string& uri);
 

@@ -232,7 +232,7 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	: total_clients(0),
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
-	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size)),
+	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, static_cast<size_t>(opts.num_http_servers) * 1000 * opts.num_shards)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
@@ -274,7 +274,7 @@ XapiandManager::~XapiandManager() noexcept
 }
 
 
-IndexSettings
+task::task<IndexSettings>
 XapiandManager::resolve_index_settings(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
 	return manager(true)->resolve_index_settings_impl(normalized_path, writable, settings, reload, rebuild, clear);
@@ -1069,7 +1069,7 @@ XapiandManager::ready_to_end(bool notify)
 }
 
 
-IndexSettings
+task::task<IndexSettings>
 XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
 	L_CALL("XapiandManager::resolve_index_settings_impl()");
@@ -1078,7 +1078,7 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 }
 
 
-Endpoints
+task::task<Endpoints>
 XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const MsgPack* settings)
 {
 	L_CALL("XapiandManager::resolve_index_endpoints_impl()");

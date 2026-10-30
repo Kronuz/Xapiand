@@ -50,6 +50,7 @@
 #include "engine/document.h"    // for engine::Document
 #include "engine/error.h"       // for engine::Error
 #include "engine/host.h"        // for Host
+#include "engine/open.h"        // for engine::ReaderRegistry
 #include "engine/shard.h"       // for engine::Shard
 #include "engine/types.h"       // for engine::rev, docid
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
@@ -258,7 +259,8 @@ public:
 	}
 
 	// The engine's uuid, once open; the data storage's volumes carry it.
-	const std::string& uuid() const {
+	std::string uuid() const {
+		std::lock_guard<std::mutex> lk(mtx);
 		return uuid_;
 	}
 
@@ -266,7 +268,7 @@ public:
 	std::string dump_databases(int level) const;
 
 private:
-	std::string uuid_;  // set when opened; the data storage's volumes carry it
+	std::string uuid_;  // set when opened, under mtx; the data storage's volumes carry it
 
 	DatabaseWALWriter& wal_writer() const;
 
@@ -362,6 +364,9 @@ public:
  *
  */
 
+// The readers a pool allows at once when its host does not size it.
+constexpr size_t default_reader_records = 4096;
+
 class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	friend ShardEndpoint;
 	friend struct PoolTestAccess;  // tests/test_pool.cc
@@ -379,6 +384,7 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 
 	std::atomic<double> turn_timeout_;                  // seconds a turn may be awaited before the request is told `busy`
 	std::atomic<std::uint64_t> buffered_docs_cap_;      // documents an index buffers before a write owes a flush; 0: the index's own bound
+	std::shared_ptr<engine::ReaderRegistry> readers_;  // the records every index's readers claim (D6, C9); set before the first open
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
 
@@ -386,7 +392,9 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	ReferencedShardEndpoint _get(const Endpoint& endpoint) const;
 
 public:
-	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0);
+	// `reader_records` is the readers the host allows at once across all its indexes (a search holds one per index
+	// it reads); a read finds none left answers busy (503).
+	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t reader_records = default_reader_records);
 	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;
@@ -407,6 +415,13 @@ public:
 
 	void set_turn_timeout(double seconds) noexcept {
 		turn_timeout_.store(seconds, std::memory_order_relaxed);
+	}
+
+	// Replaces the readers' registry: call it before any index is open (a test sizing it small).
+	void set_reader_records(size_t records);
+
+	const std::shared_ptr<engine::ReaderRegistry>& readers() const noexcept {
+		return readers_;
 	}
 
 	void set_buffered_docs_cap(std::uint64_t cap) noexcept {

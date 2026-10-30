@@ -47,6 +47,7 @@
 #include "engine/types.h"                    // for engine::WriteResult
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
+#include "task.hh"                           // for task::task
 #include "thread.hh"                         // for ThreadPolicyType::*
 #include "engine/types.h"                  // for engine::rev, docid
 
@@ -85,14 +86,14 @@ class DatabaseHandler {
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 #endif
 
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
+	task::task<std::unique_ptr<MsgPack>> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
 
-	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
+	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
-	DocumentInfo index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
 	// The match proper, on a query the engine already read.
-	engine::SearchResult match(
+	task::task<engine::SearchResult> match(
 		const engine::PreparedQuery& query,
 		engine::doccount first,
 		engine::doccount maxitems,
@@ -103,15 +104,15 @@ class DatabaseHandler {
 		engine::DocidOrder order,
 		engine::MatchSpy* aggs);
 
-	bool update_schema();
+	task::task<bool> update_schema();
 
-	MsgPack _dump_document(engine::docid did, const Data& data);
+	task::task<MsgPack> _dump_document(engine::docid did, const Data& data);
 
 public:
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints& endpoints_, int flags_ = 0, std::shared_ptr<std::unordered_set<std::string>> context_ = nullptr);
 
-	std::shared_ptr<Schema> get_schema(const MsgPack* obj = nullptr);
+	task::task<std::shared_ptr<Schema>> get_schema(const MsgPack* obj = nullptr);
 
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
@@ -119,20 +120,20 @@ public:
 	MsgPack repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised);
 #endif
 
-	MsgPack check();
+	task::task<MsgPack> check();
 
-	std::tuple<std::string, engine::Document, MsgPack> prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
+	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
-	DocumentInfo index(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
-	DocumentInfo patch(const MsgPack& document_id, engine::rev document_ver, bool create, const MsgPack& patches, bool commit);
-	DocumentInfo update(const MsgPack& document_id, engine::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	task::task<DocumentInfo> index(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	task::task<DocumentInfo> patch(const MsgPack& document_id, engine::rev document_ver, bool create, const MsgPack& patches, bool commit);
+	task::task<DocumentInfo> update(const MsgPack& document_id, engine::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
-	void update_schema(const MsgPack& obj);
-	void write_schema(const MsgPack& obj);
+	task::task<void> update_schema(const MsgPack& obj);
+	task::task<void> write_schema(const MsgPack& obj);
 
 
-	std::tuple<engine::SearchResult, MsgPack, engine::Query> get_mset(const query_field_t& e, const MsgPack* qdsl, engine::MatchSpy* aggs);
-	engine::SearchResult get_mset(
+	task::task<std::tuple<engine::SearchResult, MsgPack, engine::Query>> get_mset(const query_field_t& e, const MsgPack* qdsl, engine::MatchSpy* aggs);
+	task::task<engine::SearchResult> get_mset(
 		const engine::Query& query = engine::Query::match_all(),
 		engine::doccount first = 0,
 		engine::doccount maxitems = 10,
@@ -143,50 +144,50 @@ public:
 		engine::DocidOrder order = engine::DocidOrder::ascending,
 		engine::MatchSpy* aggs = nullptr);
 
-	MsgPack dump_document(engine::docid did);
-	MsgPack dump_document(std::string_view document_id);
-	MsgPack dump_documents();
-	std::string dump_documents(int fd);
+	task::task<MsgPack> dump_document(engine::docid did);
+	task::task<MsgPack> dump_document(std::string_view document_id);
+	task::task<MsgPack> dump_documents();
+	task::task<std::string> dump_documents(int fd);
+	// Reads a dump from the descriptor, blocking: the CLI's main thread runs it.
 	std::string restore_documents(int fd);
 
-	std::tuple<std::string, engine::Document, MsgPack> prepare_document(MsgPack& obj, size_t idx);
+	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare_document(MsgPack& obj, size_t idx);
 
-	std::string get_prefixed_term_id(const MsgPack& document_id);
+	task::task<std::string> get_prefixed_term_id(const MsgPack& document_id);
 
-	std::vector<std::string> get_metadata_keys();
-	std::string get_metadata(const std::string& key);
-	std::string get_metadata(std::string_view key);
-	void set_metadata(const std::string& key, const std::string& value, bool commit = false, bool wal = true);
-	void set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
+	task::task<std::vector<std::string>> get_metadata_keys();
+	task::task<std::string> get_metadata(const std::string& key);
+	task::task<std::string> get_metadata(std::string_view key);
+	task::task<void> set_metadata(const std::string& key, const std::string& value, bool commit = false, bool wal = true);
+	task::task<void> set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
 
+	// By id the document is a handle: it reads the index when its data is asked for.
 	Document get_document(engine::docid did);
-	Document get_document(std::string_view document_id);
-	Document get_document_term(const std::string& term);
-	engine::docid get_docid(std::string_view document_id);
-	engine::docid get_docid_term(const std::string& term);
+	task::task<Document> get_document(std::string_view document_id);
+	task::task<Document> get_document_term(const std::string& term);
+	task::task<engine::docid> get_docid(std::string_view document_id);
+	task::task<engine::docid> get_docid_term(const std::string& term);
 
-	void delete_document(engine::docid did, bool commit = false, bool wal = true, bool version = true);
-	void delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
-	void delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
+	task::task<void> delete_document(engine::docid did, bool commit = false, bool wal = true, bool version = true);
+	task::task<void> delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
+	task::task<void> delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
 
-	engine::WriteResult add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	engine::WriteResult replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	engine::WriteResult replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	engine::WriteResult replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 
-	MsgPack get_document_info(std::string_view document_id, bool raw_data, bool human);
-	MsgPack get_database_info();
+	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);
+	task::task<MsgPack> get_database_info();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(const Locator& locator, engine::docid did);
+	task::task<std::string> storage_get_stored(const Locator& locator, engine::docid did);
 #endif /* XAPIAND_DATA_STORAGE */
 
-	bool commit(bool wal = true);
-	void reopen();
+	task::task<bool> commit(bool wal = true);
+	task::task<void> reopen();
 
-	void do_close(bool commit_ = true);
-
-	MsgPack unserialise_term_id(std::string_view term_id);
+	task::task<MsgPack> unserialise_term_id(std::string_view term_id);
 };
 
 
@@ -314,16 +315,16 @@ public:
 	Document& operator=(const Document& doc_) = default;
 
 	engine::docid get_docid();
-	bool validate();
+	task::task<bool> validate();
 
-	std::string serialise();
-	std::string get_value(engine::valueno slot);
-	std::string get_data();
-	MsgPack get_values();
+	task::task<std::string> serialise();
+	task::task<std::string> get_value(engine::valueno slot);
+	task::task<std::string> get_data();
+	task::task<MsgPack> get_values();
 
-	MsgPack get_value(std::string_view slot_name);
-	MsgPack get_obj();
-	MsgPack get_field(std::string_view slot_name);
+	task::task<MsgPack> get_value(std::string_view slot_name);
+	task::task<MsgPack> get_obj();
+	task::task<MsgPack> get_field(std::string_view slot_name);
 	static MsgPack get_field(std::string_view slot_name, const MsgPack& obj);
 };
 

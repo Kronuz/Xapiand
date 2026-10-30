@@ -79,6 +79,7 @@ struct ChoreAwaiter final : WorkItem {
 	void await_suspend(std::coroutine_handle<> h) {
 		handle = h;
 		sched = task::current();
+		assert(sched && "a chore is awaited by a task that runs on a scheduler");
 		group.post(*this);  // the chore may finish, and resume h, before this returns
 	}
 
@@ -222,9 +223,6 @@ ShardEndpoint::ensure_open(int flags)
 		bool reset = false;
 		{
 			std::lock_guard<std::mutex> lk(mtx);
-			if (is_finished()) {
-				throw engine::Error(engine::errc::not_available, "Shard is not available");
-			}
 			switch (state_) {
 				case State::open:
 					if (!stale_.load(std::memory_order_acquire)) {
@@ -242,6 +240,10 @@ ShardEndpoint::ensure_open(int flags)
 					closed = closed_;
 					break;
 				case State::empty:
+					// A node that is finishing serves the indexes it has open and opens no more.
+					if (is_finished()) {
+						throw engine::Error(engine::errc::not_available, "Shard is not available");
+					}
 					state_ = State::opening;
 					flight_ = flight = std::make_shared<OpenFlight>();
 					leader = true;
@@ -406,12 +408,13 @@ ShardEndpoint::dump_databases(int level) const
  *
  */
 
-DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads) :
+DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t reader_records) :
 	lru::lru(database_pool_size),
 	finished_(false),
 	control_(nullptr),
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
+	readers_(engine::make_reader_registry(reader_records)),
 	wal_writer_(nullptr),
 	detached_(0)
 {
@@ -420,6 +423,13 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads) :
 	options.block_guard = &engine::check_may_block;
 	work_pool_ = std::make_unique<WorkPool>(options);
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
+}
+
+
+void
+DatabasePool::set_reader_records(size_t records)
+{
+	readers_ = engine::make_reader_registry(records);
 }
 
 

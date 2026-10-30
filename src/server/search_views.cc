@@ -40,6 +40,7 @@
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
+#include "engine/sync.h"                    // for engine::sync_wait
 #include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
@@ -134,9 +135,9 @@ static query_field_t query_field_maker(Request& request, int flags);
 // the forthcoming SearchService shares. Forward-declared here because the views
 // above call them before their definitions.
 static MsgPack node_obj();
-static MsgPack retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
+static task::task<MsgPack> retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
 static std::vector<std::string> expand_paths(Request& request);
-static size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
+static task::task<size_t> resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 
 // The response/transport helpers lifted off HttpClient `this` (Leg 2 stage 3b). The
 // response is formatted from `request` state (content negotiation, serialization) and
@@ -151,32 +152,32 @@ static void write_http_response(Request& request, enum http_status status, const
 // free functions, dispatched through a plain function pointer (Request::view is
 // now `void(*)(Request&)`). This is what SearchService::handle() will call.
 // Forward-declared here because prepare() takes their address before their defs.
-static void metrics_view(Request& request);
-static void info_view(Request& request);
-static void retrieve_metadata_view(Request& request);
-static void write_metadata_view(Request& request);
-static void update_metadata_view(Request& request);
-static void delete_metadata_view(Request& request);
-static void document_exists_view(Request& request);
-static void retrieve_document_view(Request& request);
-static void write_document_view(Request& request);
-static void update_document_view(Request& request);
-static void delete_document_view(Request& request);
-static void dump_document_view(Request& request);
-static void database_exists_view(Request& request);
-static void retrieve_database_view(Request& request);
-static void write_database_view(Request& request);
-static void delete_database_view(Request& request);
-static void dump_database_view(Request& request);
-static void restore_database_view(Request& request);
-static void check_database_view(Request& request);
-static void commit_database_view(Request& request);
-static void search_view(Request& request);
-static void count_view(Request& request);
-static void flush_view(Request& request);
-static void quit_view(Request& request);
+static task::task<void> metrics_view(Request& request);
+static task::task<void> info_view(Request& request);
+static task::task<void> retrieve_metadata_view(Request& request);
+static task::task<void> write_metadata_view(Request& request);
+static task::task<void> update_metadata_view(Request& request);
+static task::task<void> delete_metadata_view(Request& request);
+static task::task<void> document_exists_view(Request& request);
+static task::task<void> retrieve_document_view(Request& request);
+static task::task<void> write_document_view(Request& request);
+static task::task<void> update_document_view(Request& request);
+static task::task<void> delete_document_view(Request& request);
+static task::task<void> dump_document_view(Request& request);
+static task::task<void> database_exists_view(Request& request);
+static task::task<void> retrieve_database_view(Request& request);
+static task::task<void> write_database_view(Request& request);
+static task::task<void> delete_database_view(Request& request);
+static task::task<void> dump_database_view(Request& request);
+static task::task<void> restore_database_view(Request& request);
+static task::task<void> check_database_view(Request& request);
+static task::task<void> commit_database_view(Request& request);
+static task::task<void> search_view(Request& request);
+static task::task<void> count_view(Request& request);
+static task::task<void> flush_view(Request& request);
+static task::task<void> quit_view(Request& request);
 #if XAPIAND_DATABASE_WAL
-static void wal_view(Request& request);
+static task::task<void> wal_view(Request& request);
 #endif
 
 
@@ -765,13 +766,13 @@ node_obj()
 }
 
 
-static void
+static task::task<void>
 metrics_view(Request& request)
 {
 	L_CALL("metrics_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	resolve_index_endpoints(request, query_field);
+	co_await resolve_index_endpoints(request, query_field);
 
 	request.processing = std::chrono::steady_clock::now();
 
@@ -780,19 +781,19 @@ metrics_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 document_exists_view(Request& request)
 {
 	L_CALL("document_exists_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	resolve_index_endpoints(request, query_field);
+	co_await resolve_index_endpoints(request, query_field);
 
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN);
 
-	db_handler.get_document(request.path_parser.get_id()).validate();
+	co_await (co_await db_handler.get_document(request.path_parser.get_id())).validate();
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -800,13 +801,13 @@ document_exists_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 delete_document_view(Request& request)
 {
 	L_CALL("delete_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -816,7 +817,7 @@ delete_document_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
-	db_handler.delete_document(document_id, query_field.commit);
+	co_await db_handler.delete_document(document_id, query_field.commit);
 	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
@@ -833,7 +834,7 @@ delete_document_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 write_document_view(Request& request)
 {
 	L_CALL("write_document_view()");
@@ -841,7 +842,7 @@ write_document_view(Request& request)
 	auto& decoded_body = request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -853,7 +854,7 @@ write_document_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-	auto indexed = db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+	auto indexed = co_await db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -868,7 +869,7 @@ write_document_view(Request& request)
 		auto it = response_obj.find(ID_FIELD_NAME);
 		if (document_id.empty()) {
 			if (it == response_obj.end()) {
-				auto document_id_obj = db_handler.unserialise_term_id(info.term);
+				auto document_id_obj = co_await db_handler.unserialise_term_id(info.term);
 				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, document_id_obj.as_str());
 				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
 			} else {
@@ -876,7 +877,7 @@ write_document_view(Request& request)
 			}
 		} else {
 			if (it == response_obj.end()) {
-				response_obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+				response_obj[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
 			}
 		}
 
@@ -900,7 +901,7 @@ write_document_view(Request& request)
 		if (document_id.empty()) {
 			auto it = response_obj.find(ID_FIELD_NAME);
 			if (it == response_obj.end()) {
-				auto document_id_obj = db_handler.unserialise_term_id(info.term);
+				auto document_id_obj = co_await db_handler.unserialise_term_id(info.term);
 				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, document_id_obj.as_str());
 			} else {
 				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, it.value().as_str());
@@ -922,7 +923,7 @@ write_document_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 update_document_view(Request& request)
 {
 	L_CALL("update_document_view()");
@@ -930,7 +931,7 @@ update_document_view(Request& request)
 	auto& decoded_body = request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -946,15 +947,15 @@ update_document_view(Request& request)
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
-		indexed = db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
+		indexed = co_await db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
 	} else if (request.method == HTTP_UPSERT) {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-		indexed = db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = co_await db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-		indexed = db_handler.update(document_id, query_field.version, stored, false, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = co_await db_handler.update(document_id, query_field.version, stored, false, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	}
 
 	request.ready = std::chrono::steady_clock::now();
@@ -966,7 +967,7 @@ update_document_view(Request& request)
 		Document document(info.did, &db_handler);
 
 		if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
-			response_obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+			response_obj[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
 		}
 
 		response_obj[VERSION_FIELD_NAME] = info.version;
@@ -1001,13 +1002,13 @@ update_document_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 retrieve_metadata_view(Request& request)
 {
 	L_CALL("retrieve_metadata_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1030,14 +1031,14 @@ retrieve_metadata_view(Request& request)
 
 	if (key.empty()) {
 		response_obj = MsgPack::MAP();
-		for (auto& _key : db_handler.get_metadata_keys()) {
-			auto metadata = db_handler.get_metadata(_key);
+		for (auto& _key : co_await db_handler.get_metadata_keys()) {
+			auto metadata = co_await db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
 				response_obj[_key] = MsgPack::unserialise(metadata);
 			}
 		}
 	} else {
-		auto metadata = db_handler.get_metadata(key);
+		auto metadata = co_await db_handler.get_metadata(key);
 		if (metadata.empty()) {
 			throw engine::Error(engine::errc::doc_not_found, "Metadata not found");
 		} else {
@@ -1065,7 +1066,7 @@ retrieve_metadata_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 write_metadata_view(Request& request)
 {
 	L_CALL("write_metadata_view()");
@@ -1073,7 +1074,7 @@ write_metadata_view(Request& request)
 	auto& decoded_body = request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1096,7 +1097,7 @@ write_metadata_view(Request& request)
 		THROW(ClientError, "Metadata {} is read-only", repr(request.path_parser.get_cmd()));
 	}
 
-	db_handler.set_metadata(key, decoded_body.serialise());
+	co_await db_handler.set_metadata(key, decoded_body.serialise());
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1118,25 +1119,27 @@ write_metadata_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 update_metadata_view(Request& request)
 {
 	L_CALL("update_metadata_view()");
 
 	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	co_return;
 }
 
 
-static void
+static task::task<void>
 delete_metadata_view(Request& request)
 {
 	L_CALL("delete_metadata_view()");
 
 	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	co_return;
 }
 
 
-static void
+static task::task<void>
 info_view(Request& request)
 {
 	L_CALL("info_view()");
@@ -1144,7 +1147,7 @@ info_view(Request& request)
 	MsgPack response_obj;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1166,9 +1169,9 @@ info_view(Request& request)
 		request.query_parser.rewind();
 		bool raw = request.query_parser.next("raw") != -1;
 
-		response_obj = db_handler.get_document_info(id, raw, request.human);
+		response_obj = co_await db_handler.get_document_info(id, raw, request.human);
 	} else {
-		response_obj = db_handler.get_database_info();
+		response_obj = co_await db_handler.get_database_info();
 	}
 
 	request.ready = std::chrono::steady_clock::now();
@@ -1191,13 +1194,13 @@ info_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 database_exists_view(Request& request)
 {
 	L_CALL("database_exists_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1205,7 +1208,7 @@ database_exists_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints, DB_OPEN);
 
-	db_handler.reopen();  // Ensure it can be opened.
+	co_await db_handler.reopen();  // Ensure it can be opened.
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1213,7 +1216,7 @@ database_exists_view(Request& request)
 }
 
 
-static MsgPack
+static task::task<MsgPack>
 retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector)
 {
 	L_CALL("retrieve_database()");
@@ -1222,7 +1225,7 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		if (selector == "state") {
 			auto manager = XapiandManager::manager();
 			if (manager) {
-				return enum_name(manager->state.load());
+				co_return enum_name(manager->state.load());
 			}
 		}
 	}
@@ -1241,7 +1244,7 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		}
 
 		// Retrieve full schema
-		schema = db_handler.get_schema()->get_full(true);
+		schema = (co_await db_handler.get_schema())->get_full(true);
 	} catch (const engine::Error& error) {
 		if (!engine::is_missing(error.kind)) { throw; }
 		if (!is_root) {
@@ -1252,7 +1255,7 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 	// Get index settings (from the reserved indexes database)
 	MsgPack settings;
 	auto id = std::string(request.endpoints.size() == 1 ? request.endpoints[0].path : unsharded_path(request.endpoints[0].path).first);
-	request.endpoints = XapiandManager::resolve_index_endpoints(
+	request.endpoints = co_await XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/indexes"},
 		query_field.writable);
 
@@ -1265,11 +1268,11 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		}
 
 		// Retrive document ID
-		auto did = db_handler.get_docid(id);
+		auto did = co_await db_handler.get_docid(id);
 
 		// Retrive document data
 		auto document = db_handler.get_document(did);
-		settings = document.get_obj();
+		settings = co_await document.get_obj();
 
 		// Remove schema, ID and version from document:
 		auto it_e = settings.end();
@@ -1313,11 +1316,11 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		obj = obj.select(selector);
 	}
 
-	return obj;
+	co_return obj;
 }
 
 
-static void
+static task::task<void>
 retrieve_database_view(Request& request)
 {
 	L_CALL("retrieve_database_view()");
@@ -1327,7 +1330,7 @@ retrieve_database_view(Request& request)
 	auto is_root = !request.path_parser.has_pth();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1335,7 +1338,7 @@ retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	auto obj = retrieve_database(request, query_field, is_root, selector);
+	auto obj = co_await retrieve_database(request, query_field, is_root, selector);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1355,7 +1358,7 @@ retrieve_database_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 write_database_view(Request& request)
 {
 	L_CALL("write_database_view()");
@@ -1367,7 +1370,7 @@ write_database_view(Request& request)
 	auto& decoded_body = request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1382,19 +1385,19 @@ write_database_view(Request& request)
 		if (schema_it != decoded_body.end()) {
 			auto& schema = schema_it.value();
 			if (request.method == HTTP_UPDATE) {
-				db_handler.update_schema(schema);
+				co_await db_handler.update_schema(schema);
 			} else {
-				db_handler.write_schema(schema);
+				co_await db_handler.write_schema(schema);
 			}
 		}
 	}
 
-	db_handler.reopen();  // Ensure touch.
+	co_await db_handler.reopen();  // Ensure touch.
 
 	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
-		auto obj = retrieve_database(request, query_field, is_root, selector);
+		auto obj = co_await retrieve_database(request, query_field, is_root, selector);
 
 		write_http_response(request, HTTP_STATUS_OK, obj);
 	} else {
@@ -1413,7 +1416,7 @@ write_database_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 delete_database_view(Request& request)
 {
 	L_CALL("delete_database_view()");
@@ -1422,7 +1425,7 @@ delete_database_view(Request& request)
 	// address (prepare() answered this 405 before ever selecting the view).
 	if (!request.path_parser.has_pth()) {
 		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-		return;
+		co_return;
 	}
 
 	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
@@ -1432,14 +1435,14 @@ delete_database_view(Request& request)
 // Administrative verbs. FLUSH closes and commits every open writable, so it runs on the
 // offload pool; QUIT only signals and runs inline (SearchService::should_offload). Their
 // admin_commands + root-URL preconditions are checked here at the view.
-static void
+static task::task<void>
 flush_view(Request& request)
 {
 	L_CALL("flush_view()");
 
 	if (!opts.admin_commands || request.path_parser.has_pth()) {
 		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-		return;
+		co_return;
 	}
 
 	// Flush both databases and clients by default (unless one is specified).
@@ -1458,14 +1461,14 @@ flush_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 quit_view(Request& request)
 {
 	L_CALL("quit_view()");
 
 	if (!opts.admin_commands || request.path_parser.has_pth()) {
 		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-		return;
+		co_return;
 	}
 
 	XapiandManager::try_shutdown(true);
@@ -1474,19 +1477,19 @@ quit_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 commit_database_view(Request& request)
 {
 	L_CALL("commit_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	resolve_index_endpoints(request, query_field);
+	co_await resolve_index_endpoints(request, query_field);
 
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
-	db_handler.commit();  // Ensure touch.
+	co_await db_handler.commit();  // Ensure touch.
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1504,13 +1507,13 @@ commit_database_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 dump_document_view(Request& request)
 {
 	L_CALL("dump_document_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1521,7 +1524,7 @@ dump_document_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints, DB_OPEN);
 
-	auto obj = db_handler.dump_document(document_id);
+	auto obj = co_await db_handler.dump_document(document_id);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1539,13 +1542,13 @@ dump_document_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 dump_database_view(Request& request)
 {
 	L_CALL("dump_database_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1557,10 +1560,10 @@ dump_database_view(Request& request)
 	if (ct_type.empty()) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		write_status_response(request, HTTP_STATUS_NOT_ACCEPTABLE, "Response type not accepted by the Accept header");
-		return;
+		co_return;
 	}
 
-	auto docs = db_handler.dump_documents();
+	auto docs = co_await db_handler.dump_documents();
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1578,7 +1581,7 @@ dump_database_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 restore_database_view(Request& request)
 {
 	L_CALL("restore_database_view()");
@@ -1605,7 +1608,7 @@ restore_database_view(Request& request)
 		while (request.next_object(obj)) {
 			if (!indexer) {
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
-				if (resolve_index_endpoints(request, query_field, &obj) > 1) {
+				if (co_await resolve_index_endpoints(request, query_field, &obj) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
@@ -1624,7 +1627,7 @@ restore_database_view(Request& request)
 		for (auto& obj : docs) {
 			if (!indexer) {
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
-				if (resolve_index_endpoints(request, query_field, &obj) > 1) {
+				if (co_await resolve_index_endpoints(request, query_field, &obj) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
@@ -1675,13 +1678,13 @@ restore_database_view(Request& request)
 
 
 #if XAPIAND_DATABASE_WAL
-static void
+static task::task<void>
 wal_view(Request& request)
 {
 	L_CALL("wal_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1710,13 +1713,13 @@ wal_view(Request& request)
 #endif
 
 
-static void
+static task::task<void>
 check_database_view(Request& request)
 {
 	L_CALL("check_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1724,7 +1727,7 @@ check_database_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints);
 
-	auto status = db_handler.check();
+	auto status = co_await db_handler.check();
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1742,7 +1745,7 @@ check_database_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 retrieve_document_view(Request& request)
 {
 	L_CALL("retrieve_document_view()");
@@ -1750,7 +1753,7 @@ retrieve_document_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
-	if (resolve_index_endpoints(request, query_field) > 1) {
+	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1768,18 +1771,18 @@ retrieve_document_view(Request& request)
 
 	// Retrive document ID
 	engine::docid did;
-	did = db_handler.get_docid(id);
+	did = co_await db_handler.get_docid(id);
 
 	// Retrive document data
 	auto document = db_handler.get_document(did);
-	auto document_data = document.get_data();
+	auto document_data = co_await document.get_data();
 	const Data data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 	auto selector_mime_type = mime_type(selector);
 	auto accepted = data.get_accepted(request.accept_set, selector_mime_type);
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		write_status_response(request, HTTP_STATUS_NOT_ACCEPTABLE, "Response type not accepted by the Accept header");
-		return;
+		co_return;
 	}
 
 	auto& locator = *accepted.first;
@@ -1795,11 +1798,11 @@ retrieve_document_view(Request& request)
 
 		// Detailed info about the document:
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
-			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			obj[ID_FIELD_NAME] = co_await document.get_value(ID_FIELD_NAME);
 		}
 
 		if (obj.find(VERSION_FIELD_NAME) == obj.end()) {
-			auto version = document.get_value(DB_SLOT_VERSION);
+			auto version = co_await document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
 				obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
 			}
@@ -1828,7 +1831,7 @@ retrieve_document_view(Request& request)
 #ifdef XAPIAND_DATA_STORAGE
 		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
 			if (request.response_blob.empty()) {
-				auto stored = db_handler.storage_get_stored(locator, did);
+				auto stored = co_await db_handler.storage_get_stored(locator, did);
 				request.response_blob = unserialise_string_at(STORED_BLOB, stored);
 			}
 		}
@@ -1854,7 +1857,7 @@ retrieve_document_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 search_view(Request& request)
 {
 	L_CALL("search_view()");
@@ -1862,7 +1865,7 @@ search_view(Request& request)
 	std::string selector_string_holder;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
-	resolve_index_endpoints(request, query_field);
+	co_await resolve_index_endpoints(request, query_field);
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -1881,14 +1884,14 @@ search_view(Request& request)
 		}
 
 		if (request.body_view().empty()) {
-			mset_tuple = db_handler.get_mset(query_field, nullptr, nullptr);
+			mset_tuple = co_await db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
 			if (!decoded_body.is_map()) {
 				THROW(ClientError, "Invalid request body");
 			}
 
-			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
+			AggregationMatchSpy aggs(decoded_body, co_await db_handler.get_schema());
 
 			if (decoded_body.find(RESERVED_QUERYDSL_SELECTOR) != decoded_body.end()) {
 				auto selector_obj = decoded_body.at(RESERVED_QUERYDSL_SELECTOR);
@@ -1900,7 +1903,7 @@ search_view(Request& request)
 				}
 			}
 
-			mset_tuple = db_handler.get_mset(query_field, &decoded_body, &aggs);
+			mset_tuple = co_await db_handler.get_mset(query_field, &decoded_body, &aggs);
 			aggregations = aggs.get_aggregation().at(RESERVED_AGGS_AGGREGATIONS);
 		}
 	} catch (const engine::Error& error) {
@@ -1931,7 +1934,7 @@ search_view(Request& request)
 
 		// Retrive document data
 		auto document = db_handler.get_document(did);
-		auto document_data = document.get_data();
+		auto document_data = co_await document.get_data();
 		const auto data = Data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 
 		auto hit_obj = MsgPack::MAP();
@@ -1945,11 +1948,11 @@ search_view(Request& request)
 
 		// Detailed info about the document:
 		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
-			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			hit_obj[ID_FIELD_NAME] = co_await document.get_value(ID_FIELD_NAME);
 		}
 
 		if (hit_obj.find(VERSION_FIELD_NAME) == hit_obj.end()) {
-			auto version = document.get_value(DB_SLOT_VERSION);
+			auto version = co_await document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
 				hit_obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
 			}
@@ -2007,13 +2010,13 @@ search_view(Request& request)
 }
 
 
-static void
+static task::task<void>
 count_view(Request& request)
 {
 	L_CALL("count_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
-	resolve_index_endpoints(request, query_field);
+	co_await resolve_index_endpoints(request, query_field);
 
 	std::tuple<engine::SearchResult, MsgPack, engine::Query> mset_tuple;
 
@@ -2029,13 +2032,13 @@ count_view(Request& request)
 		}
 
 		if (request.body_view().empty()) {
-			mset_tuple = db_handler.get_mset(query_field, nullptr, nullptr);
+			mset_tuple = co_await db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
 			if (!decoded_body.is_map()) {
 				THROW(ClientError, "Invalid request body");
 			}
-			mset_tuple = db_handler.get_mset(query_field, &decoded_body, nullptr);
+			mset_tuple = co_await db_handler.get_mset(query_field, &decoded_body, nullptr);
 		}
 	} catch (const engine::Error& error) {
 		if (error.kind != engine::errc::not_found) { throw; }
@@ -2168,7 +2171,7 @@ url_resolve(Request& request)
 }
 
 
-static size_t
+static task::task<size_t>
 resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
 	L_CALL("resolve_index_endpoints(<request>, <query_field>, <settings>)");
@@ -2177,7 +2180,7 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 
 	request.endpoints.clear();
 	for (const auto& path : paths) {
-		auto index_endpoints = XapiandManager::resolve_index_endpoints(
+		auto index_endpoints = co_await XapiandManager::resolve_index_endpoints(
 			Endpoint(path),
 			query_field.writable,
 			settings);
@@ -2190,7 +2193,7 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 	}
 	L_HTTP("Endpoint: -> {}", request.endpoints.to_string());
 
-	return paths.size();
+	co_return paths.size();
 }
 
 
@@ -2980,7 +2983,9 @@ SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 			}
 			request.append(nullptr, 0);  // flush any trailing streamed object
 		}
-		request.view(request);
+		// The one bridge from the library's synchronous handler, which runs on an offload worker, to the
+		// view's task. X3 awaits the task on the reactor instead (docs/design/phase7c.md D3).
+		engine::sync_wait(request.view(request));
 	}
 	ENGINE_CENSUS_STATUS(census_request, request.response_status);
 

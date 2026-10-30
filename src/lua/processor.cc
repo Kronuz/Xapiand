@@ -32,6 +32,8 @@
 
 #include "lua/exception.h"                        // for lua::ScriptSyntaxError
 #include "database/handler.h"                     // for DatabaseHandler
+#include "engine/sync.h"                          // for engine::sync_wait
+#include "task.hh"                                // for task::task
 #include "xapiand_exception.h"                            // for ClientError, THROW
 #include "log.h"                                  // for L_ERR, L_INFO
 #include "lru.h"                                  // for lru::lru
@@ -41,6 +43,24 @@
 #include "url_parser.h"                           // for urldecode
 
 namespace lua {
+
+namespace {
+
+// The object of the document a script's foreign link names.
+task::task<MsgPack>
+read_foreign_script(std::string foreign_path, std::string id)
+{
+	Endpoint endpoint(foreign_path);
+	auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint);
+	if (endpoints.empty()) {
+		THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+	}
+	DatabaseHandler _db_handler(endpoints, DB_OPEN);
+	auto doc = co_await _db_handler.get_document(id);
+	co_return co_await doc.get_obj();
+}
+
+}  // namespace
 
 namespace internal {
 
@@ -243,14 +263,8 @@ Processor::Processor(const Script& script)
 		std::string_view id = foreign_id;
 		MsgPack obj;
 		try {
-			Endpoint endpoint(foreign_path);
-			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
-			if (endpoints.empty()) {
-				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
-			}
-			DatabaseHandler _db_handler(endpoints, DB_OPEN);
-			auto doc = _db_handler.get_document(id);
-			obj = doc.get_obj();
+			// A script compiles in Lua's C stack, which cannot suspend: the read waits on this thread (X4 gives it yields).
+			obj = engine::sync_wait(read_foreign_script(foreign_path, std::string(id)));
 		} catch (const engine::Error& error) {
 			switch (error.kind) {
 				case engine::errc::doc_not_found: {

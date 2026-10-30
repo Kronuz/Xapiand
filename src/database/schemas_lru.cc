@@ -80,7 +80,7 @@ compare_schema(const MsgPack& a, const MsgPack& b)
 }
 
 
-static inline std::pair<engine::rev, MsgPack>
+static inline task::task<std::pair<engine::rev, MsgPack>>
 load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("load_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), read_flags, context ? std::to_string(context->size()) : "nullptr");
@@ -95,19 +95,19 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indexes") {
 			// Return initial schema for the reserved indexes database (chicken and egg problem)
-			return std::make_pair(0, MsgPack::MAP());
+			co_return std::make_pair(0, MsgPack::MAP());
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
 	try {
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
+		auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(endpoints, read_flags, context);
 		engine::rev version;
-		auto document = _db_handler.get_document(id);
-		auto obj = document.get_obj();
+		auto document = co_await _db_handler.get_document(id);
+		auto obj = co_await document.get_obj();
 		auto it = obj.find(VERSION_FIELD_NAME);
 		if (it != obj.end()) {
 			auto& version_val = it.value();
@@ -116,7 +116,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			}
 			version = version_val.u64();
 		} else {
-			auto version_ser = document.get_value(DB_SLOT_VERSION);
+			auto version_ser = co_await document.get_value(DB_SLOT_VERSION);
 			if (version_ser.empty()) {
 				THROW(Error, "Inconsistency in '{}' for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 			}
@@ -125,7 +125,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 		obj = obj[SCHEMA_FIELD_NAME];
 		Schema::check<Error>(obj, "Foreign schema is invalid: ", false);
 		context->erase(path);
-		return std::make_pair(version, obj);
+		co_return std::make_pair(version, obj);
 	} catch (...) {
 		context->erase(path);
 		throw;
@@ -133,7 +133,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 }
 
 
-static inline std::pair<engine::rev, MsgPack>
+static inline task::task<std::pair<engine::rev, MsgPack>>
 save_shared(std::string_view id, const MsgPack& schema, engine::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("save_shared({}, {}, {}. {}, {})", repr(id), schema.to_string(), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
@@ -150,25 +150,25 @@ save_shared(std::string_view id, const MsgPack& schema, engine::rev version, con
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indexes") {
 			// Ignore the reserved indexes database (chicken and egg problem)
-			return std::make_pair(0, schema);
+			co_return std::make_pair(0, schema);
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
 	try {
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true, &non_strict);
+		auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint, true, &non_strict);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = _db_handler.update(id, version, false, true, MsgPack({
+		auto updated = co_await _db_handler.update(id, version, false, true, MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, schema },
 		}), false, msgpack_type);
 		auto obj = std::move(updated.second);
 		obj = obj[SCHEMA_FIELD_NAME];
 		context->erase(path);
-		return std::make_pair(updated.first.version, obj);
+		co_return std::make_pair(updated.first.version, obj);
 	} catch (...) {
 		context->erase(path);
 		throw;
@@ -183,7 +183,7 @@ SchemasLRU::SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age) :
 }
 
 
-std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>
+task::task<std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>>
 SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("SchemasLRU::_update({}, {}, {}, {}, {}, {}, <context>)", repr(prefix), writable, new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr", repr(endpoints.to_string()), read_flags);
@@ -274,7 +274,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		std::string schema_ser;
 		try {
 			DatabaseHandler _db_handler(endpoints, read_flags, context);
-			schema_ser = _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
+			schema_ser = co_await _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
@@ -338,16 +338,16 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr))) {
 				std::string schema_ser;
 				try {
-					schema_ser = _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
+					schema_ser = co_await _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
 				if (schema_ser.empty()) {
-					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
+					co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
-					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
+					co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 				} else {
@@ -375,7 +375,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					failure = true;
 				}
 			} else {
-				_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
+				co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 			}
@@ -483,7 +483,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try loading from {} id={}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 				}
 				try {
-					auto shared = load_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
+					auto shared = co_await load_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
 					schema_ptr->set_flags(shared.first);
@@ -576,8 +576,9 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					}
 					throw;
 				};
+				bool version_conflict = false;
 				try {
-					auto shared = save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
+					auto shared = co_await save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					assert(schema_ptr);
 					schema_ptr->lock();
@@ -610,10 +611,15 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					if (error.kind != engine::errc::version_conflict) {
 						save_failed();
 					}
+					version_conflict = true;
+				} catch (...) {
+					save_failed();
+				}
+				if (version_conflict) {
 					// Foreign Schema needs to be read
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 					try {
-						auto shared = load_shared(foreign_id, Endpoint(foreign_path), DB_CREATE_OR_OPEN | DB_WRITABLE, context);
+						auto shared = co_await load_shared(foreign_id, Endpoint(foreign_path), DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_version = shared.first;
@@ -684,18 +690,16 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						}
 					}
 					failure = true;
-				} catch (...) {
-					save_failed();
 				}
 			}
 		}
 	}
 
-	return std::make_tuple(failure, std::move(schema_ptr), std::move(local_schema_path), std::move(foreign_uri));
+	co_return std::make_tuple(failure, std::move(schema_ptr), std::move(local_schema_path), std::move(foreign_uri));
 }
 
 
-std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
+task::task<std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>>
 SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 {
 	/**
@@ -716,7 +720,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	auto up = _update("GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
+	auto up = co_await _update("GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
 	auto schema_ptr = std::get<1>(up);
 	auto foreign_uri = std::get<3>(up);
 
@@ -736,15 +740,15 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		std::unique_ptr<MsgPack> mut_schema;
 		schema.swap(mut_schema);
 		if (mut_schema) {
-			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), std::move(foreign_uri));
+			co_return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), std::move(foreign_uri));
 		}
 	}
 
-	return std::make_tuple(std::move(schema_ptr), nullptr, std::move(foreign_uri));
+	co_return std::make_tuple(std::move(schema_ptr), nullptr, std::move(foreign_uri));
 }
 
 
-bool
+task::task<bool>
 SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
@@ -753,15 +757,15 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	assert(!db_handler->endpoints.empty());
 
 	bool writable = has_db_writable(db_handler->flags);
-	auto up = _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context);
+	auto up = co_await _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context);
 	auto failure = std::get<0>(up);
 	auto schema_ptr = std::get<1>(up);
 
 	if (failure) {
 		old_schema = schema_ptr;
-		return false;
+		co_return false;
 	}
-	return true;
+	co_return true;
 }
 
 

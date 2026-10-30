@@ -31,6 +31,7 @@
 #include "endpoint.h"
 #include "lru.h"
 #include "msgpack.h"
+#include "task.hh"                // for task::task
 #include "engine/types.h"                  // for engine::rev, docid
 
 
@@ -47,7 +48,7 @@ class SchemasLRU {
 	mutable std::mutex versions_mtx;
 	lru::aging_lru<std::string, engine::rev> versions;
 
-	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>
+	task::task<std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>>
 	_update(
 		const char* prefix,
 		bool writable,
@@ -57,9 +58,9 @@ class SchemasLRU {
 public:
 	SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age);
 
-	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj);
+	task::task<std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>> get(DatabaseHandler* db_handler, const MsgPack* obj);
 
-	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
+	task::task<bool> set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
 
 	void updated(const std::string& uri, engine::rev version);
 

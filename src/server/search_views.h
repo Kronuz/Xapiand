@@ -47,6 +47,7 @@
 #include "http_message.h"                   // for http::Request, http::RequestExtension (Leg 2 stage 3d)
 #include "msgpack.h"                        // for MsgPack
 #include "phf.hh"                           // for phf::make_phf
+#include "task.hh"                          // for task::task
 #include "url_parser.h"                     // for PathParser, QueryParser
 
 
@@ -68,7 +69,7 @@ struct query_field_t;
 class Request;
 // The endpoint views are now file-scope free functions (Leg 2 stage 3c-3), so a
 // request's selected view is a plain function pointer, not a member pointer.
-using view_function = void(*)(Request&);
+using view_function = task::task<void>(*)(Request&);
 
 // The generic HTTP library's output seam (Kronuz/http). Forward-declared so a
 // Request can carry a pointer to the ResponseWriter it is served through by the

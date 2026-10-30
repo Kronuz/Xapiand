@@ -56,6 +56,7 @@
 #endif
 
 #include "database/handler.h"                     // for DatabaseHandler
+#include "engine/sync.h"                          // for engine::sync_wait
 #include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
 #include "error.hh"                               // for error::name, error::description
@@ -712,7 +713,7 @@ resolve_index_endpoints(const Endpoint& endpoint) {
 	// This function tries to resolve endpoints the "right" way (using XapiandManager)
 	// but if it fails, it tries to get all available shard directories directly,
 	// otherwise it uses the passed endpoint as single endpoint.
-	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
+	auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(endpoint));
 	if (endpoints.empty()) {
 		auto base_path = endpoint.path + "/";
 		DIR *dirp = ::opendir(base_path.c_str());
@@ -824,7 +825,7 @@ void dump_documents() {
 			auto endpoints = resolve_index_endpoints(endpoint);
 			L_INFO("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN);
-			auto sha256 = db_handler.dump_documents(fd);
+			auto sha256 = engine::sync_wait(db_handler.dump_documents(fd));
 			L(-LOG_NOTICE, NOTICE_COL, "Dump sha256 = {}", sha256);
 			manager->join();
 			manager.reset();

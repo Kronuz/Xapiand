@@ -104,6 +104,9 @@ public:
 	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
 	task::task<engine::Shard*> engine_for_read();
 
+	// The engine's integrity check of the index, in its turn (a missing index is opened, or created by the flags).
+	task::task<engine::CheckResult> check();
+
 	// Replaces an engine a failure marked stale; true when this call opened a new one.
 	task::task<bool> reopen();
 
@@ -114,6 +117,10 @@ public:
 	// A fan-out over shards: remember a failure of this one so the next can go on, and rethrow what is
 	// final. A write does not treat a stale snapshot as retryable. Called from a catch block.
 	void collect_failure(const engine::Error& error, std::exception_ptr& eptr, size_t& valid, bool writes);
+
+	// What follows a write: its commit when it asked for one, else the debounced autocommit. A commit whose turn
+	// times out leaves the write standing (applied and logged) for the autocommit; the caller is not failed.
+	task::task<void> finish_write(bool commit_, bool wal_);
 
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
 	task::task<bool> commit(bool wal_ = true);
