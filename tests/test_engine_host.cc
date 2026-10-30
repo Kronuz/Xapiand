@@ -167,7 +167,11 @@ void test_owed_flush_runs_as_a_chore_and_the_write_is_retried() {
 	CHECK_TRUE(shard.dirty());
 	CHECK_EQ(engine::sync_wait(shard.get(9))->data(), "d9");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(10)); }) == engine::errc::doc_not_found);
-	CHECK_EQ(engine::sync_wait(shard.find_key("K10")), 10u);  // the key map reads the buffer too
+	// A read sees one published view, which holds what the last refresh flushed and not the buffer.
+	CHECK_EQ(engine::sync_wait(shard.find_key("K10")), 0u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("K9")), 9u);
+	engine::sync_wait(shard.refresh());
+	CHECK_EQ(engine::sync_wait(shard.find_key("K10")), 10u);
 }
 
 // A host's read sees what was applied only once refresh() flushed it, and refresh() does nothing when

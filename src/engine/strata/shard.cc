@@ -25,6 +25,7 @@
 #include <algorithm>               // for std::sort
 #include <array>                   // for std::array
 #include <atomic>                  // for std::atomic
+#include <chrono>                  // for std::chrono
 #include <coroutine>               // for std::coroutine_handle
 #ifdef XAPIAND_CRASH_POINTS
 #include <csignal>                 // for SIGKILL
@@ -39,6 +40,7 @@
 #include <random>                  // for std::random_device
 #include <system_error>            // for std::system_error
 
+#include "atomic_shared_ptr.h"     // for atomic_shared_ptr
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
 #include "prospect/index.hh"       // for prospect::index
 
@@ -48,8 +50,9 @@
 #include "database/utils.h"        // for DB_SLOT_VERSION
 #include "engine/census.h"         // for ENGINE_CENSUS_*
 #include "engine/error.h"          // for Error, errc
+#include "engine/host.h"           // for engine::sleep_for
 #include "engine/strata/document.h"  // for StrataDocument
-#include "engine/strata/pin.h"    // for Pinned
+#include "engine/strata/viewed.h"  // for Viewed
 #include "engine/strata/doc_view.h"  // for SegmentDocView, OwnedDocView
 #include "engine/strata/values.h"  // for the value columns
 
@@ -100,6 +103,12 @@ rethrow_translated(Core* core, bool callback_threw)
 	} catch (const ::strata::index_fenced& exc) {
 		mark_fenced(core);
 		throw Error(errc::database, exc.what());
+	} catch (const ::strata::index_closed& exc) {
+		throw Error(errc::closed, exc.what());
+	} catch (const ::strata::too_many_readers& exc) {
+		throw Error(errc::busy, std::string("Too many searches are reading at once: ") + exc.what());
+	} catch (const ::strata::readers_active& exc) {
+		throw Error(errc::busy, exc.what());
 	} catch (const ::strata::corrupt_segment& exc) {
 		throw Error(errc::corrupt, exc.what());
 	} catch (const ::strata::corrupt_index& exc) {
@@ -166,25 +175,54 @@ index_options(const OpenOptions& host)
 }  // namespace
 
 
-// The index of one shard and the state its handles share.
+// What readers hold of an index: the handle that lends its published views.
+struct Readers {
+	prospect::index::reader_handle handle;
+};
+
+// The registry of the engine's readers: strata's own, behind the engine's name for it.
+class StrataReaders final : public engine::ReaderRegistry {
+public:
+	explicit StrataReaders(std::size_t records) : registry(records) { }
+	std::size_t capacity() const noexcept override { return registry.capacity(); }
+	std::size_t bytes() const noexcept override { return registry.capacity() * ::strata::hazard_line; }
+	::strata::reader_registry registry;
+};
+
+// The reader records a shard that no host gave a registry makes for itself.
+constexpr std::size_t private_readers = 128;
+
+// How long a close or a reopen waits for the readers of the old index to let go of its views.
+constexpr std::chrono::seconds drain_timeout{30};
+
+// The index of one shard and the state its handles share. Everything that changes the index (the writes,
+// refresh, commit, close, reopen and the housekeeping) runs one at a time, as the host's turn lets it;
+// the reads take no turn and no lock: each acquires the index's published view through `readers`.
 struct Core {
 	std::string dir;
+	std::shared_ptr<engine::ReaderRegistry> reader_registry;  // outlives the index and the views its readers hold
 	std::unique_ptr<kronuz::journal::PosixIO> io;
 	prospect::index::options options;      // how the index is opened, again after a reopen
 	bool host = false;                     // a host serialises the writers and refreshes before it reads
 	std::optional<prospect::index> index;  // empty after a reopen that failed: recover() retries it
+	atomic_shared_ptr<const Readers> readers;  // the views' handle; none while there is no index to read
 	std::string uuid;
-	std::mutex mtx;
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
-	std::atomic<bool> dirty{false};  // applied since the last refresh: reads by id need a refresh first
+	std::atomic<bool> retiring{false};  // the index is being replaced or closed: its readers are let go of
+	std::atomic<bool> dirty{false};  // applied since the last refresh: reads need a refresh first
 	bool pending = false;      // applied since the last commit
 	bool transaction = false;
-	bool closed = false;       // Shard::close released the index on purpose
+	std::atomic<bool> closed{false};  // Shard::close released the index on purpose
 	std::atomic<std::uint64_t> epoch{0};  // bumped whenever the index is replaced: writes it held are gone
+
+	// What the owner publishes for the threads that read without a turn.
+	std::atomic<rev> committed_revision{0};          // the manifest's, as of the last commit
+	std::atomic<std::uint64_t> committed_length{0};  // the live length the manifest holds
+	std::atomic<std::size_t> owed{0};                // background work and views not yet freed
 
 	~Core() {
 		// A transaction that is still open is discarded.
-		if (index && pending && !transaction) {
+		if (index && pending && !transaction && !index->closing()) {
 			try {
 				index->commit();  // a dropped writer keeps its work
 			} catch (const std::exception& exc) {
@@ -195,39 +233,85 @@ struct Core {
 		}
 	}
 
-	// Under mtx: whether the handle can use the index; a writable handle that has not seen the latest
+	// Whether the handle can write with the index: a writable handle that has not seen the latest
 	// replacement lost its writes with it and must be closed, so that opening it again replays the log.
 	void check(const Handle& handle) const;
 
-	bool unusable() const noexcept { return fenced.load() || !index; }
+	// The same for a read, which also needs a published view to read.
+	void check_read(const Handle& handle) const;
 
-	// Under mtx: drops the index and opens it again from its last commit; what was written since is lost.
-	// The handle that asks (`seen`) knows of the replacement.
-	void reopen_index(std::uint64_t* seen = nullptr) {
+	bool unusable() const noexcept { return fenced.load() || retiring.load() || !index; }
+
+	// Gives the readers the index's views and records the owner's figures. Call it after the index is made.
+	void adopt_index() {
+		readers.store(std::make_shared<const Readers>(Readers{index->reader()}));
+		note();
+	}
+
+	// The owner's figures for the readers and the housekeeping: call it when a refresh, commit, reclaim
+	// or reopen finished.
+	void note() noexcept {
+		if (!index) {
+			owed.store(0, std::memory_order_relaxed);
+			return;
+		}
+		const auto& manifest = index->manifest();
+		committed_revision.store(manifest.revision, std::memory_order_relaxed);
+		committed_length.store(manifest.live_length, std::memory_order_relaxed);
+		// A view that readers released stays until the next refresh, commit or reclaim frees it (C16).
+		const auto held = index->views_held().views;
+		owed.store(index->merges_pending() + index->reclaim_pending() + index->deletes_pending() + (held > 1 ? held - 1 : 0),
+			std::memory_order_relaxed);
+	}
+
+	// Starts replacing the index: nobody can acquire its views from now on. The views readers hold keep
+	// their segments until they are released (drain).
+	void begin_retire() {
+		retiring = true;
+		readers.store(nullptr);
+		if (index && !index->closing()) {
+			index->close();
+		}
+	}
+
+	// Frees the views released since; true once none is held and the index has let go of its files.
+	bool finish_retire() {
+		return !index || index->try_finish_close();
+	}
+
+	// Opens the index again from its last commit; what was written since is lost. The handle that asks
+	// (`seen`) knows of the replacement. Call it with no index (after retire).
+	void open_index(std::uint64_t* seen = nullptr) {
 		const auto replaced = ++epoch;
 		if (seen) {
 			*seen = replaced;
 		}
-		pending = dirty = transaction = closed = false;
+		pending = dirty = transaction = false;
+		closed = false;
 		index.reset();
 		index.emplace(prospect::index::open(*io, options));
 		try {
 			verify_fields();
 		} catch (...) {
 			index.reset();  // a failed check leaves no index, as a failed open does
+			readers.store(nullptr);
 			throw;
 		}
 		fenced = false;
+		retiring = false;
+		adopt_index();
 	}
 
 	void refresh() {
 		if (dirty) {
 			index->refresh();
 			dirty = false;
+			note();
 		}
 	}
 
-	// A read's refresh. A host refreshes before it reads, in a chore (Shard::refresh), so a read does no I/O.
+	// A read's refresh. A host refreshes before it reads, in a chore (Shard::refresh), so a read does no I/O;
+	// a shard with no host reads in the thread that writes it, and flushes here.
 	void refresh_for_read() {
 		if (!host) {
 			refresh();
@@ -242,12 +326,13 @@ struct Core {
 			index->commit();
 			crash_point("commit.after");
 			pending = dirty = false;
+			note();
 		}
 	}
 
-	rev revision() const { return index->manifest().revision; }
+	rev revision() const { return committed_revision.load(std::memory_order_relaxed); }
 
-	// Under mtx: every segment's dictionary names only fields of the table and none is the key field
+	// Every segment's dictionary names only fields of the table and none is the key field
 	// (fielddict::check_fields); a segment that does not is corrupt. The merge's inputs are the segments
 	// this verifies at open, so a merge cannot carry such an id into a new one.
 	void verify_fields() const {
@@ -298,7 +383,7 @@ struct Handle {
 	std::shared_ptr<Entry> entry;
 	Core* core;
 	bool writable = false;
-	std::uint64_t seen = 0;  // the latest replacement of the index this handle knows of; under core->mtx
+	std::uint64_t seen = 0;  // the latest replacement of the index this handle knows of
 
 	Handle(std::shared_ptr<Entry> entry_, Core* core_) : entry(std::move(entry_)), core(core_) { }
 	Handle(const Handle&) = delete;
@@ -319,7 +404,22 @@ Core::check(const Handle& handle) const
 	if (closed) {
 		throw Error(errc::closed, "The strata index is closed");
 	}
-	if (!index) {
+	if (!index || retiring) {
+		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
+	}
+	if (handle.writable && handle.seen != epoch.load()) {
+		throw Error(errc::database, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+	}
+}
+
+
+void
+Core::check_read(const Handle& handle) const
+{
+	if (closed) {
+		throw Error(errc::closed, "The strata index is closed");
+	}
+	if (!readers.load()) {
 		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
 	}
 	if (handle.writable && handle.seen != epoch.load()) {
@@ -330,8 +430,9 @@ Core::check(const Handle& handle) const
 
 namespace {
 
-// Opens the Core at `path`, or joins the one that is open; null when it does not exist and
-// create_missing is off.
+// Opens the Core at `path`, or joins the one that is open. It throws not_found when the index does not
+// exist and create_missing is off. A core that went unusable (fenced, or left without an index by a failed
+// reopen) is returned as it is: open_local replaces its index.
 std::unique_ptr<Handle>
 acquire(const std::string& path, bool create_missing, bool& created, const OpenOptions& host)
 {
@@ -350,7 +451,9 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
 		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);
+		core->reader_registry = host.readers ? host.readers : make_reader_registry(private_readers);
 		core->options = index_options(host);
+		core->options.readers = &static_cast<StrataReaders&>(*core->reader_registry).registry;
 		core->host = host.host;
 		const auto& options = core->options;
 		const auto create = [&] {
@@ -372,19 +475,60 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		}
 		core->uuid = format_uuid(core->index->manifest().uuid);
 		core->verify_fields();
+		core->adopt_index();
 		entry->core = std::move(core);
-	} else if (entry->core->unusable()) {
-		// A fenced or failed index is replaced by one reopened from disk; the handles that live keep working on it.
-		std::lock_guard<std::mutex> core_lock(entry->core->mtx);
-		if (entry->core->unusable()) {
-			entry->core->reopen_index();
-		}
 	}
 	++entry->handles;
 	auto handle = std::make_unique<Handle>(std::move(entry), entry->core.get());
 	handle->seen = handle->core->epoch.load();
 	return handle;
 }
+
+// Waits, in the host's task, for the readers that hold the views of a closing index to let go of them: until
+// then the views keep their segments, files and the directory lock. It raises `busy` when they do not within
+// drain_timeout, leaving the index closing. Run it under the host's turn, after Core::begin_retire.
+task::task<void>
+drain_readers(Core& core, Chores& chores)
+{
+	const auto deadline = std::chrono::steady_clock::now() + drain_timeout;
+	auto pause = std::chrono::milliseconds(1);
+	for (;;) {
+		co_await engine::sleep_for(pause);
+		pause = std::min(pause * 2, std::chrono::milliseconds(50));
+		bool done = false;
+		co_await chores.run(ChoreClass::flush, [&core, &done] { done = core.finish_retire(); });
+		if (done) {
+			co_return;
+		}
+		if (std::chrono::steady_clock::now() >= deadline) {
+			throw Error(errc::busy, "Readers still hold the index's views");
+		}
+	}
+}
+
+// Replaces the index of a core with one opened from its last commit; what was written since is lost. The
+// handle that asks (`seen`) knows of the replacement. The old index is closed first, in the same chore when
+// no reader holds a view of it, and the readers that do are waited for. Run it under the host's turn.
+task::task<void>
+reopen_core(Core& core, Chores& chores, std::uint64_t* seen)
+{
+	bool replaced = false;
+	co_await chores.run(ChoreClass::flush, [&core, seen, &replaced] {
+		if (core.index) {
+			core.begin_retire();
+			if (!core.finish_retire()) {
+				return;
+			}
+		}
+		core.open_index(seen);
+		replaced = true;
+	});
+	if (!replaced) {
+		co_await drain_readers(core, chores);
+		co_await chores.run(ChoreClass::flush, [&core, seen] { core.open_index(seen); });
+	}
+}
+
 
 // A document as the index has it by id: its version and where it is.
 struct Located {
@@ -394,16 +538,14 @@ struct Located {
 	prospect::ordinal_t ord = 0;
 };
 
-// The live document with this id, or none. Reads what the index has flushed, so a buffer with
-// writes is flushed first.
+// The live document with this id in the view, or none.
 std::optional<Located>
-locate(Core& core, docid did)
+locate(const Viewed& viewed, docid did)
 {
-	if (did == 0 || did > core.index->last_docid()) {
+	if (did == 0 || did > viewed.view().last_docid()) {
 		return std::nullopt;
 	}
-	core.refresh_for_read();
-	const auto segments = core.index->segments();
+	const auto segments = viewed.segments();
 	for (auto it = segments.end(); it != segments.begin();) {
 		const auto& view = *--it;
 		const auto* seg = view.seg();
@@ -417,6 +559,23 @@ locate(Core& core, docid did)
 		found.seg = seg;
 		found.ord = *ord;
 		return found;
+	}
+	return std::nullopt;
+}
+
+// The document holding this key in the view: its id and version, or none. The newest segment that holds
+// the key live answers, as the index's own lookup does.
+std::optional<std::pair<docid, rev>>
+locate_key(const Viewed& viewed, const std::string& key)
+{
+	const std::uint64_t hash = xxh64::hash(key);
+	const auto segments = viewed.segments();
+	for (auto it = segments.end(); it != segments.begin();) {
+		const auto& view = *--it;
+		const auto& keys = view.seg()->get<::strata::keys_plugin>();
+		if (const auto ord = keys.find(key, ::strata::live_bits{view.deleted ? view.deleted->data() : nullptr}, hash)) {
+			return std::pair{static_cast<docid>(view.seg()->core().docid(*ord)), static_cast<rev>(keys.version(*ord))};
+		}
 	}
 	return std::nullopt;
 }
@@ -436,10 +595,10 @@ version_of(Core& core, docid did)
 
 // The live documents of the flushed segments (the manifest's count waits for a commit).
 doccount
-live_count(Core& core)
+live_count(const Viewed& viewed)
 {
 	std::uint64_t live = 0;
-	for (const auto& view : core.index->segments()) {
+	for (const auto& view : viewed.segments()) {
 		live += view.seg()->core().doc_count() - view.dead;
 	}
 	return static_cast<doccount>(live);
@@ -570,43 +729,31 @@ replay_applies(const StrataDocument& native, const std::optional<rev>& stored)
 	return true;
 }
 
-// Applies `t`, which the caller built from the index as it stands. A host serialises its writers (the
-// index's turn) and has let go of core.mtx; a caller that has not (`held` still owns it) applies under
-// it, so building and applying are one step. A host's index owes a flush or a drain before it takes
-// the transaction (nothing was applied): that runs as a chore and the same transaction is applied again.
-// `visible` says the transaction changed documents, so reads need a refresh.
+// Applies `t`, which the caller built from the index as it stands; the host's turn keeps any other write
+// from changing it meanwhile. A host's index owes a flush or a drain before it takes the transaction
+// (nothing was applied): that runs as a chore and the same transaction is applied again. `visible` says the
+// transaction changed what a read sees, so reads need a refresh.
 task::task<::strata::verdict>
-apply_t(Core& core, const Handle& handle, Chores& chores, prospect::transaction& t, bool visible, std::unique_lock<std::mutex>& held)
+apply_t(Core& core, const Handle& handle, Chores& chores, prospect::transaction& t, bool visible)
 {
 	constexpr int max_rounds = 4;  // an owed answer ends after one round (strata's contract); a loop is a bug
 	for (int round = 0;; ++round) {
-		::strata::verdict::outcome owed;
-		{
-			std::unique_lock<std::mutex> own;
-			if (!held.owns_lock()) {
-				own = std::unique_lock<std::mutex>(core.mtx);
-			}
-			core.check(handle);
-			auto verdict = core.index->apply(t, {});
-			if (verdict.result == ::strata::verdict::accepted) {
-				core.dirty = core.dirty.load() || visible;
-				core.pending = true;
-				co_return verdict;
-			}
-			if (verdict.result != ::strata::verdict::flush_owed && verdict.result != ::strata::verdict::drain_owed) {
-				reject(verdict);
-			}
-			owed = verdict.result;
+		core.check(handle);
+		auto verdict = core.index->apply(t, {});
+		if (verdict.result == ::strata::verdict::accepted) {
+			core.dirty = core.dirty.load() || visible;
+			core.pending = true;
+			co_return verdict;
+		}
+		if (verdict.result != ::strata::verdict::flush_owed && verdict.result != ::strata::verdict::drain_owed) {
+			reject(verdict);
 		}
 		if (round >= max_rounds) {
 			throw Error(errc::internal, "The index kept owing I/O before it took a transaction");
 		}
-		if (held.owns_lock()) {
-			held.unlock();  // only a host is owed, and a host does not hold it
-		}
 		// The flush or the drain is a chore; the next round finds room.
+		const auto owed = verdict.result;
 		co_await chores.run(ChoreClass::flush, [&core, &handle, owed] {
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(handle);
 			if (owed == ::strata::verdict::flush_owed) {
 				core.index->refresh();
@@ -614,6 +761,7 @@ apply_t(Core& core, const Handle& handle, Chores& chores, prospect::transaction&
 			} else {
 				core.index->reclaim_for_space();
 			}
+			core.note();
 		});
 	}
 }
@@ -669,7 +817,6 @@ Shard::add(Document& doc, WriteArgs args)
 		auto& core = *handle_->core;
 		WriteResult info;
 		prospect::transaction t;
-		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
 		{
 			core.check(*handle_);
 			check_version(args.expected_version, std::nullopt);
@@ -685,10 +832,7 @@ Shard::add(Document& doc, WriteArgs args)
 			stamp_version(native, info.version);
 			fill(t, op.doc, native, core.index->fields());
 		}
-		if (host_) {
-			lk.unlock();
-		}
-		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true, lk), info);
+		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -707,7 +851,6 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		const bool replayed = native.replayed();
 		WriteResult info;
 		prospect::transaction t;
-		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
 		{
 			core.check(*handle_);
 			std::optional<rev> stored;
@@ -749,10 +892,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 			op.docid = did;
 			fill(t, op.doc, native, core.index->fields());
 		}
-		if (host_) {
-			lk.unlock();
-		}
-		auto result = assigned(co_await apply_t(core, *handle_, *chores_, t, true, lk), info);
+		auto result = assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
 		if (replayed) {
 			crash_point("replay");
 		}
@@ -773,7 +913,6 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 		auto& core = *handle_->core;
 		WriteResult info;
 		prospect::transaction t;
-		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
 		{
 			core.check(*handle_);
 			const auto ekey = key;
@@ -805,10 +944,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			op.key = ekey;
 			fill(t, op.doc, native, core.index->fields());
 		}
-		if (host_) {
-			lk.unlock();
-		}
-		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true, lk), info);
+		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -823,7 +959,6 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		prospect::transaction t;
-		std::unique_lock<std::mutex> lk(core.mtx);  // a host lets go of it before it waits for a chore
 		{
 			core.check(*handle_);
 			const auto stored = version_of(core, did);
@@ -837,10 +972,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 			t.ops[0].type = prospect::operation::delete_docid;
 			t.ops[0].docid = did;
 		}
-		if (host_) {
-			lk.unlock();
-		}
-		co_await apply_t(core, *handle_, *chores_, t, true, lk);
+		co_await apply_t(core, *handle_, *chores_, t, true);
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -857,7 +989,6 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 		auto& core = *handle_->core;
 		prospect::transaction t;
 		docid erased;
-		std::unique_lock<std::mutex> lk(core.mtx);
 		{
 			core.check(*handle_);
 			const auto ekey = key;
@@ -873,10 +1004,7 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 			t.ops[0].key = ekey;
 			erased = static_cast<docid>(found->first);
 		}
-		if (host_) {
-			lk.unlock();
-		}
-		co_await apply_t(core, *handle_, *chores_, t, true, lk);
+		co_await apply_t(core, *handle_, *chores_, t, true);
 		(void)local;
 		co_return erased;
 	} catch (...) {
@@ -895,7 +1023,6 @@ Shard::commit(Transaction transaction)
 	try {
 		auto& core = *handle_->core;
 		co_await chores_->run(ChoreClass::flush, [&core, this] {
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(*handle_);
 			core.commit();
 		});
@@ -914,7 +1041,6 @@ Shard::begin_transaction(bool flushed)
 	try {
 		auto& core = *handle_->core;
 		co_await chores_->run(ChoreClass::flush, [&core, this, flushed] {
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(*handle_);
 			if (core.transaction) {
 				throw Error(errc::invalid, "A transaction is already in progress");
@@ -938,7 +1064,6 @@ Shard::commit_transaction()
 	try {
 		auto& core = *handle_->core;
 		co_await chores_->run(ChoreClass::flush, [&core, this] {
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(*handle_);
 			if (!core.transaction) {
 				throw Error(errc::invalid, "No transaction is in progress");
@@ -960,13 +1085,13 @@ Shard::cancel_transaction()
 	try {
 		auto& core = *handle_->core;
 		co_await chores_->run(ChoreClass::flush, [&core, this] {
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(*handle_);
 			if (!core.transaction) {
 				throw Error(errc::invalid, "No transaction is in progress");
 			}
-			core.reopen_index(&handle_->seen);  // when it fails the shard raises on every call until a reopen succeeds
 		});
+		// When the reopen fails the shard raises on every call until a reopen succeeds.
+		co_await reopen_core(core, *chores_, &handle_->seen);
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -990,8 +1115,8 @@ Shard::set_metadata(const std::string& key, const std::string& value)
 		op.type = value.empty() ? prospect::operation::delete_meta : prospect::operation::set_meta;
 		op.meta_key = key;
 		op.meta_value = value;
-		std::unique_lock<std::mutex> lk;  // apply_t takes it
-		co_await apply_t(core, *handle_, *chores_, t, false, lk);
+		// A read sees the metadata of the view it acquires: the write is visible after the next refresh.
+		co_await apply_t(core, *handle_, *chores_, t, true);
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -1021,24 +1146,19 @@ Shard::reopen()
 	try {
 		// One index in this process: a handle always sees the latest. Only a fenced or failed index is replaced.
 		auto& core = *handle_->core;
-		bool reopened = false;
-		co_await chores_->run(ChoreClass::flush, [&core, this, &reopened] {
-			std::lock_guard<std::mutex> lk(core.mtx);
-			const bool stale = writable_ && handle_->seen != core.epoch.load();
-			if (!stale && !core.unusable()) {
-				return;
+		const bool stale = writable_ && handle_->seen != core.epoch.load();
+		if (!stale && !core.unusable()) {
+			co_return false;
+		}
+		if (writable_ && (stale || core.fenced.load())) {
+			// The writer's unsaved writes are gone with the index: it must be closed and opened again, which replays the log.
+			if (core.unusable()) {
+				co_await reopen_core(core, *chores_, nullptr);
 			}
-			if (writable_ && (stale || core.fenced.load())) {
-				// The writer's unsaved writes are gone with the index: it must be closed and opened again, which replays the log.
-				if (core.unusable()) {
-					core.reopen_index();
-				}
-				throw Error(errc::reopen, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
-			}
-			core.reopen_index(&handle_->seen);
-			reopened = true;
-		});
-		co_return reopened;
+			throw Error(errc::reopen, "The strata index was replaced, dropping this writer's unsaved writes; reopen the shard");
+		}
+		co_await reopen_core(core, *chores_, &handle_->seen);
+		co_return true;
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -1050,21 +1170,18 @@ Shard::stats()
 {
 	try {
 		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		core.refresh_for_read();
-		const auto& manifest = core.index->manifest();
+		const auto viewed = view();
 		Stats stats;
 		stats.uuid = core.uuid;
-		stats.revision = manifest.revision;
-		stats.lastdocid = static_cast<docid>(manifest.last_docid);
-		stats.doc_count = live_count(core);
-		stats.total_length = manifest.live_length;
+		stats.revision = core.revision();
+		stats.lastdocid = static_cast<docid>(viewed.view().last_docid());
+		stats.doc_count = live_count(viewed);
+		stats.total_length = core.committed_length.load(std::memory_order_relaxed);
 		// The bounds are over every stored document of the segments that hold any, deleted ones included.
 		bool any = false;
-		for (const auto& view : core.index->segments()) {
-			if (!view.seg()->core().doc_count()) { continue; }
-			const auto& inverted = view.seg()->get<prospect::inverted_plugin>();
+		for (const auto& segment : viewed.segments()) {
+			if (!segment.seg()->core().doc_count()) { continue; }
+			const auto& inverted = segment.seg()->get<prospect::inverted_plugin>();
 			stats.doclen_lower = any ? std::min<termcount>(stats.doclen_lower, inverted.min_length()) : inverted.min_length();
 			stats.doclen_upper = std::max<termcount>(stats.doclen_upper, inverted.max_length());
 			any = true;
@@ -1082,11 +1199,9 @@ task::task<docid>
 Shard::find_key(const std::string& key)
 {
 	try {
-		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		const auto found = core.index->find_key(key);
-		co_return found ? static_cast<docid>(found->first) : docid{0};
+		const auto viewed = view();
+		const auto found = locate_key(viewed, key);
+		co_return found ? found->first : docid{0};
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -1097,10 +1212,8 @@ task::task<std::unique_ptr<DocView>>
 Shard::get(docid did)
 {
 	try {
-		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		const auto found = locate(core, did);
+		const auto viewed = view();
+		const auto found = locate(viewed, did);
 		if (!found) {
 			throw Error(errc::doc_not_found, "Document not found");
 		}
@@ -1116,23 +1229,19 @@ Shard::scan(docid from, const ScanSink& sink)
 {
 	CallbackGuard guard;
 	try {
-		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		core.refresh_for_read();
+		const auto viewed = view();
 		struct Hit {
 			docid did;
 			const prospect::segment* seg;
 			prospect::ordinal_t ord;
 		};
 		std::vector<Hit> hits;
-		const auto segments = core.index->segments();
-		for (const auto& view : segments) {
-			const auto* seg = view.seg();
+		for (const auto& segment : viewed.segments()) {
+			const auto* seg = segment.seg();
 			const auto& core_seg = seg->core();
 			for (::strata::ordinal_t ord = 0; ord < core_seg.doc_count(); ++ord) {
 				const auto did = core_seg.docid(ord);
-				if (did < from || !view.live(ord)) {
+				if (did < from || !segment.live(ord)) {
 					continue;
 				}
 				hits.push_back({static_cast<docid>(did), seg, ord});
@@ -1140,8 +1249,8 @@ Shard::scan(docid from, const ScanSink& sink)
 		}
 		std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) { return a.did < b.did; });
 		for (auto& hit : hits) {
-			const OwnedDocView view(SegmentDocView(hit.did, *hit.seg, hit.ord));
-			guard([&] { sink(view); });
+			const OwnedDocView doc(SegmentDocView(hit.did, *hit.seg, hit.ord));
+			guard([&] { sink(doc); });
 		}
 		co_return;
 	} catch (...) {
@@ -1154,10 +1263,8 @@ task::task<std::string>
 Shard::metadata(const std::string& key)
 {
 	try {
-		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
-		const auto& all = core.index->metadata();
+		const auto viewed = view();
+		const auto& all = viewed.view().metadata();
 		const auto it = all.find(key);
 		co_return it == all.end() ? std::string() : it->second;
 	} catch (...) {
@@ -1170,11 +1277,9 @@ task::task<std::vector<std::string>>
 Shard::metadata_keys()
 {
 	try {
-		auto& core = *handle_->core;
-		std::lock_guard<std::mutex> lk(core.mtx);
-		core.check(*handle_);
+		const auto viewed = view();
 		std::vector<std::string> keys;
-		for (const auto& entry : core.index->metadata()) {
+		for (const auto& entry : viewed.view().metadata()) {
 			if (!entry.first.starts_with(reserved_meta_prefix)) {
 				keys.push_back(entry.first);
 			}
@@ -1200,7 +1305,6 @@ Shard::refresh()
 		auto& core = *handle_->core;
 		if (core.dirty) {
 			co_await chores_->run(ChoreClass::query, [&core, this] {
-				std::lock_guard<std::mutex> lk(core.mtx);
 				core.check(*handle_);
 				core.refresh();
 			});
@@ -1212,20 +1316,21 @@ Shard::refresh()
 }
 
 
-// Publishes the merges that finished and frees what the index queued for removal.
+// Publishes the merges that finished and frees what the index queued for removal, the views readers
+// released among it.
 task::task<void>
 Shard::reclaim()
 {
 	try {
 		auto& core = *handle_->core;
 		co_await chores_->run(ChoreClass::merge, [&core, this] {
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(*handle_);
 			if (core.index->merges_pending() > 0 || core.dirty) {
 				core.index->refresh();  // publishes the merges that finished
 				core.dirty = false;
 			}
 			core.index->reclaim();
+			core.note();
 		});
 		co_return;
 	} catch (...) {
@@ -1234,13 +1339,12 @@ Shard::reclaim()
 }
 
 
-// Background work owed: merges not yet published, files queued for removal, deletes not yet collected.
+// Background work owed: merges not yet published, files queued for removal, deletes not yet collected, views
+// that readers released and no refresh has freed.
 std::size_t
 Shard::merges_pending() const noexcept
 {
-	auto& core = *handle_->core;
-	std::lock_guard<std::mutex> lk(core.mtx);
-	return core.index ? core.index->merges_pending() + core.index->reclaim_pending() + core.index->deletes_pending() : 0;
+	return handle_->core->owed.load(std::memory_order_relaxed);
 }
 
 
@@ -1256,18 +1360,32 @@ Shard::close()
 {
 	try {
 		auto& core = *handle_->core;
-		co_await chores_->run(ChoreClass::flush, [&core] {
-			std::lock_guard<std::mutex> lk(core.mtx);
-			if (core.index) {
-				// An open transaction is discarded; pending work is kept.
-				if (core.pending && !core.transaction && !core.fenced.load()) {
-					core.index->commit();
-					core.pending = core.dirty = false;
-				}
+		bool released = true;
+		co_await chores_->run(ChoreClass::flush, [&core, &released] {
+			if (!core.index) {
+				return;
+			}
+			// An open transaction is discarded; pending work is kept.
+			if (core.pending && !core.transaction && !core.fenced.load()) {
+				core.index->commit();
+				core.pending = core.dirty = false;
+			}
+			core.closed = true;
+			core.begin_retire();
+			released = core.finish_retire();
+			if (released) {
 				core.index.reset();
-				core.closed = true;
+				core.owed.store(0, std::memory_order_relaxed);
 			}
 		});
+		if (!released) {
+			// Searches still read the index: it is closed when the last lets go of its view.
+			co_await drain_readers(core, *chores_);
+			co_await chores_->run(ChoreClass::flush, [&core] {
+				core.index.reset();
+				core.owed.store(0, std::memory_order_relaxed);
+			});
+		}
 		co_return;
 	} catch (...) {
 		rethrow_translated(handle_->core);
@@ -1275,24 +1393,42 @@ Shard::close()
 }
 
 
+task::task<CheckResult>
+Shard::check()
+{
+	CheckResult result;
+	try {
+		auto& core = *handle_->core;
+		co_await chores_->run(ChoreClass::flush, [&core, this] {
+			core.check(*handle_);
+			core.refresh();
+			core.verify_fields();
+			(void)core.index->check();
+		});
+	} catch (...) {
+		try {
+			rethrow_translated(handle_->core);
+		} catch (const Error& error) {
+			result.errors = 1;
+			result.failure = error.description();
+		}
+	}
+	co_return result;
+}
+
+
 rev
 Shard::revision() const
 {
-	auto& core = *handle_->core;
-	std::lock_guard<std::mutex> lk(core.mtx);
-	core.check(*handle_);
-	return core.revision();
+	return handle_->core->revision();
 }
 
 
 doccount
 Shard::doc_count() const
 {
-	auto& core = *handle_->core;
-	std::lock_guard<std::mutex> lk(core.mtx);
-	core.check(*handle_);
-	core.refresh_for_read();
-	return live_count(core);
+	const auto viewed = view();
+	return live_count(viewed);
 }
 
 
@@ -1313,11 +1449,9 @@ Shard::refs() const
 std::vector<DeclaredField>
 Shard::declared_fields() const
 {
-	auto& core = *handle_->core;
-	std::lock_guard<std::mutex> lk(core.mtx);
-	core.check(*handle_);
+	const auto viewed = view();
 	std::vector<DeclaredField> result;
-	const auto& table = core.index->fields();
+	const auto& table = viewed.fields();
 	for (std::size_t id = 0; id < table.size(); ++id) {
 		const auto& declaration = table[id];
 		DeclaredField field;
@@ -1338,21 +1472,21 @@ Shard::identity() const noexcept
 }
 
 
-Pinned
-Shard::pin()
+Viewed
+Shard::view() const
 {
 	auto& core = *handle_->core;
-	Pinned pinned{std::unique_lock<std::mutex>(core.mtx)};
 	try {
-		core.check(*handle_);
+		core.check_read(*handle_);
 		core.refresh_for_read();
-		pinned.segments_ = core.index->segments();
-		pinned.fields_ = &core.index->fields();
-		pinned.identity_ = handle_->core;
+		const auto readers = core.readers.load();
+		if (!readers) {
+			throw Error(errc::closed, "The strata index is closed");
+		}
+		return Viewed(readers->handle.acquire(), handle_->core);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
-	return pinned;
 }
 
 
@@ -1366,6 +1500,11 @@ open_local(const std::string& path, bool writable, bool create_missing, OpenOpti
 		Chores& chores = options.chores ? *options.chores : inline_chores();
 		co_await chores.run(ChoreClass::query, [&] { handle = acquire(path, create_missing, opened.created, options); });
 		handle->writable = writable;
+		if (handle->core->unusable()) {
+			// A fenced or failed index is replaced by one reopened from disk; the handles that live keep working on it.
+			co_await reopen_core(*handle->core, chores, nullptr);
+			handle->seen = handle->core->epoch.load();
+		}
 		opened.shard = std::make_unique<Shard>(std::move(handle), writable, options);
 		co_return opened;
 	} catch (...) {
@@ -1384,7 +1523,6 @@ check(const std::string& path, OpenOptions options)
 			bool created = false;
 			auto handle = acquire(path, false, created, options);
 			auto& core = *handle->core;
-			std::lock_guard<std::mutex> lk(core.mtx);
 			core.check(*handle);
 			core.refresh();
 			core.verify_fields();
@@ -1401,3 +1539,14 @@ check(const std::string& path, OpenOptions options)
 }
 
 }  // namespace engine::strata
+
+
+namespace engine {
+
+std::shared_ptr<ReaderRegistry>
+make_reader_registry(std::size_t records)
+{
+	return std::make_shared<strata::StrataReaders>(records);
+}
+
+}  // namespace engine

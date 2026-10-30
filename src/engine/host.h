@@ -41,6 +41,7 @@
 #include <memory>                  // for std::unique_ptr
 #include <mutex>                   // for std::mutex
 #include <optional>                // for std::optional
+#include <thread>                  // for std::this_thread
 #include <type_traits>             // for std::decay_t
 #include <utility>                 // for std::move
 #include <variant>                 // for std::monostate
@@ -119,6 +120,34 @@ public:
 private:
 	Host* previous_;
 };
+
+
+// Suspends the running task for `d` and resumes it on the scheduler it suspended on. A task that runs on no
+// host (inline, in a test) sleeps its thread instead.
+class [[nodiscard]] SleepFor {
+public:
+	explicit SleepFor(std::chrono::steady_clock::duration d) noexcept : d_(d) { }
+	bool await_ready() const noexcept { return d_ <= std::chrono::steady_clock::duration::zero(); }
+	bool await_suspend(std::coroutine_handle<> h) {
+		Host* host = Host::current();
+		if (host == nullptr) {
+			std::this_thread::sleep_for(d_);
+			return false;
+		}
+		const auto scheduler = task::current();
+		timer_ = host->start_timer(std::chrono::steady_clock::now() + d_, [scheduler, h]() mutable { scheduler.post(h); });
+		return true;
+	}
+	void await_resume() noexcept { }
+
+private:
+	std::chrono::steady_clock::duration d_;
+	std::unique_ptr<Host::Timer> timer_;
+};
+
+inline SleepFor sleep_for(std::chrono::steady_clock::duration d) noexcept {
+	return SleepFor(d);
+}
 
 
 // A scheduler owned by one waiting thread: run() drives a task there until it ends.

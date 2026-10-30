@@ -76,12 +76,21 @@ struct Stats {
 	bool has_positions = false;
 };
 
+// The engine's own integrity check of a shard. `errors` counts what the check found; `failure` says why the
+// check could not run or did not pass.
+struct CheckResult {
+	std::size_t errors = 0;
+	std::string failure;
+};
+
 // Called for each document of a scan; the view and its strings are valid only during the call.
 using ScanSink = std::function<void(const DocView&)>;
 
 // One shard of an index: the write, read and lifecycle slice. Every operation that can block on I/O
-// returns a task. The referenced arguments must outlive the task. Writes are made by one task at a
-// time: the host serialises them (the index's turn); reads may overlap them.
+// returns a task. The referenced arguments must outlive the task. Writes, refreshes, commits and the
+// other operations that change the index are made by one task at a time: the host serialises them (the
+// index's turn). Reads (find_key, get, scan, stats, metadata, doc_count and search) take no turn: each
+// reads one published view of the index, as of the last refresh, and never waits for a write.
 class Shard {
 public:
 	virtual ~Shard() = default;
@@ -142,8 +151,12 @@ public:
 	// index is opened and its log replayed). Call it when no call is in flight.
 	virtual void use_chores(Chores* chores) noexcept = 0;
 
-	// Commits what is pending and releases the index; later calls raise `closed`.
+	// Commits what is pending and releases the index; later calls raise `closed`. It ends when the
+	// readers that hold a view of the index have let go of it, or raises `busy` when they do not in time.
 	virtual task::task<void> close() = 0;
+
+	// The integrity check of the open index (a chore, under the host's turn).
+	virtual task::task<CheckResult> check() = 0;
 
 	// Cheap state of a local shard, read from memory.
 	virtual rev revision() const = 0;

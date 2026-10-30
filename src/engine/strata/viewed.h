@@ -23,39 +23,42 @@
 
 #pragma once
 
-#include <memory>                  // for std::unique_ptr
-#include <mutex>                   // for std::mutex, std::unique_lock
 #include <span>                    // for std::span
 #include <utility>                 // for std::move
-#include <vector>                  // for std::vector
 
 #include "prospect/index.hh"       // for prospect::index
 
 
 namespace engine::strata {
 
-// The segments of one shard as of the moment its buffer was flushed, with the shard's lock held until
-// the pin is dropped: a write, a merge or a close waits for it. Obtained from Shard::pin().
-class Pinned {
+// One published generation of a shard's index, held for a read (docs/design/phase7c.md D6): its segments with
+// their live bits frozen, and the field table as of its publication. Holding it blocks nothing: a write, a
+// refresh, a commit and a merge go on, and the generation stays readable until this is dropped, which can
+// happen on any thread. Obtained from Shard::view().
+class Viewed {
 public:
 	using segment_view = ::prospect::index::segment_view;
-	using segment_list = ::prospect::index::segment_list;
+	using view_guard = ::prospect::index::view_guard;
+	using view_type = ::prospect::index::view;
 
-	explicit Pinned(std::unique_lock<std::mutex> lock) noexcept : lock_(std::move(lock)) { }
+	Viewed() noexcept = default;
+	Viewed(view_guard guard, const void* identity) noexcept : guard_(std::move(guard)), identity_(identity) { }
 
-	std::span<const segment_view> segments() const noexcept { return {segments_.data(), segments_.size()}; }
+	explicit operator bool() const noexcept { return static_cast<bool>(guard_); }
 
-	// The field table of the shard's index: the names the segments' terms are filed under. It lives as long as
-	// the pin holds the shard's lock.
-	const ::strata::field_table& fields() const noexcept { return *fields_; }
+	const view_type& view() const noexcept { return *guard_; }
+	std::span<const segment_view> segments() const noexcept { return guard_->segments(); }
+	const ::strata::field_table& fields() const noexcept { return guard_->fields(); }
 
-	// The Shard::pin() that made it fills these.
-	segment_list segments_;
-	const ::strata::field_table* fields_ = nullptr;
-	const void* identity_ = nullptr;
+	// The shard this generation belongs to: handles of one index share it.
+	const void* identity() const noexcept { return identity_; }
+
+	// Lets go of the generation now.
+	void release() noexcept { guard_.release(); }
 
 private:
-	std::unique_lock<std::mutex> lock_;
+	view_guard guard_;
+	const void* identity_ = nullptr;
 };
 
 }  // namespace engine::strata
