@@ -166,11 +166,22 @@ inline SleepFor sleep_for(std::chrono::steady_clock::duration d) noexcept {
 }
 
 
-// Aborts (debug builds) when the running task holds a view and is about to wait for a turn, an open or a
-// drain: the view could be what that wait is waiting for. Release builds compile it out.
-inline void check_no_view_held([[maybe_unused]] const char* waits_for) noexcept {
+// What a debug build does when a task that holds a view is about to wait (docs/mechanisms/reader-views.md, "The rule
+// for a request that holds a view"): abort. A test replaces it with a function that throws.
+using ViewRuleHandler = void (*)(const char* waits_for);
+inline ViewRuleHandler& view_rule_handler() noexcept {
+	static ViewRuleHandler handler = nullptr;
+	return handler;
+}
+
+// Fails (debug builds) when the running task holds a view and is about to wait for a turn, an open or a drain:
+// the view could be what that wait is waiting for. Release builds compile it out.
+inline void check_no_view_held([[maybe_unused]] const char* waits_for) {
 #ifndef NDEBUG
 	if (const auto* counters = Host::running_counters(); counters != nullptr && counters->views != 0) {
+		if (auto handler = view_rule_handler()) {
+			handler(waits_for);
+		}
 		std::fprintf(stderr, "a task that holds %d view(s) waits for %s\n", counters->views, waits_for);
 		std::abort();
 	}

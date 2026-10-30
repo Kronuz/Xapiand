@@ -314,13 +314,14 @@ ShardEndpoint::take_turn(int flags)
 {
 	L_CALL("ShardEndpoint::take_turn(({}))", readable_flags(flags));
 
+	engine::check_no_view_held("a turn");
+
 	for (;;) {
 		co_await ensure_open(flags);
 
 		task::async_mutex::guard guard;
 		int* held = nullptr;
 		if (auto* host = engine::Host::current()) {
-			engine::check_no_view_held("a turn");
 			const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
 			guard = co_await turn.lock_until(*host, deadline);
 			if (auto* counters = host->counters()) {

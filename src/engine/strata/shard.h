@@ -114,8 +114,11 @@ public:
 
 	// The shard's current published view, held for a read (src/engine/strata/search.cc). A host refreshes
 	// first (engine_for_read), so the view has what was applied. It holds no lock: writes go on, and
-	// nothing waits for it. Raises `busy` when every reader record of the host's registry is claimed.
+	// nothing waits for it. Raises `busy` when the index's readers are at their cap.
 	Viewed view() const;
+
+	// The views refused so far because the index's readers were at their cap (an overload: busy).
+	std::uint64_t views_refused() const noexcept;
 
 	// Names the index behind the handle: handles of one shard share it.
 	const void* identity() const noexcept;

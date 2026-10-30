@@ -228,19 +228,17 @@ void sig_exit(int sig) {
 }
 
 
-// The hazard records each index gives its readers: one per view the threads that read can hold of it at once, so
-// the reactors, the HTTP offload workers, the pool workers (a read resumes on the thread that ran its chore),
-// the bulk preparers and indexers and the control loop, doubled because a read that runs under a view (a scan's
-// callback, a spy) may take a second view of the same index on its thread. Each record is a cache line.
+// The most views of one index that are held at once, and the hazard records that back them: a view past it is
+// refused (503) before it takes a record. A view is held while a search runs and while it waits demoted for its next
+// slice: 16 searches per reactor on one index is the estimate here. The pool workers and the control loop hold one each,
+// doubled because a read that runs under a view (a scan's callback, a spy) may take a second view of the same index on
+// its thread. Each record is a cache line; strata's chunked registry (X3-1) will let the bytes follow the load.
 static std::size_t
 readers_per_index()
 {
 	const auto reactors = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_servers));
-	const auto clients = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_clients));
-	const auto offload = reactors * ((clients + reactors - 1) / reactors);  // as the HTTP service spreads them
 	const auto pool = static_cast<std::size_t>(std::max(1.0, opts.processors));
-	const auto bulk = static_cast<std::size_t>(std::max<ssize_t>(0, opts.num_doc_preparers) + std::max<ssize_t>(0, opts.num_doc_indexers));
-	return 2 * (reactors + offload + pool + bulk + 1);
+	return reactors * 16 + 2 * (pool + 1);
 }
 
 
@@ -463,6 +461,7 @@ XapiandManager::run_loop()
 	_rx->host.bind_loop_thread();   // the tasks resumed on this thread run on the control host
 	if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
 	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
+	engine::Host::bind_thread(nullptr);   // this thread runs no host's tasks after the loop stops
 	_running_loop.store(false, std::memory_order_release);
 }
 

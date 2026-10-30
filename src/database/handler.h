@@ -88,6 +88,12 @@ class DatabaseHandler {
 
 	std::shared_ptr<std::unordered_set<std::string>> context;
 
+public:
+	// The time slice a search of this handler runs in (a request's budget); null runs a search to its end
+	// where it is awaited. Not owned.
+	task::budget* budget = nullptr;
+
+private:
 #ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;

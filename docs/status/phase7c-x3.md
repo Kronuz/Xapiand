@@ -7,16 +7,33 @@ the architect's ruling and the X3 items: `docs/reviews/phase7c-x2b-code.md` (X3-
 
 ## State
 
-Step 1 (pins and the coroutine service) done and committed. Steps 2 to 4 follow the order in "Done criteria".
+Steps 1 and 2 done and committed; step 3 (bodies and blocking paths) and the proof (step 4) follow.
 
 ## Done criteria
 
-- [ ] **1. Pins and service.**
-- [ ] **2. Views on the reactor** (X3-2, X3-3, X3-4; X3-1 and X3-5 remain).
+- [x] **1. Pins and service.** The nine pins; `SearchService::handle` is a coroutine and `should_offload` is gone; `manager.cc` (`reactor()`, the control plane's own
+  one-worker `asio::thread_pool` until D13/X5, `HttpAsioService(handler, reactors, 1000)`); `engine/release.h` and `engine/drain.h` (dead after the pools went) deleted with
+  their tests; the demoted cap (256 per reactor) is `RequestRejected(503, ..., Retry-After: 1)` from `create_extension`; a disconnect or a shutdown requests the request's
+  cancel source (`Request::cancel`, `Request::budget`, 200 us slice); `storage` needed `storage::posix` from the library in `xapiand_storage_io.h`; `exact_count` is a task in prospect.
+  Beyond the list: `ShardEndpoint`'s `IndexChores` group is joined on a worker, never on a loop (`~WorkGroup` waits, and `block_guard` fires on a loop even when idle);
+  a Lua foreign read on a reactor is let through by `engine::BlockingAllowed` until X4.
+- [x] **2. Views on the reactor.**
+  - Searches are coroutines with the request's budget (`SearchRequest::budget`, `DatabaseHandler::budget`, set by the search and count views): `engine::strata::run` awaits
+    prospect's `search_task` over views, snapshot and plan that live in its frame. I did not use `search_pinned`: it moves the snapshot into its own frame while the
+    scorer builder here captures `term_table`/`plan`, which point into the snapshot, so a frame-local `search_task` pins the same things without a second copy.
+  - **X3-2** the per-index cap is a `reactor::AdmissionGate` in each `Core` (`view_gate`, limit `readers_per_index`); `Viewed` holds the lease; refusal is `busy` (503) before a
+    record is taken; `Shard::views_refused()` counts. `readers_per_index` is now 16 searches per reactor plus the pool and control terms (194 records on this host).
+  - **X3-3** debug check: `TaskCounters` per request (`engine::Run`, a per-request scheduler whose resumes set the counters), `Viewed` counts, `take_turn`/`ensure_open`/`drain_readers`
+    call `check_no_view_held`; close drains off the turn (`Shard::begin_close`/`finish_close`; `close_marked` releases the turn between them).
+  - **X3-4** `Core::readers` is a `std::atomic<const Readers*>`; the owner keeps every handle it published (`handles`) until the Core ends.
+  - Listed as remaining: **X3-1** (strata's chunked registry, revision 4), **X3-5** (the T13 row).
 - [ ] **3. Bodies and blocking paths** (`body_stream`, RESTORE parse-ahead, streamed uploads, FLUSH, bulk indexers).
 - [ ] **4. Proof.**
 
 ## Done (commits)
+
+- `Xapiand:b4915e5dd` step 1: the pins, the coroutine service, FLUSH as a task, the close split and the view counters.
+- step 2 (this commit): searches with a budget, the admission cap, the wait rule and its mutants, the lock-free acquire. Hash in the next commit's list.
 
 ## Next
 

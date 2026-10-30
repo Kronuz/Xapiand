@@ -74,6 +74,12 @@ struct PoolTestAccess {
 	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) { entry.chores = std::move(chores); }
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 	static void mark_stale(ShardEndpoint& entry) { entry.mark_stale(); }
+	// Whether nobody holds the index's turn right now.
+	static bool turn_is_free(ShardEndpoint& entry) {
+		if (!entry.turn.try_lock()) { return false; }
+		entry.turn.unlock();
+		return true;
+	}
 	static std::uint64_t applied(ShardEndpoint& entry) { return entry.applied_.load(); }
 	// As if a write landed after a commit began: one more write applied, and not yet committed.
 	static void write_lands(ShardEndpoint& entry) {
@@ -978,6 +984,34 @@ void test_readers_cap() {
 	CHECK_EQ(served.hits(), 2u);
 }
 
+// A close waits for the readers that hold views of the index, and while it waits it holds no turn: a writer
+// or a refresh that needs the turn is not behind a drain (X3-3).
+void test_a_close_drains_its_readers_without_the_turn() {
+	Watchdog watchdog("a close drains off the turn");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("drain_turn")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	engine::sync_wait(shard.commit());
+	HeldSearch held(shard);
+	CHECK_TRUE(held.holding());
+	std::atomic<bool> closed{false};
+	CHECK_TRUE(entry->begin_idle_close(1000));   // the handles of this test count as uses: mark it anyway
+	std::thread closer([&] {
+		engine::sync_wait(entry->finish_idle_close());
+		closed = true;
+	});
+	// The close cannot end while the search holds its view.
+	CHECK_TRUE(A::state(*entry.get()) == ShardEndpoint::State::closing);
+	std::this_thread::sleep_for(150ms);   // the drain polls with a growing pause: it is waiting by now
+	CHECK_FALSE(closed.load());
+	CHECK_TRUE(A::turn_is_free(*entry.get()));
+	held.release();
+	closer.join();
+	CHECK_TRUE(closed.load());
+	CHECK_TRUE(A::state(*entry.get()) == ShardEndpoint::State::empty);
+}
+
 // The records belong to the index: one index with all of its records held refuses its next reader, and a
 // neighbour is not affected (C9).
 void test_readers_cap_is_per_index() {
@@ -1227,6 +1261,7 @@ int main(int argc, char** argv) {
 		{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
 		{"test_readers_cap", test_readers_cap},
 		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},
+		{"test_a_close_drains_its_readers_without_the_turn", test_a_close_drains_its_readers_without_the_turn},
 		{"test_a_search_over_more_indexes_than_records_is_served", test_a_search_over_more_indexes_than_records_is_served},
 		{"test_search_fanout_limit", test_search_fanout_limit},
 		{"test_a_commit_that_times_out_leaves_the_write_standing", test_a_commit_that_times_out_leaves_the_write_standing},

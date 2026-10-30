@@ -1186,6 +1186,7 @@ DatabaseHandler::match(
 	request.collapse_max = collapse_max;
 	request.order = order;
 	request.spy = aggs;
+	request.budget = budget;
 
 	// Every shard the search names stays open until it ends: the limit is checked before any is taken.
 	check_search_fanout(endpoints.size(), static_cast<size_t>(opts.max_indexes_per_search));

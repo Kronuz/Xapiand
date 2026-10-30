@@ -1886,6 +1886,7 @@ search_view(Request& request)
 
 	// Open database
 	DatabaseHandler db_handler;
+	db_handler.budget = &*request.budget;   // the search yields its reactor at window boundaries
 	try {
 		if (query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
@@ -2034,6 +2035,7 @@ count_view(Request& request)
 
 	// Open database
 	DatabaseHandler db_handler;
+	db_handler.budget = &*request.budget;   // the search yields its reactor at window boundaries
 	try {
 		if (query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);

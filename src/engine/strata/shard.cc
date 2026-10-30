@@ -40,7 +40,7 @@
 #include <random>                  // for std::random_device
 #include <system_error>            // for std::system_error
 
-#include "atomic_shared_ptr.h"     // for atomic_shared_ptr
+#include "reactor.h"                // for reactor::AdmissionGate
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
 #include "prospect/index.hh"       // for prospect::index
 
@@ -205,7 +205,14 @@ struct Core {
 	prospect::index::options options;      // how the index is opened, again after a reopen
 	bool host = false;                     // a host serialises the writers and refreshes before it reads
 	std::optional<prospect::index> index;  // empty after a reopen that failed: recover() retries it
-	atomic_shared_ptr<const Readers> readers;  // the views' handle; none while there is no index to read
+	// The views' handle; null while there is no index to read. A reader loads it with no lock and no count: every
+	// handle ever published is kept in `handles` until the Core ends, so the pointer a reader holds stays valid
+	// (a handle of a replaced index raises index_closed when it is used).
+	std::atomic<const Readers*> readers{nullptr};
+	std::vector<std::unique_ptr<const Readers>> handles;   // the owner's: appended under the turn, never read by readers
+	// Admits the readers of this index: a view past the cap is refused (busy) before it takes a record, so the
+	// registry never runs out (docs/mechanisms/reader-views.md, Limits).
+	reactor::AdmissionGate view_gate{0};
 	std::string uuid;
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
 	std::atomic<bool> retiring{false};  // the index is being replaced or closed: its readers are let go of
@@ -248,7 +255,8 @@ struct Core {
 
 	// Gives the readers the index's views and records the owner's figures. Call it after the index is made.
 	void adopt_index() {
-		readers.store(std::make_shared<const Readers>(Readers{index->reader()}));
+		handles.push_back(std::make_unique<const Readers>(Readers{index->reader()}));
+		readers.store(handles.back().get(), std::memory_order_release);
 		note();
 	}
 
@@ -272,7 +280,7 @@ struct Core {
 	// their segments until they are released (drain).
 	void begin_retire() {
 		retiring = true;
-		readers.store(nullptr);
+		readers.store(nullptr, std::memory_order_release);
 		if (index && !index->closing()) {
 			index->close();
 		}
@@ -298,7 +306,7 @@ struct Core {
 			verify_fields();
 		} catch (...) {
 			index.reset();  // a failed check leaves no index, as a failed open does
-			readers.store(nullptr);
+			readers.store(nullptr, std::memory_order_release);
 			throw;
 		}
 		fenced = false;
@@ -423,7 +431,7 @@ Core::check_read(const Handle& handle) const
 	if (closed) {
 		throw Error(errc::closed, "The strata index is closed");
 	}
-	if (!readers.load()) {
+	if (readers.load(std::memory_order_acquire) == nullptr) {
 		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
 	}
 	if (handle.writable && handle.seen != epoch.load()) {
@@ -456,6 +464,7 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		core->dir = dir;
 		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);
 		core->reader_registry = std::make_shared<StrataReaders>(host.readers_per_index);
+		core->view_gate.limit = static_cast<int>(host.readers_per_index);
 		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
 		core->options.readers = &core->reader_registry->registry;
@@ -1480,6 +1489,13 @@ Shard::declared_fields() const
 }
 
 
+std::uint64_t
+Shard::views_refused() const noexcept
+{
+	return handle_->core->view_gate.rejected.load(std::memory_order_relaxed);
+}
+
+
 const void*
 Shard::identity() const noexcept
 {
@@ -1494,11 +1510,15 @@ Shard::view() const
 	try {
 		core.check_read(*handle_);
 		core.refresh_for_read();
-		const auto readers = core.readers.load();
-		if (!readers) {
+		const Readers* readers = core.readers.load(std::memory_order_acquire);
+		if (readers == nullptr) {
 			throw Error(errc::closed, "The strata index is closed");
 		}
-		return Viewed(readers->handle.acquire(), handle_->core);
+		auto lease = core.view_gate.enter();
+		if (!lease) {
+			throw Error(errc::busy, "Too many concurrent reads of this index");
+		}
+		return Viewed(readers->handle.acquire(), handle_->core, std::move(lease));
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
