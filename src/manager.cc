@@ -228,11 +228,27 @@ void sig_exit(int sig) {
 }
 
 
+// The hazard records each index gives its readers: one per view the threads that read can hold of it at once, so
+// the reactors, the HTTP offload workers, the pool workers (a read resumes on the thread that ran its chore),
+// the bulk preparers and indexers and the control loop, doubled because a read that runs under a view (a scan's
+// callback, a spy) may take a second view of the same index on its thread. Each record is a cache line.
+static std::size_t
+readers_per_index()
+{
+	const auto reactors = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_servers));
+	const auto clients = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_clients));
+	const auto offload = reactors * ((clients + reactors - 1) / reactors);  // as the HTTP service spreads them
+	const auto pool = static_cast<std::size_t>(std::max(1.0, opts.processors));
+	const auto bulk = static_cast<std::size_t>(std::max<ssize_t>(0, opts.num_doc_preparers) + std::max<ssize_t>(0, opts.num_doc_indexers));
+	return 2 * (reactors + offload + pool + bulk + 1);
+}
+
+
 XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_start_)
 	: total_clients(0),
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
-	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, static_cast<size_t>(opts.num_http_servers) * 1000 * opts.num_shards)),
+	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, readers_per_index())),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),

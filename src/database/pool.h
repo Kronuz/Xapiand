@@ -50,7 +50,7 @@
 #include "engine/document.h"    // for engine::Document
 #include "engine/error.h"       // for engine::Error
 #include "engine/host.h"        // for Host
-#include "engine/open.h"        // for engine::ReaderRegistry
+#include "engine/open.h"        // for engine::default_readers_per_index
 #include "engine/shard.h"       // for engine::Shard
 #include "engine/types.h"       // for engine::rev, docid
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
@@ -364,9 +364,6 @@ public:
  *
  */
 
-// The readers a pool allows at once when its host does not size it.
-constexpr size_t default_reader_records = 4096;
-
 class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	friend ShardEndpoint;
 	friend struct PoolTestAccess;  // tests/test_pool.cc
@@ -384,7 +381,7 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 
 	std::atomic<double> turn_timeout_;                  // seconds a turn may be awaited before the request is told `busy`
 	std::atomic<std::uint64_t> buffered_docs_cap_;      // documents an index buffers before a write owes a flush; 0: the index's own bound
-	std::shared_ptr<engine::ReaderRegistry> readers_;  // the records every index's readers claim (D6, C9); set before the first open
+	std::atomic<std::size_t> readers_per_index_;        // the hazard records each index gives its readers (D6, C9)
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
 
@@ -392,9 +389,9 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	ReferencedShardEndpoint _get(const Endpoint& endpoint) const;
 
 public:
-	// `reader_records` is the readers the host allows at once across all its indexes (a search holds one per index
-	// it reads); a read finds none left answers busy (503).
-	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t reader_records = default_reader_records);
+	// `readers_per_index` is the views of one index the host's threads hold at once (a search holds one per index it
+	// reads); a read that finds none free in its index answers busy (503).
+	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index);
 	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;
@@ -417,11 +414,9 @@ public:
 		turn_timeout_.store(seconds, std::memory_order_relaxed);
 	}
 
-	// Replaces the readers' registry: call it before any index is open (a test sizing it small).
-	void set_reader_records(size_t records);
-
-	const std::shared_ptr<engine::ReaderRegistry>& readers() const noexcept {
-		return readers_;
+	// Resizes the records of the indexes opened from now on (a test sizing them small).
+	void set_readers_per_index(size_t records) noexcept {
+		readers_per_index_.store(records, std::memory_order_relaxed);
 	}
 
 	void set_buffered_docs_cap(std::uint64_t cap) noexcept {

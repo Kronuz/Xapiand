@@ -465,7 +465,7 @@ ShardEndpoint::open_index_blocking(int flags)
 	options.host = true;
 	options.background = &database_pool.executor();
 	options.buffered_docs_cap = database_pool.buffered_docs_cap_.load(std::memory_order_relaxed);
-	options.readers = database_pool.readers_;
+	options.readers_per_index = database_pool.readers_per_index_.load(std::memory_order_relaxed);
 	auto opened = engine::sync_wait(engine::open_local(path, true, has_db_create_or_open(flags), options));
 	std::shared_ptr<engine::Shard> eng(std::move(opened.shard));
 

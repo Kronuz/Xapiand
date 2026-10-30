@@ -25,9 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A search no longer holds its index.** A search reads a published view of each index it names, so a long search
   does not delay a write, a refresh or a commit to the same index (it used to hold the index's lock for its whole
   run). A search sees the index as of the moment it started.
-- **Too many searches at once answer `503`.** Searches share a fixed number of reader records (the HTTP loops
-  times 1,000 requests times the default shard count); a search that finds none free answers `503` instead of
+- **Too many searches of one index at once answer `503`.** Each index has a fixed number of reader records (the
+  threads that can read it at once, doubled); a search that finds none free in an index answers `503` instead of
   waiting.
+- **A search over too many indexes answers `400`.** A search keeps every index it reads open until it ends, so one
+  that names more shards than `--max-indexes-per-search` (default and ceiling: the database pool size) is refused
+  with the limit in the message.
 - **A write that asks for a commit and waits too long for it still succeeds.** The write is applied and logged; its
   commit is left to the timed commit, so a client is not told to retry what was done (an `add` without an id would
   have been stored twice).

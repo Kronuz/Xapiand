@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-30) the X2b developer's ledger (phase 7c step X2b: the handler, views and schema callers as tasks, and the reader views); ready for review, not pushed.
+> Status: CURRENT (2026-10-30) the X2b developer's ledger (phase 7c step X2b: the handler, views and schema callers as tasks, and the reader views); reviewed (approve with conditions), the architect's ruling R1 to R4 folded in, not pushed.
 
 # phase7c X2b (build): handlers and views as tasks, reader views
 
@@ -8,8 +8,8 @@ X2 review `Xapiand:db50b90b3`). Design: `docs/design/phase7c.md` (D2, D3, D5, D6
 
 ## State
 
-Ready for the code review (concurrency code: reader views and their close protocol). K1 to K6 are ticked below with their evidence. Nothing is
-blocked. What X2b could not convert needs L3 (X3) or the Lua yields (X4) and is listed under "Needs L3".
+Code review done (`docs/reviews/phase7c-x2b-code.md`); the architect's ruling on the reader registry (R1 to R4) is implemented and proved below, ready for
+the lead to confirm and merge. K1 to K6 are ticked below with their evidence. Nothing is blocked. What X2b could not convert needs L3 (X3) or the Lua yields (X4) and is listed under "Needs L3".
 
 ## Done criteria, ticked
 
@@ -34,7 +34,7 @@ blocked. What X2b could not convert needs L3 (X3) or the Lua yields (X4) and is 
   written; only `pool.housekeeping()` runs, and the owed count reaches 0 and the files of the strata directory fall below the peak. **Mutant M3**
   (the owed count ignores retired views) -> fails at both owed checks and at the file count.
 - [x] **K4. `too_many_readers` is a 503.** `strata::rethrow_translated` maps it to `errc::busy` (the existing 503 row of `catch_http_errors`).
-  `test_readers_cap` (T8: a `DatabasePool` with `set_reader_records(16)`): 16 held searches, the 17th answers `busy`, a write and a commit still go,
+  `test_readers_cap` (T8: a `DatabasePool` with `set_readers_per_index(16)`): 16 held searches, the 17th answers `busy`, a write and a commit still go,
   and a record freed serves the next search. `test_a_full_registry_answers_busy` (engine, a 2-record registry). **Mutants** M2 (mapped to `database`)
   -> both fail; M10 (the pool gives the engine no shared registry) -> `test_readers_cap` fails.
 - [x] **K5. Proof.**
@@ -70,6 +70,30 @@ X2 review items: **X2-B1** done (the revision and the work owed are atomics, `Co
 the entry's lock; M6); **X2-N2** chosen: the write stands and the autocommit commits it, because the write is applied and logged and a 503 would
 make an auto-id client add it twice; making apply and commit one turn would end commit coalescing (`Shard::finish_write`; M4); **X2-N3** (the
 `finished` check moved to the `empty` branch; M5); **X2-N8** (the assert; M12).
+
+## Architect ruling on the reader registry (R1 to R4)
+
+Binding text: `docs/reviews/phase7c-x2b-code.md`, "Architect ruling on the reader registry". Mechanism: `docs/mechanisms/reader-views.md`.
+
+- [x] **R1. A registry per index.** `Core` owns a `StrataReaders` (strata's `reader_registry`) of `OpenOptions::readers_per_index` records; `DatabasePool::readers_`,
+  `engine::ReaderRegistry` / `make_reader_registry` and `manager.cc`'s formula are gone; phase7c.md C9 rewritten. `readers_per_index()` (`manager.cc`) =
+  2 x (reactors + HTTP offload workers + pool workers + bulk preparers + bulk indexers + 1 control loop): 174 on a 16-CPU host with the defaults (11,136 B
+  per open index, 22,272 B on arm64); the x2 is for a read that takes a second view of its index under a callback, which I did not audit away. Bytes and scan cost
+  are in `reader-views.md` Limits.
+- [x] **R2. The registry outlives every guard.** `~Core` keeps the registry (`strata::detail::keep_forever`) when a record is still claimed. `OpenOptions::drain_timeout`
+  (default 30 s) lets a test reach the timeout path. Test `test_a_view_outlives_a_drain_that_timed_out` (`test_engine_host.cc`): hold a view, close (busy after 100 ms),
+  drop the shard, release the view.
+- [x] **R3. `max_indexes_per_search`.** `--max-indexes-per-search` (`opts.max_indexes_per_search`, 0: the pool size), capped in `main.cc` at the pool size the descriptor
+  computation leaves (200 by default); `check_search_fanout` at the top of `DatabaseHandler::match`, after wildcard and comma expansion, throws `errc::invalid` (a 400)
+  with the limit and the option. The per-index cap stays a 503. Tests: `test_search_fanout_limit` (at, +1, the 1,010 case, 0 unset), `test_a_search_over_more_indexes_than_records_is_served`
+  (40 indexes, 2 records each), `test_readers_cap_is_per_index`, and over HTTP `harness/search_fanout_check.py` (limit 1,010: 1,010 -> 200, 1,011 -> 400; defaults: 200 -> 200,
+  201 and the review's 1,010 -> 400, never 503).
+- [x] **R4. The N2 rule** is written in `reader-views.md` ("The rule for a request that holds a view"), with why X2b satisfies it (`run` is synchronous).
+
+Carried forward to X3 (not done here, per the ruling): **X3-1** strata's chunked registry (revision 4; then `readers_per_index` goes); **X3-2** the per-index cap becomes D2's
+in-flight admission cap; **X3-3** N2 made structural (a debug check in the request context; close and reopen drain off the turn); **X3-4** `Shard::view()` takes a lock
+(`core.readers.load()` is a `std::atomic_load` on a `shared_ptr`): the acquire path must have none, and T13 measures `view()` at 1 and 8 threads; **X3-5** N1's T13 row
+(per-index scan cost and bytes at 10^4 open indexes, with the cap from X3-2). X3 must not start suspending searches before X3-1 to X3-3.
 
 ## Done (commits)
 

@@ -23,6 +23,7 @@
 #pragma once
 
 #include <cstddef>                 // for std::size_t
+#include <chrono>                  // for std::chrono::milliseconds
 #include <cstdint>                 // for std::uint64_t
 #include <memory>                  // for std::shared_ptr, std::unique_ptr
 #include <string>                  // for std::string
@@ -43,18 +44,10 @@ struct Opened {
 	bool created = false;
 };
 
-// The records readers claim to hold an index's published view (docs/design/phase7c.md D6, C9). One registry is
-// shared by every index of a host: a record is held for as long as a search reads a view, so its size bounds
-// the searches in flight, and a read that finds none left is refused with errc::busy.
-class ReaderRegistry {
-public:
-	virtual ~ReaderRegistry() = default;
-	virtual std::size_t capacity() const noexcept = 0;
-	// The memory the records take.
-	virtual std::size_t bytes() const noexcept = 0;
-};
-
-std::shared_ptr<ReaderRegistry> make_reader_registry(std::size_t records);
+// The hazard records one index's readers claim, one per view in use (docs/design/phase7c.md D6, C9). Each index
+// owns its records, so a search of many indexes takes one record in each and a commit scans only its own index's.
+// A read that finds none free is refused with errc::busy. The default is the hostless shard's: a few threads.
+constexpr std::size_t default_readers_per_index = 128;
 
 // How a host runs the shard. With none of it, every call does its device work inline.
 struct OpenOptions {
@@ -71,8 +64,12 @@ struct OpenOptions {
 	// The documents the write buffer holds before the next write owes a flush; 0 keeps the index's own bound.
 	std::uint64_t buffered_docs_cap = 0;
 
-	// The registry readers of this shard claim their records in; null gives the shard one of its own.
-	std::shared_ptr<ReaderRegistry> readers;
+	// The records the index gives its readers (see default_readers_per_index): the threads that can hold a view of
+	// it at once, doubled for a read that holds a second view of it.
+	std::size_t readers_per_index = default_readers_per_index;
+
+	// How long a close or a reopen waits for the readers of the old index to let go of its views.
+	std::chrono::milliseconds drain_timeout{30000};
 };
 
 // Opens (or, when create_missing, creates) the local shard at `path`.

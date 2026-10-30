@@ -180,27 +180,27 @@ struct Readers {
 	prospect::index::reader_handle handle;
 };
 
-// The registry of the engine's readers: strata's own, behind the engine's name for it.
-class StrataReaders final : public engine::ReaderRegistry {
+// The hazard records the readers of one index claim: one per view in use, owned by the index's Core.
+class StrataReaders {
 public:
 	explicit StrataReaders(std::size_t records) : registry(records) { }
-	std::size_t capacity() const noexcept override { return registry.capacity(); }
-	std::size_t bytes() const noexcept override { return registry.capacity() * ::strata::hazard_line; }
+	// Whether a reader still holds a record: its guard writes the record back when it lets go.
+	bool claimed() noexcept {
+		for (std::size_t i = 0; i < registry.capacity(); ++i) {
+			if (registry.slot(i).p.load(std::memory_order_acquire) != nullptr) { return true; }
+		}
+		return false;
+	}
 	::strata::reader_registry registry;
 };
-
-// The reader records a shard that no host gave a registry makes for itself.
-constexpr std::size_t private_readers = 128;
-
-// How long a close or a reopen waits for the readers of the old index to let go of its views.
-constexpr std::chrono::seconds drain_timeout{30};
 
 // The index of one shard and the state its handles share. Everything that changes the index (the writes,
 // refresh, commit, close, reopen and the housekeeping) runs one at a time, as the host's turn lets it;
 // the reads take no turn and no lock: each acquires the index's published view through `readers`.
 struct Core {
 	std::string dir;
-	std::shared_ptr<engine::ReaderRegistry> reader_registry;  // outlives the index and the views its readers hold
+	std::shared_ptr<StrataReaders> reader_registry;  // this index's records; outlives the index and every guard on them
+	std::chrono::milliseconds drain_timeout{30000};  // how long a close or a reopen waits for the readers of the old index
 	std::unique_ptr<kronuz::journal::PosixIO> io;
 	prospect::index::options options;      // how the index is opened, again after a reopen
 	bool host = false;                     // a host serialises the writers and refreshes before it reads
@@ -221,6 +221,10 @@ struct Core {
 	std::atomic<std::size_t> owed{0};                // background work and views not yet freed
 
 	~Core() {
+		// A reader that outlived its entry (a drain that timed out) releases its record into this registry later.
+		if (reader_registry && reader_registry->claimed()) {
+			::strata::detail::keep_forever(reader_registry);
+		}
 		// A transaction that is still open is discarded.
 		if (index && pending && !transaction && !index->closing()) {
 			try {
@@ -451,9 +455,10 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
 		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);
-		core->reader_registry = host.readers ? host.readers : make_reader_registry(private_readers);
+		core->reader_registry = std::make_shared<StrataReaders>(host.readers_per_index);
+		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
-		core->options.readers = &static_cast<StrataReaders&>(*core->reader_registry).registry;
+		core->options.readers = &core->reader_registry->registry;
 		core->host = host.host;
 		const auto& options = core->options;
 		const auto create = [&] {
@@ -490,7 +495,7 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 task::task<void>
 drain_readers(Core& core, Chores& chores)
 {
-	const auto deadline = std::chrono::steady_clock::now() + drain_timeout;
+	const auto deadline = std::chrono::steady_clock::now() + core.drain_timeout;
 	auto pause = std::chrono::milliseconds(1);
 	for (;;) {
 		co_await engine::sleep_for(pause);
@@ -1541,12 +1546,3 @@ check(const std::string& path, OpenOptions options)
 }  // namespace engine::strata
 
 
-namespace engine {
-
-std::shared_ptr<ReaderRegistry>
-make_reader_registry(std::size_t records)
-{
-	return std::make_shared<strata::StrataReaders>(records);
-}
-
-}  // namespace engine

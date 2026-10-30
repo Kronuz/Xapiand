@@ -954,7 +954,7 @@ void test_a_held_search_delays_no_refresh_or_commit() {
 void test_readers_cap() {
 	Watchdog watchdog("the readers cap");
 	DatabasePool pool(8);
-	pool.set_reader_records(16);
+	pool.set_readers_per_index(16);
 	auto entry = pool.spawn(Endpoint(fresh("readers")));
 	Shard shard(*entry.get(), WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -976,6 +976,75 @@ void test_readers_cap() {
 	CHECK_TRUE(served.holding());
 	served.release();
 	CHECK_EQ(served.hits(), 2u);
+}
+
+// The records belong to the index: one index with all of its records held refuses its next reader, and a
+// neighbour is not affected (C9).
+void test_readers_cap_is_per_index() {
+	Watchdog watchdog("the readers cap per index");
+	DatabasePool pool(8);
+	pool.set_readers_per_index(4);
+	auto first = pool.spawn(Endpoint(fresh("readers_first")));
+	auto second = pool.spawn(Endpoint(fresh("readers_second")));
+	Shard a(*first.get(), WRITE);
+	Shard b(*second.get(), WRITE);
+	for (auto* shard : {&a, &b}) {
+		engine::sync_wait(shard->add_document(make("Ka", "a")));
+		engine::sync_wait(shard->commit());
+	}
+	std::vector<std::unique_ptr<HeldSearch>> held;
+	for (int i = 0; i < 4; ++i) {
+		held.push_back(std::make_unique<HeldSearch>(a));
+		CHECK_TRUE(held.back()->holding());
+	}
+	HeldSearch refused(a);
+	CHECK_TRUE(refused.threw());
+	CHECK_TRUE(refused.kind() == engine::errc::busy);
+	HeldSearch neighbour(b);
+	CHECK_TRUE(neighbour.holding());
+	neighbour.release();
+	CHECK_EQ(neighbour.hits(), 1u);
+}
+
+// A search over more indexes than one index has records is served: it takes one record in each (X2b-B1).
+void test_a_search_over_more_indexes_than_records_is_served() {
+	Watchdog watchdog("a wide search");
+	constexpr std::size_t indexes = 40;
+	DatabasePool pool(indexes + 8);
+	pool.set_readers_per_index(2);
+	std::vector<ReferencedShardEndpoint> entries;
+	std::vector<std::unique_ptr<Shard>> shards;
+	for (std::size_t i = 0; i < indexes; ++i) {
+		entries.push_back(pool.spawn(Endpoint(fresh(("wide" + std::to_string(i)).c_str()))));
+		shards.push_back(std::make_unique<Shard>(*entries.back().get(), WRITE));
+		engine::sync_wait(shards.back()->add_document(make("Ka", "a")));
+		engine::sync_wait(shards.back()->commit());
+	}
+	std::vector<engine::Shard*> engines;
+	for (auto& shard : shards) {
+		engines.push_back(engine::sync_wait(shard->engine_for_read()));
+	}
+	auto prepared = engine::prepare(engine::Query::term("f", "body"));
+	engine::SearchRequest request;
+	request.query = prepared.get();
+	request.maxitems = 100;
+	CHECK_EQ(engine::sync_wait(engine::search(engines, request)).hits.size(), indexes);
+}
+
+// A search names at most max_indexes_per_search shards: the limit is served, one more is the client's error (a 400).
+void test_search_fanout_limit() {
+	CHECK_TRUE(error_kind([] { check_search_fanout(200, 200); }) == engine::errc::internal);  // no error
+	CHECK_TRUE(error_kind([] { check_search_fanout(1, 200); }) == engine::errc::internal);
+	CHECK_TRUE(error_kind([] { check_search_fanout(201, 200); }) == engine::errc::invalid);
+	CHECK_TRUE(error_kind([] { check_search_fanout(1010, 200); }) == engine::errc::invalid);
+	CHECK_TRUE(error_kind([] { check_search_fanout(5000, 0); }) == engine::errc::internal);  // 0: unset
+	try {
+		check_search_fanout(201, 200);
+	} catch (const engine::Error& error) {
+		const std::string message = error.description();
+		CHECK_TRUE(message.find("200") != std::string::npos);
+		CHECK_TRUE(message.find("--max-indexes-per-search") != std::string::npos);
+	}
 }
 
 // A commit whose turn times out after the write was applied does not fail the write: a client that retried it would
@@ -1157,6 +1226,9 @@ int main(int argc, char** argv) {
 		{"test_the_wal_order_is_the_apply_order", test_the_wal_order_is_the_apply_order},
 		{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
 		{"test_readers_cap", test_readers_cap},
+		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},
+		{"test_a_search_over_more_indexes_than_records_is_served", test_a_search_over_more_indexes_than_records_is_served},
+		{"test_search_fanout_limit", test_search_fanout_limit},
 		{"test_a_commit_that_times_out_leaves_the_write_standing", test_a_commit_that_times_out_leaves_the_write_standing},
 		{"test_a_finishing_pool_serves_an_open_index", test_a_finishing_pool_serves_an_open_index},
 		{"test_the_uuid_is_read_under_the_lock_while_the_index_reopens", test_the_uuid_is_read_under_the_lock_while_the_index_reopens},

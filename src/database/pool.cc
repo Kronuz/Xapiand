@@ -408,13 +408,13 @@ ShardEndpoint::dump_databases(int level) const
  *
  */
 
-DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t reader_records) :
+DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t readers_per_index) :
 	lru::lru(database_pool_size),
 	finished_(false),
 	control_(nullptr),
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
-	readers_(engine::make_reader_registry(reader_records)),
+	readers_per_index_(readers_per_index),
 	wal_writer_(nullptr),
 	detached_(0)
 {
@@ -423,13 +423,6 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, siz
 	options.block_guard = &engine::check_may_block;
 	work_pool_ = std::make_unique<WorkPool>(options);
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
-}
-
-
-void
-DatabasePool::set_reader_records(size_t records)
-{
-	readers_ = engine::make_reader_registry(records);
 }
 
 

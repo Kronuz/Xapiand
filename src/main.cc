@@ -23,6 +23,7 @@
 
 #include "config.h"                               // for XAPIAND_LUA, XAPIAND_UUID...
 
+#include <algorithm>                              // for std::min
 #include <chrono>                                 // for std::chrono::
 #include <clocale>                                // for std::setlocale, LC_CTYPE
 #include <csignal>                                // for sigaction, sigemptyset
@@ -481,6 +482,8 @@ void adjustOpenFilesLimit()
 	// Set new values:
 	opts.max_files = max_files;
 	opts.database_pool_size = new_database_pool_size;
+	// A search keeps every index it reads open, so it can read no more than the pool holds open.
+	opts.max_indexes_per_search = opts.max_indexes_per_search > 0 ? std::min<ssize_t>(opts.max_indexes_per_search, new_database_pool_size) : new_database_pool_size;
 	opts.max_clients = new_max_clients;
 }
 

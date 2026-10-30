@@ -69,6 +69,13 @@ engine::docid to_docid(std::string_view document_id);
 
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
+
+// Refuses a search over more shards than `max_indexes_per_search`: a search keeps every index it reads open for
+// its whole run, and the pool holds no more open than its file-descriptor budget. Throws errc::invalid (a 400)
+// naming the limit; the request is the client's to narrow, so retrying it cannot help. 0 is no limit (a tool
+// that never ran main()'s sizing).
+void check_search_fanout(size_t shards, size_t max_indexes_per_search);
+
 class DatabaseHandler {
 	friend class Document;
 	friend class Schema;

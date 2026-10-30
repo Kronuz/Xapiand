@@ -49,6 +49,9 @@
 #include "engine/open.h"
 #include "engine/query.h"
 #include "engine/search.h"
+#include "engine/strata/shard.h"
+#include "engine/strata/viewed.h"
+#include "strata/core/owner.hh"
 #include "engine/sync.h"
 
 namespace {
@@ -358,7 +361,7 @@ void test_a_reopen_waits_for_the_readers() { closing_waits_for_the_readers("reop
 void test_a_full_registry_answers_busy() {
 	ThreadChores chores;
 	auto options = host(chores);
-	options.readers = engine::make_reader_registry(2);
+	options.readers_per_index = 2;
 	auto opened = engine::sync_wait(engine::open_local(scratch("registry"), true, true, options));
 	auto& shard = *opened.shard;
 	auto doc = make("Ka", "a");
@@ -398,4 +401,25 @@ void test_a_full_registry_answers_busy() {
 	CHECK_EQ(engine::sync_wait(shard.find_key("Kb")), 2u);
 }
 
-TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter, test_close_waits_for_the_readers, test_a_reopen_waits_for_the_readers, test_a_full_registry_answers_busy)
+// A reader that outlives its index (a close whose drain timed out, then the shard dropped) lets go of its record
+// afterwards, into the registry the index's Core owns: the registry must outlive that guard (R2). Under ASan the
+// release is a heap-use-after-free when the Core frees the registry with a record still claimed.
+void test_a_view_outlives_a_drain_that_timed_out() {
+	ThreadChores chores;
+	auto options = host(chores);
+	options.drain_timeout = std::chrono::milliseconds(100);
+	auto opened = engine::sync_wait(engine::open_local(scratch("outlive"), true, true, options));
+	auto doc = make("Ka", "a");
+	engine::sync_wait(opened.shard->add(doc, {}));
+	engine::sync_wait(opened.shard->refresh());
+	auto view = static_cast<engine::strata::Shard&>(*opened.shard).view();
+	CHECK_TRUE(static_cast<bool>(view));
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(opened.shard->close()); }) == engine::errc::busy);
+	// Destroying an index under a held view is reported as a break of the owner's duty (an abort when asserts are on).
+	::strata::detail::abort_on_owner_break().store(false);
+	opened.shard.reset();
+	view.release();
+	::strata::detail::abort_on_owner_break().store(true);
+}
+
+TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter, test_close_waits_for_the_readers, test_a_reopen_waits_for_the_readers, test_a_full_registry_answers_busy, test_a_view_outlives_a_drain_that_timed_out)

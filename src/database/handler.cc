@@ -1148,6 +1148,15 @@ DatabaseHandler::get_mset(
 }
 
 
+void
+check_search_fanout(size_t shards, size_t max_indexes_per_search)
+{
+	if (max_indexes_per_search != 0 && shards > max_indexes_per_search) {
+		throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes at once (--max-indexes-per-search) and this one names {}; narrow the index pattern", max_indexes_per_search, shards));
+	}
+}
+
+
 task::task<engine::SearchResult>
 DatabaseHandler::match(
 	const engine::PreparedQuery& query,
@@ -1177,6 +1186,9 @@ DatabaseHandler::match(
 	request.collapse_max = collapse_max;
 	request.order = order;
 	request.spy = aggs;
+
+	// Every shard the search names stays open until it ends: the limit is checked before any is taken.
+	check_search_fanout(endpoints.size(), static_cast<size_t>(opts.max_indexes_per_search));
 
 	// The engine feeds every shard into one search, merges the per-shard results and unshards the
 	// docids itself.

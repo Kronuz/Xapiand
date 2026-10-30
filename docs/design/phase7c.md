@@ -266,10 +266,13 @@ refresh is coalesced (`index.hh:1312-1318`), which keeps 7a's D7. Host mode clos
 3. `evaluate`'s page faults on mapped segments are T6's subject, reported at 7c and gated at Phase 6
    (owner).
 
-*Readers (C9).* One host `reader_registry` is shared by every index, which strata documents
-(`index.hh:466-469`). Its records number reactors x the in-flight cap x the default shard count
-(`opts.cc:44`). `too_many_readers` (`hazard.hh:47`, `:211`) maps to 503. T8 tests that with a
-16-record registry, and T13 states the registry's bytes and the commit's scan cost over it.
+*Readers (C9).* Each index owns its hazard registry (`Core`, as the hostless path already does), sized
+`readers_per_index`: the threads that can hold a view of one index at once, times 2 (`manager.cc`).
+`too_many_readers` (`hazard.hh:47`, `:211`) maps to 503 and means more concurrent readers of one index than the
+host runs. A search takes one record in each index it reads, so its fan-out is bounded by the open indexes, not by
+the registry: `max_indexes_per_search`, at most the pool size, answers 400 (architect ruling,
+`docs/reviews/phase7c-x2b-code.md`). T8 tests the 503 with a 16-record registry, and T13 states the registry's bytes
+and the commit's scan cost (`docs/mechanisms/reader-views.md`, Limits).
 
 **D7. Fsyncs and durability.** Every fsync, `F_FULLFSYNC` and directory barrier runs inside a chore:
 strata's commit through completion's `PosixIO::sync_files`, and `storage_commit`
@@ -402,12 +405,12 @@ clients. Light is open loop at a fixed rate: GET by id and single-term searches 
 | **T5** light-query p99 | Under heavy load ≤ 2x its unloaded p99 + 1 ms (PLAN `:645-647`), and below the pre-7c baseline; a same-index run (RESTORE into `accounts`) reported as Q6's cost | `stall_load.py`, `unloaded` then `loaded`, then `--restore-into accounts` |
 | **T6** reactor faults | Major faults on reactor threads per 1,000 queries ≤ 1 at 2x RAM: reported at 7c, gated at Phase 6 (owner) | Linux gate VM, `getrusage(RUSAGE_THREAD)` per loop, `stall_load.py --index-size 2xram` |
 | **T7** concurrency and shutdown | 0 TSan and 0 ASan reports; the final dump equals the model; a SIGTERM at 300 s exits 0 with every acknowledged write durable | `engine_mixed_load.py BIN OUT --engine strata --secs 600 --term-at 300` on TSan and on ASan builds |
-| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record reader registry gives 503s, not errors | `stall_load.py --overload light 4` and `--overload heavy 4` (4x the saturating rate, K3); `test_readers_cap` |
+| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record index registry gives 503s, not errors | `stall_load.py --overload light 4` and `--overload heavy 4` (4x the saturating rate, K3); `test_readers_cap` |
 | **T9** cancellation | A read whose client disconnects frees its reactor within one slice, and the cancel counter rises; a write whose client half-closes completes and is durable | Functional tests: a heavy search disconnected after 50 ms; a PUT then `shutdown(SHUT_WR)` |
 | **T10** Lua bounds | Two calls interleaved on one script keep their own `_doc`; an infinite loop ends at the instruction cap; one inside a `table.sort` comparator ends at the non-yieldable bound; an exponential pattern and an allocation past the cap each end; all 4xx; T4 holds with four looping scripts | Unit tests (the review's `lua_yield_probe` cases among them) plus `stall_load.py --lua-loop 4` |
 | **T11** replaced layer wins by a lot | Dispatch cost per light request is at most half the offload hop's, in CPU and in wall; parity fails (owner, 2026-10-27) | `harness/profile_light.sh` on both binaries at concurrency 1: CPU from frames, wall from K6's timestamps |
 | **T12** no throughput loss | RESTORE docs/s (20,000 accounts) and saturated query QPS each ≥ 1.0x pre-7c `main`, on a host with more than 10 CPUs; the row states its CPU count | `profile_bulk.sh`, `loadtest.py`, interleaved |
-| **T13** every gate | ASan, UBSan, TSan; coverage at TESTING.md's targets; restore corpora replayed; per-open-index cost (entry, turn, `WorkGroup`, strata's three groups, a `DataStorage` handle) at 10,000 open indexes, and the shared reader registry's bytes, stated | strata PLAN, "Every gate"; `small-indexes.md`'s open-index rows |
+| **T13** every gate | ASan, UBSan, TSan; coverage at TESTING.md's targets; restore corpora replayed; per-open-index cost (entry, turn, `WorkGroup`, strata's three groups, a `DataStorage` handle) at 10,000 open indexes, and the per-index reader registry's bytes, stated | strata PLAN, "Every gate"; `small-indexes.md`'s open-index rows |
 
 ## 5. Steps
 

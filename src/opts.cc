@@ -182,6 +182,8 @@ parseOptions(int argc, char** argv)
 		app.add_option("--committers", num_committers, "Number of threads handling the commits.");
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
+		std::size_t max_indexes_per_search = 0;
+		app.add_option("--max-indexes-per-search", max_indexes_per_search, "Most indexes (shards) one search may read; a search over more answers 400. 0 and anything above the database pool size use the pool size.");
 		std::size_t schema_pool_size = SCHEMA_POOL_SIZE;
 		app.add_option("--schema-pool-size", schema_pool_size, "Maximum number of schemas in schema pool.");
 		std::size_t schema_versions_size = SCHEMAS_VERSIONS_CACHE_SIZE;
@@ -384,6 +386,7 @@ parseOptions(int argc, char** argv)
 		o.uid = uid;
 		o.gid = gid;
 		o.database_pool_size = database_pool_size;
+		o.max_indexes_per_search = max_indexes_per_search;
 		o.schema_pool_size = schema_pool_size;
 		o.schema_versions_size =  schema_versions_size;
 		o.scripts_cache_size = scripts_cache_size;

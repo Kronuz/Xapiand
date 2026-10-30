@@ -65,6 +65,7 @@ extern struct opts_t {
 	ssize_t num_committers = 1;
 	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;
+	ssize_t max_indexes_per_search = 0;  // 0: as many as the pool holds open; main() caps it there
 	ssize_t schema_pool_size = 30;
 	ssize_t schema_versions_size = 1000;
 	ssize_t scripts_cache_size = 10;
