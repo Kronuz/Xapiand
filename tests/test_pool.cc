@@ -1110,6 +1110,27 @@ void test_the_integrity_check_takes_the_turn() {
 	CHECK_EQ(result.failure, "");
 }
 
+
+// A chore is awaited by a task that runs on a scheduler, which the chore resumes it on; one that runs on none (task.hh's
+// own sync_wait) would continue on a pool worker, so debug builds abort (X2-N8).
+void test_a_chore_needs_a_scheduler() {
+#ifndef NDEBUG
+	Watchdog watchdog("a chore needs a scheduler");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("scheduler")));
+	Shard shard(*entry.get(), WRITE);
+	std::fflush(nullptr);
+	pid_t pid = ::fork();
+	if (pid == 0) {
+		task::sync_wait(shard.ready());
+		::_exit(0);  // not reached when the assertion is on
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	CHECK_TRUE(WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT);
+#endif
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1141,6 +1162,7 @@ int main(int argc, char** argv) {
 		{"test_the_uuid_is_read_under_the_lock_while_the_index_reopens", test_the_uuid_is_read_under_the_lock_while_the_index_reopens},
 		{"test_released_views_are_reclaimed_by_the_housekeeping", test_released_views_are_reclaimed_by_the_housekeeping},
 		{"test_the_integrity_check_takes_the_turn", test_the_integrity_check_takes_the_turn},
+		{"test_a_chore_needs_a_scheduler", test_a_chore_needs_a_scheduler},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {
