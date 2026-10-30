@@ -93,11 +93,14 @@ void test_registry_shard() {
 
 void test_index_shards() {
 	auto root = make_root();
-	touch(root + "/.xapiand/indexes/.__1/strata/MANIFEST");
 	touch(root + "/a/b/c/.__3/iamglass");
 	touch(root + "/a/b/c/.__3/postlist.glass");
 	auto found = xapian_guard::find(root);
 	CHECK(found == root + "/a/b/c/.__3/iamglass" || found == root + "/a/b/c/.__3/postlist.glass");
+	// Once a strata release has started here (its registry has a strata directory), the tree is not
+	// walked again: a start reads the registry only.
+	touch(root + "/.xapiand/indexes/.__1/strata/MANIFEST");
+	CHECK_EQ(xapian_guard::find(root), "");
 	remove_tree(root);
 
 	root = make_root();

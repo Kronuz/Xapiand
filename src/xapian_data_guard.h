@@ -26,6 +26,7 @@
 // name only, so that a node does not start fresh beside indexes it cannot read.
 
 #include <dirent.h>
+#include <sys/stat.h>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -76,10 +77,28 @@ inline std::string scan(const std::string& root) {
 	return "";
 }
 
-// The first Xapian file in the data directory `directory`: the registry (`.xapiand/indexes`) first, then everything.
+// Whether a strata release already started on this directory: its registry holds a `strata`
+// directory (in the registry or one of its shards).
+inline bool started_by_strata(const std::string& registry) {
+	for (const auto& dir : {registry, registry + "/.__1"}) {
+		struct stat st;
+		if (::stat((dir + "/strata").c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// The first Xapian file in the data directory `directory`: the registry (`.xapiand/indexes`) first;
+// the whole tree only when no strata release has started here, so a strata node with millions of
+// indexes reads one or two entries at start, not its whole tree.
 inline std::string find(const std::string& directory) {
-	auto found = scan(directory + "/.xapiand/indexes");
-	return found.empty() ? scan(directory) : found;
+	const auto registry = directory + "/.xapiand/indexes";
+	auto found = scan(registry);
+	if (!found.empty() || started_by_strata(registry)) {
+		return found;
+	}
+	return scan(directory);
 }
 
 inline constexpr std::string_view UPGRADE_DOC = "https://kronuz.github.io/Xapiand/upgrade/#upgrading-from-100-alpha9";
