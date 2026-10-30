@@ -87,8 +87,10 @@ public:
 
 	// Lets go of the generation now.
 	void release() noexcept {
-		guard_.release();
+		// The admission goes back first: the record's registry (which holds the gate) is kept while the record is
+		// claimed, so the gate is alive for as long as the record is.
 		lease_.reset();
+		guard_.release();
 #ifndef NDEBUG
 		if (counters_ != nullptr) {
 			--counters_->views;

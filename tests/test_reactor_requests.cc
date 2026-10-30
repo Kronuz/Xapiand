@@ -260,7 +260,7 @@ static void test_views_are_acquired_while_the_index_is_replaced() {
 	std::atomic<bool> stop{false};
 	std::atomic<std::size_t> served{0};
 	std::vector<std::thread> readers;
-	for (int t = 0; t < 4; ++t) {
+	for (int t = 0; t < 8; ++t) {
 		readers.emplace_back([&] {
 			while (!stop) {
 				try {
@@ -270,15 +270,18 @@ static void test_views_are_acquired_while_the_index_is_replaced() {
 			}
 		});
 	}
-	for (int i = 0; i < 20; ++i) {
-		engine::sync_wait(strata->reopen());
-		std::this_thread::sleep_for(2ms);
+	const auto kept = strata->view_handles_kept();
+	for (int i = 0; i < 300; ++i) {
+		engine::sync_wait(strata->begin_close());   // retires the index: its views' handle goes
+		CHECK_TRUE(engine::sync_wait(strata->reopen()));   // opens it again with a new handle
 	}
 	stop = true;
 	for (auto& reader : readers) {
 		reader.join();
 	}
 	CHECK_GT(served.load(), 0u);
+	// A reader may still hold the pointer of any handle that was published: none is freed before the index ends.
+	CHECK_EQ(strata->view_handles_kept(), kept + 300);
 }
 
 // A bulk body is parsed in a chore of the request's group, not on the loop (D12): the loop thread spends a fraction of

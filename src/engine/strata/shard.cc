@@ -183,7 +183,7 @@ struct Readers {
 // The hazard records the readers of one index claim: one per view in use, owned by the index's Core.
 class StrataReaders {
 public:
-	explicit StrataReaders(std::size_t records) : registry(records) { }
+	explicit StrataReaders(std::size_t records) : registry(records), gate(static_cast<int>(records)) { }
 	// Whether a reader still holds a record: its guard writes the record back when it lets go.
 	bool claimed() noexcept {
 		for (std::size_t i = 0; i < registry.capacity(); ++i) {
@@ -192,6 +192,10 @@ public:
 		return false;
 	}
 	::strata::reader_registry registry;
+	// Admits the readers of this index: a view past the cap is refused (busy) before it takes a record, so the
+	// registry never runs out (docs/mechanisms/reader-views.md, Limits). It lives with the registry, which
+	// outlives every guard, because a view returns its admission when it lets go.
+	reactor::AdmissionGate gate;
 };
 
 // The index of one shard and the state its handles share. Everything that changes the index (the writes,
@@ -210,9 +214,6 @@ struct Core {
 	// (a handle of a replaced index raises index_closed when it is used).
 	std::atomic<const Readers*> readers{nullptr};
 	std::vector<std::unique_ptr<const Readers>> handles;   // the owner's: appended under the turn, never read by readers
-	// Admits the readers of this index: a view past the cap is refused (busy) before it takes a record, so the
-	// registry never runs out (docs/mechanisms/reader-views.md, Limits).
-	reactor::AdmissionGate view_gate{0};
 	std::string uuid;
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
 	std::atomic<bool> retiring{false};  // the index is being replaced or closed: its readers are let go of
@@ -464,7 +465,6 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		core->dir = dir;
 		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);
 		core->reader_registry = std::make_shared<StrataReaders>(host.readers_per_index);
-		core->view_gate.limit = static_cast<int>(host.readers_per_index);
 		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
 		core->options.readers = &core->reader_registry->registry;
@@ -1492,7 +1492,14 @@ Shard::declared_fields() const
 std::uint64_t
 Shard::views_refused() const noexcept
 {
-	return handle_->core->view_gate.rejected.load(std::memory_order_relaxed);
+	return handle_->core->reader_registry->gate.rejected.load(std::memory_order_relaxed);
+}
+
+
+std::size_t
+Shard::view_handles_kept() const noexcept
+{
+	return handle_->core->handles.size();
 }
 
 
@@ -1514,7 +1521,7 @@ Shard::view() const
 		if (readers == nullptr) {
 			throw Error(errc::closed, "The strata index is closed");
 		}
-		auto lease = core.view_gate.enter();
+		auto lease = core.reader_registry->gate.enter();
 		if (!lease) {
 			throw Error(errc::busy, "Too many concurrent reads of this index");
 		}

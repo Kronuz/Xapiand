@@ -120,6 +120,10 @@ public:
 	// The views refused so far because the index's readers were at their cap (an overload: busy).
 	std::uint64_t views_refused() const noexcept;
 
+	// The views' handles this index has published and keeps until it ends (one per open): a reader that loaded the
+	// pointer of a replaced index finds it valid.
+	std::size_t view_handles_kept() const noexcept;
+
 	// Names the index behind the handle: handles of one shard share it.
 	const void* identity() const noexcept;
 

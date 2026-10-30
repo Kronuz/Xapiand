@@ -3128,7 +3128,9 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 		// The view is a task on this reactor's scheduler: it suspends for a turn, a chore or a
 		// slice, and the loop serves other requests meanwhile.
 		auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
-		assert(host != nullptr && "a request runs on a reactor bound to its host");
+		if (host == nullptr) {
+			THROW(Error, "The request does not run on a reactor bound to its host");
+		}
 		engine::Run run(*host);
 		try {
 			co_await run.await(request.decode_large_body());
