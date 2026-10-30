@@ -984,6 +984,24 @@ void test_readers_cap() {
 	CHECK_EQ(served.hits(), 2u);
 }
 
+// FLUSH closes every index nobody uses and returns when they are closed (X3).
+void test_flush_closes_every_idle_index_before_it_returns() {
+	Watchdog watchdog("flush");
+	DatabasePool pool(8);
+	for (int i = 0; i < 3; ++i) {
+		auto entry = pool.spawn(Endpoint(fresh(("flush" + std::to_string(i)).c_str())));
+		Shard shard(*entry.get(), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+	}   // nobody uses the three indexes now
+	engine::sync_wait(pool.flush());
+	std::size_t seen = 0;
+	for (auto& entry : pool.endpoints()) {
+		CHECK_TRUE(A::state(*entry.get()) == ShardEndpoint::State::empty);
+		++seen;
+	}
+	CHECK_EQ(seen, 3u);
+}
+
 // A close waits for the readers that hold views of the index, and while it waits it holds no turn: a writer
 // or a refresh that needs the turn is not behind a drain (X3-3).
 void test_a_close_drains_its_readers_without_the_turn() {
@@ -1262,6 +1280,7 @@ int main(int argc, char** argv) {
 		{"test_readers_cap", test_readers_cap},
 		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},
 		{"test_a_close_drains_its_readers_without_the_turn", test_a_close_drains_its_readers_without_the_turn},
+		{"test_flush_closes_every_idle_index_before_it_returns", test_flush_closes_every_idle_index_before_it_returns},
 		{"test_a_search_over_more_indexes_than_records_is_served", test_a_search_over_more_indexes_than_records_is_served},
 		{"test_search_fanout_limit", test_search_fanout_limit},
 		{"test_a_commit_that_times_out_leaves_the_write_standing", test_a_commit_that_times_out_leaves_the_write_standing},

@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 
 #include "http_handler.h"                   // Kronuz/http: HttpHandler, ResponseWriter, BodySink
@@ -45,6 +46,9 @@
 // on the connection's reactor: it rebuilds an application Request from the library's
 // http::Request, awaits the route table's selected view as a task on that reactor's
 // scheduler, and emits the response through the library ResponseWriter.
+// The largest body a request buffers (http answers 413 past it). A stored blob past it streams (docs/design/phase7c.md D9, D12).
+inline constexpr std::size_t BUFFERED_BODY_CAP = 16u * 1024 * 1024;
+
 class SearchService : public http::HttpHandler {
 public:
 	asio::awaitable<void> handle(http::Request& request, http::ResponseWriter& response) override;

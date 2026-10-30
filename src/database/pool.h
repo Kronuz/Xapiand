@@ -133,6 +133,41 @@ private:
  *                                                             |_|
  */
 
+// The largest blob a streamed upload stores: a record of the data storage is at most 4 GiB - 1 bytes, framing included.
+inline constexpr std::uint64_t STORED_UPLOAD_LIMIT = 0xFFFFFFFFull - 1024;
+
+// A blob being written to a volume of its own, chunk by chunk (docs/design/phase7c.md D9). Each step is a chore of
+// the group it is given, so the request that streams the body waits for none of them on its reactor. The record is
+// uncompressed and has the framing of any `stored` record (the content type, then the blob), so it reads back like one.
+class StoredUpload {
+public:
+	~StoredUpload();
+	StoredUpload(const StoredUpload&) = delete;
+	StoredUpload& operator=(const StoredUpload&) = delete;
+
+	// Writes a chunk of the blob. The chunks add up to the size the upload was begun with.
+	task::task<void> append(std::string chunk);
+
+	// Ends the record and syncs the volume: the blob is then durable and `locator()` names it.
+	task::task<void> end();
+
+	// Abandons the upload and removes its volume. Awaited on every path that does not end().
+	task::task<void> abort() noexcept;
+
+	// Where the record is, once end() ran.
+	ssize_t volume() const noexcept;
+	size_t offset() const noexcept;
+
+private:
+	friend class ShardEndpoint;
+	struct Impl;
+	StoredUpload(std::unique_ptr<Impl> impl, engine::Chores& chores);
+
+	std::unique_ptr<Impl> impl;
+	engine::Chores& chores;
+};
+
+
 // One registry entry: an index by path.
 class ShardEndpoint : public Endpoint
 {
@@ -183,6 +218,9 @@ private:
 	std::uint64_t committed_ = 0;           // the writes the last commit covered
 #ifdef XAPIAND_DATA_STORAGE
 	std::unique_ptr<DataStorage> writable_storage;
+	// The next volume number nobody has: the shared writer's rollover and each streamed upload take theirs from
+	// here, so no volume has two writers (docs/design/phase7c.md D9).
+	std::atomic<std::uint64_t> next_volume_{1};
 #endif /* XAPIAND_DATA_STORAGE */
 
 	// The commit in flight, if any: a write at or below `covers` joins it.
@@ -295,6 +333,10 @@ private:
 	std::pair<std::string, std::string> storage_push_blobs_blocking(std::string&& doc_data);
 	task::task<std::pair<std::string, std::string>> storage_push_blobs(engine::Chores& chores, std::string doc_data);
 	task::task<void> storage_commit(engine::Chores& chores);
+
+	// Begins a streamed upload of a blob of `size` bytes with content type `ct_type` into a volume of its own. Raises
+	// ClientError when the record could not fit a volume (the request's 413).
+	task::task<std::unique_ptr<StoredUpload>> upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size);
 	std::string storage_read_blocking(const Locator& locator);
 	std::string storage_read_blocking(std::string_view key);
 #endif /* XAPIAND_DATA_STORAGE */

@@ -26,6 +26,7 @@
 #include <algorithm>              // for std::move
 #include <cassert>                // for assert
 #include <optional>                // for std::optional
+#include <unistd.h>                // for unlink
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
 #include "database/data.h"        // for Locator
@@ -479,6 +480,15 @@ ShardEndpoint::open_index_blocking(int flags)
 
 #ifdef XAPIAND_DATA_STORAGE
 	writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
+	{
+		// The shared writer continues in the newest volume on disk; uploads and rollovers take the numbers above it.
+		unsigned long long newest = 0;
+		try {
+			newest = writable_storage->get_volumes_range(DATA_STORAGE_PATH).second;
+		} catch (const StorageNotFound&) { }
+		writable_storage->volume = static_cast<uint32_t>(newest);
+		next_volume_.store(newest + 1, std::memory_order_relaxed);
+	}
 #endif  // XAPIAND_DATA_STORAGE
 
 #if XAPIAND_DATABASE_WAL
@@ -1075,19 +1085,18 @@ ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
 					while (true) {
 						try {
 							if (writable_storage->closed()) {
-								writable_storage->volume = writable_storage->get_volumes_range(DATA_STORAGE_PATH).second;
 								writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 							}
 							offset = writable_storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
 							break;
 						} catch (StorageEOF) {
-							++writable_storage->volume;
+							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
 							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 						} catch (const StorageLegacyReadOnly&) {
 							// The latest volume is a legacy v1 volume (read-only).
 							// Start a fresh v2 volume above it for new writes; the
 							// old v1 volumes stay readable and age out over time.
-							++writable_storage->volume;
+							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
 							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 						}
 					}
@@ -1121,6 +1130,134 @@ ShardEndpoint::storage_commit(engine::Chores& chores_)
 	if (writable_storage) {
 		co_await chores_.run(engine::ChoreClass::flush, [this] { writable_storage->commit(); });
 	}
+}
+
+
+// The state of a streamed upload: a storage of its own on a volume nobody else writes, and the record being streamed
+// into it. Every call that touches the device runs in a chore.
+struct StoredUpload::Impl {
+	ShardEndpoint& entry;
+	std::uint64_t volume;
+	std::unique_ptr<DataStorage> storage;
+	std::optional<DataStorage::StreamWriter> writer;
+	std::uint32_t record_offset = 0;
+	bool ended = false;
+	bool aborted = false;
+
+	Impl(ShardEndpoint& entry_, std::uint64_t volume_) : entry(entry_), volume(volume_) { }
+
+	std::string name() const {
+		return strings::format(DATA_STORAGE_PATH "{}", volume);
+	}
+};
+
+
+StoredUpload::StoredUpload(std::unique_ptr<Impl> impl_, engine::Chores& chores_) : impl(std::move(impl_)), chores(chores_) { }
+
+
+StoredUpload::~StoredUpload()
+{
+	// An upload that neither ended nor was aborted leaves a volume behind: say so, a later reclaim collects it.
+	if (impl && !impl->ended && !impl->aborted) {
+		L_WARNING("A streamed upload of {} was dropped without ending or aborting", repr(impl->name()));
+	}
+}
+
+
+ssize_t
+StoredUpload::volume() const noexcept
+{
+	return static_cast<ssize_t>(impl->volume);
+}
+
+
+size_t
+StoredUpload::offset() const noexcept
+{
+	return impl->record_offset;
+}
+
+
+task::task<void>
+StoredUpload::append(std::string chunk)
+{
+	co_await chores.run(engine::ChoreClass::flush, [this, &chunk] { impl->writer->append(chunk); });
+}
+
+
+task::task<void>
+StoredUpload::end()
+{
+	co_await chores.run(engine::ChoreClass::flush, [this] {
+		impl->record_offset = impl->writer->commit();   // the data is synced, then the volume's header publishes the record
+		impl->writer.reset();
+		impl->storage->close();
+	});
+	impl->ended = true;
+}
+
+
+task::task<void>
+StoredUpload::abort() noexcept
+{
+	if (impl->ended || impl->aborted) {
+		co_return;
+	}
+	impl->aborted = true;
+	try {
+		co_await chores.run(engine::ChoreClass::flush, [this] {
+			impl->writer.reset();
+			if (impl->storage) {
+				impl->storage->close();
+			}
+			const auto file = strings::format("{}/{}", impl->entry.path, impl->name());
+			::unlink(file.c_str());
+		});
+	} catch (...) {
+		L_EXC("Unable to remove the volume of an aborted upload");
+	}
+}
+
+
+task::task<std::unique_ptr<StoredUpload>>
+ShardEndpoint::upload_begin(engine::Chores& chores_, std::string ct_type, std::uint64_t size)
+{
+	if (!writable_storage) {
+		THROW(ClientError, "The index has no data storage to upload a blob to");
+	}
+	// The record is the content type, then the blob, as a `stored` record is: the framing is written first and
+	// the blob's bytes follow.
+	static_assert(STORED_UPLOAD_LIMIT + 1024 == DataStorage::stream_max_size, "the upload limit leaves 1 KiB for the framing");
+	std::string head = serialise_string(ct_type) + serialise_length(size);
+	const std::uint64_t record = head.size() + size;
+	if (record > DataStorage::stream_max_size) {
+		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size - head.size()));
+	}
+
+	auto impl = std::make_unique<StoredUpload::Impl>(*this, next_volume_.fetch_add(1));
+	std::exception_ptr error;
+	try {
+		co_await chores_.run(engine::ChoreClass::flush, [&] {
+			impl->storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_SYNC_MODE);
+			impl->storage->open(impl->name());
+			impl->writer.emplace(*impl->storage, record);
+			impl->writer->append(head);
+		});
+	} catch (...) {
+		error = std::current_exception();
+	}
+	std::unique_ptr<StoredUpload> upload(new StoredUpload(std::move(impl), chores_));
+	if (error) {
+		co_await upload->abort();
+		try {
+			std::rethrow_exception(error);
+		} catch (const StorageTooLarge&) {
+			THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size));
+		} catch (const StorageEOF&) {
+			THROW(PayloadTooLarge, "The blob does not fit a volume of the data storage");
+		}
+	}
+	co_return upload;
 }
 
 
@@ -1583,6 +1720,16 @@ Shard::storage_get_stored(const Locator& locator)
 	co_await ready();
 	co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(locator); });
 	co_return value;
+}
+
+
+task::task<std::unique_ptr<StoredUpload>>
+Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t size)
+{
+	L_CALL("Shard::upload_begin()");
+
+	co_await ready();
+	co_return co_await endpoint.upload_begin(chores, std::move(ct_type), size);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 

@@ -50,8 +50,6 @@
 
 
 
-class DocPreparer;
-class DocIndexer;
 
 class MsgPack;
 
@@ -122,8 +120,6 @@ public:
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
-	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> doc_preparer_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> doc_indexer_pool;
 
 	std::atomic<State> state;
 	std::string node_name;

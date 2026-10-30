@@ -87,8 +87,8 @@ E2E above, load, soak/stress, benchmarks, and the
 - **Services on the reactor.** There is no libev and no `Worker` tree any more.
   `XapiandManager` runs a control-plane `reactor::Reactor`; the HTTP
   service runs on the [reactor](https://github.com/Kronuz/reactor)
-  library's shared-nothing loops, with blocking work offloaded to its worker pool.
-  Never block a reactor thread.
+  library's shared-nothing loops; a request is a task on its loop and device work is a chore
+  on one `WorkPool`. Never block a reactor thread.
 - **MsgPack as the universal value.** JSON, MessagePack, and internal objects are
   all `MsgPack` (from the [msgpack](https://github.com/Kronuz/msgpack) library), a
   copy-on-write wrapper. Reserved keys are

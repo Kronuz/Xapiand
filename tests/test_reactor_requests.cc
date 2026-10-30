@@ -30,6 +30,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <ctime>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -49,7 +50,11 @@
 #include "engine/strata/shard.h"
 #include "engine/strata/viewed.h"
 #include "engine/sync.h"
+#include "http_body_stream.h"
+#include "http_message.h"
 #include "reactor.h"
+#include "server/search_service.h"
+#include "server/search_views.h"
 #include "task.hh"
 
 using namespace std::chrono_literals;
@@ -276,6 +281,99 @@ static void test_views_are_acquired_while_the_index_is_replaced() {
 	CHECK_GT(served.load(), 0u);
 }
 
+// A bulk body is parsed in a chore of the request's group, not on the loop (D12): the loop thread spends a fraction of
+// the parse's CPU time on a body that takes `inline_ms` of CPU to parse.
+static double thread_cpu_ms() {
+	timespec ts;
+	::clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+	return static_cast<double>(ts.tv_sec) * 1e3 + static_cast<double>(ts.tv_nsec) / 1e6;
+}
+
+static void test_a_bulk_body_is_parsed_off_the_loop() {
+	DatabasePool pool(8);
+	const std::string line = R"({"_id": 1, "user": "kronuz", "message": "a line of the bulk body that is a little long to parse"})" "\n";
+	std::string body;
+	std::size_t lines = 0;
+	double inline_ms = 0;
+	while (inline_ms < 80 && body.size() < (96u << 20)) {
+		for (std::size_t i = 0; i < 100000; ++i) {
+			body += line;
+			++lines;
+		}
+		Request probe;
+		probe.mode = Request::Mode::STREAM_NDJSON;
+		probe.has_content_length = true;
+		const auto start = thread_cpu_ms();
+		probe.append(body.data(), body.size());
+		probe.append(nullptr, 0);
+		inline_ms = thread_cpu_ms() - start;
+	}
+	CHECK_GE(inline_ms, 80.0);   // a parse long enough to tell
+
+	Loop loop;
+	auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+	http::Request hreq;
+	hreq.body_stream = stream;
+	Request request;
+	request.http_req = &hreq;
+	request.mode = Request::Mode::STREAM_NDJSON;
+	request.has_content_length = true;
+	IndexChores chores(pool.work_pool());
+	request.parse_chores = &chores;
+
+	asio::co_spawn(loop.reactor.io(), [&]() -> asio::awaitable<void> {
+		constexpr std::size_t piece = 64 * 1024;
+		for (std::size_t at = 0; at < body.size(); at += piece) {
+			co_await stream->push(body.substr(at, piece));
+		}
+		stream->finish();
+	}, asio::detached);
+	std::size_t total = 0;
+	const auto start = thread_cpu_ms();
+	loop.run([&]() -> task::task<void> {
+		std::vector<MsgPack> batch;
+		while (co_await request.next_batch(batch)) {
+			total += batch.size();
+		}
+	});
+	const double loop_ms = thread_cpu_ms() - start;
+	CHECK_EQ(total, lines);
+	CHECK_LT(loop_ms, inline_ms / 3);   // the parse ran on the pool's workers
+}
+
+// A loop with more demoted handles than its cap refuses the next request before its body is read (D2): 503 with Retry-After.
+static void test_a_loop_past_its_demoted_cap_refuses_new_requests() {
+	SearchService service;
+	Loop loop;
+	int status = 0;
+	unsigned retry_after = 0;
+	bool admitted_below_the_cap = false;
+	loop.run([&]() -> task::task<void> {
+		const http::Request request;
+		admitted_below_the_cap = service.create_extension(request) != nullptr;
+		for (int i = 0; i < 300; ++i) {
+			loop.host.spawn([]() -> task::task<void> {
+				co_await task::yield_awaiter{true};   // spends its slice: waits demoted
+			}());
+		}
+		co_await task::yield();   // every spawned task has run and parked itself demoted
+		CHECK_GE(loop.host.scheduler().demoted(), 256u);
+		try {
+			(void)service.create_extension(request);
+		} catch (const http::RequestRejected& rejected) {
+			status = rejected.status();
+			retry_after = rejected.retry_after();
+		}
+		while (loop.host.scheduler().demoted() != 0) {
+			co_await task::yield();
+		}
+	});
+	CHECK_TRUE(admitted_below_the_cap);
+	CHECK_EQ(status, 503);
+	CHECK_EQ(retry_after, 1u);
+}
+
+
 #ifndef NDEBUG
 struct RuleBroken {
 	std::string waits_for;
@@ -360,6 +458,8 @@ TEST_MAIN(
 	test_a_cancelled_search_stops_and_lets_go,
 	test_the_cap_is_an_admission_that_counts,
 	test_views_are_acquired_while_the_index_is_replaced,
+	test_a_bulk_body_is_parsed_off_the_loop,
+	test_a_loop_past_its_demoted_cap_refuses_new_requests,
 	test_a_task_that_holds_a_view_waits_for_nothing,
 	test_the_rule_allows_a_yield_and_a_wait_after_the_view
 )
@@ -368,6 +468,8 @@ TEST_MAIN(
 	test_a_search_with_a_budget_shares_its_loop,
 	test_a_cancelled_search_stops_and_lets_go,
 	test_the_cap_is_an_admission_that_counts,
-	test_views_are_acquired_while_the_index_is_replaced
+	test_views_are_acquired_while_the_index_is_replaced,
+	test_a_bulk_body_is_parsed_off_the_loop,
+	test_a_loop_past_its_demoted_cap_refuses_new_requests
 )
 #endif

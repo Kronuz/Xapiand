@@ -49,7 +49,7 @@
 #include "allocators.h"                          // for allocators::total_allocated
 #include "color_tools.hh"                        // for color
 #include "database/cleanup.h"                    // for DatabaseCleanup
-#include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
+#include "database/handler.h"                    // for DatabaseHandler, committer
 #include "database/pool.h"                       // for DatabasePool
 #include "engine/host_asio.h"                    // for engine::AsioHost
 #include "database/schemas_lru.h"                // for SchemasLRU
@@ -249,8 +249,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, readers_per_index())),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
-	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
 	  state(State::RESET),
 	  node_name(opts.node_name),
 	  _shutdown_asap(0),
@@ -841,6 +839,7 @@ XapiandManager::make_servers()
 		http_service->set_bind_options(bind_options);
 		if (lag_probe_enabled()) { http_service->enable_lag_probe(); }
 		http_service->enable_compression(search_compression());
+		http_service->set_max_body(BUFFERED_BODY_CAP);
 
 		// Each reactor's host: the scheduler its requests' tasks resume through. The loop's thread
 		// is bound to it before the loop serves anything.
@@ -928,39 +927,8 @@ XapiandManager::join()
 	if (http_service) {
 		L_MANAGER("Stopping the HTTP service!");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
-		http_service->stop();  // stops the reactors + joins the offload pools
+		http_service->stop();  // aborts the requests, then stops and joins the reactors
 	}
-
-	////////////////////////////////////////////////////////////////////
-	if (doc_preparer_pool) {
-		L_MANAGER("Finishing bulk document preparer threads pool!");
-		doc_preparer_pool->finish();
-
-		L_MANAGER("Waiting for {} bulk document preparer thread{}...", doc_preparer_pool->running_size(), (doc_preparer_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document preparers...", "Bulk document preparers finished!");
-		while (!doc_preparer_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-	////////////////////////////////////////////////////////////////////
-	if (doc_indexer_pool) {
-		L_MANAGER("Finishing bulk document indexer threads pool!");
-		doc_indexer_pool->finish();
-
-		L_MANAGER("Waiting for {} bulk document indexer thread{}...", doc_indexer_pool->running_size(), (doc_indexer_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document indexers...", "Bulk document indexers finished!");
-		while (!doc_indexer_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 
 	////////////////////////////////////////////////////////////////////
 	auto& committer_obj = committer(false);
@@ -1055,9 +1023,6 @@ XapiandManager::join()
 	database_pool.reset();
 
 	wal_writer.reset();
-
-	doc_indexer_pool.reset();
-	doc_preparer_pool.reset();
 
 
 	database_cleanup.reset();

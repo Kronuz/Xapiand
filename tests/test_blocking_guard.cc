@@ -124,6 +124,17 @@ static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires(destroy_on_loop));
 }
 
+// The chores of an index end with a WorkGroup, and joining one is a wait: on a loop it is left to a worker.
+static void test_quiet_when_a_loop_drops_a_group_of_chores() {
+	CHECK_FALSE(guard_fires([] {
+		DatabasePool pool(8);
+		on_loop([&] {
+			IndexChores chores(pool.work_pool());
+		});
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));   // the worker that joins it
+	}));
+}
+
 static void test_fires_on_scheduler_thread() {
 	CHECK_TRUE(guard_fires([] {
 		Idle idle;
@@ -177,4 +188,4 @@ static void test_quiet_off_loop() {
 	CHECK_EQ(engine::blocking_violations(), 0u);
 }
 
-TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop)
+TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop, test_quiet_when_a_loop_drops_a_group_of_chores)

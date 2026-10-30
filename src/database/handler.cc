@@ -52,7 +52,6 @@
 #include "opts.h"                           // for opts::
 #include "engine/open.h"                    // for engine::check
 #include "engine/search.h"                  // for engine::search, prepare
-#include "engine/sync.h"                    // for engine::sync_wait
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -487,6 +486,104 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 }
 
 
+task::task<DatabaseHandler::UploadedBlob>
+DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_type, size_t size, engine::Chores& chores, BodyChunks& body)
+{
+	L_CALL("DatabaseHandler::upload_stored({}, {}/{}, {})", repr(document_id.to_string()), ct_type.first, ct_type.second, size);
+
+	if (!has_db_writable(flags)) {
+		THROW(Error, "Database is read-only");
+	}
+	if (!document_id) {
+		THROW(ClientError, "A blob too big to buffer needs a document id in the URL");
+	}
+	if (size == 0) {
+		THROW(ClientError, "A streamed blob has at least a byte");
+	}
+
+	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: a
+	// numeric id says it, and any other id is placed by its hash. A new numeric id is placed by the load of the shards
+	// when it is indexed, so it cannot stream.
+	const auto term_id = co_await get_prefixed_term_id(document_id);
+	const size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		if (term_id[0] == 'N') {
+			const engine::docid did = sortable_unserialise(term_id.substr(1));
+			if (did == 0u) {
+				THROW(ClientError, "A blob too big to buffer needs a document id in the URL");
+			}
+			shard_num = (did - 1) % n_shards;
+		} else {
+			shard_num = key_placement_hash(term_id) % n_shards;
+		}
+	}
+
+	lock_shard lk_shard(endpoints[shard_num], flags);
+	auto upload = co_await lk_shard->upload_begin(chores, ct_type.to_string(), size);
+	std::exception_ptr error;
+	try {
+		size_t received = 0;
+		std::string chunk;
+		while (co_await body.next(chunk)) {
+			received += chunk.size();
+			if (received > size) {
+				THROW(ClientError, "The blob is longer than its Content-Length");
+			}
+			co_await upload->append(std::move(chunk));
+			chunk = std::string();
+		}
+		if (received != size) {
+			THROW(ClientError, "The blob is shorter than its Content-Length");
+		}
+		co_await upload->end();
+	} catch (...) {
+		error = std::current_exception();
+	}
+	if (error) {
+		co_await upload->abort();
+		std::rethrow_exception(error);
+	}
+	UploadedBlob blob;
+	blob.volume = upload->volume();
+	blob.offset = upload->offset();
+	blob.size = size;
+	co_return blob;
+}
+
+
+task::task<DocumentInfo>
+DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit)
+{
+	L_CALL("DatabaseHandler::index_uploaded({}, {}, {}/{})", repr(document_id.to_string()), document_ver, ct_type.first, ct_type.second);
+
+	if (!has_db_writable(flags)) {
+		THROW(Error, "Database is read-only");
+	}
+
+	const auto term_id = document_id ? co_await get_prefixed_term_id(document_id) : std::string();
+
+	int t = CONFLICT_RETRIES;
+	while (true) {
+		try {
+			Data data;
+			engine::docid did = 0;
+			if (!term_id.empty()) {
+				try {
+					did = co_await get_docid_term(term_id);
+				} catch (const engine::Error& error) {
+					if (!engine::is_missing(error.kind)) { throw; }
+				}
+			}
+			data.update(ct_type, blob.volume, blob.offset, blob.size);
+			co_return co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
+		} catch (const engine::Error& error) {
+			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
+		}
+	}
+}
+
+
 task::task<DocumentInfo>
 DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, bool create, const MsgPack& patches, bool commit)
 {
@@ -866,7 +963,7 @@ DatabaseHandler::dump_documents(int fd)
 }
 
 
-std::string
+task::task<std::string>
 DatabaseHandler::restore_documents(int fd)
 {
 	L_CALL("DatabaseHandler::restore_documents()");
@@ -875,12 +972,12 @@ DatabaseHandler::restore_documents(int fd)
 	msgpack::unpacker unpacker;
 	query_field_t query_field;
 	query_field.commit = true;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
+	DocIndexer indexer(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
+	std::exception_ptr error;
 	try {
 		while (true) {
 			auto manager = XapiandManager::manager();
 			if (!manager || manager->is_detaching()) {
-				indexer->finish();
 				break;
 			}
 			manager.reset();
@@ -891,23 +988,25 @@ DatabaseHandler::restore_documents(int fd)
 			sha256.add(unpacker.buffer(), bytes);
 			unpacker.buffer_consumed(bytes);
 
+			std::vector<MsgPack> batch;
 			msgpack::object_handle result;
 			while (unpacker.next(result)) {
-				indexer->prepare(result.get());
+				batch.emplace_back(result.get());
 			}
+			co_await indexer.index(batch);
 
 			if (!bytes) {
 				break;
 			}
 		}
-
-		indexer->wait();
-
-		return sha256.getHash();
 	} catch (...) {
-		indexer->finish();
-		throw;
+		error = std::current_exception();
 	}
+	co_await indexer.commit();   // what was indexed stays, whatever ended the stream
+	if (error) {
+		std::rethrow_exception(error);
+	}
+	co_return sha256.getHash();
 }
 
 
@@ -1926,342 +2025,162 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
  *
  */
 
-DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field) :
-	indexers(0),
-	started(0),
-	running(0),
-	finished(false),
-	ready(false),
+DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, task::budget* budget) :
 	endpoints(endpoints),
 	flags(flags),
 	echo(echo),
 	comments(comments),
 	first(query_field.offset),
 	maxitems(query_field.limit),
-	_prepared(0),
-	_processed(0),
-	_indexed(0),
-	_total(0),
-	_idx(0),
-	bulk_cnt(0)
+	db_handler(endpoints, flags)
 {
+	db_handler.budget = budget;
 }
 
 
-DocIndexer::~DocIndexer()
+namespace {
+
+// catch_http_errors for a task: the status and message an exception of the awaited work maps to.
+template <typename F>
+task::task<http_errors_t>
+co_catch_http_errors(F work)
 {
+	std::exception_ptr error;
 	try {
-		if (indexed()) {
-			DatabaseHandler db_handler(endpoints, flags);
-			engine::sync_wait(db_handler.commit());
-		}
+		co_await work();
 	} catch (...) {
-		L_EXC("Unhandled exception in DocIndexer destructor");
+		error = std::current_exception();
 	}
-}
-
-
-void
-DocPreparer::operator()()
-{
-	L_CALL("DocPreparer::operator()()");
-
-	assert(indexer);
-	auto http_errors = catch_http_errors([&]{
-		DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
-		auto prepared = engine::sync_wait(db_handler.prepare_document(obj, idx + 1));
-		// Route document to proper indexer:
-		auto n_shards = indexer->endpoints.size();
-		auto& term_id = std::get<0>(prepared);
-		auto shard_num = key_placement_hash(term_id) % n_shards;
-		if unlikely(!indexer->ready_queues[shard_num % indexer->indexers]->enqueue(
-			std::make_tuple(
-				std::move(term_id),
-				std::move(std::get<1>(prepared)),
-				std::move(std::get<2>(prepared)),
-				idx
-			)
-		)) {
-			L_ERR("Prepared document: cannot enqueue to index!");
-			return 1;
+	co_return catch_http_errors([&] {
+		if (error) {
+			std::rethrow_exception(error);
 		}
-		indexer->_prepared.fetch_add(1, std::memory_order_acq_rel);
 		return 0;
 	});
-	if (http_errors.ret) {
-		if unlikely(!indexer->ready_queues[random_int(0, indexer->indexers - 1)]->enqueue(
-			std::make_tuple(
-				std::string{},
-				engine::Document{},
-				MsgPack{
-					{ RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
-					{ RESPONSE_TYPE, http_status_str(http_errors.error_code) },
-					{ RESPONSE_MESSAGE, http_errors.error }
-				},
-				idx
-			)
-		)) {
-			L_ERR("Prepared document: cannot enqueue to index!");
-		}
-	}
 }
 
+}  // namespace
 
-void
-DocIndexer::_prepare(MsgPack&& obj)
+
+task::task<void>
+DocIndexer::index_one(MsgPack&& obj)
 {
-	L_CALL("DocIndexer::_prepare(<obj>)");
+	L_CALL("DocIndexer::index_one(<obj>)");
 
 	if (!obj.is_map()) {
 		L_ERR("Indexing object has an unsupported type: {}", enum_name(obj.get_type()));
-		return;
+		co_return;
 	}
 
 	if (first) {
 		--first;
-		return;
+		co_return;
 	}
 
-	bool last = false;
-	if (maxitems) {
-		last = !--maxitems;
-	} else {
-		return;
+	if (!maxitems) {
+		co_return;
+	}
+	--maxitems;
+
+	const auto idx = _idx++;
+	++_total;
+	if (_results.size() <= idx) {
+		_results.resize(idx + 1, MsgPack::MAP());
 	}
 
-	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
-	// Add documents in the bulk buffer as soon as is filled.
-	if (bulk_cnt == bulk.size() || last) {
-		auto manager = XapiandManager::manager();
-		if (manager) {
-			if (!indexers) {
-				indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
-				ready_queues.reserve(indexers);
-				for (int i = 0; i < indexers; ++i) {
-					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, engine::Document, MsgPack, size_t>>>());
-					manager->doc_indexer_pool->enqueue(shared_from_this());
-				}
-			}
-
-			_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
-			if unlikely(!manager->doc_preparer_pool->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-				_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
-				L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-			}
-		}
-		bulk_cnt = 0;
+	// Prepare: the document the engine will index, and where it goes.
+	std::tuple<std::string, engine::Document, MsgPack> prepared;
+	auto prepare_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
+		prepared = co_await db_handler.prepare_document(obj, idx + 1);
+	});
+	++_processed;
+	MsgPack result;
+	if (prepare_errors.error_code != HTTP_STATUS_OK) {
+		result = MsgPack{
+			{ RESPONSE_STATUS, static_cast<unsigned>(prepare_errors.error_code) },
+			{ RESPONSE_TYPE, http_status_str(prepare_errors.error_code) },
+			{ RESPONSE_MESSAGE, prepare_errors.error }
+		};
+		_results[idx] = std::move(result);
+		co_return;
 	}
-}
+	++_prepared;
 
+	// Apply: the document goes to its shard, in the shard's turn.
+	auto& term_id = std::get<0>(prepared);
+	auto& doc = std::get<1>(prepared);
+	auto& data_obj = std::get<2>(prepared);
+	if (!term_id.empty()) {
+		auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
+			auto info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
 
-void
-DocIndexer::prepare(MsgPack&& obj)
-{
-	L_CALL("DocIndexer::prepare(<obj>)");
-
-	if (obj.is_array()) {
-		for (auto &o : obj) {
-			_prepare(std::move(o));
-		}
-	} else {
-		_prepare(std::move(obj));
-	}
-}
-
-
-void
-DocIndexer::operator()()
-{
-	L_CALL("DocIndexer::operator()()");
-
-	DatabaseHandler db_handler(endpoints, flags);
-
-	running.fetch_add(1, std::memory_order_acq_rel);
-	try {
-		auto indexer = started.fetch_add(1, std::memory_order_acq_rel);
-		if (indexer == indexers - 1) {
-			all_started.notify_one();
-		}
-		auto& ready_queue = *ready_queues[indexer];
-
-		bool ready_ = false;
-		while (!finished.load(std::memory_order_acquire)) {
-			std::tuple<std::string, engine::Document, MsgPack, size_t> prepared;
-			auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
-
-			if unlikely(!ready_) {
-				ready_ = ready.load(std::memory_order_acquire);
-			}
-
-			size_t processed_;
-			if likely(valid) {
-				auto& idx = std::get<3>(prepared);
-				if likely(idx != std::numeric_limits<size_t>::max()) {
-					auto& term_id = std::get<0>(prepared);
-					auto& doc = std::get<1>(prepared);
-					auto& data_obj = std::get<2>(prepared);
-
-					processed_ = _processed.fetch_add(1, std::memory_order_acq_rel) + 1;
-
-					MsgPack obj;
-					if (!term_id.empty()) {
-						auto http_errors = catch_http_errors([&]{
-							auto info = engine::sync_wait(db_handler.replace_document_term(term_id, std::move(doc), false, true, false));
-
-							Document document(info.did, &db_handler);
-
-							if (term_id == "N\x80") {
-								obj[ID_FIELD_NAME] = engine::sync_wait(db_handler.unserialise_term_id(info.term));
-							} else {
-								auto it_id = data_obj.find(ID_FIELD_NAME);
-								if (it_id == data_obj.end()) {
-									obj[ID_FIELD_NAME] = engine::sync_wait(db_handler.unserialise_term_id(info.term));
-								} else {
-									obj[ID_FIELD_NAME] = it_id.value();
-								}
-							}
-
-							if (echo) {
-								obj[VERSION_FIELD_NAME] = info.version;
-
-								if (comments) {
-									obj[RESPONSE_xDOCID] = info.did;
-
-									size_t n_shards = endpoints.size();
-									size_t shard_num = (info.did - 1) % n_shards;
-									obj[RESPONSE_xSHARD] = shard_num + 1;
-									// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
-								}
-							}
-
-							_indexed.fetch_add(1, std::memory_order_acq_rel);
-							return 0;
-						});
-						if (http_errors.error_code != HTTP_STATUS_OK) {
-							obj[RESPONSE_STATUS] = static_cast<unsigned>(http_errors.error_code);
-							obj[RESPONSE_TYPE] = http_status_str(http_errors.error_code);
-							obj[RESPONSE_MESSAGE] = http_errors.error;
-						}
-					} else if (!data_obj.is_undefined()) {
-						obj = std::move(data_obj);
-					}
-					std::lock_guard<std::mutex> lk(_results_mtx);
-					if (_idx > _results.size()) {
-						_results.resize(_idx, MsgPack::MAP());
-					}
-					_results[idx] = std::move(obj);
-				} else {
-					processed_ = _processed.load(std::memory_order_acquire);
-				}
+			if (term_id == "N\x80") {
+				result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
 			} else {
-				processed_ = _processed.load(std::memory_order_acquire);
-			}
-
-			if (ready_) {
-				auto total_ = _total.load(std::memory_order_acquire);
-				if (processed_ == total_) {
-					finish();
-					break;
-				}
-				auto prepared_ = _prepared.load(std::memory_order_acquire);
-				if (prepared_ == total_ && ready_queue.empty()) {
-					break;
+				auto it_id = data_obj.find(ID_FIELD_NAME);
+				if (it_id == data_obj.end()) {
+					result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+				} else {
+					result[ID_FIELD_NAME] = it_id.value();
 				}
 			}
-		}
 
-		if (running.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-			done.notify_one();
+			if (echo) {
+				result[VERSION_FIELD_NAME] = info.version;
+
+				if (comments) {
+					result[RESPONSE_xDOCID] = info.did;
+
+					size_t n_shards = endpoints.size();
+					size_t shard_num = (info.did - 1) % n_shards;
+					result[RESPONSE_xSHARD] = shard_num + 1;
+					// result[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+				}
+			}
+
+			++_indexed;
+		});
+		if (index_errors.error_code != HTTP_STATUS_OK) {
+			result[RESPONSE_STATUS] = static_cast<unsigned>(index_errors.error_code);
+			result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
+			result[RESPONSE_MESSAGE] = index_errors.error;
 		}
-	} catch (...) {
-		if (running.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-			done.notify_one();
-		}
-		throw;
+	} else if (!data_obj.is_undefined()) {
+		result = std::move(data_obj);
 	}
+	_results[idx] = std::move(result);
 }
 
 
-bool
-DocIndexer::wait(double timeout)
+task::task<void>
+DocIndexer::index(std::vector<MsgPack>& batch)
 {
-	L_CALL("DocIndexer::wait(<timeout>)");
+	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
 
-	// Add any missing documents in the bulk buffer.
-	if (bulk_cnt != 0) {
-		auto manager = XapiandManager::manager();
-		if (manager) {
-			if (!indexers) {
-				indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
-				ready_queues.reserve(indexers);
-				for (int i = 0; i < indexers; ++i) {
-					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, engine::Document, MsgPack, size_t>>>());
-					manager->doc_indexer_pool->enqueue(shared_from_this());
-				}
-			}
-
-			_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
-			if unlikely(!manager->doc_preparer_pool->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-				_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
-				L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-			}
-		}
-		bulk_cnt = 0;
-	}
-
-	// Initialize results with empty MAPs.
-	{
-		std::lock_guard<std::mutex> lk(_results_mtx);
-		if (_idx > _results.size()) {
-			_results.resize(_idx, MsgPack::MAP());
-		}
-	}
-
-	// Flag as ready and wake up indexers which could have missed the "ready" check.
-	ready.store(true, std::memory_order_release);
-	for (auto& ready_queue : ready_queues) {
-		ready_queue->enqueue(std::make_tuple(std::string{}, engine::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
-	}
-
-	std::mutex cond_mtx;
-	std::unique_lock<std::mutex> cond_lk(cond_mtx);
-
-	// Wait for all indexers to start.
-	while (!all_started.wait_for(cond_lk, 1s, [this]{
-		return started.load(std::memory_order_acquire) == indexers;
-	})) { }
-
-	// Wait for the indexers to end.
-	auto wait_done_pred = [this]{
-		return !running.load(std::memory_order_acquire);
-	};
-	if (timeout) {
-		if (timeout > 0.0) {
-			auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
-			if (!done.wait_until(cond_lk, timeout_tp, wait_done_pred)) {
-				return false;
+	for (auto& obj : batch) {
+		if (obj.is_array()) {
+			for (auto& o : obj) {
+				co_await index_one(std::move(o));
 			}
 		} else {
-			while (!done.wait_for(cond_lk, 1s, wait_done_pred)) { }
+			co_await index_one(std::move(obj));
 		}
-	} else {
-		if (!wait_done_pred()) {
-			return false;
+		// An object per slice at most: the request gives its reactor back when its slice is spent.
+		if (db_handler.budget != nullptr) {
+			co_await db_handler.budget->checkpoint();
 		}
 	}
-
-	return true;
 }
 
 
-void
-DocIndexer::finish()
+task::task<void>
+DocIndexer::commit()
 {
-	L_CALL("DocIndexer::finish()");
+	L_CALL("DocIndexer::commit()");
 
-	finished.store(true, std::memory_order_release);
-	for (auto& ready_queue : ready_queues) {
-		ready_queue->enqueue(std::make_tuple(std::string{}, engine::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
+	if (_indexed != 0) {
+		DatabaseHandler committer(endpoints, flags);
+		co_await committer.commit();
 	}
 }
 

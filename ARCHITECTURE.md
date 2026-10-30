@@ -38,7 +38,7 @@ utility, wire-format, HTTP-parser, compression, and metrics bundles are pulled b
 | Area | Where | One line |
 |---|---|---|
 | Storage engine | `src/storage.h`, `src/database/`, `src/engine/` | Haystack-style append-only volumes, WAL, schema cache, sharding, and the engine seam over strata. |
-| Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` pools; blocking work offloaded to bounded thread-pools. No libev. |
+| Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` loops; each request is a task on its loop, and device work is a chore on one `WorkPool`. No libev. |
 | Search / query | `src/query_dsl.*`, `src/aggregations/`, `src/multivalue/`, `src/engine/` | JSON/MsgPack DSL and a boolean string language, both compiling to engine queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
 | Serialization | `src/serialise*.{cc,h}`, `src/sortable_serialise.*`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
@@ -86,7 +86,7 @@ main: "main thread" {
   }
 }
 
-svc: "HTTP service  -  a reactor pool (N loops) + a bounded offload thread-pool" {
+svc: "HTTP service  -  a reactor pool (N loops); each request a task on its loop" {
   style.fill: "#e8f5ee"
   http: "HTTP\n(http::HttpAsioService)"
 }
@@ -95,8 +95,7 @@ wrk: "background worker threads (plain std::thread / Thread<> / debouncers)" {
   style.fill: "#eef2f7"
   cl: "DatabaseCleanup\n(std::thread, 60s)"
   wal: "WAL writers\n(Thread<> pool + queue)"
-  doc: "doc preparers / indexers\n(ThreadPools)"
-  deb: "committer / fsyncher\n(debouncers)"
+    deb: "committer / fsyncher\n(debouncers)"
 }
 
 store: "storage" {
@@ -107,7 +106,7 @@ store: "storage" {
 }
 
 clients -> svc: "accept" {style.stroke-dash: 3}
-svc -> store: "offloaded blocking\nIO work"
+svc -> store: "chores on the WorkPool\n(device work)"
 main.manager -> svc: "start on READY"
 wrk.cl -> store.dbp
 ```
@@ -120,10 +119,11 @@ The rules that hold the topology together:
   inline on that loop. Signals reach it through a
   **self-pipe** (a POSIX handler does one async-signal-safe `write()`; the loop drains
   it) — never `asio::post`, which is not async-signal-safe.
-- **The HTTP service is a shared-nothing reactor pool + a bounded offload pool.**
-  Accepted connections are served by per-connection coroutines; the blocking, IO-bound
-  work is `co_await`ed onto the offload pool so the reactor thread never blocks. HTTP
-  starts when the node reaches `READY`.
+- **The HTTP service is a shared-nothing reactor pool.** Accepted connections are served
+  by per-connection coroutines, and each request's view is a task on its loop that
+  suspends for a turn, a chore or a slice, so the reactor thread never blocks; the only
+  work that leaves a loop is a chore on the `WorkPool`. HTTP starts when the node reaches
+  `READY` (`docs/mechanisms/requests-on-the-reactor.md`).
 - **Background work is off-loop.** `DatabaseCleanup` is a bare `std::thread` on a 60 s
   cadence; the WAL writers are a `Thread<>` pool draining a concurrent queue;
   committers/fsynchers are debouncers. None of them touch the control loop.
