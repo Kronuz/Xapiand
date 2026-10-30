@@ -246,8 +246,10 @@ reconciliation on write and support for "foreign" schemas that point at another
 index's document by URI, with cycle detection (`schemas_lru.cc`,
 `MAX_SCHEMA_RECURSION = 10`). **Sharding** maps doc IDs across N shards
 arithmetically (`did = (info.did-1)*n_shards + shard_num + 1`, `shard.cc:1487`);
-`DatabasePool` is an LRU of shard endpoints checked out/in with busy flags
-(`pool.cc`).
+`DatabasePool` is an LRU registry of shard endpoints (`pool.cc`): an open is a single
+flight that users await as tasks, every operation on an index takes that index's turn
+(an async mutex with a deadline), and its device work runs as chores on a shared
+`WorkPool` ([the note](docs/mechanisms/index-registry-and-lease.md)).
 
 ### Networking & the reactor runtime (`src/server/`, `http_asio.h`, `src/manager.*`)
 

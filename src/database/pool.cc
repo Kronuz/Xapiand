@@ -463,6 +463,9 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 			return DropAction::stop;
 		}, endpoint, std::make_unique<ShardEndpoint>(*this, endpoint));
 		database_endpoint = emplaced.first->second.get();
+		if (finished_.load()) {
+			database_endpoint->finished.store(true);  // an entry made during the shutdown opens nothing
+		}
 	} else {
 		database_endpoint = it->second.get();
 	}

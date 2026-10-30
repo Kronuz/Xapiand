@@ -138,7 +138,7 @@ E2E above, load, soak/stress, benchmarks, and the
 
 - Match the surrounding style: heavy `constexpr`, CRTP for zero-overhead
   polymorphism, `string_view` over copies, RAII for every resource (sockets,
-  shard checkouts, locks).
+  shard uses, turns).
 - When adding a field type, reserved word, or aggregation, you'll typically touch
   three places: the reserved vocabulary (`src/reserved/`), the schema/serialise
   layer, and the perfect-hash dispatch. Grep an existing one end-to-end first.

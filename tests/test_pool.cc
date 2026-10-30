@@ -425,10 +425,13 @@ void test_a_read_with_nothing_to_refresh_takes_no_turn() {
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
 	engine::sync_wait(shard.engine_for_read());  // refreshes: nothing is owed now
 	HoldTurn hold(*entry.get(), WRITE);
-	Running running([&] { CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a"); });
+	std::string data;
+	Running running([&] { data = engine::sync_wait(shard.get_view(1))->data(); });
 	std::this_thread::sleep_for(150ms);
 	CHECK_TRUE(running.done());
 	hold.release();
+	running.join();
+	CHECK_EQ(data, "a");
 }
 
 // The debounced autocommit is a task that takes the turn like any request, and commits what is pending.

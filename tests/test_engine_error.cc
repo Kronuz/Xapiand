@@ -53,7 +53,7 @@ void test_fates() {
 	CHECK_TRUE(engine::read_fate(errc::closed) == fate::close_retry);
 	CHECK_TRUE(engine::read_fate(errc::corrupt) == fate::close_fail);
 	CHECK_TRUE(engine::read_fate(errc::database) == fate::close_fail);
-	for (auto kind : {errc::doc_not_found, errc::version_conflict, errc::invalid, errc::syntax, errc::internal}) {
+	for (auto kind : {errc::doc_not_found, errc::version_conflict, errc::invalid, errc::syntax, errc::internal, errc::busy}) {  // busy: the turn did not come; a retry would wait again
 		CHECK_TRUE(engine::read_fate(kind) == fate::fail);
 	}
 	for (auto kind : {errc::doc_not_found, errc::not_found}) {
@@ -120,6 +120,7 @@ void test_http_answers() {
 		{errc::not_found, {HTTP_STATUS_NOT_FOUND, "Not Found: the reason"}},
 		{errc::version_conflict, {HTTP_STATUS_CONFLICT, "Conflict: the reason"}},
 		{errc::not_available, {HTTP_STATUS_SERVICE_UNAVAILABLE, "Service Unavailable: the reason"}},
+		{errc::busy, {HTTP_STATUS_SERVICE_UNAVAILABLE, "Service Unavailable: the reason"}},
 		{errc::reopen, {HTTP_STATUS_SERVICE_UNAVAILABLE, "Service Unavailable: the reason"}},
 		{errc::timeout, {HTTP_STATUS_GATEWAY_TIMEOUT, "Gateway Timeout: the reason"}},
 		{errc::invalid, {HTTP_STATUS_BAD_REQUEST, "Bad Request: the description"}},
