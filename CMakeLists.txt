@@ -512,7 +512,7 @@ include_directories("${traceback_SOURCE_DIR}")
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 628679a2e27b563cf2709a6f35f98f1657baf7b3)
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG e961e447f9ea444081b9f13a68f82d633d499fc4)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
 FetchContent_MakeAvailable(threadpool)
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
@@ -732,12 +732,14 @@ FetchContent_MakeAvailable(queryparser)
 # that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only; the Asio binding
 # is not used here.
 set(TASK_ASIO OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG aa447e726c617c5c10a569409ecf8e024b88750f)
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 9a85e89a2dc560b042a8a41efee9c09c62451db6)  # task main: event, async_mutex, lock_until, await_asio
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
+# strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG c82ac9f25833a1b42999265bc90bec322870268c)  # strata main: defer_io, reclaim_for_space
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG b348da5cbdc62764abac2ce7446f362c3018937c)  # prospect main: no pool when no term reached it
 FetchContent_MakeAvailable(prospect)
 
