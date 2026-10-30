@@ -886,6 +886,22 @@ XapiandManager::join()
 		worker->join();
 	}
 
+	// The index registry's tasks that timers started (the debounced commit, an idle close) run on the control
+	// loop, which has stopped: from now on they run on the thread that starts them, and the ones already
+	// posted run here, on this thread, until they end.
+	database_pool->set_control(nullptr);
+	{
+		auto& io = _rx->reactor.io();
+		io.restart();
+		const auto limit = std::chrono::steady_clock::now() + 60s;
+		while (database_pool->detached() != 0 && std::chrono::steady_clock::now() < limit) {
+			io.run_for(10ms);
+		}
+		if (database_pool->detached() != 0) {
+			L_WARNING("{} tasks of the index registry did not end", database_pool->detached());
+		}
+	}
+
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Manager:\n{}Databases:\n{}Nodes:\n{}", __repr__(), database_pool->dump_databases(), Node::dump_nodes());

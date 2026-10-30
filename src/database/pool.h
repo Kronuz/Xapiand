@@ -380,6 +380,7 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	std::atomic<double> turn_timeout_;                  // seconds a turn may be awaited before the request is told `busy`
 	std::atomic<std::uint64_t> buffered_docs_cap_;      // documents an index buffers before a write owes a flush; 0: the index's own bound
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
+	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
 
 	ReferencedShardEndpoint _spawn(const Endpoint& endpoint);
 	ReferencedShardEndpoint _get(const Endpoint& endpoint) const;
@@ -419,6 +420,12 @@ public:
 	// Runs a task that no request awaits (a timer's commit, an idle close): on the control loop when
 	// there is one, else to its end on this thread.
 	void run_detached(task::task<void> t);
+
+	// The tasks run_detached posted to the control loop that have not ended. A shutdown that stops the loop
+	// clears the control with set_control(nullptr), then runs the loop until this is zero.
+	std::size_t detached() const noexcept {
+		return detached_.load();
+	}
 
 	// The entry of this path, referenced so that it stays until the reference ends. Never waits.
 	ReferencedShardEndpoint spawn(const Endpoint& endpoint);

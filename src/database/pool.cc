@@ -412,7 +412,8 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads) :
 	control_(nullptr),
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
-	wal_writer_(nullptr)
+	wal_writer_(nullptr),
+	detached_(0)
 {
 	WorkPool::Options options;
 	options.threads = work_threads;
@@ -430,17 +431,37 @@ DatabasePool::~DatabasePool()
 }
 
 
+namespace {
+
+// Counts a task posted to the control loop until it ends, however it ends.
+task::task<void>
+counted(task::task<void> t, std::atomic<std::size_t>& detached)
+{
+	struct Done {
+		std::atomic<std::size_t>& n;
+		~Done() { n.fetch_sub(1); }
+	} done{detached};
+	co_await std::move(t);
+}
+
+}  // namespace
+
+
 void
 DatabasePool::run_detached(task::task<void> t)
 {
-	if (auto* control = control_.load(std::memory_order_acquire)) {
-		control->spawn(std::move(t));
-	} else {
-		try {
-			engine::sync_wait(std::move(t));
-		} catch (...) {
-			L_EXC("A detached task failed");
-		}
+	// Counted before the control is read: a shutdown that clears the control and then sees no task counted
+	// is sure that this call read the empty control.
+	detached_.fetch_add(1);
+	if (auto* control = control_.load()) {
+		control->spawn(counted(std::move(t), detached_));
+		return;
+	}
+	detached_.fetch_sub(1);
+	try {
+		engine::sync_wait(std::move(t));
+	} catch (...) {
+		L_EXC("A detached task failed");
 	}
 }
 
