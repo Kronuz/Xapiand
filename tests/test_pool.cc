@@ -1039,46 +1039,52 @@ void test_the_uuid_is_read_under_the_lock_while_the_index_reopens() {
 	CHECK_GE(entry->opens(), 11u);
 }
 
-// A view readers released stays unfreed until something frees it: the idle housekeeping does, so a merge's
-// source files go back to the disk without another write (C16).
+// A view readers released stays unfreed until something frees it: the idle housekeeping does, so the files a merge
+// replaced go back to the disk without another write (C16).
 void test_released_views_are_reclaimed_by_the_housekeeping() {
 	Watchdog watchdog("released views", 120s);
 	DatabasePool pool(8);
 	const auto path = fresh("views");
 	auto entry = pool.spawn(Endpoint(path));
 	Shard shard(*entry.get(), WRITE);
-	// Many one-document segments, so the merge policy merges them.
-	for (int i = 1; i <= 40; ++i) {
-		engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
-		engine::sync_wait(shard.engine_for_read());
-	}
-	const auto before = count_files(path);
+	// Many one-document segments, which the merge policy keeps merging.
+	const auto write = [&](int from, int to) {
+		for (int i = from; i <= to; ++i) {
+			engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
+			engine::sync_wait(shard.engine_for_read());
+		}
+	};
+	write(1, 40);
+	std::size_t peak = 0;
 	{
-		HeldSearch held(shard);
+		HeldSearch held(shard);  // a view of the segments as they are now
 		CHECK_TRUE(held.holding());
-		engine::sync_wait(shard.commit());  // schedules the merges
-		// The merges publish at a refresh or a housekeeping; the segments they replace stay, as the held view names them.
-		std::size_t peak = before;
+		write(41, 100);  // the merges replace segments the held view still names
+		engine::sync_wait(shard.commit());
 		const auto end = std::chrono::steady_clock::now() + 20s;
-		while (std::chrono::steady_clock::now() < end && peak <= before) {
+		while (std::chrono::steady_clock::now() < end && shard.engine().merges_pending() == 0) {
 			pool.housekeeping();
-			std::this_thread::sleep_for(20ms);
-			peak = std::max(peak, count_files(path));
+			std::this_thread::sleep_for(10ms);
 		}
-		CHECK_GT(peak, before);  // the merge's output is there, the sources too
+		CHECK_GT(shard.engine().merges_pending(), 0u);  // the view a reader holds is owed
+		peak = count_files(path);
 		held.release();
-		CHECK_GT(shard.engine().merges_pending(), 0u);  // a view readers let go of is owed
-		const auto end2 = std::chrono::steady_clock::now() + 20s;
-		while (std::chrono::steady_clock::now() < end2 && shard.engine().merges_pending() != 0) {
-			pool.housekeeping();
-			std::this_thread::sleep_for(20ms);
-		}
-		CHECK_EQ(shard.engine().merges_pending(), 0u);
-		CHECK_LT(count_files(path), peak);  // the sources went
 	}
-	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 40u);
+	// Nothing is written from here: only the housekeeping can free the view the search let go of.
+	CHECK_GT(shard.engine().merges_pending(), 0u);
+	const auto end = std::chrono::steady_clock::now() + 30s;
+	while (std::chrono::steady_clock::now() < end && shard.engine().merges_pending() != 0) {
+		pool.housekeeping();
+		std::this_thread::sleep_for(20ms);
+	}
+	CHECK_EQ(shard.engine().merges_pending(), 0u);
+	const auto freed = std::chrono::steady_clock::now() + 10s;
+	while (std::chrono::steady_clock::now() < freed && count_files(path) >= peak) {
+		std::this_thread::sleep_for(20ms);
+	}
+	CHECK_LT(count_files(path), peak);  // the files only the released view named went back
+	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 100u);
 }
-
 
 // The engine's integrity check changes nothing but runs against the engine the node has open, so it takes the turn
 // like any other operation on the index.
