@@ -294,7 +294,7 @@ struct Core {
 
 	// Opens the index again from its last commit; what was written since is lost. The handle that asks
 	// (`seen`) knows of the replacement. Call it with no index (after retire).
-	void open_index(std::uint64_t* seen = nullptr) {
+	void open_index(std::atomic<std::uint64_t>* seen = nullptr) {
 		const auto replaced = ++epoch;
 		if (seen) {
 			*seen = replaced;
@@ -396,7 +396,7 @@ struct Handle {
 	std::shared_ptr<Entry> entry;
 	Core* core;
 	bool writable = false;
-	std::uint64_t seen = 0;  // the latest replacement of the index this handle knows of
+	std::atomic<std::uint64_t> seen{0};  // the latest replacement of the index this handle knows of (readers check it while a reopen sets it)
 
 	Handle(std::shared_ptr<Entry> entry_, Core* core_) : entry(std::move(entry_)), core(core_) { }
 	Handle(const Handle&) = delete;
@@ -525,7 +525,7 @@ drain_readers(Core& core, Chores& chores)
 // handle that asks (`seen`) knows of the replacement. The old index is closed first, in the same chore when
 // no reader holds a view of it, and the readers that do are waited for. Run it under the host's turn.
 task::task<void>
-reopen_core(Core& core, Chores& chores, std::uint64_t* seen)
+reopen_core(Core& core, Chores& chores, std::atomic<std::uint64_t>* seen)
 {
 	bool replaced = false;
 	co_await chores.run(ChoreClass::flush, [&core, seen, &replaced] {
