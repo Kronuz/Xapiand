@@ -258,8 +258,11 @@ refresh is coalesced (`index.hh:1312-1318`), which keeps 7a's D7. Host mode clos
 2. strata gains `index_options::defer_io` (L5). When it is set, `apply` neither refreshes (`:691`) nor
    drains (`:705`). It returns `verdict::flush_owed` or `verdict::drain_owed` before stage 1, with
    nothing applied. The turn runs `refresh()` or a new public `reclaim_for_space()` as a chore, then
-   retries the apply once more. `install` (`:1472`, which 7c does not call) defers its drain the
-   same way. Xapiand sets no storage permit in 7c, so strata's fault tests cover `drain_owed`.
+   retries the apply once more, before it applies any later position (C3 of the L5 review: a later
+   position makes the retry `skipped`). `defer_io` covers `apply` only and forces eager segments, so
+   no first-read map happens inside it (L5-B1). `install` (`:1472`, which 7c does not call) drains
+   inline and runs only as a chore. Xapiand sets no storage permit in 7c, so strata's fault tests
+   cover `drain_owed`.
 3. `evaluate`'s page faults on mapped segments are T6's subject, reported at 7c and gated at Phase 6
    (owner).
 
