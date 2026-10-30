@@ -31,8 +31,10 @@
 #include <atomic>
 #include <coroutine>
 #include <cstdint>
+#include <chrono>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -40,10 +42,13 @@
 #include <thread>
 #include <vector>
 
+#include "engine/callbacks.h"
 #include "engine/chores.h"
 #include "engine/document.h"
 #include "engine/error.h"
 #include "engine/open.h"
+#include "engine/query.h"
+#include "engine/search.h"
 #include "engine/sync.h"
 
 namespace {
@@ -265,4 +270,130 @@ void test_reclaim_is_a_merge_chore() {
 
 }  // namespace
 
-TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter)
+
+// A spy that stops inside its first see() until released: the search that runs it holds its view of the index.
+class BlockingSpy final : public engine::MatchSpy {
+public:
+	std::atomic<bool> inside{false};
+	std::shared_future<void> gate;
+
+	void see(const engine::DocView&, double) override {
+		if (!inside.exchange(true)) {
+			gate.wait();
+		}
+	}
+	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<BlockingSpy>(); }
+	std::string name() const override { return "BlockingSpy"; }
+	std::string serialise() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<BlockingSpy>(); }
+	std::string serialise_results() const override { return ""; }
+	void merge_results(std::string_view) override { }
+	std::string description() const override { return "BlockingSpy"; }
+};
+
+// Closing the index, or replacing it, ends only when the searches that hold a view of it have let go: an index is
+// never destroyed under a view. Meanwhile no new view is given, and the search that holds one reads on.
+void closing_waits_for_the_readers(const char* name, bool reopen) {
+	ThreadChores chores;
+	auto opened = engine::sync_wait(engine::open_local(scratch(name), true, true, host(chores)));
+	auto& shard = *opened.shard;
+	for (int i = 1; i <= 3; ++i) {
+		auto doc = make("K" + std::to_string(i), "d");
+		engine::sync_wait(shard.add(doc, {}));
+	}
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	if (reopen) {
+		engine::sync_wait(shard.begin_transaction(true));
+		auto doc = make("Kt", "t");
+		engine::sync_wait(shard.add(doc, {}));
+	}
+
+	std::promise<void> release;
+	BlockingSpy spy;
+	spy.gate = release.get_future().share();
+	std::size_t hits = 0;
+	std::thread searcher([&] {
+		auto prepared = engine::prepare(engine::Query::term("f", "body"));
+		engine::SearchRequest request;
+		request.query = prepared.get();
+		request.maxitems = 10;
+		request.spy = &spy;
+		hits = engine::sync_wait(engine::search(std::vector<engine::Shard*>{&shard}, request)).hits.size();
+	});
+	for (int i = 0; i < 5000 && !spy.inside; ++i) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	CHECK_TRUE(spy.inside);
+
+	std::atomic<bool> replaced{false};
+	std::thread closer([&] {
+		if (reopen) {
+			engine::sync_wait(shard.cancel_transaction());
+		} else {
+			engine::sync_wait(shard.close());
+		}
+		replaced = true;
+	});
+	std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	CHECK_FALSE(replaced.load());  // the view is still held
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.find_key("K1")); }) != engine::errc::internal);  // no new view
+	release.set_value();
+	searcher.join();
+	closer.join();
+	CHECK_TRUE(replaced.load());
+	CHECK_EQ(hits, 3u);  // the search read the view it held to the end
+	if (reopen) {
+		CHECK_EQ(engine::sync_wait(shard.find_key("K1")), 1u);  // the index is open again, from its last commit
+		CHECK_EQ(engine::sync_wait(shard.find_key("Kt")), 0u);
+	} else {
+		CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.find_key("K1")); }) == engine::errc::closed);
+	}
+}
+
+void test_close_waits_for_the_readers() { closing_waits_for_the_readers("close_readers", false); }
+void test_a_reopen_waits_for_the_readers() { closing_waits_for_the_readers("reopen_readers", true); }
+
+// Every reader record of a registry is held by a search: the next read is refused with busy, and a record freed
+// serves the next (C9).
+void test_a_full_registry_answers_busy() {
+	ThreadChores chores;
+	auto options = host(chores);
+	options.readers = engine::make_reader_registry(2);
+	auto opened = engine::sync_wait(engine::open_local(scratch("registry"), true, true, options));
+	auto& shard = *opened.shard;
+	auto doc = make("Ka", "a");
+	engine::sync_wait(shard.add(doc, {}));
+	engine::sync_wait(shard.refresh());
+
+	std::promise<void> release;
+	auto gate = release.get_future().share();
+	std::vector<std::unique_ptr<BlockingSpy>> spies;
+	std::vector<std::thread> searchers;
+	for (int i = 0; i < 2; ++i) {
+		spies.push_back(std::make_unique<BlockingSpy>());
+		spies.back()->gate = gate;
+		searchers.emplace_back([&, i] {
+			auto prepared = engine::prepare(engine::Query::term("f", "body"));
+			engine::SearchRequest request;
+			request.query = prepared.get();
+			request.spy = spies[static_cast<std::size_t>(i)].get();
+			engine::sync_wait(engine::search(std::vector<engine::Shard*>{&shard}, request));
+		});
+	}
+	for (int i = 0; i < 5000 && !(spies[0]->inside && spies[1]->inside); ++i) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	CHECK_TRUE(spies[0]->inside && spies[1]->inside);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.find_key("Ka")); }) == engine::errc::busy);
+	CHECK_TRUE(error_kind([&] { (void)shard.doc_count(); }) == engine::errc::busy);
+	// A write, a refresh and a commit need no record.
+	auto second = make("Kb", "b");
+	engine::sync_wait(shard.add(second, {}));
+	engine::sync_wait(shard.refresh());
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	release.set_value();
+	for (auto& searcher : searchers) { searcher.join(); }
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kb")), 2u);
+}
+
+TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter, test_close_waits_for_the_readers, test_a_reopen_waits_for_the_readers, test_a_full_registry_answers_busy)

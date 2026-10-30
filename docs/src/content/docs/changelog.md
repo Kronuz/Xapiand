@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a commit, a refresh before a read, the timed commit and the idle close) takes that index's turn, and waits for
   it for at most 30 s. The old pool made a request wait on a condition variable for a free shard, and answered
   the same error when it ran out of time; now the wait is bounded by the one turn, not by a pool of copies.
+- **A search no longer holds its index.** A search reads a published view of each index it names, so a long search
+  does not delay a write, a refresh or a commit to the same index (it used to hold the index's lock for its whole
+  run). A search sees the index as of the moment it started.
+- **Too many searches at once answer `503`.** Searches share a fixed number of reader records (the HTTP loops
+  times 1,000 requests times the default shard count); a search that finds none free answers `503` instead of
+  waiting.
+- **A write that asks for a commit and waits too long for it still succeeds.** The write is applied and logged; its
+  commit is left to the timed commit, so a client is not told to retry what was done (an `add` without an id would
+  have been stored twice).
 - **The device work of an index runs on a shared pool of workers.** Opening an index, writing a segment,
   committing, closing and reading or writing a stored blob run as jobs of the index's own queue on one pool of
   workers, so a slow disk for one index no longer holds the threads that serve the others, and a write does no

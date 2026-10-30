@@ -18,7 +18,7 @@ engine::prepare(Query) -> Prepared (Xapian query + the neutral Query, PreparedQu
 engine::search(shards, request)
    all Xapian -> xapian::search          all strata -> strata::search       mixed -> errc::invalid
 strata::search
-   pin each distinct index once, in address order:  flush the write buffer, lock, segments()
+   hold one view of each distinct index (Shard::view()): its segments and field table, as of the last refresh
    one prospect::multi_snapshot = the segments of all shards (shard i = the i-th shard asked for)
    term_table over its segments: global statistics and document frequencies
    prospect::search(snapshot, build, options):  pruned top-k per shard merged by weight then interleaved docid,
@@ -34,9 +34,9 @@ strata::search
    `DocidOrder::descending`).
 3. **Estimate.** The count of live matches, exact (G12), from prospect's search with `count`; the exhaustive
    collector counts as it visits. `check_at_least` is not needed.
-4. **Refresh before search.** `Shard::pin()` flushes the write buffer if documents were applied since the
-   last flush (D7), then holds the shard's lock for the search. A write, merge or close waits for it.
-   Indexes are pinned in address order, so searches that share indexes cannot deadlock.
+4. **Refresh before search.** A host refreshes an index when documents were applied since the last refresh
+   (`engine_for_read`, D7), and the search then holds `Shard::view()`, the view that refresh published
+   (`docs/mechanisms/reader-views.md`). Nothing waits for the search: a write, refresh, commit or merge goes on.
 5. **Scorers.** A term is `term_scorer` with `weight::bm25_xapian(statistics, df, wqf)`; AND is
    `conjunction_scorer`, OR `disjunction_scorer`, AND_NOT `exclusion_scorer`, AND_MAYBE
    `required_optional_scorer`, FILTER an AND with the right side scaled by 0 (`scale_scorer`, prospect's
@@ -58,8 +58,9 @@ strata::search
    Xapian; the window applies after the collapse and the estimate is the number of hits kept. The collapser
    holds one entry per distinct value, so a collapse on a field with millions of values holds millions of
    entries for the length of the search.
-8. **One snapshot.** A search holds every pinned shard's lock from the first pin to the end, so the documents
-   and statistics it reads are the index as of the last pin: no write, commit or merge lands in between.
+8. **One snapshot per shard.** A search holds a view of each shard from the start to the end, so the documents
+   and statistics it reads are those the views hold, whole; a write that lands meanwhile is not seen. The views are
+   taken one after the other, so two shards may be at different moments.
 
 ## Tests
 

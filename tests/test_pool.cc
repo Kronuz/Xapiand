@@ -34,6 +34,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -52,9 +53,12 @@
 #include "database/pool.h"
 #include "database/shard.h"
 #include "database/wal.h"
+#include "engine/callbacks.h"
 #include "engine/chores.h"
 #include "engine/document.h"
 #include "engine/error.h"
+#include "engine/query.h"
+#include "engine/search.h"
 #include "engine/sync.h"
 #include "compressor_lz4.h"
 #include "length.h"
@@ -265,6 +269,89 @@ GateChores& gate_chores(ShardEndpoint& entry) {
 	auto* raw = gate.get();
 	A::set_chores(entry, std::move(gate));
 	return *raw;
+}
+
+
+// A spy that stops inside its first see() until released: the search that runs it holds its views of the index.
+class BlockingSpy final : public engine::MatchSpy {
+public:
+	std::atomic<bool> inside{false};
+	std::shared_future<void> gate;
+
+	void see(const engine::DocView&, double) override {
+		if (!inside.exchange(true)) {
+			gate.wait();
+		}
+	}
+	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<BlockingSpy>(); }
+	std::string name() const override { return "BlockingSpy"; }
+	std::string serialise() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<BlockingSpy>(); }
+	std::string serialise_results() const override { return ""; }
+	void merge_results(std::string_view) override { }
+	std::string description() const override { return "BlockingSpy"; }
+};
+
+// A search held open on a thread of its own, between the first match it sees and release(). It ended at once when
+// it threw (kind() says why).
+class HeldSearch {
+public:
+	explicit HeldSearch(Shard& shard) {
+		spy_.gate = release_.get_future().share();
+		thread_ = std::thread([this, &shard] {
+			try {
+				auto* eng = engine::sync_wait(shard.engine_for_read());
+				auto prepared = engine::prepare(engine::Query::term("f", "body"));
+				engine::SearchRequest request;
+				request.query = prepared.get();
+				request.maxitems = 10;
+				request.spy = &spy_;
+				hits_ = engine::sync_wait(engine::search(std::vector<engine::Shard*>{eng}, request)).hits.size();
+			} catch (const engine::Error& error) {
+				kind_ = error.kind;
+				threw_ = true;
+			}
+			done_ = true;
+		});
+		const auto end = std::chrono::steady_clock::now() + 5s;
+		while (!spy_.inside && !done_ && std::chrono::steady_clock::now() < end) {
+			std::this_thread::sleep_for(1ms);
+		}
+	}
+	~HeldSearch() { release(); }
+
+	bool holding() const { return spy_.inside && !done_; }
+	bool threw() const { return threw_; }
+	engine::errc kind() const { return kind_; }
+	std::size_t hits() const { return hits_; }
+
+	void release() {
+		if (!released_) {
+			released_ = true;
+			release_.set_value();
+		}
+		if (thread_.joinable()) {
+			thread_.join();
+		}
+	}
+
+private:
+	BlockingSpy spy_;
+	std::promise<void> release_;
+	std::thread thread_;
+	std::atomic<bool> done_{false};
+	std::atomic<bool> released_{false};
+	bool threw_ = false;
+	engine::errc kind_ = engine::errc::internal;
+	std::size_t hits_ = 0;
+};
+
+std::size_t count_files(const std::string& path) {
+	std::size_t files = 0;
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+		files += entry.is_regular_file() ? 1 : 0;
+	}
+	return files;
 }
 
 
@@ -814,6 +901,209 @@ void test_the_wal_order_is_the_apply_order() {
 	}
 }
 
+
+// A search held for a second delays neither a write, a refresh nor a commit of the index it reads: it holds a view
+// of the index, not a lock (D6). The reads that tasks on the control loop make (the work owed, the revision) do
+// not wait for it either.
+void test_a_held_search_delays_no_refresh_or_commit() {
+	Watchdog watchdog("a held search");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("held")));
+	Shard shard(*entry.get(), WRITE);
+	for (int i = 1; i <= 3; ++i) {
+		engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
+	}
+	engine::sync_wait(shard.commit());
+	HeldSearch held(shard);
+	CHECK_TRUE(held.holding());
+	const auto begin = std::chrono::steady_clock::now();
+
+	Running writer([&] {
+		engine::sync_wait(shard.add_document(make("Kw", "w")));
+		auto* eng = engine::sync_wait(shard.engine_for_read());  // a refresh
+		CHECK_EQ(eng->doc_count(), 4u);
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+	});
+	Running loop([&] {
+		(void)shard.engine().revision();
+		(void)shard.engine().merges_pending();
+		pool.housekeeping();
+	});
+	const auto end = std::chrono::steady_clock::now() + 3s;
+	while ((!writer.done() || !loop.done()) && std::chrono::steady_clock::now() < end) {
+		std::this_thread::sleep_for(2ms);
+	}
+	const bool delayed = !writer.done() || !loop.done();
+	CHECK_FALSE(delayed);
+	CHECK_FALSE(writer.threw());
+	// The search is held for a second in all.
+	const auto elapsed = std::chrono::steady_clock::now() - begin;
+	if (elapsed < 1s) {
+		std::this_thread::sleep_for(1s - elapsed);
+	}
+	CHECK_TRUE(held.holding());
+	held.release();
+	writer.join();
+	loop.join();
+	CHECK_EQ(held.hits(), 3u);  // the search read the view it held: the write came after
+	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 4u);
+}
+
+// Every reader record is claimed by a search that is running: the next one is refused with busy (a 503), the
+// writes go on, and a record freed serves the next search (C9, T8).
+void test_readers_cap() {
+	Watchdog watchdog("the readers cap");
+	DatabasePool pool(8);
+	pool.set_reader_records(16);
+	auto entry = pool.spawn(Endpoint(fresh("readers")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	engine::sync_wait(shard.commit());
+	std::vector<std::unique_ptr<HeldSearch>> held;
+	for (int i = 0; i < 16; ++i) {
+		held.push_back(std::make_unique<HeldSearch>(shard));
+		CHECK_TRUE(held.back()->holding());
+	}
+	HeldSearch refused(shard);
+	CHECK_FALSE(refused.holding());
+	CHECK_TRUE(refused.threw());
+	CHECK_TRUE(refused.kind() == engine::errc::busy);
+	// A write and a commit need no record.
+	engine::sync_wait(shard.add_document(make("Kb", "b")));
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	held.pop_back();  // frees a record
+	HeldSearch served(shard);
+	CHECK_TRUE(served.holding());
+	served.release();
+	CHECK_EQ(served.hits(), 2u);
+}
+
+// A commit whose turn times out after the write was applied does not fail the write: a client that retried it would
+// create a second document. The write stands, and a later commit makes it durable (N2).
+void test_a_commit_that_times_out_leaves_the_write_standing() {
+	Watchdog watchdog("a late commit");
+	DatabasePool pool(8);
+	pool.set_turn_timeout(0.3);
+	auto entry = pool.spawn(Endpoint(fresh("late_commit")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	{
+		HoldTurn hold(*entry.get(), WRITE);
+		engine::sync_wait(shard.finish_write(true, false));  // the commit's turn does not come: no error
+	}
+	CHECK_TRUE(entry->is_modified());
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	CHECK_FALSE(entry->is_modified());
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
+}
+
+// A node that is finishing serves the indexes it has open (an autocommit, a request in flight) and opens no more (N3).
+void test_a_finishing_pool_serves_an_open_index() {
+	Watchdog watchdog("a finishing pool");
+	DatabasePool pool(8);
+	auto open = pool.spawn(Endpoint(fresh("finishing_open")));
+	auto closed = pool.spawn(Endpoint(fresh("finishing_closed")));
+	Shard shard(*open.get(), WRITE);
+	Shard other(*closed.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	pool.finish();
+	engine::sync_wait(shard.add_document(make("Kb", "b")));
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(other.ready()); }) == engine::errc::not_available);
+}
+
+// The uuid the data storage's volumes carry is read while a stale engine is replaced: under the entry's lock (N1;
+// the thread sanitizer reports the race without it).
+void test_the_uuid_is_read_under_the_lock_while_the_index_reopens() {
+	Watchdog watchdog("the uuid");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("uuid")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.ready());
+	const auto uuid = entry->uuid();
+	std::atomic<bool> stop{false};
+	std::atomic<int> wrong{0};
+	std::thread reader([&] {
+		while (!stop) {
+			if (entry->uuid() != uuid) { ++wrong; }
+		}
+	});
+	for (int i = 0; i < 10; ++i) {
+		A::mark_stale(*entry.get());
+		engine::sync_wait(shard.ready());
+	}
+	stop = true;
+	reader.join();
+	CHECK_EQ(wrong.load(), 0);
+	CHECK_GE(entry->opens(), 11u);
+}
+
+// A view readers released stays unfreed until something frees it: the idle housekeeping does, so a merge's
+// source files go back to the disk without another write (C16).
+void test_released_views_are_reclaimed_by_the_housekeeping() {
+	Watchdog watchdog("released views", 120s);
+	DatabasePool pool(8);
+	const auto path = fresh("views");
+	auto entry = pool.spawn(Endpoint(path));
+	Shard shard(*entry.get(), WRITE);
+	// Many one-document segments, so the merge policy merges them.
+	for (int i = 1; i <= 40; ++i) {
+		engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
+		engine::sync_wait(shard.engine_for_read());
+	}
+	const auto before = count_files(path);
+	{
+		HeldSearch held(shard);
+		CHECK_TRUE(held.holding());
+		engine::sync_wait(shard.commit());  // schedules the merges
+		// The merges publish at a refresh or a housekeeping; the segments they replace stay, as the held view names them.
+		std::size_t peak = before;
+		const auto end = std::chrono::steady_clock::now() + 20s;
+		while (std::chrono::steady_clock::now() < end && peak <= before) {
+			pool.housekeeping();
+			std::this_thread::sleep_for(20ms);
+			peak = std::max(peak, count_files(path));
+		}
+		CHECK_GT(peak, before);  // the merge's output is there, the sources too
+		held.release();
+		CHECK_GT(shard.engine().merges_pending(), 0u);  // a view readers let go of is owed
+		const auto end2 = std::chrono::steady_clock::now() + 20s;
+		while (std::chrono::steady_clock::now() < end2 && shard.engine().merges_pending() != 0) {
+			pool.housekeeping();
+			std::this_thread::sleep_for(20ms);
+		}
+		CHECK_EQ(shard.engine().merges_pending(), 0u);
+		CHECK_LT(count_files(path), peak);  // the sources went
+	}
+	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 40u);
+}
+
+
+// The engine's integrity check changes nothing but runs against the engine the node has open, so it takes the turn
+// like any other operation on the index.
+void test_the_integrity_check_takes_the_turn() {
+	Watchdog watchdog("the check takes the turn");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("check")));
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	engine::sync_wait(shard.commit());
+	{
+		HoldTurn hold(*entry.get(), WRITE);
+		Running running([&] { (void)engine::sync_wait(shard.check()); });
+		std::this_thread::sleep_for(150ms);
+		CHECK_FALSE(running.done());
+		hold.release();
+		running.join();
+		CHECK_TRUE(running.done());
+		CHECK_FALSE(running.threw());
+	}
+	const auto result = engine::sync_wait(shard.check());
+	CHECK_EQ(result.errors, 0u);
+	CHECK_EQ(result.failure, "");
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -838,6 +1128,13 @@ int main(int argc, char** argv) {
 		{"test_housekeeping_costs_nothing_on_a_quiet_index", test_housekeeping_costs_nothing_on_a_quiet_index},
 		{"test_blob_io_runs_in_chores", test_blob_io_runs_in_chores},
 		{"test_the_wal_order_is_the_apply_order", test_the_wal_order_is_the_apply_order},
+		{"test_a_held_search_delays_no_refresh_or_commit", test_a_held_search_delays_no_refresh_or_commit},
+		{"test_readers_cap", test_readers_cap},
+		{"test_a_commit_that_times_out_leaves_the_write_standing", test_a_commit_that_times_out_leaves_the_write_standing},
+		{"test_a_finishing_pool_serves_an_open_index", test_a_finishing_pool_serves_an_open_index},
+		{"test_the_uuid_is_read_under_the_lock_while_the_index_reopens", test_the_uuid_is_read_under_the_lock_while_the_index_reopens},
+		{"test_released_views_are_reclaimed_by_the_housekeeping", test_released_views_are_reclaimed_by_the_housekeeping},
+		{"test_the_integrity_check_takes_the_turn", test_the_integrity_check_takes_the_turn},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {
