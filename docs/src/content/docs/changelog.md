@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and 10 times a second when idle. `XAPIAND_LAG_PROBE=0` starts the node without the probes.
 
 ### Changed
+- **A data directory with Xapian indexes is refused at startup.** A node started on files from
+  1.0.0-alpha.9 or earlier (`iamglass`, `flintlock`, `postlist.*`, `*.glass`) exits with status 65 and names the
+  first one, instead of starting with empty strata indexes beside them. Dump the indexes with that release and restore
+  them here (see [Upgrading](/Xapiand/upgrade#upgrading-from-100-alpha9)).
 - **`collapse_max` above 1 returns the best documents of each group** on the strata engine: for each group,
   the best `collapse_max` documents of the window. The Xapian engine returns lower-ranked documents of a
   group when a better one fell outside its window (the bank's `?collapse=age&limit=5` answers accounts 6,

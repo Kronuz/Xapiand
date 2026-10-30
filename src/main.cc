@@ -59,6 +59,7 @@
 #include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
 #include "error.hh"                               // for error::name, error::description
+#include "xapian_data_guard.h"                     // for xapian_guard::find
 #include "xapiand_exception.h"                            // for SystemExit
 #include "fs.hh"                                  // for mkdirs
 #include "hashes.hh"                              // for fnv1ah32
@@ -651,6 +652,14 @@ void usedir(std::string_view path, bool force) {
 	}
 	auto xapiand_directory = directory + "/.xapiand";
 
+	if (auto xapian_file = xapian_guard::find(directory); !xapian_file.empty()) {
+		L_CRIT("Data directory holds a Xapian index: {}\n"
+			"This data is from a Xapian-based release (1.0.0-alpha.9 or earlier), which this release does not read. "
+			"Export it with that release (DUMP, or --dump) and restore it into a new, empty data directory here (RESTORE, or --restore). "
+			"See {}", repr(xapian_file), xapian_guard::UPGRADE_DOC);
+		throw SystemExit(EX_DATAERR);
+	}
+
 	if (force) {
 		if (!mkdirs(xapiand_directory)) {
 			L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(directory), error::name(errno), errno, error::description(errno));
@@ -673,10 +682,7 @@ void usedir(std::string_view path, bool force) {
 				}
 				if (ent->d_type == DT_REG) {
 					if (
-						std::strcmp(s, "node") == 0 ||
-						std::strcmp(s, "iamchert") == 0 ||
-						std::strcmp(s, "iamglass") == 0 ||
-						std::strcmp(s, "iamhoney") == 0
+						std::strcmp(s, "node") == 0
 					) {
 						empty = true;
 						break;
