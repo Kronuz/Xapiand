@@ -96,3 +96,62 @@ Record = one cache line (`hazard_line`: 64 B here, 128 B on arm64 Apple per `str
 - The docs E2E, WAL, crash and shutdown scripts (the developer's, not redone).
 - Benchmarks and the real cost of a scan inside a refresh.
 - `src/sortable_serialise.{cc,h}` not opened.
+
+## Architect ruling on the reader registry (X2b-B1, N1, N2)
+
+- Date: 2026-10-30.
+- Reviewed: this review's B1, N1, N2 and its probes (`.scratch/review-x2b/fanout*.py`, `scan_cost.cc`, `probe_timeout.cc`); `Xapiand:127ba188b` `src/manager.cc:235`, `src/engine/strata/search.cc:631-656`, `src/engine/strata/shard.cc:184-208, 454, 1476-1490`, `src/engine/strata/viewed.h:38-62`, `src/database/pool.cc:585-602`; `docs/mechanisms/reader-views.md`; `docs/design/phase7c.md` D5, D6 (C9 at `:269-272`); strata `main` `93b5322` `include/strata/core/hazard.hh`, `include/strata/core/index.hh:471, 1266-1343`, `docs/design/shared-reader.md` D4, D5, D6, D9, D10.
+- Checked against: Lucene's `SearcherManager`/`ReferenceManager` (a refcount per reader, `incRef` per sub-reader of a multi-reader) and Tantivy's `Searcher` (an `Arc` per searcher over its segment readers), from their design as shared-reader D5 cites it; Elasticsearch's old `action.search.shard_count.limit` (a 400 naming the setting) as precedent for a fan-out 4xx.
+- Checked by: `.scratch/arch-registry/registry_arms.cc` (results `results.txt`), clang -O2, macOS x86_64 (i9-9980HK), one run under `quiet light`. Three arms: the X2b global registry (strata `reader_registry`, 50,000 records, 25% claimed), a per-index growable registry (Michael's growable record list: chunks of 4 records, append-only link, a per-thread hint), and a refcount per view (Lucene/Tantivy).
+  - Not run: arm64 (128-byte records), Linux, FreeBSD; TSan or the strata litmus on the growable prototype; any Xapiand build or server.
+
+### Ruling
+
+**Per-index hazard registries, growable in chunks ((a) with (c)'s shape); hazards stay; the fan-out limit is the open-index budget, answered 400; no view is held across an await that needs a turn.** The global registry goes. It was never strata's design: shared-reader D4 recommends one registry per pool partition and gives the unsplit node-wide registry as the worst case (D6), and C9 chose the worst case.
+
+| Arm (probe) | Fan-out 10,000 indexes | Owner scan per publish | Hot index, 8 threads | Idle per open index | Verdict |
+|---|---|---|---|---|---|
+| Global fixed (X2b) | 205 us; 1,010 indexes 503 at capacity 1,000 (B1) | 135 us at 50,000 records, 2.8 ms at 320,000 (N1), every index, grows with the host's load | 8.7 ns (hinted) | 0 (but 3.2 to 20 MB host-wide) | Rejected: scan scales with every reader on the host |
+| (a)+(c) per index, chunked | 168 us | 0.001 us at H=4, 0.024 us at 64, 0.12 us at 256 | 8.7 ns/op | 0 until the first reader, then one chunk: 384 B (x86_64), about 640 B on arm64 | **Chosen** |
+| (b) one record per search | n/a | n/a | n/a | n/a | Rejected: below |
+| (c) global growable | as global | grows with total readers host-wide | as global | as global | Rejected as the scope; kept as the per-index registry's shape |
+| (d) epochs | cheap | O(threads) | cheap | 0 | Rejected: below |
+| Refcount (Lucene, Tantivy) | 97 us | none (free on last decref) | **348 ns/op** (40x the hazard arm; 177 ns at 4 threads) | 8 B | Rejected for strata's hot-index rows |
+
+Why each loses:
+
+1. (b) One record naming a multi-index snapshot hides each index's view from that index's owner, whose scan looks for its own view pointer. Making owners see through it needs either the composite protected by a second hazard level, with every owner dereferencing every composite on every scan (cost times fan-out), or the composite holding a count on each view, which is the refcount arm. Building the composite also needs each view protected while it is copied. Nothing is saved.
+2. (c) as the scope (one growable global) removes the 503 but keeps N1: every commit of every index scans every record any search on the host holds. At the many-indexes target, 10^4 refreshes per second over 50,000 records is 5 x 10^8 record loads per second for nothing.
+3. (d) Epochs: one stalled wide search stops every index on the node from freeing a view, so merged-away segments stay on disk node-wide. shared-reader D5's rejection 4 stands; a per-index epoch is a per-index counter, the refcount arm.
+4. Refcounts are what Lucene and Tantivy pay, and per index they get what this ruling wants (commit cost independent of other indexes, no fan-out cap). They lose on one hot index: 40x slower at 8 threads on the probe, the case strata's read-while-writing rows gate. A per-index hazard registry has the refcount model's scoping without the shared read-modify-write.
+
+What it overturns in strata's landed design: D4's "one registry per pool partition" becomes "one registry per index by default, a shared one when the host asks", D5's fixed H becomes a cap on a chunked list, and D9's sizing paragraph changes. The protocol (claim, validate, seq_cst scan), D1 to D3 and D6 to D8 are unchanged; Michael's original algorithm is the growable list, so the correctness argument holds with the chunk link stored and loaded seq_cst (a reader's link store precedes its claim, which precedes the owner's publish and scan in the total order).
+
+Against the criteria:
+
+- *Idle cost per open index:* zero until the first reader (strata's reader state is already lazy, `index.hh:2642`), one chunk after.
+- *Commit and refresh cost:* O(peak concurrent readers of that index), independent of other indexes and of other searches' fan-out. N1 disappears.
+- *Fan-out limit:* no longer the registry's. What a wide search really pins is open indexes: every index it reads stays open and unclosable for the whole search (a held view blocks the idle close, `pool.cc:597`), and the pool is a soft LRU that overflows rather than refuses (`pool.cc:585-602`). So the named limit is `max_indexes_per_search`, at most the open-index budget the descriptor computation sets (`main.cc:338-362`, `database_pool_size`), checked on the resolved shard list (after wildcard and comma expansion) before any view is taken, and answered **400** (`errc::invalid`, the limit and its option in the message). The per-index cap stays a **503**: it now means more concurrent readers of one index than the host runs at once, which is real overload.
+- *N2:* see X3 below; the rule makes the cycle unrepresentable rather than timed out.
+
+### What X2b changes before it merges (replaces condition 1)
+
+- **R1. A registry per index.** Each `Core` owns its own registry, as the hostless path already does (`shard.cc:454`, `private_readers`); `DatabasePool::readers_` and the `manager.cc:235` formula go, and phase7c.md C9 (`:269-272`) is rewritten. Until strata's chunked registry lands (X3), the size is fixed at a named `readers_per_index`: the threads that can hold a view of one index at once (reactors plus the pool threads that run reads; `run` is synchronous and dedupes per index, `search.cc:642-656`), times 2 unless the developer shows no read nests a second view of the same index on one thread. Its bytes (records x 64, x 128 on arm64) go in `reader-views.md` Limits with the scan cost from this probe.
+- **R2. The registry outlives every guard on it (new, X2b-A2).** A guard's release writes into its registry (`hazard.hh:96-100`), and `Viewed` holds only the guard (`viewed.h:60-61`). With the registry in `Core`, the 30 s drain timeout that drops the entry while a reader holds a view (N2's first half, `pool.cc:550-567`) would make that release a write into freed memory; the global registry hid it. On that path the registry is kept with the views (`keep_forever`), or the guard keeps it alive. A test: drop the shard past the drain with a held view, then release it, under ASan.
+- **R3. The fan-out limit.** `max_indexes_per_search` as above, with a test that a search over limit+1 indexes on an idle server answers 400 (not 503), and one at the limit answers 200. Mutant: drop the check; the first test fails.
+- **R4. The rule for N2 in `reader-views.md`:** a request takes its views after every await that needs a turn (its `fresh()` refreshes, opens) and, while it holds a view, awaits nothing that takes a turn, opens, or waits for a drain. X2b satisfies it because `run` is synchronous; say so.
+- B1's test (capacity+1 indexes, idle, not 503) is subsumed by R3.
+
+### What waits for X3 (before searches suspend)
+
+- **X3-1. strata: the chunked registry** (shared-reader revision 4: D4, D5, D9 as above; `reader()` makes the index its own registry when `index_options::readers` is null). The litmus and TSan stress rerun with chunks appended during claims; an architect re-check of revision 4 only. Xapiand then drops `readers_per_index` for the cap below.
+- **X3-2. The per-index cap is D2's in-flight admission cap**, which must exist once searches suspend holding views (one view per index per search). Build the cap; the registry grows to it.
+- **X3-3. N2 made structural.** A debug check in the request context (beside `IndexTurn`'s count, D5 R4.3): awaiting a turn, an open or a drain while the request holds a view aborts. And the close and reopen drain off the turn: `begin_retire` under the turn, release it, await the drain; a writer that gets a closing entry's turn already releases and retries (D5 R4.2). Then a search holding A's view and awaiting A's turn cannot meet a close holding A's turn while it waits for A's readers.
+- **X3-4. `Shard::view()` takes a lock (new, X2b-A1).** `core.readers.load()` (`shard.cc:1482`) is `std::atomic_load` on a `shared_ptr` (Kronuz `atomic_shared_ptr.h:81-82`): libc++'s global spinlock pool plus a count on one control block per acquire, which is shared-reader D5's rejected arm 1 (the refcount arm costs 348 ns/op at 8 threads here). The acquire path must have no lock and no shared read-modify-write; T13 measures `view()` at 1 and 8 threads on one index.
+- **X3-5.** N1's T13 row becomes the per-index scan cost and bytes at 10^4 open indexes, with the cap from X3-2.
+
+### Verdict
+
+**APPROVE WITH CONDITIONS: per-index registries; X2b lands with R1 to R4.** Blocking: R1, R2, R3 (R4 is a doc line). Conditions: X3 does not start suspending searches before X3-1 to X3-3; X3-4 and X3-5 before X3's gate.
+
+Not run: arm64, Linux, FreeBSD; TSan or the strata litmus on the growable prototype; any Xapiand build, test or server; the cost of `view()`'s lock measured inside Xapiand (inferred from the refcount arm, not measured).
