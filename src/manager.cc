@@ -51,6 +51,7 @@
 #include "database/cleanup.h"                    // for DatabaseCleanup
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
 #include "database/pool.h"                       // for DatabasePool
+#include "engine/host_asio.h"                    // for engine::AsioHost
 #include "database/schemas_lru.h"                // for SchemasLRU
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
@@ -145,6 +146,7 @@ std::shared_ptr<XapiandManager> XapiandManager::_manager;
 // same async-signal-safe mechanism ev::async uses internally -- and drained on the loop.
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
+	engine::AsioHost host;                       // where the index registry's timer-driven tasks run
 	reactor::PeriodicTimer try_shutdown_timer;
 	reactor::Signal setup_node_async;
 	reactor::Signal shutdown_async;
@@ -155,6 +157,7 @@ struct XapiandManager::Reactors {
 
 	Reactors()
 		: reactor(1, 0),
+		  host(reactor.io().get_executor()),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  shutdown_async(reactor.io().get_executor()),
@@ -225,11 +228,27 @@ void sig_exit(int sig) {
 }
 
 
+// The hazard records each index gives its readers: one per view the threads that read can hold of it at once, so
+// the reactors, the HTTP offload workers, the pool workers (a read resumes on the thread that ran its chore),
+// the bulk preparers and indexers and the control loop, doubled because a read that runs under a view (a scan's
+// callback, a spy) may take a second view of the same index on its thread. Each record is a cache line.
+static std::size_t
+readers_per_index()
+{
+	const auto reactors = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_servers));
+	const auto clients = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_clients));
+	const auto offload = reactors * ((clients + reactors - 1) / reactors);  // as the HTTP service spreads them
+	const auto pool = static_cast<std::size_t>(std::max(1.0, opts.processors));
+	const auto bulk = static_cast<std::size_t>(std::max<ssize_t>(0, opts.num_doc_preparers) + std::max<ssize_t>(0, opts.num_doc_indexers));
+	return 2 * (reactors + offload + pool + bulk + 1);
+}
+
+
 XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_start_)
 	: total_clients(0),
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
-	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
+	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, readers_per_index())),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
@@ -247,6 +266,7 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  _rx(std::make_unique<Reactors>()),
 	  atom_sig(0)
 {
+	database_pool->set_control(&_rx->host);
 	_rx->try_shutdown_timer.set_callback([this] { try_shutdown_timer_cb(); });
 	_rx->setup_node_async.set_callback([this] { setup_node_async_cb(); });
 	_rx->shutdown_async.set_callback([this] { shutdown_async_cb(); });
@@ -270,7 +290,7 @@ XapiandManager::~XapiandManager() noexcept
 }
 
 
-IndexSettings
+task::task<IndexSettings>
 XapiandManager::resolve_index_settings(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
 	return manager(true)->resolve_index_settings_impl(normalized_path, writable, settings, reload, rebuild, clear);
@@ -882,6 +902,22 @@ XapiandManager::join()
 		worker->join();
 	}
 
+	// The index registry's tasks that timers started (the debounced commit, an idle close) run on the control
+	// loop, which has stopped: from now on they run on the thread that starts them, and the ones already
+	// posted run here, on this thread, until they end.
+	database_pool->set_control(nullptr);
+	{
+		auto& io = _rx->reactor.io();
+		io.restart();
+		const auto limit = std::chrono::steady_clock::now() + 60s;
+		while (database_pool->detached() != 0 && std::chrono::steady_clock::now() < limit) {
+			io.run_for(10ms);
+		}
+		if (database_pool->detached() != 0) {
+			L_WARNING("{} tasks of the index registry did not end", database_pool->detached());
+		}
+	}
+
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Manager:\n{}Databases:\n{}Nodes:\n{}", __repr__(), database_pool->dump_databases(), Node::dump_nodes());
@@ -1049,7 +1085,7 @@ XapiandManager::ready_to_end(bool notify)
 }
 
 
-IndexSettings
+task::task<IndexSettings>
 XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
 	L_CALL("XapiandManager::resolve_index_settings_impl()");
@@ -1058,7 +1094,7 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 }
 
 
-Endpoints
+task::task<Endpoints>
 XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const MsgPack* settings)
 {
 	L_CALL("XapiandManager::resolve_index_endpoints_impl()");

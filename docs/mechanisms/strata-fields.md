@@ -26,7 +26,7 @@ Schema / QueryDSL          seam                              strata engine      
    `replace_by_key`, `erase_by_key`, `find_key` and `WriteResult.term` unchanged. Multi-shard placement hashes `"Q" + key`
    (`key_placement_hash`), the spelling the Xapian engine always had, so an index keeps its documents where they are.
 3. **Reading.** A query node names its field. The shard set resolves the name to each segment's id through the field table
-   its pin carries (`Pinned::fields()`); a shard that does not know a name answers no terms. A term on `KEY_FIELD` is a key
+   its view carries (`Viewed::fields()`); a shard that does not know a name answers no terms. A term on `KEY_FIELD` is a key
    leaf. `expand()` (`expand.cc`) scans one field's dictionary (or the keys for the key field) per wildcard or edit-distance node;
    a wildcard with an empty pattern (`Query::field`) scans every field whose name starts with the node's, as the Xapian engine
    reads the name as a prefix. A phrase over two fields matches nothing.

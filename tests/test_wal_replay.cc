@@ -21,7 +21,8 @@
  */
 
 // The log replay through the real DatabaseWAL::execute_line (wal.cc): a replayed erase of a missing document is
-// a no-op, and replaying a log twice ends in the primary's state (CR4). A shard is opened through the pool, lines are built as DatabaseWALWriterTask builds them.
+// a no-op, and replaying a log twice ends in the primary's state (CR4). The engine shard is opened directly and replayed into through
+// a WalTarget; lines are built as DatabaseWALWriterTask builds them.
 #include "test_harness.h"
 
 #include <cstdio>
@@ -30,18 +31,38 @@
 #include <string>
 #include <vector>
 #include "compressor_lz4.h"
-#include "database/flags.h"
-#include "database/pool.h"
-#include "database/shard.h"
 #include "database/wal.h"
-#include "endpoint.h"
 #include "engine/error.h"
+#include "engine/open.h"
 #include "engine/sync.h"
 #include "length.h"
 #include "node.h"
 #include "utype.hh"
 
 namespace {
+
+// What the log replays into: an engine shard opened on its own, as the registry's open chore does (chores inline).
+class Target final : public WalTarget {
+public:
+	Target(const std::string& path, engine::Opened opened) : path_(path), shard_(std::move(opened.shard)), start_(shard_->revision()) { }
+	const std::string& path() const override { return path_; }
+	engine::Shard& engine() override { return *shard_; }
+	engine::rev start_revision() const override { return start_; }
+	bool commit(bool) override { engine::sync_wait(shard_->commit(engine::Transaction::none)); return true; }
+	void replace_document(engine::docid did, engine::Document&& doc, bool, bool, bool) override {
+		engine::WriteArgs args;
+		engine::sync_wait(shard_->replace(did, doc, args));
+	}
+	void delete_document(engine::docid did, bool, bool, bool) override { engine::sync_wait(shard_->erase(did, true, std::nullopt)); }
+	void set_metadata(const std::string& key, const std::string& value, bool, bool) override { engine::sync_wait(shard_->set_metadata(key, value)); }
+	void add_spelling(const std::string& word, engine::termcount freq, bool, bool) override { engine::sync_wait(shard_->add_spelling(word, freq)); }
+	void remove_spelling(const std::string& word, engine::termcount freq, bool, bool) override { engine::sync_wait(shard_->remove_spelling(word, freq)); }
+
+private:
+	std::string path_;
+	std::unique_ptr<engine::Shard> shard_;
+	engine::rev start_;
+};
 
 std::string wal_line(engine::rev rev, DatabaseWAL::Type type, const std::string& data) {
 	return serialise_length(rev) + serialise_length(toUType(type)) + compress_lz4(data);
@@ -63,22 +84,20 @@ std::string state(engine::Shard& s) {
 }
 
 void erase_missing() {
-	DatabasePool pool(8, 1);
-	Endpoint ep(fresh("test_wal_replay_erase.db"));
-	auto shard = pool.checkout(ep, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, 5.0);
-	DatabaseWAL wal(shard.get());
-	auto rev = shard->engine().revision();
+	const auto path = fresh("test_wal_replay_erase.db");
+	Target target(path, engine::sync_wait(engine::open_local(path, true, true)));
+	DatabaseWAL wal(&target);
+	auto rev = target.engine().revision();
 	auto r = run(wal, wal_line(rev, DatabaseWAL::Type::DELETE_DOCUMENT, serialise_length(7)));
 	std::printf("replayed erase of a missing document through execute_line: %s\n", r.c_str());
 	CHECK_EQ(r, "ok");
 }
 
 void double_replay() {
-	DatabasePool pool(8, 1);
-	Endpoint ep(fresh("test_wal_replay_twice.db"));
-	auto shard = pool.checkout(ep, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, 5.0);
-	DatabaseWAL wal(shard.get());
-	auto& e = shard->engine();
+	const auto path = fresh("test_wal_replay_twice.db");
+	Target target(path, engine::sync_wait(engine::open_local(path, true, true)));
+	DatabaseWAL wal(&target);
+	auto& e = target.engine();
 	const auto rev = e.revision();
 	auto make = [&](const std::string& data) { engine::Document d; d.set_key("Qa"); d.add_term(d.field("f"), "body", 2); d.set_data(data); return d; };
 	std::vector<std::string> lines;
@@ -99,7 +118,7 @@ void double_replay() {
 		CHECK_EQ(state(e), want);
 	}
 }
-void t_all() { Node n; n.name("test"); Node::set_local_node(n); erase_missing(); double_replay();
+void t_all() { erase_missing(); double_replay();
 	std::filesystem::remove_all("test_wal_replay_erase.db");
 	std::filesystem::remove_all("test_wal_replay_twice.db");
 }

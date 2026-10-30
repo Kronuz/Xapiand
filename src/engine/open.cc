@@ -28,20 +28,20 @@
 namespace engine {
 
 task::task<Opened>
-open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on)
+open_local(const std::string& path, bool writable, bool create_missing, OpenOptions options)
 {
 	Opened result;
-	auto opened = co_await strata::open_local(path, writable, create_missing, on);
+	auto opened = co_await strata::open_local(path, writable, create_missing, options);
 	result.shard = std::move(opened.shard);
 	result.created = opened.created;
 	co_return result;
 }
 
 task::task<CheckResult>
-check(const std::string& path, task::scheduler_ref on)
+check(const std::string& path, OpenOptions options)
 {
 	CheckResult result;
-	auto checked = co_await strata::check(path, on);
+	auto checked = co_await strata::check(path, options);
 	result.errors = checked.errors;
 	result.failure = std::move(checked.failure);
 	co_return result;

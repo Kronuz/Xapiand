@@ -209,17 +209,17 @@ DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, std::s
 	  context(std::move(context_)) { }
 
 
-std::shared_ptr<Schema>
+task::task<std::shared_ptr<Schema>>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL("DatabaseHandler::get_schema(<obj>)");
 
 	auto manager = XapiandManager::manager();
 	if (!manager) {
-		return nullptr;
+		co_return nullptr;
 	}
-	auto s = manager->schemas->get(this, obj);
-	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
+	auto s = co_await manager->schemas->get(this, obj);
+	co_return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
 
@@ -258,7 +258,7 @@ DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, 
 #endif
 
 
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::check()
 {
 	L_CALL("DatabaseHandler::check()");
@@ -266,7 +266,9 @@ DatabaseHandler::check()
 	MsgPack errors = MsgPack::MAP();
 	for (auto& endpoint : endpoints) {
 		try {
-			auto result = engine::sync_wait(engine::check(endpoint.path));
+			// The check runs in the index's turn, on the engine the node has open.
+			lock_shard lk_shard(endpoint, flags);
+			auto result = co_await lk_shard->check();
 			if (result.failure.empty()) {
 				errors[endpoint.path] = result.errors;
 			} else {
@@ -277,13 +279,13 @@ DatabaseHandler::check()
 			errors[endpoint.path] = "Unknown error";
 		}
 	}
-	return {
+	co_return MsgPack{
 		{"errors", errors},
 	};
 }
 
 
-std::unique_ptr<MsgPack>
+task::task<std::unique_ptr<MsgPack>>
 DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
 #ifdef XAPIAND_LUA
@@ -297,9 +299,9 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 		if (data.version.empty()) {
 			Data current_data;
 			try {
-				auto current_document = get_document_term(term_id);
-				current_data = Data(current_document.get_data());
-				data.version = current_document.get_value(DB_SLOT_VERSION);  // update version in data
+				auto current_document = co_await get_document_term(term_id);
+				current_data = Data(co_await current_document.get_data());
+				data.version = co_await current_document.get_value(DB_SLOT_VERSION);  // update version in data
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
 			}
@@ -311,16 +313,17 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 		L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
 
 		(*processor)(method, *doc, old_doc, script.get_params());
-		return doc;
+		co_return doc;
 	}
-	return nullptr;
+	co_return nullptr;
 #else
 	THROW(ClientError, "Script type 'lua' (Lua scripting) not available.");
+	co_return nullptr;
 #endif
 }
 
 
-std::tuple<std::string, engine::Document, MsgPack>
+task::task<std::tuple<std::string, engine::Document, MsgPack>>
 DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t seq)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, <data>, <seq>)", repr(document_id.to_string()), obj.to_string());
@@ -334,10 +337,10 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 	}
 
 	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
-		schema = get_schema(&obj);
+		schema = co_await get_schema(&obj);
 		L_INDEX("Prepare {}: {} using schema {}", repr(document_id.to_string()), obj.to_string(), schema->to_string());
-		prepared = schema->index(obj, document_id, *this, data, seq);
-		if (update_schema()) {
+		prepared = co_await schema->index(obj, document_id, *this, data, seq);
+		if (co_await update_schema()) {
 			break;
 		}
 		if (t == 0) {
@@ -365,11 +368,11 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 		doc.add_value(DB_SLOT_VERSION, data.version);
 	}
 
-	return prepared;
+	co_return prepared;
 }
 
 
-std::tuple<std::string, engine::Document, MsgPack>
+task::task<std::tuple<std::string, engine::Document, MsgPack>>
 DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second);
@@ -390,26 +393,26 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, b
 				}
 				data.update(ct_type, blob);
 			}
-			return prepare(document_id, document_ver, MsgPack::MAP(), data);
+			co_return co_await prepare(document_id, document_ver, MsgPack::MAP(), data);
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			data.erase(ct_type);
-			return prepare(document_id, document_ver, MsgPack::MAP(), data);
+			co_return co_await prepare(document_id, document_ver, MsgPack::MAP(), data);
 		case MsgPack::Type::MAP:
 			inject_data(data, body);
-			return prepare(document_id, document_ver, body, data);
+			co_return co_await prepare(document_id, document_ver, body, data);
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 	}
 }
 
 
-DocumentInfo
+task::task<DocumentInfo>
 DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit);
 
-	auto prepared = prepare(document_id, document_ver, obj, data);
+	auto prepared = co_await prepare(document_id, document_ver, obj, data);
 	auto& term_id = std::get<0>(prepared);
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -417,9 +420,9 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 	engine::WriteResult info;
 	if (did) {
 		assert(term_id != "N\x80");
-		info = replace_document(did, std::move(doc), commit);
+		info = co_await replace_document(did, std::move(doc), commit);
 	} else {
-		info = replace_document_term(term_id, std::move(doc), commit);
+		info = co_await replace_document_term(term_id, std::move(doc), commit);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
@@ -427,11 +430,11 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 		data_obj.erase(it);
 	}
 
-	return std::make_pair(std::move(info), std::move(data_obj));
+	co_return std::make_pair(std::move(info), std::move(data_obj));
 }
 
 
-DocumentInfo
+task::task<DocumentInfo>
 DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
@@ -440,7 +443,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
-	const auto term_id = document_id ? get_prefixed_term_id(document_id) : std::string();
+	const auto term_id = document_id ? co_await get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -449,7 +452,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = get_docid_term(term_id);
+					did = co_await get_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -466,14 +469,14 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
+					co_return co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
+					co_return co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
 				case MsgPack::Type::MAP:
 					inject_data(data, body);
-					return index(did, document_id, document_ver, body, data, commit);
+					co_return co_await index(did, document_id, document_ver, body, data, commit);
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
@@ -484,7 +487,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 }
 
 
-DocumentInfo
+task::task<DocumentInfo>
 DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, bool create, const MsgPack& patches, bool commit)
 {
 	L_CALL("DatabaseHandler::patch({}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit);
@@ -501,7 +504,7 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
+	const auto term_id = co_await get_prefixed_term_id(document_id);
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -509,9 +512,9 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 			Data data;
 			engine::docid did = 0;
 			try {
-				auto current_document = get_document_term(term_id);
+				auto current_document = co_await get_document_term(term_id);
 				did = current_document.get_docid();
-				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
 				if (!create) {
@@ -529,7 +532,7 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 				obj[ID_FIELD_NAME] = std::move(id_field);
 			}
 			inject_data(data, obj);
-			return index(did, document_id, document_ver, obj, data, commit);
+			co_return co_await index(did, document_id, document_ver, obj, data, commit);
 		} catch (const engine::Error& error) {
 			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
@@ -537,7 +540,7 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 }
 
 
-DocumentInfo
+task::task<DocumentInfo>
 DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, enum_name(body.get_type()), commit, ct_type.first, ct_type.second);
@@ -550,7 +553,7 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
+	const auto term_id = co_await get_prefixed_term_id(document_id);
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -558,9 +561,9 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 			Data data;
 			engine::docid did = 0;
 			try {
-				auto current_document = get_document_term(term_id);
+				auto current_document = co_await get_document_term(term_id);
 				did = current_document.get_docid();
-				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
 				if (!create) {
@@ -581,18 +584,18 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(did, document_id, document_ver, obj, data, commit);
+					co_return co_await index(did, document_id, document_ver, obj, data, commit);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(did, document_id, document_ver, obj, data, commit);
+					co_return co_await index(did, document_id, document_ver, obj, data, commit);
 				case MsgPack::Type::MAP:
 					if (stored) {
 						THROW(ClientError, "Objects of this type cannot be put in storage");
 					}
 					if (obj.empty()) {
 						inject_data(data, body);
-						return index(did, document_id, document_ver, body, data, commit);
+						co_return co_await index(did, document_id, document_ver, body, data, commit);
 					} else {
 						obj.update(body);
 						auto it = obj.find(ID_FIELD_NAME);
@@ -602,13 +605,13 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 							obj[ID_FIELD_NAME] = std::move(id_field);
 						}
 						inject_data(data, obj);
-						return index(did, document_id, document_ver, obj, data, commit);
+						co_return co_await index(did, document_id, document_ver, obj, data, commit);
 					}
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
 
-			return index(did, document_id, document_ver, obj, data, commit);
+			co_return co_await index(did, document_id, document_ver, obj, data, commit);
 		} catch (const engine::Error& error) {
 			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}
@@ -616,17 +619,17 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 }
 
 
-void
+task::task<void>
 DatabaseHandler::update_schema(const MsgPack& obj)
 {
 	L_CALL("DatabaseHandler::update_schema({}, {})", repr(obj.to_string()));
 
 	bool was_foreign_obj;
 	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
-		schema = get_schema();
+		schema = co_await get_schema();
 		was_foreign_obj = schema->update(obj);
 		L_INDEX("Schema to update: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
-		if (update_schema()) {
+		if (co_await update_schema()) {
 			break;
 		}
 		if (t == 0) {
@@ -639,10 +642,10 @@ DatabaseHandler::update_schema(const MsgPack& obj)
 		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_FOREIGN);
 		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
-			schema = get_schema();
+			schema = co_await get_schema();
 			was_foreign_obj = schema->update(o);
 			L_INDEX("Schema to update: {} (local)", repr(schema->to_string()));
-			if (update_schema()) {
+			if (co_await update_schema()) {
 				break;
 			}
 			if (t == 0) {
@@ -653,17 +656,17 @@ DatabaseHandler::update_schema(const MsgPack& obj)
 }
 
 
-void
+task::task<void>
 DatabaseHandler::write_schema(const MsgPack& obj)
 {
 	L_CALL("DatabaseHandler::write_schema({}, {})", repr(obj.to_string()));
 
 	bool was_foreign_obj;
 	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
-		schema = get_schema();
+		schema = co_await get_schema();
 		was_foreign_obj = schema->write(obj);
 		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
-		if (update_schema()) {
+		if (co_await update_schema()) {
 			break;
 		}
 		if (t == 0) {
@@ -676,10 +679,10 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_FOREIGN);
 		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
-			schema = get_schema();
+			schema = co_await get_schema();
 			was_foreign_obj = schema->write(o);
 			L_INDEX("Schema to write: {} (local)", repr(schema->to_string()));
-			if (update_schema()) {
+			if (co_await update_schema()) {
 				break;
 			}
 			if (t == 0) {
@@ -690,7 +693,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 }
 
 
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 	auto main_locator = data.get("");
 	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
@@ -712,7 +715,7 @@ DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 			case Locator::Type::lz4_compressed_stored:
 			case Locator::Type::zstd_compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
-				auto stored = storage_get_stored(locator, did);
+				auto stored = co_await storage_get_stored(locator, did);
 				obj[RESERVED_DATA].push_back(MsgPack({
 					{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
 					{ "_type", "stored" },
@@ -723,31 +726,71 @@ DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 			}
 		}
 	}
-	return obj;
+	co_return obj;
 }
 
 
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::dump_document(engine::docid did)
 {
 	L_CALL("DatabaseHandler::dump_document()");
 
 	auto document = get_document(did);
-	return _dump_document(did, Data(document.get_data()));
+	co_return co_await _dump_document(did, Data(co_await document.get_data()));
 }
 
 
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::dump_document(std::string_view document_id)
 {
 	L_CALL("DatabaseHandler::dump_document()");
 
-	auto did = get_docid(document_id);
-	return dump_document(did);
+	auto did = co_await get_docid(document_id);
+	co_return co_await dump_document(did);
 }
 
 
-MsgPack
+namespace {
+
+// How many documents a dump reads from a shard before it writes them out.
+constexpr size_t DUMP_PAGE = 256;
+
+// The sink of a dump's page throws it to end the scan at the page's size.
+struct PageFull { };
+
+// One page of a shard's documents, from `initial`: the shard's docid and data of each. `more` says the shard has
+// documents beyond the page. A failure is retried the way a read is, from the page's start.
+task::task<std::vector<std::pair<engine::docid, std::string>>>
+dump_page(lock_shard& lk_shard, engine::docid initial, bool& more)
+{
+	std::vector<std::pair<engine::docid, std::string>> page;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		page.clear();
+		more = false;
+		try {
+			auto* eng = co_await lk_shard->engine_for_read();
+			co_await eng->scan(initial, [&](const engine::DocView& doc) {
+				if (page.size() == DUMP_PAGE) {
+					more = true;
+					throw PageFull{};
+				}
+				page.emplace_back(doc.did(), doc.data());
+			});
+			break;
+		} catch (const PageFull&) {
+			break;
+		} catch (const engine::Error& error) {
+			lk_shard->retry_read(error, t);
+		}
+		co_await lk_shard->reopen();
+	}
+	co_return page;
+}
+
+}  // namespace
+
+
+task::task<MsgPack>
 DatabaseHandler::dump_documents()
 {
 	L_CALL("DatabaseHandler::dump_documents()");
@@ -764,32 +807,26 @@ DatabaseHandler::dump_documents()
 		lock_shard lk_shard(endpoint, flags);
 
 		engine::docid initial = 1;
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			engine::docid shard_did = initial;
-			try {
-				engine::sync_wait(lk_shard->engine().scan(initial, [&](const engine::DocView& doc) {
-					shard_did = doc.did();
-					engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-					docs.push_back(_dump_document(did, Data(doc.data())));
-				}));
-				break;
-			} catch (const engine::Error& error) {
-				lk_shard->retry_read(error, t);
+		bool more = true;
+		while (more) {
+			auto page = co_await dump_page(lk_shard, initial, more);
+			for (auto& [shard_did, data] : page) {
+				engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+				docs.push_back(co_await _dump_document(did, Data(std::move(data))));
 			}
-			lk_shard->reopen();
-			L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-
-			initial = shard_did;
+			if (!page.empty()) {
+				initial = page.back().first + 1;
+			}
 		}
 
 		++shard_num;
 	}
 
-	return docs;
+	co_return docs;
 }
 
 
-std::string
+task::task<std::string>
 DatabaseHandler::dump_documents(int fd)
 {
 	L_CALL("DatabaseHandler::dump_documents(<fd>)");
@@ -806,32 +843,26 @@ DatabaseHandler::dump_documents(int fd)
 		lock_shard lk_shard(endpoint, flags);
 
 		engine::docid initial = 1;
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			engine::docid shard_did = initial;
-			try {
-				engine::sync_wait(lk_shard->engine().scan(initial, [&](const engine::DocView& doc) {
-					shard_did = doc.did();
-					engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-					auto obj = _dump_document(did, Data(doc.data()));
-					std::string obj_ser = obj.serialise();
-					ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
-					if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
-					sha256.add(obj_ser.data(), obj_ser.size());
-				}));
-				break;
-			} catch (const engine::Error& error) {
-				lk_shard->retry_read(error, t);
+		bool more = true;
+		while (more) {
+			auto page = co_await dump_page(lk_shard, initial, more);
+			for (auto& [shard_did, data] : page) {
+				engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+				auto obj = co_await _dump_document(did, Data(std::move(data)));
+				std::string obj_ser = obj.serialise();
+				ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
+				if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
+				sha256.add(obj_ser.data(), obj_ser.size());
 			}
-			lk_shard->reopen();
-			L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-
-			initial = shard_did;
+			if (!page.empty()) {
+				initial = page.back().first + 1;
+			}
 		}
 
 		++shard_num;
 	}
 
-	return sha256.getHash();
+	co_return sha256.getHash();
 }
 
 
@@ -880,7 +911,7 @@ DatabaseHandler::restore_documents(int fd)
 }
 
 
-std::tuple<std::string, engine::Document, MsgPack>
+task::task<std::tuple<std::string, engine::Document, MsgPack>>
 DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 {
 	L_CALL("DatabaseHandler::prepare_document(<body>, <seq>)");
@@ -920,7 +951,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 		Data data;
 		inject_data(data, body);
 
-		return prepare(document_id, UNKNOWN_REVISION, body, data, seq);
+		co_return co_await prepare(document_id, UNKNOWN_REVISION, body, data, seq);
 	}
 
 	if (op_type == "patch") {
@@ -928,19 +959,19 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
-		const auto term_id = get_prefixed_term_id(document_id);
+		const auto term_id = co_await get_prefixed_term_id(document_id);
 
 		Data data;
 		try {
-			auto current_document = get_document_term(term_id);
-			data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+			auto current_document = co_await get_document_term(term_id);
+			data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
 		auto obj = data.get_obj();
 		apply_patch(body, obj);
 
-		return prepare(document_id, UNKNOWN_REVISION, body, data, seq);
+		co_return co_await prepare(document_id, UNKNOWN_REVISION, body, data, seq);
 	}
 
 	if (op_type == "update" || op_type == "merge") {
@@ -948,12 +979,12 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
-		const auto term_id = get_prefixed_term_id(document_id);
+		const auto term_id = co_await get_prefixed_term_id(document_id);
 
 		Data data;
 		try {
-			auto current_document = get_document_term(term_id);
-			data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+			auto current_document = co_await get_document_term(term_id);
+			data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
@@ -961,11 +992,11 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 
 		if (obj.empty()) {
 			inject_data(data, body);
-			return prepare(document_id, UNKNOWN_REVISION, body, data, seq);
+			co_return co_await prepare(document_id, UNKNOWN_REVISION, body, data, seq);
 		} else {
 			obj.update(body);
 			inject_data(data, obj);
-			return prepare(document_id, UNKNOWN_REVISION, obj, data, seq);
+			co_return co_await prepare(document_id, UNKNOWN_REVISION, obj, data, seq);
 		}
 	}
 
@@ -973,12 +1004,12 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 }
 
 
-std::tuple<engine::SearchResult, MsgPack, engine::Query>
+task::task<std::tuple<engine::SearchResult, MsgPack, engine::Query>>
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, engine::MatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
-	schema = get_schema();
+	schema = co_await get_schema();
 
 	engine::doccount first = query_field.offset;
 	engine::doccount maxitems = query_field.limit;
@@ -1080,7 +1111,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		check_at_least = engine::CHECK_ALL;
 	}
 
-	return std::make_tuple(get_mset(
+	auto mset = co_await get_mset(
 		query,
 		first,
 		maxitems,
@@ -1089,13 +1120,14 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		collapse_key,
 		collapse_max,
 		order,
-		aggs), std::move(qdsl_query), std::move(query));
+		aggs);
+	co_return std::make_tuple(std::move(mset), std::move(qdsl_query), std::move(query));
 }
 
 
 
 
-engine::SearchResult
+task::task<engine::SearchResult>
 DatabaseHandler::get_mset(
 	const engine::Query& query,
 	engine::doccount first,
@@ -1112,11 +1144,20 @@ DatabaseHandler::get_mset(
 
 	// The engine reads the text of the query here, once, before any database is checked out.
 	auto prepared = engine::prepare(query);
-	return match(*prepared, first, maxitems, check_at_least, sorter, collapse_key, collapse_max, order, aggs);
+	co_return co_await match(*prepared, first, maxitems, check_at_least, sorter, collapse_key, collapse_max, order, aggs);
 }
 
 
-engine::SearchResult
+void
+check_search_fanout(size_t shards, size_t max_indexes_per_search)
+{
+	if (max_indexes_per_search != 0 && shards > max_indexes_per_search) {
+		throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes at once (--max-indexes-per-search) and this one names {}; narrow the index pattern", max_indexes_per_search, shards));
+	}
+}
+
+
+task::task<engine::SearchResult>
 DatabaseHandler::match(
 	const engine::PreparedQuery& query,
 	engine::doccount first,
@@ -1132,7 +1173,7 @@ DatabaseHandler::match(
 	L_CALL("DatabaseHandler::match({}, {}, {}, {})", query.description(), first, maxitems, check_at_least);
 
 	if (query.empty()) {
-		return {};
+		co_return engine::SearchResult{};
 	}
 
 	engine::SearchRequest request;
@@ -1146,70 +1187,73 @@ DatabaseHandler::match(
 	request.order = order;
 	request.spy = aggs;
 
+	// Every shard the search names stays open until it ends: the limit is checked before any is taken.
+	check_search_fanout(endpoints.size(), static_cast<size_t>(opts.max_indexes_per_search));
+
 	// The engine feeds every shard into one search, merges the per-shard results and unshards the
 	// docids itself.
 	auto manager = XapiandManager::manager();
 
 	engine::SearchResult result;
 
-	auto shards = manager->database_pool->checkout(endpoints, flags);
-	try {
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			try {
-				// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
-				std::vector<engine::Shard*> engines;
-				engines.reserve(shards.size());
-				for (auto& shard : shards) {
-					try {
-						engines.push_back(&shard->engine());
-					} catch (const engine::Error& error) {
-						if (error.kind != engine::errc::not_found) { throw; }
-					}
-				}
-				if (engines.empty()) {
-					break;  // nothing to search -> empty result
-				}
-
-				result = engine::sync_wait(engine::search(engines, request));
-				break;
-			} catch (const QueryParserError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const SerialisationError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const QueryDslError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const engine::Error& error) {
-				switch (error.kind) {
-					case engine::errc::reopen:
-					case engine::errc::opening:
-					case engine::errc::not_found:
-					case engine::errc::not_available:
-					case engine::errc::timeout:
-					case engine::errc::network:
-					case engine::errc::closed:
-						if (t == 0) { throw; }
-						break;
-					case engine::errc::syntax:
-						THROW(ClientError, error.description());
-					default:
-						throw;
+	// One use of each shard for the whole search: the entries stay open, and each engine is refreshed
+	// once, so the search reads what was applied before it.
+	std::vector<lock_shard> shards;
+	shards.reserve(endpoints.size());
+	for (auto& endpoint : endpoints) {
+		shards.emplace_back(endpoint, flags);
+	}
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
+			std::vector<engine::Shard*> engines;
+			engines.reserve(shards.size());
+			for (auto& shard : shards) {
+				try {
+					engines.push_back(co_await shard->engine_for_read());
+				} catch (const engine::Error& error) {
+					if (error.kind != engine::errc::not_found) { throw; }
 				}
 			}
-			for (auto& shard : shards) {
-				shard->reopen();
+			if (engines.empty()) {
+				break;  // nothing to search -> empty result
+			}
+
+			result = co_await engine::search(engines, request);
+			break;
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const engine::Error& error) {
+			switch (error.kind) {
+				case engine::errc::reopen:
+				case engine::errc::opening:
+				case engine::errc::not_found:
+				case engine::errc::not_available:
+				case engine::errc::timeout:
+				case engine::errc::network:
+				case engine::errc::closed:
+					if (t == 0) { throw; }
+					break;
+				case engine::errc::syntax:
+					THROW(ClientError, error.description());
+				default:
+					throw;
 			}
 		}
-	} catch (...) {
-		manager->database_pool->checkin(shards);
-		throw;
+		for (auto& shard : shards) {
+			co_await shard->reopen();
+		}
 	}
-	manager->database_pool->checkin(shards);
 
-	return result;
+	co_return result;
 }
 
 
-bool
+task::task<bool>
 DatabaseHandler::update_schema()
 {
 	L_CALL("DatabaseHandler::update_schema()");
@@ -1218,20 +1262,20 @@ DatabaseHandler::update_schema()
 	if (mod_schema) {
 		auto old_schema = schema->get_const_schema();
 		auto manager = XapiandManager::manager();
-		return manager && manager->schemas->set(this, old_schema, mod_schema);
+		co_return manager && co_await manager->schemas->set(this, old_schema, mod_schema);
 	}
-	return true;
+	co_return true;
 }
 
 
-std::string
+task::task<std::string>
 DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
 	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
 
 	assert(!document_id.empty());
 
-	schema = get_schema();
+	schema = co_await get_schema();
 
 	std::string unprefixed_term_id;
 	auto spc_id = schema->get_data_id();
@@ -1249,11 +1293,11 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	} else {
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
-	return document_key(unprefixed_term_id, spc_id.get_ctype());
+	co_return document_key(unprefixed_term_id, spc_id.get_ctype());
 }
 
 
-std::vector<std::string>
+task::task<std::vector<std::string>>
 DatabaseHandler::get_metadata_keys()
 {
 	L_CALL("DatabaseHandler::get_metadata_keys()");
@@ -1265,7 +1309,7 @@ DatabaseHandler::get_metadata_keys()
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			keys = lk_shard->get_metadata_keys();
+			keys = co_await lk_shard->get_metadata_keys();
 			if (!keys.empty()) {
 				break;
 			}
@@ -1276,11 +1320,11 @@ DatabaseHandler::get_metadata_keys()
 	if (eptr && !valid) {
 		std::rethrow_exception(eptr);
 	}
-	return keys;
+	co_return keys;
 }
 
 
-std::string
+task::task<std::string>
 DatabaseHandler::get_metadata(const std::string& key)
 {
 	L_CALL("DatabaseHandler::get_metadata({})", repr(key));
@@ -1293,7 +1337,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			value = lk_shard->get_metadata(key);
+			value = co_await lk_shard->get_metadata(key);
 			if (!value.empty()) {
 				break;
 			}
@@ -1304,19 +1348,19 @@ DatabaseHandler::get_metadata(const std::string& key)
 	if (eptr && !valid) {
 		std::rethrow_exception(eptr);
 	}
-	return value;
+	co_return value;
 }
 
 
-std::string
+task::task<std::string>
 DatabaseHandler::get_metadata(std::string_view key)
 {
 	assert(!key.empty());
-	return get_metadata(std::string(key));
+	co_return co_await get_metadata(std::string(key));
 }
 
 
-void
+task::task<void>
 DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit, bool wal)
 {
 	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, wal);
@@ -1328,7 +1372,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			lk_shard->set_metadata(key, value, commit, wal);
+			co_await lk_shard->set_metadata(key, value, commit, wal);
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -1339,11 +1383,11 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 }
 
 
-void
+task::task<void>
 DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit, bool wal)
 {
 	assert(!key.empty());
-	set_metadata(std::string(key), std::string(value), commit, wal);
+	co_await set_metadata(std::string(key), std::string(value), commit, wal);
 }
 
 
@@ -1356,48 +1400,48 @@ DatabaseHandler::get_document(engine::docid did)
 }
 
 
-Document
+task::task<Document>
 DatabaseHandler::get_document(std::string_view document_id)
 {
 	L_CALL("DatabaseHandler::get_document((std::string){})", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		return get_document(did);
+		co_return get_document(did);
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
-	did = get_docid_term(term_id);
-	return Document(did, this);
+	const auto term_id = co_await get_prefixed_term_id(document_id);
+	did = co_await get_docid_term(term_id);
+	co_return Document(did, this);
 }
 
 
-Document
+task::task<Document>
 DatabaseHandler::get_document_term(const std::string& term_id)
 {
 	L_CALL("DatabaseHandler::get_document_term({})", repr(term_id));
 
-	auto did = get_docid_term(term_id);
-	return Document(did, this);
+	auto did = co_await get_docid_term(term_id);
+	co_return Document(did, this);
 }
 
 
-engine::docid
+task::task<engine::docid>
 DatabaseHandler::get_docid(std::string_view document_id)
 {
 	L_CALL("DatabaseHandler::get_docid({})", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		return did;
+		co_return did;
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
-	return get_docid_term(term_id);
+	const auto term_id = co_await get_prefixed_term_id(document_id);
+	co_return co_await get_docid_term(term_id);
 }
 
 
-engine::docid
+task::task<engine::docid>
 DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
@@ -1417,10 +1461,11 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				auto shard_did = engine::sync_wait(lk_shard->engine().find_key(term));
+				auto* eng = co_await lk_shard->engine_for_read();
+				auto shard_did = co_await eng->find_key(term);
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-					return did;
+					co_return did;
 				}
 				break;
 			} catch (const engine::Error& error) {
@@ -1430,7 +1475,7 @@ DatabaseHandler::get_docid_term(const std::string& term)
 				lk_shard->retry_read(error, t);
 			}
 			try {
-				lk_shard->reopen();
+				co_await lk_shard->reopen();
 			} catch (const engine::Error& error) {
 				if (error.kind != engine::errc::not_available) { throw; }
 				eptr = std::current_exception(); break;
@@ -1448,7 +1493,7 @@ DatabaseHandler::get_docid_term(const std::string& term)
 }
 
 
-void
+task::task<void>
 DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, commit, wal, version);
@@ -1459,27 +1504,27 @@ DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool 
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	lk_shard->delete_document(shard_did, commit, wal, version);
+	co_await lk_shard->delete_document(shard_did, commit, wal, version);
 }
 
 
-void
+task::task<void>
 DatabaseHandler::delete_document(std::string_view document_id, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), commit, wal, version);
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		delete_document(did, commit, wal, version);
-		return;
+		co_await delete_document(did, commit, wal, version);
+		co_return;
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
-	delete_document_term(term_id, commit);
+	const auto term_id = co_await get_prefixed_term_id(document_id);
+	co_await delete_document_term(term_id, commit);
 }
 
 
-void
+task::task<void>
 DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
@@ -1490,9 +1535,10 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 
 	if (n_shards > 1) {
 		try {
-			auto did = get_docid_term(term);
+			auto did = co_await get_docid_term(term);
 			if (did != 0u) {
-				return delete_document(did, commit, wal, version);
+				co_await delete_document(did, commit, wal, version);
+				co_return;
 			}
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
@@ -1502,11 +1548,11 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	lk_shard->delete_document_term(term, commit, wal, version);
+	co_await lk_shard->delete_document_term(term, commit, wal, version);
 }
 
 
-engine::WriteResult
+task::task<engine::WriteResult>
 DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
@@ -1526,7 +1572,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 			auto node = lk_shard->node();
 			if (node && node->is_active()) {
 				try {
-					auto doccount = lk_shard->engine().doc_count();
+					auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
 					if (min_doccount > doccount) {
 						min_doccount = doccount;
 						shard_num = n;
@@ -1538,13 +1584,13 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto info = lk_shard->add_document(std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->add_document(std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-	return info;
+	co_return info;
 }
 
 
-engine::WriteResult
+task::task<engine::WriteResult>
 DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
@@ -1555,13 +1601,13 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto info = lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
 	info.did = did;
-	return info;
+	co_return info;
 }
 
 
-engine::WriteResult
+task::task<engine::WriteResult>
 DatabaseHandler::replace_document_term(const std::string& term, engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
@@ -1586,7 +1632,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 					auto node = lk_shard->node();
 					if (node && node->is_active()) {
 						try {
-							auto doccount = lk_shard->engine().doc_count();
+							auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
 							if (min_doccount > doccount) {
 								min_doccount = doccount;
 								shard_num = n;
@@ -1604,9 +1650,9 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 		try {
 			// Figure out if the term alredy exists (across all shards)
-			auto did = get_docid_term(term);
+			auto did = co_await get_docid_term(term);
 			if (did != 0u) {
-				return replace_document(did, std::move(doc), commit, wal, version);
+				co_return co_await replace_document(did, std::move(doc), commit, wal, version);
 			}
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
@@ -1615,41 +1661,41 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto info = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-	return info;
+	co_return info;
 }
 
 
-engine::WriteResult
+task::task<engine::WriteResult>
 DatabaseHandler::replace_document(std::string_view document_id, engine::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>)", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		return replace_document(did, std::move(doc), commit, wal, version);
+		co_return co_await replace_document(did, std::move(doc), commit, wal, version);
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
-	return replace_document_term(term_id, std::move(doc), commit, wal, version);
+	const auto term_id = co_await get_prefixed_term_id(document_id);
+	co_return co_await replace_document_term(term_id, std::move(doc), commit, wal, version);
 }
 
 
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, bool human)
 {
 	L_CALL("DatabaseHandler::get_document_info({}, {}, {})", repr(document_id), raw_data, human);
 
-	auto document = get_document(document_id);
-	const auto data = Data(document.get_data());
+	auto document = co_await get_document(document_id);
+	const auto data = Data(co_await document.get_data());
 
 	MsgPack info;
 
 	auto did = document.get_docid();
 	info[RESPONSE_DOCID] = did;
 
-	auto version = document.get_value(DB_SLOT_VERSION);
+	auto version = co_await document.get_value(DB_SLOT_VERSION);
 	if (!version.empty()) {
 		info[RESPONSE_VERSION] = static_cast<engine::rev>(sortable_unserialise(version));
 	}
@@ -1704,13 +1750,13 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 		}
 	}
 
-	info[RESPONSE_VALUES] = document.get_values();
+	info[RESPONSE_VALUES] = co_await document.get_values();
 
-	return info;
+	co_return info;
 }
 
 
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::get_database_info()
 {
 	L_CALL("DatabaseHandler::get_database_info()");
@@ -1719,8 +1765,8 @@ DatabaseHandler::get_database_info()
 	if (endpoints.size() == 1) {
 		auto& endpoint = endpoints[0];
 		lock_shard lk_shard(endpoint, flags);
-		auto stats = engine::sync_wait(lk_shard->engine().stats());
-		return {
+		auto stats = co_await (co_await lk_shard->engine_for_read())->stats();
+		co_return MsgPack{
 			{ RESPONSE_ENDPOINT, endpoint.path },
 			{ RESPONSE_UUID, stats.uuid },
 			{ RESPONSE_REVISION, stats.revision },
@@ -1751,7 +1797,7 @@ DatabaseHandler::get_database_info()
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
-		auto stats = engine::sync_wait(lk_shard->engine().stats());
+		auto stats = co_await (co_await lk_shard->engine_for_read())->stats();
 		doc_count += stats.doc_count;
 		engine::docid shard_lastdocid = stats.lastdocid;
 		engine::docid did = (shard_lastdocid - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
@@ -1769,7 +1815,7 @@ DatabaseHandler::get_database_info()
 	}
     double average_length = doc_count == 0 ? 0.0 : total_length / double(doc_count);
 
-	return {
+	co_return MsgPack{
 		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path).first },
 		{ RESPONSE_DOC_COUNT, doc_count },
 		{ RESPONSE_LAST_ID, lastdocid },
@@ -1784,7 +1830,7 @@ DatabaseHandler::get_database_info()
 
 
 #ifdef XAPIAND_DATA_STORAGE
-std::string
+task::task<std::string>
 DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 {
 	L_CALL("DatabaseHandler::storage_get_stored()");
@@ -1794,12 +1840,12 @@ DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	return lk_shard->storage_get_stored(locator);
+	co_return co_await lk_shard->storage_get_stored(locator);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 
 
-bool
+task::task<bool>
 DatabaseHandler::commit(bool wal)
 {
 	L_CALL("DatabaseHandler::commit({})", wal);
@@ -1811,7 +1857,7 @@ DatabaseHandler::commit(bool wal)
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 		try {
-			ret = lk_shard->commit(wal) || ret;
+			ret = co_await lk_shard->commit(wal) || ret;
 		} catch (const engine::Error& error) {
 			lk_shard->collect_failure(error, eptr, valid, true);
 		}
@@ -1819,34 +1865,23 @@ DatabaseHandler::commit(bool wal)
 	if (eptr && !valid) {
 		std::rethrow_exception(eptr);
 	}
-	return ret;
+	co_return ret;
 }
 
 
-void
+task::task<void>
 DatabaseHandler::reopen()
 {
 	L_CALL("DatabaseHandler::reopen()");
 
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
-		lk_shard->reopen();
+		co_await lk_shard->reopen();
 	}
 }
 
 
-void
-DatabaseHandler::do_close(bool commit_)
-{
-	L_CALL("DatabaseHandler::do_close()");
-
-	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
-		lk_shard->do_close(commit_);
-	}
-}
-
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::unserialise_term_id(std::string_view term_id)
 {
 	L_CALL("DatabaseHandler::unserialise_term_id({})", repr(term_id));
@@ -1859,21 +1894,21 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
 	term_id.remove_prefix(1);
 	switch (type) {
 		case 'U':
-			return Unserialise::MsgPack(FieldType::uuid, term_id);
+			co_return Unserialise::MsgPack(FieldType::uuid, term_id);
 		case 'K':
-			return Unserialise::MsgPack(FieldType::keyword, term_id);
+			co_return Unserialise::MsgPack(FieldType::keyword, term_id);
 		case 'S':
-			return Unserialise::MsgPack(FieldType::text, term_id);
+			co_return Unserialise::MsgPack(FieldType::text, term_id);
 		case 'B':
-			return Unserialise::MsgPack(FieldType::boolean, term_id);
+			co_return Unserialise::MsgPack(FieldType::boolean, term_id);
 		case 'G':
-			return Unserialise::MsgPack(FieldType::geo, term_id);
+			co_return Unserialise::MsgPack(FieldType::geo, term_id);
 		case 'N':
 		case 'D':
 		case 'T': {
 			// These three types need further information, get such from the schema.
-			auto field_type = get_schema()->get_slot_field(ID_FIELD_NAME).get_type();
-			return Unserialise::MsgPack(field_type, term_id);
+			auto field_type = (co_await get_schema())->get_slot_field(ID_FIELD_NAME).get_type();
+			co_return Unserialise::MsgPack(field_type, term_id);
 		}
 		default:
 			THROW(SerialisationError, "Term type: {} is an unknown type", type);
@@ -1917,7 +1952,7 @@ DocIndexer::~DocIndexer()
 	try {
 		if (indexed()) {
 			DatabaseHandler db_handler(endpoints, flags);
-			db_handler.commit();
+			engine::sync_wait(db_handler.commit());
 		}
 	} catch (...) {
 		L_EXC("Unhandled exception in DocIndexer destructor");
@@ -1933,7 +1968,7 @@ DocPreparer::operator()()
 	assert(indexer);
 	auto http_errors = catch_http_errors([&]{
 		DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
-		auto prepared = db_handler.prepare_document(obj, idx + 1);
+		auto prepared = engine::sync_wait(db_handler.prepare_document(obj, idx + 1));
 		// Route document to proper indexer:
 		auto n_shards = indexer->endpoints.size();
 		auto& term_id = std::get<0>(prepared);
@@ -2070,16 +2105,16 @@ DocIndexer::operator()()
 					MsgPack obj;
 					if (!term_id.empty()) {
 						auto http_errors = catch_http_errors([&]{
-							auto info = db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+							auto info = engine::sync_wait(db_handler.replace_document_term(term_id, std::move(doc), false, true, false));
 
 							Document document(info.did, &db_handler);
 
 							if (term_id == "N\x80") {
-								obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+								obj[ID_FIELD_NAME] = engine::sync_wait(db_handler.unserialise_term_id(info.term));
 							} else {
 								auto it_id = data_obj.find(ID_FIELD_NAME);
 								if (it_id == data_obj.end()) {
-									obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+									obj[ID_FIELD_NAME] = engine::sync_wait(db_handler.unserialise_term_id(info.term));
 								} else {
 									obj[ID_FIELD_NAME] = it_id.value();
 								}
@@ -2256,7 +2291,7 @@ Document::get_docid()
 }
 
 
-std::string
+task::task<std::string>
 Document::serialise()
 {
 	L_CALL("Document::serialise()");
@@ -2264,7 +2299,7 @@ Document::serialise()
 	std::string serialised;
 
 	if (db_handler == nullptr) {
-		return serialised;
+		co_return serialised;
 	}
 
 	if (did == 0u) {
@@ -2283,20 +2318,20 @@ Document::serialise()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = co_await lk_shard->get_view(shard_did);
 			serialised = doc->serialise();
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		co_await lk_shard->reopen();
 	}
 
-	return serialised;
+	co_return serialised;
 }
 
 
-std::string
+task::task<std::string>
 Document::get_value(engine::valueno slot)
 {
 	L_CALL("Document::get_value({})", slot);
@@ -2304,7 +2339,7 @@ Document::get_value(engine::valueno slot)
 	std::string value;
 
 	if (db_handler == nullptr) {
-		return value;
+		co_return value;
 	}
 
 	if (did == 0u) {
@@ -2323,20 +2358,20 @@ Document::get_value(engine::valueno slot)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = co_await lk_shard->get_view(shard_did);
 			value = doc->value(slot);
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		co_await lk_shard->reopen();
 	}
 
-	return value;
+	co_return value;
 }
 
 
-std::string
+task::task<std::string>
 Document::get_data()
 {
 	L_CALL("Document::get_data()");
@@ -2344,7 +2379,7 @@ Document::get_data()
 	std::string data;
 
 	if (db_handler == nullptr) {
-		return data;
+		co_return data;
 	}
 
 	if (did == 0u) {
@@ -2363,26 +2398,26 @@ Document::get_data()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = co_await lk_shard->get_view(shard_did);
 			data = doc->data();
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		co_await lk_shard->reopen();
 	}
 
-	return data;
+	co_return data;
 }
 
 
-bool
+task::task<bool>
 Document::validate()
 {
 	L_CALL("Document::validate()");
 
 	if (db_handler == nullptr) {
-		return false;
+		co_return false;
 	}
 
 	if (did == 0u) {
@@ -2401,19 +2436,19 @@ Document::validate()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			lk_shard->get_view(shard_did);
+			co_await lk_shard->get_view(shard_did);
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		co_await lk_shard->reopen();
 	}
 
-	return true;
+	co_return true;
 }
 
 
-MsgPack
+task::task<MsgPack>
 Document::get_values()
 {
 	L_CALL("get_values()");
@@ -2421,7 +2456,7 @@ Document::get_values()
 	MsgPack values;
 
 	if (db_handler == nullptr) {
-		return values;
+		co_return values;
 	}
 
 	if (did == 0u) {
@@ -2440,7 +2475,7 @@ Document::get_values()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_view(shard_did);
+			auto doc = co_await lk_shard->get_view(shard_did);
 			doc->values([&](engine::valueno slot, std::string_view value) {
 				values[std::to_string(slot)] = value;
 			});
@@ -2448,42 +2483,42 @@ Document::get_values()
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
 		}
-		lk_shard->reopen();
+		co_await lk_shard->reopen();
 	}
 
-	return values;
+	co_return values;
 }
 
 
-MsgPack
+task::task<MsgPack>
 Document::get_value(std::string_view slot_name)
 {
 	L_CALL("Document::get_value({})", repr(slot_name));
 
 	if (db_handler != nullptr) {
-		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
-		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
+		auto slot_field = (co_await db_handler->get_schema())->get_slot_field(slot_name);
+		co_return Unserialise::MsgPack(slot_field.get_type(), co_await get_value(slot_field.slot));
 	}
-	return MsgPack::NIL();
+	co_return MsgPack::NIL();
 }
 
 
-MsgPack
+task::task<MsgPack>
 Document::get_obj()
 {
 	L_CALL("Document::get_obj()");
 
-	auto data = Data(get_data());
-	return data.get_obj();
+	auto data = Data(co_await get_data());
+	co_return data.get_obj();
 }
 
 
-MsgPack
+task::task<MsgPack>
 Document::get_field(std::string_view slot_name)
 {
 	L_CALL("Document::get_field({})", repr(slot_name));
 
-	return get_field(slot_name, get_obj());
+	co_return get_field(slot_name, co_await get_obj());
 }
 
 
@@ -2509,27 +2544,14 @@ Document::get_field(std::string_view slot_name, const MsgPack& obj)
 
 
 void
-committer_commit(std::weak_ptr<Shard> weak_shard) {
-	if (auto shard = weak_shard.lock()) {
-		auto start = std::chrono::steady_clock::now();
-
-		std::string error;
-
-		try {
-			lock_shard lk_shard(Endpoint(shard->endpoint), DB_OPEN | DB_WRITABLE);
-			lk_shard->commit();
-		} catch (const Exception& exc) {
-			error = exc.get_message();
-		} catch (const engine::Error& exc) {
-			error = exc.description();
-		}
-
-		auto end = std::chrono::steady_clock::now();
-
-		if (error.empty()) {
-			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), strings::from_delta(start, end));
-		} else {
-			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
-		}
+committer_commit(Endpoint endpoint) {
+	// The debouncer's thread only starts the commit: it is a task of the index, and takes its turn.
+	auto manager = XapiandManager::manager();
+	if (!manager || !manager->database_pool) {
+		return;
+	}
+	auto entry = manager->database_pool->get(endpoint);
+	if (entry) {
+		manager->database_pool->run_detached(autocommit(std::move(entry)));
 	}
 }

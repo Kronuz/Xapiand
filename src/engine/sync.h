@@ -24,9 +24,12 @@
 #pragma once
 
 #include <cstdint>                 // for std::uint64_t
+#include <memory>                  // for std::unique_ptr
 #include <utility>                 // for std::move
+#include <vector>                  // for std::vector
 
-#include "task.hh"                 // for task::task, task::sync_wait
+#include "engine/host.h"           // for BlockingScheduler
+#include "task.hh"                 // for task::task
 
 
 namespace engine {
@@ -39,11 +42,35 @@ void check_may_block(const char* site) noexcept;
 // The violations counted so far.
 std::uint64_t blocking_violations() noexcept;
 
-// The one bridge from a blocking caller to the engine: waits for t on this thread.
+namespace detail {
+
+// The calling thread's idle BlockingSchedulers: a wait takes one, so a nested wait takes another.
+inline std::vector<std::unique_ptr<BlockingScheduler>>& idle_schedulers() {
+	static thread_local std::vector<std::unique_ptr<BlockingScheduler>> idle;
+	return idle;
+}
+
+}  // namespace detail
+
+// The one bridge from a blocking caller to the engine: waits for t on this thread. Everything t
+// awaits resumes on this thread too (a turn handed over, a chore that finished, an event), so
+// nothing runs inside another task's stack.
 template <typename T>
 T sync_wait(task::task<T> t) {
 	check_may_block("engine::sync_wait");
-	return task::sync_wait(std::move(t));
+	auto& idle = detail::idle_schedulers();
+	std::unique_ptr<BlockingScheduler> scheduler;
+	if (idle.empty()) {
+		scheduler = std::make_unique<BlockingScheduler>();
+	} else {
+		scheduler = std::move(idle.back());
+		idle.pop_back();
+	}
+	struct Return {
+		std::unique_ptr<BlockingScheduler>& scheduler;
+		~Return() { detail::idle_schedulers().push_back(std::move(scheduler)); }
+	} giveback{scheduler};
+	return scheduler->run(std::move(t));
 }
 
 }  // namespace engine

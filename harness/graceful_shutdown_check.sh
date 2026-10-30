@@ -15,6 +15,8 @@
 #   1. HTTP  in-flight request + 1x SIGINT -> WAITS; drains -> clean exit.
 #   2. HTTP  in-flight request + 2x SIGINT -> FORCED exit.
 #   3. HTTP  no clients        + 1x SIGINT -> prompt exit.
+#   4. A write the debounced autocommit has not committed + SIGTERM at 0.5, 1.0 and 1.5 s after it (the commit is a task
+#      the registry started on the control loop, which stops at the shutdown) -> clean exit, and the write is there after a restart.
 set -u
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -135,6 +137,35 @@ else
 	fails=$((fails+1)); kill -9 "$PID" 2>/dev/null
 fi
 PID=""
+echo
+
+# ---- Scenario 4: SIGTERM while the debounced commit fires --------------------
+echo "=== scenario 4: an uncommitted write + SIGTERM around its autocommit -> clean exit, write kept ==="
+for delay in 0.5 1.0 1.5; do
+	if ! start_node; then echo "  SETUP FAIL"; exit 1; fi
+	curl -s -m10 -o /dev/null -XPUT "localhost:$PORT/gsd4/1" -H 'Content-Type: application/json' -d '{"n":1}'
+	sleep "$delay"
+	t0="$(now)"
+	kill -TERM "$PID"
+	if exited_within 20; then
+		echo "  PASS: SIGTERM ${delay}s after the write: exited ($(elapsed "$t0")s)"
+	else
+		echo "  FAIL: SIGTERM ${delay}s after the write: no exit within 20s"
+		fails=$((fails+1)); kill -9 "$PID" 2>/dev/null
+	fi
+	PID=""
+	# Restart on the same data: the write was committed by the shutdown or replayed from the WAL.
+	"$BIN" --port "$PORT" --name gsdnode -D "$RUNDIR/n" >"$RUNDIR/node2.log" 2>&1 &
+	PID=$!
+	for _ in $(seq 60); do curl -s --max-time 3 -o /dev/null "localhost:$PORT/" 2>/dev/null && break; sleep 0.5; done
+	got="$(curl -s -m10 "localhost:$PORT/gsd4/1")"
+	case "$got" in
+		*'"n":1'*) echo "  PASS: the write is there after the restart" ;;
+		*) echo "  FAIL: the write is missing after the restart: $got"; fails=$((fails+1)) ;;
+	esac
+	kill -TERM "$PID" 2>/dev/null; exited_within 20 || kill -9 "$PID" 2>/dev/null
+	PID=""
+done
 echo
 
 if [ "$fails" -eq 0 ]; then

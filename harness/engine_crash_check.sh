@@ -10,8 +10,18 @@
 # Compared: A's set equals the input (N ids, every `n` right). B's set holds every write
 # acknowledged more than GRACE seconds before the kill (the async WAL may lose the last moments), nothing that was not
 # written, every document intact (the cut point differs per run). Exit 0 = all checks passed.
-# Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh
+#   D. (--reactors N, default 2) N writers on N HTTP reactors put sequences into ONE one-shard index; kill -9; restart; poke; list. Every write
+#      acknowledged more than GRACE seconds before the kill is present, and what each writer recovered is a prefix of what it sent:
+#      the WAL's order is the apply order across reactors (phase 7c D5, C6).
+# Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh [--reactors N]
 set -u
+REACTORS=2
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--reactors) REACTORS="$2"; shift 2 ;;
+		*) echo "usage: $0 [--reactors N]"; exit 2 ;;
+	esac
+done
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8931}"
@@ -28,7 +38,7 @@ fail() { echo "  FAIL: $*"; fails=$((fails + 1)); }
 pass() { echo "  ok: $*"; }
 
 start_node() {  # start_node ENGINE LOG
-	"$BIN" --port "$PORT" --name crashnode --verbosity 3 -D "$RUNDIR/n_$1" >>"$RUNDIR/$2" 2>&1 &
+	"$BIN" --port "$PORT" --name crashnode --verbosity 3 --http-servers "$REACTORS" -D "$RUNDIR/n_$1" >>"$RUNDIR/$2" 2>&1 &
 	PID=$!
 	for _ in $(seq 80); do
 		kill -0 "$PID" 2>/dev/null || { echo "  node died during startup"; return 1; }
@@ -63,7 +73,9 @@ PY
 check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every file's digest) passes on each shard; node stopped
 	local out
 	if [ -x "$CHECK_TOOL" ]; then
-		out=$("$CHECK_TOOL" "$RUNDIR"/n_strata/"$1"/.__* 2>&1) && pass "$2: strata check passes on $(echo "$out" | grep -c ': ok') shards" || fail "$2: strata check: $(echo "$out" | grep -v ': ok' | head -3 | tr '\n' ';')"
+		local shards=("$RUNDIR"/n_strata/"$1"/.__*)
+		[ -e "${shards[0]}" ] || shards=("$RUNDIR"/n_strata/"$1")   # a one-shard index has no shard subdirectories
+		out=$("$CHECK_TOOL" "${shards[@]}" 2>&1) && pass "$2: strata check passes on $(echo "$out" | grep -c ': ok') shards" || fail "$2: strata check: $(echo "$out" | grep -v ': ok' | head -3 | tr '\n' ';')"
 	else
 		fail "$2: no CHECK_TOOL (tests/strata_check_tool.cc, built against the server's objects) to run the strata check"
 	fi
@@ -130,6 +142,65 @@ PY
 	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$nb" -le $((na + 1)) ] && pass "$ENG: $na writes acknowledged, $nb recovered; none acknowledged more than ${GRACE:-2}s before the kill is missing ($late newer ones missing), all intact, none duplicated" || fail "$ENG: B acknowledged $na, recovered $nb, $bad wrong, $dup duplicated, $lost old acknowledged writes missing"
 	crash
 	[ "$ENG" != strata ] || check_digest bulk "$ENG after the restart and a second kill (B)"
+
+	echo "== [crash $ENG] D: $REACTORS writers on $REACTORS reactors into one index, kill -9 ${CUT:-4}s in =="
+	start_node "$ENG" "$ENG.D1.log" || { fail "$ENG startup D"; continue; }
+	# One shard, so one log: what a crash loses is a suffix of the log's order, which is the order the writes were applied in.
+	curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/multi/" -H 'Content-Type: application/json' -d '{"_settings":{"number_of_shards":1}}'
+	WBG=""
+	for w in $(seq 1 "$REACTORS"); do
+		python3 -I - "$PORT" "$RUNDIR/acked_D$w" "$w" <<'PY' &
+import sys, json, time, http.client
+c = http.client.HTTPConnection('localhost', int(sys.argv[1]), timeout=30)
+w = sys.argv[3]
+with open(sys.argv[2], 'w', buffering=1) as log:
+    i = 0
+    while True:
+        i += 1
+        try:
+            c.request('PUT', f'/multi/w{w}-{i}', body=json.dumps({'w': int(w), 'n': i, 'txt': f'writer {w} doc {i}'}), headers={'Content-Type': 'application/json'})
+            r = c.getresponse(); r.read()
+        except Exception:
+            break
+        if r.status in (200, 201, 204):
+            log.write(f'{i} {time.time():.3f}\n')
+PY
+		WBG="$WBG $!"
+	done
+	sleep "${CUT:-4}"
+	killed=$(python3 -c 'import time; print(f"{time.time():.3f}")')
+	crash
+	for b in $WBG; do kill -9 "$b" 2>/dev/null; wait "$b" 2>/dev/null; done
+	[ "$ENG" != strata ] || check_digest multi "$ENG right after the kill -9 (D)"
+	start_node "$ENG" "$ENG.D2.log" || { fail "$ENG restart D"; continue; }
+	poke multi
+	list_set multi "$RUNDIR/D_$ENG"
+	read -r bad dup lost gaps total <<<"$(python3 -I - "$RUNDIR/D_$ENG" "$RUNDIR" "$killed" "${GRACE:-2}" "$REACTORS" <<'PY'
+import sys, re
+rows = [l.split() for l in open(sys.argv[1])]
+rundir, killed, grace, n = sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5])
+got = {}
+dup = bad = 0
+for _id, num in rows:
+    m = re.fullmatch(r'w(\d+)-(\d+)', _id)
+    if not m or str(num) != m.group(2):
+        bad += 1; continue
+    s = got.setdefault(int(m.group(1)), set())
+    if int(m.group(2)) in s: dup += 1
+    s.add(int(m.group(2)))
+lost = gaps = 0
+for w in range(1, n + 1):
+    acked = [(int(a), float(t)) for a, t in (l.split() for l in open(f'{rundir}/acked_D{w}'))]
+    have = got.get(w, set())
+    lost += sum(1 for i, t in acked if t <= killed - grace and i not in have)
+    # what a writer recovered is a prefix of what it sent: no id is missing below its highest recovered one
+    gaps += sum(1 for i in range(1, max(have, default=0) + 1) if i not in have)
+print(bad, dup, lost, gaps, len(rows))
+PY
+)"
+	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$gaps" = 0 ] && [ "$total" -gt 0 ] && pass "$ENG: $REACTORS writers, $total documents recovered; none acknowledged more than ${GRACE:-2}s before the kill is missing, each writer's set is a prefix of its sequence (WAL order = apply order)" || fail "$ENG: D recovered $total, $bad wrong, $dup duplicated, $lost old acknowledged writes missing, $gaps gaps below a writer's highest id"
+	crash
+	[ "$ENG" != strata ] || check_digest multi "$ENG after the restart and a second kill (D)"
 done
 if [ "$fails" = 0 ]; then echo "PASS"; else echo "FAIL ($fails)"; fi
 [ "$fails" = 0 ]

@@ -43,6 +43,7 @@
 #include "opts.h"                             // for opts::*
 #include "node.h"                             // for Node, local_node
 #include "thread.hh"                          // for ThreadPolicyType::*
+#include "task.hh"                            // for task::task
 #include "threadpool.hh"                      // for ThreadPool
 #include "engine/error.h"                    // for engine::Error
 
@@ -166,8 +167,8 @@ private:
 	bool is_running_loop() const { return _running_loop.load(std::memory_order_relaxed); }
 
 
-	IndexSettings resolve_index_settings_impl(std::string_view normalized_slashed_path, bool writable = false, const MsgPack* settings = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
-	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable = false, const MsgPack* settings = nullptr);
+	task::task<IndexSettings> resolve_index_settings_impl(std::string_view normalized_slashed_path, bool writable = false, const MsgPack* settings = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
+	task::task<Endpoints> resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable = false, const MsgPack* settings = nullptr);
 	void invalidate_settings_impl(const std::string& uri);
 
 	std::string server_metrics_impl();
@@ -229,9 +230,9 @@ public:
 		_manager.reset();
 	}
 
-	static IndexSettings resolve_index_settings(std::string_view normalized_path, bool writable = false, const MsgPack* settings = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
+	static task::task<IndexSettings> resolve_index_settings(std::string_view normalized_path, bool writable = false, const MsgPack* settings = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
 
-	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, const MsgPack* settings = nullptr) {
+	static task::task<Endpoints> resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, const MsgPack* settings = nullptr) {
 		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, settings);
 	}
 

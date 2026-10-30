@@ -34,6 +34,7 @@ enum class errc {
 	closed,            // the shard was closed under the operation
 	not_found,         // the shard does not exist
 	not_available,     // the shard exists but cannot serve now
+	busy,              // the shard's turn did not come in time: the request gives up (a 503), nothing to retry
 	network,           // a transport failure
 	timeout,           // a transport timeout
 	doc_not_found,     // no such document
@@ -52,6 +53,7 @@ constexpr const char* to_string(errc kind) noexcept {
 		case errc::closed: return "closed";
 		case errc::not_found: return "not_found";
 		case errc::not_available: return "not_available";
+		case errc::busy: return "busy";
 		case errc::network: return "network";
 		case errc::timeout: return "timeout";
 		case errc::doc_not_found: return "doc_not_found";

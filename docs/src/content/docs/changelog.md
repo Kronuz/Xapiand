@@ -22,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   1.0.0-alpha.9 or earlier (`iamglass`, `flintlock`, `postlist.*`, `*.glass`) exits with status 65 and names the
   first one, instead of starting with empty strata indexes beside them. Dump the indexes with that release and restore
   them here (see [Upgrading](/Xapiand/upgrade#upgrading-from-100-alpha9)).
+- **A request that cannot get its index's turn in time answers `503`.** Every operation on an index (a write,
+  a commit, a refresh before a read, the timed commit and the idle close) takes that index's turn, and waits for
+  it for at most 30 s. The old pool made a request wait on a condition variable for a free shard, and answered
+  the same error when it ran out of time; now the wait is bounded by the one turn, not by a pool of copies.
+- **A search no longer holds its index.** A search reads a published view of each index it names, so a long search
+  does not delay a write, a refresh or a commit to the same index (it used to hold the index's lock for its whole
+  run). A search sees the index as of the moment it started.
+- **Too many searches of one index at once answer `503`.** Each index has a fixed number of reader records (the
+  threads that can read it at once, doubled); a search that finds none free in an index answers `503` instead of
+  waiting.
+- **A search over too many indexes answers `400`.** A search keeps every index it reads open until it ends, so one
+  that names more shards than `--max-indexes-per-search` (default and ceiling: the database pool size) is refused
+  with the limit in the message.
+- **A write that asks for a commit and waits too long for it still succeeds.** The write is applied and logged; its
+  commit is left to the timed commit, so a client is not told to retry what was done (an `add` without an id would
+  have been stored twice).
+- **The device work of an index runs on a shared pool of workers.** Opening an index, writing a segment,
+  committing, closing and reading or writing a stored blob run as jobs of the index's own queue on one pool of
+  workers, so a slow disk for one index no longer holds the threads that serve the others, and a write does no
+  I/O of its own while it holds the index.
 - **`collapse_max` above 1 returns the best documents of each group** on the strata engine: for each group,
   the best `collapse_max` documents of the window. The Xapian engine returns lower-ranked documents of a
   group when a better one fell outside its window (the bank's `?collapse=age&limit=5` answers accounts 6,
@@ -66,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   among the values; it now returns the values.
 
 ### Removed
+- **`--max-database-readers`**: an index is opened once and shared by every request; there are no pooled
+  reader copies to cap.
 - **The `_elite_set` operator** (query DSL, default operator and the engine's ELITE_SET). A query with it
   answers `400` ("Invalid operator").
 - **The `terms` of `INFO` on a document** (every term the document indexes, with its frequency and

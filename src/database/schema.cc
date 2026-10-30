@@ -2704,7 +2704,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
  * |_____|_____|_____|_____|_____|_____|_____|_____|
  */
 
-std::tuple<std::string, engine::Document, MsgPack>
+task::task<std::tuple<std::string, engine::Document, MsgPack>>
 Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq)
 {
 	L_CALL("Schema::index({}, {}, <db_handler>)", object.to_string(), document_id.to_string());
@@ -2772,8 +2772,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							if (endpoint.is_active()) {
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags, false);
-									lk_shard.lock(0);
-									auto doccount = lk_shard->engine().doc_count();
+									lk_shard.lock();
+									auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
 										shard_num = n;
@@ -2838,8 +2838,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							if (endpoint.is_active()) {
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags, false);
-									lk_shard.lock(0);
-									auto doccount = lk_shard->engine().doc_count();
+									lk_shard.lock();
+									auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
 										shard_num = n;
@@ -2911,7 +2911,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 #ifdef XAPIAND_LUA
 		std::unique_ptr<MsgPack> mut_object;
 		if (specification.script) {
-			mut_object = db_handler.call_script(object, term_id, *specification.script, data);
+			mut_object = co_await db_handler.call_script(object, term_id, *specification.script, data);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
 					THROW(ClientError, "Script must return an object, it returned {}", enum_name(mut_object->get_type()));
@@ -2988,7 +2988,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
 
-		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
+		co_return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
 	} catch (...) {
 		L_DEBUG("ERROR IN {}: {}", document_id.to_string(), object.to_string());
 		mut_schema.reset();

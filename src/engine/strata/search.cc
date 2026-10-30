@@ -50,7 +50,7 @@
 #include "engine/error.h"          // for Error, errc
 #include "engine/strata/doc_view.h"  // for SegmentDocView
 #include "engine/strata/expand.h"  // for expand
-#include "engine/strata/pin.h"     // for Pinned
+#include "engine/strata/viewed.h"  // for Viewed
 #include "engine/strata/shard.h"   // for Shard
 #include "engine/strata/values.h"  // for values::Slot
 
@@ -629,7 +629,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		return {};
 	}
 
-	// Pin every distinct index once, in a fixed order, so searches that share indexes cannot deadlock.
+	// Hold one view of every distinct index, none of which blocks a write, a refresh or another search.
 	std::vector<Shard*> mine;
 	mine.reserve(shards.size());
 	for (auto* shard : shards) {
@@ -639,22 +639,26 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		}
 		mine.push_back(strata);
 	}
-	std::vector<Shard*> order = mine;
-	std::sort(order.begin(), order.end(), [](const Shard* a, const Shard* b) { return std::less<>{}(a->identity(), b->identity()); });
-	std::vector<Pinned> pins;
-	pins.reserve(order.size());
-	for (std::size_t i = 0; i < order.size(); ++i) {
-		if (i == 0 || order[i]->identity() != order[i - 1]->identity()) {
-			pins.push_back(order[i]->pin());
-		}
-	}
-	const auto pin_of = [&](const Shard* shard) -> const Pinned& {
-		for (const auto& pin : pins) {
-			if (pin.identity_ == shard->identity()) {
-				return pin;
+	std::vector<Viewed> views;
+	views.reserve(mine.size());
+	const auto viewed_of = [&](const Shard* shard) -> const Viewed* {
+		for (const auto& held : views) {
+			if (held.identity() == shard->identity()) {
+				return &held;
 			}
 		}
-		throw Error(errc::internal, "A strata search lost a pinned shard");
+		return nullptr;
+	};
+	for (auto* shard : mine) {
+		if (viewed_of(shard) == nullptr) {
+			views.push_back(shard->view());
+		}
+	}
+	const auto view_of = [&](const Shard* shard) -> const Viewed& {
+		if (const auto* held = viewed_of(shard)) {
+			return *held;
+		}
+		throw Error(errc::internal, "A strata search lost a viewed shard");
 	};
 
 	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's, and
@@ -662,8 +666,8 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	std::vector<p::shard_input> inputs(mine.size());
 	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
-		for (const auto& view : pin_of(mine[i]).segments()) {
-			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead, &pin_of(mine[i]).fields()});
+		for (const auto& view : view_of(mine[i]).segments()) {
+			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead, &view_of(mine[i]).fields()});
 			documents += view.seg()->core().doc_count();
 		}
 	}

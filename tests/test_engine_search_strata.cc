@@ -169,12 +169,16 @@ void write_docs(Index& index, int shard, const Model& model, std::size_t from, s
 
 // An index holding the model's documents; `commits` splits each shard's load into that many commits,
 // which leaves several segments.
-void build(const char* name, int shard_count, int count, int commits, Index& strata, Model& model) {
+// `host` opens the shards in host mode: their writes take turns (the caller's), a read sees what the last
+// refresh flushed, and nothing a reader holds blocks a write.
+void build(const char* name, int shard_count, int count, int commits, Index& strata, Model& model, bool host = false) {
 	std::mt19937 rng(1234);
 	model.shards.assign(static_cast<std::size_t>(shard_count), {});
 	strata.owned.clear();
+	engine::OpenOptions options;
+	options.host = host;
 	for (int s = 0; s < shard_count; ++s) {
-		auto opened = engine::sync_wait(engine::open_local(path_of(name, s), true, true));
+		auto opened = engine::sync_wait(engine::open_local(path_of(name, s), true, true, options));
 		strata.owned.push_back(std::move(opened.shard));
 	}
 	for (int s = 0; s < shard_count; ++s) {
@@ -1174,7 +1178,7 @@ void test_long_chains_impl() {
 void test_concurrent_searches_impl() {
 	Index strata;
 	Model model;
-	build("threads", 2, 40, 2, strata, model);
+	build("threads", 2, 40, 2, strata, model, true);
 	std::atomic<bool> stop{false};
 	std::atomic<int> failures{0};
 	const auto searcher = [&](bool reversed) {
@@ -1195,6 +1199,7 @@ void test_concurrent_searches_impl() {
 			auto doc = random_doc(rng, 1000 + i);
 			auto written = make(1, 1000 + i, doc);
 			engine::sync_wait(strata.owned[i % 2]->add(written, {}));
+			engine::sync_wait(strata.owned[i % 2]->refresh());
 		}
 	});
 	std::thread a(searcher, false), b(searcher, true), c(searcher, false);
@@ -1225,15 +1230,15 @@ double weight_in(std::size_t n, const Model::Doc& doc) {
 	return weigh(statistics_of(sized, 3), doc, Query::term("f", "common")).second;
 }
 
-// A search that runs while another thread writes and commits sees one snapshot of the whole index.
-// The writer adds document g to shard 0, then 1, then 2, so the states that ever existed are
-// (g,g,g), (g+1,g,g), (g+1,g+1,g) and back to (g+1,g+1,g+1); a search holds every shard's lock before it
-// reads any, so what it finds is one of them: the same documents in every shard as of one moment, with the
-// statistics (and so the weights) of exactly those documents. Searches name the shards in opposite orders.
+// A search that runs while another thread writes and commits sees, in each shard, one snapshot of it: the
+// documents 1..count, whole. The writer adds document g to shard 0, then 1, then 2, and the search holds a view
+// of each shard (acquired one after the other, so the shards may be at different moments), with the
+// statistics (and so the weights) of exactly the documents the views hold. Searches name the shards in
+// opposite orders.
 void test_snapshot_consistency_impl() {
 	Index strata;
 	Model model;
-	build("snapshot", 3, 0, 1, strata, model);
+	build("snapshot", 3, 0, 1, strata, model, true);
 	Model::Doc doc;
 	doc.live = true;
 	doc.terms = {"common", "pad"};
@@ -1280,7 +1285,9 @@ void test_snapshot_consistency_impl() {
 			for (std::size_t s = 0; s < 3; ++s) {
 				if (top[s] != count[s]) { fail("a shard's documents are not 1..count", s, top[s], count[s]); }
 			}
-			if (!(count[0] >= count[1] && count[1] >= count[2] && count[2] + 1 >= count[0])) { fail("shards from different moments", count[0], count[1], count[2]); }
+			for (std::size_t s = 0; s < 3; ++s) {
+				if (count[s] > generations) { fail("a shard holds more than was written", s, count[s], generations); }
+			}
 			if (n > 0) {
 				const double want = weight_for(n);
 				for (const auto& hit : result.hits) {
@@ -1301,7 +1308,11 @@ void test_snapshot_consistency_impl() {
 			for (std::size_t s = 0; s < 3; ++s) {
 				auto written = make(static_cast<int>(s), g, doc);
 				engine::sync_wait(strata.owned[s]->add(written, {}));
-				if (g % 7 == 0) { engine::sync_wait(strata.owned[s]->commit(engine::Transaction::none)); }
+				if (g % 7 == 0) {
+					engine::sync_wait(strata.owned[s]->commit(engine::Transaction::none));
+				} else {
+					engine::sync_wait(strata.owned[s]->refresh());
+				}
 			}
 		}
 		done = true;
@@ -1319,7 +1330,7 @@ void test_snapshot_consistency_impl() {
 }
 
 
-// A spy that stops inside its first see() until released, with every shard's lock held by the search.
+// A spy that stops inside its first see() until released, with a view of every shard held by the search.
 class BlockingSpy final : public engine::MatchSpy {
 public:
 	std::promise<void> inside;
@@ -1343,18 +1354,18 @@ public:
 	std::string description() const override { return "BlockingSpy"; }
 };
 
-// While a spy is inside see(), every shard's lock is held: a write, a commit and a delete on each shard (the
-// one pinned last included) wait until the search ends, and the search sees the state before them.
-void test_pin_holds_impl() {
+// While a spy is held inside see() for a second, every shard is read through its view: a write, a refresh,
+// a commit and a delete on each shard all finish meanwhile, and the held search still sees the state it
+// started with. (Reads once took the shard's lock for the whole search, and these waited for it: phase 7c D6.)
+void test_view_holds_nothing_impl() {
 	Index strata;
 	Model model;
-	build("pin_holds", 3, 20, 2, strata, model);
+	build("view_holds", 3, 20, 2, strata, model, true);
 	std::promise<void> release;
 	BlockingSpy spy;
 	spy.gate = release.get_future().share();
 	engine::SearchResult result;
 	std::thread searcher([&] {
-		// Asked for out of order, so the locks are not taken in the order of the request.
 		std::vector<engine::Shard*> order{strata.owned[2].get(), strata.owned[0].get(), strata.owned[1].get()};
 		auto prepared = engine::prepare(Query::term("f", "common"));
 		engine::SearchRequest request;
@@ -1364,33 +1375,41 @@ void test_pin_holds_impl() {
 		result = engine::sync_wait(engine::search(order, request));
 	});
 	spy.inside.get_future().wait();
+	const auto begin = std::chrono::steady_clock::now();
 	std::atomic<int> finished{0};
 	std::vector<std::thread> writers;
 	for (std::size_t s = 0; s < 3; ++s) {
+		// One thread per shard is the shard's writer: the host's turn.
 		writers.emplace_back([&, s] {
 			auto doc = make(static_cast<int>(s), 777, model.shards[0][0]);
 			engine::sync_wait(strata.owned[s]->add(doc, {}));
 			++finished;
-		});
-		writers.emplace_back([&, s] {
+			engine::sync_wait(strata.owned[s]->refresh());
+			++finished;
+			engine::sync_wait(strata.owned[s]->commit(engine::Transaction::none));
+			++finished;
+			engine::sync_wait(strata.owned[s]->erase_by_key("Q" + std::to_string(s) + "_3", true, std::nullopt));
+			engine::sync_wait(strata.owned[s]->refresh());
+			++finished;
 			engine::sync_wait(strata.owned[s]->commit(engine::Transaction::none));
 			++finished;
 		});
-		writers.emplace_back([&, s] {
-			engine::sync_wait(strata.owned[s]->erase_by_key("Q" + std::to_string(s) + "_3", true, std::nullopt));
-			++finished;
-		});
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(700));
+	for (auto& writer : writers) { writer.join(); }
 	const int during = finished.load();
+	const auto elapsed = std::chrono::steady_clock::now() - begin;
+	// Hold the search a second in all: the writes above did not wait for it.
+	std::this_thread::sleep_for(std::chrono::seconds(1) - std::min<std::chrono::steady_clock::duration>(elapsed, std::chrono::seconds(1)));
 	release.set_value();
 	searcher.join();
-	for (auto& writer : writers) { writer.join(); }
-	CHECK_EQ(during, 0);
+	CHECK_EQ(during, 15);
+	CHECK_TRUE(elapsed < std::chrono::milliseconds(800));
 	CHECK_EQ(result.hits.size(), 60u);
 	CHECK_EQ(result.estimated, 60u);
 	CHECK_EQ(spy.seen.load(), 60);
-	CHECK_EQ(finished.load(), 9);
+	// The next search sees the writes: three documents added, three erased.
+	const auto after = run(strata, 3, Query::term("f", "common"), 0, 1000);
+	CHECK_EQ(after.hits.size(), 60u);
 }
 
 // A pin after a failed reopen raises a database error and releases the other shards' locks; it never reads the
@@ -1625,7 +1644,7 @@ void test_phrase_alternatives() { guarded("test_phrase_alternatives", test_phras
 void test_long_chains() { guarded("test_long_chains", test_long_chains_impl); }
 void test_snapshot_consistency() { guarded("test_snapshot_consistency", test_snapshot_consistency_impl); }
 void test_concurrent_searches() { guarded("test_concurrent_searches", test_concurrent_searches_impl); }
-void test_pin_holds() { guarded("test_pin_holds", test_pin_holds_impl); }
+void test_view_holds_nothing() { guarded("test_view_holds_nothing", test_view_holds_nothing_impl); }
 void test_pin_after_failed_reopen() { guarded("test_pin_after_failed_reopen", test_pin_after_failed_reopen_impl); }
 void test_huge_window() { guarded("test_huge_window", test_huge_window_impl); }
 void test_percent_infinite() { guarded("test_percent_infinite", test_percent_infinite_impl); }
@@ -1633,4 +1652,4 @@ void test_collapse() { guarded("test_collapse", test_collapse_impl); }
 
 }  // namespace
 
-TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_invalid_shapes, test_phrase_alternatives, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_pin_holds, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite, test_collapse)
+TEST_MAIN(test_one_shard, test_positional, test_append, test_fields, test_two_shards, test_spy, test_five_shards, test_no_shards_and_empty, test_writes_and_deletes, test_refusals, test_invalid_shapes, test_phrase_alternatives, test_long_chains, test_concurrent_searches, test_snapshot_consistency, test_view_holds_nothing, test_pin_after_failed_reopen, test_huge_window, test_percent_infinite, test_collapse)

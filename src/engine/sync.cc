@@ -48,8 +48,14 @@ void
 check_may_block(const char* site) noexcept
 {
 	const bool on_loop = reactor::inside_run();
-	if (!on_loop && !task::current()) {
-		return;
+	if (!on_loop) {
+		if (!task::current()) {
+			return;
+		}
+		// A task that engine::sync_wait drives runs on a thread that is allowed to block: it is the waiting thread.
+		if (dynamic_cast<BlockingScheduler*>(Host::current()) != nullptr) {
+			return;
+		}
 	}
 	violations.fetch_add(1, std::memory_order_relaxed);
 	const char* where = on_loop ? "a reactor loop" : "a task scheduler's thread";

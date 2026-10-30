@@ -24,6 +24,8 @@
 #pragma once
 
 #include <cassert>              // for assert
+#include <optional>             // for std::optional
+#include <utility>              // for std::exchange, std::move
 
 #include "database/pool.h"      // for DatabasePool (database_pool)
 #include "database/shard.h"     // for Shard
@@ -32,8 +34,12 @@
 #include "engine/error.h"       // for engine::Error
 
 
+// A use of an index: it keeps the registry entry from being closed as idle, and makes the Shard through
+// which the index is read and written. Taking it never waits: the index is opened, and its turn taken,
+// by the operations that need them.
 class lock_shard {
-	std::shared_ptr<Shard> _locked;
+	ReferencedShardEndpoint _ref;
+	std::optional<Shard> _shard;
 	int _locks;
 
 	lock_shard(const lock_shard&) = delete;
@@ -43,7 +49,15 @@ public:
 	const int flags;
 	const Endpoint endpoint;
 
+	lock_shard(lock_shard&& other) noexcept :
+		_ref(std::move(other._ref)),
+		_shard(std::move(other._shard)),
+		_locks(std::exchange(other._locks, 0)),
+		flags(other.flags),
+		endpoint(other.endpoint) { }
+
 	lock_shard(const Endpoint& endpoint, int flags, bool do_lock = true) :
+		_ref(nullptr),
 		_locks(0),
 		flags(flags),
 		endpoint(endpoint)
@@ -60,50 +74,39 @@ public:
 		}
 	}
 
-	template <typename... Args>
-	const std::shared_ptr<Shard> lock(Args&&... args)
+	Shard& lock()
 	{
-		if (!_locked) {
-			assert(_locks == 0);
+		if (_locks == 0) {
 			auto manager = XapiandManager::manager();
 			if (!manager) {
 				throw engine::Error(engine::errc::internal, "No manager");
 			}
-			_locked = manager->database_pool->checkout(endpoint, flags, std::forward<Args>(args)...);
+			_ref = manager->database_pool->spawn(endpoint);
+			_shard.emplace(*_ref.get(), flags);
 		}
 		++_locks;
-		return _locked;
+		return *_shard;
 	}
 
 	int unlock() noexcept
 	{
 		if (_locks > 0 && --_locks == 0) {
-			assert(_locked);
-			auto manager = XapiandManager::manager();
-			if (manager) {
-				manager->database_pool->checkin(_locked);
-			} else {
-				_locked->_busy.store(false);
-				_locked.reset();
-			}
+			_shard->release();
+			_shard.reset();
+			_ref.reset();
 		}
 		return _locks;
 	}
 
 	Shard& operator*() const noexcept
 	{
-		assert(_locked);
-		return *_locked;
+		assert(_shard);
+		return const_cast<Shard&>(*_shard);
 	}
 
 	Shard* operator->() const noexcept
 	{
-		assert(_locked);
-		return _locked.get();
-	}
-
-	const std::shared_ptr<Shard> locked()
-	{
-		return _locked;
+		assert(_shard);
+		return const_cast<Shard*>(&*_shard);
 	}
 };

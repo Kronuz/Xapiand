@@ -44,7 +44,8 @@
 #include "enum.h"                                 // for ENUM_CLASS
 #include "htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
-#include "msgpack.h"                              // for MsgPack
+#include "msgpack.h"                             // for MsgPack
+#include "task.hh"                               // for task::task
 #include "repr.hh"                                // for repr
 #include "reserved/fields.h"                      // for SCHEMA_FIELD_NAME
 #include "utype.hh"                               // for toUType
@@ -995,7 +996,8 @@ public:
 	/*
 	 * Function to index object in doc.
 	 */
-	std::tuple<std::string, engine::Document, MsgPack> index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq = 0);
+	// Indexes the object. Its steps that read the database (a script's current document, the shard that holds fewest documents) are awaited.
+	task::task<std::tuple<std::string, engine::Document, MsgPack>> index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq = 0);
 
 	/*
 	 * Function to update the schema according to obj_schema.

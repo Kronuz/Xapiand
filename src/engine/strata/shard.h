@@ -26,7 +26,9 @@
 #include <string>                  // for std::string
 #include <vector>                  // for std::vector
 
+#include "engine/chores.h"         // for Chores
 #include "engine/document.h"       // for FieldKind
+#include "engine/open.h"           // for OpenOptions, CheckResult
 #include "engine/shard.h"          // for engine::Shard
 
 
@@ -57,7 +59,7 @@ private:
 };
 
 struct Handle;
-class Pinned;
+class Viewed;
 
 // A field of the shard's field table: its name, the kind of the first document that named it (the table
 // keeps what its postings hold), and whether it is the key field.
@@ -72,8 +74,9 @@ struct DeclaredField {
 // handles of a shard in this process share it through a Handle.
 class Shard final : public engine::Shard {
 public:
-	// Each call hops onto `on` before it touches the index; empty runs it on the thread that awaits it.
-	Shard(std::unique_ptr<Handle> handle, bool writable, task::scheduler_ref on = {});
+	// With options.host the shard serves a host that serialises its writers: a write does no I/O of its
+	// own and the device work of every call is a chore of options.chores.
+	Shard(std::unique_ptr<Handle> handle, bool writable, const OpenOptions& options = {});
 	~Shard() override;
 
 
@@ -96,17 +99,24 @@ public:
 	task::task<void> scan(docid from, const ScanSink& sink) override;
 	task::task<std::string> metadata(const std::string& key) override;
 	task::task<std::vector<std::string>> metadata_keys() override;
+	bool dirty() const noexcept override;
+	task::task<void> refresh() override;
+	task::task<void> reclaim() override;
+	std::size_t merges_pending() const noexcept override;
+	task::task<void> close() override;
+	task::task<CheckResult> check() override;
+	void use_chores(Chores* chores) noexcept override;
 	rev revision() const override;
 	doccount doc_count() const override;
 	std::string uuid() const override;
 	unsigned refs() const override;
 
-	// Flushes the write buffer and pins the shard's segments for a search (src/engine/strata/search.cc).
-	// The pin holds the shard's lock; see identity() for taking several in order.
-	Pinned pin();
+	// The shard's current published view, held for a read (src/engine/strata/search.cc). A host refreshes
+	// first (engine_for_read), so the view has what was applied. It holds no lock: writes go on, and
+	// nothing waits for it. Raises `busy` when every reader record of the host's registry is claimed.
+	Viewed view() const;
 
-	// Names the index behind the handle: handles of one shard share it, and shards are pinned in the
-	// order of their identities.
+	// Names the index behind the handle: handles of one shard share it.
 	const void* identity() const noexcept;
 
 	// The shard's field table, in id order, as of its last applied write.
@@ -115,7 +125,8 @@ public:
 private:
 	std::unique_ptr<Handle> handle_;
 	bool writable_;
-	task::scheduler_ref on_;
+	bool host_;
+	Chores* chores_;
 };
 
 struct Opened {
@@ -124,13 +135,8 @@ struct Opened {
 };
 
 // Opens (or, when create_missing, creates) the strata shard at a path.
-task::task<Opened> open_local(const std::string& path, bool writable, bool create_missing, task::scheduler_ref on = {});
+task::task<Opened> open_local(const std::string& path, bool writable, bool create_missing, OpenOptions options = {});
 
-// Whether the engine's own integrity check of the shard at `path` passes; the text says why not.
-struct CheckResult {
-	std::size_t errors = 0;
-	std::string failure;
-};
-task::task<CheckResult> check(const std::string& path, task::scheduler_ref on = {});
+task::task<CheckResult> check(const std::string& path, OpenOptions options = {});
 
 }  // namespace engine::strata
