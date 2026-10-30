@@ -90,6 +90,23 @@ Binding text: `docs/reviews/phase7c-x2b-code.md`, "Architect ruling on the reade
   201 and the review's 1,010 -> 400, never 503).
 - [x] **R4. The N2 rule** is written in `reader-views.md` ("The rule for a request that holds a view"), with why X2b satisfies it (`run` is synchronous).
 
+Proof (after `Xapiand:70c40cc78`):
+
+- Unit tests 26 of 26 on **Release**, **Debug** and **ASan+UBSan**; **TSan** 9 of 9 concurrency targets and `engine_mixed_load.py --engine strata --secs 60`
+  (10,135 documents, model equals the dump, 0 failures, 0 sanitizer reports).
+- Docs E2E (newman 6.2.3): **641 of 641** on the Release, Debug and ASan servers.
+- `ryw.py` (the review's read-your-writes probe, 4 threads x 300, 1 shard): 0 misses and 0 exceptions with 1 reactor and with 2.
+- Mutants (each applied to the committed tree, built, run, reverted):
+
+  | | Rule | Killed by |
+  |---|---|---|
+  | M13 | R1: every index shares one registry | `test_readers_cap_is_per_index` (the neighbour is refused), `test_a_search_over_more_indexes_than_records_is_served` (busy) |
+  | M14 | R2: the Core frees its registry with a record claimed | `test_a_view_outlives_a_drain_that_timed_out` on ASan: heap-use-after-free in `~Core`'s free, hit by the release; passes with the fix |
+  | M15 | R3: `match` does not call `check_search_fanout` | `harness/search_fanout_check.py`: limit + 1, default limit + 1 and the 1,010 search answer 200 |
+  | M16 | R3: the limit itself is refused (`>=`) | `test_search_fanout_limit` |
+
+  R4 is prose; no mutant applies.
+
 Carried forward to X3 (not done here, per the ruling): **X3-1** strata's chunked registry (revision 4; then `readers_per_index` goes); **X3-2** the per-index cap becomes D2's
 in-flight admission cap; **X3-3** N2 made structural (a debug check in the request context; close and reopen drain off the turn); **X3-4** `Shard::view()` takes a lock
 (`core.readers.load()` is a `std::atomic_load` on a `shared_ptr`): the acquire path must have none, and T13 measures `view()` at 1 and 8 threads; **X3-5** N1's T13 row
@@ -100,6 +117,7 @@ in-flight admission cap; **X3-3** N2 made structural (a debug check in the reque
 - `Xapiand:6863b1076` the reader views: `Viewed`, the registry, `Core` without `core.mtx`, close and reopen that wait for readers, the atomics, `Shard::check`.
 - `Xapiand:690d2cfc3` the handler, schema, resolver and views as tasks; the pool's registry and the X2 review items; the allowlist.
 - `Xapiand:1afabbd06`, `0ab64f5dd`, `b19f4d17f`, `393de1dc9` the tests, the docs and this ledger.
+- `Xapiand:70c40cc78` the architect's ruling: a registry per index, the registry outliving its guards, `max_indexes_per_search`, the N2 rule (R1 to R4).
 
 ## Needs L3 (and X4)
 
@@ -112,8 +130,8 @@ in-flight admission cap; **X3-3** N2 made structural (a debug check in the reque
 
 ## Next
 
-- The code review of this branch (concurrency: the close protocol with readers, `Core::note`'s atomics, the registry sizing).
-- X3 (views on the reactors) and X4 (Lua).
+- The lead confirms R1 to R4 against the ruling and merges X2b into local master.
+- X3 (views on the reactors; starts with X3-1 to X3-3) and X4 (Lua).
 
 ## Blocked on
 
