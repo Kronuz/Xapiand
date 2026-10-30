@@ -55,6 +55,7 @@
 #include "engine/document.h"
 #include "engine/error.h"
 #include "engine/sync.h"
+#include "compressor_lz4.h"
 #include "length.h"
 #include "node.h"
 #include "task.hh"
@@ -69,6 +70,11 @@ struct PoolTestAccess {
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 	static void mark_stale(ShardEndpoint& entry) { entry.mark_stale(); }
 	static std::uint64_t applied(ShardEndpoint& entry) { return entry.applied_.load(); }
+	// As if a write landed after a commit began: one more write applied, and not yet committed.
+	static void write_lands(ShardEndpoint& entry) {
+		entry.applied_.fetch_add(1);
+		entry.modified.store(true);
+	}
 };
 
 namespace {
@@ -527,13 +533,17 @@ void test_a_request_racing_an_idle_close() {
 	CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::closing);
 	auto referenced = pool.spawn(endpoint);
 	Shard late(*referenced.get(), WRITE);
+	Running opening([&] { engine::sync_wait(late.ready()); });  // a lookup finds the entry closing: it awaits the close
 	Running request([&] { engine::sync_wait(late.add_document(make("Kb", "b"))); });
 	std::this_thread::sleep_for(150ms);
+	CHECK_FALSE(opening.done());
 	CHECK_FALSE(request.done());
 	CHECK_EQ(raw->opens(), 1u);  // it waits for the close: no second engine
 	hold.release();
 	closing.join();
+	opening.join();
 	request.join();
+	CHECK_FALSE(opening.threw());
 	CHECK_FALSE(request.threw());
 	CHECK_EQ(raw->opens(), 2u);
 	CHECK_EQ(engine::sync_wait(late.get_view(1))->data(), "a");
@@ -590,6 +600,29 @@ void test_a_commit_joins_the_one_in_flight() {
 	// The write that waited is not covered: its own commit is the next one.
 	CHECK_TRUE(engine::sync_wait(s3.commit()));
 	CHECK_EQ(revision_of(s1), revision + 2);
+}
+
+// The rule behind the join is a position: a commit joins the one in flight only if that commit covers its writes. A write
+// that lands after the commit began is not covered, so it does not share the commit's outcome, failure included.
+void test_a_commit_not_covered_does_not_share_the_outcome() {
+	Watchdog watchdog("a commit not covered");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("covered")));
+	auto& gate = gate_chores(*entry.get());
+	Shard s1(*entry.get(), WRITE), s2(*entry.get(), WRITE);
+	engine::sync_wait(s1.add_document(make("Ka", "a")));
+	gate.arm(true);  // the commit in flight will fail
+	Running first([&] { engine::sync_wait(s1.commit()); });
+	CHECK_TRUE(eventually(gate.entered_flag()));
+	A::write_lands(*entry.get());
+	Running second([&] { engine::sync_wait(s2.commit()); });  // its position is past the commit's: it waits for its own turn
+	std::this_thread::sleep_for(150ms);
+	CHECK_FALSE(second.done());
+	gate.release();
+	first.join();
+	second.join();
+	CHECK_TRUE(first.threw());
+	CHECK_FALSE(second.threw());  // it ran its own commit
 }
 
 // A failed commit reaches the commit that ran it and the waiters that joined it, and no one else: the write
@@ -654,9 +687,60 @@ void test_owed_flushes_do_not_reorder_writers() {
 	CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), static_cast<engine::doccount>(threads_n * per_thread));
 }
 
+// The WAL's order is the apply order across writers (C6): the turn covers the apply, the revision update and the WAL
+// enqueue, so lines reach the log in the order the documents were assigned their ids.
+void test_the_wal_order_is_the_apply_order() {
+	Watchdog watchdog("the WAL order", 120s);
+	DatabasePool pool(8);
+	DatabaseWALWriter writer("WL{:02}", 1);
+	pool.set_wal_writer(&writer);
+	Endpoint endpoint(fresh("walorder"));
+	constexpr int threads_n = 4;
+	constexpr int per_thread = 50;
+	{
+		auto entry = pool.spawn(endpoint);
+		std::vector<std::thread> threads;
+		for (int t = 0; t < threads_n; ++t) {
+			threads.emplace_back([&, t] {
+				Shard shard(*entry.get(), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT);
+				for (int i = 0; i < per_thread; ++i) {
+					engine::sync_wait(shard.add_document(make("K" + std::to_string(t) + "-" + std::to_string(i), "d")));
+				}
+			});
+		}
+		for (auto& thread : threads) {
+			thread.join();
+		}
+	}
+	writer.finish();
+	writer.join(std::chrono::milliseconds(20000));
+	// The log, line by line: the ids of the replaced documents, in the order they reached it.
+	std::vector<engine::docid> logged;
+	DatabaseWAL wal(endpoint.path);
+	for (auto it = wal.begin(); it != wal.end(); ++it) {
+		const std::string line = *it;
+		const char* p = line.data();
+		const char* p_end = p + line.size();
+		(void)unserialise_length(&p, p_end);  // the revision
+		const auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&p, p_end));
+		if (type == DatabaseWAL::Type::REPLACE_DOCUMENT) {
+			const auto data = decompress_lz4(std::string_view(p, p_end - p));
+			const char* q = data.data();
+			logged.push_back(static_cast<engine::docid>(unserialise_length(&q, q + data.size())));
+		}
+	}
+	CHECK_EQ(logged.size(), static_cast<std::size_t>(threads_n * per_thread));
+	for (std::size_t i = 0; i < logged.size(); ++i) {
+		if (logged[i] != i + 1) {
+			CHECK_EQ(logged[i], i + 1);
+			break;
+		}
+	}
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
 	struct Case { const char* name; void (*fn)(); };
 	const Case cases[] = {
 		{"test_smoke", test_smoke},
@@ -672,10 +756,15 @@ int main() {
 		{"test_a_request_racing_an_idle_close", test_a_request_racing_an_idle_close},
 		{"test_a_stale_engine_is_replaced_before_a_queued_write", test_a_stale_engine_is_replaced_before_a_queued_write},
 		{"test_a_commit_joins_the_one_in_flight", test_a_commit_joins_the_one_in_flight},
+		{"test_a_commit_not_covered_does_not_share_the_outcome", test_a_commit_not_covered_does_not_share_the_outcome},
 		{"test_a_failed_commit_reaches_only_the_joined_waiters", test_a_failed_commit_reaches_only_the_joined_waiters},
 		{"test_owed_flushes_do_not_reorder_writers", test_owed_flushes_do_not_reorder_writers},
+		{"test_the_wal_order_is_the_apply_order", test_the_wal_order_is_the_apply_order},
 	};
 	for (const auto& c : cases) {
+		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {
+			continue;  // a name filter, for running one test
+		}
 		const int before = testh::failures;
 		try {
 			c.fn();

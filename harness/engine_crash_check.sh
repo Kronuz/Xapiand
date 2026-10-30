@@ -10,7 +10,7 @@
 # Compared: A's set equals the input (N ids, every `n` right). B's set holds every write
 # acknowledged more than GRACE seconds before the kill (the async WAL may lose the last moments), nothing that was not
 # written, every document intact (the cut point differs per run). Exit 0 = all checks passed.
-#   D. (--reactors N, default 2) N writers on N HTTP reactors put sequences into ONE index; kill -9; restart; poke; list. Every write
+#   D. (--reactors N, default 2) N writers on N HTTP reactors put sequences into ONE one-shard index; kill -9; restart; poke; list. Every write
 #      acknowledged more than GRACE seconds before the kill is present, and what each writer recovered is a prefix of what it sent:
 #      the WAL's order is the apply order across reactors (phase 7c D5, C6).
 # Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh [--reactors N]
@@ -73,7 +73,9 @@ PY
 check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every file's digest) passes on each shard; node stopped
 	local out
 	if [ -x "$CHECK_TOOL" ]; then
-		out=$("$CHECK_TOOL" "$RUNDIR"/n_strata/"$1"/.__* 2>&1) && pass "$2: strata check passes on $(echo "$out" | grep -c ': ok') shards" || fail "$2: strata check: $(echo "$out" | grep -v ': ok' | head -3 | tr '\n' ';')"
+		local shards=("$RUNDIR"/n_strata/"$1"/.__*)
+		[ -e "${shards[0]}" ] || shards=("$RUNDIR"/n_strata/"$1")   # a one-shard index has no shard subdirectories
+		out=$("$CHECK_TOOL" "${shards[@]}" 2>&1) && pass "$2: strata check passes on $(echo "$out" | grep -c ': ok') shards" || fail "$2: strata check: $(echo "$out" | grep -v ': ok' | head -3 | tr '\n' ';')"
 	else
 		fail "$2: no CHECK_TOOL (tests/strata_check_tool.cc, built against the server's objects) to run the strata check"
 	fi
@@ -143,6 +145,8 @@ PY
 
 	echo "== [crash $ENG] D: $REACTORS writers on $REACTORS reactors into one index, kill -9 ${CUT:-4}s in =="
 	start_node "$ENG" "$ENG.D1.log" || { fail "$ENG startup D"; continue; }
+	# One shard, so one log: what a crash loses is a suffix of the log's order, which is the order the writes were applied in.
+	curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/multi/" -H 'Content-Type: application/json' -d '{"_settings":{"number_of_shards":1}}'
 	WBG=""
 	for w in $(seq 1 "$REACTORS"); do
 		python3 -I - "$PORT" "$RUNDIR/acked_D$w" "$w" <<'PY' &
