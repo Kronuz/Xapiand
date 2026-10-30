@@ -200,10 +200,12 @@ one lane per class (`work_pool.hh:1110-1128`), so classes do not queue behind ea
 
 Aging (C8.2, threadpool L2): a merge lane that has waited longer than 100 ms (an estimate) takes the
 next background pick ahead of `flush`, so sustained bulk load cannot starve merges. T5 reports the
-merge backlog. A chore that waits for its own index's work calls `WorkGroup::wait`, which helps on a
-worker. L2 carries the offload review's negative tests: V2's shape (a worker waits on work queued
-only in its own group) completes, and V5's shape (a reactor calls a waiting entry) hits
-`engine::check_may_block` (C8.4). Deleted: the reactors' pools, `release_on_pool`, DP, DI, AC and
+merge backlog. No chore waits on its own index's group (threadpool review, architect ruling on
+L2-B2, AC2): a wait serves only the group it waits on, and a wait on a group already on the calling
+stack aborts. A chore that needs its index's other work either runs it in a child group it waits on,
+or returns, and the task holding the index's turn awaits the group's idle notification. L2's
+negative tests: V2's shape (a worker waits on its own group) aborts, and V5's shape (a reactor calls
+a waiting entry) hits `engine::check_may_block` (C8.4). Deleted: the reactors' pools, `release_on_pool`, DP, DI, AC and
 the cleanup thread.
 
 **D5. The registry and the lease.** `DatabasePool` becomes a map from path to an entry: the reader
