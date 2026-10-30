@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-30) the X3 developer's ledger (phase 7c step X3: views on the reactors as coroutine handlers); in progress, not pushed.
+> Status: CURRENT (2026-10-30) the X3 developer's ledger (phase 7c step X3: views on the reactors as coroutine handlers); built and proved, awaiting its code review, not pushed.
 
 # phase7c X3 (build): views on the reactors
 
@@ -7,7 +7,7 @@ the architect's ruling and the X3 items: `docs/reviews/phase7c-x2b-code.md` (X3-
 
 ## State
 
-Steps 1 to 3 done and committed; the proof (step 4) is in the log below. Remaining: X3-1, X3-5, the Lua foreign read (X4) and what "Remaining" lists.
+Steps 1 to 4 done and committed (the proof is below); the code review is running. Remaining: see "Remaining".
 
 ## Done criteria
 
@@ -41,15 +41,73 @@ Steps 1 to 3 done and committed; the proof (step 4) is in the log below. Remaini
     own turn. Past 4 GiB (framing included) is a 413 (`PayloadTooLarge`); a streamed body for any other view is a 413; no id is a 400. Not built: streaming a large blob
     out (D9's read side) and collecting orphan volumes (`reclaim_volumes`).
   - **FLUSH** awaits `DatabasePool::flush()` (one close task per index, `when_all`); `restore_database_view` blocks no worker.
-- [ ] **4. Proof.** (below)
+- [x] **4. Proof** (below). Not yet done: the code review (launched; its ruling goes to `docs/reviews/phase7c-x3-code.md`), M31, and the lead's measurements.
+
+## Proof (at `Xapiand:a89f6b0d4`)
+
+- `grep -rn sync_wait src/` outside `src/engine/` lists the CLI (`main.cc` x3), the registry's shutdown and detached task (`pool.cc` x2), the open chore's WAL replay on a
+  worker (`database/shard.cc` x7) and Lua's foreign read (`lua/processor.cc:268`, X4, let through by `engine::BlockingAllowed`). `harness/async_check.sh --strict
+  --extern strata=<build>/_deps/strata-src`: exit 0, **0 unclassified** (247 hits: 190 allowed, 44 owed, 13 compiled out), no stale row.
+- Unit tests: **27 of 27** ctest targets on **Release**, **Debug** and **ASan+UBSan** (`detect_leaks=0`), each rebuilt at the head.
+- **TSan**: the concurrency targets (`pool`, `engine_host`, `engine_error`, `blocking_guard`, `wal_replay`, `engine_strata`, `engine_search_strata`, `debounce_or_run`,
+  `reactor_requests`) 9 of 9, 0 reports; `harness/engine_mixed_load.py --engine strata --secs 120`: 20,373 documents, the final dump equals the model, 0 failures, 0 sanitizer reports.
+- Docs E2E (newman 6.2.3, `harness/engine_e2e.sh`): **641 of 641** (371 requests) on the Release, Debug and ASan servers; no "blocks on database work" line in any node log.
+- `harness/wal_recovery_check.sh` PASS (50 of 50). `harness/engine_crash_check.sh --reactors 2` PASS (A: 50 of 50, the strata check on 5 shards; B: 3,723 acknowledged, 3,723
+  recovered; D: 2 writers, 6,714 recovered, each a prefix). `harness/graceful_shutdown_check.sh` PASS, scenario 4 included (SIGTERM at 0.5, 1.0, 1.5 s).
+- **T2's upload rows** (`harness/stored_stream.sh`, on Release, Debug and ASan): a `stored` upload of 33,554,432 bytes (2x the cap), of 16,777,217 (one over) and of 16,773,120
+  (just under, buffered) each read back byte-equal; four 20 MiB uploads at once, byte-equal; a size past the record limit 413, a POST of a big blob with no id 400, a big
+  stored body for a view that cannot stream 413, a big JSON body 413; a client that leaves mid-upload leaves no volume and the node serves.
+  `harness/restore_stream_check.sh` (same three builds): 20,000 NDJSON documents, a 5,000-document MsgPack stream, a chunked body and a stream with a bad line, each counted back;
+  a client that leaves mid-stream keeps what was indexed (13,076 of 20,000 here, which survive `kill -9` and a restart).
+- **Found by the new rows and fixed**: the Debug E2E aborted on the first RESTORE (the indexer's last reference was a copy inside a `std::function` the reactor destroyed; the
+  chore takes it by reference); ASan found a write into a freed Core (`test_a_view_outlives_a_drain_that_timed_out`: a view returned its admission to a gate that lived in the
+  Core; the gate now lives in the registry, which outlives every guard, `21012b19f`); TSan found a race the new reader-and-reopen stress exercises (`Handle::seen` was a plain
+  integer a reader compares while the reopen writes it; atomic, `a89f6b0d4`; without it `test_views_are_acquired_while_the_index_is_replaced` reports it under TSan).
+- **Mutants**, one per new rule (`.scratch/mut.py`: apply to the committed tree, build, run, restore; the numbers continue X2b's M1 to M16):
+
+  | | Rule | Killed by |
+  |---|---|---|
+  | M17 | a search ignores its budget | `test_a_search_with_a_budget_shares_its_loop`, `test_a_cancelled_search_stops_and_lets_go` |
+  | M18 | the per-index cap is not an admission (no gate) | `test_the_cap_is_an_admission_that_counts` (`views_refused()` stays 0) |
+  | M19 | a task that holds a view may wait for a turn | `test_a_task_that_holds_a_view_waits_for_nothing` |
+  | M20 | ... for an open | same |
+  | M21 | ... for a drain | same (abort) |
+  | M22 | the close drains readers under the turn | `test_a_close_drains_its_readers_without_the_turn` |
+  | M23 | a bulk body is parsed on the loop | `test_a_bulk_body_is_parsed_off_the_loop` (the loop's CPU is a third of the parse's, or more) |
+  | M24 | no demoted cap at admission | `test_a_loop_past_its_demoted_cap_refuses_new_requests` |
+  | M25 | FLUSH does not await its closes | `test_flush_closes_every_idle_index_before_it_returns` |
+  | M26 | a group of chores is joined on the loop | `test_quiet_when_a_loop_drops_a_group_of_chores` |
+  | M27 | an upload drops a byte of a chunk | `harness/stored_stream.sh` (PUT answers 500) |
+  | M28 | any view takes a streamed body | `harness/stored_stream.sh` (413 row) |
+  | M29 | a failed restore does not commit what it indexed | `harness/restore_stream_check.sh` (`kill -9` row) |
+  | M30 | a replaced index's views handle is freed | `test_views_are_acquired_while_the_index_is_replaced` (`view_handles_kept`) |
+
+  Not killed, with the reason: the rule that the shared writer's rollover and an upload take volumes from one counter (`next_volume_`) has no mutant, since reaching a rollover
+  takes a 32 GiB volume; a revert to `++volume` is the only change and a review reads it. The cancel hookup (`hreq.on_cancel`) is covered by the `< N` row of the restore harness; its
+  mutant (M31) is not run yet.
 
 ## Done (commits)
 
 - `Xapiand:b4915e5dd` step 1: the pins, the coroutine service, FLUSH as a task, the close split and the view counters.
 - `Xapiand:b7b1361b9` step 2: searches with a budget, the admission cap, the wait rule and its mutants, the lock-free acquire.
-- step 3 (the commit after this ledger line): the bodies, RESTORE parse-ahead, the task bulk indexer, streamed uploads, FLUSH, the allowlist and the notes. Its hash is in the git log.
+- `Xapiand:df93cf455` step 3: the bodies, RESTORE parse-ahead, the task bulk indexer, streamed uploads, FLUSH, the allowlist and the notes.
+- `Xapiand:21012b19f` the admission gate lives with the registry (ASan); the kept views handles are tested.
+- `Xapiand:a89f6b0d4` `Handle::seen` is atomic (TSan).
+
+## Remaining (not done here)
+
+1. **X3-1**: strata's chunked registry (revision 4); then `readers_per_index` (16 searches per reactor plus the pool terms, an estimate) goes, and a chunk is allocated on the first reader.
+2. **X3-5**: N1's T13 row, the per-index scan cost and bytes at 10^4 open indexes with the cap from X3-2; and **X3-4**'s measurement of `Shard::view()` at 1 and 8 threads on one index
+   (the lock is gone; the number is the lead's).
+3. **X4**: Lua's yields and its foreign read (`engine::BlockingAllowed` is the one place a reactor still waits; `async_check.sh` lists it).
+4. D9's read side (a blob past the cap streamed out in chunks; today `storage_get_stored` reads it whole) and `reclaim_volumes` for orphan upload volumes.
+5. The control plane's one-worker pool (`Reactors::pool`) and `--http-servers` / `MAX_HTTP_SERVERS` stay until X5 and X6 (D13, D15).
+6. T12 and T4: RESTORE preparing and applying run on the request's reactor (the parse is what leaves it); the lead measures.
 
 ## Next
+
+- The code reviewer's ruling, then its findings folded in here.
+- The lead merges, measures T4/T5/T12 and X3-4/X3-5, and starts X4.
 
 ## Blocked on
 
@@ -58,6 +116,10 @@ Nothing.
 ## Log
 
 ### 2026-10-30
+
+- Choices that shaped the cut: a per-request scheduler (`engine::Run`) exists in debug builds only, to count what a task holds; Release resumes straight through the host.
+  The streamed upload needs a document id (a new numeric id is placed by the shards' load after the body), and goes to the shard the id places it in. RESTORE's results
+  vector, counters and ordering are the old indexer's; its commit now precedes the response.
 
 - Pins moved to the heads the task names (reactor 76c32b4, http fce24c6, http-log d2315b8, task 9a85e89, threadpool e961e44, strata c82ac9f, prospect c77d6eb, storage e4c5746,
   compressors dc4474b).
