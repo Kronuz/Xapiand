@@ -58,6 +58,18 @@ documents so their ids are re-minted as v6.
 4. Create each index with its settings and schema, if it had explicit ones.
 5. Restore every dump (`RESTORE`, or `xapiand --restore`).
 
+## Upgrading from 1.0.0-alpha.9
+
+1.0.0-alpha.9 and the alphas before it searched with the Xapian engine, and this release does not read
+its files. A node started on such a data directory exits with status 65 and names the first Xapian
+file it found (`iamglass`, `flintlock`, `postlist.*` or `*.glass`, in the registry or in an index's
+shard directory), and creates nothing. There is no option to skip the check.
+
+Carry the documents over as in [Migrating a single node](#migrating-a-single-node): dump every
+index with alpha.9 (`DUMP`, or `xapiand --dump`), start this release on a new, empty data directory,
+and restore each dump into it (`RESTORE`, or `xapiand --restore`). See
+[Backups](/Xapiand/reference-guide/indexes/backups).
+
 ## Rolling back
 
 Stop 1.0.0 and start the 0.40.0 binary against the old data directory. Writes made
