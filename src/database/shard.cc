@@ -537,6 +537,9 @@ ShardEndpoint::close_marked(bool commit_)
 {
 	std::exception_ptr error;
 	{
+		// The turn covers the commit and the retirement; the wait for the readers that hold views of the
+		// index happens after it is released, so no reader waits on a turn that waits for it. The entry is
+		// `closing`, so whoever takes the turn next finds it unusable and awaits the close.
 		task::async_mutex::guard guard = co_await turn.lock();
 		auto eng = engine_ptr();
 		try {
@@ -545,7 +548,11 @@ ShardEndpoint::close_marked(bool commit_)
 					const int saved = last_flags_.load();
 					co_await do_commit(*eng, *chores, saved ? saved : (DB_WRITABLE | DB_OPEN), true);
 				}
-				co_await eng->close();
+				const bool released = co_await eng->begin_close();
+				guard.unlock();
+				if (!released) {
+					co_await eng->finish_close();
+				}
 			}
 		} catch (...) {
 			error = std::current_exception();

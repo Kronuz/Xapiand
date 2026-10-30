@@ -264,6 +264,7 @@ Processor::Processor(const Script& script)
 		MsgPack obj;
 		try {
 			// A script compiles in Lua's C stack, which cannot suspend: the read waits on this thread (X4 gives it yields).
+			engine::BlockingAllowed allowed("a Lua script's foreign read (X4)");
 			obj = engine::sync_wait(read_foreign_script(foreign_path, std::string(id)));
 		} catch (const engine::Error& error) {
 			switch (error.kind) {

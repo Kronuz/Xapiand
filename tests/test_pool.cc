@@ -560,7 +560,7 @@ void test_the_idle_close_takes_the_turn() {
 	}  // nobody uses the index now
 	{
 		HoldTurn hold(*raw, WRITE);
-		Running running([&] { pool.cleanup(true); });
+		Running running([&] { engine::sync_wait(pool.flush()); });
 		std::this_thread::sleep_for(150ms);
 		CHECK_FALSE(running.done());
 		hold.release();
@@ -639,7 +639,7 @@ void test_a_request_racing_an_idle_close() {
 		engine::sync_wait(shard.add_document(make("Ka", "a")));  // pending: the close commits it
 	}
 	HoldTurn hold(*raw, WRITE);
-	Running closing([&] { pool.cleanup(true); });
+	Running closing([&] { engine::sync_wait(pool.flush()); });
 	for (int i = 0; i < 2500 && A::state(*raw) != ShardEndpoint::State::closing; ++i) {
 		std::this_thread::sleep_for(2ms);
 	}

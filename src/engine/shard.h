@@ -153,7 +153,21 @@ public:
 
 	// Commits what is pending and releases the index; later calls raise `closed`. It ends when the
 	// readers that hold a view of the index have let go of it, or raises `busy` when they do not in time.
-	virtual task::task<void> close() = 0;
+	// A host that serializes operations on the index calls the two halves apart: begin_close under its
+	// turn, finish_close after it released the turn, so a close never holds the turn while readers drain.
+	task::task<void> close() {
+		if (!co_await begin_close()) {
+			co_await finish_close();
+		}
+	}
+
+	// Commits what is pending and stops new readers. True when no reader held a view and the index is
+	// released; false when finish_close must wait for the readers.
+	virtual task::task<bool> begin_close() = 0;
+
+	// Waits for the readers that hold a view to let go of it (`busy` when they do not in time), then
+	// releases the index. It needs no turn: after begin_close nothing else uses the index.
+	virtual task::task<void> finish_close() = 0;
 
 	// The integrity check of the open index (a chore, under the host's turn).
 	virtual task::task<CheckResult> check() = 0;

@@ -32,6 +32,7 @@
 #include "engine/error.h"         // for engine::Error, engine::errc
 #include "engine/sync.h"          // for engine::check_may_block, engine::sync_wait
 #include "log.h"                  // for L_CALL
+#include "reactor.h"              // for reactor::inside_run
 #include "strata/core/work_pool_executor.hh"  // for strata::work_pool_executor
 #include "work_pool.hh"           // for WorkPool, WorkGroup, WorkItem
 #include "xapiand_exception.h"    // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -109,12 +110,39 @@ struct ChoreAwaiter final : WorkItem {
 }  // namespace
 
 
-IndexChores::IndexChores(WorkPool& pool) : group_(std::make_unique<WorkGroup>(pool))
+namespace {
+
+// Destroys a WorkGroup on a worker: ~WorkGroup joins the group, which a loop thread must not do.
+struct Reap final : WorkItem {
+	std::unique_ptr<WorkGroup> group;
+
+	explicit Reap(std::unique_ptr<WorkGroup> group_) : group(std::move(group_)) {
+		run = &Reap::invoke;
+		cls = WorkClass::flush;
+	}
+
+	static void invoke(WorkItem* item) noexcept {
+		delete static_cast<Reap*>(item);
+	}
+};
+
+}  // namespace
+
+
+IndexChores::IndexChores(WorkPool& pool) : pool_(pool), group_(std::make_unique<WorkGroup>(pool))
 {
 }
 
 
-IndexChores::~IndexChores() = default;
+IndexChores::~IndexChores()
+{
+	// The group is idle by now (its owner ended every chore), but joining it is a wait: off a loop it
+	// is done here, on a loop a worker does it.
+	if (group_ && reactor::inside_run()) {
+		auto* reap = new Reap(std::move(group_));
+		pool_.post(*reap);
+	}
+}
 
 
 task::task<void>
@@ -216,6 +244,8 @@ ShardEndpoint::ensure_open(int flags)
 {
 	L_CALL("ShardEndpoint::ensure_open(({}))", readable_flags(flags));
 
+	engine::check_no_view_held("an open");
+
 	for (;;) {
 		std::shared_ptr<OpenFlight> flight;
 		std::shared_ptr<task::event> closed;
@@ -290,9 +320,12 @@ ShardEndpoint::take_turn(int flags)
 		task::async_mutex::guard guard;
 		int* held = nullptr;
 		if (auto* host = engine::Host::current()) {
+			engine::check_no_view_held("a turn");
 			const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
 			guard = co_await turn.lock_until(*host, deadline);
-			held = host->turns_held();
+			if (auto* counters = host->counters()) {
+				held = &counters->turns;
+			}
 		} else {
 			guard = co_await turn.lock();
 		}
@@ -564,55 +597,61 @@ close_idle(ReferencedShardEndpoint entry)
 }
 
 
-void
-DatabasePool::cleanup(bool immediate)
+std::vector<ReferencedShardEndpoint>
+DatabasePool::begin_closes(bool immediate)
 {
-	L_CALL("DatabasePool::cleanup()");
-
 	auto now = std::chrono::steady_clock::now();
 
 	std::vector<ReferencedShardEndpoint> closing;
 
-	{
-		std::lock_guard<std::mutex> lk(mtx);
+	std::lock_guard<std::mutex> lk(mtx);
 
-		trim_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool overflowed, bool) {
-			auto& entry = *endpoint_database_endpoint.second;
-			const bool idle = immediate || entry.renew_time < now - (overflowed ? 60s : 3600s);
-			if (!idle) {
-				return overflowed ? DropAction::leave : DropAction::stop;
-			}
-			// Marking is under the map's lock, as every use of the entry is: a use that came first is seen
-			// in refs, and one that comes later awaits the close.
-			if (entry.begin_idle_close()) {
-				closing.emplace_back(&entry);
-			}
-			if (entry.is_used()) {
-				L_DATABASE("Leave used endpoint: {}", repr(entry.to_string()));
-				return DropAction::leave;
-			}
-			L_DATABASE("Evict endpoint: {}", repr(entry.to_string()));
-			return DropAction::evict;
-		});
-	}
-
-	if (immediate) {
-		// An immediate cleanup (FLUSH) returns once the indexes are closed: one close task per open index, awaited together.
-		engine::check_may_block("DatabasePool::cleanup");
-		std::vector<task::task<void>> tasks;
-		tasks.reserve(closing.size());
-		for (auto& entry : closing) {
-			tasks.push_back(close_idle(std::move(entry)));
+	trim_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool overflowed, bool) {
+		auto& entry = *endpoint_database_endpoint.second;
+		const bool idle = immediate || entry.renew_time < now - (overflowed ? 60s : 3600s);
+		if (!idle) {
+			return overflowed ? DropAction::leave : DropAction::stop;
 		}
-		closing.clear();
-		engine::sync_wait(task::when_all(std::move(tasks)));
-		return;
-	}
+		// Marking is under the map's lock, as every use of the entry is: a use that came first is seen
+		// in refs, and one that comes later awaits the close.
+		if (entry.begin_idle_close()) {
+			closing.emplace_back(&entry);
+		}
+		if (entry.is_used()) {
+			L_DATABASE("Leave used endpoint: {}", repr(entry.to_string()));
+			return DropAction::leave;
+		}
+		L_DATABASE("Evict endpoint: {}", repr(entry.to_string()));
+		return DropAction::evict;
+	});
+
+	return closing;
+}
+
+
+void
+DatabasePool::cleanup()
+{
+	L_CALL("DatabasePool::cleanup()");
 
 	// Each close is a task of its own; this returns without waiting for it.
-	for (auto& entry : closing) {
+	for (auto& entry : begin_closes(false)) {
 		run_detached(close_idle(std::move(entry)));
 	}
+}
+
+
+task::task<void>
+DatabasePool::flush()
+{
+	L_CALL("DatabasePool::flush()");
+
+	// One close task per open index, awaited together; the caller holds no turn.
+	std::vector<task::task<void>> tasks;
+	for (auto& entry : begin_closes(true)) {
+		tasks.push_back(close_idle(std::move(entry)));
+	}
+	co_await task::when_all(std::move(tasks));
 }
 
 

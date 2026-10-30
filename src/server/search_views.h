@@ -29,6 +29,7 @@
 #include <condition_variable>               // for std::condition_variable
 #include <deque>                            // for std::deque
 #include <memory>                           // for shared_ptr
+#include <optional>                         // for std::optional
 #include <mutex>                            // for std::mutex, std::lock_guard
 #include <set>                              // for std::set
 #include <stdio.h>                          // for size_t
@@ -188,6 +189,11 @@ public:
 
 	atomic_shared_ptr<DocIndexer> indexer;
 
+	// The request's cancellation and time slice (set by SearchService::handle): the view's task awaits
+	// the budget's checkpoints, and a disconnect or a shutdown requests the source.
+	task::cancel_source cancel;
+	std::optional<task::budget> budget;
+
 	Request();
 	~Request() noexcept;
 
@@ -198,7 +204,7 @@ public:
 
 	bool append(const char* at, size_t length);
 
-	bool next_object(MsgPack& obj);
+	task::task<bool> next_object(MsgPack& obj);
 
 	MsgPack& decoded_body();
 

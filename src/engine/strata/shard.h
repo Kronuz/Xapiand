@@ -103,7 +103,8 @@ public:
 	task::task<void> refresh() override;
 	task::task<void> reclaim() override;
 	std::size_t merges_pending() const noexcept override;
-	task::task<void> close() override;
+	task::task<bool> begin_close() override;
+	task::task<void> finish_close() override;
 	task::task<CheckResult> check() override;
 	void use_chores(Chores* chores) noexcept override;
 	rev revision() const override;

@@ -95,6 +95,7 @@ public:
 	}
 
 private:
+	WorkPool& pool_;
 	std::unique_ptr<WorkGroup> group_;
 };
 
@@ -379,6 +380,9 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	// Where tasks started by a timer run (the control loop); null runs them to their end on the calling thread.
 	std::atomic<engine::Host*> control_;
 
+	// Marks the entries to close under the map's lock: the idle ones, or every unused one when immediate.
+	std::vector<ReferencedShardEndpoint> begin_closes(bool immediate);
+
 	std::atomic<double> turn_timeout_;                  // seconds a turn may be awaited before the request is told `busy`
 	std::atomic<std::uint64_t> buffered_docs_cap_;      // documents an index buffers before a write owes a flush; 0: the index's own bound
 	std::atomic<std::size_t> readers_per_index_;        // the hazard records each index gives its readers (D6, C9)
@@ -445,7 +449,10 @@ public:
 
 	// Closes the entries nobody uses that have been idle long, and the ones past the pool's size.
 	// A close is a task of its own: this returns without waiting for it.
-	void cleanup(bool immediate = false);
+	void cleanup();
+
+	// Closes every index nobody uses (FLUSH) and returns once they are closed.
+	task::task<void> flush();
 
 	// The idle housekeeping of every open index: publishes finished merges and frees queued files.
 	void housekeeping();

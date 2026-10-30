@@ -47,6 +47,9 @@ std::atomic<std::uint64_t> violations{0};
 void
 check_may_block(const char* site) noexcept
 {
+	if (BlockingAllowed::active()) {
+		return;
+	}
 	const bool on_loop = reactor::inside_run();
 	if (!on_loop) {
 		if (!task::current()) {

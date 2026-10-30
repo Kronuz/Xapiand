@@ -42,6 +42,24 @@ void check_may_block(const char* site) noexcept;
 // The violations counted so far.
 std::uint64_t blocking_violations() noexcept;
 
+// A scope in which the calling thread's blocking waits are let through: the one wait on a reactor that
+// the plan has not removed yet (a Lua script's foreign read, X4). Every use is listed in
+// harness/async_check.sh; the plan ends them.
+class BlockingAllowed {
+public:
+	explicit BlockingAllowed(const char* /*why*/) noexcept { ++depth(); }
+	~BlockingAllowed() { --depth(); }
+	BlockingAllowed(const BlockingAllowed&) = delete;
+	BlockingAllowed& operator=(const BlockingAllowed&) = delete;
+	static bool active() noexcept { return depth() != 0; }
+
+private:
+	static int& depth() noexcept {
+		static thread_local int depth_ = 0;
+		return depth_;
+	}
+};
+
 namespace detail {
 
 // The calling thread's idle BlockingSchedulers: a wait takes one, so a nested wait takes another.

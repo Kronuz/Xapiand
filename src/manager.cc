@@ -137,15 +137,16 @@ static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(
 std::shared_ptr<XapiandManager> XapiandManager::_manager;
 
 // The manager's Asio control-plane state, kept out of manager.h (which stays Asio-free).
-// One reactor whose single offload worker runs the control plane's database work (node
-// setup, the dispatched commands) in arrival order; the loop keeps the state changes and
-// never blocks on a database. The ev::timer/ev::async watchers become a
+// One reactor, plus a worker that runs the control plane's database work (node setup, the
+// dispatched commands) in arrival order until the control plane is made of tasks (D13); the
+// loop keeps the state changes and never blocks on a database. The ev::timer/ev::async watchers become a
 // PeriodicTimer + three Signals. The signal wake is deliberately NOT a reactor::Signal
 // (its send() does asio::post -> heap alloc + lock, which is NOT async-signal-safe): it is
 // a self-pipe (sig_pipe), written from the POSIX signal handler with a bare write() -- the
 // same async-signal-safe mechanism ev::async uses internally -- and drained on the loop.
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
+	asio::thread_pool pool{1};                   // the control plane's database work (D13 removes it)
 	engine::AsioHost host;                       // where the index registry's timer-driven tasks run
 	reactor::PeriodicTimer try_shutdown_timer;
 	reactor::Signal setup_node_async;
@@ -156,8 +157,7 @@ struct XapiandManager::Reactors {
 	char sig_drain[64];
 
 	Reactors()
-		: reactor(1, 0),
-		  host(reactor.io().get_executor()),
+		: host(reactor.io().get_executor()),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  shutdown_async(reactor.io().get_executor()),
@@ -460,6 +460,7 @@ XapiandManager::run_loop()
 	arm_signal_reader();
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
+	_rx->host.bind_loop_thread();   // the tasks resumed on this thread run on the control host
 	if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
 	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
 	_running_loop.store(false, std::memory_order_release);
@@ -482,7 +483,7 @@ XapiandManager::control_offload(std::function<void()> work, std::function<void()
 	// One worker: the database parts run in arrival order. An exception from work is
 	// rethrown on the loop, out of run_loop(), as when it ran there.
 	auto& rx = _rx->reactor;
-	asio::post(*rx.pool(), [&rx, work = std::move(work), then = std::move(then)]() mutable {
+	asio::post(_rx->pool, [&rx, work = std::move(work), then = std::move(then)]() mutable {
 		std::exception_ptr error;
 		try {
 			work();
@@ -805,16 +806,12 @@ XapiandManager::make_servers()
 	auto local_node_addr = inet_ntop(local_node->addr());
 
 	// The search HTTP API, served over the Asio transport: N reactors
-	// (num_http_servers) share the listen port via SO_REUSEPORT, each with its own
-	// offload pool for the blocking work. The configured client (offload)
-	// threads are spread across the reactors so the total tracks num_http_clients. The
-	// service binds + starts later, when the node is ready (like http->start).
+	// (num_http_servers) share the listen port via SO_REUSEPORT. A request is a task on the
+	// scheduler of the reactor that accepted it. The service binds + starts later, when the
+	// node is ready (like http->start).
 	{
 		std::size_t reactors = opts.num_http_servers > 0 ? static_cast<std::size_t>(opts.num_http_servers) : 1;
-		std::size_t workers = opts.num_http_clients > 0
-			? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_http_clients) + reactors - 1) / reactors)
-			: 1;
-#ifdef XAPIAND_TLS
+		#ifdef XAPIAND_TLS
 		if (tls_context) {
 			// HTTPS (transport-security D1): http's handshake deadline and caps, the connection
 			// bound, and the idle, header, and inactivity timeouts, which plain HTTP leaves off.
@@ -831,20 +828,28 @@ XapiandManager::make_servers()
 				}
 			};
 			const std::size_t bound = opts.tls_max_connections;
-			http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000,
+			http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, 1000,
 				http::tls_connection_factory_timed(tls_context, std::chrono::seconds(5), 64, bound, failed), bound);
 			http_service->set_idle_timeout(std::chrono::seconds(75));
 			http_service->set_header_timeout(std::chrono::seconds(30));
 			http_service->set_inactivity_timeout(std::chrono::seconds(60));
 		} else
 #endif
-		http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000);
+		http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, 1000);
 		http::AsioBindOptions bind_options;
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;
 		http_service->set_bind_options(bind_options);
 		if (lag_probe_enabled()) { http_service->enable_lag_probe(); }
 		http_service->enable_compression(search_compression());
+
+		// Each reactor's host: the scheduler its requests' tasks resume through. The loop's thread
+		// is bound to it before the loop serves anything.
+		for (std::size_t i = 0; i < http_service->reactors(); ++i) {
+			auto& io = http_service->reactor(i).io();
+			auto& host = http_hosts.emplace_back(std::make_unique<engine::AsioHost>(io.get_executor()));
+			asio::post(io, [host = host.get()] { host->bind_loop_thread(); });
+		}
 	}
 	this->http_port = http_port;
 
@@ -897,10 +902,8 @@ XapiandManager::join()
 
 	// The control plane's worker: the loop has stopped (break_loop), so drop what is queued
 	// and wait for the running database part before the database pool finishes.
-	if (auto* worker = _rx->reactor.pool()) {
-		worker->stop();
-		worker->join();
-	}
+	_rx->pool.stop();
+	_rx->pool.join();
 
 	// The index registry's tasks that timers started (the debounced commit, an idle close) run on the control
 	// loop, which has stopped: from now on they run on the thread that starts them, and the ones already
@@ -1048,6 +1051,7 @@ XapiandManager::join()
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
 
 	http_service.reset();
+	http_hosts.clear();
 
 	database_pool.reset();
 

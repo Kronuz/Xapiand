@@ -22,17 +22,3 @@
  */
 
 #include "search_service.h"
-
-
-bool
-SearchService::should_offload(const http::Request& request) const
-{
-	// Only the view-less methods (OPTIONS, QUIT, OPEN, CLOSE) run inline: they do no database
-	// work. Everything else, FLUSH included (it closes and commits every open writable), runs
-	// once on the reactor's offload pool; no reactor loop blocks on database work.
-	const std::string& m = request.method;
-	if (m == "OPTIONS" || m == "QUIT" || m == "OPEN" || m == "CLOSE") {
-		return false;
-	}
-	return true;
-}

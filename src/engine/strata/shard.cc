@@ -491,10 +491,11 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 
 // Waits, in the host's task, for the readers that hold the views of a closing index to let go of them: until
 // then the views keep their segments, files and the directory lock. It raises `busy` when they do not within
-// drain_timeout, leaving the index closing. Run it under the host's turn, after Core::begin_retire.
+// drain_timeout, leaving the index closing. Run it after Core::begin_retire; it needs no turn.
 task::task<void>
 drain_readers(Core& core, Chores& chores)
 {
+	check_no_view_held("a drain");
 	const auto deadline = std::chrono::steady_clock::now() + core.drain_timeout;
 	auto pause = std::chrono::milliseconds(1);
 	for (;;) {
@@ -1360,8 +1361,8 @@ Shard::use_chores(Chores* chores) noexcept
 }
 
 
-task::task<void>
-Shard::close()
+task::task<bool>
+Shard::begin_close()
 {
 	try {
 		auto& core = *handle_->core;
@@ -1383,15 +1384,24 @@ Shard::close()
 				core.owed.store(0, std::memory_order_relaxed);
 			}
 		});
-		if (!released) {
-			// Searches still read the index: it is closed when the last lets go of its view.
-			co_await drain_readers(core, *chores_);
-			co_await chores_->run(ChoreClass::flush, [&core] {
-				core.index.reset();
-				core.owed.store(0, std::memory_order_relaxed);
-			});
-		}
-		co_return;
+		co_return released;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+task::task<void>
+Shard::finish_close()
+{
+	try {
+		// Searches still read the index: it is closed when the last lets go of its view.
+		auto& core = *handle_->core;
+		co_await drain_readers(core, *chores_);
+		co_await chores_->run(ChoreClass::flush, [&core] {
+			core.index.reset();
+			core.owed.store(0, std::memory_order_relaxed);
+		});
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}

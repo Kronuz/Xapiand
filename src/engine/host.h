@@ -34,6 +34,8 @@
 #include <cassert>                 // for assert
 #include <chrono>                  // for std::chrono
 #include <condition_variable>      // for std::condition_variable
+#include <cstdio>                  // for std::fprintf
+#include <cstdlib>                 // for std::abort
 #include <coroutine>               // for std::coroutine_handle
 #include <cstdint>                 // for std::uint64_t
 #include <deque>                   // for std::deque
@@ -51,6 +53,13 @@
 
 
 namespace engine {
+
+// What the task running on a host holds, counted in debug builds: the rules are that a task holds one index's
+// turn at most, and that it takes no turn, open or drain while it holds a view (docs/mechanisms/reader-views.md).
+struct TaskCounters {
+	int turns = 0;
+	int views = 0;
+};
 
 class Host {
 public:
@@ -72,9 +81,9 @@ public:
 	virtual void post(std::coroutine_handle<> h) = 0;
 	virtual void post_demoted(std::coroutine_handle<> h) { post(h); }
 
-	// How many index turns the task running here holds, when this host runs one task at a time (a
-	// blocking wait does); null when it interleaves tasks. A task holds one at most (debug builds).
-	virtual int* turns_held() noexcept { return nullptr; }
+	// What the task running here holds, when the host can tell: a blocking wait runs one task at a time,
+	// and a debug build tracks each request on a reactor; null otherwise.
+	virtual TaskCounters* counters() noexcept { return nullptr; }
 
 	// Runs t on this host to its end, with nobody awaiting it. A task that can fail catches its own errors.
 	void spawn(task::task<void> t) {
@@ -100,6 +109,13 @@ public:
 
 	// The host whose thread is running a task right now (null outside any).
 	static Host* current() noexcept { return current_; }
+
+	// The running task's counters, or null when it runs on no host or the host does not count.
+	static TaskCounters* running_counters() noexcept { return current_ ? current_->counters() : nullptr; }
+
+	// Marks the calling thread as this host's for the rest of its life: the thread of a loop that only
+	// the host's tasks run on (an Asio host).
+	static void bind_thread(Host* host) noexcept { current_ = host; }
 
 protected:
 	virtual std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point at, std::unique_ptr<TimerNode> node) = 0;
@@ -150,6 +166,18 @@ inline SleepFor sleep_for(std::chrono::steady_clock::duration d) noexcept {
 }
 
 
+// Aborts (debug builds) when the running task holds a view and is about to wait for a turn, an open or a
+// drain: the view could be what that wait is waiting for. Release builds compile it out.
+inline void check_no_view_held([[maybe_unused]] const char* waits_for) noexcept {
+#ifndef NDEBUG
+	if (const auto* counters = Host::running_counters(); counters != nullptr && counters->views != 0) {
+		std::fprintf(stderr, "a task that holds %d view(s) waits for %s\n", counters->views, waits_for);
+		std::abort();
+	}
+#endif
+}
+
+
 // A scheduler owned by one waiting thread: run() drives a task there until it ends.
 class BlockingScheduler final : public Host {
 public:
@@ -168,7 +196,7 @@ public:
 		cv_.notify_one();
 	}
 
-	int* turns_held() noexcept override { return &turns_; }
+	TaskCounters* counters() noexcept override { return &counters_; }
 
 	// Runs `t` to its end on the calling thread and returns its value or rethrows its exception. Every
 	// resume of the task, and of anything it awaits that resumes through this host, runs here.
@@ -281,7 +309,7 @@ private:
 	std::deque<std::coroutine_handle<>> ready_;
 	std::vector<Entry> timers_;
 	std::uint64_t last_id_ = 0;
-	int turns_ = 0;
+	TaskCounters counters_;
 };
 
 }  // namespace engine

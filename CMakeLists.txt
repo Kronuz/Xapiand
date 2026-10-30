@@ -443,7 +443,7 @@ include(FetchContent)
 
 # compressors: the commit strata pins, for its stored blocks' one-shot LZ4 and zstd block codecs
 # (declared first, so it wins over the older pins of the libraries that also use compressors).
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 816bc82ca9e41bd6fc54831d172ede45b3fc6eaa)
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG dc4474be69e46cfd5c2dce97b6088521048f205a)
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
 # rapidjson; logger / http_log pull cppcodec). FetchContent is first-declaration-wins
@@ -564,7 +564,7 @@ add_compile_definitions(TRACEBACK_HOOKS=1)
 # xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
 # thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
 # handed to the WAL at construction; the data store stays on synchronous fsync.
-FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 671eaacb924402be6ff65c2ddca1d2b9d03a96de)
+FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG e4c574656d91959c790e0d24b7abb3898d1d0c50)
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
@@ -740,7 +740,7 @@ FetchContent_MakeAvailable(task)
 # strata and the libraries strata links (the pins above win where the same library is declared).
 # strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG c82ac9f25833a1b42999265bc90bec322870268c)  # strata main: defer_io, reclaim_for_space
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG b348da5cbdc62764abac2ce7446f362c3018937c)  # prospect main: no pool when no term reached it
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG c77d6ebda1165fc72e50b631232a2f7494d77d46)  # prospect main: search_pinned, the task budget
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -801,8 +801,8 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http so this pin wins over its (first declaration wins).
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ef26c30fbf713fb6526a8ed60db2066bc9b4b19b)  # reactor main (LagProbe)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG c23bb991db31dae9dc7eac6e8099d9322366e4dc)  # http main (enable_lag_probe)
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 76c32b44de7632909e1287c76ea0f36c5f75d695)  # reactor main (AdmissionGate, abort_all, no pool)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG fce24c639692bee7dee97f39303ad32ca54014d0)  # http main (coroutine handlers, BodyStream, cancel)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
@@ -814,7 +814,7 @@ include_directories("${http_lib_SOURCE_DIR}")
 # include path, which is all http_log.h needs.
 FetchContent_Declare(http_log
   GIT_REPOSITORY https://github.com/Kronuz/http-log.git
-  GIT_TAG        dbcc21b2c57baca2b1a87ef9cf883eead39b31eb
+  GIT_TAG        d2315b86ee0483c0b2fa8b25f82e79e64e40b33d
   SOURCE_SUBDIR  do-not-configure)
 FetchContent_MakeAvailable(http_log)
 include_directories("${http_log_SOURCE_DIR}")
@@ -1911,7 +1911,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard offload_followups)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"

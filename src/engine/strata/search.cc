@@ -96,7 +96,7 @@ public:
 	p::ordinal_t block_end(p::ordinal_t) override { return p::no_more_docs; }
 	double max_score_total() const noexcept override { return 0.0; }
 	std::size_t score_terms() const noexcept override { return 1; }
-	std::optional<std::uint64_t> exact_count() override { return count_; }
+	task::task<std::optional<std::uint64_t>> exact_count(p::slice) override { co_return count_; }
 	bool matches_all() const noexcept override { return true; }
 	std::unique_ptr<p::scorer> fresh() const override { return std::make_unique<AllScorer>(count_); }
 
