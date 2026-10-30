@@ -45,6 +45,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "database/data.h"
 #include "database/flags.h"
 #include "database/handler.h"
 #include "database/lock.h"
@@ -236,6 +237,28 @@ private:
 	std::shared_ptr<task::event> gate_;
 	std::atomic<bool> entered_{false};
 };
+
+// Counts the chores of each class that an index runs.
+class CountingChores final : public engine::Chores {
+public:
+	explicit CountingChores(std::unique_ptr<engine::Chores> inner) : inner_(std::move(inner)) { }
+	task::task<void> run(engine::ChoreClass cls, std::function<void()> fn) override {
+		++counts_[static_cast<int>(cls)];
+		co_await inner_->run(cls, std::move(fn));
+	}
+	std::size_t count(engine::ChoreClass cls) const { return counts_[static_cast<int>(cls)].load(); }
+
+private:
+	std::unique_ptr<engine::Chores> inner_;
+	std::atomic<std::size_t> counts_[3] = {};
+};
+
+CountingChores& count_chores(ShardEndpoint& entry) {
+	auto counting = std::make_unique<CountingChores>(A::take_chores(entry));
+	auto* raw = counting.get();
+	A::set_chores(entry, std::move(counting));
+	return *raw;
+}
 
 GateChores& gate_chores(ShardEndpoint& entry) {
 	auto gate = std::make_unique<GateChores>(A::take_chores(entry));
@@ -687,6 +710,56 @@ void test_owed_flushes_do_not_reorder_writers() {
 	CHECK_EQ(engine::sync_wait(reader.engine_for_read())->doc_count(), static_cast<engine::doccount>(threads_n * per_thread));
 }
 
+// The idle housekeeping posts a chore only when background work is owed: a quiet index costs nothing every minute.
+void test_housekeeping_costs_nothing_on_a_quiet_index() {
+	Watchdog watchdog("housekeeping");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("housekeeping")));
+	auto& counting = count_chores(*entry.get());
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	engine::sync_wait(shard.commit());
+	const auto before = counting.count(engine::ChoreClass::merge);
+	pool.housekeeping();  // nothing owed: no chore
+	CHECK_EQ(counting.count(engine::ChoreClass::merge), before);
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
+}
+
+// Blob I/O is device work, so it runs as chores: the blob's write is a flush chore (inside the document's turn, before
+// the apply), its commit another, and its read a query chore.
+void test_blob_io_runs_in_chores() {
+	Watchdog watchdog("blob I/O");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("blobs")));
+	auto& counting = count_chores(*entry.get());
+	Shard shard(*entry.get(), WRITE);
+	engine::sync_wait(shard.ready());
+	Data data;
+	data.update(ct_type_t("application/octet-stream"), -1, 0, 0, std::string("blobbytes"));
+	data.flush();
+	auto doc = make("Kblob", "");
+	doc.set_data(data.serialise());
+	const auto flushes = counting.count(engine::ChoreClass::flush);
+	const auto written = engine::sync_wait(shard.add_document(std::move(doc)));
+	CHECK_GT(counting.count(engine::ChoreClass::flush), flushes);  // the blob was pushed in a chore
+	const auto commits = counting.count(engine::ChoreClass::flush);
+	CHECK_TRUE(engine::sync_wait(shard.commit()));
+	CHECK_GE(counting.count(engine::ChoreClass::flush), commits + 2);  // the storage's fsync and the engine's commit
+	auto view = engine::sync_wait(shard.get_view(written.did));
+	Data stored(view->data());
+	const Locator* locator = nullptr;
+	for (const auto& candidate : stored) {
+		if (candidate.volume != -1) {
+			locator = &candidate;
+		}
+	}
+	REQUIRE(locator != nullptr);
+	const auto queries = counting.count(engine::ChoreClass::query);
+	const auto blob = engine::sync_wait(shard.storage_get_stored(*locator));
+	CHECK_GT(counting.count(engine::ChoreClass::query), queries);  // the read was a chore
+	CHECK_TRUE(blob.find("blobbytes") != std::string::npos);
+}
+
 // The WAL's order is the apply order across writers (C6): the turn covers the apply, the revision update and the WAL
 // enqueue, so lines reach the log in the order the documents were assigned their ids.
 void test_the_wal_order_is_the_apply_order() {
@@ -712,7 +785,7 @@ void test_the_wal_order_is_the_apply_order() {
 			thread.join();
 		}
 	}
-	writer.finish();
+	writer.end();  // the queue drains, then the thread ends
 	writer.join(std::chrono::milliseconds(20000));
 	// The log, line by line: the ids of the replaced documents, in the order they reached it.
 	std::vector<engine::docid> logged;
@@ -759,6 +832,8 @@ int main(int argc, char** argv) {
 		{"test_a_commit_not_covered_does_not_share_the_outcome", test_a_commit_not_covered_does_not_share_the_outcome},
 		{"test_a_failed_commit_reaches_only_the_joined_waiters", test_a_failed_commit_reaches_only_the_joined_waiters},
 		{"test_owed_flushes_do_not_reorder_writers", test_owed_flushes_do_not_reorder_writers},
+		{"test_housekeeping_costs_nothing_on_a_quiet_index", test_housekeeping_costs_nothing_on_a_quiet_index},
+		{"test_blob_io_runs_in_chores", test_blob_io_runs_in_chores},
 		{"test_the_wal_order_is_the_apply_order", test_the_wal_order_is_the_apply_order},
 	};
 	for (const auto& c : cases) {

@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and 10 times a second when idle. `XAPIAND_LAG_PROBE=0` starts the node without the probes.
 
 ### Changed
+- **A request that cannot get its index's turn in time answers `503`.** Every operation on an index (a write,
+  a commit, a refresh before a read, the timed commit and the idle close) takes that index's turn, and waits for
+  it for at most 30 s. The old pool made a request wait on a condition variable for a free shard, and answered
+  the same error when it ran out of time; now the wait is bounded by the one turn, not by a pool of copies.
+- **The device work of an index runs on a shared pool of workers.** Opening an index, writing a segment,
+  committing, closing and reading or writing a stored blob run as jobs of the index's own queue on one pool of
+  workers, so a slow disk for one index no longer holds the threads that serve the others, and a write does no
+  I/O of its own while it holds the index.
 - **`collapse_max` above 1 returns the best documents of each group** on the strata engine: for each group,
   the best `collapse_max` documents of the window. The Xapian engine returns lower-ranked documents of a
   group when a better one fell outside its window (the bank's `?collapse=age&limit=5` answers accounts 6,
@@ -62,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   among the values; it now returns the values.
 
 ### Removed
+- **`--max-database-readers`**: an index is opened once and shared by every request; there are no pooled
+  reader copies to cap.
 - **The `_elite_set` operator** (query DSL, default operator and the engine's ELITE_SET). A query with it
   answers `400` ("Invalid operator").
 - **The `terms` of `INFO` on a document** (every term the document indexes, with its frequency and

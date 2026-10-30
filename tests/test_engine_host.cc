@@ -239,10 +239,26 @@ void test_a_chore_error_reaches_the_awaiter() {
 	auto opened = engine::sync_wait(engine::open_local(scratch("error"), true, true, host(chores)));
 	auto& shard = *opened.shard;
 	engine::sync_wait(shard.close());
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.refresh()); }) == engine::errc::internal || true);
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.commit(engine::Transaction::none)); }) == engine::errc::closed);
+}
+
+// The idle index's housekeeping, reclaim(), is a merge-class chore: it publishes finished merges and frees the files the
+// index queued for removal, off the thread that awaits it.
+void test_reclaim_is_a_merge_chore() {
+	ThreadChores chores;
+	auto opened = engine::sync_wait(engine::open_local(scratch("reclaim"), true, true, host(chores)));
+	auto& shard = *opened.shard;
+	auto doc = make("Ka", "a");
+	engine::sync_wait(shard.add(doc, {}));
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	CHECK_EQ(shard.merges_pending(), 0u);
+	CHECK_EQ(chores.count(engine::ChoreClass::merge), 0u);
+	engine::sync_wait(shard.reclaim());
+	CHECK_EQ(chores.count(engine::ChoreClass::merge), 1u);
+	CHECK_FALSE(chores.ran_on(std::this_thread::get_id()));
+	CHECK_EQ(engine::sync_wait(shard.get(1))->data(), "a");
 }
 
 }  // namespace
 
-TEST_MAIN(test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter)
+TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter)
