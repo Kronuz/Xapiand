@@ -74,16 +74,24 @@ Ready for the code review (concurrency code). K1 to K4, K6 and K7 are done and t
 - [x] **K6 Proof.**
   - Release and Debug (`Debug`, asserts on) builds link; unit tests **26 of 26** ctest targets on each (Debug includes the one-turn death test and the
     assertion mutant M4, killed by it).
-  - Docs E2E, Release: 371 requests, **641 of 641** assertions (`harness/engine_e2e.sh`, newman 6.2.3).
+  - Docs E2E: 371 requests, **641 of 641** assertions (`harness/engine_e2e.sh`, newman 6.2.3) on the Release server and on the Debug server (asserts on).
   - ASan+UBSan (Homebrew LLVM 22, `RelWithDebInfo`, one build): unit tests 26 of 26 (`detect_leaks=0`), docs E2E 641 of 641, no report. The first ASan run
     of `test_pool` found a real bug: `pool.h` did not include `config.h`, so `ShardEndpoint` had a different layout in `pool.cc` (no
     `XAPIAND_DATA_STORAGE` member) than in `shard.cc`, a heap overflow in the first open (fixed in `Xapiand:f4f0fd319`).
   - TSan (one build): the concurrency tests (`test_pool`, `test_engine_host`, `test_engine_strata`, `test_wal_replay`, `test_engine_error`, `test_blocking_guard`,
     `test_offload_followups`, `test_debounce_or_run`): 8 of 8, 0 warnings (the first run found a data race in the test itself: a `CHECK` in a helper thread; fixed).
-    `harness/engine_mixed_load.py --engine strata --secs 120` on the TSan server: model equals the final dump (15,773 documents), 0 failures, 0 sanitizer reports.
+    `harness/engine_mixed_load.py --engine strata --secs 120` on the TSan server: model equals the final dump (12,237 documents), 0 failures, 0 sanitizer reports.
   - `harness/stall_load.py --dry-run` on the Release server: passes (20,000 documents loaded, unloaded and loaded phases, 0 errors, JSON written; no timing
     claim from a dry run on a shared host).
   - `harness/wal_recovery_check.sh` PASS; `harness/engine_crash_check.sh --reactors 2` PASS (sections A, B, D).
+  - **A shutdown bug found by hand and fixed** (`Xapiand:fcbeb8ebc`): a node that got SIGTERM as the debounced autocommit fired (1.0 s after a write; 3 of 3 runs)
+    never exited. The autocommit and the idle close are tasks posted to the control loop, which stops when the shutdown begins; the commit posted at that moment
+    never ran and its reference kept the entry from closing, so `DatabasePool::join` waited for ever. The registry now counts the tasks it posted
+    (`detached()`); `XapiandManager::join` clears the control and runs the loop until the count is zero, and later tasks run on the thread that starts them.
+    `harness/graceful_shutdown_check.sh` scenario 4 (SIGTERM 0.5, 1.0 and 1.5 s after a write; clean exit; write kept after a restart) passes; with the
+    drain removed it fails at 1.0 s.
+  - `engine::check_may_block` lets a wait inside a task that `engine::sync_wait` drives pass (that task runs on the waiting thread, which may block) and still stops
+    one on the control loop's `AsioHost` (`test_quiet_inside_a_blocking_wait`).
 - [x] **K7** `docs/mechanisms/index-registry-and-lease.md`; changelog (Changed: 503 on a turn timeout, the device work on a shared pool; Removed:
   `--max-database-readers`).
 
@@ -94,8 +102,9 @@ See `git log master..` for the branch; the substance:
 - `Xapiand:f8657f445` pins (K1).
 - `Xapiand:f4f0fd319` the registry, the lease, host mode and chores: the engine, the pool, the shard, the WAL target, the manager's control host, the
   handler's calls.
-- the registry tests and crash check D; the allowlist, blob and housekeeping tests, the mechanism note and the changelog; the final commit adds this ledger,
-  the busy rows of `test_engine_error`, the TSan test fix and the shutdown guard in `_spawn`.
+- the registry tests and crash check D (`Xapiand:dcfdf5af8`); the allowlist, blob and housekeeping tests, the mechanism note and the changelog
+  (`Xapiand:afd7bf042`); this ledger, the busy rows of `test_engine_error`, the TSan test fix and the shutdown guard in `_spawn` (`Xapiand:325f3e6d2`);
+  the shutdown fix and its check (`Xapiand:fcbeb8ebc`); the block-guard refinement and its test (the last commit).
 
 ## Next
 

@@ -41,6 +41,7 @@
 #include "database/flags.h"
 #include "database/pool.h"
 #include "database/shard.h"
+#include "engine/host_asio.h"
 #include "engine/release.h"
 #include "engine/sync.h"
 #include "reactor.h"
@@ -156,6 +157,22 @@ static void test_fires_on_scheduler_thread() {
 	}));
 }
 
+// A task that a blocking wait drives runs on the waiting thread, which may block: a wait inside it is not a violation. The
+// control loop's tasks are not so.
+static task::task<int> nested_wait() {
+	co_return engine::sync_wait(answer()) + 1;
+}
+
+static void test_quiet_inside_a_blocking_wait() {
+	CHECK_FALSE(guard_fires([] { CHECK_EQ(engine::sync_wait(nested_wait()), 43); }));
+	CHECK_TRUE(guard_fires([] {
+		asio::io_context io;
+		engine::AsioHost host(io.get_executor());
+		host.spawn([]() -> task::task<void> { engine::sync_wait(answer()); co_return; }());
+		io.run();
+	}));
+}
+
 static void test_quiet_off_loop() {
 	CHECK_FALSE(guard_fires(wait_answer));
 	CHECK_FALSE(guard_fires(release_on_loop_via_pool));
@@ -184,4 +201,4 @@ static void test_quiet_off_loop() {
 	CHECK_EQ(engine::blocking_violations(), 0u);
 }
 
-TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_off_loop)
+TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop)
