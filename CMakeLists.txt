@@ -490,8 +490,8 @@ FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 70b9663acea98b9f94c098d2152bae2de87afc81)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG 73b74938b3a455423cdf4c0039372dc1fe3b71c7)
 FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG 351ef2e0fb69c3648eb1e33439ced4a50443200b)  # track tip
-FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG 5837d5307a33ac9835b909b5931be6efefb0bc5b)
-FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 310c409fd728e9ab5d90db31b5cc91a2d5ccc421)
+FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG b16bc32e90ebff2056677422e81bfb02bcfefa8f)
+FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG da07c12d3e30da9ba1698fade3d8c08c5eb342c9)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 1d20a4468c2574a8b1d03dfc93622c833e5ce3dd)
 # uinteger_t is declared before base_x so base_x's own FetchContent of it dedups
 # to this pinned copy.

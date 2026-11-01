@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+### Changed
+- **Base conversion is faster.** The `base-x` and `uinteger_t` libraries are pinned at their
+  latest versions, with a small-vector integer container and faster conversion between
+  bytes and text. UUID and node-id text is unchanged.
+- **Auto-generated `_id`s of `text` and `keyword` fields are standard base64url text.** The
+  old codec dropped a leading zero digit from some ids (a leading `A`), so their text was
+  not the standard encoding of the id's bytes. Ids already stored are not touched, and
+  nothing decodes them.
+
 ### Fixed
 - **Nested bucket aggregations over a multi-valued field no longer exhaust the host.** A
   document is still counted once in each bucket it belongs to, as in Elasticsearch, so seven
