@@ -58,10 +58,7 @@ extern struct opts_t {
 	std::string uid = "";
 	std::string gid = "";
 	ssize_t num_http_servers = 1;
-	ssize_t num_http_clients = 1;
 	ssize_t num_async_wal_writers = 1;
-	ssize_t num_doc_preparers = 1;
-	ssize_t num_doc_indexers = 1;
 	ssize_t num_committers = 1;
 	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;

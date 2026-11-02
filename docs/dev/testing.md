@@ -89,7 +89,14 @@ JSON response). Then:
 (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3)
 harness/engine_e2e.sh build-asan/bin/xapiand OUT                         # the docs E2E on a fresh node
 TSAN_OPTIONS=log_path=OUT/san python3 harness/engine_mixed_load.py build-tsan/bin/xapiand OUT --secs 600   # T10
+harness/stored_stream.sh build-asan/bin/xapiand                          # T2's upload rows: 2x the body cap, one byte over, one just under
+harness/restore_stream_check.sh build-asan/bin/xapiand                   # RESTORE streamed, chunked, with a bad line, and cut off
 ```
+
+`stored_stream.sh` uploads `stored` blobs of 2x the buffered-body cap, one byte over it and one just under it, and reads each
+back byte-equal, then four uploads at once, the refusals (past the record limit 413, a POST without an id 400, a big JSON body
+413) and a client that leaves mid-upload (no volume stays). `restore_stream_check.sh` restores 20,000 NDJSON documents, a MsgPack
+stream, a chunked body and a stream with a bad line, counts each back, and cuts a stream off mid-way.
 
 `engine_mixed_load.py` runs writers (PUT, RESTORE batches, replace, DELETE against a model) and searchers on one single-shard
 strata index for the stated time, then compares the final `DUMP` with the model; it exits 0 only when nothing failed and the

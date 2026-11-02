@@ -101,7 +101,7 @@ catch_http_errors(Func&& func)
 			}
 			default:
 				if (const auto* client_error = dynamic_cast<const ClientError*>(&exc)) {
-					http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+					http_errors.error_code = dynamic_cast<const PayloadTooLarge*>(client_error) != nullptr ? HTTP_STATUS_PAYLOAD_TOO_LARGE : HTTP_STATUS_BAD_REQUEST;
 					http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + client_error->what();
 				} else if (exc.kind == engine::errc::syntax || exc.kind == engine::errc::invalid) {
 					// An invalid argument is the request's own (a field path too long to be a term, say).
@@ -124,6 +124,9 @@ catch_http_errors(Func&& func)
 		// (cartesian) as a std::runtime_error subtype rather than a ClientError,
 		// so catch it explicitly to keep a bad coordinate/SRID a 400 not a 500.
 		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
+	} catch (const PayloadTooLarge& exc) {
+		http_errors.error_code = HTTP_STATUS_PAYLOAD_TOO_LARGE;
 		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
 	} catch (const ClientError& exc) {
 		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;

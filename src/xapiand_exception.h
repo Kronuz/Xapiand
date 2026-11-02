@@ -46,6 +46,14 @@ public:
 };
 
 
+// The request carries more than the server stores for it (a 413).
+class PayloadTooLarge : public ClientError {
+public:
+	template<typename... Args>
+	PayloadTooLarge(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
 class MissingTypeError : public ClientError {
 public:
 	template<typename... Args>

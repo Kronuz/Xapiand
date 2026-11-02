@@ -85,6 +85,11 @@ struct SearchRequest {
 	doccount collapse_max = 0;
 	DocidOrder order = DocidOrder::ascending;
 	MatchSpy* spy = nullptr;              // sees the matching documents; borrowed, holds its results afterwards
+
+	// The time slice the search runs in; borrowed, outlives the search. A search with one yields its
+	// loop at window boundaries and raises task::cancelled when the budget's token is set; without
+	// one it runs to its end where it is awaited.
+	task::budget* budget = nullptr;
 };
 
 struct Hit {

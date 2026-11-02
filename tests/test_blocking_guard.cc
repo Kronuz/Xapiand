@@ -23,7 +23,7 @@
 
 // The blocking guard (engine::check_may_block): engine::sync_wait and the registry's waiting entry points
 // (an immediate cleanup, clear) refuse to run inside a reactor loop's run() or on a task scheduler's
-// thread, and run on a reactor's offload pool, on the loop's thread after run() returns, and on a plain thread.
+// thread, and run off the loop on a plain thread, and on the loop's thread after run() returns.
 
 #include "test_harness.h"
 
@@ -33,6 +33,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include <sys/wait.h>
@@ -42,7 +43,6 @@
 #include "database/pool.h"
 #include "database/shard.h"
 #include "engine/host_asio.h"
-#include "engine/release.h"
 #include "engine/sync.h"
 #include "reactor.h"
 #include "task.hh"
@@ -75,7 +75,7 @@ bool guard_fires(const std::function<void()>& body) {
 
 // Runs fn on a reactor loop, inside Reactor::run().
 void on_loop(const std::function<void()>& fn) {
-	reactor::Reactor r(1, 8);
+	reactor::Reactor r;
 	asio::post(r.io(), fn);
 	r.run();
 }
@@ -99,33 +99,9 @@ void destroy_on_loop() {
 	on_loop([] { Teardown t; });
 }
 
-void release_on_loop_via_pool() {
-	reactor::Reactor r(1, 8);
-	asio::co_spawn(r.io(), engine::release_on_pool(&r, std::make_unique<Teardown>()), asio::detached);
-	r.run();
-}
-
-// Releases from a session whose cancellation slot fired, as TcpServer::stop() leaves one.
-void release_after_cancel(bool keep_hop) {
-	reactor::Reactor r(1, 8);
-	asio::cancellation_signal stop;
-	auto session = [&r, keep_hop]() -> asio::awaitable<void> {
-		auto t = std::make_unique<Teardown>();
-		asio::steady_timer wait(co_await asio::this_coro::executor, std::chrono::hours(1));
-		try { co_await wait.async_wait(asio::use_awaitable); } catch (const std::exception&) { }
-		if (keep_hop) {
-			co_await asio::this_coro::throw_if_cancelled(false);
-		}
-		try { co_await engine::release_on_pool(&r, std::move(t)); } catch (const std::exception&) { }
-	};
-	asio::co_spawn(r.io(), session(), asio::bind_cancellation_slot(stop.slot(), asio::detached));
-	asio::post(r.io(), [&] { stop.emit(asio::cancellation_type::all); });
-	r.run();
-}
-
 void cleanup() {
 	DatabasePool pool(8);
-	pool.cleanup(true);
+	engine::sync_wait(pool.flush());
 }
 
 void clear() {
@@ -146,7 +122,17 @@ static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires([] { on_loop(cleanup); }));
 	CHECK_TRUE(guard_fires([] { on_loop(clear); }));
 	CHECK_TRUE(guard_fires(destroy_on_loop));
-	CHECK_TRUE(guard_fires([] { release_after_cancel(false); }));
+}
+
+// The chores of an index end with a WorkGroup, and joining one is a wait: on a loop it is left to a worker.
+static void test_quiet_when_a_loop_drops_a_group_of_chores() {
+	CHECK_FALSE(guard_fires([] {
+		DatabasePool pool(8);
+		on_loop([&] {
+			IndexChores chores(pool.work_pool());
+		});
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));   // the worker that joins it
+	}));
 }
 
 static void test_fires_on_scheduler_thread() {
@@ -175,8 +161,6 @@ static void test_quiet_inside_a_blocking_wait() {
 
 static void test_quiet_off_loop() {
 	CHECK_FALSE(guard_fires(wait_answer));
-	CHECK_FALSE(guard_fires(release_on_loop_via_pool));
-	CHECK_FALSE(guard_fires([] { release_after_cancel(true); }));
 	CHECK_FALSE(guard_fires([] {
 		on_loop([] { });
 		open_through_the_registry();  // the loop's thread, after run() returns
@@ -185,10 +169,12 @@ static void test_quiet_off_loop() {
 		wait_answer();
 	}));
 
-	reactor::Reactor r(1, 8);
+	// A thread a loop's handler started is not the loop.
+	reactor::Reactor r;
 	std::promise<void> done;
+	std::thread worker;
 	asio::post(r.io(), [&] {
-		asio::post(*r.pool(), [&] {
+		worker = std::thread([&] {
 			open_through_the_registry();
 			cleanup();
 			clear();
@@ -198,7 +184,8 @@ static void test_quiet_off_loop() {
 	});
 	r.run();
 	done.get_future().get();
+	worker.join();
 	CHECK_EQ(engine::blocking_violations(), 0u);
 }
 
-TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop)
+TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop, test_quiet_when_a_loop_drops_a_group_of_chores)

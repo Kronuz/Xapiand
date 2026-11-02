@@ -26,7 +26,9 @@
 #include <span>                    // for std::span
 #include <utility>                 // for std::move
 
+#include "engine/host.h"           // for Host, TaskCounters
 #include "prospect/index.hh"       // for prospect::index
+#include "reactor.h"               // for reactor::AdmissionGate
 
 
 namespace engine::strata {
@@ -42,7 +44,37 @@ public:
 	using view_type = ::prospect::index::view;
 
 	Viewed() noexcept = default;
-	Viewed(view_guard guard, const void* identity) noexcept : guard_(std::move(guard)), identity_(identity) { }
+	using lease_type = reactor::AdmissionGate::Lease;
+
+	// `lease` is the index's admission of this view; it is returned when the view is released.
+	Viewed(view_guard guard, const void* identity, lease_type lease = {}) noexcept : guard_(std::move(guard)), identity_(identity), lease_(std::move(lease)) {
+#ifndef NDEBUG
+		// The running task holds a view from here: it must not wait for a turn, an open or a drain (check_no_view_held).
+		if ((counters_ = Host::running_counters()) != nullptr) {
+			++counters_->views;
+		}
+#endif
+	}
+	Viewed(Viewed&& other) noexcept : guard_(std::move(other.guard_)), identity_(other.identity_), lease_(std::move(other.lease_)) {
+#ifndef NDEBUG
+		counters_ = std::exchange(other.counters_, nullptr);
+#endif
+	}
+	Viewed& operator=(Viewed&& other) noexcept {
+		if (this != &other) {
+			release();
+			guard_ = std::move(other.guard_);
+			identity_ = other.identity_;
+			lease_ = std::move(other.lease_);
+#ifndef NDEBUG
+			counters_ = std::exchange(other.counters_, nullptr);
+#endif
+		}
+		return *this;
+	}
+	Viewed(const Viewed&) = delete;
+	Viewed& operator=(const Viewed&) = delete;
+	~Viewed() { release(); }
 
 	explicit operator bool() const noexcept { return static_cast<bool>(guard_); }
 
@@ -54,11 +86,27 @@ public:
 	const void* identity() const noexcept { return identity_; }
 
 	// Lets go of the generation now.
-	void release() noexcept { guard_.release(); }
+	void release() noexcept {
+		// The admission goes back first: the record's registry (which holds the gate) is kept while the record is
+		// claimed, so the gate is alive for as long as the record is. A reader admitted in the gap finds the record
+		// still claimed, and at exactly the cap gets the registry's own refusal, which is the same 503.
+		lease_.reset();
+		guard_.release();
+#ifndef NDEBUG
+		if (counters_ != nullptr) {
+			--counters_->views;
+			counters_ = nullptr;
+		}
+#endif
+	}
 
 private:
 	view_guard guard_;
 	const void* identity_ = nullptr;
+	lease_type lease_;
+#ifndef NDEBUG
+	TaskCounters* counters_ = nullptr;
+#endif
 };
 
 }  // namespace engine::strata

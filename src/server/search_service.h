@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 
 #include "http_handler.h"                   // Kronuz/http: HttpHandler, ResponseWriter, BodySink
@@ -37,17 +38,20 @@
 // router, http::MethodRouter, plus a small classifier for Xapiand's ":command" URL
 // sub-syntax), the ~28 *_view endpoints, and the MsgPack content-negotiation /
 // response formatting. The generic transport -- HTTP parsing, HTTP/1.1 framing, the
-// reactor, and the un-stallable worker offload -- lives entirely in the library
-// (http::HttpConnection + http::Dispatcher), which drives this handler through the
-// value-semantic seam handle(Request, ResponseWriter).
+// reactor and the connection -- lives entirely in the library (Kronuz/http), which
+// drives this handler through the seam handle(Request&, ResponseWriter&).
 //
 // STATUS: LIVE (Leg 2 stage 3c-6). HttpServer creates http::HttpConnection bound to a
-// shared stateless SearchService; the legacy HttpClient is gone. handle() rebuilds
-// an application Request from the library's http::Request, runs the route table's
-// selected view, and emits the response through the library ResponseWriter.
+// shared stateless SearchService; the legacy HttpClient is gone. handle() is a coroutine
+// on the connection's reactor: it rebuilds an application Request from the library's
+// http::Request, awaits the route table's selected view as a task on that reactor's
+// scheduler, and emits the response through the library ResponseWriter.
+// The largest body a request buffers (http answers 413 past it). A stored blob past it streams (docs/design/phase7c.md D9, D12).
+inline constexpr std::size_t BUFFERED_BODY_CAP = 16u * 1024 * 1024;
+
 class SearchService : public http::HttpHandler {
 public:
-	void handle(const http::Request& request, http::ResponseWriter& response) override;
+	asio::awaitable<void> handle(http::Request& request, http::ResponseWriter& response) override;
 
 	// Build Xapiand's per-request state as the http::Request's typed extension (see
 	// http::RequestExtension). Called by the connection at headers-complete; handle()
@@ -60,15 +64,9 @@ public:
 	// its backstop and owns only the generic 500 fallback.
 	void on_error(std::exception_ptr error, const http::Request& request, http::ResponseWriter& response) override;
 
-	// Search endpoints are CPU-bound/blocking, so they must always run on a
-	// worker thread, never the reactor -- the un-stallable model. (A cheap route like
-	// a health check could return false here to stay inline; the search views do not.)
-	bool should_offload(const http::Request& request) const override;
-
-	// A whole-database RESTORE (NDJSON / MsgPack, no doc id) streams its body: the
-	// library runs handle() on a worker and feeds the body through Request::body_reader
-	// with flow control, so the restore indexes objects as they arrive in O(buffer)
-	// memory -- a multi-gigabyte dump is never held whole. Everything else buffers.
+	// A whole-database RESTORE (NDJSON / MsgPack, no doc id) and a stored upload past the buffered
+	// body cap stream their body: handle() runs while it arrives and reads it from
+	// Request::body_stream with flow control, in O(buffer) memory. Everything else buffers.
 	bool wants_body_stream(const http::Request& request) override;
 };
 

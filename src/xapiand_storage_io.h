@@ -20,6 +20,7 @@
 #include <sys/types.h>       // for off_t, ssize_t
 
 #include "io.hh"             // for io::open/close/read/write/pread/pwrite/lseek/fsync/full_fsync/fallocate/fadvise
+#include "storage_io.h"      // for storage::posix: the volume locks and ftruncate this policy leaves to the library
 
 
 struct XapiandStorageIO {

@@ -54,21 +54,10 @@
 #define MAX_HTTP_SERVERS              10
 #define MIN_HTTP_SERVERS               1
 
-#define NUM_HTTP_CLIENTS             1.5          // Number of http client threads per CPU
-#define MAX_HTTP_CLIENTS              20
-#define MIN_HTTP_CLIENTS               2
 
 #define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
 #define MAX_ASYNC_WAL_WRITERS         10
 #define MIN_ASYNC_WAL_WRITERS          1
-
-#define NUM_DOC_PREPARERS            1.0          // Number of threads handling bulk documents preparing per CPU
-#define MAX_DOC_PREPARERS             10
-#define MIN_DOC_PREPARERS              1
-
-#define NUM_DOC_INDEXERS             3.0          // Number of threads handling bulk documents indexing per CPU
-#define MAX_DOC_INDEXERS              30
-#define MIN_DOC_INDEXERS               3
 
 #define NUM_COMMITTERS               1.0          // Number of threads handling the commits per CPU
 #define MAX_COMMITTERS                10
@@ -174,10 +163,6 @@ parseOptions(int argc, char** argv)
 		std::size_t num_async_wal_writers = 0;
 		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
 #endif
-		std::size_t num_doc_preparers = 0;
-		app.add_option("--bulk-preparers", num_doc_preparers, "Number of threads handling bulk documents preparing.");
-		std::size_t num_doc_indexers = 0;
-		app.add_option("--bulk-indexers", num_doc_indexers, "Number of threads handling bulk documents indexing.");
 		std::size_t num_committers = 0;
 		app.add_option("--committers", num_committers, "Number of threads handling the commits.");
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
@@ -201,8 +186,6 @@ parseOptions(int argc, char** argv)
 		std::size_t max_files = 0;
 		app.add_option("--max-files", max_files, "Maximum number of files to open.");
 
-		std::size_t num_http_clients = 0;
-		app.add_option("--http-clients", num_http_clients, "Number of http client threads.");
 		std::size_t num_http_servers = 0;
 		app.add_option("--http-servers", num_http_servers, "Number of http servers.");
 		std::size_t max_clients = MAX_CLIENTS;
@@ -396,14 +379,11 @@ parseOptions(int argc, char** argv)
 #if XAPIAND_DATABASE_WAL
 		o.num_async_wal_writers = fallback(num_async_wal_writers, std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif
-		o.num_doc_preparers = fallback(num_doc_preparers, std::max(MIN_DOC_PREPARERS, std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors)))));
-		o.num_doc_indexers = fallback(num_doc_indexers, std::max(MIN_DOC_INDEXERS, std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors)))));
 		o.num_committers = fallback(num_committers, std::max(MIN_COMMITTERS, std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)))));
 		o.num_fsynchers = fallback(num_fsynchers, std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)))));
 
 		o.max_clients = max_clients;
 		o.max_files = max_files;
-		o.num_http_clients = fallback(num_http_clients, std::max(MIN_HTTP_CLIENTS, std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)))));
 		o.num_http_servers = fallback(num_http_servers, std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));
 		if (o.detach) {
 			if (o.logfile.empty()) {

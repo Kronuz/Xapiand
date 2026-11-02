@@ -40,7 +40,7 @@
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
-#include "engine/sync.h"                    // for engine::sync_wait
+#include "engine/host_asio.h"               // for engine::AsioHost
 #include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
@@ -690,9 +690,9 @@ dispatch_request(Request& request)
 	// (Expect: 100-continue is a transport concern handled by http::HttpConnection.)
 
 	// Reserve the body buffer up front from Content-Length -- but NOT when streaming
-	// (request.http_req->body_reader set): that body is pulled in bounded chunks, so
+	// (request.http_req->body_stream set): that body is pulled in bounded chunks, so
 	// reserving its full (possibly multi-gigabyte) length would defeat the point.
-	bool streaming = request.http_req != nullptr && request.http_req->body_reader != nullptr;
+	bool streaming = request.http_req != nullptr && request.http_req->body_stream != nullptr;
 	if (request.has_content_length && request.content_length && !streaming) {
 		if (request.mode == Request::Mode::STREAM_MSGPACK) {
 			request.unpacker.reserve_buffer(request.content_length);
@@ -752,10 +752,7 @@ node_obj()
 				{ "num_shards", opts.num_shards },
 				{ "num_replicas", opts.num_replicas },
 				{ "num_http_servers", opts.num_http_servers },
-				{ "num_http_clients", opts.num_http_clients },
 				{ "num_async_wal_writers", opts.num_async_wal_writers },
-				{ "num_doc_preparers", opts.num_doc_preparers },
-				{ "num_doc_indexers", opts.num_doc_indexers },
 				{ "num_committers", opts.num_committers },
 				{ "num_fsynchers", opts.num_fsynchers },
 			} },
@@ -834,12 +831,52 @@ delete_document_view(Request& request)
 }
 
 
+// Whether a body of this content type is stored as a blob (not indexed as a JSON, YAML or MsgPack document).
+static bool
+is_stored_type(const ct_type_t& ct_type)
+{
+	return !ct_type.empty() && ct_type != json_type && ct_type != x_json_type && ct_type != yaml_type && ct_type != x_yaml_type && ct_type != msgpack_type && ct_type != x_msgpack_type;
+}
+
+
+// The body of a request, one chunk at a time, for an upload.
+class RequestChunks final : public DatabaseHandler::BodyChunks {
+public:
+	explicit RequestChunks(Request& request) : request(request) { }
+	task::task<bool> next(std::string& chunk) override {
+		return request.read_chunk(chunk);
+	}
+
+private:
+	Request& request;
+};
+
+
+// Indexes a document whose blob is the request's body, streamed to the data storage in chores of the upload's own
+// group, a chunk at a time (docs/design/phase7c.md D9): no turn is held while the body arrives.
+static task::task<DocumentInfo>
+index_streamed_blob(Request& request, DatabaseHandler& db_handler, const MsgPack& document_id, engine::rev version, const ct_type_t& ct_type, bool commit)
+{
+	if (request.content_length > STORED_UPLOAD_LIMIT) {
+		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(STORED_UPLOAD_LIMIT));
+	}
+	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+	RequestChunks body(request);
+	auto blob = co_await db_handler.upload_stored(document_id, ct_type, request.content_length, chores, body);
+	co_return co_await db_handler.index_uploaded(document_id, version, ct_type, blob, commit);
+}
+
+
 static task::task<void>
 write_document_view(Request& request)
 {
 	L_CALL("write_document_view()");
 
-	auto& decoded_body = request.decoded_body();
+	// A blob too big to buffer arrives as a stream and is written to the data storage as it comes (D9): the
+	// document has no decoded body.
+	const bool streamed = request.http_req != nullptr && request.http_req->body_stream != nullptr;
+	MsgPack streamed_body;
+	auto& decoded_body = streamed ? streamed_body : request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	if (co_await resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
@@ -853,8 +890,11 @@ write_document_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
-	bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-	auto indexed = co_await db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+	bool stored = is_stored_type(request.ct_type);
+	auto ct_type = request.ct_type.empty() ? mime_type(selector) : request.ct_type;
+	auto indexed = streamed
+		? co_await index_streamed_blob(request, db_handler, document_id, query_field.version, ct_type, query_field.commit)
+		: co_await db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, ct_type);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1432,9 +1472,8 @@ delete_database_view(Request& request)
 }
 
 
-// Administrative verbs. FLUSH closes and commits every open writable, so it runs on the
-// offload pool; QUIT only signals and runs inline (SearchService::should_offload). Their
-// admin_commands + root-URL preconditions are checked here at the view.
+// Administrative verbs. FLUSH closes and commits every open writable and awaits the closes; QUIT only
+// signals. Their admin_commands + root-URL preconditions are checked here at the view.
 static task::task<void>
 flush_view(Request& request)
 {
@@ -1451,7 +1490,7 @@ flush_view(Request& request)
 	request.query_parser.rewind();
 	int flush_clients = request.query_parser.next("clients");
 	if (flush_databases != -1 || flush_clients == -1) {
-		XapiandManager::manager(true)->database_pool->cleanup(true);
+		co_await XapiandManager::manager(true)->database_pool->flush();
 	}
 	if (flush_clients != -1 || flush_databases == -1) {
 		XapiandManager::manager(true)->shutdown(0, 0);
@@ -1586,93 +1625,106 @@ restore_database_view(Request& request)
 {
 	L_CALL("restore_database_view()");
 
-	auto indexer = request.indexer.load();
+	// The restore's own group of chores: the parse of each chunk runs there, beside the indexing of the
+	// previous one, and splits the pool's service with the index's own group.
+	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+	request.parse_chores = &chores;
 
-	// Finishes and drops the request's indexer here, on the worker, on every exit, so its last
-	// reference (and the commit in ~DocIndexer) never falls on the reactor in ~Request.
-	struct DropIndexer {
-		Request& request;
-		~DropIndexer() {
-			try {
-				if (auto held = request.indexer.exchange(nullptr)) {
-					held->finish();
-				}
-			} catch (...) {
-				L_EXC("Unhandled exception finishing the restore indexer");
+	std::optional<DocIndexer> indexer;
+	std::exception_ptr error;
+	try {
+		auto open_indexer = [&](MsgPack& obj) -> task::task<void> {
+			auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
+			if (co_await resolve_index_endpoints(request, query_field, &obj) > 1) {
+				THROW(ClientError, "Method can only be used with single indexes");
 			}
-		}
-	} drop_indexer{request};
 
-	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
-		MsgPack obj;
-		while (request.next_object(obj)) {
-			if (!indexer) {
-				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
-				if (co_await resolve_index_endpoints(request, query_field, &obj) > 1) {
-					THROW(ClientError, "Method can only be used with single indexes");
-				}
+			request.processing = std::chrono::steady_clock::now();
 
-				request.processing = std::chrono::steady_clock::now();
-
-				indexer = DocIndexer::make_shared(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field);
-				request.indexer.store(indexer);
-			}
-			indexer->prepare(std::move(obj));
-		}
-	} else {
-		auto& docs = request.decoded_body();
-		if (!docs.is_array()) {
-			THROW(ClientError, "Invalid request body");
-		}
-		for (auto& obj : docs) {
-			if (!indexer) {
-				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
-				if (co_await resolve_index_endpoints(request, query_field, &obj) > 1) {
-					THROW(ClientError, "Method can only be used with single indexes");
-				}
-
-				request.processing = std::chrono::steady_clock::now();
-
-				indexer = DocIndexer::make_shared(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field);
-				request.indexer.store(indexer);
-			}
-			indexer->prepare(std::move(obj));
-		}
-	}
-
-	if (request.ending) {
-		if (indexer && !indexer->wait()) {
-			indexer.reset();
-		}
-
-		request.ready = std::chrono::steady_clock::now();
-		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-
-		MsgPack response_obj = {
-			// { RESPONSE_ENDPOINT, request.endpoints.to_string() },
-			{ RESPONSE_PREPARED, indexer ? indexer->prepared() : 0 },
-			{ RESPONSE_PROCESSED, indexer ? indexer->processed() : 0 },
-			{ RESPONSE_INDEXED, indexer ? indexer->indexed() : 0 },
-			{ RESPONSE_TOTAL, indexer ? indexer->total() : 0 },
-			{ RESPONSE_ITEMS, indexer ? indexer->results() : MsgPack::ARRAY() },
+			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field, &*request.budget);
 		};
 
-		if (request.human) {
-			response_obj[RESPONSE_TOOK] = strings::from_delta(took);
+		if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
+			co_await request.feed_whole_body();
+			std::vector<MsgPack> batch;
+			bool more = co_await request.next_batch(batch);
+			while (more) {
+				if (!indexer) {
+					co_await open_indexer(batch.front());
+				}
+				// The next chunk is read and parsed while this batch is prepared and applied.
+				std::vector<MsgPack> next;
+				bool next_more = false;
+				co_await task::when_all(indexer->index(batch), [&]() -> task::task<void> {
+					next_more = co_await request.next_batch(next);
+				}());
+				batch = std::move(next);
+				more = next_more;
+			}
 		} else {
-			response_obj[RESPONSE_TOOK] = took / 1e9;
+			auto& docs = request.decoded_body();
+			if (!docs.is_array()) {
+				THROW(ClientError, "Invalid request body");
+			}
+			std::vector<MsgPack> batch;
+			for (auto& obj : docs) {
+				batch.push_back(std::move(obj));
+			}
+			if (!batch.empty()) {
+				co_await open_indexer(batch.front());
+				co_await indexer->index(batch);
+			}
 		}
 
-		write_http_response(request, HTTP_STATUS_OK, response_obj);
+		if (request.ending) {
+			request.ready = std::chrono::steady_clock::now();
+			auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 
-		L_TIME("Restore took {}", strings::from_delta(took));
+			if (indexer) {
+				co_await indexer->commit();
+			}
 
-		Metrics::metrics()
-			.xapiand_operations_summary
-			.Add({
-				{"operation", "restore"},
-			}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
-			.Observe(took / 1e9);
+			MsgPack response_obj = {
+				// { RESPONSE_ENDPOINT, request.endpoints.to_string() },
+				{ RESPONSE_PREPARED, indexer ? indexer->prepared() : 0 },
+				{ RESPONSE_PROCESSED, indexer ? indexer->processed() : 0 },
+				{ RESPONSE_INDEXED, indexer ? indexer->indexed() : 0 },
+				{ RESPONSE_TOTAL, indexer ? indexer->total() : 0 },
+				{ RESPONSE_ITEMS, indexer ? indexer->results() : MsgPack::ARRAY() },
+			};
+
+			if (request.human) {
+				response_obj[RESPONSE_TOOK] = strings::from_delta(took);
+			} else {
+				response_obj[RESPONSE_TOOK] = took / 1e9;
+			}
+
+			write_http_response(request, HTTP_STATUS_OK, response_obj);
+
+			L_TIME("Restore took {}", strings::from_delta(took));
+
+			Metrics::metrics()
+				.xapiand_operations_summary
+				.Add({
+					{"operation", "restore"},
+				}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
+				.Observe(took / 1e9);
+		}
+	} catch (...) {
+		error = std::current_exception();
+	}
+
+	// What was indexed before a failure stays: the closing commit runs on every exit.
+	if (error && indexer) {
+		try {
+			co_await indexer->commit();
+		} catch (...) {
+			L_EXC("Unhandled exception committing the restore");
+		}
+	}
+	request.parse_chores = nullptr;
+	if (error) {
+		std::rethrow_exception(error);
 	}
 }
 
@@ -1876,6 +1928,7 @@ search_view(Request& request)
 
 	// Open database
 	DatabaseHandler db_handler;
+	db_handler.budget = &*request.budget;   // the search yields its reactor at window boundaries
 	try {
 		if (query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
@@ -2024,6 +2077,7 @@ count_view(Request& request)
 
 	// Open database
 	DatabaseHandler db_handler;
+	db_handler.budget = &*request.budget;   // the search yields its reactor at window boundaries
 	try {
 		if (query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
@@ -2622,15 +2676,6 @@ Request::~Request() noexcept
 	}
 
 	try {
-		auto indexer_ = indexer.load();
-		if (indexer_) {
-			indexer_->finish();
-		}
-	} catch (...) {
-		L_EXC("Unhandled exception in destructor");
-	}
-
-	try {
 		if (log) {
 			// clean() (not clear()) completes the L_TIMED_VAR watchdog: it cancels the
 			// scheduled "taking too long" line silently if the request finished in time,
@@ -2715,6 +2760,20 @@ Request::decode(std::string_view body)
 }
 
 
+task::task<void>
+Request::decode_large_body()
+{
+	// A body past 64 KiB (an estimate) is decoded in a chore of its own group, so decoding up to the buffered cap
+	// costs its reactor no more than the hand-off (docs/design/phase7c.md D12).
+	constexpr size_t LARGE_BODY = 64 * 1024;
+	if (mode != Mode::FULL || http_req == nullptr || http_req->body.size() <= LARGE_BODY || !_decoded_body.is_undefined()) {
+		co_return;
+	}
+	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+	co_await chores.run(engine::ChoreClass::flush, [this] { decoded_body(); });
+}
+
+
 MsgPack&
 Request::decoded_body()
 {
@@ -2765,7 +2824,6 @@ Request::append(const char* at, size_t length)
 							rapidjson::Document rdoc;
 							json_load(rdoc, json);
 							signal_pending = true;
-							std::lock_guard<std::mutex> lk(objects_mtx);
 							objects.emplace_back(rdoc);
 						} catch (const std::exception&) {
 							L_EXC("Cannot load object");
@@ -2791,7 +2849,6 @@ Request::append(const char* at, size_t length)
 						rapidjson::Document rdoc;
 						json_load(rdoc, json);
 						signal_pending = true;
-						std::lock_guard<std::mutex> lk(objects_mtx);
 						objects.emplace_back(rdoc);
 					} catch (const std::exception&) {
 						L_EXC("Cannot load object");
@@ -2813,7 +2870,6 @@ Request::append(const char* at, size_t length)
 					msgpack::object_handle result;
 					while (unpacker.next(result)) {
 						signal_pending = true;
-						std::lock_guard<std::mutex> lk(objects_mtx);
 						objects.emplace_back(result.get());
 					}
 				} catch (const std::exception&) {
@@ -2827,39 +2883,96 @@ Request::append(const char* at, size_t length)
 	return signal_pending;
 }
 
-bool
-Request::next_object(MsgPack& obj)
+task::task<void>
+Request::parse_ahead(std::string chunk, bool last)
 {
-	L_CALL("Request::next_object(<&obj>)");
+	// The chunk is parsed in a chore of the request's group, so a body of any size costs its reactor no more than
+	// the hand-off; the parser's state (raw, unpacker, objects) is touched by one chore at a time, and by this
+	// task between them.
+	const auto parse = [this, &chunk, last] {
+		if (!last) {
+			append(chunk.data(), chunk.size());
+		} else {
+			append(nullptr, 0);   // flush any trailing streamed object
+		}
+	};
+	if (parse_chores != nullptr) {
+		co_await parse_chores->run(engine::ChoreClass::flush, parse);
+	} else {
+		parse();
+	}
+}
+
+
+task::task<void>
+Request::feed_whole_body()
+{
+	// A streamed-mode body that arrived whole (it was under the buffered cap): parse it like the chunks of a
+	// stream, in one chore, straight from the request's buffer.
+	if (http_req == nullptr || http_req->body_stream != nullptr) {
+		co_return;
+	}
+	const auto parse = [this] {
+		if (!http_req->body.empty()) {
+			append(http_req->body.data(), http_req->body.size());
+		}
+		append(nullptr, 0);   // flush any trailing streamed object
+	};
+	if (parse_chores != nullptr) {
+		co_await parse_chores->run(engine::ChoreClass::flush, parse);
+	} else {
+		parse();
+	}
+}
+
+
+task::task<bool>
+Request::read_chunk(std::string& chunk)
+{
+	if (http_req == nullptr || !http_req->body_stream) {
+		co_return false;
+	}
+	auto& stream = *http_req->body_stream;
+	const asio::error_code ec = co_await task::await_asio<void(asio::error_code)>([&](auto handler) {
+		stream.async_read(chunk, std::move(handler));
+	});
+	if (!ec) {
+		co_return true;
+	}
+	if (ec == asio::error::eof) {
+		co_return false;
+	}
+	THROW(ClientError, "The request body ended early");
+}
+
+
+task::task<bool>
+Request::next_batch(std::vector<MsgPack>& batch)
+{
+	L_CALL("Request::next_batch(<&batch>)");
 
 	assert(has_content_length);
 	assert(mode == Mode::STREAM_MSGPACK || mode == Mode::STREAM_NDJSON);
 
+	batch.clear();
 	for (;;) {
-		{
-			std::lock_guard<std::mutex> lk(objects_mtx);
-			if (!objects.empty()) {
-				obj = std::move(objects.front());
-				objects.pop_front();
-				return true;
-			}
+		if (!objects.empty()) {
+			batch.assign(std::make_move_iterator(objects.begin()), std::make_move_iterator(objects.end()));
+			objects.clear();
+			co_return true;
 		}
-		// The deque is drained. On the streaming path, pull the next raw body chunk from
-		// the framework's flow-controlled BodyReader and parse it (append() fills the
-		// deque); on the buffered path (no reader) the body was already fully appended, so
-		// an empty deque means done. Bounded memory: one chunk + a partial-line remainder.
-		if (http_req == nullptr || !http_req->body_reader) {
-			return false;
+		// The objects are drained. On the streaming path, await the next raw body chunk from the
+		// flow-controlled BodyStream and parse it (append() fills the deque); on the buffered path (no
+		// stream) the body was already fed whole, so an empty deque means done.
+		if (http_req == nullptr || !http_req->body_stream || body_ended) {
+			co_return false;
 		}
 		std::string chunk;
-		if (http_req->body_reader->read(chunk)) {
-			append(chunk.data(), chunk.size());
+		if (co_await read_chunk(chunk)) {
+			co_await parse_ahead(std::move(chunk), false);
 		} else {
-			append(nullptr, 0);   // flush any trailing streamed object
-			std::lock_guard<std::mutex> lk(objects_mtx);
-			if (objects.empty()) {
-				return false;
-			}
+			body_ended = true;
+			co_await parse_ahead({}, true);
 		}
 	}
 }
@@ -2895,9 +3008,24 @@ method_from_string(std::string_view m)
 }
 
 
+// The longest a request runs before it yields its reactor (an estimate; docs/design/phase7c.md D2).
+static constexpr std::chrono::microseconds REQUEST_SLICE{200};
+
+// The most demoted handles a reactor lets queue before it refuses new requests (docs/design/phase7c.md D2).
+static constexpr std::size_t DEMOTED_ADMISSION_CAP = 256;
+
+
 std::unique_ptr<http::RequestExtension>
 SearchService::create_extension(const http::Request& /*hreq*/)
 {
+	// The second admission count (the first is the reactor's in-flight gate): requests that spent
+	// their slice and wait demoted. Over its cap the loop is saturated, so the request is refused
+	// before its body is read.
+	if (auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current())) {
+		if (host->scheduler().demoted() >= DEMOTED_ADMISSION_CAP) {
+			throw http::RequestRejected(503, "The server is busy", http::RejectionContent::Text, 1);
+		}
+	}
 	// Allocate Xapiand's per-request state as the http::Request's extension. It is
 	// populated in handle() (which runs guarded by the connection's error backstop),
 	// because that setup -- process_header()'s Accept parsing + method override -- can
@@ -2909,11 +3037,21 @@ SearchService::create_extension(const http::Request& /*hreq*/)
 bool
 SearchService::wants_body_stream(const http::Request& hreq)
 {
-	// Stream a whole-database RESTORE with a bulk body (NDJSON / MsgPack, no doc id): the
-	// library runs handle() on a worker and feeds the body through Request::body_reader,
-	// which restore_database_view pulls object-by-object -- O(buffer) memory for a dump of
-	// any size. A single-document RESTORE (id present) and every other request buffer.
-	if (method_from_string(hreq.method) != HTTP_RESTORE) { return false; }
+	const auto method = method_from_string(hreq.method);
+
+	// A blob past the buffered cap streams to the data storage as it arrives (D9): the request needs its length
+	// up front. Which requests can take a stream is checked once the route is known (handle).
+	if (method == HTTP_PUT || method == HTTP_POST) {
+		const auto length = hreq.header("Content-Length");
+		if (length.empty() || std::strtoull(std::string(length).c_str(), nullptr, 10) <= BUFFERED_BODY_CAP) { return false; }
+		return is_stored_type(ct_type_t(hreq.content_type()));
+	}
+
+	// Stream a whole-database RESTORE with a bulk body (NDJSON / MsgPack, no doc id): handle()
+	// runs while the body arrives and restore_database_view awaits it chunk by chunk --
+	// O(buffer) memory for a dump of any size. A single-document RESTORE (id present) and every
+	// other request buffer.
+	if (method != HTTP_RESTORE) { return false; }
 	if (hreq.header("Content-Length").empty()) { return false; }
 	ct_type_t ct(hreq.content_type());
 	if (ct != ndjson_type && ct != x_ndjson_type && ct != msgpack_type && ct != x_msgpack_type) { return false; }
@@ -2923,13 +3061,23 @@ SearchService::wants_body_stream(const http::Request& hreq)
 }
 
 
-void
-SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
+asio::awaitable<void>
+SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();   // the extension create_extension() built
 	ENGINE_CENSUS_REQUEST(census_request, hreq.method, hreq.target);
 	request.http_req = &hreq;                 // the source of truth for every HTTP fact
 	request.response_writer = &response;       // the response path emits through the library writer
+
+	// A client that goes away, or a shutdown, stops the request's reads at their next checkpoint;
+	// a write that was admitted completes and its response is attempted.
+	hreq.on_cancel([source = request.cancel, stream = hreq.body_stream](http::CancelReason) mutable {
+		source.request();
+		if (stream) {
+			stream->fail(asio::error::operation_aborted);   // a read that waits for the body ends too
+		}
+	});
+	request.budget.emplace(REQUEST_SLICE, request.cancel.token());
 
 	// HTTP facts from the library request (keep-alive/close, version).
 	request.http_major = hreq.http_major;
@@ -2972,20 +3120,33 @@ SearchService::handle(const http::Request& hreq, http::ResponseWriter& response)
 	// SearchService::on_error() -- the app's error-to-status mapping.
 	if (dispatch_request(request) == 0 && request.view != nullptr) {
 		// A FULL request reads its body straight from http_req (via body_view() /
-		// decoded_body()) -- no copy. A buffered streamed request (a whole-DB RESTORE
-		// under the buffer path) feeds append() once, which parses the chunks into the
-		// objects deque. When the body is streamed concurrently (body_reader set), the
-		// view's next_object() pulls + append()s each chunk itself, so nothing is fed
-		// here -- the body flows in bounded chunks while the view indexes them.
-		if (request.mode != Request::Mode::FULL && hreq.body_reader == nullptr) {
-			if (!hreq.body.empty()) {
-				request.append(hreq.body.data(), hreq.body.size());
-			}
-			request.append(nullptr, 0);  // flush any trailing streamed object
+		// decoded_body()) -- no copy. A bulk body (RESTORE) is parsed by its view, in a chore of
+		// its own group: next_batch() awaits and parses each chunk of a stream, and
+		// feed_whole_body() parses one that arrived whole.
+
+		// A streamed body is read by the one view that wants it; any other answers 413 without reading it.
+		if (hreq.body_stream != nullptr && request.view != &restore_database_view && request.view != &write_document_view) {
+			write_status_response(request, HTTP_STATUS_PAYLOAD_TOO_LARGE, strings::format("The body is past the {} limit of this request", strings::from_bytes(BUFFERED_BODY_CAP)));
+			response.set_close();
+			co_return;
 		}
-		// The one bridge from the library's synchronous handler, which runs on an offload worker, to the
-		// view's task. X3 awaits the task on the reactor instead (docs/design/phase7c.md D3).
-		engine::sync_wait(request.view(request));
+		// The view is a task on this reactor's scheduler: it suspends for a turn, a chore or a
+		// slice, and the loop serves other requests meanwhile.
+		auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
+		if (host == nullptr) {
+			THROW(Error, "The request does not run on a reactor bound to its host");
+		}
+		engine::Run run(*host);
+		try {
+			co_await run.await(request.decode_large_body());
+			co_await run.await(request.view(request));
+		} catch (const task::cancelled&) {
+			// The reads stopped at a checkpoint; say so to a client that is still there.
+			if (request.response_status == static_cast<http_status>(0)) {
+				write_status_response(request, HTTP_STATUS_SERVICE_UNAVAILABLE, "The request was cancelled");
+			}
+			response.set_close();
+		}
 	}
 	ENGINE_CENSUS_STATUS(census_request, request.response_status);
 

@@ -27,7 +27,6 @@
 
 #include <cassert>                           // for assert
 #include <chrono>                            // for std::chrono
-#include <condition_variable>                // for std::condition_variable
 #include <memory>                            // for std::shared_ptr, std::make_shared
 #include <stddef.h>                          // for size_t
 #include <string>                            // for std::string
@@ -36,11 +35,11 @@
 #include <utility>                           // for std::pair
 #include <vector>                            // for std::vector
 
-#include "blocking_concurrent_queue.h"       // for BlockingConcurrentQueue
 #include "database/flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
 #include "engine/callbacks.h"                // for engine::KeyMaker, engine::MatchSpy
+#include "engine/chores.h"                   // for engine::Chores
 #include "engine/document.h"                 // for engine::Document
 #include "engine/query.h"                    // for engine::Query
 #include "engine/search.h"                   // for engine::SearchRequest, SearchResult
@@ -88,6 +87,12 @@ class DatabaseHandler {
 
 	std::shared_ptr<std::unordered_set<std::string>> context;
 
+public:
+	// The time slice a search of this handler runs in (a request's budget); null runs a search to its end
+	// where it is awaited. Not owned.
+	task::budget* budget = nullptr;
+
+private:
 #ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
@@ -132,6 +137,31 @@ public:
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
 	task::task<DocumentInfo> index(const MsgPack& document_id, engine::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+
+	// The chunks of a body being uploaded, read one at a time.
+	class BodyChunks {
+	public:
+		virtual ~BodyChunks() = default;
+		// The next chunk into `chunk`; false at the end of the body.
+		virtual task::task<bool> next(std::string& chunk) = 0;
+	};
+
+	// Where a streamed blob lies in the data storage of its shard.
+	struct UploadedBlob {
+		ssize_t volume = -1;
+		size_t offset = 0;
+		size_t size = 0;
+		size_t shard = 0;   // the shard whose storage holds it
+	};
+
+	// Streams a blob of `size` bytes from `body` into the data storage of the shard that document `document_id` goes
+	// to, in chores of `chores`. The document is indexed afterwards, with index_uploaded(), in a turn of its own. An
+	// upload that fails, or whose body ends short, leaves nothing behind. Raises ClientError (a 4xx) when the blob
+	// cannot be stored: a size past the limit, or an id that does not name its shard before it is indexed.
+	task::task<UploadedBlob> upload_stored(const MsgPack& document_id, const ct_type_t& ct_type, size_t size, engine::Chores& chores, BodyChunks& body);
+
+	// index() of a `stored` document whose blob upload_stored() wrote.
+	task::task<DocumentInfo> index_uploaded(const MsgPack& document_id, engine::rev document_ver, const ct_type_t& ct_type, const UploadedBlob& blob, bool commit);
 	task::task<DocumentInfo> patch(const MsgPack& document_id, engine::rev document_ver, bool create, const MsgPack& patches, bool commit);
 	task::task<DocumentInfo> update(const MsgPack& document_id, engine::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
@@ -156,7 +186,7 @@ public:
 	task::task<MsgPack> dump_documents();
 	task::task<std::string> dump_documents(int fd);
 	// Reads a dump from the descriptor, blocking: the CLI's main thread runs it.
-	std::string restore_documents(int fd);
+	task::task<std::string> restore_documents(int fd);
 
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare_document(MsgPack& obj, size_t idx);
 
@@ -198,45 +228,10 @@ public:
 };
 
 
-class DocIndexer;
-
-
-class DocPreparer {
-	std::shared_ptr<DocIndexer> indexer;
-	MsgPack obj;
-	size_t idx;
-
-	DocPreparer(const std::shared_ptr<DocIndexer>& indexer, MsgPack&& obj, size_t idx) :
-		indexer(indexer),
-		obj(std::move(obj)),
-		idx(idx) { }
-
-public:
-	template <typename... Args>
-	static auto make_unique(Args&&... args) {
-		/*
-		 * std::make_unique only can call a public constructor, for this reason
-		 * it is neccesary wrap the constructor in a struct.
-		 */
-		struct enable_make_unique : DocPreparer {
-			enable_make_unique(Args&&... _args) : DocPreparer(std::forward<Args>(_args)...) { }
-		};
-		return std::make_unique<enable_make_unique>(std::forward<Args>(args)...);
-	}
-
-	void operator()();
-};
-
-
-class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
-	friend DocPreparer;
-
-	int indexers;
-	std::atomic_int started;
-	std::atomic_int running;
-	std::atomic_bool finished;
-	std::atomic_bool ready;
-
+// The bulk indexer of a RESTORE: prepares each object of a stream and applies it to its shard, in order, as
+// tasks on the reactor that serves the request (docs/design/phase7c.md D12). It owns no thread and waits for
+// none: it yields when its slice is spent, and the parse of the next batch runs beside it in a chore.
+class DocIndexer {
 	Endpoints endpoints;
 	int flags;
 
@@ -245,65 +240,48 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	engine::doccount first;
 	engine::doccount maxitems;
 
-	std::atomic_size_t _prepared;
-	std::atomic_size_t _processed;
-	std::atomic_size_t _indexed;
-	std::atomic_size_t _total;
-	std::atomic_size_t _idx;
-	std::condition_variable done;
-	std::condition_variable all_started;
+	DatabaseHandler db_handler;
 
-	std::mutex _results_mtx;
+	size_t _prepared = 0;
+	size_t _processed = 0;
+	size_t _indexed = 0;
+	size_t _total = 0;
+	size_t _idx = 0;
 	std::vector<MsgPack> _results;
-	std::vector<std::unique_ptr<BlockingConcurrentQueue<std::tuple<std::string, engine::Document, MsgPack, size_t>>>> ready_queues;
 
-	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::block_size> bulk;
-	size_t bulk_cnt;
-
-	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field);
-
-	void _prepare(MsgPack&& obj);
+	task::task<void> index_one(MsgPack&& obj);
 
 public:
-	~DocIndexer();
+	// `budget` is the request's time slice (null: the work runs without yielding).
+	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, task::budget* budget = nullptr);
 
-	template <typename... Args>
-	static auto make_shared(Args&&... args) {
-		/*
-		 * std::make_shared only can call a public constructor, for this reason
-		 * it is neccesary wrap the constructor in a struct.
-		 */
-		struct enable_make_shared : DocIndexer {
-			enable_make_shared(Args&&... _args) : DocIndexer(std::forward<Args>(_args)...) { }
-		};
-		return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+	DocIndexer(const DocIndexer&) = delete;
+	DocIndexer& operator=(const DocIndexer&) = delete;
+
+	// Takes the objects of a batch in order (an array is the objects it holds): skips the first `offset`
+	// of the stream, stops after `limit`, prepares and applies the rest, and records a result for each.
+	task::task<void> index(std::vector<MsgPack>& batch);
+
+	// Commits what was indexed (the closing commit of a restore).
+	task::task<void> commit();
+
+	size_t prepared() const noexcept {
+		return _prepared;
 	}
 
-	void operator()();
-
-	void prepare(MsgPack&& obj);
-
-	bool wait(double timeout = -1.0);
-
-	void finish();
-
-	size_t prepared() {
-		return _prepared.load(std::memory_order_relaxed);
+	size_t processed() const noexcept {
+		return _processed;
 	}
 
-	size_t processed() {
-		return _processed.load(std::memory_order_relaxed);
+	size_t indexed() const noexcept {
+		return _indexed;
 	}
 
-	size_t indexed() {
-		return _indexed.load(std::memory_order_relaxed);
-	}
-
-	size_t total() {
+	size_t total() const noexcept {
 		return _total;
 	}
 
-	const std::vector<MsgPack>& results() {
+	const std::vector<MsgPack>& results() const noexcept {
 		return _results;
 	}
 };

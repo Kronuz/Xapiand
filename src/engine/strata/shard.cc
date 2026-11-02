@@ -40,7 +40,7 @@
 #include <random>                  // for std::random_device
 #include <system_error>            // for std::system_error
 
-#include "atomic_shared_ptr.h"     // for atomic_shared_ptr
+#include "reactor.h"                // for reactor::AdmissionGate
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
 #include "prospect/index.hh"       // for prospect::index
 
@@ -183,7 +183,7 @@ struct Readers {
 // The hazard records the readers of one index claim: one per view in use, owned by the index's Core.
 class StrataReaders {
 public:
-	explicit StrataReaders(std::size_t records) : registry(records) { }
+	explicit StrataReaders(std::size_t records) : registry(records), gate(static_cast<int>(records)) { }
 	// Whether a reader still holds a record: its guard writes the record back when it lets go.
 	bool claimed() noexcept {
 		for (std::size_t i = 0; i < registry.capacity(); ++i) {
@@ -192,6 +192,10 @@ public:
 		return false;
 	}
 	::strata::reader_registry registry;
+	// Admits the readers of this index: a view past the cap is refused (busy) before it takes a record, so the
+	// registry never runs out (docs/mechanisms/reader-views.md, Limits). It lives with the registry, which
+	// outlives every guard, because a view returns its admission when it lets go.
+	reactor::AdmissionGate gate;
 };
 
 // The index of one shard and the state its handles share. Everything that changes the index (the writes,
@@ -205,7 +209,11 @@ struct Core {
 	prospect::index::options options;      // how the index is opened, again after a reopen
 	bool host = false;                     // a host serialises the writers and refreshes before it reads
 	std::optional<prospect::index> index;  // empty after a reopen that failed: recover() retries it
-	atomic_shared_ptr<const Readers> readers;  // the views' handle; none while there is no index to read
+	// The views' handle; null while there is no index to read. A reader loads it with no lock and no count: every
+	// handle ever published is kept in `handles` until the Core ends, so the pointer a reader holds stays valid
+	// (a handle of a replaced index raises index_closed when it is used).
+	std::atomic<const Readers*> readers{nullptr};
+	std::vector<std::unique_ptr<const Readers>> handles;   // the owner's: appended under the turn, never read by readers
 	std::string uuid;
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
 	std::atomic<bool> retiring{false};  // the index is being replaced or closed: its readers are let go of
@@ -248,7 +256,8 @@ struct Core {
 
 	// Gives the readers the index's views and records the owner's figures. Call it after the index is made.
 	void adopt_index() {
-		readers.store(std::make_shared<const Readers>(Readers{index->reader()}));
+		handles.push_back(std::make_unique<const Readers>(Readers{index->reader()}));
+		readers.store(handles.back().get(), std::memory_order_release);
 		note();
 	}
 
@@ -272,7 +281,7 @@ struct Core {
 	// their segments until they are released (drain).
 	void begin_retire() {
 		retiring = true;
-		readers.store(nullptr);
+		readers.store(nullptr, std::memory_order_release);
 		if (index && !index->closing()) {
 			index->close();
 		}
@@ -285,7 +294,7 @@ struct Core {
 
 	// Opens the index again from its last commit; what was written since is lost. The handle that asks
 	// (`seen`) knows of the replacement. Call it with no index (after retire).
-	void open_index(std::uint64_t* seen = nullptr) {
+	void open_index(std::atomic<std::uint64_t>* seen = nullptr) {
 		const auto replaced = ++epoch;
 		if (seen) {
 			*seen = replaced;
@@ -298,7 +307,7 @@ struct Core {
 			verify_fields();
 		} catch (...) {
 			index.reset();  // a failed check leaves no index, as a failed open does
-			readers.store(nullptr);
+			readers.store(nullptr, std::memory_order_release);
 			throw;
 		}
 		fenced = false;
@@ -387,7 +396,7 @@ struct Handle {
 	std::shared_ptr<Entry> entry;
 	Core* core;
 	bool writable = false;
-	std::uint64_t seen = 0;  // the latest replacement of the index this handle knows of
+	std::atomic<std::uint64_t> seen{0};  // the latest replacement of the index this handle knows of (readers check it while a reopen sets it)
 
 	Handle(std::shared_ptr<Entry> entry_, Core* core_) : entry(std::move(entry_)), core(core_) { }
 	Handle(const Handle&) = delete;
@@ -423,7 +432,7 @@ Core::check_read(const Handle& handle) const
 	if (closed) {
 		throw Error(errc::closed, "The strata index is closed");
 	}
-	if (!readers.load()) {
+	if (readers.load(std::memory_order_acquire) == nullptr) {
 		throw Error(errc::database, "The strata index is closed after a failed reopen; reopen the shard");
 	}
 	if (handle.writable && handle.seen != epoch.load()) {
@@ -491,10 +500,11 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 
 // Waits, in the host's task, for the readers that hold the views of a closing index to let go of them: until
 // then the views keep their segments, files and the directory lock. It raises `busy` when they do not within
-// drain_timeout, leaving the index closing. Run it under the host's turn, after Core::begin_retire.
+// drain_timeout, leaving the index closing. Run it after Core::begin_retire; it needs no turn.
 task::task<void>
 drain_readers(Core& core, Chores& chores)
 {
+	check_no_view_held("a drain");
 	const auto deadline = std::chrono::steady_clock::now() + core.drain_timeout;
 	auto pause = std::chrono::milliseconds(1);
 	for (;;) {
@@ -515,7 +525,7 @@ drain_readers(Core& core, Chores& chores)
 // handle that asks (`seen`) knows of the replacement. The old index is closed first, in the same chore when
 // no reader holds a view of it, and the readers that do are waited for. Run it under the host's turn.
 task::task<void>
-reopen_core(Core& core, Chores& chores, std::uint64_t* seen)
+reopen_core(Core& core, Chores& chores, std::atomic<std::uint64_t>* seen)
 {
 	bool replaced = false;
 	co_await chores.run(ChoreClass::flush, [&core, seen, &replaced] {
@@ -1360,8 +1370,8 @@ Shard::use_chores(Chores* chores) noexcept
 }
 
 
-task::task<void>
-Shard::close()
+task::task<bool>
+Shard::begin_close()
 {
 	try {
 		auto& core = *handle_->core;
@@ -1383,15 +1393,24 @@ Shard::close()
 				core.owed.store(0, std::memory_order_relaxed);
 			}
 		});
-		if (!released) {
-			// Searches still read the index: it is closed when the last lets go of its view.
-			co_await drain_readers(core, *chores_);
-			co_await chores_->run(ChoreClass::flush, [&core] {
-				core.index.reset();
-				core.owed.store(0, std::memory_order_relaxed);
-			});
-		}
-		co_return;
+		co_return released;
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+task::task<void>
+Shard::finish_close()
+{
+	try {
+		// Searches still read the index: it is closed when the last lets go of its view.
+		auto& core = *handle_->core;
+		co_await drain_readers(core, *chores_);
+		co_await chores_->run(ChoreClass::flush, [&core] {
+			core.index.reset();
+			core.owed.store(0, std::memory_order_relaxed);
+		});
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -1470,6 +1489,20 @@ Shard::declared_fields() const
 }
 
 
+std::uint64_t
+Shard::views_refused() const noexcept
+{
+	return handle_->core->reader_registry->gate.rejected.load(std::memory_order_relaxed);
+}
+
+
+std::size_t
+Shard::view_handles_kept() const noexcept
+{
+	return handle_->core->handles.size();
+}
+
+
 const void*
 Shard::identity() const noexcept
 {
@@ -1484,11 +1517,15 @@ Shard::view() const
 	try {
 		core.check_read(*handle_);
 		core.refresh_for_read();
-		const auto readers = core.readers.load();
-		if (!readers) {
+		const Readers* readers = core.readers.load(std::memory_order_acquire);
+		if (readers == nullptr) {
 			throw Error(errc::closed, "The strata index is closed");
 		}
-		return Viewed(readers->handle.acquire(), handle_->core);
+		auto lease = core.reader_registry->gate.enter();
+		if (!lease) {
+			throw Error(errc::busy, "Too many concurrent reads of this index");
+		}
+		return Viewed(readers->handle.acquire(), handle_->core, std::move(lease));
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}

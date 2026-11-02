@@ -49,7 +49,7 @@
 #include "allocators.h"                          // for allocators::total_allocated
 #include "color_tools.hh"                        // for color
 #include "database/cleanup.h"                    // for DatabaseCleanup
-#include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
+#include "database/handler.h"                    // for DatabaseHandler, committer
 #include "database/pool.h"                       // for DatabasePool
 #include "engine/host_asio.h"                    // for engine::AsioHost
 #include "database/schemas_lru.h"                // for SchemasLRU
@@ -137,15 +137,16 @@ static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(
 std::shared_ptr<XapiandManager> XapiandManager::_manager;
 
 // The manager's Asio control-plane state, kept out of manager.h (which stays Asio-free).
-// One reactor whose single offload worker runs the control plane's database work (node
-// setup, the dispatched commands) in arrival order; the loop keeps the state changes and
-// never blocks on a database. The ev::timer/ev::async watchers become a
+// One reactor, plus a worker that runs the control plane's database work (node setup, the
+// dispatched commands) in arrival order until the control plane is made of tasks (D13); the
+// loop keeps the state changes and never blocks on a database. The ev::timer/ev::async watchers become a
 // PeriodicTimer + three Signals. The signal wake is deliberately NOT a reactor::Signal
 // (its send() does asio::post -> heap alloc + lock, which is NOT async-signal-safe): it is
 // a self-pipe (sig_pipe), written from the POSIX signal handler with a bare write() -- the
 // same async-signal-safe mechanism ev::async uses internally -- and drained on the loop.
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
+	asio::thread_pool pool{1};                   // the control plane's database work (D13 removes it)
 	engine::AsioHost host;                       // where the index registry's timer-driven tasks run
 	reactor::PeriodicTimer try_shutdown_timer;
 	reactor::Signal setup_node_async;
@@ -156,8 +157,7 @@ struct XapiandManager::Reactors {
 	char sig_drain[64];
 
 	Reactors()
-		: reactor(1, 0),
-		  host(reactor.io().get_executor()),
+		: host(reactor.io().get_executor()),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  shutdown_async(reactor.io().get_executor()),
@@ -228,19 +228,17 @@ void sig_exit(int sig) {
 }
 
 
-// The hazard records each index gives its readers: one per view the threads that read can hold of it at once, so
-// the reactors, the HTTP offload workers, the pool workers (a read resumes on the thread that ran its chore),
-// the bulk preparers and indexers and the control loop, doubled because a read that runs under a view (a scan's
-// callback, a spy) may take a second view of the same index on its thread. Each record is a cache line.
+// The most views of one index that are held at once, and the hazard records that back them: a view past it is
+// refused (503) before it takes a record. A view is held while a search runs and while it waits demoted for its next
+// slice: 16 searches per reactor on one index is the estimate here. The pool workers and the control loop hold one each,
+// doubled because a read that runs under a view (a scan's callback, a spy) may take a second view of the same index on
+// its thread. Each record is a cache line; strata's chunked registry (X3-1) will let the bytes follow the load.
 static std::size_t
 readers_per_index()
 {
 	const auto reactors = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_servers));
-	const auto clients = static_cast<std::size_t>(std::max<ssize_t>(1, opts.num_http_clients));
-	const auto offload = reactors * ((clients + reactors - 1) / reactors);  // as the HTTP service spreads them
 	const auto pool = static_cast<std::size_t>(std::max(1.0, opts.processors));
-	const auto bulk = static_cast<std::size_t>(std::max<ssize_t>(0, opts.num_doc_preparers) + std::max<ssize_t>(0, opts.num_doc_indexers));
-	return 2 * (reactors + offload + pool + bulk + 1);
+	return reactors * 16 + 2 * (pool + 1);
 }
 
 
@@ -251,8 +249,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, readers_per_index())),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
-	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
 	  state(State::RESET),
 	  node_name(opts.node_name),
 	  _shutdown_asap(0),
@@ -460,8 +456,11 @@ XapiandManager::run_loop()
 	arm_signal_reader();
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
-	if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
-	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
+	{
+		engine::HostBinding binding(&_rx->host);   // the tasks resumed on this thread run on the control host
+		if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
+		_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
+	}
 	_running_loop.store(false, std::memory_order_release);
 }
 
@@ -482,7 +481,7 @@ XapiandManager::control_offload(std::function<void()> work, std::function<void()
 	// One worker: the database parts run in arrival order. An exception from work is
 	// rethrown on the loop, out of run_loop(), as when it ran there.
 	auto& rx = _rx->reactor;
-	asio::post(*rx.pool(), [&rx, work = std::move(work), then = std::move(then)]() mutable {
+	asio::post(_rx->pool, [&rx, work = std::move(work), then = std::move(then)]() mutable {
 		std::exception_ptr error;
 		try {
 			work();
@@ -805,16 +804,12 @@ XapiandManager::make_servers()
 	auto local_node_addr = inet_ntop(local_node->addr());
 
 	// The search HTTP API, served over the Asio transport: N reactors
-	// (num_http_servers) share the listen port via SO_REUSEPORT, each with its own
-	// offload pool for the blocking work. The configured client (offload)
-	// threads are spread across the reactors so the total tracks num_http_clients. The
-	// service binds + starts later, when the node is ready (like http->start).
+	// (num_http_servers) share the listen port via SO_REUSEPORT. A request is a task on the
+	// scheduler of the reactor that accepted it. The service binds + starts later, when the
+	// node is ready (like http->start).
 	{
 		std::size_t reactors = opts.num_http_servers > 0 ? static_cast<std::size_t>(opts.num_http_servers) : 1;
-		std::size_t workers = opts.num_http_clients > 0
-			? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_http_clients) + reactors - 1) / reactors)
-			: 1;
-#ifdef XAPIAND_TLS
+		#ifdef XAPIAND_TLS
 		if (tls_context) {
 			// HTTPS (transport-security D1): http's handshake deadline and caps, the connection
 			// bound, and the idle, header, and inactivity timeouts, which plain HTTP leaves off.
@@ -831,20 +826,29 @@ XapiandManager::make_servers()
 				}
 			};
 			const std::size_t bound = opts.tls_max_connections;
-			http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000,
+			http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, 1000,
 				http::tls_connection_factory_timed(tls_context, std::chrono::seconds(5), 64, bound, failed), bound);
 			http_service->set_idle_timeout(std::chrono::seconds(75));
 			http_service->set_header_timeout(std::chrono::seconds(30));
 			http_service->set_inactivity_timeout(std::chrono::seconds(60));
 		} else
 #endif
-		http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, workers, 1000);
+		http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, 1000);
 		http::AsioBindOptions bind_options;
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;
 		http_service->set_bind_options(bind_options);
 		if (lag_probe_enabled()) { http_service->enable_lag_probe(); }
 		http_service->enable_compression(search_compression());
+		http_service->set_max_body(BUFFERED_BODY_CAP);
+
+		// Each reactor's host: the scheduler its requests' tasks resume through. The loop's thread
+		// is bound to it before the loop serves anything.
+		for (std::size_t i = 0; i < http_service->reactors(); ++i) {
+			auto& io = http_service->reactor(i).io();
+			auto& host = http_hosts.emplace_back(std::make_unique<engine::AsioHost>(io.get_executor()));
+			asio::post(io, [host = host.get()] { host->bind_loop_thread(); });
+		}
 	}
 	this->http_port = http_port;
 
@@ -897,20 +901,19 @@ XapiandManager::join()
 
 	// The control plane's worker: the loop has stopped (break_loop), so drop what is queued
 	// and wait for the running database part before the database pool finishes.
-	if (auto* worker = _rx->reactor.pool()) {
-		worker->stop();
-		worker->join();
-	}
+	_rx->pool.stop();
+	_rx->pool.join();
 
 	// The index registry's tasks that timers started (the debounced commit, an idle close) run on the control
 	// loop, which has stopped: from now on they run on the thread that starts them, and the ones already
 	// posted run here, on this thread, until they end.
 	database_pool->set_control(nullptr);
 	{
+		engine::HostBinding binding(&_rx->host);   // the tasks the drain resumes find their host, as they did on the loop
 		auto& io = _rx->reactor.io();
-		io.restart();
 		const auto limit = std::chrono::steady_clock::now() + 60s;
 		while (database_pool->detached() != 0 && std::chrono::steady_clock::now() < limit) {
+			io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
 			io.run_for(10ms);
 		}
 		if (database_pool->detached() != 0) {
@@ -926,39 +929,8 @@ XapiandManager::join()
 	if (http_service) {
 		L_MANAGER("Stopping the HTTP service!");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
-		http_service->stop();  // stops the reactors + joins the offload pools
+		http_service->stop();  // aborts the requests, then stops and joins the reactors
 	}
-
-	////////////////////////////////////////////////////////////////////
-	if (doc_preparer_pool) {
-		L_MANAGER("Finishing bulk document preparer threads pool!");
-		doc_preparer_pool->finish();
-
-		L_MANAGER("Waiting for {} bulk document preparer thread{}...", doc_preparer_pool->running_size(), (doc_preparer_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document preparers...", "Bulk document preparers finished!");
-		while (!doc_preparer_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-	////////////////////////////////////////////////////////////////////
-	if (doc_indexer_pool) {
-		L_MANAGER("Finishing bulk document indexer threads pool!");
-		doc_indexer_pool->finish();
-
-		L_MANAGER("Waiting for {} bulk document indexer thread{}...", doc_indexer_pool->running_size(), (doc_indexer_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document indexers...", "Bulk document indexers finished!");
-		while (!doc_indexer_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 
 	////////////////////////////////////////////////////////////////////
 	auto& committer_obj = committer(false);
@@ -1048,13 +1020,11 @@ XapiandManager::join()
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
 
 	http_service.reset();
+	http_hosts.clear();
 
 	database_pool.reset();
 
 	wal_writer.reset();
-
-	doc_indexer_pool.reset();
-	doc_preparer_pool.reset();
 
 
 	database_cleanup.reset();

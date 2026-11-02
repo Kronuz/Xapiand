@@ -124,7 +124,7 @@ LAYERS = [
  ('Data record build (zstd, locator)',    'stays',       r'Data::|Locator|compress_zstd|ZstdCompress|ZSTD|storage|Storage|volume|HUF_|FSE_|finalise_write'),
  ('JSON/MsgPack decode',                  'stays',       r'rapidjson|msgpack::|Json|json|ndjson|NDJSON|ObjectBody|Parser|parser|yyjson'),
  ('HTTP/reactor/request parsing',         'stays',       r'restore_database_view|Http|http|asio|reactor|Reactor|kqueue|ClientSession|Request|Response|nghttp|llhttp'),
- ('Doc pipeline glue (prepare/index)',    'stays',       r'DocPreparer|DocIndexer|DatabaseHandler|engine::Document|ThreadPoolThread|BlockingConcurrentQueue'),
+ ('Doc pipeline glue (prepare/index)',    'stays',       r'DocIndexer|DatabaseHandler|engine::Document'),
 ]
 LAYERS = [(n, r, re.compile(p)) for n, r, p in LAYERS]
 DATA_RX = re.compile(r'Data::|Locator|finalise_write')

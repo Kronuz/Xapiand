@@ -33,6 +33,7 @@
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
 #include <string_view>                        // for std::string_view
+#include <vector>                             // for std::vector
 
 #include "base_x.hh"                          // for Base62
 #include "database/utils.h"                   // for UNKNOWN_REVISION
@@ -49,12 +50,11 @@
 
 
 
-class DocPreparer;
-class DocIndexer;
 
 class MsgPack;
 
 namespace http { class HttpAsioService; }
+namespace engine { class AsioHost; }
 class DatabasePool;
 class DatabaseWALWriter;
 class DatabaseCleanup;
@@ -109,6 +109,7 @@ public:
 	std::atomic_int total_clients;
 	std::atomic_int http_clients;
 
+	std::vector<std::unique_ptr<engine::AsioHost>> http_hosts;   // one per HTTP reactor; outlive http_service's loops
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
 
@@ -119,8 +120,6 @@ public:
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
-	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> doc_preparer_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> doc_indexer_pool;
 
 	std::atomic<State> state;
 	std::string node_name;

@@ -96,7 +96,7 @@ public:
 	p::ordinal_t block_end(p::ordinal_t) override { return p::no_more_docs; }
 	double max_score_total() const noexcept override { return 0.0; }
 	std::size_t score_terms() const noexcept override { return 1; }
-	std::optional<std::uint64_t> exact_count() override { return count_; }
+	task::task<std::optional<std::uint64_t>> exact_count(p::slice) override { co_return count_; }
 	bool matches_all() const noexcept override { return true; }
 	std::unique_ptr<p::scorer> fresh() const override { return std::make_unique<AllScorer>(count_); }
 
@@ -621,12 +621,12 @@ struct RanksAbove {
 	}
 };
 
-SearchResult
+task::task<SearchResult>
 run(std::span<engine::Shard* const> shards, const SearchRequest& request, CallbackGuard& guarded)
 {
 	const auto& source = request.query->source();
 	if (shards.empty() || request.query->empty()) {
-		return {};
+		co_return SearchResult{};
 	}
 
 	// Hold one view of every distinct index, none of which blocks a write, a refresh or another search.
@@ -711,7 +711,10 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 			}
 		};
 	}
-	const auto found = p::search(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options);
+	// The views, the snapshot and the plan are locals of this frame, so they stay pinned across every
+	// suspension; the search yields its reactor at window boundaries when it has a budget.
+	const auto found = co_await p::search_task(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options,
+		request.budget != nullptr ? p::slice(*request.budget) : p::slice());
 
 	SearchResult result;
 	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
@@ -722,7 +725,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 			const auto& item = kept.items[i].item;
 			result.hits.push_back({item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top)});
 		}
-		return result;
+		co_return result;
 	}
 	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
 	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
@@ -737,7 +740,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		hit.percent = percent_of(found_hit.score, top);
 		result.hits.push_back(hit);
 	}
-	return result;
+	co_return result;
 }
 
 }  // namespace
@@ -748,7 +751,9 @@ search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 {
 	CallbackGuard guarded;
 	try {
-		co_return run(shards, request, guarded);
+		co_return co_await run(shards, request, guarded);
+	} catch (const task::cancelled&) {
+		throw;   // the request was cancelled at a checkpoint: not a failure of the engine
 	} catch (...) {
 		rethrow_translated(nullptr, guarded.threw());
 	}

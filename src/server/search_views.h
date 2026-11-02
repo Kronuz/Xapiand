@@ -29,6 +29,7 @@
 #include <condition_variable>               // for std::condition_variable
 #include <deque>                            // for std::deque
 #include <memory>                           // for shared_ptr
+#include <optional>                         // for std::optional
 #include <mutex>                            // for std::mutex, std::lock_guard
 #include <set>                              // for std::set
 #include <stdio.h>                          // for size_t
@@ -37,10 +38,10 @@
 #include <utility>                          // for std::pair
 #include <vector>                           // for std::vector
 
-#include "atomic_shared_ptr.h"              // for atomic_shared_ptr
 #include "compressor_deflate.h"             // for DeflateCompressData
 #include "database/data.h"                  // for ct_type_t, accept_set_t
 #include "database/utils.h"                 // for make_msgpack_unpacker
+#include "engine/chores.h"                   // for engine::Chores
 #include "endpoint.h"                       // for Endpoints
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
@@ -51,7 +52,6 @@
 #include "url_parser.h"                     // for PathParser, QueryParser
 
 
-class DocIndexer;
 class UUIDGenerator;
 class Logging;
 struct query_field_t;
@@ -155,8 +155,11 @@ public:
 	size_t raw_peek;
 	size_t raw_offset;
 
-	std::mutex objects_mtx;
+	// The objects parsed from a bulk body and not yet taken (touched by one chore at a time and by the
+	// request's task between them, so it needs no lock), and where the chunks of a stream are parsed.
 	std::deque<MsgPack> objects;
+	engine::Chores* parse_chores = nullptr;
+	bool body_ended = false;
 	msgpack::unpacker unpacker = make_msgpack_unpacker();  // msgpack unpacker, depth-limited
 
 	ct_type_t ct_type;
@@ -186,7 +189,11 @@ public:
 	std::chrono::steady_clock::time_point ready;
 	std::chrono::steady_clock::time_point ends;
 
-	atomic_shared_ptr<DocIndexer> indexer;
+
+	// The request's cancellation and time slice (set by SearchService::handle): the view's task awaits
+	// the budget's checkpoints, and a disconnect or a shutdown requests the source.
+	task::cancel_source cancel;
+	std::optional<task::budget> budget;
 
 	Request();
 	~Request() noexcept;
@@ -198,7 +205,21 @@ public:
 
 	bool append(const char* at, size_t length);
 
-	bool next_object(MsgPack& obj);
+	// Parses a chunk of a bulk body (or, with `last`, flushes the trailing object) in a chore of parse_chores.
+	task::task<void> parse_ahead(std::string chunk, bool last);
+
+	// Parses a bulk body that arrived whole.
+	task::task<void> feed_whole_body();
+
+	// Reads the next chunk of a streamed body into `chunk`; false at the end of the body. Raises a ClientError when
+	// the body failed (the client went away before it ended).
+	task::task<bool> read_chunk(std::string& chunk);
+
+	// The objects of the next chunk of a bulk body, parsed; false once the body has ended and none is left.
+	task::task<bool> next_batch(std::vector<MsgPack>& batch);
+
+	// Decodes a body past 64 KiB in a chore, so decoded_body() finds it done; a smaller one decodes where it is read.
+	task::task<void> decode_large_body();
 
 	MsgPack& decoded_body();
 

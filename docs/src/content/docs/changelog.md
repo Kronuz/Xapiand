@@ -16,8 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one
   series per HTTP loop and the control loop, from a probe that wakes every 1 ms while the loop serves requests
   and 10 times a second when idle. `XAPIAND_LAG_PROBE=0` starts the node without the probes.
+- **A stored blob past 16 MiB uploads in a stream**: a `PUT` of a `stored` document (any content type that is not JSON, YAML
+  or MsgPack) with a `Content-Length` over the 16 MiB buffered-body cap is written to the data storage as it arrives, in O(chunk)
+  memory, and the document is indexed once the blob is durable. The blob is stored uncompressed; past 4 GiB it answers `413`,
+  and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **Requests run on the HTTP loops, and a long search shares its loop.** A request is a task on the loop that accepted it: it
+  suspends for a turn, a read or a chunk of its body instead of holding a thread, and a search yields at window
+  boundaries (a 200 us slice), so one heavy query no longer delays the light ones behind it. A loop with 256 requests
+  waiting for their next slice answers `503` with `Retry-After: 1` to new ones. A search stops at its next slice when its client
+  goes away. `RESTORE` parses its stream on the pool beside the indexing of the previous chunk, and a document body over 64 KiB
+  is decoded on the pool; `FLUSH` waits for the closes without holding a thread.
 - **A data directory with Xapian indexes is refused at startup.** A node started on files from
   1.0.0-alpha.9 or earlier (`iamglass`, `flintlock`, `postlist.*`, `*.glass`) exits with status 65 and names the
   first one, instead of starting with empty strata indexes beside them. Dump the indexes with that release and restore
@@ -29,9 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A search no longer holds its index.** A search reads a published view of each index it names, so a long search
   does not delay a write, a refresh or a commit to the same index (it used to hold the index's lock for its whole
   run). A search sees the index as of the moment it started.
-- **Too many searches of one index at once answer `503`.** Each index has a fixed number of reader records (the
-  threads that can read it at once, doubled); a search that finds none free in an index answers `503` instead of
-  waiting.
+- **Too many searches of one index at once answer `503`.** Each index admits a fixed number of concurrent readers
+  (16 per HTTP loop plus the pool's workers); a search that finds the index at its cap answers `503` instead of waiting.
 - **A search over too many indexes answers `400`.** A search keeps every index it reads open until it ends, so one
   that names more shards than `--max-indexes-per-search` (default and ceiling: the database pool size) is refused
   with the limit in the message.
@@ -86,6 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   among the values; it now returns the values.
 
 ### Removed
+- **`--http-clients`, `--bulk-preparers` and `--bulk-indexers`.** The offload threads and the bulk preparer and indexer
+  threads are gone; requests and the restore indexer are tasks on the HTTP loops, and device work is on the pool.
 - **`--max-database-readers`**: an index is opened once and shared by every request; there are no pooled
   reader copies to cap.
 - **The `_elite_set` operator** (query DSL, default operator and the engine's ELITE_SET). A query with it

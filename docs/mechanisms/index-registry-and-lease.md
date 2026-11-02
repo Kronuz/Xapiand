@@ -68,12 +68,12 @@ has a deadline: a request that does not get it answers `engine::errc::busy`, a 5
 
 ## Limits
 
-- The handler, the schema and resolver code and the views are tasks (X2b); the library's synchronous `handle` still
-  waits for a view's task through one `engine::sync_wait` on an offload worker (`SearchService::handle`; X3 awaits it
-  on the reactor), and the bulk indexer's threads and a Lua script's foreign read wait for the handler's tasks the
-  same way (`async_check.sh` lists them as owed to X3 and X4).
+- The handler, the schema and resolver code and the views are tasks (X2b), and a request awaits its view on its reactor (X3,
+  `docs/mechanisms/requests-on-the-reactor.md`). A Lua script's foreign read still waits for the handler's tasks on its reactor
+  (X4); `async_check.sh` lists it as owed.
 - Reads take no turn: they hold a view of the index (`docs/mechanisms/reader-views.md`).
-- A commit holds the turn through its fsyncs: writes to that index wait for them.
+- A commit holds the turn through its fsyncs: writes to that index wait for them. A close holds it for the commit and the retirement
+  only: the wait for readers that hold views happens after the turn is released (`ShardEndpoint::close_marked`).
 - The turn deadline is a constant (`DB_TIMEOUT`, 30 s), not the request's remaining time.
 
 ## Code
