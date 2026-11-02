@@ -8,12 +8,12 @@ Xapian is a fork with its own procedure (`xapian-fork.md`). The sources below ar
 
 `contrib/lua/xapiand-limits.patch` (applied by `FetchContent_Declare(lua ... PATCH_COMMAND)` in `CMakeLists.txt`) is the one patch
 every change to Lua's sources lives in. It lets the host meter the work a script call does and removes what cannot be metered
-(`docs/mechanisms/lua-bounds.md` says how the pieces fit). It declares four host functions in `lua.h` (`lua_xcharge`, `lua_xnote`,
-`lua_xcondemn`, `lua_xcloseok`, defined in `src/lua/processor.cc`) and changes:
+(`docs/mechanisms/lua-bounds.md` says how the pieces fit). It declares five host functions in `lua.h` (`lua_xcharge`, `lua_xnote`,
+`lua_xcondemn`, `lua_xcloseok`, `lua_xcallwork`, defined in `src/lua/processor.cc`) and changes:
 
 | File | Change |
 |---|---|
-| `lstrlib.c` | The matcher counts a step per pattern item (also in the `goto init` runs), per class member, per `max_expand` and `min_expand` iteration, per `%b` character and per byte copied or compared (1 per 32). It checks every 4,096 steps, raises `pattern too complex (step budget)` past `max(10^6, 64 x subject)` per API call (a `gmatch` iterator call is an API call), and charges its steps to the call's meter (4 units each). `lmemfind` (plain `find`) charges the bytes it scans and compares as it goes. `rep`, `sub`, `upper`, `lower`, `reverse`, `byte`, `format` charge their lengths. |
+| `lstrlib.c` | The matcher counts a step per pattern item (also in the `goto init` runs), per class member, per `max_expand` and `min_expand` iteration, per `%b` character and per byte copied or compared (1 per 32). It checks every 4,096 steps, raises `pattern too complex (step budget)` past `min(max(10^6, 64 x subject), lua_xcallwork() / 5)` per API call (a `gmatch` iterator call is an API call), and charges its steps to the call's meter (4 units each). `lmemfind` (plain `find`) charges the bytes it scans and compares as it goes. `rep`, `sub`, `upper`, `lower`, `reverse`, `byte`, `format` charge their lengths. |
 | `lutf8lib.c` | `len`, `codepoint` and `offset` charge the bytes they walk. |
 | `ltablib.c` | `insert`, `remove`, `move`, `unpack` and `concat` charge their elements (and `concat` its bytes). |
 | `lvm.c` | `..`, string comparison and a `SETLIST` of many values charge their copies; `OP_TBC` and `OP_TFORPREP` refuse a to-be-closed value unless the host allows it (tests only). |

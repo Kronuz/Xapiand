@@ -14,10 +14,13 @@ a script that runs long shares its reactor.
 2. Swallowers. Ten requests whose scripts try to outlive the cap through a closing variable run
    at once: fresh GETs must keep being answered, every request must end 400, and the node must stop
    gracefully when asked.
-3. Foreign scripts. A local script named like a foreign reference must neither replace the cached
+3. Flood. --flood-clients (default 16) clients re-send a request whose script makes one worst-case call
+   (a quadratic pattern over 1 MiB, which ends at the per-call cap) for six seconds; every request must
+   answer 400 and the light GETs' p99 must stay under --max-flood-p99-ms.
+4. Foreign scripts. A local script named like a foreign reference must neither replace the cached
    foreign script nor stand in for it, in either order, and a rewritten foreign script must take
    effect.
-4. Slices. A light GET is timed alone (the baseline), then while --loops (default 4) concurrent
+5. Slices. A light GET is timed alone (the baseline), then while --loops (default 4) concurrent
    PUTs each run a long script (about 8 x 10^7 instructions, under the cap), and again while --loops
    concurrent PUTs each loop library calls over a large string. The PUTs must succeed; the light
    GETs' p50, p99 and max are reported with the node's reactor-lag histogram deltas.
@@ -81,6 +84,9 @@ CASES = [
     ("loop of table.concat over 2M strings", "local t = {} for i = 1, 2000000 do t[i] = 'ab' end for i = 1, 100000 do table.concat(t) end", 400),
     ("loop of front inserts", "local t = {} for i = 1, 2000000 do t[i] = i end for i = 1, 100000 do table.insert(t, 1, i) end", 400),
     ("native-sized sort of 1M numbers", "local t = {} for i = 1, 1000000 do t[i] = (i * 7919) % 1000003 end for i = 1, 100 do table.sort(t) end", 400),
+    ("quadratic pattern over a 1 MiB subject (the per-call cap)", "string.rep('a', 1048576):find('.-b')", 400),
+    ("upper over 8 MiB (refused before it runs)", "local _ = string.rep('a', 8 * 1048576):upper()", 400),
+    ("gsub over 8 MiB (the sum of its charges passes the per-call cap)", "local _ = string.rep('a', 8 * 1048576):gsub('a', 'b')", 400),
     ("vararg chain", "local function f(...) return f(1, ...) end f()", 400),
     ("1 GiB string", "local s = string.rep('x', 1024 * 1024 * 1024)", 400),
     ("table growth", "local t = {} for i = 1, 100000000 do t[i] = 'k' .. i end", 400),
@@ -98,6 +104,9 @@ FINISH_CASES = [
 ]
 
 LIB_LOOP = "local s = string.rep('a', 8 * 1048576); for i = 1, 150 do s:find('b', 1, true) end; local u = 0; for i = 1, 100 do u = u + #s:sub(1, 1000000):upper() end; _doc.u = u"
+
+# X4-R1: what a client can re-send as fast as the 400 returns; each makes one uninterruptible call that runs to the per-call cap.
+FLOOD_SCRIPT = "local s = string.rep('a', 1048576) s:find('.-b')"
 
 LONG_SCRIPT = "local s = 0; for i = 1, 40000000 do s = s + i end; _doc.s = s"
 
@@ -190,6 +199,8 @@ def main():
     ap.add_argument("--loops", type=int, default=4)
     ap.add_argument("--max-bound-secs", type=float, default=30.0)
     ap.add_argument("--max-light-ms", type=float, default=50.0)
+    ap.add_argument("--flood-clients", type=int, default=16)
+    ap.add_argument("--max-flood-p99-ms", type=float, default=100.0)
     ap.add_argument("--out")
     args = ap.parse_args()
 
@@ -354,6 +365,34 @@ def main():
             failures.append(f"library-call loops answered {lib_statuses}")
         if max(lib_loaded) > args.max_light_ms:
             failures.append(f"a light GET took {max(lib_loaded):.1f} ms while library-call loops ran (limit {args.max_light_ms})")
+        # X4-R1: clients re-sending a worst-case single call as fast as it answers. Every call ends at the per-call cap, so the
+        # light GETs' p99 is bounded by the cap (about 20 ms) plus the host's load, not by the whole-call cap.
+        flood_statuses = []
+        flood_stop = time.time() + 6.0
+
+        def flooder(i):
+            while time.time() < flood_stop:
+                try:
+                    flood_statuses.append(request(args.port, "PUT", f"/lua_flood{i}/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)[0])
+                except OSError:
+                    flood_statuses.append(None)
+
+        def flood_during():
+            threads = [threading.Thread(target=flooder, args=(i,)) for i in range(args.flood_clients)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        flooded, _, flood_lag = run_probe(0, flood_during)
+        print(f"light GET beside {args.flood_clients} clients flooding the per-call cap: n={len(flooded)} p50={percentile(flooded, .5):.2f} ms p99={percentile(flooded, .99):.2f} ms max={max(flooded):.2f} ms; "
+              f"{len(flood_statuses)} requests answered, {sorted(set(flood_statuses), key=str)}")
+        report["slices"]["flood"] = {"clients": args.flood_clients, "n": len(flooded), "p50_ms": percentile(flooded, .5), "p99_ms": percentile(flooded, .99),
+                                     "max_ms": max(flooded), "requests": len(flood_statuses), "lag": flood_lag}
+        if set(flood_statuses) != {400}:
+            failures.append(f"the flooding requests answered {sorted(set(flood_statuses), key=str)}")
+        if percentile(flooded, .99) > args.max_flood_p99_ms:
+            failures.append(f"light GET p99 {percentile(flooded, .99):.1f} ms beside the flood (limit {args.max_flood_p99_ms})")
         node.terminate()
         try:
             node.wait(timeout=20)

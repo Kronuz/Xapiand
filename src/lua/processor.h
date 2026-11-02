@@ -54,6 +54,7 @@ struct Limits {
 	std::size_t max_bytes = 64u << 20;              // live bytes of a script's state
 	std::size_t max_work = 500'000'000;             // per call: matcher steps, bytes and elements the library touches (about a nanosecond each)
 	std::size_t slice_work = 200'000;               // work after which the call yields at its next instruction
+	std::size_t max_call_work = 16'000'000;         // work one uninterrupted stretch (a library call, between two hook calls) may do: about 20 ms
 	std::size_t max_print_bytes = 4096;             // what `print` may log per call
 	std::size_t max_message_bytes = 1024;           // a script error's message, as logged and as answered
 	std::size_t max_result_bytes = 16u << 20;       // string and key bytes of the converted result: the body cap (BUFFERED_BODY_CAP)
@@ -109,6 +110,9 @@ public:
 	static std::shared_ptr<Processor> cached_local(const std::string& name);
 	static std::shared_ptr<Processor> cached_foreign(const std::string& reference);
 	static void remember_foreign(const std::string& reference, std::shared_ptr<Processor> processor);
+	// ...whether a cached foreign script is still within `foreign_revalidation()` (`compile` serves it without a read), and the bytes `print` has logged on this thread.
+	static bool foreign_trusted(const std::string& reference);
+	static std::size_t printed_bytes();
 
 	size_t get_hash() const {
 		return hash;

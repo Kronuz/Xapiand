@@ -92,6 +92,8 @@ thread_local Call* current_call = nullptr;
 
 constexpr std::size_t max_print_line = 1024;
 
+thread_local std::size_t printed = 0;   // bytes `print` has handed to the log on this thread
+
 static_assert(Limits{}.max_result_bytes == BUFFERED_BODY_CAP, "a script's result is bounded like the body it replaces");
 
 void hook(lua_State* L, lua_Debug* ar);
@@ -118,6 +120,8 @@ void note(Call& call, std::size_t units) {
 	if (call.reason == nullptr) {
 		if (call.work > call.limits->max_work) {
 			condemn(call, "work");
+		} else if (call.slice_work > call.limits->max_call_work) {
+			condemn(call, "call");  // one stretch no hook can interrupt would hold the reactor too long
 		} else if (call.slice_work > call.limits->slice_work && call.count != 1) {
 			arm(call, 1);
 		}
@@ -199,6 +203,7 @@ int host_print(lua_State* L) {
 	const std::size_t take = std::min({len, call->prints_left, max_print_line});
 	const bool truncated = take < len || take == call->prints_left;
 	call->prints_left -= take;
+	printed += take;
 	if (truncated) {
 		call->prints_left = 0;
 	}
@@ -581,6 +586,9 @@ void throw_if_condemned(const Call& call, const Limits& limits) {
 	if (reason == "work") {
 		THROW(ScriptLimitError, "Script exceeded its work limit of {} (what its string, table and pattern calls touch)", limits.max_work);
 	}
+	if (reason == "call") {
+		THROW(ScriptLimitError, "Script exceeded its per-call work limit of {} (one library call or pattern match touched too much)", limits.max_call_work);
+	}
 	if (reason == "memory") {
 		THROW(ScriptLimitError, "Script exceeded its memory limit of {} bytes", limits.max_bytes);
 	}
@@ -791,6 +799,21 @@ Processor::cached_foreign(const std::string& reference)
 }
 
 
+bool
+Processor::foreign_trusted(const std::string& reference)
+{
+	auto hit = cached(foreign_key(reference), {});
+	return hit && std::chrono::steady_clock::now() - hit->checked < foreign_revalidation();
+}
+
+
+std::size_t
+Processor::printed_bytes()
+{
+	return printed;
+}
+
+
 void
 Processor::remember_foreign(const std::string& reference, std::shared_ptr<Processor> processor)
 {
@@ -807,9 +830,8 @@ Processor::compile(const Script& script)
 	}
 
 	const auto key = foreign_key(script.get_endpoint());
-	auto hit = cached(key, {});
-	if (hit && std::chrono::steady_clock::now() - hit->checked < foreign_revalidation()) {
-		co_return hit;
+	if (foreign_trusted(std::string(script.get_endpoint()))) {
+		co_return cached(key, {});
 	}
 
 	std::string_view foreign_path_view, foreign_id_view;
@@ -885,6 +907,12 @@ void lua_xcondemn(lua_State* /*L*/, const char* why)
 	if (auto* call = lua::current_call) {
 		lua::condemn(*call, why);
 	}
+}
+
+std::size_t lua_xcallwork(void)
+{
+	auto* call = lua::current_call;
+	return call != nullptr ? call->limits->max_call_work : static_cast<std::size_t>(-1);
 }
 
 int lua_xcloseok(void)

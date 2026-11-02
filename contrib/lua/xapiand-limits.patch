@@ -47,8 +47,8 @@ diff -ru a/src/lstring.c b/src/lstring.c
  
  
 diff -ru a/src/lstrlib.c b/src/lstrlib.c
---- a/src/lstrlib.c	2024-06-13 15:15:09
-+++ b/src/lstrlib.c	2026-11-02 03:21:57
+--- a/src/lstrlib.c
++++ b/src/lstrlib.c
 @@ -103,7 +103,8 @@
    size_t start = posrelatI(luaL_checkinteger(L, 2), l);
    size_t end = getendpos(L, 3, -1, l);
@@ -243,16 +243,18 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
      return NULL;  /* not found */
    }
  }
-@@ -757,6 +812,8 @@
+@@ -757,6 +812,10 @@
  static void prepstate (MatchState *ms, lua_State *L,
                         const char *s, size_t ls, const char *p, size_t lp) {
    ms->L = L;
-+  ms->total = (64 * ls > 1000000) ? 64 * ls : 1000000;  /* Xapiand: the API call's step budget */
++  ms->total = (64 * ls > 1000000) ? 64 * ls : 1000000;  /* Xapiand: the API call's step budget... */
++  { size_t cap = lua_xcallwork() / 5;  /* ...at most a fifth of the work one call may do (4 units a step, so the step error comes first) */
++    if (ms->total > cap) ms->total = cap; }
 +  resetsteps(ms);
    ms->matchdepth = MAXCCALLS;
    ms->src_init = s;
    ms->src_end = s + ls;
-@@ -780,9 +837,10 @@
+@@ -780,9 +839,10 @@
      return 1;
    }
    /* explicit request or no special characters? */
@@ -264,7 +266,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
      if (s2) {
        lua_pushinteger(L, (s2 - s) + 1);
        lua_pushinteger(L, (s2 - s) + lp);
-@@ -801,6 +859,7 @@
+@@ -801,6 +861,7 @@
        const char *res;
        reprepstate(&ms);
        if ((res=match(&ms, s1, p)) != NULL) {
@@ -272,7 +274,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
          if (find) {
            lua_pushinteger(L, (s1 - s) + 1);  /* start */
            lua_pushinteger(L, res - s);   /* end */
-@@ -810,6 +869,7 @@
+@@ -810,6 +871,7 @@
            return push_captures(&ms, s1, res);
        }
      } while (s1++ < ms.src_end && !anchor);
@@ -280,7 +282,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
    }
    luaL_pushfail(L);  /* not found */
    return 1;
-@@ -839,14 +899,17 @@
+@@ -839,14 +901,17 @@
    GMatchState *gm = (GMatchState *)lua_touserdata(L, lua_upvalueindex(3));
    const char *src;
    gm->ms.L = L;
@@ -298,7 +300,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
    return 0;  /* not found */
  }
  
-@@ -874,20 +937,25 @@
+@@ -874,20 +939,25 @@
    lua_State *L = ms->L;
    const char *news = lua_tolstring(L, 3, &l);
    const char *p;
@@ -326,7 +328,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
      }
      else
        luaL_error(L, "invalid use of '%c' in replacement string", L_ESC);
-@@ -926,6 +994,7 @@
+@@ -926,6 +996,7 @@
    }
    if (!lua_toboolean(L, -1)) {  /* nil or false? */
      lua_pop(L, 1);  /* remove value */
@@ -334,7 +336,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
      luaL_addlstring(b, s, e - s);  /* keep original text */
      return 0;  /* no changes */
    }
-@@ -933,6 +1002,7 @@
+@@ -933,6 +1004,7 @@
      return luaL_error(L, "invalid replacement value (a %s)",
                           luaL_typename(L, -1));
    else {
@@ -342,7 +344,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
      luaL_addvalue(b);  /* add result to accumulator */
      return 1;  /* something changed */
    }
-@@ -972,6 +1042,7 @@
+@@ -972,6 +1044,7 @@
      else break;  /* end of subject */
      if (anchor) break;
    }
@@ -350,7 +352,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
    if (!changed)  /* no changes? */
      lua_pushvalue(L, 1);  /* return original string */
    else {  /* something changed */
-@@ -1120,6 +1191,7 @@
+@@ -1120,6 +1193,7 @@
  
  
  static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
@@ -358,7 +360,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
    luaL_addchar(b, '"');
    while (len--) {
      if (*s == '"' || *s == '\\' || *s == '\n') {
-@@ -1349,6 +1421,7 @@
+@@ -1349,6 +1423,7 @@
          case 's': {
            size_t l;
            const char *s = luaL_tolstring(L, arg, &l);
@@ -423,7 +425,7 @@ diff -ru a/src/ltm.c b/src/ltm.c
 diff -ru a/src/lua.h b/src/lua.h
 --- a/src/lua.h
 +++ b/src/lua.h
-@@ -56,6 +56,12 @@
+@@ -56,7 +56,14 @@
  
  typedef struct lua_State lua_State;
  
@@ -432,10 +434,12 @@ diff -ru a/src/lua.h b/src/lua.h
 +LUA_API void (lua_xnote) (size_t units);                   /* charges; the next VM instruction ends the call */
 +LUA_API void (lua_xcondemn) (lua_State *L, const char *why);
 +LUA_API int (lua_xcloseok) (void);
-+
++LUA_API size_t (lua_xcallwork) (void);                    /* the most work one uninterrupted stretch of a call may do */
  
++
  /*
  ** basic types
+ */
 diff -ru a/src/luaconf.h b/src/luaconf.h
 --- a/src/luaconf.h
 +++ b/src/luaconf.h
