@@ -492,17 +492,21 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 
 // ---- a shutdown that cannot finish a write in its bound ----
 
+// The node reports ready a moment before its listener accepts: connect again for up to 5 s.
 static int connect_to(int port) {
-	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(static_cast<uint16_t>(port));
-	::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-	if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+	for (int attempt = 0; attempt < 100; ++attempt) {
+		const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+		sockaddr_in addr{};
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(static_cast<uint16_t>(port));
+		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+		if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
+			return fd;
+		}
 		::close(fd);
-		return -1;
+		std::this_thread::sleep_for(50ms);
 	}
-	return fd;
+	return -1;
 }
 
 // One request on a connection of its own; the whole response (the server closes after it).
