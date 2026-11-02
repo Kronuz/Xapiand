@@ -729,8 +729,10 @@ FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryp
 FetchContent_MakeAvailable(queryparser)
 
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
-# that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only; the Asio binding
-# is not used here.
+# that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only. The loops' tasks run through
+# task_asio.hh (engine/host_asio.h, docs/design/phase7c.md D2), built on the Asio that reactor fetches; the
+# library's own task::asio target stays off so that no second copy of Asio is fetched. A chore resumes its
+# awaiter with asio_scheduler::post(), the one thread-safe entry, never post_demoted() (C10).
 set(TASK_ASIO OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 9a85e89a2dc560b042a8a41efee9c09c62451db6)  # task main: event, async_mutex, lock_until, await_asio
 FetchContent_MakeAvailable(task)

@@ -292,6 +292,10 @@ public:
 	// In use or not empty: the pool keeps the entry.
 	bool is_used() const;
 
+	// What still uses the entry, for the shutdown's report: its path, whether its turn is held and by how many
+	// references; empty when nothing does. `own_refs` are the references of the caller's own.
+	std::string busy_line(int own_refs = 0);
+
 	// Applied since the last commit.
 	bool is_modified() const {
 		return modified.load(std::memory_order_relaxed);
@@ -488,6 +492,10 @@ public:
 	ReferencedShardEndpoint get(const Endpoint& endpoint) const;
 
 	std::vector<ReferencedShardEndpoint> endpoints() const;
+
+	// The entries something still uses (a task on a turn, a lease, a view), one line each. For the shutdown's
+	// report of what it abandoned.
+	std::vector<std::string> busy();
 
 	// Closes the entries nobody uses that have been idle long, and the ones past the pool's size.
 	// A close is a task of its own: this returns without waiting for it.

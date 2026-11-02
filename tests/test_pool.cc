@@ -31,6 +31,9 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <coroutine>
+#include <deque>
 #include <cstdio>
 #include <filesystem>
 #include <functional>
@@ -1252,6 +1255,107 @@ void test_a_chore_needs_a_scheduler() {
 #endif
 }
 
+// A scheduler that records how it was handed work: a chore finishes on a pool worker, and only post() is thread-safe
+// on a loop's scheduler, so the resume must come through it and never through post_demoted (review C10).
+class SpyScheduler {
+public:
+	void post(std::coroutine_handle<> h) {
+		std::lock_guard<std::mutex> lk(m_);
+		ready_.push_back(h);
+		++posts_;
+		cv_.notify_one();
+	}
+	void post_demoted(std::coroutine_handle<> h) {
+		std::lock_guard<std::mutex> lk(m_);
+		ready_.push_back(h);
+		++demoted_;
+		cv_.notify_one();
+	}
+	std::uint64_t now() const noexcept { return 0; }
+	int posts() { std::lock_guard<std::mutex> lk(m_); return posts_; }
+	int demoted() { std::lock_guard<std::mutex> lk(m_); return demoted_; }
+
+	// Runs the queued handles on this thread until `done`.
+	void drive(const std::atomic<bool>& done) {
+		task::running_on scope(task::scheduler_ref::of(*this));
+		while (!done) {
+			std::coroutine_handle<> h;
+			{
+				std::unique_lock<std::mutex> lk(m_);
+				cv_.wait_for(lk, 5ms, [this] { return !ready_.empty(); });
+				if (ready_.empty()) {
+					continue;
+				}
+				h = ready_.front();
+				ready_.pop_front();
+			}
+			h.resume();
+		}
+	}
+
+private:
+	std::mutex m_;
+	std::condition_variable cv_;
+	std::deque<std::coroutine_handle<>> ready_;
+	int posts_ = 0;
+	int demoted_ = 0;
+};
+
+// A chore resumes the task that awaits it through the scheduler's post(), from the worker that ran it, even when
+// the task had used up its slice.
+void test_a_chore_resumes_its_awaiter_with_post() {
+	Watchdog watchdog("a chore resumes with post");
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("chorepost")));
+	auto chores = A::take_chores(*entry.get());
+	SpyScheduler spy;
+	std::atomic<bool> done{false};
+	std::atomic<int> ran{0};
+	std::thread::id worker;
+	auto body = [&]() -> task::task<void> {
+		for (int i = 0; i < 5; ++i) {
+			co_await chores->run(engine::ChoreClass::query, [&] { worker = std::this_thread::get_id(); ++ran; });
+		}
+		done = true;
+	};
+	auto t = body();
+	auto handle = t.release();
+	spy.post(handle);
+	spy.drive(done);
+	CHECK_EQ(ran.load(), 5);
+	CHECK_NE(worker, std::this_thread::get_id());   // the chore ran on a worker
+	CHECK_EQ(spy.demoted(), 0);                     // and resumed its awaiter with post, five times
+	CHECK_GE(spy.posts(), 6);                       // the first post starts the task
+	handle.destroy();
+}
+
+// The shutdown's report of what it abandoned lists the indexes something still uses: a turn held, or a reference.
+void test_the_registry_lists_what_still_uses_an_index() {
+	Watchdog watchdog("what still uses an index");
+	DatabasePool pool(8);
+	Endpoint endpoint(fresh("listbusy"));
+	ShardEndpoint* raw;
+	{
+		auto entry = pool.spawn(endpoint);
+		raw = entry.get();
+		Shard shard(*raw, WRITE);
+		engine::sync_wait(shard.ready());
+		const auto used = pool.busy();   // the test's own reference
+		REQUIRE_EQ(used.size(), 1u);
+		CHECK_TRUE(used[0].find("1 reference") != std::string::npos);
+		CHECK_TRUE(used[0].find("turn held") == std::string::npos);
+	}
+	CHECK_TRUE(pool.busy().empty());   // nobody uses the open index now
+	{
+		HoldTurn hold(*raw, WRITE);
+		const auto held = pool.busy();
+		REQUIRE_EQ(held.size(), 1u);
+		CHECK_TRUE(held[0].find("turn held") != std::string::npos);
+		CHECK_TRUE(held[0].find("listbusy") != std::string::npos);
+	}
+	CHECK_TRUE(pool.busy().empty());   // the turn is back
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1289,6 +1393,8 @@ int main(int argc, char** argv) {
 		{"test_released_views_are_reclaimed_by_the_housekeeping", test_released_views_are_reclaimed_by_the_housekeeping},
 		{"test_the_integrity_check_takes_the_turn", test_the_integrity_check_takes_the_turn},
 		{"test_a_chore_needs_a_scheduler", test_a_chore_needs_a_scheduler},
+		{"test_a_chore_resumes_its_awaiter_with_post", test_a_chore_resumes_its_awaiter_with_post},
+		{"test_the_registry_lists_what_still_uses_an_index", test_the_registry_lists_what_still_uses_an_index},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

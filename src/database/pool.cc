@@ -394,6 +394,21 @@ ShardEndpoint::is_used() const
 }
 
 
+std::string
+ShardEndpoint::busy_line(int own_refs)
+{
+	const bool turn_held = !turn.try_lock();
+	if (!turn_held) {
+		turn.unlock();
+	}
+	const int users = refs.load() - own_refs;
+	if (!turn_held && users <= 0) {
+		return {};
+	}
+	return strings::format("{} ({}{} reference{})", repr(to_string()), turn_held ? "turn held, " : "", users, users == 1 ? "" : "s");
+}
+
+
 engine::rev
 ShardEndpoint::get_revision() const
 {
@@ -567,6 +582,20 @@ DatabasePool::get(const Endpoint& endpoint) const
 
 	std::lock_guard<std::mutex> lk(mtx);
 	return _get(endpoint);
+}
+
+
+std::vector<std::string>
+DatabasePool::busy()
+{
+	std::vector<std::string> lines;
+	for (auto& entry : endpoints()) {
+		auto line = entry->busy_line(1);   // this reference is one of the entry's refs
+		if (!line.empty()) {
+			lines.push_back(std::move(line));
+		}
+	}
+	return lines;
 }
 
 
