@@ -117,6 +117,14 @@ class AsyncCheck(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_check(root, lst)
 
+    def test_the_tree_has_no_owed_hit(self) -> None:
+        """The gate: Xapiand's own sources pass `--strict --owed` (the strata rows need --extern, which CI passes)."""
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = async_check.main(["--strict", "--owed"])
+        self.assertEqual(code, 0, out.getvalue())
+        self.assertIn("owed 0", out.getvalue())
+
     def test_owed_hits_fail_only_with_the_owed_flag(self) -> None:
         src = "void f() { std::lock_guard<std::mutex> lk(m); }\n"
         root, lst = self.tree({"src/a.cc": src}, "src/a.cc\tmutex\t.\towed\t1\tD5: the lease replaces it\n")

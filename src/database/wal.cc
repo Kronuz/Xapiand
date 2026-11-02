@@ -27,19 +27,14 @@
 
 #include <array>                    // for std::array
 #include <cassert>                  // for assert
-#include <errno.h>                  // for errno
-#include <fcntl.h>                  // for O_CREAT, O_WRONLY, O_EXCL
 #include <limits>                   // for std::numeric_limits
 #include <utility>                  // for std::make_pair
 
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
 #include "database/pool.h"          // for DatabasePool
 #include "engine/shard.h"            // for engine::Shard
-#include "database/utils.h"         // for read_uuid
 #include "xapiand_exception.h"              // for THROW, Error
-#include "error.hh"                 // for error:name, error::description
-#include "fs.hh"                    // for exists, delete_files, normalize_path
-#include "io.hh"                    // for io::*
+#include "fs.hh"                    // for delete_files, quarantine_files
 #include "log.h"                    // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
 #include "manager.h"                // for XapiandManager
 #include "metrics.h"                // for Metrics::metrics
@@ -115,12 +110,6 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 	  _revision(0),
 	  _shard(nullptr)
 {
-	std::array<unsigned char, 16> uuid_data;
-	if (read_uuid(base_path, uuid_data) != -1) {
-		_uuid = UUID(uuid_data);
-		_uuid_le = UUID(uuid_data, true);
-		validate_uuid = true;
-	}
 }
 
 
@@ -584,77 +573,6 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_)
 	}
 
 	return modified;
-}
-
-
-bool
-DatabaseWAL::init_database()
-{
-	L_CALL("DatabaseWAL::init_database()");
-
-	if (!_shard) {
-		THROW(Error, "Database is not defined");
-	}
-
-	static const std::array<std::string, 2> iamglass({{
-		std::string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e", 16),
-		std::string("\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00\x03\x00"
-					"\x04\x04\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00"
-					"\x03\x00\x04\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00", 45)
-	}});
-
-	auto filename = base_path + "iamglass";
-	if (exists(filename)) {
-		return true;
-	}
-
-	validate_uuid = false;
-
-	try {
-		open(strings::format(WAL_STORAGE_PATH "{}", 0), STORAGE_OPEN);
-		if (header.revision != 0) {
-			L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.revision, repr(base_path), 0);
-			THROW(StorageCorruptWAL, "Mismatch in WAL revision");
-		}
-	} catch (const StorageIOError&) {
-		return true;
-	}
-
-	UUID header_uuid(header.uuid, UUID_LENGTH);
-	const auto& bytes = header_uuid.get_bytes();
-	std::string uuid_str(bytes.begin(), bytes.end());
-
-	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
-	if unlikely(fd == -1) {
-		L_ERR("ERROR: opening file. {}\n", filename);
-		return false;
-	}
-	if unlikely(io::write(fd, iamglass[0].data(), iamglass[0].size()) < 0) {
-		L_ERRNO("io::write() -> {} ({}): {}", error::name(errno), errno, error::description(errno));
-		io::close(fd);
-		return false;
-	}
-	if unlikely(io::write(fd, uuid_str.data(), uuid_str.size()) < 0) {
-		L_ERRNO("io::write() -> {} ({}): {}", error::name(errno), errno, error::description(errno));
-		io::close(fd);
-		return false;
-	}
-	if unlikely(io::write(fd, iamglass[1].data(), iamglass[1].size()) < 0) {
-		L_ERRNO("io::write() -> {} ({}): {}", error::name(errno), errno, error::description(errno));
-		io::close(fd);
-		return false;
-	}
-	io::close(fd);
-
-	filename = base_path + "postlist.glass";
-	fd = io::open(filename.c_str(), O_WRONLY | O_CREAT);
-	if unlikely(fd == -1) {
-		L_ERR("ERROR: opening file. {}\n", filename);
-		return false;
-	}
-	io::close(fd);
-
-	return true;
 }
 
 
