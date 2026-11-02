@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **The node's own work runs on its control loop.** The minute housekeeping (idle closes, merges to publish), the debounced autocommit of a write that asked for no commit,
+  the signal reader and the node setup are tasks of the control loop that wait on timers and events; the cleanup thread and the committer threads are gone.
+  Autocommit times are as before (a commit 1 s after the last write, 3 s while writes continue, and by 8 to 10 s after the first).
+- **Concurrent first uses of a schema or of an index's settings read it once.** A burst of requests for a new index used to read its schema metadata and its settings once each; they now wait for
+  one read. Stop words and `mime.types` load at startup, before the listeners open.
+- **A shutdown waits for unfinished writes for at most 35 s.** Past that it logs what it abandoned (the requests in flight per loop, and the indexes whose turn is held), closes the rest and
+  exits with status 75.
 - **Requests run on the HTTP loops, and a long search shares its loop.** A request is a task on the loop that accepted it: it
   suspends for a turn, a read or a chunk of its body instead of holding a thread, and a search yields at window
   boundaries (a 200 us slice), so one heavy query no longer delays the light ones behind it. A loop with 256 requests

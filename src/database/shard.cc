@@ -33,7 +33,6 @@
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
 #include "database/handler.h"     // for committer
-#include "debounce_or_run.h"      // for debounce_or_run
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
 #include "engine/chores.h"          // for engine::Chores
@@ -1435,7 +1434,9 @@ static void
 schedule_autocommit(const Shard& shard)
 {
 	if (shard.is_autocommit_active() && shard.endpoint.is_modified()) {
-		debounce_or_run(*committer(), committer_commit, Endpoint(shard.endpoint), Endpoint(shard.endpoint));
+		if (!XapiandManager::schedule_autocommit(shard.endpoint)) {
+			committer_commit(Endpoint(shard.endpoint));   // no control loop to wait on (the shutdown began): commit now
+		}
 	}
 }
 

@@ -114,19 +114,19 @@ wrk.cl -> store.dbp
 
 The rules that hold the topology together:
 
-- **One control-plane loop on the main thread.** `XapiandManager` owns a single
-  `reactor::Reactor`; its callbacks (node setup, "ready", the shutdown-retry timer) run
-  inline on that loop. Signals reach it through a
-  **self-pipe** (a POSIX handler does one async-signal-safe `write()`; the loop drains
+- **One control-plane loop.** `XapiandManager` owns a single `reactor::Reactor`; its work
+  (node setup, "ready", the shutdown checks, the minute housekeeping, the debounced autocommit)
+  is tasks on that loop that wait on timers and events and never on a thread
+  (`docs/mechanisms/control-plane.md`). Signals reach it through a
+  **self-pipe** (a POSIX handler does one async-signal-safe `write()`; a task on the loop reads
   it) — never `asio::post`, which is not async-signal-safe.
 - **The HTTP service is a shared-nothing reactor pool.** Accepted connections are served
   by per-connection coroutines, and each request's view is a task on its loop that
   suspends for a turn, a chore or a slice, so the reactor thread never blocks; the only
   work that leaves a loop is a chore on the `WorkPool`. HTTP starts when the node reaches
   `READY` (`docs/mechanisms/requests-on-the-reactor.md`).
-- **Background work is off-loop.** `DatabaseCleanup` is a bare `std::thread` on a 60 s
-  cadence; the WAL writers are a `Thread<>` pool draining a concurrent queue;
-  committers/fsynchers are debouncers. None of them touch the control loop.
+- **Background work is off-loop.** The WAL writers are a `Thread<>` pool draining a concurrent
+  queue and the fsynchers are a debouncer; neither touches the control loop.
 
 ---
 

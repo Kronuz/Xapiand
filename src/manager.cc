@@ -48,10 +48,10 @@
 
 #include "allocators.h"                          // for allocators::total_allocated
 #include "color_tools.hh"                        // for color
-#include "database/cleanup.h"                    // for DatabaseCleanup
-#include "database/handler.h"                    // for DatabaseHandler, committer
+#include "database/handler.h"                    // for DatabaseHandler, committer_commit
 #include "database/pool.h"                       // for DatabasePool
 #include "engine/host_asio.h"                    // for engine::AsioHost
+#include "engine/sync.h"                         // for engine::sync_wait
 #include "database/schemas_lru.h"                // for SchemasLRU
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
@@ -81,9 +81,14 @@
 #endif
 #include "reactor.h"                             // Kronuz/reactor: reactor::Reactor (the control-plane loop)
 #include "reactor_lag.h"                         // Kronuz/reactor: reactor::LagProbe, LagSnapshot
+#include "task_asio.hh"                           // for task::await_asio
 #include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
 #include "server/search_service.h"           // for SearchService (the HttpHandler)
+#include "control_plane.h"                       // for control::Tasks, Periodic, Debounce
 #include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
+#include "server/mime_types.h"                   // for preload_mime_types
+#include "shutdown_wait.h"                       // for shutdown_wait::wait
+#include "stopper.h"                             // for preloadStopWords
 #include "storage.h"                             // for Storage
 #include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
 #include "strict_stox.hh"                        // for strict_stoll
@@ -136,18 +141,33 @@ static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(
 
 std::shared_ptr<XapiandManager> XapiandManager::_manager;
 
+// How long the reactors let requests finish after they are asked to stop, before they close the sockets that
+// stalled peers still hold.
+static constexpr auto SHUTDOWN_GRACE = 5s;
+
+// The longest the shutdown waits for the writes that were admitted (C14). A read ends at its next checkpoint and a
+// stalled body is closed after the grace; a write queued on an index waits for its turn for DB_TIMEOUT, and one that
+// holds the turn is finishing. So the longer of the two, and a few seconds to write the responses.
+std::chrono::milliseconds
+XapiandManager::default_shutdown_write_bound()
+{
+	return std::max(std::chrono::milliseconds(static_cast<long long>(DB_TIMEOUT * 1000)), std::chrono::duration_cast<std::chrono::milliseconds>(SHUTDOWN_GRACE)) + 5s;
+}
+
 // The manager's Asio control-plane state, kept out of manager.h (which stays Asio-free).
-// One reactor, plus a worker that runs the control plane's database work (node setup, the
-// dispatched commands) in arrival order until the control plane is made of tasks (D13); the
-// loop keeps the state changes and never blocks on a database. The ev::timer/ev::async watchers become a
-// PeriodicTimer + three Signals. The signal wake is deliberately NOT a reactor::Signal
+// One reactor, the control loop, and everything that runs on it as a task on its host (D13): the setup, the
+// shutdown checks, the signal reader, the housekeeping and the debounced autocommit. Nothing there waits;
+// a task that has to wait awaits a timer, an event or a chore. The ev::timer/ev::async watchers become a
+// PeriodicTimer + two Signals. The signal wake is deliberately NOT a reactor::Signal
 // (its send() does asio::post -> heap alloc + lock, which is NOT async-signal-safe): it is
 // a self-pipe (sig_pipe), written from the POSIX signal handler with a bare write() -- the
-// same async-signal-safe mechanism ev::async uses internally -- and drained on the loop.
+// same async-signal-safe mechanism ev::async uses internally -- and read by a task on the loop.
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
-	asio::thread_pool pool{1};                   // the control plane's database work (D13 removes it)
-	engine::AsioHost host;                       // where the index registry's timer-driven tasks run
+	engine::AsioHost host;                       // where the control plane's tasks run
+	control::Tasks tasks;                        // the control tasks that have not ended
+	std::unique_ptr<control::Periodic> housekeeping;
+	std::unique_ptr<control::Debounce<Endpoint>> autocommits;
 	reactor::PeriodicTimer try_shutdown_timer;
 	reactor::Signal setup_node_async;
 	reactor::Signal shutdown_async;
@@ -158,12 +178,14 @@ struct XapiandManager::Reactors {
 
 	Reactors()
 		: host(reactor.io().get_executor()),
+		  tasks(host),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  shutdown_async(reactor.io().get_executor()),
 		  sig_pipe{-1, -1},
 		  sig_reader(reactor.io())
 	{
+		tasks.failed = [](const std::exception& error) { L_WARNING("A control task failed: {}", error.what()); };
 		if (::pipe(sig_pipe) == 0) {
 			for (int fd : sig_pipe) {
 				::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
@@ -263,6 +285,15 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  atom_sig(0)
 {
 	database_pool->set_control(&_rx->host);
+	_rx->housekeeping = std::make_unique<control::Periodic>(_rx->tasks, 60s, [this] { housekeeping_tick(); });
+	_rx->autocommits = std::make_unique<control::Debounce<Endpoint>>(_rx->host,
+		control::Debounce<Endpoint>::Timing{
+			std::chrono::milliseconds(opts.committer_debounce_timeout),
+			std::chrono::milliseconds(opts.committer_debounce_busy_timeout),
+			std::chrono::milliseconds(opts.committer_debounce_min_force_timeout),
+			std::chrono::milliseconds(opts.committer_debounce_max_force_timeout)},
+		[](const Endpoint& endpoint) { committer_commit(endpoint); });
+	_rx->autocommits->tasks().failed = _rx->tasks.failed;
 	_rx->try_shutdown_timer.set_callback([this] { try_shutdown_timer_cb(); });
 	_rx->setup_node_async.set_callback([this] { setup_node_async_cb(); });
 	_rx->shutdown_async.set_callback([this] { shutdown_async_cb(); });
@@ -432,16 +463,56 @@ XapiandManager::signal_sig(int sig)
 }
 
 
-void
-XapiandManager::arm_signal_reader()
+// Reads the self-pipe the signal handler writes and runs the signal on the loop. Ends when the read is cancelled.
+task::task<void>
+XapiandManager::signal_loop()
 {
-	if (!_rx) { return; }
-	_rx->sig_reader.async_read_some(asio::buffer(_rx->sig_drain),
-		[this](const asio::error_code& ec, std::size_t /*n*/) {
-			if (ec) { return; }  // pipe closed / read cancelled at shutdown
-			signal_sig_impl();
-			arm_signal_reader();
+	for (;;) {
+		auto [ec, n] = co_await task::await_asio<void(asio::error_code, std::size_t)>([this](auto handler) {
+			_rx->sig_reader.async_read_some(asio::buffer(_rx->sig_drain), std::move(handler));
 		});
+		(void)n;
+		if (ec) {
+			co_return;   // the pipe closed, or the read was cancelled at shutdown
+		}
+		signal_sig_impl();
+	}
+}
+
+
+// The idle work of the registry and the schema cache, once a minute: closes the indexes idle too long and
+// starts the housekeeping of the open ones as tasks of their own. Nothing here waits.
+void
+XapiandManager::housekeeping_tick()
+{
+	if (database_pool) {
+		database_pool->cleanup();
+		database_pool->housekeeping();
+	}
+	if (schemas) {
+		schemas->cleanup();
+	}
+}
+
+
+void
+XapiandManager::spawn_control(task::task<void> t)
+{
+	_rx->tasks.spawn(std::move(t));
+}
+
+
+reactor::LagProbe&
+XapiandManager::control_lag()
+{
+	return _rx->reactor.lag();
+}
+
+
+bool
+XapiandManager::schedule_autocommit(const Endpoint& endpoint)
+{
+	return _manager && _manager->_rx->autocommits->touch(endpoint);
 }
 
 
@@ -453,7 +524,7 @@ XapiandManager::run_loop()
 	assert(!is_running_loop());
 
 	_running_loop.store(true, std::memory_order_release);
-	arm_signal_reader();
+	_rx->tasks.spawn(signal_loop());
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
 	{
@@ -472,31 +543,6 @@ XapiandManager::break_loop()
 
 	// io_context::stop() is thread-safe and makes a running run() return ASAP.
 	_rx->reactor.io().stop();
-}
-
-
-void
-XapiandManager::control_offload(std::function<void()> work, std::function<void()> then)
-{
-	// One worker: the database parts run in arrival order. An exception from work is
-	// rethrown on the loop, out of run_loop(), as when it ran there.
-	auto& rx = _rx->reactor;
-	asio::post(_rx->pool, [&rx, work = std::move(work), then = std::move(then)]() mutable {
-		std::exception_ptr error;
-		try {
-			work();
-		} catch (...) {
-			error = std::current_exception();
-		}
-		asio::post(rx.io(), [error, then = std::move(then)] {
-			if (error) {
-				std::rethrow_exception(error);
-			}
-			if (then) {
-				then();
-			}
-		});
-	});
 }
 
 
@@ -646,20 +692,28 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 			break_loop();
 		}
 
-		// The readiness checks resolve index settings for pending shards, a database read, so
-		// they run on the control plane's worker; break_loop() is thread-safe.
-		control_offload([this, now] {
-			if (!ready_to_end_http()) {
-				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
-			} else {
-				L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
-			}
-
-			if (now == 0 && ready_to_end(true)) {
-				break_loop();
-			}
-		});
+		if (_running_loop.load(std::memory_order_acquire)) {
+			_rx->tasks.spawn(shutdown_checks(now));   // on the control loop
+		} else {
+			engine::sync_wait(shutdown_checks(now));   // the loop has ended: this is the main thread
+		}
 	}
+}
+
+
+task::task<void>
+XapiandManager::shutdown_checks(long long now)
+{
+	if (!ready_to_end_http()) {
+		L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
+	} else {
+		L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
+	}
+
+	if (now == 0 && ready_to_end(true)) {
+		break_loop();
+	}
+	co_return;
 }
 
 
@@ -672,6 +726,10 @@ XapiandManager::init()
 		!opts.dump_documents.empty() ||
 		!opts.restore_documents.empty()
 	);
+
+	// The files requests read are read now, before any listener opens (D1).
+	preloadStopWords();
+	preload_mime_types();
 
 	// Set the id in local node.
 	auto local_node = Node::get_local_node();
@@ -716,6 +774,14 @@ XapiandManager::run()
 			throw SystemExit(EX_CONFIG);
 		}
 
+		// The node's name is read and saved here, on the main thread, before the loop and its listeners exist.
+		node_name = set_node_name(Node::get_local_node()->name());
+		if (auto local_node = Node::get_local_node(); strings::lower(node_name) != local_node->lower_name()) {
+			auto local_node_copy = std::make_unique<Node>(*local_node);
+			local_node_copy->name(node_name);
+			Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
+		}
+
 		setup_node();
 
 		L_MANAGER("Entered manager loop...");
@@ -754,26 +820,23 @@ XapiandManager::setup_node_async_cb()
 
 	L_MANAGER("Setup Node!");
 
+	_rx->tasks.spawn(setup_node_task());
+}
+
+
+// Node setup, on the control loop: the servers, then the ready state, which opens the listeners.
+task::task<void>
+XapiandManager::setup_node_task()
+{
 	make_servers();
 
 	// Once all threads have started, get a callstacks snapshot:
 	traceback::callstacks_snapshot();
 
-	// The node name is saved on the control plane's worker (a file write); the loop then
-	// sets the ready state.
-	control_offload([this] {
-		node_name = set_node_name(Node::get_local_node()->name());
-		auto local_node = Node::get_local_node();
-		if (strings::lower(node_name) != local_node->lower_name()) {
-			auto local_node_copy = std::make_unique<Node>(*local_node);
-			local_node_copy->name(node_name);
-			Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
-		}
-	}, [this] {
-		Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
+	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
-		set_ready_impl();
-	});
+	set_ready_impl();
+	co_return;
 }
 
 
@@ -838,6 +901,7 @@ XapiandManager::make_servers()
 		bind_options.address = opts.bind_address;
 		bind_options.reuse_port = reuse_ports;
 		http_service->set_bind_options(bind_options);
+		http_service->set_shutdown_grace(std::chrono::duration_cast<std::chrono::milliseconds>(SHUTDOWN_GRACE));
 		if (lag_probe_enabled()) { http_service->enable_lag_probe(); }
 		http_service->enable_compression(search_compression());
 		http_service->set_max_body(BUFFERED_BODY_CAP);
@@ -862,12 +926,10 @@ XapiandManager::make_servers()
 	msg += strings::format("TCP {}:{} (HTTP v1.1)", opts.bind_address, http_port);
 	L(-LOG_NOTICE, NOTICE_COL, msg);
 
-	// Setup database cleanup thread.
-	database_cleanup = std::make_shared<DatabaseCleanup>();
-	database_cleanup->run();
+	// The idle housekeeping runs as a task on this loop; the autocommit is already waiting for its first write.
+	_rx->housekeeping->start();
 
-	// Start committers, fsynchers, database updaters.
-	committer();
+	// Start the fsynchers.
 	fsyncher();
 }
 
@@ -891,6 +953,22 @@ XapiandManager::set_ready_impl()
 
 
 void
+XapiandManager::drain_control(control::Tasks& tasks, const char* what)
+{
+	engine::HostBinding binding(&_rx->host);   // the tasks the drain resumes find their host, as they did on the loop
+	auto& io = _rx->reactor.io();
+	const auto limit = std::chrono::steady_clock::now() + 60s;
+	while ((database_pool->detached() != 0 || tasks.running() != 0) && std::chrono::steady_clock::now() < limit) {
+		io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
+		io.run_for(10ms);
+	}
+	if (database_pool->detached() != 0 || tasks.running() != 0) {
+		L_WARNING("{} {} tasks and {} tasks of the index registry did not end", tasks.running(), what, database_pool->detached());
+	}
+}
+
+
+void
 XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
@@ -899,27 +977,19 @@ XapiandManager::join()
 		return;  // already joined!
 	}
 
-	// The control plane's worker: the loop has stopped (break_loop), so drop what is queued
-	// and wait for the running database part before the database pool finishes.
-	_rx->pool.stop();
-	_rx->pool.join();
-
-	// The index registry's tasks that timers started (the debounced commit, an idle close) run on the control
-	// loop, which has stopped: from now on they run on the thread that starts them, and the ones already
-	// posted run here, on this thread, until they end.
-	database_pool->set_control(nullptr);
+	// The control loop has stopped (break_loop). The tasks that wait end now: the housekeeping, and the signal
+	// reader, whose read is cancelled.
+	_rx->housekeeping->stop();
 	{
-		engine::HostBinding binding(&_rx->host);   // the tasks the drain resumes find their host, as they did on the loop
-		auto& io = _rx->reactor.io();
-		const auto limit = std::chrono::steady_clock::now() + 60s;
-		while (database_pool->detached() != 0 && std::chrono::steady_clock::now() < limit) {
-			io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
-			io.run_for(10ms);
-		}
-		if (database_pool->detached() != 0) {
-			L_WARNING("{} tasks of the index registry did not end", database_pool->detached());
-		}
+		asio::error_code ec;
+		_rx->sig_reader.cancel(ec);
 	}
+
+	// The index registry's tasks that timers started (an idle close, a commit) run on the control loop, which
+	// has stopped: from now on they run on the thread that starts them, and the ones already posted run here,
+	// on this thread, until they end.
+	database_pool->set_control(nullptr);
+	drain_control(_rx->tasks, "control");
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
@@ -929,24 +999,24 @@ XapiandManager::join()
 	if (http_service) {
 		L_MANAGER("Stopping the HTTP service!");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
-		http_service->stop();  // aborts the requests, then stops and joins the reactors
+		// Aborts the requests, then stops and joins the reactors. The writes admitted are let finish, up to the
+		// bound; what is still running then is reported and abandoned.
+		auto report = shutdown_wait::wait(shutdown_write_bound, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); });
+		if (!report.finished) {
+			L_WARNING("Shutdown abandoned {} unfinished item{} after waiting {} ms for the writes in flight:", report.abandoned.size(), report.abandoned.size() == 1 ? "" : "s", report.waited.count());
+			for (const auto& line : report.abandoned) {
+				L_WARNING("    {}", line);
+			}
+			abandoned_http_ = std::move(http_service);   // the thread that waits in stop() still uses it
+			abandoned_at_ = std::chrono::steady_clock::now();
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	auto& committer_obj = committer(false);
-	if (committer_obj) {
-		L_MANAGER("Finishing autocommitter scheduler!");
-		committer_obj->finish();
-
-		L_MANAGER("Waiting for {} autocommitter{}...", committer_obj->running_size(), (committer_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
-		while (!committer_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
+	// The autocommits still waiting do not run: closing an index commits what it has pending.
+	L_MANAGER("Finishing autocommit scheduler!");
+	_rx->autocommits->stop();
+	drain_control(_rx->autocommits->tasks(), "autocommit");
 
 
 	////////////////////////////////////////////////////////////////////
@@ -960,6 +1030,13 @@ XapiandManager::join()
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
+			}
+			if (abandoned_http_ && std::chrono::steady_clock::now() > abandoned_at_ + shutdown_write_bound) {
+				L_WARNING("Shutdown abandoned the indexes that writes still use:");
+				for (const auto& line : database_pool->busy()) {
+					L_WARNING("    {}", line);
+				}
+				break;
 			}
 		}
 	}
@@ -983,21 +1060,6 @@ XapiandManager::join()
 
 #endif
 
-
-	////////////////////////////////////////////////////////////////////
-	if (database_cleanup) {
-		L_MANAGER("Finishing Database Cleanup loop!");
-		database_cleanup->finish();
-
-		L_MANAGER("Waiting for Database Cleanup...");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the database cleanup worker...", "Database cleanup worker finished!");
-		while (!database_cleanup->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
 
 	////////////////////////////////////////////////////////////////////
 	auto& fsyncher_obj = fsyncher(false);
@@ -1027,15 +1089,41 @@ XapiandManager::join()
 	wal_writer.reset();
 
 
-	database_cleanup.reset();
-
-	committer_obj.reset();
 	fsyncher_obj.reset();
 
 	schemas.reset();
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
+
+	if (abandoned_http_) {
+		// Reactor threads are still inside requests that did not end: leave without running destructors under them.
+		L(-LOG_WARNING, WARNING_COL, "Exiting with unfinished writes abandoned (see above).");
+		Logging::finish();
+		Logging::join();
+		_Exit(EX_TEMPFAIL);
+	}
+}
+
+
+std::vector<std::string>
+XapiandManager::unfinished_work()
+{
+	std::vector<std::string> lines;
+	if (http_service) {
+		for (std::size_t i = 0; i < http_service->reactors(); ++i) {
+			const auto inflight = http_service->reactor(i).gate().inflight.load();
+			if (inflight > 0) {
+				lines.push_back(strings::format("{} request{} in flight on http{}", inflight, inflight == 1 ? "" : "s", i));
+			}
+		}
+	}
+	if (database_pool) {
+		for (auto& line : database_pool->busy()) {
+			lines.push_back(std::move(line));
+		}
+	}
+	return lines;
 }
 
 
@@ -1109,11 +1197,11 @@ XapiandManager::server_metrics_impl()
 		metrics.xapiand_servers_capacity.Set(reactors);
 	}
 
-	// committers_threads:
-	metrics.xapiand_committers_running.Set(committer()->running_size());
-	metrics.xapiand_committers_queue_size.Set(committer()->size());
-	metrics.xapiand_committers_pool_size.Set(committer()->threadpool_size());
-	metrics.xapiand_committers_capacity.Set(committer()->threadpool_capacity());
+	// committers: autocommits are tasks on the control loop, not threads; the queue is the keys waiting.
+	metrics.xapiand_committers_running.Set(static_cast<double>(_rx->autocommits->tasks().running()));
+	metrics.xapiand_committers_queue_size.Set(static_cast<double>(_rx->autocommits->pending()));
+	metrics.xapiand_committers_pool_size.Set(0);
+	metrics.xapiand_committers_capacity.Set(0);
 
 	// fsync_threads:
 	metrics.xapiand_fsync_running.Set(fsyncher()->running_size());
