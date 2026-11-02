@@ -24,6 +24,7 @@
 #pragma once
 
 #include <string>                              // for std::string
+#include <string_view>                         // for std::string_view
 
 #include "length.h"                            // for serialise_bool/string/length, unserialise_*
 #include "engine/codec.h"                      // for engine::serialise_double, unserialise_double

@@ -184,13 +184,9 @@ struct Readers {
 class StrataReaders {
 public:
 	explicit StrataReaders(std::size_t records) : registry(records), gate(static_cast<int>(records)) { }
-	// Whether a reader still holds a record: its guard writes the record back when it lets go.
-	bool claimed() noexcept {
-		for (std::size_t i = 0; i < registry.capacity(); ++i) {
-			if (registry.slot(i).p.load(std::memory_order_acquire) != nullptr) { return true; }
-		}
-		return false;
-	}
+	// Whether a reader still holds a record: its guard writes the record back when it lets go. Walks the chunks
+	// that exist and allocates nothing (slot() would append a chunk per record up to the capacity).
+	bool claimed() noexcept { return registry.claimed(); }
 	::strata::reader_registry registry;
 	// Admits the readers of this index: a view past the cap is refused (busy) before it takes a record, so the
 	// registry never runs out (docs/mechanisms/reader-views.md, Limits). It lives with the registry, which
@@ -1497,6 +1493,13 @@ std::uint64_t
 Shard::views_refused() const noexcept
 {
 	return handle_->core->reader_registry->gate.rejected.load(std::memory_order_relaxed);
+}
+
+
+std::function<std::size_t()>
+Shard::reader_records_probe() const
+{
+	return [registry = handle_->core->reader_registry] { return registry->registry.allocated(); };
 }
 
 

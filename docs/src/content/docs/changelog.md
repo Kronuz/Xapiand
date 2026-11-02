@@ -47,6 +47,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `string.packsize`, `string.dump`, to-be-closed variables and the `__gc`, `__close` and `__mode` metamethods are no longer
   available to scripts, and `print` logs at most 4 KiB per call. A script saved under a name now replaces the cached script of the
   same name; a foreign script is cached apart from the local ones and re-read when its document changes (within a second).
+- **The Kronuz libraries move to their heads of 2026-11-02**, and `CMakeLists.txt` declares only the 57 that Xapiand
+  includes directly (it declared 64): the libraries pin the rest at their own heads, so stash, uinteger_t, times,
+  lazy, queue, bloom-filter and radix-router are no longer declared here (from
+  [`cpp-libraries/docs/UPGRADING-2026-10.md`](https://github.com/Kronuz/cpp-libraries/blob/main/docs/UPGRADING-2026-10.md)):
+  boolean-parser `ac248d1` to `85110af`, datetime `569521c` to `5dd9155`, string-similarity `cbc0a79` to `594e6d6`,
+  htm `11e0c46` to `bb5e01d`, msgpack `75d13ce` to `e0b4696`, fs `a7a7693` to `11067ed`, storage `e4c5746` to `f3a38fc`,
+  url-parser `4424e25` to `def41f8`, fantasyname `a87942a` to namegen `3eb14ce`, scheduler `2cbea95` to `2bb0a8f`,
+  logger `90094b5` to `801105c`, http-parser `178f873` to `c27615d`, and the rest of the family, with strata at
+  `501f943` and prospect at `465ee7d`. The results that change are listed below. strata's fusefilter moves to
+  `0665ee0`, whose build writes other filter bytes, so **the segment version bumped** (`0x8000000C` to `0x8000000D`, and
+  strata reads only the current version): an index written by an older pre-release build is not read, and must be
+  indexed again.
+- **Boolean query strings (`q=`, `query=`) group by precedence, and malformed ones answer `400`.** An implicit `OR`
+  obeys precedence: `a AND b c` is `(a AND b) OR c` (it was `a OR (b AND c)`), and `NOT a b` is `(NOT a) OR b`. An
+  implicit `OR` before `NOT` or `(` parses (`a NOT b` answered `400`). Text that was accepted by dropping an operand
+  or a parenthesis answers `400` with the parser's message: `a NOT`, `a ()`, `(a` (`'(' not expected`), and
+  an operator without operands. All 10 query strings of the documentation's requests parse to the same
+  queue as before; `harness/boolean_query_check.py` holds the classes.
+- **Dates that `datetime` no longer reads are text.** A new field whose first value is a time with a fraction
+  dot and no digits (`2020-01-01T10:00:00.Z`) or a fraction of more than 62 digits is typed `text` and indexed;
+  it was typed `datetime` and the write answered `400`. `2020-12-15||+12M` is `2021-12-15` (it was an error), a
+  negative hour, minute or second is out of range, and a timestamp before 1970 with a fraction converts right.
+  The 7,330 strings of the documentation's requests and fixtures (101 dates) type the same;
+  `harness/datetime_detection_check.py` holds the classes.
+- **Sorting by a string metric scores by the standard definitions.** `Jaro`, `Jaro-Winkler`, `Sorensen-Dice` and
+  weighted `Levenshtein` are corrected, and a phonetic metric encodes both operands: sorting by `soundex` against
+  `DICKSONX` puts `DICKSONX`, `DIXON`, `DWAYNE` first (it began `DWAYNE`, `DUANE`, `DIXON`). Of 8 metrics and 3
+  reference strings over 18 names, only the `soundex` orders moved.
+- **Geospatial ids of points near a cell edge are the same on every build.** `htm` turns floating-point contraction
+  off: a build that fuses multiply-adds (Apple silicon, `-mfma`) put 0.7% of random points, and 8 of the
+  1,000 cities of the documentation, in the neighboring trixel (`-117.1858759 34.5008311` was `11168355159896371`
+  and is `11168355159896369`). A build that does not fuse is unchanged; reindex the points of an index written by a
+  fusing build.
+- **A document that repeats a key keeps one entry.** `{"a":1,"a":2,"b":3,"c":4}` is `{"a":2,"b":3,"c":4}` (it was
+  `{"a":2,"b":3,"b":3}`). None of the documentation's bodies or fixtures repeats a key.
+- **Paths follow Python's `os.path.normpath`.** An empty data directory resolves to `.` (it was `/`), `a/../b` is `b`,
+  `./a` is `a`, `../a` stays `../a`, and `//x` is `/x`; the storage volume of an empty base path opens
+  `./vol.0`. A request path `a/b/..` is the path `a`, and `../a` is the path `..` with the id `a`.
+- **Node names and random draws differ for a seed.** `namegen` gives every alternative of a choice the same
+  probability (the first and the last came up half as often), and `random` is xoshiro256++.
+- **The HTTP parser rejects what request smuggling relies on** (a bare LF, obs-fold, a `Transfer-Encoding` other than
+  exactly `chunked`, a malformed `Content-Length` or chunk size): the server closes the connection without a reply (a bare LF
+  request answered `200`, and `Transfer-Encoding: chunked, identity` answered `405`).
 - **Requests run on the HTTP loops, and a long search shares its loop.** A request is a task on the loop that accepted it: it
   suspends for a turn, a read or a chunk of its body instead of holding a thread, and a search yields at window
   boundaries (a 200 us slice), so one heavy query no longer delays the light ones behind it. A loop with 256 requests
@@ -118,6 +161,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as on the Xapian engine (it answered 500).
 - **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
   among the values; it now returns the values.
+- **An empty data directory and an index path outside the data directory are refused.** `-D ""` used to mean the
+  current directory and now exits with a usage error. An index path that is empty, `.`, `a/..` or escapes with `..`
+  (`PUT /a/../doc`) answers `400`, and `--dump` or `--restore` of such a name exits with a usage error.
 
 ### Removed
 - **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`

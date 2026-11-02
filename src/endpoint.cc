@@ -31,6 +31,7 @@
 #include "node.h"                                 // for Node::
 #include "opts.h"                                 // for opts
 #include "serialise.h"                            // for UUIDRepr, Serialise
+#include "xapiand_exception.h"                   // for ClientError
 #include "xapiand_strings.hh"                             // for strings::format
 #include "exception_engine.h"                     // for SerialisationError
 
@@ -194,6 +195,7 @@ std::string Endpoint::cwd("/");
 
 Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node)
 {
+	const auto original_uri = uri;
 	if (node) {
 		node_name = node->lower_name();
 	}
@@ -229,10 +231,15 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 		query = _query;
 	}
 
-	if (!strings::startswith(_path, '/')) {
+	const bool relative = !strings::startswith(_path, '/');
+	if (relative) {
 		_path = path = Endpoint::cwd + std::string(_path);
 	}
 	path = normalize_path(_path);
+	// A relative index path must name something strictly inside the data directory.
+	if (relative && (path.size() <= Endpoint::cwd.size() || !strings::startswith(path, Endpoint::cwd))) {
+		THROW(ClientError, "Index path {} is empty or outside the data directory", repr(original_uri));
+	}
 	_path = path;
 	if (strings::startswith(_path, Endpoint::cwd)) {
 		_path.remove_prefix(Endpoint::cwd.size());

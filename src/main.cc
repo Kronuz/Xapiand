@@ -650,6 +650,10 @@ void writepid(const char* pidfile) {
 
 
 void usedir(std::string_view path, bool force) {
+	if (path.empty()) {
+		L_CRIT("The data directory must not be empty (-D, --database)");
+		throw SystemExit(EX_USAGE);
+	}
 	auto directory = normalize_path(path);
 	if (strings::endswith(directory, "/.xapiand")) {
 		directory.resize(directory.size() - 9);
@@ -822,6 +826,17 @@ void server(std::chrono::steady_clock::time_point process_start) {
 }
 
 
+// The index named on the command line, or a usage error when it is not strictly inside the data directory.
+static Endpoint cli_endpoint(std::string_view name) {
+	try {
+		return Endpoint(name);
+	} catch (const ClientError& exc) {
+		L_CRIT("{}", exc.get_message());
+		throw SystemExit(EX_USAGE);
+	}
+}
+
+
 void dump_documents() {
 	std::shared_ptr<XapiandManager> manager;
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
@@ -830,7 +845,7 @@ void dump_documents() {
 			setup();
 			manager = XapiandManager::make();
 			DatabaseHandler db_handler;
-			Endpoint endpoint(opts.dump_documents);
+			auto endpoint = cli_endpoint(opts.dump_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
 			L_INFO("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN);
@@ -866,7 +881,7 @@ void restore_documents() {
 			setup();
 			manager = XapiandManager::make();
 			DatabaseHandler db_handler;
-			Endpoint endpoint(opts.restore_documents);
+			auto endpoint = cli_endpoint(opts.restore_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
 			L_INFO("Restoring into: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT);

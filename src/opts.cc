@@ -340,9 +340,6 @@ parseOptions(int argc, char** argv)
 #endif
 
 		o.database = database;
-		if (o.database.empty()) {
-			o.database = ".";
-		}
 		o.http_port = http_port;
 		o.bind_address = bind_address;
 		o.tls_cert = tls_cert;
