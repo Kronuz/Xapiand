@@ -30,6 +30,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <ctime>
 #include <cstring>
 #include <filesystem>
 #include <functional>
@@ -621,7 +622,6 @@ struct ChildResult {
 	bool exited = false;
 	int code = -1;
 	std::chrono::steady_clock::duration took{};
-	long long ended_at_ms = 0;   // the wall clock when the child was seen to end (to within 50 ms)
 };
 
 // Forks a child that runs `body` and waits for it up to `limit`. Run before this process has threads.
@@ -645,7 +645,6 @@ static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 		::waitpid(pid, &status, 0);
 	}
 	ChildResult result;
-	result.ended_at_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	result.took = std::chrono::steady_clock::now() - began;
 	result.exited = done == pid && WIFEXITED(status);
 	result.code = result.exited ? WEXITSTATUS(status) : -1;
@@ -655,10 +654,25 @@ static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 	return result;
 }
 
-// How long the shutdown took, from the child's SHUTDOWN_AT line to the child's end.
-static long long stop_ms(const ChildResult& result, const std::string& log) {
+// How long the stop took: from the child's SHUTDOWN_AT line to its "Exiting" line (the logs' own clock, so the
+// process teardown after it, slow under a sanitizer, is not counted).
+static long long stop_ms(const std::string& log) {
 	const auto at = log.find("SHUTDOWN_AT ");
-	return at == std::string::npos ? -1 : result.ended_at_ms - std::stoll(log.substr(at + 12));
+	const auto exiting = log.find("Exiting with unfinished writes abandoned");
+	if (at == std::string::npos || exiting == std::string::npos) {
+		return -1;
+	}
+	const auto line_start = log.rfind('\n', exiting);
+	const auto stamp = log.substr(line_start == std::string::npos ? 0 : line_start + 1);
+	const auto date = stamp.find("20");   // "▍2026-11-02 07:54:36.095 ..."
+	std::tm tm{};
+	if (date == std::string::npos || strptime(stamp.c_str() + date, "%Y-%m-%d %H:%M:%S", &tm) == nullptr) {
+		return -1;
+	}
+	tm.tm_isdst = -1;
+	const auto millis = std::stoll(stamp.substr(date + 20, 3));
+	const long long exiting_ms = static_cast<long long>(std::mktime(&tm)) * 1000 + millis;
+	return exiting_ms - std::stoll(log.substr(at + 12));
 }
 
 // The shutdown abandons what it cannot finish in its bound and exits 75 (EX_TEMPFAIL). Every write acknowledged
@@ -672,7 +686,7 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	CHECK(result.exited);
 	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL
 	const auto log = read_file(log_path);
-	const auto stopped_in = stop_ms(result, log);
+	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, 0);
 	CHECK_LT(stopped_in, spec.bound.count() + 800);   // one bound (and the log flush), where two bounds took more than twice the bound
 	CHECK(log.find("Shutdown abandoned 2 unfinished items") != std::string::npos);
@@ -699,7 +713,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 	CHECK(result.exited);
 	CHECK_EQ(result.code, 75);
 	const auto log = read_file(log_path);
-	const auto stopped_in = stop_ms(result, log);
+	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, spec.bound.count() - 100);   // it waited for the indexes
 	CHECK_LT(stopped_in, spec.bound.count() + 800);
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
