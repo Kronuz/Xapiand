@@ -123,8 +123,8 @@ void hook(lua_State* L, lua_Debug* /*unused*/) {
 // the sentinel as its argument, then empties the state's globals, which `load` would otherwise hand out.
 constexpr std::string_view base_chunk = R"LUA(
 local KILL = ...
-local pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select =
-	pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select
+local pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select, rawget =
+	pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select, rawget
 local find = string.find
 local native_sort = table.sort
 
@@ -180,10 +180,18 @@ local function xpcall1(f, h, ...)
 	return after(xpcall0(f, function(e) if fatal(e) then return e end return h(e) end, ...))
 end
 
+-- A finalizer runs with hooks off, so a __gc that never returns would stall the loop: scripts get none.
+local function setmetatable1(t, mt)
+	if type(mt) == "table" and rawget(mt, "__gc") ~= nil then
+		error("a script cannot set a __gc metamethod", 2)
+	end
+	return setmetatable(t, mt)
+end
+
 local base = {
 	_VERSION = _VERSION, assert = assert, error = error, getmetatable = getmetatable, ipairs = ipairs,
 	next = next, pairs = pairs, pcall = pcall1, print = print, rawequal = rawequal, rawget = rawget,
-	rawlen = rawlen, rawset = rawset, select = select, setmetatable = setmetatable, tonumber = tonumber,
+	rawlen = rawlen, rawset = rawset, select = select, setmetatable = setmetatable1, tonumber = tonumber,
 	tostring = tostring, type = type, xpcall = xpcall1,
 }
 local env_mt = { __index = base, __metatable = false }

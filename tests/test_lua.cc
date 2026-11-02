@@ -27,6 +27,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <csignal>
+#include <cstdio>
 #include <exception>
 #include <memory>
 #include <string>
@@ -36,7 +38,15 @@
 #include "lua/processor.h"
 #include "task.hh"
 
+#include <unistd.h>
+
 namespace {
+
+// A bound that fails to end its call would hang the test: stop it instead.
+[[maybe_unused]] const auto watchdog = [] {
+	std::signal(SIGALRM, [](int) { std::fprintf(stderr, "HANG: a script ran past the watchdog\n"); ::_exit(3); });
+	return ::alarm(120);
+}();
 
 using lua::Limits;
 using lua::Processor;
@@ -182,10 +192,11 @@ void test_a_syntax_error_names_its_line() {
 // The architect's L4 and L5 probe: calls A and B of one script interleave; B writes through `_G`
 // and into `string`; A, mid-run, sees neither its own `_doc` replaced nor B's writes.
 const char* const leak_probe =
-	"local mine = _doc.who; local s = 0; for i = 1, 200000 do s = s + i end; "
-	"if mine == 'B' then _G.leak = 'B'; string.leak = 'B'; table.leak = 'B'; math.leak = 'B' end; "
+	"local mine = _doc.who; "
+	"if mine == 'B' then _G.leak = 'B'; string.leak = 'B'; table.leak = 'B'; math.leak = 'B' end; "   // B writes at once...
+	"local s = 0; for i = 1, 200000 do s = s + i end; "                                                // ...and both calls take turns...
 	"_doc.mine = mine; _doc.seen = _doc.who; _doc.glob = leak; _doc.sleak = string.leak; _doc.tleak = table.leak; "
-	"_doc.mleak = math.leak; _doc.same = (_G == _ENV)";
+	"_doc.mleak = math.leak; _doc.same = (_G == _ENV)";                                                  // ...before A reads
 
 void test_interleaved_calls_keep_their_own_doc_and_globals() {
 	Processor processor("leak", leak_probe, MsgPack::MAP());
@@ -232,18 +243,42 @@ void test_the_calls_really_interleaved() {
 	CHECK(a.finished && b.finished);
 }
 
+void test_collection_runs_while_calls_are_suspended() {
+	// Garbage is made and collected while three calls take turns: each call's thread stays anchored.
+	Processor processor("churn",
+		"local keep = {} for i = 1, 200000 do local t = {i, tostring(i), {i}}; if i % 1000 == 0 then keep[#keep + 1] = t end end; "
+		"_doc.n = #keep; _doc.last = keep[#keep][2]",
+		MsgPack::MAP());
+	task::inline_scheduler scheduler;
+	task::budget budget(every_checkpoint);
+	Pending calls[3];
+	for (auto& pending : calls) {
+		pending.doc = MsgPack::MAP();
+		start(scheduler, pending, processor, budget);
+	}
+	scheduler.run();
+	for (auto& pending : calls) {
+		REQUIRE(pending.finished);
+		REQUIRE(pending.outcome.ok());
+		CHECK_EQ(pending.doc.at("n").i64(), 200);
+		CHECK_EQ(str(pending.doc, "last"), "200000");
+	}
+}
+
 void test_writes_do_not_outlive_their_call() {
-	Processor processor("persist", "_doc.before = rawget(_G, 'kept'); kept = 'yes'; string.kept = 'yes'; table.kept = 1; math.huge = 0", MsgPack::MAP());
+	// Each call starts from the base: the last call's globals and library writes are gone.
+	Processor processor("persist",
+		"_doc.before = rawget(_G, 'kept'); _doc.sb = string.kept; _doc.tb = table.kept; _doc.hb = math.huge; "
+		"kept = 'yes'; string.kept = 'yes'; table.kept = 1; math.huge = 0",
+		MsgPack::MAP());
 	for (int i = 0; i < 3; ++i) {
 		auto out = call(processor, MsgPack::MAP());
 		REQUIRE(out.ok());
-		CHECK(absent(out.doc, "before"));   // each call starts from the base, not from the last call's globals
+		CHECK(absent(out.doc, "before"));
+		CHECK(absent(out.doc, "sb"));
+		CHECK(absent(out.doc, "tb"));
+		CHECK(out.doc.at("hb").f64() > 1e300);
 	}
-	auto probe = call("_doc.s = string.kept; _doc.t = table.kept; _doc.h = math.huge", MsgPack::MAP());
-	REQUIRE(probe.ok());
-	CHECK(absent(probe.doc, "s"));
-	CHECK(absent(probe.doc, "t"));
-	CHECK(probe.doc.at("h").f64() > 1e300);
 }
 
 void test_the_environment_is_closed() {
@@ -262,6 +297,17 @@ void test_the_environment_is_closed() {
 	}
 	CHECK_EQ(str(out.doc, "upper"), "ABC");
 	CHECK_EQ(str(out.doc, "fmt"), "3");
+}
+
+void test_a_script_cannot_set_a_finalizer() {
+	// A __gc runs with hooks off: one that never returns would hold the loop.
+	auto out = call(
+		"_doc.ok = pcall(setmetatable, {}, {__gc = function() while true do end end}); "
+		"for i = 1, 300000 do local t = {i} end; _doc.done = true",
+		MsgPack::MAP());
+	REQUIRE(out.ok());
+	CHECK(!out.doc.at("ok").boolean());
+	CHECK(out.doc.at("done").boolean());
 }
 
 void test_a_changed_script_replaces_its_cached_processor() {
@@ -507,8 +553,10 @@ TEST_MAIN(
 	test_a_syntax_error_names_its_line,
 	test_interleaved_calls_keep_their_own_doc_and_globals,
 	test_the_calls_really_interleaved,
+	test_collection_runs_while_calls_are_suspended,
 	test_writes_do_not_outlive_their_call,
 	test_the_environment_is_closed,
+	test_a_script_cannot_set_a_finalizer,
 	test_a_changed_script_replaces_its_cached_processor,
 	test_an_infinite_loop_ends_at_the_instruction_cap,
 	test_pcall_cannot_swallow_a_bound,
