@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # path_boundary_check.sh BIN: an empty data directory, and an index path that is empty or normalizes outside
-# or onto the data directory, are refused: 400 from the API, a usage error (64) from the CLI. Exit 0 when all hold.
+# or onto the data directory (relative, or absolute in any spelling), are refused: 400 from the API, a usage error
+# (64) from the CLI. Nothing is created, read or deleted outside the data directory. Exit 0 when all hold.
 BIN=$1; PORT=${PORT:-18837}; rc=0
 W=${HARNESS_TMP:-${TMPDIR:-.}}
 D=$(mktemp -d "$W/path_boundary.XXXXXX")
@@ -10,7 +11,7 @@ fail() { echo "FAIL: $*"; rc=1; }
 # CLI: the data directory must be named, and a dump or restore names an index inside it.
 "$BIN" --port $PORT --name pb -D "" >"$D/empty.log" 2>&1; c=$?
 [ $c = 64 ] && echo "ok   -D '' exits 64" || fail "-D '' exited $c (want 64)"
-for name in . ./ a/.. .. ../x a/../../x; do
+for name in . ./ a/.. .. ../x a/../../x "$D/out" "$D/out/" /etc/x //etc/x; do
 	"$BIN" --port $PORT --name pb -D "$D/cli" --dump "$name" --out "$D/out.mp" >"$D/dump.log" 2>&1; c=$?
 	[ $c = 64 ] && echo "ok   --dump '$name' exits 64" || fail "--dump '$name' exited $c (want 64)"
 	"$BIN" --port $PORT --name pb -D "$D/cli" --restore "$name" --in /dev/null >"$D/restore.log" 2>&1; c=$?
@@ -31,6 +32,33 @@ for path in ../x a/../../y ok/../fine; do
 	code=$(curl -s -m 10 --path-as-is -o /dev/null -w '%{http_code}' -X PUT "localhost:$PORT/$path/doc" -H 'Content-Type: application/json' -d '{"a":1}')
 	case $code in 2??) echo "ok   PUT /$path/doc -> $code";; *) fail "PUT /$path/doc -> $code (want 2xx)";; esac
 done
+# An absolute index path is outside the data directory: every spelling that reaches the Endpoint as one (an encoded
+# slash first) answers 400, a leading "//" is folded into the data directory by the router, and nothing is ever
+# created, read or deleted outside it, nor linked as a foreign schema.
+OUT="$D/out"; mkdir -p "$OUT"; echo '{"a":1}' > "$OUT/keep"
+ENC=${OUT//\//%2F}
+for url in "/$ENC" "/%2F${OUT#/}" "/%2Fetc%2Ffoo" "/$ENC%2F..%2Fout" "/$ENC/%2e%2e/out" "/%2e%2e/$ENC" "/a/$ENC"; do
+	for method in PUT GET DELETE; do
+		code=$(curl -s -m 10 --path-as-is -o /dev/null -w '%{http_code}' -X $method "localhost:$PORT$url/doc" -H 'Content-Type: application/json' -d '{"a":1}')
+		case $url in
+		/a/*) case $code in 2??|404) echo "ok   $method $url/doc -> $code (inside)";; *) fail "$method $url/doc -> $code (want 2xx or 404)";; esac;;
+		*) [ "$code" = 400 ] && echo "ok   $method $url/doc -> 400" || fail "$method $url/doc -> $code (want 400)";;
+		esac
+	done
+done
+for url in "/$OUT" "//$OUT" "/./$OUT" "/$OUT/.." "//etc/foo"; do
+	for method in PUT GET DELETE; do
+		code=$(curl -s -m 10 --path-as-is -o /dev/null -w '%{http_code}' -X $method "localhost:$PORT$url/doc" -H 'Content-Type: application/json' -d '{"a":1}')
+		case $code in 5??) fail "$method $url/doc -> $code";; *) echo "ok   $method $url/doc -> $code (folded into the data directory)";; esac
+	done
+done
+curl -s -m 10 -o /dev/null -X PUT "localhost:$PORT/linked/"
+code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X PUT "localhost:$PORT/linked/" -H 'Content-Type: application/json' \
+	-d "{\"_schema\":{\"_type\":\"foreign/object\",\"_foreign\":\"$OUT/sch\"}}")
+code2=$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X PUT "localhost:$PORT/linked/d1" -H 'Content-Type: application/json' -d '{"a":1}')
+[ "$code2" = 400 ] && echo "ok   a foreign schema in an absolute path: link $code, first write 400" || fail "a foreign schema in an absolute path: link $code, first write $code2 (want 400)"
+[ "$(ls -A "$OUT")" = keep ] && echo "ok   nothing appeared outside the data directory" || fail "the outside directory holds: $(ls -A "$OUT" | tr '\n' ' ')"
+[ -e "$OUT/keep" ] || fail "an outside file was deleted"
 for name in x y fine; do
 	[ -d "$D/n/$name" ] && echo "ok   index $name is inside the data directory" || fail "index $name is not inside the data directory"
 	[ -e "$D/$name" ] && fail "$name was created outside the data directory"

@@ -236,8 +236,8 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 		_path = path = Endpoint::cwd + std::string(_path);
 	}
 	path = normalize_path(_path);
-	// A relative index path must name something strictly inside the data directory.
-	if (relative && (path.size() <= Endpoint::cwd.size() || !strings::startswith(path, Endpoint::cwd))) {
+	// An index path, relative or absolute, must name something strictly inside the data directory.
+	if (path.size() <= Endpoint::cwd.size() || !strings::startswith(path, Endpoint::cwd)) {
 		THROW(ClientError, "Index path {} is empty or outside the data directory", repr(original_uri));
 	}
 	_path = path;

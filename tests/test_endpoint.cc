@@ -36,16 +36,12 @@
 static void test_endpoint_path() {
 	struct Case { const char* cwd; const char* uri; const char* path; };
 	const Case cases[] = {
-		{"/var/db/xapiand/", "/",                                 "/"},
-		{"/var/db/xapiand/", "/home/user/something/",            "/home/user/something"},
 		{"/var/db/xapiand/", "home/////user///something/",       "home/user/something"},
 		{"/",                "/////home/user/something/",        "home/user/something"},
-		{"/var/db/xapiand/", "/////home/user/something/",        "/home/user/something"},
-		{"/var/db/xapiand/", "/home/user/something////////",     "/home/user/something"},
+		{"/var/db/xapiand/", "/var/db/xapiand/home/user/",       "home/user"},
+		{"/var/db/xapiand/", "//var//db/xapiand/a/./b////",      "a/b"},
 		{"/var/db/xapiand/", "xapiand://home/user/something/",   "user/something"},
-		{"/var/db/xapiand/", "xapiand://home////////user/something/", "/user/something"},
 		{"/var/db/xapiand/", "://home/user/something/",          "home/user/something"},
-		{"/var/db/xapiand/", ":///home/user/something/",         "/home/user/something"},
 		{"/var/db/xapiand/", "file://home/user/something/",      "home/user/something"},
 	};
 	for (const auto& c : cases) {
@@ -74,7 +70,7 @@ static void test_normalize_path() {
 	}
 }
 
-// A relative index path names something strictly inside the data directory, or the Endpoint refuses it.
+// An index path names something strictly inside the data directory, or the Endpoint refuses it.
 static bool refused(const char* cwd, std::string_view uri) {
 	Endpoint::cwd = cwd;
 	try {
@@ -99,10 +95,19 @@ static void test_endpoint_refuses_paths_outside_the_base() {
 	for (const char* uri : {"..", "../x", "a/../../x", "a/../..", "../../../etc/passwd", "./a/../..", "../xapiand", "../xapiand2/x"}) {
 		CHECK_TRUE(refused("/var/db/xapiand/", uri));
 	}
+	// An absolute path is inside the base or refused, however it is written.
+	for (const char* uri : {"/", "//", "/home/user/something/", "/////home/user/something/", "/var/db/xapiand", "/var/db/xapiand/",
+	                        "/var/db/xapiand/.", "/var/db/xapiand/a/..", "/var/db/xapiand2/x", "/var/db/x", "/var/db/xapiand/../x",
+	                        "/etc/passwd", "//etc/passwd", ":///home/user/something/", "xapiand://home////////user/something/"}) {
+		CHECK_TRUE(refused("/var/db/xapiand/", uri));
+	}
+	CHECK_TRUE(refused("/", "/"));
+	CHECK_FALSE(refused("/", "/etc/x"));  // everything is inside the root
 	// What a relative path resolves to stays relative to the base.
 	Endpoint::cwd = "/var/db/xapiand/";
 	CHECK_EQ(Endpoint("a/../b").path, std::string("b"));
 	CHECK_EQ(Endpoint("./a//b/").path, std::string("a/b"));
+	CHECK_EQ(Endpoint("/var/db/xapiand/a/../b").path, std::string("b"));
 }
 
 TEST_MAIN(test_endpoint_path, test_normalize_path, test_endpoint_refuses_paths_outside_the_base)

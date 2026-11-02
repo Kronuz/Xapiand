@@ -165,6 +165,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **An empty data directory and an index path outside the data directory are refused.** `-D ""` used to mean the
   current directory and now exits with a usage error. An index path that is empty, `.`, `a/..` or escapes with `..`
   (`PUT /a/../doc`) answers `400`, and `--dump` or `--restore` of such a name exits with a usage error.
+- **An absolute index path outside the data directory is refused.** `PUT /%2Ftmp%2Fx/doc` (an encoded slash first), a `_foreign` schema or script
+  that names `/tmp/x/doc`, and `--dump` or `--restore` of `/tmp/x` used to create, read or delete an index at that path, outside the data directory.
+  They answer `400` (a usage error on the command line). An absolute path inside the data directory still names the index it points at.
 
 ### Removed
 - **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
