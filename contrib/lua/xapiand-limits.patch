@@ -1,0 +1,522 @@
+diff -ru a/src/ldo.c b/src/ldo.c
+--- a/src/ldo.c
++++ b/src/ldo.c
+@@ -484,6 +484,7 @@
+ */
+ void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
+   int wanted = ci->nresults;
++  if (nres > 16) lua_xnote((size_t)nres * 2);  /* Xapiand: charge the move */
+   if (l_unlikely(L->hookmask && !hastocloseCfunc(wanted)))
+     rethook(L, ci, nres);
+   /* move results to proper place */
+@@ -555,6 +556,7 @@
+       int i;
+       checkstackGCp(L, fsize - delta, func);
+       ci->func.p -= delta;  /* restore 'func' (if vararg) */
++      if (narg1 > 16) lua_xnote((size_t)narg1 * 2);  /* Xapiand: charge the move */
+       for (i = 0; i < narg1; i++)  /* move down function and arguments */
+         setobjs2s(L, ci->func.p + i, func + i);
+       func = ci->func.p;  /* moved-down function */
+diff -ru a/src/lgc.c b/src/lgc.c
+--- a/src/lgc.c
++++ b/src/lgc.c
+@@ -541,7 +541,7 @@
+ 
+ static lu_mem traversetable (global_State *g, Table *h) {
+   const char *weakkey, *weakvalue;
+-  const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
++  const TValue *mode = NULL;  /* Xapiand: no weak tables: their collection is not bounded */
+   TString *smode;
+   markobjectN(g, h->metatable);
+   if (mode && ttisshrstring(mode) &&  /* is there a weak mode? */
+diff -ru a/src/lstring.c b/src/lstring.c
+--- a/src/lstring.c	2024-06-13 15:15:09
++++ b/src/lstring.c	2026-11-02 03:21:52
+@@ -34,9 +34,10 @@
+ int luaS_eqlngstr (TString *a, TString *b) {
+   size_t len = a->u.lnglen;
+   lua_assert(a->tt == LUA_VLNGSTR && b->tt == LUA_VLNGSTR);
+-  return (a == b) ||  /* same instance or... */
+-    ((len == b->u.lnglen) &&  /* equal length and ... */
+-     (memcmp(getlngstr(a), getlngstr(b), len) == 0));  /* equal contents */
++  if (a == b) return 1;  /* same instance or... */
++  if (len != b->u.lnglen) return 0;  /* equal length and ... */
++  lua_xnote(len >> 3);  /* Xapiand: charge the comparison */
++  return memcmp(getlngstr(a), getlngstr(b), len) == 0;  /* equal contents */
+ }
+ 
+ 
+diff -ru a/src/lstrlib.c b/src/lstrlib.c
+--- a/src/lstrlib.c	2024-06-13 15:15:09
++++ b/src/lstrlib.c	2026-11-02 03:21:57
+@@ -103,7 +103,8 @@
+   size_t start = posrelatI(luaL_checkinteger(L, 2), l);
+   size_t end = getendpos(L, 3, -1, l);
+   if (start <= end)
+-    lua_pushlstring(L, s + start - 1, (end - start) + 1);
++  { lua_xcharge(L, ((end - start) + 1) >> 3);  /* Xapiand: charge the copy */
++    lua_pushlstring(L, s + start - 1, (end - start) + 1); }
+   else lua_pushliteral(L, "");
+   return 1;
+ }
+@@ -113,7 +114,9 @@
+   size_t l, i;
+   luaL_Buffer b;
+   const char *s = luaL_checklstring(L, 1, &l);
+-  char *p = luaL_buffinitsize(L, &b, l);
++  char *p;
++  lua_xcharge(L, l * 3);  /* Xapiand: charge the pass */
++  p = luaL_buffinitsize(L, &b, l);
+   for (i = 0; i < l; i++)
+     p[i] = s[l - i - 1];
+   luaL_pushresultsize(&b, l);
+@@ -126,7 +129,9 @@
+   size_t i;
+   luaL_Buffer b;
+   const char *s = luaL_checklstring(L, 1, &l);
+-  char *p = luaL_buffinitsize(L, &b, l);
++  char *p;
++  lua_xcharge(L, l * 3);  /* Xapiand: charge the pass */
++  p = luaL_buffinitsize(L, &b, l);
+   for (i=0; i<l; i++)
+     p[i] = tolower(uchar(s[i]));
+   luaL_pushresultsize(&b, l);
+@@ -139,7 +144,9 @@
+   size_t i;
+   luaL_Buffer b;
+   const char *s = luaL_checklstring(L, 1, &l);
+-  char *p = luaL_buffinitsize(L, &b, l);
++  char *p;
++  lua_xcharge(L, l * 3);  /* Xapiand: charge the pass */
++  p = luaL_buffinitsize(L, &b, l);
+   for (i=0; i<l; i++)
+     p[i] = toupper(uchar(s[i]));
+   luaL_pushresultsize(&b, l);
+@@ -159,7 +166,9 @@
+   else {
+     size_t totallen = (size_t)n * l + (size_t)(n - 1) * lsep;
+     luaL_Buffer b;
+-    char *p = luaL_buffinitsize(L, &b, totallen);
++    char *p;
++    lua_xcharge(L, (totallen >> 3) + (l + lsep == 0 ? (size_t)n : 0));  /* Xapiand: charge the copy, and the empty copies */
++    p = luaL_buffinitsize(L, &b, totallen);
+     while (n-- > 1) {  /* first n-1 copies (followed by separator) */
+       memcpy(p, s, l * sizeof(char)); p += l;
+       if (lsep > 0) {  /* empty 'memcpy' is not that cheap */
+@@ -186,6 +195,7 @@
+     return luaL_error(L, "string slice too long");
+   n = (int)(pose -  posi) + 1;
+   luaL_checkstack(L, n, "string slice too long");
++  lua_xcharge(L, (size_t)n * 2);  /* Xapiand: charge the pushes */
+   for (i=0; i<n; i++)
+     lua_pushinteger(L, uchar(s[posi+i-1]));
+   return n;
+@@ -361,6 +371,10 @@
+   const char *p_end;  /* end ('\0') of pattern */
+   lua_State *L;
+   int matchdepth;  /* control for recursive depth (to avoid C stack overflow) */
++  size_t steps;  /* Xapiand: matcher steps so far in this API call (one per item matched) */
++  size_t budget;  /* the step count at which the next check runs (at most every 4096 steps) */
++  size_t total;  /* the most steps one API call may take */
++  size_t charged;  /* the steps already charged to the call's meter (4 work units each) */
+   unsigned char level;  /* total number of captures (finished or unfinished) */
+   struct {
+     const char *init;
+@@ -476,7 +490,8 @@
+     switch (*p) {
+       case '.': return 1;  /* matches any char */
+       case L_ESC: return match_class(c, uchar(*(p+1)));
+-      case '[': return matchbracketclass(c, p, ep-1);
++      case '[': ms->steps += (size_t)(ep - p) >> 2;  /* Xapiand: a long class costs per member */
++              return matchbracketclass(c, p, ep-1);
+       default:  return (uchar(*p) == c);
+     }
+   }
+@@ -493,6 +508,7 @@
+     int e = *(p+1);
+     int cont = 1;
+     while (++s < ms->src_end) {
++      ms->steps++;  /* Xapiand */
+       if (*s == e) {
+         if (--cont == 0) return s+1;
+       }
+@@ -506,8 +522,10 @@
+ static const char *max_expand (MatchState *ms, const char *s,
+                                  const char *p, const char *ep) {
+   ptrdiff_t i = 0;  /* counts maximum expand for item */
+-  while (singlematch(ms, s + i, p, ep))
++  while (singlematch(ms, s + i, p, ep)) {
+     i++;
++    ms->steps++;  /* Xapiand */
++  }
+   /* keeps trying to match with the maximum repetitions */
+   while (i>=0) {
+     const char *res = match(ms, (s+i), ep+1);
+@@ -524,8 +542,10 @@
+     const char *res = match(ms, s, ep+1);
+     if (res != NULL)
+       return res;
+-    else if (singlematch(ms, s, p, ep))
++    else if (singlematch(ms, s, p, ep)) {
+       s++;  /* try with one more repetition */
++      ms->steps++;  /* Xapiand */
++    }
+     else return NULL;
+   }
+ }
+@@ -560,6 +580,7 @@
+   size_t len;
+   l = check_capture(ms, l);
+   len = ms->capture[l].len;
++  ms->steps += len >> 5;  /* Xapiand: charge the comparison */
+   if ((size_t)(ms->src_end-s) >= len &&
+       memcmp(ms->capture[l].init, s, len) == 0)
+     return s+len;
+@@ -567,10 +588,38 @@
+ }
+ 
+ 
++/* Xapiand: charges the steps not yet charged to the call's meter. */
++static void chargesteps (MatchState *ms) {
++  size_t n = ms->steps - ms->charged;
++  ms->charged = ms->steps;
++  lua_xcharge(ms->L, n * 4);
++}
++
++
++/* Xapiand: the slow path of the step check: ends the call past this API call's budget, else charges. */
++static void stepcheck (MatchState *ms) {
++  if (ms->steps > ms->total) {
++    lua_xcondemn(ms->L, "steps");
++    luaL_error(ms->L, "pattern too complex (step budget)");
++  }
++  chargesteps(ms);
++  ms->budget = (ms->total - ms->steps > 4096) ? ms->steps + 4096 : ms->total;
++}
++
++
++static void resetsteps (MatchState *ms) {
++  ms->steps = 0;
++  ms->charged = 0;
++  ms->budget = ms->total < 4096 ? ms->total : 4096;
++}
++
++
+ static const char *match (MatchState *ms, const char *s, const char *p) {
+   if (l_unlikely(ms->matchdepth-- == 0))
+     luaL_error(ms->L, "pattern too complex");
+   init: /* using goto to optimize tail recursion */
++  if (l_unlikely(++ms->steps > ms->budget))  /* Xapiand: one step per item, also in the 'goto init' runs */
++    stepcheck(ms);
+   if (p != ms->p_end) {  /* end of pattern? */
+     switch (*p) {
+       case '(': {  /* start capture */
+@@ -670,23 +719,29 @@
+ 
+ 
+ 
+-static const char *lmemfind (const char *s1, size_t l1,
++static const char *lmemfind (lua_State *L, const char *s1, size_t l1,
+                                const char *s2, size_t l2) {
+   if (l2 == 0) return s1;  /* empty strings are everywhere */
+   else if (l2 > l1) return NULL;  /* avoids a negative 'l1' */
+   else {
+     const char *init;  /* to search for a '*s2' inside 's1' */
++    size_t work = 0;  /* Xapiand: bytes scanned and compared, charged to the call as the search goes */
+     l2--;  /* 1st char will be checked by 'memchr' */
+     l1 = l1-l2;  /* 's2' cannot be found after that */
+     while (l1 > 0 && (init = (const char *)memchr(s1, *s2, l1)) != NULL) {
++      work += (size_t)(init - s1) + 1 + l2;
++      if (work >= 65536) { lua_xcharge(L, work >> 3); work = 0; }
+       init++;   /* 1st char is already checked */
+-      if (memcmp(init, s2+1, l2) == 0)
++      if (memcmp(init, s2+1, l2) == 0) {
++        lua_xcharge(L, work >> 3);
+         return init-1;
++      }
+       else {  /* correct 'l1' and 's1' to try again */
+         l1 -= init-s1;
+         s1 = init;
+       }
+     }
++    lua_xcharge(L, (work + l1) >> 3);
+     return NULL;  /* not found */
+   }
+ }
+@@ -757,6 +812,8 @@
+ static void prepstate (MatchState *ms, lua_State *L,
+                        const char *s, size_t ls, const char *p, size_t lp) {
+   ms->L = L;
++  ms->total = (64 * ls > 1000000) ? 64 * ls : 1000000;  /* Xapiand: the API call's step budget */
++  resetsteps(ms);
+   ms->matchdepth = MAXCCALLS;
+   ms->src_init = s;
+   ms->src_end = s + ls;
+@@ -780,9 +837,10 @@
+     return 1;
+   }
+   /* explicit request or no special characters? */
++  if (find) lua_xcharge(L, lp >> 3);  /* Xapiand: charge the scan for special characters */
+   if (find && (lua_toboolean(L, 4) || nospecials(p, lp))) {
+     /* do a plain search */
+-    const char *s2 = lmemfind(s + init, ls - init, p, lp);
++    const char *s2 = lmemfind(L, s + init, ls - init, p, lp);
+     if (s2) {
+       lua_pushinteger(L, (s2 - s) + 1);
+       lua_pushinteger(L, (s2 - s) + lp);
+@@ -801,6 +859,7 @@
+       const char *res;
+       reprepstate(&ms);
+       if ((res=match(&ms, s1, p)) != NULL) {
++        chargesteps(&ms);
+         if (find) {
+           lua_pushinteger(L, (s1 - s) + 1);  /* start */
+           lua_pushinteger(L, res - s);   /* end */
+@@ -810,6 +869,7 @@
+           return push_captures(&ms, s1, res);
+       }
+     } while (s1++ < ms.src_end && !anchor);
++    chargesteps(&ms);
+   }
+   luaL_pushfail(L);  /* not found */
+   return 1;
+@@ -839,14 +899,17 @@
+   GMatchState *gm = (GMatchState *)lua_touserdata(L, lua_upvalueindex(3));
+   const char *src;
+   gm->ms.L = L;
++  resetsteps(&gm->ms);  /* Xapiand: each call of the iterator has the budget of an API call */
+   for (src = gm->src; src <= gm->ms.src_end; src++) {
+     const char *e;
+     reprepstate(&gm->ms);
+     if ((e = match(&gm->ms, src, gm->p)) != NULL && e != gm->lastmatch) {
+       gm->src = gm->lastmatch = e;
++      chargesteps(&gm->ms);
+       return push_captures(&gm->ms, src, e);
+     }
+   }
++  chargesteps(&gm->ms);
+   return 0;  /* not found */
+ }
+ 
+@@ -874,20 +937,25 @@
+   lua_State *L = ms->L;
+   const char *news = lua_tolstring(L, 3, &l);
+   const char *p;
++  ms->steps += l >> 5;  /* Xapiand: charge the replacement's copy */
+   while ((p = (char *)memchr(news, L_ESC, l)) != NULL) {
+     luaL_addlstring(b, news, p - news);
+     p++;  /* skip ESC */
+     if (*p == L_ESC)  /* '%%' */
+       luaL_addchar(b, *p);
+-    else if (*p == '0')  /* '%0' */
++    else if (*p == '0') {  /* '%0' */
++        ms->steps += (size_t)(e - s) >> 5;  /* Xapiand */
+         luaL_addlstring(b, s, e - s);
++    }
+     else if (isdigit(uchar(*p))) {  /* '%n' */
+       const char *cap;
+       ptrdiff_t resl = get_onecapture(ms, *p - '1', s, e, &cap);
+       if (resl == CAP_POSITION)
+         luaL_addvalue(b);  /* add position to accumulated result */
+-      else
++      else {
++        ms->steps += (size_t)resl >> 5;  /* Xapiand */
+         luaL_addlstring(b, cap, resl);
++      }
+     }
+     else
+       luaL_error(L, "invalid use of '%c' in replacement string", L_ESC);
+@@ -926,6 +994,7 @@
+   }
+   if (!lua_toboolean(L, -1)) {  /* nil or false? */
+     lua_pop(L, 1);  /* remove value */
++    ms->steps += (size_t)(e - s) >> 5;  /* Xapiand */
+     luaL_addlstring(b, s, e - s);  /* keep original text */
+     return 0;  /* no changes */
+   }
+@@ -933,6 +1002,7 @@
+     return luaL_error(L, "invalid replacement value (a %s)",
+                          luaL_typename(L, -1));
+   else {
++    ms->steps += lua_rawlen(L, -1) >> 5;  /* Xapiand */
+     luaL_addvalue(b);  /* add result to accumulator */
+     return 1;  /* something changed */
+   }
+@@ -972,6 +1042,7 @@
+     else break;  /* end of subject */
+     if (anchor) break;
+   }
++  chargesteps(&ms);
+   if (!changed)  /* no changes? */
+     lua_pushvalue(L, 1);  /* return original string */
+   else {  /* something changed */
+@@ -1120,6 +1191,7 @@
+ 
+ 
+ static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
++  lua_xcharge(b->L, len * 3);  /* Xapiand: charge the pass */
+   luaL_addchar(b, '"');
+   while (len--) {
+     if (*s == '"' || *s == '\\' || *s == '\n') {
+@@ -1349,6 +1421,7 @@
+         case 's': {
+           size_t l;
+           const char *s = luaL_tolstring(L, arg, &l);
++          lua_xcharge(L, l >> 3);  /* Xapiand: charge the copy */
+           if (form[2] == '\0')  /* no modifiers? */
+             luaL_addvalue(&b);  /* keep entire string */
+           else {
+diff -ru a/src/ltablib.c b/src/ltablib.c
+--- a/src/ltablib.c	2024-06-13 15:15:10
++++ b/src/ltablib.c	2026-11-02 03:21:53
+@@ -73,6 +73,7 @@
+       /* check whether 'pos' is in [1, e] */
+       luaL_argcheck(L, (lua_Unsigned)pos - 1u < (lua_Unsigned)e, 2,
+                        "position out of bounds");
++      lua_xcharge(L, (size_t)(e - pos) * 16);  /* Xapiand: charge the shift */
+       for (i = e; i > pos; i--) {  /* move up elements */
+         lua_geti(L, 1, i - 1);
+         lua_seti(L, 1, i);  /* t[i] = t[i - 1] */
+@@ -96,6 +97,7 @@
+     luaL_argcheck(L, (lua_Unsigned)pos - 1u <= (lua_Unsigned)size, 2,
+                      "position out of bounds");
+   lua_geti(L, 1, pos);  /* result = t[pos] */
++  if (pos < size) lua_xcharge(L, (size_t)(size - pos) * 16);  /* Xapiand: charge the shift */
+   for ( ; pos < size; pos++) {
+     lua_geti(L, 1, pos + 1);
+     lua_seti(L, 1, pos);  /* t[pos] = t[pos + 1] */
+@@ -126,6 +128,7 @@
+     n = e - f + 1;  /* number of elements to move */
+     luaL_argcheck(L, t <= LUA_MAXINTEGER - n + 1, 4,
+                   "destination wrap around");
++    lua_xcharge(L, (size_t)n * 16);  /* Xapiand: charge the copy */
+     if (t > e || t <= f || (tt != 1 && !lua_compare(L, 1, tt, LUA_OPEQ))) {
+       for (i = 0; i < n; i++) {
+         lua_geti(L, 1, f + i);
+@@ -149,6 +152,7 @@
+   if (l_unlikely(!lua_isstring(L, -1)))
+     luaL_error(L, "invalid value (%s) at index %I in table for 'concat'",
+                   luaL_typename(L, -1), (LUAI_UACINT)i);
++  lua_xcharge(L, 48 + (lua_rawlen(L, -1) >> 3));  /* Xapiand: charge the element and its bytes */
+   luaL_addvalue(b);
+ }
+ 
+@@ -200,6 +204,7 @@
+   if (l_unlikely(n >= (unsigned int)INT_MAX  ||
+                  !lua_checkstack(L, (int)(++n))))
+     return luaL_error(L, "too many results to unpack");
++  lua_xcharge(L, (size_t)n * 16);  /* Xapiand: charge the pushes */
+   for (; i < e; i++) {  /* push arg[i..e - 1] (to avoid overflows) */
+     lua_geti(L, 1, i);
+   }
+diff -ru a/src/ltm.c b/src/ltm.c
+--- a/src/ltm.c	2024-06-13 15:15:10
++++ b/src/ltm.c	2026-11-02 03:21:52
+@@ -260,6 +260,7 @@
+   int nextra = ci->u.l.nextraargs;
+   if (wanted < 0) {
+     wanted = nextra;  /* get all extra arguments available */
++    if (nextra > 16) lua_xnote((size_t)nextra * 2);  /* Xapiand: charge the copy */
+     checkstackGCp(L, nextra, where);  /* ensure stack space */
+     L->top.p = where + nextra;  /* next instruction will need top */
+   }
+diff -ru a/src/lua.h b/src/lua.h
+--- a/src/lua.h
++++ b/src/lua.h
+@@ -56,6 +56,12 @@
+ 
+ typedef struct lua_State lua_State;
+ 
++/* Xapiand: the host's meter of the work one script call does (src/lua/processor.cc). */
++LUA_API void (lua_xcharge) (lua_State *L, size_t units);   /* charges; ends the call when over its budget */
++LUA_API void (lua_xnote) (size_t units);                   /* charges; the next VM instruction ends the call */
++LUA_API void (lua_xcondemn) (lua_State *L, const char *why);
++LUA_API int (lua_xcloseok) (void);
++
+ 
+ /*
+ ** basic types
+diff -ru a/src/luaconf.h b/src/luaconf.h
+--- a/src/luaconf.h
++++ b/src/luaconf.h
+@@ -746,7 +746,7 @@
+ ** (It must fit into max(size_t)/32 and max(int)/2.)
+ */
+ #if LUAI_IS32INT
+-#define LUAI_MAXSTACK		1000000
++#define LUAI_MAXSTACK		200000
+ #else
+ #define LUAI_MAXSTACK		15000
+ #endif
+diff -ru a/src/lutf8lib.c b/src/lutf8lib.c
+--- a/src/lutf8lib.c	2024-06-13 15:15:10
++++ b/src/lutf8lib.c	2026-11-02 03:21:54
+@@ -104,6 +104,7 @@
+                    "initial position out of bounds");
+   luaL_argcheck(L, --posj < (lua_Integer)len, 3,
+                    "final position out of bounds");
++  if (posi <= posj) lua_xcharge(L, (size_t)(posj - posi + 1) * 3);  /* Xapiand: charge the scan */
+   while (posi <= posj) {
+     const char *s1 = utf8_decode(s + posi, NULL, !lax);
+     if (s1 == NULL) {  /* conversion error? */
+@@ -138,6 +139,7 @@
+     return luaL_error(L, "string slice too long");
+   n = (int)(pose -  posi) + 1;  /* upper bound for number of returns */
+   luaL_checkstack(L, n, "string slice too long");
++  lua_xcharge(L, (size_t)n * 3);  /* Xapiand: charge the decoding */
+   n = 0;  /* count the number of returns */
+   se = s + pose;  /* string end */
+   for (s += posi - 1; s < se;) {
+@@ -192,6 +194,7 @@
+   posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
+   luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
+                    "position out of bounds");
++  lua_xcharge(L, (size_t)len);  /* Xapiand: charge the walk (at most the string) */
+   if (n == 0) {
+     /* find beginning of current byte sequence */
+     while (posi > 0 && iscontp(s + posi)) posi--;
+diff -ru a/src/lvm.c b/src/lvm.c
+--- a/src/lvm.c
++++ b/src/lvm.c
+@@ -380,6 +380,7 @@
+   size_t rl1 = tsslen(ts1);  /* real length */
+   const char *s2 = getstr(ts2);
+   size_t rl2 = tsslen(ts2);
++  if ((rl1 < rl2 ? rl1 : rl2) >= 64) lua_xnote((rl1 < rl2 ? rl1 : rl2) >> 1);  /* Xapiand: charge the scan */
+   for (;;) {  /* for each segment */
+     int temp = strcoll(s1, s2);
+     if (temp != 0)  /* not equal? */
+@@ -667,6 +668,7 @@
+         }
+         tl += l;
+       }
++      if (tl >= 64) lua_xnote(tl >> 3);  /* Xapiand: charge the copy */
+       if (tl <= LUAI_MAXSHORTLEN) {  /* is result a short string? */
+         char buff[LUAI_MAXSHORTLEN];
+         copy2buff(top, n, buff);  /* copy strings to buffer */
+@@ -1593,6 +1595,8 @@
+       vmcase(OP_TBC) {
+         StkId ra = RA(i);
+         /* create new to-be-closed upvalue */
++        if (l_unlikely(!l_isfalse(s2v(ra)) && !lua_xcloseok()))  /* Xapiand: a close handler cannot be bounded */
++          Protect(luaG_runerror(L, "to-be-closed variables are not available to scripts"));
+         halfProtect(luaF_newtbcupval(L, ra));
+         vmbreak;
+       }
+@@ -1810,6 +1814,8 @@
+       vmcase(OP_TFORPREP) {
+        StkId ra = RA(i);
+         /* create to-be-closed upvalue (if needed) */
++        if (l_unlikely(!l_isfalse(s2v(ra + 3)) && !lua_xcloseok()))  /* Xapiand: see OP_TBC */
++          Protect(luaG_runerror(L, "to-be-closed variables are not available to scripts"));
+         halfProtect(luaF_newtbcupval(L, ra + 3));
+         pc += GETARG_Bx(i);
+         i = *(pc++);  /* go to next instruction */
+@@ -1851,6 +1857,7 @@
+           n = cast_int(L->top.p - ra) - 1;  /* get up to the top */
+         else
+           L->top.p = ci->top.p;  /* correct top in case of emergency GC */
++        if (n > 16) lua_xnote((size_t)n * 2);  /* Xapiand: charge the copy */
+         last += n;
+         if (TESTARG_k(i)) {
+           last += GETARG_Ax(*pc) * (MAXARG_C + 1);

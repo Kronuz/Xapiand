@@ -1039,12 +1039,12 @@ FetchContent_MakeAvailable(prometheus_cpp)
 if(LUA)
 	# Lua 5.4: official sources ship no CMake, so build a static object lib from
 	# src/*.c (minus the interpreter/compiler driver mains).
-	# The matcher carries a step budget (D10): contrib/lua/lstrlib-step-budget.patch, applied to the pinned tarball.
+	# Lua carries the limits patch (D10): contrib/lua/xapiand-limits.patch, applied to the pinned tarball.
 	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
 	FetchContent_Declare(lua
 		URL "${XAPIAND_LUA_URL}"
 		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
-		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/lstrlib-step-budget.patch"
+		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
 	FetchContent_MakeAvailable(lua)
 	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/src/*.c")
@@ -1927,12 +1927,12 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
-		# The Lua step-budget patch applies to the pinned tarball and yields the file that was built.
+		# The Lua limits patch applies to the pinned tarball and yields the tree that was built.
 		if (LUA)
 			add_test(NAME test_lua_patch_drift COMMAND ${CMAKE_COMMAND}
 				-DLUA_SRC=${lua_SOURCE_DIR}
 				-DLUA_TARBALL=${lua_SOURCE_DIR}/../lua-subbuild/lua-populate-prefix/src/lua-5.4.7.tar.gz
-				-DPATCH=${PROJECT_SOURCE_DIR}/contrib/lua/lstrlib-step-budget.patch
+				-DPATCH=${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch
 				-DVERSION_FILE=${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake
 				-DWORK=${CMAKE_BINARY_DIR}/lua-drift
 				-P ${PROJECT_SOURCE_DIR}/tests/lua_patch_drift.cmake)

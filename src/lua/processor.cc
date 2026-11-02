@@ -25,6 +25,7 @@
 
 #if XAPIAND_LUA
 
+#include <algorithm>                              // for std::min
 #include <cassert>
 #include <cstdint>                                // for int64_t
 #include <cstdlib>                                // for realloc, free
@@ -32,6 +33,7 @@
 #include <new>                                    // for std::bad_alloc
 #include <string>
 #include <string_view>
+#include <utility>                                // for std::exchange
 
 extern "C" {
 #include <lua.h>
@@ -69,13 +71,58 @@ namespace {
 // The registry key of the sentinel a bound raises: no pcall of a script catches it.
 const char kill_key = 0;
 
-// The bounds one call has crossed, kept in the thread's extra space for the hook.
+// One call's meters, kept in the thread's extra space for the hook and, while the call is resumed,
+// in `current_call` for the library patch (contrib/lua/xapiand-limits.patch) to charge.
 struct Call {
 	const Limits* limits;
+	lua_State* co = nullptr;
 	std::size_t instructions = 0;
-	std::size_t unyielded = 0;
-	const char* reason = nullptr;
+	std::size_t unyielded = 0;         // instructions since the last yield point, while the call cannot yield
+	std::size_t count = 0;             // the interval the count hook is armed with
+	std::size_t work = 0;              // the library's and the VM's work so far (units of about a nanosecond)
+	std::size_t slice_work = 0;        // ...since the last yield
+	std::size_t prints_left = 0;       // bytes `print` may still log
+	const char* reason = nullptr;      // the bound that condemned the call: it cannot be resumed or caught
 };
+
+thread_local Call* current_call = nullptr;
+
+constexpr std::size_t max_print_line = 1024;
+
+void hook(lua_State* L, lua_Debug* ar);
+
+void arm(Call& call, std::size_t count) {
+	call.count = count;
+	lua_sethook(call.co, hook, LUA_MASKCOUNT, static_cast<int>(count));
+}
+
+// Condemns the call: every instruction from now on raises, whatever a script catches.
+void condemn(Call& call, const char* why) {
+	if (call.reason == nullptr) {
+		call.reason = why;
+	}
+	if (call.count != 1) {
+		arm(call, 1);
+	}
+}
+
+// Adds work; past the cap the call is condemned, past a slice the hook is armed to yield at the next instruction.
+void note(Call& call, std::size_t units) {
+	call.work += units;
+	call.slice_work += units;
+	if (call.reason == nullptr) {
+		if (call.work > call.limits->max_work) {
+			condemn(call, "work");
+		} else if (call.slice_work > call.limits->slice_work && call.count != 1) {
+			arm(call, 1);
+		}
+	}
+}
+
+void raise_kill(lua_State* L) {
+	lua_rawgetp(L, LUA_REGISTRYINDEX, &kill_key);
+	lua_error(L);
+}
 
 void* lua_alloc(void* ud, void* ptr, std::size_t osize, std::size_t nsize) {
 	auto* heap = static_cast<detail::Heap*>(ud);
@@ -86,6 +133,9 @@ void* lua_alloc(void* ud, void* ptr, std::size_t osize, std::size_t nsize) {
 		return nullptr;
 	}
 	if (nsize > old && heap->metered && heap->used + (nsize - old) > heap->limit) {
+		if (current_call != nullptr) {
+			condemn(*current_call, "memory");
+		}
 		return nullptr;
 	}
 	void* block = std::realloc(ptr, nsize);
@@ -99,34 +149,67 @@ void* lua_alloc(void* ud, void* ptr, std::size_t osize, std::size_t nsize) {
 // Counts the call's instructions, ends it past a bound, and yields wherever Lua allows it.
 void hook(lua_State* L, lua_Debug* /*unused*/) {
 	auto* call = *static_cast<Call**>(lua_getextraspace(L));
+	const auto& limits = *call->limits;
 	const bool yieldable = lua_isyieldable(L) != 0;
-	call->instructions += call->limits->hook_period;
+	call->instructions += call->count;
 	if (call->reason == nullptr) {
-		if (call->instructions > call->limits->max_instructions) {
-			call->reason = "instruction";
-		} else if (!yieldable && ++call->unyielded > call->limits->max_unyielded_hooks) {
-			call->reason = "callback";
+		if (call->instructions > limits.max_instructions) {
+			condemn(*call, "instruction");
+		} else if (call->work > limits.max_work) {
+			condemn(*call, "work");
+		} else if (!yieldable) {
+			call->unyielded += call->count;
+			if (call->unyielded > limits.max_unyielded_hooks * limits.hook_period) {
+				condemn(*call, "callback");
+			}
 		}
 	}
 	if (call->reason != nullptr) {
-		lua_rawgetp(L, LUA_REGISTRYINDEX, &kill_key);
-		lua_error(L);
+		raise_kill(L);
 	}
+	if (call->count != limits.hook_period) {
+		arm(*call, limits.hook_period);
+	}
+	call->slice_work = 0;
 	if (yieldable) {
 		call->unyielded = 0;
 		lua_yield(L, 0);
 	}
 }
 
-// The base: copies of the opened libraries, a Lua `table.sort` (comparators yield), pcall and xpcall
-// that rethrow what ends a call, and a factory of per-call environments. It is run once per state with
-// the sentinel as its argument, then empties the state's globals, which `load` would otherwise hand out.
+// What the library patch and the base call into.
+int host_condemned(lua_State* L) {
+	lua_pushboolean(L, current_call != nullptr && current_call->reason != nullptr);
+	return 1;
+}
+
+// print(s): logs the first bytes of s, within the call's budget.
+int host_print(lua_State* L) {
+	std::size_t len = 0;
+	const char* str = luaL_checklstring(L, 1, &len);
+	Call* call = current_call;
+	if (call == nullptr || call->prints_left == 0) {
+		return 0;
+	}
+	const std::size_t take = std::min({len, call->prints_left, max_print_line});
+	const bool truncated = take < len || take == call->prints_left;
+	call->prints_left -= take;
+	if (truncated) {
+		call->prints_left = 0;
+	}
+	L_INFO("Script print: {}{}", repr(std::string_view(str, take)), truncated ? " ...[truncated]" : "");
+	return 0;
+}
+
+// The base: copies of the opened libraries (less the functions the host cannot charge), a Lua
+// `table.sort`, a `print` that logs within a budget, pcall and xpcall that rethrow what ends a call,
+// and a factory of per-call environments. It is run once per state with the sentinel and two host
+// functions as its arguments, then empties the state's globals, which `load` would otherwise hand out.
 constexpr std::string_view base_chunk = R"LUA(
-local KILL = ...
-local pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select, rawget =
-	pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select, rawget
-local find = string.find
-local native_sort = table.sort
+local KILL, condemned, host_print = ...
+local pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select, rawget, tostring =
+	pairs, setmetatable, getmetatable, type, error, pcall, xpcall, select, rawget, tostring
+local find, concat = string.find, table.concat
 
 local function copy(t)
 	local r = {}
@@ -135,10 +218,14 @@ local function copy(t)
 end
 local libs = { string = copy(string), table = copy(table), math = copy(math), utf8 = copy(utf8) }
 
--- A merge sort in Lua: a comparator is a Lua function called from Lua, so the hook can yield in it.
+-- Functions whose cost the host cannot charge are retired.
+libs.string.dump, libs.string.pack, libs.string.packsize, libs.string.unpack = nil, nil, nil, nil
+
+-- A merge sort in Lua, so comparisons are instructions: the hook counts and yields in them.
 function libs.table.sort(t, comp)
-	if comp == nil then return native_sort(t) end
-	if type(comp) ~= "function" then
+	if comp == nil then
+		comp = function(x, y) return x < y end
+	elseif type(comp) ~= "function" then
 		error("bad argument #2 to 'sort' (function expected, got " .. type(comp) .. ")", 2)
 	end
 	local n = #t
@@ -166,9 +253,10 @@ function libs.table.sort(t, comp)
 	for i = 1, n do t[i] = a[i] end
 end
 
--- What no script may catch: a bound crossed (the sentinel), the matcher's step budget, memory.
+-- What no script may catch: once the host has condemned the call (a bound crossed), whatever value
+-- the error carries, so a handler that replaces it changes nothing. The values are the fallback.
 local function fatal(e)
-	return e == KILL or (type(e) == "string" and (e == "not enough memory" or find(e, "(step budget)", 1, true) ~= nil))
+	return condemned() or e == KILL or (type(e) == "string" and (e == "not enough memory" or find(e, "(step budget)", 1, true) ~= nil))
 end
 local function after(ok, ...)
 	if not ok and fatal((...)) then error((...), 0) end
@@ -180,17 +268,26 @@ local function xpcall1(f, h, ...)
 	return after(xpcall0(f, function(e) if fatal(e) then return e end return h(e) end, ...))
 end
 
--- A finalizer runs with hooks off, so a __gc that never returns would stall the loop: scripts get none.
+-- A finalizer runs with hooks off and a close handler or a weak table has no bound: scripts get none.
 local function setmetatable1(t, mt)
-	if type(mt) == "table" and rawget(mt, "__gc") ~= nil then
-		error("a script cannot set a __gc metamethod", 2)
+	if type(mt) == "table" then
+		if rawget(mt, "__gc") ~= nil then error("a script cannot set a __gc metamethod", 2) end
+		if rawget(mt, "__close") ~= nil then error("a script cannot set a __close metamethod", 2) end
+		if rawget(mt, "__mode") ~= nil then error("a script cannot set a __mode metamethod", 2) end
 	end
 	return setmetatable(t, mt)
 end
 
+local function print1(...)
+	local n = select("#", ...)
+	local parts = {}
+	for i = 1, n do parts[i] = tostring((select(i, ...))) end
+	return host_print(concat(parts, "\t"))
+end
+
 local base = {
 	_VERSION = _VERSION, assert = assert, error = error, getmetatable = getmetatable, ipairs = ipairs,
-	next = next, pairs = pairs, pcall = pcall1, print = print, rawequal = rawequal, rawget = rawget,
+	next = next, pairs = pairs, pcall = pcall1, print = print1, rawequal = rawequal, rawget = rawget,
 	rawlen = rawlen, rawset = rawset, select = select, setmetatable = setmetatable1, tonumber = tonumber,
 	tostring = tostring, type = type, xpcall = xpcall1,
 }
@@ -341,6 +438,7 @@ MsgPack lua_to_msgpack(lua_State* L, int idx, Walk& walk, int depth) {
 				lua_pop(L, 1);
 			}
 			if (pure_seq && seq > 0 && count == seq) {
+				walk.node(1);   // an array: 2 units in all
 				MsgPack arr = MsgPack::ARRAY();
 				for (std::size_t i = 1; i <= seq; ++i) {
 					lua_rawgeti(L, idx, static_cast<lua_Integer>(i));
@@ -349,6 +447,7 @@ MsgPack lua_to_msgpack(lua_State* L, int idx, Walk& walk, int depth) {
 				}
 				return arr;
 			}
+			walk.node(7);   // a map: 8 units in all
 			MsgPack map = MsgPack::MAP();
 			lua_pushnil(L);
 			while (lua_next(L, idx) != 0) {
@@ -431,6 +530,27 @@ std::shared_ptr<Processor> remember(const std::string& name, std::shared_ptr<Pro
 	return processor;
 }
 
+// Ends the request when the call crossed a bound, whatever its error or result says.
+void throw_if_condemned(const Call& call, const Limits& limits) {
+	if (call.reason == nullptr) {
+		return;
+	}
+	const std::string_view reason = call.reason;
+	if (reason == "instruction") {
+		THROW(ScriptLimitError, "Script exceeded its instruction limit of {}", limits.max_instructions);
+	}
+	if (reason == "work") {
+		THROW(ScriptLimitError, "Script exceeded its work limit of {} (what its string, table and pattern calls touch)", limits.max_work);
+	}
+	if (reason == "memory") {
+		THROW(ScriptLimitError, "Script exceeded its memory limit of {} bytes", limits.max_bytes);
+	}
+	if (reason == "steps") {
+		THROW(ScriptLimitError, "Script exceeded the pattern matcher's step budget (pattern too complex)");
+	}
+	THROW(ScriptLimitError, "Script ran more than {} instructions in a callback that cannot yield", limits.max_unyielded_hooks * limits.hook_period);
+}
+
 }  // namespace
 
 
@@ -468,7 +588,9 @@ Processor::Processor(std::string_view name, std::string_view body, MsgPack param
 			THROW(ClientError, "Script base failed to load: {}", lua_tostring(L, -1));
 		}
 		lua_rawgetp(L, LUA_REGISTRYINDEX, &kill_key);
-		if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
+		lua_pushcfunction(L, host_condemned);
+		lua_pushcfunction(L, host_print);
+		if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
 			THROW(ClientError, "Script base failed to run: {}", lua_tostring(L, -1));
 		}
 		new_env_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -502,6 +624,8 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 	assert(owner == std::this_thread::get_id());  // a Processor is its thread's own
 
 	Call call{&limits};
+	call.count = limits.hook_period;
+	call.prints_left = limits.max_print_bytes;
 	Refs refs(L);
 	lua_State* co;
 	{
@@ -531,6 +655,7 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 		co = lua_newthread(L);
 		refs.thread = luaL_ref(L, LUA_REGISTRYINDEX);
 		*static_cast<Call**>(lua_getextraspace(co)) = &call;
+		call.co = co;
 		lua_sethook(co, hook, LUA_MASKCOUNT, static_cast<int>(limits.hook_period));
 		lua_rawgeti(L, LUA_REGISTRYINDEX, func_ref);
 		lua_pushvalue(L, env);
@@ -541,9 +666,11 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 	for (;;) {
 		assert(owner == std::this_thread::get_id());
 		int nres = 0;
+		Call* const outer = std::exchange(current_call, &call);
 		heap->metered = true;
 		const int status = lua_resume(co, L, nargs, &nres);
 		heap->metered = false;
+		current_call = outer;
 		nargs = 0;
 		if (status == LUA_YIELD) {
 			if (budget != nullptr) {
@@ -555,26 +682,25 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 			break;
 		}
 
-		// An error: a bound the call crossed ends the request; any other leaves the document as it was.
-		std::string message = lua_type(co, -1) == LUA_TSTRING ? lua_tostring(co, -1) : "(error object is not a string)";
-		lua_rawgetp(co, LUA_REGISTRYINDEX, &kill_key);
-		const bool killed = lua_rawequal(co, -1, -2) != 0;
-		lua_pop(co, 2);
-		if (killed) {
-			if (std::string_view(call.reason) == "instruction") {
-				THROW(ScriptLimitError, "Script exceeded its instruction limit of {}", limits.max_instructions);
-			}
-			THROW(ScriptLimitError, "Script ran more than {} instructions in a callback that cannot yield", limits.max_unyielded_hooks * limits.hook_period);
+		// An error: a bound the call crossed ends the request, whatever the error says (a script can
+		// replace the error in flight); any other error is the script's own.
+		std::size_t len = 0;
+		const char* text = lua_type(co, -1) == LUA_TSTRING ? lua_tolstring(co, -1, &len) : nullptr;
+		std::string message = text != nullptr ? std::string(text, std::min(len, limits.max_message_bytes)) : "(error object is not a string)";
+		if (text != nullptr && len > limits.max_message_bytes) {
+			message += " ...[truncated]";
 		}
+		lua_pop(co, 1);
+		throw_if_condemned(call, limits);
 		if (status == LUA_ERRMEM || message == "not enough memory") {
 			THROW(ScriptLimitError, "Script exceeded its memory limit of {} bytes", limits.max_bytes);
 		}
 		if (message.find("(step budget)") != std::string::npos) {
 			THROW(ScriptLimitError, "Script exceeded the pattern matcher's step budget: {}", message);
 		}
-		L_ERR("Script error: {}", message);
-		co_return;
+		THROW(ScriptError, "Script error: {}", message);
 	}
+	throw_if_condemned(call, limits);
 
 	// Apply the script's changes back onto the document.
 	StackGuard guard(L);
@@ -650,5 +776,41 @@ Processor::compile(const Script& script)
 
 
 }; // End namespace lua
+
+
+// The library patch's meter (contrib/lua/xapiand-limits.patch); no call is running, no charge.
+extern "C" {
+
+void lua_xnote(std::size_t units)
+{
+	if (auto* call = lua::current_call) {
+		lua::note(*call, units);
+	}
+}
+
+void lua_xcharge(lua_State* L, std::size_t units)
+{
+	if (auto* call = lua::current_call) {
+		lua::note(*call, units);
+		if (call->reason != nullptr) {
+			lua::raise_kill(L);
+		}
+	}
+}
+
+void lua_xcondemn(lua_State* /*L*/, const char* why)
+{
+	if (auto* call = lua::current_call) {
+		lua::condemn(*call, why);
+	}
+}
+
+int lua_xcloseok(void)
+{
+	auto* call = lua::current_call;
+	return call != nullptr && call->limits->allow_close;
+}
+
+}
 
 #endif

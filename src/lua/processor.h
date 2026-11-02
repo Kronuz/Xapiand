@@ -49,8 +49,13 @@ namespace lua {
 struct Limits {
 	std::size_t hook_period = 10'000;               // VM instructions between two hook calls
 	std::size_t max_instructions = 100'000'000;     // per call
-	std::size_t max_unyielded_hooks = 100;          // hook calls in a row without a yield point
+	std::size_t max_unyielded_hooks = 100;          // hook periods in a row without a yield point
 	std::size_t max_bytes = 64u << 20;              // live bytes of a script's state
+	std::size_t max_work = 500'000'000;             // per call: matcher steps, bytes and elements the library touches (about a nanosecond each)
+	std::size_t slice_work = 200'000;               // work after which the call yields at its next instruction
+	std::size_t max_print_bytes = 4096;             // what `print` may log per call
+	std::size_t max_message_bytes = 1024;           // a script error's message, as logged and as answered
+	bool allow_close = false;                       // tests only: lets a script declare to-be-closed variables
 };
 
 
@@ -81,8 +86,9 @@ public:
 	Processor& operator=(const Processor&) = delete;
 
 	// Runs the script on `doc`. `budget` (the request's slice) is awaited at each yield; null runs
-	// the call to its end. A bound crossed (instructions, memory, matcher steps, a long run of
-	// callbacks) is a ScriptLimitError; any other script error leaves the document as it was.
+	// the call to its end. A bound crossed (instructions, work, memory, matcher steps, a long run of
+	// callbacks) is a ScriptLimitError, and any
+	// other script error a ScriptError; the document is as it was after any of them.
 	task::task<void> operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params, task::budget* budget = nullptr);
 
 	// The calling thread's compiled script for `script`; a foreign script's document is read (awaited) on a miss.

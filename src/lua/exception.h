@@ -44,6 +44,14 @@ public:
 };
 
 
+// A script raised an error of its own: a 400, and the document is as it was.
+class ScriptError : public ClientError {
+public:
+	template<typename... Args>
+	ScriptError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
 class TimeOutError : public Error {
 public:
 	TimeOutError() : Error("Time Out") { }
