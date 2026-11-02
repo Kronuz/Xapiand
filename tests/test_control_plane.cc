@@ -29,6 +29,9 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -38,11 +41,14 @@
 
 #include "asio.hpp"
 #include "control_plane.h"
+#include "database/data.h"
 #include "engine/host_asio.h"
 #include "reactor.h"
 #include "reactor_lag.h"
 #include "shutdown_wait.h"
+#include "server/mime_types.h"
 #include "single_flight.h"
+#include "stopper.h"
 #include "task.hh"
 
 using namespace std::chrono_literals;
@@ -435,6 +441,36 @@ static void test_a_destroyed_leader_does_not_strand_the_waiters() {
 }
 
 
+// ---- inventory J: files read at startup ----
+
+// The stop words and the mime types are read by the preload, before any listener opens, and a lookup after it reads
+// the table it built: the files can go and the answers stay. Every lookup of a language without a list is null.
+static void test_stop_words_and_mime_types_are_read_once_at_startup() {
+	namespace fs = std::filesystem;
+	const auto root = fs::current_path() / "startup_files";
+	fs::remove_all(root);
+	fs::create_directories(root / "stopwords");
+	{
+		std::ofstream(root / "stopwords" / "xx.txt") << "alpha beta\ngamma\n";
+		std::ofstream(root / "mime.types") << "types {\n  text/x-startup startup;\n}\n";
+	}
+	::setenv("XAPIAND_DATA_PATH", root.c_str(), 1);
+
+	preloadStopWords();
+	preload_mime_types();
+	fs::remove_all(root);   // nothing may read the files again
+
+	const auto* stop = getStopWords("xx");
+	REQUIRE(stop != nullptr);
+	CHECK((*stop)("alpha"));
+	CHECK((*stop)("gamma"));
+	CHECK_FALSE((*stop)("delta"));
+	CHECK(getStopWords("yy") == nullptr);   // no list for the language, and nothing to read for it
+	CHECK_EQ(mime_type("file.startup").to_string(), "text/x-startup");
+	CHECK(mime_type("file.unknown").empty());
+}
+
+
 // ---- the shutdown's bound ----
 
 static void test_a_stop_that_returns_in_time_is_not_abandoned() {
@@ -494,6 +530,7 @@ int main(int argc, char** argv) {
 		{"test_a_failed_load_reaches_every_waiter", test_a_failed_load_reaches_every_waiter},
 		{"test_a_cancelled_leader_leaves_the_waiters_to_load", test_a_cancelled_leader_leaves_the_waiters_to_load},
 		{"test_a_destroyed_leader_does_not_strand_the_waiters", test_a_destroyed_leader_does_not_strand_the_waiters},
+		{"test_stop_words_and_mime_types_are_read_once_at_startup", test_stop_words_and_mime_types_are_read_once_at_startup},
 		{"test_a_stop_that_returns_in_time_is_not_abandoned", test_a_stop_that_returns_in_time_is_not_abandoned},
 		{"test_a_stop_that_does_not_return_is_reported_at_the_bound_and_abandoned", test_a_stop_that_does_not_return_is_reported_at_the_bound_and_abandoned},
 	};

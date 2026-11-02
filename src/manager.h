@@ -128,6 +128,12 @@ public:
 	static std::chrono::milliseconds default_shutdown_write_bound();
 	std::chrono::milliseconds shutdown_write_bound = default_shutdown_write_bound();
 
+	// How often the idle housekeeping runs (a minute); read when the node starts serving.
+	std::chrono::milliseconds housekeeping_period = std::chrono::minutes(1);
+
+	// The housekeeping ticks so far.
+	std::uint64_t housekeeping_ticks() const;
+
 private:
 	static std::shared_ptr<XapiandManager> _manager;
 

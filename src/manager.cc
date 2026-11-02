@@ -285,7 +285,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  atom_sig(0)
 {
 	database_pool->set_control(&_rx->host);
-	_rx->housekeeping = std::make_unique<control::Periodic>(_rx->tasks, 60s, [this] { housekeeping_tick(); });
 	_rx->autocommits = std::make_unique<control::Debounce<Endpoint>>(_rx->host,
 		control::Debounce<Endpoint>::Timing{
 			std::chrono::milliseconds(opts.committer_debounce_timeout),
@@ -492,6 +491,13 @@ XapiandManager::housekeeping_tick()
 	if (schemas) {
 		schemas->cleanup();
 	}
+}
+
+
+std::uint64_t
+XapiandManager::housekeeping_ticks() const
+{
+	return _rx->housekeeping ? _rx->housekeeping->ticks() : 0;
 }
 
 
@@ -782,6 +788,8 @@ XapiandManager::run()
 			Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
 		}
 
+		_rx->housekeeping = std::make_unique<control::Periodic>(_rx->tasks, housekeeping_period, [this] { housekeeping_tick(); });
+
 		setup_node();
 
 		L_MANAGER("Entered manager loop...");
@@ -979,7 +987,9 @@ XapiandManager::join()
 
 	// The control loop has stopped (break_loop). The tasks that wait end now: the housekeeping, and the signal
 	// reader, whose read is cancelled.
-	_rx->housekeeping->stop();
+	if (_rx->housekeeping) {
+		_rx->housekeeping->stop();
+	}
 	{
 		asio::error_code ec;
 		_rx->sig_reader.cancel(ec);
@@ -1078,6 +1088,14 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
+	if (abandoned_http_) {
+		// Threads are still inside requests that did not end, and they use the registry, the log writers and the
+		// service: leave without destroying any of them. What was acknowledged is in the log writers' files.
+		L(-LOG_WARNING, WARNING_COL, "Exiting with unfinished writes abandoned (see above).");
+		Logging::finish();
+		Logging::join();
+		_Exit(EX_TEMPFAIL);
+	}
 
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
 
@@ -1096,13 +1114,6 @@ XapiandManager::join()
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
 
-	if (abandoned_http_) {
-		// Reactor threads are still inside requests that did not end: leave without running destructors under them.
-		L(-LOG_WARNING, WARNING_COL, "Exiting with unfinished writes abandoned (see above).");
-		Logging::finish();
-		Logging::join();
-		_Exit(EX_TEMPFAIL);
-	}
 }
 
 

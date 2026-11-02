@@ -40,7 +40,7 @@ concurrent first uses of one schema, or of one index's settings, read it once.
 `join` stops the HTTP service on a thread of its own and waits for it for `XapiandManager::shutdown_write_bound` (35 s: the longer of a turn's deadline, `DB_TIMEOUT` = 30 s, and the reactors'
 grace, 5 s, plus 5 s to write the responses). Reads end at their next checkpoint, and sockets a stalled peer holds are closed after the grace; an admitted write finishes, or answers `503` when
 its turn does not come in 30 s. If the service has not stopped at the bound, the shutdown logs what was unfinished (requests in flight per loop, and each index whose turn or references are
-held), keeps the service alive for the thread that still waits in it, closes the registry for at most another bound, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log. A write
+held), keeps the service alive for the thread that still waits in it, closes the registry for at most another bound, finishes the WAL writers and the fsynchers, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log, without destroying what the abandoned threads use. A write
 that was not acknowledged was never promised to be durable; an acknowledged one is in the log. `shutdown_wait::wait` (`src/shutdown_wait.h`) is the wait.
 
 ## Limits

@@ -234,6 +234,7 @@ public:
 		opts.committer_debounce_max_force_timeout = 400;
 
 		XapiandManager::make();
+		manager()->housekeeping_period = 100ms;
 		thread_ = std::thread([] { XapiandManager::manager()->run(); });
 		ready_ = eventually([] { return XapiandManager::get_state() == XapiandManager::State::READY; }, 30s);
 	}
@@ -350,6 +351,14 @@ static void test_a_cached_schema_is_not_loaded_again() {
 		engine::sync_wait(manager()->schemas->get(&again, nullptr));
 	}
 	CHECK_EQ(manager()->schemas->loads(), loads);
+}
+
+
+// The idle housekeeping is a task of the control loop that ticks on its period (100 ms here, a minute in a node).
+static void test_the_housekeeping_ticks_on_the_control_loop() {
+	Watchdog watchdog("housekeeping");
+	const auto first = manager()->housekeeping_ticks();
+	CHECK(eventually([&] { return manager()->housekeeping_ticks() >= first + 3; }, 5s));
 }
 
 
@@ -576,6 +585,7 @@ int main(int argc, char** argv) {
 		{"test_concurrent_first_uses_of_a_schema_load_it_once", test_concurrent_first_uses_of_a_schema_load_it_once},
 		{"test_concurrent_first_uses_of_index_settings_load_them_once", test_concurrent_first_uses_of_index_settings_load_them_once},
 		{"test_a_cached_schema_is_not_loaded_again", test_a_cached_schema_is_not_loaded_again},
+		{"test_the_housekeeping_ticks_on_the_control_loop", test_the_housekeeping_ticks_on_the_control_loop},
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 	};
