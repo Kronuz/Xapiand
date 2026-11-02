@@ -27,6 +27,7 @@
 
 #if XAPIAND_LUA
 
+#include <chrono>            // for std::chrono::milliseconds
 #include <cstddef>           // for std::size_t
 #include <memory>            // for std::shared_ptr
 #include <string>
@@ -79,6 +80,7 @@ class Processor {
 	MsgPack script_params;
 	Limits limits;
 	std::thread::id owner;
+	std::chrono::steady_clock::time_point checked;   // a foreign script: when its document was last read
 
 public:
 	// Compiles `body` as the script `name`. A syntax error is a ClientError.
@@ -93,10 +95,20 @@ public:
 	// other script error a ScriptError; the document is as it was after any of them.
 	task::task<void> operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params, task::budget* budget = nullptr);
 
-	// The calling thread's compiled script for `script`; a foreign script's document is read (awaited) on a miss.
+	// The calling thread's compiled script for `script`; a foreign script's document is read (awaited) on a miss,
+	// and again once a cached one is older than `foreign_revalidation()`, so a rewritten script takes effect.
 	static task::task<std::shared_ptr<Processor>> compile(const Script& script);
 	// The same for a script with a body of its own: no read, so no wait.
 	static std::shared_ptr<Processor> compile_local(const Script& script);
+
+	// How long a cached foreign script is trusted before its document is read again.
+	static std::chrono::milliseconds foreign_revalidation();
+	static void set_foreign_revalidation(std::chrono::milliseconds age);
+
+	// Test seams: this thread's cached script under a local name, and a foreign reference.
+	static std::shared_ptr<Processor> cached_local(const std::string& name);
+	static std::shared_ptr<Processor> cached_foreign(const std::string& reference);
+	static void remember_foreign(const std::string& reference, std::shared_ptr<Processor> processor);
 
 	size_t get_hash() const {
 		return hash;

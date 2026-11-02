@@ -26,7 +26,9 @@
 #if XAPIAND_LUA
 
 #include <algorithm>                              // for std::min
+#include <atomic>                                 // for std::atomic
 #include <cassert>
+#include <chrono>                                 // for std::chrono::steady_clock
 #include <cstdint>                                // for int64_t
 #include <cstdlib>                                // for realloc, free
 #include <functional>                             // for std::hash
@@ -530,6 +532,18 @@ public:
 		lru::lru(max_size) { }
 };
 
+// A local script is cached under its name, a foreign one under its reference: the first character keeps a
+// client-chosen name from ever being a foreign key.
+std::string local_key(std::string_view name) {
+	return 'L' + std::string(name);
+}
+
+std::string foreign_key(std::string_view reference) {
+	return 'F' + std::string(reference);
+}
+
+std::atomic<std::int64_t> foreign_age_ms{1000};
+
 ScriptLRU& cache() {
 	thread_local ScriptLRU script_lru(opts.scripts_cache_size);
 	return script_lru;
@@ -741,11 +755,47 @@ std::shared_ptr<Processor>
 Processor::compile_local(const Script& script)
 {
 	auto name_body = script.get_name_body();
-	const std::string name(name_body.first);
-	if (auto processor = cached(name, name_body.second)) {
+	const auto key = local_key(name_body.first);
+	if (auto processor = cached(key, name_body.second)) {
 		return processor;
 	}
-	return remember(name, std::make_shared<Processor>(name_body.first, name_body.second, script.get_params()));
+	return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, script.get_params()));
+}
+
+
+std::chrono::milliseconds
+Processor::foreign_revalidation()
+{
+	return std::chrono::milliseconds(foreign_age_ms.load(std::memory_order_relaxed));
+}
+
+
+void
+Processor::set_foreign_revalidation(std::chrono::milliseconds age)
+{
+	foreign_age_ms.store(age.count(), std::memory_order_relaxed);
+}
+
+
+std::shared_ptr<Processor>
+Processor::cached_local(const std::string& name)
+{
+	return cached(local_key(name), {});
+}
+
+
+std::shared_ptr<Processor>
+Processor::cached_foreign(const std::string& reference)
+{
+	return cached(foreign_key(reference), {});
+}
+
+
+void
+Processor::remember_foreign(const std::string& reference, std::shared_ptr<Processor> processor)
+{
+	processor->checked = std::chrono::steady_clock::now();
+	remember(foreign_key(reference), std::move(processor));
 }
 
 
@@ -756,9 +806,10 @@ Processor::compile(const Script& script)
 		co_return compile_local(script);
 	}
 
-	const std::string key(script.get_endpoint());
-	if (auto processor = cached(key, {})) {
-		co_return processor;
+	const auto key = foreign_key(script.get_endpoint());
+	auto hit = cached(key, {});
+	if (hit && std::chrono::steady_clock::now() - hit->checked < foreign_revalidation()) {
+		co_return hit;
 	}
 
 	std::string_view foreign_path_view, foreign_id_view;
@@ -793,10 +844,16 @@ Processor::compile(const Script& script)
 	params.update(script.get_params());
 
 	// The read may have moved this task to another thread: the processor is built where it will run.
-	if (auto processor = cached(key, {})) {
-		co_return processor;
+	// The cached one stands while the document's script and params are what it was built from.
+	if (auto current = cached(key, {})) {
+		if (current->get_hash() == std::hash<std::string_view>()(name_body.second) && current->script_params.to_string() == params.to_string()) {
+			current->checked = std::chrono::steady_clock::now();
+			co_return current;
+		}
 	}
-	co_return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, std::move(params)));
+	auto processor = std::make_shared<Processor>(name_body.first, name_body.second, std::move(params));
+	processor->checked = std::chrono::steady_clock::now();
+	co_return remember(key, std::move(processor));
 }
 
 

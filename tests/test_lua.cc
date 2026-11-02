@@ -804,6 +804,33 @@ void test_a_result_past_its_node_budget_is_refused() {
 }
 
 
+// --- X4-S4: local names and foreign references are different keys ---------------------------------------
+
+void test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference() {
+	// The foreign key is a database path and a document id; a client can name a local script the same.
+	const std::string reference = "scripts/shared";
+	MsgPack local_object({{"_name", reference}, {"_body", "_doc.who = 'attacker'"}});
+	Script local_script(local_object);
+	auto foreign = std::make_shared<Processor>("scripts/shared", "_doc.who = 'victim'", MsgPack::MAP());
+	Processor::remember_foreign(reference, foreign);
+	auto local = Processor::compile_local(local_script);           // saved under the same name afterwards...
+	CHECK(Processor::cached_foreign(reference) == foreign);        // ...the foreign entry stays
+	CHECK(Processor::cached_local(reference) == local);
+	CHECK(local != foreign);
+	// The other order: the local script is cached first.
+	const std::string reference2 = "scripts/other";
+	MsgPack local_object2({{"_name", reference2}, {"_body", "_doc.who = 'attacker'"}});
+	Script local_script2(local_object2);
+	auto local2 = Processor::compile_local(local_script2);
+	CHECK(Processor::cached_foreign(reference2) == nullptr);       // a foreign reference misses
+	auto foreign2 = std::make_shared<Processor>("scripts/other", "_doc.who = 'victim'", MsgPack::MAP());
+	Processor::remember_foreign(reference2, foreign2);
+	CHECK(Processor::cached_local(reference2) == local2);
+	CHECK(Processor::cached_foreign(reference2) == foreign2);
+	CHECK_EQ(call(*Processor::cached_foreign(reference2), MsgPack::MAP()).doc.at("who").str(), "victim");
+}
+
+
 // --- N1: print is bounded -------------------------------------------------------------------------------
 
 void test_print_is_bounded_per_call() {
@@ -909,6 +936,7 @@ TEST_MAIN(
 	test_plain_find_agrees_with_std_string_find,
 	test_a_result_past_its_byte_budget_is_refused,
 	test_a_result_past_its_node_budget_is_refused,
+	test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference,
 	test_print_is_bounded_per_call,
 	test_a_long_script_lets_other_work_run,
 	test_without_a_budget_a_script_runs_to_its_end,
