@@ -558,6 +558,45 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 }
 
 
+// The resolver's lookup of an index's settings, run as a task of the control loop, waits 400 ms for the reserved index,
+// and the loop keeps serving meanwhile.
+static void test_the_control_loop_is_free_during_a_settings_load() {
+	Watchdog watchdog("slow settings load");
+	Pulse pulse;
+	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
+	auto entry = manager()->database_pool->spawn(reserved[0]);
+	Shard shard(*entry.get(), WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("slow_settings_marker")));   // so that a read of the index takes its turn
+	std::atomic<bool> resolved{false};
+	std::atomic<int> sentinels{0};
+	const auto before = manager()->control_lag().snapshot();
+	{
+		HoldTurn hold(*entry.get(), WRITE);
+		manager()->spawn_control([](std::atomic<bool>& resolved) -> task::task<void> {
+			co_await XapiandManager::resolve_index_settings("slow_settings");
+			resolved = true;
+		}(resolved));
+		CHECK(eventually([&] { return manager()->index_settings_resolver->loads() >= 1; }));
+		for (int i = 0; i < 20; ++i) {
+			manager()->spawn_control([](std::atomic<int>& sentinels) -> task::task<void> {
+				++sentinels;
+				co_return;
+			}(sentinels));
+			std::this_thread::sleep_for(20ms);
+		}
+		CHECK_EQ(sentinels.load(), 20);
+		CHECK_FALSE(resolved.load());
+	}
+	const auto during = manager()->control_lag().snapshot();
+	CHECK(eventually([&] { return resolved.load(); }));
+
+	const auto lag = lag_between(before, during);
+	CHECK_GT(lag.wakes, 150u);
+	CHECK_EQ(lag.over_50ms, 0u);
+	CHECK_LE(lag.p99_us, 16384u);
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -588,6 +627,7 @@ int main(int argc, char** argv) {
 		{"test_the_housekeeping_ticks_on_the_control_loop", test_the_housekeeping_ticks_on_the_control_loop},
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
+		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {
