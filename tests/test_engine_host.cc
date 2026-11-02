@@ -422,4 +422,28 @@ void test_a_view_outlives_a_drain_that_timed_out() {
 	::strata::detail::abort_on_owner_break().store(true);
 }
 
-TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter, test_close_waits_for_the_readers, test_a_reopen_waits_for_the_readers, test_a_full_registry_answers_busy, test_a_view_outlives_a_drain_that_timed_out)
+// An index's teardown asks the registry whether a record is claimed without allocating one: the registry grows
+// with the readers an index has, not with its capacity (C3). With a capacity of 4096, walking the records would
+// allocate every chunk of it, for every index closed.
+void test_a_teardown_allocates_no_reader_records() {
+	ThreadChores chores;
+	auto options = host(chores);
+	options.readers_per_index = 4096;
+	auto opened = engine::sync_wait(engine::open_local(scratch("teardown"), true, true, options));
+	auto doc = make("Ka", "a");
+	engine::sync_wait(opened.shard->add(doc, {}));
+	engine::sync_wait(opened.shard->refresh());
+	auto& strata = static_cast<engine::strata::Shard&>(*opened.shard);
+	{
+		auto view = strata.view();  // one reader claims a record, so one chunk exists
+		CHECK_TRUE(static_cast<bool>(view));
+	}
+	auto probe = strata.reader_records_probe();
+	const auto before = probe();
+	CHECK_GT(before, 0u);
+	CHECK_LT(before, 4096u);
+	opened.shard.reset();  // ~Core asks claimed()
+	CHECK_EQ(probe(), before);
+}
+
+TEST_MAIN(test_reclaim_is_a_merge_chore, test_open_is_a_chore, test_owed_flush_runs_as_a_chore_and_the_write_is_retried, test_reads_see_writes_after_refresh, test_without_a_host_the_work_is_inline, test_commit_and_close_are_chores, test_a_chore_error_reaches_the_awaiter, test_close_waits_for_the_readers, test_a_reopen_waits_for_the_readers, test_a_full_registry_answers_busy, test_a_view_outlives_a_drain_that_timed_out, test_a_teardown_allocates_no_reader_records)

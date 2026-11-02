@@ -22,15 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
-- **The Kronuz libraries move to the heads of 2026-11-02** (all 64 pins of `CMakeLists.txt`, from
+- **The Kronuz libraries move to their heads of 2026-11-02**, and `CMakeLists.txt` declares only the 57 that Xapiand
+  includes directly (it declared 64): the libraries pin the rest at their own heads, so stash, uinteger_t, times,
+  lazy, queue, bloom-filter and radix-router are no longer declared here (from
   [`cpp-libraries/docs/UPGRADING-2026-10.md`](https://github.com/Kronuz/cpp-libraries/blob/main/docs/UPGRADING-2026-10.md)):
-  boolean-parser `ac248d1` to `85110af`, datetime `569521c` to `babf3f5`, string-similarity `cbc0a79` to `1e0a211`,
-  htm `11e0c46` to `1e041ef`, msgpack `75d13ce` to `f470c92`, fs `a7a7693` to `aa06315`, storage `e4c5746` to `cfb59f6`,
-  url-parser `4424e25` to `e528e77`, fantasyname `a87942a` to namegen `3eb14ce`, scheduler `2cbea95` to `80acde0`,
-  logger `90094b5` to `765528e`, http-parser `178f873` to `145c905`, and the rest of the family (the pins of
-  strata and prospect are their `deps/pins-2026-11` commits until those land). The results that change are listed
-  below; fusefilter stays at `a42bd15` through strata's pin (its newer build writes other filter bytes; see strata's
-  `docs/status/pins-2026-11.md`).
+  boolean-parser `ac248d1` to `85110af`, datetime `569521c` to `5dd9155`, string-similarity `cbc0a79` to `7878fb2`,
+  htm `11e0c46` to `bb5e01d`, msgpack `75d13ce` to `e0b4696`, fs `a7a7693` to `11067ed`, storage `e4c5746` to `f3a38fc`,
+  url-parser `4424e25` to `def41f8`, fantasyname `a87942a` to namegen `3eb14ce`, scheduler `2cbea95` to `2bb0a8f`,
+  logger `90094b5` to `801105c`, http-parser `178f873` to `c27615d`, and the rest of the family, with strata at
+  `f2d7626` and prospect at `f817398`. The results that change are listed below. strata's fusefilter moves to
+  `0665ee0`, whose build writes other filter bytes, so **the segment version bumped** (`0x8000000C` to `0x8000000D`, and
+  strata reads only the current version): an index written by an older pre-release build is not read, and must be
+  indexed again.
 - **Boolean query strings (`q=`, `query=`) group by precedence, and malformed ones answer `400`.** An implicit `OR`
   obeys precedence: `a AND b c` is `(a AND b) OR c` (it was `a OR (b AND c)`), and `NOT a b` is `(NOT a) OR b`. An
   implicit `OR` before `NOT` or `(` parses (`a NOT b` answered `400`). Text that was accepted by dropping an operand

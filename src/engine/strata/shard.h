@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <functional>              // for std::function
 #include <memory>                  // for std::shared_ptr, std::unique_ptr
 #include <string>                  // for std::string
 #include <vector>                  // for std::vector
@@ -119,6 +120,10 @@ public:
 
 	// The views refused so far because the index's readers were at their cap (an overload: busy).
 	std::uint64_t views_refused() const noexcept;
+
+	// How many hazard records the index's registry has allocated so far. The probe keeps the registry alive, so it
+	// can be called after the shard is gone (a teardown must not allocate records).
+	std::function<std::size_t()> reader_records_probe() const;
 
 	// The views' handles this index has published and keeps until it ends (one per open): a reader that loaded the
 	// pointer of a replaced index finds it valid.
