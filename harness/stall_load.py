@@ -1015,7 +1015,7 @@ async def amain(args: argparse.Namespace) -> int:
     if args.lua_loop:
         extra["lua_loop"] = {
             "requested": args.lua_loop,
-            "status": "not run: Lua bounds land with step X4",
+            "status": "not run here: harness/lua_bounds.py --loops N runs the bounds and the slice check (T10)",
         }
     if args.index_size:
         extra["index_size"] = {
@@ -1156,7 +1156,7 @@ def main() -> int:
         help="use this light rate instead of finding it",
     )
     ap.add_argument("--overload", nargs=2, metavar=("light|heavy", "N"))
-    ap.add_argument("--lua-loop", type=int, default=0, help="looping scripts (filled by step X4)")
+    ap.add_argument("--lua-loop", type=int, default=0, help="looping scripts (run by harness/lua_bounds.py)")
     ap.add_argument("--index-size", default="", help="e.g. 2xram (gated at Phase 6)")
     ap.add_argument(
         "--census",

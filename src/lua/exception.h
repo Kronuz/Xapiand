@@ -26,11 +26,37 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 
+#include "xapiand_exception.h"  // for ClientError
+
 
 namespace lua {
 
 class Error : public std::runtime_error {
 	using std::runtime_error::runtime_error;
+};
+
+
+// A script crossed one of its bounds (instructions, memory, matcher steps, callbacks): a 400.
+class ScriptLimitError : public ClientError {
+public:
+	template<typename... Args>
+	ScriptLimitError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
+// A script raised an error of its own: a 400, and the document is as it was.
+class ScriptError : public ClientError {
+public:
+	template<typename... Args>
+	ScriptError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
+// A script's result is past the bytes or values the host converts (the body cap): a 413.
+class ScriptResultTooLarge : public PayloadTooLarge {
+public:
+	template<typename... Args>
+	ScriptResultTooLarge(Args&&... args) : PayloadTooLarge(std::forward<Args>(args)...) { }
 };
 
 

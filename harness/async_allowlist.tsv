@@ -30,9 +30,6 @@ src/engine/sync.cc	mutex	.	allow	1	check_may_block's own diagnostics lock, taken
 src/engine/sync.h	sync_wait	.	allow	1	the bridge itself; every call is guarded by check_may_block (D14)
 src/index_resolver_lru.cc	mutex	.	allow	3	the settings map: O(log n) lookups and inserts under the lock, released before a settings read and taken again after it (D11)
 src/length.cc	file	.	allow	6	fd serialisers used only by --dump and --restore on the CLI main thread
-src/lua/processor.cc	mutex	lk\.lock	owed	1	D10: a call gets its own environment; the state lock goes
-src/lua/processor.cc	mutex	mtx	owed	2	D10: a call gets its own environment; the state lock goes
-src/lua/processor.cc	sync_wait	read_foreign_script	owed	1	D10: a script compiles on Lua's C stack, which cannot suspend; X4's yields make the foreign read an awaited call
 src/lua/processor.cc	mutex	script_params\.lock	allow	1	weak_ptr promotion, not a mutex
 src/main.cc	file	.	allow	25	process startup, signal handlers and the CLI --dump and --restore, before or beside the loops and never on a reactor
 src/main.cc	sync_wait	.	allow	3	the CLI --dump, --restore and resolve wait on the main thread (check_may_block guards it)
