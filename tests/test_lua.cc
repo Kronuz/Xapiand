@@ -456,7 +456,7 @@ void test_ordinary_patterns_stay_inside_the_budget() {
 }
 
 void test_an_allocation_past_the_cap_ends() {
-	auto rep = call("local a = string.rep('x', 5 * 1024 * 1024) local b = a .. a", MsgPack::MAP(), quick());   // 10 MiB live against 8 MiB
+	auto rep = call("local a = string.rep('x', 3 * 1024 * 1024) local b = a .. a .. a", MsgPack::MAP(), quick());   // 9 MiB live against 8 MiB
 	CHECK(rep.limit);
 	CHECK(rep.what.find("memory limit") != std::string::npos);
 	CHECK(call("local s = string.rep('x', 1024 * 1024 * 1024)", MsgPack::MAP(), quick()).limit);   // refused whole: past the per-call cap
@@ -654,14 +654,17 @@ void test_one_call_cannot_hold_the_loop_past_the_call_cap() {
 	CHECK_EQ(defaults.max_call_work, 16'000'000u);
 	auto has = [](const Outcome& out, const char* what) { return out.limit && out.what.find(what) != std::string::npos; };
 	// Linear library calls on strings the memory cap allows: refused before they run.
-	auto upper = call("local s = string.rep('a', 8 * 1024 * 1024) local r = s:upper()", MsgPack::MAP());
+	auto upper = call("local s = string.rep('abcdefgh', 1024 * 1024) local r = s:upper()", MsgPack::MAP());
 	CHECK(has(upper, "per-call work limit"));
-	auto reverse = call("local s = string.rep('a', 8 * 1024 * 1024) local r = s:reverse()", MsgPack::MAP());
+	auto reverse = call("local s = string.rep('abcdefgh', 1024 * 1024) local r = s:reverse()", MsgPack::MAP());
 	CHECK(has(reverse, "per-call work limit"));
-	auto utf = call("local s = string.rep('a', 20 * 1024 * 1024) local n = utf8.len(s)", MsgPack::MAP());
+	auto utf = call("local s = string.rep('abcdefgh', 2560 * 1024) local n = utf8.len(s)", MsgPack::MAP());
 	CHECK(has(utf, "per-call work limit"));
+	// A one-byte repeat costs about 3 ns a copy: rep('x', 31 MiB) is refused before it runs (it held a reactor 0.12 s).
+	auto rep = call("local s = string.rep('x', 31 * 1024 * 1024)", MsgPack::MAP());
+	CHECK(has(rep, "per-call work limit"));
 	// Many small charges inside one call add up the same way: a gsub that would complete over 8 MiB is cut.
-	auto gsub = call("local s = string.rep('a', 8 * 1024 * 1024) local r = s:gsub('a', 'b')", MsgPack::MAP());
+	auto gsub = call("local s = string.rep('abcdefgh', 1024 * 1024) local r = s:gsub('a', 'b')", MsgPack::MAP());
 	CHECK(has(gsub, "step budget") || has(gsub, "per-call work limit"));
 	auto plain = call("local h = string.rep('a', 1 << 20) local n = string.rep('a', 1 << 19) .. 'b' local r = h:find(n, 1, true)", MsgPack::MAP());
 	CHECK(has(plain, "per-call work limit"));
@@ -885,6 +888,11 @@ void test_print_is_bounded_per_call() {
 	const auto logged = Processor::printed_bytes() - before;
 	CHECK(logged > 0);
 	CHECK(logged <= Limits{}.max_print_bytes);              // 20,000 prints of 4 MiB asked; the budget is per call
+	const auto small_before = Processor::printed_bytes();      // small prints never hit the line cut: only the call's budget ends them
+	CHECK(call("for i = 1, 100000 do print('line', i) end", MsgPack::MAP()).ok());
+	const auto small = Processor::printed_bytes() - small_before;
+	CHECK(small > 0);
+	CHECK(small <= Limits{}.max_print_bytes);
 	const auto line_before = Processor::printed_bytes();
 	CHECK(call("print(string.rep('q', 1 << 22))", MsgPack::MAP()).ok());
 	CHECK_EQ(Processor::printed_bytes() - line_before, 1024u);   // a line is cut at 1 KiB

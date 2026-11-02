@@ -98,7 +98,7 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
      luaL_Buffer b;
 -    char *p = luaL_buffinitsize(L, &b, totallen);
 +    char *p;
-+    lua_xcharge(L, (totallen >> 3) + (l + lsep == 0 ? (size_t)n : 0));  /* Xapiand: charge the copy, and the empty copies */
++    lua_xcharge(L, (size_t)n * 3 + (totallen >> 3));  /* Xapiand: charge each repetition and the copy */
 +    p = luaL_buffinitsize(L, &b, totallen);
      while (n-- > 1) {  /* first n-1 copies (followed by separator) */
        memcpy(p, s, l * sizeof(char)); p += l;
