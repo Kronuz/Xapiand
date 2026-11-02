@@ -456,10 +456,11 @@ XapiandManager::run_loop()
 	arm_signal_reader();
 	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
 	auto guard = asio::make_work_guard(_rx->reactor.io());
-	_rx->host.bind_loop_thread();   // the tasks resumed on this thread run on the control host
-	if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
-	_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
-	engine::Host::bind_thread(nullptr);   // this thread runs no host's tasks after the loop stops
+	{
+		engine::HostBinding binding(&_rx->host);   // the tasks resumed on this thread run on the control host
+		if (lag_probe_enabled()) { _rx->reactor.lag().start(); }
+		_rx->reactor.run();  // marks this thread reactor::inside_run() for the blocking guard
+	}
 	_running_loop.store(false, std::memory_order_release);
 }
 
@@ -908,10 +909,11 @@ XapiandManager::join()
 	// posted run here, on this thread, until they end.
 	database_pool->set_control(nullptr);
 	{
+		engine::HostBinding binding(&_rx->host);   // the tasks the drain resumes find their host, as they did on the loop
 		auto& io = _rx->reactor.io();
-		io.restart();
 		const auto limit = std::chrono::steady_clock::now() + 60s;
 		while (database_pool->detached() != 0 && std::chrono::steady_clock::now() < limit) {
+			io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
 			io.run_for(10ms);
 		}
 		if (database_pool->detached() != 0) {

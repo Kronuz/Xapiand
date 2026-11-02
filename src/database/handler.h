@@ -151,6 +151,7 @@ public:
 		ssize_t volume = -1;
 		size_t offset = 0;
 		size_t size = 0;
+		size_t shard = 0;   // the shard whose storage holds it
 	};
 
 	// Streams a blob of `size` bytes from `body` into the data storage of the shard that document `document_id` goes

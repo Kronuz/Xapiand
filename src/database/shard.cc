@@ -1222,9 +1222,6 @@ StoredUpload::abort() noexcept
 task::task<std::unique_ptr<StoredUpload>>
 ShardEndpoint::upload_begin(engine::Chores& chores_, std::string ct_type, std::uint64_t size)
 {
-	if (!writable_storage) {
-		THROW(ClientError, "The index has no data storage to upload a blob to");
-	}
 	// The record is the content type, then the blob, as a `stored` record is: the framing is written first and
 	// the blob's bytes follow.
 	static_assert(STORED_UPLOAD_LIMIT + 1024 == DataStorage::stream_max_size, "the upload limit leaves 1 KiB for the framing");
@@ -1238,6 +1235,9 @@ ShardEndpoint::upload_begin(engine::Chores& chores_, std::string ct_type, std::u
 	std::exception_ptr error;
 	try {
 		co_await chores_.run(engine::ChoreClass::flush, [&] {
+			if (!writable_storage) {
+				THROW(ClientError, "The index has no data storage to upload a blob to");
+			}
 			impl->storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_SYNC_MODE);
 			impl->storage->open(impl->name());
 			impl->writer.emplace(*impl->storage, record);

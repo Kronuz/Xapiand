@@ -3071,7 +3071,12 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 
 	// A client that goes away, or a shutdown, stops the request's reads at their next checkpoint;
 	// a write that was admitted completes and its response is attempted.
-	hreq.on_cancel([source = request.cancel](http::CancelReason) mutable { source.request(); });
+	hreq.on_cancel([source = request.cancel, stream = hreq.body_stream](http::CancelReason) mutable {
+		source.request();
+		if (stream) {
+			stream->fail(asio::error::operation_aborted);   // a read that waits for the body ends too
+		}
+	});
 	request.budget.emplace(REQUEST_SLICE, request.cancel.token());
 
 	// HTTP facts from the library request (keep-alive/close, version).

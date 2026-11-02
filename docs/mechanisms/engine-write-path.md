@@ -12,7 +12,7 @@ and the write-ahead log serialises it (`Document::serialise`, `src/database/wal.
 ## How
 
 ```
-DocPreparer thread (parallel)      DocIndexer thread, one per shard       WAL thread
+DocIndexer::index (a task)         the shard's turn (a task)              WAL thread
 Schema::index -> Document          lock_shard -> Shard::replace_document  doc.serialise()
   (built in Xapian form)             finalise (id, version), stamp          (same object)
                                      db.replace_document(native(doc))

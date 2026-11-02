@@ -30,10 +30,12 @@ leaves a loop is a chore (a device read or write, a commit, a parse) on the host
 2. **Two admissions.** http's `AdmissionGate` counts requests from headers complete to response settled (1,000 per reactor, the
    old offload queue limit). `SearchService::create_extension` refuses a request when its loop has 256 demoted handles (an
    estimate): both answer 503 with `Retry-After: 1` before any body byte is read.
-3. **Cancel reads, not writes.** http calls `Request::cancel` on a client's EOF or at shutdown; `handle` turns it into the
-   request's `task::cancel_source`. A search stops at its next checkpoint (`task::cancelled`, answered 503 to a client still
-   there). A write that was admitted completes. RESTORE passes the budget to its indexer, so a shutdown ends it at the next object
-   and the closing commit keeps what was indexed.
+3. **Cancel reads, not writes.** http calls `Request::cancel` on a client's EOF, and `abort_all` calls it at shutdown; `handle`
+   turns it into the request's `task::cancel_source` and fails the request's `BodyStream`, so a read that waits for the body ends
+   too. A search stops at its next checkpoint (`task::cancelled`, answered 503 to a client still there). A write that was admitted
+   completes. RESTORE passes the budget to its indexer, so a cancel ends it at the next object and the closing commit keeps what was
+   indexed. A node's shutdown reaches `abort_all` only after the in-flight requests drain or the forced stop fires
+   (`XapiandManager::join`, D16's order is X6's), so until then a SIGTERM waits for them.
 4. **Sliced work.** `Request::budget` is a 200 us slice that restarts on every resume. A search takes it through
    `DatabaseHandler::budget` and `SearchRequest::budget`; the bulk indexer takes a checkpoint after each object.
 
@@ -65,7 +67,10 @@ view holds no turn. `?clients` shuts the node down as before.
 
 - A streamed upload creates a volume per blob; a crash between the upload and the document's apply leaves a volume nothing names
   (storage's `reclaim_volumes` collects it; nothing calls it yet). A document whose apply fails (a version conflict) leaves its blob the same way.
-- A blob reads back whole into memory (`storage_get_stored`); streaming a large blob out in chunks (D9, reads) is not built.
+- A blob reads back whole into memory (`storage_get_stored`), about three times its size at the peak (the record, the blob cut from it,
+  the response), so a 4 GiB blob costs about 12 GiB to read; streaming a large blob out in chunks (D9, reads) is not built.
+- The shard an upload goes to is chosen from the id, and the document's shard is chosen again when it is indexed; `index_uploaded`
+  fails (`internal`, after the write) if they differ, which no case tried has produced.
 - `prepare_document` runs on the reactor, sliced by one checkpoint per object: a single object that takes long to prepare is not
   interrupted. A restore into one index uses one reactor's CPU for preparing and indexing; the parse is the part that leaves it.
 - A Lua script's foreign read still waits on its reactor (`engine::BlockingAllowed`, X4).

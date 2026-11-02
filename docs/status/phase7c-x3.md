@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-30) the X3 developer's ledger (phase 7c step X3: views on the reactors as coroutine handlers); built and proved, awaiting its code review, not pushed.
+> Status: CURRENT (2026-10-30) the X3 developer's ledger (phase 7c step X3: views on the reactors as coroutine handlers); built, proved and reviewed (approve with conditions, `docs/reviews/phase7c-x3-code.md`); the review's fixes are in; not pushed.
 
 # phase7c X3 (build): views on the reactors
 
@@ -7,7 +7,7 @@ the architect's ruling and the X3 items: `docs/reviews/phase7c-x2b-code.md` (X3-
 
 ## State
 
-Steps 1 to 4 done and committed (the proof is below); the code review is running. Remaining: see "Remaining".
+Steps 1 to 4 done and committed (the proof is below); the review ruled approve with conditions and its fixes are folded in ("Review fixes"). Remaining: see "Remaining".
 
 ## Done criteria
 
@@ -41,7 +41,7 @@ Steps 1 to 4 done and committed (the proof is below); the code review is running
     own turn. Past 4 GiB (framing included) is a 413 (`PayloadTooLarge`); a streamed body for any other view is a 413; no id is a 400. Not built: streaming a large blob
     out (D9's read side) and collecting orphan volumes (`reclaim_volumes`).
   - **FLUSH** awaits `DatabasePool::flush()` (one close task per index, `when_all`); `restore_database_view` blocks no worker.
-- [x] **4. Proof** (below). Not yet done: the code review (launched; its ruling goes to `docs/reviews/phase7c-x3-code.md`), M31, and the lead's measurements.
+- [x] **4. Proof** (below). Review fixes below. Not done: M31, and the lead's measurements.
 
 ## Proof (at `Xapiand:a89f6b0d4`)
 
@@ -94,6 +94,23 @@ Steps 1 to 4 done and committed (the proof is below); the code review is running
 - `Xapiand:21012b19f` the admission gate lives with the registry (ASan); the kept views handles are tested.
 - `Xapiand:a89f6b0d4` `Handle::seen` is atomic (TSan).
 
+## Review fixes (`docs/reviews/phase7c-x3-code.md`)
+
+- **X3-B1** (the CLI `--restore` never exits). Cause, found by tracing the two stuck autocommit tasks to their engine-commit chores: `join()` drains the control loop's
+  detached tasks with `io.restart(); while (...) io.run_for(10ms)`. An `io_context` that runs out of work is *stopped*, and a chore that finishes after that posts its
+  resume to a stopped context, which nothing runs; X2's drain had the flaw, the restore's late autocommits (`.xapiand/indexes`) exposed it. The loop restarts the context every
+  iteration. The drain and `run_loop` also bind the thread to the control host with `engine::HostBinding` (the review's hypothesis; a scope that puts back the previous
+  binding, which is also **X3-N3**), so resumed tasks find their host. Test: `harness/cli_roundtrip_check.sh` (`--dump` then `--restore --shards 2` of 3,000 documents,
+  both exit 0 within a bound under `timeout -s KILL`, same sha256); on ASan without the per-iteration restart (mutant **M32**) the restore never exits (137 at the bound), with it
+  both exit 0. Not reproduced on the Release build either way (timing).
+- **X3-N1** the mechanism note says a shutdown reaches `abort_all` only after the in-flight requests drain (D16's order is X6's). **X3-N2** the cancel callback also fails the request's
+  `BodyStream`, so a read waiting for a stalled body ends (and an upload aborts and removes its volume). **X3-N3** `HostBinding`. **X3-N4** Debug+ASan and Debug+TSan builds
+  (`build-dasan`, `build-dtsan`) of `test_reactor_requests` (341 checks), `test_pool` (180), `test_engine_host` (95), `test_blocking_guard` (13): all clean, so the wait rule runs
+  under both sanitizers. **X3-N5** the comment in `Viewed::release` says what the gap gives (the registry's own 503). **X3-N6** `index_uploaded` fails if the document's shard differs
+  from the blob's, and the `writable_storage` test is inside the chore; the read-side memory (about 3x the blob) is in the note's Limits and stays on D9's read item. Tests for
+  `upload_stored` and for a failing `when_all` child remain harness-only/read (listed below). **X3-N7** the two stale `DocPreparer` mentions.
+- Final sweep at the fix commit: ctest 27 of 27 and docs E2E 641 of 641 on Release, Debug and ASan+UBSan; `stored_stream.sh`, `restore_stream_check.sh`, `cli_roundtrip_check.sh` on ASan.
+
 ## Remaining (not done here)
 
 1. **X3-1**: strata's chunked registry (revision 4); then `readers_per_index` (16 searches per reactor plus the pool terms, an estimate) goes, and a chunk is allocated on the first reader.
@@ -102,7 +119,8 @@ Steps 1 to 4 done and committed (the proof is below); the code review is running
 3. **X4**: Lua's yields and its foreign read (`engine::BlockingAllowed` is the one place a reactor still waits; `async_check.sh` lists it).
 4. D9's read side (a blob past the cap streamed out in chunks; today `storage_get_stored` reads it whole) and `reclaim_volumes` for orphan upload volumes.
 5. The control plane's one-worker pool (`Reactors::pool`) and `--http-servers` / `MAX_HTTP_SERVERS` stay until X5 and X6 (D13, D15).
-6. T12 and T4: RESTORE preparing and applying run on the request's reactor (the parse is what leaves it); the lead measures.
+6. Unit tests for `upload_stored` and for a failing `when_all(index, next_batch)` child (the harness and a read cover them); M31 (the cancel hookup).
+7. T12 and T4: RESTORE preparing and applying run on the request's reactor (the parse is what leaves it); the lead measures.
 
 ## Next
 

@@ -548,6 +548,7 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 	blob.volume = upload->volume();
 	blob.offset = upload->offset();
 	blob.size = size;
+	blob.shard = shard_num;
 	co_return blob;
 }
 
@@ -576,7 +577,12 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 				}
 			}
 			data.update(ct_type, blob.volume, blob.offset, blob.size);
-			co_return co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
+			auto indexed = co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
+			if (const auto n_shards = endpoints.size(); n_shards > 1 && (indexed.first.did - 1) % n_shards != blob.shard) {
+				// The blob lies in another shard's storage than the document: the write is applied, so say so.
+				THROW(Error, "The document landed in shard {} but its blob is in shard {}", (indexed.first.did - 1) % n_shards, blob.shard);
+			}
+			co_return indexed;
 		} catch (const engine::Error& error) {
 			if (error.kind != engine::errc::version_conflict || --t == 0 || document_ver != UNKNOWN_REVISION) { throw; }
 		}

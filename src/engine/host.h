@@ -125,6 +125,20 @@ private:
 	static inline thread_local Host* current_ = nullptr;
 };
 
+// Makes the calling thread `host`'s for a scope, and puts back what it was: a thread that drives a host's loop for
+// a while (the control loop, or the drain of its last tasks at exit) binds it so that the tasks it resumes find it.
+class HostBinding {
+public:
+	explicit HostBinding(Host* host) noexcept : previous_(Host::current()) { Host::bind_thread(host); }
+	~HostBinding() { Host::bind_thread(previous_); }
+	HostBinding(const HostBinding&) = delete;
+	HostBinding& operator=(const HostBinding&) = delete;
+
+private:
+	Host* previous_;
+};
+
+
 // Marks the code that runs a resume as running on `host`.
 class HostScope {
 public:

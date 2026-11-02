@@ -88,7 +88,8 @@ public:
 	// Lets go of the generation now.
 	void release() noexcept {
 		// The admission goes back first: the record's registry (which holds the gate) is kept while the record is
-		// claimed, so the gate is alive for as long as the record is.
+		// claimed, so the gate is alive for as long as the record is. A reader admitted in the gap finds the record
+		// still claimed, and at exactly the cap gets the registry's own refusal, which is the same 503.
 		lease_.reset();
 		guard_.release();
 #ifndef NDEBUG
