@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **A Lua script runs in slices, in its own environment, with bounds.** A script yields its event loop every 10,000 instructions
+  instead of holding it, so a long script no longer delays the requests behind it. Each call has its own `_doc`, globals and
+  copies of `string`, `table`, `math` and `utf8`: calls of one script no longer share globals. A call that passes 100,000,000
+  instructions, 64 MiB of live data, a pattern-matching step budget (a patch to Lua's matcher) or 10^6 instructions in a callback that cannot
+  yield answers `400`. `table.sort` is written in Lua (a stable merge sort) so comparators yield. `load`, `dofile`, `loadfile` and
+  `collectgarbage` are no longer available to scripts. A script saved under a name now replaces the cached script of the same name.
 - **Requests run on the HTTP loops, and a long search shares its loop.** A request is a task on the loop that accepted it: it
   suspends for a turn, a read or a chunk of its body instead of holding a thread, and a search yields at window
   boundaries (a 200 us slice), so one heavy query no longer delays the light ones behind it. A loop with 256 requests

@@ -126,6 +126,29 @@ e2e:end -->
 
 The body is compiled once; only the parameter changes between requests.
 
+### Isolation and Limits
+
+Every call runs in its own environment: `_doc`, `_old_doc`, `_method`, the
+parameters and every global the script sets live for that call only, and writes
+into `string`, `table`, `math` and `utf8` stay in the call. Two requests running
+the same script at once never see each other's data. Only the base libraries,
+`string`, `table`, `math` and `utf8` are available (no `io`, `os`, `load`,
+`dofile` or `collectgarbage`).
+
+A script shares its event loop with other requests: it runs in slices and yields
+between them. A call that crosses a bound ends with `400 Bad Request` and the
+document is not indexed:
+
+| Bound                | Value                                                                    |
+|----------------------|--------------------------------------------------------------------------|
+| Instructions         | 100,000,000 per call                                                     |
+| Memory               | 64 MiB of live data per compiled script on each thread                   |
+| Pattern matching     | `max(100,000, 8 x subject length)` steps per `string` call               |
+| Callbacks            | 1,000,000 instructions in a row inside a callback that cannot yield (a `gsub` function, an `__lt` run by `table.sort`) |
+
+A script cannot catch these errors with `pcall`. Any other error in a script is
+logged and leaves the document as it was.
+
 ## Real-World Examples
 
 ### Normalize on write
