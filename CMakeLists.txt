@@ -880,7 +880,7 @@ endif()
 # needs is re-attached Xapiand-side in src/metrics/soundex_metric.h
 # (SerialisableSoundex), so it stays out of the library. Depends on strings
 # (already on the path); header-only, so it just goes on the include path.
-FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG 51f25f96856f876630a530734ee3980394994ddc)
+FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG 3fd0402a6d169f1b9944e3037d5e1d691dc5e85e)
 FetchContent_MakeAvailable(soundex)
 include_directories("${soundex_SOURCE_DIR}")
 
@@ -896,7 +896,7 @@ include_directories("${soundex_SOURCE_DIR}")
 # alongside the soundex family for PhoneticMetric. Its one out-of-line file
 # (double_metaphone.cc) compiles as part of Xapiand below (the cartesian/htm way),
 # and its header goes on the include path.
-FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG 7878fb24a97841df2622259a182796d71c44bb5c)
+FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG 594e6d69ec46dadcf989ac8989dd1f18c4ffc40f)
 FetchContent_Declare(double_metaphone  GIT_REPOSITORY https://github.com/Kronuz/double-metaphone.git  GIT_TAG b3191c4db0d7446dd2711f4aaaea7dbcc737ca3c)
 foreach(dep string_similarity double_metaphone)
 	FetchContent_MakeAvailable(${dep})

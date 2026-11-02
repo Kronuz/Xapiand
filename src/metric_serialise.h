@@ -100,10 +100,6 @@ struct SerialisableJaroWinkler : Jaro_Winkler {
 template <typename Encoder, typename Metric>
 struct SerialisablePhoneticMetric : PhoneticMetric<Encoder, Metric> {
 	using PhoneticMetric<Encoder, Metric>::PhoneticMetric;
-	// The French, German and Spanish encoders take a std::string; the comparand arrives as a view.
-	double distance(std::string_view str2) const {
-		return PhoneticMetric<Encoder, Metric>::distance(std::string(str2));
-	}
 	std::string serialise() const {
 		std::string s;
 		s += serialise_bool(this->_icase);
