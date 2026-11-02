@@ -257,3 +257,132 @@ Second session: `s_lib.py` (shared helpers; nodes are SIGKILLed at exit), `p3_ma
 `p13_matcher_quad.py`, `p14_close_swallow.py`, `p14b_genfor.py`, `p15_gc_compile.py`, `p16_slice.py`, `p17_direct_doc.py`, `p18_vararg.py`,
 `p19_gc_stall.py`, drivers `run_all_a.sh`, `run_all_b.sh`, `run_all_c.sh`, outputs in `out/` (`p3.txt` ... `p19b.txt`).
 Run each as `quiet light NAME MINUTES WHAT -- python3 pN_*.py PORT` (ports 18981 and up).
+
+
+## Re-check 1
+
+Scope: X4-S1 to S4, N1 and N3, the developer's two residuals, and what the limits patch changed for normal scripts. Not a new review. Branch head
+`Xapiand:2752325bb` (`a62c1277a`, `9729de23e`, `4700151bf`, `ee597976d`, `2752325bb`), tree clean. Fresh Release build in
+`.scratch/review-x4-recheck/build-rel` (`cfg.sh`; dependency sources reused from the developer's `deps-rel`, Lua fetched fresh so the patch
+applied at configure). `ctest -R lua`: `test_lua` and `test_lua_patch_drift` 2 of 2. Did not open `src/sortable_serialise.{cc,h}`. Every server was
+started by a probe and SIGKILLed at exit; none left running; ports 19300 to 19900 only. Host load average 5 to 8 on 16 CPUs throughout, so times
+are noisy by tens of percent; the scaling and the orders of magnitude are what matter. Checks are described by category and result.
+
+### Rulings
+
+| Item | Ruling | Why |
+|---|---|---|
+| X4-S1 closing variable outlives the cap | **CLOSED** | `p14`: the call ends (400 at the instruction cap), SIGINT exits within 20 s, 1 to 39 in flight leave 20 of 20 fresh GETs answered (max 4 ms), a plain write answers 204, `p14b` (14 generic-for swallowers) 20 of 20 at 954% CPU, `p2`, `p2b`, `p2c` end in 400. The language now refuses `<close>`, a generic-for closing value and a `__close` in `setmetatable`; the flag and the per-instruction raise are depth. See residual (b). |
+| X4-S2 work the hook cannot see | **PARTIAL** | The unbounded classes are closed: quadratic plain find 400 in 0.3 s (was 1.8 h extrapolated), matcher literal-run and class shapes 400 (`p13`, 512K/256K 190 ms), vararg chain ends (`p18` GET max 22 ms), weak-table GC stall gone (`p19` max 6 ms over 108 GETs; the table is never weak), and the loop multiplier is gone (`p7` GET max 1.3 to 14 ms for plain find, `utf8.len`, sort, front insert, 31 MiB `rep`). What remains is the per-call stall of a call the hook cannot interrupt: up to the work cap, 0.55 to 0.85 s, for a matcher call, attacker-chosen. New finding X4-R1 below. |
+| X4-S3 converted result | **CLOSED** (memory); time is X4-R2 | `p5`: every shape that cost 2.4 to 6 GB now answers 413 (or 400 at the memory cap) in 0.1 to 0.5 s with peak RSS 15 to 275 MB (was over 6,000 MB). References are counted per reference. 413 is the status the tests assert. |
+| X4-S4 cache key collision | **CLOSED** | `p10`, both directions, one reactor and default node: the victim keeps `legit` before and after the attacker's same-named local script and when the attacker seeds first; a rewritten foreign script is seen (`rewritten`) after the 1 s trust (the default node's first request inside that second still ran the old one, as stated). Keys are `L`+name and `F`+reference. |
+| X4-N1 print and error volume | **CLOSED** | Default verbosity: log +0.00 MiB for every `p9` case. The default hides `L_INFO`, so also run at `--verbosity 6` (`rp_print.py`): 1,000,000 one-byte prints cost 145 KiB (the 4 KiB budget counts payload, not the line overhead of about 35 bytes, so the worst case is about 145 KiB per request), 20 x 8 MiB prints 1.8 KiB, a 31 MiB error message 1.7 KiB (cut at 1 KiB), 200 requests with 1 KiB messages 328 KiB. Was 160 MiB and 32 MiB lines. The unit test does not bite (R3). |
+| X4-N3 script errors answered 2xx | **CLOSED** | Script errors answer 400 with the message (cut at 1 KiB): `p8`, `p9`, `p14`. A normal script that raised before now fails its write; documented in the changelog and `scripting.md`. |
+
+N6 (drift test reach) is also closed: the test now compares every file of the built tree and the file list. On a scratch copy of the built tree:
+unmodified exit 0; a comment appended to the unpatched `ltable.c` exit 1; an extra file in `src/` exit 1; a changed `LUAI_MAXSTACK` in `luaconf.h` exit 1.
+`harness/lua_bounds.py` on the fresh binary: PASS (30 cases at their statuses, 10 swallowers answer 400 with 20 of 20 fresh GETs, graceful stop, foreign
+script in both orders and the rewrite, light GET p50/p99/max 0.49/0.73/1.28 ms alone, 0.48/0.72/1.37 ms beside 4 long scripts, 0.52/1.88/2.34 ms beside 4
+library-call loops).
+
+### Fix reverted, test fails? (mutants on the built objects; scratch copies only, the tree is untouched: `mut.py`, `mut/`, `out/mut*.txt`)
+
+| Mutant | Result |
+|---|---|
+| S1: close ban dropped (`lua_xcloseok` true, `setmetatable` accepts `__close`); same plus flag and per-instruction raise dropped (the original bug) | KILLED, `test_a_script_cannot_declare_a_to_be_closed_variable` (the process aborts there) |
+| S1: flag dropped from `fatal()`; per-instruction raise dropped (flag kept); both dropped | all three SURVIVE the unit tests (see residual (b): the test shapes cannot tell them apart) |
+| S2: work cap never condemns | KILLED (hang, the test watchdog) |
+| S2: `lmemfind` uncharged; matcher `goto init` run uncounted; vararg/results move uncharged; weak tables weak again; `utf8.len` uncharged | KILLED (`:607`, `:626`, loop cases, `:659`, hang) |
+| S3: string bytes unbounded; container weights zero | KILLED (`:785`, `:796`) |
+| S4: local and foreign share a namespace | KILLED (`:818`, `:826`); 1 s revalidation made 1 h: SURVIVES the unit tests, covered by the harness and `p10` |
+| N3: script errors swallowed again | KILLED (`:185`) |
+| N1: print budget removed | SURVIVES (R3) |
+
+### Residual (b): the surviving flag mutant
+
+Does any path rely on the condemned flag alone? **No.** With the language ban in force no script can replace an in-flight error, so `fatal()` never
+sees a replaced value. With close handlers permitted (the unit test's `allow_close`), a 4-way matrix (`probe_close.cc`; shapes: `pcall`, `xpcall`,
+generic-for, nested `pcall` inside the handler, all with a handler that raises a non-string) gives: shipped ends in 0.01 s; flag dropped ends in 0.01 s;
+per-instruction raise dropped (flag kept) ends in 0.01 s; **both dropped does not end** (25 s timeout). So the flag and the per-instruction raise are each
+sufficient and neither is solely relied on. One more thing found by tracing (`mut/trace_both.cc`): the shipped tests' handlers raise a *string*, and a string
+reaches `find(e, "(step budget)", ...)` inside `fatal()`; `find` is a charged library call and raises the sentinel once the call is condemned, so the
+tests end for a reason unrelated to the flag or the hook. With a table-valued error that incidental layer is gone. Consequence for the tests, not the code:
+the "both layers dropped" mutant survives because of that incidental layer; change the handlers in `test_a_close_handler_cannot_outlive_a_bound` to
+`error({})` and that mutant dies (R3). Accept the flag mutant surviving as defence in depth.
+
+### Residual (a): a call the hook cannot interrupt
+
+Measured on the fresh Release build, one HTTP server (so the GET shares the script's reactor), worst fresh GET while one request runs one call, minus the
+same script without the call (`ra_stall.py`, `out/ra.txt`; `p4*`, `p7`):
+
+| One call | Reactor held |
+|---|---|
+| matcher call that runs to the work cap and answers 400 (`find('.-b')`, `a*a*a*b`, `.-.-.-b`, `[ab]*c`, on 8 or 31 MiB) | **0.5 to 0.85 s** (worst GET 700 to 870 ms; the cap is 5 x 10^8 units at about 1.1 to 1.7 ns a unit) |
+| `gsub('a','b')` that completes, 8 MiB / 31 MiB | 0.1 to 0.4 s / 0.5 to 0.8 s (the 31 MiB one ends at the memory cap) |
+| linear library calls: `utf8.len`, `format('%s')`, `table.concat` 2M, front `insert` 2M, `move` 2M, `upper`, `rep` 31 MiB | 0.03 to 0.22 s each |
+| the conversion of a result at its caps (262,000 integers; `sample` of the node: `lua_to_msgpack` 689 of about 3,960 sampled ms, about 2.7 us a value) | **about 0.7 s** |
+| the whole PUT of that result | 5.0 s, worst GET 4.8 s; the same document sent as a plain body: 3.0 s, worst GET 2.6 s |
+
+The matcher number is the one that matters, because the attacker chooses it and every request costs about 200 bytes. Sustained (`rc_flood.py`, default
+node, 12 s, K clients each re-sending the request as soon as the 400 returns): K=4 hostile requests: light GET p50 1.2 ms, **p99 829 ms**; K=16 (about one
+per reactor): **p50 468 ms, p99 1,871 ms**, 13 GETs answered in 10 s; the control with yielding Lua loops, K=16: p50 1.7 ms, p99 51 ms. The node is not
+wedged and recovers when the attack stops, but T4's rule (p99 at or under 1 ms) does not hold under hostile scripts and one client with a handful of
+connections can hold every reactor.
+
+**Ruling: not a blocker for landing X4; a blocker for any release that runs scripts from untrusted writers.** Reasons: it is bounded and ends in a 400, the
+node stays up and stops gracefully, nothing is stored, and the unbounded classes the first review blocked on are closed. It is the same posture as N1 and
+N2 in the first review's conditions. The fix is small and belongs to this patch: **a per-call cap in work units, not in bytes.** A byte cap per call
+(say 1 MiB) is not enough: the matcher's cost is steps, not bytes, and a quadratic pattern over a 1 MiB subject runs 64 x 10^6 steps (130 to 330 ms in
+`p4b`) before its budget ends it, so a byte cap leaves a 0.1 to 0.3 s stall and a flood with the same shape. Instead, add `max_call_work` (about 16 x 10^6
+units, 15 to 25 ms at the measured rate) and (i) make `lua_xcharge` refuse a single charge above it, which stops the linear calls before they run (they
+charge first), and (ii) set the matcher's `ms->total` to `min(max(10^6, 64 x subject), max_call_work / 4)` so one API call cannot run past it. It reuses the
+meter, the sentinel and the tests' shapes; normal scripts (strings under about 2 MiB, tables under about 1M elements per call) are unaffected, and a loop
+of such calls still yields between calls. Then state the bound honestly in D10 and T10: single non-yieldable call at most about 20 ms, so the 1 ms p99
+holds for benign scripts and is bounded at about 20 ms for hostile ones. Do not claim "no reactor stall" before that.
+
+The conversion: **accept with a stated bound, do not make it a chore on its own.** Reasons: at the node cap it holds the reactor about 0.7 s, the same
+magnitude as R1's cap; it sits in front of the write's own indexing, which holds the same reactor 2.5 to 4.8 s for the same document sent directly (a
+pre-existing property of the write path, `p17`: a 10 MiB body of 1M strings peaks at 5.8 GB and takes 10 s), so a conversion-only chore would shave
+under a fifth of a stall the write path still has; and chunking belongs with that path's own work. Record in D10: conversion at most 0.7 s for a
+result at its caps, charged by the same weights. If R1's per-call cap lands, make the conversion's weights obey it too (262,144 units become a
+single-digit-millisecond slice only if the node cap falls to a few thousand values, which breaks normal documents, so do not).
+
+### New findings
+
+- **X4-R1 (medium, blocks exposure to untrusted writers, not the landing): a single non-yieldable call holds a reactor up to the work cap.** Attacker: any
+  client that can write a script. Gain: with K connections at about one per reactor, node-wide light-request p50 468 ms and p99 1.9 s while the attack
+  lasts. Probes: `ra_stall.py` (matcher rows), `rc_flood.py`. Fix and test above: a unit case per shape asserting a 400 at the per-call cap and a
+  live case in `lua_bounds.py` that floods K matcher requests and bounds the light GET p99.
+- **X4-R2 (low): conversion holds the reactor about 0.7 s at the cap (2.7 us a value).** Probe `rb_conv.py`, `rd_sample.py`. Accept with the bound stated.
+- **X4-R3 (low): tests that do not bite.** (i) The close-handler shapes use string errors, which a charged `find` ends incidentally; use `error({})` so the
+  flag and the hook are what is tested. (ii) `test_print_is_bounded_per_call` only checks completion; assert the logged bytes (a counter in `host_print`
+  or the log hook), since the N1 mutant survives. (iii) The 1 s foreign revalidation is only covered by the harness.
+- **X4-R4 (low): semantic changes for normal scripts, all stated in the changelog except the last two.** `string.pack/unpack/packsize/dump`, `<close>`,
+  `__gc/__close/__mode` and weak tables are gone; script errors now fail the write (400) instead of storing the document untransformed; `print` goes to
+  the log, 4 KiB a call; `table.sort` without a comparator is a Lua merge sort (stable, no "invalid order function" error), so sorting more than roughly
+  200,000 elements now ends at the instruction cap (a 1M-element sort answers 400 in about 1 s; the native sort took 0.75 s). **Not stated:** (a)
+  `LUAI_MAXSTACK` went from 1,000,000 to 200,000, so `table.unpack`/`select('#', ...)` over about 200,000 elements now raises "too many results to
+  unpack" (`p4a`, `p8`); (b) a script over a large document answers 413 when the document has more than 262,144 value units even if the script touches one
+  field (checked: a no-op script over 100,000 and 200,000 integers answers 204, over 400,000 answers 413, while the same document sent directly answers 204).
+  Add both to the changelog and `scripting.md`.
+- **Low, from reading the patch:** `condemn`/`note` re-arm the count hook to 1 and back, which drops the partial period from the instruction count. A
+  script can trigger that at most `max_work / slice_work` = 2,500 times, so the instruction cap can overrun by at most about 25M instructions (25%).
+  Harmless; note it in the mechanism doc.
+
+### Probes and outputs added (all in `.scratch/review-x4-recheck/`, kept)
+
+`cfg.sh`, `runA.sh`, `runB.sh` (the original probes `p1` to `p19` rerun with `XBIN` set; outputs `out/p*.txt`, `out/progress-*.txt`), `ra_stall.py`
+(`out/ra.txt`), `rb_conv.py` (`out/rb.txt`), `rc_flood.py` (`out/rc.txt`), `rd_sample.py` (`out/rd.txt`, `out/sample.txt`), `rp_print.py` (`out/rp.txt`),
+`rs_params.py`, `rt_bigdoc.py`, `mut.py` (`out/mut.txt`, `out/mut2.txt`), `probe_close.cc`, `probe_close2.cc`, `probe_close3.cc` (`mut/pc_*`, `mut/pc3*`),
+`drift/`, harness output `out/harness.txt`, `out/harness.json`. Run each as `quiet light NAME MINUTES WHAT -- ...` with `XBIN=.scratch/review-x4-recheck/build-rel/bin/xapiand`.
+
+### Verdict (re-check 1)
+
+S1 CLOSED, S2 PARTIAL (residual R1), S3 CLOSED, S4 CLOSED, N1 CLOSED, N3 CLOSED, N6 CLOSED. **LAND X4** on the condition that X4-R1 (per-call work
+cap) is fixed and re-checked before any release that runs scripts from untrusted clients, and R4's two unstated changes are added to the docs; R2 is
+accepted with the stated bound; R3 at the developer's discretion.
+
+Not run: ASan, UBSan and TSan builds of the fixes (the developer reports them green; not reproduced); Linux and FreeBSD; the docs E2E (the developer's
+641 of 641 not reproduced; I ran `harness/lua_bounds.py` and the probes instead); the cluster paths (a foreign script read across nodes, replicated or
+restored writes running a script that now errors with 400); TLS; a fix-side measurement of the per-call cap (it does not exist yet); the idle-host
+numbers (the host ran other agents' builds throughout).
