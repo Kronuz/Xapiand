@@ -114,10 +114,25 @@ load_mime_types()
 }
 
 
+static const std::unordered_map<std::string, ct_type_t>&
+mime_types_table()
+{
+	static const auto mime_types = load_mime_types();
+	return mime_types;
+}
+
+
+void
+preload_mime_types()
+{
+	(void)mime_types_table();
+}
+
+
 const ct_type_t&
 mime_type(std::string_view extension)
 {
-	static const auto mime_types = load_mime_types();
+	const auto& mime_types = mime_types_table();
 
 	auto found = extension.find_last_of('.');
 	if (found != std::string_view::npos) {

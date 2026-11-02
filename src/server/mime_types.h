@@ -27,4 +27,8 @@
 
 struct ct_type_t;
 
+// Reads <data path>/mime.types. The server calls it at startup, before its listeners open, so that no request
+// reads a file (docs/design/phase7c.md D1); a process that does not reads it at the first lookup.
+void preload_mime_types();
+
 const ct_type_t& mime_type(std::string_view extension);
