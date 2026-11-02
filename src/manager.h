@@ -43,9 +43,7 @@
 #include "length.h"                           // for serialise_length
 #include "opts.h"                             // for opts::*
 #include "node.h"                             // for Node, local_node
-#include "thread.hh"                          // for ThreadPolicyType::*
 #include "task.hh"                            // for task::task
-#include "threadpool.hh"                      // for ThreadPool
 #include "engine/error.h"                    // for engine::Error
 
 
