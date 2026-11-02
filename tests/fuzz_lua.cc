@@ -67,7 +67,7 @@ std::string num(Rng& rng) {
 
 std::string statement(Rng& rng) {
 	const std::string n = num(rng), m = num(rng);
-	switch (rng.below(24)) {
+	switch (rng.below(36)) {
 		case 0: return "_doc.a = (_doc.a or 0) + " + n;
 		case 1: return "leak = (leak or 0) + 1; _doc.g = leak";
 		case 2: return "string.x = (string.x or 0) + 1; _doc.s = string.x";
@@ -91,7 +91,19 @@ std::string statement(Rng& rng) {
 		case 20: return "error('script error')";
 		case 21: return "setmetatable(_doc, {__index = function() return 1 end}); _doc.x = _doc.nope";
 		case 22: return "_doc.tx = select('#', table.unpack({1, 2, 3}))";
-		default: return "do local x <const> = " + n + "; _doc.cx = x end";
+		case 23: return "do local x <const> = " + n + "; _doc.cx = x end";
+		case 24: return "local b = string.rep('ab', " + n + ") _doc.up = #b:upper() + #b:reverse() + #b:sub(2, -2) + (b:find('ba', 1, true) or 0)";
+		case 25: return "local h = string.rep('a', " + n + ") _doc.pf = h:find(string.rep('a', " + m + ") .. 'b', 1, true) or 0";
+		case 26: return "local t = {} for i = 1, " + n + " do t[i] = 'x' .. i end _doc.cc = #table.concat(t, ',') + select('#', table.unpack(t, 1, 100))";
+		case 27: return "local t = {1, 2, 3} for i = 1, " + n + " do table.insert(t, 1, i) end table.remove(t, 1) table.move(t, 1, 3, 2) _doc.ti = #t";
+		case 28: return "local function f(...) if select('#', ...) > " + n + " then return ... end return f(1, ...) end _doc.va = select('#', f())";
+		case 29: return "_doc.ut = (utf8.len(string.rep('h\\u{e9}', " + n + ")) or 0) + #utf8.char(233, 8364) + (utf8.codepoint('h\\u{e9}', 1, -1))";
+		case 30: return "pcall(setmetatable, {}, {__close = print}) pcall(setmetatable, {}, {__mode = 'k'}) _doc.wk = 1";
+		case 31: return "local mt = {} local t = setmetatable({}, mt) mt.__close = function() error('x') end pcall(function() local c <close> = t end)";
+		case 32: return "local s = string.rep('x', " + n + ") local t = {} for i = 1, 8 do t[i] = s end _doc.big = t";
+		case 33: return "local o = {1, 2} local t = {} for i = 1, " + n + " do t[i] = o end _doc.sh = t";
+		case 34: return "print('p', " + n + ", string.rep('q', 3000))";
+		default: return "_doc.fmt = string.format('%s|%q|%5.1f', string.rep('z', " + n + "), 'a\\nb', " + n + ")";
 	}
 }
 
@@ -166,6 +178,8 @@ Result classify(std::exception_ptr error, const MsgPack& doc) {
 		std::rethrow_exception(error);
 	} catch (const lua::ScriptLimitError&) {
 		return {"limit", ""};
+	} catch (const lua::ScriptResultTooLarge&) {
+		return {"too large", ""};
 	} catch (const std::exception&) {
 		return {"error", ""};
 	}

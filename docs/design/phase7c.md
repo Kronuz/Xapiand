@@ -322,14 +322,20 @@ reactor, or a worker in a parse-ahead chore) keeps its own compiled-script cache
   comparator), the hook keeps counting: past 100 consecutive hook calls (10^6 instructions, an
   estimate) without a yield point, the call ends with an error. That bounds a comparator or a
   `gsub` callback that never returns.
-- *Bounds.* An instruction cap (10^8 per call, an estimate), checked in the hook. A live-byte cap
-  per script state (64 MiB, an estimate), enforced by `lua_Alloc`. Code with no Lua instructions
-  (sort without a comparator, `rep`, `concat`, `format`) is bounded by that cap's sizes. Lua's
-  pattern matcher has a depth cap (`lstrlib.c` `MAXCCALLS`, 200) but no step cap, so the build
-  carries one patch generated from 5.4.7: a per-call step budget in `match`, max(10^5, 8 x subject
-  length) (an estimate), past which the call raises "pattern too complex". A drift test checks
-  that the patch applies to the pinned tarball's hash, and the patch is listed in
-  `docs/dev/patches.md`.
+- *Bounds.* An instruction cap (10^8 per call, an estimate), checked in the hook. A **work meter** (5 x 10^8 units per call, a unit
+  about a nanosecond): the library and the VM charge what they touch (bytes scanned, compared or copied, matcher steps, table
+  elements, stack values moved), and a call that spent 200,000 units since it last yielded yields at its next instruction. Code
+  with no Lua instructions is therefore *not* free: it is bounded by the meter, per call and across calls, not by the sizes the
+  memory cap allows (that earlier claim was false for time). A live-byte cap per script state (64 MiB, an estimate), enforced by
+  `lua_Alloc`. Lua's pattern matcher has a depth cap (`lstrlib.c` `MAXCCALLS`, 200) but no step cap, so the build carries one
+  patch (`contrib/lua/xapiand-limits.patch`, generated from 5.4.7, every change to Lua's sources) that counts matcher steps per
+  pattern item, class member and copied byte, raises "pattern too complex" past max(10^6, 64 x subject length) per API call, and
+  charges the steps to the meter. A call that crossed a bound is **condemned**: the host's flag makes the base's `pcall` and
+  `xpcall` rethrow whatever the error carries and the hook raises at every instruction, so nothing a script runs while an error
+  unwinds can outlive the cap. Scripts have no to-be-closed variables, `__gc`, `__close` or `__mode`, no `string.pack` family,
+  and a Lua `table.sort`. The converted result is bounded by 16 MiB of strings (the body cap) and 262,144 value units (an object is 8). A drift test
+  checks that the patch applies to the pinned tarball's hash and that the compiled tree equals the patched tarball file for
+  file, and the patch is listed in `docs/dev/patches.md`. `docs/mechanisms/lua-bounds.md` describes how it fits together.
 - Each bound returns a 4xx. Foreign scripts load through an awaited handler read
   (`processor.cc:247-251`).
 
@@ -407,7 +413,7 @@ clients. Light is open loop at a fixed rate: GET by id and single-term searches 
 | **T7** concurrency and shutdown | 0 TSan and 0 ASan reports; the final dump equals the model; a SIGTERM at 300 s exits 0 with every acknowledged write durable | `engine_mixed_load.py BIN OUT --engine strata --secs 600 --term-at 300` on TSan and on ASan builds |
 | **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record index registry gives 503s, not errors | `stall_load.py --overload light 4` and `--overload heavy 4` (4x the saturating rate, K3); `test_readers_cap` |
 | **T9** cancellation | A read whose client disconnects frees its reactor within one slice, and the cancel counter rises; a write whose client half-closes completes and is durable | Functional tests: a heavy search disconnected after 50 ms; a PUT then `shutdown(SHUT_WR)` |
-| **T10** Lua bounds | Two calls interleaved on one script keep their own `_doc`; an infinite loop ends at the instruction cap; one inside a `table.sort` comparator ends at the non-yieldable bound; an exponential pattern and an allocation past the cap each end; all 4xx; T4 holds with four looping scripts | Unit tests (the review's `lua_yield_probe` cases among them) plus `stall_load.py --lua-loop 4` |
+| **T10** Lua bounds | Two calls interleaved on one script keep their own `_doc`; an infinite loop ends at the instruction cap; one inside a `table.sort` comparator ends at the non-yieldable bound; an exponential pattern, a quadratic plain `find`, a pattern with a long literal run or class, a vararg chain, a loop of library calls over a large string, a swallowed bound (a to-be-closed handler) and an allocation past the cap each end; a result past its byte or value budget answers 413; a foreign script and a local one of the same name never swap; all 4xx; T4 holds with four looping scripts, and with four looping library calls | Unit tests (the review's `lua_yield_probe` cases among them) plus `stall_load.py --lua-loop 4` |
 | **T11** replaced layer wins by a lot | Dispatch cost per light request is at most half the offload hop's, in CPU and in wall; parity fails (owner, 2026-10-27) | `harness/profile_light.sh` on both binaries at concurrency 1: CPU from frames, wall from K6's timestamps |
 | **T12** no throughput loss | RESTORE docs/s (20,000 accounts) and saturated query QPS each ≥ 1.0x pre-7c `main`, on a host with more than 10 CPUs; the row states its CPU count | `profile_bulk.sh`, `loadtest.py`, interleaved |
 | **T13** every gate | ASan, UBSan, TSan; coverage at TESTING.md's targets; restore corpora replayed; per-open-index cost (entry, turn, `WorkGroup`, strata's three groups, a `DataStorage` handle) at 10,000 open indexes, and the per-index reader registry's bytes, stated | strata PLAN, "Every gate"; `small-indexes.md`'s open-index rows |
@@ -501,7 +507,7 @@ No new question blocks a step. Three choices are made here and are reversible:
 
 1. EOF cancels reads but not writes (D3).
 2. A streamed upload needs `Content-Length` (D9).
-3. Lua's matcher carries a step-budget patch (D10).
+3. Lua carries one limits patch: a work meter, a matcher step budget and no unbounded features (D10).
 
 ## 7. Risks and what is not covered
 

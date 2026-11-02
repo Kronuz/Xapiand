@@ -133,7 +133,10 @@ parameters and every global the script sets live for that call only, and writes
 into `string`, `table`, `math` and `utf8` stay in the call. Two requests running
 the same script at once never see each other's data. Only the base libraries,
 `string`, `table`, `math` and `utf8` are available (no `io`, `os`, `load`,
-`dofile` or `collectgarbage`).
+`dofile` or `collectgarbage`). Also absent, because their cost cannot be bounded:
+`string.pack`, `string.unpack`, `string.packsize`, `string.dump`, to-be-closed
+variables (`<close>`), and the `__gc`, `__close` and `__mode` metamethods (weak
+tables). `print` writes to the server log, at most 4 KiB per call.
 
 A script shares its event loop with other requests: it runs in slices and yields
 between them. A call that crosses a bound ends with `400 Bad Request` and the
@@ -142,12 +145,26 @@ document is not indexed:
 | Bound                | Value                                                                    |
 |----------------------|--------------------------------------------------------------------------|
 | Instructions         | 100,000,000 per call                                                     |
+| Work                 | 500,000,000 units per call: the bytes, pattern steps and table elements the library calls touch, about a nanosecond each |
 | Memory               | 64 MiB of live data per compiled script on each thread                   |
-| Pattern matching     | `max(100,000, 8 x subject length)` steps per `string` call               |
+| Pattern matching     | `max(1,000,000, 64 x subject length)` steps per `string` call            |
 | Callbacks            | 1,000,000 instructions in a row inside a callback that cannot yield (a `gsub` function, an `__lt` run by `table.sort`) |
 
-A script cannot catch these errors with `pcall`. Any other error in a script is
-logged and leaves the document as it was.
+Work is charged by what a call touches, not by how often it is made: a plain
+`find` over a megabyte costs a megabyte, a pattern costs its steps, and `rep`,
+`sub`, `upper`, `reverse`, `format`, `..`, string comparison, `utf8.*`,
+`table.concat`, `unpack`, `insert`, `remove` and `move` cost their lengths. A
+call that has done more than a slice of it yields at its next instruction.
+
+The document a script leaves in `_doc` is converted back with a budget of its
+own: at most 16 MiB of string and key bytes and 262,144 value units (a scalar is 1, an
+array 2, an object 8), counting every reference to a shared string or table again. A script that returns more answers
+`413 Payload Too Large`. Any other error a script raises answers `400 Bad
+Request` with the script's message (cut at 1 KiB), and the document is not
+indexed.
+
+A script cannot catch the bound errors with `pcall` or `xpcall`, whatever its
+error handlers do.
 
 ## Real-World Examples
 
