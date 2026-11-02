@@ -176,7 +176,8 @@ public:
 	virtual rev revision() const = 0;
 	virtual doccount doc_count() const = 0;
 	virtual std::string uuid() const = 0;
-	virtual unsigned refs() const = 0;
+	// The views readers hold of the index right now. An index that ends with any leaves their records claimed (D14).
+	virtual std::size_t readers_claimed() const noexcept = 0;
 };
 
 }  // namespace engine

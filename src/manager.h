@@ -141,7 +141,7 @@ private:
 
 	// The HTTP service whose stop() did not return within the bound: its thread still uses it, so it is kept.
 	std::unique_ptr<http::HttpAsioService> abandoned_http_;
-	std::chrono::steady_clock::time_point abandoned_at_;
+	bool abandoned_ = false;   // the stop gave up on the HTTP service or on the registry: the process exits without destroying them
 
 	std::atomic_llong _shutdown_asap;
 	std::atomic_llong _shutdown_now;
@@ -164,7 +164,7 @@ private:
 	void break_loop();
 	// Runs the control loop's thread until the tasks of `tasks` (and the registry's detached ones) have ended; the
 	// loop has stopped, so this thread drives it.
-	void drain_control(control::Tasks& tasks, const char* what);
+	void drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit);
 	std::vector<std::string> unfinished_work();
 	task::task<void> signal_loop();
 	void housekeeping_tick();

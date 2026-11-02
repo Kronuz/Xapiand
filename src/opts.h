@@ -59,7 +59,6 @@ extern struct opts_t {
 	std::string gid = "";
 	ssize_t num_http_servers = 1;
 	ssize_t num_async_wal_writers = 1;
-	ssize_t num_committers = 1;
 	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;
 	ssize_t max_indexes_per_search = 0;  // 0: as many as the pool holds open; main() caps it there

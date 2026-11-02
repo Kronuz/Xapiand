@@ -38,6 +38,12 @@ jobs:
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
           ninja -C build
+      - name: Blocking calls on reactor paths (async_check --strict)
+        # Every blocking primitive on a path a reactor reaches is classified in harness/async_allowlist.tsv
+        # (docs/design/phase7c.md D14); an unclassified hit, or a stale row, fails the job.
+        run: harness/async_check.sh --strict --extern strata=build/_deps/strata-src
+      - name: Removed options stay removed
+        run: harness/removed_options_check.sh build/bin/xapiand
       - name: Unit tests (ctest)
         run: ctest --test-dir build --output-on-failure
       - name: Smoke + load

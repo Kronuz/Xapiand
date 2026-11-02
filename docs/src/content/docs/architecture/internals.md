@@ -45,12 +45,11 @@ are switched on by editing the `#define`s near the top of `src/log.h`. To trace 
 subsystem, flip its category there and rebuild. Log arguments are evaluated
 lazily, so passing expensive expressions is fine.
 
-**The `Worker` tree.** Anything that owns a socket or a timer is a `Worker`
-(`src/worker.h`), living in a shared-pointer parent/children tree. Never call
-another worker's methods across threads directly. Use the async control watchers
-(`shutdown`, `stop`, `destroy`, `detach`), which run on the owning loop. Lifetime
-is by `shared_ptr`; clients keep themselves alive across the loop→pool hand-off
-with `share_this()`.
+**Never block a loop.** A request, and the node's own work, is a task on an event loop. A task that
+has to wait awaits a timer, an event, an index's turn or a chore (device work on the `WorkPool`); it
+never calls `sync_wait`, waits on a condition variable, sleeps or makes a file call. `engine::check_may_block`
+aborts a debug build that does, and `harness/async_check.sh --strict` (a CI step) fails on any blocking
+primitive that `harness/async_allowlist.tsv` does not classify.
 
 **MsgPack as the universal value.** JSON, MessagePack, and internal objects are
 all `MsgPack` (`src/msgpack.h`), a copy-on-write wrapper over a shared,

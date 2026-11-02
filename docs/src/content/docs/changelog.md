@@ -25,12 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The node's own work runs on its control loop.** The minute housekeeping (idle closes, merges to publish), the debounced autocommit of a write that asked for no commit,
   the signal reader and the node setup are tasks of the control loop that wait on timers and events; the cleanup thread and the committer threads are gone.
   Autocommit times are as before (a commit 1 s after the last write, 3 s while writes continue, and by 8 to 10 s after the first).
-  `xapiand_committers_running` and `xapiand_committers_queue_size` count the watch tasks and the indexes waiting for a commit; the pool size and capacity read 0.
+  `xapiand_committers_running` and `xapiand_committers_queue_size` count the watch tasks and the indexes waiting for a commit.
 - **Concurrent first uses of a schema or of an index's settings read it once.** A burst of requests for a new index used to read its schema metadata and its settings once each; they now wait for
   one read. Stop words and `mime.types` load at startup, before the listeners open.
-- **A shutdown waits for unfinished writes for at most 35 s.** Past that it logs what it abandoned (the requests in flight per loop, and the indexes whose turn is held), waits at most
-  another 35 s for the indexes those writes use, flushes the write-ahead logs and exits with status 75. A second `SIGINT` or `SIGTERM` during either wait ends it at once. A write that was
-  answered with a 2xx is in the log. See [Stopping the node](/Xapiand/options#stopping-the-node).
+- **A shutdown waits at most 35 s after the clients are done, in all.** The HTTP service, the autocommits and the closing of every index share that bound. Past it the node logs what it abandoned (the requests in flight per loop, and the indexes
+  whose turn is held or that are still in use), flushes the write-ahead logs and exits with status 75. A second `SIGINT` or `SIGTERM` ends the wait at once. The steps are logged in order
+  (`Stop 1` to `Stop 5`). A write that was answered with a 2xx is in the log. See [Stopping the node](/Xapiand/options#stopping-the-node).
 - **A node that cannot set itself up exits.** A taken port, or any failure while the servers start, is logged and ends the process with status 70 (it used to log "Servers listening",
   fail on the bind, and stay up serving nothing).
 - **A Lua script runs in slices, in its own environment, with bounds.** A script yields its event loop every 10,000 instructions
@@ -117,6 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   among the values; it now returns the values.
 
 ### Removed
+- **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
+  (half of them, at least 1, at most 10), and the node runs one HTTP loop per processor: `--processors N` sets both (it was capped at 10 loops, now it is not).
+  The `num_committers` key of the root `GET /` statistics and the `xapiand_http_clients_*`, `xapiand_committers_capacity` and `xapiand_committers_pool_size` gauges of `:metrics` are gone.
 - **`--http-clients`, `--bulk-preparers` and `--bulk-indexers`.** The offload threads and the bulk preparer and indexer
   threads are gone; requests and the restore indexer are tasks on the HTTP loops, and device work is on the pool.
 - **`--max-database-readers`**: an index is opened once and shared by every request; there are no pooled

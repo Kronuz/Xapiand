@@ -112,14 +112,14 @@ public:
 
 	void post(std::coroutine_handle<> h) {
 #ifndef NDEBUG
-		host_.scheduler().post(hop(this, h));
+		host_.scheduler().post(resume_in(this, h));
 #else
 		host_.scheduler().post(h);
 #endif
 	}
 	void post_demoted(std::coroutine_handle<> h) {
 #ifndef NDEBUG
-		host_.scheduler().post_demoted(hop(this, h));
+		host_.scheduler().post_demoted(resume_in(this, h));
 #else
 		host_.scheduler().post_demoted(h);
 #endif
@@ -148,9 +148,9 @@ public:
 	TaskCounters counters;
 
 private:
-	struct Hop {
+	struct Resume {
 		struct promise_type {
-			Hop get_return_object() noexcept { return Hop{std::coroutine_handle<promise_type>::from_promise(*this)}; }
+			Resume get_return_object() noexcept { return Resume{std::coroutine_handle<promise_type>::from_promise(*this)}; }
 			std::suspend_always initial_suspend() noexcept { return {}; }
 			std::suspend_never final_suspend() noexcept { return {}; }
 			void return_void() noexcept { }
@@ -159,7 +159,7 @@ private:
 		std::coroutine_handle<promise_type> handle;
 	};
 
-	static Hop run_hop(Run* run, std::coroutine_handle<> h) {
+	static Resume run_resume(Run* run, std::coroutine_handle<> h) {
 		TaskCounters* const previous = AsioHost::running_;
 		AsioHost::running_ = &run->counters;
 		{
@@ -169,7 +169,7 @@ private:
 		AsioHost::running_ = previous;
 		co_return;
 	}
-	static std::coroutine_handle<> hop(Run* run, std::coroutine_handle<> h) { return run_hop(run, h).handle; }
+	static std::coroutine_handle<> resume_in(Run* run, std::coroutine_handle<> h) { return run_resume(run, h).handle; }
 #else
 
 private:

@@ -645,7 +645,7 @@ dispatch_request(Request& request)
 		}
 	}
 
-	// Trivial verbs answered inline (no database work, so never offloaded): OPTIONS
+	// Trivial verbs answered inline (no database work): OPTIONS
 	// advertises the allowed methods, OPEN/CLOSE are unimplemented, and a method not in
 	// the command table is rejected the way prepare()'s switch default did.
 	switch (request.method) {
@@ -756,7 +756,6 @@ node_obj()
 				{ "num_replicas", opts.num_replicas },
 				{ "num_http_servers", opts.num_http_servers },
 				{ "num_async_wal_writers", opts.num_async_wal_writers },
-				{ "num_committers", opts.num_committers },
 				{ "num_fsynchers", opts.num_fsynchers },
 			} },
 		} },

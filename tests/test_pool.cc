@@ -39,6 +39,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <optional>
 #include <mutex>
 #include <set>
 #include <string>
@@ -68,6 +69,7 @@
 #include "node.h"
 #include "task.hh"
 #include "utype.hh"
+#include "work_pool.hh"
 
 using namespace std::chrono_literals;
 
@@ -84,6 +86,11 @@ struct PoolTestAccess {
 		return true;
 	}
 	static std::uint64_t applied(ShardEndpoint& entry) { return entry.applied_.load(); }
+	static WorkGroup& chore_group(ShardEndpoint& entry) { return static_cast<IndexChores&>(*entry.chores).group(); }
+	// As if a task posted to the control loop had not ended.
+	static void count_detached(DatabasePool& pool, int by) {
+		if (by > 0) { pool.detached_.fetch_add(static_cast<std::size_t>(by)); } else { pool.detached_.fetch_sub(static_cast<std::size_t>(-by)); }
+	}
 	// As if a write landed after a commit began: one more write applied, and not yet committed.
 	static void write_lands(ShardEndpoint& entry) {
 		entry.applied_.fetch_add(1);
@@ -1410,6 +1417,163 @@ void test_the_registry_lists_what_still_uses_an_index() {
 	CHECK_TRUE(pool.busy().empty());   // the turn is back
 }
 
+#ifndef NDEBUG
+// The registry, the lease and the chores end with nothing outstanding (D14): a debug build aborts and says what is left.
+// Each scenario runs in a child, once with the outstanding work (it aborts with the message) and once without (it ends clean).
+struct ChildEnd {
+	bool aborted = false;
+	bool clean = false;
+	std::string log;
+};
+
+template <typename F>
+ChildEnd in_child(const char* name, F&& body) {
+	const std::string log_path = std::string("at_end_") + name + ".log";
+	std::fflush(nullptr);
+	pid_t pid = ::fork();
+	if (pid == 0) {
+		std::freopen(log_path.c_str(), "w", stderr);
+		::alarm(30);   // a child that waits for what it should have refused to destroy ends here
+		body();
+		std::fflush(nullptr);
+		::_exit(0);
+	}
+	int status = 0;
+	::waitpid(pid, &status, 0);
+	ChildEnd end;
+	end.aborted = WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT;
+	end.clean = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+	if (FILE* f = std::fopen(log_path.c_str(), "r")) {
+		char buf[512];
+		std::size_t n;
+		while ((n = std::fread(buf, 1, sizeof(buf), f)) > 0) {
+			end.log.append(buf, n);
+		}
+		std::fclose(f);
+	}
+	return end;
+}
+
+task::task<void> take_and_drop(ShardEndpoint& entry) {
+	auto turn = co_await entry.take_turn(WRITE);
+}
+
+// The lease: the index's turn is held, and a task waits for it.
+void at_end_turn(bool outstanding) {
+	auto pool = std::make_unique<DatabasePool>(8);
+	ShardEndpoint* raw = nullptr;
+	std::unique_ptr<HoldTurn> hold;
+	std::unique_ptr<Running> waiter;
+	{
+		auto entry = pool->spawn(Endpoint(fresh("at_end_turn")));
+		raw = entry.get();
+		Shard shard(*raw, WRITE);
+		engine::sync_wait(shard.ready());
+		hold = std::make_unique<HoldTurn>(*raw, WRITE);
+		waiter = std::make_unique<Running>([raw] { engine::sync_wait(take_and_drop(*raw)); });
+		std::this_thread::sleep_for(100ms);
+	}
+	if (!outstanding) {
+		hold->release();
+		waiter->join();
+	}
+	pool.reset();
+}
+
+// The registry: a view a reader holds when the index ends.
+void at_end_views(bool outstanding) {
+	auto pool = std::make_unique<DatabasePool>(8);
+	std::unique_ptr<HeldSearch> held;
+	{
+		auto entry = pool->spawn(Endpoint(fresh("at_end_views")));
+		Shard shard(*entry.get(), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		engine::sync_wait(shard.commit());
+		held = std::make_unique<HeldSearch>(shard);
+		if (!held->holding()) {
+			std::_Exit(3);
+		}
+	}
+	if (!outstanding) {
+		held->release();
+	}
+	pool.reset();
+}
+
+// The chores: a chore of the index is still running.
+void at_end_chores(bool outstanding) {
+	auto pool = std::make_unique<DatabasePool>(8);
+	std::atomic<bool> go{false};
+	std::atomic<bool> started{false};
+	ShardEndpoint* raw = nullptr;
+	{
+		auto entry = pool->spawn(Endpoint(fresh("at_end_chores")));
+		raw = entry.get();
+		A::chore_group(*raw).enqueue([&go, &started] {
+			started = true;
+			while (!go) {
+				std::this_thread::sleep_for(1ms);
+			}
+		});
+		if (!eventually(started)) {
+			std::_Exit(3);
+		}
+	}
+	if (!outstanding) {
+		go = true;
+		A::chore_group(*raw).wait();
+	}
+	pool.reset();
+}
+
+// The registry: a task posted to the control loop has not ended.
+void at_end_detached(bool outstanding) {
+	auto pool = std::make_unique<DatabasePool>(8);
+	A::count_detached(*pool, 1);
+	if (!outstanding) {
+		A::count_detached(*pool, -1);
+	}
+	pool.reset();
+}
+
+// The registry: a reference to an entry outlives the pool.
+void at_end_references(bool outstanding) {
+	auto pool = std::make_unique<DatabasePool>(8);
+	std::optional<ReferencedShardEndpoint> entry;
+	entry.emplace(pool->spawn(Endpoint(fresh("at_end_refs"))));
+	if (!outstanding) {
+		entry.reset();
+	}
+	pool.reset();
+}
+
+template <typename F>
+void check_at_end(const char* name, F&& scenario, const char* message) {
+	Watchdog watchdog(name);
+	const auto with = in_child(name, [&] { scenario(true); });
+	CHECK_TRUE(with.aborted);
+	CHECK_TRUE(with.log.find(message) != std::string::npos);
+	if (!with.aborted || with.log.find(message) == std::string::npos) {
+		std::fprintf(stderr, "  %s with work outstanding: %s\n", name, with.log.c_str());
+	}
+	const auto without = in_child(name, [&] { scenario(false); });
+	CHECK_TRUE(without.clean);
+	if (!without.clean) {
+		std::fprintf(stderr, "  %s without: %s\n", name, without.log.c_str());
+	}
+}
+#endif
+
+void test_a_registry_that_ends_with_work_outstanding_aborts() {
+#ifndef NDEBUG
+	check_at_end("turn", at_end_turn, "the turn is held or awaited");
+	check_at_end("views", at_end_views, "views are claimed by readers");
+	check_at_end("chores", at_end_chores, "a chore is queued or running");
+	check_at_end("detached", at_end_detached, "detached tasks have not ended");
+	check_at_end("references", at_end_references, "references");
+#endif
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1450,6 +1614,7 @@ int main(int argc, char** argv) {
 		{"test_a_chore_needs_a_scheduler", test_a_chore_needs_a_scheduler},
 		{"test_a_chore_resumes_its_awaiter_with_post", test_a_chore_resumes_its_awaiter_with_post},
 		{"test_the_registry_lists_what_still_uses_an_index", test_the_registry_lists_what_still_uses_an_index},
+		{"test_a_registry_that_ends_with_work_outstanding_aborts", test_a_registry_that_ends_with_work_outstanding_aborts},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

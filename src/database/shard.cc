@@ -29,6 +29,7 @@
 #include <unistd.h>                // for unlink
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
+#include "at_end.h"               // for at_end::assert_none
 #include "database/data.h"        // for Locator
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
@@ -346,9 +347,33 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 }
 
 
+std::string
+ShardEndpoint::outstanding()
+{
+	if (const auto users = refs.load(); users != 0) {
+		return strings::format("{} references", users);
+	}
+	if (!turn.try_lock()) {
+		return "the turn is held or awaited";
+	}
+	turn.unlock();
+	std::shared_ptr<engine::Shard> eng;
+	{
+		std::lock_guard<std::mutex> lk(mtx);
+		eng = engine_;
+	}
+	if (eng) {
+		if (const auto claimed = eng->readers_claimed(); claimed != 0) {
+			return strings::format("{} views are claimed by readers", claimed);
+		}
+	}
+	return {};
+}
+
+
 ShardEndpoint::~ShardEndpoint()
 {
-	assert(refs == 0);
+	at_end::assert_none("ShardEndpoint", outstanding());
 }
 
 

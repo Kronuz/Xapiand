@@ -93,9 +93,8 @@ svc: "HTTP service  -  a reactor pool (N loops); each request a task on its loop
 
 wrk: "background worker threads (plain std::thread / Thread<> / debouncers)" {
   style.fill: "#eef2f7"
-  cl: "DatabaseCleanup\n(std::thread, 60s)"
   wal: "WAL writers\n(Thread<> pool + queue)"
-    deb: "committer / fsyncher\n(debouncers)"
+  deb: "fsyncher\n(debouncer)"
 }
 
 store: "storage" {
@@ -108,7 +107,6 @@ store: "storage" {
 clients -> svc: "accept" {style.stroke-dash: 3}
 svc -> store: "chores on the WorkPool\n(device work)"
 main.manager -> svc: "start on READY"
-wrk.cl -> store.dbp
 ```
 -->
 
@@ -255,16 +253,15 @@ flight that users await as tasks, every operation on an index takes that index's
 
 Every networked service runs on [reactor](https://github.com/Kronuz/reactor), a
 shared-nothing standalone-Asio runtime. A service is a **pool of `reactor::Reactor`s**
-(each an `io_context` on its own thread) plus an optional **bounded offload
-`thread_pool`**. All `num_http_servers` reactors bind the same port with
+(each an `io_context` on its own thread). One reactor runs per processor (`--processors`), and all of them bind the same port with
 `SO_REUSEPORT`, so the kernel load-balances accepts (or a single acceptor distributes
 round-robin where `SO_REUSEPORT` is unavailable).
 
 The per-connection model is a coroutine, not a state machine: each accepted socket is
 served to completion by `co_await`-driven code that reads framed messages
-(`[type][len][body]`), and offloads the blocking, IO-bound handler onto the reactor's `thread_pool` via `co_await co_spawn(pool)`. The
-reactor thread itself never blocks. Backpressure is the offload gate's bounded queue;
-shutdown is `io_context::stop()` plus a registry of "abortables" (tracked sockets) that
+(`[type][len][body]`), and each request is a task on that reactor; device work leaves the loop only as a chore on the
+`WorkPool`. The reactor thread itself never blocks. Backpressure is the admission gate (requests in flight and
+handles waiting for a slice); shutdown is `io_context::stop()` plus a registry of "abortables" (tracked sockets) that
 get shut to unwedge any in-flight blocking write.
 
 The control plane is `XapiandManager`, itself a single `reactor::Reactor` on the main

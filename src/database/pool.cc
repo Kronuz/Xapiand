@@ -28,6 +28,7 @@
 #include <optional>               // for std::optional
 #include <thread>                 // for std::this_thread
 
+#include "at_end.h"               // for at_end::assert_none
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
 #include "engine/error.h"         // for engine::Error, engine::errc
@@ -135,8 +136,30 @@ IndexChores::IndexChores(WorkPool& pool) : pool_(pool), group_(std::make_unique<
 }
 
 
+bool
+IndexChores::idle() noexcept
+{
+	struct Probe : WorkIdle {
+		std::atomic<bool> fired{false};
+	} probe;
+	probe.fn = [](WorkIdle* node) noexcept { static_cast<Probe*>(node)->fired.store(true, std::memory_order_release); };
+	group_->on_idle(probe);   // runs the probe now when the group is idle
+	if (probe.fired.load(std::memory_order_acquire)) {
+		return true;
+	}
+	if (group_->cancel_idle(probe)) {
+		return false;
+	}
+	while (!probe.fired.load(std::memory_order_acquire)) {   // it fired between the two calls: the store is next
+	}
+	return true;
+}
+
+
 IndexChores::~IndexChores()
 {
+	at_end::assert_none("IndexChores", !group_ || idle() ? std::string() : "a chore is queued or running");
+
 	// The group is idle by now (its owner ended every chore), but joining it is a wait: off a loop it
 	// is done here, on a loop a worker does it.
 	if (group_ && reactor::inside_run()) {
@@ -479,6 +502,7 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, siz
 
 DatabasePool::~DatabasePool()
 {
+	at_end::assert_none("DatabasePool", detached_.load() == 0 ? std::string() : strings::format("{} detached tasks have not ended", detached_.load()));
 	// The entries (their groups, their engines and the merges those run) end before the pool they run on.
 	std::lock_guard<std::mutex> lk(mtx);
 	lru::lru::clear();

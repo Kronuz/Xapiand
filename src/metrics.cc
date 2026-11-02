@@ -114,34 +114,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			{ "arch", check_architecture() },
 		})
 	),
-	xapiand_http_clients_running(
-		AddGauge(registry,
-			"xapiand_http_clients_running",
-			"Number of Http clients running",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_http_clients_queue_size(
-		AddGauge(registry,
-			"xapiand_http_clients_queue_size",
-			"Http clients in the queue",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_http_clients_capacity(
-		AddGauge(registry,
-			"xapiand_http_clients_capacity",
-			"Http client queue capacity",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_http_clients_pool_size(
-		AddGauge(registry,
-			"xapiand_http_clients_pool_size",
-			"Http client total pool size",
-			constant_labels)
-		.Add({})
-	),
 	xapiand_servers_running(
 		AddGauge(registry,
 			"xapiand_servers_running",
@@ -181,20 +153,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 		AddGauge(registry,
 			"xapiand_committers_queue_size",
 			"Committers in the queue",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_committers_capacity(
-		AddGauge(registry,
-			"xapiand_committers_capacity",
-			"Committers queue capacity",
-			constant_labels)
-		.Add({})
-	),
-	xapiand_committers_pool_size(
-		AddGauge(registry,
-			"xapiand_committers_pool_size",
-			"Server pool size",
 			constant_labels)
 		.Add({})
 	),

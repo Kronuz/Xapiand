@@ -38,7 +38,7 @@ fail() { echo "  FAIL: $*"; fails=$((fails + 1)); }
 pass() { echo "  ok: $*"; }
 
 start_node() {  # start_node ENGINE LOG
-	"$BIN" --port "$PORT" --name crashnode --verbosity 3 --http-servers "$REACTORS" -D "$RUNDIR/n_$1" >>"$RUNDIR/$2" 2>&1 &
+	"$BIN" --port "$PORT" --name crashnode --verbosity 3 --processors "$REACTORS" -D "$RUNDIR/n_$1" >>"$RUNDIR/$2" 2>&1 &
 	PID=$!
 	for _ in $(seq 80); do
 		kill -0 "$PID" 2>/dev/null || { echo "  node died during startup"; return 1; }
