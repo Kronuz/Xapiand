@@ -1463,10 +1463,14 @@ Shard::uuid() const
 }
 
 
-unsigned
-Shard::refs() const
+std::size_t
+Shard::readers_claimed() const noexcept
 {
-	return 1;
+	if (!handle_ || !handle_->core || !handle_->core->reader_registry) {
+		return 0;
+	}
+	const int in_use = handle_->core->reader_registry->gate.inflight.load(std::memory_order_acquire);
+	return in_use > 0 ? static_cast<std::size_t>(in_use) : 0;
 }
 
 

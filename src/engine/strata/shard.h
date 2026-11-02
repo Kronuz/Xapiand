@@ -110,7 +110,7 @@ public:
 	rev revision() const override;
 	doccount doc_count() const override;
 	std::string uuid() const override;
-	unsigned refs() const override;
+	std::size_t readers_claimed() const noexcept override;
 
 	// The shard's current published view, held for a read (src/engine/strata/search.cc). A host refreshes
 	// first (engine_for_read), so the view has what was applied. It holds no lock: writes go on, and

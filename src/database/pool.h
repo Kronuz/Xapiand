@@ -83,7 +83,10 @@ class executor;
 class IndexChores final : public engine::Chores {
 public:
 	explicit IndexChores(WorkPool& pool);
-	~IndexChores() override;
+	~IndexChores() override;   // debug builds abort when a chore is still queued or running (D14)
+
+	// Whether the group has nothing queued and nothing running. It never waits.
+	bool idle() noexcept;
 
 	IndexChores(const IndexChores&) = delete;
 	IndexChores& operator=(const IndexChores&) = delete;
@@ -233,7 +236,10 @@ private:
 public:
 	ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
 
-	~ShardEndpoint();
+	~ShardEndpoint();   // debug builds abort when `outstanding()` is not empty (D14)
+
+	// What still uses the entry, or empty: references, the turn (held or awaited), the views readers hold.
+	std::string outstanding();
 
 	State state() const;
 	bool is_open() const {
