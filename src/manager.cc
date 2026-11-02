@@ -1023,10 +1023,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	// The autocommits still waiting do not run: closing an index commits what it has pending.
-	L_MANAGER("Finishing autocommit scheduler!");
-	_rx->autocommits->stop();
-	drain_control(_rx->autocommits->tasks(), "autocommit");
+	// The autocommits still waiting do not run: closing an index commits what it has pending. After an abandoned
+	// stop the reactors still run, and a write that ends late would commit on its own thread: leave the scheduler.
+	if (!abandoned_http_) {
+		L_MANAGER("Finishing autocommit scheduler!");
+		_rx->autocommits->stop();
+		drain_control(_rx->autocommits->tasks(), "autocommit");
+	}
 
 
 	////////////////////////////////////////////////////////////////////
