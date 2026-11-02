@@ -26,11 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   includes directly (it declared 64): the libraries pin the rest at their own heads, so stash, uinteger_t, times,
   lazy, queue, bloom-filter and radix-router are no longer declared here (from
   [`cpp-libraries/docs/UPGRADING-2026-10.md`](https://github.com/Kronuz/cpp-libraries/blob/main/docs/UPGRADING-2026-10.md)):
-  boolean-parser `ac248d1` to `85110af`, datetime `569521c` to `5dd9155`, string-similarity `cbc0a79` to `7878fb2`,
+  boolean-parser `ac248d1` to `85110af`, datetime `569521c` to `5dd9155`, string-similarity `cbc0a79` to `594e6d6`,
   htm `11e0c46` to `bb5e01d`, msgpack `75d13ce` to `e0b4696`, fs `a7a7693` to `11067ed`, storage `e4c5746` to `f3a38fc`,
   url-parser `4424e25` to `def41f8`, fantasyname `a87942a` to namegen `3eb14ce`, scheduler `2cbea95` to `2bb0a8f`,
   logger `90094b5` to `801105c`, http-parser `178f873` to `c27615d`, and the rest of the family, with strata at
-  `f2d7626` and prospect at `f817398`. The results that change are listed below. strata's fusefilter moves to
+  `501f943` and prospect at `465ee7d`. The results that change are listed below. strata's fusefilter moves to
   `0665ee0`, whose build writes other filter bytes, so **the segment version bumped** (`0x8000000C` to `0x8000000D`, and
   strata reads only the current version): an index written by an older pre-release build is not read, and must be
   indexed again.

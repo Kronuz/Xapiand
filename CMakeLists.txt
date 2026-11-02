@@ -736,8 +736,8 @@ FetchContent_MakeAvailable(task)
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
 # strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG f2d762658fa659bd57ffd43060af6a740c6fb664)  # strata main
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG f817398a265702e46c2edad8b64ebe140d7ba5f7)  # prospect deps/pins-2026-11
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 501f94372308a30f901d6ffb223da4bdc73a195c)  # strata main
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 465ee7d9023750e043777cda81afb9d5641bc4cd)  # prospect deps/pins-2026-11
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
