@@ -58,24 +58,15 @@ public:
 	prometheus::Gauge& xapiand_running;
 	prometheus::Gauge& xapiand_info;
 
-	// http client tasks:
-	prometheus::Gauge& xapiand_http_clients_running;
-	prometheus::Gauge& xapiand_http_clients_queue_size;
-	prometheus::Gauge& xapiand_http_clients_capacity;
-	prometheus::Gauge& xapiand_http_clients_pool_size;
-
-
 	// server tasks:
 	prometheus::Gauge& xapiand_servers_running;
 	prometheus::Gauge& xapiand_servers_queue_size;
 	prometheus::Gauge& xapiand_servers_capacity;
 	prometheus::Gauge& xapiand_servers_pool_size;
 
-	// committers threads:
+	// autocommit tasks (on the control loop): the watches running and the indexes waiting for a commit
 	prometheus::Gauge& xapiand_committers_running;
 	prometheus::Gauge& xapiand_committers_queue_size;
-	prometheus::Gauge& xapiand_committers_capacity;
-	prometheus::Gauge& xapiand_committers_pool_size;
 
 	// fsync threads:
 	prometheus::Gauge& xapiand_fsync_running;

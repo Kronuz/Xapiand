@@ -48,6 +48,7 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 - `--shards` sets the default number of shards per index (5).
 - `--port` sets the HTTP REST API port.
 - `-d`, `--detach` runs the process in the background.
+- `--processors` sets how many processors the node uses (all by default). It runs one HTTP loop per processor.
 
 ## Write-Ahead Log
 

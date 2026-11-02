@@ -224,7 +224,7 @@ public:
 		std::filesystem::current_path(root);
 		Endpoint::cwd = root.string() + "/";
 
-		std::vector<std::string> args = {"xapiand", "--port", port, "--name", "nodetest", "-D", root.string(), "--shards", "1", "--http-servers", "1"};
+		std::vector<std::string> args = {"xapiand", "--port", port, "--name", "nodetest", "-D", root.string(), "--shards", "1", "--processors", "1"};
 		std::vector<char*> argv;
 		for (auto& arg : args) {
 			argv.push_back(arg.data());

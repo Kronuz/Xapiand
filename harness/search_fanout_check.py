@@ -35,7 +35,7 @@ def call(c: http.client.HTTPConnection, method: str, path: str, body: object = N
 
 def start(tag: str, *flags: str) -> subprocess.Popen[bytes]:
     node = subprocess.Popen(
-        [BIN, "--port", str(PORT), "--name", "fan", "-D", DATA, "--http-servers", "1", "--shards", "1", *flags],
+        [BIN, "--port", str(PORT), "--name", "fan", "-D", DATA, "--processors", "1", "--shards", "1", *flags],
         stdout=open(os.path.join(OUT, f"node-{tag}.log"), "wb"),
         stderr=subprocess.STDOUT,
     )

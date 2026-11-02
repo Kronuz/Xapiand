@@ -106,6 +106,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   among the values; it now returns the values.
 
 ### Removed
+- **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
+  (half of them, at least 1, at most 10), and the node runs one HTTP loop per processor: `--processors N` sets both (it was capped at 10 loops, now it is not).
+  The `num_committers` key of the root `GET /` statistics and the `xapiand_http_clients_*`, `xapiand_committers_capacity` and `xapiand_committers_pool_size` gauges of `:metrics` are gone.
 - **`--http-clients`, `--bulk-preparers` and `--bulk-indexers`.** The offload threads and the bulk preparer and indexer
   threads are gone; requests and the restore indexer are tasks on the HTTP loops, and device work is on the pool.
 - **`--max-database-readers`**: an index is opened once and shared by every request; there are no pooled

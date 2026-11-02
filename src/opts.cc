@@ -50,18 +50,10 @@
 #define DATABASE_POOL_SIZE           200          // Maximum number of database endpoints in database pool
 #define MAX_CLIENTS                 1000          // Maximum number of open client connections
 
-#define NUM_HTTP_SERVERS             1.0          // Number of servers per CPU
-#define MAX_HTTP_SERVERS              10
-#define MIN_HTTP_SERVERS               1
-
 
 #define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
 #define MAX_ASYNC_WAL_WRITERS         10
 #define MIN_ASYNC_WAL_WRITERS          1
-
-#define NUM_COMMITTERS               1.0          // Number of threads handling the commits per CPU
-#define MAX_COMMITTERS                10
-#define MIN_COMMITTERS                 1
 
 #define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
 #define MAX_FSYNCHERS                 10
@@ -163,8 +155,6 @@ parseOptions(int argc, char** argv)
 		std::size_t num_async_wal_writers = 0;
 		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
 #endif
-		std::size_t num_committers = 0;
-		app.add_option("--committers", num_committers, "Number of threads handling the commits.");
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
 		std::size_t max_indexes_per_search = 0;
@@ -180,14 +170,9 @@ parseOptions(int argc, char** argv)
 		std::size_t wal_writer_cache_size = WAL_WRITER_CACHE_SIZE;
 		app.add_option("--wal-writer-cache-size", wal_writer_cache_size, "Cache size wal writer.");
 
-		std::size_t num_fsynchers = 0;
-		app.add_option("--fsynchers", num_fsynchers, "Number of threads handling the fsyncs.");
-
 		std::size_t max_files = 0;
 		app.add_option("--max-files", max_files, "Maximum number of files to open.");
 
-		std::size_t num_http_servers = 0;
-		app.add_option("--http-servers", num_http_servers, "Number of http servers.");
 		std::size_t max_clients = MAX_CLIENTS;
 		app.add_option("--max-clients", max_clients, "Max number of open client connections.");
 
@@ -379,12 +364,11 @@ parseOptions(int argc, char** argv)
 #if XAPIAND_DATABASE_WAL
 		o.num_async_wal_writers = fallback(num_async_wal_writers, std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif
-		o.num_committers = fallback(num_committers, std::max(MIN_COMMITTERS, std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)))));
-		o.num_fsynchers = fallback(num_fsynchers, std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)))));
+		o.num_fsynchers = std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors))));
 
 		o.max_clients = max_clients;
 		o.max_files = max_files;
-		o.num_http_servers = fallback(num_http_servers, std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));
+		o.num_http_servers = std::max(1, static_cast<int>(std::ceil(o.processors)));   // one reactor per processor
 		if (o.detach) {
 			if (o.logfile.empty()) {
 				o.logfile = XAPIAND_ROOT "/var/log/" XAPIAND_LOG_FILE;

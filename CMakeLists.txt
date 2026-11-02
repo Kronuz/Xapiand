@@ -823,7 +823,7 @@ include_directories("${http_log_SOURCE_DIR}")
 
 # reactor: the generic Asio server runtime (Kronuz/reactor) that Kronuz/http's transport
 # (http_asio.h) now rides on -- the shared-nothing reactor pool, accept/bind strategies,
-# offload gate, and graceful shutdown, extracted from http so other services can share
+# admission gate, and graceful shutdown, extracted from http so other services can share
 # one runtime. Header-only; needs only <asio.hpp> (provided below). Included here because
 # http_asio.h does #include "reactor.h".
 FetchContent_MakeAvailable(reactor)

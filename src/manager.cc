@@ -204,9 +204,9 @@ struct XapiandManager::Reactors {
 
 // The Xapiand search API served over the Asio transport. SearchService is a
 // stateless http::HttpHandler (its handle() builds all per-request state locally),
-// so one shared instance is safe across every reactor thread. The transport owns the
-// offload pool (blocking work runs off the reactor) and the response
-// transforms, so no bespoke dispatcher/response wiring survives here.
+// so one shared instance is safe across every reactor thread. A request is a task on the
+// loop that accepted it; the transport owns the response transforms, so no bespoke
+// dispatcher/response wiring survives here.
 static SearchService search_service;
 
 // The request/response logging middleware (Kronuz/http-log) wrapping the search
@@ -1231,14 +1231,6 @@ XapiandManager::server_metrics_impl()
 
 	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - _process_start).count());
 
-	// http client tasks: the bespoke http_client_pool retired with HttpClient (Leg 2
-	// stage 3c); the http::Dispatcher that replaced it is not yet observable from here.
-	metrics.xapiand_http_clients_running.Set(0);
-	metrics.xapiand_http_clients_queue_size.Set(0);
-	metrics.xapiand_http_clients_pool_size.Set(0);
-	metrics.xapiand_http_clients_capacity.Set(0);
-
-
 	// servers_threads: the Asio transport owns its reactors internally; expose the
 	// reactor count as the running/pool size (queue/capacity are not modelled here).
 	{
@@ -1252,8 +1244,6 @@ XapiandManager::server_metrics_impl()
 	// committers: autocommits are tasks on the control loop, not threads; the queue is the keys waiting.
 	metrics.xapiand_committers_running.Set(static_cast<double>(_rx->autocommits->tasks().running()));
 	metrics.xapiand_committers_queue_size.Set(static_cast<double>(_rx->autocommits->pending()));
-	metrics.xapiand_committers_pool_size.Set(0);
-	metrics.xapiand_committers_capacity.Set(0);
 
 	// fsync_threads:
 	metrics.xapiand_fsync_running.Set(fsyncher()->running_size());
