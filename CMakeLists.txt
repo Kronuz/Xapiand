@@ -849,28 +849,23 @@ include_directories("${datetime_SOURCE_DIR}")
 # the path); random/epoch/nanosleep/stringified are small standalone utilities;
 # allocators is the tracked-memory allocator; cartesian is the WGS84/geodesy core.
 # Header-only ones just need their dir on the include path; the compiled ones
-# (md5/sha256/random/allocators/cartesian) get their .cc added to XAPIAND_OBJ below.
+# (md5/sha256/random/allocators/cartesian) are linked as targets by XAPIAND_OBJ below.
 FetchContent_Declare(md5         GIT_REPOSITORY https://github.com/Kronuz/md5.git         GIT_TAG 945987c5224b48c90cf0e3a3dbb5ebe5beadef5b)
 FetchContent_Declare(sha256      GIT_REPOSITORY https://github.com/Kronuz/sha256.git      GIT_TAG f4a3463310853ebc26133acd3a793a7019ce3000)
 FetchContent_Declare(epoch       GIT_REPOSITORY https://github.com/Kronuz/epoch.git       GIT_TAG de7efdf6a10bcf5983264c8e0d1a53b1969e0bd5)
 FetchContent_Declare(nanosleep   GIT_REPOSITORY https://github.com/Kronuz/nanosleep.git   GIT_TAG 974680bbd4f1ed4e253737ce8d9196d60d86c8a1)
 FetchContent_Declare(cartesian   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git   GIT_TAG 05cab81fe803532613e05fba65a37a8c14268cf7)
+# allocators tracks memory only when asked; the library compiles its allocator with that choice.
+set(ALLOCATORS_TRACKED_MEM ${TRACKED_MEM} CACHE BOOL "Override global new/delete and track allocated bytes" FORCE)
 foreach(dep md5 sha256 random epoch nanosleep stringified allocators cartesian)
 	FetchContent_MakeAvailable(${dep})
 endforeach()
 include_directories(
-	"${md5_SOURCE_DIR}"           # md5.h
-	"${sha256_SOURCE_DIR}"        # sha256.h
-	"${random_SOURCE_DIR}"        # random.hh
 	"${epoch_SOURCE_DIR}"         # epoch.hh
 	"${nanosleep_SOURCE_DIR}"     # nanosleep.h
 	"${stringified_SOURCE_DIR}"   # stringified.hh
-	"${allocators_SOURCE_DIR}"    # allocators.h
-	"${cartesian_SOURCE_DIR}"     # cartesian.h (+ its decoupled CartesianError)
 )
-# allocators dropped its #include "config.h"; supply the one feature macro it reads
-# when tracking is enabled. HAS_THREAD_LOCAL is self-detected by the library (its
-# own in-source probe), so it needs nothing here.
+# Xapiand's own sources read the tracked-memory macro too.
 if(TRACKED_MEM)
 	add_compile_definitions(XAPIAND_TRACKED_MEM)
 endif()
@@ -1131,11 +1126,6 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/times.cc"
 "${PROJECT_SOURCE_DIR}/src/strings.cc"
 "${PROJECT_SOURCE_DIR}/src/url_parser.cc"
-"${PROJECT_SOURCE_DIR}/src/hash/md5.cc"
-"${PROJECT_SOURCE_DIR}/src/hash/sha256.cc"
-"${PROJECT_SOURCE_DIR}/src/random.cc"
-"${PROJECT_SOURCE_DIR}/src/allocators.cc"
-"${PROJECT_SOURCE_DIR}/src/geospatial/cartesian.cc"
 "${PROJECT_SOURCE_DIR}/src/geospatial/htm.cc"
 "${PROJECT_SOURCE_DIR}/src/geospatial/geometry.cc"
 "${PROJECT_SOURCE_DIR}/src/compressor_deflate.cc"
@@ -1203,25 +1193,6 @@ list(APPEND XAPIAND_SRC_LIST "${msgpack_SOURCE_DIR}/msgpack_patcher.cc")
 list(APPEND XAPIAND_SRC_LIST "${repr_SOURCE_DIR}/repr.cc")
 list(APPEND XAPIAND_SRC_LIST "${strings_SOURCE_DIR}/strings.cc")
 list(APPEND XAPIAND_SRC_LIST "${url_parser_SOURCE_DIR}/url_parser.cc")
-# The newly extracted compiled utilities, in place of the removed
-# src/hash/{md5,sha256}.cc, src/random.cc, src/allocators.cc,
-# src/geospatial/cartesian.cc (the rest are header-only).
-list(APPEND XAPIAND_SRC_LIST "${md5_SOURCE_DIR}/md5.cc")
-list(APPEND XAPIAND_SRC_LIST "${sha256_SOURCE_DIR}/sha256.cc"
-	"${sha256_SOURCE_DIR}/sha256_x86.cc" "${sha256_SOURCE_DIR}/sha256_arm.cc")
-# Linux and FreeBSD arm64 default to plain ARMv8-A: the SHA2 kernel's file gets the crypto
-# extension (the library's CMakeLists does the same), and the dispatch in sha256.cc learns of it.
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$" AND NOT APPLE)
-	include(CheckCXXCompilerFlag)
-	check_cxx_compiler_flag("-march=armv8-a+crypto" SHA256_ARMV8_CRYPTO_FLAG)
-	if (SHA256_ARMV8_CRYPTO_FLAG)
-		set_source_files_properties("${sha256_SOURCE_DIR}/sha256_arm.cc" PROPERTIES COMPILE_OPTIONS "-march=armv8-a+crypto")
-		set_property(SOURCE "${sha256_SOURCE_DIR}/sha256.cc" "${sha256_SOURCE_DIR}/sha256_arm.cc" APPEND PROPERTY COMPILE_DEFINITIONS SHA256_ARMV8_KERNEL)
-	endif ()
-endif ()
-list(APPEND XAPIAND_SRC_LIST "${random_SOURCE_DIR}/random.cc")
-list(APPEND XAPIAND_SRC_LIST "${allocators_SOURCE_DIR}/allocators.cc")
-list(APPEND XAPIAND_SRC_LIST "${cartesian_SOURCE_DIR}/cartesian.cc")
 # htm (Hierarchical Triangular Mesh) + the Constraint primitive it absorbed, in
 # place of the removed src/geospatial/htm.cc and src/geospatial/geometry.cc.
 list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/htm.cc")
@@ -1247,6 +1218,11 @@ if (TLS)
 	target_compile_definitions(XAPIAND_OBJ PUBLIC XAPIAND_TLS=1)
 endif ()
 target_link_libraries(XAPIAND_OBJ PUBLIC
+	md5::md5
+	sha256::sha256
+	random::random
+	allocators::allocators
+	cartesian::cartesian
 	analysis::analysis
 	queryparser::queryparser
 	prospect::prospect
