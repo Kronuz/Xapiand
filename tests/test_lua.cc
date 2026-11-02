@@ -45,7 +45,7 @@ namespace {
 // A bound that fails to end its call would hang the test: stop it instead.
 [[maybe_unused]] const auto watchdog = [] {
 	std::signal(SIGALRM, [](int) { std::fprintf(stderr, "HANG: a script ran past the watchdog\n"); ::_exit(3); });
-	return ::alarm(120);
+	return ::alarm(600);
 }();
 
 using lua::Limits;
@@ -98,6 +98,7 @@ MsgPack doc_of(std::initializer_list<std::pair<const char*, int64_t>> fields) {
 
 // Runs one call to its end on this thread (no budget: it never suspends).
 Outcome call(Processor& processor, MsgPack doc, const MsgPack& params = MsgPack::MAP()) {
+	::alarm(600);   // the watchdog bounds one call, not the whole run (a sanitizer build is slow)
 	Outcome out;
 	out.doc = std::move(doc);
 	MsgPack old_doc = MsgPack::MAP();

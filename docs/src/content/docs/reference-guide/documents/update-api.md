@@ -110,7 +110,7 @@ UPDATE /twitter/tweet/1
 
 {
   "_script": {
-    "_body": "_doc.hashtags.append(tag)",
+    "_body": "table.insert(_doc.hashtags, tag)",
     "_params": {
       "tag": "#trying"
     }
@@ -125,7 +125,7 @@ UPDATE /twitter/tweet/1
 
 {
   "_script": {
-    "_body": "_doc.hashtags.erase(tag)",
+    "_body": "for i = #_doc.hashtags, 1, -1 do if _doc.hashtags[i] == tag then table.remove(_doc.hashtags, i) end end",
     "_params": {
       "tag": "#trying"
     }
@@ -156,7 +156,7 @@ UPDATE /twitter/tweet/1
 
 {
   "_script": {
-    "_body": "_doc.erase(field)",
+    "_body": "_doc[field] = nil",
     "_params": {
       "field": "new_field",
     }

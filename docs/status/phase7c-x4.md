@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-01) the X4 developer's ledger (phase 7c step X4: Lua runs in a coroutine that yields, D10); building; not pushed.
+> Status: CURRENT (2026-11-02) the X4 developer's ledger (phase 7c step X4: Lua runs in a coroutine that yields, D10); the four blockers of the security review are fixed and proved, awaiting the security reviewer's re-check; not pushed.
 
 # phase7c X4 (build): Lua in a yielding coroutine
 
@@ -7,8 +7,7 @@ review items R1, C11, C12, C13 (`docs/reviews/phase7c-design.md`); the architect
 
 ## State
 
-Steps K1 to K5 done and committed; the build is proved on Release, Debug and ASan+UBSan (unit, docs E2E), TSan (script and pool tests), with a mutant per rule. Not pushed; no review yet (this changes how untrusted scripts run, so
-a security review of the sandbox is worth the lead's one review: see "Open for review").
+Steps K1 to K5 done (below). The security review (`docs/reviews/phase7c-x4-security.md`, REJECT, four blockers) is folded in: X4-S1 to X4-S4, N1 and N3 are fixed in four commits, each with a regression test built from the reviewer's probe, a mutant, and the probes rerun on the fixed Release binary (table under "Security fixes"). Unit tests, docs E2E and the harness are recorded there. Not pushed. Waiting for the security reviewer's re-check with its probes.
 
 ## Done criteria
 
@@ -58,6 +57,29 @@ a security review of the sandbox is worth the lead's one review: see "Open for r
   | M14 | the matcher's error is fatal | catchable | watchdog (a `pcall(string.find)` loop) |
   | M15 | no `sync_wait` (K4) | `engine::sync_wait` in `compile` | `async_check.sh --strict` exit 1 |
 
+## Security fixes (review `docs/reviews/phase7c-x4-security.md`)
+
+Mechanism: `docs/mechanisms/lua-bounds.md`; patch list: `docs/dev/patches.md`; design: D10 and T10.
+
+| Finding | Before (the review) | After (fixed Release node, the reviewer's probes rerun) | Regression test |
+|---|---|---|---|
+| X4-S1 closing variable outlives the cap | one call: 100% CPU, never ends; SIGINT: still running after 20 s; N=10 in flight: 0 of 20 fresh GETs answered; `xpcall` shape the same | `p14`: call ends (`call still running=False`, 400 at the instruction cap), SIGINT exits within 20 s; 1 to 39 in flight: 20 of 20 GETs each time, max GET 4 ms; a plain write answers 204; `p2b` (4 at once) GET max 8 ms | `test_a_script_cannot_declare_a_to_be_closed_variable`, `test_a_close_handler_cannot_outlive_a_bound` |
+| X4-S2 work the hook cannot see | plain find 1 MiB in 512 KiB: 15.9 s, 204; 31 MiB search loop: GET waited 16.3 s; matcher 128K/64K: 49 s; vararg chain: no end in 120 s; ephemeron chain 300K: one 56 s stall | plain find quad: 400 in 0.15 s; matcher 512K/256K: 400 (190 ms over base); `p7` loops: GET max 1.5 to 2.2 ms (one `gsub` that completes over 8 MiB: 446 ms); `p18`: call ends, GET max 13 ms over 40 s; weak-mode `setmetatable` refused (400 in 0.1 s) | `test_library_calls_are_charged_by_what_they_touch` (21 loops), `test_a_slow_search_ends_at_the_work_cap`, `test_the_matcher_is_charged_by_work_not_by_entries`, `test_a_vararg_chain_ends_at_the_work_cap`, `test_weak_tables_are_refused_and_never_weak`, `test_a_charged_loop_yields_...` |
+| X4-S3 result conversion | 1 MiB x 256 refs: 11.5 s, 2.4 GB; 8 MiB x 256: killed at 6 GB; 2M refs of a small object: killed at 6 GB | 1 MiB x 16 to 256 refs, 4 and 8 MiB x 64/256: 413 in 0.2 s, peak RSS under 60 MB; 500,000 and 2,000,000 refs: 413 in 1.4 s (peak 780 MB while walking, cut by the unit weights below) | `test_a_result_past_its_byte_budget_is_refused`, `test_a_result_past_its_node_budget_is_refused` |
+| X4-S4 cache key collision | attacker's name replaced/stood in for the victim's foreign script: 8 of 8 (6 of 8 default node); rewrites never seen | `p10`: victim keeps `legit` in both orders; the rewrite is seen (`rewritten`) after the 1 s trust | `test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference`; `lua_bounds.py` foreign section |
+| N1 | 8 MiB print x 20 wrote 160 MiB; log lines of 8 and 32 MiB | `p9`: log +0.00 MiB for every case | `test_print_is_bounded_per_call`, huge-message check in `test_a_script_error_is_a_client_error_...` |
+| N3 | script errors answered 2xx | 400 with the script's message | same test |
+
+The unit of work is about a nanosecond (`Limits::max_work` 5 x 10^8 per call). A single library call is still uninterruptible: it is bounded by the 31 MiB string the memory cap allows, up to about 0.1 s (`utf8.len`, `upper`) and 0.5 s for a matcher call that completes over 8 to 31 MiB. The conversion back to MsgPack costs about 6 us a value on the reactor with no yield.
+
+Weights: a result is 16 MiB of strings and 262,144 units (scalar 1, array 2, object 8) after the first run showed 100,000 small objects costing 890 MB and 3.9 s.
+
+Mutants (Release `test_lua`, `.scratch/mutants-x4*.txt`; each applied to the built source, rebuilt, restored): killed: OP_TBC and OP_TFORPREP accept a closable value; setmetatable accepts `__close`; lmemfind charges nothing; matcher counts nothing per item; a class member costs nothing; matcher steps not charged to the meter; rep charges nothing; upper/lower/reverse; `..`; string equality; utf8.len; table.concat/insert/unpack; stack-value moves (varargs, tail calls, returns); weak tables honoured; no early yield; native `table.sort` again; result bytes and values not charged; local and foreign keys share a namespace; messages not truncated; script errors swallowed again. **Survived: dropping the condemned flag from `fatal()`, alone and together with the per-instruction raise.** Three layers end a swallowing call (the flag, the hook raising at every instruction once condemned, and the host judging the call's outcome by `reason` after any exit), so no unit test isolates the flag; the language layer (no closable value) and the live `p14` shape are what the tests and probes prove. A flag-only test would need a script that survives the other two layers; follow-up.
+
+Run (this host, other agents' builds running; no benchmark, so no timing here is a measurement): Release `ctest` 29 of 29 and Debug 29 of 29 (at `Xapiand:ee597976d`); ASan+UBSan 28 of 29 at that commit, the one failure being `test_lua`'s whole-run 120 s watchdog on the slow build (695 checks passed standalone); the watchdog is now per call and 600 s, and `test_lua` plus `test_lua_patch_drift` then passed on Release, Debug and ASan+UBSan (2 of 2 each); TSan on the Lua tests (`test_lua`, `test_lua_patch_drift`): 2 of 2, 0 reports (516 s). `fuzz_lua` under ASan+UBSan: 167 scripts in 60 s, no violation (Release 1,438 in 60 s earlier, no violation). Docs E2E (newman 6.2.3, Release): **641 of 641** (371 requests); its first run failed 3 assertions because three `update-api.md` examples used a removed Python-style API (`_doc.hashtags.append(tag)`, `erase`) whose script error used to be swallowed as a 204; the examples are Lua now. `harness/lua_bounds.py` on the Release node: PASS, 30 bound cases at their statuses (400, or 413 for oversized results), 10 concurrent swallowers answer 400 with 20 of 20 fresh GETs answered, graceful stop completes, foreign scripts hold in both orders and the rewrite is seen; light GET p50/p99/max 0.72/1.04/1.30 ms alone, 0.49/1.09/1.99 ms beside 4 long scripts, 0.53/1.61/3.18 ms beside 4 library-call loops (all 4 loops 204).
+
+Follow-ups (not blockers): flag-only unit test; X4-N2 (collect a state's garbage at call end, size `--scripts-cache-size` against threads x 10 x 64 MiB); X4-N5 (compile is synchronous and unmetered); X4-N7 (`lua_call` and the call's table build run unprotected); X4-N8 (`tostring(function)` leaks an address; `math.random` state shared across a script's calls); a matcher call that completes over 31 MiB cannot yield (slice `gsub`/`gmatch` with a continuation); `next` on a table drained from the front scans on every call; conversion in slices; a foreign script's cache key ignores the referrer's params; `string.pack` family could return charged.
+
 ## Design as built
 
 - **Environment** (`src/lua/processor.cc`, `base_chunk`): a script compiles once as `local _ENV = ...; <body>`. A call builds an environment table over a shared
@@ -89,20 +111,15 @@ a security review of the sandbox is worth the lead's one review: see "Open for r
 - `Xapiand:162d1c369` `harness/lua_bounds.py`, async allowlist rows removed, scripting guide and changelog.
 - `Xapiand:95cb14ba3` `__gc` refused to scripts (a finalizer runs with hooks off); the interleave probe and the persistence test made to bite (M2 survived the first version).
 - This ledger and the final proof: the commit that adds it.
+- Security fixes: `Xapiand:a62c1277a` (X4-S1, X4-S2, N1, N3: the limits patch, the condemned flag, the meter), `Xapiand:9729de23e` (X4-S3), `Xapiand:4700151bf` (X4-S4), `Xapiand:ee597976d` (fuzz, harness, docs), then the commit that adds the per-call watchdog, the `update-api.md` examples, the harness fix and this section.
 
 ## Open for review
 
-- A script's time in C code is bounded per call (64 MiB) but not per hook interval: a loop of non-allocating O(n) calls on a large string (`string.find(big, 'x', 1, true)`, `utf8.len`, string comparison) spends its time between two hook
-  calls. Allocating ones are bounded by the byte cap and the instruction cap together. A fix needs a work counter charged by those calls (or a smaller cap on any one string); I left it as D10 states it.
-- `Script::process_script` (synchronous schema code, X5's area) no longer reads a foreign script's document to check it exists; the error moves to the first run. Making it a coroutine means making the schema's dispatch
-  coroutines, which belongs to X5; no file outside `src/lua`, `src/script.*`, their callers (`database/handler.cc`, `server/search_views.cc`: a `task::budget` for single-document writes), CMake and the harness changed.
-- The byte cap is the state's live bytes, shared by interleaved calls of one script; a hog can fail a sibling call.
-- Removed from scripts: `load`, `loadfile`, `dofile`, `collectgarbage`, `__gc`; a changelog entry says so.
-- Host: `quiet check` showed under 20 GiB free for most of this step, which held every build for minutes; x3's build directories were deleted underneath my builds (I now carry my own copy of the fetched sources in `.scratch/deps-rel`).
+The security reviewer's re-check with its probes (`.scratch/review-x4/`, rerun results in `.scratch/review-x4-after/out/`). The first-session "open" items are closed by X4-S2 (the loop of non-allocating calls is charged and sliced). Still stated: the byte cap is a state's live bytes, shared by interleaved calls of one script; `Script::process_script` (X5's area) no longer reads a foreign script's document at schema time; `load`, `loadfile`, `dofile`, `collectgarbage`, `string.pack` and family, to-be-closed variables and `__gc`/`__close`/`__mode` are removed from scripts (changelog says so).
 
 ## Next
 
-The lead's review, then the lead's T4/T10 measurement (`harness/lua_bounds.py --loops 4`, or `stall_load.py` extended with it). X5 should call `Processor::compile` (a task) if its schema dispatch becomes coroutines.
+The security re-check, then the lead's T4/T10 measurement (`harness/lua_bounds.py --loops 4`, now with library-call loops). X5 should call `Processor::compile` (a task) if its schema dispatch becomes coroutines.
 
 ## Blocked on
 

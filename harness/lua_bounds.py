@@ -87,7 +87,8 @@ CASES = [
     ("script raises an error", "error('boom')", 400),
     ("result: one 1 MiB string shared 64 times", "local s = string.rep('x', 1048576) local t = {} for i = 1, 64 do t[i] = s end _doc.t = t", 413),
     ("result: one small object shared 500,000 times", "local o = {a = 1, b = 2} local t = {} for i = 1, 500000 do t[i] = o end _doc.t = t", 413),
-    ("result: 1,000,000 distinct short strings", "local t = {} for i = 1, 1000000 do t[i] = 'v' .. i end _doc.t = t", 413),
+    ("1,000,000 distinct short strings (the memory cap comes first)", "local t = {} for i = 1, 1000000 do t[i] = 'v' .. i end _doc.t = t", 400),
+    ("result: 400,000 distinct short strings", "local t = {} for i = 1, 400000 do t[i] = 'v' .. i end _doc.t = t", 413),
 ]
 
 # Finish with 2xx: a weak-table chain once stalled the collector for a minute; print is capped.
