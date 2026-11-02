@@ -136,6 +136,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as on the Xapian engine (it answered 500).
 - **`_terms` on numeric, boolean and date fields** returned the accuracy terms of the index
   among the values; it now returns the values.
+- **An empty data directory and an index path outside the data directory are refused.** `-D ""` used to mean the
+  current directory and now exits with a usage error. An index path that is empty, `.`, `a/..` or escapes with `..`
+  (`PUT /a/../doc`) answers `400`, and `--dump` or `--restore` of such a name exits with a usage error.
 
 ### Removed
 - **`--http-clients`, `--bulk-preparers` and `--bulk-indexers`.** The offload threads and the bulk preparer and indexer
