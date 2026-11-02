@@ -995,11 +995,10 @@ XapiandManager::set_ready_impl()
 
 
 void
-XapiandManager::drain_control(control::Tasks& tasks, const char* what)
+XapiandManager::drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit)
 {
 	engine::HostBinding binding(&_rx->host);   // the tasks the drain resumes find their host, as they did on the loop
 	auto& io = _rx->reactor.io();
-	const auto limit = std::chrono::steady_clock::now() + 60s;
 	while ((database_pool->detached() != 0 || tasks.running() != 0) && std::chrono::steady_clock::now() < limit) {
 		io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
 		io.run_for(10ms);
@@ -1022,6 +1021,9 @@ XapiandManager::join()
 	const auto signals_at_join = shutdown_signals.load();
 	const auto insisted = [this, signals_at_join] { return shutdown_signals.load() > signals_at_join; };
 
+	// The stop has one bound (D16): the drains, the HTTP service and the registry's close all end by this time.
+	const auto deadline = std::chrono::steady_clock::now() + shutdown_write_bound;
+
 	// The control loop has stopped (break_loop). The tasks that wait end now: the housekeeping, and the signal
 	// reader, whose read is cancelled.
 	if (_rx->housekeeping) {
@@ -1036,7 +1038,7 @@ XapiandManager::join()
 	// has stopped: from now on they run on the thread that starts them, and the ones already posted run here,
 	// on this thread, until they end.
 	database_pool->set_control(nullptr);
-	drain_control(_rx->tasks, "control");
+	drain_control(_rx->tasks, "control", deadline);
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
@@ -1044,49 +1046,55 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	if (http_service) {
-		L_MANAGER("Stopping the HTTP service!");
+		L(-LOG_NOTICE, NOTICE_COL, "Stop 1: the HTTP service");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
 		// Aborts the requests, then stops and joins the reactors. The writes admitted are let finish, up to the
-		// bound; what is still running then is reported and abandoned.
+		// deadline; what is still running then is reported and abandoned.
 		// A SIGINT or SIGTERM that arrives from here on is an insistence: it ends the wait and the registry's.
-		auto report = shutdown_wait::wait(shutdown_write_bound, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, insisted);
+		const auto left = std::max(std::chrono::milliseconds(1), std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()));
+		auto report = shutdown_wait::wait(left, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, insisted);
 		if (!report.finished) {
 			L_WARNING("Shutdown abandoned {} unfinished item{} after waiting {} ms for the writes in flight{}:", report.abandoned.size(), report.abandoned.size() == 1 ? "" : "s", report.waited.count(), report.interrupted ? " (stopped by a second signal)" : "");
 			for (const auto& line : report.abandoned) {
 				L_WARNING("    {}", line);
 			}
 			abandoned_http_ = std::move(http_service);   // the thread that waits in stop() still uses it
-			abandoned_at_ = std::chrono::steady_clock::now();
+			abandoned_ = true;
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
 	// The autocommits still waiting do not run: closing an index commits what it has pending. After an abandoned
 	// stop the reactors still run, and a write that ends late would commit on its own thread: leave the scheduler.
-	if (!abandoned_http_) {
-		L_MANAGER("Finishing autocommit scheduler!");
+	if (!abandoned_) {
+		L(-LOG_NOTICE, NOTICE_COL, "Stop 2: the autocommits");
 		_rx->autocommits->stop();
-		drain_control(_rx->autocommits->tasks(), "autocommit");
+		drain_control(_rx->autocommits->tasks(), "autocommit", deadline);
 	}
 
 
 	////////////////////////////////////////////////////////////////////
 	if (database_pool) {
-		L_MANAGER("Finishing database pool!");
+		L(-LOG_NOTICE, NOTICE_COL, "Stop 3: the indexes");
 		database_pool->finish();
 
 		L_MANAGER("Clearing and waiting for database pool!");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the database pool...", "Database pool finished!");
-		while (!database_pool->join(500ms)) {
+		for (;;) {
+			const auto remaining = deadline - std::chrono::steady_clock::now();
+			if (database_pool->join(std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(remaining), std::chrono::milliseconds(1), std::chrono::milliseconds(500)))) {
+				break;
+			}
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
 			}
-			if (abandoned_http_ && (insisted() || std::chrono::steady_clock::now() > abandoned_at_ + shutdown_write_bound)) {
-				L_WARNING("Shutdown abandoned the indexes that writes still use:");
+			if (insisted() || std::chrono::steady_clock::now() >= deadline) {
+				L_WARNING("Shutdown abandoned the indexes that are still in use{}:", insisted() ? " (stopped by a second signal)" : "");
 				for (const auto& line : database_pool->busy()) {
 					L_WARNING("    {}", line);
 				}
+				abandoned_ = true;
 				break;
 			}
 		}
@@ -1096,7 +1104,7 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	if (wal_writer) {
-		L_MANAGER("Finishing WAL writers!");
+		L(-LOG_NOTICE, NOTICE_COL, "Stop 4: the write-ahead logs");
 		wal_writer->finish();
 
 		L_MANAGER("Waiting for {} WAL writer{}...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
@@ -1115,7 +1123,7 @@ XapiandManager::join()
 	////////////////////////////////////////////////////////////////////
 	auto& fsyncher_obj = fsyncher(false);
 	if (fsyncher_obj) {
-		L_MANAGER("Finishing async fsync threads pool!");
+		L(-LOG_NOTICE, NOTICE_COL, "Stop 5: the fsync threads");
 		fsyncher_obj->finish();
 
 		L_MANAGER("Waiting for {} async fsync{}...", fsyncher_obj->running_size(), (fsyncher_obj->running_size() == 1) ? "" : "s");
@@ -1129,9 +1137,10 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (abandoned_http_) {
-		// Threads are still inside requests that did not end, and they use the registry, the log writers and the
-		// service: leave without destroying any of them. What was acknowledged is in the log writers' files.
+	if (abandoned_) {
+		// Threads are still inside requests or index work that did not end, and they use the registry, the log
+		// writers and the service: leave without destroying any of them. What was acknowledged is in the log
+		// writers' files.
 		L(-LOG_WARNING, WARNING_COL, "Exiting with unfinished writes abandoned (see above).");
 		Logging::finish();
 		Logging::join();

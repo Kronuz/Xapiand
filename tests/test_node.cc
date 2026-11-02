@@ -533,7 +533,8 @@ static constexpr int abandon_port = 18782;
 static constexpr int acked_writes = 5;
 
 struct AbandonSpec {
-	std::chrono::milliseconds bound = 1500ms;
+	std::chrono::milliseconds bound = 2000ms;
+	bool request = true;          // a PUT waits for the held turn (otherwise only the registry has work left)
 	bool acked = false;           // acknowledged writes to another index before the shutdown
 	bool second_signal = false;   // a second SIGTERM 1 s into the shutdown
 };
@@ -551,16 +552,18 @@ struct AbandonSpec {
 	auto entry = manager()->database_pool->spawn(endpoints_of("abandon")[0]);
 	HoldTurn hold(*entry.get(), WRITE);
 
-	const int fd = connect_to(abandon_port);
-	if (fd < 0) {
-		std::_Exit(3);
+	if (spec.request) {
+		const int fd = connect_to(abandon_port);
+		if (fd < 0) {
+			std::_Exit(3);
+		}
+		const char* request = "PUT /abandon/1 HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 9\r\n\r\n{\"a\":\"b\"}";
+		::send(fd, request, std::strlen(request), 0);
+		if (!eventually([] { return manager()->http_service->reactor(0).gate().inflight.load() == 1; })) {
+			std::_Exit(4);
+		}
+		std::this_thread::sleep_for(300ms);   // the write is waiting for its turn
 	}
-	const char* request = "PUT /abandon/1 HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 9\r\n\r\n{\"a\":\"b\"}";
-	::send(fd, request, std::strlen(request), 0);
-	if (!eventually([] { return manager()->http_service->reactor(0).gate().inflight.load() == 1; })) {
-		std::_Exit(4);
-	}
-	std::this_thread::sleep_for(300ms);   // the write is waiting for its turn
 
 	// Acknowledged: the answer was a 2xx. The shutdown follows at once, before the autocommit (200 ms) fires.
 	for (int i = 1; spec.acked && i <= acked_writes; ++i) {
@@ -571,6 +574,7 @@ struct AbandonSpec {
 	}
 
 	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+	L(-LOG_NOTICE, NOTICE_COL, "SHUTDOWN_AT {}", now);
 	manager()->shutdown(now, now);
 	if (spec.second_signal) {
 		std::this_thread::sleep_for(1s);
@@ -617,6 +621,7 @@ struct ChildResult {
 	bool exited = false;
 	int code = -1;
 	std::chrono::steady_clock::duration took{};
+	long long ended_at_ms = 0;   // the wall clock when the child was seen to end (to within 50 ms)
 };
 
 // Forks a child that runs `body` and waits for it up to `limit`. Run before this process has threads.
@@ -640,6 +645,7 @@ static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 		::waitpid(pid, &status, 0);
 	}
 	ChildResult result;
+	result.ended_at_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	result.took = std::chrono::steady_clock::now() - began;
 	result.exited = done == pid && WIFEXITED(status);
 	result.code = result.exited ? WEXITSTATUS(status) : -1;
@@ -649,8 +655,15 @@ static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 	return result;
 }
 
+// How long the shutdown took, from the child's SHUTDOWN_AT line to the child's end.
+static long long stop_ms(const ChildResult& result, const std::string& log) {
+	const auto at = log.find("SHUTDOWN_AT ");
+	return at == std::string::npos ? -1 : result.ended_at_ms - std::stoll(log.substr(at + 12));
+}
+
 // The shutdown abandons what it cannot finish in its bound and exits 75 (EX_TEMPFAIL). Every write acknowledged
-// before it is there after a restart of the data directory.
+// before it is there after a restart of the data directory. The stop is one bound long, not one for the service and
+// another for the registry.
 static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	const char* log_path = "node_abandon.log";
 	AbandonSpec spec;
@@ -658,8 +671,10 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	const auto result = run_child([&] { abandon_child(log_path, spec); }, 90s);
 	CHECK(result.exited);
 	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL
-	CHECK_LT(result.took, 45s);   // the bound, not the 30 s turn wait twice over
 	const auto log = read_file(log_path);
+	const auto stopped_in = stop_ms(result, log);
+	CHECK_GE(stopped_in, 0);
+	CHECK_LT(stopped_in, spec.bound.count() + 800);   // one bound (and the log flush), where two bounds took more than twice the bound
 	CHECK(log.find("Shutdown abandoned 2 unfinished items") != std::string::npos);
 	CHECK(log.find("1 request in flight on http0") != std::string::npos);
 	CHECK(log.find("turn held") != std::string::npos);
@@ -671,6 +686,65 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	CHECK_EQ(restart.code, 0);
 	if (restart.code != 0) {
 		std::fprintf(stderr, "%s\n", read_file("node_restart.log").c_str());
+	}
+}
+
+// The service stops at once; the registry cannot close an index whose turn a thread holds, and its close ends at the
+// bound like the rest of the stop (it used to wait without a limit).
+static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
+	const char* log_path = "node_registry.log";
+	AbandonSpec spec;
+	spec.request = false;
+	const auto result = run_child([&] { abandon_child(log_path, spec); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 75);
+	const auto log = read_file(log_path);
+	const auto stopped_in = stop_ms(result, log);
+	CHECK_GE(stopped_in, spec.bound.count() - 100);   // it waited for the indexes
+	CHECK_LT(stopped_in, spec.bound.count() + 800);
+	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
+	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(log.find("unfinished item") == std::string::npos);   // the service itself stopped
+	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
+}
+
+// A node that serves a write and is told to stop: the stop's steps run in the order the note states, and the status is 0.
+[[noreturn]] static void ordered_stop_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	{
+		RunningNode node("node_order_data", std::to_string(abandon_port));
+		if (!node.ready()) {
+			std::_Exit(2);
+		}
+		const auto response = http_call(abandon_port, "PUT", "/ordered/1", "{\"a\":\"b\"}");
+		if (response.rfind("HTTP/1.1 2", 0) != 0) {
+			std::_Exit(3);
+		}
+	}   // the node's destructor stops it: the shutdown, then join()
+	Logging::finish();
+	Logging::join();
+	std::_Exit(0);
+}
+
+// The stop: the HTTP service, then the autocommits, the indexes, the write-ahead logs and the fsync threads (the
+// logs after the indexes, since closing an index appends to its log).
+static void test_the_stop_runs_in_its_stated_order() {
+	const char* log_path = "node_order.log";
+	const auto result = run_child([&] { ordered_stop_child(log_path); }, 60s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 0);
+	const auto log = read_file(log_path);
+	std::size_t at = 0;
+	for (const char* step : {"Stop 1: the HTTP service", "Stop 2: the autocommits", "Stop 3: the indexes", "Stop 4: the write-ahead logs", "Stop 5: the fsync threads"}) {
+		const auto found = log.find(step, at);
+		CHECK(found != std::string::npos);
+		if (found == std::string::npos) {
+			std::fprintf(stderr, "  step \"%s\" is missing or out of order in:\n%s\n", step, log.c_str());
+			break;
+		}
+		CHECK_EQ(log.rfind(step), found);   // each step is logged once
+		at = found;
 	}
 }
 
@@ -773,6 +847,8 @@ int main(int argc, char** argv) {
 	const Forked forked[] = {
 		{"test_a_node_on_a_taken_port_ends_the_process", test_a_node_on_a_taken_port_ends_the_process},
 		{"test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound", test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound},
+		{"test_the_stop_runs_in_its_stated_order", test_the_stop_runs_in_its_stated_order},
+		{"test_a_registry_that_cannot_close_ends_the_stop_at_the_bound", test_a_registry_that_cannot_close_ends_the_stop_at_the_bound},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
 	};
 	for (const auto& f : forked) {
