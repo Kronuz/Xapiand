@@ -146,19 +146,28 @@ document is not indexed:
 |----------------------|--------------------------------------------------------------------------|
 | Instructions         | 100,000,000 per call                                                     |
 | Work                 | 500,000,000 units per call: the bytes, pattern steps and table elements the library calls touch, about a nanosecond each |
+| One library call     | 16,000,000 units (about 20 ms) between two instructions of the script: a single `string`, `table` or `utf8` call that touches more (about 5 MiB with `upper` or `reverse`, 16 MiB with `utf8.len`) ends the call |
 | Memory               | 64 MiB of live data per compiled script on each thread                   |
-| Pattern matching     | `max(1,000,000, 64 x subject length)` steps per `string` call            |
+| Pattern matching     | `min(max(1,000,000, 64 x subject length), 3,200,000)` steps per `string` call |
+| Stack                | 200,000 slots: `table.unpack` or `select('#', ...)` over about 200,000 elements raises "too many results to unpack" |
 | Callbacks            | 1,000,000 instructions in a row inside a callback that cannot yield (a `gsub` function, an `__lt` run by `table.sort`) |
 
 Work is charged by what a call touches, not by how often it is made: a plain
 `find` over a megabyte costs a megabyte, a pattern costs its steps, and `rep`,
 `sub`, `upper`, `reverse`, `format`, `..`, string comparison, `utf8.*`,
 `table.concat`, `unpack`, `insert`, `remove` and `move` cost their lengths. A
-call that has done more than a slice of it yields at its next instruction.
+call that has done more than a slice of it yields at its next instruction. No
+single library call can hold the event loop for more than about 20 ms: one that
+would touch more than 16,000,000 units (a quadratic pattern over a 1 MiB
+subject, `upper` over 8 MiB, a `gsub` over several MiB) ends the call with `400`
+instead. Process a larger string in pieces.
 
 The document a script leaves in `_doc` is converted back with a budget of its
 own: at most 16 MiB of string and key bytes and 262,144 value units (a scalar is 1, an
-array 2, an object 8), counting every reference to a shared string or table again. A script that returns more answers
+array 2, an object 8), counting every reference to a shared string or table again. The
+whole document counts, not only what the script changed: a document of more than
+262,144 value units (about 262,000 integers) answers `413 Payload Too Large` through
+any script, even one that touches a single field. A script that returns more answers
 `413 Payload Too Large`. Any other error a script raises answers `400 Bad
 Request` with the script's message (cut at 1 KiB), and the document is not
 indexed.

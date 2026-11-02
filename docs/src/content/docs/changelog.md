@@ -38,8 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copies of `string`, `table`, `math` and `utf8`: calls of one script no longer share globals. A call that passes 100,000,000
   instructions, 500,000,000 units of work (what its string, table and pattern calls touch: bytes, steps, elements, charged per
   call and yielded in slices), 64 MiB of live data or 10^6 instructions in a callback that cannot yield answers `400`, and
-  `pcall` cannot catch it. A script's result is converted back within 16 MiB of strings and 262,144 value units (an object is 8) (a bigger one answers
-  `413`), and any error a script raises answers `400` instead of storing the document untransformed. `table.sort` is written in
+  `pcall` cannot catch it. A single library call that would touch more than 16,000,000 units (about 20 ms: a quadratic pattern over
+  a 1 MiB subject, `upper` over 8 MiB) answers `400` too, so no call holds a request loop longer than that. A script's result is converted back within 16 MiB of strings and 262,144 value units (an object is 8)
+  (a bigger one answers `413`; the whole document counts, so a script over a document of more than 262,144 value units answers `413` even when
+  it touches one field), the Lua stack holds 200,000 slots instead of 1,000,000 (`table.unpack` over about 200,000 elements raises "too many
+  results to unpack"), and any error a script raises answers `400` instead of storing the document untransformed. `table.sort` is written in
   Lua (a stable merge sort) so comparisons yield. `load`, `dofile`, `loadfile`, `collectgarbage`, `string.pack`, `string.unpack`,
   `string.packsize`, `string.dump`, to-be-closed variables and the `__gc`, `__close` and `__mode` metamethods are no longer
   available to scripts, and `print` logs at most 4 KiB per call. A script saved under a name now replaces the cached script of the

@@ -456,9 +456,10 @@ void test_ordinary_patterns_stay_inside_the_budget() {
 }
 
 void test_an_allocation_past_the_cap_ends() {
-	auto rep = call("local s = string.rep('x', 1024 * 1024 * 1024)", MsgPack::MAP(), quick());
+	auto rep = call("local a = string.rep('x', 3 * 1024 * 1024) local b = a .. a .. a", MsgPack::MAP(), quick());   // 9 MiB live against 8 MiB
 	CHECK(rep.limit);
 	CHECK(rep.what.find("memory limit") != std::string::npos);
+	CHECK(call("local s = string.rep('x', 1024 * 1024 * 1024)", MsgPack::MAP(), quick()).limit);   // refused whole: past the per-call cap
 	auto grow = call("local t = {} for i = 1, 100000000 do t[i] = i end", MsgPack::MAP(), quick());
 	CHECK(grow.limit);
 	auto strings = call("local t = {} for i = 1, 100000000 do t[i] = 'k' .. i end", MsgPack::MAP(), quick());
@@ -510,22 +511,22 @@ void test_conversion_runs_no_script_code() {
 
 // --- X4-S1: a call that crossed a bound cannot be resumed or caught -------------------------------------
 
-// The reviewer's probe (p14): a to-be-closed variable whose handler raises replaces the bound's error in flight,
+// The reviewer's probe (p14): a to-be-closed variable whose handler raises (a table: a string would meet a charged `find` and end the call by accident) replaces the bound's error in flight,
 // the script's own pcall catches the replacement, and the hook raises again 10,000 instructions later.
 const char* const close_swallow =
 	"local n = 0 while true do pcall(function() "
-	"local mt = {} local x <close> = setmetatable({}, mt) mt.__close = function() error('swallowed') end "
+	"local mt = {} local x <close> = setmetatable({}, mt) mt.__close = function() error({}) end "
 	"while true do end end) n = n + 1 end";
 const char* const close_swallow_late =   // the metamethod is added after setmetatable, which is how the refusal is walked around
 	"while true do pcall(function() "
-	"local mt = {} local t = setmetatable({}, mt) mt.__close = function() error('swallowed') end "
+	"local mt = {} local t = setmetatable({}, mt) mt.__close = function() error({}) end "
 	"local x <close> = t while true do end end) end";
 const char* const close_swallow_xpcall =
 	"while true do xpcall(function() "
-	"local mt = {} local t = setmetatable({}, mt) mt.__close = function() error('swallowed') end "
+	"local mt = {} local t = setmetatable({}, mt) mt.__close = function() error({}) end "
 	"local x <close> = t while true do end end, function(m) return m end) end";
 const char* const close_swallow_genfor =
-	"while true do pcall(function() local mt = {} local t = setmetatable({}, mt) mt.__close = function() error('swallowed') end "
+	"while true do pcall(function() local mt = {} local t = setmetatable({}, mt) mt.__close = function() error({}) end "
 	"for _ in next, {}, nil, t do end local c <close> = t while true do end end) end";
 
 void test_a_script_cannot_declare_a_to_be_closed_variable() {
@@ -644,6 +645,48 @@ void test_a_vararg_chain_ends_at_the_work_cap() {
 	CHECK(spread.limit);
 	auto pack = call("local t = {} for i = 1, 100000 do t[i] = i end while true do local p = {table.unpack(t)} end", MsgPack::MAP());
 	CHECK(pack.limit);
+}
+
+void test_one_call_cannot_hold_the_loop_past_the_call_cap() {
+	// X4-R1: no uninterruptible stretch may do more than `max_call_work` (16 x 10^6 units, about 20 ms), however
+	// far the whole call's cap (5 x 10^8) is.
+	const Limits defaults;
+	CHECK_EQ(defaults.max_call_work, 16'000'000u);
+	auto has = [](const Outcome& out, const char* what) { return out.limit && out.what.find(what) != std::string::npos; };
+	// Linear library calls on strings the memory cap allows: refused before they run.
+	auto upper = call("local s = string.rep('abcdefgh', 1024 * 1024) local r = s:upper()", MsgPack::MAP());
+	CHECK(has(upper, "per-call work limit"));
+	auto reverse = call("local s = string.rep('abcdefgh', 1024 * 1024) local r = s:reverse()", MsgPack::MAP());
+	CHECK(has(reverse, "per-call work limit"));
+	auto utf = call("local s = string.rep('abcdefgh', 2560 * 1024) local n = utf8.len(s)", MsgPack::MAP());
+	CHECK(has(utf, "per-call work limit"));
+	// A one-byte repeat costs about 3 ns a copy: rep('x', 31 MiB) is refused before it runs (it held a reactor 0.12 s).
+	auto rep = call("local s = string.rep('x', 31 * 1024 * 1024)", MsgPack::MAP());
+	CHECK(has(rep, "per-call work limit"));
+	// Many small charges inside one call add up the same way: a gsub that would complete over 8 MiB is cut.
+	auto gsub = call("local s = string.rep('abcdefgh', 1024 * 1024) local r = s:gsub('a', 'b')", MsgPack::MAP());
+	CHECK(has(gsub, "step budget") || has(gsub, "per-call work limit"));
+	auto plain = call("local h = string.rep('a', 1 << 20) local n = string.rep('a', 1 << 19) .. 'b' local r = h:find(n, 1, true)", MsgPack::MAP());
+	CHECK(has(plain, "per-call work limit"));
+	// A quadratic pattern over a 1 MiB subject ends at the matcher's share of the cap (3.2 x 10^6 steps), not at 64 x 10^6.
+	auto quad = call("local s = string.rep('a', 1 << 20) local r = s:find('.-b')", MsgPack::MAP());
+	CHECK(has(quad, "step budget"));
+	// A call below the cap is untouched, and so is a loop of them (each yields between calls).
+	auto fine = call("local s = string.rep('a', 1 << 20) local r = s:upper() local g = s:gsub('a', 'b') _doc.n = #g _doc.u = utf8.len(s)", MsgPack::MAP());
+	REQUIRE(fine.ok());
+	CHECK_EQ(fine.doc.at("n").i64(), 1 << 20);
+	auto loop = call("local s = string.rep('a', 1 << 20) local n = 0 for i = 1, 100 do n = n + #s:upper() end _doc.n = n", MsgPack::MAP());
+	REQUIRE(loop.ok());
+	CHECK_EQ(loop.doc.at("n").i64(), 100 << 20);
+	// The matcher's share follows the limit: a pattern of a few hundred thousand steps completes by default, and ends at the
+	// step budget (a fifth of the cap) when the cap is 500,000 units, before the sum of the charges reaches the cap.
+	const char* const some_steps = "local s = string.rep('a', 600) local r = s:find('.-c') _doc.done = r == nil";
+	auto roomy = call(some_steps, MsgPack::MAP());
+	REQUIRE(roomy.ok());
+	CHECK(roomy.doc.at("done").boolean());
+	Limits tight;
+	tight.max_call_work = 500'000;
+	CHECK(has(call(some_steps, MsgPack::MAP(), tight), "step budget"));
 }
 
 void test_weak_tables_are_refused_and_never_weak() {
@@ -835,12 +878,51 @@ void test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference()
 // --- N1: print is bounded -------------------------------------------------------------------------------
 
 void test_print_is_bounded_per_call() {
+	const auto before = Processor::printed_bytes();
 	auto out = call(
 		"local big = string.rep('p', 1 << 22) for i = 1, 200 do print(big, i, nil, {} ~= nil) end "
 		"for i = 1, 100000 do print('line', i) end _doc.done = true",
 		MsgPack::MAP());
 	REQUIRE(out.ok());
 	CHECK(out.doc.at("done").boolean());
+	const auto logged = Processor::printed_bytes() - before;
+	CHECK(logged > 0);
+	CHECK(logged <= Limits{}.max_print_bytes);              // 20,000 prints of 4 MiB asked; the budget is per call
+	const auto small_before = Processor::printed_bytes();      // small prints never hit the line cut: only the call's budget ends them
+	CHECK(call("for i = 1, 100000 do print('line', i) end", MsgPack::MAP()).ok());
+	const auto small = Processor::printed_bytes() - small_before;
+	CHECK(small > 0);
+	CHECK(small <= Limits{}.max_print_bytes);
+	const auto line_before = Processor::printed_bytes();
+	CHECK(call("print(string.rep('q', 1 << 22))", MsgPack::MAP()).ok());
+	CHECK_EQ(Processor::printed_bytes() - line_before, 1024u);   // a line is cut at 1 KiB
+	const auto again = Processor::printed_bytes();
+	CHECK(call("print('x')", MsgPack::MAP()).ok());           // the next call has its own budget
+	CHECK_EQ(Processor::printed_bytes() - again, 1u);
+}
+
+
+// --- S4: a cached foreign script is trusted for a second -----------------------------------------------
+
+void test_a_cached_foreign_script_is_trusted_for_a_second_and_then_read_again() {
+	using namespace std::chrono_literals;
+	CHECK(Processor::foreign_revalidation() == 1000ms);
+	const std::string reference = "scripts/trusted";
+	auto cached = std::make_shared<Processor>("scripts/trusted", "_doc.v = 1", MsgPack::MAP());
+	Processor::remember_foreign(reference, cached);
+	CHECK(Processor::foreign_trusted(reference));
+	// Inside the window `compile` serves the cached processor without reading the document.
+	MsgPack object({{"_type", "foreign/object"}, {"_foreign", reference}});
+	Script foreign_script(object);
+	CHECK(task::sync_wait(Processor::compile(foreign_script)) == cached);
+	// Past it the entry is stale, so `compile` would read the document again.
+	Processor::set_foreign_revalidation(20ms);
+	std::this_thread::sleep_for(60ms);
+	CHECK(!Processor::foreign_trusted(reference));
+	Processor::remember_foreign(reference, cached);        // a read stamps the entry anew
+	CHECK(Processor::foreign_trusted(reference));
+	Processor::set_foreign_revalidation(1000ms);
+	CHECK(!Processor::foreign_trusted("scripts/never-seen"));
 }
 
 
@@ -939,6 +1021,8 @@ TEST_MAIN(
 	test_a_result_past_its_node_budget_is_refused,
 	test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference,
 	test_print_is_bounded_per_call,
+	test_a_cached_foreign_script_is_trusted_for_a_second_and_then_read_again,
+	test_one_call_cannot_hold_the_loop_past_the_call_cap,
 	test_a_long_script_lets_other_work_run,
 	test_without_a_budget_a_script_runs_to_its_end,
 	test_a_cancelled_call_stops_at_its_next_slice_and_frees_its_thread,
