@@ -53,3 +53,7 @@ strata/include/strata/core/index.hh	sleep	yield	allow	1	published_position() spi
 strata/include/strata/core/index.hh	wait	bool drain\(\)	owed	1	D6: L5 defer_io returns drain_owed instead of draining on the caller
 strata/include/strata/core/index.hh	wait	try_grow\(.*drain\(\)	owed	3	D6: L5 defer_io returns drain_owed instead of draining on the caller
 src/manager.cc	sync_wait	shutdown_checks	allow	1	the shutdown checks after the control loop ended run on the main thread; check_may_block guards it (D13)
+src/control_plane.h	mutex	.	allow	8	the control tasks' state (a wake pointer, a key's target, one map entry): O(1) sections, never held across a wait or a call (D13)
+src/shutdown_wait.h	mutex	.	allow	2	the state shared with the thread that runs a blocking stop: a flag under a lock, on the main thread at shutdown; check_may_block guards the entry (D14)
+src/shutdown_wait.h	wait	.	allow	1	the shutdown's bounded wait for a blocking stop (C14), on the main thread; check_may_block guards it (D14)
+src/single_flight.h	mutex	.	allow	2	the flights map: one lookup or erase under the lock, never held across the load or a wait (D11)

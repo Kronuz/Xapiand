@@ -36,6 +36,8 @@
 #include <thread>                  // for std::thread
 #include <vector>                  // for std::vector
 
+#include "engine/sync.h"           // for engine::check_may_block
+
 
 namespace shutdown_wait {
 
@@ -51,6 +53,8 @@ struct Report {
 inline Report
 wait(std::chrono::milliseconds bound, std::function<void()> stop, const std::function<std::vector<std::string>()>& describe)
 {
+	engine::check_may_block("shutdown_wait::wait");
+
 	struct State {
 		std::mutex m;
 		std::condition_variable cv;
