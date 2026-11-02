@@ -1034,12 +1034,18 @@ FetchContent_MakeAvailable(prometheus_cpp)
 
 
 ########################################################################
-# Lua + sol2 — the document-scripting engine
+# Lua — the document-scripting engine (the C API, used directly)
 ########################################################################
 if(LUA)
 	# Lua 5.4: official sources ship no CMake, so build a static object lib from
 	# src/*.c (minus the interpreter/compiler driver mains).
-	FetchContent_Declare(lua URL https://www.lua.org/ftp/lua-5.4.7.tar.gz)
+	# The matcher carries a step budget (D10): contrib/lua/lstrlib-step-budget.patch, applied to the pinned tarball.
+	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
+	FetchContent_Declare(lua
+		URL "${XAPIAND_LUA_URL}"
+		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
+		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/lstrlib-step-budget.patch"
+	)
 	FetchContent_MakeAvailable(lua)
 	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/src/*.c")
 	list(REMOVE_ITEM LUA_SRC_LIST
@@ -1049,21 +1055,7 @@ if(LUA)
 	add_library(LUA_OBJ OBJECT ${LUA_SRC_LIST})
 	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}/src")
 
-	# sol2: header-only C++ binding; use its headers directly.
-	FetchContent_Declare(sol2 GIT_REPOSITORY https://github.com/ThePhD/sol2.git GIT_TAG c1f95a773c6f8f4fde8ca3efe872e7286afe4444)  # v3.5.0-4
-	FetchContent_MakeAvailable(sol2)
-
-	# sol2 prefers <lua/lua.h> when it exists, and a system Lua (Homebrew's, say) can
-	# provide one; stage the fetched headers under lua/ and search them first.
-	set(LUA_STAGED_INCLUDE "${CMAKE_BINARY_DIR}/lua-include")
-	foreach(header lua.h luaconf.h lualib.h lauxlib.h lua.hpp)
-		configure_file("${lua_SOURCE_DIR}/src/${header}" "${LUA_STAGED_INCLUDE}/lua/${header}" COPYONLY)
-	endforeach()
-	include_directories(BEFORE
-		"${LUA_STAGED_INCLUDE}"
-		"${lua_SOURCE_DIR}/src"
-		"${sol2_SOURCE_DIR}/include"
-	)
+	include_directories(BEFORE "${lua_SOURCE_DIR}/src")
 endif()
 
 
@@ -1911,7 +1903,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests lua)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1934,6 +1926,17 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		# The Lua step-budget patch applies to the pinned tarball and yields the file that was built.
+		if (LUA)
+			add_test(NAME test_lua_patch_drift COMMAND ${CMAKE_COMMAND}
+				-DLUA_SRC=${lua_SOURCE_DIR}
+				-DLUA_TARBALL=${lua_SOURCE_DIR}/../lua-subbuild/lua-populate-prefix/src/lua-5.4.7.tar.gz
+				-DPATCH=${PROJECT_SOURCE_DIR}/contrib/lua/lstrlib-step-budget.patch
+				-DVERSION_FILE=${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake
+				-DWORK=${CMAKE_BINARY_DIR}/lua-drift
+				-P ${PROJECT_SOURCE_DIR}/tests/lua_patch_drift.cmake)
+		endif ()
 
 	# libFuzzer targets: standalone (they link only the code they fuzz), built with -DFUZZ=ON.
 	if (FUZZ)
@@ -1986,6 +1989,19 @@ if (BUILD_TESTS)
 		)
 		target_include_directories(${PROJECT_NAME}_fuzz_text PRIVATE "${queryparser_SOURCE_DIR}/test")
 		target_compile_definitions(${PROJECT_NAME}_fuzz_text PRIVATE QUERYPARSER_VECTORS="${queryparser_SOURCE_DIR}/test/vectors" XAPIAND_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+		# Fuzzes the Lua runner: random scripts run interleaved and one after another must end alike. Run it: xapiand_fuzz_lua SECONDS [SEED].
+		if (LUA)
+			add_executable(${PROJECT_NAME}_fuzz_lua
+				"${PROJECT_SOURCE_DIR}/tests/fuzz_lua.cc"
+				"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+			)
+			target_link_libraries(${PROJECT_NAME}_fuzz_lua PRIVATE
+				XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+				$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+				${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+			)
+		endif ()
 
 		# Fuzzes the request body decoders (JSON, YAML, MessagePack) around the nesting limit. Run it: xapiand_fuzz_body SECONDS [SEED].
 		add_executable(${PROJECT_NAME}_fuzz_body

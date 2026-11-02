@@ -478,6 +478,9 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 
 
 
+// The longest a request runs before it yields its reactor (an estimate; docs/design/phase7c.md D2).
+static constexpr std::chrono::microseconds REQUEST_SLICE{200};
+
 // The URL "kinds" Xapiand's grammar classifies into: a small, fixed set of route
 // keys the declarative table is registered under. They are internal routing tokens
 // (never user-facing paths), so they are zero-copy constants and cost no allocation
@@ -890,6 +893,8 @@ write_document_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	task::budget script_budget(REQUEST_SLICE);   // a script yields its reactor between slices; an admitted write is not cancelled
+	db_handler.budget = &script_budget;
 	bool stored = is_stored_type(request.ct_type);
 	auto ct_type = request.ct_type.empty() ? mime_type(selector) : request.ct_type;
 	auto indexed = streamed
@@ -985,6 +990,8 @@ update_document_view(Request& request)
 	std::string operation;
 	DocumentInfo indexed;
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	task::budget script_budget(REQUEST_SLICE);   // a script yields its reactor between slices; an admitted write is not cancelled
+	db_handler.budget = &script_budget;
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
 		indexed = co_await db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
@@ -1419,6 +1426,8 @@ write_database_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	task::budget script_budget(REQUEST_SLICE);   // a script yields its reactor between slices; an admitted write is not cancelled
+	db_handler.budget = &script_budget;
 
 	if (decoded_body.is_map()) {
 		auto schema_it = decoded_body.find(RESERVED_SCHEMA);
@@ -3007,9 +3016,6 @@ method_from_string(std::string_view m)
 	}
 }
 
-
-// The longest a request runs before it yields its reactor (an estimate; docs/design/phase7c.md D2).
-static constexpr std::chrono::microseconds REQUEST_SLICE{200};
 
 // The most demoted handles a reactor lets queue before it refuses new requests (docs/design/phase7c.md D2).
 static constexpr std::size_t DEMOTED_ADMISSION_CAP = 256;

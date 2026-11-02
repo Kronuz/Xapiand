@@ -26,11 +26,21 @@
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 
+#include "xapiand_exception.h"  // for ClientError
+
 
 namespace lua {
 
 class Error : public std::runtime_error {
 	using std::runtime_error::runtime_error;
+};
+
+
+// A script crossed one of its bounds (instructions, memory, matcher steps, callbacks): a 400.
+class ScriptLimitError : public ClientError {
+public:
+	template<typename... Args>
+	ScriptLimitError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
 

@@ -288,33 +288,31 @@ task::task<std::unique_ptr<MsgPack>>
 DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
 #ifdef XAPIAND_LUA
-	auto processor = lua::Processor::compile(script);
-	if (processor) {
-		std::string method;  // TODO: Fill vriable "method" to pass to script
+	std::string method;  // TODO: Fill vriable "method" to pass to script
 
-		auto doc = std::make_unique<MsgPack>(object);
+	auto doc = std::make_unique<MsgPack>(object);
 
-		MsgPack old_doc;
-		if (data.version.empty()) {
-			Data current_data;
-			try {
-				auto current_document = co_await get_document_term(term_id);
-				current_data = Data(co_await current_document.get_data());
-				data.version = co_await current_document.get_value(DB_SLOT_VERSION);  // update version in data
-			} catch (const engine::Error& error) {
-				if (!engine::is_missing(error.kind)) { throw; }
-			}
-			old_doc = current_data.get_obj();
-		} else {
-			old_doc = data.get_obj();
+	MsgPack old_doc;
+	if (data.version.empty()) {
+		Data current_data;
+		try {
+			auto current_document = co_await get_document_term(term_id);
+			current_data = Data(co_await current_document.get_data());
+			data.version = co_await current_document.get_value(DB_SLOT_VERSION);  // update version in data
+		} catch (const engine::Error& error) {
+			if (!engine::is_missing(error.kind)) { throw; }
 		}
-
-		L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
-
-		(*processor)(method, *doc, old_doc, script.get_params());
-		co_return doc;
+		old_doc = current_data.get_obj();
+	} else {
+		old_doc = data.get_obj();
 	}
-	co_return nullptr;
+
+	L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
+
+	// Compiled and run without a wait between: the processor is this thread's own.
+	auto processor = co_await lua::Processor::compile(script);
+	co_await (*processor)(method, *doc, old_doc, script.get_params(), budget);
+	co_return doc;
 #else
 	THROW(ClientError, "Script type 'lua' (Lua scripting) not available.");
 	co_return nullptr;

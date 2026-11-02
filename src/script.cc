@@ -241,7 +241,7 @@ Script::process_script([[maybe_unused]] bool strict) const
 	auto sep_types = get_types(strict);
 
 	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-		lua::Processor::compile(*this);
+		// The foreign document is read (awaited) when the script first runs: this is not a coroutine.
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_FOREIGN, get_endpoint() },
@@ -253,7 +253,7 @@ Script::process_script([[maybe_unused]] bool strict) const
 		return script_data;
 	} else {
 		auto name_body = get_name_body();
-		lua::Processor::compile(*this);
+		lua::Processor::compile_local(*this);
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_LUA, {

@@ -27,44 +27,70 @@
 
 #if XAPIAND_LUA
 
+#include <cstddef>           // for std::size_t
 #include <memory>            // for std::shared_ptr
-#include <mutex>             // for std::mutex
+#include <string>
 #include <string_view>
-
-// Xapiand's logging system defines a function-like macro `L(...)`, which
-// collides with sol2's pervasive `lua_State* L` members (written as `L(...)` in
-// constructor initializer lists throughout sol2). Shield the sol2 include from
-// it: this is order-independent, so processor.h is safe to include after log.h.
-#pragma push_macro("L")
-#undef L
-#include <sol/sol.hpp>       // the Lua (sol2) scripting engine
-#pragma pop_macro("L")
+#include <thread>            // for std::thread::id
 
 #include "msgpack.h"         // for MsgPack
 #include "script.h"          // for Script
+#include "task.hh"           // for task::task, task::budget
 
+struct lua_State;
+
+namespace lua::detail {
+struct Heap;
+}
 
 namespace lua {
 
-// Document-transform scripting, backed by Lua (sol2). A script runs with the
-// globals `_method`, `_doc`, `_old_doc`, and the script's parameters (each by
-// name) in scope, mutating `_doc`. The document is exposed as a Lua table
-// (MsgPack <-> table conversion happens around each call), so scripts are plain,
-// idiomatic Lua.
+// The bounds of one script call (D10). The defaults are the design's estimates.
+struct Limits {
+	std::size_t hook_period = 10'000;               // VM instructions between two hook calls
+	std::size_t max_instructions = 100'000'000;     // per call
+	std::size_t max_unyielded_hooks = 100;          // hook calls in a row without a yield point
+	std::size_t max_bytes = 64u << 20;              // live bytes of a script's state
+};
+
+
+// Document-transform scripting on Lua 5.4. A script compiles once into a chunk of the form
+// `local _ENV = ...; <body>`; each call runs it in its own lua_newthread with its own environment
+// table (`_method`, `_doc`, `_old_doc`, the params, `_G` as the table itself, and its own
+// proxies of `string`, `table`, `math` and `utf8`), over a base that holds the opened libraries.
+// A call yields to its reactor at the hook (every `hook_period` instructions) wherever Lua
+// allows it, so scripts run in slices; calls of one script interleave without sharing globals.
+//
+// A Processor belongs to the thread that compiled it (each thread keeps its own cache); the byte
+// cap is charged to the state's live bytes, so interleaved calls on one script share it.
 class Processor {
 	size_t hash;
-	sol::state state;
-	sol::protected_function func;   // the compiled script body
+	std::unique_ptr<detail::Heap> heap;
+	lua_State* L = nullptr;
+	int func_ref = 0;               // the compiled chunk, in the registry
+	int new_env_ref = 0;            // the base's environment factory, in the registry
 	MsgPack script_params;
-	std::mutex mtx;                 // a Lua state is not re-entrant; serialize calls
+	Limits limits;
+	std::thread::id owner;
 
 public:
-	Processor(const Script& script);
+	// Compiles `body` as the script `name`. A syntax error is a ClientError.
+	Processor(std::string_view name, std::string_view body, MsgPack params, Limits limits = {});
+	~Processor();
+	Processor(const Processor&) = delete;
+	Processor& operator=(const Processor&) = delete;
 
-	void operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params);
-	static std::shared_ptr<Processor> compile(const Script& script);
+	// Runs the script on `doc`. `budget` (the request's slice) is awaited at each yield; null runs
+	// the call to its end. A bound crossed (instructions, memory, matcher steps, a long run of
+	// callbacks) is a ScriptLimitError; any other script error leaves the document as it was.
+	task::task<void> operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params, task::budget* budget = nullptr);
 
-	size_t get_hash() {
+	// The calling thread's compiled script for `script`; a foreign script's document is read (awaited) on a miss.
+	static task::task<std::shared_ptr<Processor>> compile(const Script& script);
+	// The same for a script with a body of its own: no read, so no wait.
+	static std::shared_ptr<Processor> compile_local(const Script& script);
+
+	size_t get_hash() const {
 		return hash;
 	}
 };
