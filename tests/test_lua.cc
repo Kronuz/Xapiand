@@ -55,11 +55,12 @@ using lua::Processor;
 struct Outcome {
 	MsgPack doc;
 	bool limit = false;      // ScriptLimitError
+	bool too_large = false;  // ScriptResultTooLarge
 	bool script_error = false;   // ScriptError: the script's own
 	bool cancelled = false;
 	bool failed = false;     // any other exception
 	std::string what;
-	bool ok() const { return !limit && !script_error && !cancelled && !failed; }
+	bool ok() const { return !limit && !too_large && !script_error && !cancelled && !failed; }
 };
 
 Outcome outcome_of(std::exception_ptr error) {
@@ -71,6 +72,9 @@ Outcome outcome_of(std::exception_ptr error) {
 		std::rethrow_exception(error);
 	} catch (const lua::ScriptLimitError& e) {
 		out.limit = true;
+		out.what = e.what();
+	} catch (const lua::ScriptResultTooLarge& e) {
+		out.too_large = true;
 		out.what = e.what();
 	} catch (const lua::ScriptError& e) {
 		out.script_error = true;
@@ -486,11 +490,11 @@ void test_the_state_serves_the_next_call_after_every_bound() {
 void test_a_document_with_a_cycle_or_a_shared_blowup_is_refused() {
 	auto cycle = call("_doc.me = _doc", MsgPack::MAP());
 	CHECK(cycle.failed);
-	CHECK(cycle.what.find("too large or too deeply nested") != std::string::npos);
+	CHECK(cycle.what.find("too deeply nested") != std::string::npos);
 	Limits limits;
 	limits.max_bytes = 16u << 20;
 	auto dag = call("local t = {1} for i = 1, 60 do t = {t, t} end; _doc.t = t", MsgPack::MAP(), limits);
-	CHECK(dag.failed);
+	CHECK(dag.too_large);
 }
 
 void test_conversion_runs_no_script_code() {
@@ -772,6 +776,34 @@ void test_plain_find_agrees_with_std_string_find() {
 }
 
 
+// --- X4-S3: the converted result is bounded -------------------------------------------------------------
+
+void test_a_result_past_its_byte_budget_is_refused() {
+	// The reviewer's p5: one 1 MiB string referenced many times costs the host a copy per reference.
+	auto shared = call("local s = string.rep('x', 1048576) local t = {} for i = 1, 40 do t[i] = s end _doc.t = t", MsgPack::MAP());
+	CHECK(shared.too_large);
+	CHECK(shared.what.find("bytes") != std::string::npos);
+	auto keys = call("local t = {} local k = string.rep('k', 1048576) for i = 1, 40 do t[k .. i] = 1 end _doc.t = t", MsgPack::MAP());
+	CHECK(keys.too_large);
+	auto within = call("local s = string.rep('x', 1048576) local t = {} for i = 1, 12 do t[i] = s end _doc.t = t", MsgPack::MAP());
+	REQUIRE(within.ok());
+	CHECK_EQ(within.doc.at("t").size(), 12u);
+}
+
+void test_a_result_past_its_node_budget_is_refused() {
+	auto shared = call("local o = {a = 1, b = 2} local t = {} for i = 1, 40000 do t[i] = o end _doc.t = t", MsgPack::MAP());
+	CHECK(shared.too_large);   // a map costs 8 units, three values in it 3 more
+	CHECK(shared.what.find("values") != std::string::npos);
+	auto distinct = call("local t = {} for i = 1, 400000 do t[i] = 'v' .. i end _doc.t = t", MsgPack::MAP());
+	CHECK(distinct.too_large);
+	auto dropped = call("local k = {} local t = {} for i = 1, 300000 do t[{}] = i end _doc.t = t _doc.k = k", MsgPack::MAP());
+	CHECK(dropped.too_large);   // entries the conversion drops still cost a visit
+	auto within = call("local t = {} for i = 1, 50000 do t[i] = {i, 'v'} end _doc.t = t", MsgPack::MAP());
+	REQUIRE(within.ok());
+	CHECK_EQ(within.doc.at("t").size(), 50000u);
+}
+
+
 // --- N1: print is bounded -------------------------------------------------------------------------------
 
 void test_print_is_bounded_per_call() {
@@ -875,6 +907,8 @@ TEST_MAIN(
 	test_table_sort_without_a_comparator_is_the_merge_sort,
 	test_patched_library_functions_still_compute,
 	test_plain_find_agrees_with_std_string_find,
+	test_a_result_past_its_byte_budget_is_refused,
+	test_a_result_past_its_node_budget_is_refused,
 	test_print_is_bounded_per_call,
 	test_a_long_script_lets_other_work_run,
 	test_without_a_budget_a_script_runs_to_its_end,

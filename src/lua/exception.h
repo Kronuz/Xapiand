@@ -52,6 +52,14 @@ public:
 };
 
 
+// A script's result is past the bytes or values the host converts (the body cap): a 413.
+class ScriptResultTooLarge : public PayloadTooLarge {
+public:
+	template<typename... Args>
+	ScriptResultTooLarge(Args&&... args) : PayloadTooLarge(std::forward<Args>(args)...) { }
+};
+
+
 class TimeOutError : public Error {
 public:
 	TimeOutError() : Error("Time Out") { }

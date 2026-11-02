@@ -51,6 +51,7 @@ extern "C" {
 #include "manager.h"                              // for XapiandManager::*
 #include "msgpack.h"                              // for MsgPack
 #include "repr.hh"                                // for repr
+#include "server/search_service.h"                 // for BUFFERED_BODY_CAP
 #include "url_parser.h"                           // for urldecode
 
 namespace lua {
@@ -88,6 +89,8 @@ struct Call {
 thread_local Call* current_call = nullptr;
 
 constexpr std::size_t max_print_line = 1024;
+
+static_assert(Limits{}.max_result_bytes == BUFFERED_BODY_CAP, "a script's result is bounded like the body it replaces");
 
 void hook(lua_State* L, lua_Debug* ar);
 
@@ -384,8 +387,26 @@ void push_msgpack(lua_State* L, const MsgPack& m, int depth) {
 }
 
 
+// What the conversion may still spend: values (the host spends about 500 bytes on each) and string bytes.
 struct Walk {
 	std::size_t nodes_left;
+	std::size_t bytes_left;
+
+	// A value costs `weight` units: 1 for a scalar or string, more for a container (the host spends about 500 bytes
+	// on a scalar and about 4 KiB on a small map).
+	void node(std::size_t weight = 1) {
+		if (weight > nodes_left) {
+			THROW(ScriptResultTooLarge, "The script's result has more than the {} values a script may return", Limits{}.max_result_nodes);
+		}
+		nodes_left -= weight;
+	}
+
+	void bytes(std::size_t n) {
+		if (n > bytes_left) {
+			THROW(ScriptResultTooLarge, "The script's result is past the {} bytes of strings a script may return", Limits{}.max_result_bytes);
+		}
+		bytes_left -= n;
+	}
 };
 
 // A number as the document stores it: an integer when it is one, a double otherwise.
@@ -418,10 +439,10 @@ lua_Integer key_integer(lua_State* L, int idx) {
 // integers 1..#t; otherwise it is a map (keys that are neither strings nor numbers are dropped).
 // Depth and total nodes are bounded: a script can build a cycle or a table that shares its parts.
 MsgPack lua_to_msgpack(lua_State* L, int idx, Walk& walk, int depth) {
-	if (depth > max_depth || walk.nodes_left == 0 || !lua_checkstack(L, 4)) {
-		THROW(ClientError, "The script's document is too large or too deeply nested");
+	if (depth > max_depth || !lua_checkstack(L, 4)) {
+		THROW(ClientError, "The script's document is too deeply nested");
 	}
-	--walk.nodes_left;
+	walk.node();
 	idx = lua_absindex(L, idx);
 	switch (lua_type(L, idx)) {
 		case LUA_TTABLE: {
@@ -456,10 +477,13 @@ MsgPack lua_to_msgpack(lua_State* L, int idx, Walk& walk, int depth) {
 				if (kt == LUA_TSTRING) {
 					std::size_t len;
 					const char* str = lua_tolstring(L, -2, &len);
+					walk.bytes(len);
 					key.assign(str, len);
 				} else if (kt == LUA_TNUMBER) {
 					key = std::to_string(key_integer(L, -2));
+					walk.bytes(key.size());
 				} else {
+					walk.node();   // a dropped entry still costs a visit
 					lua_pop(L, 1);
 					continue;
 				}
@@ -471,6 +495,7 @@ MsgPack lua_to_msgpack(lua_State* L, int idx, Walk& walk, int depth) {
 		case LUA_TSTRING: {
 			std::size_t len;
 			const char* str = lua_tolstring(L, idx, &len);
+			walk.bytes(len);
 			return MsgPack(std::string(str, len));
 		}
 		case LUA_TNUMBER:
@@ -707,7 +732,7 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 	lua_rawgeti(L, LUA_REGISTRYINDEX, refs.env);
 	lua_pushstring(L, "_doc");
 	lua_rawget(L, -2);
-	Walk walk{limits.max_bytes / 16};
+	Walk walk{limits.max_result_nodes, limits.max_result_bytes};
 	doc = lua_to_msgpack(L, -1, walk, 0);
 }
 

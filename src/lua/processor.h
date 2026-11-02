@@ -55,6 +55,8 @@ struct Limits {
 	std::size_t slice_work = 200'000;               // work after which the call yields at its next instruction
 	std::size_t max_print_bytes = 4096;             // what `print` may log per call
 	std::size_t max_message_bytes = 1024;           // a script error's message, as logged and as answered
+	std::size_t max_result_bytes = 16u << 20;       // string and key bytes of the converted result: the body cap (BUFFERED_BODY_CAP)
+	std::size_t max_result_nodes = (16u << 20) / 64; // value units of the converted result (a map is 8, an array 2, a scalar 1): about 500 host bytes a unit
 	bool allow_close = false;                       // tests only: lets a script declare to-be-closed variables
 };
 
@@ -87,7 +89,7 @@ public:
 
 	// Runs the script on `doc`. `budget` (the request's slice) is awaited at each yield; null runs
 	// the call to its end. A bound crossed (instructions, work, memory, matcher steps, a long run of
-	// callbacks) is a ScriptLimitError, and any
+	// callbacks) is a ScriptLimitError, a result past its budget a ScriptResultTooLarge, and any
 	// other script error a ScriptError; the document is as it was after any of them.
 	task::task<void> operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params, task::budget* budget = nullptr);
 
