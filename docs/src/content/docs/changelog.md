@@ -29,7 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Concurrent first uses of a schema or of an index's settings read it once.** A burst of requests for a new index used to read its schema metadata and its settings once each; they now wait for
   one read. Stop words and `mime.types` load at startup, before the listeners open.
 - **A shutdown waits at most 35 s after the clients are done, in all.** The HTTP service, the autocommits and the closing of every index share that bound. Past it the node logs what it abandoned (the requests in flight per loop, and the indexes
-  whose turn is held or that are still in use), flushes the write-ahead logs and exits with status 75. A second `SIGINT` or `SIGTERM` ends the wait at once. The steps are logged in order
+  whose turn is held or that are still in use), flushes the write-ahead logs and exits with status 75; an index that cannot close within the bound (a hung disk, for instance) ends the stop the same way, where
+  the wait for it used to have no limit. A second `SIGINT` or `SIGTERM` ends the wait at once. The steps are logged in order
   (`Stop 1` to `Stop 5`). A write that was answered with a 2xx is in the log. See [Stopping the node](/Xapiand/options#stopping-the-node).
 - **A node that cannot set itself up exits.** A taken port, or any failure while the servers start, is logged and ends the process with status 70 (it used to log "Servers listening",
   fail on the bind, and stay up serving nothing).

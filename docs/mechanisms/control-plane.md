@@ -51,7 +51,7 @@ A signal reaches a task on the control loop, which runs `shutdown_checks`: the l
 5. **Stop 4, the write-ahead logs** finish (closing an index appended to them, so they come after the indexes); **Stop 5, the fsync threads** finish.
 6. The service, the registry (and with it the `WorkPool`), the logs and the schemas are destroyed.
 
-D16 lists the acceptors first; here they close at step 2 of `join()`, after the clients wait, and the loops stop before the indexes close (the registry closes on the main thread, so it needs none). The
+D16 states this order: the acceptors close at the start of `join()`, after the clients wait, and the loops stop before the indexes close (the registry closes on the main thread, so it needs none). The
 order is logged (`Stop 1` to `Stop 5`) and tested (`test_node`: `test_the_stop_runs_in_its_stated_order`).
 
 If the service has not stopped by the deadline, or an index is still in use at it, the stop logs what was unfinished (requests in flight per loop, and each index whose turn or references are held), keeps
