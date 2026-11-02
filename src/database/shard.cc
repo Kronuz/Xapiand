@@ -594,6 +594,14 @@ ShardEndpoint::close_marked(bool commit_)
 }
 
 
+bool
+ShardEndpoint::housekeeping_due() const
+{
+	std::lock_guard<std::mutex> lk(mtx);
+	return state_ == State::open && engine_ && engine_->merges_pending() > 0;
+}
+
+
 task::task<void>
 ShardEndpoint::housekeeping()
 {

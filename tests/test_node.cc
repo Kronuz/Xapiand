@@ -65,6 +65,7 @@
 #include "reactor_lag.h"
 #include "task.hh"
 #include "traceback.h"
+#include "xapiand_exception.h"
 
 using namespace std::chrono_literals;
 
@@ -206,7 +207,7 @@ engine::Document make(const std::string& key) {
 // in a data directory of its own.
 class RunningNode {
 public:
-	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = "18781") {
+	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = "18781", bool keep = false) {
 		// What main() installs: a node takes SIGUSR2 to collect the threads' call stacks.
 		::signal(SIGPIPE, SIG_IGN);
 		struct sigaction sa;
@@ -216,7 +217,9 @@ public:
 		::sigaction(SIGUSR2, &sa, nullptr);
 
 		const auto root = std::filesystem::current_path() / name;
-		std::filesystem::remove_all(root);
+		if (!keep) {
+			std::filesystem::remove_all(root);
+		}
 		std::filesystem::create_directories(root / ".xapiand");
 		std::filesystem::current_path(root);
 		Endpoint::cwd = root.string() + "/";
@@ -235,8 +238,15 @@ public:
 
 		XapiandManager::make();
 		manager()->housekeeping_period = 100ms;
-		thread_ = std::thread([] { XapiandManager::manager()->run(); });
-		ready_ = eventually([] { return XapiandManager::get_state() == XapiandManager::State::READY; }, 30s);
+		thread_ = std::thread([this] {
+			try {
+				XapiandManager::manager()->run();
+			} catch (const SystemExit& exit) {
+				exit_code_ = exit.code;   // what main() ends the process with
+			}
+			exited_ = true;
+		});
+		ready_ = eventually([this] { return exited_.load() || XapiandManager::get_state() == XapiandManager::State::READY; }, 30s) && !exited_.load();
 	}
 
 	~RunningNode() {
@@ -252,9 +262,15 @@ public:
 
 	bool ready() const { return ready_; }
 
+	// Whether run() ended (the node stopped itself), and the status the process would end with.
+	bool exited() const { return exited_.load(); }
+	int exit_code() const { return exit_code_.load(); }
+
 private:
 	std::thread thread_;
 	bool ready_ = false;
+	std::atomic<bool> exited_{false};
+	std::atomic<int> exit_code_{0};
 };
 
 const std::shared_ptr<XapiandManager>& manager() {
@@ -476,25 +492,63 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 
 // ---- a shutdown that cannot finish a write in its bound ----
 
-// The child: a node whose index turn is held by a thread of its own, a PUT waiting for that turn, and a shutdown
-// with a bound of 1.5 s. The shutdown reports what it abandons and ends the process with status 75.
-[[noreturn]] static void abandon_child(const char* log_path) {
-	std::freopen(log_path, "w", stderr);
-	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_abandon_data", "18782");
-	if (!node.ready()) {
-		std::_Exit(2);
-	}
-	manager()->shutdown_write_bound = 1500ms;
-	auto entry = manager()->database_pool->spawn(endpoints_of("abandon")[0]);
-	HoldTurn hold(*entry.get(), WRITE);
-
+static int connect_to(int port) {
 	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(18782);
+	addr.sin_port = htons(static_cast<uint16_t>(port));
 	::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
 	if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+		::close(fd);
+		return -1;
+	}
+	return fd;
+}
+
+// One request on a connection of its own; the whole response (the server closes after it).
+static std::string http_call(int port, const std::string& method, const std::string& path, const std::string& body = "") {
+	const int fd = connect_to(port);
+	if (fd < 0) {
+		return "";
+	}
+	timeval timeout{10, 0};
+	::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	const auto request = method + " " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+	::send(fd, request.data(), request.size(), 0);
+	std::string response;
+	char buf[4096];
+	ssize_t n;
+	while ((n = ::recv(fd, buf, sizeof(buf), 0)) > 0) {
+		response.append(buf, static_cast<std::size_t>(n));
+	}
+	::close(fd);
+	return response;
+}
+
+static constexpr int abandon_port = 18782;
+static constexpr int acked_writes = 5;
+
+struct AbandonSpec {
+	std::chrono::milliseconds bound = 1500ms;
+	bool acked = false;           // acknowledged writes to another index before the shutdown
+	bool second_signal = false;   // a second SIGTERM 1 s into the shutdown
+};
+
+// The child: a node whose index turn is held by a thread of its own, a PUT waiting for that turn, and a shutdown
+// with a bound. The shutdown reports what it abandons and ends the process with status 75.
+[[noreturn]] static void abandon_child(const char* log_path, AbandonSpec spec) {
+	std::freopen(log_path, "w", stderr);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_abandon_data", std::to_string(abandon_port));
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	manager()->shutdown_write_bound = spec.bound;
+	auto entry = manager()->database_pool->spawn(endpoints_of("abandon")[0]);
+	HoldTurn hold(*entry.get(), WRITE);
+
+	const int fd = connect_to(abandon_port);
+	if (fd < 0) {
 		std::_Exit(3);
 	}
 	const char* request = "PUT /abandon/1 HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 9\r\n\r\n{\"a\":\"b\"}";
@@ -504,10 +558,42 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 	}
 	std::this_thread::sleep_for(300ms);   // the write is waiting for its turn
 
+	// Acknowledged: the answer was a 2xx. The shutdown follows at once, before the autocommit (200 ms) fires.
+	for (int i = 1; spec.acked && i <= acked_writes; ++i) {
+		const auto response = http_call(abandon_port, "PUT", "/acked/" + std::to_string(i), "{\"marker\":\"ack-" + std::to_string(i) + "\"}");
+		if (response.rfind("HTTP/1.1 2", 0) != 0) {
+			std::_Exit(6);
+		}
+	}
+
 	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	manager()->shutdown(now, now);
+	if (spec.second_signal) {
+		std::this_thread::sleep_for(1s);
+		manager()->signal_sig(SIGTERM);
+	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);
+}
+
+// The restart: the data directory of the abandoned node, and a read of what it acknowledged.
+[[noreturn]] static void restart_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_abandon_data", std::to_string(abandon_port), true);
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	int missing = 0;
+	for (int i = 1; i <= acked_writes; ++i) {
+		const auto response = http_call(abandon_port, "GET", "/acked/" + std::to_string(i));
+		if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("ack-" + std::to_string(i)) == std::string::npos) {
+			std::fprintf(stderr, "MISSING acknowledged write %d: %s\n", i, response.substr(0, 60).c_str());
+			++missing;
+		}
+	}
+	std::fflush(nullptr);
+	std::_Exit(missing == 0 ? 0 : 10 + missing);
 }
 
 static std::string read_file(const char* path) {
@@ -523,38 +609,112 @@ static std::string read_file(const char* path) {
 	return out;
 }
 
-// Run before this process has threads: the child is a node of its own.
-static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
-	const char* log_path = "node_abandon.log";
+struct ChildResult {
+	bool exited = false;
+	int code = -1;
+	std::chrono::steady_clock::duration took{};
+};
+
+// Forks a child that runs `body` and waits for it up to `limit`. Run before this process has threads.
+template <typename F>
+static ChildResult run_child(F&& body, std::chrono::seconds limit) {
 	std::fflush(nullptr);
 	const pid_t pid = ::fork();
 	if (pid == 0) {
-		abandon_child(log_path);
+		body();
+		std::_Exit(99);
 	}
-	REQUIRE(pid > 0);
+	CHECK(pid > 0);
 	int status = 0;
 	const auto began = std::chrono::steady_clock::now();
 	pid_t done = 0;
-	while ((done = ::waitpid(pid, &status, WNOHANG)) == 0 && std::chrono::steady_clock::now() - began < 90s) {
+	while ((done = ::waitpid(pid, &status, WNOHANG)) == 0 && std::chrono::steady_clock::now() - began < limit) {
 		std::this_thread::sleep_for(50ms);
 	}
 	if (done == 0) {
 		::kill(pid, SIGKILL);
 		::waitpid(pid, &status, 0);
 	}
-	const auto took = std::chrono::steady_clock::now() - began;
-	CHECK(done == pid);
+	ChildResult result;
+	result.took = std::chrono::steady_clock::now() - began;
+	result.exited = done == pid && WIFEXITED(status);
+	result.code = result.exited ? WEXITSTATUS(status) : -1;
 	if (WIFSIGNALED(status)) {
 		std::fprintf(stderr, "  the child ended with signal %d\n", WTERMSIG(status));
 	}
-	CHECK(WIFEXITED(status));
-	CHECK_EQ(WEXITSTATUS(status), 75);   // EX_TEMPFAIL
-	CHECK_LT(took, 45s);                 // the bound, not the 30 s turn wait twice over
+	return result;
+}
+
+// The shutdown abandons what it cannot finish in its bound and exits 75 (EX_TEMPFAIL). Every write acknowledged
+// before it is there after a restart of the data directory.
+static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
+	const char* log_path = "node_abandon.log";
+	AbandonSpec spec;
+	spec.acked = true;
+	const auto result = run_child([&] { abandon_child(log_path, spec); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 75);   // EX_TEMPFAIL
+	CHECK_LT(result.took, 45s);   // the bound, not the 30 s turn wait twice over
 	const auto log = read_file(log_path);
 	CHECK(log.find("Shutdown abandoned 2 unfinished items") != std::string::npos);
 	CHECK(log.find("1 request in flight on http0") != std::string::npos);
 	CHECK(log.find("turn held") != std::string::npos);
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
+
+	// The restart reads back what the abandoned shutdown had acknowledged.
+	const auto restart = run_child([&] { restart_child("node_restart.log"); }, 90s);
+	CHECK(restart.exited);
+	CHECK_EQ(restart.code, 0);
+	if (restart.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_restart.log").c_str());
+	}
+}
+
+// A second SIGTERM during the bound ends the wait and the registry's, and the process exits 75 at once.
+static void test_a_second_signal_ends_the_shutdowns_wait() {
+	const char* log_path = "node_signal.log";
+	AbandonSpec spec;
+	spec.bound = 60s;
+	spec.second_signal = true;
+	const auto result = run_child([&] { abandon_child(log_path, spec); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 75);
+	CHECK_LT(result.took, 20s);   // not the 30 s the write waits for its turn, nor the 60 s bound
+	const auto log = read_file(log_path);
+	CHECK(log.find("stopped by a second signal") != std::string::npos);
+	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
+}
+
+// A node whose port is taken cannot set itself up: it ends the process with a status, and says why.
+[[noreturn]] static void taken_port_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	const int taken = ::socket(AF_INET, SOCK_STREAM, 0);
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(18783);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	if (::bind(taken, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::listen(taken, 8) != 0) {
+		std::_Exit(2);
+	}
+	RunningNode node("node_taken_data", "18783");
+	if (!eventually([&] { return node.exited(); }, 20s)) {
+		std::_Exit(5);   // still up, serving nothing
+	}
+	Logging::finish();
+	Logging::join();
+	std::_Exit(node.exit_code());
+}
+
+static void test_a_node_on_a_taken_port_ends_the_process() {
+	const char* log_path = "node_taken.log";
+	const auto result = run_child([&] { taken_port_child(log_path); }, 60s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 70);   // EX_SOFTWARE
+	CHECK_LT(result.took, 15s);
+	const auto log = read_file(log_path);
+	CHECK(log.find("Address already in use") != std::string::npos);
+	CHECK(log.find("The node setup failed") != std::string::npos);
 }
 
 
@@ -601,11 +761,23 @@ int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
 
-	// First, while this process has no threads: the child forks from a clean process.
-	if (std::getenv("SKIP_ABANDON") == nullptr && wanted("test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound")) {
+	// First, while this process has no threads: each child forks from a clean process.
+	struct Forked {
+		const char* name;
+		void (*fn)();
+	};
+	const Forked forked[] = {
+		{"test_a_node_on_a_taken_port_ends_the_process", test_a_node_on_a_taken_port_ends_the_process},
+		{"test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound", test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound},
+		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
+	};
+	for (const auto& f : forked) {
+		if (std::getenv("SKIP_FORKED") != nullptr || !wanted(f.name)) {
+			continue;
+		}
 		const int before = testh::failures;
-		test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound();
-		std::fprintf(stderr, "%s test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound\n", testh::failures == before ? "ok  " : "FAIL");
+		f.fn();
+		std::fprintf(stderr, "%s %s\n", testh::failures == before ? "ok  " : "FAIL", f.name);
 	}
 
 	if (std::getenv("NODE_LOG") != nullptr) {

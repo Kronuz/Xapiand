@@ -170,6 +170,8 @@ private:
 	void housekeeping_tick();
 	task::task<void> setup_node_task();
 	task::task<void> shutdown_checks(long long now);
+	// A control task whose failure the node cannot go on after: logs it and ends the process with `code`.
+	void control_task_failed(const char* what, int code);
 
 	void try_shutdown_timer_cb();
 	void signal_sig_impl();
@@ -202,6 +204,7 @@ private:
 
 public:
 	std::atomic_int atom_sig;
+	std::atomic<std::uint64_t> shutdown_signals{0};   // SIGINT and SIGTERM received
 
 	void signal_sig(int sig);
 

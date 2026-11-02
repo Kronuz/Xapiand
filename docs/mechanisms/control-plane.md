@@ -19,8 +19,10 @@ concurrent first uses of one schema, or of one index's settings, read it once.
 ```
 
 1. **`control::Tasks`** (`src/control_plane.h`) spawns a task on a host and counts it until it ends; `join` runs the stopped loop on the main thread until the counts reach zero. A task
-   that throws is logged, never fatal.
-2. **`control::Periodic`** replaces the cleanup thread. Its wait is an event that the host's timer or `stop()` sets, so a stop does not wait out the minute.
+   that throws is logged, except the node setup and the shutdown checks, which end the process (`XapiandManager::control_task_failed`, status 70 or the `SystemExit` code, through the path a
+   negative signal takes). The signal reader logs a signal that fails to run and reads the next. The housekeeping tick, an autocommit and an idle close log their failure and are tried again.
+2. **`control::Periodic`** replaces the cleanup thread. Its wait is an event that the host's timer or `stop()` sets, so a stop does not wait out the minute. The registry's housekeeping pass is a
+   task of its own that looks at 256 entries per turn under the pool's lock, spawns a task only for an entry that owes work, and yields between turns (`DatabasePool::housekeeping`).
 3. **`control::Debounce`** replaces the committer threads. A write calls `XapiandManager::schedule_autocommit` (a lock on a small map, `touch`); the first touch of a key starts a watch
    task, a later one moves its target (`busy` after the touch, never past the first touch plus a random 8 to 10 s) and the key fires once it has been quiet for `debounce`. The throttle
    window of the old debouncer had no effect on timing and is gone. `stop()` ends the watchers without firing: closing an index commits what it has pending, so nothing is lost. After
@@ -42,6 +44,10 @@ grace, 5 s, plus 5 s to write the responses). Reads end at their next checkpoint
 its turn does not come in 30 s. If the service has not stopped at the bound, the shutdown logs what was unfinished (requests in flight per loop, and each index whose turn or references are
 held), keeps the service alive for the thread that still waits in it, closes the registry for at most another bound, finishes the WAL writers and the fsynchers, and exits with status 75 (`EX_TEMPFAIL`) after flushing the log, without destroying what the abandoned threads use. A write
 that was not acknowledged was never promised to be durable; an acknowledged one is in the log. `shutdown_wait::wait` (`src/shutdown_wait.h`) is the wait.
+
+A second SIGINT or SIGTERM from the start of `join()` on (`XapiandManager::shutdown_signals`, counted by the signal handler) ends the wait and the registry's at once, with the same report and exit.
+The worst case after the graceful wait for clients is two bounds, 70 s; the control tasks' and the autocommits' drains have a 60 s limit each, reached only when a task never ends.
+`docs/src/content/docs/options.md` ("Stopping the node") tells operators.
 
 ## Limits
 

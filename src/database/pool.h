@@ -272,6 +272,9 @@ public:
 	// The idle housekeeping: publishes finished merges and frees what is queued for removal.
 	task::task<void> housekeeping();
 
+	// True when the housekeeping has something to do: the entry is open and owes background work.
+	bool housekeeping_due() const;
+
 	// Tells the entry the engine cannot go on; the next user closes it and opens it again.
 	void mark_stale() noexcept {
 		stale_.store(true, std::memory_order_release);
@@ -434,6 +437,11 @@ class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	std::atomic<std::size_t> readers_per_index_;        // the hazard records each index gives its readers (D6, C9)
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
+	std::atomic_bool housekeeping_active_;              // a housekeeping pass is running
+	std::atomic<std::uint64_t> housekeeping_turns_{0};    // slices the passes looked at
+	std::atomic<std::uint64_t> housekeeping_spawned_{0};  // entries the passes started the housekeeping of
+
+	task::task<void> housekeeping_pass(std::size_t slice);
 
 	ReferencedShardEndpoint _spawn(const Endpoint& endpoint);
 	ReferencedShardEndpoint _get(const Endpoint& endpoint) const;
@@ -504,8 +512,18 @@ public:
 	// Closes every index nobody uses (FLUSH) and returns once they are closed.
 	task::task<void> flush();
 
-	// The idle housekeeping of every open index: publishes finished merges and frees queued files.
-	void housekeeping();
+	// The entries a housekeeping turn looks at before it yields the control loop.
+	static constexpr std::size_t housekeeping_slice = 256;
+
+	// The idle housekeeping of every open index that owes work: publishes finished merges and frees queued
+	// files. The pass is a task of its own that looks at `slice` entries per turn and yields between turns, so
+	// it never holds the control loop (or the registry's lock) for more than one slice; a pass still running
+	// makes this a no-op.
+	void housekeeping(std::size_t slice = housekeeping_slice);
+
+	// The slices the passes have looked at, and the entries they started a housekeeping task for.
+	std::uint64_t housekeeping_turns() const noexcept { return housekeeping_turns_.load(); }
+	std::uint64_t housekeeping_spawned() const noexcept { return housekeeping_spawned_.load(); }
 
 	// Shutdown: no new use. join() is called until it returns true; it closes the entries nobody
 	// uses and runs on a thread that may wait (the main thread), never on a loop.

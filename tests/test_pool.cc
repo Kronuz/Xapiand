@@ -1210,6 +1210,60 @@ void test_released_views_are_reclaimed_by_the_housekeeping() {
 	CHECK_EQ(engine::sync_wait(shard.engine_for_read())->doc_count(), 100u);
 }
 
+// The housekeeping pass looks at a slice of the registry per turn, and starts a task only for an entry that owes
+// work: 30 quiet indexes in slices of 4 are 8 turns and no task; one that owes a released view is found in whichever
+// slice it sits in and its view is freed.
+void test_the_housekeeping_pass_works_in_slices() {
+	Watchdog watchdog("housekeeping slices", 120s);
+	DatabasePool pool(64);
+	std::vector<ReferencedShardEndpoint> quiet;
+	for (int i = 0; i < 30; ++i) {
+		quiet.push_back(pool.spawn(Endpoint(fresh(("slice_quiet" + std::to_string(i)).c_str()))));
+		Shard shard(*quiet.back().get(), WRITE);
+		engine::sync_wait(shard.add_document(make("K", "a")));
+	}
+	pool.housekeeping(4);
+	std::uint64_t calls = 0;   // the passes that follow
+	CHECK_EQ(pool.housekeeping_turns(), 8u);   // 30 entries, 4 a turn
+	CHECK_EQ(pool.housekeeping_spawned(), 0u);
+
+	const auto path = fresh("slice_views");
+	auto entry = pool.spawn(Endpoint(path));
+	Shard shard(*entry.get(), WRITE);
+	const auto write = [&](int from, int to) {
+		for (int i = from; i <= to; ++i) {
+			engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
+			engine::sync_wait(shard.engine_for_read());
+		}
+	};
+	write(1, 40);
+	{
+		HeldSearch held(shard);
+		CHECK_TRUE(held.holding());
+		write(41, 100);
+		engine::sync_wait(shard.commit());
+		const auto end = std::chrono::steady_clock::now() + 20s;
+		while (std::chrono::steady_clock::now() < end && shard.engine().merges_pending() == 0) {
+			std::this_thread::sleep_for(10ms);
+			pool.housekeeping(4);
+			++calls;
+		}
+		CHECK_GT(shard.engine().merges_pending(), 0u);
+		held.release();
+	}
+	const auto spawned = pool.housekeeping_spawned();
+	const auto end = std::chrono::steady_clock::now() + 30s;
+	while (std::chrono::steady_clock::now() < end && shard.engine().merges_pending() != 0) {
+		pool.housekeeping(4);
+		++calls;
+		std::this_thread::sleep_for(20ms);
+	}
+	CHECK_EQ(shard.engine().merges_pending(), 0u);
+	CHECK_GT(pool.housekeeping_spawned(), spawned);
+	// Each pass started at most the one entry that owes work, never one of the 30 quiet ones.
+	CHECK_LE(pool.housekeeping_spawned(), calls);
+}
+
 // The engine's integrity check changes nothing but runs against the engine the node has open, so it takes the turn
 // like any other operation on the index.
 void test_the_integrity_check_takes_the_turn() {
@@ -1391,6 +1445,7 @@ int main(int argc, char** argv) {
 		{"test_a_finishing_pool_serves_an_open_index", test_a_finishing_pool_serves_an_open_index},
 		{"test_the_uuid_is_read_under_the_lock_while_the_index_reopens", test_the_uuid_is_read_under_the_lock_while_the_index_reopens},
 		{"test_released_views_are_reclaimed_by_the_housekeeping", test_released_views_are_reclaimed_by_the_housekeeping},
+		{"test_the_housekeeping_pass_works_in_slices", test_the_housekeeping_pass_works_in_slices},
 		{"test_the_integrity_check_takes_the_turn", test_the_integrity_check_takes_the_turn},
 		{"test_a_chore_needs_a_scheduler", test_a_chore_needs_a_scheduler},
 		{"test_a_chore_resumes_its_awaiter_with_post", test_a_chore_resumes_its_awaiter_with_post},

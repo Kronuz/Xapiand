@@ -454,6 +454,9 @@ XapiandManager::signal_sig(int sig)
 	// asio::post (heap alloc + lock), which is unsafe in a signal handler. The reactor
 	// drains the pipe on the loop thread (arm_signal_reader) and runs signal_sig_impl.
 	atom_sig = sig;
+	if (sig == SIGINT || sig == SIGTERM) {
+		shutdown_signals.fetch_add(1);
+	}
 	if (_rx && _rx->sig_pipe[1] != -1) {
 		char byte = 1;
 		ssize_t written = ::write(_rx->sig_pipe[1], &byte, 1);
@@ -474,7 +477,12 @@ XapiandManager::signal_loop()
 		if (ec) {
 			co_return;   // the pipe closed, or the read was cancelled at shutdown
 		}
-		signal_sig_impl();
+		// A signal that fails to run is logged and the next one is still read: the loop is how a node is told to stop.
+		try {
+			signal_sig_impl();
+		} catch (const std::exception& error) {
+			L_WARNING("Handling signal {} failed: {}", atom_sig.load(), error.what());
+		}
 	}
 }
 
@@ -707,17 +715,35 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 }
 
 
+// A control task that cannot go on leaves the node half-set-up or half-shut-down: the process ends with `code`,
+// through the path a negative signal takes (the loop breaks and run() exits with it). A task that is only
+// maintenance (the housekeeping, an autocommit, a signal that fails to run) is logged by Tasks::failed instead.
+void
+XapiandManager::control_task_failed(const char* what, int code)
+{
+	L_CRIT("{} failed: ending the process with status {}", what, code);
+	shutdown_sig(-code, true);
+}
+
+
 task::task<void>
 XapiandManager::shutdown_checks(long long now)
 {
-	if (!ready_to_end_http()) {
-		L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
-	} else {
-		L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
-	}
+	try {
+		if (!ready_to_end_http()) {
+			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
+		} else {
+			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
+		}
 
-	if (now == 0 && ready_to_end(true)) {
-		break_loop();
+		if (now == 0 && ready_to_end(true)) {
+			break_loop();
+		}
+	} catch (const SystemExit& exit) {
+		control_task_failed("The shutdown checks", exit.code);
+	} catch (...) {
+		L_EXC("The shutdown checks");
+		control_task_failed("The shutdown checks", EX_SOFTWARE);
 	}
 	co_return;
 }
@@ -833,17 +859,25 @@ XapiandManager::setup_node_async_cb()
 
 
 // Node setup, on the control loop: the servers, then the ready state, which opens the listeners.
+// A failure (a port that is taken, a TLS file that cannot be read) ends the process.
 task::task<void>
 XapiandManager::setup_node_task()
 {
-	make_servers();
+	try {
+		make_servers();
 
-	// Once all threads have started, get a callstacks snapshot:
-	traceback::callstacks_snapshot();
+		// Once all threads have started, get a callstacks snapshot:
+		traceback::callstacks_snapshot();
 
-	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
+		Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
-	set_ready_impl();
+		set_ready_impl();
+	} catch (const SystemExit& exit) {
+		control_task_failed("The node setup", exit.code);
+	} catch (...) {
+		L_EXC("The node setup");
+		control_task_failed("The node setup", EX_SOFTWARE);
+	}
 	co_return;
 }
 
@@ -985,6 +1019,9 @@ XapiandManager::join()
 		return;  // already joined!
 	}
 
+	const auto signals_at_join = shutdown_signals.load();
+	const auto insisted = [this, signals_at_join] { return shutdown_signals.load() > signals_at_join; };
+
 	// The control loop has stopped (break_loop). The tasks that wait end now: the housekeeping, and the signal
 	// reader, whose read is cancelled.
 	if (_rx->housekeeping) {
@@ -1011,9 +1048,10 @@ XapiandManager::join()
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
 		// Aborts the requests, then stops and joins the reactors. The writes admitted are let finish, up to the
 		// bound; what is still running then is reported and abandoned.
-		auto report = shutdown_wait::wait(shutdown_write_bound, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); });
+		// A SIGINT or SIGTERM that arrives from here on is an insistence: it ends the wait and the registry's.
+		auto report = shutdown_wait::wait(shutdown_write_bound, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, insisted);
 		if (!report.finished) {
-			L_WARNING("Shutdown abandoned {} unfinished item{} after waiting {} ms for the writes in flight:", report.abandoned.size(), report.abandoned.size() == 1 ? "" : "s", report.waited.count());
+			L_WARNING("Shutdown abandoned {} unfinished item{} after waiting {} ms for the writes in flight{}:", report.abandoned.size(), report.abandoned.size() == 1 ? "" : "s", report.waited.count(), report.interrupted ? " (stopped by a second signal)" : "");
 			for (const auto& line : report.abandoned) {
 				L_WARNING("    {}", line);
 			}
@@ -1044,7 +1082,7 @@ XapiandManager::join()
 			if (sig < 0) {
 				throw SystemExit(-sig);
 			}
-			if (abandoned_http_ && std::chrono::steady_clock::now() > abandoned_at_ + shutdown_write_bound) {
+			if (abandoned_http_ && (insisted() || std::chrono::steady_clock::now() > abandoned_at_ + shutdown_write_bound)) {
 				L_WARNING("Shutdown abandoned the indexes that writes still use:");
 				for (const auto& line : database_pool->busy()) {
 					L_WARNING("    {}", line);

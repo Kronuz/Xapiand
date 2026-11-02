@@ -28,8 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `xapiand_committers_running` and `xapiand_committers_queue_size` count the watch tasks and the indexes waiting for a commit; the pool size and capacity read 0.
 - **Concurrent first uses of a schema or of an index's settings read it once.** A burst of requests for a new index used to read its schema metadata and its settings once each; they now wait for
   one read. Stop words and `mime.types` load at startup, before the listeners open.
-- **A shutdown waits for unfinished writes for at most 35 s.** Past that it logs what it abandoned (the requests in flight per loop, and the indexes whose turn is held), closes the rest and
-  exits with status 75.
+- **A shutdown waits for unfinished writes for at most 35 s.** Past that it logs what it abandoned (the requests in flight per loop, and the indexes whose turn is held), waits at most
+  another 35 s for the indexes those writes use, flushes the write-ahead logs and exits with status 75. A second `SIGINT` or `SIGTERM` during either wait ends it at once. A write that was
+  answered with a 2xx is in the log. See [Stopping the node](/Xapiand/options#stopping-the-node).
+- **A node that cannot set itself up exits.** A taken port, or any failure while the servers start, is logged and ends the process with status 70 (it used to log "Servers listening",
+  fail on the bind, and stay up serving nothing).
 - **Requests run on the HTTP loops, and a long search shares its loop.** A request is a task on the loop that accepted it: it
   suspends for a turn, a read or a chunk of its body instead of holding a thread, and a search yields at window
   boundaries (a 200 us slice), so one heavy query no longer delays the light ones behind it. A loop with 256 requests

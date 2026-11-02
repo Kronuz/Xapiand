@@ -24,9 +24,11 @@
 
 // The bound on the shutdown's wait for unfinished writes (docs/design/phase7c.md D16, review C14). A write that has
 // been admitted is let finish, and it may wait for its index's turn for DB_TIMEOUT, so the wait cannot be unbounded:
-// it ends after `bound`, and what was still running is reported and abandoned. A write that was not acknowledged
-// was never promised to be durable; an acknowledged one is already in the log.
+// it ends after `bound`, or at once when `interrupted` (a second SIGINT or SIGTERM) says so, and what was still
+// running is reported and abandoned. A write that was not acknowledged was never promised to be durable; an
+// acknowledged one is already in the log.
 
+#include <algorithm>               // for std::min
 #include <chrono>                  // for std::chrono
 #include <condition_variable>      // for std::condition_variable
 #include <functional>              // for std::function
@@ -43,15 +45,16 @@ namespace shutdown_wait {
 
 struct Report {
 	bool finished = true;                 // stop() returned within the bound
+	bool interrupted = false;             // the wait ended early because `interrupted` said so
 	std::chrono::milliseconds waited{0};  // how long the wait took
 	std::vector<std::string> abandoned;   // what describe() said was unfinished at the bound; empty when finished
 };
 
 // Runs `stop`, which blocks, on a thread of its own (never on a reactor) and waits for it up to `bound`. When it
 // has not returned by then, `describe` lists what is unfinished and the thread is left to end when it can: what
-// `stop` uses must outlive it.
+// `stop` uses must outlive it. `interrupted`, polled every 50 ms, ends the wait before the bound.
 inline Report
-wait(std::chrono::milliseconds bound, std::function<void()> stop, const std::function<std::vector<std::string>()>& describe)
+wait(std::chrono::milliseconds bound, std::function<void()> stop, const std::function<std::vector<std::string>()>& describe, const std::function<bool()>& interrupted = nullptr)
 {
 	engine::check_may_block("shutdown_wait::wait");
 
@@ -76,8 +79,26 @@ wait(std::chrono::milliseconds bound, std::function<void()> stop, const std::fun
 
 	Report report;
 	{
+		constexpr std::chrono::milliseconds slice{50};
 		std::unique_lock<std::mutex> lk(state->m);
-		report.finished = state->cv.wait_for(lk, bound, [&] { return state->done; });
+		const auto deadline = began + bound;
+		for (;;) {
+			if (state->done) {
+				report.finished = true;
+				break;
+			}
+			const auto now = std::chrono::steady_clock::now();
+			if (now >= deadline) {
+				report.finished = false;
+				break;
+			}
+			if (interrupted && interrupted()) {
+				report.finished = false;
+				report.interrupted = true;
+				break;
+			}
+			state->cv.wait_until(lk, std::min(deadline, now + slice), [&] { return state->done; });
+		}
 	}
 	report.waited = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began);
 	if (!report.finished && describe) {
