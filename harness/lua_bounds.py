@@ -100,7 +100,7 @@ CASES = [
 # Finish with 2xx: a weak-table chain once stalled the collector for a minute; print is capped.
 FINISH_CASES = [
     ("ephemeron chain (the table is never weak)", "local t = setmetatable({}, {}) local keys = {} for i = 1, 160000 do keys[i] = {} end for i = 1, 159999 do t[keys[i]] = keys[i + 1] end keys = {keys[1]} for i = 1, 1000000 do local j = {i} end"),
-    ("print flood", "local big = string.rep('p', 8 * 1048576) for i = 1, 20 do print(big) end for i = 1, 100000 do print('line', i) end"),
+    ("print flood", "local big = string.rep('pppppppp', 1048576) for i = 1, 20 do print(big) end for i = 1, 100000 do print('line', i) end"),
 ]
 
 LIB_LOOP = "local s = string.rep('abcdefgh', 1048576); for i = 1, 150 do s:find('b', 1, true) end; local u = 0; for i = 1, 100 do u = u + #s:sub(1, 1000000):upper() end; _doc.u = u"
