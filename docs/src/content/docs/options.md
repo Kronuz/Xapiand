@@ -54,6 +54,20 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 - `--writers` and `--wal-writer-cache-size` tune the
   [WAL](/Xapiand/reference-guide/wal) writer pool.
 
+## Stopping the node
+
+`SIGINT` or `SIGTERM` stops the node. The stop has three waits, and the node exits when the last one ends:
+
+1. **The clients.** The node stops accepting and waits for the requests in flight. With clients that keep sending, this has taken up to about 45 s.
+2. **The writes.** A write already admitted is let finish; one that waits for its index's turn answers `503` after 30 s. This wait ends after 35 s whatever is still running.
+3. **The indexes.** What was still running at 35 s is logged and abandoned, and the node waits at most another 35 s for the indexes those writes use.
+
+Then the node flushes the write-ahead logs and exits. Without abandoned writes the status is 0; with them it is 75 (`EX_TEMPFAIL`) and the log lists what was abandoned. The next start
+replays the log. A write answered with a 2xx is in the log; one that was not answered was never promised.
+
+A second `SIGINT` or `SIGTERM` during the second or third wait ends it at once: the node logs what is unfinished, flushes the logs and exits 75. The longest stop is therefore the first wait
+plus 70 s; set a supervisor's stop timeout above that (for example 120 s). A node that cannot set itself up (a port that is taken) logs why and exits with status 70.
+
 ## HTTPS
 
 - `--tls-cert` and `--tls-key` (PEM files, given together) serve the REST API over TLS on

@@ -33,6 +33,7 @@
 #include "lru.h"                              // for lru::lru
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "node.h"                             // for Node
+#include "single_flight.h"                    // for SingleFlight
 #include "task.hh"                            // for task::task
 #include "engine/types.h"                  // for engine::rev, docid
 
@@ -80,7 +81,16 @@ public:
 
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_nodes(const IndexSettings& index_settings);
 
+	// Reads of an index's settings started, calls that awaited a read in flight, and the ones awaiting one now.
+	std::uint64_t loads() const noexcept { return settings_loads.loads(); }
+	std::uint64_t joined() const noexcept { return settings_loads.joined(); }
+	std::uint64_t waiting() const noexcept { return settings_loads.waiting(); }
+
 private:
+	// The map's lock guards O(log n) lookups and inserts and is never held across a read (D11).
 	std::mutex resolve_index_lru_mtx;
 	lru::aging_lru<std::string, IndexSettings> resolve_index_lru;
+
+	// Concurrent first uses of an index await one read of its settings.
+	SingleFlight<std::string, IndexSettings> settings_loads;
 };

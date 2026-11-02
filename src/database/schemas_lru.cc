@@ -176,6 +176,20 @@ save_shared(std::string_view id, const MsgPack& schema, engine::rev version, con
 }
 
 
+// The schema document of an index as stored in its metadata; empty when the index or the metadata is missing.
+static task::task<std::string>
+read_metadata(Endpoints endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
+{
+	try {
+		DatabaseHandler db_handler(endpoints, read_flags, std::move(context));
+		co_return co_await db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
+	} catch (const engine::Error& error) {
+		if (!engine::is_missing(error.kind)) { throw; }
+	}
+	co_return std::string();
+}
+
+
 SchemasLRU::SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age) :
 	schemas(max_size, max_age),
 	versions(opts.schema_versions_size, max_age)
@@ -227,6 +241,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		}
 	}
 
+	// A first use (nothing cached, nothing outdated) outside any nested load awaits the load already in
+	// flight for the schema: a nested load never joins one, so no load can wait on itself.
+	const bool outermost = !context || context->empty();
+	const bool first_use = outermost && !local_schema_ptr;
+
 	// Whatever was passed by the user doesn't specify a foreign schema,
 	// or there it wasn't passed anything.
 	if (local_schema_ptr && !local_outdated) {
@@ -272,11 +291,10 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
 		}
 		std::string schema_ser;
-		try {
-			DatabaseHandler _db_handler(endpoints, read_flags, context);
-			schema_ser = co_await _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
-		} catch (const engine::Error& error) {
-			if (!engine::is_missing(error.kind)) { throw; }
+		if (first_use) {
+			schema_ser = co_await metadata_loads.run(strings::format("{}:{}", local_schema_path, read_flags), [&] { return read_metadata(endpoints, read_flags, context); });
+		} else {
+			schema_ser = co_await read_metadata(endpoints, read_flags, context);
 		}
 		if (schema_ser.empty()) {
 			if (!foreign_uri.empty()) {
@@ -483,7 +501,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try loading from {} id={}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 				}
 				try {
-					auto shared = co_await load_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
+					const Endpoint foreign_endpoint(foreign_path);   // load_shared keeps a reference to it while it runs
+					auto load = [&] { return load_shared(foreign_id, foreign_endpoint, read_flags, context); };
+					std::pair<engine::rev, MsgPack> shared;
+					if (outermost && !foreign_schema_ptr) {
+						shared = co_await foreign_loads.run(strings::format("{}:{}", foreign_uri, read_flags), load);
+					} else {
+						shared = co_await load();
+					}
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
 					schema_ptr->set_flags(shared.first);

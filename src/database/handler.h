@@ -36,7 +36,6 @@
 #include <vector>                            // for std::vector
 
 #include "database/flags.h"                  // for DB_*
-#include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
 #include "engine/callbacks.h"                // for engine::KeyMaker, engine::MatchSpy
 #include "engine/chores.h"                   // for engine::Chores
@@ -317,8 +316,3 @@ public:
 void committer_commit(Endpoint endpoint);
 
 
-inline auto& committer(bool create = true) {
-	static auto committer = create ? make_unique_debouncer<Endpoint, ThreadPolicyType::committers>("AC--", "AC{:02}", opts.num_committers, committer_commit, std::chrono::milliseconds(opts.committer_throttle_time), std::chrono::milliseconds(opts.committer_debounce_timeout), std::chrono::milliseconds(opts.committer_debounce_busy_timeout), std::chrono::milliseconds(opts.committer_debounce_min_force_timeout), std::chrono::milliseconds(opts.committer_debounce_max_force_timeout)) : nullptr;
-	assert(!create || committer);
-	return committer;
-}

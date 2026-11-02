@@ -57,9 +57,10 @@ namespace http { class HttpAsioService; }
 namespace engine { class AsioHost; }
 class DatabasePool;
 class DatabaseWALWriter;
-class DatabaseCleanup;
 class SchemasLRU;
 class IndexResolverLRU;
+namespace control { class Tasks; }
+namespace reactor { class LagProbe; }
 struct IndexSettings;
 
 extern void sig_exit(int sig);
@@ -113,8 +114,6 @@ public:
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
 
-	std::shared_ptr<DatabaseCleanup> database_cleanup;
-
 	std::unique_ptr<SchemasLRU> schemas;
 	std::unique_ptr<DatabasePool> database_pool;
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
@@ -124,10 +123,25 @@ public:
 	std::atomic<State> state;
 	std::string node_name;
 
+	// How long the shutdown waits for the writes that were admitted, before it reports what is unfinished and
+	// abandons it (docs/design/phase7c.md D16).
+	static std::chrono::milliseconds default_shutdown_write_bound();
+	std::chrono::milliseconds shutdown_write_bound = default_shutdown_write_bound();
+
+	// How often the idle housekeeping runs (a minute); read when the node starts serving.
+	std::chrono::milliseconds housekeeping_period = std::chrono::minutes(1);
+
+	// The housekeeping ticks so far.
+	std::uint64_t housekeeping_ticks() const;
+
 private:
 	static std::shared_ptr<XapiandManager> _manager;
 
 	std::shared_ptr<Logging> log;
+
+	// The HTTP service whose stop() did not return within the bound: its thread still uses it, so it is kept.
+	std::unique_ptr<http::HttpAsioService> abandoned_http_;
+	std::chrono::steady_clock::time_point abandoned_at_;
 
 	std::atomic_llong _shutdown_asap;
 	std::atomic_llong _shutdown_now;
@@ -148,9 +162,16 @@ private:
 
 	void run_loop();
 	void break_loop();
-	// Runs work on the control plane's offload worker, then `then` on the loop.
-	void control_offload(std::function<void()> work, std::function<void()> then = {});
-	void arm_signal_reader();
+	// Runs the control loop's thread until the tasks of `tasks` (and the registry's detached ones) have ended; the
+	// loop has stopped, so this thread drives it.
+	void drain_control(control::Tasks& tasks, const char* what);
+	std::vector<std::string> unfinished_work();
+	task::task<void> signal_loop();
+	void housekeeping_tick();
+	task::task<void> setup_node_task();
+	task::task<void> shutdown_checks(long long now);
+	// A control task whose failure the node cannot go on after: logs it and ends the process with `code`.
+	void control_task_failed(const char* what, int code);
 
 	void try_shutdown_timer_cb();
 	void signal_sig_impl();
@@ -183,6 +204,7 @@ private:
 
 public:
 	std::atomic_int atom_sig;
+	std::atomic<std::uint64_t> shutdown_signals{0};   // SIGINT and SIGTERM received
 
 	void signal_sig(int sig);
 
@@ -235,9 +257,19 @@ public:
 		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, settings);
 	}
 
+	// Schedules the debounced commit of a shard endpoint's pending writes on the control loop. False when the node
+	// has no control loop to run it (no manager, or the shutdown has begun): the caller then commits now.
+	static bool schedule_autocommit(const Endpoint& endpoint);
+
 	static void invalidate_settings(const std::string& uri) {
 		return manager(true)->invalidate_settings_impl(uri);
 	}
+
+	// Runs a task on the control loop. It awaits what it needs and never waits on a thread; its failure is logged.
+	void spawn_control(task::task<void> t);
+
+	// How late the control loop runs its probe (reactor_lag.h).
+	reactor::LagProbe& control_lag();
 
 	static void setup_node() {
 		manager(true)->setup_node_impl();

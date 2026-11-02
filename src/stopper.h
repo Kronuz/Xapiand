@@ -28,6 +28,10 @@
 #include "analysis.hh"             // for analysis::stopper
 
 
-// The stop words of a language, read once from <data path>/stopwords/<language>.txt;
-// null when there is no such list.
+// Reads every <data path>/stopwords/<language>.txt. The server calls it at startup, before its listeners open,
+// so that no request reads a file (docs/design/phase7c.md D1); a process that does not (a test) reads them at
+// the first lookup.
+void preloadStopWords();
+
+// The stop words of a language; null when there is no such list.
 const analysis::stopper* getStopWords(std::string_view language);

@@ -24,10 +24,11 @@
 #include "stopper.h"
 
 #include <cstdlib>                                // for getenv
+#include <filesystem>                             // for std::filesystem
 #include <fstream>                                // for std::ifstream
 #include <iterator>                               // for std::istream_iterator
-#include <mutex>                                  // for std::mutex, std::lock_guard
 #include <string>                                 // for std::string
+#include <system_error>                           // for std::error_code
 #include <unordered_map>                          // for std::unordered_map
 
 #include "config.h"                               // for XAPIAND_DATA_PATH
@@ -36,43 +37,54 @@
 
 namespace {
 
-struct StopWords {
-	bool loaded = false;
-	analysis::stopper words;
-};
+using StopWordLists = std::unordered_map<std::string, analysis::stopper>;
 
-static StopWords&
-getStopWordsEntry(std::string_view language)
+// Every <data path>/stopwords/<language>.txt, read once. The table never changes after it is built, so a
+// lookup is a read of an immutable map.
+const StopWordLists&
+stop_word_lists()
 {
-	static std::mutex mtx;
-	static std::string data_path(getenv("XAPIAND_DATA_PATH") != nullptr ? getenv("XAPIAND_DATA_PATH") : XAPIAND_DATA_PATH);
-	static std::unordered_map<std::string, StopWords> entries;
-	std::lock_guard<std::mutex> lk(mtx);
-	auto it = entries.find(std::string(language));
-	if (it != entries.end()) {
-		return it->second;
-	}
-	auto& entry = entries[std::string(language)];
-	auto path = data_path + "/stopwords/" + std::string(language) + ".txt";
-	std::ifstream file(path);
-	if (file.is_open()) {
-		for (std::istream_iterator<std::string> word(file), end; word != end; ++word) {
-			entry.words.add(*word);
+	static const StopWordLists lists = [] {
+		StopWordLists loaded;
+		const std::string data_path(getenv("XAPIAND_DATA_PATH") != nullptr ? getenv("XAPIAND_DATA_PATH") : XAPIAND_DATA_PATH);
+		const auto directory = std::filesystem::path(data_path) / "stopwords";
+		std::error_code ec;
+		for (std::filesystem::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+			if (it->path().extension() != ".txt") {
+				continue;
+			}
+			std::ifstream file(it->path());
+			if (!file.is_open()) {
+				L_WARNING_ONCE("Cannot open stop words file: {}", it->path().string());
+				continue;
+			}
+			auto& words = loaded[it->path().stem().string()];
+			for (std::istream_iterator<std::string> word(file), last; word != last; ++word) {
+				words.add(*word);
+			}
 		}
-		entry.loaded = true;
-	} else {
-		L_WARNING_ONCE("Cannot open stop words file: {}", path);
-	}
-	return entry;
+		if (loaded.empty()) {
+			L_WARNING_ONCE("No stop words found in {}", directory.string());
+		}
+		return loaded;
+	}();
+	return lists;
 }
 
 }  // namespace
 
 
+void
+preloadStopWords()
+{
+	(void)stop_word_lists();
+}
+
+
 const analysis::stopper*
 getStopWords(std::string_view language)
 {
-	auto& entry = getStopWordsEntry(language);
-	return entry.loaded ? &entry.words : nullptr;
+	const auto& lists = stop_word_lists();
+	auto it = lists.find(std::string(language));
+	return it != lists.end() ? &it->second : nullptr;
 }
-

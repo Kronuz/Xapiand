@@ -45,6 +45,7 @@
 #include "engine/host_asio.h"
 #include "engine/sync.h"
 #include "reactor.h"
+#include "shutdown_wait.h"
 #include "task.hh"
 
 namespace {
@@ -115,8 +116,13 @@ void wait_answer() {
 
 }  // namespace
 
+void bounded_wait() {
+	shutdown_wait::wait(std::chrono::milliseconds(50), [] { }, {});
+}
+
 // Forks first, before any test starts a thread.
 static void test_fires_on_loop() {
+	CHECK_TRUE(guard_fires([] { on_loop(bounded_wait); }));   // the shutdown's bounded wait is a main-thread entry (D14)
 	CHECK_TRUE(guard_fires([] { on_loop(wait_answer); }));
 	CHECK_TRUE(guard_fires([] { on_loop(open_through_the_registry); }));
 	CHECK_TRUE(guard_fires([] { on_loop(cleanup); }));

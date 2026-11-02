@@ -31,6 +31,7 @@
 #include "endpoint.h"
 #include "lru.h"
 #include "msgpack.h"
+#include "single_flight.h"           // for SingleFlight
 #include "task.hh"                // for task::task
 #include "engine/types.h"                  // for engine::rev, docid
 
@@ -47,6 +48,11 @@ class SchemasLRU {
 
 	mutable std::mutex versions_mtx;
 	lru::aging_lru<std::string, engine::rev> versions;
+
+	// One metadata read, and one foreign-schema read, per schema at a time: concurrent first uses of a
+	// schema await the one load (D11).
+	SingleFlight<std::string, std::string> metadata_loads;
+	SingleFlight<std::string, std::pair<engine::rev, MsgPack>> foreign_loads;
 
 	task::task<std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>>
 	_update(
@@ -65,6 +71,12 @@ public:
 	void updated(const std::string& uri, engine::rev version);
 
 	void cleanup();
+
+	// Reads of schemas started (metadata and foreign), calls that awaited a read in flight, and the ones
+	// awaiting one now.
+	std::uint64_t loads() const noexcept { return metadata_loads.loads() + foreign_loads.loads(); }
+	std::uint64_t joined() const noexcept { return metadata_loads.joined() + foreign_loads.joined(); }
+	std::uint64_t waiting() const noexcept { return metadata_loads.waiting() + foreign_loads.waiting(); }
 
 	std::string __repr__() const;
 

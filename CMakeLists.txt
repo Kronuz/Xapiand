@@ -729,8 +729,10 @@ FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryp
 FetchContent_MakeAvailable(queryparser)
 
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
-# that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only; the Asio binding
-# is not used here.
+# that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only. The loops' tasks run through
+# task_asio.hh (engine/host_asio.h, docs/design/phase7c.md D2), built on the Asio that reactor fetches; the
+# library's own task::asio target stays off so that no second copy of Asio is fetched. A chore resumes its
+# awaiter with asio_scheduler::post(), the one thread-safe entry, never post_demoted() (C10).
 set(TASK_ASIO OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 9a85e89a2dc560b042a8a41efee9c09c62451db6)  # task main: event, async_mutex, lock_until, await_asio
 FetchContent_MakeAvailable(task)
@@ -1911,7 +1913,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests control_plane node)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"

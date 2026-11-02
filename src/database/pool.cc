@@ -25,6 +25,7 @@
 
 #include <algorithm>              // for std::find, std::move
 #include <cassert>                // for assert
+#include <optional>               // for std::optional
 #include <thread>                 // for std::this_thread
 
 #include "database/flags.h"       // for readable_flags
@@ -394,6 +395,21 @@ ShardEndpoint::is_used() const
 }
 
 
+std::string
+ShardEndpoint::busy_line(int own_refs)
+{
+	const bool turn_held = !turn.try_lock();
+	if (!turn_held) {
+		turn.unlock();
+	}
+	const int users = refs.load() - own_refs;
+	if (!turn_held && users <= 0) {
+		return {};
+	}
+	return strings::format("{} ({}{} reference{})", repr(to_string()), turn_held ? "turn held, " : "", users, users == 1 ? "" : "s");
+}
+
+
 engine::rev
 ShardEndpoint::get_revision() const
 {
@@ -446,6 +462,7 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, siz
 	lru::lru(database_pool_size),
 	finished_(false),
 	control_(nullptr),
+	housekeeping_active_(false),
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
 	readers_per_index_(readers_per_index),
@@ -570,6 +587,20 @@ DatabasePool::get(const Endpoint& endpoint) const
 }
 
 
+std::vector<std::string>
+DatabasePool::busy()
+{
+	std::vector<std::string> lines;
+	for (auto& entry : endpoints()) {
+		auto line = entry->busy_line(1);   // this reference is one of the entry's refs
+		if (!line.empty()) {
+			lines.push_back(std::move(line));
+		}
+	}
+	return lines;
+}
+
+
 std::vector<ReferencedShardEndpoint>
 DatabasePool::endpoints() const
 {
@@ -656,22 +687,78 @@ DatabasePool::flush()
 }
 
 
-void
-DatabasePool::housekeeping()
+// One pass over the registry, a slice of entries per turn. The lock is held for one slice; the cursor is the
+// last entry looked at, so the pass resumes after it (from the front when it was evicted), and it ends after as
+// many entries as the registry held when it began.
+task::task<void>
+DatabasePool::housekeeping_pass(std::size_t slice)
 {
-	for (auto& entry : endpoints()) {
-		if (entry->state() != ShardEndpoint::State::open) {
-			continue;
-		}
-		run_detached([](ReferencedShardEndpoint entry) -> task::task<void> {
-			try {
-				co_await entry->housekeeping();
-			} catch (const engine::Error& error) {
-				L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), error.description());
-			} catch (const std::exception& exc) {
-				L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), exc.what());
+	struct Done {
+		std::atomic_bool& active;
+		~Done() { active.store(false); }
+	} done{housekeeping_active_};
+
+	std::optional<Endpoint> cursor;
+	std::size_t budget = 0;
+	bool first = true;
+	for (;;) {
+		std::vector<ReferencedShardEndpoint> due;
+		bool more = false;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			if (finished_.load()) {
+				co_return;
 			}
-		}(std::move(entry)));
+			if (first) {
+				budget = size();
+				first = false;
+			}
+			auto it = begin();
+			if (cursor) {
+				if (auto found = find_and_leave(*cursor); found != end()) {
+					it = ++found;
+				}
+			}
+			const Endpoint* last = nullptr;
+			std::size_t seen = 0;
+			for (; it != end() && seen < slice && seen < budget; ++it, ++seen) {
+				if (it->second->housekeeping_due()) {
+					due.emplace_back(it->second.get());
+				}
+				last = &it->first;
+			}
+			budget -= seen;
+			housekeeping_turns_.fetch_add(1);
+			more = it != end() && budget > 0;
+			if (more && last) {
+				cursor = *last;
+			}
+		}
+		housekeeping_spawned_.fetch_add(due.size());
+		for (auto& entry : due) {
+			run_detached([](ReferencedShardEndpoint entry) -> task::task<void> {
+				try {
+					co_await entry->housekeeping();
+				} catch (const engine::Error& error) {
+					L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), error.description());
+				} catch (const std::exception& exc) {
+					L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), exc.what());
+				}
+			}(std::move(entry)));
+		}
+		if (!more) {
+			co_return;
+		}
+		co_await task::yield();
+	}
+}
+
+
+void
+DatabasePool::housekeeping(std::size_t slice)
+{
+	if (!housekeeping_active_.exchange(true)) {
+		run_detached(housekeeping_pass(slice));
 	}
 }
 

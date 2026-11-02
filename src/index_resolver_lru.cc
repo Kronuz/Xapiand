@@ -525,7 +525,11 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		L_SHARDS("Node settings for {} loaded from LRU", unsharded_normalized_path);
 	} else {
 		lk.unlock();
-		index_settings = co_await load_settings(unsharded_normalized_path);
+		if (reload) {
+			index_settings = co_await load_settings(unsharded_normalized_path);   // a reload wants the settings as they are now
+		} else {
+			index_settings = co_await settings_loads.run(unsharded_normalized_path, [&] { return load_settings(unsharded_normalized_path); });
+		}
 		store_lru = true;
 		if (!index_settings.shards.empty()) {
 			for (auto& shard : index_settings.shards) {
