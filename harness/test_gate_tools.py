@@ -78,10 +78,11 @@ class AsyncCheck(unittest.TestCase):
             "int fd = ::open(p, 0);",
             "std::ifstream f(p);",
             "lock_shard lk_shard(endpoint, flags);",
+            "DatabaseWAL wal(path);",
         ]
         root, lst = self.tree({"src/a.cc": "\n".join(lines) + "\n"})
         _code, out = self.run_check(root, lst)
-        for rule in ("sync_wait", "wait", "sleep", "file", "pool"):
+        for rule in ("sync_wait", "wait", "sleep", "file", "pool", "wal"):
             self.assertIn(f"[{rule}] unclassified", out)
         self.assertEqual(out.count("unclassified:"), len(lines))
 

@@ -23,7 +23,7 @@ All four criteria are built and proved on Release and ASan+UBSan. Nothing is blo
 
 `registry_mutex`'s note no longer says "moves to D5's registry" (it stays: O(log n), no I/O).
 
-Finding, not in a rule: `wal_view` (the `WAL` method) reads the whole write-ahead log in `DatabaseHandler::repr_wal` on the request's reactor. The rules do not match the `Storage` reads, so no row covers it. D8 keeps the WAL until 7b (the journal), and the method is a diagnostic; the lead decides whether 7b or a chore.
+`wal_view` (the `WAL` method) used to read the whole write-ahead log in `DatabaseHandler::repr_wal` on the request's reactor, and no rule matched the `Storage` reads. Fixed: `repr_wal` is a task that reads the log in a query chore of its own `IndexChores` group; `wal_view` awaits it. New `wal` rule in `async_check.py` (a `DatabaseWAL` construction or a `.repr_wal(` call) with three allow rows: the chore body in `handler.cc` (anchor `DatabaseWAL wal\(path\)`), the open chore in `shard.cc`, and the awaited call in `search_views.cc` (anchor `co_await db_handler\.repr_wal`).
 
 ## Absolute index paths (criterion 3)
 
@@ -65,6 +65,12 @@ Builds: Release (`BUILD_TESTS`), and ASan+UBSan (Homebrew LLVM 22, RelWithDebInf
 - Mutant (Release): `Endpoint` comparing the base without its trailing slash (so `/var/db/xapiand2/x` passes) -> `test_endpoint` fails 2 of 76 checks (killed). Source restored.
 - New parsers or decoders: none (no fuzz target owed). The `Endpoint` change is a path check on untrusted input; its cases are table tests.
 
+## The `wal_view` chore
+
+- Proof: with the three source files reverted, `async_check.sh --strict --owed --extern strata=<pin 501f9437>` exits 1 (`handler.cc:254 [wal] unclassified: DatabaseWAL wal(endpoints[0].path);`, `search_views.cc:1757 [wal] unclassified: auto obj = db_handler.repr_wal(...)`), and `test_the_tree_has_no_owed_hit` fails; with the fix it exits 0 (247 hits, allow 234, owed 0, unclassified 0). Mutant: dropping the `wal` rule fails `test_every_rule_class_is_found` (and the tree test). `test_gate_tools.py` 15 of 15 with the fix.
+- Release build (RelWithDebInfo-like `-O3`, ASSERTS) ctest 32 of 32. Live: `GET /walt/.__N/:wal` and `?raw` answer the log through the chore; an index of 5 shards still answers 400 (unchanged). Sanitizers: not run for this step (the change is a lambda over locals awaited in the frame).
+- Docs E2E: no docs page documents `:wal`. newman 6 under Node 26.10 on this host exits silently on the third request (with `localhost`: `ERR_INVALID_IP_ADDRESS`), so the full suite could not run; a status-only replay of the collection gave 337 ok, 34 mismatches, all from missing `@file` fixtures (bank, Lenna) and unencoded spaces in my replayer, none on `:wal`.
+
 ## Done (commits)
 
 - `Xapiand:6c820df05` the owed rows: allowlist, `read_uuid` and `init_database` deleted, CI step, the tree test.
@@ -75,7 +81,9 @@ Builds: Release (`BUILD_TESTS`), and ASan+UBSan (Homebrew LLVM 22, RelWithDebInf
 ## Next
 
 - Review (the lead's skim); a security look at `Endpoint` is optional but cheap.
-- The lead: the `wal_view` finding above; merge, then X7.
+- The lead: merge, then X7.
+- Follow-up (not done, scope): `:wal` still builds the whole log as one `MsgPack` (unbounded memory for a large log); it also needs a shard path (`/idx/.__N/:wal`), an index of several shards answers 400. The WAL stays until 7b.
+- Open finding for the security reviewer / owner: on this branch `GET /` answers 400 "Index path '' is empty or outside the data directory" (`src/endpoint.cc:241`, from `9fcdf2dd1`, which now applies the strictly-inside check to absolute paths; `/` normalises to the data directory itself). Master's `4ec3d6d03` checked relative paths only. I did not touch `endpoint*`.
 
 ## Blocked on
 

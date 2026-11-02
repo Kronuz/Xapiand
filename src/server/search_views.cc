@@ -1754,7 +1754,7 @@ wal_view(Request& request)
 
 	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
-	auto obj = db_handler.repr_wal(0, std::numeric_limits<engine::rev>::max(), unserialised);
+	auto obj = co_await db_handler.repr_wal(0, std::numeric_limits<engine::rev>::max(), unserialised);
 
 	request.ready = std::chrono::steady_clock::now();
 

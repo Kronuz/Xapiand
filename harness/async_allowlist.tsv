@@ -2,6 +2,7 @@
 # allow: cheap or off-reactor, with the reason. owed: the decision or step that removes it. compiled_out: the switch.
 src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and restore_documents(fd) serve the CLI --dump and --restore on the main thread (check_may_block guards it)
 src/database/handler.cc	pool	lock_shard	allow	25	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
+src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
 src/database/pool.cc	mutex	.	allow	20	the registry: O(1) state sections of an entry and O(log n) map sections of the pool, none with I/O or a wait; the report of what a shutdown abandoned tries the turn and gives it back (D1)
 src/database/pool.cc	sleep	sleep_for	allow	1	DatabasePool::join polls on the main thread at shutdown; guarded by check_may_block (D16)
 src/database/pool.cc	sleep	task::yield	allow	1	the housekeeping pass suspends its task between slices of the registry and holds no thread (D13)
@@ -17,6 +18,7 @@ src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs 
 src/database/shard.cc	pool	ShardEndpoint::storage_commit	allow	1	the definition: the commit is chores_.run(flush, ...) (D7)
 src/database/shard.cc	pool	writable_storage->	allow	11	the blob writes, reads and rollovers run in flush chores of the entry or the upload (D9)
 src/database/shard.cc	sync_wait	.	allow	7	the open chore replays the WAL and opens the engine on a WorkPool worker, with chores inline (D4, D8): chore code, never a request thread
+src/database/shard.cc	wal	DatabaseWAL wal\(&target\)	allow	1	the open chore replays the log on a WorkPool worker (D4, D8)
 src/engine/census.cc	file	.	compiled_out	4	ENGINE_CENSUS is OFF in gate builds (D1)
 src/engine/census.cc	mutex	.	compiled_out	9	ENGINE_CENSUS is OFF in gate builds (D1)
 src/engine/host.h	mutex	.	allow	7	BlockingScheduler: its queue and timers under one mutex, each O(1); the thread that drives it may block by definition (check_may_block guards engine::sync_wait)
@@ -40,6 +42,7 @@ src/manager.cc	file	ignore_eintr	allow	2	an atomic flag, not I/O
 src/net.hh	file	.	allow	4	setsockopt on an accepted socket: one syscall, no wait
 src/node.cc	mutex	.	allow	5	the node map under _nodes_mtx: lookup and insert, O(log n)
 src/server/mime_types.cc	file	.	allow	2	preload_mime_types reads mime.types at startup, before the listeners open; mime_type reads the loaded table (D1)
+src/server/search_views.cc	wal	co_await db_handler\.repr_wal	allow	1	wal_view awaits the chore that reads the log
 src/stopper.cc	file	.	allow	3	preloadStopWords reads the stop word files at startup, before the listeners open; getStopWords reads the loaded table (D1)
 src/tls.cc	file	.	allow	1	stat of --tls-key while the TLS context is built, before the listeners open
 src/xapiand_fsyncher.h	file	.	allow	2	runs on the FS debouncer thread (D8, until 7b), never on a reactor
