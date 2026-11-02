@@ -77,6 +77,7 @@ Builds: Release (`BUILD_TESTS`), and ASan+UBSan (Homebrew LLVM 22, RelWithDebInf
 - `Xapiand:4e38c40a6` the dead `thread.hh` and `threadpool.hh` includes.
 - `Xapiand:c38c35ffb` D16 restated (design, control-plane note, `options.md`, changelog, D14).
 - `Xapiand:9fcdf2dd1` absolute index paths refused (`Endpoint`, tests, harness, changelog).
+- `Xapiand:a9efae7f9` `wal_view` reads the log in a query chore; the `wal` rule of `async_check`.
 
 ## Next
 
