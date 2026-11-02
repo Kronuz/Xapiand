@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the X5 developer's ledger (phase 7c step X5: the schema and settings caches, the control plane as tasks, inventory J); built and proved; not reviewed; not pushed.
+> Status: CURRENT (2026-11-02) the X5 developer's ledger (phase 7c step X5: the schema and settings caches, the control plane as tasks, inventory J); built and proved; reviewed (approve with conditions); the review's blocker and notes N1, N4, N5 are fixed below; not pushed.
 
 # phase7c X5 (build): the caches, the control plane and inventory J
 
@@ -84,6 +84,31 @@ through ctest: Release, Debug and ASan 29 of 29, TSan 11 of 11 with 0 reports.
 3. `--committers` no longer sizes anything (D15 removes the option); the `xapiand_committers_*` gauges report watch tasks and waiting keys.
 4. The exit status 75 on an abandoned shutdown is new (`EX_TEMPFAIL`); `graceful_shutdown_check.sh` never reaches it.
 
+## Review fixes (docs/reviews/phase7c-x5-code.md)
+
+Commit `Xapiand:e6c18eada`. Release build; the sanitizer results are in the proof table below.
+
+- **X5-B1** `setup_node_task` and `shutdown_checks` catch and call `XapiandManager::control_task_failed`, which logs and takes the `shutdown_sig(sig < 0)` path (status 70, or the `SystemExit` code). Per control task:
+  1. node setup: fatal (a half-set-up node serves nothing);
+  2. shutdown checks: fatal (a half-done shutdown);
+  3. signal reader: a signal that fails to run is logged and the next is read (before, one throw ended the reader and the node could no longer be told to stop);
+  4. housekeeping tick: logged, the next tick runs (`Periodic`);
+  5. debounced autocommit watch, autocommit, idle close, housekeeping per entry: logged, the next write or tick tries again; the log and the close commit what is pending.
+  Probe `bind_conflict.sh`: the second node exits with status 70 in under 1 s, logging `The node setup failed: ending the process with status 70` and `bind: Address already in use` (review: stayed alive). Test `test_a_node_on_a_taken_port_ends_the_process` (a child node on a port a listener holds: exit 70 within 15 s, both lines logged). Mutant: the setup swallows again: killed (status not 70, 3 checks).
+  Not tested: a failure in `shutdown_checks` (no seam to make it throw).
+- **X5-N1** `DatabasePool::housekeeping(slice = 256)` runs a pass as a detached task: 256 entries per turn under the pool lock, a task only for an entry that owes work (`ShardEndpoint::housekeeping_due`), `task::yield()` between turns, one pass at a time. The review's probe at 10,000 open entries, a 1 ms ticker on the loop, three ticks, under `quiet strict`:
+
+  | | `housekeeping()` call on the loop | until its tasks drained | max ticker gap |
+  |---|---|---|---|
+  | before (the reviewed code) | 5.6 to 8.1 ms | 14.5 to 41 ms | 14.9 to 41.1 ms |
+  | after | 0.001 to 0.006 ms | 3.0 to 4.7 ms | 1.2 to 1.5 ms |
+
+  (The ticker is 1 ms, so 1.1 ms is its floor.) `endpoints()` still copies under the pool lock for `busy()`, `dump_databases()` and the SIGUSR1 dump (0.1 to 0.3 ms at 10,000); the housekeeping no longer calls it. Test `test_pool.cc test_the_housekeeping_pass_works_in_slices`: 30 quiet indexes in slices of 4 are 8 turns and no task, and an index that owes a released view is found and freed. Mutants: no slicing (turns 1, not 8), no filter (30 tasks): both killed.
+- **X5-N4** a SIGINT or SIGTERM counted from the start of `join()` (`shutdown_signals`, incremented by the handler) ends `shutdown_wait::wait` (polled every 50 ms) and the registry's extra wait. The documented worst case is the graceful wait for clients plus 70 s (the bound twice; the 60 s drains only if a task never ends): `docs/src/content/docs/options.md` ("Stopping the node"), the changelog and the note. I kept the second bound; making the whole stop one bound is a choice for the lead. Test `test_a_second_signal_ends_the_shutdowns_wait` (bound 60 s, a second SIGTERM 1 s in: exit 75 in under 20 s, the log says `stopped by a second signal`). Mutant: the interrupt ignored: killed.
+- **X5-N5** `test_a_shutdown_abandons...` now acknowledges 5 PUTs (2xx) to another index while a write waits on a held turn, shuts down at once (before the 200 ms autocommit), and a second child restarts the data directory and reads all 5 back. The property holds on the code as it is. Sensitivity: a mutant that exits at the abandonment and drops the WAL append loses the writes and the restart check fails with 5 missing; on its own the early exit does not lose them (the append is before the acknowledgement), so only its log-line check dies.
+- **X5-N3** left for X6: `--committers` (`src/opts.cc:166`), the `num_committers` stats key (`src/server/search_views.cc:756`), the stale thread diagram in `ARCHITECTURE.md:96`.
+- Other findings (N2, N6, N7) are notes without a fix owed; N6(a) (`SingleFlight::run` precondition: a suspended joiner's frame must not be destroyed) is still to be recorded beside the code when a step starts destroying request frames.
+
 ## Done (commits)
 
 - `Xapiand:17bcf2f1b` K1, K3, and the building blocks: `SingleFlight`, `control_plane.h`, `shutdown_wait.h`, the stop-word and mime preloads, and their tests.
@@ -93,6 +118,7 @@ through ctest: Release, Debug and ASan 29 of 29, TSan 11 of 11 with 0 reports.
 - `Xapiand:451d88b80` the resolver's lookup as a control-loop task; `Xapiand:32ee5feb2` the changelog line for the gauges.
 - `Xapiand:7150e3cca` the allowlist rows for the new headers (the strict check had 13 unclassified) and the guard on the bounded wait.
 - `Xapiand:1a6e3e140` the autocommit scheduler stays up after an abandoned stop (a late write would otherwise commit on a reactor thread).
+- `Xapiand:e6c18eada` the review's blocker and notes X5-B1, N1, N4, N5 (above).
 
 ## Next
 
