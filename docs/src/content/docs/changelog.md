@@ -22,6 +22,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **The Kronuz libraries move to the heads of 2026-11-02** (all 64 pins of `CMakeLists.txt`, from
+  [`cpp-libraries/docs/UPGRADING-2026-10.md`](https://github.com/Kronuz/cpp-libraries/blob/main/docs/UPGRADING-2026-10.md)):
+  boolean-parser `ac248d1` to `85110af`, datetime `569521c` to `babf3f5`, string-similarity `cbc0a79` to `1e0a211`,
+  htm `11e0c46` to `1e041ef`, msgpack `75d13ce` to `f470c92`, fs `a7a7693` to `aa06315`, storage `e4c5746` to `cfb59f6`,
+  url-parser `4424e25` to `e528e77`, fantasyname `a87942a` to namegen `3eb14ce`, scheduler `2cbea95` to `80acde0`,
+  logger `90094b5` to `765528e`, http-parser `178f873` to `145c905`, and the rest of the family (the pins of
+  strata and prospect are their `deps/pins-2026-11` commits until those land). The results that change are listed
+  below; fusefilter stays at `a42bd15` through strata's pin (its newer build writes other filter bytes; see strata's
+  `docs/status/pins-2026-11.md`).
+- **Boolean query strings (`q=`, `query=`) group by precedence, and malformed ones answer `400`.** An implicit `OR`
+  obeys precedence: `a AND b c` is `(a AND b) OR c` (it was `a OR (b AND c)`), and `NOT a b` is `(NOT a) OR b`. An
+  implicit `OR` before `NOT` or `(` parses (`a NOT b` answered `400`). Text that was accepted by dropping an operand
+  or a parenthesis answers `400` with the parser's message: `a NOT`, `a ()`, `(a` (`'(' not expected`), and
+  an operator without operands. All 10 query strings of the documentation's requests parse to the same
+  queue as before; `harness/boolean_query_check.py` holds the classes.
+- **Dates that `datetime` no longer reads are text.** A new field whose first value is a time with a fraction
+  dot and no digits (`2020-01-01T10:00:00.Z`) or a fraction of more than 62 digits is typed `text` and indexed;
+  it was typed `datetime` and the write answered `400`. `2020-12-15||+12M` is `2021-12-15` (it was an error), a
+  negative hour, minute or second is out of range, and a timestamp before 1970 with a fraction converts right.
+  The 7,330 strings of the documentation's requests and fixtures (101 dates) type the same;
+  `harness/datetime_detection_check.py` holds the classes.
+- **Sorting by a string metric scores by the standard definitions.** `Jaro`, `Jaro-Winkler`, `Sorensen-Dice` and
+  weighted `Levenshtein` are corrected, and a phonetic metric encodes both operands: sorting by `soundex` against
+  `DICKSONX` puts `DICKSONX`, `DIXON`, `DWAYNE` first (it began `DWAYNE`, `DUANE`, `DIXON`). Of 8 metrics and 3
+  reference strings over 18 names, only the `soundex` orders moved.
+- **Geospatial ids of points near a cell edge are the same on every build.** `htm` turns floating-point contraction
+  off: a build that fuses multiply-adds (Apple silicon, `-mfma`) put 0.7% of random points, and 8 of the
+  1,000 cities of the documentation, in the neighboring trixel (`-117.1858759 34.5008311` was `11168355159896371`
+  and is `11168355159896369`). A build that does not fuse is unchanged; reindex the points of an index written by a
+  fusing build.
+- **A document that repeats a key keeps one entry.** `{"a":1,"a":2,"b":3,"c":4}` is `{"a":2,"b":3,"c":4}` (it was
+  `{"a":2,"b":3,"b":3}`). None of the documentation's bodies or fixtures repeats a key.
+- **Paths follow Python's `os.path.normpath`.** An empty data directory resolves to `.` (it was `/`), `a/../b` is `b`,
+  `./a` is `a`, `../a` stays `../a`, and `//x` is `/x`; the storage volume of an empty base path opens
+  `./vol.0`. A request path `a/b/..` is the path `a`, and `../a` is the path `..` with the id `a`.
+- **Node names and random draws differ for a seed.** `namegen` gives every alternative of a choice the same
+  probability (the first and the last came up half as often), and `random` is xoshiro256++.
+- **The HTTP parser rejects what request smuggling relies on** (a bare LF, obs-fold, a `Transfer-Encoding` other than
+  exactly `chunked`, a malformed `Content-Length` or chunk size): the server closes the connection without a reply (a bare LF
+  request answered `200`, and `Transfer-Encoding: chunked, identity` answered `405`).
 - **Requests run on the HTTP loops, and a long search shares its loop.** A request is a task on the loop that accepted it: it
   suspends for a turn, a read or a chunk of its body instead of holding a thread, and a search yields at window
   boundaries (a 200 us slice), so one heavy query no longer delays the light ones behind it. A loop with 256 requests

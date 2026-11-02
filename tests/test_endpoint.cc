@@ -60,8 +60,12 @@ static void test_normalize_path() {
 		{"var/db/xapiand/./",  "var/db/xapiand/"},
 		{"./././",             "./"},
 		{"var/./db/./xapiand", "var/db/xapiand/"},
-		{"././var/db/xapiand", "./var/db/xapiand/"},
+		{"././var/db/xapiand", "var/db/xapiand/"},
 		{"./var/../",          "./"},
+		{"",                   "./"},
+		{"a/../b",             "b/"},
+		{"../a",               "../a/"},
+		{"//x",                "/x/"},
 	};
 	for (const auto& c : cases) {
 		auto res = normalize_path(std::string_view(c.in), true);
