@@ -39,7 +39,6 @@ inline void assert_none([[maybe_unused]] const char* owner, [[maybe_unused]] con
 #ifndef NDEBUG
 	if (!left.empty()) {
 		std::fprintf(stderr, "%s ended with work outstanding: %s\n", owner, left.c_str());
-		std::fflush(stderr);
 		std::abort();
 	}
 #endif
