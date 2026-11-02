@@ -17,16 +17,22 @@ for name in . ./ a/.. .. ../x a/../../x; do
 	[ $c = 64 ] && echo "ok   --restore '$name' exits 64" || fail "--restore '$name' exited $c (want 64)"
 done
 
-# API: the same paths answer 400, and a path that stays inside is still served.
+# API: an index path that is empty or names the data directory answers 400 (the router already folds a plain
+# ".." into the base; an encoded one reaches the Endpoint). A path that stays inside is served, nothing lands outside.
 "$BIN" --port $PORT --name pb -D "$D/n" >"$D/log" 2>&1 & P=$!
 for _ in $(seq 60); do curl -s -m2 -o /dev/null localhost:$PORT/ && break; sleep .5; done
-for path in .. a/.. a/b/../.. ../x a/../../x %2e%2e a/%2e%2e a/%2e%2e/%2e%2e/x; do
+for path in .. a/.. a/b/../.. %2e%2e a/%2e%2e a/%2e%2e/%2e%2e/x; do
 	for method in PUT GET; do
 		code=$(curl -s -m 10 --path-as-is -o /dev/null -w '%{http_code}' -X $method "localhost:$PORT/$path/doc" -H 'Content-Type: application/json' -d '{"a":1}')
 		[ "$code" = 400 ] && echo "ok   $method /$path/doc -> 400" || fail "$method /$path/doc -> $code (want 400)"
 	done
 done
-code=$(curl -s -m 10 --path-as-is -o /dev/null -w '%{http_code}' -X PUT "localhost:$PORT/ok/../fine/doc" -H 'Content-Type: application/json' -d '{"a":1}')
-[ "$code" = 200 ] || [ "$code" = 201 ] && echo "ok   PUT /ok/../fine/doc -> $code" || fail "PUT /ok/../fine/doc -> $code (want 2xx)"
-[ -d "$D/n/../fine" ] && fail "an index was created outside the data directory"
+for path in ../x a/../../y ok/../fine; do
+	code=$(curl -s -m 10 --path-as-is -o /dev/null -w '%{http_code}' -X PUT "localhost:$PORT/$path/doc" -H 'Content-Type: application/json' -d '{"a":1}')
+	case $code in 2??) echo "ok   PUT /$path/doc -> $code";; *) fail "PUT /$path/doc -> $code (want 2xx)";; esac
+done
+for name in x y fine; do
+	[ -d "$D/n/$name" ] && echo "ok   index $name is inside the data directory" || fail "index $name is not inside the data directory"
+	[ -e "$D/$name" ] && fail "$name was created outside the data directory"
+done
 exit $rc
