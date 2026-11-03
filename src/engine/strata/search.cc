@@ -64,21 +64,6 @@ namespace p = ::prospect;
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
 
-// A hit's weight as a percentage of the top weight, in [0, 100]. Against an infinite top weight (an
-// overflowed or infinite scale factor) a hit is 100 if it is infinite too and 0 otherwise.
-int
-percent_of(double score, double top)
-{
-	if (!(top > 0)) {
-		return 100;
-	}
-	if (!std::isfinite(top)) {
-		return score >= top ? 100 : 0;
-	}
-	const double ratio = score / top * 100.0 + 0.5;
-	return ratio >= 100.0 ? 100 : ratio > 0.0 ? static_cast<int>(ratio) : 0;
-}
-
 // Every document of a segment, weighing nothing: the empty term and match_all.
 class AllScorer final : public p::scorer {
 public:
@@ -716,14 +701,37 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	const auto found = co_await p::search_task(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options,
 		request.budget != nullptr ? p::slice(*request.budget) : p::slice());
 
+	// Hits with the sort key and collapse value they ranked by, for a merge across batches.
+	const auto report = [&](Hit& hit, std::uint64_t id) {
+		if (!request.report_keys) {
+			return;
+		}
+		const auto [shard, did] = p::split_docid(id, mine.size());
+		for (const auto& snap : snapshot.segments(shard)) {
+			if (const auto ord = snap.seg->core().ordinal_of(did)) {
+				const SegmentDocView view(static_cast<docid>(did), *snap.seg, *ord);
+				if (request.sorter != nullptr) {
+					hit.key = guarded([&] { return request.sorter->key(view); });
+				}
+				if (collapse) {
+					hit.value = view.value(request.collapse_key);
+				}
+				return;
+			}
+		}
+	};
+
 	SearchResult result;
 	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
+	result.top = top;
 	if (collapse) {
 		const auto kept = std::move(collapsed).take();
 		result.estimated = static_cast<doccount>(std::min<std::uint64_t>(kept.items.size(), std::numeric_limits<doccount>::max()));
 		for (std::size_t i = request.first; i < kept.items.size() && i < window; ++i) {
 			const auto& item = kept.items[i].item;
-			result.hits.push_back({item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top)});
+			Hit hit{item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top), {}, {}};
+			report(hit, item.did);
+			result.hits.push_back(std::move(hit));
 		}
 		co_return result;
 	}
@@ -738,7 +746,8 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		hit.weight = found_hit.score;
 		hit.rank = static_cast<doccount>(i);
 		hit.percent = percent_of(found_hit.score, top);
-		result.hits.push_back(hit);
+		report(hit, found_hit.docid);
+		result.hits.push_back(std::move(hit));
 	}
 	co_return result;
 }

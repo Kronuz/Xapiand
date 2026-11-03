@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""wide_search_check.py check|gate BIN OUTDIR PORT [--indexes N] [--k K] [--runs R]: a search over many indexes.
+
+A search reads its indexes in batches of at most K held at once (--concurrent-search-indexes) and merges them.
+
+check: creates 3K+2 one-shard indexes and runs the same searches on one server that reads them all in one batch
+  and on one that reads K at a time, over the same data; the hits (ids, order), totals and aggregations must be
+  equal. Then --max-search-indexes: a search over the cap is served, one over it answers 400 naming the option.
+gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches (default 30) across all of them and
+  prints p50 and p99 latency in ms and the peak number of indexes searches held open (the metric
+  xapiand_search_pinned_indexes_peak). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
+  their data under OUTDIR; both are killed on exit.
+"""
+
+import argparse
+import atexit
+import concurrent.futures
+import http.client
+import json
+import os
+import shutil
+import signal
+import statistics
+import subprocess
+import sys
+import time
+
+ap = argparse.ArgumentParser()
+ap.add_argument("mode", choices=["check", "gate"])
+ap.add_argument("bin")
+ap.add_argument("out")
+ap.add_argument("port", type=int)
+ap.add_argument("--indexes", type=int, default=10000)
+ap.add_argument("--k", type=int, default=4)
+ap.add_argument("--runs", type=int, default=30)
+args = ap.parse_args()
+BIN, OUT, PORT = os.path.abspath(args.bin), os.path.abspath(args.out), args.port
+DATA = os.path.join(OUT, "data")
+failures: list[str] = []
+nodes: list[subprocess.Popen[bytes]] = []
+
+
+def reap() -> None:
+    for node in nodes:
+        if node.poll() is None:
+            node.kill()
+
+
+atexit.register(reap)
+
+
+def call(method: str, path: str, body: object = None, port: int = PORT) -> tuple[int, bytes]:
+    c = http.client.HTTPConnection("localhost", port, timeout=600)
+    c.request(
+        method, path, body=json.dumps(body) if body is not None else None, headers={"Content-Type": "application/json"}
+    )
+    r = c.getresponse()
+    return r.status, r.read()
+
+
+def start(tag: str, *flags: str) -> subprocess.Popen[bytes]:
+    node = subprocess.Popen(
+        [BIN, "--port", str(PORT), "--name", "wide", "-D", DATA, "--processors", "2", "--shards", "1", *flags],
+        stdout=open(os.path.join(OUT, f"node-{tag}.log"), "wb"),
+        stderr=subprocess.STDOUT,
+    )
+    nodes.append(node)
+    for _ in range(240):
+        try:
+            if call("GET", "/")[0] == 200:
+                return node
+        except Exception:
+            time.sleep(0.5)
+    node.kill()
+    raise SystemExit("the server did not start")
+
+
+def stop(node: subprocess.Popen[bytes]) -> None:
+    node.send_signal(signal.SIGTERM)
+    node.wait(120)
+
+
+def create(i: int) -> int:
+    # Index i holds 5 documents; n is unique per document, g one of 4 groups.
+    status = 0
+    for j in range(5):
+        n = i * 5 + j
+        status = max(status, call("PUT", f"/wi{i}/d{j}", {"n": n, "g": f"g{(n * 3 + j) % 4}", "tag": "x"})[0])
+    return status
+
+
+def create_all(count: int) -> None:
+    t0 = time.time()
+    with concurrent.futures.ThreadPoolExecutor(8) as pool:
+        statuses = list(pool.map(create, range(count)))
+    assert all(s < 300 for s in statuses), sorted(set(statuses))
+    print(f"created {count} indexes in {round(time.time() - t0)} s", flush=True)
+
+
+def normalise(raw: bytes) -> object:
+    body = json.loads(raw)
+    hits = [(h.get("_id"), h.get("n"), h.get("g")) for h in body.get("hits", [])]
+    return {
+        "total": body.get("total"),
+        "count": body.get("count"),
+        "hits": hits,
+        "aggregations": body.get("aggregations"),
+    }
+
+
+AGGS = {
+    "by_g": {"_terms": {"_field": "g"}, "_aggs": {"s": {"_sum": {"_field": "n"}}}},
+    "all": {"_sum": {"_field": "n"}},
+    "most": {"_max": {"_field": "n"}},
+}
+SEARCHES = {
+    "sorted ascending": {"_query": {"tag": "x"}, "_sort": "n", "_limit": 12},
+    "sorted descending window": {"_query": {"tag": "x"}, "_sort": "-n", "_offset": 3, "_limit": 9},
+    "aggregations": {"_query": {"tag": "x"}, "_sort": "n", "_limit": 5, "_aggs": AGGS},
+    "group filter": {"_query": {"g": "g1"}, "_sort": "-n", "_limit": 20, "_aggs": AGGS},
+}
+
+
+def check() -> None:
+    k = args.k
+    n = 3 * k + 2
+    shutil.rmtree(OUT, ignore_errors=True)
+    os.makedirs(DATA)
+    node = start("create", "--concurrent-search-indexes", str(n))
+    create_all(n)
+    stop(node)
+    results: dict[str, dict[str, object]] = {}
+    for tag, batch in (("all", n + 5), ("batched", k)):
+        node = start(tag, "--concurrent-search-indexes", str(batch))
+        results[tag] = {}
+        for width in (1, k - 1, k, k + 1, n):
+            for label, body in SEARCHES.items():
+                path = "/" + ",".join(f"wi{i}" for i in range(width)) + "/"
+                status, raw = call("SEARCH", path, body)
+                results[tag][f"{label} over {width}"] = normalise(raw) if status == 200 else status
+        stop(node)
+    for key, whole in results["all"].items():
+        ok = whole == results["batched"][key] and isinstance(whole, dict)
+        print(f"{'ok  ' if ok else 'FAIL'} {key}: {whole['total'] if isinstance(whole, dict) else whole} matches")
+        if not ok:
+            failures.append(key)
+    cap = 7
+    node = start("cap", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
+    for width, want in ((cap, 200), (cap + 1, 400)):
+        path = "/" + ",".join(f"wi{i}" for i in range(width)) + "/"
+        status, raw = call("SEARCH", path, SEARCHES["sorted ascending"])
+        ok = status == want and (want == 200 or b"--max-search-indexes" in raw)
+        print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: a search over {width} indexes -> {status}")
+        if not ok:
+            failures.append(f"cap {width}")
+    stop(node)
+
+
+def metric(name: str) -> float:
+    for line in call("GET", "/:metrics")[1].decode().splitlines():
+        if line.startswith((name + " ", name + "{")):
+            return float(line.rsplit(" ", 1)[1])
+    return -1.0
+
+
+def gate() -> None:
+    count = args.indexes
+    shutil.rmtree(OUT, ignore_errors=True)
+    os.makedirs(DATA)
+    node = start("create")
+    create_all(count)
+    stop(node)
+    node = start("search")
+    body = {"_query": {"tag": "x"}, "_sort": "n", "_limit": 10, "_aggs": {"all": {"_sum": {"_field": "n"}}}}
+    times = []
+    total = None
+    for run in range(args.runs + 1):
+        t0 = time.perf_counter()
+        status, raw = call("SEARCH", "/wi*/", body)
+        dt = (time.perf_counter() - t0) * 1000
+        assert status == 200, (status, raw[:200])
+        total = json.loads(raw).get("total")
+        if run:  # the first run opens every index
+            times.append(dt)
+    times.sort()
+    p50 = statistics.median(times)
+    p99 = times[min(len(times) - 1, int(len(times) * 0.99))]
+    print(
+        f"gate: {count} indexes, {args.runs} searches, total {total} (want {count * 5}): p50 {p50:.0f} ms, p99 {p99:.0f} ms, "
+        f"peak pinned indexes {metric('xapiand_search_pinned_indexes_peak'):.0f}, now {metric('xapiand_search_pinned_indexes'):.0f}"
+    )
+    if total != count * 5:
+        failures.append("total")
+    stop(node)
+
+
+check() if args.mode == "check" else gate()
+print("PASS" if not failures else "FAIL: " + ", ".join(failures))
+sys.exit(1 if failures else 0)

@@ -483,8 +483,8 @@ void adjustOpenFilesLimit()
 	// Set new values:
 	opts.max_files = max_files;
 	opts.database_pool_size = new_database_pool_size;
-	// A search keeps every index it reads open, so it can read no more than the pool holds open.
-	opts.max_indexes_per_search = opts.max_indexes_per_search > 0 ? std::min<ssize_t>(opts.max_indexes_per_search, new_database_pool_size) : new_database_pool_size;
+	// A search holds open at most the batch it reads, which cannot exceed what the pool holds open.
+	opts.concurrent_search_indexes = std::min<ssize_t>(opts.concurrent_search_indexes, new_database_pool_size);
 	opts.max_clients = new_max_clients;
 }
 

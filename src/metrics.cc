@@ -304,6 +304,20 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			"Total open databases",
 			constant_labels)
 		.Add({})
+	),
+	xapiand_search_pinned_indexes(
+		AddGauge(registry,
+			"xapiand_search_pinned_indexes",
+			"Indexes searches hold open now",
+			constant_labels)
+		.Add({})
+	),
+	xapiand_search_pinned_indexes_peak(
+		AddGauge(registry,
+			"xapiand_search_pinned_indexes_peak",
+			"Most indexes searches have held open at once",
+			constant_labels)
+		.Add({})
 	)
 {
 	xapiand_running.Set(1);

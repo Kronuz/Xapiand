@@ -1284,6 +1284,8 @@ XapiandManager::server_metrics_impl()
 	auto count = database_pool->count();
 	metrics.xapiand_endpoints.Set(count.first);
 	metrics.xapiand_databases.Set(count.second);
+	metrics.xapiand_search_pinned_indexes.Set(static_cast<double>(search_pinned_indexes(false)));
+	metrics.xapiand_search_pinned_indexes_peak.Set(static_cast<double>(search_pinned_indexes(true)));
 
 	return metrics.serialise() + reactor_lag_metrics();
 }

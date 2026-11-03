@@ -24,6 +24,7 @@
 
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint8_t
+#include <functional>              // for std::function
 #include <limits>                  // for std::numeric_limits
 #include <memory>                  // for std::unique_ptr
 #include <span>                    // for std::span
@@ -90,6 +91,9 @@ struct SearchRequest {
 	// loop at window boundaries and raises task::cancelled when the budget's token is set; without
 	// one it runs to its end where it is awaited.
 	task::budget* budget = nullptr;
+
+	// Each hit also carries its sort key and collapse value, which a merge across batches ranks by.
+	bool report_keys = false;
 };
 
 struct Hit {
@@ -97,12 +101,15 @@ struct Hit {
 	double weight = 0;
 	doccount rank = 0;                    // position in the full ordering, from 0
 	int percent = 0;                      // weight as a percentage of the best weight
+	std::string key;                      // the sorter's key; only with `report_keys`
+	std::string value;                    // the collapse slot's value; only with `report_keys`
 };
 
 // What a search found; holds no engine resource.
 struct SearchResult {
 	std::vector<Hit> hits;                // the requested window
 	doccount estimated = 0;               // matching documents, estimated
+	double top = 0;                       // the heaviest weight, which `percent` is a share of
 
 	std::size_t size() const noexcept {
 		return hits.size();
@@ -115,5 +122,29 @@ struct SearchResult {
 // search only until it ends. prepare() may reject a query shape first, with errc::invalid or
 // errc::internal.
 task::task<SearchResult> search(std::span<Shard* const> shards, const SearchRequest& request);
+
+// A hit's weight as a percentage of the top weight, in [0, 100]; against an infinite top weight a hit
+// is 100 if it is infinite too and 0 otherwise.
+int percent_of(double score, double top);
+
+// What one batch of a wide search returned: the result numbered over the shards that were searched,
+// and each searched shard's position in the whole search (ascending, within the batch's range). A
+// shard that does not exist is skipped, so there can be fewer positions than the range holds.
+struct BatchResult {
+	SearchResult result;
+	std::vector<std::size_t> positions;
+};
+
+// Searches shards [begin, end) of the whole search under `request`. The host holds them open for the
+// call and no longer: this is the one seam between a wide search and how its indexes are kept.
+using BatchRunner = std::function<task::task<BatchResult>(std::size_t begin, std::size_t end, const SearchRequest& request)>;
+
+// Searches `total` shards as one index, at most `batch` of them held at once: each batch is searched
+// as it starts and its hits merged into the top of the whole. Hit ids, order, totals and the spy's
+// results are those of one search over all the shards, ids numbered by position (hit id =
+// (d - 1) * total + position + 1); a weight is read against the statistics of its batch. A batch of
+// 0, or no more shards than a batch, is one search. Raises errc::internal when a hit's id does not
+// fit across the shards.
+task::task<SearchResult> search_batched(std::size_t total, std::size_t batch, const BatchRunner& run, const SearchRequest& request);
 
 }  // namespace engine

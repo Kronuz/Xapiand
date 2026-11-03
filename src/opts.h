@@ -61,7 +61,8 @@ extern struct opts_t {
 	ssize_t num_async_wal_writers = 1;
 	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;
-	ssize_t max_indexes_per_search = 0;  // 0: as many as the pool holds open; main() caps it there
+	ssize_t max_search_indexes = 100000;       // the runaway cap: a search over more answers 400
+	ssize_t concurrent_search_indexes = 0;     // the most indexes one search holds open at once; 0: a reactor's share of the pool
 	ssize_t schema_pool_size = 30;
 	ssize_t schema_versions_size = 1000;
 	ssize_t scripts_cache_size = 10;

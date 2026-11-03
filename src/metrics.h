@@ -103,4 +103,6 @@ public:
 	// databases:
 	prometheus::Gauge& xapiand_endpoints;
 	prometheus::Gauge& xapiand_databases;
+	prometheus::Gauge& xapiand_search_pinned_indexes;
+	prometheus::Gauge& xapiand_search_pinned_indexes_peak;
 };

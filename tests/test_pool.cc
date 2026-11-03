@@ -1093,19 +1093,20 @@ void test_a_search_over_more_indexes_than_records_is_served() {
 	CHECK_EQ(engine::sync_wait(engine::search(engines, request)).hits.size(), indexes);
 }
 
-// A search names at most max_indexes_per_search shards: the limit is served, one more is the client's error (a 400).
+// A search names at most max_search_indexes shards (the runaway cap): the limit is served, one more is the client's
+// error (a 400). A search under the cap reads any number of indexes, in batches (test_wide_search).
 void test_search_fanout_limit() {
-	CHECK_TRUE(error_kind([] { check_search_fanout(200, 200); }) == engine::errc::internal);  // no error
-	CHECK_TRUE(error_kind([] { check_search_fanout(1, 200); }) == engine::errc::internal);
-	CHECK_TRUE(error_kind([] { check_search_fanout(201, 200); }) == engine::errc::invalid);
-	CHECK_TRUE(error_kind([] { check_search_fanout(1010, 200); }) == engine::errc::invalid);
-	CHECK_TRUE(error_kind([] { check_search_fanout(5000, 0); }) == engine::errc::internal);  // 0: unset
+	CHECK_TRUE(error_kind([] { check_search_fanout(100000, 100000); }) == engine::errc::internal);  // no error
+	CHECK_TRUE(error_kind([] { check_search_fanout(1, 100000); }) == engine::errc::internal);
+	CHECK_TRUE(error_kind([] { check_search_fanout(100001, 100000); }) == engine::errc::invalid);
+	CHECK_TRUE(error_kind([] { check_search_fanout(1010, 1000); }) == engine::errc::invalid);
+	CHECK_TRUE(error_kind([] { check_search_fanout(5000000, 0); }) == engine::errc::internal);  // 0: unset
 	try {
-		check_search_fanout(201, 200);
+		check_search_fanout(1001, 1000);
 	} catch (const engine::Error& error) {
 		const std::string message = error.description();
-		CHECK_TRUE(message.find("200") != std::string::npos);
-		CHECK_TRUE(message.find("--max-indexes-per-search") != std::string::npos);
+		CHECK_TRUE(message.find("1000") != std::string::npos);
+		CHECK_TRUE(message.find("--max-search-indexes") != std::string::npos);
 	}
 }
 
