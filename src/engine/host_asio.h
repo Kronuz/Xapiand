@@ -50,6 +50,16 @@ public:
 
 	void post(std::coroutine_handle<> h) override { scheduler_.post(h); }
 	void post_demoted(std::coroutine_handle<> h) override { scheduler_.post_demoted(h); }
+	void post_call(void (*fn)(void*), void* arg) override { scheduler_.post_call(fn, arg); }
+	bool runs_here() const noexcept override { return scheduler_.runs_here(); }
+	task::root_list* roots() noexcept override { return scheduler_.roots(); }
+
+	// Teardown, after the loop has stopped and every pool a task here may wait on has drained (task's
+	// cancellation D8): close() drops what is posted from then on and destroys what is spawned; destroy_roots()
+	// destroys the tasks spawned here that have not ended, with the loop's io_context alive.
+	void close() noexcept { scheduler_.close(); }
+	void destroy_roots() noexcept { scheduler_.destroy_roots(); }
+	bool closed() const noexcept { return scheduler_.closed(); }
 
 	// The scheduler every task of this loop resumes through; its demoted() is the loop's admission count.
 	task::asio_scheduler& scheduler() noexcept { return scheduler_; }
@@ -124,6 +134,10 @@ public:
 		host_.scheduler().post_demoted(h);
 #endif
 	}
+	// Forwarded, so that a task spawned through a Run is a root of the loop's scheduler (task's cancellation D7).
+	void post_call(void (*fn)(void*), void* arg) { host_.scheduler().post_call(fn, arg); }
+	bool runs_here() const noexcept { return host_.scheduler().runs_here(); }
+	task::root_list* roots() noexcept { return host_.scheduler().roots(); }
 	std::uint64_t now() const noexcept { return host_.scheduler().now(); }
 
 	// Runs t on the loop and completes on the awaiting coroutine's executor; an exception of t propagates.

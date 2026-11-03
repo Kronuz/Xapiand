@@ -34,6 +34,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -376,6 +377,96 @@ static void test_a_loop_past_its_demoted_cap_refuses_new_requests() {
 	CHECK_EQ(retry_after, 1u);
 }
 
+// Shutdown with requests suspended on a turn, a chore, a body read, and an event while holding a turn (task's
+// cancellation D8): the loop stops, the chores are cancelled and drained, the host closes and destroys its tasks, and
+// no task frame is left; both turns are free for the next one.
+static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read() {
+	DatabasePool pool(8);
+	auto entry = pool.spawn(Endpoint(fresh("teardown")));
+	{
+		Shard shard(*entry.get(), WRITE);
+		fill(shard, 10);
+	}
+	auto other = pool.spawn(Endpoint(fresh("teardown_other")));
+	(void)engine::sync_wait(other->take_turn(WRITE));   // opened now: an open index's own tasks are in the baseline
+	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));   // the turn request (a) waits for
+	task::event never;   // what request (d) waits on, holding the other index's turn
+	IndexChores chores(pool.work_pool());
+	std::atomic<bool> chore_started{false};
+	std::atomic<bool> chore_release{false};
+	std::atomic<int> ended{0};
+	const auto baseline = task::detail::live_frames();
+	{
+		Loop loop;
+		auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+		http::Request hreq;
+		hreq.body_stream = stream;
+		Request request;
+		request.http_req = &hreq;
+		request.mode = Request::Mode::STREAM_NDJSON;
+		request.has_content_length = true;
+		request.parse_chores = &chores;
+
+		auto start = [&](std::function<task::task<void>()> body) {
+			asio::co_spawn(loop.reactor.io(), [&loop, &ended, body]() -> asio::awaitable<void> {
+				engine::Run run(loop.host);
+				try {
+					co_await run.await(body());
+				} catch (...) {
+				}
+				++ended;
+			}, asio::detached);
+		};
+		start([&]() -> task::task<void> {   // (a) a turn
+			auto mine = co_await entry->take_turn(WRITE);
+		});
+		start([&]() -> task::task<void> {   // (b) a chore
+			co_await chores.run(engine::ChoreClass::flush, [&] {
+				chore_started = true;
+				while (!chore_release) {
+					std::this_thread::sleep_for(1ms);
+				}
+			});
+		});
+		start([&]() -> task::task<void> {   // (c) a body read
+			std::vector<MsgPack> batch;
+			while (co_await request.next_batch(batch)) {
+			}
+		});
+		start([&]() -> task::task<void> {   // (d) a turn held across a wait: its Turn points into the request's Run
+			auto mine = co_await other->take_turn(WRITE);
+			co_await never;
+		});
+		asio::steady_timer stopper(loop.reactor.io(), 300ms);
+		stopper.async_wait([&](const asio::error_code&) { loop.reactor.io().stop(); });
+		loop.reactor.run();
+		CHECK_TRUE(chore_started.load());
+		CHECK_EQ(ended.load(), 0);
+
+		// The loop has stopped. The running chore ends later; cancel_all() waits for it.
+		std::thread releaser([&] {
+			std::this_thread::sleep_for(50ms);
+			chore_release = true;
+		});
+		CHECK_TRUE(IndexChores::cancel_all(std::chrono::steady_clock::now() + 5s));
+		releaser.join();
+		loop.host.close();
+		loop.host.destroy_roots();
+		CHECK_EQ(ended.load(), 0);   // destroyed, not completed
+	}
+	// The destroyed waiter's node stays queued until the holder's unlock sheds it; a deadline's state goes with
+	// its timer, in the loop's io_context. Both are gone now.
+	held.reset();
+#if TASK_COUNT_FRAMES
+	CHECK_EQ(task::detail::live_frames(), baseline);
+#else
+	(void)baseline;
+#endif
+	(void)engine::sync_wait(entry->take_turn(WRITE));   // the destroyed waiter does not keep the turn
+	(void)engine::sync_wait(other->take_turn(WRITE));   // the destroyed holder gave its turn back
+	CHECK_TRUE(chores.idle());
+}
+
 
 #ifndef NDEBUG
 struct RuleBroken {
@@ -472,6 +563,7 @@ TEST_MAIN(
 	test_the_cap_is_an_admission_that_counts,
 	test_views_are_acquired_while_the_index_is_replaced,
 	test_a_bulk_body_is_parsed_off_the_loop,
+	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests,
 	test_a_task_that_holds_a_view_waits_for_nothing,
 	test_the_rule_allows_a_yield_and_a_wait_after_the_view
@@ -483,6 +575,7 @@ TEST_MAIN(
 	test_the_cap_is_an_admission_that_counts,
 	test_views_are_acquired_while_the_index_is_replaced,
 	test_a_bulk_body_is_parsed_off_the_loop,
+	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests
 )
 #endif

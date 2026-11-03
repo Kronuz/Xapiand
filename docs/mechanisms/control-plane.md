@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the control plane, the caches and the stop as built through phase 7c step X6; the design is `docs/design/phase7c.md` D1, D11, D13, D14, D16.
+> Status: CURRENT (2026-11-02) the control plane, the caches and the stop as built through phase 7c step X6 and the task C3 wave; the design is `docs/design/phase7c.md` D1, D11, D13, D14, D16.
 
 # The control plane and the caches
 
@@ -46,10 +46,15 @@ A signal reaches a task on the control loop, which runs `shutdown_checks`: the l
 2. **Stop 1, the HTTP service**: `http::HttpAsioService::stop()` on a thread of its own (`shutdown_wait::wait`, `src/shutdown_wait.h`). It calls `abort_all()` on each reactor (every live request's cancel source), closes the
    acceptors, lets the sessions finish within the grace (5 s) and closes the sockets stalled peers still hold, then stops the loops. A read ends at its next checkpoint; an admitted write finishes, or answers `503`
    when its turn does not come in 30 s.
+   Then the tasks left suspended on the stopped loops (on a turn, a chore, a body read) go, in task's teardown phases (task `docs/design/cancellation.md` D8):
+   `IndexChores::cancel_all()` drops every index's queued chores (their awaiters resume with `task::cancelled`) and waits for the running ones; every HTTP host's scheduler
+   closes (`post` drops, `spawn` destroys its task); then each destroys its roots, which releases their turns and shard uses before the indexes close. A task is counted by its
+   frame, and the control plane's published wakes are cleared by a scope guard, so a destroyed task leaves no count and no dead event behind.
 3. **Stop 2, the autocommits**: the scheduler stops; the waits that had not fired are dropped, because closing an index commits what it has pending. Then it drains.
 4. **Stop 3, the indexes**: `DatabasePool::finish()` and `join()` close every index nobody uses (its turn, then its close chore on the `WorkPool`), polling in slices of at most 500 ms.
 5. **Stop 4, the write-ahead logs** finish (closing an index appended to them, so they come after the indexes); **Stop 5, the fsync threads** finish.
-6. The service, the registry (and with it the `WorkPool`), the logs and the schemas are destroyed.
+6. The control loop stops, and its host's scheduler closes and destroys its roots. The hosts are destroyed before the service whose io_contexts they post to; then the
+   registry (and with it the `WorkPool`), the logs and the schemas.
 
 D16 states this order: the acceptors close at the start of `join()`, after the clients wait, and the loops stop before the indexes close (the registry closes on the main thread, so it needs none). The
 order is logged (`Stop 1` to `Stop 5`) and tested (`test_node`: `test_the_stop_runs_in_its_stated_order`).

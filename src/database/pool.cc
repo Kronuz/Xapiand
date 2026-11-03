@@ -27,6 +27,7 @@
 #include <cassert>                // for assert
 #include <optional>               // for std::optional
 #include <thread>                 // for std::this_thread
+#include <utility>                // for std::exchange
 
 #include "at_end.h"               // for at_end::assert_none
 #include "database/flags.h"       // for readable_flags
@@ -99,8 +100,18 @@ struct ChoreAwaiter final : WorkItem {
 		} catch (...) {
 			self->error = std::current_exception();
 		}
-		const auto h = self->handle;
-		const auto s = self->sched;
+		self->resume();
+	}
+
+	// A chore its group dropped unrun: the awaiter resumes with task::cancelled.
+	void cancel() noexcept {
+		error = std::make_exception_ptr(task::cancelled{});
+		resume();
+	}
+
+	void resume() noexcept {
+		const auto h = handle;
+		const auto s = sched;
 		if (s) {
 			s.post(h);
 		} else {
@@ -131,8 +142,60 @@ struct Reap final : WorkItem {
 }  // namespace
 
 
+namespace {
+
+// Every IndexChores alive, so that a teardown can cancel and drain their groups (IndexChores::cancel_all).
+std::mutex chores_mtx;
+IndexChores* chores_head = nullptr;
+
+}  // namespace
+
+
 IndexChores::IndexChores(WorkPool& pool) : pool_(pool), group_(std::make_unique<WorkGroup>(pool))
 {
+	std::lock_guard<std::mutex> lk(chores_mtx);
+	next_ = chores_head;
+	if (chores_head != nullptr) { chores_head->prev_ = this; }
+	chores_head = this;
+}
+
+
+bool
+IndexChores::cancel_all(std::chrono::steady_clock::time_point limit) noexcept
+{
+	{
+		std::lock_guard<std::mutex> lk(chores_mtx);
+		for (auto* chores = chores_head; chores != nullptr; chores = chores->next_) {
+			if (!chores->group_) {
+				continue;
+			}
+			for (WorkItem* item = chores->group_->cancel(); item != nullptr;) {
+				WorkItem* const next = std::exchange(item->next, nullptr);
+				assert(item->run == &ChoreAwaiter::invoke && "an index group holds only chores");
+				if (item->run == &ChoreAwaiter::invoke) {
+					static_cast<ChoreAwaiter*>(item)->cancel();
+				}
+				item = next;
+			}
+		}
+	}
+	// The running chores end on their own; a cancelled one's resume is queued. Polled: it runs once, at exit.
+	for (;;) {
+		bool idle = true;
+		{
+			std::lock_guard<std::mutex> lk(chores_mtx);
+			for (auto* chores = chores_head; chores != nullptr && idle; chores = chores->next_) {
+				idle = !chores->group_ || chores->idle();
+			}
+		}
+		if (idle) {
+			return true;
+		}
+		if (std::chrono::steady_clock::now() >= limit) {
+			return false;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
 }
 
 
@@ -158,6 +221,12 @@ IndexChores::idle() noexcept
 
 IndexChores::~IndexChores()
 {
+	{
+		std::lock_guard<std::mutex> lk(chores_mtx);
+		(prev_ != nullptr ? prev_->next_ : chores_head) = next_;
+		if (next_ != nullptr) { next_->prev_ = prev_; }
+	}
+
 	at_end::assert_none("IndexChores", !group_ || idle() ? std::string() : "a chore is queued or running");
 
 	// The group is idle by now (its owner ended every chore), but joining it is a wait: off a loop it
@@ -512,14 +581,25 @@ DatabasePool::~DatabasePool()
 
 namespace {
 
-// Counts a task posted to the control loop until it ends, however it ends.
+// Uncounts a detached task when its frame goes: it ends, or teardown destroys it suspended, or a closed
+// control loop destroys it unrun. A parameter, so it lives in the frame from the call on.
+struct Uncount {
+	std::atomic<std::size_t>* n;
+	explicit Uncount(std::atomic<std::size_t>& n_) noexcept : n(&n_) { }
+	Uncount(Uncount&& other) noexcept : n(std::exchange(other.n, nullptr)) { }
+	Uncount(const Uncount&) = delete;
+	Uncount& operator=(const Uncount&) = delete;
+	Uncount& operator=(Uncount&&) = delete;
+	~Uncount() {
+		if (n != nullptr) { n->fetch_sub(1); }
+	}
+};
+
+// Counts a task posted to the control loop until its frame goes, however it goes.
 task::task<void>
-counted(task::task<void> t, std::atomic<std::size_t>& detached)
+counted(task::task<void> t, Uncount done)
 {
-	struct Done {
-		std::atomic<std::size_t>& n;
-		~Done() { n.fetch_sub(1); }
-	} done{detached};
+	(void)done;
 	co_await std::move(t);
 }
 
@@ -533,7 +613,7 @@ DatabasePool::run_detached(task::task<void> t)
 	// is sure that this call read the empty control.
 	detached_.fetch_add(1);
 	if (auto* control = control_.load()) {
-		control->spawn(counted(std::move(t), detached_));
+		control->spawn(counted(std::move(t), Uncount(detached_)));
 		return;
 	}
 	detached_.fetch_sub(1);

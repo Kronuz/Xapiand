@@ -3,7 +3,9 @@
 src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and restore_documents(fd) serve the CLI --dump and --restore on the main thread (check_may_block guards it)
 src/database/handler.cc	pool	lock_shard	allow	25	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
 src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
+src/database/pool.cc	mutex	chores_mtx	allow	4	the list of live IndexChores: O(1) link and unlink; cancel_all walks it at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	mutex	.	allow	20	the registry: O(1) state sections of an entry and O(log n) map sections of the pool, none with I/O or a wait; the report of what a shutdown abandoned tries the turn and gives it back (D1)
+src/database/pool.cc	sleep	sleep_for\(std::chrono::milliseconds\(1\)\)	allow	1	IndexChores::cancel_all polls the groups at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	sleep	sleep_for	allow	1	DatabasePool::join polls on the main thread at shutdown; guarded by check_may_block (D16)
 src/database/pool.cc	sleep	task::yield	allow	1	the housekeeping pass suspends its task between slices of the registry and holds no thread (D13)
 src/database/pool.cc	sync_wait	finish_idle_close	allow	1	DatabasePool::clear, called by the shutdown on the main thread; guarded by check_may_block (D16)
@@ -20,7 +22,7 @@ src/database/shard.cc	sync_wait	.	allow	7	the open chore replays the WAL and ope
 src/database/shard.cc	wal	DatabaseWAL wal\(&target\)	allow	1	the open chore replays the log on a WorkPool worker (D4, D8)
 src/engine/census.cc	file	.	compiled_out	4	ENGINE_CENSUS is OFF in gate builds (D1)
 src/engine/census.cc	mutex	.	compiled_out	9	ENGINE_CENSUS is OFF in gate builds (D1)
-src/engine/host.h	mutex	.	allow	7	BlockingScheduler: its queue and timers under one mutex, each O(1); the thread that drives it may block by definition (check_may_block guards engine::sync_wait)
+src/engine/host.h	mutex	.	allow	8	BlockingScheduler: its queue (resumes and post_call functions) and timers under one mutex, each O(1); the thread that drives it may block by definition (check_may_block guards engine::sync_wait)
 src/engine/host.h	wait	.	allow	2	BlockingScheduler::drive waits for a resume or a timer on the thread that called engine::sync_wait; guarded by check_may_block
 src/engine/host.h	sleep	.	allow	2	SleepFor suspends the task on its host's timer; a task that runs on no host (a test, the CLI) sleeps its own thread, never a loop's
 src/engine/strata/shard.cc	file	.	allow	4	acquire runs only in a query chore (open_local, check): opening the core reads the directory there, never on a reactor (D4)
@@ -52,7 +54,7 @@ strata/include/strata/core/index.hh	sleep	yield	allow	1	published_position() spi
 strata/include/strata/core/index.hh	wait	bool drain\(\)	allow	1	storage admission only: Xapiand sets no storage permit and options::defer_io, so apply answers drain_owed and this site is not reached (D6)
 strata/include/strata/core/index.hh	wait	try_grow\(.*drain\(\)	allow	3	storage admission only: Xapiand sets no storage permit and options::defer_io, so apply answers drain_owed and this site is not reached (D6)
 src/manager.cc	sync_wait	shutdown_checks	allow	1	the shutdown checks after the control loop ended run on the main thread; check_may_block guards it (D13)
-src/control_plane.h	mutex	.	allow	8	the control tasks' state (a wake pointer, a key's target, one map entry): O(1) sections, never held across a wait or a call (D13)
+src/control_plane.h	mutex	.	allow	11	the control tasks' state (a wake pointer, cleared by a scope guard, a key's target, one map entry): O(1) sections, never held across a wait or a call (D13)
 src/shutdown_wait.h	mutex	.	allow	2	the state shared with the thread that runs a blocking stop: a flag under a lock, on the main thread at shutdown; check_may_block guards the entry (D14)
 src/shutdown_wait.h	wait	.	allow	1	the shutdown's bounded wait for a blocking stop (C14), on the main thread; check_may_block guards it (D14)
 src/single_flight.h	mutex	.	allow	2	the flights map: one lookup or erase under the lock, never held across the load or a wait (D11)

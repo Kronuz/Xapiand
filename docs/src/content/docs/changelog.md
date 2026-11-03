@@ -147,6 +147,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
+- **A shutdown no longer leaves requests waiting on a stopped loop.** A request still waiting for an index's
+  turn, a chore or its body when the loops stop is now destroyed before the indexes close, which gives its turn
+  and its hold on the index back first.
 - **`RESTORE` of a dump no longer bumps one document per shard.** A record that carries `_version`, as every
   dump record does, was stored one version too high when it landed at docid 78 of its shard (ids 386 to 390
   of a five-shard dump).

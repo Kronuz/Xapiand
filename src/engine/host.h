@@ -81,6 +81,14 @@ public:
 	virtual void post(std::coroutine_handle<> h) = 0;
 	virtual void post_demoted(std::coroutine_handle<> h) { post(h); }
 
+	// task's optional scheduler members, which scheduler_ref::of(*this) finds on Host and so a host forwards
+	// (task's cancellation D7): fn(arg) runs on the host's thread (a cross-thread cancel's emit), dropped once
+	// the host closes; whether the caller is on that thread (an Asio completion then resumes inline); and the
+	// list its spawned tasks are roots of, destroyed at teardown (null: they are not roots).
+	virtual void post_call(void (*fn)(void*), void* arg) = 0;
+	virtual bool runs_here() const noexcept { return false; }
+	virtual task::root_list* roots() noexcept { return nullptr; }
+
 	// What the task running here holds, when the host can tell: a blocking wait runs one task at a time,
 	// and a debug build tracks each request on a reactor; null otherwise.
 	virtual TaskCounters* counters() noexcept { return nullptr; }
@@ -217,7 +225,13 @@ public:
 		// Signals under the lock: once the waiter sees its work (or `done`) it may leave and destroy this
 		// scheduler, so no signal may follow the unlock.
 		std::lock_guard<std::mutex> lk(m_);
-		ready_.push_back(h);
+		ready_.push_back({h, nullptr, nullptr});
+		cv_.notify_one();
+	}
+
+	void post_call(void (*fn)(void*), void* arg) override {
+		std::lock_guard<std::mutex> lk(m_);
+		ready_.push_back({{}, fn, arg});
 		cv_.notify_one();
 	}
 
@@ -235,6 +249,8 @@ public:
 			done = true;
 			cv_.notify_one();  // under the lock: the waiter may destroy this scheduler as soon as it sees `done`
 		};
+		// This scheduler owns no roots (roots() is null) and never closes, so the spawn always runs the task and
+		// `finished` always comes: the wait cannot outlive a task destroyed unrun.
 		if constexpr (std::is_void_v<T>) {
 			task::spawn(task::scheduler_ref::of(*this), std::move(t), [&](std::exception_ptr e) {
 				error = e;
@@ -269,6 +285,13 @@ protected:
 	}
 
 private:
+	// A resume, or a function post_call queued.
+	struct Ready {
+		std::coroutine_handle<> h;
+		void (*fn)(void*);
+		void* arg;
+	};
+
 	struct Entry {
 		std::chrono::steady_clock::time_point at;
 		std::uint64_t id;
@@ -298,13 +321,17 @@ private:
 		std::unique_lock<std::mutex> lk(m_);
 		while (!done) {
 			if (!ready_.empty()) {
-				const auto h = ready_.front();
+				const auto next = ready_.front();
 				ready_.pop_front();
 				lk.unlock();
 				{
 					task::running_on scope(task::scheduler_ref::of(*this));
 					HostScope host(this);
-					h.resume();
+					if (next.fn != nullptr) {
+						next.fn(next.arg);
+					} else {
+						next.h.resume();
+					}
 				}
 				lk.lock();
 				continue;
@@ -329,7 +356,7 @@ private:
 
 	std::mutex m_;
 	std::condition_variable cv_;
-	std::deque<std::coroutine_handle<>> ready_;
+	std::deque<Ready> ready_;
 	std::vector<Entry> timers_;
 	std::uint64_t last_id_ = 0;
 	TaskCounters counters_;

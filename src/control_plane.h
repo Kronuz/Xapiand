@@ -39,7 +39,7 @@
 #include <random>                  // for std::mt19937_64
 #include <stdexcept>                // for std::runtime_error
 #include <unordered_map>           // for std::unordered_map
-#include <utility>                 // for std::move
+#include <utility>                 // for std::exchange, std::move
 
 #include "engine/host.h"           // for engine::Host
 #include "task.hh"                 // for task::task, task::event
@@ -59,7 +59,7 @@ public:
 	// Thread-safe. The task runs on the host; its failure is passed to `failed` (when set) and ends only it.
 	void spawn(task::task<void> t) {
 		running_.fetch_add(1);
-		host_.spawn(counted(std::move(t)));
+		host_.spawn(counted(std::move(t), Ended{running_}));
 	}
 
 	std::size_t running() const noexcept { return running_.load(); }
@@ -68,7 +68,22 @@ public:
 	std::function<void(const std::exception&)> failed;
 
 private:
-	task::task<void> counted(task::task<void> t) {
+	// Uncounts a task when its frame goes, however it goes: it ends, or teardown destroys it suspended, or a
+	// closed host destroys it unrun. A parameter, so it lives in the frame from the call on.
+	struct Ended {
+		std::atomic<std::size_t>* running;
+		explicit Ended(std::atomic<std::size_t>& r) noexcept : running(&r) { }
+		Ended(Ended&& other) noexcept : running(std::exchange(other.running, nullptr)) { }
+		Ended(const Ended&) = delete;
+		Ended& operator=(const Ended&) = delete;
+		Ended& operator=(Ended&&) = delete;
+		~Ended() {
+			if (running != nullptr) { running->fetch_sub(1); }
+		}
+	};
+
+	task::task<void> counted(task::task<void> t, Ended ended) {
+		(void)ended;
 		try {
 			co_await std::move(t);
 		} catch (const std::exception& error) {
@@ -76,7 +91,6 @@ private:
 		} catch (...) {
 			if (failed) { failed(std::runtime_error("unknown error")); }
 		}
-		running_.fetch_sub(1);
 	}
 
 	engine::Host& host_;
@@ -105,6 +119,12 @@ public:
 
 	std::uint64_t ticks() const noexcept { return ticks_.load(); }
 
+	// Whether the task waits for its next tick with its wake published to stop().
+	bool waiting() {
+		std::lock_guard<std::mutex> lk(mtx_);
+		return wake_ != nullptr;
+	}
+
 private:
 	task::task<void> loop() {
 		for (;;) {
@@ -117,12 +137,14 @@ private:
 				wake_ = &wake;
 			}
 			{
+				// Cleared however the wait ends, a teardown that destroys this frame included: stop() must never
+				// set a dead event.
+				Unpublish unpublish{*this};
 				auto timer = tasks_.host().start_timer(std::chrono::steady_clock::now() + period_, [&wake] { wake.set(); });
 				co_await wake;
 			}
 			{
 				std::lock_guard<std::mutex> lk(mtx_);
-				wake_ = nullptr;
 				if (stopped_) {
 					co_return;
 				}
@@ -135,6 +157,14 @@ private:
 			ticks_.fetch_add(1);
 		}
 	}
+
+	struct Unpublish {
+		Periodic& self;
+		~Unpublish() {
+			std::lock_guard<std::mutex> lk(self.mtx_);
+			self.wake_ = nullptr;
+		}
+	};
 
 	Tasks& tasks_;
 	std::chrono::steady_clock::duration period_;
@@ -209,6 +239,16 @@ public:
 
 	std::uint64_t fired() const noexcept { return fired_.load(); }
 
+	// The keys whose task waits with its wake published to stop().
+	std::size_t waiting() const {
+		std::lock_guard<std::mutex> lk(mtx_);
+		std::size_t n = 0;
+		for (const auto& [key, state] : states_) {
+			n += state.wake != nullptr ? 1 : 0;
+		}
+		return n;
+	}
+
 private:
 	struct State {
 		std::chrono::steady_clock::time_point max_wakeup;
@@ -248,15 +288,26 @@ private:
 				co_return;
 			}
 			{
+				// Cleared however the wait ends, a teardown that destroys this frame included: stop() must never
+				// set a dead event.
+				Unpublish unpublish{*this, key, &wake};
 				auto timer = tasks_.host().start_timer(target, [&wake] { wake.set(); });
 				co_await wake;
 			}
-			std::lock_guard<std::mutex> lk(mtx_);
-			if (auto it = states_.find(key); it != states_.end()) {
+		}
+	}
+
+	struct Unpublish {
+		Debounce& self;
+		const Key& key;
+		task::event* wake;
+		~Unpublish() {
+			std::lock_guard<std::mutex> lk(self.mtx_);
+			if (auto it = self.states_.find(key); it != self.states_.end() && it->second.wake == wake) {
 				it->second.wake = nullptr;
 			}
 		}
-	}
+	};
 
 	Tasks tasks_;
 	Timing timing_;

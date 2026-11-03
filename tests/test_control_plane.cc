@@ -283,6 +283,66 @@ static void test_pending_keys_cost_the_loop_nothing() {
 }
 
 
+// ---- Teardown (task's cancellation D8) ----
+
+// The loop's scheduler destroys the periodic task while it waits: its published wake goes with it, so a later stop()
+// sets nothing, and the task is counted out.
+static void test_teardown_unpublishes_the_periodic_wake() {
+	Loop loop;
+	control::Tasks tasks(loop.host);
+	control::Periodic periodic(tasks, 1h, [] { });
+	periodic.start();
+	CHECK(eventually([&] { return periodic.waiting(); }));
+	loop.stop();
+	loop.host.close();
+	loop.host.destroy_roots();
+	CHECK_FALSE(periodic.waiting());
+	CHECK_EQ(tasks.running(), 0u);
+	periodic.stop();
+}
+
+// The same for the debounced autocommit's waiting keys.
+static void test_teardown_unpublishes_the_autocommit_wakes() {
+	Loop loop;
+	std::atomic<int> fired{0};
+	Autocommit autocommit(loop.host, {10s, 10s, 10s, 10s}, [&](const int&) { ++fired; });
+	for (int key = 0; key < 3; ++key) {
+		CHECK(autocommit.touch(key));
+	}
+	CHECK(eventually([&] { return autocommit.waiting() == 3; }));
+	loop.stop();
+	loop.host.close();
+	loop.host.destroy_roots();
+	CHECK_EQ(autocommit.waiting(), 0u);
+	CHECK_EQ(autocommit.tasks().running(), 0u);
+	autocommit.stop();
+	CHECK_EQ(fired.load(), 0);
+}
+
+// A task spawned on a closed host is destroyed unrun and counted out, so a drain that waits for the count ends.
+static void test_a_task_spawned_on_a_closed_host_is_counted_out() {
+	Loop loop;
+	loop.stop();
+	loop.host.close();
+	control::Tasks tasks(loop.host);
+	bool ran = false;
+	tasks.spawn([](bool& ran) -> task::task<void> {
+		ran = true;
+		co_return;
+	}(ran));
+	CHECK_EQ(tasks.running(), 0u);
+	CHECK_FALSE(ran);
+}
+
+// A blocking wait's scheduler owns no roots, so a spawn onto it always runs its task (Host::run never waits on a
+// task destroyed unrun).
+static void test_a_blocking_scheduler_owns_no_roots() {
+	engine::BlockingScheduler blocking;
+	CHECK(task::scheduler_ref::of(blocking).roots() == nullptr);
+	CHECK_EQ(blocking.run([]() -> task::task<int> { co_return 7; }()), 7);
+}
+
+
 // ---- SingleFlight ----
 
 static void test_concurrent_first_uses_load_once() {
@@ -524,6 +584,10 @@ int main(int argc, char** argv) {
 		{"test_writes_that_never_stop_are_committed_by_the_forced_time", test_writes_that_never_stop_are_committed_by_the_forced_time},
 		{"test_a_stop_ends_the_waiting_without_running_the_calls", test_a_stop_ends_the_waiting_without_running_the_calls},
 		{"test_pending_keys_cost_the_loop_nothing", test_pending_keys_cost_the_loop_nothing},
+		{"test_teardown_unpublishes_the_periodic_wake", test_teardown_unpublishes_the_periodic_wake},
+		{"test_teardown_unpublishes_the_autocommit_wakes", test_teardown_unpublishes_the_autocommit_wakes},
+		{"test_a_task_spawned_on_a_closed_host_is_counted_out", test_a_task_spawned_on_a_closed_host_is_counted_out},
+		{"test_a_blocking_scheduler_owns_no_roots", test_a_blocking_scheduler_owns_no_roots},
 		{"test_concurrent_first_uses_load_once", test_concurrent_first_uses_load_once},
 		{"test_a_later_use_loads_again", test_a_later_use_loads_again},
 		{"test_other_keys_load_beside_each_other", test_other_keys_load_beside_each_other},
