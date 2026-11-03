@@ -158,7 +158,8 @@ parseOptions(int argc, char** argv)
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
 		std::size_t max_search_indexes = 100000;
-		app.add_option("--max-search-indexes", max_search_indexes, "Most indexes (shards) one search may name; a search over more answers 400. A search reads its indexes in batches, so this bounds only a runaway pattern.");
+		app.add_option("--max-search-indexes", max_search_indexes, "Most indexes (shards) one search may name, and most directory entries its patterns may read to find them (at least 1); a search over more answers 400. A search reads its indexes in batches, so this bounds only a runaway pattern.")
+			->check(CLI::Range(std::size_t{1}, std::size_t{1} << 40));
 		std::size_t concurrent_search_indexes = 0;
 		app.add_option("--concurrent-search-indexes", concurrent_search_indexes, "Most indexes one search holds open at once; it reads the rest in later batches. 0: a reactor's share of the database pool (the pool size over the reactors).");
 		std::size_t schema_pool_size = SCHEMA_POOL_SIZE;

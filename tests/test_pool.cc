@@ -1167,7 +1167,7 @@ void test_search_fanout_limit() {
 	CHECK_TRUE(error_kind([] { check_search_fanout(1, 100000); }) == engine::errc::internal);
 	CHECK_TRUE(error_kind([] { check_search_fanout(100001, 100000); }) == engine::errc::invalid);
 	CHECK_TRUE(error_kind([] { check_search_fanout(1010, 1000); }) == engine::errc::invalid);
-	CHECK_TRUE(error_kind([] { check_search_fanout(5000000, 0); }) == engine::errc::internal);  // 0: unset
+	CHECK_TRUE(error_kind([] { check_search_fanout(1, 0); }) == engine::errc::invalid);  // 0 is not unlimited (the option refuses it)
 	try {
 		check_search_fanout(1001, 1000);
 	} catch (const engine::Error& error) {

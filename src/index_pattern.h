@@ -24,6 +24,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -70,11 +71,34 @@ match(std::string_view pattern, std::string_view name) noexcept
 	return p == pattern.size();
 }
 
+// The longest list of patterns (wildcards and exclusions together) a search may name. The walk tests every entry it
+// reads against every pattern, so this bounds the work per entry.
+inline constexpr std::size_t max_patterns = 32;
+
+// What one expansion may spend. Both are `--max-search-indexes`: `names` bounds the indexes the patterns name, and
+// `visits` the directory entries the walk reads to find them, whether or not an entry matches (a pattern and
+// its own exclusion match nothing and still read the tree), so the work has a number whatever the patterns say.
+struct Bounds {
+	std::size_t names;
+	std::size_t visits;
+};
+
+// Called before each directory entry the walk reads, on the walking thread; it may throw to stop the walk.
+using Checkpoint = std::function<void()>;
+
 // The indexes `items` name under `root` (the node's data directory, ending in `/`): a plain item stands for itself,
 // `_all` and a pattern for the indexes on disk it matches (an index is a directory holding `strata` or a shard
-// `.__N`; one that holds neither is searched for indexes below it), `-item` removes names. The names are sorted
-// and have no repeats. It reads the file system and blocks, so it runs off a reactor. Raises errc::invalid
-// (a 400) when a pattern is longer than `max_pattern_size` or the names pass `limit`.
-std::vector<std::string> expand(const std::string& root, std::span<const std::string> items, std::size_t limit);
+// `.__N`; one that holds neither is searched for indexes below it), `-item` removes names. Equal items count once.
+// One walk finds the indexes of all the patterns, reading directories entry by entry. The names are sorted and have no
+// repeats. It reads the file system and blocks, so it runs off a reactor. Raises errc::invalid (a 400) when a pattern
+// is longer than `max_pattern_size`, there are more than `max_patterns` of them, the names pass `bounds.names` or the
+// walk reads more than `bounds.visits` entries.
+std::vector<std::string> expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint = {});
+
+// Raises errc::invalid (a 400) when creating the index `path` under `root` would nest it: when an index is a proper
+// prefix of `path`, when an index is below it, or when a name below the first is one the layout keeps (`strata`, `.__N`).
+// Patterns do not look inside an index, so a nested index would be invisible to them. It reads the file system and
+// blocks; the directory below `path` is read for at most `visits` entries.
+void check_new_index(const std::string& root, std::string_view path, std::size_t visits);
 
 }  // namespace index_pattern

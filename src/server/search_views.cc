@@ -2308,9 +2308,15 @@ expand_paths(Request& request, bool patterns)
 	if (wildcards && patterns) {
 		std::vector<std::string> names;
 		IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
-		const auto cap = static_cast<size_t>(std::max<ssize_t>(0, opts.max_search_indexes));   // 0: no cap
+		const auto cap = static_cast<size_t>(opts.max_search_indexes);
+		// The walk looks at the request between entries, so a client that goes away stops it.
+		const auto token = request.cancel.token();
 		co_await chores.run(engine::ChoreClass::query, [&] {
-			names = index_pattern::expand(Endpoint::cwd, paths, cap != 0 ? cap : std::numeric_limits<size_t>::max());
+			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, [&token] {
+				if (token.requested()) {
+					throw task::cancelled{};
+				}
+			});
 		});
 		co_return names;
 	}

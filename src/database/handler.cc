@@ -1280,7 +1280,7 @@ split_hit_id(engine::hitid did, size_t shards)
 void
 check_search_fanout(size_t shards, size_t max_search_indexes)
 {
-	if (max_search_indexes != 0 && shards > max_search_indexes) {
+	if (shards > max_search_indexes) {
 		throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes (--max-search-indexes) and this one names {}; narrow the index pattern", max_search_indexes, shards));
 	}
 }

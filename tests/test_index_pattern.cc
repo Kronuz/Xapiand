@@ -89,8 +89,8 @@ struct Tree {
 
 using Names = std::vector<std::string>;
 
-Names names(const Tree& tree, const Names& items, std::size_t limit = 100) {
-	return expand(tree.root, items, limit);
+Names names(const Tree& tree, const Names& items, std::size_t limit = 100, std::size_t visits = 1000) {
+	return expand(tree.root, items, {limit, visits});
 }
 
 void test_expand() {
@@ -115,7 +115,7 @@ void test_expand() {
 	CHECK_TRUE(names(tree, {"e*"}).empty());        // a directory that is no index
 	CHECK_TRUE(names(tree, {"afile*"}).empty());    // a file is no index
 	CHECK_TRUE(names(tree, {"-"}) == (Names{"-"}));  // a lone dash is a name
-	CHECK_TRUE(expand(tree.root.substr(0, tree.root.size() - 1), Names{"b*"}, 10) == (Names{"b1"}));   // the root needs no slash
+	CHECK_TRUE(expand(tree.root.substr(0, tree.root.size() - 1), Names{"b*"}, {10, 100}) == (Names{"b1"}));   // the root needs no slash
 }
 
 void test_the_limit() {
@@ -123,7 +123,7 @@ void test_the_limit() {
 	CHECK_EQ(names(tree, {"_all"}, 6).size(), std::size_t{6});
 	CHECK_THROW(names(tree, {"_all"}, 5), engine::Error);
 	CHECK_THROW(names(tree, {"a*", "b*", "c*"}, 5), engine::Error);
-	CHECK_EQ(names(tree, {"_all", "-c/*"}, 4).size(), std::size_t{4});   // the names removed do not count
+	CHECK_EQ(names(tree, {"_all", "-c/*"}, 4).size(), std::size_t{4});   // the names removed do not count as names
 	CHECK_THROW(names(tree, {"x1", "x2", "x3"}, 2), engine::Error);
 	try {
 		names(tree, {"_all"}, 5);
@@ -136,6 +136,137 @@ void test_the_limit() {
 	CHECK_TRUE(names(tree, {std::string(index_pattern::max_pattern_size - 1, 'a') + "*"}).empty());
 }
 
+// A tree of `n` index directories under one level, `d` directories with an index below them each.
+struct Wide {
+	std::string root = "pattern_wide_root/";
+	explicit Wide(int n) {
+		fs::remove_all(root);
+		for (int i = 0; i < n; ++i) {
+			fs::create_directories(root + "i" + std::to_string(1000 + i) + "/strata");
+		}
+	}
+	~Wide() { fs::remove_all(root); }
+};
+
+// SR1: the work of the walk is bounded by the entries it reads, not by the names that survive.
+void test_the_walk_is_bounded() {
+	Wide wide(50);
+	// `*` and its own exclusion leave no name, and still read the 50 entries: the budget trips on the work.
+	CHECK_THROW(expand(wide.root, Names{"*", "-*"}, {100, 49}), engine::Error);
+	CHECK_TRUE(expand(wide.root, Names{"*", "-*"}, {100, 50}).empty());
+	CHECK_THROW(expand(wide.root, Names{"i1*", "-i1*"}, {100, 49}), engine::Error);
+	try {
+		expand(wide.root, Names{"_all", "-_all"}, {100, 10});
+		CHECK_TRUE(false);
+	} catch (const engine::Error& error) {
+		CHECK_EQ(error.kind, engine::errc::invalid);
+		CHECK_TRUE(error.description().find("--max-search-indexes") != std::string::npos);
+		CHECK_TRUE(error.description().find("directory entries") != std::string::npos);
+	}
+	// The entries read are counted as they are read: the walk stops at the budget, it does not list the level first.
+	std::size_t calls = 0;
+	CHECK_THROW(expand(wide.root, Names{"*", "-*"}, {100, 7}, [&] { ++calls; }), engine::Error);
+	CHECK_EQ(calls, std::size_t{7});
+	// Names that are only plain items read nothing.
+	calls = 0;
+	CHECK_EQ(expand(wide.root, Names{"x", "y", "z"}, {100, 0}, [&] { ++calls; }).size(), std::size_t{3});
+	CHECK_EQ(calls, std::size_t{0});
+}
+
+// SR1: one walk serves all the patterns; the entries read do not depend on how many patterns there are.
+void test_one_walk_for_all_the_items() {
+	Wide wide(50);
+	const auto reads = [&](const Names& items) {
+		std::size_t calls = 0;
+		expand(wide.root, items, {100, 1000}, [&] { ++calls; });
+		return calls;
+	};
+	const auto one = reads({"i1*"});
+	CHECK_EQ(one, std::size_t{50});
+	Names many;
+	for (int i = 0; i < 30; ++i) {
+		many.push_back("i10" + std::to_string(i % 5) + "*");
+		many.push_back("-i1" + std::to_string(i) + "x");
+	}
+	many.resize(index_pattern::max_patterns);
+	CHECK_EQ(reads(many), one);
+	// ... and each name still comes out for the patterns that match it.
+	CHECK_EQ(expand(wide.root, Names{"i1000", "i1001*", "i1002"}, {100, 1000}).size(), std::size_t{3});
+	CHECK_TRUE(expand(wide.root, Names{"i100*", "i101*", "-i1001", "-i1012"}, {100, 1000}) == (Names{"i1000", "i1002", "i1003", "i1004", "i1005", "i1006", "i1007", "i1008", "i1009", "i1010", "i1011", "i1013", "i1014", "i1015", "i1016", "i1017", "i1018", "i1019"}));
+}
+
+// SR1: the number of patterns is bounded.
+void test_the_patterns_are_bounded() {
+	Wide wide(3);
+	Names items;
+	for (std::size_t i = 0; i < index_pattern::max_patterns; ++i) {
+		items.push_back("p" + std::to_string(i) + "*");
+	}
+	CHECK_TRUE(expand(wide.root, items, {100, 1000}).empty());
+	items.push_back("-q");
+	CHECK_THROW(expand(wide.root, items, {100, 1000}), engine::Error);
+	items.resize(2);
+	for (int i = 0; i < 5000; ++i) {
+		items.push_back("name" + std::to_string(i));   // plain names are not patterns: the names bound counts them
+	}
+	CHECK_EQ(expand(wide.root, items, {5000, 1000}).size(), std::size_t{5000});
+	CHECK_THROW(expand(wide.root, items, {4999, 1000}), engine::Error);
+}
+
+// SR1: the walk looks at the request between entries.
+void test_the_walk_can_be_cancelled() {
+	Wide wide(50);
+	struct Stop { };
+	std::size_t calls = 0;
+	CHECK_THROW(expand(wide.root, Names{"*"}, {100, 1000}, [&] { if (++calls == 5) { throw Stop{}; } }), Stop);
+	CHECK_EQ(calls, std::size_t{5});
+}
+
+// SR4: equal items count once.
+void test_equal_items_count_once() {
+	Tree tree;
+	CHECK_TRUE(names(tree, {"a*", "a*"}, 3) == (Names{"a1", "a2", "a3"}));
+	CHECK_TRUE(names(tree, {"a*", "a*", "a1", "a1", "a*"}, 3) == (Names{"a1", "a2", "a3"}));   // a name in a pattern and by itself too
+	CHECK_TRUE(names(tree, {"a*", "a2*", "a*", "-b1", "-b1"}, 3) == (Names{"a1", "a2", "a3"}));
+	CHECK_THROW(names(tree, {"a*"}, 2), engine::Error);
+}
+
+// SR2: index paths do not nest.
+void test_index_paths_do_not_nest() {
+	Tree tree;
+	const auto refused = [&](const std::string& path) {
+		try {
+			index_pattern::check_new_index(tree.root, path, 1000);
+			return false;
+		} catch (const engine::Error& error) {
+			return error.kind == engine::errc::invalid;
+		}
+	};
+	CHECK_TRUE(refused("c"));            // c holds the indexes c/d1 and c/d2
+	CHECK_TRUE(refused("a1/x"));         // below the index a1
+	CHECK_TRUE(refused("a2/x/y"));       // ... any depth, and a2 has shards
+	CHECK_TRUE(refused("c/d1/x"));
+	CHECK_TRUE(refused("c/strata"));     // makes c look like an index
+	CHECK_TRUE(refused("e/.__1"));
+	CHECK_TRUE(refused("e/.__x/y"));
+	CHECK_TRUE(refused("n/strata/x"));
+	CHECK_FALSE(refused("a1"));          // an existing index is itself
+	CHECK_FALSE(refused("c/d3"));        // next to others
+	CHECK_FALSE(refused("e"));           // a directory with no index below
+	CHECK_FALSE(refused("e/f"));
+	CHECK_FALSE(refused("new"));
+	CHECK_FALSE(refused("strata"));      // as a first name it is an ordinary index
+	CHECK_FALSE(refused("a1x/y"));
+	// The directory below is read for at most the budget; a bigger one is refused, it is not assumed empty.
+	Wide wide(50);
+	fs::create_directories(wide.root + "box");
+	for (int i = 0; i < 30; ++i) {
+		fs::create_directories(wide.root + "box/e" + std::to_string(i));
+	}
+	index_pattern::check_new_index(wide.root, "box", 1000);
+	CHECK_THROW(index_pattern::check_new_index(wide.root, "box", 10), engine::Error);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -144,6 +275,12 @@ int main(int argc, char** argv) {
 		{"test_match", test_match},
 		{"test_expand", test_expand},
 		{"test_the_limit", test_the_limit},
+		{"test_the_walk_is_bounded", test_the_walk_is_bounded},
+		{"test_one_walk_for_all_the_items", test_one_walk_for_all_the_items},
+		{"test_the_patterns_are_bounded", test_the_patterns_are_bounded},
+		{"test_the_walk_can_be_cancelled", test_the_walk_can_be_cancelled},
+		{"test_equal_items_count_once", test_equal_items_count_once},
+		{"test_index_paths_do_not_nest", test_index_paths_do_not_nest},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

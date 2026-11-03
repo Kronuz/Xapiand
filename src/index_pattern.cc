@@ -27,6 +27,8 @@
 #include <sys/stat.h>
 
 #include <algorithm>               // for std::sort, std::unique, std::any_of
+#include <iterator>                // for std::make_move_iterator
+#include <memory>                  // for std::unique_ptr
 
 #include "engine/error.h"          // for Error, errc
 #include "index_path.h"            // for index_path::valid
@@ -43,6 +45,20 @@ too_many(std::size_t limit)
 	throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes (--max-search-indexes) and these patterns name more; narrow the index pattern", limit));
 }
 
+[[noreturn]] void
+too_much_work(std::size_t limit)
+{
+	throw engine::Error(engine::errc::invalid, strings::format("A search can look through at most {} directory entries (--max-search-indexes) and these patterns need more; narrow the index pattern", limit));
+}
+
+// The walk read more entries than its budget.
+struct OutOfBudget { };
+
+struct DirCloser {
+	void operator()(DIR* dirp) const noexcept { ::closedir(dirp); }
+};
+using DirPtr = std::unique_ptr<DIR, DirCloser>;
+
 bool
 is_directory(const std::string& path, bool follow = true)
 {
@@ -51,136 +67,255 @@ is_directory(const std::string& path, bool follow = true)
 }
 
 // Whether a directory is an index: it holds `strata` (an index of one shard) or a shard `.__N`, which may be any
-// of the node's shards of the index.
+// of the node's shards of the index. `entry()` is called for each entry it reads.
+template <typename Entry>
 bool
-holds_index(const std::string& dir)
+holds_index(const std::string& dir, Entry&& entry)
 {
 	if (is_directory(dir + "/strata") || is_directory(dir + "/.__1")) {
 		return true;
 	}
-	DIR* dirp = ::opendir(dir.c_str());
-	if (dirp == nullptr) {
+	DirPtr dirp(::opendir(dir.c_str()));
+	if (!dirp) {
 		return false;
 	}
-	bool found = false;
-	while (const dirent* ent = ::readdir(dirp)) {
+	while (const dirent* ent = ::readdir(dirp.get())) {
 		const std::string_view name(ent->d_name);
+		if (name == "." || name == "..") {
+			continue;
+		}
+		entry();
 		if (name.starts_with(".__") && ent->d_type != DT_REG) {
-			found = true;
-			break;
+			return true;
 		}
 	}
-	::closedir(dirp);
-	return found;
+	return false;
 }
 
-// The indexes under a directory that one pattern matches, without the names `excluded` match.
+// The indexes under a directory that the wanted patterns match and the excluded ones do not, found in one walk:
+// each entry is tested against every pattern. The walk reads at most `bounds.visits` directory entries, however
+// few of them match, and calls `checkpoint` before each.
 class Walk {
 public:
-	Walk(std::string_view pattern, std::span<const std::string> excluded, std::size_t limit, std::vector<std::string>& out)
-		: pattern_(pattern), excluded_(excluded), limit_(limit), out_(out),
-		  literal_(pattern.substr(0, pattern.find('*'))) { }
+	Walk(std::span<const std::string> wanted, std::span<const std::string> excluded, const Bounds& bounds, const Checkpoint& checkpoint, std::vector<std::string>& out)
+		: wanted_(wanted), excluded_(excluded), bounds_(bounds), checkpoint_(checkpoint), out_(out)
+	{
+		for (const auto& pattern : wanted_) {
+			literals_.push_back(std::string_view(pattern).substr(0, pattern.find('*')));   // the bytes before its first `*`
+		}
+	}
+
+	// With `first_only` the walk stops at the first index it finds.
+	void run(const std::string& dir, const std::string& prefix, bool first_only = false)
+	{
+		first_only_ = first_only;
+		scan(dir, prefix);
+	}
+
+	std::size_t visits() const noexcept { return visits_; }
+
+private:
+	void visit()
+	{
+		if (++visits_ > bounds_.visits) {
+			throw OutOfBudget{};
+		}
+		if (checkpoint_) {
+			checkpoint_();
+		}
+	}
 
 	void scan(const std::string& dir, const std::string& prefix)
 	{
-		std::vector<std::string> children;
-		DIR* dirp = ::opendir(dir.c_str());
-		if (dirp == nullptr) {
+		DirPtr dirp(::opendir(dir.c_str()));
+		if (!dirp) {
 			return;
 		}
-		while (const dirent* ent = ::readdir(dirp)) {
+		std::vector<std::pair<std::string, std::string>> deeper_dirs;   // the directories to look inside, after this one is closed
+		while (const dirent* ent = ::readdir(dirp.get())) {
 			const std::string_view name(ent->d_name);
+			if (name == "." || name == "..") {
+				continue;
+			}
+			visit();
 			if (name.empty() || name[0] == '.' || !index_path::valid(name)) {
 				continue;
 			}
-			if (ent->d_type == DT_DIR || (ent->d_type == DT_UNKNOWN && is_directory(dir + "/" + std::string(name), false))) {
-				children.emplace_back(name);
+			if (ent->d_type != DT_DIR && (ent->d_type != DT_UNKNOWN || !is_directory(dir + "/" + std::string(name), false))) {
+				continue;
 			}
-		}
-		::closedir(dirp);
-		for (const auto& child : children) {
-			const auto rel = prefix + child;
-			const bool matched = match(pattern_, rel) && !excluded(rel);
+			const auto rel = prefix + std::string(name);
+			const bool matched = wanted_match(rel) && !excluded(rel);
 			const bool deeper = below(rel);
 			if (!matched && !deeper) {
 				continue;
 			}
-			const auto path = dir + "/" + child;
-			if (holds_index(path)) {
+			auto path = dir + "/" + std::string(name);
+			if (holds_index(path, [this] { visit(); })) {
 				if (matched) {
 					out_.push_back(rel);
-					if (out_.size() > limit_) {
-						too_many(limit_);
+					if (first_only_) {
+						return;
+					}
+					if (out_.size() > bounds_.names) {
+						too_many(bounds_.names);
 					}
 				}
 			} else if (deeper) {
-				scan(path, rel + "/");
+				deeper_dirs.emplace_back(std::move(path), rel + "/");
+			}
+		}
+		dirp.reset();
+		for (const auto& [path, rel] : deeper_dirs) {
+			scan(path, rel);
+			if (first_only_ && !out_.empty()) {
+				return;
 			}
 		}
 	}
 
-private:
+	bool wanted_match(std::string_view name) const
+	{
+		return std::any_of(wanted_.begin(), wanted_.end(), [&](const std::string& pattern) { return match(pattern, name); });
+	}
+
 	bool excluded(std::string_view name) const
 	{
 		return std::any_of(excluded_.begin(), excluded_.end(), [&](const std::string& pattern) { return match(pattern, name); });
 	}
 
-	// Whether the pattern can match a name below the directory `rel`.
-	bool below(const std::string& rel) const
+	// Whether a wanted pattern can match a name below the directory `rel`.
+	bool below(std::string_view inside) const
 	{
-		const std::string_view inside(rel);
-		if (literal_.size() > inside.size()) {
-			return literal_.substr(0, inside.size()) == inside && literal_[inside.size()] == '/';
-		}
-		return inside.substr(0, literal_.size()) == literal_;
+		return std::any_of(literals_.begin(), literals_.end(), [&](std::string_view literal) {
+			if (literal.size() > inside.size()) {
+				return literal.substr(0, inside.size()) == inside && literal[inside.size()] == '/';
+			}
+			return inside.substr(0, literal.size()) == literal;
+		});
 	}
 
-	std::string_view pattern_;
+	std::span<const std::string> wanted_;
 	std::span<const std::string> excluded_;
-	std::size_t limit_;
+	Bounds bounds_;
+	const Checkpoint& checkpoint_;
 	std::vector<std::string>& out_;
-	std::string_view literal_;   // the bytes of the pattern before its first `*`
+	std::vector<std::string_view> literals_;
+	std::size_t visits_ = 0;
+	bool first_only_ = false;
 };
+
+void
+sort_unique(std::vector<std::string>& names)
+{
+	std::sort(names.begin(), names.end());
+	names.erase(std::unique(names.begin(), names.end()), names.end());
+}
+
+std::string
+trimmed(const std::string& root)
+{
+	std::string dir = root.empty() ? "." : root;
+	while (dir.size() > 1 && dir.back() == '/') {
+		dir.pop_back();
+	}
+	return dir;
+}
 
 }  // namespace
 
 
 std::vector<std::string>
-expand(const std::string& root, std::span<const std::string> items, std::size_t limit)
+expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint)
 {
-	std::vector<std::string> wanted, excluded, names;
+	std::vector<std::string> plain, wanted, excluded, names;
 	for (const auto& item : items) {
 		if (item.size() > max_pattern_size) {
 			throw engine::Error(engine::errc::invalid, strings::format("An index pattern is at most {} bytes", max_pattern_size));
 		}
 		if (item.size() > 1 && item[0] == '-') {
 			excluded.push_back(item.substr(1));
-		} else {
+		} else if (item == "_all" || item.find('*') != std::string::npos) {
 			wanted.push_back(item == "_all" ? std::string("*") : item);
+		} else {
+			plain.push_back(item);
 		}
 	}
-	std::string dir = root.empty() ? "." : root;
-	while (dir.size() > 1 && dir.back() == '/') {
-		dir.pop_back();
+	sort_unique(plain);
+	sort_unique(wanted);
+	sort_unique(excluded);
+	if (wanted.size() + excluded.size() > max_patterns) {
+		throw engine::Error(engine::errc::invalid, strings::format("A search names at most {} index patterns (wildcards and exclusions together)", max_patterns));
 	}
 	const auto removed = [&](std::string_view name) {
 		return std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return match(pattern, name); });
 	};
-	for (const auto& item : wanted) {
-		if (item.find('*') == std::string::npos) {
-			if (!removed(item)) {
-				names.push_back(item);
-			}
-			if (names.size() > limit) {
-				too_many(limit);
-			}
-		} else {
-			Walk(item, excluded, limit, names).scan(dir, "");   // stops at the limit
+	for (auto& item : plain) {
+		if (!removed(item)) {
+			names.push_back(std::move(item));
 		}
 	}
-	std::sort(names.begin(), names.end());
-	names.erase(std::unique(names.begin(), names.end()), names.end());
+	if (names.size() > bounds.names) {
+		too_many(bounds.names);
+	}
+	if (!wanted.empty()) {
+		std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
+		try {
+			Walk(wanted, excluded, bounds, checkpoint, found).run(trimmed(root), "");   // stops at the bounds
+		} catch (const OutOfBudget&) {
+			too_much_work(bounds.visits);
+		}
+		names.insert(names.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
+	}
+	sort_unique(names);
+	if (names.size() > bounds.names) {
+		too_many(bounds.names);
+	}
 	return names;
+}
+
+
+void
+check_new_index(const std::string& root, std::string_view path, std::size_t visits)
+{
+	const auto refuse = [&](std::string_view why) {
+		throw engine::Error(engine::errc::invalid, strings::format("Cannot create index '{}': {}", path, why));
+	};
+	const auto dir = trimmed(root);
+	const std::string full(path);
+
+	// A directory of the layout (`strata`, `.__N`) below the first name would make its parent look like an index.
+	std::size_t at = full.find('/');
+	while (at != std::string::npos) {
+		const auto next = full.find('/', at + 1);
+		const auto component = std::string_view(full).substr(at + 1, next == std::string::npos ? next : next - at - 1);
+		if (component == "strata" || component.starts_with(".__")) {
+			refuse(strings::format("'{}' is a name the index layout keeps", component));
+		}
+		at = next;
+	}
+
+	// Index paths do not nest: patterns do not look inside an index, so an index below another would be invisible to them.
+	for (auto cut = full.find('/'); cut != std::string::npos; cut = full.find('/', cut + 1)) {
+		if (holds_index(dir + "/" + full.substr(0, cut), [] {})) {
+			refuse(strings::format("'{}' is an index, and an index path cannot be below another", full.substr(0, cut)));
+		}
+	}
+	const auto self = dir + "/" + full;
+	if (is_directory(self) && !holds_index(self, [] {})) {
+		const std::vector<std::string> any{"*"};
+		const Checkpoint none;
+		std::vector<std::string> found;
+		Walk walk(any, {}, Bounds{1, visits}, none, found);
+		try {
+			walk.run(self, full + "/", true);
+		} catch (const OutOfBudget&) {
+			refuse("the directory holds too many entries to check that no index is below it");
+		}
+		if (!found.empty()) {
+			refuse(strings::format("'{}' is an index, and an index path cannot be above another", found.front()));
+		}
+	}
 }
 
 }  // namespace index_pattern
