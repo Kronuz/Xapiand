@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the wide-search developer's ledger (phase 7c: bounded-concurrency searches in batches); local branch `phase7c/wide-search` from master `Xapiand:11e3d82a4`, not pushed.
+> Status: CURRENT (2026-11-03) the wide-search developer's ledger (phase 7c: bounded-concurrency searches in batches); local branch `phase7c/wide-search` from master `Xapiand:11e3d82a4`, not pushed.
 
 # phase7c wide search (build): a search walks its indexes in batches
 
@@ -6,7 +6,7 @@ Branch `phase7c/wide-search` in `Xapiand-wt/wide-search`. Source: `strata/docs/s
 
 ## State
 
-Built and proved; the four findings of the first review round are fixed (below). Master (gate-prep, then drop-threadpool Xapiand:88892b4cb, strata pin 3f564dc5) is merged in. Local only (never pushed); ready for review. Head Xapiand:6ae5e1d5b (fix round Xapiand:5110af2ec to Xapiand:6ae5e1d5b over the proved head Xapiand:dfbcc88e9).
+Built and proved; the four findings of the first review round are fixed, and the security review's findings (SR1 to SR7, below) are fixed or answered. Master (Linux gate fixes, X-POOL step 1, strata pin 3f564dc5) is merged in (Xapiand:9201227c8). Local only (never pushed); ready for the security re-check. Code head Xapiand:2533b89c3; the fix round is Xapiand:b6b454d9a to Xapiand:2533b89c3, then the ledger.
 
 ## Done criteria
 
