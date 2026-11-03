@@ -135,7 +135,7 @@ static query_field_t query_field_maker(Request& request, int flags);
 // the forthcoming SearchService shares. Forward-declared here because the views
 // above call them before their definitions.
 static MsgPack node_obj();
-static task::task<MsgPack> retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
+static task::task<MsgPack> retrieve_database(Request& request, const query_field_t& query_field, std::string_view selector);
 static std::vector<std::string> expand_paths(Request& request);
 static task::task<size_t> resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 
@@ -765,18 +765,42 @@ node_obj()
 }
 
 
+bool
+is_node_route(PathParser& path_parser)
+{
+	return !path_parser.has_pth() && path_parser.get_id().empty();
+}
+
+
+MsgPack
+node_info(std::string_view selector)
+{
+	auto manager = XapiandManager::manager();
+	if (selector == "state" && manager) {
+		return enum_name(manager->state.load());
+	}
+	auto obj = MsgPack::MAP();
+	obj.update(node_obj());
+	if (manager) {
+		obj["state"] = enum_name(manager->state.load());
+	}
+	if (!selector.empty()) {
+		obj = obj.select(selector);
+	}
+	return obj;
+}
+
+
 static task::task<void>
 metrics_view(Request& request)
 {
 	L_CALL("metrics_view()");
 
-	auto query_field = query_field_maker(request, 0);
-	co_await resolve_index_endpoints(request, query_field);
-
 	request.processing = std::chrono::steady_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
 	emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size());
+	co_return;
 }
 
 
@@ -1193,6 +1217,11 @@ info_view(Request& request)
 	MsgPack response_obj;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (is_node_route(request.path_parser)) {
+		auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+		write_http_response(request, HTTP_STATUS_OK, node_info(selector));
+		co_return;
+	}
 	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
@@ -1245,6 +1274,12 @@ database_exists_view(Request& request)
 {
 	L_CALL("database_exists_view()");
 
+	// HEAD / asks whether the node answers; it names no index.
+	if (is_node_route(request.path_parser)) {
+		write_http_response(request, HTTP_STATUS_OK);
+		co_return;
+	}
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
@@ -1263,25 +1298,15 @@ database_exists_view(Request& request)
 
 
 static task::task<MsgPack>
-retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector)
+retrieve_database(Request& request, const query_field_t& query_field, std::string_view selector)
 {
 	L_CALL("retrieve_database()");
-
-	if (is_root) {
-		if (selector == "state") {
-			auto manager = XapiandManager::manager();
-			if (manager) {
-				co_return enum_name(manager->state.load());
-			}
-		}
-	}
-
 
 	auto obj = MsgPack::MAP();
 
 	// Get active schema
 	MsgPack schema;
-	try {
+	{
 		DatabaseHandler db_handler;
 		if (query_field.writable || query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
@@ -1291,11 +1316,6 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 
 		// Retrieve full schema
 		schema = (co_await db_handler.get_schema())->get_full(true);
-	} catch (const engine::Error& error) {
-		if (!engine::is_missing(error.kind)) { throw; }
-		if (!is_root) {
-			throw;
-		}
 	}
 
 	// Get index settings (from the reserved indexes database)
@@ -1305,49 +1325,33 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 		Endpoint{".xapiand/indexes"},
 		query_field.writable);
 
-	try {
-		DatabaseHandler db_handler;
-		if (query_field.writable || query_field.primary) {
-			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
-		} else {
-			db_handler.reset(request.endpoints, DB_OPEN);
-		}
-
-		// Retrive document ID
-		auto did = co_await db_handler.get_docid(id);
-
-		// Retrive document data
-		auto document = db_handler.get_document(did);
-		settings = co_await document.get_obj();
-
-		// Remove schema, ID and version from document:
-		auto it_e = settings.end();
-		auto it = settings.find(SCHEMA_FIELD_NAME);
-		if (it != it_e) {
-			settings.erase(it);
-		}
-		it = settings.find(ID_FIELD_NAME);
-		if (it != it_e) {
-			settings.erase(it);
-		}
-		it = settings.find(VERSION_FIELD_NAME);
-		if (it != it_e) {
-			settings.erase(it);
-		}
-	} catch (const engine::Error& error) {
-		if (!engine::is_missing(error.kind)) { throw; }
-		if (!is_root) {
-			throw;
-		}
+	DatabaseHandler db_handler;
+	if (query_field.writable || query_field.primary) {
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
+	} else {
+		db_handler.reset(request.endpoints, DB_OPEN);
 	}
 
-	// Add node information for '/':
-	if (is_root) {
-		obj.update(node_obj());
-		auto manager = XapiandManager::manager();
-		if (manager) {
-			obj["state"] = enum_name(manager->state.load());
-		}
+	// Retrive document ID
+	auto did = co_await db_handler.get_docid(id);
+
+	// Retrive document data
+	auto document = db_handler.get_document(did);
+	settings = co_await document.get_obj();
+
+	// Remove schema, ID and version from document:
+	auto it_e = settings.end();
+	auto it = settings.find(SCHEMA_FIELD_NAME);
+	if (it != it_e) {
+		settings.erase(it);
+	}
+	it = settings.find(ID_FIELD_NAME);
+	if (it != it_e) {
+		settings.erase(it);
+	}
+	it = settings.find(VERSION_FIELD_NAME);
+	if (it != it_e) {
+		settings.erase(it);
 	}
 
 	if (!settings.empty()) {
@@ -1373,9 +1377,13 @@ retrieve_database_view(Request& request)
 
 	assert(request.path_parser.get_id().empty());
 
-	auto is_root = !request.path_parser.has_pth();
-
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (is_node_route(request.path_parser)) {
+		auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+		write_http_response(request, HTTP_STATUS_OK, node_info(selector));
+		co_return;
+	}
+
 	if (co_await resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
@@ -1384,7 +1392,7 @@ retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	auto obj = co_await retrieve_database(request, query_field, is_root, selector);
+	auto obj = co_await retrieve_database(request, query_field, selector);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1410,8 +1418,6 @@ write_database_view(Request& request)
 	L_CALL("write_database_view()");
 
 	assert(request.path_parser.get_id().empty());
-
-	auto is_root = !request.path_parser.has_pth();
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1445,7 +1451,7 @@ write_database_view(Request& request)
 	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
-		auto obj = co_await retrieve_database(request, query_field, is_root, selector);
+		auto obj = co_await retrieve_database(request, query_field, selector);
 
 		write_http_response(request, HTTP_STATUS_OK, obj);
 	} else {

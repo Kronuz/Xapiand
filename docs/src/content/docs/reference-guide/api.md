@@ -174,6 +174,61 @@ requesting a method for the proper resource path.
 
 ---
 
+## The Node
+
+The root of the API is the node itself. It names no index, so it has no documents:
+`GET /` answers with the node's name, its server and library versions, its options
+and its state, and `HEAD /` answers `200` when the node is up.
+
+```rest
+GET /
+```
+
+<!-- e2e:begin
+
+```js
+pm.test("The root describes the node", function() {
+  pm.response.to.have.status(200);
+  var jsonData = pm.response.json();
+  pm.expect(jsonData["server"]["name"]).to.equal("Xapiand");
+  pm.expect(jsonData["versions"]["Xapiand"]).to.be.a("string");
+  pm.expect(jsonData["options"]["thread_pools"]["num_shards"]).to.be.a("number");
+  pm.expect(jsonData["state"]).to.be.a("string");
+});
+```
+e2e:end -->
+
+A [field selector](#field-expansion) reduces the answer, `GET /.state` answers just the node's
+state, and `GET /:info` answers the same as `GET /`. `GET /:metrics` answers the
+node's metrics in the Prometheus text format. A request that needs an index (`PUT /`,
+`POST /`, `DELETE /`, a search) and names none answers `400`.
+
+```rest
+GET /.server.name
+```
+
+<!-- e2e:begin
+
+```js
+pm.test("A selector reduces the node's answer", function() {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json()).to.equal("Xapiand");
+});
+```
+e2e:end -->
+
+```rest
+PUT /
+```
+
+<!-- e2e:begin
+---
+status: 400
+---
+e2e:end -->
+
+---
+
 ## JSON, MessagePack, and YAML
 
 The Xapiand API can process JSON, MessagePack, or YAML objects. Choose the format
