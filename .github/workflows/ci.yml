@@ -45,10 +45,15 @@ jobs:
           path: .ccache
           key: ccache-build-test-${{ github.sha }}
           restore-keys: ccache-build-test-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-build-test-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-build-test-
       - name: Build (RelWithDebInfo, tests + asserts on)
         run: |
           set -eux
-          cmake -GNinja -B build \
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
           ccache -z
@@ -59,10 +64,10 @@ jobs:
       - name: Blocking calls on reactor paths (async_check --strict)
         # Every blocking primitive on a path a reactor reaches is classified in harness/async_allowlist.tsv
         # (docs/design/phase7c.md D14); an unclassified hit, or a stale row, fails the job.
-        run: harness/async_check.sh --strict --extern strata=build/_deps/strata-src
+        run: harness/async_check.sh --strict --extern strata=.deps/strata-src
       - name: No owed blocking calls (async_check --strict --owed)
         # The gate after X6: no hit waits on a decision, so an owed row fails too.
-        run: harness/async_check.sh --strict --owed --extern strata=build/_deps/strata-src
+        run: harness/async_check.sh --strict --owed --extern strata=.deps/strata-src
       - name: Removed options stay removed
         run: harness/removed_options_check.sh build/bin/xapiand
       - name: Unit tests (ctest)
@@ -103,10 +108,15 @@ jobs:
           path: .ccache
           key: ccache-e2e-${{ github.sha }}
           restore-keys: ccache-e2e-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-e2e-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-e2e-
       - name: Build (RelWithDebInfo, asserts off)
         run: |
           set -eux
-          cmake -GNinja -B build \
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DLTO=OFF
           ccache -z
@@ -172,10 +182,15 @@ jobs:
           path: .ccache
           key: ccache-${{ matrix.ccache_key }}-${{ github.sha }}
           restore-keys: ccache-${{ matrix.ccache_key }}-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-${{ matrix.ccache_key }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-${{ matrix.ccache_key }}-
       - name: Build (${{ matrix.name }})
         run: |
           set -eux
-          cmake -GNinja -B build \
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             ${{ matrix.cmake_flag }} -DLTO=OFF
           # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.
