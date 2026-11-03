@@ -86,16 +86,27 @@ The consequence of one walk at a time: pattern searches queue behind each other;
 
 - Release ctest 37 of 37; docs E2E (`newman 6.2.3`) 386 requests, 656 of 656; `wide_search_check.py check` PASS (cap rows, nesting rows); identity test `tests/test_wide_search.cc` unchanged (`git diff 088eab99e -- tests/test_wide_search.cc` is empty).
 - `async_check.sh --strict --owed --extern strata=3f564dc5`: 254 hits, allow 241, owed 0, compiled_out 13, unclassified 0 (the `index_pattern.cc` row is 9 syscall sites: the walk and the nesting check, both query chores); `test_gate_tools.py` OK.
+- macOS ASan+UBSan (Homebrew LLVM 22, `.scratch/build-asan`, `detect_leaks=0:allocator_may_return_null=1`): `test_index_pattern` 108, `test_endpoint` 144, `test_pool` 214, `test_text` 24,526 checks pass; the docs E2E 656 of 656 and `wide_search_check.py check` PASS on the sanitized server, no sanitizer line in the node logs. **Linux ASan+UBSan was not run** (see Blocked on).
 - Fuzz: `fuzz_index_pattern` (the glob) 1,196,998 runs in 91 s; the new `fuzz_index_expand` (expand and check_new_index against a brute-force oracle, entries read included) 257,842 runs in 121 s; ASan+UBSan, no finding. Its mutant (`visits_` limit raised to 100,000) aborts it.
 - Mutants of `src/index_pattern.cc` (each built, run, restored from git), all killed by `test_index_pattern`: no entry counted (`test_the_walk_is_bounded`, `test_one_walk_for_all_the_items`, `test_the_walk_can_be_cancelled`); final unique dropped (`test_equal_items_count_once`); one walk per pattern (`test_one_walk_for_all_the_items`); no pattern limit (`test_the_patterns_are_bounded`); no ancestor check, no descendant check, no layout-name check (`test_index_paths_do_not_nest`); steps not counted for wanted patterns, and for exclusions (`test_the_matching_is_bounded`). The first mutant of the steps (wanted only) survived until the test had wanted-heavy patterns; fixed.
 - Mutants of the wiring (built into the Release server, probe run, restored): the nesting check off in `resolve_index_settings` (`hide2.py`: `PUT /tenant/d` 204 and `_all` lists only `tenant`); the cancel token not passed (no checkpoint, `lock()` without the token; `bounded.py`: a `live*` search right after 40 clients left waits 19.1 s, with the fix 0.15 s).
 - Reverts: with the fixes absent the old behaviour is the review's probes: `hide.py`/`hide2.py` (hiding PUT 204 then `_all` without the hidden indexes), `bounded.py` (the 48 s and 1.3 s rows), `cap.py` (`a*,a*` counted twice).
 - Reviewer probes rerun (`rerun.sh`): `traversal.py` output identical (90 vectors clean); `diff_expand.py` seeds 1 to 4: 247, 249, 259 and 252 patterns, 0 mismatches; `cap.py` now 400 for the exclusion cases that used to pass (the walk reads the whole tree, by design); `destructive.py`, `misc.py`, `deep.py`, `items.py` as before.
 
+## Done (commits)
+
+- Xapiand:9201227c8 master merged (pin before view in `search_batch`).
+- Xapiand:b6b454d9a the single bounded walk, nesting check, dedupe, `--max-search-indexes` at least 1 (SR1, SR2, SR4, SR5).
+- Xapiand:6d62d96db docs (limits table, nesting rule, proxy note) and `fuzz_index_expand` (SR1, SR2, SR4, SR5, SR6).
+- Xapiand:ade61e145 docs examples renamed off nested paths; harness rows.
+- Xapiand:126878418 and Xapiand:f9150fd24 the step budget for matching, with the wanted-pattern test.
+- Xapiand:2533b89c3 one walk at a time (SR1).
+- Xapiand:8d3f76cdc, Xapiand:75d7c2d95 and the wiring-mutant note: this ledger.
+
 ## Next
 
-Review (code reviewer; the lead decides on security: `index_pattern` reads a pattern from the URL and lists directories, bounded by a 256-byte pattern, the name cap and `index_path::valid` on every name it lists, but it is the one new path from a request to the file system). The lead runs the 10,000-index gate (`harness/wide_search_check.py gate`, which now searches `/w*/`).
+The security re-check (rechecker) of SR1, SR2, SR4 to SR7 with `.scratch/sec-patterns/` (`bounded.py N W CAP` is the new cost probe, `corrupt.py` the SR7 one, `rerun.sh` the old ones); the lead's 10,000-index gate run (`gate`), which also closes SR3 with `stall.py` against real indexes; Linux ASan+UBSan on the lease once its session is renewed (`.scratch/linux-asan.sh ship|build|test` is written for it; it needs `aws login`, and the lua tarball host `www.lua.org` fails TLS from the local VM, so a lease build needs no workaround but a local one needs `-DFETCHCONTENT_SOURCE_DIR_LUA`).
 
 ## Blocked on
 
-Nothing.
+- Linux ASan+UBSan (asked for via `aws-linux.sh`): `aws` answers "Your session has expired. Please reauthenticate using 'aws login'" (interactive, the owner's), so the lease is gone and the script fell back to strata's local VM. That VM has 4 GB free of 116 GB (other agents' builds); an ASan build needed more, ran out of disk at 4.2 GB of mine, and was removed (`~/widesec` deleted). Nothing of mine remains there. clang-20 and libc++-20 were installed on that VM with apt.
