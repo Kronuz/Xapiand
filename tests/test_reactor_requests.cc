@@ -425,6 +425,15 @@ static void test_a_task_that_holds_a_view_waits_for_nothing() {
 		}), std::string("an open"));
 	}
 	{
+		// A pin may open or wake its index: a request pins every index it reads before it takes any view (D4).
+		Loop loop;
+		const Endpoint other(fresh("rules_pin"));
+		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
+			auto view = strata->view();
+			auto pin = co_await pool.pin(other);
+		}), std::string("a pin"));
+	}
+	{
 		// Closing the index waits for its readers, and this task is one.
 		Loop loop;
 		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
@@ -450,6 +459,7 @@ static void test_the_rule_allows_a_yield_and_a_wait_after_the_view() {
 			co_await task::yield();
 			co_await task::yield();
 		}
+		auto pin = co_await pool.pin(Endpoint(fresh("rules_ok_pin")));
 		co_await shard.add_document(make("Ky"));
 	}), std::string());
 }

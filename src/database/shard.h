@@ -156,4 +156,4 @@ public:
 
 
 // The debounced autocommit of an index: a commit in its own turn.
-task::task<void> autocommit(ReferencedShardEndpoint entry);
+task::task<void> autocommit(DatabasePool& pool, Endpoint endpoint);

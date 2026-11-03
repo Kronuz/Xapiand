@@ -91,7 +91,8 @@ commit, a merge and the idle close go on, and the view stays readable until its 
 
 ## The rule for a request that holds a view
 
-A request takes its views after every await that needs a turn: its `fresh()` refreshes and the opens. While it holds
+A request pins every index it will read before it takes any view (`lock_shard::pin`, `docs/design/x-pool.md` D4), and
+takes its views after every await that needs a turn: its `fresh()` refreshes and the opens. While it holds
 a view it awaits nothing that takes a turn, opens an index or waits for a drain. A search that held A's view and
 awaited A's turn could meet a close or reopen that waits for A's readers, a cycle that only the drain's timeout ends.
 The rule makes the cycle unrepresentable, and two things keep it so.
@@ -100,8 +101,8 @@ The rule makes the cycle unrepresentable, and two things keep it so.
   the only suspension in the search is the slice), so a search holds views across a yield and across nothing else. `get`,
   `find_key`, `scan` and the other `Viewed` readers hold theirs across no `co_await`.
 - **A check in debug builds.** Each request's task runs through its own scheduler (`engine::Run`), whose resumes make the
-  request's `TaskCounters` the running ones. `Viewed` counts the views the running task holds, and `take_turn`,
-  `ensure_open` and `drain_readers` call `engine::check_no_view_held`, which aborts (a test replaces the abort with a
+  request's `TaskCounters` the running ones. `Viewed` counts the views the running task holds, and `DatabasePool::pin`,
+  `take_turn`, `ensure_open` and `drain_readers` call `engine::check_no_view_held`, which aborts (a test replaces the abort with a
   throw) when the count is not zero. Release builds compile the check out; a task on a blocking wait
   (`engine::sync_wait`) is counted the same way.
 

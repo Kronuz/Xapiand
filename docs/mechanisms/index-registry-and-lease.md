@@ -27,7 +27,7 @@ has a deadline: a request that does not get it answers `engine::errc::busy`, a 5
 
 1. **State machine** (`ShardEndpoint::State`, under the entry's mutex, O(1) sections). `empty` → the first user
    becomes the leader and sets `opening`; the others take the leader's `OpenFlight` and await its event, and see
-   its error if it failed. `open` → `closing` when the idle task finds no user (`refs == 0`) under the pool's lock,
+   its error if it failed. `open` → `closing` when the idle task finds no user (`refs == 0`: no `IndexPin`, `docs/design/x-pool.md` D3) under the pool's lock,
    or when a failure marked the engine stale; users that find `closing` await the entry's `closed` event, then
    go round again (and open a new engine). A task that gets the turn of an entry that closed or went stale while it
    was queued gives the turn back and starts over.
@@ -78,7 +78,7 @@ has a deadline: a request that does not get it answers `engine::errc::busy`, a 5
 
 ## Code
 
-`src/database/pool.{h,cc}` (`DatabasePool`, `ShardEndpoint`, `Turn`, `IndexChores`), `src/database/shard.{h,cc}` (`Shard`,
+`src/database/pool.{h,cc}` (`DatabasePool`, `ShardEndpoint`, `Turn`, `IndexChores`, `IndexPin`), `src/database/lock.h` (`lock_shard`), `src/database/shard.{h,cc}` (`Shard`,
 the `do_*` writes, commit, open and close, the data storage in chores), `src/engine/host.h`, `src/engine/host_asio.h`,
 `src/engine/chores.h`, `src/engine/strata/shard.cc` (`apply_t`, `refresh`, `close`).
 Tests: `tests/test_pool.cc`, `tests/test_engine_host.cc`; `harness/engine_crash_check.sh --reactors 2`.

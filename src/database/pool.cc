@@ -575,6 +575,30 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 }
 
 
+task::task<IndexPin>
+DatabasePool::pin(const Endpoint& endpoint)
+{
+	L_CALL("DatabasePool::pin({})", repr(endpoint.to_string()));
+
+	engine::check_no_view_held("a pin");
+	co_return IndexPin(spawn(endpoint));
+}
+
+
+task::task<IndexPin>
+DatabasePool::pin_chore(const Endpoint& endpoint)
+{
+	L_CALL("DatabasePool::pin_chore({})", repr(endpoint.to_string()));
+
+	// Resident only: the reference keeps an open entry from the idle close, which marks only unreferenced ones.
+	auto ref = get(endpoint);
+	if (ref && ref->state() != ShardEndpoint::State::open) {
+		ref.reset();
+	}
+	co_return IndexPin(std::move(ref));
+}
+
+
 ReferencedShardEndpoint
 DatabasePool::spawn(const Endpoint& endpoint)
 {

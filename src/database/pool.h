@@ -70,6 +70,7 @@ class ReplayTarget;
 class DataStorage;
 class DatabasePool;
 class ReferencedShardEndpoint;
+class IndexPin;
 
 class WorkPool;
 class WorkGroup;
@@ -411,6 +412,38 @@ public:
 };
 
 
+// A pin on an index (docs/design/x-pool.md D3): while held, the index stays open and its entry valid. Taken with
+// `co_await pool.pin(...)`, before any view the request takes (D4). Outside the registry, it is the only way
+// Xapiand names an index; it is backed by the entry's `refs` until the catalog's pins replace them.
+class IndexPin {
+	ReferencedShardEndpoint ref_{nullptr};
+
+	friend DatabasePool;
+	explicit IndexPin(ReferencedShardEndpoint ref) noexcept : ref_(std::move(ref)) { }
+
+public:
+	IndexPin() noexcept = default;
+	IndexPin(IndexPin&&) noexcept = default;
+	IndexPin& operator=(IndexPin&&) noexcept = default;
+
+	explicit operator bool() const noexcept {
+		return static_cast<bool>(ref_);
+	}
+
+	// The index's entry, valid for the pin's life only.
+	ShardEndpoint& entry() const noexcept {
+		return *ref_.get();
+	}
+	ShardEndpoint* operator->() const noexcept {
+		return ref_.get();
+	}
+
+	void release() noexcept {
+		ref_.reset();
+	}
+};
+
+
 /*
  *  ____        _        _                    ____             _
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___|  _ \ ___   ___ | |
@@ -501,7 +534,16 @@ public:
 		return detached_.load();
 	}
 
-	// The entry of this path, referenced so that it stays until the reference ends. Never waits.
+	// A request's pin on the index of this path (D3, D4). A task that holds a view and pins fails the view rule
+	// (debug builds): a pin may open or wake its index, which a held view could be keeping from happening.
+	task::task<IndexPin> pin(const Endpoint& endpoint);
+
+	// A chore's resident pin (the autocommit): it opens nothing, and an index that is not open gives an empty pin
+	// (one that closed was committed by its close).
+	task::task<IndexPin> pin_chore(const Endpoint& endpoint);
+
+	// The entry of this path, referenced so that it stays until the reference ends. Never waits. The registry's
+	// own and its tests'; requests and chores take a pin.
 	ReferencedShardEndpoint spawn(const Endpoint& endpoint);
 	ReferencedShardEndpoint get(const Endpoint& endpoint) const;
 

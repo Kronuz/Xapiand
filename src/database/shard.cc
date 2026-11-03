@@ -1786,10 +1786,15 @@ Shard::__repr__() const
 }
 
 
-// The debounced autocommit of an index: a commit in its own turn.
+// The debounced autocommit of an index: a commit in its own turn, under a chore's pin; nothing when the index
+// is no longer in the registry.
 task::task<void>
-autocommit(ReferencedShardEndpoint entry)
+autocommit(DatabasePool& pool, Endpoint endpoint)
 {
+	auto entry = co_await pool.pin_chore(endpoint);
+	if (!entry) {
+		co_return;
+	}
 	const auto start = std::chrono::steady_clock::now();
 	std::string error;
 	try {

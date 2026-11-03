@@ -549,8 +549,7 @@ void test_the_autocommit_task_takes_the_turn() {
 	CHECK_TRUE(entry->is_modified());
 	{
 		HoldTurn hold(*entry.get(), WRITE);
-		auto referenced = pool.get(endpoint);
-		Running running([&] { engine::sync_wait(autocommit(std::move(referenced))); });
+		Running running([&] { engine::sync_wait(autocommit(pool, endpoint)); });
 		std::this_thread::sleep_for(150ms);
 		CHECK_FALSE(running.done());
 		hold.release();
@@ -1010,6 +1009,74 @@ void test_flush_closes_every_idle_index_before_it_returns() {
 		++seen;
 	}
 	CHECK_EQ(seen, 3u);
+}
+
+// A pin keeps its index open (docs/design/x-pool.md D3): FLUSH closes only the index nobody pins, and the pinned
+// one closes once its pin is released.
+void test_a_pin_keeps_its_index_open() {
+	Watchdog watchdog("a pin keeps its index open");
+	DatabasePool pool(8);
+	Endpoint pinned_at(fresh("pinned")), loose_at(fresh("loose"));
+	auto pin = engine::sync_wait(pool.pin(pinned_at));
+	CHECK_TRUE(static_cast<bool>(pin));
+	ShardEndpoint* pinned = &pin.entry();
+	ShardEndpoint* loose;
+	{
+		Shard shard(*pinned, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+	}
+	{
+		auto other = engine::sync_wait(pool.pin(loose_at));
+		loose = &other.entry();
+		Shard shard(*loose, WRITE);
+		engine::sync_wait(shard.add_document(make("Kb", "b")));
+	}
+	engine::sync_wait(pool.flush());
+	CHECK_TRUE(A::state(*pinned) == ShardEndpoint::State::open);
+	CHECK_TRUE(A::state(*loose) == ShardEndpoint::State::empty);
+	pin.release();
+	CHECK_FALSE(static_cast<bool>(pin));
+	engine::sync_wait(pool.flush());
+	CHECK_TRUE(A::state(*pinned) == ShardEndpoint::State::empty);
+	// Two pins of one path name one entry.
+	auto a = engine::sync_wait(pool.pin(pinned_at));
+	auto b = engine::sync_wait(pool.pin(pinned_at));
+	CHECK_TRUE(&a.entry() == &b.entry());
+	CHECK_TRUE(&a.entry() == pinned);
+}
+
+// A chore's pin is resident: it opens nothing. A path the registry does not have, or an index that is not open,
+// gives an empty pin and opens nothing; an open index gives its entry, kept from the idle close while pinned.
+void test_a_chore_pin_opens_nothing() {
+	Watchdog watchdog("a chore pin opens nothing");
+	DatabasePool pool(8);
+	Endpoint endpoint(fresh("chorepin"));
+	{
+		auto none = engine::sync_wait(pool.pin_chore(endpoint));
+		CHECK_FALSE(static_cast<bool>(none));
+		CHECK_EQ(pool.count().first, 0u);
+	}
+	ShardEndpoint* raw;
+	{
+		auto pin = engine::sync_wait(pool.pin(endpoint));
+		raw = &pin.entry();
+		CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(endpoint))));  // made, not open
+		Shard shard(*raw, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+	}
+	{
+		auto chore = engine::sync_wait(pool.pin_chore(endpoint));
+		CHECK_TRUE(static_cast<bool>(chore));
+		CHECK_TRUE(&chore.entry() == raw);
+		engine::sync_wait(pool.flush());
+		CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::open);  // pinned: not closed
+	}
+	engine::sync_wait(pool.flush());
+	CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::empty);
+	const auto opens = raw->opens();
+	CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(endpoint))));  // closed: empty, not reopened
+	CHECK_EQ(raw->opens(), opens);
+	CHECK_EQ(pool.count().second, 0u);
 }
 
 // A close waits for the readers that hold views of the index, and while it waits it holds no turn: a writer
@@ -1603,6 +1670,8 @@ int main(int argc, char** argv) {
 		{"test_readers_cap_is_per_index", test_readers_cap_is_per_index},
 		{"test_a_close_drains_its_readers_without_the_turn", test_a_close_drains_its_readers_without_the_turn},
 		{"test_flush_closes_every_idle_index_before_it_returns", test_flush_closes_every_idle_index_before_it_returns},
+		{"test_a_pin_keeps_its_index_open", test_a_pin_keeps_its_index_open},
+		{"test_a_chore_pin_opens_nothing", test_a_chore_pin_opens_nothing},
 		{"test_a_search_over_more_indexes_than_records_is_served", test_a_search_over_more_indexes_than_records_is_served},
 		{"test_search_fanout_limit", test_search_fanout_limit},
 		{"test_a_commit_that_times_out_leaves_the_write_standing", test_a_commit_that_times_out_leaves_the_write_standing},
