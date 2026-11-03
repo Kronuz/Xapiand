@@ -136,7 +136,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   below, so `logs/2026/*` reads `logs` and `logs/2026` and nothing else, and it goes into index directories too: `twitter`
   and `twitter/user` can both exist, and creating `tenant` does not hide `tenant/a` from `_all` or a prefix. Every
   entry read, at any depth, counts against `--max-search-indexes`. Before, a `*` matched a `/` too (`test*` found
-  `test1/old`); write `test*/*` or `test*/**` for that.
+  `test1/old`); write `test*/*` or `test*/**` for that. An index name with a `?` or a `[...]` class in a search is a pattern now,
+  as one with a `*` was.
 - **A relevance weight is read against the statistics of its own index.** A document weighs the same in a search of its
   index alone and in a search over many indexes, as Elasticsearch weighs a shard's documents by default; before, the
   indexes of one search were weighed as one, so adding an index to a search changed the order of the others' hits.
