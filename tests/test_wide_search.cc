@@ -50,9 +50,9 @@ namespace {
 constexpr std::size_t K = 4;
 constexpr int DOCS = 6;
 constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
-constexpr engine::valueno GROUP_SLOT = 2;   // the collapse value; absent on every seventh document
-constexpr engine::valueno TIED_SLOT = 3;    // a sort key many documents share
-constexpr engine::valueno UNIQUE_SLOT = 4;  // a sort key no two documents share
+constexpr engine::valueno GROUP_SLOT = 21;  // the collapse value; absent on every seventh document
+constexpr engine::valueno TIED_SLOT = 22;   // a sort key many documents share
+constexpr engine::valueno UNIQUE_SLOT = 23; // a sort key no two documents share
 
 std::string two(int n) {
 	char buffer[16];
@@ -81,7 +81,7 @@ struct Corpus {
 				doc.add_term(doc.field("f"), (n % 2) != 0 ? "odd" : "even");
 				doc.add_term(doc.field("f"), "text", static_cast<engine::termcount>(1 + n % 3));
 				if (n % 7 != 6) {
-					doc.add_value(GROUP_SLOT, "g" + std::to_string((n * 5 + j) % 4));
+					doc.add_value(GROUP_SLOT, "g" + std::to_string((n * 7 + static_cast<int>(i)) % 4));
 				}
 				doc.add_value(TIED_SLOT, two((n * 3 + j) % 5));
 				doc.add_value(UNIQUE_SLOT, two((n * 37) % 1000));
@@ -221,6 +221,30 @@ void test_a_batched_search_is_the_search_of_all_the_indexes() {
 	cases.push_back({"term unique key collapse", engine::Query::term("f", "body"), &unique, GROUP_SLOT, 2, engine::DocidOrder::ascending, 0, 8});
 	cases.push_back({"no match", engine::Query::term("f", "absent"), nullptr, engine::BAD_VALUENO, 0, engine::DocidOrder::ascending, 0, 10, true});
 	cases.push_back({"zero window", engine::Query::match_all(), nullptr, engine::BAD_VALUENO, 0, engine::DocidOrder::ascending, 0, 0, true});
+	// The values are stored and read back: a key reorders the hits and a collapse drops some.
+	{
+		const auto plain = [&](const engine::KeyMaker* sorter, engine::valueno collapse_key, engine::doccount collapse_max) {
+			auto prepared = engine::prepare(engine::Query::match_all());
+			engine::SearchRequest request;
+			request.query = prepared.get();
+			request.maxitems = 1000;
+			request.sorter = sorter;
+			request.collapse_key = collapse_key;
+			request.collapse_max = collapse_max;
+			return run(corpus, 3 * K + 2, K, request);
+		};
+		const auto base = plain(nullptr, engine::BAD_VALUENO, 0);
+		const auto keyed = plain(&tied, engine::BAD_VALUENO, 0);
+		const auto collapsed = plain(nullptr, GROUP_SLOT, 2);
+		REQUIRE_EQ(base.hits.size(), static_cast<std::size_t>((3 * K + 2) * DOCS));
+		bool reordered = false;
+		for (std::size_t i = 0; i < base.hits.size(); ++i) {
+			reordered = reordered || base.hits[i].did != keyed.hits[i].did;
+		}
+		CHECK_TRUE(reordered);
+		CHECK_LT(collapsed.hits.size(), base.hits.size());
+		CHECK_GE(collapsed.hits.size(), std::size_t{8});
+	}
 	for (const std::size_t n : {std::size_t{1}, K - 1, K, K + 1, 3 * K + 2}) {
 		for (const auto& c : cases) {
 			compare(corpus, c, n);
