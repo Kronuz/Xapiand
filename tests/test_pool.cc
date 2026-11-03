@@ -177,8 +177,8 @@ public:
 		thread_ = std::thread([this, op = std::move(op)] {
 			try {
 				op();
-			} catch (const engine::Error& error) {
-				kind_ = error.kind;
+			} catch (const engine::Error&) {
+				error_ = std::current_exception();   // read by kind() after the join, where TSan sees the order
 				threw_ = true;
 			}
 			done_ = true;
@@ -187,7 +187,18 @@ public:
 	~Running() { join(); }
 	bool done() const { return done_; }
 	bool threw() const { return threw_; }
-	engine::errc kind() const { return kind_; }
+	// What the operation threw, read here and not in the thread: waiters that share one exception object release it
+	// through a refcount in libstdc++, which TSan does not see, so a read in the thread looks like a race with the free.
+	engine::errc kind() const {
+		if (!error_) {
+			return engine::errc::internal;
+		}
+		try {
+			std::rethrow_exception(error_);
+		} catch (const engine::Error& error) {
+			return error.kind;
+		}
+	}
 	void join() {
 		if (thread_.joinable()) {
 			thread_.join();
@@ -197,7 +208,7 @@ public:
 private:
 	std::atomic<bool> done_{false};
 	bool threw_ = false;
-	engine::errc kind_ = engine::errc::internal;
+	std::exception_ptr error_;
 	std::thread thread_;
 };
 
