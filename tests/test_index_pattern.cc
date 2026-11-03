@@ -192,6 +192,12 @@ void test_the_matching_is_bounded() {
 		CHECK_EQ(error.kind, engine::errc::invalid);
 		CHECK_TRUE(error.description().find("steps") != std::string::npos);
 	}
+	Names slow_wanted;   // the same, as wanted patterns none of which matches
+	for (int k = 0; k < 32; ++k) {
+		slow_wanted.push_back("*" + std::string(100 + k, 'a') + "c*");
+	}
+	CHECK_THROW(expand("pattern_long_root/", slow_wanted, {100, 1000}), engine::Error);
+	CHECK_TRUE(expand("pattern_long_root/", slow_wanted, {100, 1000, std::size_t{1} << 40}).empty());
 	CHECK_EQ(expand("pattern_long_root/", slow, {100, 1000, std::size_t{1} << 40}).size(), std::size_t{50});   // with the room it is served
 	CHECK_EQ(expand("pattern_long_root/", Names{"a*"}, {100, 1000}).size(), std::size_t{50});   // an ordinary pattern costs a step a byte
 	// The exclusions of plain names are matched too, and counted.
