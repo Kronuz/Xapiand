@@ -122,7 +122,7 @@ void check_new_index(const std::string& root, std::string_view path, std::size_t
 
 // The same check once the shard directory `shard_path` (the index's own, or its `.__N`) is made on disk: two creates
 // that raced past `check_new_index` each find the other here and one or both are refused. Raises errc::invalid; a path
-// outside `root` is not checked.
+// outside `root` is not checked, and a relative one is taken from `root`.
 void check_created(const std::string& root, std::string_view shard_path, std::size_t visits);
 
 }  // namespace index_pattern

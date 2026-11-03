@@ -345,10 +345,14 @@ void
 check_created(const std::string& root, std::string_view shard_path, std::size_t visits)
 {
 	const auto dir = trimmed(root);
-	if (shard_path.size() <= dir.size() + 1 || shard_path.substr(0, dir.size() + 1) != dir + "/") {
-		return;   // not under the data directory
+	// The node runs in its data directory, so a shard's path may be relative to it.
+	if (shard_path.starts_with('/')) {
+		if (shard_path.size() <= dir.size() + 1 || shard_path.substr(0, dir.size() + 1) != dir + "/") {
+			return;   // not under the data directory
+		}
+		shard_path.remove_prefix(dir.size() + 1);
 	}
-	std::string full(shard_path.substr(dir.size() + 1));
+	std::string full(shard_path);
 	while (full.size() > 1 && full.back() == '/') {
 		full.pop_back();
 	}

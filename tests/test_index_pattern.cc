@@ -391,6 +391,7 @@ void test_a_created_index_is_checked_again() {
 	CHECK_FALSE(refused("okd/.__1"));
 	CHECK_FALSE(refused("c/d1"));                            // next to c/d2
 	index_pattern::check_created(abs, "/elsewhere/a1/x", 1000);   // not under the data directory: not checked
+	CHECK_THROW(index_pattern::check_created(abs, "a1/x", 1000), engine::Error);   // relative: from the data directory
 	// A directory that is no index and holds more entries than the budget is refused, not assumed empty.
 	for (int i = 0; i < 30; ++i) {
 		fs::create_directories(tree.root + "box/e" + std::to_string(i));
@@ -473,9 +474,10 @@ struct Walker {
 	enum State { waiting, holding, over_queue, too_late, cancelled, other };
 	std::atomic<int> state{waiting};
 	std::atomic<bool> release{false};
+	task::cancel_source stop;   // ends the wait of a walk that is still queued when the test is over
 	std::thread thread;
-	Walker(index_pattern::WalkGate& gate, task::cancel_token token = {}) {
-		thread = std::thread([this, &gate, token] {
+	Walker(index_pattern::WalkGate& gate, const task::cancel_token& parent = {}) : stop(parent) {
+		thread = std::thread([this, &gate, token = stop.token()] {
 			try {
 				auto turn = engine::sync_wait(gate.enter(token));
 				state = holding;
@@ -501,6 +503,7 @@ struct Walker {
 		return state.load() == wanted;
 	}
 	~Walker() {
+		stop.request();
 		release = true;
 		thread.join();
 	}
