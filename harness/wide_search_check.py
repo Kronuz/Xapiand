@@ -80,12 +80,18 @@ def stop(node: subprocess.Popen[bytes]) -> None:
     node.wait(120)
 
 
+def short(i: int) -> str:
+    """A 4-character index name, so a 10,000-name path fits the 64 KiB a URL path can hold."""
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+    return "w" + digits[i // 1296 % 36] + digits[i // 36 % 36] + digits[i % 36]
+
+
 def create(i: int) -> int:
     # Index i holds 5 documents; n is unique per document, g one of 4 groups.
     status = 0
     for j in range(5):
         n = i * 5 + j
-        status = max(status, call("PUT", f"/wi{i}/d{j}", {"n": n, "g": f"g{(n * 3 + j) % 4}", "tag": "x"})[0])
+        status = max(status, call("PUT", f"/{short(i)}/d{j}", {"n": n, "g": f"g{(n * 3 + j) % 4}", "tag": "x"})[0])
     return status
 
 
@@ -135,7 +141,7 @@ def check() -> None:
         results[tag] = {}
         for width in (1, k - 1, k, k + 1, n):
             for label, body in SEARCHES.items():
-                path = "/" + ",".join(f"wi{i}" for i in range(width)) + "/"
+                path = "/" + ",".join(short(i) for i in range(width)) + "/"
                 status, raw = call("SEARCH", path, body)
                 results[tag][f"{label} over {width}"] = normalise(raw) if status == 200 else status
         peak = metric("xapiand_search_pinned_indexes_peak")
@@ -156,7 +162,7 @@ def check() -> None:
     cap = 7
     node = start("cap", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
     for width, want in ((cap, 200), (cap + 1, 400)):
-        path = "/" + ",".join(f"wi{i}" for i in range(width)) + "/"
+        path = "/" + ",".join(short(i) for i in range(width)) + "/"
         status, raw = call("SEARCH", path, SEARCHES["sorted ascending"])
         ok = status == want and (want == 200 or b"--max-search-indexes" in raw)
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: a search over {width} indexes -> {status}")
@@ -181,11 +187,12 @@ def gate() -> None:
     stop(node)
     node = start("search")
     body = {"_query": {"tag": "x"}, "_sort": "n", "_limit": 10, "_aggs": {"all": {"_sum": {"_field": "n"}}}}
+    path = "/" + ",".join(short(i) for i in range(count)) + "/"  # the index list is the URL: wildcards do not expand
     times = []
     total = None
     for run in range(args.runs + 1):
         t0 = time.perf_counter()
-        status, raw = call("SEARCH", "/wi*/", body)
+        status, raw = call("SEARCH", path, body)
         dt = (time.perf_counter() - t0) * 1000
         assert status == 200, (status, raw[:200])
         total = json.loads(raw).get("total")
