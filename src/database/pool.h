@@ -108,6 +108,7 @@ private:
 	std::unique_ptr<WorkGroup> group_;
 	IndexChores* prev_ = nullptr;   // the list of every IndexChores alive, under its lock
 	IndexChores* next_ = nullptr;
+	std::atomic<std::size_t> awaited_{0};   // chores whose awaiter has not resumed yet
 };
 
 

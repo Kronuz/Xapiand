@@ -544,6 +544,7 @@ struct AbandonSpec {
 // with a bound. The shutdown reports what it abandons and ends the process with status 75.
 [[noreturn]] static void abandon_child(const char* log_path, AbandonSpec spec) {
 	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
 	RunningNode node("node_abandon_data", std::to_string(abandon_port));
 	if (!node.ready()) {
@@ -588,6 +589,7 @@ struct AbandonSpec {
 // The restart: the data directory of the abandoned node, and a read of what it acknowledged.
 [[noreturn]] static void restart_child(const char* log_path) {
 	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
 	RunningNode node("node_abandon_data", std::to_string(abandon_port), true);
 	if (!node.ready()) {
@@ -725,6 +727,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 // A node that serves a write and is told to stop: the stop's steps run in the order the note states, and the status is 0.
 [[noreturn]] static void ordered_stop_child(const char* log_path) {
 	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
 	{
 		RunningNode node("node_order_data", std::to_string(abandon_port));
@@ -780,6 +783,7 @@ static void test_a_second_signal_ends_the_shutdowns_wait() {
 // A node whose port is taken cannot set itself up: it ends the process with a status, and says why.
 [[noreturn]] static void taken_port_child(const char* log_path) {
 	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
 	const int taken = ::socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in addr{};
