@@ -68,7 +68,8 @@ request fail with `412 Precondition Failed` if the datatype is missing.
    5. The fsync threads finish.
 
 What is still running when the 35 s end (steps 1 to 3 share them) is logged and abandoned: the requests in flight per loop, and the indexes whose turn or references are held. The node then flushes the
-write-ahead logs and exits. Without abandoned work the status is 0; with it the status is 75 (`EX_TEMPFAIL`) and the log lists what was abandoned. The next start replays the log. A write answered with a 2xx
+write-ahead logs and exits. Without abandoned work the status is 0; with it the status is 75 (`EX_TEMPFAIL`) and the log lists what was abandoned. An index that cannot close within the 35 s (for example on a hung
+disk) counts, whether or not a request is in flight: the node logs `Shutdown abandoned the indexes that are still in use` and exits 75. The next start replays the log. A write answered with a 2xx
 is in the log; one that was not answered was never promised.
 
 A second `SIGINT` or `SIGTERM` during the second wait ends it at once: the node logs what is unfinished, flushes the logs and exits 75. The longest stop is therefore the first wait plus 35 s, plus the

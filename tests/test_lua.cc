@@ -34,6 +34,7 @@
 #include <string>
 #include <thread>
 
+#include "endpoint.h"
 #include "lua/exception.h"
 #include "lua/processor.h"
 #include "task.hh"
@@ -980,6 +981,24 @@ void test_a_cancelled_call_stops_at_its_next_slice_and_frees_its_thread() {
 	CHECK(after.doc.at("ok").boolean());
 }
 
+
+// --- SR1: a foreign link is an index path, and an index path names a place inside the data directory ----------
+
+void test_a_foreign_link_that_leaves_the_data_directory_is_refused() {
+	Endpoint::cwd = "/var/db/xapiand/";
+	for (const char* reference : {"..%00/scripts/doc", "%2Fetc/scripts/doc", "%2e%2e/doc", "scripts%5cx/doc"}) {
+		MsgPack object({{"_type", "foreign/object"}, {"_foreign", reference}});
+		Script foreign_script(object);
+		bool refused = false;
+		try {
+			task::sync_wait(Processor::compile(foreign_script));
+		} catch (const ClientError&) {
+			refused = true;
+		}
+		CHECK(refused);
+	}
+}
+
 }  // namespace
 
 TEST_MAIN(
@@ -1026,5 +1045,6 @@ TEST_MAIN(
 	test_a_long_script_lets_other_work_run,
 	test_without_a_budget_a_script_runs_to_its_end,
 	test_a_cancelled_call_stops_at_its_next_slice_and_frees_its_thread,
-	test_a_charged_loop_yields_before_its_slice_of_instructions_is_spent
+	test_a_charged_loop_yields_before_its_slice_of_instructions_is_spent,
+	test_a_foreign_link_that_leaves_the_data_directory_is_refused
 )

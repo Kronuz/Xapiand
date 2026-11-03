@@ -28,6 +28,7 @@
 #include "config.h"                               // for XAPIAND_*
 
 #include "fs.hh"                                  // for normalize_path
+#include "index_path.h"                           // for index_path::valid
 #include "node.h"                                 // for Node::
 #include "opts.h"                                 // for opts
 #include "serialise.h"                            // for UUIDRepr, Serialise
@@ -231,13 +232,19 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 		query = _query;
 	}
 
+	// Checked before the path is normalized: the system calls read it as a C string, so a NUL would
+	// hide the rest of it from the boundary check below.
+	if (!index_path::valid(_path)) {
+		THROW(ClientError, "Index path {} holds a byte a name cannot hold", repr(original_uri));
+	}
+
 	const bool relative = !strings::startswith(_path, '/');
 	if (relative) {
 		_path = path = Endpoint::cwd + std::string(_path);
 	}
 	path = normalize_path(_path);
-	// A relative index path must name something strictly inside the data directory.
-	if (relative && (path.size() <= Endpoint::cwd.size() || !strings::startswith(path, Endpoint::cwd))) {
+	// An index path, relative or absolute, must name something strictly inside the data directory.
+	if (path.size() <= Endpoint::cwd.size() || !strings::startswith(path, Endpoint::cwd)) {
 		THROW(ClientError, "Index path {} is empty or outside the data directory", repr(original_uri));
 	}
 	_path = path;

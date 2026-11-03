@@ -241,7 +241,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, const std::share
 
 
 #if XAPIAND_DATABASE_WAL
-MsgPack
+task::task<MsgPack>
 DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised)
 {
 	L_CALL("DatabaseHandler::repr_wal({}, {})", start_revision, end_revision);
@@ -250,9 +250,15 @@ DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, 
 		THROW(ClientError, "This operation can only be executed on a single shard");
 	}
 
-	// WAL required on a local writable database, open it.
-	DatabaseWAL wal(endpoints[0].path);
-	return wal.to_string(start_revision, end_revision, unserialised);
+	// The log is read in a query chore: the reactor thread never reads the device.
+	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+	MsgPack result;
+	const auto path = endpoints[0].path;
+	co_await chores.run(engine::ChoreClass::query, [&] {
+		DatabaseWAL wal(path);
+		result = wal.to_string(start_revision, end_revision, unserialised);
+	});
+	co_return result;
 }
 #endif
 

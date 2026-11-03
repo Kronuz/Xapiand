@@ -42,6 +42,9 @@ jobs:
         # Every blocking primitive on a path a reactor reaches is classified in harness/async_allowlist.tsv
         # (docs/design/phase7c.md D14); an unclassified hit, or a stale row, fails the job.
         run: harness/async_check.sh --strict --extern strata=build/_deps/strata-src
+      - name: No owed blocking calls (async_check --strict --owed)
+        # The gate after X6: no hit waits on a decision, so an owed row fails too.
+        run: harness/async_check.sh --strict --owed --extern strata=build/_deps/strata-src
       - name: Removed options stay removed
         run: harness/removed_options_check.sh build/bin/xapiand
       - name: Unit tests (ctest)
