@@ -6,7 +6,7 @@ Branch `fix/wide-search-sr8` in `Xapiand-wt/wide-sr8`. Source: `docs/reviews/pha
 
 ## State
 
-SR8, SR9, SR10 and both test gaps are fixed and proved in Release (ctest 37 of 37, docs E2E 656 of 656, `async_check` 0 owed, fuzz rerun, timings under `quiet strict`). The ASan+UBSan run of the touched tests is recorded under "Proof" (see its row). Local only, never pushed; ready for the rechecker.
+SR8, SR9, SR10 and both test gaps are fixed and proved in Release (ctest 37 of 37, docs E2E 656 of 656, `async_check` 0 owed, fuzz rerun, timings under `quiet strict`). ASan+UBSan (macOS, clang 22) of the touched tests is clean. Local only, never pushed; ready for the rechecker.
 
 ## Done criteria
 
@@ -31,6 +31,7 @@ New options: `--search-walk-queue`, `--search-walk-wait` (`options.md`, changelo
 - `ctest`: 37 of 37 (test_index_pattern 634 checks, six runs in a row green after the queue test was made order-independent; test_wide_search, test_pool and test_engine_strata green).
 - Docs E2E (`newman` 6.2.3, `harness/e2e_capture.sh`): 386 requests, 656 of 656 assertions, 0 "Cannot create index" lines.
 - `harness/async_check.sh --strict --owed --extern strata=<_deps/strata-src at 3f564dc5>`: 268 hits, allow 255, owed 0, unclassified 0; `test_gate_tools.py` OK. Two rows added to `async_allowlist.tsv` (the creation lock, the directory calls of the recheck).
+- ASan+UBSan (`.scratch/build-asan`, `detect_leaks=0`, `allocator_may_return_null=1`): test_index_pattern 634 checks, test_engine_strata 9,735, test_pool 214, test_wide_search 22,301, no sanitizer line.
 - Fuzz (clang 22 libFuzzer, ASan+UBSan, light hold): `fuzz_index_expand` 272,770 runs in 121 s (it now also checks `check_created` against its brute-force oracle), `fuzz_index_pattern` 1,283,615 runs in 91 s, no finding. Mutant (the parents check skipped when a directory was just made) aborts `fuzz_index_expand`: `check_created(x.y/{[) = 0`.
 
 ### Each test fails with its fix reverted (mutants, one at a time, `.scratch/mutants.py`)
@@ -66,7 +67,7 @@ SR10 (`ancestor2.py`, 20,000 children in `big`): `PUT /big/new/d` takes 0.06 s w
 ## Next
 
 - The rechecker confirms SR8 to SR10 and the two gaps (probes in `.scratch/wide-recheck/`: `starve4.py`, `nest2.py`, `ancestor2.py`, `mutants.py`).
-- Linux ASan+UBSan and TSan of `test_index_pattern` on the shared lease (the gate uses threads and a mutex) before the branch lands.
+- TSan of `test_index_pattern` (the gate and the creation lock use threads) and the Linux sanitizer lease were not run here; CI covers Linux.
 
 ## Blocked on
 
