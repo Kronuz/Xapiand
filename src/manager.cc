@@ -163,7 +163,7 @@ XapiandManager::default_shutdown_write_bound()
 // same async-signal-safe mechanism ev::async uses internally -- and read by a task on the loop.
 struct XapiandManager::Reactors {
 	reactor::Reactor reactor;
-	engine::AsioHost host;                       // where the control plane's tasks run
+	engine::AsioHost host;                       // where the control plane's tasks run: the reactor's scheduler
 	control::Tasks tasks;                        // the control tasks that have not ended
 	std::unique_ptr<control::Periodic> housekeeping;
 	std::unique_ptr<control::Debounce<Endpoint>> autocommits;
@@ -176,7 +176,7 @@ struct XapiandManager::Reactors {
 	char sig_drain[64];
 
 	Reactors()
-		: host(reactor.io().get_executor()),
+		: host(reactor.scheduler()),
 		  tasks(host),
 		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
@@ -931,7 +931,7 @@ XapiandManager::make_servers()
 			};
 			const std::size_t bound = opts.tls_max_connections;
 			http_service = std::make_unique<http::HttpAsioService>(logged_search_service, reactors, 1000,
-				http::tls_connection_factory_timed(tls_context, std::chrono::seconds(5), 64, bound, failed), bound);
+				http::tls_connection_factory(tls_context, std::chrono::seconds(5), 64, bound, failed), bound);
 			http_service->set_idle_timeout(std::chrono::seconds(75));
 			http_service->set_header_timeout(std::chrono::seconds(30));
 			http_service->set_inactivity_timeout(std::chrono::seconds(60));
@@ -947,12 +947,12 @@ XapiandManager::make_servers()
 		http_service->enable_compression(search_compression());
 		http_service->set_max_body(BUFFERED_BODY_CAP);
 
-		// Each reactor's host: the scheduler its requests' tasks resume through. The loop's thread
-		// is bound to it before the loop serves anything.
+		// Each reactor's host, over the reactor's scheduler: the one its requests' tasks resume through. The
+		// loop's thread is bound to it before the loop serves anything.
 		for (std::size_t i = 0; i < http_service->reactors(); ++i) {
-			auto& io = http_service->reactor(i).io();
-			auto& host = http_hosts.emplace_back(std::make_unique<engine::AsioHost>(io.get_executor()));
-			asio::post(io, [host = host.get()] { host->bind_loop_thread(); });
+			auto& reactor = http_service->reactor(i);
+			auto& host = http_hosts.emplace_back(std::make_unique<engine::AsioHost>(reactor.scheduler()));
+			asio::post(reactor.io(), [host = host.get()] { host->bind_loop_thread(); });
 		}
 	}
 	this->http_port = http_port;
@@ -1047,8 +1047,9 @@ XapiandManager::join()
 	if (http_service) {
 		L(-LOG_NOTICE, NOTICE_COL, "Stop 1: the HTTP service");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
-		// Aborts the requests, then stops and joins the reactors. The writes admitted are let finish, up to the
-		// deadline; what is still running then is reported and abandoned.
+		// Phase 1 of task's teardown: cancels the requests, lets them finish for the grace, forces the sockets a
+		// stalled peer still holds, lets them finish for another grace, then stops and joins the reactors. The
+		// writes admitted are let finish within that; what is still running at the deadline is reported and abandoned.
 		// A SIGINT or SIGTERM that arrives from here on is an insistence: it ends the wait and the registry's.
 		const auto left = std::max(std::chrono::milliseconds(1), std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()));
 		auto report = shutdown_wait::wait(left, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, insisted);
@@ -1064,17 +1065,14 @@ XapiandManager::join()
 
 	// The requests left suspended on the stopped HTTP loops (on a turn, a chore, a body read) are destroyed now,
 	// before the indexes close, which releases their shard uses and turns (task's cancellation D8): the chores
-	// they may wait on are cancelled and drained, then every loop's scheduler closes and destroys its tasks.
+	// they may wait on are cancelled and drained, then the service closes every loop's scheduler (phase 2) and
+	// destroys the tasks still suspended on them (phase 3).
 	if (http_service && !abandoned_) {
 		if (!IndexChores::cancel_all(deadline)) {
 			L_WARNING("Index chores were still running at the shutdown deadline");
 		}
-		for (auto& host : http_hosts) {
-			host->close();
-		}
-		for (auto& host : http_hosts) {
-			host->destroy_roots();
-		}
+		http_service->close();
+		http_service->destroy_roots();
 	}
 
 	////////////////////////////////////////////////////////////////////
@@ -1166,10 +1164,10 @@ XapiandManager::join()
 	// The control loop's tasks still suspended (an autocommit that did not run, a wait the drains gave up on) go
 	// the same way, with the loop stopped: its scheduler closes and destroys them.
 	_rx->reactor.io().stop();
-	_rx->host.close();
-	_rx->host.destroy_roots();
+	_rx->reactor.scheduler().close();
+	_rx->reactor.scheduler().destroy_roots();
 
-	// The schedulers before the loops they post to (D8's phase 4).
+	// The hosts before the reactors whose schedulers they wrap; the service destroys its reactors (phase 4).
 	http_hosts.clear();
 	http_service.reset();
 

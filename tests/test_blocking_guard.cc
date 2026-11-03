@@ -159,7 +159,8 @@ static void test_quiet_inside_a_blocking_wait() {
 	CHECK_FALSE(guard_fires([] { CHECK_EQ(engine::sync_wait(nested_wait()), 43); }));
 	CHECK_TRUE(guard_fires([] {
 		asio::io_context io;
-		engine::AsioHost host(io.get_executor());
+		task::asio_scheduler scheduler(io.get_executor());
+		engine::AsioHost host(scheduler);
 		host.spawn([]() -> task::task<void> { engine::sync_wait(answer()); co_return; }());
 		io.run();
 	}));

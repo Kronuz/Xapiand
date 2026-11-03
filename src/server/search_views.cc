@@ -289,6 +289,22 @@ static void
 emit_via_writer(Request& request, enum http_status status, const std::string& body, const std::string& location, const std::string& ct_type, const std::string& ct_encoding, bool options)
 {
 	auto& writer = *request.response_writer;
+#ifndef NDEBUG
+	// A debug build runs the views on a scheduler of their own that forwards to the loop's (engine::counted); the
+	// writer is the loop's (http's affinity rule, D9), so the writes run in the loop's scheduler, on its thread.
+	std::optional<task::running_on> on_loop;
+	if (request.http_req != nullptr && task::current()) {
+		try {
+			auto& loop = request.http_req->scheduler();
+			if (task::current() != task::scheduler_ref::of(loop)) {
+				assert(loop.runs_here());
+				on_loop.emplace(task::scheduler_ref::of(loop));
+			}
+		} catch (const std::logic_error&) {
+			// A request no transport serves has no scheduler.
+		}
+	}
+#endif
 
 	assert(request.response_status == static_cast<http_status>(0));
 	request.response_status = status;
@@ -3072,7 +3088,14 @@ SearchService::wants_body_stream(const http::Request& hreq)
 }
 
 
-asio::awaitable<void>
+void
+Request::FailBody::operator()() const
+{
+	stream->fail(asio::error::operation_aborted);
+}
+
+
+task::task<void>
 SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();   // the extension create_extension() built
@@ -3081,14 +3104,13 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 	request.response_writer = &response;       // the response path emits through the library writer
 
 	// A client that goes away, or a shutdown, stops the request's reads at their next checkpoint;
-	// a write that was admitted completes and its response is attempted.
-	hreq.on_cancel([source = request.cancel, stream = hreq.body_stream](http::CancelReason) mutable {
-		source.request();
-		if (stream) {
-			stream->fail(asio::error::operation_aborted);   // a read that waits for the body ends too
-		}
-	});
-	request.budget.emplace(REQUEST_SLICE, request.cancel.token());
+	// a write that was admitted completes and its response is attempted. The request's token is
+	// http's (Request::cancel_token()); a read that waits for a streamed body ends with it too.
+	const task::cancel_token token = hreq.cancel_token();
+	if (hreq.body_stream) {
+		request.fail_body.emplace(token, Request::FailBody{hreq.body_stream});
+	}
+	request.budget.emplace(REQUEST_SLICE, token);
 
 	// HTTP facts from the library request (keep-alive/close, version).
 	request.http_major = hreq.http_major;
@@ -3141,16 +3163,15 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 			response.set_close();
 			co_return;
 		}
-		// The view is a task on this reactor's scheduler: it suspends for a turn, a chore or a
-		// slice, and the loop serves other requests meanwhile.
+		// The view is a child task of the connection on this reactor's scheduler: it suspends for a
+		// turn, a chore or a slice, and the loop serves other requests meanwhile.
 		auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
-		if (host == nullptr) {
+		if (host == nullptr || &host->scheduler() != &hreq.scheduler()) {
 			THROW(Error, "The request does not run on a reactor bound to its host");
 		}
-		engine::Run run(*host);
 		try {
-			co_await run.await(request.decode_large_body());
-			co_await run.await(request.view(request));
+			co_await engine::counted(*host, request.decode_large_body());
+			co_await engine::counted(*host, request.view(request));
 		} catch (const task::cancelled&) {
 			// The reads stopped at a checkpoint; say so to a client that is still there.
 			if (request.response_status == static_cast<http_status>(0)) {

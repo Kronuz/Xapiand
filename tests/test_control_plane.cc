@@ -88,7 +88,7 @@ public:
 	}
 
 	reactor::Reactor reactor;
-	engine::AsioHost host{reactor.io().get_executor()};
+	engine::AsioHost host{reactor.scheduler()};
 
 private:
 	asio::executor_work_guard<asio::io_context::executor_type> guard_;
@@ -294,8 +294,8 @@ static void test_teardown_unpublishes_the_periodic_wake() {
 	periodic.start();
 	CHECK(eventually([&] { return periodic.waiting(); }));
 	loop.stop();
-	loop.host.close();
-	loop.host.destroy_roots();
+	loop.reactor.scheduler().close();
+	loop.reactor.scheduler().destroy_roots();
 	CHECK_FALSE(periodic.waiting());
 	CHECK_EQ(tasks.running(), 0u);
 	periodic.stop();
@@ -311,8 +311,8 @@ static void test_teardown_unpublishes_the_autocommit_wakes() {
 	}
 	CHECK(eventually([&] { return autocommit.waiting() == 3; }));
 	loop.stop();
-	loop.host.close();
-	loop.host.destroy_roots();
+	loop.reactor.scheduler().close();
+	loop.reactor.scheduler().destroy_roots();
 	CHECK_EQ(autocommit.waiting(), 0u);
 	CHECK_EQ(autocommit.tasks().running(), 0u);
 	autocommit.stop();
@@ -323,7 +323,7 @@ static void test_teardown_unpublishes_the_autocommit_wakes() {
 static void test_a_task_spawned_on_a_closed_host_is_counted_out() {
 	Loop loop;
 	loop.stop();
-	loop.host.close();
+	loop.reactor.scheduler().close();
 	control::Tasks tasks(loop.host);
 	bool ran = false;
 	tasks.spawn([](bool& ran) -> task::task<void> {

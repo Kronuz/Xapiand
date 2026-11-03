@@ -190,10 +190,16 @@ public:
 	std::chrono::steady_clock::time_point ends;
 
 
-	// The request's cancellation and time slice (set by SearchService::handle): the view's task awaits
-	// the budget's checkpoints, and a disconnect or a shutdown requests the source.
-	task::cancel_source cancel;
+	// The request's time slice, on http's cancel token (set by SearchService::handle): the view's task awaits the
+	// budget's checkpoints, which a disconnect or a shutdown ends.
 	std::optional<task::budget> budget;
+
+	// Fails a streamed body when the request is cancelled, so a read that waits for it ends too.
+	struct FailBody {
+		std::shared_ptr<http::BodyStream> stream;
+		void operator()() const;
+	};
+	std::optional<task::cancel_callback<FailBody>> fail_body;
 
 	Request();
 	~Request() noexcept;

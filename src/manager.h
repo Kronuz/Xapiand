@@ -108,7 +108,7 @@ public:
 	std::atomic_int total_clients;
 	std::atomic_int http_clients;
 
-	std::vector<std::unique_ptr<engine::AsioHost>> http_hosts;   // one per HTTP reactor; outlive http_service's loops
+	std::vector<std::unique_ptr<engine::AsioHost>> http_hosts;   // one per HTTP reactor, over its scheduler; cleared before http_service
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
 
