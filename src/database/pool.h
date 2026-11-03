@@ -88,6 +88,11 @@ public:
 	// Whether the group has nothing queued and nothing running. It never waits.
 	bool idle() noexcept;
 
+	// Teardown, once the loops have stopped (task's cancellation D8, phase 1): drops every index's queued chores,
+	// whose awaiters resume with task::cancelled, then waits until no chore runs, at most until `limit`; false
+	// when one still runs then. A task left suspended on a stopped loop is destroyed afterwards, by its scheduler.
+	static bool cancel_all(std::chrono::steady_clock::time_point limit) noexcept;
+
 	IndexChores(const IndexChores&) = delete;
 	IndexChores& operator=(const IndexChores&) = delete;
 
@@ -100,6 +105,8 @@ public:
 private:
 	WorkPool& pool_;
 	std::unique_ptr<WorkGroup> group_;
+	IndexChores* prev_ = nullptr;   // the list of every IndexChores alive, under its lock
+	IndexChores* next_ = nullptr;
 };
 
 

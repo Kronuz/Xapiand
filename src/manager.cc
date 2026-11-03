@@ -1062,6 +1062,21 @@ XapiandManager::join()
 		}
 	}
 
+	// The requests left suspended on the stopped HTTP loops (on a turn, a chore, a body read) are destroyed now,
+	// before the indexes close, which releases their shard uses and turns (task's cancellation D8): the chores
+	// they may wait on are cancelled and drained, then every loop's scheduler closes and destroys its tasks.
+	if (http_service && !abandoned_) {
+		if (!IndexChores::cancel_all(deadline)) {
+			L_WARNING("Index chores were still running at the shutdown deadline");
+		}
+		for (auto& host : http_hosts) {
+			host->close();
+		}
+		for (auto& host : http_hosts) {
+			host->destroy_roots();
+		}
+	}
+
 	////////////////////////////////////////////////////////////////////
 	// The autocommits still waiting do not run: closing an index commits what it has pending. After an abandoned
 	// stop the reactors still run, and a write that ends late would commit on its own thread: leave the scheduler.
@@ -1148,8 +1163,15 @@ XapiandManager::join()
 
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
 
-	http_service.reset();
+	// The control loop's tasks still suspended (an autocommit that did not run, a wait the drains gave up on) go
+	// the same way, with the loop stopped: its scheduler closes and destroys them.
+	_rx->reactor.io().stop();
+	_rx->host.close();
+	_rx->host.destroy_roots();
+
+	// The schedulers before the loops they post to (D8's phase 4).
 	http_hosts.clear();
+	http_service.reset();
 
 	database_pool.reset();
 
