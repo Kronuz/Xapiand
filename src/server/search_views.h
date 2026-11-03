@@ -115,6 +115,7 @@ public:
 	std::string response_blob;
 	std::atomic<http_status> response_status;
 	size_t response_size;
+	unsigned retry_after = 0;   // seconds for the `Retry-After` header of an answer that turns the request away; 0: none
 
 	// The ResponseWriter this request is served through (set by SearchService::handle
 	// from the http::HttpConnection). The response path emits through it. (Leg 2 stage 3c.)

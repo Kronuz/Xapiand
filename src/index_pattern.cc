@@ -278,34 +278,32 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 }
 
 
+namespace {
+
+// Raises when an index is a proper prefix of `full` (read for at most `visits` entries in all), or when an index is
+// below the directory `full` that is not itself an index. `created` is whether `full` was just made: it then holds
+// its own `strata`, which is not an obstacle.
 void
-check_new_index(const std::string& root, std::string_view path, std::size_t visits)
+check_nesting(const std::string& dir, const std::string& full, std::size_t visits, bool created)
 {
 	const auto refuse = [&](std::string_view why) {
-		throw engine::Error(engine::errc::invalid, "Cannot create index '" + std::string(path) + "': " + std::string(why));
+		throw engine::Error(engine::errc::invalid, "Cannot create index '" + full + "': " + std::string(why));
 	};
-	const auto dir = trimmed(root);
-	const std::string full(path);
-
-	// A directory of the layout (`strata`, `.__N`) below the first name would make its parent look like an index.
-	std::size_t at = full.find('/');
-	while (at != std::string::npos) {
-		const auto next = full.find('/', at + 1);
-		const auto component = std::string_view(full).substr(at + 1, next == std::string::npos ? next : next - at - 1);
-		if (component == "strata" || component.starts_with(".__")) {
-			refuse("'" + std::string(component) + "' is a name the index layout keeps");
-		}
-		at = next;
-	}
 
 	// Index paths do not nest: patterns do not look inside an index, so an index below another would be invisible to them.
+	// Each ancestor that is no index is read entry by entry, and the entries of all of them share the budget.
+	std::size_t read = 0;
 	for (auto cut = full.find('/'); cut != std::string::npos; cut = full.find('/', cut + 1)) {
-		if (holds_index(dir + "/" + full.substr(0, cut), [] {})) {
+		if (holds_index(dir + "/" + full.substr(0, cut), [&] {
+			if (++read > visits) {
+				refuse("its parent directories hold too many entries to check that none is an index");
+			}
+		})) {
 			refuse("'" + full.substr(0, cut) + "' is an index, and an index path cannot be below another");
 		}
 	}
 	const auto self = dir + "/" + full;
-	if (is_directory(self) && !holds_index(self, [] {})) {
+	if (is_directory(self) && (created || !holds_index(self, [] {}))) {
 		const std::vector<std::string> any{"*"};
 		const Checkpoint none;
 		std::vector<std::string> found;
@@ -319,6 +317,48 @@ check_new_index(const std::string& root, std::string_view path, std::size_t visi
 			refuse("'" + found.front() + "' is an index, and an index path cannot be above another");
 		}
 	}
+}
+
+}  // namespace
+
+
+void
+check_new_index(const std::string& root, std::string_view path, std::size_t visits)
+{
+	const std::string full(path);
+
+	// A directory of the layout (`strata`, `.__N`) below the first name would make its parent look like an index.
+	std::size_t at = full.find('/');
+	while (at != std::string::npos) {
+		const auto next = full.find('/', at + 1);
+		const auto component = std::string_view(full).substr(at + 1, next == std::string::npos ? next : next - at - 1);
+		if (component == "strata" || component.starts_with(".__")) {
+			throw engine::Error(engine::errc::invalid, "Cannot create index '" + full + "': '" + std::string(component) + "' is a name the index layout keeps");
+		}
+		at = next;
+	}
+	check_nesting(trimmed(root), full, visits, false);
+}
+
+
+void
+check_created(const std::string& root, std::string_view shard_path, std::size_t visits)
+{
+	const auto dir = trimmed(root);
+	if (shard_path.size() <= dir.size() + 1 || shard_path.substr(0, dir.size() + 1) != dir + "/") {
+		return;   // not under the data directory
+	}
+	std::string full(shard_path.substr(dir.size() + 1));
+	while (full.size() > 1 && full.back() == '/') {
+		full.pop_back();
+	}
+	// The path of a shard ends in `.__N`; the index is the directory above it.
+	const auto last = full.rfind('/');
+	const auto leaf = std::string_view(full).substr(last == std::string::npos ? 0 : last + 1);
+	if (last != std::string::npos && leaf.starts_with(".__")) {
+		full.resize(last);
+	}
+	check_nesting(dir, full, visits, true);
 }
 
 }  // namespace index_pattern

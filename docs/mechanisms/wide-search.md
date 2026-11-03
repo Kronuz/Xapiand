@@ -31,14 +31,18 @@ DatabaseHandler::match
   against every wanted pattern and every exclusion, and the directory is read entry by entry (not listed first). Every
   entry read, in a directory the walk lists or inside an index directory it probes, counts against `--max-search-indexes`,
   matching or not; past it the request answers 400. The count is of the work, so an exclusion that removes everything (`*,-*`)
-  or a pattern that matches nothing still pays for the tree. One walk runs at a time on the node (the others wait their turn without a thread). Before each entry the walk calls the request's cancel token
+  or a pattern that matches nothing still pays for the tree. One walk runs at a time on the node; the others wait their turn without a thread, at most `--search-walk-queue` of them and each for `--search-walk-wait` at most (`index_pattern::WalkGate`, below). Before each entry the walk calls the request's cancel token
   (`Request::cancel`), so a client that goes away stops it. Equal items are one item.
 - **Nothing nests.** The walk does not look inside an index, so an index path is never above or below another's:
   `PUT /tenant/d` while `tenant/a` is an index, `PUT /a/b/d` while `a` is one, and a name below the first that the layout
-  keeps (`strata`, `.__N`) are refused with 400 when the index is created (`index_pattern::check_new_index`, run in a query
-  chore before the settings of a new index are saved). The check reads this node's directories, as the walk does, and two
-  creations racing each other can both pass it. Indexes made before the rule can be nested; a pattern does not find the
-  inner one (a name does).
+  keeps (`strata`, `.__N`) are refused with 400. Two checks hold it. `index_pattern::check_new_index` runs in a query
+  chore before the settings of a new index are saved, so the usual refusal comes before anything is written. Creations
+  racing each other can both pass it, so the engine checks again where the index comes to be: `strata/shard.cc` `acquire`
+  makes the directory and then calls `OpenOptions::on_create` (`index_pattern::check_created`); a check that finds a nested
+  index takes the directories that creation made back (only those, a parent only while it is empty) and the request
+  answers 400. The make and the check run under one process-wide mutex (a few system calls), so of a racing pair the
+  first stands and the second is refused. Both checks read this node's directories, as the walk does.
+  Indexes made before the rule can be nested; a pattern does not find the inner one (a name does).
 - **The seam.** `engine::BatchRunner` is the one place that decides how a batch's indexes are held: today
   `DatabaseHandler::search_batch` takes a `lock_shard` per endpoint (a use of the registry entry plus one view per index,
   taken by the search) and searches them with the reopen-and-retry loop. When the cold-tier catalog's wake lands, a batch pins
@@ -82,7 +86,10 @@ DatabaseHandler::match
 | Names a search reads | `--max-search-indexes` (100,000, at least 1) | the names are counted as the walk finds them, plain names first; 400 past it | a runaway `_all` over more indexes than a node should serve in one request |
 | Directory entries the patterns read | the same number | `index_pattern::Walk` counts every entry it reads, matching or not; 400 past it | the work of a walk must have a number whatever the exclusions say |
 | Steps of matching | 4,096 for each entry the cap allows (`index_pattern::steps_per_visit`) | the matcher counts a step for each byte of a name it walks, backtracking included, and the walk answers 400 past the total | a pattern that backtracks over a long name costs its size times the name's; 32 of them on every entry of a big tree would hold a work-pool thread for tens of seconds |
-| Walks at once | 1 per node | `expand_paths` takes a FIFO `task::async_mutex` (cancellable) before the chore; a waiting request holds no thread | however many clients send walks, they hold one worker of the work pool, so the chores of writes and opens run beside them |
+| Walks at once | 1 per node | `index_pattern::WalkGate` holds a FIFO `task::async_mutex` (cancellable) taken before the chore; a waiting request holds no thread | however many clients send walks, they hold one worker of the work pool, so the chores of writes and opens run beside them |
+| Walks waiting | `--search-walk-queue` (8, at least 0) | the gate counts the walk that runs and those that wait; a walk that finds the queue full answers 429 with `Retry-After: 1` at once, taking no place | the queue must have a length: the wait of an honest search is the walks ahead of it times a walk (1.4 s warm and 5 s cold at the default cap), so an unbounded queue let 40 held connections hold a wildcard search for 56 s and 150 for 240 s (SR8) |
+| Wait for a walk | `--search-walk-wait` (10 s, above 0) | the wait for the mutex runs under a `task::deadline`; a walk that waits that long gives up its place and answers 503 with `Retry-After: 1` | the wait is bounded whatever the walks ahead do or how fast they run; the walk that runs is never interrupted by it, only the work of reading is (the cap above) |
+| Entries read to check a new index's parents | the names bound (`--max-search-indexes`) in all | `check_new_index` counts the entries it reads in the parents of the new path that are no index, and refuses (400) past the budget; the directory below the path has the same budget | a container with many children made every create under it read all of them (SR10); the cost is now at most one budget of entries, as for a walk |
 | Patterns in a request | 32 (`index_pattern::max_patterns`) | wildcards and exclusions together, after equal items are merged; 400 above | every entry is tested against every pattern, so patterns times entries is the match work |
 | Length of a pattern | 256 bytes (`max_pattern_size`) | 400 above | the matcher's cost is the pattern's length times the name's |
 | Plain names in a request | the names bound | they count as names | a plain name costs nothing to find, and the URL (64 KiB) bounds the list |

@@ -128,9 +128,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/*test/` and `/test*,-test3/` search the indexes on the node that match; before, a pattern was taken as a name and
   found nothing. The names are listed in a chore of the work pool, not on the loop. A pattern that matches nothing
   answers `200` with no hits. A search names at most 32 patterns, and the walk is cancelled when the client goes away.
+  The node reads its data directory for one such search at a time: at most `--search-walk-queue` (8) wait behind it, and
+  a search over that answers `429`; one that waits `--search-walk-wait` (10 s) for its turn answers `503`, both with `Retry-After: 1`.
 - **Index paths do not nest.** Creating an index below another (`a/b` when `a` is an index), above one, or with a
   `strata` or `.__N` name below its first answers `400`; a wildcard does not look inside an index, so a nested index
-  would be invisible to it.
+  would be invisible to it. Two creates racing each other cannot both stand: the engine checks again once the directory is made.
 - **A relevance weight is read against the statistics of its own index.** A document weighs the same in a search of its
   index alone and in a search over many indexes, as Elasticsearch weighs a shard's documents by default; before, the
   indexes of one search were weighed as one, so adding an index to a search changed the order of the others' hits.

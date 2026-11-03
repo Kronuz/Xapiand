@@ -34,6 +34,7 @@
 #endif
 #include <cstdio>                  // for std::snprintf
 #include <filesystem>              // for std::filesystem
+#include <vector>                  // for std::vector
 #include <map>                     // for std::map
 #include <mutex>                   // for std::mutex, std::lock_guard
 #include <optional>                // for std::optional
@@ -456,7 +457,27 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		if (!exists && !create_missing) {
 			throw Error(errc::not_found, "No such database: " + path);
 		}
-		fs::create_directories(dir);
+		if (!exists) {
+			// One creation at a time makes its directory and checks it: of two that race, the second finds the first.
+			static std::mutex creating;
+			std::lock_guard<std::mutex> creation(creating);
+			std::vector<fs::path> made;   // the directories this creation makes, the deepest first
+			for (auto p = fs::path(dir); !p.empty() && !fs::exists(p, ec); p = p.parent_path()) {
+				made.push_back(p);
+			}
+			fs::create_directories(dir);
+			if (host.on_create) {
+				try {
+					host.on_create(path);
+				} catch (...) {
+					// Only what this creation made goes, and a parent only while it is empty: a racing create may be below it.
+					fs::remove_all(dir, ec);
+					for (std::size_t i = 1; i < made.size() && fs::remove(made[i], ec); ++i) {
+					}
+					throw;
+				}
+			}
+		}
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
 		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);

@@ -26,7 +26,8 @@
 // names of a brute-force oracle (every pattern matched against the tree's indexes, minus the exclusions, plus the plain
 // items); read at most the entries bound; and raise only when the oracle has more names than the bound, more than
 // max_patterns patterns are named, an item is too long, or the walk read exactly its bound. The first item is also a
-// path for check_new_index, which must refuse exactly what the oracle refuses.
+// path for check_new_index, which must refuse exactly what the oracle refuses, and for check_created, which refuses an
+// index among the parents or below the path whether or not the path is an index itself.
 
 #include <algorithm>
 #include <cstdint>
@@ -108,6 +109,29 @@ bool refused(const std::string& path) {
 		return false;
 	}
 	for (const auto& name : listed) {   // the walk lists no dot-led name
+		if (starts_with(name, path + "/")) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// What check_created must do for a clean path whose last name is no shard's: the directory is made, so it is judged as
+// a directory that holds its own index.
+bool refused_when_made(const std::string& path) {
+	std::vector<std::string> parts;
+	std::string cur;
+	for (char c : path + "/") {
+		if (c == '/') { parts.push_back(cur); cur.clear(); } else { cur.push_back(c); }
+	}
+	for (std::size_t i = 1; i < parts.size(); ++i) {
+		std::string prefix;
+		for (std::size_t j = 0; j < i; ++j) { prefix += (j ? "/" : "") + parts[j]; }
+		if (std::find(indexes.begin(), indexes.end(), prefix) != indexes.end()) {
+			return true;
+		}
+	}
+	for (const auto& name : listed) {
 		if (starts_with(name, path + "/")) {
 			return true;
 		}
@@ -224,6 +248,19 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* d, std::size_t n) {
 		if (did != refused(items[0])) {
 			std::fprintf(stderr, "check_new_index(%s) = %d\n", items[0].c_str(), did);
 			std::abort();
+		}
+		const auto last = items[0].rfind('/');
+		if (!starts_with(last == std::string::npos ? items[0] : items[0].substr(last + 1), ".__")) {
+			bool made = false;
+			try {
+				index_pattern::check_created(root, root + items[0], 1000);
+			} catch (const engine::Error&) {
+				made = true;
+			}
+			if (made != refused_when_made(items[0])) {
+				std::fprintf(stderr, "check_created(%s) = %d\n", items[0].c_str(), made);
+				std::abort();
+			}
 		}
 	}
 	return 0;

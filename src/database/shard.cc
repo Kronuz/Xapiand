@@ -39,6 +39,9 @@
 #include "engine/chores.h"          // for engine::Chores
 #include "engine/open.h"            // for engine::open_local
 #include "engine/sync.h"            // for engine::sync_wait
+#include "endpoint.h"                // for Endpoint::cwd
+#include "index_pattern.h"          // for index_pattern::check_created
+#include "opts.h"                   // for opts.max_search_indexes
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
 #include "length.h"               // for serialise_string
@@ -491,6 +494,9 @@ ShardEndpoint::open_index_blocking(int flags)
 	options.background = &database_pool.executor();
 	options.buffered_docs_cap = database_pool.buffered_docs_cap_.load(std::memory_order_relaxed);
 	options.readers_per_index = database_pool.readers_per_index_.load(std::memory_order_relaxed);
+	options.on_create = [](const std::string& shard_path) {
+		index_pattern::check_created(Endpoint::cwd, shard_path, static_cast<std::size_t>(opts.max_search_indexes));
+	};
 	auto opened = engine::sync_wait(engine::open_local(path, true, has_db_create_or_open(flags), options));
 	std::shared_ptr<engine::Shard> eng(std::move(opened.shard));
 

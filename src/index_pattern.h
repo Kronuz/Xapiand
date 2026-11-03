@@ -116,7 +116,13 @@ std::vector<std::string> expand(const std::string& root, std::span<const std::st
 // Raises errc::invalid (a 400) when creating the index `path` under `root` would nest it: when an index is a proper
 // prefix of `path`, when an index is below it, or when a name below the first is one the layout keeps (`strata`, `.__N`).
 // Patterns do not look inside an index, so a nested index would be invisible to them. It reads the file system and
-// blocks; the directory below `path` is read for at most `visits` entries.
+// blocks; the parents of `path` are read for at most `visits` entries in all, and the directory below it for at most
+// `visits` more.
 void check_new_index(const std::string& root, std::string_view path, std::size_t visits);
+
+// The same check once the shard directory `shard_path` (the index's own, or its `.__N`) is made on disk: two creates
+// that raced past `check_new_index` each find the other here and one or both are refused. Raises errc::invalid; a path
+// outside `root` is not checked.
+void check_created(const std::string& root, std::string_view shard_path, std::size_t visits);
 
 }  // namespace index_pattern
