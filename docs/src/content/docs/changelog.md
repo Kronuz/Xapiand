@@ -168,6 +168,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **An absolute index path outside the data directory is refused.** `PUT /%2Ftmp%2Fx/doc` (an encoded slash first), a `_foreign` schema or script
   that names `/tmp/x/doc`, and `--dump` or `--restore` of `/tmp/x` used to create, read or delete an index at that path, outside the data directory.
   They answer `400` (a usage error on the command line). An absolute path inside the data directory still names the index it points at.
+- **An index path with a NUL byte no longer reaches one level above the data directory.** `PUT /..%00/doc`, a `_foreign` schema or script
+  link that names `..%00/x`, and the same through `--dump` or `--restore` passed the boundary check as a three-byte name and were opened by
+  the system as `..`; with `--shards 1` one request aborted the node. A path with a NUL, a control byte, a backslash or malformed UTF-8 (an
+  overlong `%c0%af`, a surrogate) now answers `400` (a usage error on the command line) instead of a `500` with an internal message.
+- **`GET /`, `HEAD /`, `GET /:info`, `GET /:metrics` and `GET /.name` answer again.** They named the data directory itself as an index and
+  answered `400 Index path '' is empty or outside the data directory`. The root names no index; a request that needs one (`PUT /`, a search) still answers `400`.
+- **A damaged WAL's quarantine directory failure no longer aborts the node on macOS.** The `fs` library's `quarantine_files` formatted a
+  `char[PATH_MAX + 1]` buffer in its log message and left it unterminated for a path of `PATH_MAX` bytes or more.
 
 ### Removed
 - **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
