@@ -6,7 +6,7 @@ Branch `phase7c/wide-search` in `Xapiand-wt/wide-search`. Source: `strata/docs/s
 
 ## State
 
-Built and proved; the four findings of the first review round are fixed (below). Master (gate-prep, then drop-threadpool Xapiand:88892b4cb, strata pin 3f564dc5) is merged in. Local only (never pushed); ready for review. Head Xapiand:f71f1dd46 (fix round Xapiand:5110af2ec to Xapiand:f71f1dd46 over the proved head Xapiand:dfbcc88e9).
+Built and proved; the four findings of the first review round are fixed (below). Master (gate-prep, then drop-threadpool Xapiand:88892b4cb, strata pin 3f564dc5) is merged in. Local only (never pushed); ready for review. Head Xapiand:6ae5e1d5b (fix round Xapiand:5110af2ec to Xapiand:6ae5e1d5b over the proved head Xapiand:dfbcc88e9).
 
 ## Done criteria
 
@@ -18,7 +18,7 @@ Built and proved; the four findings of the first review round are fixed (below).
 - [x] Patterns: `tests/test_index_pattern.cc` (glob, expansion over a directory tree, the limit), `tests/fuzz_index_pattern.cc` (the glob against a table reference: 1.25 million runs in 90 s under ASan+UBSan, no finding), E2E examples in `api.md`.
 - [x] `harness/wide_search_check.py check`: two servers (all in one batch, K = 4) agree on sorted and relevance searches (with weights and ids), by name list and by pattern; the cap (`--max-search-indexes 7`) through a list, `_all`, a prefix and an exclusion. `gate` searches `/w*/`.
 
-## Proof (fix round, head Xapiand:f71f1dd46; Release in `.scratch/build-rel`; Linux ASan+UBSan on the shared lease, clang 20, commit Xapiand:9c8da59a0, which differs from the head in harness and docs files only)
+## Proof (fix round, head Xapiand:6ae5e1d5b; Release in `.scratch/build-rel`; Linux ASan+UBSan on the shared lease, clang 20, commit Xapiand:9c8da59a0, which differs from the head in harness, docs and a one-line `lstat` change only)
 
 | | Release (macOS) | ASan+UBSan (Linux, `detect_leaks=0`) |
 |---|---|---|
