@@ -121,7 +121,12 @@ The same validator: backslash, control bytes, overlong UTF-8 (`%c0%af`, `%c0%ae%
 - `Xapiand:c38c35ffb` D16 restated (design, control-plane note, `options.md`, changelog, D14).
 - `Xapiand:9fcdf2dd1` absolute index paths refused (`Endpoint`, tests, harness, changelog).
 - `Xapiand:a9efae7f9` `wal_view` reads the log in a query chore; the `wal` rule of `async_check`.
-- Security-review fixes: see the commit list in the log (SR1 and the NUL/byte validator; the quarantine buffer test; the node routes; the newman preflight).
+- `Xapiand:a8167224c` SR1: NUL and unholdable bytes refused in `Endpoint` (`index_path::valid`, tests, `fuzz_index_path`); the clean 400s.
+- `Xapiand:bfd3431ff` the node's own routes answer without an index Endpoint (`GET /` and the rest), docs E2E, `test_root_routes`.
+- `Xapiand:788c3cc22` `test_quarantine` through the real logger (needs `fs:291842c` pinned).
+- `Xapiand:5fbad2b76` newman 6 preflight; `path_boundary_check.sh` rows for SR1 and the node routes.
+- `Xapiand:5ecbf190b` changelog and ledger.
+- `fs:291842c` (local branch `fix/quarantine-path-buffer` of `Kronuz/fs`, worktree `fs-wt/quarantine-fix`, not pushed) `quarantine_files` builds its template in a `std::string`.
 
 ## Next
 
