@@ -1922,6 +1922,13 @@ if (BUILD_TESTS)
 		target_compile_features(fuzz_strata_pattern PRIVATE cxx_std_20)
 		target_compile_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
 		target_link_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
+		add_executable(fuzz_index_path
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_index_path.cc"
+		)
+		target_include_directories(fuzz_index_path PRIVATE "${PROJECT_SOURCE_DIR}/src")
+		target_compile_features(fuzz_index_path PRIVATE cxx_std_20)
+		target_compile_options(fuzz_index_path PRIVATE -fsanitize=fuzzer,address,undefined)
+		target_link_options(fuzz_index_path PRIVATE -fsanitize=fuzzer,address,undefined)
 	endif ()
 
 		# The query tests read the stop words from the source tree.

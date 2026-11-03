@@ -28,6 +28,7 @@
 #include "config.h"                               // for XAPIAND_*
 
 #include "fs.hh"                                  // for normalize_path
+#include "index_path.h"                           // for index_path::valid
 #include "node.h"                                 // for Node::
 #include "opts.h"                                 // for opts
 #include "serialise.h"                            // for UUIDRepr, Serialise
@@ -229,6 +230,12 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 			}
 		}
 		query = _query;
+	}
+
+	// Checked before the path is normalized: the system calls read it as a C string, so a NUL would
+	// hide the rest of it from the boundary check below.
+	if (!index_path::valid(_path)) {
+		THROW(ClientError, "Index path {} holds a byte a name cannot hold", repr(original_uri));
 	}
 
 	const bool relative = !strings::startswith(_path, '/');
