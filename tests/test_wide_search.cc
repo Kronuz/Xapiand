@@ -222,6 +222,9 @@ void compare(Corpus& corpus, const Case& c, std::size_t n) {
 
 	std::fprintf(stderr, "    %s n=%zu: %zu hits of %u, widest batch %zu\n", c.name, n, batched.hits.size(), batched.estimated, widest);
 	CHECK_LE(widest, K);
+	if (n == SHARDS && std::string(c.name) != "no match") {
+		CHECK_GT(whole.estimated, 0u);   // never a comparison of two empty results
+	}
 	same_hits(whole, direct);
 	same_hits(batched, whole);
 	// The spy sees every match once, in the same order, with the same weight.
@@ -257,7 +260,8 @@ std::vector<Case> all_cases(const engine::KeyMaker& tied, const engine::KeyMaker
 	cases.push_back({"term descending", Query::term("f", "text"), nullptr, none, 0, desc, 1, 25});
 	cases.push_back({"or", Query::combine(engine::Op::OR, Query::term("f", "rare"), Query::term("f", "tail")), nullptr, none, 0, asc, 0, 40});
 	cases.push_back({"and", Query::combine(engine::Op::AND, Query::term("f", "text"), Query::term("f", "odd")), nullptr, none, 0, asc, 0, 40});
-	cases.push_back({"wildcard", Query::wildcard("f", "ta*"), nullptr, none, 0, asc, 0, 30});
+	cases.push_back({"wildcard", Query::wildcard("f", "ta"), nullptr, none, 0, asc, 0, 30});
+	cases.push_back({"wildcard or", Query::wildcard("f", "t", 0, engine::Expansion::error, 0, engine::Op::OR), nullptr, none, 0, asc, 0, 40});
 	cases.push_back({"synonym", Query::combine(engine::Op::SYNONYM, Query::term("f", "rare"), Query::term("f", "tail")), nullptr, none, 0, asc, 0, 30});
 	cases.push_back({"term collapse", Query::term("f", "text"), nullptr, GROUP_SLOT, 2, asc, 0, 10});
 	cases.push_back({"term tied key", Query::term("f", "text"), &tied, none, 0, asc, 0, 30});
@@ -342,7 +346,7 @@ void test_a_weight_is_that_of_the_documents_index() {
 	Corpus corpus;
 	for (const auto& query : {engine::Query::term("f", "text"), engine::Query::term("f", "rare"),
 		engine::Query::combine(engine::Op::OR, engine::Query::term("f", "rare"), engine::Query::term("f", "tail")),
-		engine::Query::wildcard("f", "ta*")}) {
+		engine::Query::wildcard("f", "ta"), engine::Query::wildcard("f", "t", 0, engine::Expansion::error, 0, engine::Op::OR)}) {
 		auto prepared = engine::prepare(query);
 		engine::SearchRequest request;
 		request.query = prepared.get();
