@@ -3,6 +3,7 @@
 # 2x the body cap, one byte over it, and one just under it (buffered), and GET each back byte-equal; then four
 # uploads at once; then the refusals (a size past the record limit is a 413, a POST with no id is a 400, a client that
 # leaves mid-upload leaves no volume behind). Exit 0 when every row passes.
+. "$(dirname "$0")/env.sh"
 BIN=$1; PORT=${PORT:-18830}; CAP=$((16 * 1024 * 1024)); rc=0
 W=${HARNESS_TMP:-${TMPDIR:-.}}
 D=$(mktemp -d "$W/stored_stream.XXXXXX")
@@ -37,7 +38,7 @@ for i in 1 2 3 4; do
 done
 
 # The refusals, over a raw socket (curl would send a body).
-/usr/local/bin/python3 -I - "$PORT" <<'PY' || rc=1
+"$PY" -I - "$PORT" <<'PY' || rc=1
 import socket, sys
 port = int(sys.argv[1])
 def talk(request, body=b'', leave_after=None, read=True):
@@ -60,7 +61,7 @@ sys.exit(1 if bad else 0)
 PY
 # A client that leaves mid-upload: the node goes on, and its volume is removed.
 before=$(find "$D/n" -name 'docdata.*' | wc -l)
-/usr/local/bin/python3 -I - "$PORT" <<'PY'
+"$PY" -I - "$PORT" <<'PY'
 import socket, sys
 s = socket.create_connection(('127.0.0.1', int(sys.argv[1])), timeout=30)
 s.sendall(b'PUT /up/leaver HTTP/1.1\r\nHost: x\r\nContent-Type: application/octet-stream\r\nContent-Length: 41943040\r\n\r\n' + b'x' * (20 * 1024 * 1024))

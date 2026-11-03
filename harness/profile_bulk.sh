@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # profile_bulk.sh BIN OUTDIR [--mult N] [--schema JSON] [--label NAME] [--port P]
 #
-# Rerunnable per-layer profile of a bulk RESTORE (macOS). BIN is any xapiand binary
+# Rerunnable per-layer profile of a bulk RESTORE (`sample` on macOS, `perf` on Linux via perf_sample.py). BIN is any xapiand binary
 # (RelWithDebInfo with -fno-omit-frame-pointer gives the best symbols). For each run it
 #   1. smoke: fresh node, one timed N x 1000-doc ndjson RESTORE (default N=20 -> 20000 docs),
 #      docs/s plus server user/sys CPU;
-#   2. profile: fresh node, same RESTORE sampled end to end with sample(1), attributed by
+#   2. profile: fresh node, same RESTORE sampled end to end with sample(1) or perf, attributed by
 #      thread group and by layer (rules in LAYERS below; edit them when frames change).
 # Writes OUTDIR/<label>.json, <label>.md and the raw <label>.sample.txt.
 # Run it under a hold: quiet strict NAME MIN "what" -- harness/profile_bulk.sh BIN OUT
 set -eu
 [ $# -ge 2 ] || { sed -n 2,12p "$0"; exit 2; }
+. "$(dirname "$0")/env.sh"
 BIN=$1; OUT=$2; shift 2
-exec python3 -I - "$BIN" "$OUT" "$@" <<'PY'
+HARNESS_DIR=$(cd "$(dirname "$0")" && pwd) exec "$PY" -I - "$BIN" "$OUT" "$@" <<'PY'
 import sys, os, re, json, time, shutil, subprocess, http.client, resource, collections, argparse, signal
 ap = argparse.ArgumentParser()
 ap.add_argument('bin'); ap.add_argument('out')
@@ -73,7 +74,8 @@ else:
     # 2. profile
     p = start(); sm = []
     secs = a.sample_secs or max(8, int(ndocs / 3000) + 4)
-    def go(): sm.append(subprocess.Popen(['sample', str(p.pid), str(secs), '-file', rawp], stdout=subprocess.DEVNULL)); time.sleep(0.4)
+    sampler = [os.path.join(os.environ['HARNESS_DIR'], 'perf_sample.py'), str(p.pid), str(secs), rawp] if sys.platform.startswith('linux') else ['sample', str(p.pid), str(secs), '-file', rawp]
+    def go(): sm.append(subprocess.Popen(sampler, stdout=subprocess.DEVNULL)); time.sleep(0.4)
     e2 = restore(p, go)
     sm[0].wait()
     shards = subprocess.run(['find', data, '-maxdepth', '3', '-type', 'd'], capture_output=True, text=True).stdout.count('\n')
@@ -107,7 +109,7 @@ for d, c, name, cs, anc in nodes:
 def tgroup(th):
     m = re.search(r'Thread_\d+\s*:?\s*(.*)$', th); n = m.group(1).strip() if m else th
     return 'main' if 'main-thread' in n else (re.sub(r'\d+$', '', n) or 'unnamed')
-IDLE = re.compile(r'psynch_cvwait|^kevent|mach_msg|semwait|__select|nanosleep|semaphore_wait|^poll|__sigwait')
+IDLE = re.compile(r'psynch_cvwait|^kevent|mach_msg|semwait|__select|nanosleep|semaphore_wait|^poll|__sigwait|futex_wait|epoll_wait')
 # A thread blocked in a device flush (F_FULLFSYNC and F_BARRIERFSYNC are __fcntl, plus fsync) burns no CPU: its own line.
 FLUSH = re.compile(r'^(__fcntl|fsync|fdatasync|__fsync_nocancel|fsync_nocancel)\b')
 LOCK = re.compile(r'psynch_mutexwait|ulock_wait|psynch_rw')
