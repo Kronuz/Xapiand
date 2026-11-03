@@ -52,6 +52,45 @@ Built and proved; the four findings of the first review round are fixed (below).
 
 **K default, against the design's reader cap.** `readers_per_index` (16 searches per reactor, `manager.cc`) bounds the readers of one index; a batch takes one record per index it holds, so K does not enter it. K bounds the indexes pinned: one wide search per loop holds at most pool / loops, so the loops together hold the pool's budget (sized from the file-descriptor limit). More wide searches on one loop than one add their batches; the pool is soft (a used entry is never evicted, an overflowing idle one goes after 60 s), so that is a larger working set and shows in `xapiand_search_pinned_indexes_peak`, not a failure. The default stands; written in `wide-search.md`.
 
+## Security fix round (docs/reviews/phase7c-wide-search-security.md, REJECT on SR1)
+
+Master (Linux gate fixes, X-POOL step 1) is merged in Xapiand:9201227c8; `search_batch` pins each shard (`co_await shards.back().pin()`) as master's `lock_shard` sites do. The probes of the review are in `.scratch/sec-patterns/` (kept; `bounded.py` and `corrupt.py` are new, `rerun.sh` reruns the others).
+
+| Finding | Fix | Evidence |
+|---|---|---|
+| SR1 the walk's work | one walk finds the names of every pattern (each entry tested against all of them), read entry by entry; every entry read counts against `--max-search-indexes` (matching or not; inside an index directory too), 400 past it; matching steps are counted too (4,096 per entry the cap allows), because 32 backtracking patterns on a 100,000-entry tree held a thread 48 s inside the entry budget; at most 32 patterns (wildcards and exclusions together); the walk calls the request's cancel token (`Request::cancel`) between entries; one walk at a time per node (a cancellable FIFO `task::async_mutex`), so walks hold one work-pool worker | `test_the_walk_is_bounded`, `test_the_matching_is_bounded`, `test_one_walk_for_all_the_items`, `test_the_patterns_are_bounded`, `test_the_walk_can_be_cancelled`; `bounded.py` (below); limits table in `docs/mechanisms/wide-search.md` |
+| SR2 hiding | `index_pattern::check_new_index`, run in a query chore before the settings of a new index are saved: 400 when the path is below an index, above one, or has a name below its first that the layout keeps (`strata`, `.__N`) | `test_index_paths_do_not_nest`; `hide.py`, `hide2.py`, `collide.py` now answer 400 for the hiding PUT and list the same indexes; `wide_search_check.py` nesting rows; the docs E2E needed two renames (below) |
+| SR4 duplicates | equal items merged before counting; the walk's matches and the plain names are counted apart, so a name in both counts once | `test_equal_items_count_once` |
+| SR5 cap 0 | `--max-search-indexes` must be at least 1 (`CLI::Range`); `check_search_fanout` has no 0 case | `test_pool` (`check_search_fanout(1, 0)` is 400); `--max-search-indexes 0` is refused at start |
+| SR6 | api.md says an unknown name no longer protects an index (`,`, `*`, `_all`, `-`; `:count` on a prefix tells whether names exist) | docs |
+| SR7 | no code change: a really damaged index is not skipped. `corrupt.py` damages the manifest of a committed index: `bad` by name, `_all`, `bad,good` and `:count` all answer 500 `manifest: magic`; `good` by name 200. `search_batch` is master's code (it skips only `not_found`), so by name master behaves the same. The review's probe planted files strata does not read as an index, which strata reports as "no index was committed here" (`index_not_created`, `not_found`), the same as a missing name | `corrupt.py`, `corrupt.out` |
+| SR3 | left to the 10,000-index gate run, as asked: yield in the per-name loop of `resolve_index_endpoints` if `stall.py` against real indexes shows a loop stall | open |
+
+**Measured** (macOS, Release, `quiet strict`, `bounded.py 99999 40 100020`: 99,999 fake index directories of 157-byte names plus 5 entries, cap 100,020; before is the review's numbers or this probe on the build before the fix named):
+
+| request | before | after |
+|---|---|---|
+| 1000 items of `*` plus `-*`, 50,000 dirs (review) | 518.7 s | 1 item merged: 1.07 s over 99,999 dirs (warm; the first walk, cold, 3.5 s) |
+| 32 backtracking patterns, 99,999 dirs (this probe, before the step budget) | 48 s | 400 in 0.47 to 0.78 s |
+| 33 patterns | served | 400 in 1 ms |
+| a PUT to an open index while 40 worst-case walks are in flight | 36 s (review, 40 requests of 40 items); 1.3 s (this probe, entry and step budgets without the one-walk rule) | 1 ms (control with no walkers 1 ms); a PUT creating an index 3 ms (control 27 ms) |
+| `live*` search while 40 worst-case walks are queued | | 18 s (the queue: one walk at a time, 0.5 s each); the same search right after the 40 clients left: 0.15 s (they cancelled) |
+
+The consequence of one walk at a time: pattern searches queue behind each other; plain searches, writes and opens do not wait for them. A data directory with more entries than `--max-search-indexes` in the directories a pattern must read cannot be walked by a wildcard (a flat directory of a million indexes needs the cap raised to match, or names); that is the cost of making the cap the bound of the work. Raising the cap raises the worst walk linearly (about 1 s per 100,000 entries, warm).
+
+**Data made before this round can nest** (nothing refused `PUT /a/b/d` beside an index `a`, and the docs E2E did exactly that). A pattern does not find the inner index, and searching it by name works. The check runs on creation only; no startup scan reports existing nested pairs. Decision for the lead: a one-off report (a walk that lists index directories holding a non-layout subdirectory) if there is data to worry about.
+
+**Docs E2E**: the examples nested `test` beside `test/*` (global terms) and `test/namespace` beside `test/namespace/*`; renamed to `test_global` and `test/namespace_root` (path edits only, 656 of 656 assertions as before).
+
+### Proof (head `Xapiand:2533b89c3` for code; docs and ledger commits follow)
+
+- Release ctest 37 of 37; docs E2E (`newman 6.2.3`) 386 requests, 656 of 656; `wide_search_check.py check` PASS (cap rows, nesting rows); identity test `tests/test_wide_search.cc` unchanged (`git diff 088eab99e -- tests/test_wide_search.cc` is empty).
+- `async_check.sh --strict --owed --extern strata=3f564dc5`: 254 hits, allow 241, owed 0, compiled_out 13, unclassified 0 (the `index_pattern.cc` row is 9 syscall sites: the walk and the nesting check, both query chores); `test_gate_tools.py` OK.
+- Fuzz: `fuzz_index_pattern` (the glob) 1,196,998 runs in 91 s; the new `fuzz_index_expand` (expand and check_new_index against a brute-force oracle, entries read included) 257,842 runs in 121 s; ASan+UBSan, no finding. Its mutant (`visits_` limit raised to 100,000) aborts it.
+- Mutants of `src/index_pattern.cc` (each built, run, restored from git), all killed by `test_index_pattern`: no entry counted (`test_the_walk_is_bounded`, `test_one_walk_for_all_the_items`, `test_the_walk_can_be_cancelled`); final unique dropped (`test_equal_items_count_once`); one walk per pattern (`test_one_walk_for_all_the_items`); no pattern limit (`test_the_patterns_are_bounded`); no ancestor check, no descendant check, no layout-name check (`test_index_paths_do_not_nest`); steps not counted for wanted patterns, and for exclusions (`test_the_matching_is_bounded`). The first mutant of the steps (wanted only) survived until the test had wanted-heavy patterns; fixed.
+- Reverts: with the fixes absent the old behaviour is the review's probes: `hide.py`/`hide2.py` (hiding PUT 204 then `_all` without the hidden indexes), `bounded.py` (the 48 s and 1.3 s rows), `cap.py` (`a*,a*` counted twice).
+- Reviewer probes rerun (`rerun.sh`): `traversal.py` output identical (90 vectors clean); `diff_expand.py` seeds 1 to 4: 247, 249, 259 and 252 patterns, 0 mismatches; `cap.py` now 400 for the exclusion cases that used to pass (the walk reads the whole tree, by design); `destructive.py`, `misc.py`, `deep.py`, `items.py` as before.
+
 ## Next
 
 Review (code reviewer; the lead decides on security: `index_pattern` reads a pattern from the URL and lists directories, bounded by a 256-byte pattern, the name cap and `index_path::valid` on every name it lists, but it is the one new path from a request to the file system). The lead runs the 10,000-index gate (`harness/wide_search_check.py gate`, which now searches `/w*/`).
