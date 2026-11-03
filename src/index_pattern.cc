@@ -171,11 +171,11 @@ expand(const std::string& root, std::span<const std::string> items, std::size_t 
 			if (!removed(item)) {
 				names.push_back(item);
 			}
+			if (names.size() > limit) {
+				too_many(limit);
+			}
 		} else {
-			Walk(item, excluded, limit, names).scan(dir, "");
-		}
-		if (names.size() > limit) {
-			too_many(limit);
+			Walk(item, excluded, limit, names).scan(dir, "");   // stops at the limit
 		}
 	}
 	std::sort(names.begin(), names.end());
