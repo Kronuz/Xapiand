@@ -825,7 +825,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http so this pin wins over its (first declaration wins).
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 2fd30c80284a4224c1c6476fa5fb4ee3137a66be)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 93dc7bbefcc003145725e63f4c9cff86edfbb697)  # http main step H2 (BodyStream::read as a task)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 73cfa02035a7da5edd229b2bbd838f2fdaaa72be)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 

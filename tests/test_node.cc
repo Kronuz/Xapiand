@@ -586,6 +586,7 @@ struct AbandonSpec {
 	if (spec.release_after.count() != 0) {
 		std::this_thread::sleep_for(spec.release_after);
 		hold.release();
+		entry.reset();   // the registry closes the index only once nobody refers to it
 	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);

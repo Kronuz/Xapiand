@@ -289,22 +289,6 @@ static void
 emit_via_writer(Request& request, enum http_status status, const std::string& body, const std::string& location, const std::string& ct_type, const std::string& ct_encoding, bool options)
 {
 	auto& writer = *request.response_writer;
-#ifndef NDEBUG
-	// A debug build runs the views on a scheduler of their own that forwards to the loop's (engine::counted); the
-	// writer is the loop's (http's affinity rule, D9), so the writes run in the loop's scheduler, on its thread.
-	std::optional<task::running_on> on_loop;
-	if (request.http_req != nullptr && task::current()) {
-		try {
-			auto& loop = request.http_req->scheduler();
-			if (task::current() != task::scheduler_ref::of(loop)) {
-				assert(loop.runs_here());
-				on_loop.emplace(task::scheduler_ref::of(loop));
-			}
-		} catch (const std::logic_error&) {
-			// A request no transport serves has no scheduler.
-		}
-	}
-#endif
 
 	assert(request.response_status == static_cast<http_status>(0));
 	request.response_status = status;
@@ -2963,29 +2947,7 @@ Request::read_chunk(std::string& chunk)
 		co_return false;
 	}
 	auto& stream = *http_req->body_stream;
-#ifndef NDEBUG
-	// A debug build runs the views on a scheduler of their own that forwards to the loop's (engine::counted); the
-	// stream is the loop's (http's affinity rule, D9), so the read runs on the loop and returns to the views' scheduler.
-	const task::scheduler_ref views = task::current();
-	task::scheduler_ref loop;
-	if (views) {
-		try {
-			loop = task::scheduler_ref::of(http_req->scheduler());
-		} catch (const std::logic_error&) {
-			// A request no transport serves has no scheduler.
-		}
-	}
-	const bool moved = loop && loop != views;
-	if (moved) {
-		co_await task::schedule_on{loop};
-	}
-#endif
 	const asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());
-#ifndef NDEBUG
-	if (moved) {
-		co_await task::schedule_on{views};
-	}
-#endif
 	if (!ec) {
 		co_return true;
 	}
