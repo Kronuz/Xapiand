@@ -31,7 +31,7 @@ DatabaseHandler::match
   against every wanted pattern and every exclusion, and the directory is read entry by entry (not listed first). Every
   entry read, in a directory the walk lists or inside an index directory it probes, counts against `--max-search-indexes`,
   matching or not; past it the request answers 400. The count is of the work, so an exclusion that removes everything (`*,-*`)
-  or a pattern that matches nothing still pays for the tree. Before each entry the walk calls the request's cancel token
+  or a pattern that matches nothing still pays for the tree. One walk runs at a time on the node (the others wait their turn without a thread). Before each entry the walk calls the request's cancel token
   (`Request::cancel`), so a client that goes away stops it. Equal items are one item.
 - **Nothing nests.** The walk does not look inside an index, so an index path is never above or below another's:
   `PUT /tenant/d` while `tenant/a` is an index, `PUT /a/b/d` while `a` is one, and a name below the first that the layout
@@ -82,6 +82,7 @@ DatabaseHandler::match
 | Names a search reads | `--max-search-indexes` (100,000, at least 1) | the names are counted as the walk finds them, plain names first; 400 past it | a runaway `_all` over more indexes than a node should serve in one request |
 | Directory entries the patterns read | the same number | `index_pattern::Walk` counts every entry it reads, matching or not; 400 past it | the work of a walk must have a number whatever the exclusions say |
 | Steps of matching | 4,096 for each entry the cap allows (`index_pattern::steps_per_visit`) | the matcher counts a step for each byte of a name it walks, backtracking included, and the walk answers 400 past the total | a pattern that backtracks over a long name costs its size times the name's; 32 of them on every entry of a big tree would hold a work-pool thread for tens of seconds |
+| Walks at once | 1 per node | `expand_paths` takes a FIFO `task::async_mutex` (cancellable) before the chore; a waiting request holds no thread | however many clients send walks, they hold one worker of the work pool, so the chores of writes and opens run beside them |
 | Patterns in a request | 32 (`index_pattern::max_patterns`) | wildcards and exclusions together, after equal items are merged; 400 above | every entry is tested against every pattern, so patterns times entries is the match work |
 | Length of a pattern | 256 bytes (`max_pattern_size`) | 400 above | the matcher's cost is the pattern's length times the name's |
 | Plain names in a request | the names bound | they count as names | a plain name costs nothing to find, and the URL (64 KiB) bounds the list |

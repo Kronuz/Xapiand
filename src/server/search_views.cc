@@ -2308,6 +2308,13 @@ expand_paths(Request& request, bool patterns)
 	if (wildcards && patterns) {
 		std::vector<std::string> names;
 		IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+		// One walk at a time on the node: the rest wait their turn holding no thread, so the walks hold one worker of the
+		// work pool whatever the clients send, and the writes' chores run beside them.
+		static task::async_mutex walks;
+		auto turn = co_await walks.lock(request.cancel.token());
+		if (!turn) {
+			throw task::cancelled{};
+		}
 		const auto cap = static_cast<size_t>(opts.max_search_indexes);
 		// The walk looks at the request between entries, so a client that goes away stops it.
 		const auto token = request.cancel.token();
