@@ -35,7 +35,6 @@
 #include <asio/any_io_executor.hpp>
 #include <asio/awaitable.hpp>
 #include <asio/dispatch.hpp>
-#include <asio/post.hpp>
 #include <asio/steady_timer.hpp>
 #include <asio/use_awaitable.hpp>
 
@@ -123,7 +122,6 @@ public:
 
 	void post(std::coroutine_handle<> h) {
 #ifndef NDEBUG
-		if (host_.closed()) { return; }   // the scheduler would drop the resume and leak its wrapper
 		host_.scheduler().post(resume_in(this, h));
 #else
 		host_.scheduler().post(h);
@@ -131,7 +129,6 @@ public:
 	}
 	void post_demoted(std::coroutine_handle<> h) {
 #ifndef NDEBUG
-		if (host_.closed()) { return; }
 		host_.scheduler().post_demoted(resume_in(this, h));
 #else
 		host_.scheduler().post_demoted(h);
@@ -147,7 +144,10 @@ public:
 	template <typename T>
 	asio::awaitable<T> await(task::task<T> t) {
 		auto initiate = [this](auto handler, task::task<T> work) {
-			task::spawn(task::scheduler_ref::of(*this), std::move(work), Complete<decltype(handler)>{std::move(handler)});
+			task::spawn(task::scheduler_ref::of(*this), std::move(work), [h = std::move(handler)](std::exception_ptr e, auto&&... value) mutable {
+				auto ex = asio::get_associated_executor(h);
+				asio::dispatch(ex, [h = std::move(h), e, ... value = std::move(value)]() mutable { std::move(h)(e, std::move(value)...); });
+			});
 		};
 		if constexpr (std::is_void_v<T>) {
 			co_await asio::async_initiate<const asio::use_awaitable_t<>&, void(std::exception_ptr)>(initiate, asio::use_awaitable, std::move(t));
@@ -158,33 +158,6 @@ public:
 		}
 	}
 
-private:
-	// Completes the awaiting coroutine with the task's result, on the coroutine's executor. When teardown destroys
-	// the task unrun, the handler is not destroyed with it: that would destroy the awaiting frame, which holds this
-	// Run, before the task's own chain, whose frames still point at it. It is queued on the stopped loop instead,
-	// and goes with the loop's io_context.
-	template <typename H>
-	struct Complete {
-		std::optional<H> h;
-		explicit Complete(H handler) : h(std::move(handler)) { }
-		Complete(Complete&& other) noexcept : h(std::move(other.h)) { other.h.reset(); }
-		Complete(const Complete&) = delete;
-		~Complete() {
-			if (h) {
-				auto ex = asio::get_associated_executor(*h);
-				asio::post(ex, [handler = std::move(*h)]() mutable { (void)handler; });
-			}
-		}
-		template <typename... V>
-		void operator()(std::exception_ptr e, V&&... value) {
-			auto handler = std::move(*h);
-			h.reset();
-			auto ex = asio::get_associated_executor(handler);
-			asio::dispatch(ex, [handler = std::move(handler), e, ... value = std::forward<V>(value)]() mutable { std::move(handler)(e, std::move(value)...); });
-		}
-	};
-
-public:
 #ifndef NDEBUG
 	TaskCounters counters;
 
