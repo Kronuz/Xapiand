@@ -10,8 +10,7 @@ src/database/pool.cc	sync_wait	finish_idle_close	allow	1	DatabasePool::clear, ca
 src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached task with no control loop runs to its end on the thread that started it (a timer thread, the CLI); guarded by check_may_block
 src/database/pool.h	mutex	.	allow	1	the entry's O(1) state lock, for the uuid (D5)
 src/database/pool.h	pool	storage_commit	allow	1	the declaration: the blob fsync runs as a flush chore (D7)
-src/database/schema.cc	mutex	lk_shard\.lock	allow	2	lock_shard::lock registers a use of the entry; it takes no mutex
-src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard registers a use and takes no turn (D5)
+src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
 src/database/schemas_lru.cc	mutex	.	allow	19	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11)
 src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	12	the entry: O(1) state sections under its mutex, and the turn, an async mutex a task awaits without blocking (D5)
 src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs in a flush chore, first in the commit chore (D7)

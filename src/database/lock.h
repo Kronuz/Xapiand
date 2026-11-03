@@ -35,7 +35,7 @@
 
 
 // A use of an index: it pins the index (docs/design/x-pool.md D3) and makes the Shard through which the index is
-// read and written. `co_await lock()` takes the pin, before any view the request takes (D4); the index is opened,
+// read and written. `co_await pin()` takes the pin, before any view the request takes (D4); the index is opened,
 // and its turn taken, by the operations that need them.
 class lock_shard {
 	IndexPin _pin;
@@ -66,7 +66,7 @@ public:
 	}
 
 	// Pins the index and makes its Shard; a second call does nothing.
-	task::task<void> lock()
+	task::task<void> pin()
 	{
 		if (!_shard) {
 			auto manager = XapiandManager::manager();

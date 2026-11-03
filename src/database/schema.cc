@@ -2772,7 +2772,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							if (endpoint.is_active()) {
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags);
-									co_await lk_shard.lock();
+									co_await lk_shard.pin();
 									auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
@@ -2838,7 +2838,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							if (endpoint.is_active()) {
 								try {
 									lock_shard lk_shard(endpoint, db_handler.flags);
-									co_await lk_shard.lock();
+									co_await lk_shard.pin();
 									auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
 									if (min_doccount > doccount) {
 										min_doccount = doccount;
