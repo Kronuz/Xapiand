@@ -825,7 +825,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http so this pin wins over its (first declaration wins).
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 2fd30c80284a4224c1c6476fa5fb4ee3137a66be)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 679c0f814917389ac7f6cd24c4c8b95967bd7404)  # http main (coroutine handlers, BodyStream, cancel)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 2bede1b935af107214fa25403e45de3515c8fd1a)  # http main step H1 (task handlers, Request::cancel_token, phased teardown)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
@@ -837,7 +837,7 @@ include_directories("${http_lib_SOURCE_DIR}")
 # include path, which is all http_log.h needs.
 FetchContent_Declare(http_log
   GIT_REPOSITORY https://github.com/Kronuz/http-log.git
-  GIT_TAG        431b878b1d0a7c1e1989251fb4546beb62f74de9
+  GIT_TAG        765672a2a3ebe95b7a9f8a6adc7f96acd20b63de  # http-log phase/task-h1: AccessLog::handle on task (http H1)
   SOURCE_SUBDIR  do-not-configure)
 FetchContent_MakeAvailable(http_log)
 include_directories("${http_log_SOURCE_DIR}")
