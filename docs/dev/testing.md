@@ -101,7 +101,7 @@ stream, a chunked body and a stream with a bad line, counts each back, and cuts 
 `engine_mixed_load.py` runs writers (PUT, RESTORE batches, replace, DELETE against a model) and searchers on one single-shard
 strata index for the stated time, then compares the final `DUMP` with the model; it exits 0 only when nothing failed and the
 sanitizer wrote no report. `xapiand_fuzz_text SECONDS [SEED]` and `xapiand_fuzz_body SECONDS [SEED]` are built with the tests;
-the three libFuzzer targets (`fuzz_strata_document`, `fuzz_strata_pattern`, `fuzz_index_path`) build with `-DFUZZ=ON` or by hand
+the four libFuzzer targets (`fuzz_strata_document`, `fuzz_strata_pattern`, `fuzz_index_path`, `fuzz_index_pattern`) build with `-DFUZZ=ON` or by hand
 (`clang++ -fsanitize=fuzzer,address,undefined -Isrc tests/fuzz_X.cc src/engine/strata/X.cc`).
 
 ---
