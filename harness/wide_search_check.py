@@ -94,7 +94,7 @@ def create(i: int) -> int:
     status = 0
     for j in range(5 + (i % 3 if args.mode == "check" else 0)):
         n = i * 8 + j
-        doc = {"n": n, "g": f"g{(n * 3 + j) % 4}", "tag": "x", "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4)}
+        doc = {"n": n, "g": f"g{(n // 2 + i) % 4}", "tag": "x", "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4)}
         status = max(status, call("PUT", f"/{short(i)}/d{j}", doc)[0])
     return status
 
