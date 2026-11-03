@@ -587,6 +587,12 @@ struct AbandonSpec {
 		std::this_thread::sleep_for(spec.release_after);
 		hold.release();
 		entry.reset();   // the registry closes the index only once nobody refers to it
+		if (!eventually([&] { return node.exited(); }, 60s)) {
+			std::_Exit(7);
+		}
+		Logging::finish();
+		Logging::join();
+		std::_Exit(node.exit_code());
 	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);
@@ -602,7 +608,7 @@ struct AbandonSpec {
 		std::_Exit(2);
 	}
 	int missing = 0;
-	for (int i = 1; i <= acked_writes; ++i) {
+	for (int i = 1; !expect_put && i <= acked_writes; ++i) {
 		const auto response = http_call(abandon_port, "GET", "/acked/" + std::to_string(i));
 		if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("ack-" + std::to_string(i)) == std::string::npos) {
 			std::fprintf(stderr, "MISSING acknowledged write %d: %s\n", i, response.substr(0, 60).c_str());
