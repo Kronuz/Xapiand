@@ -319,6 +319,9 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	}
 	CHECK_EQ(done.load(), N);
 	CHECK_EQ(manager()->schemas->loads() - loads_before, 2u);   // the metadata read, and the foreign schema it links to: once each
+	if (manager()->schemas->loads() - loads_before != 2u) {
+		std::fprintf(stderr, "  schema loads: %llu\n", static_cast<unsigned long long>(manager()->schemas->loads() - loads_before));
+	}
 	CHECK_GE(manager()->schemas->joined(), static_cast<std::uint64_t>(N - 1));
 	for (int i = 1; i < N; ++i) {
 		CHECK(got[i] == got[0]);   // the one schema object of the cache
