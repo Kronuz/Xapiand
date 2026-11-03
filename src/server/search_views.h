@@ -231,3 +231,10 @@ public:
 		return http_req != nullptr ? std::string_view(http_req->body) : std::string_view(raw);
 	}
 };
+
+
+// The node's own routes name no index: GET /, HEAD /, GET /:info and the selectors of GET / (/.name).
+bool is_node_route(PathParser& path_parser);
+
+// What GET / answers: the node, its options and its state, reduced by the selector.
+MsgPack node_info(std::string_view selector);

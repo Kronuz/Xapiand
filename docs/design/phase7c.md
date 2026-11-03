@@ -372,21 +372,35 @@ the 1,024 µs edge. Destructors do no database work: `~DocIndexer`, `~Request` a
 closing commit become awaited closes, and their destructors assert that the close ran.
 `harness/async_check.sh --strict` runs in CI. Every hit is in one of four classes: allowlisted
 (file:line, reason), owed (the decision that removes it), compiled out of gate builds, or
-unclassified. `--strict` fails on unclassified hits, and on owed hits once X6 lands.
+unclassified. `--strict` fails on unclassified hits; `--strict --owed` also fails on owed hits, and CI runs both
+(the gate after X6: the allowlist holds no owed row).
 
 **D15. Removed options.** `--http-clients`, `--http-servers`, `--bulk-preparers`, `--bulk-indexers`,
 `--committers`, `--fsynchers` (`opts.cc:237-288`), and with X1 the remote and replication options
 (`opts.cc:262-301`), each with a changelog bullet. `--writers` stays while D8 holds.
 
-**D16. Shutdown order (R6.3).**
+**D16. Shutdown order (R6.3), as the code runs it (X6).** A signal reaches a control task, which waits
+for the requests in flight (`shutdown_checks`; the acceptors still accept, up to about 45 s). Then
+`join()` runs on the main thread with one deadline, `shutdown_write_bound` (35 s) after it starts:
 
-1. Close the acceptors.
-2. `abort_all()` on each reactor (`reactor.h:145`) requests every live request's cancel source;
-   http registers one `Abortable` per request through `Reactor::track` (`:132`).
-3. Reads end at their next checkpoint, and writes finish. The loops keep running.
-4. The main thread waits in `wait_sessions()` (`:159`), which is not a reactor.
-5. Close every open index: its turn, then its close chore. Then `WorkGroup::wait` runs off-reactor.
-6. Stop the `WorkPool`, then the loops.
+1. The housekeeping and the signal read stop, and the control tasks drain.
+2. **Stop 1, the HTTP service** (`stop()` on a thread of its own): the acceptors close, `abort_all()` on
+   each reactor requests every live request's cancel source (http registers one `Abortable` per request
+   through `Reactor::track`), reads end at their next checkpoint, admitted writes finish (or answer 503
+   when their turn does not come in 30 s), and the loops stop.
+3. **Stop 2, the autocommits**: the waits that had not fired are dropped; closing an index commits what it
+   has pending.
+4. **Stop 3, the indexes**: every index nobody uses closes on the main thread, which is not a reactor (its
+   turn, then its close chore on the `WorkPool`, polled in slices of at most 500 ms); the registry needs
+   no loop. `WorkGroup::wait` runs off-reactor under `engine::check_may_block`.
+5. **Stop 4, the write-ahead logs**, then **Stop 5, the fsync threads**, then destruction (the registry,
+   and with it the `WorkPool`, last).
+
+An index that cannot close within the bound (a held turn, a hung disk), or an HTTP service that cannot
+stop, is logged and abandoned, and the node exits with status 75 (`EX_TEMPFAIL`) after flushing the logs;
+the next start replays them. A second signal ends the wait at once, with the same exit. Differences from
+the first draft of this decision: the acceptors close at the start of `join()`, after the clients wait,
+and not first; the loops stop before the indexes close, not after.
 
 T7 runs this under load on ASan and TSan builds.
 

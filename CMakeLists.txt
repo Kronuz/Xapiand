@@ -1869,7 +1869,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests control_plane node lua metric_serialise)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests control_plane node lua metric_serialise quarantine root_routes)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1922,6 +1922,13 @@ if (BUILD_TESTS)
 		target_compile_features(fuzz_strata_pattern PRIVATE cxx_std_20)
 		target_compile_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
 		target_link_options(fuzz_strata_pattern PRIVATE -fsanitize=fuzzer,address,undefined)
+		add_executable(fuzz_index_path
+			"${PROJECT_SOURCE_DIR}/tests/fuzz_index_path.cc"
+		)
+		target_include_directories(fuzz_index_path PRIVATE "${PROJECT_SOURCE_DIR}/src")
+		target_compile_features(fuzz_index_path PRIVATE cxx_std_20)
+		target_compile_options(fuzz_index_path PRIVATE -fsanitize=fuzzer,address,undefined)
+		target_link_options(fuzz_index_path PRIVATE -fsanitize=fuzzer,address,undefined)
 	endif ()
 
 		# The query tests read the stop words from the source tree.

@@ -190,7 +190,6 @@ public:
 	const UUID& get_uuid_le() const;
 	engine::rev get_revision() const;
 
-	bool init_database();
 	bool execute();
 	bool execute_line(std::string_view line, bool wal_);
 	void write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data);

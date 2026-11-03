@@ -27,8 +27,6 @@
 #include <chrono>                                    // for seconds, duration_cast
 #include <cstdio>                                    // for snprintf, size_t
 #include <cstring>                                   // for strlen
-#include <fcntl.h>                                   // for O_CLOEXEC, O_CREAT, O_RDONLY
-#include <sys/stat.h>                                // for stat
 
 #include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
@@ -36,7 +34,6 @@
 #include "exception_engine.h"                         // for SerialisationError
 #include "xapiand_exception.h"                               // for ClientError, MSG_ClientError
 #include "hashes.hh"                                // for fnv1ah64
-#include "io.hh"                                     // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
 #include "log.h"                                     // for L_DATABASE
 #include "opts.h"                                    // for opts
@@ -158,35 +155,6 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 		return normalize_uuid(uuid.str_view());
 	}
 	return uuid;
-}
-
-
-int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
-{
-	auto sdir = std::string(dir);
-	L_DATABASE("+ READING UUID OF INDEX '{}'...", sdir);
-
-	struct stat info;
-	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
-		L_DATABASE("- NO DATABASE INDEX '{}'", sdir);
-		return -1;
-	}
-
-	int fd = io::open((sdir + "/iamglass").c_str(), O_RDONLY | O_CLOEXEC);
-	if (fd == -1) {
-		L_DATABASE("- NO DATABASE INDEX '{}'", sdir);
-		return -1;
-	}
-
-	char bytes[32];
-	size_t length = io::read(fd, bytes, 32);
-	io::close(fd);
-	if (length == 32) {
-		std::copy(bytes + 16, bytes + 32, uuid.begin());
-		return 0;
-	}
-
-	return -1;
 }
 
 

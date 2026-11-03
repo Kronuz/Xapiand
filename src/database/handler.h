@@ -127,7 +127,7 @@ public:
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
 #if XAPIAND_DATABASE_WAL
-	MsgPack repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised);
+	task::task<MsgPack> repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised);
 #endif
 
 	task::task<MsgPack> check();

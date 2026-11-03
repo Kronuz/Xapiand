@@ -46,10 +46,15 @@ CA="${CA:-}"
 read -r -a node_flags <<< "${XAPIAND_FLAGS:-}"
 probe_ca=()
 newman_ca=()
+# newman 4 fails every request (it mangles the collection's templating), so the major version is checked on every run.
+major=$(newman --version 2>/dev/null | cut -d. -f1)
+[ "${major:-0}" -ge 6 ] || {
+	echo "the docs E2E needs newman 6 or later first on PATH (found '$(newman --version 2>/dev/null)')."
+	echo "Install one beside the work, not globally: npm i --prefix DIR newman@6.2.3; PATH=DIR/node_modules/.bin:\$PATH"
+	exit 1
+}
 if [ "$SCHEME" = https ]; then
 	[ -n "$CA" ] || { echo "SCHEME=https needs CA"; exit 1; }
-	major=$(newman --version 2>/dev/null | cut -d. -f1)
-	[ "${major:-0}" -ge 6 ] || { echo "SCHEME=https needs newman 6 or later (found $(newman --version 2>/dev/null))"; exit 1; }
 	probe_ca=(--cacert "$CA")
 	newman_ca=(--ssl-extra-ca-certs "$CA")
 fi

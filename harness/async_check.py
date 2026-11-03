@@ -66,6 +66,7 @@ RULES: dict[str, str] = {
         r"mkdir|rmdir|ftruncate|lseek|mmap|munmap|flock|fcntl|msync|readdir|opendir)\(|\bio::[a-z_]+\(|"
         r"\bexists\(|\bis_directory\(|\bis_regular_file\(|\bgetline\(|\bpopen\(|\bsystem\(|\bgetaddrinfo\("
     ),
+    "wal": r"\bDatabaseWAL\s+\w+\s*[({]|\.repr_wal\(",
     "pool": r"\block_shard\s+\w+\s*[({]|\bcheckout\(|\bcheck_out\(|\bstorage_commit\(|\bstorage->(read|write)\(|\bwritable_storage->",
 }
 
