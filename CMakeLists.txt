@@ -1305,6 +1305,10 @@ install(FILES ${CMAKE_SOURCE_DIR}/mime.types DESTINATION ${XAPIAND_DATA_PATH})
 # Manual page generation
 install(FILES ${CMAKE_SOURCE_DIR}/man/xapiand.8 DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
 
+# License and notices, carried by every package built from the install tree
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE ${CMAKE_SOURCE_DIR}/NOTICE ${CMAKE_SOURCE_DIR}/THIRD-PARTY-NOTICES
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/xapiand)
+
 # Install binary
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
