@@ -454,7 +454,7 @@ FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/en
 FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG e040c2b383a1a19147cfcb0d14947d38d098e534)
 FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG 87450b43c6ff113a321e06d811d9b7a4857c9351)
 FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 46561fad9f26f9b2b613568fe1a3dbcb016d4aba)
-FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG b947d77073914132dc155ce3bf7084f4465bf9df)
+FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 1f9190ca19bbb5291456c54f3ff34982e0083113)
 FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 07c9505ece8824a80777bc9b49ed12a2002c9c9b)
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 1be38483a333d13544fbf6b0937409295c8ea3e0)
 FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 94df6e5e1cadebbba45cd1f5fbb679407550be56)  # track tip
@@ -504,7 +504,7 @@ include_directories(
 
 # traceback (headers only, up front). Xapiand's trace adapters inject traceback.h into
 # the extracted libraries: threadpool -> xapiand_threadpool_trace.h -> traceback.h, and
-# scheduler / logger, which pull threadpool.hh transitively. traceback proper is fetched
+# scheduler / logger, which pull thread.hh and work_pool.hh transitively. traceback proper is fetched
 # further down (its traceback.cc compiles into XAPIAND_OBJ), but its headers must be on
 # the include path BEFORE those libraries so their collateral targets can find traceback.h
 # in a full `ninja` build (CI builds every fetched target; Xapiand links none of them).
@@ -515,13 +515,13 @@ FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/tracebac
 FetchContent_MakeAvailable(traceback)
 include_directories("${traceback_SOURCE_DIR}")
 
-# threadpool: the thread pool + Thread primitive, extracted from Xapiand. Like
+# threadpool: WorkPool + the Thread primitive, extracted from Xapiand. Like
 # located-exception, we compile its one out-of-line file (thread.cc) as part of
 # Xapiand (below) so it picks up Xapiand's config.h and the trace injection,
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 65bc0bccd640babe7eec7f67f5e4acdb30d09420)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG eb4751a33ed492961cb125df68e526264ba1f18b)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
 FetchContent_MakeAvailable(threadpool)
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
@@ -535,7 +535,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + xapiand_colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 2bb0a8f11ce97ad8fee5a35ce2bf63877286dc84)  # track tip
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 1e5ccc9c6dfc62611751dae2143467ef00305fc3)  # track tip
 FetchContent_MakeAvailable(scheduler)
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
@@ -546,7 +546,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 801105c8c4938d06c15c730df94118ea60364111)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 2356791b1bc668bb23a27f0d14eb6d4105963ee1)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
@@ -731,15 +731,15 @@ FetchContent_MakeAvailable(queryparser)
 # library's own task::asio target stays off so that no second copy of Asio is fetched. A chore resumes its
 # awaiter with asio_scheduler::post(), the one thread-safe entry, never post_demoted() (C10).
 set(TASK_ASIO OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 8cad661e0dd3bd1c74b964cdc0ee42066f568838)  # task main: event, async_mutex, lock_until, await_asio
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG b4067664424e7546f5c6ab645135dbe64fdc4e8f)  # task main: event, async_mutex (lock(token)), deadline, await_asio
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
 # strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 501f94372308a30f901d6ffb223da4bdc73a195c)  # strata main
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 465ee7d9023750e043777cda81afb9d5641bc4cd)  # prospect deps/pins-2026-11
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 3f564dc5b7e84325d0425d8c6344ab76b5667057)  # strata deps: drop-threadpool (threadpool without ThreadPool, task b406766)
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG bd782248009a994c677aef44827f3138f824529e)  # prospect drop-threadpool
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh

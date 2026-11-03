@@ -23,7 +23,6 @@
 #include "logger.h"              // for L_DEBUG, L_WARNING
 #include "opts.h"                // for opts::*
 #include "xapiand_strings.hh"            // for strings::from_delta
-#include "thread.hh"             // for ThreadPolicyType::fsynchers
 
 
 // The fsync itself: run by the debouncer, or directly when it refuses.
@@ -49,7 +48,7 @@ inline void fsyncher_fsync(int fd, bool full_fsync) {
 
 
 inline auto& fsyncher(bool create = true) {
-	static auto fsyncher = create ? make_unique_debouncer<int, ThreadPolicyType::fsynchers>("FS--", "FS{:02}", opts.num_fsynchers, fsyncher_fsync, std::chrono::milliseconds(opts.fsyncher_throttle_time), std::chrono::milliseconds(opts.fsyncher_debounce_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_busy_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_min_force_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_max_force_timeout)) : nullptr;
+	static auto fsyncher = create ? make_unique_debouncer<int>("FS--", "FS{:02}", opts.num_fsynchers, fsyncher_fsync, std::chrono::milliseconds(opts.fsyncher_throttle_time), std::chrono::milliseconds(opts.fsyncher_debounce_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_busy_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_min_force_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_max_force_timeout)) : nullptr;
 	assert(!create || fsyncher);
 	return fsyncher;
 }

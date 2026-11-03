@@ -346,8 +346,9 @@ ShardEndpoint::take_turn(int flags)
 		task::async_mutex::guard guard;
 		int* held = nullptr;
 		if (auto* host = engine::Host::current()) {
-			const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
-			guard = co_await turn.lock_until(*host, deadline);
+			const auto at = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
+			task::deadline<engine::Host> expiry(*host, at);
+			guard = co_await turn.lock(expiry.token());
 			if (auto* counters = host->counters()) {
 				held = &counters->turns;
 			}

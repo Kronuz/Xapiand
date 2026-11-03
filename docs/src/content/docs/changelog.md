@@ -48,6 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `string.packsize`, `string.dump`, to-be-closed variables and the `__gc`, `__close` and `__mode` metamethods are no longer
   available to scripts, and `print` logs at most 4 KiB per call. A script saved under a name now replaces the cached script of the
   same name; a foreign script is cached apart from the local ones and re-read when its document changes (within a second).
+- **One pool: `WorkPool`.** The `ThreadPool` family is gone from the threadpool library, so the thread-policy
+  tags that selected nothing (`fsynchers`, `wal_writer`, and the others) are removed; the fsync and WAL writer threads are
+  named as before. A shard's turn wait is `task::async_mutex::lock(token)` with a `task::deadline` built from the host's
+  timer (the `lock_until` it replaces is gone from task): the same `turn_timeout`, the same "The index is busy" error.
+  The libraries move: threadpool `65bc0bc` to `eb4751a`, scheduler `2bb0a8f` to `1e5ccc9`, logger `801105c` to `2356791`,
+  task `8cad661` to `b406766`, strata `501f943` to `3f564dc`, prospect `465ee7d` to `bd78224` and strict-stox `b947d77`
+  to `1f9190c`.
 - **The Kronuz libraries move to their heads of 2026-11-02**, and `CMakeLists.txt` declares only the 57 that Xapiand
   includes directly (it declared 64): the libraries pin the rest at their own heads, so stash, uinteger_t, times,
   lazy, queue, bloom-filter and radix-router are no longer declared here (from

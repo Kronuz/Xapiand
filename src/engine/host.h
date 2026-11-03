@@ -23,7 +23,7 @@
 #pragma once
 
 // The schedulers the database layer's tasks run on. A Host is a task scheduler that can also arm a
-// timer, which a turn's deadline needs (task::async_mutex::lock_until). Two exist:
+// timer, which a turn's deadline needs (task::deadline, passed to task::async_mutex::lock). Two exist:
 //
 //   BlockingScheduler  runs a task on the thread that waits for it: every resume (a chore's completion,
 //                      a turn handed over, an event) is posted to that thread's queue and run there, so
