@@ -24,6 +24,10 @@ the catalog's host interface cannot host Xapiand's open (gaps F1 to F6 in the no
   `path_boundary_check.sh` (XP6, XP7).
 - [ ] After wide-search lands: its `search_batch` pins through `IndexPin`, K clamped to `soft_open`.
 
+Host rule (the lead, 2026-11-02): the TSan and ASan+UBSan batches run on Linux through strata's
+`tools/vm/aws-linux.sh` (shared 32-core lease, the branch shipped as a git bundle); only macOS builds
+run locally.
+
 ## Done
 
 - Design note and this ledger (this commit).
