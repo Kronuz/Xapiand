@@ -5,7 +5,9 @@
 # is created, read or deleted outside the data directory. The node's own routes (GET /, HEAD /, GET /:info,
 # GET /:metrics, GET /.name) name no index and answer 200. Exit 0 when all hold.
 BIN=$1; PORT=${PORT:-18837}; rc=0
-W=${HARNESS_TMP:-${TMPDIR:-.}}
+# D is absolute: the check spells "$D/out" as an absolute path, which a relative D (TMPDIR unset) would turn into
+# an index path inside the data directory.
+W=$(cd "${HARNESS_TMP:-${TMPDIR:-.}}" && pwd -P) || exit 2
 D=$(mktemp -d "$W/path_boundary.XXXXXX")
 trap 'kill -9 $P 2>/dev/null; wait $P 2>/dev/null; rm -rf "$D"' EXIT
 fail() { echo "FAIL: $*"; rc=1; }
