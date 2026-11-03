@@ -575,6 +575,25 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 }
 
 
+task::task<IndexPin>
+DatabasePool::pin(const Endpoint& endpoint)
+{
+	L_CALL("DatabasePool::pin({})", repr(endpoint.to_string()));
+
+	engine::check_no_view_held("a pin");
+	co_return IndexPin(spawn(endpoint));
+}
+
+
+task::task<IndexPin>
+DatabasePool::pin_chore(const Endpoint& endpoint)
+{
+	L_CALL("DatabasePool::pin_chore({})", repr(endpoint.to_string()));
+
+	co_return IndexPin(get(endpoint));
+}
+
+
 ReferencedShardEndpoint
 DatabasePool::spawn(const Endpoint& endpoint)
 {
