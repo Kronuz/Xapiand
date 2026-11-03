@@ -38,11 +38,15 @@ sync_wait / run_detached / housekeeping    pool.cc:786 / test_pool.cc:1208
 | same test, fix in | pass; `test_pool` 197 checks and `test_blocking_guard` 14 checks pass (both hung before) |
 | TSan, g++-13 (`vm.mmap_rnd_bits=28`) | `test_blocking_scheduler`, `test_blocking_guard` clean; `test_pool` only the known `test_pool.cc:183` exception_ptr report (Blocked on in the linux-gate-fixes ledger), no other report, `test_released_views_are_reclaimed_by_the_housekeeping` ok |
 | ASan, g++-13 | all three clean |
-| Mutant: the destructor does not put the outer trampoline back | survives (test passes); the revert above is the mutant the test kills |
+| Mutant: the destructor does not put the outer trampoline back (the test nests twice and compares the running loop's `active`, `head` and queue size before and after each nested wait) | killed: `CHECK(kept)` fails, 1 of 5 checks; with the restore, 5 of 5 pass |
 
 ## task repro
 
 `.scratch/gcc-hang-repro/nested_drive.cc` (main checkout): a 30-line thread-owned loop driven from inside a task another such loop runs. g++-13 with task:b406766 and with task HEAD (C3, `6558c2e`): "stuck", rc 1, at -O0 and -O2; clang 18: ok. C2 and C3 do not fix it: `fresh_trampoline` (task.hh) is applied only to await_asio's inline resume, not to a driver outside the library. A public hook (or making `transfer` detect a nested driver) belongs to task.
+
+## Dropping the workaround
+
+The fix is a fallback while task has none. Once task makes a nested driver safe (a public fresh-trampoline scope, or `transfer` detecting one) and the pin is bumped: 1. delete `NestedTrampoline` and its use in `BlockingScheduler::drive` (host.h), or replace it with the task scope; 2. keep `test_a_blocking_wait_nests` as the regression test but drop its `keeps_the_outer_loop` part if it reads `task::detail`; 3. rebuild with g++-13 and rerun `test_blocking_scheduler`, `test_blocking_guard` and `test_pool`; the watchdog turns a regression into an abort, not a hang. Revert check: with the pin bumped and `NestedTrampoline` removed, the nesting test must still pass.
 
 ## Next
 

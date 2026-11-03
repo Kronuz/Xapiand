@@ -71,6 +71,30 @@ task::task<int> waits_two_deep() {
 	co_return engine::sync_wait(waits_inside()) + 1;
 }
 
+#if !TASK_SYMMETRIC_TRANSFER
+// The trampoline loop that runs the calling task, as the nested waits found it: they put it back as they left.
+struct LoopState {
+	bool active;
+	std::size_t head;
+	std::size_t queued;
+	bool operator==(const LoopState&) const = default;
+};
+
+LoopState loop_state() {
+	const auto& t = task::detail::local_trampoline();
+	return {t.active, t.head, t.queue.size()};
+}
+
+task::task<void> keeps_the_outer_loop(int depth, bool& kept) {
+	const LoopState before = loop_state();
+	if (depth > 0) {
+		engine::sync_wait(keeps_the_outer_loop(depth - 1, kept));
+	}
+	kept = kept && before.active && loop_state() == before;
+	co_return;
+}
+#endif
+
 // Aborts the process when the test has not ended in time, so a deadlock fails instead of hanging.
 struct Watchdog {
 	std::atomic<bool> stop{false};
@@ -93,6 +117,12 @@ void test_a_blocking_wait_nests() {
 	Watchdog watchdog;
 	CHECK_EQ(engine::sync_wait(waits_inside()), 43);
 	CHECK_EQ(engine::sync_wait(waits_two_deep()), 44);
+#if !TASK_SYMMETRIC_TRANSFER
+	// Each level finds the loop that runs it, after the wait, as it was before it.
+	bool kept = true;
+	engine::sync_wait(keeps_the_outer_loop(2, kept));
+	CHECK_TRUE(kept);
+#endif
 	CHECK_EQ(engine::blocking_violations(), 0u);
 }
 
