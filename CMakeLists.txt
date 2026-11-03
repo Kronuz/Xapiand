@@ -585,7 +585,7 @@ add_compile_definitions(TRACEBACK_HOOKS=1)
 # xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
 # thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
 # handed to the WAL at construction; the data store stays on synchronous fsync.
-FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 8bbdb507f33091c4c077c5eff46cedfb11868d7f)
+FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 9f14417d24a133ab0b4ab31e452625eceb227afb)
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
@@ -657,7 +657,7 @@ add_compile_definitions(
 # hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
 # the commit with wordwise::hash32.
 FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG e3bf5b6167775f26dd14f89f210f687b0253241b)
-FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 9344b40fed2e51a89539ecbdc4ebcc5bf008ecaf)
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 4a1a97ca16bebe93f1e6c8aeb35fbac086f66817)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
 add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
