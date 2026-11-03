@@ -743,6 +743,12 @@ FetchContent_MakeAvailable(queryparser)
 # library's own task::asio target stays off so that no second copy of Asio is fetched. A chore resumes its
 # awaiter with asio_scheduler::post(), the one thread-safe entry, never post_demoted() (C10).
 set(TASK_ASIO OFF CACHE BOOL "" FORCE)
+# Counts live task frames (task::detail::live_frames), which the teardown tests check; set for every target, since
+# it changes task's inline functions. Off by default: it adds an atomic add per frame.
+option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
+if (TASK_COUNT_FRAMES)
+	add_compile_definitions(TASK_COUNT_FRAMES=1)
+endif ()
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 6558c2e9c533ebb0fa1177f22edd4fff528f6efa)  # task main C3: cancellation, inline resume, roots and the four teardown phases
 FetchContent_MakeAvailable(task)
 
