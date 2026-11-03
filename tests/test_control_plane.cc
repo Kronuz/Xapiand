@@ -267,16 +267,23 @@ static void test_a_stop_ends_the_waiting_without_running_the_calls() {
 	CHECK_FALSE(autocommit.touch(1));   // the caller commits now
 }
 
-// The loop answers its lag probe while thousands of keys wait and fire: nothing on it waits or scans.
+// The loop answers its lag probe while thousands of keys wait and fire: nothing on it waits or scans. The keys arrive
+// in groups of 50 every 20 ms (2.5 per ms) and all 5,000 are pending when the first fires, so the loop's work is paced
+// and a slow or busy host (a sanitizer build, other tests running) measures the loop, not its own CPU: one burst of
+// 5,000 starts and fires keeps the loop busy for as long as the host takes to run them, with no wait or scan in it.
 static void test_pending_keys_cost_the_loop_nothing() {
 	Loop loop;
 	loop.watch_lag();
 	std::atomic<int> fired{0};
-	Autocommit autocommit(loop.host, {500ms, 600ms, 1s, 1s}, [&](const int&) { ++fired; });
-	for (int key = 0; key < 5000; ++key) {
-		autocommit.touch(key);
+	Autocommit autocommit(loop.host, {2200ms, 2300ms, 2500ms, 2500ms}, [&](const int&) { ++fired; });
+	for (int group = 0; group < 100; ++group) {
+		for (int key = group * 50; key < (group + 1) * 50; ++key) {
+			autocommit.touch(key);
+		}
+		std::this_thread::sleep_for(20ms);
 	}
-	CHECK(eventually([&] { return fired.load() == 5000; }, 5s));
+	CHECK_GT(autocommit.pending(), 2500u);   // thousands wait together
+	CHECK(eventually([&] { return fired.load() == 5000; }, 10s));
 	const auto snap = loop.reactor.lag().snapshot();
 	CHECK_GT(snap.wakes, 50u);
 	CHECK_LE(snap.quantile_upper_us(0.99), 16384u);   // p99 under 16 ms with 5,000 watchers started and fired
