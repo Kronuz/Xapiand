@@ -280,6 +280,15 @@ static void test_pending_keys_cost_the_loop_nothing() {
 	const auto snap = loop.reactor.lag().snapshot();
 	CHECK_GT(snap.wakes, 50u);
 	CHECK_LE(snap.quantile_upper_us(0.99), 16384u);   // p99 under 16 ms with 5,000 watchers started and fired
+	if (snap.quantile_upper_us(0.99) > 16384u) {
+		std::uint64_t late = 0;
+		for (std::size_t i = 0; i < reactor::LagSnapshot::buckets; ++i) {
+			if (reactor::LagSnapshot::upper_us(i) > 16384u) {
+				late += snap.count[i];
+			}
+		}
+		std::fprintf(stderr, "  lag: %llu wakes, %llu over 16 ms, p50 %llu us, p99 %llu us, max %llu us\n", static_cast<unsigned long long>(snap.wakes), static_cast<unsigned long long>(late), static_cast<unsigned long long>(snap.quantile_upper_us(0.5)), static_cast<unsigned long long>(snap.quantile_upper_us(0.99)), static_cast<unsigned long long>(snap.max_us));
+	}
 }
 
 
