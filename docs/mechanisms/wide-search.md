@@ -81,6 +81,7 @@ DatabaseHandler::match
 |---|---|---|---|
 | Names a search reads | `--max-search-indexes` (100,000, at least 1) | the names are counted as the walk finds them, plain names first; 400 past it | a runaway `_all` over more indexes than a node should serve in one request |
 | Directory entries the patterns read | the same number | `index_pattern::Walk` counts every entry it reads, matching or not; 400 past it | the work of a walk must have a number whatever the exclusions say |
+| Steps of matching | 4,096 for each entry the cap allows (`index_pattern::steps_per_visit`) | the matcher counts a step for each byte of a name it walks, backtracking included, and the walk answers 400 past the total | a pattern that backtracks over a long name costs its size times the name's; 32 of them on every entry of a big tree would hold a work-pool thread for tens of seconds |
 | Patterns in a request | 32 (`index_pattern::max_patterns`) | wildcards and exclusions together, after equal items are merged; 400 above | every entry is tested against every pattern, so patterns times entries is the match work |
 | Length of a pattern | 256 bytes (`max_pattern_size`) | 400 above | the matcher's cost is the pattern's length times the name's |
 | Plain names in a request | the names bound | they count as names | a plain name costs nothing to find, and the URL (64 KiB) bounds the list |

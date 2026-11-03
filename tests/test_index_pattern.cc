@@ -173,6 +173,43 @@ void test_the_walk_is_bounded() {
 	CHECK_EQ(calls, std::size_t{0});
 }
 
+// SR1: the work of matching is bounded as well: patterns built to backtrack over long names cost the pattern's size
+// times the name's on every entry, however few entries there are.
+void test_the_matching_is_bounded() {
+	fs::remove_all("pattern_long_root");
+	for (int i = 0; i < 50; ++i) {
+		fs::create_directories("pattern_long_root/" + std::string(150, 'a') + std::to_string(1000 + i) + "/strata");
+	}
+	Names slow = {"*"};   // matches every name, so every exclusion is tried on every entry
+	for (int k = 0; k < 31; ++k) {
+		slow.push_back("-*" + std::string(100 + k, 'a') + "c*");
+	}
+	// 50 entries x 31 patterns x about 15,000 steps is far past the 4,096 steps an entry may cost.
+	CHECK_THROW(expand("pattern_long_root/", slow, {100, 1000}), engine::Error);
+	try {
+		expand("pattern_long_root/", slow, {100, 1000});
+	} catch (const engine::Error& error) {
+		CHECK_EQ(error.kind, engine::errc::invalid);
+		CHECK_TRUE(error.description().find("steps") != std::string::npos);
+	}
+	CHECK_EQ(expand("pattern_long_root/", slow, {100, 1000, std::size_t{1} << 40}).size(), std::size_t{50});   // with the room it is served
+	CHECK_EQ(expand("pattern_long_root/", Names{"a*"}, {100, 1000}).size(), std::size_t{50});   // an ordinary pattern costs a step a byte
+	// The exclusions of plain names are matched too, and counted.
+	Names plain = slow;
+	plain.erase(plain.begin());
+	for (int i = 0; i < 50; ++i) {
+		plain.push_back(std::string(150, 'a') + std::to_string(i));
+	}
+	CHECK_THROW(expand("pattern_long_root/", plain, {100, 1000, 100000}), engine::Error);
+	fs::remove_all("pattern_long_root");
+	std::size_t steps = 0;
+	CHECK_TRUE(match("abc", "abc", steps));
+	CHECK_EQ(steps, std::size_t{3});   // a step a byte of the name
+	steps = 0;
+	CHECK_FALSE(match(std::string(100, 'a') + "b", std::string(100, 'a') + "c", steps));
+	CHECK_TRUE(steps >= 100);
+}
+
 // SR1: one walk serves all the patterns; the entries read do not depend on how many patterns there are.
 void test_one_walk_for_all_the_items() {
 	Wide wide(50);
@@ -276,6 +313,7 @@ int main(int argc, char** argv) {
 		{"test_expand", test_expand},
 		{"test_the_limit", test_the_limit},
 		{"test_the_walk_is_bounded", test_the_walk_is_bounded},
+		{"test_the_matching_is_bounded", test_the_matching_is_bounded},
 		{"test_one_walk_for_all_the_items", test_one_walk_for_all_the_items},
 		{"test_the_patterns_are_bounded", test_the_patterns_are_bounded},
 		{"test_the_walk_can_be_cancelled", test_the_walk_can_be_cancelled},

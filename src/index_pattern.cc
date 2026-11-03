@@ -48,7 +48,7 @@ too_many(std::size_t limit)
 [[noreturn]] void
 too_much_work(std::size_t limit)
 {
-	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " directory entries (--max-search-indexes) and these patterns need more; narrow the index pattern");
+	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " directory entries (--max-search-indexes), and spend " + std::to_string(limit * steps_per_visit) + " steps matching them; these patterns need more; narrow the index pattern");
 }
 
 // The walk read more entries than its budget.
@@ -117,7 +117,7 @@ public:
 private:
 	void visit()
 	{
-		if (++visits_ > bounds_.visits) {
+		if (++visits_ > bounds_.visits || steps_ > bounds_.steps) {
 			throw OutOfBudget{};
 		}
 		if (checkpoint_) {
@@ -174,14 +174,14 @@ private:
 		}
 	}
 
-	bool wanted_match(std::string_view name) const
+	bool wanted_match(std::string_view name)
 	{
-		return std::any_of(wanted_.begin(), wanted_.end(), [&](const std::string& pattern) { return match(pattern, name); });
+		return std::any_of(wanted_.begin(), wanted_.end(), [&](const std::string& pattern) { return match(pattern, name, steps_); });
 	}
 
-	bool excluded(std::string_view name) const
+	bool excluded(std::string_view name)
 	{
-		return std::any_of(excluded_.begin(), excluded_.end(), [&](const std::string& pattern) { return match(pattern, name); });
+		return std::any_of(excluded_.begin(), excluded_.end(), [&](const std::string& pattern) { return match(pattern, name, steps_); });
 	}
 
 	// Whether a wanted pattern can match a name below the directory `rel`.
@@ -202,6 +202,7 @@ private:
 	std::vector<std::string>& out_;
 	std::vector<std::string_view> literals_;
 	std::size_t visits_ = 0;
+	std::size_t steps_ = 0;
 	bool first_only_ = false;
 };
 
@@ -247,11 +248,13 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 	if (wanted.size() + excluded.size() > max_patterns) {
 		throw engine::Error(engine::errc::invalid, "A search names at most " + std::to_string(max_patterns) + " index patterns (wildcards and exclusions together)");
 	}
-	const auto removed = [&](std::string_view name) {
-		return std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return match(pattern, name); });
-	};
+	std::size_t steps = 0;   // a plain name is tested against the exclusions: at most a URL of names, 32 patterns, counted too
 	for (auto& item : plain) {
-		if (!removed(item)) {
+		const bool removed = std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return match(pattern, item, steps); });
+		if (steps > bounds.steps) {
+			too_much_work(bounds.visits);
+		}
+		if (!removed) {
 			names.push_back(std::move(item));
 		}
 	}

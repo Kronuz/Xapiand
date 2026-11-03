@@ -65,8 +65,9 @@ with more shards than the batch is a batch of its own.
   the ones a wildcard expands to, answers `400` with the limit in the message. So does one whose patterns read more
   than that many directory entries to find their indexes, whether the entries match or not (`*,-*` matches nothing and
   reads the whole tree): the same number bounds the names and the work. A data directory with more entries in one
-  directory than the cap cannot be walked by a wildcard; name the indexes, or raise the cap. A search names at most 32
-  patterns (wildcards and `-` exclusions together).
+  directory than the cap cannot be walked by a wildcard; name the indexes, or raise the cap. Matching the names has a budget too
+  (4,096 steps per entry the cap allows, so patterns that backtrack over long names answer `400` rather than hold a
+  thread). A search names at most 32 patterns (wildcards and `-` exclusions together).
 
 Each index is read as its batch starts, so a search does not see all its indexes at one moment; each index is whole, and
 a write acknowledged before the search began is in it. A relevance weight is read against the statistics of the index

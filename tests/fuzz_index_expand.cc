@@ -184,7 +184,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* d, std::size_t n) {
 	std::vector<std::string> out;
 	bool threw = false;
 	try {
-		out = index_pattern::expand(root, items, {names_bound, visits_bound}, [&] { ++calls; });
+		out = index_pattern::expand(root, items, {names_bound, visits_bound, std::size_t{1} << 40}, [&] { ++calls; });
 	} catch (const engine::Error&) {
 		threw = true;
 	}

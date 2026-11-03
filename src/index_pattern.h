@@ -45,13 +45,15 @@ is_wildcard(std::string_view item) noexcept
 	return item == "_all" || item.find('*') != std::string_view::npos;
 }
 
-// Whether `name` is one `pattern` stands for.
+// Whether `name` is one `pattern` stands for. `steps` grows by the work the match did (one per byte of the name it
+// walks, so a pattern that backtracks costs more), for a caller that bounds the total.
 inline bool
-match(std::string_view pattern, std::string_view name) noexcept
+match(std::string_view pattern, std::string_view name, std::size_t& steps) noexcept
 {
 	constexpr auto none = std::string_view::npos;
 	std::size_t p = 0, n = 0, star = none, mark = 0;
 	while (n < name.size()) {
+		++steps;
 		if (p < pattern.size() && pattern[p] == '*') {
 			star = p++;
 			mark = n;
@@ -67,20 +69,36 @@ match(std::string_view pattern, std::string_view name) noexcept
 	}
 	while (p < pattern.size() && pattern[p] == '*') {
 		++p;
+		++steps;
 	}
 	return p == pattern.size();
+}
+
+inline bool
+match(std::string_view pattern, std::string_view name) noexcept
+{
+	std::size_t steps = 0;
+	return match(pattern, name, steps);
 }
 
 // The longest list of patterns (wildcards and exclusions together) a search may name. The walk tests every entry it
 // reads against every pattern, so this bounds the work per entry.
 inline constexpr std::size_t max_patterns = 32;
 
-// What one expansion may spend. Both are `--max-search-indexes`: `names` bounds the indexes the patterns name, and
-// `visits` the directory entries the walk reads to find them, whether or not an entry matches (a pattern and
-// its own exclusion match nothing and still read the tree), so the work has a number whatever the patterns say.
+// What one expansion may spend. `names` and `visits` are both `--max-search-indexes`: `names` bounds the indexes the
+// patterns name, and `visits` the directory entries the walk reads to find them, whether or not an entry matches (a
+// pattern and its own exclusion match nothing and still read the tree), so the work has a number whatever the patterns
+// say. `steps` bounds the work of matching (`steps_per_visit` for each entry it may read): a pattern that backtracks
+// over a long name costs the pattern's size times the name's, and 32 of them on every entry of a big tree would hold a
+// thread for minutes.
+inline constexpr std::size_t steps_per_visit = 4096;
+
 struct Bounds {
 	std::size_t names;
 	std::size_t visits;
+	std::size_t steps;
+	Bounds(std::size_t names_, std::size_t visits_) noexcept : names(names_), visits(visits_), steps(visits_ * steps_per_visit) { }
+	Bounds(std::size_t names_, std::size_t visits_, std::size_t steps_) noexcept : names(names_), visits(visits_), steps(steps_) { }
 };
 
 // Called before each directory entry the walk reads, on the walking thread; it may throw to stop the walk.
