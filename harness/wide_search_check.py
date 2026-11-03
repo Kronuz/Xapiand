@@ -109,7 +109,7 @@ def normalise(raw: bytes) -> object:
 
 
 AGGS = {
-    "by_g": {"_terms": {"_field": "g"}, "_aggs": {"s": {"_sum": {"_field": "n"}}}},
+    "by_g": {"_values": {"_field": "g"}, "_aggs": {"s": {"_sum": {"_field": "n"}}}},
     "all": {"_sum": {"_field": "n"}},
     "most": {"_max": {"_field": "n"}},
 }
@@ -138,12 +138,21 @@ def check() -> None:
                 path = "/" + ",".join(f"wi{i}" for i in range(width)) + "/"
                 status, raw = call("SEARCH", path, body)
                 results[tag][f"{label} over {width}"] = normalise(raw) if status == 200 else status
+        peak = metric("xapiand_search_pinned_indexes_peak")
+        print(f"{tag}: batch {batch}, peak indexes held open by searches {peak:.0f}")
+        if peak > batch or peak < min(batch, n):
+            failures.append(f"{tag} peak {peak}")
         stop(node)
     for key, whole in results["all"].items():
         ok = whole == results["batched"][key] and isinstance(whole, dict)
         print(f"{'ok  ' if ok else 'FAIL'} {key}: {whole['total'] if isinstance(whole, dict) else whole} matches")
         if not ok:
             failures.append(key)
+    sample = results["all"][f"aggregations over {n}"]
+    assert isinstance(sample, dict)
+    print(f"sample: first hit {sample['hits'][0]}, aggregations {json.dumps(sample['aggregations'])[:200]}")
+    if not sample["aggregations"] or sample["hits"][0][1] is None:
+        failures.append("the sample has no aggregations or no fields: the comparison would be vacuous")
     cap = 7
     node = start("cap", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
     for width, want in ((cap, 200), (cap + 1, 400)):
