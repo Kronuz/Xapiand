@@ -51,4 +51,4 @@ sync_wait / run_detached / housekeeping    pool.cc:786 / test_pool.cc:1208
 
 ## Blocked on
 
-Nothing.
+1. **`test_node` segfaults on g++-13 Release, with and without this fix** (full Release ctest with the fix: 33 of 34, `test_node` SEGFAULT; same on a plain `-DCMAKE_BUILD_TYPE=Release` build, and on master `Xapiand:ebfb8fdfe`'s `host.h`). It was hidden behind the two hangs. The `xapiand` child the test starts dies in the traceback library's SIGUSR2 collector when the shutdown dumps callstacks: gdb shows `SIGSEGV` in `traceback::collect_callstack_sig_handler` at `traceback.cc:712` (`frame->return_address`, `frame` read from the interrupted thread's context) on an idle `Xapiand:FS00` worker parked in `futex_wait`. Not examined further; it belongs to the traceback library (pinned `7f3d7ba`) or to how Xapiand arms it, and CI will report it as soon as the hangs are gone.
