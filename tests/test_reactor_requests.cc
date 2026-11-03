@@ -671,6 +671,16 @@ static void test_a_task_that_holds_a_view_waits_for_nothing() {
 		}), std::string("a turn"));
 	}
 	{
+		// After an Asio completion too: it resumes the request through its counted scheduler, not inline.
+		Loop loop;
+		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
+			asio::steady_timer timer(loop.reactor.io(), 1ms);
+			(void)co_await task::await_asio<void(asio::error_code)>([&](auto handler) { timer.async_wait(std::move(handler)); });
+			auto view = strata->view();
+			co_await shard.add_document(make("Kw"));
+		}), std::string("a turn"));
+	}
+	{
 		Loop loop;
 		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
 			auto view = strata->view();
