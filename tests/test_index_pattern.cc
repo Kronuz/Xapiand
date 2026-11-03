@@ -58,7 +58,7 @@ void test_match() {
 	CHECK_FALSE(match("a", "ab"));
 	CHECK_FALSE(match("ab", "a"));
 	CHECK_TRUE(match("*", ""));
-	CHECK_TRUE(match("*", "anything/at all"));
+	CHECK_TRUE(match("*", "anything at all"));
 	CHECK_TRUE(match("test*", "test"));
 	CHECK_TRUE(match("test*", "test1"));
 	CHECK_FALSE(match("test*", "tes"));
@@ -73,15 +73,127 @@ void test_match() {
 	CHECK_TRUE(match("a*b*c", "abbc"));
 	CHECK_FALSE(match("a*b*c", "acb"));
 	CHECK_TRUE(match("a**b", "ab"));
-	CHECK_TRUE(match("a*", "a/b"));   // a star crosses the slash of a nested index
 	CHECK_FALSE(match("", "a"));
 	CHECK_TRUE(match("", ""));
+	// A `*` and a `?` stay in one segment of the path.
+	CHECK_FALSE(match("a*", "a/b"));
+	CHECK_FALSE(match("*", "a/b"));
+	CHECK_FALSE(match("*b", "a/b"));
+	CHECK_FALSE(match("a?b", "a/b"));
+	CHECK_TRUE(match("a/*", "a/b"));
+	CHECK_TRUE(match("*/*", "a/b"));
+	CHECK_FALSE(match("a/*", "a/b/c"));
+	CHECK_FALSE(match("a/*", "a"));
+	CHECK_TRUE(match("a*/b*", "ax/by"));
+	CHECK_FALSE(match("a*/b*", "ax/cy"));
+	CHECK_TRUE(match("some-??", "some-ab"));
+	CHECK_FALSE(match("some-??", "some-a"));
+	CHECK_FALSE(match("some-??", "some-abc"));
+	CHECK_TRUE(match("?", "\xc3\xa9"));          // a character is a UTF-8 sequence
+	CHECK_FALSE(match("??", "\xc3\xa9"));
+	CHECK_TRUE(match("*\xc3\xa9?", "x\xc3\xa9y"));
+	CHECK_TRUE(match("a?c", "a\xe2\x82\xac" "c"));
+	// A class is one character of a set.
+	CHECK_TRUE(match("[abc]", "b"));
+	CHECK_FALSE(match("[abc]", "d"));
+	CHECK_FALSE(match("[abc]", "ab"));
+	CHECK_TRUE(match("[a-c]x", "bx"));
+	CHECK_FALSE(match("[a-c]x", "dx"));
+	CHECK_TRUE(match("[!a-c]x", "dx"));
+	CHECK_TRUE(match("[^a-c]x", "dx"));
+	CHECK_FALSE(match("[!a-c]x", "bx"));
+	CHECK_TRUE(match("[]]", "]"));                 // a `]` first is a member
+	CHECK_TRUE(match("[!]]", "a"));
+	CHECK_FALSE(match("[!]]", "]"));
+	CHECK_TRUE(match("[a-]", "-"));                // a `-` last is a member
+	CHECK_TRUE(match("[a-]", "a"));
+	CHECK_TRUE(match("[\xc3\xa0-\xc3\xbf]", "\xc3\xa9"));   // a range of characters
+	CHECK_TRUE(match("a[0-9]*", "a7zz"));
+	CHECK_FALSE(match("a[0-9]*", "az"));
+	CHECK_TRUE(match("[", "["));                   // no closing `]`: a plain `[`
+	CHECK_TRUE(match("a[b", "a[b"));
+	CHECK_FALSE(match("a[b", "ab"));
+	CHECK_TRUE(match("[]", "[]"));
+	CHECK_FALSE(match("[a-c]", "a/c"));            // a class never matches `/`
+	CHECK_TRUE(match("*[0-9]", "ab12"));
+	CHECK_FALSE(match("*[0-9]", "ab12x"));
+	// `**` is a whole segment of any number of segments (none included); inside a segment it is a `*`.
+	CHECK_TRUE(match("**", "a"));
+	CHECK_TRUE(match("**", "a/b/c"));
+	CHECK_TRUE(match("**/some-??", "some-ab"));
+	CHECK_TRUE(match("**/some-??", "x/some-ab"));
+	CHECK_TRUE(match("**/some-??", "x/y/z/some-ab"));
+	CHECK_FALSE(match("**/some-??", "some-abc"));
+	CHECK_FALSE(match("**/some-??", "some-ab/x"));
+	CHECK_TRUE(match("a/**", "a"));
+	CHECK_TRUE(match("a/**", "a/b"));
+	CHECK_TRUE(match("a/**", "a/b/c"));
+	CHECK_FALSE(match("a/**", "b/a"));
+	CHECK_FALSE(match("a/**", "ab"));
+	CHECK_TRUE(match("a/**/b", "a/b"));
+	CHECK_TRUE(match("a/**/b", "a/x/y/b"));
+	CHECK_FALSE(match("a/**/b", "a/x/y/c"));
+	CHECK_FALSE(match("a/**/b", "a/x/y/b/c"));
+	CHECK_TRUE(match("a**b", "aXb"));
+	CHECK_FALSE(match("a**b", "a/b"));
+	CHECK_TRUE(match("abc-*", "abc-x"));
+	CHECK_FALSE(match("abc-*", "d/abc-x"));       // one level
+	// More than one `**`.
+	CHECK_TRUE(match("**/some-*/**/nested-??", "some-1/nested-ab"));
+	CHECK_TRUE(match("**/some-*/**/nested-??", "x/some-1/y/z/nested-ab"));
+	CHECK_TRUE(match("**/some-*/**/nested-??", "x/some-1/some-2/nested-ab"));
+	CHECK_FALSE(match("**/some-*/**/nested-??", "x/other/nested-ab"));
+	CHECK_FALSE(match("**/some-*/**/nested-??", "some-1/nested-abc"));
+	CHECK_FALSE(match("**/some-*/**/nested-??", "nested-ab/some-1"));
+	CHECK_TRUE(match("**/a/**/b/**", "a/b"));
+	CHECK_TRUE(match("**/a/**/b/**", "x/a/y/b/z"));
+	CHECK_FALSE(match("**/a/**/b/**", "b/a"));
+	CHECK_TRUE(match("**/**/**/a", "a"));
+	CHECK_TRUE(match("**/**/**/a", "x/y/a"));
+	CHECK_FALSE(match("**/**/**/a", "x/y/b"));
+	// The names: `_all` is `**`, and a `?` or a class makes a pattern.
 	CHECK_TRUE(index_pattern::is_wildcard("_all"));
 	CHECK_TRUE(index_pattern::is_wildcard("a*"));
+	CHECK_TRUE(index_pattern::is_wildcard("a?"));
+	CHECK_TRUE(index_pattern::is_wildcard("a[bc]"));
+	CHECK_TRUE(index_pattern::is_wildcard("**"));
 	CHECK_FALSE(index_pattern::is_wildcard("a"));
+	CHECK_FALSE(index_pattern::is_wildcard("a[b"));      // no closing `]`
+	CHECK_FALSE(index_pattern::is_wildcard("a[]"));
 	CHECK_FALSE(index_pattern::is_wildcard("_allx"));
+	CHECK_FALSE(index_pattern::is_wildcard("a/b"));
 	// A pattern built to make a matcher backtrack: bounded by the pattern's size, so it ends.
 	CHECK_FALSE(match(std::string(100, 'a') + std::string("*a*a*a*a*a*a*b"), std::string(2000, 'a')));
+}
+
+// `**` is a loop of an automaton over the segments, never a backtrack: the work for a path is its segments times the
+// pattern's, however many `**` the pattern holds.
+void test_many_globstars_stay_linear() {
+	std::string deep = "x";
+	for (int i = 0; i < 1999; ++i) {
+		deep += "/x";
+	}
+	for (const std::string pattern : {"**/**/**/a", "**/*/**/*/**/*/**/*/**/a", "**/x/**/x/**/x/**/x/**/x/**/x/**/x/**/x/b", "**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/**/a"}) {
+		std::size_t steps = 0;
+		CHECK_FALSE(match(pattern, deep, steps));
+		std::size_t segments = 1;
+		for (char c : pattern) {
+			segments += c == '/';
+		}
+		CHECK_LE(steps, std::size_t{2000} * (segments + 2) * 4);      // segments of the path x segments of the pattern, a few steps each
+		CHECK_GE(steps, std::size_t{2000});
+	}
+	std::size_t steps = 0;
+	CHECK_TRUE(match("**/**/**/a", deep + "/a", steps));
+	CHECK_LE(steps, std::size_t{2000} * 12);
+	// Many `**` are one: `**/**` is `**`.
+	steps = 0;
+	CHECK_FALSE(match("**/**/**/**/**/**/**/**/**/**/**/**/a", deep, steps));
+	CHECK_LE(steps, std::size_t{2000} * 8);
+	// A segment that backtracks is still bounded by its length times the name's.
+	steps = 0;
+	CHECK_FALSE(match("**/*a*a*a*a*a*a*b/**", std::string(200, 'a'), steps));
+	CHECK_LE(steps, std::size_t{200} * 40);
 }
 
 // A node's data directory: a1 (one shard), a2 (shards 1 and 2), a3 (only shard 3), b1, c/d1, c/d2, a stray
@@ -100,6 +212,12 @@ struct Tree {
 
 using Names = std::vector<std::string>;
 
+std::size_t reads(const std::string& root, const Names& items, std::size_t visits = 1000) {
+	std::size_t calls = 0;
+	expand(root, items, {100, visits}, [&] { ++calls; });
+	return calls;
+}
+
 Names names(const Tree& tree, const Names& items, std::size_t limit = 100, std::size_t visits = 1000) {
 	return expand(tree.root, items, {limit, visits});
 }
@@ -108,15 +226,21 @@ void test_expand() {
 	Tree tree;
 	const Names all = {"a1", "a2", "a3", "b1", "c/d1", "c/d2"};
 	CHECK_TRUE(names(tree, {"_all"}) == all);
-	CHECK_TRUE(names(tree, {"*"}) == all);
+	CHECK_TRUE(names(tree, {"*"}) == (Names{"a1", "a2", "a3", "b1"}));   // one segment: c is no index
 	CHECK_TRUE(names(tree, {"a*"}) == (Names{"a1", "a2", "a3"}));
-	CHECK_TRUE(names(tree, {"*1"}) == (Names{"a1", "b1", "c/d1"}));
-	CHECK_TRUE(names(tree, {"*d*"}) == (Names{"c/d1", "c/d2"}));
+	CHECK_TRUE(names(tree, {"*1"}) == (Names{"a1", "b1"}));
+	CHECK_TRUE(names(tree, {"**/*1"}) == (Names{"a1", "b1", "c/d1"}));
+	CHECK_TRUE(names(tree, {"*d*"}).empty());                         // a star stays in its segment: c is no index
+	CHECK_TRUE(names(tree, {"**/*d*"}) == (Names{"c/d1", "c/d2"}));
 	CHECK_TRUE(names(tree, {"c/*"}) == (Names{"c/d1", "c/d2"}));
-	CHECK_TRUE(names(tree, {"c*"}) == (Names{"c/d1", "c/d2"}));
+	CHECK_TRUE(names(tree, {"c*"}).empty());
+	CHECK_TRUE(names(tree, {"c/**"}) == (Names{"c/d1", "c/d2"}));
+	CHECK_TRUE(names(tree, {"c/d?"}) == (Names{"c/d1", "c/d2"}));
+	CHECK_TRUE(names(tree, {"c/d[1]"}) == (Names{"c/d1"}));
 	CHECK_TRUE(names(tree, {"a*", "-a2"}) == (Names{"a1", "a3"}));
 	CHECK_TRUE(names(tree, {"-a2", "a*"}) == (Names{"a1", "a3"}));   // an exclusion applies wherever it stands
 	CHECK_TRUE(names(tree, {"_all", "-a*", "-c/*"}) == (Names{"b1"}));
+	CHECK_TRUE(names(tree, {"_all", "-**/d?"}) == (Names{"a1", "a2", "a3", "b1"}));
 	CHECK_TRUE(names(tree, {"b1", "a*", "b*"}) == (Names{"a1", "a2", "a3", "b1"}));   // sorted, no repeats
 	CHECK_TRUE(names(tree, {"zzz", "a1"}) == (Names{"a1", "zzz"}));   // a plain name stands for itself, there or not
 	CHECK_TRUE(names(tree, {"zzz", "-zzz"}).empty());
@@ -133,7 +257,7 @@ void test_the_limit() {
 	Tree tree;
 	CHECK_EQ(names(tree, {"_all"}, 6).size(), std::size_t{6});
 	CHECK_THROW(names(tree, {"_all"}, 5), engine::Error);
-	CHECK_THROW(names(tree, {"a*", "b*", "c*"}, 5), engine::Error);
+	CHECK_THROW(names(tree, {"a*", "b*", "c/*"}, 5), engine::Error);
 	CHECK_EQ(names(tree, {"_all", "-c/*"}, 4).size(), std::size_t{4});   // the names removed do not count as names
 	CHECK_THROW(names(tree, {"x1", "x2", "x3"}, 2), engine::Error);
 	try {
@@ -221,10 +345,28 @@ void test_the_matching_is_bounded() {
 	fs::remove_all("pattern_long_root");
 	std::size_t steps = 0;
 	CHECK_TRUE(match("abc", "abc", steps));
-	CHECK_EQ(steps, std::size_t{3});   // a step a byte of the name
+	CHECK_EQ(steps, std::size_t{4});   // a step for the position and a step a byte of the name
 	steps = 0;
 	CHECK_FALSE(match(std::string(100, 'a') + "b", std::string(100, 'a') + "c", steps));
 	CHECK_TRUE(steps >= 100);
+}
+
+// SR1: the entries a directory holds are read, and counted, to decide whether it is an index.
+void test_the_entries_of_a_candidate_are_counted() {
+	fs::remove_all("pattern_entries_root");
+	const std::string root = "pattern_entries_root/";
+	fs::create_directories(root + "box");
+	for (int i = 0; i < 40; ++i) {
+		std::ofstream(root + "box/f" + std::to_string(i)) << "x";
+	}
+	// `bo*` reads `box` (1) and the 40 entries that show it is no index (40).
+	CHECK_THROW(expand(root, Names{"bo*"}, {100, 40}), engine::Error);
+	CHECK_TRUE(expand(root, Names{"bo*"}, {100, 41}).empty());
+	CHECK_EQ(reads(root, {"bo*"}), std::size_t{41});
+	// A pattern that goes into the directory reads its entries once.
+	CHECK_EQ(reads(root, {"**"}), std::size_t{41});
+	CHECK_EQ(reads(root, {"**/zz"}), std::size_t{41});
+	fs::remove_all("pattern_entries_root");
 }
 
 // SR1: one walk serves all the patterns; the entries read do not depend on how many patterns there are.
@@ -285,188 +427,138 @@ void test_equal_items_count_once() {
 	CHECK_THROW(names(tree, {"a*"}, 2), engine::Error);
 }
 
-// SR2: index paths do not nest.
-void test_index_paths_do_not_nest() {
-	Tree tree;
-	const auto refused = [&](const std::string& path) {
+// A node's data directory with indexes inside indexes: `twitter` holds `twitter/user` (which holds `twitter/user/lists`)
+// and a sharded `twitter/tweet`; `tenant` is no index, `tenant/a` and `tenant/b` are; logs three levels down; and
+// indexes at several depths for the `**` patterns. 7 entries at the top, 37 in all.
+struct Nested {
+	std::string root = "pattern_nested_root/";
+	Nested() {
+		fs::remove_all(root);
+		for (const char* index : {"twitter/strata", "twitter/user/strata", "twitter/user/lists/strata", "twitter/tweet/.__1/strata",
+				"twitter/tweet/.__2/strata", "twitter/.hid/strata", "tenant/a/strata", "tenant/b/strata", "logs/2026/jan/strata",
+				"logs/2026/feb/strata", "logs/2025/jan/strata", "some-ab/strata", "deep/x/y/some-cd/strata",
+				"deep/some-ef/mid/nested-xy/strata", ".hid/strata"}) {
+			fs::create_directories(root + index);
+		}
+		std::ofstream(root + "afile") << "x";
+	}
+	~Nested() { fs::remove_all(root); }
+};
+
+Names nested_names(const Nested& tree, const Names& items) {
+	return expand(tree.root, items, {100, 1000});
+}
+
+// An index may hold indexes: the walk goes into an index directory too and lists its children as indexes.
+void test_nested_indexes_are_listed() {
+	Nested tree;
+	const Names every = {"deep/some-ef/mid/nested-xy", "deep/x/y/some-cd", "logs/2025/jan", "logs/2026/feb", "logs/2026/jan", "some-ab",
+		"tenant/a", "tenant/b", "twitter", "twitter/tweet", "twitter/user", "twitter/user/lists"};
+	CHECK_TRUE(nested_names(tree, {"_all"}) == every);
+	CHECK_TRUE(nested_names(tree, {"**"}) == every);
+	CHECK_TRUE(nested_names(tree, {"*"}) == (Names{"some-ab", "twitter"}));            // one segment, the parent only
+	CHECK_TRUE(nested_names(tree, {"twitter*"}) == (Names{"twitter"}));
+	CHECK_TRUE(nested_names(tree, {"twitter/*"}) == (Names{"twitter/tweet", "twitter/user"}));
+	CHECK_TRUE(nested_names(tree, {"twitter/**"}) == (Names{"twitter", "twitter/tweet", "twitter/user", "twitter/user/lists"}));
+	CHECK_TRUE(nested_names(tree, {"twitter/*/*"}) == (Names{"twitter/user/lists"}));
+	CHECK_TRUE(nested_names(tree, {"**/user"}) == (Names{"twitter/user"}));
+	CHECK_TRUE(nested_names(tree, {"**/some-??"}) == (Names{"deep/x/y/some-cd", "some-ab"}));   // deep/some-ef is no index
+	CHECK_TRUE(nested_names(tree, {"**/some-*/**/nested-??"}) == (Names{"deep/some-ef/mid/nested-xy"}));
+	CHECK_TRUE(nested_names(tree, {"**/some-*/**/*-??"}) == (Names{"deep/some-ef/mid/nested-xy"}));
+	CHECK_TRUE(nested_names(tree, {"logs/2026/*"}) == (Names{"logs/2026/feb", "logs/2026/jan"}));
+	CHECK_TRUE(nested_names(tree, {"**/jan"}) == (Names{"logs/2025/jan", "logs/2026/jan"}));
+	CHECK_TRUE(nested_names(tree, {"**/[ab]"}) == (Names{"tenant/a", "tenant/b"}));
+	CHECK_TRUE(nested_names(tree, {"tenant/[!a]"}) == (Names{"tenant/b"}));
+	CHECK_TRUE(nested_names(tree, {"tenant"}) == (Names{"tenant"}));                   // a name stands for itself, index or not
+	CHECK_TRUE(nested_names(tree, {"tenant*"}).empty());                                // tenant holds indexes and is none
+	CHECK_TRUE(nested_names(tree, {"**", "-twitter/**"}) == (Names{"deep/some-ef/mid/nested-xy", "deep/x/y/some-cd", "logs/2025/jan", "logs/2026/feb", "logs/2026/jan", "some-ab", "tenant/a", "tenant/b"}));
+	CHECK_TRUE(nested_names(tree, {"twitter*", "twitter/user/*"}) == (Names{"twitter", "twitter/user/lists"}));
+	CHECK_TRUE(nested_names(tree, {"**/.hid"}).empty());                                // the node's own are not listed, nested or not
+	CHECK_TRUE(nested_names(tree, {"**/strata"}).empty());                              // the engine's directories are not indexes
+	CHECK_TRUE(nested_names(tree, {"**/.__?"}).empty());
+	CHECK_TRUE(nested_names(tree, {"twitter/tweet/**"}) == (Names{"twitter/tweet"}));
+	CHECK_TRUE(nested_names(tree, {"**/**/**/a"}) == (Names{"tenant/a"}));
+}
+
+// SR2: creating an index never hides the indexes below it: the walk goes into an index directory.
+void test_an_index_does_not_hide_the_ones_below_it() {
+	Nested tree;
+	fs::create_directories(tree.root + "tenant/strata");            // `PUT /tenant/d`: tenant is an index now
+	CHECK_TRUE(nested_names(tree, {"tenant/**"}) == (Names{"tenant", "tenant/a", "tenant/b"}));
+	CHECK_TRUE(nested_names(tree, {"tenant*"}) == (Names{"tenant"}));
+	CHECK_TRUE(nested_names(tree, {"**/[ab]"}) == (Names{"tenant/a", "tenant/b"}));
+	// Five shards instead of one: the same.
+	fs::remove_all(tree.root + "tenant/strata");
+	for (int shard = 1; shard <= 5; ++shard) {
+		fs::create_directories(tree.root + "tenant/.__" + std::to_string(shard) + "/strata");
+	}
+	CHECK_TRUE(nested_names(tree, {"tenant/**"}) == (Names{"tenant", "tenant/a", "tenant/b"}));
+	// A child named `strata` is the engine's own directory of the index: it is not a nested index (and hides nothing else).
+	fs::create_directories(tree.root + "tenant/strata/strata");
+	CHECK_TRUE(nested_names(tree, {"tenant/**"}) == (Names{"tenant", "tenant/a", "tenant/b"}));
+	// At the top, `strata` is an ordinary name: an index called so is listed.
+	fs::create_directories(tree.root + "strata/strata");
+	CHECK_TRUE(nested_names(tree, {"strata"}) == (Names{"strata"}));
+	CHECK_TRUE(nested_names(tree, {"stra*"}) == (Names{"strata"}));
+	CHECK_EQ(nested_names(tree, {"**"}).size(), std::size_t{14});
+	fs::remove_all(tree.root + "strata");
+	// A name that is a prefix of another's: both are indexes, and each pattern finds what its segments say.
+	fs::create_directories(tree.root + "twitter2/strata");
+	CHECK_TRUE(nested_names(tree, {"twitter*"}) == (Names{"twitter", "twitter2"}));
+	CHECK_TRUE(nested_names(tree, {"twitter/**"}) == (Names{"twitter", "twitter/tweet", "twitter/user", "twitter/user/lists"}));
+}
+
+// The walk goes into a directory only while a pattern can still match below it, and counts every entry it reads.
+void test_the_walk_goes_only_where_a_pattern_can_match() {
+	Nested tree;
+	CHECK_EQ(reads(tree.root, {"_all"}), std::size_t{37});                  // every entry of the tree, the index directories' too
+	CHECK_EQ(reads(tree.root, {"twitter*"}), std::size_t{7});               // the top level only
+	CHECK_EQ(reads(tree.root, {"logs/2026/*"}), std::size_t{7 + 2 + 2});    // the top, logs, logs/2026: no other directory
+	CHECK_EQ(reads(tree.root, {"twitter/*"}), std::size_t{7 + 4});          // the top, twitter
+	CHECK_EQ(reads(tree.root, {"twitter/user/*"}), std::size_t{7 + 4 + 2});
+	CHECK_EQ(reads(tree.root, {"**/some-??"}), std::size_t{37});            // a `**` goes everywhere
+	CHECK_EQ(reads(tree.root, {"logs/2026/*", "twitter/*"}), std::size_t{7 + 2 + 2 + 4});   // one walk for both
+	CHECK_EQ(reads(tree.root, {"nomatch/*"}), std::size_t{7});
+	// The budget counts all of those, at every depth: 36 entries pass, 37 do not.
+	CHECK_THROW(expand(tree.root, Names{"_all"}, {100, 36}), engine::Error);
+	CHECK_EQ(expand(tree.root, Names{"_all"}, {100, 37}).size(), std::size_t{12});
+	CHECK_THROW(expand(tree.root, Names{"_all", "-_all"}, {100, 36}), engine::Error);
+	CHECK_THROW(expand(tree.root, Names{"logs/2026/*"}, {100, 10}), engine::Error);
+	CHECK_EQ(expand(tree.root, Names{"logs/2026/*"}, {100, 11}).size(), std::size_t{2});
+}
+
+// SR1: nesting does not let a tree escape the budget: a deep chain and a wide one are read for at most the budget.
+void test_a_deep_tree_stays_within_the_budget() {
+	fs::remove_all("pattern_deep_root");
+	std::string path = "pattern_deep_root";
+	for (int depth = 0; depth < 60; ++depth) {
+		path += "/d";
+		fs::create_directories(path + "/strata");     // an index inside an index, 60 deep
+	}
+	for (std::size_t budget : {10u, 59u, 100u}) {
+		std::size_t calls = 0;
 		try {
-			index_pattern::check_new_index(tree.root, path, 1000);
-			return false;
-		} catch (const engine::Error& error) {
-			return error.kind == engine::errc::invalid;
+			expand("pattern_deep_root/", Names{"_all"}, {1000, budget}, [&] { ++calls; });
+		} catch (const engine::Error&) {
 		}
-	};
-	CHECK_TRUE(refused("c"));            // c holds the indexes c/d1 and c/d2
-	CHECK_TRUE(refused("a1/x"));         // below the index a1
-	CHECK_TRUE(refused("a2/x/y"));       // ... any depth, and a2 has shards
-	CHECK_TRUE(refused("c/d1/x"));
-	CHECK_TRUE(refused("c/strata"));     // makes c look like an index
-	CHECK_TRUE(refused("e/.__1"));
-	CHECK_TRUE(refused("e/.__x/y"));
-	CHECK_TRUE(refused("n/strata/x"));
-	CHECK_FALSE(refused("a1"));          // an existing index is itself
-	CHECK_FALSE(refused("c/d3"));        // next to others
-	CHECK_FALSE(refused("e"));           // a directory with no index below
-	CHECK_FALSE(refused("e/f"));
-	CHECK_FALSE(refused("new"));
-	CHECK_FALSE(refused("strata"));      // as a first name it is an ordinary index
-	CHECK_FALSE(refused("a1x/y"));
-	// The directory below is read for at most the budget; a bigger one is refused, it is not assumed empty.
-	Wide wide(50);
-	fs::create_directories(wide.root + "box");
+		CHECK_LE(calls, budget);
+	}
+	CHECK_THROW(expand("pattern_deep_root/", Names{"_all"}, {1000, 119}), engine::Error);   // 60 `d` and 60 `strata`, minus the last d's ... 120 entries
+	CHECK_EQ(expand("pattern_deep_root/", Names{"_all"}, {1000, 120}).size(), std::size_t{60});
+	CHECK_EQ(expand("pattern_deep_root/", Names{"**/d"}, {1000, 120}).size(), std::size_t{60});
+	// A fan-out of 30 under 30: 930 directories.
+	fs::remove_all("pattern_deep_root");
 	for (int i = 0; i < 30; ++i) {
-		fs::create_directories(wide.root + "box/e" + std::to_string(i));
-	}
-	index_pattern::check_new_index(wide.root, "box", 1000);
-	CHECK_THROW(index_pattern::check_new_index(wide.root, "box", 10), engine::Error);
-}
-
-
-// SR10: the parents of a new index are read for at most the budget, all of them together.
-void test_the_parents_are_read_within_a_budget() {
-	fs::remove_all("pattern_parents_root");
-	const std::string root = "pattern_parents_root/";
-	for (const char* box : {"big", "big/mid"}) {
-		for (int i = 0; i < 30; ++i) {
-			fs::create_directories(root + box + "/e" + std::to_string(i));   // directories that are no index
+		for (int j = 0; j < 30; ++j) {
+			fs::create_directories("pattern_deep_root/i" + std::to_string(i) + "/j" + std::to_string(j) + "/strata");
 		}
+		fs::create_directories("pattern_deep_root/i" + std::to_string(i) + "/strata");
 	}
-	// `big` and `big/mid` hold 31 and 30 entries (mid is one of big's 31).
-	index_pattern::check_new_index(root, "big/mid/new", 1000);
-	CHECK_THROW(index_pattern::check_new_index(root, "big/new", 30), engine::Error);
-	index_pattern::check_new_index(root, "big/new", 31);
-	CHECK_THROW(index_pattern::check_new_index(root, "big/mid/new", 60), engine::Error);   // the parents share the budget
-	index_pattern::check_new_index(root, "big/mid/new", 61);
-	try {
-		index_pattern::check_new_index(root, "big/new", 5);
-	} catch (const engine::Error& error) {
-		CHECK_EQ(error.kind, engine::errc::invalid);
-		CHECK_TRUE(error.description().find("too many entries") != std::string::npos);
-	}
-	fs::remove_all("pattern_parents_root");
-}
-
-// SR1: the entries a directory holds are read, and counted, to decide whether it is an index.
-void test_the_entries_of_a_candidate_are_counted() {
-	fs::remove_all("pattern_entries_root");
-	const std::string root = "pattern_entries_root/";
-	fs::create_directories(root + "box");
-	for (int i = 0; i < 40; ++i) {
-		std::ofstream(root + "box/f" + std::to_string(i)) << "x";
-	}
-	// `bo*` reads `box` (1), the 40 entries that show it is no index (40), and the 40 again as it looks below it.
-	CHECK_THROW(expand(root, Names{"bo*"}, {100, 80}), engine::Error);
-	CHECK_TRUE(expand(root, Names{"bo*"}, {100, 81}).empty());
 	std::size_t calls = 0;
-	CHECK_TRUE(expand(root, Names{"bo*"}, {100, 81}, [&] { ++calls; }).empty());
-	CHECK_EQ(calls, std::size_t{81});
-	fs::remove_all("pattern_entries_root");
-}
-
-// SR9: the check once the directory is made. Two creates that raced past the first check find each other here.
-void test_a_created_index_is_checked_again() {
-	Tree tree;
-	const auto abs = fs::absolute(tree.root).string();
-	const auto refused = [&](const std::string& shard_path) {
-		try {
-			index_pattern::check_created(abs, abs + shard_path, 1000);
-			return false;
-		} catch (const engine::Error& error) {
-			return error.kind == engine::errc::invalid;
-		}
-	};
-	fs::create_directories(tree.root + "a1/x/strata");       // made below the index a1
-	CHECK_TRUE(refused("a1/x"));
-	fs::create_directories(tree.root + "n/strata");          // made above n/m
-	fs::create_directories(tree.root + "n/m/strata");
-	CHECK_TRUE(refused("n"));
-	CHECK_TRUE(refused("n/m/"));                              // ... and n/m sees n from below
-	fs::create_directories(tree.root + "s/.__2/strata");     // a shard of s, with an index s/t beside it
-	fs::create_directories(tree.root + "s/t/strata");
-	CHECK_TRUE(refused("s/.__2"));
-	CHECK_TRUE(refused("s/t"));
-	fs::create_directories(tree.root + "ok/strata");         // alone
-	CHECK_FALSE(refused("ok"));
-	fs::create_directories(tree.root + "okd/.__1/strata");
-	CHECK_FALSE(refused("okd/.__1"));
-	CHECK_FALSE(refused("c/d1"));                            // next to c/d2
-	index_pattern::check_created(abs, "/elsewhere/a1/x", 1000);   // not under the data directory: not checked
-	CHECK_THROW(index_pattern::check_created(abs, "a1/x", 1000), engine::Error);   // relative: from the data directory
-	// A directory that is no index and holds more entries than the budget is refused, not assumed empty.
-	for (int i = 0; i < 30; ++i) {
-		fs::create_directories(tree.root + "box/e" + std::to_string(i));
-	}
-	fs::create_directories(tree.root + "box/strata");
-	CHECK_THROW(index_pattern::check_created(abs, abs + "box", 10), engine::Error);
-}
-
-engine::OpenOptions checked_creation(const std::string& root) {
-	engine::OpenOptions options;
-	options.on_create = [root](const std::string& path) { index_pattern::check_created(root, path, 1000); };
-	return options;
-}
-
-bool created(const std::string& root, const std::string& name) {
-	try {
-		engine::sync_wait(engine::open_local(root + name, true, true, checked_creation(root)));
-		return true;
-	} catch (const engine::Error& error) {
-		CHECK_EQ(error.kind, engine::errc::invalid);
-		return false;
-	}
-}
-
-// SR9: the engine makes the directory and checks again: a create that finds a nested index takes its directory back and
-// leaves what others made.
-void test_a_creation_that_nests_takes_its_directory_back() {
-	fs::remove_all("pattern_create_root");
-	fs::create_directories("pattern_create_root");
-	const auto root = fs::absolute("pattern_create_root").string() + "/";
-	CHECK_TRUE(created(root, "a"));
-	CHECK_FALSE(created(root, "a/b"));                        // below an index
-	CHECK_FALSE(fs::exists(root + "a/b"));                    // ... and nothing of it is left
-	CHECK_TRUE(fs::exists(root + "a/strata"));
-	CHECK_TRUE(created(root, "c/d"));
-	CHECK_FALSE(created(root, "c"));                          // above an index
-	CHECK_FALSE(fs::exists(root + "c/strata"));
-	CHECK_TRUE(fs::exists(root + "c/d/strata"));              // the one that was there is intact
-	CHECK_TRUE(created(root, "e/f/g"));
-	CHECK_FALSE(created(root, "e/f"));
-	CHECK_TRUE(fs::exists(root + "e/f/g/strata"));
-	fs::create_directories(root + "w/pre");                   // an empty directory that was there stays
-	CHECK_TRUE(created(root, "w"));
-	CHECK_FALSE(created(root, "w/pre/x"));
-	CHECK_TRUE(fs::exists(root + "w/pre"));
-	CHECK_FALSE(fs::exists(root + "w/pre/x"));
-	CHECK_FALSE(created(root, "w/n1/n2"));                    // the directories it made on the way go too
-	CHECK_FALSE(fs::exists(root + "w/n1"));
-	CHECK_TRUE(fs::exists(root + "w/strata"));
-	fs::remove_all("pattern_create_root");
-}
-
-// SR9: the pair of creates of nest2.py, at once: never both stand.
-void test_concurrent_creates_never_nest() {
-	fs::remove_all("pattern_race_root");
-	fs::create_directories("pattern_race_root");
-	const auto root = fs::absolute("pattern_race_root").string() + "/";
-	int both = 0, neither = 0;
-	for (int i = 0; i < 150; ++i) {
-		const auto parent = "r" + std::to_string(i);
-		std::atomic<int> go{0};
-		bool parent_made = false, child_made = false;
-		std::thread one([&] { go.fetch_add(1); while (go.load() < 2) { } parent_made = created(root, parent); });
-		std::thread two([&] { go.fetch_add(1); while (go.load() < 2) { } child_made = created(root, parent + "/b"); });
-		one.join();
-		two.join();
-		both += parent_made && child_made;
-		neither += !parent_made && !child_made;
-		// What stands is what the answers said, and no index is inside another.
-		CHECK_EQ(fs::exists(root + parent + "/strata"), parent_made);
-		CHECK_EQ(fs::exists(root + parent + "/b/strata"), child_made);
-	}
-	CHECK_EQ(both, 0);
-	CHECK_EQ(neither, 0);   // the checks are serialised: one of the pair stands
-	fs::remove_all("pattern_race_root");
+	CHECK_THROW(expand("pattern_deep_root/", Names{"_all", "-_all"}, {10000, 500}, [&] { ++calls; }), engine::Error);
+	CHECK_EQ(calls, std::size_t{500});
+	CHECK_EQ(expand("pattern_deep_root/", Names{"i*/j1*"}, {10000, 2000}).size(), std::size_t{30 * 11});
+	fs::remove_all("pattern_deep_root");
 }
 
 // The gate of the walks.
@@ -619,6 +711,7 @@ int main(int argc, char** argv) {
 	struct TestCase { const char* name; void (*fn)(); };
 	const TestCase cases[] = {
 		{"test_match", test_match},
+		{"test_many_globstars_stay_linear", test_many_globstars_stay_linear},
 		{"test_expand", test_expand},
 		{"test_the_limit", test_the_limit},
 		{"test_the_walk_is_bounded", test_the_walk_is_bounded},
@@ -627,12 +720,11 @@ int main(int argc, char** argv) {
 		{"test_the_patterns_are_bounded", test_the_patterns_are_bounded},
 		{"test_the_walk_can_be_cancelled", test_the_walk_can_be_cancelled},
 		{"test_equal_items_count_once", test_equal_items_count_once},
-		{"test_index_paths_do_not_nest", test_index_paths_do_not_nest},
-		{"test_the_parents_are_read_within_a_budget", test_the_parents_are_read_within_a_budget},
+		{"test_nested_indexes_are_listed", test_nested_indexes_are_listed},
+		{"test_an_index_does_not_hide_the_ones_below_it", test_an_index_does_not_hide_the_ones_below_it},
+		{"test_the_walk_goes_only_where_a_pattern_can_match", test_the_walk_goes_only_where_a_pattern_can_match},
+		{"test_a_deep_tree_stays_within_the_budget", test_a_deep_tree_stays_within_the_budget},
 		{"test_the_entries_of_a_candidate_are_counted", test_the_entries_of_a_candidate_are_counted},
-		{"test_a_created_index_is_checked_again", test_a_created_index_is_checked_again},
-		{"test_a_creation_that_nests_takes_its_directory_back", test_a_creation_that_nests_takes_its_directory_back},
-		{"test_concurrent_creates_never_nest", test_concurrent_creates_never_nest},
 		{"test_the_walk_queue_is_bounded", test_the_walk_queue_is_bounded},
 		{"test_a_walk_waits_for_the_deadline_at_most", test_a_walk_waits_for_the_deadline_at_most},
 		{"test_a_walk_that_is_cancelled_gives_its_place_back", test_a_walk_that_is_cancelled_gives_its_place_back},

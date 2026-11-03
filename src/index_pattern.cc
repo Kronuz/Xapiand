@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 
 #include <algorithm>               // for std::sort, std::unique, std::any_of
+#include <cstdint>                 // for std::uint32_t
 #include <iterator>                // for std::make_move_iterator
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::to_string
@@ -66,8 +67,204 @@ is_directory(const std::string& path, bool follow = true)
 	return (follow ? ::stat(path.c_str(), &st) : ::lstat(path.c_str(), &st)) == 0 && S_ISDIR(st.st_mode);
 }
 
-// Whether a directory is an index: it holds `strata` (an index of one shard) or a shard `.__N`, which may be any
-// of the node's shards of the index. `entry()` is called for each entry it reads.
+// The length of the character at `s[i]`: a well-formed UTF-8 sequence, else the one byte.
+std::size_t
+unit(std::string_view s, std::size_t i) noexcept
+{
+	const auto c = static_cast<unsigned char>(s[i]);
+	const std::size_t len = c < 0x80 ? 1 : (c >= 0xc2 && c <= 0xdf) ? 2 : (c >= 0xe0 && c <= 0xef) ? 3 : (c >= 0xf0 && c <= 0xf4) ? 4 : 1;
+	if (i + len > s.size()) {
+		return 1;
+	}
+	for (std::size_t k = 1; k < len; ++k) {
+		if ((static_cast<unsigned char>(s[i + k]) & 0xc0) != 0x80) {
+			return 1;
+		}
+	}
+	return len;
+}
+
+std::uint32_t
+code(std::string_view s, std::size_t i, std::size_t len) noexcept
+{
+	const auto c = static_cast<unsigned char>(s[i]);
+	if (len == 1) {
+		return c;
+	}
+	std::uint32_t cp = c & (0xff >> (len + 1));
+	for (std::size_t k = 1; k < len; ++k) {
+		cp = (cp << 6) | (static_cast<unsigned char>(s[i + k]) & 0x3f);
+	}
+	return cp;
+}
+
+// Whether the character `cp` is a member of the class `pattern[open, end)` (`[`, members, `]`).
+bool
+in_class(std::string_view pattern, std::size_t open, std::size_t end, std::uint32_t cp, std::size_t& steps) noexcept
+{
+	std::size_t i = open + 1;
+	const std::size_t close = end - 1;
+	bool negated = false;
+	if (pattern[i] == '!' || pattern[i] == '^') {
+		negated = true;
+		++i;
+	}
+	bool found = false;
+	while (i < close) {
+		++steps;
+		auto len = unit(pattern, i);
+		const auto lo = code(pattern, i, len);
+		auto hi = lo;
+		i += len;
+		if (i + 1 < close && pattern[i] == '-') {
+			len = unit(pattern, i + 1);
+			hi = code(pattern, i + 1, len);
+			i += 1 + len;
+		}
+		found = found || (lo <= cp && cp <= hi);
+	}
+	return found != negated;
+}
+
+// Whether `name` is a segment `pattern` (one segment, no `/`) stands for: the two-pointer match, remembering the last
+// `*` to retry from, so it never takes more than the pattern's length times the name's.
+bool
+match_segment(std::string_view pattern, std::string_view name, std::size_t& steps) noexcept
+{
+	constexpr auto none = std::string_view::npos;
+	std::size_t p = 0, n = 0, star = none, mark = 0;
+	while (n < name.size()) {
+		++steps;
+		if (p < pattern.size()) {
+			const char c = pattern[p];
+			if (c == '*') {
+				while (p < pattern.size() && pattern[p] == '*') {
+					++p;
+				}
+				star = p;
+				mark = n;
+				continue;
+			}
+			const auto len = unit(name, n);
+			if (c == '?') {
+				++p;
+				n += len;
+				continue;
+			}
+			if (c == '[') {
+				const auto end = class_end(pattern, p);
+				if (end != none) {
+					steps += end - p;
+					if (in_class(pattern, p, end, code(name, n, len), steps)) {
+						p = end;
+						n += len;
+						continue;
+					}
+					goto retry;
+				}
+			}
+			if (c == name[n]) {
+				++p;
+				++n;
+				continue;
+			}
+		}
+	retry:
+		if (star == none) {
+			return false;
+		}
+		p = star;
+		mark += unit(name, mark);
+		n = mark;
+	}
+	while (p < pattern.size() && pattern[p] == '*') {
+		++p;
+		++steps;
+	}
+	return p == pattern.size();
+}
+
+}  // namespace
+
+
+Glob::Glob(std::string_view pattern)
+{
+	if (pattern.size() > max_pattern_size) {
+		oversize_ = true;
+		return;
+	}
+	for (std::size_t from = 0;;) {
+		const auto cut = pattern.find('/', from);
+		const auto text = pattern.substr(from, cut == std::string_view::npos ? cut : cut - from);
+		const bool globstar = text == "**";
+		if (!(globstar && !segments_.empty() && segments_.back().globstar)) {   // `**/**` is `**`
+			segments_.push_back({text, globstar});
+		}
+		if (cut == std::string_view::npos) {
+			break;
+		}
+		from = cut + 1;
+	}
+}
+
+void
+Glob::add(States& states, std::size_t position) const noexcept
+{
+	states.set(position);
+	while (position < segments_.size() && segments_[position].globstar) {   // a `**` may match no segment
+		states.set(++position);
+	}
+}
+
+Glob::States
+Glob::start() const
+{
+	States states;
+	if (!oversize_) {
+		add(states, 0);
+	}
+	return states;
+}
+
+Glob::States
+Glob::step(const States& from, std::string_view segment, std::size_t& steps) const
+{
+	States next;
+	for (std::size_t i = 0; i < segments_.size(); ++i) {
+		if (!from.test(i)) {
+			continue;
+		}
+		++steps;
+		if (segments_[i].globstar) {
+			add(next, i);
+		} else if (match_segment(segments_[i].text, segment, steps)) {
+			add(next, i + 1);
+		}
+	}
+	return next;
+}
+
+bool
+match(std::string_view pattern, std::string_view name, std::size_t& steps)
+{
+	const Glob glob(pattern);
+	auto states = glob.start();
+	for (std::size_t from = 0; states.any(); ) {
+		const auto cut = name.find('/', from);
+		states = glob.step(states, name.substr(from, cut == std::string_view::npos ? cut : cut - from), steps);
+		if (cut == std::string_view::npos) {
+			return glob.accepts(states);
+		}
+		from = cut + 1;
+	}
+	return false;
+}
+
+
+namespace {
+
+// Whether a directory is an index, for one that is not read for what is in it: it holds `strata` (an index of one shard)
+// or a shard `.__N`, which may be any of the node's shards of the index. `entry()` is called for each entry it reads.
 template <typename Entry>
 bool
 holds_index(const std::string& dir, Entry&& entry)
@@ -92,29 +289,38 @@ holds_index(const std::string& dir, Entry&& entry)
 	return false;
 }
 
-// The indexes under a directory that the wanted patterns match and the excluded ones do not, found in one walk:
-// each entry is tested against every pattern. The walk reads at most `bounds.visits` directory entries, however
-// few of them match, and calls `checkpoint` before each.
+// The indexes under a directory that the wanted patterns match and the excluded ones do not, found in one walk. Each
+// pattern is a Glob, and the walk carries the live positions of every Glob down with the directory it reads: an entry
+// costs a step of each pattern, whatever the tree below, and a directory is entered only while a wanted pattern is live
+// in it. The walk reads at most `bounds.visits` directory entries, in index directories too, however few of them match,
+// and calls `checkpoint` before each.
 class Walk {
 public:
 	Walk(std::span<const std::string> wanted, std::span<const std::string> excluded, const Bounds& bounds, const Checkpoint& checkpoint, std::vector<std::string>& out)
-		: wanted_(wanted), excluded_(excluded), bounds_(bounds), checkpoint_(checkpoint), out_(out)
+		: wanted_count_(wanted.size()), bounds_(bounds), checkpoint_(checkpoint), out_(out)
 	{
-		for (const auto& pattern : wanted_) {
-			literals_.push_back(std::string_view(pattern).substr(0, pattern.find('*')));   // the bytes before its first `*`
+		for (const auto& pattern : wanted) {
+			globs_.emplace_back(pattern);
+		}
+		for (const auto& pattern : excluded) {
+			globs_.emplace_back(pattern);
 		}
 	}
 
-	// With `first_only` the walk stops at the first index it finds.
-	void run(const std::string& dir, const std::string& prefix, bool first_only = false)
+	void run(const std::string& dir)
 	{
-		first_only_ = first_only;
-		scan(dir, prefix);
+		Level start;
+		for (const auto& glob : globs_) {
+			start.push_back(glob.start());
+		}
+		scan(dir, "", start, true);
 	}
 
 	std::size_t visits() const noexcept { return visits_; }
 
 private:
+	using Level = std::vector<Glob::States>;   // the live positions of each pattern, wanted first
+
 	void visit()
 	{
 		if (++visits_ > bounds_.visits || steps_ > bounds_.steps) {
@@ -125,85 +331,107 @@ private:
 		}
 	}
 
-	void scan(const std::string& dir, const std::string& prefix)
+	Level step(const Level& level, std::string_view name)
+	{
+		Level next;
+		next.reserve(level.size());
+		for (std::size_t i = 0; i < level.size(); ++i) {
+			next.push_back(globs_[i].step(level[i], name, steps_));
+		}
+		return next;
+	}
+
+	bool matched(const Level& level) const
+	{
+		bool wanted = false;
+		for (std::size_t i = 0; i < level.size(); ++i) {
+			if (globs_[i].accepts(level[i])) {
+				if (i >= wanted_count_) {
+					return false;
+				}
+				wanted = true;
+			}
+		}
+		return wanted;
+	}
+
+	bool deeper(const Level& level) const
+	{
+		for (std::size_t i = 0; i < wanted_count_; ++i) {
+			if (globs_[i].live(level[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Reads `dir` (`rel` is its index path with a `/`, `level` the state of the patterns after it), lists the indexes it holds
+	// that match and goes into every directory a wanted pattern can still match below, an index's too. Returns whether `dir`
+	// is an index: it holds `strata` or a shard `.__N`. Those two are the engine's own names for the data of the index
+	// and are never taken for a nested index; the rest of the index's directories are its children. The data directory
+	// itself (`top`) is no index: a top-level index may be called `strata`.
+	bool scan(const std::string& dir, const std::string& rel, const Level& level, bool top = false)
 	{
 		DirPtr dirp(::opendir(dir.c_str()));
 		if (!dirp) {
-			return;
+			return false;
 		}
-		std::vector<std::pair<std::string, std::string>> deeper_dirs;   // the directories to look inside, after this one is closed
+		struct Child {
+			std::string name;
+			bool matches;
+		};
+		bool index = false;
+		std::vector<Child> children;   // the directories to look inside or to list, after this one is closed
 		while (const dirent* ent = ::readdir(dirp.get())) {
 			const std::string_view name(ent->d_name);
 			if (name == "." || name == "..") {
 				continue;
 			}
 			visit();
+			if (name == "strata" && !top) {
+				index = index || ent->d_type == DT_DIR || ((ent->d_type == DT_UNKNOWN || ent->d_type == DT_LNK) && is_directory(dir + "/strata"));
+				continue;
+			}
+			if (name.starts_with(".__")) {
+				index = index || ent->d_type != DT_REG;
+				continue;
+			}
 			if (name.empty() || name[0] == '.' || !index_path::valid(name)) {
 				continue;
 			}
 			if (ent->d_type != DT_DIR && (ent->d_type != DT_UNKNOWN || !is_directory(dir + "/" + std::string(name), false))) {
 				continue;
 			}
-			const auto rel = prefix + std::string(name);
-			const bool matched = wanted_match(rel) && !excluded(rel);
-			const bool deeper = below(rel);
-			if (!matched && !deeper) {
-				continue;
-			}
-			auto path = dir + "/" + std::string(name);
-			if (holds_index(path, [this] { visit(); })) {
-				if (matched) {
-					out_.push_back(rel);
-					if (first_only_) {
-						return;
-					}
-					if (out_.size() > bounds_.names) {
-						too_many(bounds_.names);
-					}
-				}
-			} else if (deeper) {
-				deeper_dirs.emplace_back(std::move(path), rel + "/");
+			const auto below = step(level, name);
+			const bool matches = matched(below);
+			if (matches || deeper(below)) {
+				children.push_back({std::string(name), matches});
 			}
 		}
 		dirp.reset();
-		for (const auto& [path, rel] : deeper_dirs) {
-			scan(path, rel);
-			if (first_only_ && !out_.empty()) {
-				return;
+		for (const auto& child : children) {
+			const auto path = dir + "/" + child.name;
+			const auto name = rel + child.name;
+			const auto below = step(level, child.name);
+			const bool inside = deeper(below);
+			const bool is_index = inside ? scan(path, name + "/", below) : holds_index(path, [this] { visit(); });
+			if (child.matches && is_index) {
+				out_.push_back(name);
+				if (out_.size() > bounds_.names) {
+					too_many(bounds_.names);
+				}
 			}
 		}
+		return index;
 	}
 
-	bool wanted_match(std::string_view name)
-	{
-		return std::any_of(wanted_.begin(), wanted_.end(), [&](const std::string& pattern) { return match(pattern, name, steps_); });
-	}
-
-	bool excluded(std::string_view name)
-	{
-		return std::any_of(excluded_.begin(), excluded_.end(), [&](const std::string& pattern) { return match(pattern, name, steps_); });
-	}
-
-	// Whether a wanted pattern can match a name below the directory `rel`.
-	bool below(std::string_view inside) const
-	{
-		return std::any_of(literals_.begin(), literals_.end(), [&](std::string_view literal) {
-			if (literal.size() > inside.size()) {
-				return literal.substr(0, inside.size()) == inside && literal[inside.size()] == '/';
-			}
-			return inside.substr(0, literal.size()) == literal;
-		});
-	}
-
-	std::span<const std::string> wanted_;
-	std::span<const std::string> excluded_;
+	std::vector<Glob> globs_;
+	std::size_t wanted_count_;
 	Bounds bounds_;
 	const Checkpoint& checkpoint_;
 	std::vector<std::string>& out_;
-	std::vector<std::string_view> literals_;
 	std::size_t visits_ = 0;
 	std::size_t steps_ = 0;
-	bool first_only_ = false;
 };
 
 void
@@ -236,8 +464,8 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 		}
 		if (item.size() > 1 && item[0] == '-') {
 			excluded.push_back(item.substr(1));
-		} else if (item == "_all" || item.find('*') != std::string::npos) {
-			wanted.push_back(item == "_all" ? std::string("*") : item);
+		} else if (is_wildcard(item)) {
+			wanted.push_back(item == "_all" ? std::string("**") : item);
 		} else {
 			plain.push_back(item);
 		}
@@ -264,7 +492,7 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 	if (!wanted.empty()) {
 		std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
 		try {
-			Walk(wanted, excluded, bounds, checkpoint, found).run(trimmed(root), "");   // stops at the bounds
+			Walk(wanted, excluded, bounds, checkpoint, found).run(trimmed(root));   // stops at the bounds
 		} catch (const OutOfBudget&) {
 			too_much_work(bounds.visits);
 		}
@@ -275,94 +503,6 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 		too_many(bounds.names);
 	}
 	return names;
-}
-
-
-namespace {
-
-// Raises when an index is a proper prefix of `full` (read for at most `visits` entries in all), or when an index is
-// below the directory `full` that is not itself an index. `created` is whether `full` was just made: it then holds
-// its own `strata`, which is not an obstacle.
-void
-check_nesting(const std::string& dir, const std::string& full, std::size_t visits, bool created)
-{
-	const auto refuse = [&](std::string_view why) {
-		throw engine::Error(engine::errc::invalid, "Cannot create index '" + full + "': " + std::string(why));
-	};
-
-	// Index paths do not nest: patterns do not look inside an index, so an index below another would be invisible to them.
-	// Each ancestor that is no index is read entry by entry, and the entries of all of them share the budget.
-	std::size_t read = 0;
-	for (auto cut = full.find('/'); cut != std::string::npos; cut = full.find('/', cut + 1)) {
-		if (holds_index(dir + "/" + full.substr(0, cut), [&] {
-			if (++read > visits) {
-				refuse("its parent directories hold too many entries to check that none is an index");
-			}
-		})) {
-			refuse("'" + full.substr(0, cut) + "' is an index, and an index path cannot be below another");
-		}
-	}
-	const auto self = dir + "/" + full;
-	if (is_directory(self) && (created || !holds_index(self, [] {}))) {
-		const std::vector<std::string> any{"*"};
-		const Checkpoint none;
-		std::vector<std::string> found;
-		Walk walk(any, {}, Bounds{1, visits}, none, found);
-		try {
-			walk.run(self, full + "/", true);
-		} catch (const OutOfBudget&) {
-			refuse("the directory holds too many entries to check that no index is below it");
-		}
-		if (!found.empty()) {
-			refuse("'" + found.front() + "' is an index, and an index path cannot be above another");
-		}
-	}
-}
-
-}  // namespace
-
-
-void
-check_new_index(const std::string& root, std::string_view path, std::size_t visits)
-{
-	const std::string full(path);
-
-	// A directory of the layout (`strata`, `.__N`) below the first name would make its parent look like an index.
-	std::size_t at = full.find('/');
-	while (at != std::string::npos) {
-		const auto next = full.find('/', at + 1);
-		const auto component = std::string_view(full).substr(at + 1, next == std::string::npos ? next : next - at - 1);
-		if (component == "strata" || component.starts_with(".__")) {
-			throw engine::Error(engine::errc::invalid, "Cannot create index '" + full + "': '" + std::string(component) + "' is a name the index layout keeps");
-		}
-		at = next;
-	}
-	check_nesting(trimmed(root), full, visits, false);
-}
-
-
-void
-check_created(const std::string& root, std::string_view shard_path, std::size_t visits)
-{
-	const auto dir = trimmed(root);
-	// The node runs in its data directory, so a shard's path may be relative to it.
-	if (shard_path.starts_with('/')) {
-		if (shard_path.size() <= dir.size() + 1 || shard_path.substr(0, dir.size() + 1) != dir + "/") {
-			return;   // not under the data directory
-		}
-		shard_path.remove_prefix(dir.size() + 1);
-	}
-	std::string full(shard_path);
-	while (full.size() > 1 && full.back() == '/') {
-		full.pop_back();
-	}
-	// The path of a shard ends in `.__N`; the index is the directory above it.
-	const auto last = full.rfind('/');
-	const auto leaf = std::string_view(full).substr(last == std::string::npos ? 0 : last + 1);
-	if (last != std::string::npos && leaf.starts_with(".__")) {
-		full.resize(last);
-	}
-	check_nesting(dir, full, visits, true);
 }
 
 }  // namespace index_pattern

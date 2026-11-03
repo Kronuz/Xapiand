@@ -25,7 +25,6 @@
 #include <cstddef>                 // for std::size_t
 #include <chrono>                  // for std::chrono::milliseconds
 #include <cstdint>                 // for std::uint64_t
-#include <functional>              // for std::function
 #include <memory>                  // for std::shared_ptr, std::unique_ptr
 #include <string>                  // for std::string
 
@@ -71,10 +70,6 @@ struct OpenOptions {
 
 	// How long a close or a reopen waits for the readers of the old index to let go of its views.
 	std::chrono::milliseconds drain_timeout{30000};
-
-	// Called with the shard's path right after its directory is made, before anything is written in it. It may throw
-	// (errc::invalid) to refuse the creation: the directory is removed again and the error reaches the caller.
-	std::function<void(const std::string& path)> on_create;
 };
 
 // Opens (or, when create_missing, creates) the local shard at `path`.
