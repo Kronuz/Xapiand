@@ -21,24 +21,38 @@ DatabaseHandler::match
       strata::run              one term table and plan per index
 ```
 
-- **Patterns.** `index_pattern::expand` lists the node's data directory: an index is a directory that holds `strata`
-  (one shard) or a shard `.__N`; a directory that holds neither is searched for indexes below it. `*` matches any bytes,
-  `/` included; `_all` is `*`; `-x` removes names wherever it stands; a name that starts with `.` is not listed. The
-  names a pattern may expand to are counted as the walk goes, so a pattern over a million directories stops at the cap
-  instead of listing them. The walk is blocking file-system work, so it runs as a `query` chore of the work pool, never on
-  a loop. Plain names are not looked up: a missing one is skipped by the search, as before.
+- **Patterns.** A pattern is a glob over the segments of an index path (the parts between `/`): `*` and `?` and
+  `[...]` match inside one segment and never a `/`, a segment that is `**` stands for any number of segments (none
+  included, and any number of `**` in a pattern), and `_all` is `**`. `-x` removes names wherever it stands; a name that
+  starts with `.` is not listed. `index_pattern::expand` lists the node's data directory: an index is a directory that holds
+  `strata` (one shard) or a shard `.__N`; a directory that holds neither is searched for indexes below it, and so is an
+  index (see "Indexes nest"). The names a pattern may expand to are counted as the walk goes, so a pattern over a million
+  directories stops at the cap instead of listing them. The walk is blocking file-system work, so it runs as a `query` chore
+  of the work pool, never on a loop. Plain names are not looked up: a missing one is skipped by the search, as before.
+- **A pattern is an automaton over segments.** `index_pattern::Glob` makes a position of each segment of the pattern (a run
+  of `**` is one) and a set of live positions of the path read so far: a segment moves each live position to the next if it
+  matches the segment (a `**` stays and may be skipped). The set is a bitset carried down the walk with each directory, so an
+  entry costs one step of each pattern, O(the pattern's segments), however many `**` it holds and however deep the tree is.
+  Matching inside a segment is the two-pointer match (the last `*` to retry from, `?` and a class one character each), at most
+  the segment's length times the name's, and every position tried and byte walked is a step against the steps bound. A
+  directory is entered only while a wanted pattern is live in its set, so a pattern with no `**` reads the directories its
+  segments name and no others: `logs/2026/*` reads the top, `logs` and `logs/2026`. A directory is listed when a wanted pattern
+  accepts and no exclusion does, and the directory is an index.
 - **One walk, a budget of entries.** All the patterns of a request are found in one pass: each directory entry is tested
   against every wanted pattern and every exclusion, and the directory is read entry by entry (not listed first). Every
-  entry read, in a directory the walk lists or inside an index directory it probes, counts against `--max-search-indexes`,
-  matching or not; past it the request answers 400. The count is of the work, so an exclusion that removes everything (`*,-*`)
-  or a pattern that matches nothing still pays for the tree. One walk runs at a time on the node (the others wait their turn without a thread). Before each entry the walk calls the request's cancel token
+  entry read, in a directory the walk lists or inside an index directory, at any depth, counts against `--max-search-indexes`,
+  matching or not (an index costs its own entry and the entries of its directory: `strata` or its shards, and its children); past it the request answers 400. The count is of the work, so an exclusion that removes everything (`*,-*`)
+  or a pattern that matches nothing still pays for the tree. One walk runs at a time on the node; the others wait their turn without a thread, at most `--search-walk-queue` of them and each for `--search-walk-wait` at most (`index_pattern::WalkGate`, below). Before each entry the walk calls the request's cancel token
   (`Request::cancel`), so a client that goes away stops it. Equal items are one item.
-- **Nothing nests.** The walk does not look inside an index, so an index path is never above or below another's:
-  `PUT /tenant/d` while `tenant/a` is an index, `PUT /a/b/d` while `a` is one, and a name below the first that the layout
-  keeps (`strata`, `.__N`) are refused with 400 when the index is created (`index_pattern::check_new_index`, run in a query
-  chore before the settings of a new index are saved). The check reads this node's directories, as the walk does, and two
-  creations racing each other can both pass it. Indexes made before the rule can be nested; a pattern does not find the
-  inner one (a name does).
+- **Indexes nest.** `twitter` and `twitter/user` can both exist, each a directory, the child inside the parent (owner
+  ruling 2026-11-03: nested indexes are the heart of Xapiand). The walk goes into an index directory like any other and
+  tells a child from the parent's own files by the engine's markers: in an index directory, `strata` (the engine's data
+  directory of the index) and the shard directories `.__N` are the index itself and are never listed or entered; any other
+  directory is a child, listed when it holds `strata` or a `.__N` itself and searched for children whatever it holds. So
+  creating `tenant` never hides `tenant/a` from `_all` or a prefix pattern (the attack the review found, SR2, was a
+  walk that stopped at an index directory). Names that start with `.` are never entered, nested or not. One name stays
+  invisible to patterns: a child called `strata`, whose path in the parent's directory is the engine's own; it is found by
+  its name.
 - **The seam.** `engine::BatchRunner` is the one place that decides how a batch's indexes are held: today
   `DatabaseHandler::search_batch` takes a `lock_shard` per endpoint (a use of the registry entry plus one view per index,
   taken by the search) and searches them with the reopen-and-retry loop. When the cold-tier catalog's wake lands, a batch pins
@@ -80,9 +94,11 @@ DatabaseHandler::match
 | Limit | Value | Mechanism | Reason |
 |---|---|---|---|
 | Names a search reads | `--max-search-indexes` (100,000, at least 1) | the names are counted as the walk finds them, plain names first; 400 past it | a runaway `_all` over more indexes than a node should serve in one request |
-| Directory entries the patterns read | the same number | `index_pattern::Walk` counts every entry it reads, matching or not; 400 past it | the work of a walk must have a number whatever the exclusions say |
+| Directory entries the patterns read | the same number | `index_pattern::Walk` counts every entry it reads, at every depth and inside an index directory, matching or not; it goes only into directories a wanted pattern is live in; 400 past it | the work of a walk must have a number whatever the exclusions say |
 | Steps of matching | 4,096 for each entry the cap allows (`index_pattern::steps_per_visit`) | the matcher counts a step for each byte of a name it walks, backtracking included, and the walk answers 400 past the total | a pattern that backtracks over a long name costs its size times the name's; 32 of them on every entry of a big tree would hold a work-pool thread for tens of seconds |
-| Walks at once | 1 per node | `expand_paths` takes a FIFO `task::async_mutex` (cancellable) before the chore; a waiting request holds no thread | however many clients send walks, they hold one worker of the work pool, so the chores of writes and opens run beside them |
+| Walks at once | 1 per node | `index_pattern::WalkGate` holds a FIFO `task::async_mutex` (cancellable) taken before the chore; a waiting request holds no thread | however many clients send walks, they hold one worker of the work pool, so the chores of writes and opens run beside them |
+| Walks waiting | `--search-walk-queue` (8, at least 0) | the gate counts the walk that runs and those that wait; a walk that finds the queue full answers 429 with `Retry-After: 1` at once, taking no place | the queue must have a length: the wait of an honest search is the walks ahead of it times a walk (1.4 s warm and 5 s cold at the default cap), so an unbounded queue let 40 held connections hold a wildcard search for 56 s and 150 for 240 s (SR8) |
+| Wait for a walk | `--search-walk-wait` (10 s, above 0) | the wait for the mutex runs under a `task::deadline`; a walk that waits that long gives up its place and answers 503 with `Retry-After: 1` | the wait is bounded whatever the walks ahead do or how fast they run; the walk that runs is never interrupted by it, only the work of reading is (the cap above) |
 | Patterns in a request | 32 (`index_pattern::max_patterns`) | wildcards and exclusions together, after equal items are merged; 400 above | every entry is tested against every pattern, so patterns times entries is the match work |
 | Length of a pattern | 256 bytes (`max_pattern_size`) | 400 above | the matcher's cost is the pattern's length times the name's |
 | Plain names in a request | the names bound | they count as names | a plain name costs nothing to find, and the URL (64 KiB) bounds the list |
@@ -96,6 +112,6 @@ keyed sorts with ties; both docid orders; windows; collapse. Nine indexes of one
 vocabulary, a check that each document weighs as in a search of its own index alone, and a count of the queries whose
 weights change when the indexes are weighed as one. Ids are checked at the old 32-bit edge (42,949 documents of each of
 100,000 shards) and decoded back. `tests/test_index_pattern.cc` covers the glob and the expansion against a directory tree,
-`tests/fuzz_index_pattern.cc` the glob against a reference, `tests/fuzz_index_expand.cc` the expansion and the nesting check against
-a brute-force oracle on a fixed tree. `harness/wide_search_check.py check` does the comparison over HTTP between two servers,
+`tests/fuzz_index_pattern.cc` the glob (segments, `*`, `?`, classes, `**`) and its automaton against a reference that tries every way,
+`tests/fuzz_index_expand.cc` the expansion against a brute-force oracle on a fixed tree of nested indexes. `harness/wide_search_check.py check` does the comparison over HTTP between two servers,
 and expands patterns and the cap over a live node.

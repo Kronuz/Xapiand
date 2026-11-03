@@ -162,6 +162,12 @@ parseOptions(int argc, char** argv)
 			->check(CLI::Range(std::size_t{1}, std::size_t{1} << 40));
 		std::size_t concurrent_search_indexes = 0;
 		app.add_option("--concurrent-search-indexes", concurrent_search_indexes, "Most indexes one search holds open at once; it reads the rest in later batches. 0: a reactor's share of the database pool (the pool size over the reactors).");
+		std::size_t search_walk_queue = 8;
+		app.add_option("--search-walk-queue", search_walk_queue, "Most searches that may wait to look up the index names of their patterns behind the one that is looking (one walk of the data directory runs at a time); a search over that answers 429 with Retry-After.")
+			->check(CLI::Range(std::size_t{0}, std::size_t{1} << 20));
+		double search_walk_wait = 10;
+		app.add_option("--search-walk-wait", search_walk_wait, "Seconds a search waits for its turn to look up the index names of its patterns; a search that waits longer answers 503 with Retry-After.")
+			->check(CLI::Range(0.001, 3600.0));
 		std::size_t schema_pool_size = SCHEMA_POOL_SIZE;
 		app.add_option("--schema-pool-size", schema_pool_size, "Maximum number of schemas in schema pool.");
 		std::size_t schema_versions_size = SCHEMAS_VERSIONS_CACHE_SIZE;
@@ -356,6 +362,8 @@ parseOptions(int argc, char** argv)
 		o.database_pool_size = database_pool_size;
 		o.max_search_indexes = max_search_indexes;
 		o.concurrent_search_indexes = concurrent_search_indexes;
+		o.search_walk_queue = search_walk_queue;
+		o.search_walk_wait = search_walk_wait;
 		o.schema_pool_size = schema_pool_size;
 		o.schema_versions_size =  schema_versions_size;
 		o.scripts_cache_size = scripts_cache_size;

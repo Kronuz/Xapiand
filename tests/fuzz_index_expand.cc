@@ -20,13 +20,12 @@
  * THE SOFTWARE.
  */
 
-// Fuzz target for index_pattern::expand and check_new_index against a fixed tree on disk (FUZZ_ROOT names a scratch
-// directory). Input: byte 0 is the names bound (1 + b % 40), byte 1 the entries bound (1 + b % 80), the rest is split on
-// '\n' into items. For the items, expand must: raise only engine::Error; return sorted, unique names; return the
-// names of a brute-force oracle (every pattern matched against the tree's indexes, minus the exclusions, plus the plain
-// items); read at most the entries bound; and raise only when the oracle has more names than the bound, more than
-// max_patterns patterns are named, an item is too long, or the walk read exactly its bound. The first item is also a
-// path for check_new_index, which must refuse exactly what the oracle refuses.
+// Fuzz target for index_pattern::expand against a fixed tree on disk, indexes inside indexes included (FUZZ_ROOT names a
+// scratch directory). Input: byte 0 is the names bound (1 + b % 40), byte 1 the entries bound (1 + b % 80), the rest is
+// split on '\n' into items. For the items, expand must: raise only engine::Error; return sorted, unique names; return the
+// names of a brute-force oracle (every pattern matched against the tree's indexes, nested ones too, minus the exclusions,
+// plus the plain items); read at most the entries bound; and raise only when the oracle has more names than the bound,
+// more than max_patterns patterns are named, an item is too long, or the walk read exactly its bound.
 
 #include <algorithm>
 #include <cstdint>
@@ -47,7 +46,6 @@ namespace fs = std::filesystem;
 
 std::string root;
 std::vector<std::string> listed;   // the indexes a pattern can list
-std::vector<std::string> indexes;  // all the indexes, the dot-led too
 
 void make(const std::string& rel, bool index) {
 	fs::create_directories(root + "/" + rel);
@@ -60,76 +58,25 @@ void init() {
 	root = std::string(std::getenv("FUZZ_ROOT")) + "/";
 	fs::remove_all(root);
 	fs::create_directories(root);
-	for (const char* name : {"a", "ab", "b", "c/d", "c/e", "c/f/g", "x.y", "a b", "-d", "*s", "z/z/z/z", "q/r"}) {
+	// Indexes inside indexes (a/n, a/n/m, c/d/e, ...), a container that is an index too (z/z), and names of every kind.
+	for (const char* name : {"a", "ab", "b", "c/d", "c/e", "c/f/g", "x.y", "a b", "-d", "*s", "z/z/z/z", "q/r", "a/n", "a/n/m", "ab/s/t",
+			"c/d/e", "c/d/e/f", "z/z", "k/l/m", "k/l/n", "c/d/some-ab", "c/d/some-cd/x/nested-12", "[ab]", "a?b"}) {
 		make(name, true);
 		listed.push_back(name);
 	}
-	indexes = listed;
-	for (const char* name : {".dot", "c/.hid"}) {
+	for (const char* name : {".dot", "c/.hid", "a/.hid", "c/d/.hid/x"}) {
 		make(name, true);
-		indexes.push_back(name);
 	}
 	make("hidden", false);
 	make("empty/empty2", false);
+	make("b/strata/x", true);        // below the engine's own directory of b: never listed
 	fs::create_directory_symlink("/", root + "linkroot");   // a link is never followed
 	fs::create_directory_symlink(root + "c", root + "linkc");
 	std::sort(listed.begin(), listed.end());
 }
 
 bool is_wild(const std::string& s) {
-	return s == "_all" || s.find('*') != std::string::npos;
-}
-
-bool starts_with(const std::string& s, const std::string& p) {
-	return s.compare(0, p.size(), p) == 0;
-}
-
-// What check_new_index must do for a clean path (no empty or dot components, not through a link).
-bool refused(const std::string& path) {
-	std::vector<std::string> parts;
-	std::string cur;
-	for (char c : path + "/") {
-		if (c == '/') { parts.push_back(cur); cur.clear(); } else { cur.push_back(c); }
-	}
-	for (std::size_t i = 1; i < parts.size(); ++i) {
-		if (parts[i] == "strata" || starts_with(parts[i], ".__")) {
-			return true;
-		}
-	}
-	const auto is_index = [&](const std::string& p) { return std::find(indexes.begin(), indexes.end(), p) != indexes.end(); };
-	for (std::size_t i = 1; i < parts.size(); ++i) {
-		std::string prefix;
-		for (std::size_t j = 0; j < i; ++j) { prefix += (j ? "/" : "") + parts[j]; }
-		if (is_index(prefix)) {
-			return true;
-		}
-	}
-	if (is_index(path)) {
-		return false;
-	}
-	for (const auto& name : listed) {   // the walk lists no dot-led name
-		if (starts_with(name, path + "/")) {
-			return true;
-		}
-	}
-	return false;
-}
-
-bool clean(const std::string& path) {
-	if (path.empty() || path.size() > 64 || starts_with(path, "link")) {
-		return false;
-	}
-	std::string cur;
-	for (char c : path + "/") {
-		if (c == '\0' || (c >= 'A' && c <= 'Z') || static_cast<unsigned char>(c) >= 0x80) { return false; }   // a file system may fold case and normalise
-		if (c == '/') {
-			if (cur.empty() || cur == "." || cur == "..") { return false; }
-			cur.clear();
-		} else {
-			cur.push_back(c);
-		}
-	}
-	return index_path::valid(path);
+	return index_pattern::is_wildcard(s);
 }
 
 }  // namespace
@@ -161,7 +108,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* d, std::size_t n) {
 			excl.push_back(item.substr(1));
 			patterns.insert(item);
 		} else if (is_wild(item)) {
-			wild.push_back(item == "_all" ? "*" : item);
+			wild.push_back(item == "_all" ? "**" : item);
 			patterns.insert(item);
 		} else {
 			plain.insert(item);
@@ -214,17 +161,5 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* d, std::size_t n) {
 		}
 	}
 
-	if (clean(items[0])) {
-		bool did = false;
-		try {
-			index_pattern::check_new_index(root, items[0], 1000);
-		} catch (const engine::Error&) {
-			did = true;
-		}
-		if (did != refused(items[0])) {
-			std::fprintf(stderr, "check_new_index(%s) = %d\n", items[0].c_str(), did);
-			std::abort();
-		}
-	}
 	return 0;
 }

@@ -27,8 +27,6 @@
 #include "database/flags.h"       // for  DB_*
 #include "database/handler.h"     // for DatabaseHandler
 #include "database/utils.h"       // for UNKNOWN_REVISION
-#include "database/pool.h"        // for IndexChores
-#include "index_pattern.h"        // for index_pattern::check_new_index
 #include "manager.h"              // XapiandManager::resolve_index_endpoints
 #include "opts.h"                 // for opts::*
 #include "reserved/schema.h"      // RESERVED_*
@@ -638,14 +636,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 
 	if (!index_settings.shards.empty()) {
 		if (writable && !index_settings.saved) {
-			if (!index_settings.loaded) {
-				// A new index: its path is not above or below another's, which patterns could not see.
-				IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
-				const auto cap = static_cast<size_t>(opts.max_search_indexes);
-				co_await chores.run(engine::ChoreClass::query, [&] {
-					index_pattern::check_new_index(Endpoint::cwd, unsharded_normalized_path, cap);
-				});
-			}
 			co_await save_settings(unsharded_normalized_path, index_settings);
 			store_lru = true;
 		}

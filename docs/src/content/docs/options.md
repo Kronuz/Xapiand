@@ -61,10 +61,14 @@ with more shards than the batch is a batch of its own.
 - `--concurrent-search-indexes` sets the batch size: the most shards one search holds open at once. By default it is a
   loop's share of the open indexes the database pool holds (`--database-pool-size` over the HTTP loops, at least 1), so
   one wide search on every loop at once holds about what the pool does.
+- `--search-walk-queue` (8, at least 0) and `--search-walk-wait` (10 seconds) bound the lookup of index names for
+  patterns: the node reads its data directory for one search at a time, a search that finds `--search-walk-queue` others
+  waiting answers `429`, and one that waits `--search-walk-wait` seconds for its turn answers `503`; both carry
+  `Retry-After: 1`. Searches by name, writes and everything else are not held by it.
 - `--max-search-indexes` (100,000, at least 1) is a cap on a runaway pattern. A search that names more indexes, counting
   the ones a wildcard expands to, answers `400` with the limit in the message. So does one whose patterns read more
   than that many directory entries to find their indexes, whether the entries match or not (`*,-*` matches nothing and
-  reads the whole tree): the same number bounds the names and the work. A data directory with more entries in one
+  reads the whole tree, and the directories of nested indexes count as well): the same number bounds the names and the work. A pattern goes only into the directories it can still match below (`logs/2026/*` reads `logs` and `logs/2026`), a `**` goes everywhere. A data directory with more entries in one
   directory than the cap cannot be walked by a wildcard; name the indexes, or raise the cap. Matching the names has a budget too
   (4,096 steps per entry the cap allows, so patterns that backtrack over long names answer `400` rather than hold a
   thread). A search names at most 32 patterns (wildcards and `-` exclusions together).

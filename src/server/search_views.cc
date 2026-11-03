@@ -67,6 +67,7 @@
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node
 #include "index_pattern.h"                   // for index_pattern::expand
+#include "walk_gate.h"                       // for index_pattern::WalkGate
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
 #include "phf.hh"                           // for phf::*
@@ -326,6 +327,9 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 
 	if (options) {
 		writer.set_header("Allow", "GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS");
+	}
+	if (request.retry_after != 0) {
+		writer.set_header("Retry-After", std::to_string(request.retry_after));
 	}
 	if (!location.empty()) {
 		writer.set_header("Location", location);
@@ -2309,14 +2313,13 @@ expand_paths(Request& request, bool patterns)
 		std::vector<std::string> names;
 		IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
 		// One walk at a time on the node: the rest wait their turn holding no thread, so the walks hold one worker of the
-		// work pool whatever the clients send, and the writes' chores run beside them.
-		static task::async_mutex walks;
+		// work pool whatever the clients send, and the writes' chores run beside them. The queue and the wait have bounds.
+		static index_pattern::WalkGate walks(
+			static_cast<std::size_t>(opts.search_walk_queue),
+			std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(opts.search_walk_wait)));
 		// The walk looks at the request between entries, so a client that goes away stops it.
 		const task::cancel_token token = request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{};
-		auto turn = co_await walks.lock(token);
-		if (!turn) {
-			throw task::cancelled{};
-		}
+		const auto turn = co_await walks.enter(token);
 		const auto cap = static_cast<size_t>(opts.max_search_indexes);
 		co_await chores.run(engine::ChoreClass::query, [&] {
 			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, [&token] {
@@ -3189,6 +3192,11 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 		try {
 			co_await engine::counted(*host, request.decode_large_body());
 			co_await engine::counted(*host, request.view(request));
+		} catch (const index_pattern::WalkRefused& refused) {
+			if (request.response_status == static_cast<http_status>(0)) {
+				request.retry_after = refused.retry_after;
+				write_status_response(request, static_cast<http_status>(refused.status), refused.reason);
+			}
 		} catch (const task::cancelled&) {
 			// The reads stopped at a checkpoint; say so to a client that is still there.
 			if (request.response_status == static_cast<http_status>(0)) {

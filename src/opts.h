@@ -63,6 +63,8 @@ extern struct opts_t {
 	ssize_t database_pool_size = 10;
 	ssize_t max_search_indexes = 100000;       // the runaway cap: a search over more answers 400
 	ssize_t concurrent_search_indexes = 0;     // the most indexes one search holds open at once; 0: a reactor's share of the pool
+	ssize_t search_walk_queue = 8;             // the pattern walks that may wait behind the one that runs; a search over that answers 429
+	double search_walk_wait = 10;              // the seconds a pattern walk waits for its turn; past it the search answers 503
 	ssize_t schema_pool_size = 30;
 	ssize_t schema_versions_size = 1000;
 	ssize_t scripts_cache_size = 10;
