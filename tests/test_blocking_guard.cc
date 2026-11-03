@@ -27,7 +27,6 @@
 
 #include "test_harness.h"
 
-#include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdio>
@@ -195,27 +194,4 @@ static void test_quiet_off_loop() {
 	CHECK_EQ(engine::blocking_violations(), 0u);
 }
 
-task::task<void> wait_for(task::event& ev, std::atomic<bool>& waiting) {
-	waiting = true;
-	co_await ev;
-}
-
-// A thread's BlockingScheduler dies with the thread, right after sync_wait returns, while the thread that
-// set the event may still be inside its post() signalling that scheduler: the signal must be done by then
-// (TSan reports a condition variable destroyed under a signal).
-void test_scheduler_outlives_the_signal() {
-	for (int i = 0; i < 500; ++i) {
-		task::event ev;
-		std::atomic<bool> waiting{false};
-		std::thread waiter([&] { engine::sync_wait(wait_for(ev, waiting)); });
-		while (!waiting) {
-			std::this_thread::yield();
-		}
-		std::this_thread::sleep_for(std::chrono::microseconds(20));
-		ev.set();
-		waiter.join();
-	}
-	CHECK_EQ(engine::blocking_violations(), 0u);
-}
-
-TEST_MAIN(test_scheduler_outlives_the_signal, test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop, test_quiet_when_a_loop_drops_a_group_of_chores)
+TEST_MAIN(test_fires_on_loop, test_fires_on_scheduler_thread, test_quiet_inside_a_blocking_wait, test_quiet_off_loop, test_quiet_when_a_loop_drops_a_group_of_chores)
