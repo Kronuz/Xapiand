@@ -314,35 +314,49 @@ Is equivalent to:
 Most APIs that refer to an index parameter support execution across multiple
 indexes, using simple `test1,test2,test3` notation.
 
-Searches and counts also take `_all` for all the indexes of the node, wildcards,
-for example `test*`, `*test`, `te*t` or `*test*`, and `-` to exclude, for
-example `test*,-test3`:
+Searches and counts also take `_all` for all the indexes of the node, and globs
+over the segments of an index path (the parts between `/`), for example
+`test*`, `*test`, `te*t`, `test-??`, `test-[0-9]*` or `logs/**/error-*`, and `-`
+to exclude, for example `test*,-test3`:
 
-- A `*` stands for any run of characters, none included, `/` included: `test*`
-  matches `test` and `test1/old`.
-- `_all` is the same as `*`.
+- A `*` stands for any run of characters inside one segment, none included. It
+  never matches a `/`: `test*` matches `test` and `test1`, and not `test/old`
+  (that is `test*/*`).
+- A `?` stands for one character, in one segment: `test-??` matches `test-ab`.
+- A `[...]` stands for one character of a class: `[abc]`, a range `[a-f]`, or
+  every character but those with a leading `!` or `^`: `[!0-9]`. A `[` with no
+  closing `]` is a plain `[`.
+- A segment that is `**` stands for any number of segments, none included, and
+  may be used more than once: `**/some-??` matches `some-ab` at any depth, and
+  `logs/**/error-*/**/last` matches `logs/error-1/last`, `logs/a/error-1/b/c/last`
+  and so on. `logs/**` matches `logs` and everything below it.
+- `_all` is the same as `**`.
 - An item that starts with `-` removes the indexes it matches from the result,
   wherever it stands in the list.
-- A wildcard never matches an index whose name starts with a `.` (the node's own
+- A glob never matches an index whose name starts with a `.` (the node's own
   indexes); name it to search it.
-- A wildcard that matches no index finds nothing: the search answers `200` with
+- A glob that matches no index finds nothing: the search answers `200` with
   no hits.
 - A search over more than `--max-search-indexes` indexes (100,000 by default),
-  counting the ones a wildcard expands to, answers `400`; so does one whose
-  patterns read more than that many directory entries to find them. A search
-  names at most 32 patterns (wildcards and exclusions together), and an item
-  repeated counts once. A wide search reads its indexes in batches; see
+  counting the ones a glob expands to, answers `400`; so does one whose
+  patterns read more than that many directory entries to find them, in the
+  directories of an index too. The search goes only into the directories a
+  pattern can still match below: `logs/2026/*` reads `logs` and `logs/2026`,
+  and no other directory. A search names at most 32 patterns (globs and
+  exclusions together), and an item repeated counts once. A wide search reads
+  its indexes in batches; see
   [Searching many indexes](/Xapiand/options#searching-many-indexes).
 
-Wildcards match the indexes that are on the node's disk. They are the way to reach
+A `*` used to match a `/` as well (`test*` matched `test1/old`); to reach the
+indexes below a name, give the segments: `test*/*`, or `test*/**`.
+
+Globs match the indexes that are on the node's disk. They are the way to reach
 a great many indexes: a URL holds 64 KiB, which is a few thousand index names.
 
-Index paths do not nest. Creating an index whose path is below another index
-(`a/b` when `a` is an index), above one (`a` when `a/b` is an index), or has a
-name below its first one that the layout keeps (`strata`, or one starting with
-`.__`) answers `400`, because a wildcard does not look inside an index and could
-not find the one below it. An index created before this rule may be nested; a
-wildcard does not find it below its parent, and searching it by name works.
+Indexes nest: `twitter` and `twitter/user` can both exist, the second inside the
+first. `twitter*` finds the first, `twitter/*` the second, and `twitter/**` or
+`_all` both. In a URL a `?` starts the query string; write it `%3F` in an index
+pattern.
 
 A wildcard or `_all` reads every index on the node, so a name that is not given
 no longer keeps an index out of a search: a proxy that allows a request by the
@@ -453,7 +467,7 @@ pm.test("Two indexes, two documents", function() {
 ```
 e2e:end -->
 
-Search every index under `multi/` with a wildcard:
+Search the indexes directly under `multi/` with a `*`, which stays in one segment:
 
 ```rest
 SEARCH /multi/*/?q=marker:multiindex
@@ -461,12 +475,64 @@ SEARCH /multi/*/?q=marker:multiindex
 
 <!-- e2e:begin
 ```js
-pm.test("The wildcard reaches all four indexes", function() {
+pm.test("The star reaches the three indexes one level down", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(4);
+  var names = jsonData.hits.map(function(hit) { return hit.name; }).sort();
+  pm.expect(names).to.eql(["alpha one", "beta one", "gamma one", "gamma two"]);
+});
+```
+e2e:end -->
+
+Every index at any depth under `multi/` with `**`:
+
+```rest
+SEARCH /multi/**/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("The double star reaches all four indexes", function() {
   pm.response.to.be.success;
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(5);
   var names = jsonData.hits.map(function(hit) { return hit.name; }).sort();
   pm.expect(names).to.eql(["alpha one", "beta one", "delta one", "gamma one", "gamma two"]);
+});
+```
+e2e:end -->
+
+An index at any depth by its last name:
+
+```rest
+SEARCH /**/delta/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Only delta, two levels down", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+  pm.expect(jsonData.hits[0].name).to.equal("delta one");
+});
+```
+e2e:end -->
+
+A `?` stands for one character, and a class for one of a set (a `?` in a URL starts the query, so it is written `%3F`):
+
+```rest
+SEARCH /multi/alph%3F,multi/[bg]*/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("alpha, beta and gamma", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(4);
+  pm.expect(jsonData.hits.map(function(hit) { return hit.name; }).sort()).to.eql(["alpha one", "beta one", "gamma one", "gamma two"]);
 });
 ```
 e2e:end -->
@@ -491,7 +557,7 @@ e2e:end -->
 Take indexes out with `-`:
 
 ```rest
-SEARCH /multi/*,-multi/g*,-multi/old/*/?q=marker:multiindex
+SEARCH /multi/**,-multi/g*,-multi/old/*/?q=marker:multiindex
 ```
 
 <!-- e2e:begin
@@ -524,7 +590,7 @@ e2e:end -->
 A count takes the same patterns:
 
 ```rest
-COUNT /multi/*/?q=marker:multiindex
+COUNT /multi/**/?q=marker:multiindex
 ```
 
 <!-- e2e:begin
@@ -549,6 +615,121 @@ pm.test("No index matches", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(0);
   pm.expect(jsonData.hits.length).to.equal(0);
+});
+```
+e2e:end -->
+
+Indexes nest: an index may hold others, and a glob finds each at its own depth. Make `parent` and `parent/child`:
+
+```rest
+PUT /parent/doc
+
+{
+  "marker": "nestedindex",
+  "name": "parent doc"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+PUT /parent/child/doc
+
+{
+  "marker": "nestedindex",
+  "name": "child doc"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+`parent*` is one segment, so it finds the parent only:
+
+```rest
+SEARCH /parent*/?q=marker:nestedindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("The parent only", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+  pm.expect(jsonData.hits[0].name).to.equal("parent doc");
+});
+```
+e2e:end -->
+
+`parent/*` is the indexes in it, and `parent/**` the parent and everything in it:
+
+```rest
+SEARCH /parent/*/?q=marker:nestedindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("The child only", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+  pm.expect(jsonData.hits[0].name).to.equal("child doc");
+});
+```
+e2e:end -->
+
+```rest
+SEARCH /parent/**/?q=marker:nestedindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Both, the parent and the index in it", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(2);
+  pm.expect(jsonData.hits.map(function(hit) { return hit.name; }).sort()).to.eql(["child doc", "parent doc"]);
+});
+```
+e2e:end -->
+
+`_all` is `**`: it finds both too.
+
+```rest
+SEARCH /_all/?q=marker:nestedindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Both, the parent and the index in it", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(2);
+  pm.expect(jsonData.hits.map(function(hit) { return hit.name; }).sort()).to.eql(["child doc", "parent doc"]);
+});
+```
+e2e:end -->
+
+```rest
+COUNT /parent*,parent/*/?q=marker:nestedindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Two names, two indexes", function() {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().total).to.equal(2);
 });
 ```
 e2e:end -->

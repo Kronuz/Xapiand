@@ -107,8 +107,8 @@ strata index for the stated time, then compares the final `DUMP` with the model;
 sanitizer wrote no report. `xapiand_fuzz_text SECONDS [SEED]` and `xapiand_fuzz_body SECONDS [SEED]` are built with the tests;
 the five libFuzzer targets (`fuzz_strata_document`, `fuzz_strata_pattern`, `fuzz_index_path`, `fuzz_index_pattern`, `fuzz_index_expand`) build with `-DFUZZ=ON` or by hand
 (`clang++ -fsanitize=fuzzer,address,undefined -Isrc tests/fuzz_X.cc src/engine/strata/X.cc`). `fuzz_index_expand` also takes
-`src/index_pattern.cc` and `FUZZ_ROOT=<scratch dir>`: it runs `expand` and `check_new_index` against a fixed tree there and compares
-them with a brute-force oracle, including the entries read.
+`src/index_pattern.cc` and `FUZZ_ROOT=<scratch dir>`: it runs `expand` against a fixed tree of nested indexes there and compares
+it with a brute-force oracle (every pattern matched against the tree's indexes) and the entries bound.
 
 ---
 

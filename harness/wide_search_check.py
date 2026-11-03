@@ -208,8 +208,8 @@ def check() -> None:
         if not ok:
             failures.append(f"cap pattern {pattern}")
     stop(node)
-    # With room for the walk the same patterns are served; the names are still counted (7 of the 14 pass, 14 do not).
-    cap = 20
+    # With room for the walk the same patterns are served; the names are still counted (an index costs its own entry and its directory's).
+    cap = 100
     node = start("cap-walk", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
     for pattern, want in (("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200), ("/_all/", 200), ("/w00*/", 200), ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200), ("/*,-*/", 200)):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
@@ -217,15 +217,18 @@ def check() -> None:
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
         if not ok:
             failures.append(f"cap-walk pattern {pattern}")
-    # Index paths do not nest: below an index, above one, and a name the layout keeps are refused.
-    if call("PUT", "/tenant/a/d", {"n": 1})[0] >= 300:
-        failures.append("nesting: tenant/a was not created")
-    for method, path in (("PUT", "/w000/x/d"), ("PUT", "/tenant/d"), ("PUT", "/tenant/a/x/d"), ("PUT", "/tenant/strata/d")):
-        status, raw = call(method, path, {"n": 1})
-        ok = status == 400 and b"Cannot create index" in raw
-        print(f"{'ok  ' if ok else 'FAIL'} nesting: {method} {path} -> {status}")
+    # Indexes nest: `tenant` above `tenant/a`, and `tenant/a/x` below it; each pattern finds each at its own depth.
+    for path in ("/tenant/a/d", "/tenant/d", "/tenant/a/x/d"):
+        status, raw = call("PUT", path, {"n": 1})
+        if status >= 300:
+            failures.append(f"nesting: PUT {path} -> {status}")
+    for pattern, want in (("/tenant*/", 1), ("/tenant/*/", 1), ("/tenant/*/*/", 1), ("/tenant/**/", 3), ("/**/x/", 1), ("/ten%3Fnt/", 1), ("/tenant/[a]/", 1), ("/tenant/[!a]/", 0)):
+        status, raw = call("COUNT", pattern + "?q=n:1")
+        total = json.loads(raw).get("total") if status == 200 else None
+        ok = total == want
+        print(f"{'ok  ' if ok else 'FAIL'} nesting: COUNT {pattern} -> {status} {total} (want {want})")
         if not ok:
-            failures.append(f"nesting {path}")
+            failures.append(f"nesting {pattern}")
     stop(node)
 
 
