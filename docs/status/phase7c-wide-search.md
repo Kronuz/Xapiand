@@ -6,7 +6,7 @@ Branch `phase7c/wide-search` in `Xapiand-wt/wide-search`. Source: `strata/docs/s
 
 ## State
 
-Built and proved on the pre-merge head (Xapiand:bea87389f plus the test and harness commits); master (gate-prep, then drop-threadpool Xapiand:88892b4cb) is merged in and the proof is being rerun on the merged head. Local only.
+Built and proved; master (gate-prep, then drop-threadpool Xapiand:88892b4cb, strata pin 3f564dc5) is merged in and the whole proof reran green on the merged head. Local only; ready for review.
 
 ## Done criteria
 
@@ -15,9 +15,9 @@ Built and proved on the pre-merge head (Xapiand:bea87389f plus the test and harn
 - [x] Identity test `tests/test_wide_search.cc` over 1, K-1, K, K+1, 3K+2 indexes (K = 4): hits, ids, order, ranks, totals, spy results, against one search of all and against the engine's own search; match_all and term queries, keyed sorts with ties, both docid orders, windows, collapse. 2817 checks. A non-vacuity block asserts the stored values reorder (key) and drop (collapse) hits.
 - [x] `harness/wide_search_check.py check`: the same over HTTP between a server that reads all in one batch and one with K = 4; plus the cap (`--max-search-indexes 7`: 7 served, 8 is 400) and the peak gauge (14 vs 4).
 - [x] Gate harness `harness/wide_search_check.py gate` (creates N indexes, searches across all, prints p50, p99 and `xapiand_search_pinned_indexes_peak`). Smoke at 1,000 indexes (Release, `quiet strict`, host loaded by other agents, 20 searches): p50 49 ms, p99 52 ms, peak 100 pinned (K = pool 200 / 2 loops). The 10,000 run is the lead's.
-- [ ] Proof on the merged head: see Proof.
+- [x] Proof on the merged head: see Proof.
 
-## Proof (pre-merge head, Release and ASan+UBSan builds in `.scratch/build-rel`, `.scratch/build-asan`)
+## Proof (merged head, identical results before and after the merge; Release and ASan+UBSan builds in `.scratch/build-rel`, `.scratch/build-asan`)
 
 | | Release | ASan+UBSan (LLVM 22, `detect_leaks=0`) |
 |---|---|---|
@@ -45,7 +45,7 @@ Built and proved on the pre-merge head (Xapiand:bea87389f plus the test and harn
 
 ## Next
 
-Rerun the proof on the merged head; hand to review.
+Review (code reviewer; the lead decides on security: no untrusted decoder here). The lead runs the 10,000-index gate.
 
 ## Blocked on
 
