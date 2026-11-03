@@ -43,7 +43,7 @@
 #include "enum.h"                           // for ENUM_CLASS
 #include "lru.h"                            // for lru::lru
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
-#include "thread.hh"                        // for Thread, ThreadPolicyType::*
+#include "thread.hh"                        // for Thread, ThreadPolicyType::regular
 #include "engine/document.h"                // for engine::Document
 #include "engine/types.h"                  // for engine::rev, docid
 
@@ -321,7 +321,7 @@ public:
 };
 
 
-class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPolicyType::wal_writer> {
+class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPolicyType::regular> {
 	friend DatabaseWALWriter;
 
 	DatabaseWALWriter* _wal_writer;

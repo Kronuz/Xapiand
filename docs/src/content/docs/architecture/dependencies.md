@@ -40,7 +40,7 @@ abstraction.
 
 | Library | Purpose |
 |---------|---------|
-| [threadpool](https://github.com/Kronuz/threadpool) | C++20 thread pool with named threads |
+| [threadpool](https://github.com/Kronuz/threadpool) | C++20 pool of named threads shared by many owners (`WorkPool`, `WorkGroup`) |
 | [scheduler](https://github.com/Kronuz/scheduler) | Timer-wheel scheduler and debouncer |
 | [logger](https://github.com/Kronuz/logger) | Structured logging with categories |
 | [traceback](https://github.com/Kronuz/traceback) | Crash backtraces + signal handling (atos / addr2line) |
