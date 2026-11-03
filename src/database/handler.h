@@ -90,6 +90,9 @@ public:
 	// where it is awaited. Not owned.
 	task::budget* budget = nullptr;
 
+	// The budget's token, which the index uses this handler makes pass to their turn waits (empty without one).
+	task::cancel_token turn_token() const { return budget != nullptr ? budget->token() : task::cancel_token{}; }
+
 private:
 #ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;

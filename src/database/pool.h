@@ -260,13 +260,13 @@ public:
 	task::task<void> ensure_open(int flags);
 
 	// The index's turn, with the index open: awaits the turn with a deadline of DB_TIMEOUT and answers
-	// engine::errc::busy when it does not come. A turn that came for an entry that closed meanwhile is
-	// given back and the open awaited again.
-	task::task<Turn> take_turn(int flags);
+	// engine::errc::busy when it does not come, or task::cancelled when `cancel` (the request's token) is
+	// requested first. A turn that came for an entry that closed meanwhile is given back and the open awaited again.
+	task::task<Turn> take_turn(int flags, task::cancel_token cancel = {});
 
 	// Awaits a refresh when something was applied since the last one, so a read sees it (a turn and a
 	// query chore); nothing otherwise.
-	task::task<void> fresh(int flags);
+	task::task<void> fresh(int flags, task::cancel_token cancel = {});
 
 	// The engine, for a caller that has seen the index open.
 	engine::Shard& engine();
