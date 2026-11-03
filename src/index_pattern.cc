@@ -29,10 +29,10 @@
 #include <algorithm>               // for std::sort, std::unique, std::any_of
 #include <iterator>                // for std::make_move_iterator
 #include <memory>                  // for std::unique_ptr
+#include <string>                  // for std::to_string
 
 #include "engine/error.h"          // for Error, errc
 #include "index_path.h"            // for index_path::valid
-#include "xapiand_strings.hh"      // for strings::format
 
 
 namespace index_pattern {
@@ -42,13 +42,13 @@ namespace {
 [[noreturn]] void
 too_many(std::size_t limit)
 {
-	throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes (--max-search-indexes) and these patterns name more; narrow the index pattern", limit));
+	throw engine::Error(engine::errc::invalid, "A search can read at most " + std::to_string(limit) + " indexes (--max-search-indexes) and these patterns name more; narrow the index pattern");
 }
 
 [[noreturn]] void
 too_much_work(std::size_t limit)
 {
-	throw engine::Error(engine::errc::invalid, strings::format("A search can look through at most {} directory entries (--max-search-indexes) and these patterns need more; narrow the index pattern", limit));
+	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " directory entries (--max-search-indexes) and these patterns need more; narrow the index pattern");
 }
 
 // The walk read more entries than its budget.
@@ -231,7 +231,7 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 	std::vector<std::string> plain, wanted, excluded, names;
 	for (const auto& item : items) {
 		if (item.size() > max_pattern_size) {
-			throw engine::Error(engine::errc::invalid, strings::format("An index pattern is at most {} bytes", max_pattern_size));
+			throw engine::Error(engine::errc::invalid, "An index pattern is at most " + std::to_string(max_pattern_size) + " bytes");
 		}
 		if (item.size() > 1 && item[0] == '-') {
 			excluded.push_back(item.substr(1));
@@ -245,7 +245,7 @@ expand(const std::string& root, std::span<const std::string> items, const Bounds
 	sort_unique(wanted);
 	sort_unique(excluded);
 	if (wanted.size() + excluded.size() > max_patterns) {
-		throw engine::Error(engine::errc::invalid, strings::format("A search names at most {} index patterns (wildcards and exclusions together)", max_patterns));
+		throw engine::Error(engine::errc::invalid, "A search names at most " + std::to_string(max_patterns) + " index patterns (wildcards and exclusions together)");
 	}
 	const auto removed = [&](std::string_view name) {
 		return std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return match(pattern, name); });
@@ -279,7 +279,7 @@ void
 check_new_index(const std::string& root, std::string_view path, std::size_t visits)
 {
 	const auto refuse = [&](std::string_view why) {
-		throw engine::Error(engine::errc::invalid, strings::format("Cannot create index '{}': {}", path, why));
+		throw engine::Error(engine::errc::invalid, "Cannot create index '" + std::string(path) + "': " + std::string(why));
 	};
 	const auto dir = trimmed(root);
 	const std::string full(path);
@@ -290,7 +290,7 @@ check_new_index(const std::string& root, std::string_view path, std::size_t visi
 		const auto next = full.find('/', at + 1);
 		const auto component = std::string_view(full).substr(at + 1, next == std::string::npos ? next : next - at - 1);
 		if (component == "strata" || component.starts_with(".__")) {
-			refuse(strings::format("'{}' is a name the index layout keeps", component));
+			refuse("'" + std::string(component) + "' is a name the index layout keeps");
 		}
 		at = next;
 	}
@@ -298,7 +298,7 @@ check_new_index(const std::string& root, std::string_view path, std::size_t visi
 	// Index paths do not nest: patterns do not look inside an index, so an index below another would be invisible to them.
 	for (auto cut = full.find('/'); cut != std::string::npos; cut = full.find('/', cut + 1)) {
 		if (holds_index(dir + "/" + full.substr(0, cut), [] {})) {
-			refuse(strings::format("'{}' is an index, and an index path cannot be below another", full.substr(0, cut)));
+			refuse("'" + full.substr(0, cut) + "' is an index, and an index path cannot be below another");
 		}
 	}
 	const auto self = dir + "/" + full;
@@ -313,7 +313,7 @@ check_new_index(const std::string& root, std::string_view path, std::size_t visi
 			refuse("the directory holds too many entries to check that no index is below it");
 		}
 		if (!found.empty()) {
-			refuse(strings::format("'{}' is an index, and an index path cannot be above another", found.front()));
+			refuse("'" + found.front() + "' is an index, and an index path cannot be above another");
 		}
 	}
 }

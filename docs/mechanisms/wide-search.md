@@ -27,6 +27,18 @@ DatabaseHandler::match
   names a pattern may expand to are counted as the walk goes, so a pattern over a million directories stops at the cap
   instead of listing them. The walk is blocking file-system work, so it runs as a `query` chore of the work pool, never on
   a loop. Plain names are not looked up: a missing one is skipped by the search, as before.
+- **One walk, a budget of entries.** All the patterns of a request are found in one pass: each directory entry is tested
+  against every wanted pattern and every exclusion, and the directory is read entry by entry (not listed first). Every
+  entry read, in a directory the walk lists or inside an index directory it probes, counts against `--max-search-indexes`,
+  matching or not; past it the request answers 400. The count is of the work, so an exclusion that removes everything (`*,-*`)
+  or a pattern that matches nothing still pays for the tree. Before each entry the walk calls the request's cancel token
+  (`Request::cancel`), so a client that goes away stops it. Equal items are one item.
+- **Nothing nests.** The walk does not look inside an index, so an index path is never above or below another's:
+  `PUT /tenant/d` while `tenant/a` is an index, `PUT /a/b/d` while `a` is one, and a name below the first that the layout
+  keeps (`strata`, `.__N`) are refused with 400 when the index is created (`index_pattern::check_new_index`, run in a query
+  chore before the settings of a new index are saved). The check reads this node's directories, as the walk does, and two
+  creations racing each other can both pass it. Indexes made before the rule can be nested; a pattern does not find the
+  inner one (a name does).
 - **The seam.** `engine::BatchRunner` is the one place that decides how a batch's indexes are held: today
   `DatabaseHandler::search_batch` takes a `lock_shard` per endpoint (a use of the registry entry plus one view per index,
   taken by the search) and searches them with the reopen-and-retry loop. When the cold-tier catalog's wake lands, a batch pins
@@ -63,6 +75,16 @@ DatabaseHandler::match
   say what the path says, with a rule for the two together, and the Elasticsearch API that this follows takes indices in the
   path and as patterns only; so the request does not take one.
 
+## Limits
+
+| Limit | Value | Mechanism | Reason |
+|---|---|---|---|
+| Names a search reads | `--max-search-indexes` (100,000, at least 1) | the names are counted as the walk finds them, plain names first; 400 past it | a runaway `_all` over more indexes than a node should serve in one request |
+| Directory entries the patterns read | the same number | `index_pattern::Walk` counts every entry it reads, matching or not; 400 past it | the work of a walk must have a number whatever the exclusions say |
+| Patterns in a request | 32 (`index_pattern::max_patterns`) | wildcards and exclusions together, after equal items are merged; 400 above | every entry is tested against every pattern, so patterns times entries is the match work |
+| Length of a pattern | 256 bytes (`max_pattern_size`) | 400 above | the matcher's cost is the pattern's length times the name's |
+| Plain names in a request | the names bound | they count as names | a plain name costs nothing to find, and the URL (64 KiB) bounds the list |
+
 ## Tests
 
 `tests/test_wide_search.cc` compares a batched search with one search over all the shards, and with the engine's own
@@ -72,5 +94,6 @@ keyed sorts with ties; both docid orders; windows; collapse. Nine indexes of one
 vocabulary, a check that each document weighs as in a search of its own index alone, and a count of the queries whose
 weights change when the indexes are weighed as one. Ids are checked at the old 32-bit edge (42,949 documents of each of
 100,000 shards) and decoded back. `tests/test_index_pattern.cc` covers the glob and the expansion against a directory tree,
-`tests/fuzz_index_pattern.cc` the glob against a reference. `harness/wide_search_check.py check` does the comparison over HTTP between two servers,
+`tests/fuzz_index_pattern.cc` the glob against a reference, `tests/fuzz_index_expand.cc` the expansion and the nesting check against
+a brute-force oracle on a fixed tree. `harness/wide_search_check.py check` does the comparison over HTTP between two servers,
 and expands patterns and the cap over a live node.

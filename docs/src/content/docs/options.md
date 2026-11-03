@@ -61,8 +61,12 @@ with more shards than the batch is a batch of its own.
 - `--concurrent-search-indexes` sets the batch size: the most shards one search holds open at once. By default it is a
   loop's share of the open indexes the database pool holds (`--database-pool-size` over the HTTP loops, at least 1), so
   one wide search on every loop at once holds about what the pool does.
-- `--max-search-indexes` (100,000) is a cap on a runaway pattern: a search that names more indexes, counting the ones a
-  wildcard expands to, answers `400` with the limit in the message.
+- `--max-search-indexes` (100,000, at least 1) is a cap on a runaway pattern. A search that names more indexes, counting
+  the ones a wildcard expands to, answers `400` with the limit in the message. So does one whose patterns read more
+  than that many directory entries to find their indexes, whether the entries match or not (`*,-*` matches nothing and
+  reads the whole tree): the same number bounds the names and the work. A data directory with more entries in one
+  directory than the cap cannot be walked by a wildcard; name the indexes, or raise the cap. A search names at most 32
+  patterns (wildcards and `-` exclusions together).
 
 Each index is read as its batch starts, so a search does not see all its indexes at one moment; each index is whole, and
 a write acknowledged before the search began is in it. A relevance weight is read against the statistics of the index

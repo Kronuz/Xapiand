@@ -328,11 +328,26 @@ example `test*,-test3`:
 - A wildcard that matches no index finds nothing: the search answers `200` with
   no hits.
 - A search over more than `--max-search-indexes` indexes (100,000 by default),
-  counting the ones a wildcard expands to, answers `400`. A wide search reads its
-  indexes in batches; see [Searching many indexes](/Xapiand/options#searching-many-indexes).
+  counting the ones a wildcard expands to, answers `400`; so does one whose
+  patterns read more than that many directory entries to find them. A search
+  names at most 32 patterns (wildcards and exclusions together), and an item
+  repeated counts once. A wide search reads its indexes in batches; see
+  [Searching many indexes](/Xapiand/options#searching-many-indexes).
 
 Wildcards match the indexes that are on the node's disk. They are the way to reach
 a great many indexes: a URL holds 64 KiB, which is a few thousand index names.
+
+Index paths do not nest. Creating an index whose path is below another index
+(`a/b` when `a` is an index), above one (`a` when `a/b` is an index), or has a
+name below its first one that the layout keeps (`strata`, or one starting with
+`.__`) answers `400`, because a wildcard does not look inside an index and could
+not find the one below it. An index created before this rule may be nested; a
+wildcard does not find it below its parent, and searching it by name works.
+
+A wildcard or `_all` reads every index on the node, so a name that is not given
+no longer keeps an index out of a search: a proxy that allows a request by the
+first segment of its path has to treat `,`, `*`, `_all` and a leading `-` as
+naming several indexes, and `:count` on a prefix tells whether names exist.
 
 Four indexes, one holding two documents:
 

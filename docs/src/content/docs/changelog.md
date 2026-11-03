@@ -120,13 +120,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A search over many indexes reads them in batches.** A search holds at most `--concurrent-search-indexes` shards open
   at once (by default a loop's share of the database pool) and merges each batch's best hits as the batch ends, so a
   search over thousands of indexes is served. Hits, order, weights, totals and aggregations do not depend on the batch
-  size. `--max-search-indexes` (100,000) is a cap on a runaway pattern: a search over more, counting what a wildcard
-  expands to, answers `400` with the limit in the message. `:metrics` reports `xapiand_search_pinned_indexes`
+  size. `--max-search-indexes` (100,000, at least 1) is a cap on a runaway pattern: a search over more, counting what a
+  wildcard expands to, or whose patterns read more directory entries than that to find them, answers `400` with the
+  limit in the message. `:metrics` reports `xapiand_search_pinned_indexes`
   and `xapiand_search_pinned_indexes_peak`.
 - **A search and a count take `_all`, wildcards and exclusions in the index list.** `SEARCH /_all/`, `/test*/`,
   `/*test/` and `/test*,-test3/` search the indexes on the node that match; before, a pattern was taken as a name and
   found nothing. The names are listed in a chore of the work pool, not on the loop. A pattern that matches nothing
-  answers `200` with no hits.
+  answers `200` with no hits. A search names at most 32 patterns, and the walk is cancelled when the client goes away.
+- **Index paths do not nest.** Creating an index below another (`a/b` when `a` is an index), above one, or with a
+  `strata` or `.__N` name below its first answers `400`; a wildcard does not look inside an index, so a nested index
+  would be invisible to it.
 - **A relevance weight is read against the statistics of its own index.** A document weighs the same in a search of its
   index alone and in a search over many indexes, as Elasticsearch weighs a shard's documents by default; before, the
   indexes of one search were weighed as one, so adding an index to a search changed the order of the others' hits.
