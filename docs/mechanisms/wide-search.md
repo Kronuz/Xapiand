@@ -4,42 +4,73 @@
 
 ## What
 
-A search that names many indexes (a wildcard, a list, `_all`) holds at most K of them open at once. It searches
+A search that names many indexes (a wildcard, a list, `_all`) holds at most K shards open at once. It searches
 a batch of K, merges that batch's best hits into the top of the whole, releases the batch, and takes the next. Before this
 a search kept every index it named open until it ended, so its width was the pool size (200 by default).
 
 ## How
 
 ```
+search_view / count_view
+  expand_paths                 `_all`, `test*`, `-test3` against the node's directories (a query chore); counted against the cap
+  resolve_index_endpoints      each name to its shards; sorted, no repeats
 DatabaseHandler::match
   check_search_fanout          runaway cap (--max-search-indexes, 100,000): 400
-  engine::search_batched       walks [0, K), [K, 2K), ...; merges
+  engine::search_batched       walks batches of whole indexes, at most K shards; merges
     BatchRunner (the seam)     DatabaseHandler::search_batch: pin [begin, end), refresh each, engine::search
+      strata::run              one term table and plan per index
 ```
 
+- **Patterns.** `index_pattern::expand` lists the node's data directory: an index is a directory that holds `strata`
+  (one shard) or a shard `.__N`; a directory that holds neither is searched for indexes below it. `*` matches any bytes,
+  `/` included; `_all` is `*`; `-x` removes names wherever it stands; a name that starts with `.` is not listed. The
+  names a pattern may expand to are counted as the walk goes, so a pattern over a million directories stops at the cap
+  instead of listing them. The walk is blocking file-system work, so it runs as a `query` chore of the work pool, never on
+  a loop. Plain names are not looked up: a missing one is skipped by the search, as before.
 - **The seam.** `engine::BatchRunner` is the one place that decides how a batch's indexes are held: today
   `DatabaseHandler::search_batch` takes a `lock_shard` per endpoint (a use of the registry entry plus one view per index,
   taken by the search) and searches them with the reopen-and-retry loop. When the cold-tier catalog's wake lands, a batch pins
   its indexes through the catalog instead; only this function changes.
 - **K.** `--concurrent-search-indexes`, else a reactor's share of the open indexes: the pool size over the HTTP loops, at
-  least 1 (`search_batch_indexes`). `main()` caps it at the pool size.
+  least 1 (`search_batch_indexes`). `main()` caps it at the pool size. A batch holds whole indexes, so an index with more
+  shards than K is a batch of its own.
+- **Why that K.** The design's reader cap (`readers_per_index`, 16 searches per reactor) bounds the readers of one index,
+  not the indexes of a search, and a batch takes one record per index it holds, so K does not touch it. What K bounds is the
+  indexes pinned: one wide search per loop holds at most pool size / loops each, and the loops together hold the pool's
+  budget, the number the file-descriptor limit sizes. More wide searches on a loop than one add their batches; the pool
+  is a soft budget (an entry in use is never evicted, an overflowing idle one goes after 60 s), so that is a larger
+  working set, not a failure, and `xapiand_search_pinned_indexes_peak` shows it.
 - **No cross-index snapshot.** Each index is read as its batch starts, so the refresh that makes a read see the writes
   acknowledged before it happens per index at that moment. Per-index read-your-writes holds; two indexes are not read at the same instant.
 - **Ids.** Hit ids number the documents across all the endpoints, `(d - 1) * total + position + 1`, as `get_document`
-  reads them back. A batch numbers its own shards, so the merge renumbers by position. A shard that is missing (no index) takes
-  no documents but keeps its slot. A single batch is renumbered the same way when a shard is missing. An id past 32 bits (a
-  `docid`) is refused with `errc::internal`, as before.
+  reads them back (`split_hit_id`). They are 64 bits (`engine::hitid`); a shard's own docid stays 32. A batch numbers its
+  own shards, so the merge renumbers by position. A shard that is missing (no index) takes no documents but keeps its slot.
+  A single batch is renumbered the same way when a shard is missing.
 - **Merge.** Each batch is asked for the top `first + maxitems` hits with their sort keys (`SearchRequest::report_keys`;
   the strata engine recomputes the key of the hits it returns, at most a window), and the merge ranks by key, then weight,
   then id, as one search does. Under a collapse each batch returns all it kept (with the collapse value), and the merge keeps the best
   `collapse_max` per value; the total is then the kept count. Otherwise the total is the sum of the batch counts. The spy is
   shared by the batches, so it sees every match once, in shard order. `percent` is recomputed against the heaviest weight of all batches.
-- **Weights.** A relevance weight is read against the statistics of its batch (document count, term frequencies), as
-  Elasticsearch reads a shard's by default. A search that fits in one batch is unchanged; a sort by key is unaffected.
+- **Weights.** A relevance weight reads the statistics of the document's own index, as Elasticsearch reads a shard's by
+  default: `SearchRequest::index_of` names the index of each shard, and `strata::run` builds one term table and plan per
+  index over its segments (prospect's `term_table` takes any span of segments, so the batch's composition does not enter).
+  The shards of one index share them, as they always did for one index. A document's weight, and so the order, depends on its
+  index only, whatever else is searched with it and whatever K is. The cost is the same as before: a term is looked up in
+  the segments of its own index instead of every segment of the batch.
 - **Gauges.** `xapiand_search_pinned_indexes` and `xapiand_search_pinned_indexes_peak` count the indexes batches hold.
+- **The cap is reachable.** A URL holds 64 KiB, a few thousand names, so a list of names cannot reach 100,000. A pattern
+  can: `_all` or `wi*` is a few bytes whatever it expands to. An index list in the request body would be a second way to
+  say what the path says, with a rule for the two together, and the Elasticsearch API that this follows takes indices in the
+  path and as patterns only; so the request does not take one.
 
 ## Tests
 
-`tests/test_wide_search.cc` compares a batched search with one search over all the indexes, and with the engine's own
-search, for 1, K-1, K, K+1 and 3K+2 indexes (K = 4): hits, ids, order, totals, spy results; match-all and term queries; keyed sorts
-with ties; both docid orders; windows; collapse. `harness/wide_search_check.py check` does the same over HTTP between two servers.
+`tests/test_wide_search.cc` compares a batched search with one search over all the shards, and with the engine's own
+search, for 1, K-1, K, K+1 and 3K+2 shards (K = 4) and again for every K over the same 3K+2 (1, K-1, K, K+1, 3K+2, all at
+once): hits, ids, order, weights, percents, totals, spy results; match-all, term, OR, AND, wildcard and synonym queries;
+keyed sorts with ties; both docid orders; windows; collapse. Nine indexes of one to three shards differ in size and
+vocabulary, a check that each document weighs as in a search of its own index alone, and a count of the queries whose
+weights change when the indexes are weighed as one. Ids are checked at the old 32-bit edge (42,949 documents of each of
+100,000 shards) and decoded back. `tests/test_index_pattern.cc` covers the glob and the expansion against a directory tree,
+`tests/fuzz_index_pattern.cc` the glob against a reference. `harness/wide_search_check.py check` does the comparison over HTTP between two servers,
+and expands patterns and the cap over a live node.

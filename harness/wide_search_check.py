@@ -3,9 +3,11 @@
 
 A search reads its indexes in batches of at most K held at once (--concurrent-search-indexes) and merges them.
 
-check: creates 3K+2 one-shard indexes and runs the same searches on one server that reads them all in one batch
-  and on one that reads K at a time, over the same data; the hits (ids, order), totals and aggregations must be
-  equal. Then --max-search-indexes: a search over the cap is served, one over it answers 400 naming the option.
+check: creates 3K+2 one-shard indexes (of different sizes and vocabularies) and runs the same searches on one server
+  that reads them all in one batch and on one that reads K at a time, over the same data; the hits (ids, order,
+  weights), totals and aggregations must be equal, for sorted and for relevance-ranked searches, by name list and by
+  pattern (`_all`, `w*`, an exclusion). Then --max-search-indexes: a search over the cap, by list and by `_all`, is served,
+  one over it answers 400 naming the option.
 gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches (default 30) across all of them and
   prints p50 and p99 latency in ms and the peak number of indexes searches held open (the metric
   xapiand_search_pinned_indexes_peak). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
@@ -87,11 +89,13 @@ def short(i: int) -> str:
 
 
 def create(i: int) -> int:
-    # Index i holds 5 documents; n is unique per document, g one of 4 groups.
+    # Index i holds 5 documents (more, in some); n is unique per document, g one of 4 groups; the indexes differ in
+    # vocabulary, so a relevance weight differs with the statistics it is read against.
     status = 0
-    for j in range(5):
-        n = i * 5 + j
-        status = max(status, call("PUT", f"/{short(i)}/d{j}", {"n": n, "g": f"g{(n * 3 + j) % 4}", "tag": "x"})[0])
+    for j in range(5 + (i % 3 if args.mode == "check" else 0)):
+        n = i * 8 + j
+        doc = {"n": n, "g": f"g{(n * 3 + j) % 4}", "tag": "x", "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4)}
+        status = max(status, call("PUT", f"/{short(i)}/d{j}", doc)[0])
     return status
 
 
@@ -105,7 +109,7 @@ def create_all(count: int) -> None:
 
 def normalise(raw: bytes) -> object:
     body = json.loads(raw)
-    hits = [(h.get("_id"), h.get("n"), h.get("g")) for h in body.get("hits", [])]
+    hits = [(h.get("_id"), h.get("n"), h.get("g"), h.get("#weight"), h.get("#docid")) for h in body.get("hits", [])]
     return {
         "total": body.get("total"),
         "count": body.get("count"),
@@ -124,6 +128,17 @@ SEARCHES = {
     "sorted descending window": {"_query": {"tag": "x"}, "_sort": "-n", "_offset": 3, "_limit": 9},
     "aggregations": {"_query": {"tag": "x"}, "_sort": "n", "_limit": 5, "_aggs": AGGS},
     "group filter": {"_query": {"g": "g1"}, "_sort": "-n", "_limit": 20, "_aggs": AGGS},
+    "relevance": {"_query": {"text": "gamma"}, "_limit": 25},
+    "relevance window": {"_query": {"text": "alpha beta"}, "_offset": 4, "_limit": 12},
+    "relevance or": {"_query": {"_or": [{"text": "alpha"}, {"text": "gamma"}]}, "_limit": 30},
+}
+
+
+# Patterns over the indexes w000 to w00d (14 of them): all, a prefix, and an exclusion.
+PATTERNS = {
+    "_all": "/_all/",
+    "prefix": "/w00*/",
+    "exclusion": "/w*,-w000,-w00a/",
 }
 
 
@@ -141,9 +156,14 @@ def check() -> None:
         results[tag] = {}
         for width in (1, k - 1, k, k + 1, n):
             for label, body in SEARCHES.items():
-                path = "/" + ",".join(short(i) for i in range(width)) + "/"
+                path = "/" + ",".join(short(i) for i in range(width)) + "/?comments=true"
                 status, raw = call("SEARCH", path, body)
                 results[tag][f"{label} over {width}"] = normalise(raw) if status == 200 else status
+        # The same indexes named by pattern.
+        for label, body in SEARCHES.items():
+            for name, path in PATTERNS.items():
+                status, raw = call("SEARCH", path + "?comments=true", body)
+                results[tag][f"{label} by {name}"] = normalise(raw) if status == 200 else status
         peak = metric("xapiand_search_pinned_indexes_peak")
         print(f"{tag}: batch {batch}, peak indexes held open by searches {peak:.0f}")
         if peak > batch or peak < min(batch, n):
@@ -154,6 +174,17 @@ def check() -> None:
         print(f"{'ok  ' if ok else 'FAIL'} {key}: {whole['total'] if isinstance(whole, dict) else whole} matches")
         if not ok:
             failures.append(key)
+    for name, pattern in PATTERNS.items():
+        got = results["all"][f"relevance by {name}"]
+        counted = len(got["hits"]) if isinstance(got, dict) else -1
+        ok = isinstance(got, dict) and got["total"] is not None and got["total"] > 0 and counted > 0
+        print(f"{'ok  ' if ok else 'FAIL'} {pattern}: {got['total'] if isinstance(got, dict) else got} matches")
+        if not ok:
+            failures.append(f"pattern {name}")
+        if isinstance(got, dict) and name != "exclusion":
+            same = results["all"][f"relevance over {n}"]
+            if got != same:
+                failures.append(f"pattern {name} differs from the name list")
     sample = results["all"][f"aggregations over {n}"]
     assert isinstance(sample, dict)
     print(f"sample: first hit {sample['hits'][0]}, aggregations {json.dumps(sample['aggregations'])[:200]}")
@@ -168,6 +199,14 @@ def check() -> None:
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: a search over {width} indexes -> {status}")
         if not ok:
             failures.append(f"cap {width}")
+    # The same cap through a pattern, which is the way past the URL's 64 KiB: 14 indexes exist, so `_all` is over it
+    # and a prefix that matches 7 is not.
+    for pattern, want in (("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200), ("/_all/", 400), ("/w00*/", 400), ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200)):
+        status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
+        ok = status == want and (want == 200 or b"--max-search-indexes" in raw)
+        print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
+        if not ok:
+            failures.append(f"cap pattern {pattern}")
     stop(node)
 
 
@@ -187,7 +226,7 @@ def gate() -> None:
     stop(node)
     node = start("search")
     body = {"_query": {"tag": "x"}, "_sort": "n", "_limit": 10, "_aggs": {"all": {"_sum": {"_field": "n"}}}}
-    path = "/" + ",".join(short(i) for i in range(count)) + "/"  # the index list is the URL: wildcards do not expand
+    path = "/w*/"  # a pattern: a list of 10,000 names is most of a URL, 100,000 would not fit
     times = []
     total = None
     for run in range(args.runs + 1):

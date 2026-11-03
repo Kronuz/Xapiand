@@ -314,22 +314,229 @@ Is equivalent to:
 Most APIs that refer to an index parameter support execution across multiple
 indexes, using simple `test1,test2,test3` notation.
 
-<!-- TODO: Unimplemented Feature! -->
-<!--
-It also support  `_all` for all indexes, wildcards, for example: `test*`,
-`*test`, `te*t` or `*test*`, and the ability to "exclude" (-), for example:
-`test*,-test3`.
+Searches and counts also take `_all` for all the indexes of the node, wildcards,
+for example `test*`, `*test`, `te*t` or `*test*`, and `-` to exclude, for
+example `test*,-test3`:
 
-All multi indexes API support the following url query string parameters:
+- A `*` stands for any run of characters, none included, `/` included: `test*`
+  matches `test` and `test1/old`.
+- `_all` is the same as `*`.
+- An item that starts with `-` removes the indexes it matches from the result,
+  wherever it stands in the list.
+- A wildcard never matches an index whose name starts with a `.` (the node's own
+  indexes); name it to search it.
+- A wildcard that matches no index finds nothing: the search answers `200` with
+  no hits.
+- A search over more than `--max-search-indexes` indexes (100,000 by default),
+  counting the ones a wildcard expands to, answers `400`. A wide search reads its
+  indexes in batches; see [Searching many indexes](/Xapiand/options#searching-many-indexes).
 
-* `ignore_unavailable` - Controls whether to ignore if any specified indexes are unavailable, this includes indexes that don't exist or closed indexes. Either true or false can be specified.
-* `allow_no_indexes` - Controls whether to fail if a wildcard indexes expressions results into no concrete indexes. Either true or false can be specified. For example if the wildcard expression foo* is specified and no indexes are available that start with foo then depending on this setting the request will fail. This setting is also applicable when _all, * or no index has been specified. This settings also applies for aliases, in case an alias points to a closed index.
-* `expand_wildcards` - Controls to what kind of concrete indexes wildcard indexes expression expand to. If open is specified then the wildcard expression is expanded to only open indexes and if closed is specified then the wildcard expression is expanded only to closed indexes. Also both values (open,closed) can be specified to expand to all indexes.
+Wildcards match the indexes that are on the node's disk. They are the way to reach
+a great many indexes: a URL holds 64 KiB, which is a few thousand index names.
 
-If none is specified then wildcard expansion will be disabled and if all is specified, wildcard expressions will expand to all indexes (this is equivalent to specifying open,closed).
+Four indexes, one holding two documents:
 
-The defaults settings for the above parameters depend on the api being used.
--->
+```rest
+PUT /multi/alpha/one
+
+{
+  "marker": "multiindex",
+  "name": "alpha one"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+PUT /multi/beta/one
+
+{
+  "marker": "multiindex",
+  "name": "beta one"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+PUT /multi/gamma/one
+
+{
+  "marker": "multiindex",
+  "name": "gamma one"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+PUT /multi/gamma/two
+
+{
+  "marker": "multiindex",
+  "name": "gamma two"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+PUT /multi/old/delta/one
+
+{
+  "marker": "multiindex",
+  "name": "delta one"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+Search two of them by listing them:
+
+```rest
+SEARCH /multi/alpha,multi/beta/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Two indexes, two documents", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(2);
+  pm.expect(jsonData.hits.length).to.equal(2);
+});
+```
+e2e:end -->
+
+Search every index under `multi/` with a wildcard:
+
+```rest
+SEARCH /multi/*/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("The wildcard reaches all four indexes", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(5);
+  var names = jsonData.hits.map(function(hit) { return hit.name; }).sort();
+  pm.expect(names).to.eql(["alpha one", "beta one", "delta one", "gamma one", "gamma two"]);
+});
+```
+e2e:end -->
+
+A wildcard inside a name:
+
+```rest
+SEARCH /multi/g*/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Only gamma", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(2);
+  pm.expect(jsonData.hits.map(function(hit) { return hit.name; }).sort()).to.eql(["gamma one", "gamma two"]);
+});
+```
+e2e:end -->
+
+Take indexes out with `-`:
+
+```rest
+SEARCH /multi/*,-multi/g*,-multi/old/*/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("Everything but gamma and the old ones", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(2);
+  pm.expect(jsonData.hits.map(function(hit) { return hit.name; }).sort()).to.eql(["alpha one", "beta one"]);
+});
+```
+e2e:end -->
+
+`_all` searches every index of the node:
+
+```rest
+SEARCH /_all/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("_all reaches the same five documents", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(5);
+});
+```
+e2e:end -->
+
+A count takes the same patterns:
+
+```rest
+COUNT /multi/*/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("The count over the wildcard", function() {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().total).to.equal(5);
+});
+```
+e2e:end -->
+
+A wildcard that matches nothing finds nothing:
+
+```rest
+SEARCH /multi/nomatch*/?q=marker:multiindex
+```
+
+<!-- e2e:begin
+```js
+pm.test("No index matches", function() {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(0);
+  pm.expect(jsonData.hits.length).to.equal(0);
+});
+```
+e2e:end -->
 
 :::hint{.info}
 Single index APIs such as the Document APIs and the single-index alias APIs

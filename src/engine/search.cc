@@ -87,25 +87,20 @@ namespace {
 // A hit of a batch, numbered across all the shards of the search.
 struct Candidate {
 	Hit hit;
-	std::uint64_t id;
+	hitid id;
 };
 
 // The id of a batch's hit over all the shards: batch shard i is the search's shard positions[i].
-std::uint64_t
-global_id(docid batch_id, const std::vector<std::size_t>& positions, std::size_t total)
+hitid
+global_id(hitid batch_id, const std::vector<std::size_t>& positions, std::size_t total)
 {
 	const std::uint64_t n = positions.size();
 	const std::uint64_t index = batch_id - 1;
-	return (index / n) * total + positions[index % n] + 1;
-}
-
-docid
-narrow(std::uint64_t id)
-{
-	if (id > std::numeric_limits<docid>::max()) {
+	const std::uint64_t slot = positions[index % n];
+	if (index / n > (std::numeric_limits<hitid>::max() - slot - 1) / total) {
 		throw Error(errc::internal, "A document id does not fit across the shards");
 	}
-	return static_cast<docid>(id);
+	return (index / n) * total + slot + 1;
 }
 
 // One search's result with its hit ids numbered over `total` shards, whatever shards were found.
@@ -116,18 +111,44 @@ renumber(SearchResult& result, const std::vector<std::size_t>& positions, std::s
 		return;   // every shard was there: the ids already are the whole search's
 	}
 	for (auto& hit : result.hits) {
-		hit.did = narrow(global_id(hit.did, positions, total));
+		hit.did = global_id(hit.did, positions, total);
 	}
+}
+
+// The end of the batch that starts at `begin`: whole indexes while they fit in `batch` shards, at least one.
+std::size_t
+batch_end(std::size_t begin, std::size_t total, std::size_t batch, std::span<const std::uint32_t> index_of)
+{
+	std::size_t end = begin;
+	while (end < total) {
+		std::size_t next = end + 1;
+		if (!index_of.empty()) {
+			while (next < total && index_of[next] == index_of[end]) { ++next; }
+		}
+		if (end != begin && next - begin > batch) {
+			break;
+		}
+		end = next;
+		if (end - begin >= batch) {
+			break;
+		}
+	}
+	return end;
 }
 
 }  // namespace
 
 
 task::task<SearchResult>
-search_batched(std::size_t total, std::size_t batch, const BatchRunner& run, const SearchRequest& request)
+search_batched(std::size_t total, std::size_t batch, std::span<const std::uint32_t> index_of, const BatchRunner& run, const SearchRequest& request)
 {
+	if (!index_of.empty() && index_of.size() != total) {
+		throw Error(errc::invalid, "A search was given an index for some of its shards only");
+	}
 	if (batch == 0 || total <= batch) {
-		auto only = co_await run(0, total, request);
+		SearchRequest whole = request;
+		whole.index_of = index_of;
+		auto only = co_await run(0, total, whole);
 		if (!only.result.hits.empty()) {
 			renumber(only.result, only.positions, total);
 		}
@@ -153,8 +174,13 @@ search_batched(std::size_t total, std::size_t batch, const BatchRunner& run, con
 	std::vector<Candidate> top;
 	std::uint64_t estimated = 0;
 	double heaviest = 0;
-	for (std::size_t begin = 0; begin < total; begin += batch) {
-		auto done = co_await run(begin, std::min(total, begin + batch), inner);
+	for (std::size_t begin = 0, end; begin < total; begin = end) {
+		end = batch_end(begin, total, batch, index_of);
+		SearchRequest batch_request = inner;
+		if (!index_of.empty()) {
+			batch_request.index_of = index_of.subspan(begin, end - begin);
+		}
+		auto done = co_await run(begin, end, batch_request);
 		estimated += done.result.estimated;
 		heaviest = std::max(heaviest, done.result.top);
 		for (auto& hit : done.result.hits) {
@@ -190,7 +216,7 @@ search_batched(std::size_t total, std::size_t batch, const BatchRunner& run, con
 	result.top = heaviest;
 	for (std::uint64_t i = request.first; i < top.size() && i < window; ++i) {
 		auto& hit = top[i].hit;
-		hit.did = narrow(top[i].id);
+		hit.did = top[i].id;
 		hit.rank = static_cast<doccount>(i);
 		hit.percent = percent_of(hit.weight, heaviest);
 		hit.key.clear();

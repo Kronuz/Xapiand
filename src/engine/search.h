@@ -94,10 +94,15 @@ struct SearchRequest {
 
 	// Each hit also carries its sort key and collapse value, which a merge across batches ranks by.
 	bool report_keys = false;
+
+	// The index each shard given belongs to, one entry per shard: adjacent equal entries are the shards of one
+	// index. A relevance weight reads the statistics of its own index, so it does not depend on the other indexes
+	// searched with it. Empty: all the shards are one index. Borrowed; outlives the search.
+	std::span<const std::uint32_t> index_of;
 };
 
 struct Hit {
-	docid did = 0;                        // the document's id across the shards
+	hitid did = 0;                        // the document's id across the shards
 	double weight = 0;
 	doccount rank = 0;                    // position in the full ordering, from 0
 	int percent = 0;                      // weight as a percentage of the best weight
@@ -116,11 +121,11 @@ struct SearchResult {
 	}
 };
 
-// Searches the shards as one index. Hit ids are the documents' ids across the shards, interleaved
-// the way the shards number them: document d of shard i of n is (d - 1) * n + i + 1. No shards, or
-// an empty query, find nothing. The shards must all be of one engine, stay open and be used by this
-// search only until it ends. prepare() may reject a query shape first, with errc::invalid or
-// errc::internal.
+// Searches the shards as one set. Hit ids are the documents' ids across the shards, interleaved
+// the way the shards number them: document d of shard i of n is (d - 1) * n + i + 1. A weight reads the
+// statistics of its own index (`SearchRequest::index_of`). No shards, or an empty query, find nothing.
+// The shards must all be of one engine, stay open and be used by this search only until it ends.
+// prepare() may reject a query shape first, with errc::invalid or errc::internal.
 task::task<SearchResult> search(std::span<Shard* const> shards, const SearchRequest& request);
 
 // A hit's weight as a percentage of the top weight, in [0, 100]; against an infinite top weight a hit
@@ -139,12 +144,13 @@ struct BatchResult {
 // call and no longer: this is the one seam between a wide search and how its indexes are kept.
 using BatchRunner = std::function<task::task<BatchResult>(std::size_t begin, std::size_t end, const SearchRequest& request)>;
 
-// Searches `total` shards as one index, at most `batch` of them held at once: each batch is searched
-// as it starts and its hits merged into the top of the whole. Hit ids, order, totals and the spy's
-// results are those of one search over all the shards, ids numbered by position (hit id =
-// (d - 1) * total + position + 1); a weight is read against the statistics of its batch. A batch of
-// 0, or no more shards than a batch, is one search. Raises errc::internal when a hit's id does not
-// fit across the shards.
-task::task<SearchResult> search_batched(std::size_t total, std::size_t batch, const BatchRunner& run, const SearchRequest& request);
+// Searches `total` shards, at most `batch` of them held at once: each batch is searched as it starts and its hits
+// merged into the top of the whole. `index_of` says which index each shard belongs to (empty: all one index, one
+// shard each is also fine); a batch holds whole indexes, so one wider than `batch` is a batch alone. A relevance
+// weight reads the statistics of the hit's own index, so hits, their order, weights, totals and the spy's results
+// are the same whatever `batch` is. Hit ids are numbered by position (hit id = (d - 1) * total + position + 1).
+// A batch of 0, or no more shards than a batch, is one search. Raises errc::invalid when `index_of` is not empty
+// and not `total` long.
+task::task<SearchResult> search_batched(std::size_t total, std::size_t batch, std::span<const std::uint32_t> index_of, const BatchRunner& run, const SearchRequest& request);
 
 }  // namespace engine

@@ -117,12 +117,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run). A search sees the index as of the moment it started.
 - **Too many searches of one index at once answer `503`.** Each index admits a fixed number of concurrent readers
   (16 per HTTP loop plus the pool's workers); a search that finds the index at its cap answers `503` instead of waiting.
-- **A search over many indexes reads them in batches.** A search holds at most `--concurrent-search-indexes` indexes open
+- **A search over many indexes reads them in batches.** A search holds at most `--concurrent-search-indexes` shards open
   at once (by default a loop's share of the database pool) and merges each batch's best hits as the batch ends, so a
-  search over thousands of indexes is served. Hits, order, totals and aggregations are those of one search over all of
-  them; a relevance weight is read against its batch's statistics. `--max-search-indexes` (100,000) is a cap on a runaway
-  pattern: a search over more answers `400` with the limit in the message. `:metrics` reports `xapiand_search_pinned_indexes`
+  search over thousands of indexes is served. Hits, order, weights, totals and aggregations do not depend on the batch
+  size. `--max-search-indexes` (100,000) is a cap on a runaway pattern: a search over more, counting what a wildcard
+  expands to, answers `400` with the limit in the message. `:metrics` reports `xapiand_search_pinned_indexes`
   and `xapiand_search_pinned_indexes_peak`.
+- **A search and a count take `_all`, wildcards and exclusions in the index list.** `SEARCH /_all/`, `/test*/`,
+  `/*test/` and `/test*,-test3/` search the indexes on the node that match; before, a pattern was taken as a name and
+  found nothing. The names are listed in a chore of the work pool, not on the loop. A pattern that matches nothing
+  answers `200` with no hits.
+- **A relevance weight is read against the statistics of its own index.** A document weighs the same in a search of its
+  index alone and in a search over many indexes, as Elasticsearch weighs a shard's documents by default; before, the
+  indexes of one search were weighed as one, so adding an index to a search changed the order of the others' hits.
+- **A search past 4.29 billion document ids works.** The id of a hit across the shards is 64 bits wide; a search over
+  100,000 indexes of more than 42,949 documents each used to be refused.
 - **A write that asks for a commit and waits too long for it still succeeds.** The write is applied and logged; its
   commit is left to the timed commit, so a client is not told to retry what was done (an `add` without an id would
   have been stored twice).
