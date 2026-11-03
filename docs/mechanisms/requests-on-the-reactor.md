@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) requests as tasks on the reactors as built on `phase7c/http-wave` (http H1, reactor R); the design is `docs/design/phase7c.md` D2, D3, D9, D12 and http `docs/design/task-handlers.md`. Not reviewed.
+> Status: CURRENT (2026-11-03) requests as tasks on the reactors as built on `phase7c/http-wave` (http H1 and H2, reactor R); the design is `docs/design/phase7c.md` D2, D3, D9, D12 and http `docs/design/task-handlers.md`. Not reviewed.
 
 # Requests on the reactor
 
@@ -27,19 +27,25 @@ leaves a loop is a chore (a device read or write, a commit, a parse) on the host
    `engine::counted` returns the view's task to be awaited in place in Release builds. A Debug build runs it on an
    `engine::Counted` scheduler of the request's own, which forwards to the loop's and sets the request's `TaskCounters` around
    every resume (Asio completions included: it never resumes inline), which is how `Viewed`, `take_turn`, `ensure_open` and
-   `drain_readers` enforce the wait rule (`docs/mechanisms/reader-views.md`); it moves back to the loop before it returns, and
-   `emit_via_writer` writes in the loop's scheduler scope, as http's affinity rule asks.
+   `drain_readers` enforce the wait rule (`docs/mechanisms/reader-views.md`); it moves back to the loop before it returns. http's
+   affinity rule (the writer and the body stream check the loop's thread, not the current scheduler) lets the views write and read
+   the body from the `Counted` scheduler.
 2. **Two admissions.** http's `AdmissionGate` counts requests from headers complete to response settled (1,000 per reactor, the
    old offload queue limit). `SearchService::create_extension` refuses a request when its loop has 256 demoted handles (an
    estimate): both answer 503 with `Retry-After: 1` before any body byte is read.
 3. **Cancel reads, not writes.** http requests the request's token (`Request::cancel_token()`) on a client's EOF and at
-   shutdown; `handle` gives it to the request's budget and registers a `task::cancel_callback` that fails the request's
-   `BodyStream`, so a read that waits for the body ends too. The budget's token also reaches the index's turn waits
-   (`lock_shard`, `Shard::cancel`, `take_turn`), so a read's refresh turn ends at once; a write's budget has no token. A search stops at its next checkpoint (`task::cancelled`, answered 503 to a client still there). A write that was admitted
+   shutdown, and `handle` gives it to the request's budget. A body read passes it too: `Request::read_chunk` awaits
+   `BodyStream::read(chunk, token)`, which ends with `operation_aborted` and `read_chunk` raises `task::cancelled`; a body that
+   failed (the client left mid-body) is a `ClientError`. The budget's token also reaches the index's turn waits
+   (`lock_shard`, `Shard::cancel`, `take_turn`), so a read's refresh turn ends at once; a write's budget has no token and its turn wait
+   ends only at `DB_TIMEOUT` (503). A search stops at its next checkpoint (`task::cancelled`, answered 503 to a client still there). A write that was admitted
    completes. RESTORE passes the budget to its indexer, so a cancel ends it at the next object and the closing commit keeps what was
-   indexed. At a node's shutdown `HttpAsioService::stop()` requests every token, closes the sockets stalled peers
-   hold after the grace and stops the loops after a second grace; a request still suspended then (a write queued on a turn) is
-   destroyed by `destroy_roots()` after the chores drain (`XapiandManager::join`, task's four phases).
+   indexed.
+   At a node's shutdown `HttpAsioService::stop()` is phase 1 of task's four teardown phases: it requests every token, waits one
+   grace, closes the connections of what is left, and waits one more grace. `join()` sizes the grace from what D16's budget has
+   left (`XapiandManager::http_shutdown_grace`, `docs/mechanisms/control-plane.md`: 15 s of a 35 s budget), so an admitted write waiting for its
+   turn finishes while the budget has time. A request still suspended after that is
+   destroyed by `destroy_roots()` (phase 3) once `IndexChores::cancel_all` has drained the chores (phase 2 is `close()`), before the indexes close (`XapiandManager::join`).
 4. **Sliced work.** `Request::budget` is a 200 us slice that restarts on every resume. A search takes it through
    `DatabaseHandler::budget` and `SearchRequest::budget`; the bulk indexer takes a checkpoint after each object.
 
@@ -48,7 +54,7 @@ leaves a loop is a chore (a device read or write, a commit, a parse) on the host
 - **Buffered** (up to 16 MiB, `BUFFERED_BODY_CAP`, http answers 413 past it): a body past 64 KiB is decoded in a chore of the
   request's own `IndexChores` group before the view runs (`Request::decode_large_body`), so a large document costs its loop the hand-off.
 - **RESTORE** (NDJSON or MsgPack, no id) streams: http feeds a `BodyStream`, and `Request::next_batch` reads a chunk with
-  `task::await_asio`, parses it in a chore of the restore's group, and returns the objects. `restore_database_view` runs
+  `BodyStream::read`, parses it in a chore of the restore's group, and returns the objects. `restore_database_view` runs
   `DocIndexer::index(batch)` for one batch while `next_batch` reads and parses the next (`task::when_all`): the parse overlaps the
   indexing. `DocIndexer` prepares and applies each object as tasks, one turn per object, and records its result; a bad line is
   skipped and logged. The closing commit runs on every exit. The CLI `--restore` uses the same indexer through `engine::sync_wait`.

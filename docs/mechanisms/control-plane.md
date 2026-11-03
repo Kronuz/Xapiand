@@ -40,12 +40,15 @@ concurrent first uses of one schema, or of one index's settings, read it once.
 
 A signal reaches a task on the control loop, which runs `shutdown_checks`: the loop keeps running while requests are in flight (`http_clients`), and ends when they are done or after the old
 `try_shutdown` retries (up to about 45 s measured). Then `join()` runs on the main thread, with one deadline, `XapiandManager::shutdown_write_bound` after it starts (35 s: the longer of a turn's deadline,
-`DB_TIMEOUT` = 30 s, and the reactors' grace, 5 s, plus 5 s to write the responses). Every step below ends by it:
+`DB_TIMEOUT` = 30 s, and the reactors' default grace, 5 s, plus the 5 s reserve for the registry and the responses). Every step below ends by it:
 
 1. The housekeeping stops, the signal read is cancelled, and the control tasks drain (`drain_control`).
 2. **Stop 1, the HTTP service**: `http::HttpAsioService::stop()` on a thread of its own (`shutdown_wait::wait`, `src/shutdown_wait.h`). It requests every session's and request's token, closes the acceptors, lets the sessions finish
-   within the grace (5 s), closes the sockets stalled peers still hold, lets them finish within a second grace, then stops the loops: `stop()` returns within twice the grace. A read ends at its next
-   checkpoint; an admitted write finishes within that, or is left suspended for the phases below.
+   within the grace, closes the sockets stalled peers still hold, lets them finish within a second grace, then stops the loops: `stop()` returns within twice the grace. `join()` sets the grace from the
+   budget that is left when this step starts, `max(250 ms, (left - 5 s) / 2)` (`XapiandManager::http_shutdown_grace`): 15 s when nothing else took time, so the stop takes at most 30 s and 5 s remain for the
+   autocommits and the registry. An admitted write waits for its turn for at most `DB_TIMEOUT` (30 s) from its admission, which is before this step, so it applies or answers 503 within twice the grace and is not
+   destroyed while the budget has time; its client is answered only when that happens within the first grace, since the connections of what is left are cut after it. A stalled client holds the stop for the first grace.
+   A read ends at its next checkpoint; a write still waiting when the grace runs out (the drains took the budget) is left suspended for the phases below.
    Then the tasks left suspended on the stopped loops (on a turn, a chore, a body read) go, in task's teardown phases (task `docs/design/cancellation.md` D8):
    `IndexChores::cancel_all()` drops every index's queued chores (their awaiters resume with `task::cancelled`) and waits for the running ones; `HttpAsioService::close()` closes
    every reactor's scheduler (`post` drops, `spawn` destroys its task); then `destroy_roots()` destroys the tasks still suspended on them, which releases their turns and shard uses before the indexes close. A task is counted by its
