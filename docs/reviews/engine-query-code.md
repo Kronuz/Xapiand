@@ -3,7 +3,7 @@
 - Date: 2026-10-26.
 - Branch: `phase0.5/engine-query`, head Xapiand:c281e9618, three commits over local master Xapiand:201414347 (801f16f5c, 868af2635, c281e9618). Local only, nothing pushed.
 - Tier: shared API (`engine::Query` and the callback bases are the seam strata implements), larger change (23 files, +2503 -726).
-- Reviewed against: `strata/docs/design/xapiand-on-strata.md` (D4, D13, row X3), `docs/status/engine-query.md`, `docs/status/engine-core.md`, `docs/reviews/engine-core.md`. `docs/reviews/calibration.md` does not exist in this repo.
+- Reviewed against: `docs/design/xapiand-on-strata.md` (D4, D13, row X3), `docs/status/engine-query.md`, `docs/status/engine-core.md`, `docs/reviews/engine-core.md`. `docs/reviews/calibration.md` does not exist in this repo.
 - Reviewer: code reviewer, fresh context. Never opened `src/xapian/`, `src/sortable_serialise.*`, or `src/server/remote_protocol_views.cc` (diffed with the exclusions; only its diff stat, 5 insertions and 4 deletions, was seen). Xapian was used only through its public API, the way the wrapper code uses it.
 
 ## Verdict: APPROVE WITH CONDITIONS

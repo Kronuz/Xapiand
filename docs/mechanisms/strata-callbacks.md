@@ -131,5 +131,5 @@ takes every field of the snapshot whose name starts with the node's. The group's
 ## Code
 
 `src/engine/strata/search.cc` (validate, groups, build, collection), `expand.cc`, `pattern.cc`, `doc_view.cc`,
-`values.h`; `_terms`: `src/aggregations/metrics.cc`; design `strata/docs/design/xapiand-on-strata.md` row S3, D4, G4, G5, G6, G8; operators:
+`values.h`; `_terms`: `src/aggregations/metrics.cc`; design `docs/design/xapiand-on-strata.md` row S3, D4, G4, G5, G6, G8; operators:
 `prospect/docs/mechanisms/query-operators.md`; ledger `docs/status/strata-engine-callbacks.md`.

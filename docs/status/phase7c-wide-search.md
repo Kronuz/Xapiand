@@ -2,7 +2,7 @@
 
 # phase7c wide search (build): a search walks its indexes in batches
 
-Branch `phase7c/wide-search` in `Xapiand-wt/wide-search`. Source: `strata/docs/status/road-to-release.md`, "Wide searches"; mechanism `docs/mechanisms/wide-search.md`.
+Branch `phase7c/wide-search` in `Xapiand-wt/wide-search`. Source: `docs/status/road-to-release.md`, "Wide searches"; mechanism `docs/mechanisms/wide-search.md`.
 
 ## State
 

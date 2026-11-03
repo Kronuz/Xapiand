@@ -14,7 +14,7 @@ fixed under C5 (shutdown readiness, DB_UPDATED on the bus loop). Not run: Linux,
 
 ## D13 as amended (C1)
 
-The rule, for the lead to write into D13 (`strata/docs/design/xapiand-on-strata.md:224-235`; strata
+The rule, for the lead to write into D13 (`docs/design/xapiand-on-strata.md:224-235`; strata
 is outside this branch):
 
 > No reactor loop thread blocks on database work: no `sync_wait`, no `DatabasePool` checkout or

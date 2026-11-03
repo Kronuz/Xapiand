@@ -1,4 +1,4 @@
-> Status: DRAFT (2026-11-02) a search over many indexes as built on `phase7c/wide-search`; the owner's plan is `strata/docs/status/road-to-release.md`, "Wide searches". Not reviewed.
+> Status: DRAFT (2026-11-02) a search over many indexes as built on `phase7c/wide-search`; the owner's plan is `docs/status/road-to-release.md`, "Wide searches". Not reviewed.
 
 # Wide search: indexes in batches
 

@@ -17,7 +17,7 @@ CR2a, CR2b and the CR5 leftovers done and verified (Debug ASan, Apple clang 17, 
   `engine::drain_batch` (64) commands per control-worker job, then it re-posts itself behind
   whatever the worker already has queued, so a queued job waits for at most 64 commands.
 - CR5: reactor pinned to main `0c04d0d`; the "lead repins" comment is gone.
-- D13: the design lives in the strata repo (`strata/docs/design/xapiand-on-strata.md`, outside this
+- D13: the design lives in the strata repo (`docs/design/xapiand-on-strata.md`, outside this
   branch); in this repo D13 appears only in reviews and ledgers. The amended text, with the remote
   residual, is in `docs/status/offload-bridge.md` ("D13 as amended (C1)") and stays the lead's to
   apply in strata.

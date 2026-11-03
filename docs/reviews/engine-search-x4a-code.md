@@ -3,7 +3,7 @@
 - Date: 2026-10-26.
 - Branch: `phase0.5/engine-search`, head Xapiand:0f4dd12c8 (two commits over local master Xapiand:1ab0ce077: Xapiand:3e3ff8f10 code, Xapiand:0f4dd12c8 ledger). Local only, nothing pushed.
 - Tier: shared API (`engine::Shard`'s read methods and `native<T>()` are the seam strata implements) and a larger change (20 files, +967/-178).
-- Reviewed against: `docs/status/engine-search.md` (X4a criteria 1 to 6, proof, remote edit list), `docs/reviews/engine-query-code.md` and `engine-query-2-code.md` (house rules), `strata/docs/design/xapiand-on-strata.md` (X4 row, D11, D13). `docs/reviews/calibration.md` does not exist in this repo.
+- Reviewed against: `docs/status/engine-search.md` (X4a criteria 1 to 6, proof, remote edit list), `docs/reviews/engine-query-code.md` and `engine-query-2-code.md` (house rules), `docs/design/xapiand-on-strata.md` (X4 row, D11, D13). `docs/reviews/calibration.md` does not exist in this repo.
 - Reviewer: code reviewer, fresh context. Never opened `src/xapian/`, `src/sortable_serialise.*` or `src/server/remote_protocol_views.cc`; every diff and grep excluded them. The only contact with the GPL file is `harness/seam_check.sh` running `grep -c` on it, as the developer's script does.
 
 ## Verdict: APPROVE WITH CONDITIONS

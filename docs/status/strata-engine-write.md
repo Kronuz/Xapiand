@@ -1,7 +1,7 @@
 # strata-engine-write (S1, phase 7a)
 
 Branch `phase7a/strata-engine-write` from Xapiand master `eb83813a8`. Local only, not pushed, no CI run.
-Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S1, D2 to D13, gate rows T6 to T11.
+Design: `docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S1, D2 to D13, gate rows T6 to T11.
 
 ## State
 

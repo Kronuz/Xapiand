@@ -1,7 +1,7 @@
 # engine-core (X2, phase 0.5)
 
 Branch `phase0.5/engine-core` from Xapiand master `5cce4860d`. Design:
-`strata/docs/design/xapiand-on-strata.md` sections 3 and 4 (row X2), D13, gate rows T2 to T4.
+`docs/design/xapiand-on-strata.md` sections 3 and 4 (row X2), D13, gate rows T2 to T4.
 
 ## State
 

@@ -2,7 +2,7 @@
 
 > Status: CURRENT (2026-10-28) workstream `strata-engine-search`; branch `phase7a/strata-engine-search`, rebased by merge onto master (S1, Xapiand:5d7f3263d). Local only, not pushed, no CI run.
 
-Design: `strata/docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S2, G5, G7, D13, T6, T7, T11.
+Design: `docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S2, G5, G7, D13, T6, T7, T11.
 
 ## State
 

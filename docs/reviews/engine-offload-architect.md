@@ -7,7 +7,7 @@
   `src/engine/xapian/shard.{h,cc}`, `src/server/{remote,replication}_protocol_service.h`; Kronuz/task at the pin
   `aa447e7` (`task.hh`, `task_asio.hh`); Kronuz/reactor at the pin `e19afd9` (`reactor.h`); Kronuz/http at the pin
   `dc3be77` (`http_asio.h`).
-- Checked against: D13 (`strata/docs/design/xapiand-on-strata.md:224-235`), `docs/reviews/engine-core.md` CR1, CR2,
+- Checked against: D13 (`docs/design/xapiand-on-strata.md:224-235`), `docs/reviews/engine-core.md` CR1, CR2,
   CR7, CR8, `docs/reviews/pool-concurrency-code.md` CR5 and its re-check, `docs/status/engine-core.md` ("Owed after
   review"), the memory rules "one implementation per mechanism" and "migrate callers, don't forward".
 - Checked by: `bridge_probe.cc` (standalone, ASan+UBSan, Apple clang, the pinned task and asio 1.36.0), seven variants

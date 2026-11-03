@@ -1,7 +1,7 @@
 # engine-search (X4, phase 0.5)
 
 Branch `phase0.5/engine-search` from Xapiand master `1ab0ce077`. Design:
-`strata/docs/design/xapiand-on-strata.md` sections 3 and 4 (row X4), D11, D13, gate row T2. Builds on
+`docs/design/xapiand-on-strata.md` sections 3 and 4 (row X4), D11, D13, gate row T2. Builds on
 X2 and X3 (`docs/status/engine-core.md`, `docs/status/engine-query.md`).
 
 ## State

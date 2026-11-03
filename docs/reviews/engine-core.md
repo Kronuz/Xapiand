@@ -2,7 +2,7 @@
 
 - Date: 2026-10-21.
 - Branch: `phase0.5/engine-core`, worktree `~/code/Kronuz/Xapiand-wt/engine-core`, HEAD `47bd0a66f`, five commits over master `5cce4860d` (half A `7eae6786c..d77cf2e0b`, half B `3be508883`, ledgers `47bd0a66f`). Local only, nothing pushed.
-- Reviewed against: `strata/docs/design/xapiand-on-strata.md` (D1 to D13, row X2, gates T3, T4), `docs/status/engine-core.md`, `strata/docs/reviews/calibration.md`.
+- Reviewed against: `docs/design/xapiand-on-strata.md` (D1 to D13, row X2, gates T3, T4), `docs/status/engine-core.md`, `strata/docs/reviews/calibration.md`.
 - Reviewer: code reviewer, fresh context. Nothing under `src/xapian/`, `sortable_serialise.{cc,h}` or `src/server/remote_protocol_views.cc` was opened (see item 5 for one disclosure).
 
 ## Verdict: APPROVE WITH CONDITIONS
