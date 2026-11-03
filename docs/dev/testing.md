@@ -80,10 +80,14 @@ cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLT
   -DZLIB_INCLUDE_DIR=$PWD/sdkinc -DUUID_INCLUDE_DIR=$PWD/sdkinc      # sdkinc: symlinks to zlib.h, zconf.h, uuid/
 ```
 
-For TSan use `-fsanitize=thread`. The pinned RapidJSON v1.1.0 needs two local edits with this clang, kept in a copy passed as
-`-DFETCHCONTENT_SOURCE_DIR_RAPIDJSON`: `GenericStringRef::operator=` assigns a `const` member (`document.h:319`, a hard error), and
-`Stack::Reserve` adds an offset to a null pointer (`internal/stack.h:117`, a UBSan abort in `Writer`, so the server dies on its first
-JSON response). Then:
+For TSan use `-fsanitize=thread`. RapidJSON is pinned to the master commit Kronuz/msgpack uses (v1.1.0 does not build with clang 20 and
+aborts under UBSan), so no local edits are needed.
+
+On Linux the CI sanitizer jobs use gcc-13 and the CMake options (`-DASAN=ON -DUBSAN=ON`, `-DTSAN=ON`). CMake builds against libc++ on Linux
+only when `<version>` defines `__cpp_lib_format` (libc++ 19 and later), so Ubuntu 24.04's clang 18 builds with libstdc++ even with
+libc++-18-dev installed; clang 20 with libc++-20-dev uses libc++.
+
+Then:
 
 ```sh
 (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3)
