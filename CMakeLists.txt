@@ -606,7 +606,7 @@ add_compile_definitions(
 # strings / split / stringified dependencies are already on Xapiand's path, so its own
 # CMake is not processed -- we Populate, not MakeAvailable). FS_TRACE_HEADER wires fs's
 # logging to Xapiand's real logger (+ error::name/description, repr).
-FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG 11067ed52041be7175f1c1d4038f8e54c200a56b)
+FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG 291842c03a310847bb48d244697f9e7d56dfdc0d)
 FetchContent_MakeAvailable(fs)
 include_directories("${fs_SOURCE_DIR}")
 add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
