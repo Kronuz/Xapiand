@@ -29,4 +29,4 @@ Q1 (width: the variable codec against the plan's "8-byte map"), Q2 (the Python c
 ## Log
 
 - 2026-11-03: worktree and ledger created from Xapiand:432299ed0.
-- 2026-11-03: size study run; draft written; ready for preliminary review.
+- 2026-11-03: size study run; draft written, Xapiand:e04fdf092; ready for preliminary review.
