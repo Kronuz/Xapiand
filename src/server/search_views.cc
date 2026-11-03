@@ -2989,14 +2989,15 @@ Request::read_chunk(std::string& chunk)
 		co_return false;
 	}
 	auto& stream = *http_req->body_stream;
-	const asio::error_code ec = co_await task::await_asio<void(asio::error_code)>([&](auto handler) {
-		stream.async_read(chunk, std::move(handler));
-	});
+	const asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());
 	if (!ec) {
 		co_return true;
 	}
 	if (ec == asio::error::eof) {
 		co_return false;
+	}
+	if (ec == asio::error::operation_aborted) {
+		throw task::cancelled{};   // the request's token: the client went away or the service is stopping
 	}
 	THROW(ClientError, "The request body ended early");
 }
@@ -3114,7 +3115,7 @@ SearchService::wants_body_stream(const http::Request& hreq)
 }
 
 
-asio::awaitable<void>
+task::task<void>
 SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();   // the extension create_extension() built
@@ -3123,14 +3124,10 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 	request.response_writer = &response;       // the response path emits through the library writer
 
 	// A client that goes away, or a shutdown, stops the request's reads at their next checkpoint;
-	// a write that was admitted completes and its response is attempted.
-	hreq.on_cancel([source = request.cancel, stream = hreq.body_stream](http::CancelReason) mutable {
-		source.request();
-		if (stream) {
-			stream->fail(asio::error::operation_aborted);   // a read that waits for the body ends too
-		}
-	});
-	request.budget.emplace(REQUEST_SLICE, request.cancel.token());
+	// a write that was admitted completes and its response is attempted. The request's token is
+	// http's (Request::cancel_token()); a read that waits for a streamed body ends with it too.
+	const task::cancel_token token = hreq.cancel_token();
+	request.budget.emplace(REQUEST_SLICE, token);
 
 	// HTTP facts from the library request (keep-alive/close, version).
 	request.http_major = hreq.http_major;
@@ -3183,16 +3180,15 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 			response.set_close();
 			co_return;
 		}
-		// The view is a task on this reactor's scheduler: it suspends for a turn, a chore or a
-		// slice, and the loop serves other requests meanwhile.
+		// The view is a child task of the connection on this reactor's scheduler: it suspends for a
+		// turn, a chore or a slice, and the loop serves other requests meanwhile.
 		auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
-		if (host == nullptr) {
+		if (host == nullptr || &host->scheduler() != &hreq.scheduler()) {
 			THROW(Error, "The request does not run on a reactor bound to its host");
 		}
-		engine::Run run(*host);
 		try {
-			co_await run.await(request.decode_large_body());
-			co_await run.await(request.view(request));
+			co_await engine::counted(*host, request.decode_large_body());
+			co_await engine::counted(*host, request.view(request));
 		} catch (const task::cancelled&) {
 			// The reads stopped at a checkpoint; say so to a client that is still there.
 			if (request.response_status == static_cast<http_status>(0)) {

@@ -47,18 +47,21 @@ class lock_shard {
 public:
 	const int flags;
 	const Endpoint endpoint;
+	const task::cancel_token cancel;   // the request's token, for the Shard's turn waits
 
 	lock_shard(lock_shard&& other) noexcept :
 		_pin(std::move(other._pin)),
 		_shard(std::move(other._shard)),
 		flags(other.flags),
-		endpoint(other.endpoint) {
+		endpoint(other.endpoint),
+		cancel(other.cancel) {
 		other._shard.reset();
 	}
 
-	lock_shard(const Endpoint& endpoint, int flags) :
+	lock_shard(const Endpoint& endpoint, int flags, task::cancel_token cancel = {}) :
 		flags(flags),
-		endpoint(endpoint) { }
+		endpoint(endpoint),
+		cancel(std::move(cancel)) { }
 
 	~lock_shard() noexcept
 	{
@@ -74,7 +77,7 @@ public:
 				throw engine::Error(engine::errc::internal, "No manager");
 			}
 			_pin = co_await manager->database_pool->pin(endpoint);
-			_shard.emplace(_pin.entry(), flags);
+			_shard.emplace(_pin.entry(), flags, cancel);
 		}
 	}
 

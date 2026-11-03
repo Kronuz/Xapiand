@@ -1332,9 +1332,10 @@ ShardEndpoint::storage_read_blocking(std::string_view key)
  *
  */
 
-Shard::Shard(ShardEndpoint& endpoint_, int flags_)
+Shard::Shard(ShardEndpoint& endpoint_, int flags_, task::cancel_token cancel_)
 	: endpoint(endpoint_),
-	  flags(flags_)
+	  flags(flags_),
+	  cancel(std::move(cancel_))
 {
 }
 
@@ -1386,7 +1387,7 @@ Shard::engine()
 task::task<engine::Shard*>
 Shard::engine_for_read()
 {
-	co_await endpoint.fresh(flags);
+	co_await endpoint.fresh(flags, cancel);
 	kept_ = endpoint.engine_ptr();
 	if (!kept_) {
 		throw engine::Error(engine::errc::closed, "Database has been closed");
@@ -1506,7 +1507,7 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_delete(*eng, flags, shard_did, wal_);
@@ -1524,7 +1525,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_delete_term(*eng, flags, term, wal_);
@@ -1543,7 +1544,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		info = co_await endpoint.do_add(*eng, *endpoint.chores, flags, std::move(doc), wal_, version_);
@@ -1563,7 +1564,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		info = co_await endpoint.do_replace(*eng, *endpoint.chores, flags, shard_did, std::move(doc), wal_, version_);
@@ -1583,7 +1584,7 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		info = co_await endpoint.do_replace_term(*eng, *endpoint.chores, flags, term, std::move(doc), wal_, version_);
@@ -1602,7 +1603,7 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_add_spelling(*eng, flags, word, freqinc, wal_);
@@ -1621,7 +1622,7 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 
 	engine::termcount result;
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		result = co_await endpoint.do_remove_spelling(*eng, flags, word, freqdec, wal_);
@@ -1640,7 +1641,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags);
+		auto turn = co_await endpoint.take_turn(flags, cancel);
 		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
 		auto eng = endpoint.engine_ptr();
 		co_await endpoint.do_set_metadata(*eng, flags, key, value, wal_);
@@ -1655,7 +1656,7 @@ Shard::check()
 	L_CALL("Shard::check()");
 
 	co_await ready();
-	auto turn = co_await endpoint.take_turn(flags);
+	auto turn = co_await endpoint.take_turn(flags, cancel);
 	co_return co_await endpoint.engine().check();
 }
 

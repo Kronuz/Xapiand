@@ -319,6 +319,9 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	}
 	CHECK_EQ(done.load(), N);
 	CHECK_EQ(manager()->schemas->loads() - loads_before, 2u);   // the metadata read, and the foreign schema it links to: once each
+	if (manager()->schemas->loads() - loads_before != 2u) {
+		std::fprintf(stderr, "  schema loads: %llu\n", static_cast<unsigned long long>(manager()->schemas->loads() - loads_before));
+	}
 	CHECK_GE(manager()->schemas->joined(), static_cast<std::uint64_t>(N - 1));
 	for (int i = 1; i < N; ++i) {
 		CHECK(got[i] == got[0]);   // the one schema object of the cache
@@ -538,6 +541,7 @@ struct AbandonSpec {
 	bool request = true;          // a PUT waits for the held turn (otherwise only the registry has work left)
 	bool acked = false;           // acknowledged writes to another index before the shutdown
 	bool second_signal = false;   // a second SIGTERM 1 s into the shutdown
+	std::chrono::milliseconds release_after{0};   // the held turn is released this long into the shutdown (0: never)
 };
 
 // The child: a node whose index turn is held by a thread of its own, a PUT waiting for that turn, and a shutdown
@@ -582,12 +586,23 @@ struct AbandonSpec {
 		std::this_thread::sleep_for(1s);
 		manager()->signal_sig(SIGTERM);
 	}
+	if (spec.release_after.count() != 0) {
+		std::this_thread::sleep_for(spec.release_after);
+		hold.release();
+		entry.reset();   // the registry closes the index only once nobody refers to it
+		if (!eventually([&] { return node.exited(); }, 60s)) {
+			std::_Exit(7);
+		}
+		Logging::finish();
+		Logging::join();
+		std::_Exit(node.exit_code());
+	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);
 }
 
 // The restart: the data directory of the abandoned node, and a read of what it acknowledged.
-[[noreturn]] static void restart_child(const char* log_path) {
+[[noreturn]] static void restart_child(const char* log_path, bool expect_put = false) {
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
@@ -596,10 +611,17 @@ struct AbandonSpec {
 		std::_Exit(2);
 	}
 	int missing = 0;
-	for (int i = 1; i <= acked_writes; ++i) {
+	for (int i = 1; !expect_put && i <= acked_writes; ++i) {
 		const auto response = http_call(abandon_port, "GET", "/acked/" + std::to_string(i));
 		if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("ack-" + std::to_string(i)) == std::string::npos) {
 			std::fprintf(stderr, "MISSING acknowledged write %d: %s\n", i, response.substr(0, 60).c_str());
+			++missing;
+		}
+	}
+	if (expect_put) {
+		const auto response = http_call(abandon_port, "GET", "/abandon/1");
+		if (response.rfind("HTTP/1.1 200", 0) != 0) {
+			std::fprintf(stderr, "MISSING the write that was waiting at the shutdown: %s\n", response.substr(0, 60).c_str());
 			++missing;
 		}
 	}
@@ -679,7 +701,8 @@ static long long stop_ms(const std::string& log) {
 
 // The shutdown abandons what it cannot finish in its bound and exits 75 (EX_TEMPFAIL). Every write acknowledged
 // before it is there after a restart of the data directory. The stop is one bound long, not one for the service and
-// another for the registry.
+// another for the registry. The bound is under the reserve, so the HTTP stop gets the shortest grace and ends the
+// write that waits for its turn.
 static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	const char* log_path = "node_abandon.log";
 	AbandonSpec spec;
@@ -690,10 +713,13 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	const auto log = read_file(log_path);
 	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, 0);
-	CHECK_LT(stopped_in, spec.bound.count() + 800);   // one bound (and the log flush), where two bounds took more than twice the bound
-	CHECK(log.find("Shutdown abandoned 2 unfinished items") != std::string::npos);
-	CHECK(log.find("1 request in flight on http0") != std::string::npos);
+	CHECK_LT(stopped_in, spec.bound.count() + 800);
+	if (stopped_in >= spec.bound.count() + 800) {
+		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
+	}   // one bound (and the log flush), where two bounds took more than twice the bound
+	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
 	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(log.find("unfinished item") == std::string::npos);   // the HTTP stop ended in its grace: the write was destroyed, not abandoned
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 
 	// The restart reads back what the abandoned shutdown had acknowledged.
@@ -702,6 +728,47 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 	CHECK_EQ(restart.code, 0);
 	if (restart.code != 0) {
 		std::fprintf(stderr, "%s\n", read_file("node_restart.log").c_str());
+	}
+}
+
+// D16's arithmetic: the HTTP service's grace is half of what the budget has left after the reserve for the
+// registry, so its stop (a grace, the force, a grace) ends before the budget does; with little left, the shortest.
+static void test_the_http_grace_follows_the_time_left_in_the_budget() {
+	const auto reserve = 5s;
+	CHECK_EQ(XapiandManager::http_shutdown_grace(XapiandManager::default_shutdown_write_bound()).count(), 15000);
+	for (auto left : {35000ms, 8000ms, 6000ms, 5100ms}) {
+		const auto grace = XapiandManager::http_shutdown_grace(left);
+		CHECK_LE(2 * grace, std::max(left - reserve, 2 * 250ms));
+		CHECK_GE(grace, 250ms);
+	}
+	CHECK_EQ(XapiandManager::http_shutdown_grace(0ms).count(), 250);
+	CHECK_EQ(XapiandManager::http_shutdown_grace(20000ms).count(), 7500);
+}
+
+// A write admitted before the stop that waits for its turn beyond the old 5 s grace (and the 10 s the stop took) is
+// let finish while the budget has time: its turn comes 14 s into a 25 s budget, past the first grace (10 s, where the
+// connections of what is left are cut) and inside the second. The write applies, the node exits 0 with nothing
+// abandoned, and the restart reads the write.
+static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time() {
+	const char* log_path = "node_late_write.log";
+	AbandonSpec spec;
+	spec.bound = 25s;
+	spec.release_after = 14s;
+	const auto result = run_child([&] { abandon_child(log_path, spec); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 0);
+	const auto log = read_file(log_path);
+	CHECK(log.find("Shutdown abandoned") == std::string::npos);
+	CHECK(log.find("Exiting with unfinished writes abandoned") == std::string::npos);
+	if (result.code != 0) {
+		std::fprintf(stderr, "%s\n", log.c_str());
+	}
+
+	const auto restart = run_child([&] { restart_child("node_late_restart.log", true); }, 90s);
+	CHECK(restart.exited);
+	CHECK_EQ(restart.code, 0);
+	if (restart.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_late_restart.log").c_str());
 	}
 }
 
@@ -718,6 +785,9 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 	const auto stopped_in = stop_ms(log);
 	CHECK_GE(stopped_in, spec.bound.count() - 100);   // it waited for the indexes
 	CHECK_LT(stopped_in, spec.bound.count() + 800);
+	if (stopped_in >= spec.bound.count() + 800) {
+		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
+	}
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
 	CHECK(log.find("turn held") != std::string::npos);
 	CHECK(log.find("unfinished item") == std::string::npos);   // the service itself stopped
@@ -867,6 +937,8 @@ int main(int argc, char** argv) {
 		{"test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound", test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound},
 		{"test_the_stop_runs_in_its_stated_order", test_the_stop_runs_in_its_stated_order},
 		{"test_a_registry_that_cannot_close_ends_the_stop_at_the_bound", test_a_registry_that_cannot_close_ends_the_stop_at_the_bound},
+		{"test_the_http_grace_follows_the_time_left_in_the_budget", test_the_http_grace_follows_the_time_left_in_the_budget},
+		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
 	};
 	for (const auto& f : forked) {

@@ -190,9 +190,8 @@ public:
 	std::chrono::steady_clock::time_point ends;
 
 
-	// The request's cancellation and time slice (set by SearchService::handle): the view's task awaits
-	// the budget's checkpoints, and a disconnect or a shutdown requests the source.
-	task::cancel_source cancel;
+	// The request's time slice, on http's cancel token (set by SearchService::handle): the view's task awaits the
+	// budget's checkpoints, which a disconnect or a shutdown ends.
 	std::optional<task::budget> budget;
 
 	Request();
@@ -211,8 +210,8 @@ public:
 	// Parses a bulk body that arrived whole.
 	task::task<void> feed_whole_body();
 
-	// Reads the next chunk of a streamed body into `chunk`; false at the end of the body. Raises a ClientError when
-	// the body failed (the client went away before it ended).
+	// Reads the next chunk of a streamed body into `chunk`; false at the end of the body. Raises task::cancelled when
+	// the request's token is requested, and a ClientError when the body failed.
 	task::task<bool> read_chunk(std::string& chunk);
 
 	// The objects of the next chunk of a bulk body, parsed; false once the body has ended and none is left.

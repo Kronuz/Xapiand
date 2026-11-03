@@ -274,7 +274,7 @@ DatabaseHandler::check()
 	for (auto& endpoint : endpoints) {
 		try {
 			// The check runs in the index's turn, on the engine the node has open.
-			lock_shard lk_shard(endpoint, flags);
+			lock_shard lk_shard(endpoint, flags, turn_token());
 			co_await lk_shard.pin();
 			auto result = co_await lk_shard->check();
 			if (result.failure.empty()) {
@@ -526,7 +526,7 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 		}
 	}
 
-	lock_shard lk_shard(endpoints[shard_num], flags);
+	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 	co_await lk_shard.pin();
 	auto upload = co_await lk_shard->upload_begin(chores, ct_type.to_string(), size);
 	std::exception_ptr error;
@@ -915,7 +915,7 @@ DatabaseHandler::dump_documents()
 
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 
 		engine::docid initial = 1;
@@ -952,7 +952,7 @@ DatabaseHandler::dump_documents(int fd)
 
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 
 		engine::docid initial = 1;
@@ -1510,7 +1510,7 @@ DatabaseHandler::get_metadata_keys()
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		try {
 			keys = co_await lk_shard->get_metadata_keys();
@@ -1539,7 +1539,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		try {
 			value = co_await lk_shard->get_metadata(key);
@@ -1575,7 +1575,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		try {
 			co_await lk_shard->set_metadata(key, value, commit, wal);
@@ -1663,7 +1663,7 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1710,7 +1710,7 @@ DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool 
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	co_await lk_shard->delete_document(shard_did, commit, wal, version);
 }
@@ -1755,7 +1755,7 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 
 	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	co_await lk_shard->delete_document_term(term, commit, wal, version);
 }
@@ -1777,7 +1777,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 		auto min_doccount = std::numeric_limits<engine::doccount>::max();
 		for (size_t n = 0; n < n_shards; ++n) {
 			auto& endpoint = endpoints[n];
-			lock_shard lk_shard(endpoint, flags);
+			lock_shard lk_shard(endpoint, flags, turn_token());
 			co_await lk_shard.pin();
 			auto node = lk_shard->node();
 			if (node && node->is_active()) {
@@ -1793,7 +1793,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 	}
 
 	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	auto info = co_await lk_shard->add_document(std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
@@ -1811,7 +1811,7 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
 	info.did = did;
@@ -1840,7 +1840,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 				auto min_doccount = std::numeric_limits<engine::doccount>::max();
 				for (size_t n = 0; n < n_shards; ++n) {
 					auto& endpoint = endpoints[n];
-					lock_shard lk_shard(endpoint, flags);
+					lock_shard lk_shard(endpoint, flags, turn_token());
 					co_await lk_shard.pin();
 					auto node = lk_shard->node();
 					if (node && node->is_active()) {
@@ -1873,7 +1873,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	}
 
 	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
@@ -1978,7 +1978,7 @@ DatabaseHandler::get_database_info()
 	assert(!endpoints.empty());
 	if (endpoints.size() == 1) {
 		auto& endpoint = endpoints[0];
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		auto stats = co_await (co_await lk_shard->engine_for_read())->stats();
 		co_return MsgPack{
@@ -2011,7 +2011,7 @@ DatabaseHandler::get_database_info()
 
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		auto stats = co_await (co_await lk_shard->engine_for_read())->stats();
 		doc_count += stats.doc_count;
@@ -2055,7 +2055,7 @@ DatabaseHandler::storage_get_stored(const Locator& locator, engine::docid did)
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
 	co_return co_await lk_shard->storage_get_stored(locator);
 }
@@ -2072,7 +2072,7 @@ DatabaseHandler::commit(bool wal)
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		try {
 			ret = co_await lk_shard->commit(wal) || ret;
@@ -2093,7 +2093,7 @@ DatabaseHandler::reopen()
 	L_CALL("DatabaseHandler::reopen()");
 
 	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
+		lock_shard lk_shard(endpoint, flags, turn_token());
 		co_await lk_shard.pin();
 		co_await lk_shard->reopen();
 	}
@@ -2357,7 +2357,7 @@ Document::serialise()
 	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, db_handler->turn_token());
 	co_await lk_shard.pin();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -2399,7 +2399,7 @@ Document::get_value(engine::valueno slot)
 	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, db_handler->turn_token());
 	co_await lk_shard.pin();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -2441,7 +2441,7 @@ Document::get_data()
 	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, db_handler->turn_token());
 	co_await lk_shard.pin();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -2481,7 +2481,7 @@ Document::validate()
 	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, db_handler->turn_token());
 	co_await lk_shard.pin();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -2522,7 +2522,7 @@ Document::get_values()
 	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
-	lock_shard lk_shard(endpoint, flags);
+	lock_shard lk_shard(endpoint, flags, db_handler->turn_token());
 	co_await lk_shard.pin();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {

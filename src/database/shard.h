@@ -59,8 +59,11 @@ class Shard {
 public:
 	ShardEndpoint& endpoint;
 	int flags;
+	// The request's token: this use's turn waits (a write's, a read's refresh) end when it is requested. Empty for
+	// work that is not cancelled, such as an admitted write (docs/design/phase7c.md D3).
+	task::cancel_token cancel;
 
-	Shard(ShardEndpoint& endpoint_, int flags_);
+	Shard(ShardEndpoint& endpoint_, int flags_, task::cancel_token cancel_ = {});
 
 	bool is_local() const {
 		return true;

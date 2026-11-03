@@ -108,7 +108,7 @@ public:
 	std::atomic_int total_clients;
 	std::atomic_int http_clients;
 
-	std::vector<std::unique_ptr<engine::AsioHost>> http_hosts;   // one per HTTP reactor; outlive http_service's loops
+	std::vector<std::unique_ptr<engine::AsioHost>> http_hosts;   // one per HTTP reactor, over its scheduler; cleared before http_service
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
 
@@ -125,6 +125,8 @@ public:
 	// abandons it (docs/design/phase7c.md D16).
 	static std::chrono::milliseconds default_shutdown_write_bound();
 	std::chrono::milliseconds shutdown_write_bound = default_shutdown_write_bound();
+	// The HTTP service's shutdown grace for `left` of the shutdown's budget: its stop takes at most twice that.
+	static std::chrono::milliseconds http_shutdown_grace(std::chrono::milliseconds left);
 
 	// How often the idle housekeeping runs (a minute); read when the node starts serving.
 	std::chrono::milliseconds housekeeping_period = std::chrono::minutes(1);

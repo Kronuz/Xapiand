@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `xapiand_committers_running` and `xapiand_committers_queue_size` count the watch tasks and the indexes waiting for a commit.
 - **Concurrent first uses of a schema or of an index's settings read it once.** A burst of requests for a new index used to read its schema metadata and its settings once each; they now wait for
   one read. Stop words and `mime.types` load at startup, before the listeners open.
+- **A cancelled read leaves its index's queue at once.** A search or get whose client went away, or that a shutdown stops, no longer
+  waits for the index's turn to refresh (up to 30 s) before it ends. A write that was accepted still completes.
+- **The HTTP service stops within the shutdown's budget.** At shutdown the requests are cancelled, the sockets of stalled clients close
+  after a grace, and the loops stop one grace later. The grace is half of what the 35 s have left after 5 s for closing the indexes (15 s
+  when nothing else took time), so a write that waits for its index's turn (up to 30 s) is let finish: it applies, and its client is
+  answered if the turn came within the first grace. Stalled clients can hold the stop for that grace.
 - **A shutdown waits at most 35 s after the clients are done, in all.** The HTTP service, the autocommits and the closing of every index share that bound. Past it the node logs what it abandoned (the requests in flight per loop, and the indexes
   whose turn is held or that are still in use), flushes the write-ahead logs and exits with status 75; an index that cannot close within the bound (a hung disk, for instance) ends the stop the same way, where
   the wait for it used to have no limit. A second `SIGINT` or `SIGTERM` ends the wait at once. The steps are logged in order

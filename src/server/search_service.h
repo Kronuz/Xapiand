@@ -51,7 +51,7 @@ inline constexpr std::size_t BUFFERED_BODY_CAP = 16u * 1024 * 1024;
 
 class SearchService : public http::HttpHandler {
 public:
-	asio::awaitable<void> handle(http::Request& request, http::ResponseWriter& response) override;
+	task::task<void> handle(http::Request& request, http::ResponseWriter& response) override;
 
 	// Build Xapiand's per-request state as the http::Request's typed extension (see
 	// http::RequestExtension). Called by the connection at headers-complete; handle()

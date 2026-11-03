@@ -22,21 +22,21 @@
 
 #pragma once
 
-// A Host over an Asio loop: a reactor's tasks (a request, a timer's commit, an idle close) run here. The
-// loop's tasks go through one task::asio_scheduler, which runs fresh work ahead of demoted work and counts
-// the demoted handles for admission (docs/design/phase7c.md D2).
+// A Host over a reactor's loop: a reactor's tasks (a request, a timer's commit, an idle close) run here. The
+// host wraps the loop's one task::asio_scheduler, which the reactor owns: it runs fresh work ahead of demoted
+// work and counts the demoted handles for admission (docs/design/phase7c.md D2). The reactor's owner tears the
+// scheduler down in task's phases (HttpAsioService, or the manager for the control loop).
 
 #include <coroutine>               // for std::coroutine_handle
 #include <exception>               // for std::exception_ptr
 #include <memory>                  // for std::shared_ptr, std::unique_ptr
+#include <mutex>                   // for std::mutex
 #include <optional>                // for std::optional
+#include <type_traits>             // for std::is_void_v
 #include <utility>                 // for std::move
+#include <vector>                  // for std::vector
 
-#include <asio/any_io_executor.hpp>
-#include <asio/awaitable.hpp>
-#include <asio/dispatch.hpp>
 #include <asio/steady_timer.hpp>
-#include <asio/use_awaitable.hpp>
 
 #include "engine/host.h"           // for Host
 #include "task_asio.hh"            // for task::asio_scheduler
@@ -46,7 +46,7 @@ namespace engine {
 
 class AsioHost final : public Host {
 public:
-	explicit AsioHost(asio::any_io_executor executor) : scheduler_(executor), executor_(std::move(executor)) { }
+	explicit AsioHost(task::asio_scheduler& scheduler) noexcept : scheduler_(scheduler) { }
 
 	void post(std::coroutine_handle<> h) override { scheduler_.post(h); }
 	void post_demoted(std::coroutine_handle<> h) override { scheduler_.post_demoted(h); }
@@ -54,26 +54,19 @@ public:
 	bool runs_here() const noexcept override { return scheduler_.runs_here(); }
 	task::root_list* roots() noexcept override { return scheduler_.roots(); }
 
-	// Teardown, after the loop has stopped and every pool a task here may wait on has drained (task's
-	// cancellation D8): close() drops what is posted from then on and destroys what is spawned; destroy_roots()
-	// destroys the tasks spawned here that have not ended, with the loop's io_context alive.
-	void close() noexcept { scheduler_.close(); }
-	void destroy_roots() noexcept { scheduler_.destroy_roots(); }
-	bool closed() const noexcept { return scheduler_.closed(); }
-
 	// The scheduler every task of this loop resumes through; its demoted() is the loop's admission count.
 	task::asio_scheduler& scheduler() noexcept { return scheduler_; }
 
 	// Makes the loop's own thread the host's thread. Posted to the loop once, before it serves anything.
 	void bind_loop_thread() noexcept { Host::bind_thread(this); }
 
-	// The counters of the request whose task is running on this loop (debug builds, through a Run).
+	// The counters of the request whose task is running on this loop (debug builds, through counted()).
 	TaskCounters* counters() noexcept override { return running_; }
 
 
 protected:
 	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point at, std::unique_ptr<TimerNode> node) override {
-		auto state = std::make_shared<State>(executor_, at, std::move(node));
+		auto state = std::make_shared<State>(scheduler_.executor(), at, std::move(node));
 		state->timer.async_wait([state](const asio::error_code& ec) {
 			if (!ec && !state->cancelled) {
 				state->node->fire();
@@ -102,93 +95,140 @@ private:
 		std::shared_ptr<State> state_;
 	};
 
-	friend class Run;
+	friend class Counted;
 	static inline thread_local TaskCounters* running_ = nullptr;
 
-	task::asio_scheduler scheduler_;
-	asio::any_io_executor executor_;
+	task::asio_scheduler& scheduler_;
 };
 
 
-// One request's task on a loop. Release builds run it straight through the loop's scheduler. A debug build
-// gives each request its own scheduler, so that every resume of the request's task (after a turn, a chore, a
-// slice) first makes the request's counters the running ones, and the rules on what a task holds are checked
-// (check_no_view_held, Turn).
-class Run {
+#ifndef NDEBUG
+// A debug build's scheduler for one request's work: it forwards to the loop's, and makes the request's counters the
+// running ones around every resume it runs, so the rules on what a task holds are checked (check_no_view_held, Turn).
+// Its resumes queue here and one pump coroutine, owned by this scheduler, runs them from the loop's queues (the
+// demoted one for a demoted resume, so the loop's admission count still sees it). Nothing is allocated per resume,
+// and a pump the closed loop drops is destroyed with this scheduler.
+class Counted {
 public:
-	explicit Run(AsioHost& host) : host_(host) { }
-	Run(const Run&) = delete;
-	Run& operator=(const Run&) = delete;
+	explicit Counted(AsioHost& host) : host_(host), pump_(run(this).handle) { }
+	Counted(const Counted&) = delete;
+	Counted& operator=(const Counted&) = delete;
+	~Counted() { pump_.destroy(); }
 
-	void post(std::coroutine_handle<> h) {
-#ifndef NDEBUG
-		host_.scheduler().post(resume_in(this, h));
-#else
-		host_.scheduler().post(h);
-#endif
-	}
-	void post_demoted(std::coroutine_handle<> h) {
-#ifndef NDEBUG
-		host_.scheduler().post_demoted(resume_in(this, h));
-#else
-		host_.scheduler().post_demoted(h);
-#endif
-	}
-	// Forwarded, so that a task spawned through a Run is a root of the loop's scheduler (task's cancellation D7).
+	void post(std::coroutine_handle<> h) { queue(h, false); }
+	void post_demoted(std::coroutine_handle<> h) { queue(h, true); }
 	void post_call(void (*fn)(void*), void* arg) { host_.scheduler().post_call(fn, arg); }
-	bool runs_here() const noexcept { return host_.scheduler().runs_here(); }
+	// False: an Asio completion is posted here instead of resumed inline, so every resume sets the counters.
+	bool runs_here() const noexcept { return false; }
 	task::root_list* roots() noexcept { return host_.scheduler().roots(); }
 	std::uint64_t now() const noexcept { return host_.scheduler().now(); }
 
-	// Runs t on the loop and completes on the awaiting coroutine's executor; an exception of t propagates.
-	template <typename T>
-	asio::awaitable<T> await(task::task<T> t) {
-		auto initiate = [this](auto handler, task::task<T> work) {
-			task::spawn(task::scheduler_ref::of(*this), std::move(work), [h = std::move(handler)](std::exception_ptr e, auto&&... value) mutable {
-				auto ex = asio::get_associated_executor(h);
-				asio::dispatch(ex, [h = std::move(h), e, ... value = std::move(value)]() mutable { std::move(h)(e, std::move(value)...); });
-			});
-		};
-		if constexpr (std::is_void_v<T>) {
-			co_await asio::async_initiate<const asio::use_awaitable_t<>&, void(std::exception_ptr)>(initiate, asio::use_awaitable, std::move(t));
-		} else {
-			auto v = co_await asio::async_initiate<const asio::use_awaitable_t<>&, void(std::exception_ptr, std::optional<T>)>(
-				initiate, asio::use_awaitable, std::move(t));
-			co_return std::move(*v);
-		}
-	}
-
-#ifndef NDEBUG
 	TaskCounters counters;
 
 private:
-	struct Resume {
+	struct Pump {
 		struct promise_type {
-			Resume get_return_object() noexcept { return Resume{std::coroutine_handle<promise_type>::from_promise(*this)}; }
+			Pump get_return_object() noexcept { return Pump{std::coroutine_handle<promise_type>::from_promise(*this)}; }
 			std::suspend_always initial_suspend() noexcept { return {}; }
-			std::suspend_never final_suspend() noexcept { return {}; }
+			std::suspend_always final_suspend() noexcept { return {}; }
 			void return_void() noexcept { }
 			void unhandled_exception() noexcept { std::terminate(); }
 		};
 		std::coroutine_handle<promise_type> handle;
 	};
 
-	static Resume run_resume(Run* run, std::coroutine_handle<> h) {
-		TaskCounters* const previous = AsioHost::running_;
-		AsioHost::running_ = &run->counters;
-		{
-			task::running_on scope(task::scheduler_ref::of(*run));
-			h.resume();
-		}
-		AsioHost::running_ = previous;
-		co_return;
-	}
-	static std::coroutine_handle<> resume_in(Run* run, std::coroutine_handle<> h) { return run_resume(run, h).handle; }
-#else
+	struct Ready {
+		std::coroutine_handle<> h;
+		bool demoted;
+	};
 
-private:
-#endif
+	void queue(std::coroutine_handle<> h, bool demoted) {
+		bool idle;
+		{
+			std::lock_guard<std::mutex> lk(mtx_);
+			ready_.push_back({h, demoted});
+			idle = !pumping_;
+			pumping_ = true;
+		}
+		if (idle) {
+			demoted ? host_.scheduler().post_demoted(pump_) : host_.scheduler().post(pump_);
+		}
+	}
+
+	// Each pass runs the resumes queued before it began; what they queue goes back to the loop with the pump.
+	static Pump run(Counted* self) {
+		for (;;) {
+			std::vector<Ready> batch;
+			{
+				std::lock_guard<std::mutex> lk(self->mtx_);
+				batch.swap(self->ready_);
+			}
+			for (const auto& ready : batch) {
+				TaskCounters* const previous = AsioHost::running_;
+				AsioHost::running_ = &self->counters;
+				{
+					task::running_on scope(task::scheduler_ref::of(*self));
+					ready.h.resume();
+				}
+				AsioHost::running_ = previous;
+			}
+			bool again;
+			bool demoted = true;
+			{
+				std::lock_guard<std::mutex> lk(self->mtx_);
+				again = !self->ready_.empty();
+				for (const auto& ready : self->ready_) {
+					demoted = demoted && ready.demoted;
+				}
+				self->pumping_ = again;
+			}
+			if (again) {
+				// Posted before this pass suspends: the loop runs it only after this handler returns.
+				demoted ? self->host_.scheduler().post_demoted(self->pump_) : self->host_.scheduler().post(self->pump_);
+			}
+			co_await std::suspend_always{};
+		}
+	}
+
 	AsioHost& host_;
+	std::coroutine_handle<> pump_;
+	std::mutex mtx_;
+	std::vector<Ready> ready_;
+	bool pumping_ = false;
 };
+#endif
+
+
+// Runs a request's work on the loop. Release builds return it to be awaited in place. A debug build moves it to a
+// Counted scheduler of its own and back to the loop before it returns, so the request's counters follow its resumes.
+template <typename T>
+task::task<T> counted([[maybe_unused]] AsioHost& host, task::task<T> work) {
+#ifdef NDEBUG
+	return work;
+#else
+	return [](AsioHost& host, task::task<T> work) -> task::task<T> {
+		Counted run(host);
+		co_await task::schedule_on{task::scheduler_ref::of(run)};
+		std::exception_ptr error;
+		std::optional<std::conditional_t<std::is_void_v<T>, bool, T>> value;
+		try {
+			if constexpr (std::is_void_v<T>) {
+				co_await std::move(work);
+			} else {
+				value.emplace(co_await std::move(work));
+			}
+		} catch (...) {
+			error = std::current_exception();
+		}
+		co_await task::schedule_on{task::scheduler_ref::of(host)};  // back on the loop before `run` goes
+		if (error) {
+			std::rethrow_exception(error);
+		}
+		if constexpr (!std::is_void_v<T>) {
+			co_return std::move(*value);
+		}
+	}(host, std::move(work));
+#endif
+}
 
 }  // namespace engine

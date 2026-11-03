@@ -407,7 +407,7 @@ ShardEndpoint::ensure_open(int flags)
 
 
 task::task<Turn>
-ShardEndpoint::take_turn(int flags)
+ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 {
 	L_CALL("ShardEndpoint::take_turn(({}))", readable_flags(flags));
 
@@ -420,15 +420,18 @@ ShardEndpoint::take_turn(int flags)
 		int* held = nullptr;
 		if (auto* host = engine::Host::current()) {
 			const auto at = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
-			task::deadline<engine::Host> expiry(*host, at);
+			task::deadline<engine::Host> expiry(*host, at, cancel);
 			guard = co_await turn.lock(expiry.token());
 			if (auto* counters = host->counters()) {
 				held = &counters->turns;
 			}
 		} else {
-			guard = co_await turn.lock();
+			guard = co_await turn.lock(cancel);
 		}
 		if (!guard) {
+			if (cancel.requested()) {
+				throw task::cancelled{};
+			}
 			throw engine::Error(engine::errc::busy, "The index is busy: its turn did not come in time");
 		}
 		if (held) {
@@ -451,7 +454,7 @@ ShardEndpoint::take_turn(int flags)
 
 
 task::task<void>
-ShardEndpoint::fresh(int flags)
+ShardEndpoint::fresh(int flags, task::cancel_token cancel)
 {
 	co_await ensure_open(flags);
 	std::shared_ptr<engine::Shard> eng;
@@ -462,7 +465,7 @@ ShardEndpoint::fresh(int flags)
 	if (!eng || !eng->dirty()) {
 		co_return;
 	}
-	auto mine = co_await take_turn(flags);
+	auto mine = co_await take_turn(flags, std::move(cancel));
 	{
 		std::lock_guard<std::mutex> lk(mtx);
 		eng = engine_;

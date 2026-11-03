@@ -51,6 +51,7 @@
 #include "engine/strata/shard.h"
 #include "engine/strata/viewed.h"
 #include "engine/sync.h"
+#include "http_asio.h"
 #include "http_body_stream.h"
 #include "http_message.h"
 #include "reactor.h"
@@ -86,28 +87,29 @@ void fill(Shard& shard, int documents) {
 	engine::sync_wait(shard.commit());
 }
 
-// A loop with its host, bound to the loop's thread as the manager binds its reactors.
+// A loop with its host over the reactor's scheduler, bound to the loop's thread as the manager binds its reactors.
 struct Loop {
 	reactor::Reactor reactor;
-	engine::AsioHost host{reactor.io().get_executor()};
+	engine::AsioHost host{reactor.scheduler()};
 	Loop() {
 		asio::post(reactor.io(), [this] { host.bind_loop_thread(); });
 	}
 	~Loop() { engine::Host::bind_thread(nullptr); }   // the test thread ran the loop
 
-	// Runs a request's task on the loop until it ends; what it throws is rethrown here.
+	// Runs a request's task on the loop until it ends, as SearchService::handle awaits a view; what it throws is
+	// rethrown here. A task holds no Asio work while it waits for a chore, so the loop is kept running until it ends.
 	template <typename F>
 	void run(F&& body) {
+		auto work = asio::make_work_guard(reactor.io());
 		std::exception_ptr error;
-		engine::Run run(host);
-		asio::co_spawn(reactor.io(), [&]() -> asio::awaitable<void> {
+		host.spawn([](Loop& loop, F& body, std::exception_ptr& error) -> task::task<void> {
 			try {
-				co_await run.await(body());
+				co_await engine::counted(loop.host, body());
 			} catch (...) {
 				error = std::current_exception();
 			}
-			reactor.io().stop();
-		}, asio::detached);
+			loop.reactor.io().stop();
+		}(*this, body, error));
 		reactor.run();
 		if (error) {
 			std::rethrow_exception(error);
@@ -315,9 +317,10 @@ static void test_a_bulk_body_is_parsed_off_the_loop() {
 	CHECK_GE(inline_ms, 80.0);   // a parse long enough to tell
 
 	Loop loop;
-	auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+	auto stream = std::make_shared<http::BodyStream>(loop.reactor.scheduler(), 8);
 	http::Request hreq;
 	hreq.body_stream = stream;
+	hreq.set_scheduler(&loop.reactor.scheduler());
 	Request request;
 	request.http_req = &hreq;
 	request.mode = Request::Mode::STREAM_NDJSON;
@@ -325,13 +328,13 @@ static void test_a_bulk_body_is_parsed_off_the_loop() {
 	IndexChores chores(pool.work_pool());
 	request.parse_chores = &chores;
 
-	asio::co_spawn(loop.reactor.io(), [&]() -> asio::awaitable<void> {
+	loop.host.spawn([](std::shared_ptr<http::BodyStream> stream, const std::string& body) -> task::task<void> {
 		constexpr std::size_t piece = 64 * 1024;
 		for (std::size_t at = 0; at < body.size(); at += piece) {
-			co_await stream->push(body.substr(at, piece));
+			co_await stream->push(body.substr(at, piece), {});
 		}
 		stream->finish();
-	}, asio::detached);
+	}(stream, body));
 	std::size_t total = 0;
 	const auto start = thread_cpu_ms();
 	loop.run([&]() -> task::task<void> {
@@ -361,7 +364,7 @@ static void test_a_loop_past_its_demoted_cap_refuses_new_requests() {
 			}());
 		}
 		co_await task::yield();   // every spawned task has run and parked itself demoted
-		CHECK_GE(loop.host.scheduler().demoted(), 256u);
+		CHECK_GE(loop.reactor.scheduler().demoted(), 256u);   // the host's queue is the reactor's
 		try {
 			(void)service.create_extension(request);
 		} catch (const http::RequestRejected& rejected) {
@@ -398,9 +401,10 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 	const auto baseline = task::detail::live_frames();
 	{
 		Loop loop;
-		auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+		auto stream = std::make_shared<http::BodyStream>(loop.reactor.scheduler(), 8);
 		http::Request hreq;
 		hreq.body_stream = stream;
+		hreq.set_scheduler(&loop.reactor.scheduler());
 		Request request;
 		request.http_req = &hreq;
 		request.mode = Request::Mode::STREAM_NDJSON;
@@ -408,14 +412,13 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 		request.parse_chores = &chores;
 
 		auto start = [&](std::function<task::task<void>()> body) {
-			asio::co_spawn(loop.reactor.io(), [&loop, &ended, body]() -> asio::awaitable<void> {
-				engine::Run run(loop.host);
+			loop.host.spawn([](Loop& loop, std::atomic<int>& ended, std::function<task::task<void>()> body) -> task::task<void> {
 				try {
-					co_await run.await(body());
+					co_await engine::counted(loop.host, body());
 				} catch (...) {
 				}
 				++ended;
-			}, asio::detached);
+			}(loop, ended, std::move(body)));
 		};
 		start([&]() -> task::task<void> {   // (a) a turn
 			auto mine = co_await entry->take_turn(WRITE);
@@ -433,7 +436,7 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 			while (co_await request.next_batch(batch)) {
 			}
 		});
-		start([&]() -> task::task<void> {   // (d) a turn held across a wait: its Turn points into the request's Run
+		start([&]() -> task::task<void> {   // (d) a turn held across a wait: its Turn points into the request's counters
 			auto mine = co_await other->take_turn(WRITE);
 			co_await never;
 		});
@@ -450,8 +453,8 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 		});
 		CHECK_TRUE(IndexChores::cancel_all(std::chrono::steady_clock::now() + 5s));
 		releaser.join();
-		loop.host.close();
-		loop.host.destroy_roots();
+		loop.reactor.scheduler().close();
+		loop.reactor.scheduler().destroy_roots();
 		CHECK_EQ(ended.load(), 0);   // destroyed, not completed
 	}
 	// The destroyed waiter's node stays queued until the holder's unlock sheds it; a deadline's state goes with
@@ -467,6 +470,167 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 	CHECK_TRUE(chores.idle());
 }
 
+
+// A request's token ends its wait for a turn (F2): the turn's deadline is linked to it, so a cancelled request leaves
+// the queue at once with task::cancelled, not `busy` at the turn timeout. A Shard passes its token to the wait.
+static void test_a_cancelled_request_leaves_the_turn_queue() {
+	DatabasePool pool(8);
+	pool.set_turn_timeout(60);
+	auto entry = pool.spawn(Endpoint(fresh("turn_cancel")));
+	{
+		Shard shard(*entry.get(), WRITE);
+		fill(shard, 1);
+	}
+	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));
+	for (int through_shard = 0; through_shard < 2; ++through_shard) {
+		Loop loop;
+		task::cancel_source source;
+		asio::steady_timer timer(loop.reactor.io(), 50ms);
+		timer.async_wait([&](const asio::error_code& ec) {
+			if (!ec) { source.request(); }
+		});
+		std::string outcome;
+		const auto began = std::chrono::steady_clock::now();
+		loop.run([&]() -> task::task<void> {
+			try {
+				if (through_shard) {
+					Shard shard(*entry.get(), WRITE, source.token());
+					(void)co_await shard.add_document(make("Kc"));
+				} else {
+					(void)co_await entry->take_turn(WRITE, source.token());
+				}
+				outcome = "turn";
+			} catch (const task::cancelled&) {
+				outcome = "cancelled";
+			} catch (const engine::Error& error) {
+				outcome = error.reason();
+			}
+		});
+		const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - began).count();
+		CHECK_EQ(outcome, std::string("cancelled"));
+		CHECK_LT(ms, 5000.0);
+	}
+	held.reset();
+	(void)engine::sync_wait(entry->take_turn(WRITE));   // the cancelled waiters left the queue
+}
+
+// The request's token ends a read that waits for the streamed body: Request::read_chunk passes it to
+// BodyStream::read, and the read raises task::cancelled.
+static void test_a_cancelled_request_ends_its_body_read() {
+	Loop loop;
+	auto stream = std::make_shared<http::BodyStream>(loop.reactor.scheduler(), 8);
+	http::Request hreq;
+	hreq.body_stream = stream;
+	hreq.set_scheduler(&loop.reactor.scheduler());
+	Request request;
+	request.http_req = &hreq;
+	asio::steady_timer cancel(loop.reactor.io(), 50ms);
+	cancel.async_wait([&](const asio::error_code& ec) {
+		if (!ec) { hreq.cancel(task::cancel_reason::shutdown); }
+	});
+	asio::steady_timer watchdog(loop.reactor.io(), 5s);   // ends the read cleanly when the token did not
+	watchdog.async_wait([&](const asio::error_code& ec) {
+		if (!ec) { stream->finish(); }
+	});
+	bool failed = false;
+	loop.run([&]() -> task::task<void> {
+		std::string chunk;
+		try {
+			(void)co_await request.read_chunk(chunk);
+		} catch (const task::cancelled&) {
+			failed = true;
+		}
+		watchdog.cancel();
+	});
+	CHECK_TRUE(failed);
+}
+
+// Teardown through HttpAsioService's phases (task's cancellation D8), as the manager runs it: a request waiting for a
+// turn with its token ends at stop(); one waiting without a token (an admitted write) is left suspended by the bounded
+// stop() and destroyed by destroy_roots(). No task frame is left and the turn is free.
+static void test_service_phases_end_or_destroy_requests_waiting_for_a_turn() {
+	DatabasePool pool(8);
+	pool.set_turn_timeout(60);
+	auto entry = pool.spawn(Endpoint(fresh("phases")));
+	{
+		Shard shard(*entry.get(), WRITE);
+		fill(shard, 1);
+	}
+	const auto baseline = task::detail::live_frames();
+	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));
+
+	struct Handler final : http::HttpHandler {
+		ShardEndpoint* entry = nullptr;
+		std::atomic<int> waiting{0};
+		std::atomic<int> cancelled{0};
+		std::atomic<int> ended{0};
+		task::task<void> handle(http::Request& req, http::ResponseWriter& response) override {
+			auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
+			CHECK_TRUE(host != nullptr && &host->scheduler() == &req.scheduler());
+			if (host == nullptr) {
+				co_return;
+			}
+			const task::cancel_token token = req.path == "/read" ? req.cancel_token() : task::cancel_token{};
+			++waiting;
+			try {
+				auto turn = co_await engine::counted(*host, entry->take_turn(WRITE, token));
+			} catch (const task::cancelled&) {
+				++cancelled;
+			}
+			++ended;
+			response.send(200, "ok");
+		}
+	} handler;
+	handler.entry = entry.get();
+
+	unsigned short port;
+	{
+		asio::io_context io;
+		asio::ip::tcp::acceptor reservation(io, {asio::ip::address_v4::loopback(), 0});
+		port = reservation.local_endpoint().port();
+	}
+	{
+		http::HttpAsioService service(handler, 1, 0);
+		service.set_shutdown_grace(100ms);
+		engine::AsioHost host(service.reactor(0).scheduler());   // destroyed before the service, as the manager's
+		asio::post(service.reactor(0).io(), [&host] { host.bind_loop_thread(); });
+		http::AsioBindOptions bind;
+		bind.address = "127.0.0.1";
+		service.set_bind_options(bind);
+		service.start(port);
+
+		asio::io_context client;
+		std::vector<asio::ip::tcp::socket> sockets;
+		for (const char* path : {"/read", "/write"}) {
+			auto& socket = sockets.emplace_back(client);
+			socket.connect({asio::ip::address_v4::loopback(), port});
+			const std::string request = std::string("GET ") + path + " HTTP/1.1\r\nHost: t\r\n\r\n";
+			asio::write(socket, asio::buffer(request));
+		}
+		for (int i = 0; i < 500 && handler.waiting.load() < 2; ++i) {
+			std::this_thread::sleep_for(10ms);
+		}
+		CHECK_EQ(handler.waiting.load(), 2);
+
+		const auto began = std::chrono::steady_clock::now();
+		service.stop();
+		const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - began).count();
+		CHECK_LT(ms, 2000.0);                  // bounded: grace, force, grace
+		CHECK_EQ(handler.cancelled.load(), 1);  // the read's token ended its wait
+		CHECK_EQ(handler.ended.load(), 1);      // the write is still suspended on the turn
+		CHECK_TRUE(IndexChores::cancel_all(std::chrono::steady_clock::now() + 5s));
+		service.close();
+		service.destroy_roots();
+		CHECK_EQ(handler.ended.load(), 1);      // destroyed, not completed
+	}
+	held.reset();   // sheds the destroyed waiter's node
+#if TASK_COUNT_FRAMES
+	CHECK_EQ(task::detail::live_frames(), baseline);
+#else
+	(void)baseline;
+#endif
+	(void)engine::sync_wait(entry->take_turn(WRITE));   // the destroyed waiter does not keep the turn
+}
 
 #ifndef NDEBUG
 struct RuleBroken {
@@ -506,6 +670,16 @@ static void test_a_task_that_holds_a_view_waits_for_nothing() {
 		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
 			auto view = strata->view();
 			co_await shard.add_document(make("Kx"));
+		}), std::string("a turn"));
+	}
+	{
+		// After an Asio completion too: it resumes the request through its counted scheduler, not inline.
+		Loop loop;
+		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
+			asio::steady_timer timer(loop.reactor.io(), 1ms);
+			(void)co_await task::await_asio<void(asio::error_code)>([&](auto handler) { timer.async_wait(std::move(handler)); });
+			auto view = strata->view();
+			co_await shard.add_document(make("Kw"));
 		}), std::string("a turn"));
 	}
 	{
@@ -565,6 +739,9 @@ TEST_MAIN(
 	test_a_bulk_body_is_parsed_off_the_loop,
 	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests,
+	test_a_cancelled_request_leaves_the_turn_queue,
+	test_a_cancelled_request_ends_its_body_read,
+	test_service_phases_end_or_destroy_requests_waiting_for_a_turn,
 	test_a_task_that_holds_a_view_waits_for_nothing,
 	test_the_rule_allows_a_yield_and_a_wait_after_the_view
 )
@@ -576,6 +753,9 @@ TEST_MAIN(
 	test_views_are_acquired_while_the_index_is_replaced,
 	test_a_bulk_body_is_parsed_off_the_loop,
 	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
-	test_a_loop_past_its_demoted_cap_refuses_new_requests
+	test_a_loop_past_its_demoted_cap_refuses_new_requests,
+	test_a_cancelled_request_leaves_the_turn_queue,
+	test_a_cancelled_request_ends_its_body_read,
+	test_service_phases_end_or_destroy_requests_waiting_for_a_turn
 )
 #endif
