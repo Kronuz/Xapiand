@@ -5,7 +5,7 @@
 - Design: http `docs/design/task-handlers.md` at http:2bede1b ("What Xapiand changes"), http `docs/status/task-h1.md` (H1's consumer break list), reactor `docs/status/task-sessions.md` at reactor:2fd30c8 (R's break list), task `docs/design/cancellation.md` at task:6558c2e (D7, D8), the lead's notes `http-wt/task-handlers/docs/reviews/task-handlers-xapiand.md`; the first half's ledger `Xapiand-wt/task-wave/docs/status/phase7c-task-wave.md` (Handoff, F1, F2).
 - Branch / worktree: `phase7c/http-wave` at `~/code/Kronuz/Xapiand-wt/http-wave`, from local master Xapiand:b6b8f7534. Local only: never pushed.
 - Pins: reactor:2fd30c8 (step R), http:2bede1b (step H1), http-log:765672a (branch `phase/task-h1` in `~/code/Kronuz/http-log-wt/task-h1`, not pushed: see Blocked on). task stays at task:6558c2e (C3).
-- State: building.
+- State: built and proved; ready for review. Nothing running.
 
 ## Done criteria (the lead's owed items; tick only with evidence)
 
@@ -15,7 +15,7 @@
 - [x] 9 reactor Session migration: Xapiand builds no session of its own; the tests build `AsioHost` from the reactor's scheduler; `~Reactor` stops its loop (the `Loop` fixtures rely on it). The flat 1 ms accept retry is inside reactor: nothing in Xapiand
 - [x] H1: `SearchService::handle` returns `task::task<void>`, views awaited (through `engine::counted`), `Request::cancel_token()` the only cancellation (`Request::fail_body`; mutant FailBody dies), `tls_connection_factory`, `join()` through `HttpAsioService::stop/close/destroy_roots`
 - [x] 7 again through `HttpAsioService`'s phases: `test_service_phases_end_or_destroy_requests_waiting_for_a_turn`, `live_frames()` back to baseline
-- [ ] Floor: Linux TSan and ASan+UBSan, macOS ASan; graceful_shutdown_check, docs E2E (`npx newman@6.2.3`), stall_load reduced, lua_bounds, live_frames; `async_check --strict --owed` 0 owed; g++-13 and clang builds (g++-13 excludes `test_pool` and `test_blocking_guard`: the known task hang, fixed elsewhere)
+- [x] Floor: Linux TSan and ASan+UBSan, macOS ASan; graceful_shutdown_check, docs E2E (`npx newman@6.2.3`), stall_load reduced, lua_bounds, live_frames; `async_check --strict --owed` 0 owed; g++-13 and clang builds (g++-13 excludes `test_pool` and `test_blocking_guard`: the known task hang, fixed elsewhere). Evidence below; two timing checks failed under `ctest -j4` in the VM and pass alone (not attributed)
 
 ## Decisions as built
 
@@ -38,6 +38,10 @@ Builds: macOS Debug ASan+UBSan (Homebrew clang 22, `TASK_COUNT_FRAMES=ON`, `.scr
 | `lua_bounds.py`, macOS ASan Debug server | first two cases 400 in 10.5 s and 9.7 s, the third past its 30 s bound (the first half saw 7.7 s and a pass here; Release is the run that counts, below) |
 | `async_check --strict --owed --extern strata=.scratch/deps/strata-src` (strata:3f564dc) | 0 owed, 0 unclassified, rc 0 |
 | Linux g++-13 ASan ctest, `-E "test_pool|test_blocking_guard"` (the known g++-13 task hang, excluded) | 32/33; 0 ASan, UBSan or LSan reports. `test_control_plane` failed its lag bound (`test_control_plane.cc:282`, p99 under 16 ms) once; alone it failed 1 of 3 runs. Not attributed: the check is master's binary in the same VM |
+| Linux clang 18 TSan ctest, all 35 | 34/35: `test_pool`'s one report is the first half's (`test_pool.cc:181` reads a shared exception while libc++abi's `__cxa_end_catch`, uninstrumented, frees it); `test_blocking_guard`, `test_control_plane`, `test_reactor_requests` pass with none |
+| macOS Debug TSan (clang 22), `test_reactor_requests` (RelWithDebInfo compiles `Counted` out, so this is the one TSan run of it) | 363 checks pass, 0 reports |
+| Linux g++-13 Release ctest, `-E "test_pool|test_blocking_guard"` | 32/33: `test_node` failed `test_node.cc:691` (a shutdown's stop time within its bound + 800 ms) under `-j4`; alone it passes. The first half saw `test_node` fail under `-j4` the same way |
+| `lua_bounds.py`, Linux g++-13 Release | PASS (rc 0); the flood's light GETs p99 36 ms; the graceful stop exits |
 
 Mutants (macOS ASan, `.scratch/mutants.py`, `.scratch/mutants.sh`, each restored after):
 
@@ -60,6 +64,10 @@ Mutants (macOS ASan, `.scratch/mutants.py`, `.scratch/mutants.sh`, each restored
 
 ## Next
 
+1. Review (code reviewer): the H1 move, `Counted`, item 6's plumbing, W2's scope in `emit_via_writer`.
+2. The lead: push http-log `phase/task-h1` and land it on http-log main (Blocked on); rule on W2 and W3.
+3. Attribution runs if wanted: master's `test_control_plane` and `test_node` binaries in the same VM under `ctest -j4`.
+
 ## Blocked on
 
 - Pushing http-log's `phase/task-h1` (http-log:765672a) was refused by the permission classifier. Xapiand pins it; the build reads it locally (`FETCHCONTENT_SOURCE_DIR_HTTP_LOG`). The lead pushes it and lands it on http-log main.
@@ -67,3 +75,4 @@ Mutants (macOS ASan, `.scratch/mutants.py`, `.scratch/mutants.sh`, each restored
 ## Log
 
 - 2026-11-03: worktree from Xapiand:b6b8f7534. Xapiand:f29690a3a reactor pin; Xapiand:bb6fa6e34 http and http-log pins. http-log:765672a ports `AccessLog::handle` to task (3/3 ctest, macOS Debug).
+- 2026-11-03: Xapiand:42d5d4f9b item 6; Xapiand:d2e6901c3 the H1 move, AsioHost on the reactors' schedulers, `Run` deleted, `Counted`, tests; Xapiand:44a5ff985 the rule test after an Asio completion (Cinline); Xapiand:6408e2200 mechanism notes; Xapiand:1e9b90042 changelog. The AWS lease became unreachable (AWS session expired) mid-run; the Linux floor ran in strata's local VM (`~/httpwave`, removed after). Kept: `build-asan` (macOS ASan, reusable), `.scratch/` scripts (`build-asan.sh`, `run-tests.sh`, `harness*.sh`, `mutants.*`, `d9.sh`, `vm.sh`).
