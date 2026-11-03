@@ -44,10 +44,10 @@ too_many(std::size_t limit)
 }
 
 bool
-is_directory(const std::string& path)
+is_directory(const std::string& path, bool follow = true)
 {
 	struct stat st;
-	return ::stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+	return (follow ? ::stat(path.c_str(), &st) : ::lstat(path.c_str(), &st)) == 0 && S_ISDIR(st.st_mode);
 }
 
 // Whether a directory is an index: it holds `strata` (an index of one shard) or a shard `.__N`, which may be any
@@ -93,7 +93,7 @@ public:
 			if (name.empty() || name[0] == '.' || !index_path::valid(name)) {
 				continue;
 			}
-			if (ent->d_type == DT_DIR || (ent->d_type == DT_UNKNOWN && is_directory(dir + "/" + std::string(name)))) {
+			if (ent->d_type == DT_DIR || (ent->d_type == DT_UNKNOWN && is_directory(dir + "/" + std::string(name), false))) {
 				children.emplace_back(name);
 			}
 		}

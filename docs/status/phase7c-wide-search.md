@@ -6,29 +6,42 @@ Branch `phase7c/wide-search` in `Xapiand-wt/wide-search`. Source: `strata/docs/s
 
 ## State
 
-Built and proved; master (gate-prep, then drop-threadpool Xapiand:88892b4cb, strata pin 3f564dc5) is merged in and the whole proof reran green on the merged head. Local only; ready for review.
+Built and proved; the four findings of the first review round are fixed (below). Master (gate-prep, then drop-threadpool Xapiand:88892b4cb, strata pin 3f564dc5) is merged in. Local only (never pushed); ready for review. Head Xapiand:f71f1dd46 (fix round Xapiand:5110af2ec to Xapiand:f71f1dd46 over the proved head Xapiand:dfbcc88e9).
 
 ## Done criteria
 
 - [x] `--max-indexes-per-search` removed (code, test, harness, docs, changelog); `--concurrent-search-indexes` (K) and `--max-search-indexes` (100,000, 400 above) added with `options.md`, `reader-views.md`, `wide-search.md` and a changelog bullet. Old status and review files keep the old name as history.
-- [x] A search walks its endpoints in batches of at most K, merging top-k as each batch ends, behind one seam (`engine::BatchRunner`; `DatabaseHandler::search_batch` is the one function that pins a batch).
-- [x] Identity test `tests/test_wide_search.cc` over 1, K-1, K, K+1, 3K+2 indexes (K = 4): hits, ids, order, ranks, totals, spy results, against one search of all and against the engine's own search; match_all and term queries, keyed sorts with ties, both docid orders, windows, collapse. 2817 checks. A non-vacuity block asserts the stored values reorder (key) and drop (collapse) hits.
-- [x] `harness/wide_search_check.py check`: the same over HTTP between a server that reads all in one batch and one with K = 4; plus the cap (`--max-search-indexes 7`: 7 served, 8 is 400) and the peak gauge (14 vs 4).
-- [x] Gate harness `harness/wide_search_check.py gate` (creates N indexes, searches across all, prints p50, p99 and `xapiand_search_pinned_indexes_peak`). Smoke at 1,000 indexes (Release, `quiet strict`, host loaded by other agents, 20 searches): p50 49 ms, p99 52 ms, peak 100 pinned (K = pool 200 / 2 loops). The 10,000 run is the lead's.
-- [x] Proof on the merged head: see Proof.
+- [x] A search walks its endpoints in batches of whole indexes, at most K shards, merging top-k as each batch ends, behind one seam (`engine::BatchRunner`; `DatabaseHandler::search_batch` is the one function that pins a batch).
+- [x] Identity test `tests/test_wide_search.cc` (22,301 checks): the same hits, ids, order, ranks, weights, percents, totals and spy results for 1, K-1, K, K+1 and 3K+2 shards at K = 4, and for K = 1, K-1, K, K+1, 3K+2 and one batch over the same 3K+2 shards, against one search of all and against the engine's own search; relevance queries (term, rare term, OR, AND, wildcard by prefix with a SYNONYM and an OR combiner, synonym) next to match_all, keyed sorts with ties, both docid orders, windows, collapse. Non-vacuity: stored values reorder and drop hits; at least 5 relevance queries weigh differently when the indexes are read as one; every case at 3K+2 shards finds something.
+- [x] A document weighs as in a search of its own index alone (`test_a_weight_is_that_of_the_documents_index`, 5 queries, up to 126 documents each).
+- [x] Hit ids are 64 bits; tests at the old 32-bit edge, one batch and two (`test_an_id_past_32_bits_is_exact`), and the decode (`test_a_hit_id_decodes_past_32_bits`).
+- [x] Patterns: `tests/test_index_pattern.cc` (glob, expansion over a directory tree, the limit), `tests/fuzz_index_pattern.cc` (the glob against a table reference: 1.25 million runs in 90 s under ASan+UBSan, no finding), E2E examples in `api.md`.
+- [x] `harness/wide_search_check.py check`: two servers (all in one batch, K = 4) agree on sorted and relevance searches (with weights and ids), by name list and by pattern; the cap (`--max-search-indexes 7`) through a list, `_all`, a prefix and an exclusion. `gate` searches `/w*/`.
 
-## Proof (merged head, identical results before and after the merge; Release and ASan+UBSan builds in `.scratch/build-rel`, `.scratch/build-asan`)
+## Proof (fix round, head Xapiand:f71f1dd46; Release in `.scratch/build-rel`; Linux ASan+UBSan on the shared lease, clang 20, commit Xapiand:9c8da59a0, which differs from the head in harness and docs files only)
 
-| | Release | ASan+UBSan (LLVM 22, `detect_leaks=0`) |
+| | Release (macOS) | ASan+UBSan (Linux, `detect_leaks=0`) |
 |---|---|---|
-| ctest | 35 of 35 | 35 of 35 |
-| docs E2E (newman 6.2.3) | 374 requests, 644 of 644 assertions | 644 of 644, no sanitizer line in the node log |
+| ctest | 36 of 36 | 36 of 36 (`test_text` needs `allocator_may_return_null=1`: it decodes a msgpack array header that asks for 128 GiB, and ASan refuses the allocation; unrelated to this change) |
+| docs E2E (newman 6.2.3) | 386 requests, 656 of 656 assertions | 656 of 656, no sanitizer line in the node log |
 | `wide_search_check.py check` | PASS | PASS, no sanitizer line |
 
-- `async_check.sh --strict --owed --extern strata=<pin>`: 247 hits, owed 0, unclassified 0, exit 0; `test_gate_tools.py` OK.
-- Mutants on `src/engine/search.cc` (each makes `test_wide_search` fail, and the source is restored): the merge's docid tie-break flipped (fails the `did` checks of every ordered case); `collapse_max + 1` in the merge (fails every collapse case: 37 checks with the window mutant); the window truncated by one (fails every windowed case); the missing-shard renumbering disabled (fails `test_a_missing_index_keeps_the_numbering_of_the_endpoints`).
-- Revert check: with `search_batched` forced to one search (no batching), `test_wide_search` fails 26 checks (`widest <= K`).
-- No fuzz target: nothing here decodes untrusted bytes (the merge reads engine results).
+- `async_check.sh --strict --owed --extern strata=3f564dc5`: 255 hits, allow 242, owed 0, compiled_out 13, unclassified 0, exit 0 (the pattern walk is classified: a query chore); `test_gate_tools.py` OK.
+- Mutants and reverts (each restored from git; the test or harness named fails):
+
+| fix | mutant (also the revert) | killed by |
+|---|---|---|
+| 2 per-index weights | `strata::run` builds one scope for all the shards (the old per-batch statistics) | `test_wide_search`: 1,931 weight checks, 1,551 id checks, 312 oracle checks; the harness (every relevance and sorted search over 5 and 14 indexes) |
+| 2 whole indexes per batch | `batch_end` ignores the index boundaries | `test_a_batch_holds_whole_indexes`, `test_the_hits_do_not_depend_on_the_batch_size` (522 weight checks) |
+| 3 64-bit ids | the merge narrows the id to 32 bits | `test_an_id_past_32_bits_is_exact` |
+| 3 decode | `split_hit_id` truncates | `test_a_hit_id_decodes_past_32_bits` |
+| 1 expansion | the view does not expand | docs E2E (5 assertions of "Multiple Indexes") and the harness (patterns, caps through `_all`) |
+| 1 closing slash | the last name keeps its `/` | the same E2E assertions and harness checks (found by the first E2E run: a pattern ending a path never matched) |
+| 1 walk | no descent into containers; exclusions ignored; no limit in the walk | `test_expand`, `test_the_limit` (9, 4 and 2 checks) |
+| 4 cap reachable | (the `_all` / prefix / exclusion cap rows of the harness) | the no-expansion mutant above |
+
+- Fuzz: one target (the glob). The directory listing reads names, not bytes of a format, and takes no decoder of its own.
+- Earlier mutants (merge tie-break, collapse window, window truncation, missing-shard renumbering, and the unbatched revert of Xapiand:dfbcc88e9) are unchanged; `test_wide_search` still holds those checks.
 
 ## Fix round (the lead's four findings)
 
@@ -41,7 +54,7 @@ Built and proved; master (gate-prep, then drop-threadpool Xapiand:88892b4cb, str
 
 ## Next
 
-Review (code reviewer; the lead decides on security: no untrusted decoder here). The lead runs the 10,000-index gate.
+Review (code reviewer; the lead decides on security: `index_pattern` reads a pattern from the URL and lists directories, bounded by a 256-byte pattern, the name cap and `index_path::valid` on every name it lists, but it is the one new path from a request to the file system). The lead runs the 10,000-index gate (`harness/wide_search_check.py gate`, which now searches `/w*/`).
 
 ## Blocked on
 
