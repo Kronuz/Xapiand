@@ -538,7 +538,8 @@ public:
 	// (debug builds): a pin may open or wake its index, which a held view could be keeping from happening.
 	task::task<IndexPin> pin(const Endpoint& endpoint);
 
-	// A chore's pin (the autocommit): empty when the registry has no entry for the path, so it opens nothing.
+	// A chore's resident pin (the autocommit): it opens nothing, and an index that is not open gives an empty pin
+	// (one that closed was committed by its close).
 	task::task<IndexPin> pin_chore(const Endpoint& endpoint);
 
 	// The entry of this path, referenced so that it stays until the reference ends. Never waits. The registry's

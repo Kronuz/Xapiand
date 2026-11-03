@@ -590,7 +590,12 @@ DatabasePool::pin_chore(const Endpoint& endpoint)
 {
 	L_CALL("DatabasePool::pin_chore({})", repr(endpoint.to_string()));
 
-	co_return IndexPin(get(endpoint));
+	// Resident only: the reference keeps an open entry from the idle close, which marks only unreferenced ones.
+	auto ref = get(endpoint);
+	if (ref && ref->state() != ShardEndpoint::State::open) {
+		ref.reset();
+	}
+	co_return IndexPin(std::move(ref));
 }
 
 

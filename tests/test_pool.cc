@@ -1045,8 +1045,8 @@ void test_a_pin_keeps_its_index_open() {
 	CHECK_TRUE(&a.entry() == pinned);
 }
 
-// A chore's pin opens nothing: a path the registry does not have gives an empty pin and adds no entry; a path it
-// has gives that entry.
+// A chore's pin is resident: it opens nothing. A path the registry does not have, or an index that is not open,
+// gives an empty pin and opens nothing; an open index gives its entry, kept from the idle close while pinned.
 void test_a_chore_pin_opens_nothing() {
 	Watchdog watchdog("a chore pin opens nothing");
 	DatabasePool pool(8);
@@ -1056,11 +1056,27 @@ void test_a_chore_pin_opens_nothing() {
 		CHECK_FALSE(static_cast<bool>(none));
 		CHECK_EQ(pool.count().first, 0u);
 	}
-	auto pin = engine::sync_wait(pool.pin(endpoint));
-	auto chore = engine::sync_wait(pool.pin_chore(endpoint));
-	CHECK_TRUE(static_cast<bool>(chore));
-	CHECK_TRUE(&chore.entry() == &pin.entry());
-	CHECK_EQ(pool.count().first, 1u);
+	ShardEndpoint* raw;
+	{
+		auto pin = engine::sync_wait(pool.pin(endpoint));
+		raw = &pin.entry();
+		CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(endpoint))));  // made, not open
+		Shard shard(*raw, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+	}
+	{
+		auto chore = engine::sync_wait(pool.pin_chore(endpoint));
+		CHECK_TRUE(static_cast<bool>(chore));
+		CHECK_TRUE(&chore.entry() == raw);
+		engine::sync_wait(pool.flush());
+		CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::open);  // pinned: not closed
+	}
+	engine::sync_wait(pool.flush());
+	CHECK_TRUE(A::state(*raw) == ShardEndpoint::State::empty);
+	const auto opens = raw->opens();
+	CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(endpoint))));  // closed: empty, not reopened
+	CHECK_EQ(raw->opens(), opens);
+	CHECK_EQ(pool.count().second, 0u);
 }
 
 // A close waits for the readers that hold views of the index, and while it waits it holds no turn: a writer
