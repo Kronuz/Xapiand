@@ -1669,6 +1669,11 @@ public:
 		std::this_thread::sleep_for(150ms);
 	}
 
+	void post_call(void (*fn)(void*), void* arg) override {
+		std::thread([fn, arg] { fn(arg); }).detach();
+		std::this_thread::sleep_for(150ms);
+	}
+
 protected:
 	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
 };
@@ -1680,6 +1685,8 @@ public:
 		task::running_on scope(task::scheduler_ref::of(*this));
 		h.resume();
 	}
+
+	void post_call(void (*fn)(void*), void* arg) override { fn(arg); }
 
 protected:
 	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
