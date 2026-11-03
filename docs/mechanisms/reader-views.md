@@ -100,7 +100,7 @@ The rule makes the cycle unrepresentable, and two things keep it so.
 - **Structure.** `engine::search` takes its views and then awaits only the budget's checkpoint (`run` is a coroutine, and
   the only suspension in the search is the slice), so a search holds views across a yield and across nothing else. `get`,
   `find_key`, `scan` and the other `Viewed` readers hold theirs across no `co_await`.
-- **A check in debug builds.** Each request's task runs through its own scheduler (`engine::Run`), whose resumes make the
+- **A check in debug builds.** Each request's task runs through its own scheduler (`engine::Counted`), whose resumes make the
   request's `TaskCounters` the running ones. `Viewed` counts the views the running task holds, and `DatabasePool::pin`,
   `take_turn`, `ensure_open` and `drain_readers` call `engine::check_no_view_held`, which aborts (a test replaces the abort with a
   throw) when the count is not zero. Release builds compile the check out; a task on a blocking wait

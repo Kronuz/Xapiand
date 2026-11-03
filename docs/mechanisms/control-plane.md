@@ -43,12 +43,12 @@ A signal reaches a task on the control loop, which runs `shutdown_checks`: the l
 `DB_TIMEOUT` = 30 s, and the reactors' grace, 5 s, plus 5 s to write the responses). Every step below ends by it:
 
 1. The housekeeping stops, the signal read is cancelled, and the control tasks drain (`drain_control`).
-2. **Stop 1, the HTTP service**: `http::HttpAsioService::stop()` on a thread of its own (`shutdown_wait::wait`, `src/shutdown_wait.h`). It calls `abort_all()` on each reactor (every live request's cancel source), closes the
-   acceptors, lets the sessions finish within the grace (5 s) and closes the sockets stalled peers still hold, then stops the loops. A read ends at its next checkpoint; an admitted write finishes, or answers `503`
-   when its turn does not come in 30 s.
+2. **Stop 1, the HTTP service**: `http::HttpAsioService::stop()` on a thread of its own (`shutdown_wait::wait`, `src/shutdown_wait.h`). It requests every session's and request's token, closes the acceptors, lets the sessions finish
+   within the grace (5 s), closes the sockets stalled peers still hold, lets them finish within a second grace, then stops the loops: `stop()` returns within twice the grace. A read ends at its next
+   checkpoint; an admitted write finishes within that, or is left suspended for the phases below.
    Then the tasks left suspended on the stopped loops (on a turn, a chore, a body read) go, in task's teardown phases (task `docs/design/cancellation.md` D8):
-   `IndexChores::cancel_all()` drops every index's queued chores (their awaiters resume with `task::cancelled`) and waits for the running ones; every HTTP host's scheduler
-   closes (`post` drops, `spawn` destroys its task); then each destroys its roots, which releases their turns and shard uses before the indexes close. A task is counted by its
+   `IndexChores::cancel_all()` drops every index's queued chores (their awaiters resume with `task::cancelled`) and waits for the running ones; `HttpAsioService::close()` closes
+   every reactor's scheduler (`post` drops, `spawn` destroys its task); then `destroy_roots()` destroys the tasks still suspended on them, which releases their turns and shard uses before the indexes close. A task is counted by its
    frame, and the control plane's published wakes are cleared by a scope guard, so a destroyed task leaves no count and no dead event behind.
 3. **Stop 2, the autocommits**: the scheduler stops; the waits that had not fired are dropped, because closing an index commits what it has pending. Then it drains.
 4. **Stop 3, the indexes**: `DatabasePool::finish()` and `join()` close every index nobody uses (its turn, then its close chore on the `WorkPool`), polling in slices of at most 500 ms.

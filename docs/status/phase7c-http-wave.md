@@ -9,12 +9,12 @@
 
 ## Done criteria (the lead's owed items; tick only with evidence)
 
-- [ ] 1 `AsioHost` wraps `reactor(i).scheduler()` and the control reactor's `scheduler()`, with no scheduler of its own
-- [ ] 6 `take_turn`'s deadline linked to the request's token (F2)
-- [ ] 8 `Run::await` deleted; F1's `Run::Resume` wrapper gone; the debug counters have a new home
-- [ ] 9 reactor Session migration: the tests build `AsioHost` from the reactor's scheduler; `~Reactor` stops its loop
-- [ ] H1: `SearchService::handle` returns `task::task<void>`, views awaited directly, `Request::cancel_token()` the only cancellation, `tls_connection_factory`, `join()` through `HttpAsioService::stop/close/destroy_roots`
-- [ ] 7 again through `HttpAsioService`'s phases: `live_frames()` back to baseline
+- [x] 1 `AsioHost` wraps `reactor(i).scheduler()` and the control reactor's `scheduler()`, with no scheduler of its own. Mutant H1own dies (the admission test reads the reactor's queue; the service test compares the host's scheduler with `Request::scheduler()`)
+- [x] 6 `take_turn`'s deadline linked to the request's token (F2), through `Shard::cancel`: `test_a_cancelled_request_leaves_the_turn_queue` (direct and through a Shard), and the service test. Mutants T6link and T6shard die
+- [x] 8 `Run` and `Run::await` deleted with F1's `Run::Resume` wrapper; the counters live in `engine::Counted` (Debug). Mutants Ccount, Cback, Cinline die; Linux g++-13 ASan with LSan: 0 reports (F1 was a 96-byte leak there)
+- [x] 9 reactor Session migration: Xapiand builds no session of its own; the tests build `AsioHost` from the reactor's scheduler; `~Reactor` stops its loop (the `Loop` fixtures rely on it). The flat 1 ms accept retry is inside reactor: nothing in Xapiand
+- [x] H1: `SearchService::handle` returns `task::task<void>`, views awaited (through `engine::counted`), `Request::cancel_token()` the only cancellation (`Request::fail_body`; mutant FailBody dies), `tls_connection_factory`, `join()` through `HttpAsioService::stop/close/destroy_roots`
+- [x] 7 again through `HttpAsioService`'s phases: `test_service_phases_end_or_destroy_requests_waiting_for_a_turn`, `live_frames()` back to baseline
 - [ ] Floor: Linux TSan and ASan+UBSan, macOS ASan; graceful_shutdown_check, docs E2E (`npx newman@6.2.3`), stall_load reduced, lua_bounds, live_frames; `async_check --strict --owed` 0 owed; g++-13 and clang builds (g++-13 excludes `test_pool` and `test_blocking_guard`: the known task hang, fixed elsewhere)
 
 ## Decisions as built
@@ -27,7 +27,30 @@
 
 ## Evidence
 
-(pending)
+Builds: macOS Debug ASan+UBSan (Homebrew clang 22, `TASK_COUNT_FRAMES=ON`, `.scratch/build-asan.sh`); Linux in strata's local VM (`tools/vm/linux.sh`, Ubuntu, 8 vCPUs; the AWS lease was unreachable once the AWS session expired): g++-13 Debug ASan+UBSan (`TASK_COUNT_FRAMES=ON`), clang 18 RelWithDebInfo TSan, g++-13 Release (`.scratch/vm.sh`), at Xapiand:44a5ff985.
+
+| Run | Result |
+|---|---|
+| macOS ASan: `test_reactor_requests`, `test_control_plane`, `test_blocking_guard`, `test_engine_host` | 363, 127, 14, 99 checks pass, no reports |
+| graceful_shutdown_check.sh, macOS ASan server | every scenario passes |
+| docs E2E, `npx newman@6.2.3`, macOS ASan server | 644 of 644 assertions, 374 requests; 0 sanitizer reports |
+| `stall_load.py --accounts-docs 50000 --duration 10 --no-assert`, macOS ASan server | completes; unloaded and loaded 0 errors, 0 503s (Debug ASan latencies, not a measurement) |
+| `lua_bounds.py`, macOS ASan Debug server | first two cases 400 in 10.5 s and 9.7 s, the third past its 30 s bound (the first half saw 7.7 s and a pass here; Release is the run that counts, below) |
+| `async_check --strict --owed --extern strata=.scratch/deps/strata-src` (strata:3f564dc) | 0 owed, 0 unclassified, rc 0 |
+| Linux g++-13 ASan ctest, `-E "test_pool|test_blocking_guard"` (the known g++-13 task hang, excluded) | 32/33; 0 ASan, UBSan or LSan reports. `test_control_plane` failed its lag bound (`test_control_plane.cc:282`, p99 under 16 ms) once; alone it failed 1 of 3 runs. Not attributed: the check is master's binary in the same VM |
+
+Mutants (macOS ASan, `.scratch/mutants.py`, `.scratch/mutants.sh`, each restored after):
+
+| Mutant | Result |
+|---|---|
+| H1own `AsioHost` owns a scheduler over the reactor's executor | the reactor's demoted count stays below 256; the service test's scheduler check fails |
+| T6link the turn's deadline not linked to the token | the turn test waits past 5 s twice; the service test's read is not cancelled |
+| T6shard `Shard::add_document` drops its token | the turn test's Shard case fails |
+| FailBody the callback does not fail the body | the body read is not failed (the watchdog ends it) |
+| Ccount `Counted` does not set the counters | three rule tests fail, then an abort |
+| Cback `counted()` does not move back to the loop | ASan heap-use-after-free in `running_on::~running_on` (the destroyed Counted) |
+| Cinline `Counted::runs_here()` forwards the loop's | survived; the new rule case after an Asio completion kills it (Xapiand:44a5ff985) |
+| D9scope `emit_via_writer` writes from Counted | the ASan server aborts on http's affinity assertion at the first PUT; restored: PUT 204, GET 200 (`.scratch/d9.sh`) |
 
 ## Findings
 
