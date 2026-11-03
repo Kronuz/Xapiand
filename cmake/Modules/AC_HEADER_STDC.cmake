@@ -31,8 +31,8 @@ endif (NOT STDC_HEADERS)
 
 check_include_files(unistd.h HAVE_UNISTD_H)
 
-include (CheckDIRSymbolExists)
-check_dirsymbol_exists("sys/stat.h;sys/types.h;dirent.h" HAVE_DIRENT_H)
+include (CheckCSourceCompiles)
+check_c_source_compiles("#include <sys/stat.h>\n#include <sys/types.h>\n#include <dirent.h>\nint main(void) { if ((DIR *) 0) return 0; return 0; }" HAVE_DIRENT_H)
 if (HAVE_DIRENT_H)
 	set (HAVE_SYS_STAT_H 1)
 	set (HAVE_SYS_TYPES_H 1)

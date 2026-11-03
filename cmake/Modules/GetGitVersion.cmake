@@ -1,3 +1,9 @@
+# Derived from google/benchmark's cmake/GetGitVersion.cmake (Apache-2.0,
+# https://github.com/google/benchmark, Copyright Google Inc.).
+# Licensed under the Apache License, Version 2.0; you may obtain a copy at
+# http://www.apache.org/licenses/LICENSE-2.0. The file is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
+#
 # - Returns a version string from Git tags
 #
 # This function inspects the annotated git tags for the project and returns a string
