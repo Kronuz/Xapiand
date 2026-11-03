@@ -749,7 +749,7 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 6558c2e9c533ebb0fa1177f22edd4fff528f6efa)  # task main C3: cancellation, inline resume, roots and the four teardown phases
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG d0807866aaace4bf916273a4bc0bee63f541978f)  # task main C3: cancellation, inline resume, roots and the four teardown phases
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
