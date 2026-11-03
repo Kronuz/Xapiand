@@ -194,13 +194,6 @@ public:
 	// budget's checkpoints, which a disconnect or a shutdown ends.
 	std::optional<task::budget> budget;
 
-	// Fails a streamed body when the request is cancelled, so a read that waits for it ends too.
-	struct FailBody {
-		std::shared_ptr<http::BodyStream> stream;
-		void operator()() const;
-	};
-	std::optional<task::cancel_callback<FailBody>> fail_body;
-
 	Request();
 	~Request() noexcept;
 
@@ -217,8 +210,8 @@ public:
 	// Parses a bulk body that arrived whole.
 	task::task<void> feed_whole_body();
 
-	// Reads the next chunk of a streamed body into `chunk`; false at the end of the body. Raises a ClientError when
-	// the body failed (the client went away before it ended).
+	// Reads the next chunk of a streamed body into `chunk`; false at the end of the body. Raises task::cancelled when
+	// the request's token is requested, and a ClientError when the body failed.
 	task::task<bool> read_chunk(std::string& chunk);
 
 	// The objects of the next chunk of a bulk body, parsed; false once the body has ended and none is left.

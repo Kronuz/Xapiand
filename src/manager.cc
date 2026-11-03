@@ -144,13 +144,27 @@ std::shared_ptr<XapiandManager> XapiandManager::_manager;
 // stalled peers still hold.
 static constexpr auto SHUTDOWN_GRACE = 5s;
 
+// What the HTTP service's stop leaves to the rest of the shutdown: the registry's close and the responses.
+static constexpr auto SHUTDOWN_RESERVE = 5s;
+// The shortest grace, when the budget is nearly spent: stalled peers are cut quickly.
+static constexpr auto SHUTDOWN_GRACE_MIN = 250ms;
+
 // The longest the shutdown waits for the writes that were admitted (C14). A read ends at its next checkpoint and a
 // stalled body is closed after the grace; a write queued on an index waits for its turn for DB_TIMEOUT, and one that
 // holds the turn is finishing. So the longer of the two, and a few seconds to write the responses.
 std::chrono::milliseconds
 XapiandManager::default_shutdown_write_bound()
 {
-	return std::max(std::chrono::milliseconds(static_cast<long long>(DB_TIMEOUT * 1000)), std::chrono::duration_cast<std::chrono::milliseconds>(SHUTDOWN_GRACE)) + 5s;
+	return std::max(std::chrono::milliseconds(static_cast<long long>(DB_TIMEOUT * 1000)), std::chrono::duration_cast<std::chrono::milliseconds>(SHUTDOWN_GRACE)) + SHUTDOWN_RESERVE;
+}
+
+// The reactors' stop waits one grace, forces the connections of what is left, and waits one more (2 x grace). The
+// grace is sized so that the two end before the shutdown's one budget does, leaving the reserve for the rest: an
+// admitted write that waits for its turn is let finish while D16's time remains (docs/design/phase7c.md D16).
+std::chrono::milliseconds
+XapiandManager::http_shutdown_grace(std::chrono::milliseconds left)
+{
+	return std::max(std::chrono::duration_cast<std::chrono::milliseconds>(SHUTDOWN_GRACE_MIN), (left - SHUTDOWN_RESERVE) / 2);
 }
 
 // The manager's Asio control-plane state, kept out of manager.h (which stays Asio-free).
@@ -1052,6 +1066,7 @@ XapiandManager::join()
 		// writes admitted are let finish within that; what is still running at the deadline is reported and abandoned.
 		// A SIGINT or SIGTERM that arrives from here on is an insistence: it ends the wait and the registry's.
 		const auto left = std::max(std::chrono::milliseconds(1), std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()));
+		http_service->set_shutdown_grace(http_shutdown_grace(left));   // before stop() starts, which reads it
 		auto report = shutdown_wait::wait(left, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, insisted);
 		if (!report.finished) {
 			L_WARNING("Shutdown abandoned {} unfinished item{} after waiting {} ms for the writes in flight{}:", report.abandoned.size(), report.abandoned.size() == 1 ? "" : "s", report.waited.count(), report.interrupted ? " (stopped by a second signal)" : "");

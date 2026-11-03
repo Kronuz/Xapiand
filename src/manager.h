@@ -125,6 +125,8 @@ public:
 	// abandons it (docs/design/phase7c.md D16).
 	static std::chrono::milliseconds default_shutdown_write_bound();
 	std::chrono::milliseconds shutdown_write_bound = default_shutdown_write_bound();
+	// The HTTP service's shutdown grace for `left` of the shutdown's budget: its stop takes at most twice that.
+	static std::chrono::milliseconds http_shutdown_grace(std::chrono::milliseconds left);
 
 	// How often the idle housekeeping runs (a minute); read when the node starts serving.
 	std::chrono::milliseconds housekeeping_period = std::chrono::minutes(1);

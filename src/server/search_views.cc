@@ -2963,14 +2963,37 @@ Request::read_chunk(std::string& chunk)
 		co_return false;
 	}
 	auto& stream = *http_req->body_stream;
-	const asio::error_code ec = co_await task::await_asio<void(asio::error_code)>([&](auto handler) {
-		stream.async_read(chunk, std::move(handler));
-	});
+#ifndef NDEBUG
+	// A debug build runs the views on a scheduler of their own that forwards to the loop's (engine::counted); the
+	// stream is the loop's (http's affinity rule, D9), so the read runs on the loop and returns to the views' scheduler.
+	const task::scheduler_ref views = task::current();
+	task::scheduler_ref loop;
+	if (views) {
+		try {
+			loop = task::scheduler_ref::of(http_req->scheduler());
+		} catch (const std::logic_error&) {
+			// A request no transport serves has no scheduler.
+		}
+	}
+	const bool moved = loop && loop != views;
+	if (moved) {
+		co_await task::schedule_on{loop};
+	}
+#endif
+	const asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());
+#ifndef NDEBUG
+	if (moved) {
+		co_await task::schedule_on{views};
+	}
+#endif
 	if (!ec) {
 		co_return true;
 	}
 	if (ec == asio::error::eof) {
 		co_return false;
+	}
+	if (ec == asio::error::operation_aborted) {
+		throw task::cancelled{};   // the request's token: the client went away or the service is stopping
 	}
 	THROW(ClientError, "The request body ended early");
 }
@@ -3088,13 +3111,6 @@ SearchService::wants_body_stream(const http::Request& hreq)
 }
 
 
-void
-Request::FailBody::operator()() const
-{
-	stream->fail(asio::error::operation_aborted);
-}
-
-
 task::task<void>
 SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 {
@@ -3107,9 +3123,6 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 	// a write that was admitted completes and its response is attempted. The request's token is
 	// http's (Request::cancel_token()); a read that waits for a streamed body ends with it too.
 	const task::cancel_token token = hreq.cancel_token();
-	if (hreq.body_stream) {
-		request.fail_body.emplace(token, Request::FailBody{hreq.body_stream});
-	}
 	request.budget.emplace(REQUEST_SLICE, token);
 
 	// HTTP facts from the library request (keep-alive/close, version).

@@ -61,7 +61,7 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 
 1. **The clients.** The node waits for the requests in flight. With clients that keep sending, this has taken up to about 45 s.
 2. **The rest, at most 35 s in all.** In this order, each step starting when the one before it has ended:
-   1. The HTTP service stops: it stops accepting, a read ends at its next checkpoint, an admitted write is let finish (one that waits for its index's turn answers `503` after 30 s), and the loops stop.
+   1. The HTTP service stops: it stops accepting, a read ends at its next checkpoint, an admitted write is let finish (one that waits for its index's turn answers `503` after 30 s), the connections of what is left are cut after a grace of 15 s (a write that finishes after that applies, but its client is not answered), and the loops stop one grace later.
    2. The autocommits that were waiting are dropped; closing an index commits what it has pending.
    3. Every index closes.
    4. The write-ahead logs flush.

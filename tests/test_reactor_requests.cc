@@ -317,9 +317,10 @@ static void test_a_bulk_body_is_parsed_off_the_loop() {
 	CHECK_GE(inline_ms, 80.0);   // a parse long enough to tell
 
 	Loop loop;
-	auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+	auto stream = std::make_shared<http::BodyStream>(loop.reactor.scheduler(), 8);
 	http::Request hreq;
 	hreq.body_stream = stream;
+	hreq.set_scheduler(&loop.reactor.scheduler());
 	Request request;
 	request.http_req = &hreq;
 	request.mode = Request::Mode::STREAM_NDJSON;
@@ -400,9 +401,10 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 	const auto baseline = task::detail::live_frames();
 	{
 		Loop loop;
-		auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+		auto stream = std::make_shared<http::BodyStream>(loop.reactor.scheduler(), 8);
 		http::Request hreq;
 		hreq.body_stream = stream;
+		hreq.set_scheduler(&loop.reactor.scheduler());
 		Request request;
 		request.http_req = &hreq;
 		request.mode = Request::Mode::STREAM_NDJSON;
@@ -512,21 +514,21 @@ static void test_a_cancelled_request_leaves_the_turn_queue() {
 	(void)engine::sync_wait(entry->take_turn(WRITE));   // the cancelled waiters left the queue
 }
 
-// The request's token fails its streamed body, so a read that waits for the body ends: the callback
-// SearchService::handle registers on Request::cancel_token() (Request::fail_body).
+// The request's token ends a read that waits for the streamed body: Request::read_chunk passes it to
+// BodyStream::read, and the read raises task::cancelled.
 static void test_a_cancelled_request_ends_its_body_read() {
 	Loop loop;
-	auto stream = std::make_shared<http::BodyStream>(loop.reactor.io().get_executor(), 8);
+	auto stream = std::make_shared<http::BodyStream>(loop.reactor.scheduler(), 8);
 	http::Request hreq;
 	hreq.body_stream = stream;
+	hreq.set_scheduler(&loop.reactor.scheduler());
 	Request request;
 	request.http_req = &hreq;
-	request.fail_body.emplace(hreq.cancel_token(), Request::FailBody{stream});
 	asio::steady_timer cancel(loop.reactor.io(), 50ms);
 	cancel.async_wait([&](const asio::error_code& ec) {
 		if (!ec) { hreq.cancel(task::cancel_reason::shutdown); }
 	});
-	asio::steady_timer watchdog(loop.reactor.io(), 5s);   // ends the read cleanly when nothing failed the body
+	asio::steady_timer watchdog(loop.reactor.io(), 5s);   // ends the read cleanly when the token did not
 	watchdog.async_wait([&](const asio::error_code& ec) {
 		if (!ec) { stream->finish(); }
 	});
@@ -535,7 +537,7 @@ static void test_a_cancelled_request_ends_its_body_read() {
 		std::string chunk;
 		try {
 			(void)co_await request.read_chunk(chunk);
-		} catch (...) {
+		} catch (const task::cancelled&) {
 			failed = true;
 		}
 		watchdog.cancel();

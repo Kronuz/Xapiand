@@ -396,6 +396,19 @@ for the requests in flight (`shutdown_checks`; the acceptors still accept, up to
 5. **Stop 4, the write-ahead logs**, then **Stop 5, the fsync threads**, then destruction (the registry,
    and with it the `WorkPool`, last).
 
+**The HTTP stop's arithmetic (W3).** Reactor R's `stop()` waits one grace for the live requests, cuts the
+connections of what is left (`force`), and waits one more grace: at most 2 x grace, then it stops the loops. `join()`
+sets the grace from the budget that is left when Stop 1 starts, `left`: `grace = max(250 ms, (left - 5 s) / 2)`
+(`XapiandManager::http_shutdown_grace`), so the stop ends before the deadline and 5 s remain for the autocommits
+and the registry. With the default bound (35 s = 30 s `DB_TIMEOUT` + 5 s) and nothing else spent, the grace is
+15 s and the stop takes at most 30 s. An admitted write waits for its index's turn for at most `DB_TIMEOUT`
+(30 s) from its admission, which is before Stop 1, so it applies or answers `503` within 2 x grace: the stop no
+longer destroys it while the budget has time. Its client is answered only when that happens within the first
+grace; after it the connection is cut, the write still applies. A stalled client (one that stops reading) holds
+the stop for the first grace, where the fixed 5 s used to cut it. With less budget left (the drains took
+time) the grace shrinks to what is left, down to 250 ms, and a write still waiting then is destroyed at Stop 1
+as before (task's phase 3).
+
 An index that cannot close within the bound (a held turn, a hung disk), or an HTTP service that cannot
 stop, is logged and abandoned, and the node exits with status 75 (`EX_TEMPFAIL`) after flushing the logs;
 the next start replays them. A second signal ends the wait at once, with the same exit. Differences from
