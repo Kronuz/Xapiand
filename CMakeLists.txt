@@ -1249,6 +1249,18 @@ target_link_libraries(${PROJECT_NAME}
 	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 )
 
+# The strata engine's integrity check on shard directories, with no server up (harness/engine_crash_check.sh).
+# Built on request: cmake --build build --target strata_check  ->  build/bin/strata_check
+add_executable(strata_check EXCLUDE_FROM_ALL
+	"${PROJECT_SOURCE_DIR}/tests/strata_check_tool.cc"
+	"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+)
+target_link_libraries(strata_check PRIVATE
+	XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+	${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+)
+
 
 ########################################################################
 # Copy data files (stopwords, mime types) from source to build directory

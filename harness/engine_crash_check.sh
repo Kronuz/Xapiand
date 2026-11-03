@@ -25,7 +25,7 @@ done
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8931}"
-CHECK_TOOL="${CHECK_TOOL:-$REPO/.scratch/tool/strata_check}"
+CHECK_TOOL="${CHECK_TOOL:-$(dirname "$BIN")/strata_check}"   # cmake --build build --target strata_check
 NDOCS="${NDOCS:-50}"
 IDX="walrec"
 RUNDIR="${RUNDIR:-$REPO/.scratch/xcrash_$$}"
@@ -77,7 +77,7 @@ check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every f
 		[ -e "${shards[0]}" ] || shards=("$RUNDIR"/n_strata/"$1")   # a one-shard index has no shard subdirectories
 		out=$("$CHECK_TOOL" "${shards[@]}" 2>&1) && pass "$2: strata check passes on $(echo "$out" | grep -c ': ok') shards" || fail "$2: strata check: $(echo "$out" | grep -v ': ok' | head -3 | tr '\n' ';')"
 	else
-		fail "$2: no CHECK_TOOL (tests/strata_check_tool.cc, built against the server's objects) to run the strata check"
+		fail "$2: no CHECK_TOOL (the strata_check target, tests/strata_check_tool.cc) to run the strata check"
 	fi
 }
 
