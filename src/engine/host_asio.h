@@ -29,6 +29,7 @@
 #include <coroutine>               // for std::coroutine_handle
 #include <exception>               // for std::exception_ptr
 #include <memory>                  // for std::shared_ptr, std::unique_ptr
+#include <mutex>                   // for std::mutex, std::lock_guard
 #include <optional>                // for std::optional
 #include <utility>                 // for std::move
 
@@ -188,9 +189,36 @@ public:
 #ifndef NDEBUG
 	TaskCounters counters;
 
+	// A wrapper the loop never ran (its loop stopped first) is destroyed with the Run: the loop's queue drops it unrun.
+	~Run() {
+		for (;;) {
+			std::coroutine_handle<> pending;
+			{
+				std::lock_guard<std::mutex> lk(pending_mtx_);
+				if (pending_ == nullptr) { break; }
+				pending = std::coroutine_handle<Resume::promise_type>::from_promise(*pending_);
+			}
+			pending.destroy();   // unlinks itself
+		}
+	}
+
 private:
 	struct Resume {
 		struct promise_type {
+			Run* run;
+			promise_type* prev = nullptr;
+			promise_type* next = nullptr;
+			promise_type(Run* r, std::coroutine_handle<>) noexcept : run(r) {
+				std::lock_guard<std::mutex> lk(run->pending_mtx_);
+				next = run->pending_;
+				if (next != nullptr) { next->prev = this; }
+				run->pending_ = this;
+			}
+			~promise_type() {
+				std::lock_guard<std::mutex> lk(run->pending_mtx_);
+				(prev != nullptr ? prev->next : run->pending_) = next;
+				if (next != nullptr) { next->prev = prev; }
+			}
 			Resume get_return_object() noexcept { return Resume{std::coroutine_handle<promise_type>::from_promise(*this)}; }
 			std::suspend_always initial_suspend() noexcept { return {}; }
 			std::suspend_never final_suspend() noexcept { return {}; }
@@ -199,6 +227,9 @@ private:
 		};
 		std::coroutine_handle<promise_type> handle;
 	};
+
+	std::mutex pending_mtx_;
+	Resume::promise_type* pending_ = nullptr;   // the wrappers posted and not yet run
 
 	static Resume run_resume(Run* run, std::coroutine_handle<> h) {
 		TaskCounters* const previous = AsioHost::running_;
