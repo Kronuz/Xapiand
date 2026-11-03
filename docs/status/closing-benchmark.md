@@ -17,3 +17,11 @@
 
 ## Log
 - 2026-11-03: drafted revision 0. Found while reading: `DB_SYNCHRONOUS_WAL` is never set in `src/` (no durable-on-ack mode, Q2); the `v1.0.0-alpha.10` tag does not build on Linux (fixes on `xapiand`, Q1); `lease` launches a fixed 100 GB gp3 root (Q4).
+
+## Owner rulings (2026-11-03)
+
+- Q1: the baseline is the final Xapian-only release (the `xapiand` branch), not alpha.10 as tagged.
+- Q2: compare at "acknowledged before fsync", with Elasticsearch's default translog setting reported beside it; a durable-ack option for Xapiand is a separate feature item.
+- Q3: Elasticsearch and Quickwit only, plus the Xapian baseline.
+- Q6: losses are published as losses and don't block the release.
+- Q4 and Q5 stand as recommended (lease disk options; 8 cores and 32 GiB per system).
