@@ -199,14 +199,33 @@ def check() -> None:
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: a search over {width} indexes -> {status}")
         if not ok:
             failures.append(f"cap {width}")
-    # The same cap through a pattern, which is the way past the URL's 64 KiB: 14 indexes exist, so `_all` is over it
-    # and a prefix that matches 7 is not.
-    for pattern, want in (("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200), ("/_all/", 400), ("/w00*/", 400), ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200)):
+    # A pattern reads every entry of the data directory (14 indexes and the node's own), so at a cap of 7 each is over it,
+    # whatever it matches: the cap bounds the walk's work, not only the names.
+    for pattern in ("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", "/_all/", "/w00*/", "/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", "/*,-*/"):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
-        ok = status == want and (want == 200 or b"--max-search-indexes" in raw)
+        ok = status == 400 and b"--max-search-indexes" in raw and b"directory entries" in raw
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
         if not ok:
             failures.append(f"cap pattern {pattern}")
+    stop(node)
+    # With room for the walk the same patterns are served; the names are still counted (7 of the 14 pass, 14 do not).
+    cap = 20
+    node = start("cap-walk", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
+    for pattern, want in (("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200), ("/_all/", 200), ("/w00*/", 200), ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200), ("/*,-*/", 200)):
+        status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
+        ok = status == want
+        print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
+        if not ok:
+            failures.append(f"cap-walk pattern {pattern}")
+    # Index paths do not nest: below an index, above one, and a name the layout keeps are refused.
+    if call("PUT", "/tenant/a/d", {"n": 1})[0] >= 300:
+        failures.append("nesting: tenant/a was not created")
+    for method, path in (("PUT", "/w000/x/d"), ("PUT", "/tenant/d"), ("PUT", "/tenant/a/x/d"), ("PUT", "/tenant/strata/d")):
+        status, raw = call(method, path, {"n": 1})
+        ok = status == 400 and b"Cannot create index" in raw
+        print(f"{'ok  ' if ok else 'FAIL'} nesting: {method} {path} -> {status}")
+        if not ok:
+            failures.append(f"nesting {path}")
     stop(node)
 
 
