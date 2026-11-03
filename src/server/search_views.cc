@@ -2297,6 +2297,9 @@ expand_paths(Request& request, bool patterns)
 			pth.remove_prefix(1);
 		}
 		index_path.append(pth);
+		while (index_path.size() > 1 && index_path.back() == '/') {
+			index_path.pop_back();   // the last name of `/a,b/` carries the slash that ends the path
+		}
 
 		wildcards = wildcards || index_pattern::is_wildcard(index_path);
 		paths.push_back(std::move(index_path));
