@@ -61,15 +61,17 @@ namespace {
 
 // One chore: an item of the index's group that runs `fn` on a worker and resumes the awaiting task
 // through the scheduler it suspended on. It lives in the awaiting frame, which the resume keeps
-// alive; nothing touches it after the resume.
+// alive; nothing touches it after the resume. `awaited` counts the chores not yet handed back to their
+// awaiter: a chore is over for its owner when the task resumes, which can be before the worker leaves it.
 struct ChoreAwaiter final : WorkItem {
 	WorkGroup& group;
+	std::atomic<std::size_t>& awaited;
 	std::function<void()> fn;
 	std::exception_ptr error;
 	std::coroutine_handle<> handle;
 	task::scheduler_ref sched;
 
-	ChoreAwaiter(WorkGroup& group_, engine::ChoreClass chore_class, std::function<void()> fn_) : group(group_), fn(std::move(fn_)) {
+	ChoreAwaiter(WorkGroup& group_, std::atomic<std::size_t>& awaited_, engine::ChoreClass chore_class, std::function<void()> fn_) : group(group_), awaited(awaited_), fn(std::move(fn_)) {
 		run = &ChoreAwaiter::invoke;
 		switch (chore_class) {
 			case engine::ChoreClass::query: cls = WorkClass::query; break;
@@ -84,6 +86,7 @@ struct ChoreAwaiter final : WorkItem {
 		handle = h;
 		sched = task::current();
 		assert(sched && "a chore is awaited by a task that runs on a scheduler");
+		awaited.fetch_add(1, std::memory_order_relaxed);
 		group.post(*this);  // the chore may finish, and resume h, before this returns
 	}
 
@@ -112,6 +115,7 @@ struct ChoreAwaiter final : WorkItem {
 	void resume() noexcept {
 		const auto h = handle;
 		const auto s = sched;
+		awaited.fetch_sub(1, std::memory_order_acq_rel);   // the last touch of the owner's state
 		if (s) {
 			s.post(h);
 		} else {
@@ -227,10 +231,10 @@ IndexChores::~IndexChores()
 		if (next_ != nullptr) { next_->prev_ = prev_; }
 	}
 
-	at_end::assert_none("IndexChores", !group_ || idle() ? std::string() : "a chore is queued or running");
+	at_end::assert_none("IndexChores", awaited_.load(std::memory_order_acquire) == 0 ? std::string() : "a chore is queued or running");
 
-	// The group is idle by now (its owner ended every chore), but joining it is a wait: off a loop it
-	// is done here, on a loop a worker does it.
+	// Every chore has resumed its awaiter, though a worker may still be leaving the last one: joining the
+	// group waits for that. Off a loop it is done here, on a loop a worker does it.
 	if (group_ && reactor::inside_run()) {
 		auto* reap = new Reap(std::move(group_));
 		pool_.post(*reap);
@@ -241,7 +245,7 @@ IndexChores::~IndexChores()
 task::task<void>
 IndexChores::run(engine::ChoreClass cls, std::function<void()> fn)
 {
-	co_await ChoreAwaiter{*group_, cls, std::move(fn)};
+	co_await ChoreAwaiter{*group_, awaited_, cls, std::move(fn)};
 }
 
 
@@ -617,6 +621,9 @@ DatabasePool::run_detached(task::task<void> t)
 		return;
 	}
 	detached_.fetch_sub(1);
+	// No control left: the task runs here, to its end, on the thread that starts it, which may be the shutdown
+	// thread draining the control loop (a debounced commit fires there).
+	engine::BlockingAllowed blocking("a detached task runs on the thread that starts it once the control is gone");
 	try {
 		engine::sync_wait(std::move(t));
 	} catch (...) {

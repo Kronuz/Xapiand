@@ -86,7 +86,7 @@ struct PoolTestAccess {
 		return true;
 	}
 	static std::uint64_t applied(ShardEndpoint& entry) { return entry.applied_.load(); }
-	static WorkGroup& chore_group(ShardEndpoint& entry) { return static_cast<IndexChores&>(*entry.chores).group(); }
+	static engine::Chores& chores(ShardEndpoint& entry) { return *entry.chores; }
 	// As if a task posted to the control loop had not ended.
 	static void count_detached(DatabasePool& pool, int by) {
 		if (by > 0) { pool.detached_.fetch_add(static_cast<std::size_t>(by)); } else { pool.detached_.fetch_sub(static_cast<std::size_t>(-by)); }
@@ -177,8 +177,8 @@ public:
 		thread_ = std::thread([this, op = std::move(op)] {
 			try {
 				op();
-			} catch (const engine::Error& error) {
-				kind_ = error.kind;
+			} catch (const engine::Error&) {
+				error_ = std::current_exception();   // read by kind() after the join, where TSan sees the order
 				threw_ = true;
 			}
 			done_ = true;
@@ -187,7 +187,18 @@ public:
 	~Running() { join(); }
 	bool done() const { return done_; }
 	bool threw() const { return threw_; }
-	engine::errc kind() const { return kind_; }
+	// What the operation threw, read here and not in the thread: waiters that share one exception object release it
+	// through a refcount in libstdc++, which TSan does not see, so a read in the thread looks like a race with the free.
+	engine::errc kind() const {
+		if (!error_) {
+			return engine::errc::internal;
+		}
+		try {
+			std::rethrow_exception(error_);
+		} catch (const engine::Error& error) {
+			return error.kind;
+		}
+	}
 	void join() {
 		if (thread_.joinable()) {
 			thread_.join();
@@ -197,7 +208,7 @@ public:
 private:
 	std::atomic<bool> done_{false};
 	bool threw_ = false;
-	engine::errc kind_ = engine::errc::internal;
+	std::exception_ptr error_;
 	std::thread thread_;
 };
 
@@ -1500,6 +1511,7 @@ ChildEnd in_child(const char* name, F&& body) {
 	pid_t pid = ::fork();
 	if (pid == 0) {
 		std::freopen(log_path.c_str(), "w", stderr);
+		std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 		::alarm(30);   // a child that waits for what it should have refused to destroy ends here
 		body();
 		std::fflush(nullptr);
@@ -1573,14 +1585,17 @@ void at_end_chores(bool outstanding) {
 	std::atomic<bool> go{false};
 	std::atomic<bool> started{false};
 	ShardEndpoint* raw = nullptr;
+	std::thread runner;   // awaits the chore; with work outstanding the process aborts before it ends
 	{
 		auto entry = pool->spawn(Endpoint(fresh("at_end_chores")));
 		raw = entry.get();
-		A::chore_group(*raw).enqueue([&go, &started] {
-			started = true;
-			while (!go) {
-				std::this_thread::sleep_for(1ms);
-			}
+		runner = std::thread([&go, &started, raw] {
+			engine::sync_wait(A::chores(*raw).run(engine::ChoreClass::flush, [&go, &started] {
+				started = true;
+				while (!go) {
+					std::this_thread::sleep_for(1ms);
+				}
+			}));
 		});
 		if (!eventually(started)) {
 			std::_Exit(3);
@@ -1588,7 +1603,7 @@ void at_end_chores(bool outstanding) {
 	}
 	if (!outstanding) {
 		go = true;
-		A::chore_group(*raw).wait();
+		runner.join();
 	}
 	pool.reset();
 }
@@ -1641,6 +1656,94 @@ void test_a_registry_that_ends_with_work_outstanding_aborts() {
 #endif
 }
 
+#ifndef NDEBUG
+// A host that resumes each task on a thread of its own and lingers in post(): the worker that posts a chore's
+// resume is still inside the chore when the task, and its owner, have gone on.
+class LingeringHost final : public engine::Host {
+public:
+	void post(std::coroutine_handle<> h) override {
+		std::thread([this, h] {
+			task::running_on scope(task::scheduler_ref::of(*this));
+			h.resume();
+		}).detach();
+		std::this_thread::sleep_for(150ms);
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
+};
+
+// A host that resumes each task on the thread that posts it: a task scheduler's thread that is not a waiting one.
+class InlineHost final : public engine::Host {
+public:
+	void post(std::coroutine_handle<> h) override {
+		task::running_on scope(task::scheduler_ref::of(*this));
+		h.resume();
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
+};
+
+task::task<void> nothing() { co_return; }
+
+task::task<void> detach_from_a_task(DatabasePool& pool) {
+	pool.run_detached(nothing());
+	co_return;
+}
+
+// The shutdown clears the control and drains the loop on its own thread; a debounced commit that fires there starts
+// its task with no control left, from a scheduler's thread.
+void detached_after_the_control_is_gone() {
+	DatabasePool pool(8);
+	InlineHost host;
+	host.spawn(detach_from_a_task(pool));
+}
+
+task::task<void> run_chore_and_drop(std::unique_ptr<IndexChores>& chores, std::atomic<bool>& done) {
+	co_await chores->run(engine::ChoreClass::query, [] { });
+	engine::BlockingAllowed blocking("the test drops the chores where the join waits");
+	chores.reset();   // the chore has resumed its task: nothing is outstanding
+	done = true;
+}
+
+void chore_dropped_by_its_resume() {
+	auto pool = std::make_unique<DatabasePool>(8);
+	auto chores = std::make_unique<IndexChores>(pool->work_pool());
+	LingeringHost host;
+	std::atomic<bool> done{false};
+	host.spawn(run_chore_and_drop(chores, done));
+	if (!eventually(done, 10s)) {
+		std::_Exit(3);
+	}
+	std::this_thread::sleep_for(300ms);   // the lingering post ends before the host goes
+	pool.reset();
+}
+#endif
+
+// A chore is over for its owner when its task resumes: the owner may drop the chores then, while the worker is still leaving.
+void test_a_detached_task_may_block_once_the_control_is_gone() {
+#ifndef NDEBUG
+	Watchdog watchdog("detached without control");
+	const auto end = in_child("detached_no_control", [] { detached_after_the_control_is_gone(); });
+	CHECK_TRUE(end.clean);
+	if (!end.clean) {
+		std::fprintf(stderr, "  a detached task without a control: %s\n", end.log.c_str());
+	}
+#endif
+}
+
+void test_a_chore_is_over_when_its_task_resumes() {
+#ifndef NDEBUG
+	Watchdog watchdog("chore resume");
+	const auto end = in_child("chore_resume", [] { chore_dropped_by_its_resume(); });
+	CHECK_TRUE(end.clean);
+	if (!end.clean) {
+		std::fprintf(stderr, "  a chore dropped by its resume: %s\n", end.log.c_str());
+	}
+#endif
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1684,6 +1787,8 @@ int main(int argc, char** argv) {
 		{"test_a_chore_resumes_its_awaiter_with_post", test_a_chore_resumes_its_awaiter_with_post},
 		{"test_the_registry_lists_what_still_uses_an_index", test_the_registry_lists_what_still_uses_an_index},
 		{"test_a_registry_that_ends_with_work_outstanding_aborts", test_a_registry_that_ends_with_work_outstanding_aborts},
+		{"test_a_chore_is_over_when_its_task_resumes", test_a_chore_is_over_when_its_task_resumes},
+		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {
