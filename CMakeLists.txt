@@ -737,12 +737,25 @@ FetchContent_MakeAvailable(unicode snowball analysis)
 FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG f554cd3ac53aec755c9f6fc5190060a15466a37e)
 FetchContent_MakeAvailable(queryparser)
 
+# Asio (standalone, header-only): the runtime and transport under reactor, http and task's task::asio.
+# Header-only, so the include path and ASIO_STANDALONE (no Boost) are all it needs. Fetched at a pinned
+# tag before task, reactor and http, which reuse ASIO_INCLUDE_DIR instead of fetching their own; set
+# ASIO_INCLUDE_DIR to reuse an existing checkout instead of fetching.
+set(ASIO_INCLUDE_DIR "" CACHE PATH "use an existing standalone Asio include dir instead of fetching")
+if(ASIO_INCLUDE_DIR STREQUAL "")
+	FetchContent_Declare(asio GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git GIT_TAG asio-1-36-0)
+	FetchContent_MakeAvailable(asio)
+	set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
+endif()
+include_directories("${ASIO_INCLUDE_DIR}")
+add_definitions(-DASIO_STANDALONE)
+
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
 # that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only. The loops' tasks run through
-# task_asio.hh (engine/host_asio.h, docs/design/phase7c.md D2), built on the Asio that reactor fetches; the
-# library's own task::asio target stays off so that no second copy of Asio is fetched. A chore resumes its
-# awaiter with asio_scheduler::post(), the one thread-safe entry, never post_demoted() (C10).
-set(TASK_ASIO OFF CACHE BOOL "" FORCE)
+# task_asio.hh (engine/host_asio.h, docs/design/phase7c.md D2); task::asio, which reactor links, uses the
+# Asio above. A chore resumes its awaiter with asio_scheduler::post(), the one thread-safe entry, never
+# post_demoted() (C10).
+set(TASK_ASIO ON CACHE BOOL "" FORCE)
 # Counts live task frames (task::detail::live_frames), which the teardown tests check; set for every target, since
 # it changes task's inline functions. Off by default: it adds an atomic add per frame.
 option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
@@ -811,7 +824,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http so this pin wins over its (first declaration wins).
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ade618dd5d24bd7580c71d4a977430f367815334)  # reactor main (AdmissionGate, abort_all, no pool)
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 2fd30c80284a4224c1c6476fa5fb4ee3137a66be)  # reactor main step R (task sessions, owned scheduler, phased teardown)
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 679c0f814917389ac7f6cd24c4c8b95967bd7404)  # http main (coroutine handlers, BodyStream, cancel)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
@@ -837,22 +850,6 @@ include_directories("${http_log_SOURCE_DIR}")
 FetchContent_MakeAvailable(reactor)
 include_directories("${reactor_SOURCE_DIR}")
 
-# Asio (standalone, header-only): the runtime + transport substrate the HTTP path
-# now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
-# co_spawn, N io_contexts share the listen port via SO_REUSEPORT. Header-only, so the
-# include path + ASIO_STANDALONE (no Boost) is all it needs; the coroutine support is
-# already covered by Xapiand's -std=c++20. Fetched at a pinned tag rather than taken
-# from a system/brew prefix (the same dependency policy reactor/http follow, and the
-# value Xapiand sets here is what those libs reuse instead of re-fetching); set
-# ASIO_INCLUDE_DIR to reuse an existing checkout instead of fetching.
-set(ASIO_INCLUDE_DIR "" CACHE PATH "use an existing standalone Asio include dir instead of fetching")
-if(ASIO_INCLUDE_DIR STREQUAL "")
-	FetchContent_Declare(asio GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git GIT_TAG asio-1-36-0)
-	FetchContent_MakeAvailable(asio)
-	set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
-endif()
-include_directories("${ASIO_INCLUDE_DIR}")
-add_definitions(-DASIO_STANDALONE)
 
 
 # datetime: the pure ISO-8601 + date-math + time/timedelta string parser,
@@ -1238,7 +1235,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
 	queryparser::queryparser
 	prospect::prospect
-	task::task
+	task::asio
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
 	${ZSTD_LIBRARY}
