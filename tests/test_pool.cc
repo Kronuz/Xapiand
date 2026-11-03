@@ -1673,6 +1673,33 @@ protected:
 	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
 };
 
+// A host that resumes each task on the thread that posts it: a task scheduler's thread that is not a waiting one.
+class InlineHost final : public engine::Host {
+public:
+	void post(std::coroutine_handle<> h) override {
+		task::running_on scope(task::scheduler_ref::of(*this));
+		h.resume();
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
+};
+
+task::task<void> nothing() { co_return; }
+
+task::task<void> detach_from_a_task(DatabasePool& pool) {
+	pool.run_detached(nothing());
+	co_return;
+}
+
+// The shutdown clears the control and drains the loop on its own thread; a debounced commit that fires there starts
+// its task with no control left, from a scheduler's thread.
+void detached_after_the_control_is_gone() {
+	DatabasePool pool(8);
+	InlineHost host;
+	host.spawn(detach_from_a_task(pool));
+}
+
 task::task<void> run_chore_and_drop(std::unique_ptr<IndexChores>& chores, std::atomic<bool>& done) {
 	co_await chores->run(engine::ChoreClass::query, [] { });
 	engine::BlockingAllowed blocking("the test drops the chores where the join waits");
@@ -1695,6 +1722,17 @@ void chore_dropped_by_its_resume() {
 #endif
 
 // A chore is over for its owner when its task resumes: the owner may drop the chores then, while the worker is still leaving.
+void test_a_detached_task_may_block_once_the_control_is_gone() {
+#ifndef NDEBUG
+	Watchdog watchdog("detached without control");
+	const auto end = in_child("detached_no_control", [] { detached_after_the_control_is_gone(); });
+	CHECK_TRUE(end.clean);
+	if (!end.clean) {
+		std::fprintf(stderr, "  a detached task without a control: %s\n", end.log.c_str());
+	}
+#endif
+}
+
 void test_a_chore_is_over_when_its_task_resumes() {
 #ifndef NDEBUG
 	Watchdog watchdog("chore resume");
@@ -1750,6 +1788,7 @@ int main(int argc, char** argv) {
 		{"test_the_registry_lists_what_still_uses_an_index", test_the_registry_lists_what_still_uses_an_index},
 		{"test_a_registry_that_ends_with_work_outstanding_aborts", test_a_registry_that_ends_with_work_outstanding_aborts},
 		{"test_a_chore_is_over_when_its_task_resumes", test_a_chore_is_over_when_its_task_resumes},
+		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

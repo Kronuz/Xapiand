@@ -541,6 +541,9 @@ DatabasePool::run_detached(task::task<void> t)
 		return;
 	}
 	detached_.fetch_sub(1);
+	// No control left: the task runs here, to its end, on the thread that starts it, which may be the shutdown
+	// thread draining the control loop (a debounced commit fires there).
+	engine::BlockingAllowed blocking("a detached task runs on the thread that starts it once the control is gone");
 	try {
 		engine::sync_wait(std::move(t));
 	} catch (...) {
