@@ -258,6 +258,18 @@ endif (CPPLINT)
 ########################################################################
 
 check_cxx_compiler_flag("-stdlib=libc++" HAVE_FLAG_STDLIB_LIBCPP)
+# The extracted libraries use std::format only where <version> advertises __cpp_lib_format (libc++ 19 and later);
+# on an older libc++ they fall back to passthrough, and the logger cannot format a stringified at all. A Linux
+# host that has such a libc++ installed (Ubuntu 24.04's libc++-18-dev) builds against libstdc++ instead.
+if (HAVE_FLAG_STDLIB_LIBCPP AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	set (CMAKE_REQUIRED_FLAGS "-stdlib=libc++ -std=c++20")
+	check_cxx_source_compiles("#include <version>\n#ifndef __cpp_lib_format\n#error no std::format\n#endif\nint main() { }" HAVE_LIBCPP_FORMAT)
+	unset (CMAKE_REQUIRED_FLAGS)
+	if (NOT HAVE_LIBCPP_FORMAT)
+		message (STATUS "libc++ does not advertise std::format (needs libc++ 19): using libstdc++")
+		set (HAVE_FLAG_STDLIB_LIBCPP OFF)
+	endif ()
+endif ()
 if (HAVE_FLAG_STDLIB_LIBCPP)
 	add_cxx_compiler_flag("-stdlib=libc++")
 	find_library(LIBCPP_LIBRARIES c++)
@@ -469,7 +481,7 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 # so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
 # command line; skipping them removes that need entirely. They are populated and put
 # on the include path further below, where they are actually used.
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 1d82461008c897ab004652d5c43e60ccfa7012cb)
@@ -969,7 +981,7 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # msgpack moved to Kronuz/msgpack above because Xapiand's forked exception.hpp
 # travels with that standalone library.
 ########################################################################
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2    SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
