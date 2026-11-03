@@ -30,6 +30,7 @@ src/engine/strata/shard.cc	sleep	sleep_for	allow	1	drain_readers suspends the cl
 src/engine/strata/shard.cc	mutex	registry_mutex	allow	1	map lookup and insert of the open-core registry: O(log n) under the lock, no I/O (D1)
 src/engine/sync.cc	mutex	.	allow	1	check_may_block's own diagnostics lock, taken only when a guard trips
 src/engine/sync.h	sync_wait	.	allow	1	the bridge itself; every call is guarded by check_may_block (D14)
+src/index_pattern.cc	file	.	allow	8	the directory walk of a pattern runs in a query chore of the work pool (expand_paths), never on a reactor thread
 src/index_resolver_lru.cc	mutex	.	allow	3	the settings map: O(log n) lookups and inserts under the lock, released before a settings read and taken again after it (D11)
 src/length.cc	file	.	allow	6	fd serialisers used only by --dump and --restore on the CLI main thread
 src/lua/processor.cc	mutex	script_params\.lock	allow	1	weak_ptr promotion, not a mutex
