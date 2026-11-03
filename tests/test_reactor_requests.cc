@@ -387,8 +387,9 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 		Shard shard(*entry.get(), WRITE);
 		fill(shard, 10);
 	}
-	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));   // the turn request (a) waits for
 	auto other = pool.spawn(Endpoint(fresh("teardown_other")));
+	(void)engine::sync_wait(other->take_turn(WRITE));   // opened now: an open index's own tasks are in the baseline
+	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));   // the turn request (a) waits for
 	task::event never;   // what request (d) waits on, holding the other index's turn
 	IndexChores chores(pool.work_pool());
 	std::atomic<bool> chore_started{false};
@@ -451,14 +452,16 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 		releaser.join();
 		loop.host.close();
 		loop.host.destroy_roots();
-#if TASK_COUNT_FRAMES
-		CHECK_EQ(task::detail::live_frames(), baseline);
-#else
-		(void)baseline;
-#endif
 		CHECK_EQ(ended.load(), 0);   // destroyed, not completed
 	}
+	// The destroyed waiter's node stays queued until the holder's unlock sheds it; a deadline's state goes with
+	// its timer, in the loop's io_context. Both are gone now.
 	held.reset();
+#if TASK_COUNT_FRAMES
+	CHECK_EQ(task::detail::live_frames(), baseline);
+#else
+	(void)baseline;
+#endif
 	(void)engine::sync_wait(entry->take_turn(WRITE));   // the destroyed waiter does not keep the turn
 	(void)engine::sync_wait(other->take_turn(WRITE));   // the destroyed holder gave its turn back
 	CHECK_TRUE(chores.idle());
