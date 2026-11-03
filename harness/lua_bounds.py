@@ -204,7 +204,9 @@ def main():
     ap.add_argument("--out")
     args = ap.parse_args()
 
-    tmp = tempfile.mkdtemp(prefix="lua_bounds_", dir=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".scratch"))
+    scratch = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".scratch")
+    os.makedirs(scratch, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="lua_bounds_", dir=scratch)
     node = subprocess.Popen(
         [args.binary, "--port", str(args.port), "--name", "luanode", "-D", os.path.join(tmp, "data")],
         stdout=open(os.path.join(tmp, "node.log"), "w"), stderr=subprocess.STDOUT)

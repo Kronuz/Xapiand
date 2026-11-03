@@ -197,7 +197,11 @@ res['profile']['engine_share'] = {'cpu_ms_per_doc': engine_cpu_ms_doc, 'critical
     'cpu_pct': sum(r['cpu_pct'] for r in s1), 'critical_pct': sum(r['critical_pct'] for r in s1),
     'cpu_ms_per_doc_by_smoke': res['smoke']['cpu_ms_per_doc'] * sum(r['cpu_pct'] for r in s1) / 100}
 sm_ = res['smoke']
-ncore = int(subprocess.check_output(['sysctl', '-n', 'hw.physicalcpu']).strip())
+if sys.platform == 'darwin':
+    ncore = int(subprocess.check_output(['sysctl', '-n', 'hw.physicalcpu']).strip())
+else:  # distinct (core, socket) pairs of lscpu; the logical count when lscpu is missing
+    try: ncore = len({l for l in subprocess.check_output(['lscpu', '-p=CORE,SOCKET'], text=True).splitlines() if not l.startswith('#')})
+    except (OSError, subprocess.CalledProcessError): ncore = os.cpu_count() or 1
 cpu = sm_['cpu_ms_per_doc']
 def pct(pred): return sum(r['cpu_pct'] for r in layer_rows if pred(r))
 rest = cpu * (100 - rep_pct) / 100
