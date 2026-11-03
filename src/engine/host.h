@@ -214,10 +214,10 @@ public:
 	}
 
 	void post(std::coroutine_handle<> h) override {
-		{
-			std::lock_guard<std::mutex> lk(m_);
-			ready_.push_back(h);
-		}
+		// Signals under the lock: once the waiter sees its work (or `done`) it may leave and destroy this
+		// scheduler, so no signal may follow the unlock.
+		std::lock_guard<std::mutex> lk(m_);
+		ready_.push_back(h);
 		cv_.notify_one();
 	}
 
@@ -231,11 +231,9 @@ public:
 		std::optional<std::conditional_t<std::is_void_v<T>, std::monostate, T>> value;
 		bool done = false;
 		auto finished = [this, &done] {
-			{
-				std::lock_guard<std::mutex> lk(m_);
-				done = true;
-			}
-			cv_.notify_one();
+			std::lock_guard<std::mutex> lk(m_);
+			done = true;
+			cv_.notify_one();  // under the lock: the waiter may destroy this scheduler as soon as it sees `done`
 		};
 		if constexpr (std::is_void_v<T>) {
 			task::spawn(task::scheduler_ref::of(*this), std::move(t), [&](std::exception_ptr e) {
@@ -265,8 +263,8 @@ protected:
 			std::lock_guard<std::mutex> lk(m_);
 			id = ++last_id_;
 			timers_.push_back({at, id, std::move(node)});
+			cv_.notify_one();
 		}
-		cv_.notify_one();
 		return std::make_unique<Armed>(*this, id);
 	}
 

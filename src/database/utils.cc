@@ -254,11 +254,18 @@ msgpack::unpacker make_msgpack_unpacker()
 
 MsgPack msgpack_load(std::string_view str)
 {
+	// An element takes at least a byte, so a header that counts more elements than the body has bytes
+	// (a map entry takes two) is refused before the unpacker reserves room for them.
+	const std::size_t size = std::min<std::size_t>(str.size(), 0xffffffff);
 	// Copying a nested object into a MsgPack recurses, so the unpacker refuses a deep one first.
 	try {
-		return MsgPack(msgpack::unpack(str.data(), str.size(), nullptr, nullptr, msgpack_limits()).get());
+		return MsgPack(msgpack::unpack(str.data(), str.size(), nullptr, nullptr, msgpack::unpack_limit(size, size / 2, 0xffffffff, 0xffffffff, 0xffffffff, MAX_JSON_DEPTH)).get());
 	} catch (const msgpack::depth_size_overflow&) {
 		THROW(ClientError, "MessagePack is nested too deeply: the limit is {} levels", MAX_JSON_DEPTH);
+	} catch (const msgpack::array_size_overflow&) {
+		THROW(ClientError, "MessagePack array has more items than the body has bytes");
+	} catch (const msgpack::map_size_overflow&) {
+		THROW(ClientError, "MessagePack map has more entries than the body has bytes");
 	}
 }
 

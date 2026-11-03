@@ -3,5 +3,6 @@
 # profile_light.sh --compare PRE.json POST.json
 #
 # Phase 7c K6 / T11: CPU per light request by group (offload hop, scheduler, engine, HTTP) from
-# `sample` frames, and the hop's wall time from the http trace/hop stamps. See profile_light.py.
-exec /usr/local/bin/python3 -I "$(dirname "$0")/profile_light.py" "$@"
+# `sample` frames (macOS) or `perf` (Linux), and the hop's wall time from the http trace/hop stamps. See profile_light.py.
+. "$(dirname "$0")/env.sh"
+exec "$PY" -I "$(dirname "$0")/profile_light.py" "$@"

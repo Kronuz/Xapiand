@@ -22,8 +22,8 @@
 
 // strata_check_tool SHARD_DIR...: runs the strata engine's own integrity check (index::check, which
 // verifies every file's digest, plus the field-table check) on each shard directory, with no server up.
-// Exit 0 when every shard passes. Used by harness/engine_crash_check.sh; built by hand against the
-// objects of a server build (see docs/gates/phase7a.md), not part of the CMake targets.
+// Exit 0 when every shard passes. Used by harness/engine_crash_check.sh; the `strata_check` CMake target
+// (cmake --build build --target strata_check), which is not part of `all`.
 
 #include <cstdio>
 

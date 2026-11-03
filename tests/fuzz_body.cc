@@ -42,7 +42,15 @@
 
 #include "database/utils.h"
 
-#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
+// GCC parses the whole #if line, so __has_feature (clang only) cannot share one with defined().
+#if defined(__SANITIZE_ADDRESS__)
+#define FUZZ_BODY_ASAN 1
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define FUZZ_BODY_ASAN 1
+#endif
+#endif
+#ifdef FUZZ_BODY_ASAN
 #include <sanitizer/common_interface_defs.h>
 #define FUZZ_BODY_DEATH_CALLBACK 1
 #endif

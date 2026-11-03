@@ -34,13 +34,12 @@
 #include "engine/error.h"       // for engine::Error
 
 
-// A use of an index: it keeps the registry entry from being closed as idle, and makes the Shard through
-// which the index is read and written. Taking it never waits: the index is opened, and its turn taken,
-// by the operations that need them.
+// A use of an index: it pins the index (docs/design/x-pool.md D3) and makes the Shard through which the index is
+// read and written. `co_await pin()` takes the pin, before any view the request takes (D4); the index is opened,
+// and its turn taken, by the operations that need them.
 class lock_shard {
-	ReferencedShardEndpoint _ref;
+	IndexPin _pin;
 	std::optional<Shard> _shard;
-	int _locks;
 
 	lock_shard(const lock_shard&) = delete;
 	lock_shard& operator=(const lock_shard&) = delete;
@@ -50,52 +49,42 @@ public:
 	const Endpoint endpoint;
 
 	lock_shard(lock_shard&& other) noexcept :
-		_ref(std::move(other._ref)),
+		_pin(std::move(other._pin)),
 		_shard(std::move(other._shard)),
-		_locks(std::exchange(other._locks, 0)),
 		flags(other.flags),
-		endpoint(other.endpoint) { }
-
-	lock_shard(const Endpoint& endpoint, int flags, bool do_lock = true) :
-		_ref(nullptr),
-		_locks(0),
-		flags(flags),
-		endpoint(endpoint)
-	{
-		if (do_lock) {
-			lock();
-		}
+		endpoint(other.endpoint) {
+		other._shard.reset();
 	}
+
+	lock_shard(const Endpoint& endpoint, int flags) :
+		flags(flags),
+		endpoint(endpoint) { }
 
 	~lock_shard() noexcept
 	{
-		while (_locks) {
-			unlock();
-		}
+		unlock();
 	}
 
-	Shard& lock()
+	// Pins the index and makes its Shard; a second call does nothing.
+	task::task<void> pin()
 	{
-		if (_locks == 0) {
+		if (!_shard) {
 			auto manager = XapiandManager::manager();
 			if (!manager) {
 				throw engine::Error(engine::errc::internal, "No manager");
 			}
-			_ref = manager->database_pool->spawn(endpoint);
-			_shard.emplace(*_ref.get(), flags);
+			_pin = co_await manager->database_pool->pin(endpoint);
+			_shard.emplace(_pin.entry(), flags);
 		}
-		++_locks;
-		return *_shard;
 	}
 
-	int unlock() noexcept
+	void unlock() noexcept
 	{
-		if (_locks > 0 && --_locks == 0) {
+		if (_shard) {
 			_shard->release();
 			_shard.reset();
-			_ref.reset();
 		}
-		return _locks;
+		_pin.release();
 	}
 
 	Shard& operator*() const noexcept

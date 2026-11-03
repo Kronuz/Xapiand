@@ -161,10 +161,12 @@ save_shared(std::string_view id, const MsgPack& schema, engine::rev version, con
 		}
 		DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = co_await _db_handler.update(id, version, false, true, MsgPack({
+		// Built before the co_await: GCC 13 hits an internal compiler error on an initializer-list temporary inside it.
+		MsgPack patch({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, schema },
-		}), false, msgpack_type);
+		});
+		auto updated = co_await _db_handler.update(id, version, false, true, patch, false, msgpack_type);
 		auto obj = std::move(updated.second);
 		obj = obj[SCHEMA_FIELD_NAME];
 		context->erase(path);
