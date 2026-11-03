@@ -22,6 +22,15 @@ jobs:
   build-test:
     name: Build + unit + smoke
     runs-on: ubuntu-latest
+    # ccache keeps recompiles of unchanged code out of the build; the cache dir is saved per job.
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v4
       - name: Install build deps
@@ -29,15 +38,24 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config \
+            g++-13 cmake ninja-build pkg-config ccache \
             libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-build-test-${{ github.sha }}
+          restore-keys: ccache-build-test-
       - name: Build (RelWithDebInfo, tests + asserts on)
         run: |
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
+          ccache -z
           ninja -C build
+      - name: ccache stats
+        if: always()
+        run: ccache -s
       - name: Blocking calls on reactor paths (async_check --strict)
         # Every blocking primitive on a path a reactor reaches is classified in harness/async_allowlist.tsv
         # (docs/design/phase7c.md D14); an unclassified hit, or a stale row, fails the job.
@@ -62,6 +80,15 @@ jobs:
     # the server runs in production. (A known pre-existing assertion on the restore
     # write path otherwise aborts "Load sample data" under -DASSERTS=ON; that is tracked
     # separately.)
+    # ccache keeps recompiles of unchanged code out of the build; the cache dir is saved per job.
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v4
       - name: Install build deps
@@ -69,15 +96,24 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config \
+            g++-13 cmake ninja-build pkg-config ccache \
             libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-e2e-${{ github.sha }}
+          restore-keys: ccache-e2e-
       - name: Build (RelWithDebInfo, asserts off)
         run: |
           set -eux
           cmake -GNinja -B build \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DLTO=OFF
+          ccache -z
           ninja -C build
+      - name: ccache stats
+        if: always()
+        run: ccache -s
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -107,9 +143,18 @@ jobs:
         include:
           - name: AddressSanitizer + UBSan
             cmake_flag: -DASAN=ON -DUBSAN=ON
+            ccache_key: asan-ubsan
           - name: ThreadSanitizer
             cmake_flag: -DTSAN=ON
+            ccache_key: tsan
     env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 500M
       ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
@@ -120,8 +165,13 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config \
+            g++-13 cmake ninja-build pkg-config ccache \
             libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.ccache_key }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.ccache_key }}-
       - name: Build (${{ matrix.name }})
         run: |
           set -eux
@@ -129,7 +179,11 @@ jobs:
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             ${{ matrix.cmake_flag }} -DLTO=OFF
           # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.
+          ccache -z
           ninja -C build -j2
+      - name: ccache stats
+        if: always()
+        run: ccache -s
       - name: Smoke + load under ${{ matrix.name }}
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
       - uses: actions/setup-node@v4
