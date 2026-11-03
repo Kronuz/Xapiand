@@ -24,10 +24,12 @@
 #include "database/handler.h"
 
 #include <algorithm>                        // for min, move
+#include <atomic>                           // for std::atomic
 #include <array>                            // for std::array
 #include <cassert>                          // for assert
 #include <cctype>                           // for tolower
 #include <exception>                        // for std::exception
+#include <limits>                           // for std::numeric_limits
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
@@ -1261,12 +1263,140 @@ DatabaseHandler::get_mset(
 }
 
 
-void
-check_search_fanout(size_t shards, size_t max_indexes_per_search)
+SplitHitId
+split_hit_id(engine::hitid did, size_t shards)
 {
-	if (max_indexes_per_search != 0 && shards > max_indexes_per_search) {
-		throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes at once (--max-indexes-per-search) and this one names {}; narrow the index pattern", max_indexes_per_search, shards));
+	if (did == 0u || shards == 0u) {
+		throw engine::Error(engine::errc::doc_not_found, "Document not found");
 	}
+	const auto shard_did = (did - 1) / shards + 1;
+	if (shard_did > std::numeric_limits<engine::docid>::max()) {
+		throw engine::Error(engine::errc::doc_not_found, "Document not found");
+	}
+	return {static_cast<size_t>((did - 1) % shards), static_cast<engine::docid>(shard_did)};
+}
+
+
+void
+check_search_fanout(size_t shards, size_t max_search_indexes)
+{
+	if (shards > max_search_indexes) {
+		throw engine::Error(engine::errc::invalid, strings::format("A search can read at most {} indexes (--max-search-indexes) and this one names {}; narrow the index pattern", max_search_indexes, shards));
+	}
+}
+
+
+size_t
+search_batch_indexes()
+{
+	if (opts.concurrent_search_indexes > 0) {
+		return static_cast<size_t>(opts.concurrent_search_indexes);
+	}
+	// A reactor's share of the open indexes the pool holds.
+	const auto reactors = static_cast<size_t>(std::max<ssize_t>(1, opts.num_http_servers));
+	return std::max<size_t>(1, static_cast<size_t>(std::max<ssize_t>(1, opts.database_pool_size)) / reactors);
+}
+
+
+namespace {
+
+// The indexes searches hold open right now, and the most there have been at once.
+std::atomic<size_t> pinned_now{0};
+std::atomic<size_t> pinned_most{0};
+
+// Counts a batch's indexes while the batch holds them.
+class PinCount {
+	size_t n;
+
+public:
+	explicit PinCount(size_t n) : n(n) {
+		const auto now = pinned_now.fetch_add(n, std::memory_order_relaxed) + n;
+		auto most = pinned_most.load(std::memory_order_relaxed);
+		while (most < now && !pinned_most.compare_exchange_weak(most, now, std::memory_order_relaxed)) { }
+	}
+	~PinCount() { pinned_now.fetch_sub(n, std::memory_order_relaxed); }
+	PinCount(const PinCount&) = delete;
+	PinCount& operator=(const PinCount&) = delete;
+};
+
+}  // namespace
+
+
+size_t
+search_pinned_indexes(bool most)
+{
+	return (most ? pinned_most : pinned_now).load(std::memory_order_relaxed);
+}
+
+
+// Pins the indexes [begin, end) of the search and searches them, reopening them on a stale read. This is
+// the one place that decides how a batch's indexes are held (a use of each registry entry, each engine
+// refreshed once), so the search reads what was applied before it.
+task::task<engine::BatchResult>
+DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequest& request)
+{
+	std::vector<lock_shard> shards;
+	shards.reserve(end - begin);
+	for (auto i = begin; i < end; ++i) {
+		shards.emplace_back(endpoints[i], flags);
+		co_await shards.back().pin();
+	}
+	PinCount pinned(shards.size());
+	engine::BatchResult batch;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
+			std::vector<engine::Shard*> engines;
+			engines.reserve(shards.size());
+			std::vector<std::uint32_t> indexes;   // the index of each shard found
+			batch.positions.clear();
+			for (size_t i = 0; i < shards.size(); ++i) {
+				try {
+					engines.push_back(co_await shards[i]->engine_for_read());
+					batch.positions.push_back(begin + i);
+					if (!request.index_of.empty()) {
+						indexes.push_back(request.index_of[i]);
+					}
+				} catch (const engine::Error& error) {
+					if (error.kind != engine::errc::not_found) { throw; }
+				}
+			}
+			if (engines.empty()) {
+				break;  // nothing to search -> empty result
+			}
+
+			auto searched = request;
+			searched.index_of = indexes;
+			batch.result = co_await engine::search(engines, searched);
+			break;
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const engine::Error& error) {
+			switch (error.kind) {
+				case engine::errc::reopen:
+				case engine::errc::opening:
+				case engine::errc::not_found:
+				case engine::errc::not_available:
+				case engine::errc::timeout:
+				case engine::errc::network:
+				case engine::errc::closed:
+					if (t == 0) { throw; }
+					break;
+				case engine::errc::syntax:
+					THROW(ClientError, error.description());
+				default:
+					throw;
+			}
+		}
+		for (auto& shard : shards) {
+			co_await shard->reopen();
+		}
+	}
+	co_return batch;
 }
 
 
@@ -1301,70 +1431,28 @@ DatabaseHandler::match(
 	request.spy = aggs;
 	request.budget = budget;
 
-	// Every shard the search names stays open until it ends: the limit is checked before any is taken.
-	check_search_fanout(endpoints.size(), static_cast<size_t>(opts.max_indexes_per_search));
+	// Only a runaway search is refused; a wide one is walked in batches, which hold at most
+	// `search_batch_indexes()` indexes open at once.
+	check_search_fanout(endpoints.size(), static_cast<size_t>(opts.max_search_indexes));
 
-	// The engine feeds every shard into one search, merges the per-shard results and unshards the
-	// docids itself.
-	auto manager = XapiandManager::manager();
-
-	engine::SearchResult result;
-
-	// One use of each shard for the whole search: the entries stay open, and each engine is refreshed
-	// once, so the search reads what was applied before it.
-	std::vector<lock_shard> shards;
-	shards.reserve(endpoints.size());
-	for (auto& endpoint : endpoints) {
-		shards.emplace_back(endpoint, flags);
-		co_await shards.back().pin();
-	}
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
-			std::vector<engine::Shard*> engines;
-			engines.reserve(shards.size());
-			for (auto& shard : shards) {
-				try {
-					engines.push_back(co_await shard->engine_for_read());
-				} catch (const engine::Error& error) {
-					if (error.kind != engine::errc::not_found) { throw; }
-				}
-			}
-			if (engines.empty()) {
-				break;  // nothing to search -> empty result
-			}
-
-			result = co_await engine::search(engines, request);
-			break;
-		} catch (const QueryParserError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const QueryDslError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const engine::Error& error) {
-			switch (error.kind) {
-				case engine::errc::reopen:
-				case engine::errc::opening:
-				case engine::errc::not_found:
-				case engine::errc::not_available:
-				case engine::errc::timeout:
-				case engine::errc::network:
-				case engine::errc::closed:
-					if (t == 0) { throw; }
-					break;
-				case engine::errc::syntax:
-					THROW(ClientError, error.description());
-				default:
-					throw;
-			}
-		}
-		for (auto& shard : shards) {
-			co_await shard->reopen();
+	// The engine feeds each batch into one search; the batches' results merge into the top of the whole.
+	const engine::BatchRunner run = [this](size_t begin, size_t end, const engine::SearchRequest& batch_request) {
+		return search_batch(begin, end, batch_request);
+	};
+	// The shards of one index weigh against that index's statistics together, and no other's.
+	std::vector<std::uint32_t> index_of;
+	index_of.reserve(endpoints.size());
+	std::string_view last;
+	for (const auto& endpoint : endpoints) {
+		const auto index = unsharded_path(endpoint.path).first;
+		if (index_of.empty() || index != last) {
+			index_of.push_back(index_of.empty() ? 0 : index_of.back() + 1);
+			last = index;
+		} else {
+			index_of.push_back(index_of.back());
 		}
 	}
-
-	co_return result;
+	co_return co_await engine::search_batched(endpoints.size(), search_batch_indexes(), index_of, run, request);
 }
 
 
@@ -1510,9 +1598,9 @@ DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool
 
 
 Document
-DatabaseHandler::get_document(engine::docid did)
+DatabaseHandler::get_document(engine::hitid did)
 {
-	L_CALL("DatabaseHandler::get_document((engine::docid){})", did);
+	L_CALL("DatabaseHandler::get_document((engine::hitid){})", did);
 
 	return Document(did, this);
 }
@@ -2230,7 +2318,7 @@ Document::Document()
 	  db_handler(nullptr) { }
 
 
-Document::Document(engine::docid did_, DatabaseHandler* db_handler_)
+Document::Document(engine::hitid did_, DatabaseHandler* db_handler_)
 	: did(did_),
 	  db_handler(db_handler_) { }
 
@@ -2238,7 +2326,10 @@ Document::Document(engine::docid did_, DatabaseHandler* db_handler_)
 engine::docid
 Document::get_docid()
 {
-	return did;
+	if (did > std::numeric_limits<engine::docid>::max()) {
+		throw engine::Error(engine::errc::doc_not_found, "Document not found");
+	}
+	return static_cast<engine::docid>(did);
 }
 
 
@@ -2261,8 +2352,9 @@ Document::serialise()
 	auto& endpoints = db_handler->endpoints;
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	const auto where = split_hit_id(did, n_shards);
+	const size_t shard_num = where.shard;
+	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
 	lock_shard lk_shard(endpoint, flags);
@@ -2302,8 +2394,9 @@ Document::get_value(engine::valueno slot)
 	auto& endpoints = db_handler->endpoints;
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	const auto where = split_hit_id(did, n_shards);
+	const size_t shard_num = where.shard;
+	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
 	lock_shard lk_shard(endpoint, flags);
@@ -2343,8 +2436,9 @@ Document::get_data()
 	auto& endpoints = db_handler->endpoints;
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	const auto where = split_hit_id(did, n_shards);
+	const size_t shard_num = where.shard;
+	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
 	lock_shard lk_shard(endpoint, flags);
@@ -2382,8 +2476,9 @@ Document::validate()
 	auto& endpoints = db_handler->endpoints;
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	const auto where = split_hit_id(did, n_shards);
+	const size_t shard_num = where.shard;
+	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
 	lock_shard lk_shard(endpoint, flags);
@@ -2422,8 +2517,9 @@ Document::get_values()
 	auto& endpoints = db_handler->endpoints;
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	engine::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	const auto where = split_hit_id(did, n_shards);
+	const size_t shard_num = where.shard;
+	const engine::docid shard_did = where.did;
 	auto& endpoint = endpoints[shard_num];
 
 	lock_shard lk_shard(endpoint, flags);

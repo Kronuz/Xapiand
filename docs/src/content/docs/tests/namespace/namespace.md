@@ -7,7 +7,7 @@ title: "Namespace"
 #### Index Namespace
 
 ```rest
-PUT /test/namespace/doc
+PUT /test/namespace_root/doc
 
 {
   "style": {
@@ -32,7 +32,7 @@ e2e:end -->
 #### Get Namespace
 
 ```rest
-GET /test/namespace/._schema.style
+GET /test/namespace_root/._schema.style
 ```
 
 <!-- e2e:begin
@@ -53,7 +53,7 @@ e2e:end -->
 #### Info Namespace
 
 ```rest
-INFO /test/namespace/doc
+INFO /test/namespace_root/doc
 ```
 
 <!-- e2e:begin
@@ -74,7 +74,7 @@ e2e:end -->
 #### Search Namespace
 
 ```rest
-SEARCH /test/namespace/
+SEARCH /test/namespace_root/
 
 {
   "_query": {

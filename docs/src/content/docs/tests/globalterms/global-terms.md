@@ -7,7 +7,7 @@ title: "Global Terms"
 #### Index for Global
 
 ```rest
-PUT /test/doc
+PUT /test_global/doc
 
 {
   "_id": {
@@ -32,7 +32,7 @@ e2e:end -->
 ####  Search for Global
 
 ```rest
-SEARCH /test/
+SEARCH /test_global/
 ```
 
 <!-- e2e:begin

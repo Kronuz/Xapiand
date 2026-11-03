@@ -75,11 +75,11 @@ commit, a merge and the idle close go on, and the view stays readable until its 
 - **Scan cost.** A refresh, a commit or a reclaim of an index scans that index's records: 0.024 us at 64 records and
   0.116 us at 256 (the architect's probe, x86_64, idle), about 0.08 us at 174, up to twice that when the scan also
   stamps the diagnostics. It does not grow with the other indexes or with the searches running on them.
-- **Indexes per search.** A search keeps every index it reads open until it ends, and the pool's open-index budget is
-  sized from the file-descriptor limit. `max_indexes_per_search` (`--max-indexes-per-search`) caps the shards one
-  search may name, counted after wildcard and comma expansion and checked before any view is taken (`DatabaseHandler::match`).
-  It defaults to the pool size and never exceeds it (`main.cc`, after the descriptor computation); a search over more
-  answers **400** naming the limit, since retrying it cannot help. The per-index cap above stays a 503.
+- **Indexes per search.** A search keeps the indexes of its current batch open until the batch ends, and the pool's
+  open-index budget is sized from the file-descriptor limit. A wide search walks its indexes in batches of at most
+  `--concurrent-search-indexes` (`docs/mechanisms/wide-search.md`), so it holds one view and one open index per index of the
+  batch, never one per index it names. `--max-search-indexes` (100,000) answers **400** for a runaway pattern. The
+  per-index cap above stays a 503.
 - Reads see the last refresh, not the buffer: `find_key` right after an `add` without a refresh finds nothing, and
   neither do `stats`, `doc_count` or `declared_fields`. A caller of a `view()` read refreshes first; every Xapiand
   read goes through `engine_for_read`, which does.

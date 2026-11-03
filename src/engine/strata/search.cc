@@ -64,21 +64,6 @@ namespace p = ::prospect;
 // A query nests this deep before it is refused, so a hostile one cannot exhaust the stack.
 constexpr int max_depth = 1000;
 
-// A hit's weight as a percentage of the top weight, in [0, 100]. Against an infinite top weight (an
-// overflowed or infinite scale factor) a hit is 100 if it is infinite too and 0 otherwise.
-int
-percent_of(double score, double top)
-{
-	if (!(top > 0)) {
-		return 100;
-	}
-	if (!std::isfinite(top)) {
-		return score >= top ? 100 : 0;
-	}
-	const double ratio = score / top * 100.0 + 0.5;
-	return ratio >= 100.0 ? 100 : ratio > 0.0 ? static_cast<int>(ratio) : 0;
-}
-
 // Every document of a segment, weighing nothing: the empty term and match_all.
 class AllScorer final : public p::scorer {
 public:
@@ -132,7 +117,7 @@ struct Group {
 	std::optional<p::weight> synonym;   // the weight of the union, for a SYNONYM combiner
 };
 
-// What a search works out once over the whole index and every segment then shares, so a document
+// What a search works out once over one index and every segment of it then shares, so a document
 // weighs the same in all of them: the groups of its nodes.
 struct Plan {
 	std::span<const p::segment_snapshot> segments;
@@ -140,8 +125,19 @@ struct Plan {
 	std::unordered_map<const QueryNode*, Group> groups;
 };
 
+// One index's segments with the term table and plan that weigh them.
+struct Scope {
+	std::span<const p::segment_snapshot> segments;
+	p::term_table terms;
+	Plan plan;
+
+	explicit Scope(std::span<const p::segment_snapshot> segments) : segments(segments), terms(segments), plan{segments, terms, {}} { }
+	Scope(const Scope&) = delete;
+	Scope& operator=(const Scope&) = delete;
+};
+
 // What building a query for one segment reads: the segment, and the term table and statistics of
-// the snapshot that spans every segment of every shard, so a weight is the same in all of them.
+// the index it belongs to, so a weight is the same in all the segments of that index.
 struct Builder {
 	const p::segment& seg;
 	p::term_table& terms;
@@ -606,7 +602,7 @@ build(const Query& query, const Builder& b, int depth)
 
 // A match under a collapse: what ranks it, and the id to return.
 struct Ranked {
-	docid did;
+	hitid did;
 	double weight;
 	std::string key;   // the sorter's key; empty without a sorter
 };
@@ -661,8 +657,12 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		throw Error(errc::internal, "A strata search lost a viewed shard");
 	};
 
-	// One snapshot over the shards' segments: statistics and document frequencies are the whole index's, and
-	// shard i is the i-th shard asked for (its slot in the docid interleave).
+	// One snapshot over the shards' segments, so shard i is the i-th shard asked for (its slot in the docid
+	// interleave). Statistics are read per index: the shards of one index share a term table and a plan, and
+	// another index's documents do not weigh into them.
+	if (!request.index_of.empty() && request.index_of.size() != mine.size()) {
+		throw Error(errc::invalid, "A strata search was given an index for some of its shards only");
+	}
 	std::vector<p::shard_input> inputs(mine.size());
 	std::uint64_t documents = 0;   // the most a window can return
 	for (std::size_t i = 0; i < mine.size(); ++i) {
@@ -672,8 +672,25 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		}
 	}
 	const p::multi_snapshot snapshot(std::move(inputs));
-	p::term_table terms(snapshot.segments());
-	Plan plan{snapshot.segments(), terms, {}};
+	std::vector<std::unique_ptr<Scope>> scopes;
+	std::unordered_map<const p::segment*, Scope*> scope_of;
+	{
+		const auto all = snapshot.segments();
+		std::size_t first = 0;     // the first segment of the index being gathered
+		std::size_t seen = 0;      // segments of the shards gathered so far
+		for (std::size_t i = 0; i < mine.size(); ++i) {
+			seen += snapshot.segments(i).size();
+			const bool ends = i + 1 == mine.size() || (!request.index_of.empty() && request.index_of[i + 1] != request.index_of[i]);
+			if (!ends) {
+				continue;
+			}
+			scopes.push_back(std::make_unique<Scope>(all.subspan(first, seen - first)));
+			for (const auto& segment : scopes.back()->segments) {
+				scope_of.emplace(segment.seg, scopes.back().get());
+			}
+			first = seen;
+		}
+	}
 
 	// Collapse keeps `collapse_max` hits per value of the slot, the best ranked; a document without the value never collapses.
 	const bool collapse = request.collapse_key != BAD_VALUENO && request.collapse_max != 0;
@@ -702,10 +719,7 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 				guarded([&] { request.spy->see(view, weight); });
 			}
 			if (collapse) {
-				if (m.docid > std::numeric_limits<docid>::max()) {
-					throw Error(errc::internal, "A document id does not fit across the shards");
-				}
-				Ranked ranked{static_cast<docid>(m.docid), weight, request.sorter != nullptr ? guarded([&] { return request.sorter->key(view); }) : std::string()};
+				Ranked ranked{m.docid, weight, request.sorter != nullptr ? guarded([&] { return request.sorter->key(view); }) : std::string()};
 				std::string value = view.value(request.collapse_key);
 				collapsed.add(std::move(ranked), value.empty() ? std::nullopt : std::optional<std::string>(std::move(value)));
 			}
@@ -713,32 +727,56 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 	}
 	// The views, the snapshot and the plan are locals of this frame, so they stay pinned across every
 	// suspension; the search yields its reactor at window boundaries when it has a budget.
-	const auto found = co_await p::search_task(snapshot, [&](const p::segment& seg) { return build(source, Builder{seg, terms, plan}, 0); }, options,
+	const auto found = co_await p::search_task(snapshot, [&](const p::segment& seg) {
+		auto& scope = *scope_of.at(&seg);
+		return build(source, Builder{seg, scope.terms, scope.plan}, 0);
+	}, options,
 		request.budget != nullptr ? p::slice(*request.budget) : p::slice());
+
+	// Hits with the sort key and collapse value they ranked by, for a merge across batches.
+	const auto report = [&](Hit& hit, std::uint64_t id) {
+		if (!request.report_keys) {
+			return;
+		}
+		const auto [shard, did] = p::split_docid(id, mine.size());
+		for (const auto& snap : snapshot.segments(shard)) {
+			if (const auto ord = snap.seg->core().ordinal_of(did)) {
+				const SegmentDocView view(static_cast<docid>(did), *snap.seg, *ord);
+				if (request.sorter != nullptr) {
+					hit.key = guarded([&] { return request.sorter->key(view); });
+				}
+				if (collapse) {
+					hit.value = view.value(request.collapse_key);
+				}
+				return;
+			}
+		}
+	};
 
 	SearchResult result;
 	const double top = options.visit ? heaviest : (found.hits.empty() ? 0.0 : found.hits.front().score);
+	result.top = top;
 	if (collapse) {
 		const auto kept = std::move(collapsed).take();
 		result.estimated = static_cast<doccount>(std::min<std::uint64_t>(kept.items.size(), std::numeric_limits<doccount>::max()));
 		for (std::size_t i = request.first; i < kept.items.size() && i < window; ++i) {
 			const auto& item = kept.items[i].item;
-			result.hits.push_back({item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top)});
+			Hit hit{item.did, item.weight, static_cast<doccount>(i), percent_of(item.weight, top), {}, {}};
+			report(hit, item.did);
+			result.hits.push_back(std::move(hit));
 		}
 		co_return result;
 	}
 	result.estimated = static_cast<doccount>(std::min<std::uint64_t>(found.count.value_or(0), std::numeric_limits<doccount>::max()));
 	for (std::size_t i = request.first; i < found.hits.size(); ++i) {
 		const auto& found_hit = found.hits[i];
-		if (found_hit.docid > std::numeric_limits<docid>::max()) {
-			throw Error(errc::internal, "A document id does not fit across the shards");
-		}
 		Hit hit;
-		hit.did = static_cast<docid>(found_hit.docid);
+		hit.did = found_hit.docid;
 		hit.weight = found_hit.score;
 		hit.rank = static_cast<doccount>(i);
 		hit.percent = percent_of(found_hit.score, top);
-		result.hits.push_back(hit);
+		report(hit, found_hit.docid);
+		result.hits.push_back(std::move(hit));
 	}
 	co_return result;
 }

@@ -50,6 +50,32 @@ request fail with `412 Precondition Failed` if the datatype is missing.
 - `-d`, `--detach` runs the process in the background.
 - `--processors` sets how many processors the node uses (all by default). It runs one HTTP loop per processor.
 
+## Searching many indexes
+
+A search that names several indexes (a list, a wildcard, `_all`; see [Multiple Indexes](/Xapiand/reference-guide/api#multiple-indexes))
+reads them in batches: it holds at most one batch of indexes open at once, searches it, merges its best hits into the
+result and moves on to the next. A search over thousands of indexes therefore needs only a batch's worth of open
+indexes, however wide it is. A batch holds whole indexes (all the shards of an index are read together), so an index
+with more shards than the batch is a batch of its own.
+
+- `--concurrent-search-indexes` sets the batch size: the most shards one search holds open at once. By default it is a
+  loop's share of the open indexes the database pool holds (`--database-pool-size` over the HTTP loops, at least 1), so
+  one wide search on every loop at once holds about what the pool does.
+- `--max-search-indexes` (100,000, at least 1) is a cap on a runaway pattern. A search that names more indexes, counting
+  the ones a wildcard expands to, answers `400` with the limit in the message. So does one whose patterns read more
+  than that many directory entries to find their indexes, whether the entries match or not (`*,-*` matches nothing and
+  reads the whole tree): the same number bounds the names and the work. A data directory with more entries in one
+  directory than the cap cannot be walked by a wildcard; name the indexes, or raise the cap. Matching the names has a budget too
+  (4,096 steps per entry the cap allows, so patterns that backtrack over long names answer `400` rather than hold a
+  thread). A search names at most 32 patterns (wildcards and `-` exclusions together).
+
+Each index is read as its batch starts, so a search does not see all its indexes at one moment; each index is whole, and
+a write acknowledged before the search began is in it. A relevance weight is read against the statistics of the index
+the document is in (its document count, its term frequencies), as Elasticsearch reads a shard's: a document weighs the
+same in a search of one index and in a search of a thousand, and the hits, their order, their weights, the totals and
+the aggregations do not depend on the batch size. The `xapiand_search_pinned_indexes_peak` metric reports the most
+indexes searches have held open at once.
+
 ## Write-Ahead Log
 
 - `--writers` and `--wal-writer-cache-size` tune the

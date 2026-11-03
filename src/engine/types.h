@@ -31,6 +31,7 @@
 namespace engine {
 
 using docid = std::uint32_t;       // document id within one shard
+using hitid = std::uint64_t;       // a document's id across the shards of a search: (docid - 1) * shards + shard + 1
 using doccount = std::uint32_t;    // a number of documents
 using valueno = std::uint32_t;     // value slot number
 using termcount = std::uint32_t;   // within-document frequency, and counts of terms

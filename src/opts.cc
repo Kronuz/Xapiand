@@ -157,8 +157,11 @@ parseOptions(int argc, char** argv)
 #endif
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
-		std::size_t max_indexes_per_search = 0;
-		app.add_option("--max-indexes-per-search", max_indexes_per_search, "Most indexes (shards) one search may read; a search over more answers 400. 0 and anything above the database pool size use the pool size.");
+		std::size_t max_search_indexes = 100000;
+		app.add_option("--max-search-indexes", max_search_indexes, "Most indexes (shards) one search may name, and most directory entries its patterns may read to find them (at least 1); a search over more answers 400. A search reads its indexes in batches, so this bounds only a runaway pattern.")
+			->check(CLI::Range(std::size_t{1}, std::size_t{1} << 40));
+		std::size_t concurrent_search_indexes = 0;
+		app.add_option("--concurrent-search-indexes", concurrent_search_indexes, "Most indexes one search holds open at once; it reads the rest in later batches. 0: a reactor's share of the database pool (the pool size over the reactors).");
 		std::size_t schema_pool_size = SCHEMA_POOL_SIZE;
 		app.add_option("--schema-pool-size", schema_pool_size, "Maximum number of schemas in schema pool.");
 		std::size_t schema_versions_size = SCHEMAS_VERSIONS_CACHE_SIZE;
@@ -351,7 +354,8 @@ parseOptions(int argc, char** argv)
 		o.uid = uid;
 		o.gid = gid;
 		o.database_pool_size = database_pool_size;
-		o.max_indexes_per_search = max_indexes_per_search;
+		o.max_search_indexes = max_search_indexes;
+		o.concurrent_search_indexes = concurrent_search_indexes;
 		o.schema_pool_size = schema_pool_size;
 		o.schema_versions_size =  schema_versions_size;
 		o.scripts_cache_size = scripts_cache_size;

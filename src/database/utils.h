@@ -80,6 +80,7 @@ struct query_field_t {
 	engine::doccount limit = std::numeric_limits<engine::doccount>::max();
 	engine::doccount check_at_least = 0;
 	bool writable = false;
+	bool patterns = false;   // the path may name patterns (`_all`, `test*`): a search or a count
 	bool primary = false;
 	bool spelling = true;
 	bool synonyms = false;

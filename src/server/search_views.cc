@@ -66,6 +66,7 @@
 #include "engine/query.h"                   // for engine::Query
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node
+#include "index_pattern.h"                   // for index_pattern::expand
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
 #include "phf.hh"                           // for phf::*
@@ -136,7 +137,7 @@ static query_field_t query_field_maker(Request& request, int flags);
 // above call them before their definitions.
 static MsgPack node_obj();
 static task::task<MsgPack> retrieve_database(Request& request, const query_field_t& query_field, std::string_view selector);
-static std::vector<std::string> expand_paths(Request& request);
+static task::task<std::vector<std::string>> expand_paths(Request& request, bool patterns);
 static task::task<size_t> resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 
 // The response/transport helpers lifted off HttpClient `this` (Leg 2 stage 3b). The
@@ -1944,6 +1945,9 @@ search_view(Request& request)
 	DatabaseHandler db_handler;
 	db_handler.budget = &*request.budget;   // the search yields its reactor at window boundaries
 	try {
+		if (request.endpoints.empty()) {
+			throw engine::Error(engine::errc::not_found, "No index matches the pattern");   // answered as a search that found nothing
+		}
 		if (query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
@@ -2093,6 +2097,9 @@ count_view(Request& request)
 	DatabaseHandler db_handler;
 	db_handler.budget = &*request.budget;   // the search yields its reactor at window boundaries
 	try {
+		if (request.endpoints.empty()) {
+			throw engine::Error(engine::errc::not_found, "No index matches the pattern");   // answered as a search that found nothing
+		}
 		if (query_field.primary) {
 			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
@@ -2244,9 +2251,10 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 {
 	L_CALL("resolve_index_endpoints(<request>, <query_field>, <settings>)");
 
-	auto paths = expand_paths(request);
+	auto paths = co_await expand_paths(request, query_field.patterns);
 
-	request.endpoints.clear();
+	// Sorted and without repeats, as Endpoints::add keeps them, in one sort: a wide search names thousands.
+	std::vector<Endpoint> resolved;
 	for (const auto& path : paths) {
 		auto index_endpoints = co_await XapiandManager::resolve_index_endpoints(
 			Endpoint(path),
@@ -2256,21 +2264,27 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 			throw engine::Error(engine::errc::network, "Endpoint node not available");
 		}
 		for (auto& endpoint : index_endpoints) {
-			request.endpoints.add(endpoint);
+			resolved.push_back(std::move(endpoint));
 		}
 	}
+	std::sort(resolved.begin(), resolved.end());
+	resolved.erase(std::unique(resolved.begin(), resolved.end()), resolved.end());
+	static_cast<std::vector<Endpoint>&>(request.endpoints) = std::move(resolved);
 	L_HTTP("Endpoint: -> {}", request.endpoints.to_string());
 
 	co_return paths.size();
 }
 
 
-static std::vector<std::string>
-expand_paths(Request& request)
+// The index names of the request's path. A search or a count may name patterns (`_all`, `test*`, `-test3`):
+// they are expanded against the indexes on the node's disk in a chore, so the reactor never reads the directory.
+static task::task<std::vector<std::string>>
+expand_paths(Request& request, bool patterns)
 {
 	L_CALL("expand_paths(<request>)");
 
 	std::vector<std::string> paths;
+	bool wildcards = false;
 
 	request.path_parser.rewind();
 
@@ -2283,12 +2297,38 @@ expand_paths(Request& request)
 			pth.remove_prefix(1);
 		}
 		index_path.append(pth);
+		while (index_path.size() > 1 && index_path.back() == '/') {
+			index_path.pop_back();   // the last name of `/a,b/` carries the slash that ends the path
+		}
 
-
-			paths.push_back(std::move(index_path));
+		wildcards = wildcards || index_pattern::is_wildcard(index_path);
+		paths.push_back(std::move(index_path));
 	}
 
-	return paths;
+	if (wildcards && patterns) {
+		std::vector<std::string> names;
+		IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+		// One walk at a time on the node: the rest wait their turn holding no thread, so the walks hold one worker of the
+		// work pool whatever the clients send, and the writes' chores run beside them.
+		static task::async_mutex walks;
+		auto turn = co_await walks.lock(request.cancel.token());
+		if (!turn) {
+			throw task::cancelled{};
+		}
+		const auto cap = static_cast<size_t>(opts.max_search_indexes);
+		// The walk looks at the request between entries, so a client that goes away stops it.
+		const auto token = request.cancel.token();
+		co_await chores.run(engine::ChoreClass::query, [&] {
+			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, [&token] {
+				if (token.requested()) {
+					throw task::cancelled{};
+				}
+			});
+		});
+		co_return names;
+	}
+
+	co_return paths;
 }
 
 
@@ -2358,6 +2398,8 @@ query_field_maker(Request& request, int flags)
 	}
 
 	if ((flags & QUERY_FIELD_SEARCH) != 0) {
+		query_field.patterns = true;
+
 		request.query_parser.rewind();
 		if (request.query_parser.next("spelling") != -1) {
 			query_field.spelling = true;

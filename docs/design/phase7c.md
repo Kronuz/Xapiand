@@ -270,8 +270,9 @@ refresh is coalesced (`index.hh:1312-1318`), which keeps 7a's D7. Host mode clos
 `readers_per_index`: the threads that can hold a view of one index at once, times 2 (`manager.cc`).
 `too_many_readers` (`hazard.hh:47`, `:211`) maps to 503 and means more concurrent readers of one index than the
 host runs. A search takes one record in each index it reads, so its fan-out is bounded by the open indexes, not by
-the registry: `max_indexes_per_search`, at most the pool size, answers 400 (architect ruling,
-`docs/reviews/phase7c-x2b-code.md`). T8 tests the 503 with a 16-record registry, and T13 states the registry's bytes
+the registry: a search walks its indexes in batches, each batch within the open-index budget, and a
+runaway pattern answers 400 (`docs/mechanisms/wide-search.md`; the architect's original ruling,
+`docs/reviews/phase7c-x2b-code.md`, capped the whole search at the pool size). T8 tests the 503 with a 16-record registry, and T13 states the registry's bytes
 and the commit's scan cost (`docs/mechanisms/reader-views.md`, Limits).
 
 **D7. Fsyncs and durability.** Every fsync, `F_FULLFSYNC` and directory barrier runs inside a chore:

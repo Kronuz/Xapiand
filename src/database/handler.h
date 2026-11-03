@@ -67,11 +67,26 @@ engine::docid to_docid(std::string_view document_id);
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
 
-// Refuses a search over more shards than `max_indexes_per_search`: a search keeps every index it reads open for
-// its whole run, and the pool holds no more open than its file-descriptor budget. Throws errc::invalid (a 400)
-// naming the limit; the request is the client's to narrow, so retrying it cannot help. 0 is no limit (a tool
-// that never ran main()'s sizing).
-void check_search_fanout(size_t shards, size_t max_indexes_per_search);
+// Where a document id across `shards` shards lives: the shard's position and the document's id in that shard,
+// which is the id one shard numbers. (hit id = (docid - 1) * shards + shard + 1.) A hit id is 64 bits wide, a
+// shard's docid 32: an id with no such docid, or 0, raises errc::doc_not_found.
+struct SplitHitId {
+	size_t shard;
+	engine::docid did;
+};
+SplitHitId split_hit_id(engine::hitid did, size_t shards);
+
+// Refuses a search over more shards than `max_search_indexes`, the runaway cap: a wider search is walked in
+// batches, but the walk itself has a cost nobody asked for. Throws errc::invalid (a 400) naming the limit; the
+// request is the client's to narrow, so retrying it cannot help. 0 is no limit (a tool that never ran main()).
+void check_search_fanout(size_t shards, size_t max_search_indexes);
+
+// The most indexes one search holds open at once: `--concurrent-search-indexes`, else a reactor's share of the
+// indexes the pool holds open (the pool size over the reactors, at least 1).
+size_t search_batch_indexes();
+
+// The indexes searches hold open now, or the most they have held at once since the process started.
+size_t search_pinned_indexes(bool most);
 
 class DatabaseHandler {
 	friend class Document;
@@ -101,6 +116,9 @@ private:
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+
+	// Pins the indexes [begin, end) of the endpoints and searches them: one batch of a wide search.
+	task::task<engine::BatchResult> search_batch(size_t begin, size_t end, const engine::SearchRequest& request);
 
 	// The match proper, on a query the engine already read.
 	task::task<engine::SearchResult> match(
@@ -197,7 +215,7 @@ public:
 	task::task<void> set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
 
 	// By id the document is a handle: it reads the index when its data is asked for.
-	Document get_document(engine::docid did);
+	Document get_document(engine::hitid did);
 	task::task<Document> get_document(std::string_view document_id);
 	task::task<Document> get_document_term(const std::string& term);
 	task::task<engine::docid> get_docid(std::string_view document_id);
@@ -286,13 +304,13 @@ public:
 
 
 class Document {
-	engine::docid did;
+	engine::hitid did;   // across the shards of the handler's endpoints
 
 	DatabaseHandler* db_handler;
 
 public:
 	Document();
-	Document(engine::docid did_, DatabaseHandler* db_handler_);
+	Document(engine::hitid did_, DatabaseHandler* db_handler_);
 
 	Document(const Document& doc_) = default;
 	Document& operator=(const Document& doc_) = default;
