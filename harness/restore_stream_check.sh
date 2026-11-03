@@ -2,6 +2,7 @@
 # restore_stream_check.sh BIN: RESTORE as D12 runs it (a streamed body parsed in chores, indexed as tasks). On a fresh
 # node: an NDJSON stream of N documents (default 20000) and a MsgPack stream, a body that arrives chunked (buffered),
 # a stream with a bad line, and a client that leaves mid-stream (what was indexed stays). Every count is read back.
+. "$(dirname "$0")/env.sh"
 BIN=$1; PORT=${PORT:-18832}; N=${N:-20000}; rc=0
 W=${HARNESS_TMP:-${TMPDIR:-.}}
 D=$(mktemp -d "$W/restore_stream.XXXXXX")
@@ -13,7 +14,7 @@ start() {
 start
 fail() { echo "FAIL: $*"; rc=1; }
 
-/usr/local/bin/python3 -I - "$D" "$N" <<'PY'
+"$PY" -I - "$D" "$N" <<'PY'
 import json, struct, sys
 d, n = sys.argv[1], int(sys.argv[2])
 with open(f'{d}/nd.ndjson', 'w') as f:
@@ -39,8 +40,8 @@ with open(f'{d}/mp.msgpack', 'wb') as f:
         f.write(pack({'_id': i + 1, 'user': f'u{i % 97}', 'message': f'message number {i}'}))
 PY
 
-count() { curl -s -m 30 "localhost:$PORT/$1/:count" | /usr/local/bin/python3 -I -c 'import json,sys; print(json.load(sys.stdin).get("total", -1))'; }
-indexed() { /usr/local/bin/python3 -I -c 'import json,sys; print(json.load(sys.stdin).get("indexed", -1))' < "$1"; }
+count() { curl -s -m 30 "localhost:$PORT/$1/:count" | "$PY" -I -c 'import json,sys; print(json.load(sys.stdin).get("total", -1))'; }
+indexed() { "$PY" -I -c 'import json,sys; print(json.load(sys.stdin).get("indexed", -1))' < "$1"; }
 row() {  # row NAME INDEX FILE CT WANT [extra curl args]
   name=$1; idx=$2; file=$3; ct=$4; want=$5; shift 5
   code=$(curl -s -o "$D/$name.out" -w '%{http_code}' -m 300 -XRESTORE "localhost:$PORT/$idx/" -H "Content-Type: $ct" --data-binary "@$file" "$@")
@@ -53,7 +54,7 @@ row chunked ch "$D/bad.ndjson" application/x-ndjson 1000 -H 'Transfer-Encoding: 
 row badline bl "$D/bad.ndjson" application/x-ndjson 1000
 
 # A client that leaves mid-stream: the node goes on and what it had indexed stays.
-/usr/local/bin/python3 -I - "$PORT" "$D/nd.ndjson" <<'PY'
+"$PY" -I - "$PORT" "$D/nd.ndjson" <<'PY'
 import socket, sys
 data = open(sys.argv[2], 'rb').read()
 s = socket.create_connection(('127.0.0.1', int(sys.argv[1])), timeout=30)

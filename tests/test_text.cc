@@ -571,11 +571,11 @@ test_body_depth_per_format()
 			CHECK_TRUE(refused([&] { msgpack_load(make(n)); }));
 		}
 	}
-	// A header that promises more than the body holds is a decode error, not a crash.
-	try {
-		msgpack_load(std::string("\xdd\xff\xff\xff\xff\x91", 6));
-	} catch (const std::exception&) {
-	}
+	// A header that promises more items than the body has bytes is refused from the header alone, before any
+	// room is reserved for them (a 6-byte body claiming 2^32 items would ask for 128 GiB).
+	CHECK_TRUE(refused_as([&] { msgpack_load(std::string("\xdd\xff\xff\xff\xff\x91", 6)); }, "more items"));
+	CHECK_TRUE(refused_as([&] { msgpack_load(std::string("\xdf\xff\xff\xff\xff\x01\x01", 7)); }, "more entries"));
+	CHECK_EQ(msgpack_load(std::string("\x93\x01\x02\x03", 4)).size(), std::size_t(3));
 	// YAML: n nested flow sequences, flow maps and block maps.
 	const auto flow_seq = [](std::size_t n) { return std::string(n, '[') + "1" + std::string(n, ']'); };
 	const auto flow_map = [](std::size_t n) {

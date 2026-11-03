@@ -258,6 +258,18 @@ endif (CPPLINT)
 ########################################################################
 
 check_cxx_compiler_flag("-stdlib=libc++" HAVE_FLAG_STDLIB_LIBCPP)
+# The extracted libraries use std::format only where <version> advertises __cpp_lib_format (libc++ 19 and later);
+# on an older libc++ they fall back to passthrough, and the logger cannot format a stringified at all. A Linux
+# host that has such a libc++ installed (Ubuntu 24.04's libc++-18-dev) builds against libstdc++ instead.
+if (HAVE_FLAG_STDLIB_LIBCPP AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	set (CMAKE_REQUIRED_FLAGS "-stdlib=libc++ -std=c++20")
+	check_cxx_source_compiles("#include <version>\n#ifndef __cpp_lib_format\n#error no std::format\n#endif\nint main() { }" HAVE_LIBCPP_FORMAT)
+	unset (CMAKE_REQUIRED_FLAGS)
+	if (NOT HAVE_LIBCPP_FORMAT)
+		message (STATUS "libc++ does not advertise std::format (needs libc++ 19): using libstdc++")
+		set (HAVE_FLAG_STDLIB_LIBCPP OFF)
+	endif ()
+endif ()
 if (HAVE_FLAG_STDLIB_LIBCPP)
 	add_cxx_compiler_flag("-stdlib=libc++")
 	find_library(LIBCPP_LIBRARIES c++)
@@ -455,7 +467,7 @@ FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random
 FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG 87450b43c6ff113a321e06d811d9b7a4857c9351)
 FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 46561fad9f26f9b2b613568fe1a3dbcb016d4aba)
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 1f9190ca19bbb5291456c54f3ff34982e0083113)
-FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 07c9505ece8824a80777bc9b49ed12a2002c9c9b)
+FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 05f91deaf86cddf33839d5a4de60ffb3ce73bed0)
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 1be38483a333d13544fbf6b0937409295c8ea3e0)
 FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 94df6e5e1cadebbba45cd1f5fbb679407550be56)  # track tip
 
@@ -469,7 +481,7 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 # so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
 # command line; skipping them removes that need entirely. They are populated and put
 # on the include path further below, where they are actually used.
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 1d82461008c897ab004652d5c43e60ccfa7012cb)
@@ -477,7 +489,7 @@ FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG df0ebc885c3e72e139a35dd4e34f5c731f02b4bd)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
-FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 9cce2c7f77e6f47414fa5d9b9609f125d811b1d5)
+FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
@@ -573,7 +585,7 @@ add_compile_definitions(TRACEBACK_HOOKS=1)
 # xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
 # thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
 # handed to the WAL at construction; the data store stays on synchronous fsync.
-FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG f3a38fce78925d2da3936375d4c4ca1100419a6a)
+FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 9f14417d24a133ab0b4ab31e452625eceb227afb)
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
@@ -606,7 +618,7 @@ add_compile_definitions(
 # strings / split / stringified dependencies are already on Xapiand's path, so its own
 # CMake is not processed -- we Populate, not MakeAvailable). FS_TRACE_HEADER wires fs's
 # logging to Xapiand's real logger (+ error::name/description, repr).
-FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG 291842c03a310847bb48d244697f9e7d56dfdc0d)
+FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG c002235cf3734d58e33abeb6b8b8b809928f3bae)
 FetchContent_MakeAvailable(fs)
 include_directories("${fs_SOURCE_DIR}")
 add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
@@ -645,7 +657,7 @@ add_compile_definitions(
 # hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
 # the commit with wordwise::hash32.
 FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG e3bf5b6167775f26dd14f89f210f687b0253241b)
-FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG e0b4696c749862d53935c30fddd5f6922328d788)
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 4a1a97ca16bebe93f1e6c8aeb35fbac086f66817)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
 add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
@@ -969,7 +981,7 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # msgpack moved to Kronuz/msgpack above because Xapiand's forked exception.hpp
 # travels with that standalone library.
 ########################################################################
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2    SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
@@ -1247,6 +1259,18 @@ target_link_libraries(${PROJECT_NAME}
 	prometheus-cpp::core
 	YAML_OBJ
 	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+)
+
+# The strata engine's integrity check on shard directories, with no server up (harness/engine_crash_check.sh).
+# Built on request: cmake --build build --target strata_check  ->  build/bin/strata_check
+add_executable(strata_check EXCLUDE_FROM_ALL
+	"${PROJECT_SOURCE_DIR}/tests/strata_check_tool.cc"
+	"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+)
+target_link_libraries(strata_check PRIVATE
+	XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+	${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 )
 
 
@@ -1869,7 +1893,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard reactor_requests control_plane node lua metric_serialise quarantine root_routes)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool blocking_guard blocking_scheduler reactor_requests control_plane node lua metric_serialise quarantine root_routes)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"

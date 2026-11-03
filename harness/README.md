@@ -82,8 +82,18 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
 - **`removed_options_check.sh BIN`** -- the thread-count options D15 removed (`--committers`, `--fsynchers`,
   `--http-servers`, `--http-clients`, `--bulk-preparers`, `--bulk-indexers`) are unknown arguments and not in `--help`.
 - **`profile_light.sh`** -- CPU per light request by group (offload hop, scheduler, engine, HTTP)
-  from `sample`, and the hop's wall time from an http `trace/hop` build (`-DHTTP_TRACE_HOP`);
-  `--compare PRE POST` is T11.
+  from `sample` (macOS) or `perf` (Linux), and the hop's wall time from an http `trace/hop` build
+  (`-DHTTP_TRACE_HOP`); `--compare PRE POST` is T11. `profile_bulk.sh` samples the same way.
+- **`perf_sample.py PID SECS OUT`** -- `sample(1)` for Linux: records PID with perf (cpu-clock, DWARF unwinding) and writes
+  `sample`'s call-graph text, so the two profilers read either. Needs perf and permission to profile (root, or
+  `kernel.perf_event_paranoid <= 1`).
+- **`env.sh`** -- sourced by the shell harnesses: `PY` is `$PYTHON`, else `/usr/local/bin/python3`, else `python3` on PATH;
+  the open-files soft limit is raised to `$HARNESS_NOFILE` (default 65536, up to the hard limit), since a node started with
+  `--tls-max-connections 1024` refuses to start under the usual 1024.
+- **`engine_mixed_load.py ... --term-at SECS`** -- T7: SIGTERM that many seconds in under full load; the node must exit 0
+  within `--term-bound`, then restarts on the same data and the dump must hold every acknowledged write.
+- **`engine_crash_check.sh`** needs the `strata_check` tool: `cmake --build build --target strata_check`
+  (found next to the binary, or `CHECK_TOOL=`).
 - **`baseline_7c.sh`, `baseline_report.py`** -- the pre-7c rows (T4, T5, T8, T11, T12) in one hold, and their tables.
 - **`test_gate_tools.py`** -- unit tests for `async_check` and `stall_load` (no node; `python3 -I harness/test_gate_tools.py`).
 - **`ruff.toml`, `pyrefly.toml`** -- the lint and strict type configuration for these scripts.

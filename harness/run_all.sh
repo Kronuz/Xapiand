@@ -26,6 +26,7 @@
 set -u
 
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$HARNESS_DIR/env.sh"
 REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8899}"
@@ -84,7 +85,7 @@ run_smoke() {
 		curl -s -m5 -XPUT "localhost:$PORT/smoke/1?commit=true" -H 'Content-Type: application/json' \
 			-d '{"body":"the quick brown fox"}' -o /dev/null
 		local n; n="$(curl -s -m8 -XPOST "localhost:$PORT/smoke/:search" -H 'Content-Type: application/json' \
-			-d '{"_query":{"body":"brown"}}' | python3 -c 'import sys,json;print(json.load(sys.stdin).get("count",0))' 2>/dev/null)"
+			-d '{"_query":{"body":"brown"}}' | "$PY" -c 'import sys,json;print(json.load(sys.stdin).get("count",0))' 2>/dev/null)"
 		[ "$n" = "1" ] && ok=0
 	fi
 	stop_node "$pid"
@@ -115,7 +116,7 @@ run_e2e() {
 	local out="/tmp/xa_e2e_ours.json"
 	local cap rep
 	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)"
-	rep="$(python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
+	rep="$("$PY" "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
 	if printf '%s\n' "$rep" | grep -q '^GREEN'; then
 		pass "e2e"
 	else
@@ -146,7 +147,7 @@ run_tls() {
 	PORT=18880 COLL="$dir/coll.json" SCHEME=https CA="$dir/certs/ca.pem" \
 		XAPIAND_FLAGS="--tls-cert $dir/certs/server.pem --tls-key $dir/certs/server.key" \
 		"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" "$dir/data" > "$dir/capture.log" 2>&1
-	rep="$(python3 "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
+	rep="$("$PY" "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
 	local ok=1
 	printf '%s\n' "$rep" | grep -q '^GREEN' || { ok=0; printf '%s\n' "$rep" | head -100; tail -5 "$dir/capture.log"; }
 	WORK="$dir/check" "$HARNESS_DIR/tls_check.sh" "$BIN" || ok=0
@@ -166,7 +167,7 @@ run_load() {
 	local ok=1
 	if wait_http "$PORT" 30; then
 		sh "$HARNESS_DIR/index_fortune" "http://localhost:$PORT/loadtest?commit=true" 1 200 -o /dev/null
-		local n; n="$(curl -s "localhost:$PORT/loadtest/:info" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("doc_count",0))' 2>/dev/null)"
+		local n; n="$(curl -s "localhost:$PORT/loadtest/:info" | "$PY" -c 'import sys,json;print(json.load(sys.stdin).get("doc_count",0))' 2>/dev/null)"
 		[ "${n:-0}" -ge 200 ] && ok=0 || echo "  (indexed ${n:-0}/200)"
 	fi
 	stop_node "$pid"
@@ -181,7 +182,7 @@ run_stress() {
 	local pid=$!
 	local ok=1
 	if wait_http "$PORT" 30; then
-		python3 "$HARNESS_DIR/stress_fortune" --target "localhost:$PORT" \
+		"$PY" "$HARNESS_DIR/stress_fortune" --target "localhost:$PORT" \
 			--workers 30 --databases 8 --duration 10 --commit 2>/dev/null && ok=0
 	fi
 	stop_node "$pid"
@@ -196,7 +197,7 @@ run_bench() {
 	local pid=$!
 	local ok=1
 	if wait_http "$PORT" 30; then
-		python3 "$HARNESS_DIR/loadtest.py" --target "localhost:$PORT" \
+		"$PY" "$HARNESS_DIR/loadtest.py" --target "localhost:$PORT" \
 			--dataset "$REPO/docs/public/assets/accounts.ndjson" --replicate 10 \
 			--concurrency 16 --duration 4 --trials 1 --datadir "$dir" \
 			--out "$dir/bench.json" && ok=0

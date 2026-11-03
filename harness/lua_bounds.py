@@ -113,9 +113,9 @@ LONG_SCRIPT = "local s = 0; for i = 1, 40000000 do s = s + i end; _doc.s = s"
 
 def foreign_scripts_check(binary, port, tmp):
     """A local script named like a foreign reference neither replaces nor stands in for the cached foreign script, and a
-    rewritten foreign script takes effect. One HTTP server, so every request reaches the same cache."""
+    rewritten foreign script takes effect. One processor is one reactor, so every request reaches the same (per-thread) cache."""
     failures = []
-    node = subprocess.Popen([binary, "--port", str(port), "--name", "luaforeign", "--http-servers", "1", "-D", os.path.join(tmp, "data2")],
+    node = subprocess.Popen([binary, "--port", str(port), "--name", "luaforeign", "--processors", "1", "-D", os.path.join(tmp, "data2")],
                             stdout=open(os.path.join(tmp, "node2.log"), "w"), stderr=subprocess.STDOUT)
     try:
         for _ in range(240):
@@ -204,7 +204,9 @@ def main():
     ap.add_argument("--out")
     args = ap.parse_args()
 
-    tmp = tempfile.mkdtemp(prefix="lua_bounds_", dir=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".scratch"))
+    scratch = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".scratch")
+    os.makedirs(scratch, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="lua_bounds_", dir=scratch)
     node = subprocess.Popen(
         [args.binary, "--port", str(args.port), "--name", "luanode", "-D", os.path.join(tmp, "data")],
         stdout=open(os.path.join(tmp, "node.log"), "w"), stderr=subprocess.STDOUT)

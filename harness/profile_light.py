@@ -2,7 +2,7 @@
 """profile_light.py -- Phase 7c K6 / T11: what one light request costs in dispatch, CPU and wall.
 
 Starts a solo strata node from BIN, loads --docs accounts, then drives one connection (concurrency 1)
-of GET-by-id and single-term searches for --secs while `sample` records every thread at 1 ms.
+of GET-by-id and single-term searches for --secs while `sample` (macOS) or `perf` (Linux, perf_sample.py) records every thread at 1 ms.
 
   CPU   Each sample is 1 ms of one thread. Busy samples are put in a named group by their stack:
         the offload hop (posting to the pool, waking and dequeueing a worker, posting back), the
@@ -229,7 +229,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             one()
             warm += 1
         sampler = subprocess.Popen(
-            ["sample", str(proc.pid), str(args.secs), "-file", raw],
+            [os.path.join(os.path.dirname(os.path.abspath(__file__)), "perf_sample.py"), str(proc.pid), str(args.secs), raw]
+            if sys.platform.startswith("linux")
+            else ["sample", str(proc.pid), str(args.secs), "-file", raw],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
