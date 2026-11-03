@@ -743,7 +743,7 @@ FetchContent_MakeAvailable(queryparser)
 # library's own task::asio target stays off so that no second copy of Asio is fetched. A chore resumes its
 # awaiter with asio_scheduler::post(), the one thread-safe entry, never post_demoted() (C10).
 set(TASK_ASIO OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG b4067664424e7546f5c6ab645135dbe64fdc4e8f)  # task main: event, async_mutex (lock(token)), deadline, await_asio
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 6558c2e9c533ebb0fa1177f22edd4fff528f6efa)  # task main C3: cancellation, inline resume, roots and the four teardown phases
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
