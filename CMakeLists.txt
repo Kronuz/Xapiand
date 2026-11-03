@@ -523,7 +523,7 @@ include_directories(
 # Populate the source now for headers only -- SOURCE_SUBDIR skips its CMake, so nothing is
 # built or re-fetched here, and traceback.h is self-contained (TRACEBACK_HOOKS is set
 # where traceback.cc is actually compiled, below).
-FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/traceback.git GIT_TAG 64cc1052d4fb99fcf523d6ca1b4ad54b99ac63e0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/traceback.git GIT_TAG 99376ee635cc0c6b2c7eb03b2256065b74c2baf4 SOURCE_SUBDIR do-not-configure)
 FetchContent_MakeAvailable(traceback)
 include_directories("${traceback_SOURCE_DIR}")
 
