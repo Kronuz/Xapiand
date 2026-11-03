@@ -13,8 +13,8 @@ Host rule (the lead, 2026-11-02): sanitizer batches run on Linux through strata'
 
 ## State
 
-Step 1 (the seam) built and proved on macOS; Linux sanitizer proof in progress (see Proof). Step 2
-waits for item 5b.
+Step 1 (the seam) built and proved: macOS tests and mutants, Linux TSan and ASan+UBSan with no result
+different from master (see Proof). Ready for review. Step 2 waits for item 5b.
 
 ## Done criteria
 
@@ -22,7 +22,7 @@ waits for item 5b.
 - [x] Step 1, the seam: `IndexPin` over today's `refs`, `lock_shard` awaited (`co_await lk_shard.pin()`)
   at all 28 construction sites plus `dump_page`'s borrowed one, the pin-before-view check (XP1), the
   autocommit's resident pin.
-- [ ] Step 1 proof on Linux: see Proof.
+- [x] Step 1 proof on Linux: see Proof.
 - [ ] Step 2, the registry as `H` (against item 5b): XP1, XP2.
 - [ ] Step 3, commit chore, idle close and housekeeping gone, shutdown, FLUSH by snapshot: XP3, XP4.
 - [ ] Step 4, `map_owed`, the `unleased_maps()` assertion, the budget and CT-R39's clamp: XP5.
@@ -43,26 +43,36 @@ macOS (Apple clang, RelWithDebInfo, `ASSERTS=ON`, `.scratch/build-mac`):
   0; `test_gate_tools.py` OK. `lock_shard::pin()` is named so the checker does not read it as a mutex; the
   stale `lk_shard\.lock` row is gone.
 
-Linux (AWS lease, 16 cores):
-- clang-18 TSan, asserts on (`~/xpool/tsan`): ctest 30 of 34; the four are `test_engine_host`, `test_pool`,
-  `test_node` (each a data race in `BlockingScheduler::~BlockingScheduler`, `host.h:214`, the race
-  `linux-gate-fixes` fixes in Xapiand:8b4541e63, not on master) and `test_text` (TSan out of memory). Docs E2E
-  GREEN, `graceful_shutdown_check.sh` all scenarios pass, `path_boundary_check.sh` all ok.
-- clang-18 ASan+UBSan (`-fno-sanitize-recover=undefined`), asserts on: unusable as a gate. rapidjson's
-  `Stack::Reserve` (`internal/stack.h:117`) applies an offset to a null pointer on the first JSON response
-  (`MsgPack::to_string` → `Writer::StartObject`), which aborts the node on `GET /` and six tests; third-party
-  code this branch does not touch. Docs E2E reported GREEN.
-- Attribution batch (`.scratch/linux-batch2.sh`, branch against master `88892b4cb` on the same ASan config,
-  and the branch plus 8b4541e63 on TSan): running.
-- gcc-13 ASan+UBSan, the CI's config (`-DASAN=ON -DUBSAN=ON`) with asserts and tests
-  (`.scratch/linux-batch3.sh`): running.
+Linux (AWS lease, 16 cores, `~/xpool`; scripts `.scratch/linux-batch*.sh`). No result differs from master
+(`88892b4cb`) built the same way:
+- clang-18 TSan, asserts on: docs E2E GREEN, `graceful_shutdown_check.sh` all scenarios pass. ctest 30 of
+  34: `test_engine_host`, `test_pool`, `test_node` race in `BlockingScheduler::~BlockingScheduler`
+  (`host.h:214`), which `phase7c/linux-gate-fixes` fixes in Xapiand:8b4541e63 (not on master); with that
+  commit applied, `test_engine_host` (99), `test_node` (85) and `test_reactor_requests` (342) pass, and
+  `test_pool` stops at a race on an exception object two `Running` threads share in
+  `test_a_failed_commit_reaches_only_the_joined_waiters` (test code this branch does not touch). Master
+  with the fix aborts `test_pool` earlier, in `test_smoke` ("IndexChores ended with work outstanding").
+  `test_text` runs out of TSan memory.
+- clang-18 ASan+UBSan, UBSan non-recoverable: every JSON response aborts in rapidjson (`stack.h:117`, null
+  plus offset) and LZ4 (`lz4.c:1069`); six suites abort identically on master. Not a usable gate.
+- clang-18 ASan+UBSan, UBSan recoverable with those two third-party reports suppressed, asserts on: docs
+  E2E GREEN (the view check live, so every request path pins before its views), `graceful_shutdown_check.sh`
+  all pass. `test_reactor_requests` 342 of 342 five of five (master 341). `test_pool`: 5 of 231 checks fail
+  in `test_a_registry_that_ends_with_work_outstanding_aborts` (`test_pool.cc:1622`), five of five, as on
+  master (5 of 214); one run in five aborts with "IndexChores ended with work outstanding" (master 0 of 5
+  here, 1 of 1 under TSan above). `test_text` ASan out of memory. `path_boundary_check.sh`: the same 14
+  failures on master and branch (relative `./path_boundary.*/out` index paths accepted).
+- gcc-13 with asserts and tests: an internal compiler error on `src/database/schemas_lru.cc:176` and
+  `fuzz_body.cc` not compiling; the CI's gcc config builds neither asserts nor tests.
 
 ## Findings for the lead
 
 1. clang 18 and later UBSan abort Xapiand on every JSON response (rapidjson `stack.h:117`, null plus
-   offset); clang 20 does not compile rapidjson at all (`document.h:319`, assignment to a const member).
-   The CI's gcc-13 config does not flag the first. Pre-existing, outside this branch.
-2. The TSan races in `BlockingScheduler`'s destructor fail three suites on master's code; the fix waits on
+   offset; also LZ4 `lz4.c:1069`); clang 20 does not compile rapidjson (`document.h:319`). gcc-13 with
+   `ASSERTS=ON` hits an internal compiler error on `schemas_lru.cc:176`. All pre-existing.
+2. On Linux, master fails `test_pool`'s `test_a_registry_that_ends_with_work_outstanding_aborts` under
+   ASan, `path_boundary_check.sh` 14 times (relative paths), and aborts `test_pool` intermittently with
+   "IndexChores ended with work outstanding"; the TSan races in `BlockingScheduler` wait on
    `phase7c/linux-gate-fixes`.
 
 ## Done
@@ -76,7 +86,7 @@ Linux (AWS lease, 16 cores):
 
 ## Next
 
-1. Close step 1's Linux proof (batches 2 and 3), then hand step 1 to review.
+1. Step 1 to review (the lead's triage).
 2. Step 2 against item 5b once its branch has the host interface: `IndexEntry` by `open_payload`,
    `StrataReaders` and the adapter's registry gone, create intent from the flags, `index_fenced` to
    `reopen`.
