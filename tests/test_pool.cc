@@ -86,7 +86,7 @@ struct PoolTestAccess {
 		return true;
 	}
 	static std::uint64_t applied(ShardEndpoint& entry) { return entry.applied_.load(); }
-	static WorkGroup& chore_group(ShardEndpoint& entry) { return static_cast<IndexChores&>(*entry.chores).group(); }
+	static engine::Chores& chores(ShardEndpoint& entry) { return *entry.chores; }
 	// As if a task posted to the control loop had not ended.
 	static void count_detached(DatabasePool& pool, int by) {
 		if (by > 0) { pool.detached_.fetch_add(static_cast<std::size_t>(by)); } else { pool.detached_.fetch_sub(static_cast<std::size_t>(-by)); }
@@ -1574,14 +1574,17 @@ void at_end_chores(bool outstanding) {
 	std::atomic<bool> go{false};
 	std::atomic<bool> started{false};
 	ShardEndpoint* raw = nullptr;
+	std::thread runner;   // awaits the chore; with work outstanding the process aborts before it ends
 	{
 		auto entry = pool->spawn(Endpoint(fresh("at_end_chores")));
 		raw = entry.get();
-		A::chore_group(*raw).enqueue([&go, &started] {
-			started = true;
-			while (!go) {
-				std::this_thread::sleep_for(1ms);
-			}
+		runner = std::thread([&go, &started, raw] {
+			engine::sync_wait(A::chores(*raw).run(engine::ChoreClass::flush, [&go, &started] {
+				started = true;
+				while (!go) {
+					std::this_thread::sleep_for(1ms);
+				}
+			}));
 		});
 		if (!eventually(started)) {
 			std::_Exit(3);
@@ -1589,7 +1592,7 @@ void at_end_chores(bool outstanding) {
 	}
 	if (!outstanding) {
 		go = true;
-		A::chore_group(*raw).wait();
+		runner.join();
 	}
 	pool.reset();
 }
@@ -1642,6 +1645,56 @@ void test_a_registry_that_ends_with_work_outstanding_aborts() {
 #endif
 }
 
+#ifndef NDEBUG
+// A host that resumes each task on a thread of its own and lingers in post(): the worker that posts a chore's
+// resume is still inside the chore when the task, and its owner, have gone on.
+class LingeringHost final : public engine::Host {
+public:
+	void post(std::coroutine_handle<> h) override {
+		std::thread([this, h] {
+			task::running_on scope(task::scheduler_ref::of(*this));
+			h.resume();
+		}).detach();
+		std::this_thread::sleep_for(150ms);
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point, std::unique_ptr<TimerNode>) override { std::abort(); }
+};
+
+task::task<void> run_chore_and_drop(std::unique_ptr<IndexChores>& chores, std::atomic<bool>& done) {
+	co_await chores->run(engine::ChoreClass::query, [] { });
+	engine::BlockingAllowed blocking("the test drops the chores where the join waits");
+	chores.reset();   // the chore has resumed its task: nothing is outstanding
+	done = true;
+}
+
+void chore_dropped_by_its_resume() {
+	auto pool = std::make_unique<DatabasePool>(8);
+	auto chores = std::make_unique<IndexChores>(pool->work_pool());
+	LingeringHost host;
+	std::atomic<bool> done{false};
+	host.spawn(run_chore_and_drop(chores, done));
+	if (!eventually(done, 10s)) {
+		std::_Exit(3);
+	}
+	std::this_thread::sleep_for(300ms);   // the lingering post ends before the host goes
+	pool.reset();
+}
+#endif
+
+// A chore is over for its owner when its task resumes: the owner may drop the chores then, while the worker is still leaving.
+void test_a_chore_is_over_when_its_task_resumes() {
+#ifndef NDEBUG
+	Watchdog watchdog("chore resume");
+	const auto end = in_child("chore_resume", [] { chore_dropped_by_its_resume(); });
+	CHECK_TRUE(end.clean);
+	if (!end.clean) {
+		std::fprintf(stderr, "  a chore dropped by its resume: %s\n", end.log.c_str());
+	}
+#endif
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1685,6 +1738,7 @@ int main(int argc, char** argv) {
 		{"test_a_chore_resumes_its_awaiter_with_post", test_a_chore_resumes_its_awaiter_with_post},
 		{"test_the_registry_lists_what_still_uses_an_index", test_the_registry_lists_what_still_uses_an_index},
 		{"test_a_registry_that_ends_with_work_outstanding_aborts", test_a_registry_that_ends_with_work_outstanding_aborts},
+		{"test_a_chore_is_over_when_its_task_resumes", test_a_chore_is_over_when_its_task_resumes},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

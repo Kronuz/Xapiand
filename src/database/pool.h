@@ -101,6 +101,7 @@ public:
 private:
 	WorkPool& pool_;
 	std::unique_ptr<WorkGroup> group_;
+	std::atomic<std::size_t> awaited_{0};   // chores whose awaiter has not resumed yet
 };
 
 
