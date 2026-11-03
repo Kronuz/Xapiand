@@ -26,7 +26,6 @@ src/engine/census.cc	mutex	.	compiled_out	9	ENGINE_CENSUS is OFF in gate builds 
 src/engine/host.h	mutex	.	allow	8	BlockingScheduler: its queue (resumes and post_call functions) and timers under one mutex, each O(1); the thread that drives it may block by definition (check_may_block guards engine::sync_wait)
 src/engine/host.h	wait	.	allow	2	BlockingScheduler::drive waits for a resume or a timer on the thread that called engine::sync_wait; guarded by check_may_block
 src/engine/host.h	sleep	.	allow	2	SleepFor suspends the task on its host's timer; a task that runs on no host (a test, the CLI) sleeps its own thread, never a loop's
-src/engine/host_asio.h	mutex	pending_mtx_	allow	3	debug builds: a Run's list of posted resume wrappers, O(1) link and unlink, never held across a resume
 src/engine/strata/shard.cc	file	.	allow	4	acquire runs only in a query chore (open_local, check): opening the core reads the directory there, never on a reactor (D4)
 src/engine/strata/shard.cc	mutex	entry->	allow	2	the entry lock: acquire holds it across the open I/O inside a chore, only while no handle exists, so no ~Handle can contend for it; ~Handle takes it for an O(1) count (D4, D5)
 src/engine/strata/shard.cc	sleep	sleep_for	allow	1	drain_readers suspends the closing task between polls for the readers of the old index (D6); it holds no thread
