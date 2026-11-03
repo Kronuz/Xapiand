@@ -419,7 +419,7 @@ licensing notes**, see [extraction.md](docs/design/extraction.md).
 | **Lock-free timer-wheel store** | `stash.h` | Easy | High | A novel CAS-based hierarchical slot store; near-zero deps once the trace macros are stubbed. The crown jewel of the scheduling stack. See [scheduler.md](docs/design/scheduler.md). |
 | **Cancellable timer scheduler** | `scheduler.h` (+ `stash.h`) | Moderate | High | A 24-hour multi-resolution timer wheel + a thread that runs/dispatches due tasks; tasks are cancellable. Needs a thread/pool abstraction. See [scheduler.md](docs/design/scheduler.md). |
 | **Per-key debouncer** | `debouncer.h` | Easy* | High | Throttle/debounce with a randomized force-window so a forever-touched key still fires. *Easy once the scheduler is extracted. See [scheduler.md](docs/design/scheduler.md). |
-| **Thread pool** | `threadpool.hh`, `thread.hh` | Easy | Med | Blocking-queue pool + CRTP `Thread`. Drop the runtime-ignored `ThreadPolicyType`; depends on `blocking_concurrent_queue.h` + `likely.h`. |
+| **Thread pool** | `work_pool.hh`, `thread.hh` | Done | Med | `Kronuz/threadpool`: `WorkPool` and `WorkGroup` (the `ThreadPool` family is deleted) and the CRTP `Thread`. |
 | **Lazy splitter** | `split.h` | Easy | High | One-pass `string_view` splitter, full-delimiter and find-first-of modes. |
 | **LZ4 streaming wrappers** | `compressor_lz4.*` | Easy | High | `LZ4BlockStreaming` + `compress_lz4`/`decompress_lz4`, ring-buffered file/data variants. (But: see the unused-digest bug.) |
 | **MsgPack keystone** | `Kronuz/msgpack` | Hard (done) | High | Former `src/msgpack*` + `src/xchange/`: bundled msgpack-c v1.3.0, the COW `MsgPack` value, `xchange` adaptors, and the RFC-6902 patcher. |
@@ -429,7 +429,7 @@ licensing notes**, see [extraction.md](docs/design/extraction.md).
 **The logging system as a whole** (the user's specific interest): the *engine*
 (`logger.cc`) is **Hard** to extract — it reaches into the global `opts` struct
 for every formatting decision (`logger.cc:555-645`), uses the project's own
-`Scheduler`/`ThreadPool`, and depends on `datetime`/`strings`/`io`. Extracting it
+`Scheduler`, and depends on `datetime`/`strings`/`io`. Extracting it
 means injecting a config struct, swapping the scheduler for a self-contained
 worker thread, and vendoring the formatting helpers. The **color helpers** and
 **traceback**, by contrast, are clean leaf utilities and the easy wins. So: the
@@ -503,8 +503,8 @@ included so each is checkable.
   (`strings.hh:51-54`) — undefined behavior (only type specializations are
   allowed there), even though it compiles.
 - **`concurrent_queue.h::try_dequeue_bulk` takes no lock** (`concurrent_queue.h:79`)
-  while every other method does; called from `TaskQueue::clear`
-  (`threadpool.hh:379`) concurrently with producers — a real race.
+  while every other method does; it was called from `TaskQueue::clear`
+  (removed with the `ThreadPool` family) concurrently with producers, a real race.
 - **Logger `stack_levels` accounting underflows.** The constructor stores 0 for
   the first stacked log but cleanup post-decrements an `unsigned` from 0
   (`logger.cc:334` vs `383`), wrapping to `UINT_MAX` or throwing

@@ -46,7 +46,6 @@
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "task.hh"                           // for task::task
-#include "thread.hh"                         // for ThreadPolicyType::*
 #include "engine/types.h"                  // for engine::rev, docid
 
 
