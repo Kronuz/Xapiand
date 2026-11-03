@@ -1500,6 +1500,7 @@ ChildEnd in_child(const char* name, F&& body) {
 	pid_t pid = ::fork();
 	if (pid == 0) {
 		std::freopen(log_path.c_str(), "w", stderr);
+		std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 		::alarm(30);   // a child that waits for what it should have refused to destroy ends here
 		body();
 		std::fflush(nullptr);
