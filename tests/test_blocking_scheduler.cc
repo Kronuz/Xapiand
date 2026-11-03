@@ -28,6 +28,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <thread>
 
 #include "engine/sync.h"
@@ -55,6 +57,45 @@ void test_scheduler_outlives_the_signal() {
 	CHECK_EQ(engine::blocking_violations(), 0u);
 }
 
+task::task<int> answer() {
+	co_return 42;
+}
+
+// Awaits a child after the nested wait: the outer loop's queue must still be there to resume it.
+task::task<int> waits_inside() {
+	const int nested = engine::sync_wait(answer());
+	co_return nested + 1 + (co_await answer() - 42);
+}
+
+task::task<int> waits_two_deep() {
+	co_return engine::sync_wait(waits_inside()) + 1;
+}
+
+// Aborts the process when the test has not ended in time, so a deadlock fails instead of hanging.
+struct Watchdog {
+	std::atomic<bool> stop{false};
+	std::thread thread{[this] {
+		for (int i = 0; i < 300 && !stop; ++i) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		if (!stop) {
+			std::fprintf(stderr, "a nested blocking wait did not return\n");
+			std::abort();
+		}
+	}};
+	~Watchdog() {
+		stop = true;
+		thread.join();
+	}
+};
+
+void test_a_blocking_wait_nests() {
+	Watchdog watchdog;
+	CHECK_EQ(engine::sync_wait(waits_inside()), 43);
+	CHECK_EQ(engine::sync_wait(waits_two_deep()), 44);
+	CHECK_EQ(engine::blocking_violations(), 0u);
+}
+
 }  // namespace
 
-TEST_MAIN(test_scheduler_outlives_the_signal)
+TEST_MAIN(test_scheduler_outlives_the_signal, test_a_blocking_wait_nests)

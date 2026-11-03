@@ -203,6 +203,28 @@ inline void check_no_view_held([[maybe_unused]] const char* waits_for) {
 }
 
 
+// Without symmetric transfer (g++) task queues a transfer made inside its running trampoline loop for that loop to
+// resume. A blocking wait inside a task that loop is running would wait for work queued behind itself, so the wait
+// gets a loop of its own for its duration and puts the outer one back.
+class NestedTrampoline {
+#if !TASK_SYMMETRIC_TRANSFER
+public:
+	NestedTrampoline() noexcept : nested_(task::detail::local_trampoline().active) {
+		if (nested_) { std::swap(task::detail::local_trampoline(), outer_); }
+	}
+	~NestedTrampoline() {
+		if (nested_) { std::swap(task::detail::local_trampoline(), outer_); }
+	}
+	NestedTrampoline(const NestedTrampoline&) = delete;
+	NestedTrampoline& operator=(const NestedTrampoline&) = delete;
+
+private:
+	task::detail::trampoline outer_;
+	bool nested_;
+#endif
+};
+
+
 // A scheduler owned by one waiting thread: run() drives a task there until it ends.
 class BlockingScheduler final : public Host {
 public:
@@ -295,6 +317,7 @@ private:
 	};
 
 	void drive(const bool& done) {
+		NestedTrampoline own_loop;
 		std::unique_lock<std::mutex> lk(m_);
 		while (!done) {
 			if (!ready_.empty()) {
