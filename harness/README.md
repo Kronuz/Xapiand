@@ -33,6 +33,8 @@ Both consume two newman JSON reports (`newman run … --reporters json
 
 ## Capture a baseline + compare (the loop)
 
+The docs E2E needs newman 6 or later first on `PATH`: newman 4 fails every request, and `e2e_capture.sh` (so `engine_e2e.sh`) refuses to run with it.
+
 ```sh
 # correctness (per node, fresh data dir, fixed name)
 python3 docs_to_postman.py | newman run /dev/stdin --reporters json --reporter-json-export base.json   # vs baseline build
