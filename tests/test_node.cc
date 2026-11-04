@@ -50,6 +50,7 @@
 #include "database/data.h"
 #include "database/flags.h"
 #include "database/handler.h"
+#include "engine/query.h"
 #include "database/pool.h"
 #include "database/schemas_lru.h"
 #include "database/shard.h"
@@ -927,6 +928,26 @@ static void test_the_control_loop_is_free_during_a_settings_load() {
 }
 
 
+// A search over several indexes skips one that does not exist (a list or a pattern may name it): its pin's not_found
+// comes at the use, inside the read, where the batch skips it, not at lock_shard's pin.
+static void test_a_search_batch_skips_a_missing_index() {
+	Watchdog watchdog("a search batch skips a missing index");
+	auto endpoints = endpoints_of("batch_present");
+	{
+		auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE_QUIET);
+		Shard shard = use_index(entry, WRITE_QUIET);
+		engine::sync_wait(shard.add_document(make("K1")));
+		engine::sync_wait(shard.commit());
+	}
+	const auto missing = endpoints_of("batch_missing");
+	endpoints.add(missing[0]);
+	DatabaseHandler handler(endpoints, DB_OPEN);
+	const auto result = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body")));   // its batches
+	CHECK_EQ(result.hits.size(), 1u);
+	CHECK_FALSE(std::filesystem::exists(missing[0].path));
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -974,6 +995,7 @@ int main(int argc, char** argv) {
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
+		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

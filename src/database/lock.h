@@ -66,7 +66,7 @@ public:
 		unlock();
 	}
 
-	// Pins the index and makes its Shard; a second call does nothing.
+	// Pins the index and makes its Shard; a second call does nothing. A missing index leaves the Shard unpinned.
 	task::task<void> pin()
 	{
 		if (!_shard) {
@@ -74,7 +74,16 @@ public:
 			if (!manager) {
 				throw engine::Error(engine::errc::internal, "No manager");
 			}
-			_shard.emplace(co_await manager->database_pool->pin(endpoint, flags), flags, cancel);
+			auto& pool = *manager->database_pool;
+			try {
+				_shard.emplace(co_await pool.pin(endpoint, flags), flags, cancel);
+			} catch (const engine::Error& error) {
+				if (error.kind != engine::errc::not_found) {
+					throw;
+				}
+				// A missing index fails at its use, where a search over several indexes skips it.
+				_shard.emplace(pool, endpoint.path, flags, cancel);
+			}
 		}
 	}
 

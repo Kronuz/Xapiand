@@ -68,6 +68,9 @@ public:
 	// `pin` is the use's pin (lock_shard's, taken before any view, x-pool D4).
 	Shard(IndexPin pin, int flags_, task::cancel_token cancel_ = {});
 
+	// A use with no pin yet (its index was missing when it pinned): ready() pins it, or raises not_found again.
+	Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_ = {});
+
 	// The index's entry, under the pin; raises `closed` while a reopen left the use with none.
 	ShardEndpoint& endpoint() const;
 

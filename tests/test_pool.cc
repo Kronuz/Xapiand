@@ -1676,6 +1676,27 @@ void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	CHECK_EQ(indexes.pool.catalog().stats().opens, 2u);
 }
 
+// The turn's end checks the index in (D5, F6): a background merge that finished is published when the next turn is
+// let go, with no write and no commit after it.
+void test_the_turns_end_publishes_a_finished_merge() {
+	Watchdog watchdog("the turn's end publishes a merge", 60s);
+	DatabasePool pool(8);
+	auto entry = pin(pool, fresh("checkin"));
+	Shard shard = use(entry, WRITE);
+	auto& index = A::index(entry.entry());
+	for (int i = 0; i < 200 && index.merges_pending() == 0; ++i) {   // one-document segments, which the policy merges
+		engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
+		engine::sync_wait(shard.engine_for_read());
+	}
+	REQUIRE(index.merges_pending() > 0);
+	const auto end = std::chrono::steady_clock::now() + 10s;
+	while (index.merges_pending() != 0 && std::chrono::steady_clock::now() < end) {
+		{ auto turn = engine::sync_wait(entry->take_turn(WRITE)); }
+		std::this_thread::sleep_for(5ms);
+	}
+	CHECK_EQ(index.merges_pending(), 0u);
+}
+
 // The catalog's commit chore with nothing applied writes no WAL line of its own (C25): the log has the commit of the
 // write and nothing for the chore's commits, the shutdown's included.
 void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
@@ -1774,6 +1795,7 @@ int main(int argc, char** argv) {
 		{"test_a_failed_use_hands_its_pin_back", test_a_failed_use_hands_its_pin_back},
 		{"test_a_cold_pin_reads_what_the_log_replays", test_a_cold_pin_reads_what_the_log_replays},
 		{"test_a_fenced_index_is_replaced_and_replays_its_log", test_a_fenced_index_is_replaced_and_replays_its_log},
+		{"test_the_turns_end_publishes_a_finished_merge", test_the_turns_end_publishes_a_finished_merge},
 		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},

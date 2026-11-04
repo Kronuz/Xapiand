@@ -1241,6 +1241,15 @@ Shard::Shard(IndexPin pin, int flags_, task::cancel_token cancel_)
 }
 
 
+Shard::Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_)
+	: pool_(&pool),
+	  path_(std::move(path)),
+	  flags(flags_),
+	  cancel(std::move(cancel_))
+{
+}
+
+
 ShardEndpoint&
 Shard::endpoint() const
 {
@@ -1254,7 +1263,7 @@ Shard::endpoint() const
 std::shared_ptr<const Node>
 Shard::node() const
 {
-	return endpoint().node();
+	return pin_ ? endpoint().node() : Endpoint(path_).node();
 }
 
 
@@ -1683,7 +1692,7 @@ Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t s
 std::string
 Shard::to_string() const
 {
-	return endpoint().to_string();
+	return pin_ ? endpoint().to_string() : Endpoint(path_).to_string();
 }
 
 
