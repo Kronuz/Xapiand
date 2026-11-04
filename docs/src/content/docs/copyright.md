@@ -22,5 +22,10 @@ being replaced before release.
 
 ### Elasticsearch
 
-Xapiand clients and documentation are heavily based upon the work from the
-_Elasticsearch_ project, licensed under the Apache License, Version 2.0.
+The Python client in `contrib/python/xapiand-py` is a fork of _elasticsearch-py_,
+Copyright &copy; 2017 Elasticsearch, licensed under the Apache License,
+Version 2.0 (see `contrib/python/xapiand-py/LICENSE`). It is not part of any
+package.
+
+This documentation is heavily based upon the _Elasticsearch_ project's, whose
+text and code samples were licensed under the Apache License, Version 2.0.
