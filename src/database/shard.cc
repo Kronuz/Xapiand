@@ -1308,7 +1308,7 @@ task::task<void>
 Shard::ready()
 {
 	if (!pin_) {
-		pin_ = co_await pool_->pin(Endpoint(path_), flags);
+		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel);
 	}
 }
 

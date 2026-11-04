@@ -1331,34 +1331,48 @@ search_pinned_indexes(bool most)
 
 // Pins the indexes [begin, end) of the search and searches them, reopening them on a stale read. This is
 // the one place that decides how a batch's indexes are held (a use of each registry entry, each engine
-// refreshed once), so the search reads what was applied before it.
+// refreshed once), so the search reads what was applied before it. A path named twice is pinned once and searched at
+// both positions: a second pin of a key would wait for itself while its index is replaced.
 task::task<engine::BatchResult>
 DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequest& request)
 {
 	std::vector<lock_shard> shards;
+	std::vector<size_t> shard_of;   // the shard of each position
 	shards.reserve(end - begin);
+	shard_of.reserve(end - begin);
 	for (auto i = begin; i < end; ++i) {
-		shards.emplace_back(endpoints[i], flags);
-		co_await shards.back().pin();
+		const auto it = std::find_if(shards.begin(), shards.end(), [&](const lock_shard& shard) { return shard.endpoint.path == endpoints[i].path; });
+		shard_of.push_back(static_cast<size_t>(it - shards.begin()));
+		if (it == shards.end()) {
+			shards.emplace_back(endpoints[i], flags, turn_token());
+			co_await shards.back().pin();
+		}
 	}
 	PinCount pinned(shards.size());
 	engine::BatchResult batch;
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
-			std::vector<engine::Shard*> engines;
-			engines.reserve(shards.size());
-			std::vector<std::uint32_t> indexes;   // the index of each shard found
-			batch.positions.clear();
-			for (size_t i = 0; i < shards.size(); ++i) {
+			std::vector<engine::Shard*> read(shards.size(), nullptr);   // each shard's engine; null when missing
+			for (size_t s = 0; s < shards.size(); ++s) {
 				try {
-					engines.push_back(co_await shards[i]->engine_for_read());
-					batch.positions.push_back(begin + i);
-					if (!request.index_of.empty()) {
-						indexes.push_back(request.index_of[i]);
-					}
+					read[s] = co_await shards[s]->engine_for_read();
 				} catch (const engine::Error& error) {
 					if (error.kind != engine::errc::not_found) { throw; }
+				}
+			}
+			std::vector<engine::Shard*> engines;
+			engines.reserve(shard_of.size());
+			std::vector<std::uint32_t> indexes;   // the index of each shard found
+			batch.positions.clear();
+			for (size_t i = 0; i < shard_of.size(); ++i) {
+				if (read[shard_of[i]] == nullptr) {
+					continue;
+				}
+				engines.push_back(read[shard_of[i]]);
+				batch.positions.push_back(begin + i);
+				if (!request.index_of.empty()) {
+					indexes.push_back(request.index_of[i]);
 				}
 			}
 			if (engines.empty()) {

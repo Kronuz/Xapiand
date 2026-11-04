@@ -948,6 +948,51 @@ static void test_a_search_batch_skips_a_missing_index() {
 }
 
 
+// A search that names one index twice pins it once and searches it at both positions: a second pin of a key in one
+// request would wait for itself while its index is replaced. The read waits for the held turn with every pin taken.
+static void test_a_search_batch_pins_a_repeated_index_once() {
+	Watchdog watchdog("a search batch pins a repeated index once");
+	auto& pool = *manager()->database_pool;
+	auto endpoints = endpoints_of("batch_repeated");
+	const std::string key = endpoints[0].path;
+	auto entry = pin_index(pool, key, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));
+	engine::sync_wait(shard.commit());
+	const auto once = engine::sync_wait(DatabaseHandler(endpoints, DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	Endpoint again = endpoints[0];
+	again.node_name += "_again";
+	endpoints.add(again);
+	REQUIRE(endpoints.size() == 2u);
+	const auto pins = [&] {
+		for (const auto& slot : pool.catalog().snapshot()) {
+			if (slot.key == key) {
+				return slot.pins;
+			}
+		}
+		return std::uint64_t{0};
+	};
+	const auto before = pins();
+	engine::sync_wait(shard.add_document(make("K2")));   // applied, not refreshed: the search's read takes the turn
+	std::size_t twice = 0;
+	{
+		HoldTurn hold(entry.entry(), WRITE_QUIET);
+		std::thread search([&] {
+			DatabaseHandler handler(endpoints, DB_OPEN);
+			twice = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body"))).hits.size();
+		});
+		CHECK(eventually([&] { return pins() > before; }, 3s));
+		std::this_thread::sleep_for(200ms);   // a second pin would come before the read, which waits for the turn
+		CHECK_EQ(pins(), before + 1);
+		hold.release();
+		search.join();
+	}
+	const auto after = engine::sync_wait(DatabaseHandler(endpoints_of("batch_repeated"), DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	CHECK_EQ(once, 1u);
+	CHECK_EQ(twice, 2 * after);
+}
+
+
 // An autocommit whose turn does not come is armed again (x-pool D8): the write it could not commit is committed once
 // the turn is let go, with no other write to schedule it.
 static void test_a_busy_autocommit_comes_back_for_its_write() {
@@ -1016,6 +1061,7 @@ int main(int argc, char** argv) {
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
 		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
+		{"test_a_search_batch_pins_a_repeated_index_once", test_a_search_batch_pins_a_repeated_index_once},
 		{"test_a_busy_autocommit_comes_back_for_its_write", test_a_busy_autocommit_comes_back_for_its_write},
 	};
 	for (const auto& c : cases) {

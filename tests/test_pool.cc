@@ -61,12 +61,14 @@
 #include "engine/chores.h"
 #include "engine/document.h"
 #include "engine/error.h"
+#include "engine/host_asio.h"
 #include "engine/query.h"
 #include "engine/search.h"
 #include "engine/sync.h"
 #include "compressor_lz4.h"
 #include "length.h"
 #include "node.h"
+#include "reactor.h"
 #include "strata/core/faultfs.hh"
 #include "task.hh"
 #include "utype.hh"
@@ -1825,6 +1827,129 @@ void test_the_pool_waits_for_a_pin_released_during_its_end() {
 }
 
 
+// A reactor loop with a host bound to it, torn down the way the manager stops its loops.
+struct Loop {
+	reactor::Reactor reactor;
+	engine::AsioHost host{reactor.scheduler()};
+	Loop() { asio::post(reactor.io(), [this] { host.bind_loop_thread(); }); }
+	~Loop() { engine::Host::bind_thread(nullptr); }
+	// The manager's stop: the loop stops, the chores end, the roots still suspended are destroyed.
+	void tear_down() {
+		reactor.io().stop();
+		IndexChores::cancel_all(std::chrono::steady_clock::now() + 5s);
+		reactor.scheduler().close();
+		reactor.scheduler().destroy_roots();
+	}
+};
+
+// A root destroyed while it waits for a pin leaves no waiter behind (the X-POOL step 2 review's CR1): the open's
+// delivery finds the waiter abandoned and releases its pin, so the pool's shutdown ends. Each round destroys the roots
+// at a later point of a cold open: a create pin dropped at once, one held across a wait, a chore pin and its commit.
+void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
+	Watchdog watchdog("a destroyed waiter releases its pin", 240s);
+	const auto base = fresh("destroyed_waiter");
+	std::filesystem::create_directories(base);
+	DatabasePool pool(4);
+	for (int k = 0; k < 160; ++k) {
+		Loop loop;
+		auto work = asio::make_work_guard(loop.reactor.io());
+		const std::string path = base + "/c" + std::to_string(k);
+		task::event never;
+		loop.host.spawn([](DatabasePool& pool, std::string path) -> task::task<void> {
+			auto pinned = co_await pool.pin(Endpoint(path), WRITE);
+		}(pool, path));
+		loop.host.spawn([](DatabasePool& pool, std::string path, task::event& never) -> task::task<void> {
+			auto pinned = co_await pool.pin(Endpoint(path), WRITE);
+			co_await never;
+		}(pool, path, never));
+		loop.host.spawn([](DatabasePool& pool, std::string path) -> task::task<void> {
+			auto pinned = co_await pool.pin_chore(Endpoint(path));
+			if (pinned) {
+				co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
+			}
+		}(pool, path));
+		loop.reactor.io().run_for(std::chrono::microseconds(k * 40));
+		loop.tear_down();
+	}
+	pool.finish();
+	const bool joined = pool.join(30s);
+	CHECK_TRUE(joined);
+	if (!joined) {
+		for (const auto& line : pool.busy()) {
+			std::fprintf(stderr, "    busy: %s\n", line.c_str());
+		}
+	}
+}
+
+// A destroyed root that held a pin lets the pool join (CR3, the property C24's order exists for): the manager destroys
+// its control roots before it awaits the catalog's shutdown, and a destroyed root's pin is released with its frame.
+void test_a_destroyed_root_that_held_a_pin_lets_the_pool_join() {
+	Watchdog watchdog("a destroyed root's pin is released");
+	DatabasePool pool(4);
+	const auto path = fresh("destroyed_holder");
+	std::atomic<bool> holding{false};
+	{
+		Loop loop;
+		auto work = asio::make_work_guard(loop.reactor.io());
+		task::event never;
+		loop.host.spawn([](DatabasePool& pool, std::string path, task::event& never, std::atomic<bool>& holding) -> task::task<void> {
+			auto pinned = co_await pool.pin(Endpoint(path), WRITE);
+			holding = true;
+			co_await never;
+		}(pool, path, never, holding));
+		const auto end = std::chrono::steady_clock::now() + 5s;
+		while (!holding && std::chrono::steady_clock::now() < end) {
+			loop.reactor.io().run_for(1ms);
+		}
+		REQUIRE(holding.load());
+		CHECK_EQ(pool.busy().size(), 1u);
+		loop.tear_down();
+	}
+	pool.finish();
+	CHECK_TRUE(pool.join(5s));
+	CHECK_TRUE(pool.busy().empty());
+}
+
+// A request's token ends its wait for a pin (x-pool, strata's pin review): a cancelled pin or chore pin throws
+// task::cancelled, and FLUSH ends with it. A free pin is taken whatever the token. Here the index is being replaced,
+// which waits for the pin still held.
+void test_a_cancelled_pin_stops_waiting() {
+	Watchdog watchdog("a cancelled pin stops waiting");
+	DatabasePool pool(8);
+	const auto path = fresh("cancelled_pin");
+	std::optional<IndexPin> holder(pin(pool, path));
+	{
+		task::cancel_source requested;
+		requested.request();
+		auto free = engine::sync_wait(pool.pin(Endpoint(path), WRITE, requested.token()));
+		CHECK_TRUE(static_cast<bool>(free));
+		free.reopen();   // the catalog replaces the index once the holder lets go
+	}
+	const auto waits = [&](auto call) {
+		task::cancel_source cancel;
+		std::atomic<bool> ended{false}, cancelled{false};
+		std::thread waiter([&] {
+			try {
+				call(cancel.token());
+			} catch (const task::cancelled&) {
+				cancelled = true;
+			}
+			ended = true;
+		});
+		std::this_thread::sleep_for(100ms);
+		const bool waited = !ended.load();
+		cancel.request();
+		waiter.join();
+		return waited && cancelled.load();
+	};
+	CHECK_TRUE(waits([&](task::cancel_token token) { engine::sync_wait(pool.pin(Endpoint(path), WRITE, token)); }));
+	CHECK_TRUE(waits([&](task::cancel_token token) { engine::sync_wait(pool.pin_chore(Endpoint(path), token)); }));
+	CHECK_TRUE(waits([&](task::cancel_token token) { engine::sync_wait(pool.flush(token)); }));
+	holder.reset();
+	auto after = pin(pool, path);   // the replace ends once the holder went
+	CHECK_TRUE(static_cast<bool>(after));
+}
+
 // The autocommit settles what its commit leaves (D8): while a merge is pending it asks to come back, and once the
 // merges finish it publishes them and syncs their output with no revision of its own.
 void test_the_autocommit_comes_back_while_a_merge_is_pending() {
@@ -2045,6 +2170,9 @@ int main(int argc, char** argv) {
 		{"test_the_turns_end_publishes_a_finished_merge", test_the_turns_end_publishes_a_finished_merge},
 		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
+		{"test_a_root_destroyed_while_it_waits_for_a_pin_releases_it", test_a_root_destroyed_while_it_waits_for_a_pin_releases_it},
+		{"test_a_destroyed_root_that_held_a_pin_lets_the_pool_join", test_a_destroyed_root_that_held_a_pin_lets_the_pool_join},
+		{"test_a_cancelled_pin_stops_waiting", test_a_cancelled_pin_stops_waiting},
 		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},
 		{"test_the_autocommit_comes_back_while_a_merge_is_pending", test_the_autocommit_comes_back_while_a_merge_is_pending},
 		{"test_a_busy_autocommit_comes_back", test_a_busy_autocommit_comes_back},

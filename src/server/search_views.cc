@@ -1509,7 +1509,7 @@ flush_view(Request& request)
 	request.query_parser.rewind();
 	int flush_clients = request.query_parser.next("clients");
 	if (flush_databases != -1 || flush_clients == -1) {
-		co_await XapiandManager::manager(true)->database_pool->flush();
+		co_await XapiandManager::manager(true)->database_pool->flush(request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{});
 	}
 	if (flush_clients != -1 || flush_databases == -1) {
 		XapiandManager::manager(true)->shutdown(0, 0);

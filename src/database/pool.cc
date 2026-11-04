@@ -661,7 +661,7 @@ DatabasePool::run_detached(task::task<void> t)
 
 
 task::task<IndexPin>
-DatabasePool::pin(const Endpoint& endpoint, int flags)
+DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel)
 {
 	L_CALL("DatabasePool::pin({}, ({}))", repr(endpoint.to_string()), readable_flags(flags));
 
@@ -673,7 +673,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags)
 		// A finishing node serves the indexes it has open and opens no more: a resident pin finds the index open (or
 		// owed) and keeps it so while the request pin is taken; it applies nothing, so it never meets a debt.
 		try {
-			resident = co_await catalog_->pin_chore(key, false, strata::open_intent::resident);
+			resident = co_await catalog_->pin_chore(key, false, strata::open_intent::resident, cancel);
 		} catch (...) {
 			rethrow_pin_failure(key);
 		}
@@ -682,7 +682,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags)
 		}
 	}
 	try {
-		co_return IndexPin(co_await catalog_->pin_request(key, true, intent), *this);
+		co_return IndexPin(co_await catalog_->pin_request(key, true, intent, std::move(cancel)), *this);
 	} catch (...) {
 		rethrow_pin_failure(key);
 	}
@@ -690,13 +690,13 @@ DatabasePool::pin(const Endpoint& endpoint, int flags)
 
 
 task::task<IndexPin>
-DatabasePool::pin_chore(const Endpoint& endpoint)
+DatabasePool::pin_chore(const Endpoint& endpoint, task::cancel_token cancel)
 {
 	L_CALL("DatabasePool::pin_chore({})", repr(endpoint.to_string()));
 
 	const std::string key = endpoint.path;
 	try {
-		auto pinned = co_await catalog_->pin_chore(key, false, strata::open_intent::resident);
+		auto pinned = co_await catalog_->pin_chore(key, false, strata::open_intent::resident, std::move(cancel));
 		if (!pinned) {
 			co_return IndexPin();
 		}
@@ -775,13 +775,13 @@ DatabasePool::busy()
 
 
 task::task<void>
-DatabasePool::flush()
+DatabasePool::flush(task::cancel_token cancel)
 {
 	L_CALL("DatabasePool::flush()");
 
 	// Every key the catalog has, pinned resident and committed, one at a time: a task holds one turn at most.
 	for (auto& slot : catalog_->snapshot()) {
-		auto pinned = co_await pin_chore(Endpoint(slot.key));
+		auto pinned = co_await pin_chore(Endpoint(slot.key), cancel);
 		if (!pinned) {
 			continue;   // closed since the snapshot: its close committed it
 		}

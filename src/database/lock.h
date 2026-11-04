@@ -76,7 +76,7 @@ public:
 			}
 			auto& pool = *manager->database_pool;
 			try {
-				_shard.emplace(co_await pool.pin(endpoint, flags), flags, cancel);
+				_shard.emplace(co_await pool.pin(endpoint, flags, cancel), flags, cancel);
 			} catch (const engine::Error& error) {
 				if (error.kind != engine::errc::not_found) {
 					throw;

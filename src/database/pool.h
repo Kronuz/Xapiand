@@ -490,20 +490,22 @@ public:
 	// A request's pin on the index of this path (D3, D4): it opens the index, or wakes it, and a missing one is
 	// created when `flags` ask for DB_CREATE_OR_OPEN (the create intent, F1); otherwise it raises not_found. A task
 	// that holds a view and pins fails the view rule (debug builds): a pin may open or wake its index, which a held
-	// view could be keeping from happening.
-	task::task<IndexPin> pin(const Endpoint& endpoint, int flags);
+	// view could be keeping from happening. A requested `cancel` ends the wait with task::cancelled (the open it
+	// started goes on); a pin of a key the task already pins waits for itself while that index is replaced.
+	task::task<IndexPin> pin(const Endpoint& endpoint, int flags, task::cancel_token cancel = {});
 
 	// A chore's resident pin (the autocommit, FLUSH): it opens nothing, and an index that is not open gives an
-	// empty pin (one that closed was committed by its close), as does one whose open failed (C25).
-	task::task<IndexPin> pin_chore(const Endpoint& endpoint);
+	// empty pin (one that closed was committed by its close), as does one whose open failed (C25). A requested
+	// `cancel` ends the wait with task::cancelled.
+	task::task<IndexPin> pin_chore(const Endpoint& endpoint, task::cancel_token cancel = {});
 
 	// The indexes something still holds (a pin, a transition), one line each. For the shutdown's report of what
 	// it abandoned.
 	std::vector<std::string> busy();
 
 	// Commits every open index (FLUSH, x-pool D8): each key of the catalog's snapshot is pinned resident and
-	// committed; one closed in between was committed by its close.
-	task::task<void> flush();
+	// committed; one closed in between was committed by its close. A requested `cancel` ends it at its next pin.
+	task::task<void> flush(task::cancel_token cancel = {});
 
 	// Shutdown: no new use. join() is called until it returns true; it runs on a thread that may wait (the main
 	// thread), never on a loop. Every root that holds a pin is destroyed before (C24).
