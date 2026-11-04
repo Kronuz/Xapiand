@@ -447,6 +447,23 @@ class System(ABC):
     def floor_request(self, index: str) -> Request:
         """The cheapest request the system answers: the client floor published beside T4's times."""
 
+    def segments(self, client: Client, index: str) -> int | None:
+        """Segments (E) or splits (Q) the index holds; None where the system reports none (S and X: counted on disk)."""
+        return None
+
+    def settle_merges(self, client: Client, index: str, quiet: float = 5.0, limit: float = 900.0) -> dict[str, Any]:
+        """Wait until the segment count has held still for `quiet` seconds (the merges a load started are finished),
+        so every build ends settled (C7); returns the count and the seconds waited."""
+        t0 = time.monotonic()
+        last = self.segments(client, index)
+        still = time.monotonic()
+        while last is not None and time.monotonic() - t0 < limit and time.monotonic() - still < quiet:
+            time.sleep(0.5)
+            now = self.segments(client, index)
+            if now != last:
+                last, still = now, time.monotonic()
+        return {"segments": last, "waited_s": round(time.monotonic() - t0, 2)}
+
     def durable(self, client: Client, index: str) -> None:
         """What makes the data on disk final before `du` reads it (D13): a flush where the system has one, then sync."""
         os.sync()
@@ -812,6 +829,13 @@ class Elasticsearch(System):
         return Request("GET", "/")
 
     @override
+    def segments(self, client: Client, index: str) -> int | None:
+        status, body = client.call(
+            Request("GET", f"/{index}/_stats/segments?filter_path=_all.primaries.segments.count")
+        )
+        return int(json.loads(body)["_all"]["primaries"]["segments"]["count"]) if status == 200 else None
+
+    @override
     def durable(self, client: Client, index: str) -> None:
         client.call(Request("POST", f"/{index}/_flush?force=true&wait_if_ongoing=true"))
         os.sync()
@@ -1056,6 +1080,14 @@ class Quickwit(System):
         return []  # the last ingest forces the commit
 
     supports_delete = False
+
+    @override
+    def segments(self, client: Client, index: str) -> int | None:
+        status, body = client.call(Request("GET", f"/api/v1/indexes/{index}/splits?split_states=Published"))
+        if status != 200:
+            return None
+        doc = json.loads(body)
+        return len(doc if isinstance(doc, list) else doc.get("splits", []))
 
     @override
     def floor_request(self, index: str) -> Request:
@@ -1332,7 +1364,9 @@ def probe_default(members: list[Member], schema: Schema, query: Query, repeats: 
 
 def probe_ranges(members: list[Member], schema: Schema, template: Query, repeats: int = 10) -> dict[str, Any]:
     """Probe part 2: a range template ten times with one bound, then ten draws; the filter-cache hits of the first
-    and of the second are reported (E's query cache and Q's predicate cache are on, as in normal operation)."""
+    and of the second are reported (E's query cache and Q's predicate cache are on, as in normal operation). Quickwit
+    0.9.3's predicate cache stores whole-query results only for `search_after` requests, plus per-split "term not here"
+    entries (leaf.rs), so Q's expected hits are few and come from terms absent in a split, not from a repeated range."""
     report: dict[str, Any] = {}
     for m in members:
         same = counters_delta(

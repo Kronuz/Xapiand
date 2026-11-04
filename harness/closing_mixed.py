@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import shlex
 import threading
 import time
@@ -30,6 +31,7 @@ from typing import Any
 import systems as sy
 
 BULK = 20
+MARKED = re.compile(r"w\d+-\d+")  # the ids the writers send; anything else in the index is not audited
 GRACE = {"xapiand": 2.0, "es": 5.0, "quickwit": 5.0}  # D5's process-crash windows
 
 
@@ -256,7 +258,7 @@ def run(args: argparse.Namespace) -> int:
         poke.close()
     system.commit(ctl, index)
     time.sleep(1.0)
-    got = [(i, n) for i, n in system.dump(ctl, index) if i not in poke_ids]
+    got = [(i, n) for i, n in system.dump(ctl, index) if MARKED.fullmatch(i)]  # only the marked write stream is audited
     report = audit(got, model, killed, args.grace if args.kill_at else 0.0, poke_ids)
     ok = (
         not died

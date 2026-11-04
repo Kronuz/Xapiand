@@ -361,6 +361,7 @@ def load_index(
     got = system.wait_count(ctl, index, schema, sent[0])
     elapsed = time.perf_counter() - t0
     peak = sampler.finish()
+    merges = system.settle_merges(ctl, index)  # every build ends with its merges finished (C7)
     system.durable(ctl, index)  # a flush and a sync, so `du` reads final bytes
     cg1 = cg.snapshot() if cg else None
     t_settle = time.perf_counter()
@@ -384,6 +385,7 @@ def load_index(
         "ok": not failures and got == docs,
         "failures": failures,
         "cpu_seconds_per_1000_docs": rounded(cpu_s / docs * 1000, 4) if cpu_s is not None and docs else None,
+        "segments_after_merges": merges,
         "peak_memory_bytes": peak,
         "memory_source": "cgroup" if cg else "rss",
         "disk_bytes": disk,
