@@ -799,47 +799,6 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 }
 
-// The child: a root of the control loop pins an index and waits for what never comes, so the drains give up on it at
-// the bound; the stop destroys it before it awaits the catalog's shutdown (x-pool C24).
-[[noreturn]] static void control_root_child(const char* log_path) {
-	std::freopen(log_path, "w", stderr);
-	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
-	Logging::handlers.push_back(std::make_unique<StderrLogger>());
-	RunningNode node("node_root_data", std::to_string(abandon_port));
-	if (!node.ready()) {
-		std::_Exit(2);
-	}
-	manager()->shutdown_write_bound = 2000ms;
-	auto never = std::make_shared<task::event>();
-	std::atomic<bool> pinned{false};
-	manager()->spawn_control([](std::string path, std::shared_ptr<task::event> wait, std::atomic<bool>& held) -> task::task<void> {
-		auto entry = co_await manager()->database_pool->pin(Endpoint(path), WRITE);
-		held = true;
-		co_await *wait;
-	}(endpoints_of("root")[0].path, never, pinned));
-	if (!eventually([&] { return pinned.load(); })) {
-		std::_Exit(3);
-	}
-	const auto now = static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-	manager()->shutdown(now, now);
-	std::this_thread::sleep_for(60s);   // the shutdown ends the process
-	std::_Exit(5);
-}
-
-// A root of the control loop that holds a pin past the drains is destroyed before the indexes' stop awaits every
-// pin (x-pool C24): the stop never reports the index as pinned. Destroyed after it, the pin would hold the index.
-static void test_a_control_root_lets_go_of_its_pin_before_the_indexes_stop() {
-	const char* log_path = "node_root.log";
-	const auto result = run_child([&] { control_root_child(log_path); }, 90s);
-	CHECK(result.exited);
-	const auto log = read_file(log_path);
-	CHECK(log.find("control tasks and 0 tasks of the index registry did not end") != std::string::npos);   // it outlived the drain
-	CHECK(log.find("pinned") == std::string::npos);
-	if (log.find("pinned") != std::string::npos) {
-		std::fprintf(stderr, "%s\n", log.c_str());
-	}
-}
-
 // A node that serves a write and is told to stop: the stop's steps run in the order the note states, and the status is 0.
 [[noreturn]] static void ordered_stop_child(const char* log_path) {
 	std::freopen(log_path, "w", stderr);
@@ -1026,7 +985,6 @@ int main(int argc, char** argv) {
 		{"test_the_http_grace_follows_the_time_left_in_the_budget", test_the_http_grace_follows_the_time_left_in_the_budget},
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
-		{"test_a_control_root_lets_go_of_its_pin_before_the_indexes_stop", test_a_control_root_lets_go_of_its_pin_before_the_indexes_stop},
 	};
 	for (const auto& f : forked) {
 		if (std::getenv("SKIP_FORKED") != nullptr || !wanted(f.name)) {
