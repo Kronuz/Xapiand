@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) the X-POOL developer's ledger (phase 7c: Xapiand adopts strata's cold-tier catalog); local branch `phase7c/x-pool` from master `Xapiand:88892b4cb`, not pushed.
+> Status: CURRENT (2026-11-04) the X-POOL developer's ledger (phase 7c: Xapiand adopts strata's cold-tier catalog); local branch `phase7c/x-pool` from master `Xapiand:88892b4cb`, not pushed.
 
 # phase7c X-POOL (build): the registry becomes the catalog's payload
 
@@ -8,10 +8,15 @@ revision 2, with the architect's host-interface rulings (`strata/docs/reviews/co
 Step 2 builds against strata item 5b (`phase/cold-tier-step2-item5b`) with
 `-DFETCHCONTENT_SOURCE_DIR_STRATA=<a strata worktree>`. Step 1 uses master's strata pin.
 
-Host rule (the lead, 2026-11-02): sanitizer batches run on Linux through strata's `tools/vm/aws-linux.sh`
-(the branch shipped as a git bundle into `~/xpool` on the lease); only macOS builds run locally.
+Host rule (the owner, 2026-11-04): no AWS; Linux sanitizer batches run on the local QEMU VM, through strata's
+`tools/vm/aws-linux.sh ssh` with `STRATA_AWS_VM_ALLOW` unset (its light hold), in task-named `~/xpool3`.
 
 ## State
+
+Step 3 built on `phase7c/x-pool-step3` (Xapiand-wt/x-pool-step3), stacked on step 2's review commit
+`Xapiand:b6b9718c2`, against strata item 5b `strata:c39e716`: the autocommit settles merges and re-arms (D8), the
+sweep's times (`IndexSweep`), XP3 and XP4 tests, CR4, CR5's decisions (design D13). Proof in "Proof (step 3)". Waits
+on CR1 (strata) for the pin's cancel token, CR3's property test and CR4's test.
 
 Step 2 (the registry as the catalog's `H`, pins with intents) built against strata item 5b (`strata:c39e716`,
 `-DFETCHCONTENT_SOURCE_DIR_STRATA=<strata-wt/cold-tier-step2-item5b>`); it also carries the step 3 pieces the lead put
@@ -27,9 +32,48 @@ TSan, all green with 0 sanitizer reports. Repin to strata main when items 5 and 
 - [x] Step 1 proof on Linux: see Proof.
 - [x] Step 2, the registry as `H` (against item 5b): XP1, XP2; with C24, C25, the autocommit's and FLUSH's resident
   pins, and restore's create pin.
-- [ ] Step 3, commit chore, idle close and housekeeping gone, shutdown, FLUSH by snapshot: XP3, XP4.
+- [x] Step 3, commit chore, idle close and housekeeping gone, shutdown, FLUSH by snapshot: XP3, XP4 (the autocommit's
+  re-arm; see Design vs code 11 for XP4's sweep row).
+- [ ] Step 2 review: CR1 (strata), then `pin`/`pin_chore` pass the request's token, CR3's pool-level property test, CR4's
+  test; CR4's fix and CR5's decisions are in; CR6 owed.
 - [ ] Step 4, `map_owed`, the `unleased_maps()` assertion, the budget and CT-R39's clamp: XP5.
 - [ ] After wide-search lands: its `search_batch` pins through `IndexPin`, K clamped to `soft_open`.
+
+## Proof (step 3, head `Xapiand:7d614930f`)
+
+macOS, Apple clang RelWithDebInfo `ASSERTS=ON`, LTO off (`.scratch/build-x3`):
+- `xapiand_test_pool` 264 checks, `xapiand_test_node` 108 (after dropping the manager C24 test, 112 with it), all pass.
+- `graceful_shutdown_check.sh` all scenarios pass; `path_boundary_check.sh` 0 failures; `wide_search_check.py check`
+  PASS (nested and glob paths); docs E2E (`npx newman@6.2.3`) 396 requests, 666 of 666, 0 uncovered, asserts on.
+- `async_check --strict --owed --extern strata=<item 5b>`: 250 hits, owed 0, unclassified 0; `test_gate_tools.py` OK.
+- Mutants (`.scratch/mutants3/mutants.py`, one string each, rebuilt, filtered test run, restored):
+  | Mutant | Killed by |
+  |---|---|
+  | s1 `settle_merges` never pending | `test_the_autocommit_comes_back_while_a_merge_is_pending` (first call false) |
+  | s2 no sync of a merge's output in the settle | the same (never settles; output unsynced) |
+  | s3 busy not pending | `test_a_busy_autocommit_comes_back` (pool), `test_a_busy_autocommit_comes_back_for_its_write` (node) |
+  | s4 the committer does not re-arm | `test_a_busy_autocommit_comes_back_for_its_write` |
+  | s6 `IndexSweep` ignored | `test_the_sweep_closes_only_an_unpinned_index` (the idle index stays open) |
+  | s7 a use drops its pin | the same (the held index closes): XP3's "unpin early" |
+  | s8 the default commit chore (`index.commit()`) | `test_the_shutdown_commits_and_logs_an_uncommitted_write` (0 COMMIT lines): XP4's mutant |
+  | s9 the commit chore without the merge-only sync | `test_the_sweeps_close_syncs_a_merges_output` (never closes) |
+  | s5 no check-in in the settle | survives: equivalent, the turn's release checks in, one more round settles |
+  | s10 C24 reorder reversed | killed on macOS by the manager-level test, which then failed unmutated on the Linux VM (see Findings); dropped |
+- Revert checks: each new test fails against its mutant, which is the change reverted (s1, s3, s4, s6, s8, s9).
+- The merge window is forced, not timed: `GatedExecutor` holds the index's merges at their first checkpoint.
+- No XP3 code path left: `begin_idle_close`, `finish_idle_close`, `housekeeping_pass`, `renew_time` have no hit in
+  `src/`; the manager's minute housekeeping is the schema cache's cleanup only.
+- Sanitizers, macOS (Homebrew LLVM 23, separate builds `.scratch/build-asan`, `.scratch/build-tsan`, runner
+  `.scratch/san-tests.sh`): ASan+UBSan `test_pool` 264, `test_reactor_requests` 59, `test_engine_host` 95,
+  `test_node` 108, `test_wide_search` 22301, `test_blocking_guard` 14, all pass, 0 reports.
+  Graceful all pass, path 0 failures, wide search PASS, docs E2E 666 of 666 with 0 reports in the node log. TSan
+  (`die_after_fork=0`; `report_thread_leaks=0` for `test_node`, as in step 2): the same six suites and four harness
+  checks pass, 0 reports.
+- Linux, the local QEMU VM (clang-18, `~/xpool3/{tsan,asan}`, `.scratch/linux3/ship-run.sh` through `aws-linux.sh ssh`):
+  - ASan+UBSan: the six suites pass (pool 264, node 108), 0 reports; graceful all pass; path 0 failures; docs E2E 666
+    of 666, 0 reports.
+  - TSan: pool 264, reactor_requests 59, engine_host 95, wide_search 22301, blocking_guard 14 pass, 0 reports; node
+    passes all but the manager C24 test, since dropped; graceful all pass; path 0 failures; docs E2E 666 of 666, 0 reports.
 
 ## Proof (step 2, head `Xapiand:1089c251b`)
 
@@ -165,6 +209,13 @@ registry, against D2's one way to hold an index. Not built in step 3.
 
 ## Findings for the lead
 
+- (step 3) The C24 reorder cannot show at the manager: a root that holds a pin past the drains leaves the HTTP stop 1 ms,
+   and that stop counts the pinned index as unfinished work, abandons, and so skips destroying the control roots in
+   either order (Linux VM, TSan: "Shutdown abandoned 1 unfinished item ... 'root' (open, 1 pin)"). CR3's pool-level test
+   is the one to keep.
+- (step 3) Before the re-arm, an autocommit whose turn timed out (`busy`) logged and left its write uncommitted until
+   another write or the close; it now comes back.
+
 - (step 2) Strata's `resource_budget.hh` includes `<sys/sysctl.h>` outside Linux, which defines `MIN` and `MAX`;
    every host that includes the catalog inherits them (Xapiand's `DatabaseWALType::MAX` broke). `pool.h` undefines
    them; the generic fix is strata's (keep the include in a source file or undefine after it).
@@ -186,6 +237,10 @@ registry, against D2's one way to hold an index. Not built in step 3.
 
 ## Done
 
+- Step 3: `Xapiand:00a29c2ce` the autocommit's settle and re-arm, `IndexSweep`, tests for XP3, XP4 and the re-arm;
+  `Xapiand:72528f7fb` CR4, cancellation through `pin_chore`; `Xapiand:2d5ff8ef9` the notes, D13 (CR5), CR6 owed;
+  `Xapiand:7d614930f` the manager C24 test dropped; this ledger.
+
 - Step 2: `Xapiand:d43d00046` the registry as the catalog's payload (the stopped attempt's work, kept: sound on review);
   `Xapiand:ae6490771` build and test fixes, N3, FLUSH one key at a time, failed writes hand pins back, control roots
   before the shutdown (C24), tests for C24 and C25; `Xapiand:b4d86cb9c` the faultfs tests (XP2, C23);
@@ -201,12 +256,12 @@ registry, against D2's one way to hold an index. Not built in step 3.
 
 ## Next
 
-1. Step 2 to review (the lead's triage). It touches concurrency (pin lifetimes, the shutdown's order, a resident
-   pin under the request pin), so a code review at high effort fits.
-2. Step 3's rest: the autocommit re-armed while a commit leaves merges pending (D8), XP3 and XP4 rows at the sweep's
-   rates. Step 4: `map_owed`, the gate assertion, the budget.
+1. When CR1 lands on strata's item 5b: `DatabasePool::pin` and `pin_chore` pass the request's cancel token; CR3's
+   property test (a destroyed root that held a pin lets `join()` return true); CR4's test (a cancelled resident pin
+   throws `task::cancelled`, and FLUSH ends).
+2. Step 3 to review with step 2's fixes. Step 4: `map_owed`, the gate assertion, the budget (D13's numbers).
 3. Repin strata to main when items 5 and 5b land.
 
 ## Blocked on
 
-- Nothing. (Step 2 no longer waits for item 5b: built against its branch.)
+- CR1 (strata, the destroy-safe pin awaiter and the pin's cancel token): CR3's test, CR4's test and passing the token.

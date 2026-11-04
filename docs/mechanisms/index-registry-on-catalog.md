@@ -100,5 +100,4 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 `test_the_commit_chore_logs_nothing_when_nothing_was_applied`, `test_the_pool_waits_for_a_pin_released_during_its_end`,
 `test_the_autocommit_comes_back_while_a_merge_is_pending`, `test_a_busy_autocommit_comes_back`,
 `test_the_sweep_closes_only_an_unpinned_index`, `test_the_shutdown_commits_and_logs_an_uncommitted_write`,
-`test_the_sweeps_close_syncs_a_merges_output`); `tests/test_node.cc` (`test_a_busy_autocommit_comes_back_for_its_write`,
-`test_a_control_root_lets_go_of_its_pin_before_the_indexes_stop`).
+`test_the_sweeps_close_syncs_a_merges_output`); `tests/test_node.cc` (`test_a_busy_autocommit_comes_back_for_its_write`).
