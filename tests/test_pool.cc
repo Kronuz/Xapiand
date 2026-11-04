@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <functional>
 #include <future>
+#include <map>
 #include <memory>
 #include <optional>
 #include <mutex>
@@ -1872,7 +1873,8 @@ void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
 		loop.tear_down();
 	}
 	pool.finish();
-	const bool joined = pool.join(30s);
+	// A stranded pin never lets the shutdown end; the closes of 160 indexes take seconds, more on a loaded disk.
+	const bool joined = pool.join(120s);
 	CHECK_TRUE(joined);
 	if (!joined) {
 		for (const auto& line : pool.busy()) {
@@ -1910,21 +1912,31 @@ void test_a_destroyed_root_that_held_a_pin_lets_the_pool_join() {
 	CHECK_TRUE(pool.busy().empty());
 }
 
-// A request's token ends its wait for a pin (x-pool, strata's pin review): a cancelled pin or chore pin throws
-// task::cancelled, and FLUSH ends with it. A free pin is taken whatever the token. Here the index is being replaced,
-// which waits for the pin still held.
+// A request's token ends its wait for a pin (x-pool, strata's pin review): a cancelled pin, chore pin or Shard's pin
+// throws task::cancelled, and FLUSH ends with it. Here the index's open is held inside its IO's making. A free pin is
+// taken whatever the token, and a requested token still starts the open it asked for.
 void test_a_cancelled_pin_stops_waiting() {
 	Watchdog watchdog("a cancelled pin stops waiting");
+	std::mutex fs_mutex;
+	std::map<std::string, std::unique_ptr<strata::faultfs::filesystem>> fs;   // one per index: each locks its own
 	DatabasePool pool(8);
+	std::promise<void> gate;
+	std::shared_future<void> opens = gate.get_future().share();
+	std::atomic<bool> opening{false};
+	pool.set_index_io([&](const std::string& at) -> std::unique_ptr<kronuz::journal::IO> {
+		opening = true;
+		opens.wait();
+		std::filesystem::create_directories(at);
+		std::lock_guard<std::mutex> lk(fs_mutex);
+		auto& one = fs[at];
+		if (!one) {
+			one = std::make_unique<strata::faultfs::filesystem>();
+		}
+		return std::make_unique<strata::faultfs::io>(*one);
+	});
 	const auto path = fresh("cancelled_pin");
-	std::optional<IndexPin> holder(pin(pool, path));
-	{
-		task::cancel_source requested;
-		requested.request();
-		auto taken = engine::sync_wait(pool.pin(Endpoint(path), WRITE, requested.token()));
-		CHECK_TRUE(static_cast<bool>(taken));
-		taken.reopen();   // the catalog replaces the index once the holder lets go
-	}
+	std::thread opener([&] { (void)pin(pool, path); });
+	REQUIRE(until([&] { return opening.load(); }));
 	const auto waits = [&](auto call) {
 		task::cancel_source cancel;
 		std::atomic<bool> ended{false}, cancelled{false};
@@ -1949,13 +1961,12 @@ void test_a_cancelled_pin_stops_waiting() {
 		Shard unpinned(pool, path, WRITE, token);   // as lock_shard makes one; its use pins with the token
 		engine::sync_wait(unpinned.ready());
 	}));
-	holder.reset();
-	auto after = pin(pool, path);   // the replace ends once the holder went
-	CHECK_TRUE(static_cast<bool>(after));
-	// A requested token never waits, but the open it asked for starts: a cancelled create still creates its index.
-	const auto cold = fresh("cancelled_cold");
+	gate.set_value();
+	opener.join();
 	task::cancel_source requested;
 	requested.request();
+	CHECK_TRUE(static_cast<bool>(engine::sync_wait(pool.pin(Endpoint(path), WRITE, requested.token()))));
+	const auto cold = fresh("cancelled_cold");
 	bool cancelled = false;
 	try {
 		engine::sync_wait(pool.pin(Endpoint(cold), WRITE, requested.token()));
@@ -1963,7 +1974,7 @@ void test_a_cancelled_pin_stops_waiting() {
 		cancelled = true;
 	}
 	CHECK_TRUE(cancelled);
-	CHECK_TRUE(until([&] { return std::filesystem::exists(cold + "/strata"); }));
+	CHECK_TRUE(until([&] { return state_of(pool, cold) == strata::slot_state::open; }));
 	CHECK_TRUE(static_cast<bool>(pin(pool, cold, DB_OPEN)));
 }
 

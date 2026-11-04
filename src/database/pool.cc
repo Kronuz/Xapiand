@@ -745,7 +745,6 @@ hold_name(strata::shutdown_hold why) noexcept
 		case strata::shutdown_hold::transition: return "in a transition";
 		case strata::shutdown_hold::lease_busy: return "its lease is busy";
 		case strata::shutdown_hold::close_throws: return "its close throws";
-		case strata::shutdown_hold::close_failed: return "its close failed";
 		case strata::shutdown_hold::view_held: return "a view is held";
 		case strata::shutdown_hold::waiting: return "waiting";
 	}
