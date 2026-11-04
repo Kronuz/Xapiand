@@ -213,3 +213,191 @@ probe's poll interval, which sets the lag's resolution, is stated.
   probe, the count-check drop list, and metal boot time, before the metal is booked.
 
 Not run: benchmarks, Elasticsearch or Quickwit locally, any build or test, AWS or `lease`.
+
+## Re-check
+
+- Date: 2026-11-03.
+- Reviewed: revision 1, `git diff 33ccf9e3e..791a93ed4` (`docs/design/closing-benchmark.md`,
+  `docs/status/closing-benchmark.md`) at `Xapiand:791a93ed4`, and its estimate
+  `.scratch/closing-benchmark-r1/run_plan.py` (`run_plan.out`).
+- Checked against: L1 to L4, CB-R5 to CB-R13, C1 and C2 above; dotfiles `0c3c203` `lease.sh`;
+  cpp-libraries `95ff17e` `tools/ab_compare.py`; Quickwit v0.9.3, mrecordlog `3b3562ef` and Lucene
+  `f72004515e`, fetched independently (the designer's copies in `~/.scratch/closing-benchmark-qw/`
+  match byte for byte where both exist: `state.rs`, `persist_policy.rs`, `UTQCP.java`); this branch
+  and `xapiand` at `Xapiand:e692a64b1`; strata `356acbc`; `~/.scratch/leases/config` and
+  `phases.tsv`. Owner rulings Q1 to Q6 taken as given.
+- Checked by: probes in `.scratch/closing-benchmark-review/`:
+  - `recheck_plan_probe.py` (`recheck_plan_probe.out`): `run_plan.py`'s units and packer, run as
+    designed, with every arm in the confirm rounds, at slower metal resumes, and against `lease`'s
+    daily-cap admission.
+  - `show_lines.sh`: prints a cited range with line numbers; every file:line below went through it.
+  - `upstream/`: the Quickwit, mrecordlog and Lucene sources at the pinned revisions;
+    `lease.sh@0c3c203` and `ab_compare.py@95ff17e`, the cited revisions extracted.
+  - Not run: no build, benchmark, Elasticsearch or Quickwit process, AWS or `lease`. The
+    Elasticsearch facts (elastic.co pages) were not refetched; D13's step-1 probe checks them on a
+    running node.
+
+### Verdict
+
+**APPROVE WITH CONDITIONS: L1 to L4 are closed, and revision 1's new claims hold at their sources
+apart from three corrections (CB-R15's cache row, CB-R16's audit, CB-R17's cost range). No new
+item blocks.** Steps 1 to 6 proceed; C2 to C7 are met in the harness or in the design text before
+the dry run's ledger section (D9) is written.
+
+What holds, and reproduces:
+
+- Quickwit's WAL. Ingest v2 is the default (`quickwit-config/src/lib.rs:89-92`,
+  `docs/ingest-data/ingest-api.md:81`). The ingester opens mrecordlog with
+  `OnDelay { interval: 5 s, action: Flush }` (`ingest_v2/state.rs:228-235`, mrecordlog pinned at
+  `3b3562ef`, `quickwit/Cargo.toml:184`). An append is persisted only at an append made at least
+  5 s after the last persist (`persist_policy.rs:63-76`, `:81-89`), and `Flush` reaches the OS, not
+  the disk (`:4-10`). The process-crash window of 5 s under steady appends holds. "Never fsyncs" is
+  too strong: CB-R15.
+- `lease run` at `0c3c203`: `--timeout` at most `MAX_RUN_MIN` 45 (`lease.sh:444`); the run's clock
+  starts before boot (`:459`); AWS stops the instance at launch plus timeout plus 5 min (`:460`,
+  `DEADLINE_MARGIN_MIN` at `:401`, scheduled at `:152` through `deadline_set`, `:562-571`); CMD
+  refused under 60 s (`:492-493`); the cap checked only before a run starts (`:447`, after
+  `reconcile`, `:624`); parked leases pruned after `LEASE_PARK_DAYS` (`:42`, `:313`); prices (`:55`,
+  `:58`); the 100 GB root (`:144`). `DAILY_USD=25` and `METAL_OK=0` in `~/.scratch/leases/config`.
+  The 39 s boot is `phases.tsv:312`: a launch through `lease up`, not a resume.
+- The cost. `run_plan.py` reproduces: 61 metal runs, 73 with 20% reruns, 43.1 h, $184; the dry run
+  11 runs, 8.3 h, $14. The parked volume's $4.6 a day matches gp3 list prices (500 GB at $0.08,
+  13,000 IOPS above the free 3,000 at $0.005, 875 MB/s above the free 125 at $0.04: $140 a month).
+  Total $222 to $246, as stated. The upper end assumes one anchor per unit: CB-R17.
+- D11 against `ab_compare.py`. The ratio is A/B for times and B/A for throughputs (`:167-169`), so
+  `--a S --b ANCHOR` gives S over the anchor for times and bytes and the anchor over S for
+  throughputs, below 1 favoring S, as D11 says. `slower` is a median below 1/(1 + A/A deviation)
+  (`:172-178`, `:415-417`); `low` and `high` are the smallest and largest paired ratio (`:428-429`);
+  the CSV carries `ratio`, `low`, `high`, `aa_dev`, `pairs` and `verdict` (`:558-570`). "Better"
+  (verdict `slower`, `high` below 1, median at most 0.97) and "worse" (its mirror) are computable
+  from those columns alone, and the margin for throughput (1/1.3) is in the right direction.
+- D13's Quickwit and Lucene facts. Partial request cache 64 MB and predicate cache 256 MB by default
+  (`node_config/mod.rs:396-403`, `:638-639`), `partial_request_cache_capacity` an alias of the
+  field (`:396`); the metric components (`quickwit-storage/src/metrics.rs:327-333`); `count_all`
+  defaults to true and false means an underestimate (`search_api/rest_handler.rs:206-240`). Lucene
+  never caches a `TermQuery`, caches costly and point filters after 2 uses and others after 5, 4 for
+  a boolean (`UsageTrackingQueryCachingPolicy.java:45-60`, `:122-136`).
+- D5's and D13's Xapiand facts. `check_at_least` defaults to 0 (`src/engine/search.h:82`);
+  aggregations force `CHECK_ALL` (`src/database/handler.cc:1223-1227`); the fsync debounce is forced
+  within 3.5 s (`src/opts.cc:75`; `xapiand:src/opts.cc:125`); the `xapiand` branch enqueues
+  non-synchronous writes (`wal.cc:1158`, `:1178`, `:941`; hook `:116`); `src/` has no result or
+  query cache (grep empty); `src/server/` has no merge or compact endpoint, and Quickwit's REST
+  reference has a `merge_policy` setting and no force merge, so T3's departure from strata
+  `BENCHMARKS.md:161` is sound.
+
+### Status
+
+| Item | Status | Where |
+|---|---|---|
+| L1 / CB-R1 result caches and count modes | closed | D13 (`docs/design/closing-benchmark.md:281-325`): request caches off with counters, filter caches stated, range bounds drawn per run and the template's median taken (`:295-300`), count modes per class for all four (`:301-308`), the four-part probe with a positive control (`:313-325`); D8 in the exact mode (`:195-196`). The Quickwit predicate-cache row needs CB-R15's correction |
+| L2 / CB-R2 durability label and T7's audit | closed | D5 (`:131-148`): tier renamed, every system's process-crash and power-loss windows with sources, SIGKILL stated as a process crash (`:134-136`); T7 (`:393`) audits every system against D5's window. CB-R16 is how that audit runs under T7's load |
+| L3 / CB-R3 run plan against `lease run` | closed | D14 (`:327-378`): a unit never splits (`:333-335`), whole units per run with `--timeout` at most 45 (`:336-341`), packing (`:342-345`), 30-minute caps on E's and Q's index-per-tenant creates (`:346-348`), no gap past the park limit (`:349-350`), the phase table (`:352-359`), cost redone (`:364-378`); D2's one host per round (`:77-81`); the owner's prerequisites in Q7 (`:442-451`) and D6 (`:155-160`); corpora fetched on the lease (D3 `:84-86`). CB-R14 lists the run mechanics the plan relies on |
+| L4 / CB-R4 D11's rule | closed | D10 (`:225-233`): five rounds for every claimable row, T8 to T10 included, anchor fixed after calibration; D11 (`:250-273`): the rule as `ab_compare.py` computes it, against every finalist, X separately; T11's heap search against E's own repeat (`:397`). CB-R17 (c) is one assertion |
+| CB-R5 shards | closed | D2 `:66-71` |
+| CB-R6 T3's bytes | closed | T3 `:389`: durable commit before `du`, WAL and translog column, natural bytes with the departure stated, E force-merged reported |
+| CB-R7 warm-up | closed | D4 `:125-129` |
+| CB-R8 client floor | closed | D13 `:310-312`; departure from strata `BENCHMARKS.md:137` stated at `:37` |
+| CB-R9 D8's fallback | closed | D8 `:198-204` |
+| CB-R10 T8 tenant counts | closed | T8 `:394` (N_min plus each shape's curve) |
+| CB-R11 what restarts | closed | D10 `:236-244`, with the build-to-build check in the screen |
+| CB-R12 parallelism in one query | closed | T4 `:390`, D7 `:173` |
+| CB-R13 small corrections | closed | D1 `:51`, D6 `:158`, T6 `:392` |
+| C1 | closed | the ledger's "Findings folded in" (`docs/status/closing-benchmark.md`) |
+| C2 | closed as design text, checked at the dry run | D9 `:220-223`; carried below |
+
+### New findings
+
+**CB-R14. The plan relies on three `lease run` mechanics it does not state (condition C3).**
+
+- *An overrun loses the whole run.* The archive of `$OUT` is made inside the run's unit after CMD
+  ends (`lease.sh:508-511`), and the unit has `RuntimeMaxSec` set to what remains of `--timeout`
+  (`:505`) with power-off on failure (`:506`). A CMD that reaches the limit returns nothing: every
+  unit already finished in that run is lost with the one that overran. *Fix:* `closing_bench.sh`
+  takes its deadline (T less a margin for the archive) and does not start a unit its estimate says
+  will not finish, recording it as skipped.
+- *`--sync` empties `~/work`.* Every sync runs `rm -rf ~/work` before unpacking (`:482`), and CMD
+  runs in `~/work` (`:507-508`). Indexes, pristine copies, tenant sets and corpora must live outside
+  it (on Q4's volume); a build left in `~/work` is deleted by the next run's sync. *Fix:* D3 and D14
+  name the data root.
+- *The 40-minute budget rests on one launch.* D14's 40 content minutes come from a 39 s launch
+  (`phases.tsv:312`); a resume of the parked metal is not measured. `recheck_plan_probe.out`: at a
+  5-minute resume, B1 no longer fits a run; at 10 minutes, neither does T6's 35-minute calibration
+  unit, which may not split. *Fix:* D14 derives the budget from M0's resume time (45 less resume,
+  sync, setup, archive and a margin), and `--plan` refuses a unit over it rather than shrinking it
+  unstated.
+
+**CB-R15. D13's Quickwit predicate-cache row, and probe 2's expectation for it, do not match
+v0.9.3; the power-loss window overstates "never fsyncs" (condition C4).** At v0.9.3 the predicate
+cache holds two things. Whole-query hit sets are cached only for a request with `search_after`
+(`quickwit-search/src/leaf.rs:931-945`), which no class here sends. Every query also consults
+per-split term-absence entries (`leaf.rs:630-654`, `:750-767`): a required term once proven absent
+in a split skips that split. So probe 2's "Q's predicate cache shows hits for the first" range
+expects hits that will not come, while T4a's identical repeats may count predicate hits from
+absent terms. *Fix:* the row names both; probe 2 expects no predicate hits for Q's ranges; the
+term-absence hits are stated as an index lookup (each other engine's term dictionary answers the
+same question) and published with the counters. Separately, appends are never fsynced by their own
+policy, but `create_queue`, `delete_queue` and the empty-queue positions fsync the same log
+(mrecordlog `src/multi_record_log.rs:126`, `:140`, `:245`), making earlier appends durable. D5's
+power-loss column for Q reads "until the kernel writes the file back or the next shard open, close
+or empty-queue fsync", and the ledger's log line follows. T7's process-crash window is unaffected.
+
+**CB-R16. T7's audit, as cited, cannot pass under T7's load (condition C5).**
+`engine_crash_check.sh:130-140` computes `bad` (an id against its `n` field), duplicates, `lost` and
+`late`; its "nothing unwritten present" check is the count at `:142`, `nb <= na + 1`, which assumes a
+fresh index and one write in flight. T7 starts from a pristine 12.4M-document copy and writes
+open-loop batches of 100 at up to 50 a second, so `nb` counts the base and every applied but not yet
+acknowledged batch, and the C-logs write stream has no `n` field. Q also has no fetch by id (D11
+`:270-271`), so its dump is a search over the whole index. *Fix:* the write stream's documents
+carry a stream marker and a sequence field; the writer logs every id it sends and each
+acknowledgement's time; the dump and the audit cover only the marked documents: none acknowledged
+longer than the window before the kill missing, present ids a subset of sent ids, none duplicated,
+each sequence field equal to its id, and the base's count unchanged. The dry run's T7 screen shows it
+passing on every system.
+
+**CB-R17. The cost's upper end, the daily runs, and one assertion D11 needs (condition C6).**
+
+- *Anchors per unit.* D10 runs a unit's union of anchors plus every system within 10% (`:229-233`).
+  T4a alone has eight class and mode metrics, so the union can be every system, while `run_plan.py`
+  prices rounds 3 to 5 with one anchor. With every arm in the confirm rounds
+  (`recheck_plan_probe.out`): 89 runs, 49.7 h, $213 of metal, $29 more, so the total runs about $250
+  to $275. Within D9's 20% guard, but D14's table states the one-anchor assumption or quotes the
+  range.
+- *Runs a day.* `lease` starts a run while the day's spend is below the cap (`lease.sh:447`): at 25,
+  8 worst-case runs ($3.57) or 9 typical ones (43 minutes, $3.07) start, not 7, so the window
+  estimates are conservative. The day's last run can also take the account past its cap, which
+  stops every other session's leases (Detent's included) until UTC midnight; Q7 says so.
+- *Five pairs.* `ab_compare.py` drops a pair whose value is not positive (`:401`), for example a
+  visibility lag of 0 at the 10 ms resolution, and warns only when series lengths differ (`:705-710`).
+  D11's "`high` below 1 (all five rounds favor S)" holds only with `pairs` = 5 in the CSV;
+  `closing_report.py` asserts it and otherwise publishes the row as not distinguishable.
+
+**CB-R18. Background merges can run inside timed arms (condition C7).** T4, T5 and T7 clean restart
+on indexes built once in B1 to B3, and T6 and T7 crash on B3's pristine copies. Elasticsearch's merges
+and Quickwit's split merges continue after a load; a build run that parks before they settle
+resumes them on the next arm's 8 cores, and the segment or split count a query meets changes from
+round to round. *Fix:* every build unit ends with merges settled (E: no merges running in
+`_nodes/stats`; Q: no pending merge operations), and every arm records its segment or split count at
+start beside T4's and T5's results.
+
+### New blocking items
+
+None.
+
+### Conditions
+
+- C2 (carried): the dry run's ledger section shows, per system, the effective settings read back,
+  the cache and count probes, the count check's drop list, every unit's measured duration and the
+  packed plan with its cost, before the metal is booked (D9 `:220-223`).
+- C3 (CB-R14): `closing_bench.sh` keeps its own deadline inside `--timeout`; D3 and D14 name a data
+  root outside `~/work`; D14's content budget comes from M0's measured resume.
+- C4 (CB-R15): D13's Quickwit predicate-cache row and probe 2 match v0.9.3; D5's power-loss window
+  for Q and the ledger's log line corrected.
+- C5 (CB-R16): T7's audit restricted to the marked write stream with a sent-id log, passing on every
+  system in the dry run's T7 screen.
+- C6 (CB-R17): D14 states the one-anchor assumption or the $250-275 range; `closing_report.py`
+  requires five pairs for "better" and "worse".
+- C7 (CB-R18): merges settled at the end of every build unit; segment and split counts recorded per
+  arm.
+
+Not run: builds, benchmarks, Elasticsearch or Quickwit processes, AWS or `lease`; elastic.co pages
+not refetched.
