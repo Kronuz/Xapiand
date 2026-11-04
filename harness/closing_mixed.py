@@ -318,12 +318,11 @@ def run_stream(args: argparse.Namespace) -> int:
         )
     )
     ctl = sy.Client(args.target, timeout=120)
-    count_all = sy.Query("all", command="count")
     if args.keep:
         system.commit(ctl, index)
     else:
         lt.load_index(system, args.target, index, schema, args.base_corpus, args.base_docs, 4, 1000)
-    base_before = system.run(ctl, index, schema, count_all).count
+    base_before = system.wait_count(ctl, index, schema, 0)
     model = Model()
     stop, ending = threading.Event(), threading.Event()
     lines = lt.read_corpus(args.stream_corpus, 0)
@@ -380,7 +379,7 @@ def run_stream(args: argparse.Namespace) -> int:
         poke.close()
         poke_ids.add("t7poke-0")
     system.commit(ctl, index)
-    time.sleep(1.0)
+    time.sleep(1.0 + (system.recovery_wait() if args.kill_at else 0.0))
     got: list[tuple[str, int]] = []
     for k in range(args.writers):
         got.extend((f"t7w{k}-{n}", n) for n in system.dump_stream(ctl, index, f"t7w{k}"))
@@ -472,7 +471,7 @@ def run(args: argparse.Namespace) -> int:
         poke.call(system.bulk_request(index, schema, [poke_doc], last=True))  # last: Quickwit commits what is pending
         poke.close()
     system.commit(ctl, index)
-    time.sleep(1.0)
+    time.sleep(1.0 + (system.recovery_wait() if args.kill_at else 0.0))
     got = [(i, n) for i, n in system.dump(ctl, index) if MARKED.fullmatch(i)]  # only the marked write stream is audited
     report = audit(got, model, killed, args.grace if args.kill_at else 0.0, poke_ids)
     ok = passed(report, died, model.failures)

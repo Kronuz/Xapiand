@@ -165,6 +165,10 @@ class Translation(unittest.TestCase):
         )
         self.assertEqual(xa.aggs, qa.aggs)
 
+    def test_only_quickwit_waits_for_its_commit_after_a_restart(self) -> None:
+        self.assertEqual((self.x.recovery_wait(), self.e.recovery_wait()), (0.0, 0.0))
+        self.assertEqual(self.qw.recovery_wait(), self.qw.commit_timeout_secs + 15.0)
+
     def test_schema_bodies(self) -> None:
         body = self.x.schema_body(sy.Schema.load("wiki"))
         self.assertEqual(body["id"], {"_type": "keyword", "_index": "none"})

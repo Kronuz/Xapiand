@@ -561,6 +561,10 @@ class System(ABC):
             time.sleep(0.2)
         return got
 
+    def recovery_wait(self) -> float:
+        """Seconds after a restart before everything the system kept can be searched (0: at once)."""
+        return 0.0
+
     # -- measurements
     def disk_bytes(self, settle: bool = True) -> int | None:
         if not self.datadir or not os.path.isdir(self.datadir):
@@ -1098,6 +1102,13 @@ class Quickwit(System):
 
     def ready_request(self) -> Request:
         return Request("GET", "/health/readyz")
+
+    @override
+    def recovery_wait(self) -> float:
+        """Documents replayed from the WAL are indexed at the next commit, up to commit_timeout_secs after the restart
+        (qw_crash_probe.py: 11,900 acknowledged documents searchable 66 s after a SIGKILL restart); a forced commit
+        of a new document does not publish them."""
+        return self.commit_timeout_secs + 15.0
 
     @override
     def ready(self, client: Client) -> bool:
