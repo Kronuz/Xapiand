@@ -3,6 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "engines": {
     "node": ">=22.12.0"
   },
