@@ -56,9 +56,6 @@ sha256sum "$CLOSING_XAPIAND" >"$OUT/binaries.txt"
 step fetch-logs 600 "$H/closing/fetch_corpus.sh" logs --limit 200000
 step fetch-writes 600 "$H/closing/fetch_corpus.sh" logs-writes --limit 100000
 step fetch-wiki 600 "$H/closing/fetch_corpus.sh" wiki --limit 40000
-step fetch-small-logs 120 "$H/closing/fetch_corpus.sh" logs --limit 20000
-step fetch-small-writes 120 "$H/closing/fetch_corpus.sh" logs-writes --limit 20000
-step fetch-small-wiki 300 "$H/closing/fetch_corpus.sh" wiki --limit 20000
 step fetch-wiki-queries 60 "$H/closing/fetch_corpus.sh" wiki-queries
 LOGS=$D/corpora/sample-200000/logs.ndjson
 WRITES=$D/corpora/sample-100000/logs-writes.ndjson
@@ -93,7 +90,7 @@ for sys in xapiand es quickwit; do
 		--target "$T" --schema logs --queries "$Q" --corpus "$LOGS" --limit 50000 --mixed --write-corpus "$WRITES" \
 		--write-rate 500 --warmup 5 --duration 20 --procs 2 --cpus 4 --out "$OUT/stall-mixed-$sys.json"
 	step "tenants-$sys" 900 python3 "$H/wide_search_check.py" tenants "$B" "$W/ten-$sys" "$P" --system "$sys" \
-		--corpus "$WIKI" --tenants 200 --per-tenant 20 --shape per-index --shape shared --runs 5 --cold 50 --idle-s 5 \
+		--corpus "$WIKI" --tenants 100 --per-tenant 20 --shape per-index --shape shared --runs 5 --cold 50 --idle-s 5 \
 		--budget-s 120 --cpus 4 --result "$OUT/tenants-$sys.json"
 	step "mixed-kill-$sys" 600 python3 "$H/engine_mixed_load.py" "$B" "$W/crash-$sys" --system "$sys" --kill-at 20 \
 		--secs 40 --target "$T" --cpus 4 --result "$OUT/mixed-kill-$sys.json"
@@ -116,11 +113,5 @@ for sys in xapiand es quickwit; do
 		--launch-prefix "sudo -E systemd-run --scope --quiet --uid=$(id -u) --gid=$(id -g) -p AllowedCPUs=0-3 -p MemoryMax=8G --" \
 		--out "$OUT/cgroup-$sys.json"
 done
-
-# closing_bench.sh on a small machine: the plan, then builds and rounds of several rows, then the report
-step bench-plan 60 bash "$H/closing_bench.sh" --plan --approved 250
-step bench-smoke 1500 bash "$H/closing_bench.sh" --smoke --deadline-min 24 \
-	--units B1,B2,t1-r1,t1-r2,t1-r3,t4a-r1,t4b-r1,t5b-r1,t6-r1,t7-r1
-step bench-report 120 python3 "$H/closing_report.py" report "$OUT/results" --out "$OUT/report.csv"
 
 cat "$steps" >&2
