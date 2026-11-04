@@ -203,6 +203,12 @@ def cpusets(sys_cores: int, gen_cores: int) -> tuple[str, str]:
     return ",".join(cpus[:sys_cores]), ",".join(cpus[sys_cores : sys_cores + gen_cores])
 
 
+def reap(host: Host) -> None:
+    """Stop any system a failed tool left running, so the next arm finds its port free."""
+    for path in {host.bins[k] for k in host.bins}:
+        subprocess.run(["pkill", "-9", "-f", path], check=False)
+
+
 def drop_caches() -> None:
     subprocess.run(["sync"], check=False)
     subprocess.run(["sudo", "sh", "-c", "echo 3 > /proc/sys/vm/drop_caches"], check=False)
@@ -412,6 +418,7 @@ def run_unit(host: Host, unit: Unit, root: Path, all_arms: list[str]) -> list[st
         drop_caches()
         t0 = time.time()
         rc = run_tool(host, argv, out.with_suffix(".log"))
+        reap(host)
         if rc != 0 or not out.exists():
             print(f"{unit.id} {arm}: the tool exited {rc}; see {out.with_suffix('.log')}", file=sys.stderr)
             continue

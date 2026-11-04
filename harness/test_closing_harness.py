@@ -619,6 +619,44 @@ class Plan(unittest.TestCase):
             self.assertTrue({f"{row}-r{n}" for n in range(1, 6)} <= ids, row)
 
 
+class StartupRetry(unittest.TestCase):
+    def serve(self, statuses: list[int]) -> tuple[http.server.ThreadingHTTPServer, list[int]]:
+        seen: list[int] = []
+
+        class Stub(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def do_POST(self) -> None:
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                code = statuses[min(len(seen), len(statuses) - 1)]
+                seen.append(code)
+                self.send_response(code)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            @override
+            def log_message(self, format: str, *args: Any) -> None:
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Stub)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.shutdown)
+        return server, seen
+
+    def test_a_503_is_retried_until_the_system_accepts(self) -> None:
+        server, seen = self.serve([503, 503, 200])
+        client = sy.Client(f"127.0.0.1:{server.server_address[1]}")
+        status, _ = closing_mixed.send_with_startup_retry(client, sy.Request("POST", "/", b"x"), threading.Event())
+        self.assertEqual((status, seen), (200, [503, 503, 200]))
+
+    def test_a_503_that_never_ends_is_returned_after_the_wait(self) -> None:
+        server, seen = self.serve([503])
+        client = sy.Client(f"127.0.0.1:{server.server_address[1]}")
+        status, _ = closing_mixed.send_with_startup_retry(client, sy.Request("POST", "/", b"x"), threading.Event(), 0.5)
+        self.assertEqual(status, 503)
+        self.assertGreater(len(seen), 1)
+
+
 class Fuzz(unittest.TestCase):
     """Seeded mutations of what the parsers read (CLOSING_FUZZ_N rounds, default 400): each input is accepted or refused
     with ValueError, never anything else and never a hang."""

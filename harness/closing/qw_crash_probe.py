@@ -33,8 +33,15 @@ def main() -> int:
     system = sy.make("quickwit", f"127.0.0.1:{port}")
     schema = sy.Schema.load("logs")
     system.start(sy.Launch(binary, workdir, port, cpus=2))
+    try:
+        return probe(system, schema)
+    finally:
+        system.stop(kill=True)
+
+
+def probe(system: sy.System, schema: sy.Schema) -> int:
     client = sy.Client(system.target)
-    system.setup(client, "p", schema)
+    system.setup(client, "probe", schema)
     docs = [
         json.dumps(
             {
@@ -49,7 +56,7 @@ def main() -> int:
         ).encode()
         for n in range(5000)
     ]
-    status, body = client.call(system.bulk_request("p", schema, docs, last=True))
+    status, body = client.call(system.bulk_request("probe", schema, docs, last=True))
     print("published", status, body[:100], flush=True)
     sent = acked = 0
     t0 = time.time()
@@ -67,14 +74,14 @@ def main() -> int:
             ).encode()
             for k in range(100)
         ]
-        status, body = client.call(system.bulk_request("p", schema, batch))
+        status, body = client.call(system.bulk_request("probe", schema, batch))
         if status < 300:
             acked += 100
         sent += 100
         time.sleep(0.1)
     print(f"appended {sent}, acked {acked}; before the kill:\n{tree(system.datadir)}", flush=True)
     count_q = sy.Query("all", command="count")
-    print("count before kill", system.run(client, "p", schema, count_q).count, flush=True)
+    print("count before kill", system.run(client, "probe", schema, count_q).count, flush=True)
     system.stop(kill=True)
     t_kill = time.time()
     print("killed; after:\n" + tree(system.datadir), flush=True)
@@ -83,8 +90,8 @@ def main() -> int:
     print("restarted", flush=True)
     last = None
     while time.time() - t_kill < 140:
-        ans = system.run(client, "p", schema, count_q)
-        st, sp = client.call(sy.Request("GET", "/api/v1/indexes/p/splits?split_states=Published"))
+        ans = system.run(client, "probe", schema, count_q)
+        st, sp = client.call(sy.Request("GET", "/api/v1/indexes/probe/splits?split_states=Published"))
         cl = client.call(sy.Request("GET", "/api/v1/cluster"))[1][:200]
         row = (ans.count, len(json.loads(sp).get("splits", [])) if st == 200 else None)
         if row != last:
@@ -92,7 +99,6 @@ def main() -> int:
             last = row
         time.sleep(2)
     print("after:\n" + tree(system.datadir))
-    system.stop()
     return 0
 
 
