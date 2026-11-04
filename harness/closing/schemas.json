@@ -1,8 +1,42 @@
 {
-  "wiki": {"id": "id", "fields": {"text": "text", "sort_field": "integer"}},
+  "wiki": {
+    "id": "id",
+    "fields": {
+      "text": "text",
+      "sort_field": "integer"
+    }
+  },
   "logs": {
     "time": "@timestamp",
-    "fields": {"@timestamp": "date", "clientip": "keyword", "request": "text", "status": "integer", "size": "integer"}
+    "fields": {
+      "@timestamp": "date",
+      "clientip": "keyword",
+      "request": "text",
+      "status": "integer",
+      "size": "integer"
+    }
   },
-  "tenants": {"id": "id", "fields": {"text": "text", "sort_field": "integer"}}
+  "tenants": {
+    "id": "id",
+    "fields": {
+      "text": "text",
+      "sort_field": "integer"
+    }
+  },
+  "tenants-shared": {
+    "id": "id",
+    "fields": {
+      "text": "text",
+      "sort_field": "integer",
+      "tenant": "keyword"
+    }
+  },
+  "mix": {
+    "fields": {
+      "id": "keyword",
+      "w": "integer",
+      "n": "integer",
+      "txt": "text"
+    }
+  }
 }

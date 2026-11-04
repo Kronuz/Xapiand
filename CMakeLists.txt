@@ -2057,6 +2057,6 @@ endif ()
 # Benchmarking
 # ------------
 # Micro-benchmarks used to live in benchmarks/ (a single std::string-copy stub);
-# performance work now lives in harness/ (es_loadtest.py, the
+# performance work now lives in harness/ (loadtest.py, the
 # e2e capture/diff tooling), which exercises the running server end to end.
 

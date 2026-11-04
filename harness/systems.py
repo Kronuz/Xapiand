@@ -36,7 +36,7 @@ import subprocess
 import sys
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, override
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -115,6 +115,7 @@ class Query:
     sort: tuple[str, str] | None = None  # field, asc or desc
     agg: tuple[str, str, int] | None = None  # kind, field, interval
     command: str = "search"
+    filter: tuple[str, str] | None = None  # field, value: an exact term ANDed with the rest (a tenant)
 
     @staticmethod
     def parse(line: str) -> Query:
@@ -131,6 +132,7 @@ class Query:
             (srt["field"], srt.get("order", "desc")) if srt else None,
             (agg["kind"], agg["field"], int(agg.get("interval", 0))) if agg else None,
             raw.get("command", "search"),
+            (raw["filter"]["field"], str(raw["filter"]["term"])) if raw.get("filter") else None,
         )
         if q.mode not in ("all", "any", "phrase"):
             raise ValueError(f"unknown mode {q.mode}")
@@ -140,8 +142,8 @@ class Query:
             raise ValueError(f"unknown aggregation {q.agg[0]}")
         if q.sort and q.sort[1] not in ("asc", "desc"):
             raise ValueError(f"unknown sort order {q.sort[1]}")
-        if not (q.terms or q.range or q.agg or q.sort):
-            raise ValueError("a query needs terms, a range, a sort or an aggregation")
+        if not (q.terms or q.range or q.agg or q.sort or q.filter or q.cls == "all"):
+            raise ValueError("a query needs terms, a range, a filter, a sort or an aggregation")
         return q
 
     def dumps(self) -> str:
@@ -157,11 +159,13 @@ class Query:
             raw["sort"] = {"field": self.sort[0], "order": self.sort[1]}
         if self.agg:
             raw["agg"] = {"kind": self.agg[0], "field": self.agg[1], "interval": self.agg[2]}
+        if self.filter:
+            raw["filter"] = {"field": self.filter[0], "term": self.filter[1]}
         raw["command"] = self.command
         return json.dumps(raw)
 
     def as_command(self, command: str) -> Query:
-        return Query(self.cls, self.field, self.terms, self.mode, self.range, self.sort, self.agg, command)
+        return replace(self, command=command)
 
     def vary(self, run: int, seed: int = 7) -> Query:
         """Run `run` of the query with its range bounds shifted by 0 to 9 units drawn from a seeded stream (run 0 is
@@ -170,21 +174,13 @@ class Query:
             return self
         shift = random.Random(f"{seed}:{run}:{self.label}").randrange(10)
         fld, lo, hi = self.range
-        return Query(
-            self.cls,
-            self.field,
-            self.terms,
-            self.mode,
-            (fld, None if lo is None else lo + shift, None if hi is None else hi + shift),
-            self.sort,
-            self.agg,
-            self.command,
-        )
+        return replace(self, range=(fld, None if lo is None else lo + shift, None if hi is None else hi + shift))
 
     @property
     def label(self) -> str:
         what = " ".join(self.terms) if self.terms else (self.agg or self.sort or self.range or ("", ""))[0]
-        return f"{self.cls}:{what}"[:80]
+        suffix = f"@{self.filter[1]}" if self.filter else ""
+        return f"{self.cls}:{what}{suffix}"[:80]
 
 
 def load_queries(path: str) -> list[Query]:
@@ -231,7 +227,9 @@ def dir_bytes(path: str) -> int:
     for root, _dirs, files in os.walk(path):
         for fn in files:
             with contextlib.suppress(OSError):
-                total += os.lstat(os.path.join(root, fn)).st_blocks * 512  # du's measure: a sparse file counts what it holds
+                total += (
+                    os.lstat(os.path.join(root, fn)).st_blocks * 512
+                )  # du's measure: a sparse file counts what it holds
     return total
 
 
@@ -302,6 +300,8 @@ class Launch:
     memory_bytes: int = 0  # 0: no cap told to the system (the cgroup caps it)
     prefix: tuple[str, ...] = ()  # e.g. systemd-run --scope -p AllowedCPUs=0-7 -p MemoryMax=32G
     memory_lock: bool = False  # E: bootstrap.memory_lock (needs the memlock limit; the closing run sets it)
+    shards: int = 1  # S and X: default shards per index (an arm setting: 1 and 5); tenants are always one shard
+    caches_on: bool = False  # the probe's default-cache run: Q's partial request cache at its default
     durability: str = "async"  # E: async (the comparison tier) or request (E's default, the report row)
     extra: tuple[str, ...] = ()
 
@@ -375,18 +375,22 @@ class System(ABC):
             os.killpg(pgid, signal.SIGKILL)
         self.proc = None
 
-    def restart(self, kill: bool = False) -> float:
-        """Stop (SIGKILL when `kill`) and start again on the same data; seconds until it answers."""
+    def spawn(self) -> None:
+        """Start the process again on the same data without waiting for it to answer."""
         assert self.launch is not None
-        self.stop(kill=kill)
         cmd, env = self.command(self.launch)
         full_env = dict(os.environ)
         full_env.update(env)
         log = open(os.path.join(self.workdir, "node.log"), "ab")
-        t0 = time.monotonic()
         self.proc = subprocess.Popen(
             [*self.launch.prefix, *cmd], stdout=log, stderr=log, env=full_env, cwd=self.workdir, start_new_session=True
         )
+
+    def restart(self, kill: bool = False) -> float:
+        """Stop (SIGKILL when `kill`) and start again on the same data; seconds until it answers."""
+        self.stop(kill=kill)
+        t0 = time.monotonic()
+        self.spawn()
         self.wait_up()
         return time.monotonic() - t0
 
@@ -406,6 +410,26 @@ class System(ABC):
                 total += int(parts[1])
         return total
 
+    def group_pids(self) -> list[int]:
+        if self.proc is None:
+            return []
+        out = subprocess.run(["ps", "-A", "-o", "pid=,pgid="], capture_output=True, text=True, check=False).stdout
+        return [
+            int(p)
+            for p, g in (ln.split() for ln in out.splitlines() if len(ln.split()) == 2)
+            if g == str(self.proc.pid)
+        ]
+
+    def fd_count(self) -> int | None:
+        """Open descriptors across the system's process group (Linux /proc); None where unreadable."""
+        total = 0
+        for pid in self.group_pids():
+            try:
+                total += len(os.listdir(f"/proc/{pid}/fd"))
+            except OSError:
+                continue
+        return total or None
+
     def cgroup(self) -> Cgroup | None:
         return Cgroup.of(self.proc.pid) if self.proc is not None else None
 
@@ -420,8 +444,29 @@ class System(ABC):
     def parse_bulk(self, status: int, body: bytes, n: int) -> Bulk: ...
 
     @abstractmethod
+    def floor_request(self, index: str) -> Request:
+        """The cheapest request the system answers: the client floor published beside T4's times."""
+
+    def durable(self, client: Client, index: str) -> None:
+        """What makes the data on disk final before `du` reads it (D13): a flush where the system has one, then sync."""
+        os.sync()
+
+    @abstractmethod
     def commit_requests(self, index: str, bulk: bool = False) -> list[Request]:
         """What makes everything written so far searchable (and, after a `bulk` load, restores the serving settings)."""
+
+    # -- single documents (the mixed-load audit): an id, a document without it, and every id with its `n` back out
+    supports_delete = True
+
+    @abstractmethod
+    def put_request(self, index: str, doc_id: str, doc: dict[str, Any]) -> Request: ...
+
+    def delete_request(self, index: str, doc_id: str) -> Request:
+        raise NotImplementedError(f"{self.name} deletes no document by id")
+
+    @abstractmethod
+    def dump(self, client: Client, index: str) -> list[tuple[str, int]]:
+        """Every (id, n) in the index, duplicates included."""
 
     # -- search
     @abstractmethod
@@ -488,6 +533,17 @@ def clean_term(term: str) -> str:
     return keep
 
 
+def drop_caches() -> bool:
+    """Drop the page cache (Linux, as root); False where it cannot be done."""
+    try:
+        subprocess.run(["sync"], check=False)
+        with open("/proc/sys/vm/drop_caches", "w") as fh:
+            fh.write("3\n")
+    except OSError:
+        return False
+    return True
+
+
 def int_text(value: float) -> str:
     return str(int(value))
 
@@ -535,6 +591,8 @@ class Xapiand(System):
             self.datadir,
             "--processors",
             str(launch.cpus),
+            "--shards",
+            str(launch.shards),
             *option_lines("xapiand.opts"),
             *launch.extra,
         ]
@@ -553,7 +611,8 @@ class Xapiand(System):
         return fields
 
     def create_index(self, index: str, schema: Schema, bulk: bool = False) -> list[Request]:
-        body = {"_schema": self.schema_body(schema), "_settings": {"number_of_shards": 1}}
+        shards = 1 if schema.name.startswith("tenants") else (self.launch.shards if self.launch else 1)
+        body = {"_schema": self.schema_body(schema), "_settings": {"number_of_shards": shards}}
         return [Request("PUT", f"/{index}/", json.dumps(body).encode())]
 
     def bulk_request(self, index: str, schema: Schema, lines: list[bytes], last: bool = False) -> Request:
@@ -577,6 +636,25 @@ class Xapiand(System):
     def commit_requests(self, index: str, bulk: bool = False) -> list[Request]:
         return [Request("POST", f"/{index}/:commit")]
 
+    @override
+    def floor_request(self, index: str) -> Request:
+        return Request("GET", f"/{index}/floor-missing-document")
+
+    @override
+    def put_request(self, index: str, doc_id: str, doc: dict[str, Any]) -> Request:
+        return Request("PUT", f"/{index}/{doc_id}", json.dumps(doc).encode())
+
+    @override
+    def delete_request(self, index: str, doc_id: str) -> Request:
+        return Request("DELETE", f"/{index}/{doc_id}")
+
+    @override
+    def dump(self, client: Client, index: str) -> list[tuple[str, int]]:
+        status, body = client.call(Request("DUMP", f"/{index}/"))
+        if status != 200:
+            raise SystemExit(f"xapiand: DUMP {index}: HTTP {status}")
+        return [(str(d["_id"]), int(d["n"])) for d in json.loads(body)]
+
     def clause(self, schema: Schema, q: Query) -> dict[str, Any] | None:
         parts: list[dict[str, Any]] = []
         if q.terms:
@@ -586,6 +664,8 @@ class Xapiand(System):
                 terms = [{q.field: clean_term(t)} for t in q.terms]
                 joined = terms[0] if len(terms) == 1 else {("_or" if q.mode == "any" else "_and"): terms}
                 parts.append(joined)
+        if q.filter:
+            parts.append({q.filter[0]: q.filter[1]})
         if q.range:
             rng: dict[str, Any] = {}
             if q.range[1] is not None:
@@ -651,8 +731,9 @@ class Xapiand(System):
     @override
     def assert_effective(self, eff: dict[str, Any], cpus: int) -> list[str]:
         problems = super().assert_effective({**eff, "processors": int(eff.get("processors") or 0)}, cpus)
-        if eff.get("shards") != 1:
-            problems.append(f"xapiand: default shards read back {eff.get('shards')}, asked 1")
+        asked = self.launch.shards if self.launch else 1
+        if eff.get("shards") != asked:
+            problems.append(f"xapiand: default shards read back {eff.get('shards')}, asked {asked}")
         return problems
 
 
@@ -726,6 +807,43 @@ class Elasticsearch(System):
             return Bulk(False, 0, json.dumps(doc.get("items", [])[:1])[:300])
         return Bulk(True, n)
 
+    @override
+    def floor_request(self, index: str) -> Request:
+        return Request("GET", "/")
+
+    @override
+    def durable(self, client: Client, index: str) -> None:
+        client.call(Request("POST", f"/{index}/_flush?force=true&wait_if_ongoing=true"))
+        os.sync()
+
+    request_cache = False  # the probe turns it on once, to show the counter is alive
+
+    @override
+    def put_request(self, index: str, doc_id: str, doc: dict[str, Any]) -> Request:
+        return Request("PUT", f"/{index}/_doc/{doc_id}", json.dumps(doc).encode())
+
+    @override
+    def delete_request(self, index: str, doc_id: str) -> Request:
+        return Request("DELETE", f"/{index}/_doc/{doc_id}")
+
+    @override
+    def dump(self, client: Client, index: str) -> list[tuple[str, int]]:
+        client.call(Request("POST", f"/{index}/_refresh"))
+        body = json.dumps({"size": 5000, "_source": ["n"], "query": {"match_all": {}}}).encode()
+        status, raw = client.call(Request("POST", f"/{index}/_search?scroll=2m", body))
+        out: list[tuple[str, int]] = []
+        while status == 200:
+            doc = json.loads(raw)
+            hits = doc["hits"]["hits"]
+            if not hits:
+                break
+            out.extend((str(h["_id"]), int(h["_source"]["n"])) for h in hits)
+            more = json.dumps({"scroll": "2m", "scroll_id": doc["_scroll_id"]}).encode()
+            status, raw = client.call(Request("POST", "/_search/scroll", more))
+        if status != 200:
+            raise SystemExit(f"es: scroll {index}: HTTP {status}")
+        return out
+
     def commit_requests(self, index: str, bulk: bool = False) -> list[Request]:
         reqs: list[Request] = []
         if bulk:
@@ -750,6 +868,8 @@ class Elasticsearch(System):
                 must.append(
                     {"match": {q.field: {"query": " ".join(terms), "operator": "or" if q.mode == "any" else "and"}}}
                 )
+        if q.filter:
+            filt.append({"term": {q.filter[0]: q.filter[1]}})
         if q.range:
             rng: dict[str, Any] = {}
             if q.range[1] is not None:
@@ -781,7 +901,11 @@ class Elasticsearch(System):
                 "stats": {"stats": {"field": fld}},
             }[kind]
             body["aggs"] = {"a": spec}
-        return Request("POST", f"/{index}/_search?request_cache=false", json.dumps(body).encode())
+        return Request(
+            "POST",
+            f"/{index}/_search?request_cache={'true' if self.request_cache else 'false'}",
+            json.dumps(body).encode(),
+        )
 
     def parse_answer(self, q: Query, status: int, body: bytes) -> Answer:
         if status >= 300:
@@ -850,6 +974,8 @@ class Elasticsearch(System):
 
 class Quickwit(System):
     name = "quickwit"
+    commit_timeout_secs = 60  # T6 also runs 1
+    max_partitions = 200  # the shared tenant index's partition count (Quickwit's default)
 
     def command(self, launch: Launch) -> tuple[list[str], dict[str, str]]:
         path = os.path.join(self.workdir, "quickwit.yaml")
@@ -861,6 +987,7 @@ class Quickwit(System):
                     grpc=launch.port + 1,
                     data=self.datadir,
                     cpu_millis=launch.cpus * 1000,
+                    partial_cache="64MB" if launch.caches_on else "0",
                 )
             )
         return [os.path.abspath(launch.binary), "run", "--config", path, *launch.extra], {"QW_DISABLE_TELEMETRY": "1"}
@@ -888,10 +1015,14 @@ class Quickwit(System):
                     }
                 )
         conf = json.loads(render("quickwit-index.json", index=index))
+        conf["indexing_settings"]["commit_timeout_secs"] = self.commit_timeout_secs
         conf["doc_mapping"]["field_mappings"] = mapped
         conf["search_settings"]["default_search_fields"] = [k for k, v in schema.fields.items() if v == "text"]
         if schema.time_field:
             conf["doc_mapping"]["timestamp_field"] = schema.time_field
+        if schema.name == "tenants-shared":  # the documented multi-tenant shape: a partition key per tenant
+            conf["doc_mapping"]["partition_key"] = "tenant"
+            conf["doc_mapping"]["max_num_partitions"] = self.max_partitions
         return [Request("POST", "/api/v1/indexes", json.dumps(conf).encode())]
 
     @override
@@ -924,6 +1055,30 @@ class Quickwit(System):
     def commit_requests(self, index: str, bulk: bool = False) -> list[Request]:
         return []  # the last ingest forces the commit
 
+    supports_delete = False
+
+    @override
+    def floor_request(self, index: str) -> Request:
+        return Request("GET", "/api/v1/version")
+
+    @override
+    def put_request(self, index: str, doc_id: str, doc: dict[str, Any]) -> Request:
+        body = json.dumps({"id": doc_id, **doc}).encode() + b"\n"
+        return Request("POST", f"/api/v1/{index}/ingest?commit=auto", body, NDJSON_CT)
+
+    @override
+    def dump(self, client: Client, index: str) -> list[tuple[str, int]]:
+        out: list[tuple[str, int]] = []
+        while True:
+            body = json.dumps({"query": "*", "max_hits": 5000, "start_offset": len(out), "sort_by": "n"}).encode()
+            status, raw = client.call(Request("POST", f"/api/v1/{index}/search", body))
+            if status != 200:
+                raise SystemExit(f"quickwit: dump {index}: HTTP {status}")
+            hits = json.loads(raw)["hits"]
+            out.extend((str(h["id"]), int(h["n"])) for h in hits)
+            if len(hits) < 5000:
+                return out
+
     def query_string(self, schema: Schema, q: Query) -> str:
         parts: list[str] = []
         if q.terms:
@@ -938,6 +1093,8 @@ class Quickwit(System):
                     if len(terms) > 1
                     else f"{q.field}:{terms[0]}"
                 )
+        if q.filter:
+            parts.append(f'{q.filter[0]}:"{q.filter[1]}"')
         if q.range:
             fld, lo, hi = q.range
             conv = rfc3339 if schema.fields.get(fld) == "date" else int_text
@@ -1027,7 +1184,10 @@ class Quickwit(System):
         if eff.get("runtime_cpus") != cpus:
             problems.append(f"quickwit: runtime sees {eff.get('runtime_cpus')} CPUs, asked {cpus}")
         cache = eff.get("partial_request_cache") or {}
-        if str(cache.get("capacity", "")).split(" ")[0] not in ("0", "0.0"):
+        if not (self.launch and self.launch.caches_on) and str(cache.get("capacity", "")).split(" ")[0] not in (
+            "0",
+            "0.0",
+        ):
             problems.append(f"quickwit: partial request cache capacity {cache.get('capacity')}, asked 0")
         return problems
 
@@ -1138,6 +1298,71 @@ def probe_caches(members: list[Member], schema: Schema, queries: list[Query], ru
     return report
 
 
+def counters_delta(m: Member, work: Any) -> dict[str, int]:
+    before = m.system.cache_counters(m.client)
+    work()
+    after = m.system.cache_counters(m.client)
+    return {k: after[k] - before[k] for k in after if isinstance(after[k], int) and isinstance(before.get(k), int)}
+
+
+def probe_default(members: list[Member], schema: Schema, query: Query, repeats: int = 10) -> dict[str, Any]:
+    """Probe part 1, second half: with the system's default cache settings the result-cache counters rise, so a 0
+    under D13's settings is not a dead counter. E is asked for its request cache per request; Q (and the others) are
+    probed in a separate run started with `Launch.caches_on`, and report `needs_default_launch` here."""
+    report: dict[str, Any] = {}
+    for m in members:
+        if isinstance(m.system, Elasticsearch):
+            m.system.request_cache = True
+            try:
+                delta = counters_delta(
+                    m, lambda m=m: [m.system.run(m.client, m.index, schema, query) for _ in range(repeats)]
+                )
+            finally:
+                m.system.request_cache = False
+            report[m.label] = {"delta": delta, "rises": delta.get("result_hits", 0) > 0}
+        elif isinstance(m.system, Quickwit) and m.system.launch and m.system.launch.caches_on:
+            delta = counters_delta(
+                m, lambda m=m: [m.system.run(m.client, m.index, schema, query) for _ in range(repeats)]
+            )
+            report[m.label] = {"delta": delta, "rises": delta.get("result_hits", 0) > 0}
+        else:
+            report[m.label] = {"needs_default_launch": isinstance(m.system, Quickwit), "rises": None}
+    return report
+
+
+def probe_ranges(members: list[Member], schema: Schema, template: Query, repeats: int = 10) -> dict[str, Any]:
+    """Probe part 2: a range template ten times with one bound, then ten draws; the filter-cache hits of the first
+    and of the second are reported (E's query cache and Q's predicate cache are on, as in normal operation)."""
+    report: dict[str, Any] = {}
+    for m in members:
+        same = counters_delta(
+            m, lambda m=m: [m.system.run(m.client, m.index, schema, template) for _ in range(repeats)]
+        )
+        draws = counters_delta(
+            m, lambda m=m: [m.system.run(m.client, m.index, schema, template.vary(r + 1)) for r in range(repeats)]
+        )
+        report[m.label] = {
+            "one_bound_filter_hits": same.get("filter_hits"),
+            "ten_draws_filter_hits": draws.get("filter_hits"),
+        }
+    return report
+
+
+def probe_counts(members: list[Member], schema: Schema, query: Query) -> dict[str, Any]:
+    """Probe part 3: for a term matching more than 10,000 documents, the top-10 mode gives E no exact total and Q an
+    underestimate (or equal), and the count mode gives every system the same exact count."""
+    top = {m.label: m.system.run(m.client, m.index, schema, query.as_command("search")) for m in members}
+    exact = {m.label: m.system.run(m.client, m.index, schema, query.as_command("count")) for m in members}
+    counts = {k: a.count for k, a in exact.items()}
+    return {
+        "top10_totals": {k: a.count for k, a in top.items()},
+        "exact_counts": counts,
+        "exact_counts_equal": len(set(counts.values())) == 1 and None not in counts.values(),
+        "exact_total": next(iter(counts.values()), None),
+        "over_10000": (next(iter(counts.values()), 0) or 0) > 10_000,
+    }
+
+
 def members_from(specs: list[str]) -> list[Member]:
     members: list[Member] = []
     for spec in specs:
@@ -1167,10 +1392,18 @@ def main() -> int:
     schema = Schema.load(args.schema)
     members = members_from(args.sys)
     if args.cmd == "probe":
-        probe = probe_caches(members, schema, load_queries(args.queries), args.runs)
+        qs = load_queries(args.queries)
+        probe = probe_caches(members, schema, qs, args.runs)
+        extra: dict[str, Any] = {
+            "default_caches": probe_default(members, schema, next((x for x in qs if x.agg), qs[0])),
+            "ranges": probe_ranges(members, schema, next((x for x in qs if x.range), qs[0])),
+            "counts": probe_counts(members, schema, next((x for x in qs if x.terms), qs[0])),
+            "effective": {m.label: m.system.effective(m.client, m.index) for m in members},
+        }
         if args.out:
             with open(args.out, "w") as fh:
-                json.dump(probe, fh, indent=1)
+                json.dump({"result_caches": probe, **extra}, fh, indent=1)
+        print(json.dumps(extra["counts"]))
         for label, res in probe.items():
             print(
                 f"{label}: result-cache hits +{res['delta'].get('result_hits')}, filter-cache hits +{res['delta'].get('filter_hits')}, ok={res['ok']}"

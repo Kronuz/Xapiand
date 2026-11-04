@@ -29,7 +29,7 @@ work. Build first:
 | **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
 | **load** | `index_fortune` | bulk indexing of many docs | nothing (falls back if no `fortune(6)`) |
 | **stress / soak** | `stress_fortune` | correctness under sustained concurrency | nothing |
-| **benchmark** | `loadtest.py` / `es_loadtest.py` | index throughput + query QPS/latency (vs Elasticsearch) | a dataset (bundled) |
+| **benchmark** | `loadtest.py` (`--system xapiand|es|quickwit`) | index throughput + query QPS/latency (vs Elasticsearch, Quickwit) | a dataset (bundled) |
 
 The HTTP E2E is the workhorse for correctness. See `docs/_docs/benchmarks.md` for
 recorded benchmark results.
@@ -257,8 +257,8 @@ harness/loadtest.py --target localhost:8880 --dataset docs/assets/accounts.ndjso
     --replicate 20 --concurrency 16 --duration 5 --trials 2 --datadir /tmp/xap_bench
 ```
 
-`es_loadtest.py` runs the same query mix against Elasticsearch for a side-by-side
-(different substrate — read the caveats in `docs/_docs/benchmarks.md`). `perfdiff.py`
+`loadtest.py --system es` (or `quickwit`) runs a corpus and neutral queries against Elasticsearch for a side-by-side
+(`harness/systems.py`; different substrate — read the caveats in `docs/_docs/benchmarks.md`). `perfdiff.py`
 diffs two `loadtest.py` result JSONs.
 
 ---

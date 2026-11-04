@@ -1,5 +1,5 @@
 # Quickwit (system Q): the node config. The partial request cache (leaf search results for an identical request) has
-# capacity 0; the other caches (split footer, fast fields, predicate) hold index data and stay at their defaults.
+# capacity 0 (the probe's default-cache run sets 64MB); the other caches (split footer, fast fields, predicate) hold index data and stay at their defaults.
 version: 0.8
 cluster_id: closing
 node_id: q1
@@ -15,4 +15,4 @@ indexer:
   enable_otlp_endpoint: false
   cpu_capacity: {cpu_millis}m
 searcher:
-  partial_request_cache_capacity: 0
+  partial_request_cache_capacity: {partial_cache}

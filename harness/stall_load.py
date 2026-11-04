@@ -32,11 +32,14 @@ import argparse
 import asyncio
 import atexit
 import contextlib
+import itertools
 import json
 import math
+import multiprocessing as mp
 import os
 import random
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -45,6 +48,9 @@ import sys
 import time
 from dataclasses import dataclass, field
 from typing import Any
+
+import loadtest as lt
+import systems as sy
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET = os.path.join(REPO, "docs", "public", "assets", "accounts.ndjson")
@@ -1115,6 +1121,491 @@ def dry_checks(out: dict[str, Any]) -> list[dict[str, Any]]:
     return checks
 
 
+# ---------------------------------------------------------------------------------------------
+# System mode (--system): the closing benchmark's T5 and T6 against Xapiand, Elasticsearch or Quickwit
+#
+# The open-loop schedule is split across --procs generator processes (unit i goes to process i % procs, scheduled at
+# t0 + i / rate on one shared wall-clock t0), since one asyncio process is bound near 3,200 requests/s on Linux.
+
+
+QUERY_VARIANTS = 10  # range bounds drawn per run: a repeated request is not a repeated answer
+
+
+@dataclass
+class Spec:
+    system: str
+    target: str
+    index: str
+    schema: str
+    queries: str
+    cls: str
+    rate: float
+    duration: float
+    warmup: float
+    conns: int
+    seed: int
+    procs: int
+    k: int
+    t0: float
+    qw_commit: int = 60
+
+
+async def open_loop_proc(spec: Spec) -> dict[str, Any]:
+    """One generator's share of an open-loop search load: latency runs from each unit's scheduled time."""
+    host, _, port = spec.target.partition(":")
+    adapter = sy.make(spec.system, spec.target)
+    schema = sy.Schema.load(spec.schema)
+    queries = [q for q in sy.load_queries(spec.queries) if not spec.cls or q.cls == spec.cls]
+    variants = [
+        [
+            adapter.search_request(spec.index, schema, q.vary(r, spec.seed).as_command("search"))
+            for r in range(QUERY_VARIANTS)
+        ]
+        for q in queries
+    ]
+    loop = asyncio.get_running_loop()
+    rng = random.Random(spec.seed * 1000 + spec.k)
+    pool: asyncio.Queue[Conn] = asyncio.Queue()
+    for _ in range(spec.conns):
+        pool.put_nowait(Conn(host, int(port)))
+    counts = Counts()
+    lat: list[int] = []
+    total = max(1, int(spec.rate * spec.duration))
+    t0 = loop.time() + max(0.0, spec.t0 - time.time())
+    inflight: dict[int, float] = {}
+    completed = [0]
+    cpu0 = time.process_time()
+
+    async def unit(i: int, sched: float, which: int) -> None:
+        inflight[i] = sched
+        conn = await pool.get()
+        try:
+            req = variants[which][i % QUERY_VARIANTS]
+            status, _ = await conn.request(req.method, req.path, req.body, req.content_type)
+            end = loop.time()
+            counts.add(status, "search")
+            if sched - t0 >= spec.warmup:
+                lat.append(int((end - sched) * 1e6))
+            completed[0] += 1
+        except Exception as e:
+            counts.exc(e, "search")
+            conn = Conn(host, int(port))
+        finally:
+            inflight.pop(i, None)
+            pool.put_nowait(conn)
+
+    tasks: list[asyncio.Task[None]] = []
+    issued = 0
+    for i in range(spec.k, total, spec.procs):
+        sched = t0 + i / spec.rate
+        delay = sched - loop.time()
+        if delay > 0.0005:
+            await asyncio.sleep(delay)
+        elif issued % 64 == 0:
+            await asyncio.sleep(0)
+        tasks.append(loop.create_task(unit(i, sched, rng.randrange(len(variants)))))
+        issued += 1
+    issue_span = max(1e-9, loop.time() - t0)
+    _done, pending = await asyncio.wait(tasks, timeout=10.0) if tasks else (set(), set())
+    cutoff = loop.time()
+    for task in pending:
+        task.cancel()
+    await asyncio.gather(*pending, return_exceptions=True)
+    for sched in inflight.values():
+        if sched - t0 >= spec.warmup:
+            lat.append(int((cutoff - sched) * 1e6))
+    unfinished = len(inflight)
+    for _ in range(pool.qsize()):
+        await pool.get_nowait().close()
+    wall = max(1e-9, loop.time() - t0)
+    return {
+        "k": spec.k,
+        "issued": issued,
+        "completed": completed[0],
+        "unfinished": unfinished,
+        "issue_span": issue_span,
+        "latencies_us": lat,
+        "counts": counts.as_dict(),
+        "generator_cpu": (time.process_time() - cpu0) / wall,
+    }
+
+
+def proc_main(spec: Spec, out: Any) -> None:
+    out.put(asyncio.run(open_loop_proc(spec)))
+
+
+def run_open_loop(args: argparse.Namespace, cls: str, rate: float, duration: float, warmup: float) -> dict[str, Any]:
+    """An open-loop search load at `rate`/s for `duration` s across --procs processes; the merged result."""
+    ctx = mp.get_context("spawn")
+    out = ctx.Queue()
+    t0 = time.time() + 1.0 + 0.2 * args.procs  # the processes import and build their requests before t0
+    procs = [
+        ctx.Process(
+            target=proc_main,
+            args=(
+                Spec(
+                    args.system,
+                    args.target,
+                    args.index,
+                    args.schema,
+                    args.queries,
+                    cls,
+                    rate,
+                    duration,
+                    warmup,
+                    args.light_conns,
+                    args.seed,
+                    args.procs,
+                    k,
+                    t0,
+                ),
+                out,
+            ),
+        )
+        for k in range(args.procs)
+    ]
+    for p in procs:
+        p.start()
+    results = [out.get(timeout=duration + 120) for _ in procs]
+    for p in procs:
+        p.join()
+    return merge_open_loop(results, rate, duration)
+
+
+def merge_open_loop(results: list[dict[str, Any]], rate: float, duration: float) -> dict[str, Any]:
+    lat = sorted(v for r in results for v in r["latencies_us"])
+    issued = sum(r["issued"] for r in results)
+    span = max(r["issue_span"] for r in results)
+    achieved = max(0, issued - 1) / span if issued > 1 else rate
+    errors = {"ok": 0, "http_503": 0, "http_other": 0, "exceptions": 0}
+    for r in results:
+        for key, value in r["counts"].items():
+            if key in errors:
+                errors[key] += value
+    return {
+        "target_rate": rate,
+        "achieved_rate": round(achieved, 2),
+        "rate_error": round(abs(achieved - rate) / rate, 4) if rate else None,
+        "issued": issued,
+        "completed": sum(r["completed"] for r in results),
+        "unfinished_at_drain_cutoff": sum(r["unfinished"] for r in results),
+        "latency": summarize(lat),
+        "errors": errors,
+        "generator_cpu_max": round(max(r["generator_cpu"] for r in results), 3),
+        "procs": len(results),
+        "duration": duration,
+    }
+
+
+def class_bound_ms(cls: str, override: float) -> float:
+    """T5's bound: 25 ms for term, boolean, phrase, range and sort classes, 250 ms for aggregations."""
+    return override if override > 0 else (250.0 if cls.startswith("agg") else 25.0)
+
+
+def good_step(step: dict[str, Any], bound_ms: float) -> bool:
+    p99 = step["latency"]["p99_us"]
+    err = step["errors"]
+    return (
+        p99 is not None
+        and p99 <= bound_ms * 1000
+        and step["rate_error"] is not None
+        and step["rate_error"] <= 0.01
+        and err["http_other"] == 0
+        and err["http_503"] == 0
+        and err["exceptions"] == 0
+        and step["unfinished_at_drain_cutoff"] == 0
+        and step["generator_cpu_max"] < 0.8
+    )
+
+
+def saturate_class(args: argparse.Namespace, system: sy.System, cls: str) -> dict[str, Any]:
+    """T5: the highest open-loop rate whose p99 stays within the class bound, achieved rate within 1% of offered and
+    no errors, found by doubling from --saturate-start and bisecting --bisect-steps times; the server CPU per query
+    at the best rate is read from the cgroup."""
+    bound = class_bound_ms(cls, args.bound_ms)
+    trace: list[dict[str, Any]] = []
+    cg = system.cgroup()
+
+    def step(rate: float) -> bool:
+        before = cg.snapshot() if cg else None
+        res = run_open_loop(args, cls, rate, args.step_secs, 1.0)
+        after = cg.snapshot() if cg else None
+        if before and after and before["cpu_usage_usec"] is not None and after["cpu_usage_usec"] is not None:
+            res["server_cpu_us_per_query"] = round(
+                (after["cpu_usage_usec"] - before["cpu_usage_usec"]) / max(1, res["completed"]), 1
+            )
+        ok = good_step(res, bound)
+        res["good"] = ok
+        trace.append(res)
+        log(
+            f"{cls}: {rate:.0f}/s achieved {res['achieved_rate']:.0f}, p99 {res['latency']['p99_us']} us "
+            f"(bound {bound * 1000:.0f}), generator CPU {res['generator_cpu_max']}: {'good' if ok else 'bad'}"
+        )
+        return ok
+
+    lo, hi = 0.0, args.saturate_start
+    while hi <= args.saturate_max and step(hi):
+        lo, hi = hi, hi * 2
+    if lo == 0.0:
+        return {"class": cls, "bound_ms": bound, "saturating_rate": 0.0, "first_bad_rate": hi, "trace": trace}
+    for _ in range(args.bisect_steps):
+        mid = (lo + hi) / 2
+        if step(mid):
+            lo = mid
+        else:
+            hi = mid
+    best = next((t for t in reversed(trace) if t["good"] and t["target_rate"] == lo), {})
+    return {
+        "class": cls,
+        "bound_ms": bound,
+        "saturating_rate": lo,
+        "first_bad_rate": hi,
+        "server_cpu_us_per_query": best.get("server_cpu_us_per_query"),
+        "trace": trace,
+    }
+
+
+def probe_doc(schema: sy.Schema, n: int) -> tuple[bytes, sy.Query]:
+    """A document with a token no other document holds, and the count query that finds it."""
+    token = f"zzprobe{n}x"
+    doc: dict[str, Any] = {}
+    text_field = ""
+    for name, kind in schema.fields.items():
+        if kind == "text":
+            text_field = text_field or name
+            doc[name] = f"GET /{token} HTTP/1.0" if name == text_field else "probe"
+        elif kind == "keyword":
+            doc[name] = "probe"
+        elif kind == "integer":
+            doc[name] = 1
+        else:
+            doc[name] = int(time.time())
+    if schema.id_field:
+        doc[schema.id_field] = f"probe-{n}"
+    return json.dumps(doc).encode(), sy.Query("probe", field=text_field, terms=(token,), command="count")
+
+
+def probe_field(schema: sy.Schema) -> str:
+    return next(name for name, kind in schema.fields.items() if kind == "text")
+
+
+async def mixed_writes(
+    args: argparse.Namespace, system: sy.System, schema: sy.Schema, duration: float, warmup: float
+) -> dict[str, Any]:
+    """T6's writer and probe: batches of --write-batch documents open loop at --write-rate documents/s from the write
+    corpus, and one probe document a second timed from acknowledgement to the first search that finds it."""
+    host, _, port = args.target.partition(":")
+    loop = asyncio.get_running_loop()
+    batch_rate = args.write_rate / args.write_batch
+    total = max(1, int(batch_rate * duration))
+    lines = list(itertools.islice(lt.read_corpus(args.write_corpus, 0), total * args.write_batch))
+    if len(lines) < total * args.write_batch:
+        raise SystemExit(f"{args.write_corpus} holds {len(lines)} documents; {total * args.write_batch} are needed")
+    pool: asyncio.Queue[Conn] = asyncio.Queue()
+    for _ in range(8):
+        pool.put_nowait(Conn(host, int(port)))
+    ack: list[int] = []
+    counts = Counts()
+    t0 = loop.time() + 0.3
+
+    async def one(i: int, sched: float) -> None:
+        conn = await pool.get()
+        try:
+            req = system.bulk_request(args.index, schema, lines[i * args.write_batch : (i + 1) * args.write_batch])
+            status, body = await conn.request(req.method, req.path, req.body, req.content_type)
+            res = system.parse_bulk(status, body, args.write_batch)
+            counts.add(0 if res.ok else status or 500, "write")
+            if sched - t0 >= warmup:
+                ack.append(int((loop.time() - sched) * 1e6))
+        except Exception as e:
+            counts.exc(e, "write")
+            conn = Conn(host, int(port))
+        finally:
+            pool.put_nowait(conn)
+
+    lags: list[int] = []
+    probes: list[tuple[float, str]] = []  # (acknowledgement time, token) in the order written
+    visible_at: list[float] = []  # visible_at[k]: when the poller first counted k + 1 probes
+
+    async def prober() -> None:
+        """One probe document a second; each acknowledgement is recorded."""
+        conn = Conn(host, int(port))
+        n = 0
+        end_at = t0 + duration
+        while loop.time() < end_at - 2:
+            n += 1
+            body, query = probe_doc(schema, args.seed * 100000 + n)
+            req = system.bulk_request(args.index, schema, [body])
+            await conn.request(req.method, req.path, req.body, req.content_type)
+            acked = loop.time()
+            probes.append((acked, query.terms[0]))
+            await asyncio.sleep(max(0.0, 1.0 - (loop.time() - acked)))
+        await conn.close()
+
+    async def poller(stop: asyncio.Event) -> None:
+        """One query every --probe-poll seconds asking for any probe written so far; the k-th probe is visible when
+        the count first reaches k (probes become visible in write order, to the poll's resolution)."""
+        conn = Conn(host, int(port))
+        while not stop.is_set() or len(visible_at) < len(probes):
+            outstanding = probes[len(visible_at) :]
+            if outstanding:
+                terms = tuple(t for _, t in probes)
+                query = sy.Query("probe", field=probe_field(schema), terms=terms, mode="any", command="count")
+                r = system.search_request(args.index, schema, query)
+                status, raw = await conn.request(r.method, r.path, r.body, r.content_type)
+                ans = system.parse_answer(query, status, raw)
+                now = loop.time()
+                while ans.ok and ans.count is not None and len(visible_at) < min(ans.count, len(probes)):
+                    visible_at.append(now)
+                if now - outstanding[0][0] > args.probe_timeout:
+                    break
+            await asyncio.sleep(args.probe_poll)
+        await conn.close()
+
+    stop_poll = asyncio.Event()
+    poll_task = asyncio.ensure_future(poller(stop_poll))
+    probe_task = asyncio.ensure_future(prober())
+    tasks: list[asyncio.Task[None]] = []
+    for i in range(total):
+        sched = t0 + i / batch_rate
+        delay = sched - loop.time()
+        if delay > 0.0005:
+            await asyncio.sleep(delay)
+        tasks.append(loop.create_task(one(i, sched)))
+    await asyncio.wait(tasks, timeout=30.0)
+    await probe_task
+    stop_poll.set()
+    await poll_task
+    for k, (acked, _) in enumerate(probes):
+        if k < len(visible_at) and acked - t0 >= warmup:
+            lags.append(int((visible_at[k] - acked) * 1e6))
+    for _ in range(pool.qsize()):
+        await pool.get_nowait().close()
+    return {
+        "write_rate_docs": args.write_rate,
+        "write_batch": args.write_batch,
+        "batches": total,
+        "write_ack": summarize(sorted(ack)),
+        "write_errors": counts.as_dict(),
+        "visibility_lag": summarize(sorted(lags)),
+        "probe_poll_s": args.probe_poll,
+        "probe_failures": len(probes) - len(visible_at),
+        "probes": len(probes),
+    }
+
+
+def mixed(args: argparse.Namespace, system: sy.System, schema: sy.Schema) -> dict[str, Any]:
+    """T6: open-loop writes and searches together; searches run in --procs processes beside the writer."""
+    total = args.duration + args.warmup
+    ctx = mp.get_context("spawn")
+    out = ctx.Queue()
+    t0 = time.time() + 1.0 + 0.2 * args.procs
+    procs = [
+        ctx.Process(
+            target=proc_main,
+            args=(
+                Spec(
+                    args.system,
+                    args.target,
+                    args.index,
+                    args.schema,
+                    args.queries,
+                    "",
+                    args.rate,
+                    total,
+                    args.warmup,
+                    args.light_conns,
+                    args.seed,
+                    args.procs,
+                    k,
+                    t0,
+                ),
+                out,
+            ),
+        )
+        for k in range(args.procs)
+    ]
+    for p in procs:
+        p.start()
+    time.sleep(max(0.0, t0 - time.time()))
+    writes = asyncio.run(mixed_writes(args, system, schema, total, args.warmup))
+    results = [out.get(timeout=total + 120) for _ in procs]
+    for p in procs:
+        p.join()
+    return {"search": merge_open_loop(results, args.rate, total), "write": writes}
+
+
+def system_main(args: argparse.Namespace) -> int:
+    t_boot = time.time()
+    system = sy.make(args.system, args.target)
+    if isinstance(system, sy.Quickwit):
+        system.commit_timeout_secs = args.qw_commit_timeout
+    schema = sy.Schema.load(args.schema)
+    if args.bin:
+        system.start(
+            sy.Launch(
+                args.bin,
+                args.workdir,
+                int(args.target.rpartition(":")[2]),
+                cpus=args.cpus,
+                memory_bytes=args.memory_bytes,
+                prefix=tuple(shlex.split(args.launch_prefix)),
+                durability=args.durability,
+                memory_lock=args.memory_lock,
+            )
+        )
+        atexit.register(system.stop)
+    ctl = sy.Client(args.target)
+    out: dict[str, Any] = {
+        "meta": {
+            "system": args.system,
+            "target": args.target,
+            "index": args.index,
+            "procs": args.procs,
+            "argv": sys.argv[1:],
+            "started": t_boot,
+            "binary": lt.binary_info(args.bin) if args.bin else None,
+        },
+        "effective": system.effective(ctl, args.index),
+    }
+    problems = system.assert_effective(out["effective"], args.cpus)
+    out["settings_problems"] = problems
+    if problems and args.assert_settings:
+        raise SystemExit(f"effective settings differ from what was asked: {problems}")
+    if args.corpus:
+        out["load"] = lt.load_index(
+            system, args.target, args.index, schema, args.corpus, args.limit, args.clients, args.batch_docs
+        )
+    queries = sy.load_queries(args.queries)
+    classes = sorted({q.cls for q in queries}) if args.cls == "all" else [args.cls]
+    out["cache_before"] = system.cache_counters(ctl)
+    if args.saturate:
+        out["saturate"] = [saturate_class(args, system, c) for c in classes]
+    if args.mixed:
+        out["mixed"] = mixed(args, system, schema)
+    out["cache_after"] = system.cache_counters(ctl)
+    if out["cache_after"].get("result_hits", 0) != out["cache_before"].get("result_hits", 0):
+        out["void"] = "a result cache answered during the run"
+    cg = system.cgroup()
+    if cg is not None:
+        out["cgroup"] = cg.snapshot()
+    out["meta"]["total_s"] = round(time.time() - t_boot, 2)
+    text = json.dumps(out, indent=1)
+    if args.out:
+        with open(args.out, "w") as fh:
+            fh.write(text + "\n")
+        log(f"wrote {args.out}")
+    else:
+        print(text)
+    ctl.close()
+    if args.bin:
+        system.stop()
+    if out.get("void"):
+        log(f"VOID: {out['void']}")
+        return 1
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bin", help="start a solo strata node from this binary (removed on exit)")
@@ -1170,7 +1661,41 @@ def main() -> int:
         action="store_true",
         help="20,000 documents and short phases; fails if a result is empty",
     )
+    sm = ap.add_argument_group("system mode (the closing benchmark's T5 and T6; --saturate and --mixed take these)")
+    sm.add_argument("--system", choices=sorted(sy.ADAPTERS), help="Xapiand, Elasticsearch or Quickwit")
+    sm.add_argument("--index", default="bench_load")
+    sm.add_argument("--schema", help="a name in harness/closing/schemas.json")
+    sm.add_argument("--queries", help="neutral queries (the D8-kept set)")
+    sm.add_argument("--class", dest="cls", default="all", help="one query class, or all (one after another)")
+    sm.add_argument("--bound-ms", type=float, default=0.0, help="p99 bound; default 25 ms, 250 ms for aggregations")
+    sm.add_argument("--procs", type=int, default=1, help="generator processes the open-loop schedule is split across")
+    sm.add_argument("--mixed", action="store_true", help="T6: open-loop writes and searches, with a visibility probe")
+    sm.add_argument("--warmup", type=float, default=30.0, help="seconds of --mixed excluded from the statistics")
+    sm.add_argument("--write-corpus", help="--mixed: the documents written (ndjson or ndjson.bz2)")
+    sm.add_argument("--write-rate", type=float, default=5000.0, help="--mixed: documents a second")
+    sm.add_argument("--write-batch", type=int, default=100)
+    sm.add_argument("--probe-poll", type=float, default=0.01, help="--mixed: seconds between visibility polls")
+    sm.add_argument("--probe-timeout", type=float, default=120.0)
+    sm.add_argument("--qw-commit-timeout", type=int, default=60, help="Quickwit's commit_timeout_secs")
+    sm.add_argument("--corpus", help="load this corpus first (see loadtest.py)")
+    sm.add_argument("--limit", type=int, default=0)
+    sm.add_argument("--clients", type=int, default=4)
+    sm.add_argument("--batch-docs", type=int, default=1000)
+    sm.add_argument("--cpus", type=int, default=8)
+    sm.add_argument("--memory-bytes", type=int, default=0)
+    sm.add_argument("--launch-prefix", default="")
+    sm.add_argument("--durability", choices=("async", "request"), default="async")
+    sm.add_argument("--memory-lock", action="store_true")
+    sm.add_argument("--assert-settings", action="store_true")
     args = ap.parse_args()
+    if args.system:
+        if not (args.schema and args.queries):
+            ap.error("--system needs --schema and --queries")
+        if not (args.saturate or args.mixed):
+            ap.error("--system runs --saturate (T5) or --mixed (T6)")
+        if args.mixed and not args.write_corpus:
+            ap.error("--mixed needs --write-corpus")
+        return system_main(args)
     if args.overload and args.overload[0] not in ("light", "heavy"):
         ap.error("--overload takes light or heavy")
     if not args.bin and not args.target:

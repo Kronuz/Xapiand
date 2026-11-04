@@ -8,6 +8,8 @@ check: creates 3K+2 one-shard indexes (of different sizes and vocabularies) and 
   weights), totals and aggregations must be equal, for sorted and for relevance-ranked searches, by name list and by
   pattern (`_all`, `w*`, an exclusion). Then --max-search-indexes: a search over the cap, by list and by `_all`, is served,
   one over it answers 400 naming the option.
+tenants BIN OUTDIR PORT --system SYS --corpus FILE [--tenants N]: the closing benchmark's many-index rows (T8 to T10) for
+  Xapiand, Elasticsearch or Quickwit; see closing_tenants.py.
 gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches (default 30) across all of them and
   prints p50 and p99 latency in ms and the peak number of indexes searches held open (the metric
   xapiand_search_pinned_indexes_peak). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
@@ -26,6 +28,11 @@ import statistics
 import subprocess
 import sys
 import time
+
+if len(sys.argv) > 1 and sys.argv[1] == "tenants":  # T8 to T10 on any system: closing_tenants.py
+    import closing_tenants
+
+    sys.exit(closing_tenants.main(sys.argv[2:]))
 
 ap = argparse.ArgumentParser()
 ap.add_argument("mode", choices=["check", "gate"])
@@ -94,7 +101,12 @@ def create(i: int) -> int:
     status = 0
     for j in range(5 + (i % 3 if args.mode == "check" else 0)):
         n = i * 8 + j
-        doc = {"n": n, "g": f"g{(n // 2 + i) % 4}", "tag": "x", "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4)}
+        doc = {
+            "n": n,
+            "g": f"g{(n // 2 + i) % 4}",
+            "tag": "x",
+            "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4),
+        }
         status = max(status, call("PUT", f"/{short(i)}/d{j}", doc)[0])
     return status
 
@@ -201,7 +213,13 @@ def check() -> None:
             failures.append(f"cap {width}")
     # A pattern reads every entry of the data directory (14 indexes and the node's own), so at a cap of 7 each is over it,
     # whatever it matches: the cap bounds the walk's work, not only the names.
-    for pattern in ("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", "/_all/", "/w00*/", "/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", "/*,-*/"):
+    for pattern in (
+        "/w000*,w001*,w002*,w003*,w004*,w005*,w006*/",
+        "/_all/",
+        "/w00*/",
+        "/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/",
+        "/*,-*/",
+    ):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
         ok = status == 400 and b"--max-search-indexes" in raw and b"directory entries" in raw
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
@@ -211,7 +229,13 @@ def check() -> None:
     # With room for the walk the same patterns are served; the names are still counted (an index costs its own entry and its directory's).
     cap = 100
     node = start("cap-walk", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
-    for pattern, want in (("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200), ("/_all/", 200), ("/w00*/", 200), ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200), ("/*,-*/", 200)):
+    for pattern, want in (
+        ("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200),
+        ("/_all/", 200),
+        ("/w00*/", 200),
+        ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200),
+        ("/*,-*/", 200),
+    ):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
         ok = status == want
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
@@ -222,7 +246,16 @@ def check() -> None:
         status, raw = call("PUT", path, {"n": 1})
         if status >= 300:
             failures.append(f"nesting: PUT {path} -> {status}")
-    for pattern, want in (("/tenant*/", 1), ("/tenant/*/", 1), ("/tenant/*/*/", 1), ("/tenant/**/", 3), ("/**/x/", 1), ("/ten%3Fnt/", 1), ("/tenant/[a]/", 1), ("/tenant/[!a]/", 0)):
+    for pattern, want in (
+        ("/tenant*/", 1),
+        ("/tenant/*/", 1),
+        ("/tenant/*/*/", 1),
+        ("/tenant/**/", 3),
+        ("/**/x/", 1),
+        ("/ten%3Fnt/", 1),
+        ("/tenant/[a]/", 1),
+        ("/tenant/[!a]/", 0),
+    ):
         status, raw = call("COUNT", pattern + "?q=n:1")
         total = json.loads(raw).get("total") if status == 200 else None
         ok = total == want

@@ -100,7 +100,8 @@ driver at it (`NUM_SHARDS=1` matches Xapiand's default of one shard):
 
 ```sh
 ES_JAVA_OPTS="-Xms1g -Xmx1g" elasticsearch-8.15.3/bin/elasticsearch &   # wait for a green /_cluster/health
-NUM_SHARDS=1 REPLICATE=20 CONCURRENCY=16 DURATION=5 TRIALS=3 python3 harness/es_loadtest.py
+python3 harness/loadtest.py --system es --target localhost:9200 --corpus CORPUS.ndjson --schema logs \
+    --queries harness/closing/queries/logs-smoke.jsonl --latency --clients 4 --duration 5 --trials 3
 ```
 
 <div style="min-height: 100px"></div>

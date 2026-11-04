@@ -1,5 +1,3 @@
 # Xapiand (systems S and X): options beyond the port, name, data directory and --processors the launcher adds.
-# One shard per index (D2); Xapiand's default is 5. Xapiand has no search-result cache (its caches hold databases,
+# The launcher passes --shards (D2: 1 and 5 are arm settings for S and X; tenants are one shard). Xapiand has no search-result cache (its caches hold databases,
 # schemas, scripts and the endpoint resolver), so none is turned off.
---shards
-1

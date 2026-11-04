@@ -14,11 +14,15 @@ With --term-at, the node gets SIGTERM that many seconds in, under full load, and
 the load stops, the node restarts on the same data, and the dump must hold every acknowledged write (a write cut off by the
 signal is unacknowledged: its ids may be either way, and no other id may differ).
 Exit 0 only when the checks pass and the sanitizer wrote no report.
+
+With --system SYS (xapiand, es or quickwit) and --kill-at SECS it is closing_mixed.py instead: the same writes and searches
+on any system, SIGKILL under load, restart, and an audit of acknowledged writes (T7's crash leg).
 """
 import argparse, collections, http.client, json, os, random, subprocess, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import closing_mixed  # noqa: E402
 from loadtest import QUERY_MIX  # noqa: E402
 
 ap = argparse.ArgumentParser()
@@ -31,7 +35,10 @@ ap.add_argument('--port', type=int, default=18990)
 ap.add_argument('--seed', type=int, default=1)
 ap.add_argument('--term-at', type=float, default=0, help='send SIGTERM this many seconds in (0: no), then check recovery')
 ap.add_argument('--term-bound', type=int, default=120, help='seconds the node has to exit after SIGTERM')
+closing_mixed.add_arguments(ap)
 a = ap.parse_args()
+if a.system:
+    sys.exit(closing_mixed.run(a))  # T7's crash leg on any system; OUTDIR is removed and recreated
 a.bin = os.path.abspath(a.bin); a.out = os.path.abspath(a.out)
 os.makedirs(a.out, exist_ok=True)
 data = os.path.join(a.out, 'data')
