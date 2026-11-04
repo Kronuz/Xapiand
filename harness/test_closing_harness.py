@@ -18,17 +18,22 @@ import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 from typing import Any, ClassVar, override
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import closing_mixed
+import closing_report as cr
 import closing_tenants
+import closing_units as cu
 import loadtest
 import stall_load
 import systems as sy
 
+SCRATCH = os.path.join(os.path.dirname(HERE), ".scratch")
+os.makedirs(SCRATCH, exist_ok=True)
 LOGS = sy.Schema.load("logs")
 T0 = 893964617
 
@@ -368,6 +373,14 @@ class Audit(unittest.TestCase):
         self.assertEqual(closing_mixed.audit([], m, killed=None, grace=0.0, poke_ids=set())["lost_beyond_grace"], 1)
 
 
+class Posting(Fake):
+    """The fake adapter, sending a bulk's lines as the request body."""
+
+    @override
+    def bulk_request(self, index: str, schema: sy.Schema, lines: list[bytes], last: bool = False) -> sy.Request:
+        return sy.Request("POST", "/", b"\n".join(lines) + b"\n")
+
+
 class Stream(unittest.TestCase):
     """T7's marked write stream (CB-R16): the writer's documents, its sent-id log and the audit's verdicts."""
 
@@ -408,7 +421,7 @@ class Stream(unittest.TestCase):
             target=closing_mixed.stream_writer,
             args=(
                 0,
-                Fake({}),
+                Posting({}),
                 LOGS,
                 "logs",
                 f"127.0.0.1:{server.server_address[1]}",
@@ -435,21 +448,24 @@ class Stream(unittest.TestCase):
         self.assertEqual([d["seq"] for d in self.stored], list(range(1, len(self.stored) + 1)))
         self.assertEqual({d["stream"] for d in self.stored}, {"t7w0"})
         self.assertEqual(self.model.attempted, {f"t7w0-{n}" for n in range(1, len(self.stored) + 1)})
-        path = os.path.join(tempfile.mkdtemp(dir=os.path.join(os.path.dirname(HERE), ".scratch")), "sent.tsv")
+        path = os.path.join(tempfile.mkdtemp(dir=SCRATCH), "sent.tsv")
         closing_mixed.write_sent_log(path, self.model, sorted(self.model.attempted))
-        rows = [ln.split("\t") for ln in open(path).read().splitlines()]
+        rows = [ln.split("\t") for ln in Path(path).read_text().splitlines()]
         self.assertEqual(len(rows), len(self.stored))
         self.assertTrue(all(r[1] == "ack" and float(r[2]) > 0 for r in rows))
 
     def test_a_clean_stream_passes_and_each_fault_is_named(self) -> None:
-        killed = max(r.acked for r in self.model.records.values()) + 0.1
+        last = max(r.acked for r in self.model.records.values())
+        killed = last + 10  # every acknowledgement is older than the window
         old = min(self.model.records, key=lambda i: self.model.records[i].acked)
-        recent = max(self.model.records, key=lambda i: self.model.records[i].acked)
         clean = closing_mixed.audit(self.got(), self.model, killed, 2.0, set())
         self.assertTrue(closing_mixed.passed(clean, False, []))
         lost = closing_mixed.audit([g for g in self.got() if g[0] != old], self.model, killed, 2.0, set())
         self.assertEqual(lost["lost_beyond_grace"], 1)
-        late = closing_mixed.audit([g for g in self.got() if g[0] != recent], self.model, killed, 2.0, set())
+        self.assertFalse(closing_mixed.passed(lost, False, []))
+        recent = max(self.model.records, key=lambda i: self.model.records[i].acked)
+        soon = last + 0.1  # the kill came right after the last acknowledgement: inside the window
+        late = closing_mixed.audit([g for g in self.got() if g[0] != recent], self.model, soon, 2.0, set())
         self.assertEqual((late["lost_beyond_grace"], late["late_inside_grace"]), (0, 1), "inside the window, counted")
         dup = closing_mixed.audit([*self.got(), self.got()[3]], self.model, killed, 2.0, set())
         self.assertEqual(dup["duplicated"], 1)
@@ -458,11 +474,136 @@ class Stream(unittest.TestCase):
         self.assertFalse(closing_mixed.passed({**clean, "base_unchanged": False}, False, []), "a changed base fails")
 
 
+AB_COMPARE = next(
+    (
+        p
+        for p in (
+            os.environ.get("AB_COMPARE", ""),
+            os.path.expanduser("~/data/tools/ab_compare.py"),
+            os.path.expanduser("~/code/Kronuz/cpp-libraries/tools/ab_compare.py"),
+        )
+        if p and os.path.exists(p)
+    ),
+    "",
+)
+
+
+@unittest.skipUnless(AB_COMPARE, "ab_compare.py not found (AB_COMPARE)")
+class Report(unittest.TestCase):
+    """D11 through the real ab_compare.py: the anchors, the finalists, and C6's five pairs."""
+
+    @override
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="rep", dir=SCRATCH))
+        os.environ["AB_COMPARE"] = AB_COMPARE
+
+    def put(
+        self, arm: str, values: list[float], metric: str = "t4a.term", higher: bool = False, axis: str = "query"
+    ) -> None:
+        """Rounds 1..len(values) of an arm: one metric, one value a round (a None-free list; skip a round by hand)."""
+        for n, v in enumerate(values, 1):
+            cr.write_rows(self.root / "u" / arm / f"r{n}.rows.json", {metric: cr.Metric(v, higher, axis)})
+
+    def verdict(self, metric: str = "t4a.term") -> cr.Verdict:
+        return next(v for v in cr.report_unit(self.root, "u", AB_COMPARE) if v.metric == metric)
+
+    def season(self, s: list[float], e: list[float], x: list[float] | None = None, **kw: Any) -> None:
+        self.put("S", s, **kw)
+        self.put("Sp", [v * 1.005 for v in s], **kw)
+        self.put("E", e, **kw)
+        self.put("X", x if x is not None else [v * 3 for v in e], **kw)
+
+    def test_better_by_the_margin_when_all_five_rounds_favor_s(self) -> None:
+        self.season([10, 10.1, 9.9, 10, 10.05], [20, 20.2, 19.9, 20.1, 20])
+        v = self.verdict()
+        self.assertEqual((v.anchor, v.status, v.pairs), ("E", "better by the margin", 5))
+        self.assertFalse(v.regression)
+
+    def test_one_round_against_s_makes_it_not_distinguishable(self) -> None:
+        self.season([10, 10.1, 9.9, 10, 25], [20, 20.2, 19.9, 20.1, 20])
+        self.assertEqual(self.verdict().status, "not distinguishable")
+
+    def test_a_small_win_is_better_but_not_by_the_margin(self) -> None:
+        self.season([10, 10.1, 9.9, 10, 10.05], [11, 11.1, 10.9, 11, 11.05])
+        self.assertEqual(self.verdict().status, "better")
+
+    def test_a_zero_in_one_round_drops_a_pair_and_nothing_is_claimed(self) -> None:
+        self.season([10, 10, 10, 10, 10], [20, 20, 0, 20, 20], x=[40, 40, 40, 40, 40])
+        v = self.verdict()
+        self.assertEqual(v.pairs, 4, "ab_compare silently drops the pair")
+        self.assertEqual(v.status, "not distinguishable")
+
+    def test_throughput_direction_and_the_indexing_margin(self) -> None:
+        kw: dict[str, Any] = {"higher": True, "axis": "index", "metric": "t1.docs_per_sec"}
+        self.season([140, 141, 139, 140, 140], [100, 101, 99, 100, 100], x=[50, 50, 50, 50, 50], **kw)
+        self.assertEqual(self.verdict("t1.docs_per_sec").status, "better by the margin")
+        self.season([105, 106, 104, 105, 105], [100, 101, 99, 100, 100], x=[50, 50, 50, 50, 50], **kw)
+        self.assertEqual(self.verdict("t1.docs_per_sec").status, "better")
+        self.season([90, 91, 89, 90, 90], [100, 101, 99, 100, 100], x=[50, 50, 50, 50, 50], **kw)
+        self.assertEqual(self.verdict("t1.docs_per_sec").status, "worse")
+
+    def test_worse_than_the_anchor_and_a_regression_against_x(self) -> None:
+        self.season([20, 20.1, 19.9, 20, 20], [10, 10.1, 9.9, 10, 10], x=[10, 10.1, 9.9, 10, 10])
+        v = self.verdict()
+        self.assertEqual(v.status, "worse")
+        self.assertTrue(v.regression)
+
+    def test_the_anchor_is_the_best_of_the_two_calibration_rounds_and_near_arms_stay(self) -> None:
+        self.put("E", [10, 10])
+        self.put("Q", [10.5, 10.5])
+        self.put("X", [30, 30])
+        self.put("S", [8, 8])
+        data = cr.collect(self.root, "u")
+        c = cr.comparators(data)["t4a.term"]
+        self.assertEqual((c.anchor, c.near), ("E", ["Q"]))
+        self.assertEqual(cr.arms_for_round(data, 1, ["S", "Sp", "X", "E", "Q"]), ["S", "Sp", "X", "E", "Q"])
+        self.assertEqual(cr.arms_for_round(data, 3, ["S", "Sp", "X", "E", "Q"]), ["S", "Sp", "X", "E", "Q"])
+        self.put("Q", [12, 12])
+        self.assertEqual(
+            cr.arms_for_round(cr.collect(self.root, "u"), 3, ["S", "Sp", "X", "E", "Q"]), ["S", "Sp", "X", "E"]
+        )
+
+    def test_an_anchor_with_fewer_than_five_rounds_is_not_claimed(self) -> None:
+        self.season([10, 10, 10, 10, 10], [20, 20, 20, 20, 20])
+        for n in (4, 5):
+            (self.root / "u" / "E" / f"r{n}.rows.json").unlink()
+        self.assertEqual(self.verdict().status, "not distinguishable")
+
+
+class Plan(unittest.TestCase):
+    """D14: whole units packed into runs, a unit over the budget refused, a unit that cannot finish skipped."""
+
+    def units(self, minutes: list[float], phase: str = "C") -> list[cu.Unit]:
+        return [cu.Unit(f"u{i}", phase, "t1", 1, m) for i, m in enumerate(minutes)]
+
+    def test_no_run_exceeds_the_budget_and_no_unit_splits(self) -> None:
+        units = self.units([30, 25, 20, 15, 10, 5, 5])
+        runs = cu.pack(units, 40)
+        self.assertTrue(all(r.minutes <= 40 for r in runs))
+        self.assertEqual(sorted(u.id for r in runs for u in r.units), sorted(u.id for u in units), "each unit once")
+        self.assertEqual(len(runs), 3, "first-fit decreasing: 30+10, 25+15, 20+5+5")
+
+    def test_a_unit_over_the_budget_is_refused_not_shrunk(self) -> None:
+        with self.assertRaises(SystemExit):
+            cu.pack(self.units([41]), 40)
+
+    def test_phases_are_packed_apart(self) -> None:
+        mixed = [*self.units([5], "C"), cu.Unit("d0", "D", "t1", 3, 5)]
+        self.assertEqual(len(cu.pack(mixed, 40)), 2, "confirm units wait for the anchors")
+
+    def test_a_unit_that_does_not_fit_before_the_deadline_is_skipped(self) -> None:
+        self.assertTrue(cu.fits(600, 1000.0, now=300.0))
+        self.assertFalse(cu.fits(600, 1000.0, now=401.0))
+
+    def test_the_default_plan_has_every_row_for_five_rounds(self) -> None:
+        ids = {u.id for u in cu.all_units()}
+        for row in ("t1", "t2", "t4a", "t4b", "t5a", "t5b", "t6", "t7", "t8-1e4", "t8-1e5"):
+            self.assertTrue({f"{row}-r{n}" for n in range(1, 6)} <= ids, row)
+
+
 class Tenants(unittest.TestCase):
     def test_the_corpus_is_cut_in_order(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            "w", suffix=".ndjson", delete=False, dir=os.path.join(os.path.dirname(HERE), ".scratch")
-        ) as fh:
+        with tempfile.NamedTemporaryFile("w", suffix=".ndjson", delete=False, dir=SCRATCH) as fh:
             fh.write("".join(f'{{"n":{i}}}\n' for i in range(25)))
         try:
             got = list(closing_tenants.tenant_batches(fh.name, 3, 4))
@@ -494,7 +635,7 @@ class Live(unittest.TestCase):
         corpus = os.environ["CLOSING_LOGS"]
         with open(corpus, "rb") as fh:
             cls.docs = [next(fh) for _ in range(3000)]
-        cls.root = tempfile.mkdtemp(prefix="live", dir=os.path.join(os.path.dirname(HERE), ".scratch"))
+        cls.root = tempfile.mkdtemp(prefix="live", dir=SCRATCH)
 
     def start(self, name: str, **kw: Any) -> tuple[sy.System, sy.Client]:
         binary = {"xapiand": "CLOSING_XAPIAND", "es": "CLOSING_ES", "quickwit": "CLOSING_QUICKWIT"}[name]

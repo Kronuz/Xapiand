@@ -361,7 +361,9 @@ def run_stream(args: argparse.Namespace) -> int:
         ctl.close()
         ctl = sy.Client(args.target, timeout=120)
         poke = sy.Client(args.target, timeout=120)
-        poke.call(system.bulk_request(index, schema, [json.dumps({"stream": "t7poke", "seq": 0}).encode()]))
+        poke.call(
+            system.bulk_request(index, schema, [json.dumps({"stream": "t7poke", "seq": 0}).encode()], last=True)
+        )  # last: Quickwit commits what is pending
         poke.close()
         poke_ids.add("t7poke-0")
     system.commit(ctl, index)
@@ -453,7 +455,8 @@ def run(args: argparse.Namespace) -> int:
         # A write opens a shard writable and replays its log (replay can be lazy), so poke before listing.
         poke = sy.Client(args.target, timeout=120)
         poke_ids.add("poke")
-        poke.call(system.put_request(index, "poke", {"id": "poke", "w": 0, "n": 0, "txt": "poke"}))
+        poke_doc = json.dumps({"id": "poke", "w": 0, "n": 0, "txt": "poke"}).encode()
+        poke.call(system.bulk_request(index, schema, [poke_doc], last=True))  # last: Quickwit commits what is pending
         poke.close()
     system.commit(ctl, index)
     time.sleep(1.0)

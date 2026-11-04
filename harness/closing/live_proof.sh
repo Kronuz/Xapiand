@@ -32,6 +32,8 @@ step() {
 	timeout -k 10 "$secs" "$@" >"$OUT/$name.log" 2>&1
 	rc=$?
 	printf '%s\t%s\t%s\n' "$name" "$rc" "$(($(date +%s) - t0))" >>"$steps"
+	mkdir -p "$OUT/node-logs"
+	for f in "$W"/*/node.log; do [ -s "$f" ] && cp "$f" "$OUT/node-logs/$name-$(basename "$(dirname "$f")").log"; done
 	echo "step $name rc=$rc" >&2
 	return 0
 }
@@ -51,13 +53,16 @@ sha256sum "$CLOSING_XAPIAND" >"$OUT/binaries.txt"
 step fetch-logs 600 "$H/closing/fetch_corpus.sh" logs --limit 200000
 step fetch-writes 600 "$H/closing/fetch_corpus.sh" logs-writes --limit 100000
 step fetch-wiki 600 "$H/closing/fetch_corpus.sh" wiki --limit 40000
+step fetch-small-logs 120 "$H/closing/fetch_corpus.sh" logs --limit 20000
+step fetch-small-writes 120 "$H/closing/fetch_corpus.sh" logs-writes --limit 20000
+step fetch-small-wiki 300 "$H/closing/fetch_corpus.sh" wiki --limit 20000
 step fetch-wiki-queries 60 "$H/closing/fetch_corpus.sh" wiki-queries
 LOGS=$D/corpora/sample-200000/logs.ndjson
 WRITES=$D/corpora/sample-100000/logs-writes.ndjson
 WIKI=$D/corpora/sample-40000/wiki.ndjson
 Q=$H/closing/queries/logs-smoke.jsonl
-step queries-logs 300 python3 -I "$H/closing_queries.py" logs --corpus "$LOGS" --out "$W/logs-q.jsonl"
-step queries-wiki 60 python3 -I "$H/closing_queries.py" wiki --source "$D/corpora/queries.txt" --out "$W/wiki-q.jsonl"
+step queries-logs 300 python3 "$H/closing_queries.py" logs --corpus "$LOGS" --out "$W/logs-q.jsonl"
+step queries-wiki 60 python3 "$H/closing_queries.py" wiki --source "$D/corpora/queries.txt" --out "$W/wiki-q.jsonl"
 
 step offline 300 python3 -I "$H/test_closing_harness.py"
 CLOSING_LIVE=1 CLOSING_LOGS=$LOGS CLOSING_QUERIES=$W/logs-q.jsonl step live 1200 python3 -I "$H/test_closing_harness.py" Live
@@ -69,28 +74,28 @@ for sys in xapiand es quickwit; do
 	P=$(port "$sys")
 	B=$(bin "$sys")
 	T=127.0.0.1:$P
-	step "loadtest-$sys" 900 python3 -I "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/lt-$sys" --target "$T" \
+	step "loadtest-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/lt-$sys" --target "$T" \
 		--corpus "$LOGS" --schema logs --limit 100000 --clients 4 --batch-docs 1000 --queries "$W/logs-q.jsonl" --latency --runs 3 \
 		--warm-secs 3 --duration 0 --restart --drop-caches --assert-settings --cpus 4 --out "$OUT/loadtest-$sys.json"
-	step "loadtest-wiki-$sys" 900 python3 -I "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/ltw-$sys" --target "$T" \
+	step "loadtest-wiki-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/ltw-$sys" --target "$T" \
 		--corpus "$WIKI" --schema wiki --limit 40000 --clients 4 --batch-docs 500 --queries "$W/wiki-q.jsonl" --latency --runs 3 \
 		--warm-secs 3 --duration 0 --assert-settings --cpus 4 --out "$OUT/loadtest-wiki-$sys.json"
-	step "stall-saturate-$sys" 900 python3 -I "$H/stall_load.py" --system "$sys" --bin "$B" --workdir "$W/sat-$sys" \
+	step "stall-saturate-$sys" 900 python3 "$H/stall_load.py" --system "$sys" --bin "$B" --workdir "$W/sat-$sys" \
 		--target "$T" --schema logs --queries "$Q" --corpus "$LOGS" --limit 50000 --class term --saturate \
 		--saturate-start 100 --saturate-max 1600 --bisect-steps 1 --step-secs 4 --procs 2 --cpus 4 --out "$OUT/stall-saturate-$sys.json"
-	step "stall-mixed-$sys" 900 python3 -I "$H/stall_load.py" --system "$sys" --bin "$B" --workdir "$W/mix-$sys" \
+	step "stall-mixed-$sys" 900 python3 "$H/stall_load.py" --system "$sys" --bin "$B" --workdir "$W/mix-$sys" \
 		--target "$T" --schema logs --queries "$Q" --corpus "$LOGS" --limit 50000 --mixed --write-corpus "$WRITES" \
 		--write-rate 500 --warmup 5 --duration 20 --procs 2 --cpus 4 --out "$OUT/stall-mixed-$sys.json"
-	step "tenants-$sys" 900 python3 -I "$H/wide_search_check.py" tenants "$B" "$W/ten-$sys" "$P" --system "$sys" \
+	step "tenants-$sys" 900 python3 "$H/wide_search_check.py" tenants "$B" "$W/ten-$sys" "$P" --system "$sys" \
 		--corpus "$WIKI" --tenants 200 --per-tenant 20 --shape per-index --shape shared --runs 5 --cold 50 --idle-s 5 \
 		--budget-s 120 --cpus 4 --result "$OUT/tenants-$sys.json"
-	step "mixed-kill-$sys" 600 python3 -I "$H/engine_mixed_load.py" "$B" "$W/crash-$sys" --system "$sys" --kill-at 20 \
+	step "mixed-kill-$sys" 600 python3 "$H/engine_mixed_load.py" "$B" "$W/crash-$sys" --system "$sys" --kill-at 20 \
 		--secs 40 --target "$T" --cpus 4 --result "$OUT/mixed-kill-$sys.json"
 	# T7 as designed: a marked write stream on a pristine copy of the loaded index, SIGKILL, restart, audit
-	step "base-$sys" 900 python3 -I "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/base-$sys" --target "$T" \
+	step "base-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/base-$sys" --target "$T" \
 		--corpus "$LOGS" --schema logs --limit 100000 --clients 4 --batch-docs 1000 --duration 0 --cpus 4 --out "$OUT/base-$sys.json"
 	cp -a "$W/base-$sys" "$W/pristine-$sys" 2>/dev/null || true
-	step "stream-kill-$sys" 600 python3 -I "$H/engine_mixed_load.py" "$B" "$W/pristine-$sys" --system "$sys" --kill-at 25 \
+	step "stream-kill-$sys" 600 python3 "$H/engine_mixed_load.py" "$B" "$W/pristine-$sys" --system "$sys" --kill-at 25 \
 		--secs 60 --target "$T" --cpus 4 --stream-corpus "$WRITES" --keep --index bench_load --write-rate 1000 \
 		--sent-log "$OUT/sent-$sys.tsv" --result "$OUT/stream-kill-$sys.json"
 	pkill -f "$D/(xapiand|elasticsearch|quickwit)" 2>/dev/null || true
@@ -99,11 +104,17 @@ done
 # the cgroup envelope: a scope with a cpuset and a memory limit, and the counters read back from it
 for sys in xapiand es; do
 	P=$(port "$sys")
-	step "cgroup-$sys" 900 python3 -I "$H/loadtest.py" --system "$sys" --bin "$(bin "$sys")" --workdir "$W/cg-$sys" \
+	step "cgroup-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$(bin "$sys")" --workdir "$W/cg-$sys" \
 		--target "127.0.0.1:$P" --corpus "$LOGS" --schema logs --limit 20000 --clients 4 --batch-docs 1000 \
 		--queries "$Q" --latency --runs 2 --duration 0 --cpus 4 --assert-settings \
 		--launch-prefix "sudo -E systemd-run --scope --quiet --uid=$(id -u) --gid=$(id -g) -p AllowedCPUs=0-3 -p MemoryMax=8G --" \
 		--out "$OUT/cgroup-$sys.json"
 done
+
+# closing_bench.sh on a small machine: the plan, then builds and rounds of several rows, then the report
+step bench-plan 60 bash "$H/closing_bench.sh" --plan --approved 250
+step bench-smoke 1500 bash "$H/closing_bench.sh" --smoke --deadline-min 24 \
+	--units B1,B2,t1-r1,t1-r2,t1-r3,t4a-r1,t4b-r1,t5b-r1,t6-r1,t7-r1
+step bench-report 120 python3 "$H/closing_report.py" report "$OUT/results" --out "$OUT/report.csv"
 
 cat "$steps" >&2

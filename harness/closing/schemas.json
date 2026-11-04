@@ -34,6 +34,7 @@
     }
   },
   "mix": {
+    "id": "id",
     "fields": {
       "id": "keyword",
       "w": "integer",

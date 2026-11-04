@@ -1552,6 +1552,8 @@ def system_main(args: argparse.Namespace) -> int:
                 prefix=tuple(shlex.split(args.launch_prefix)),
                 durability=args.durability,
                 memory_lock=args.memory_lock,
+                shards=args.shards,
+                keep=args.keep,
             )
         )
         atexit.register(system.stop)
@@ -1568,6 +1570,7 @@ def system_main(args: argparse.Namespace) -> int:
         },
         "effective": system.effective(ctl, args.index),
     }
+    out["segments_at_start"] = system.segments(ctl, args.index)
     problems = system.assert_effective(out["effective"], args.cpus)
     out["settings_problems"] = problems
     if problems and args.assert_settings:
@@ -1686,6 +1689,8 @@ def main() -> int:
     sm.add_argument("--launch-prefix", default="")
     sm.add_argument("--durability", choices=("async", "request"), default="async")
     sm.add_argument("--memory-lock", action="store_true")
+    sm.add_argument("--shards", type=int, default=1, help="S and X: shards per index (an arm setting: 1 and 5)")
+    sm.add_argument("--keep", action="store_true", help="start on the data already in WORKDIR/data")
     sm.add_argument("--assert-settings", action="store_true")
     args = ap.parse_args()
     if args.system:

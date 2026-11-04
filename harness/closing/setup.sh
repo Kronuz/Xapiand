@@ -5,6 +5,7 @@
 #   ~/data/elasticsearch-VERSION   the tarball with its bundled JDK, sha512 checked
 #   ~/data/quickwit-vVERSION       the tarball, sha256 checked
 #   ~/data/xapiand/xapiand         built from the synced tree (Release, gcc-13), rebuilt when src/ or CMakeLists.txt changes
+#   ~/data/tools/ab_compare.py     cpp-libraries' paired comparison at a pinned commit, sha256 checked
 #   ~/data/ccache, ~/data/build    the build's caches
 # The Ubuntu 24.04 packages are the ones .github/workflows/ci.yml installs, plus bzip2, curl, fio and python3.
 set -euo pipefail
@@ -35,6 +36,13 @@ main() {
 		curl -fsSL --retry 3 -o "$data/dl/$qw" "https://github.com/quickwit-oss/quickwit/releases/download/v$QW_VERSION/$qw"
 		echo "$QW_SHA256  $data/dl/$qw" | sha256sum -c -
 		tar -C "$data" -xzf "$data/dl/$qw"
+	fi
+
+	if [ ! -s "$data/tools/ab_compare.py" ]; then
+		mkdir -p "$data/tools"
+		curl -fsSL --retry 3 -o "$data/tools/ab_compare.py" \
+			"https://raw.githubusercontent.com/Kronuz/cpp-libraries/$AB_COMPARE_REV/tools/ab_compare.py"
+		echo "$AB_COMPARE_SHA256  $data/tools/ab_compare.py" | sha256sum -c -
 	fi
 
 	local stamp

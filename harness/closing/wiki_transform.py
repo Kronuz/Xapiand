@@ -23,7 +23,13 @@ def main() -> None:
         if doc["url"] == "":
             continue
         out.write(
-            json.dumps({"id": doc["url"], "text": PTN.sub(" ", doc["body"].lower()), "sort_field": random.randint(0, 2**32 - 1)})
+            json.dumps(
+                {
+                    "id": doc["url"],
+                    "text": PTN.sub(" ", doc["body"].lower()),
+                    "sort_field": random.randint(0, 2**32 - 1),
+                }
+            )
             + "\n"
         )
 

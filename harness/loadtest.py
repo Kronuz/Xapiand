@@ -591,6 +591,8 @@ def closing(args: argparse.Namespace) -> dict[str, Any]:
                 prefix=tuple(shlex.split(args.launch_prefix)),
                 durability=args.durability,
                 memory_lock=args.memory_lock,
+                shards=args.shards,
+                keep=args.keep,
             )
         )
         phases["start"] = round(time.perf_counter() - t0, 3)
@@ -610,23 +612,28 @@ def closing(args: argparse.Namespace) -> dict[str, Any]:
             result["tune"] = tune(system, args.target, schema, args.corpus, args.tune_docs)
             return result
         t0 = time.perf_counter()
-        result["index_phase"] = load_index(
-            system,
-            args.target,
-            args.index,
-            schema,
-            args.corpus,
-            args.limit,
-            args.clients,
-            args.batch_docs,
-            True,
-            args.resume,
-        )
-        phases["load"] = round(time.perf_counter() - t0, 3)
-        ip = result["index_phase"]
-        log(f"[index] {ip['docs']} docs in {ip['seconds']}s = {ip['docs_per_sec']} docs/s, disk {ip['disk_bytes']}")
-        if not ip["ok"]:
-            raise SystemExit(f"the load failed: {ip['failures']} (searchable {ip['searchable_count']} of {ip['docs']})")
+        if args.keep:
+            result["segments_at_start"] = system.segments(ctl, args.index)
+        else:
+            result["index_phase"] = load_index(
+                system,
+                args.target,
+                args.index,
+                schema,
+                args.corpus,
+                args.limit,
+                args.clients,
+                args.batch_docs,
+                True,
+                args.resume,
+            )
+            phases["load"] = round(time.perf_counter() - t0, 3)
+            ip = result["index_phase"]
+            log(f"[index] {ip['docs']} docs in {ip['seconds']}s = {ip['docs_per_sec']} docs/s, disk {ip['disk_bytes']}")
+            if not ip["ok"]:
+                raise SystemExit(
+                    f"the load failed: {ip['failures']} (searchable {ip['searchable_count']} of {ip['docs']})"
+                )
         result["effective_after"] = system.effective(ctl, args.index)
         queries: list[sy.Query] = sy.load_queries(args.queries) if args.queries else []
         if queries and args.latency:
@@ -698,13 +705,17 @@ def main() -> None:
     ln.add_argument("--launch-prefix", default="", help="for example 'systemd-run --scope -p AllowedCPUs=0-7'")
     ln.add_argument("--durability", choices=("async", "request"), default="async", help="E's translog durability")
     ln.add_argument("--memory-lock", action="store_true", help="E: bootstrap.memory_lock")
+    ln.add_argument("--shards", type=int, default=1, help="S and X: shards per index (an arm setting: 1 and 5)")
+    ln.add_argument(
+        "--keep", action="store_true", help="start on the data already in WORKDIR/data and skip the load (T4, T5, T7)"
+    )
     ln.add_argument("--assert-settings", action="store_true", help="fail when the read-back settings differ (D2)")
     args = ap.parse_args()
     if args.bin and not args.workdir:
         ap.error("--bin needs --workdir")
-    if args.corpus:
+    if args.corpus or args.keep:
         if not args.schema:
-            ap.error("--corpus needs --schema")
+            ap.error("--corpus and --keep need --schema")
         result = closing(args)
     else:
         if args.system != "xapiand":
