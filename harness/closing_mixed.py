@@ -373,9 +373,11 @@ def run_stream(args: argparse.Namespace) -> int:
         ctl.close()
         ctl = sy.Client(args.target, timeout=120)
         poke = sy.Client(args.target, timeout=120)
-        poke.call(
-            system.bulk_request(index, schema, [json.dumps({"stream": "t7poke", "seq": 0}).encode()], last=True)
-        )  # last: Quickwit commits what is pending
+        send_with_startup_retry(
+            poke,
+            system.bulk_request(index, schema, [json.dumps({"stream": "t7poke", "seq": 0}).encode()], last=True),
+            threading.Event(),
+        )
         poke.close()
         poke_ids.add("t7poke-0")
     system.commit(ctl, index)
@@ -384,7 +386,8 @@ def run_stream(args: argparse.Namespace) -> int:
     for k in range(args.writers):
         got.extend((f"t7w{k}-{n}", n) for n in system.dump_stream(ctl, index, f"t7w{k}"))
     total = system.wait_count(ctl, index, schema, 0)
-    base_after = total - len(got) - len(poke_ids)
+    poked = len(system.dump_stream(ctl, index, "t7poke")) if poke_ids else 0  # the poke may not be searchable yet
+    base_after = total - len(got) - poked
     report = audit(got, model, killed, args.grace if args.kill_at else 0.0, poke_ids)
     report["base_docs_before"], report["base_docs_after"] = base_before, base_after
     report["base_unchanged"] = base_before == base_after
