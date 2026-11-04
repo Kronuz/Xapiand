@@ -163,7 +163,8 @@ class Host:
         self.smoke = smoke
         self.bins = {
             "xapiand": os.environ.get("CLOSING_XAPIAND", str(self.data / "xapiand" / "xapiand")),
-            "x": os.environ.get("CLOSING_X", str(self.data / "xapiand-x" / "xapiand")),
+            # the Xapian-only release; a smoke run has none and runs the same binary, which exercises the arm
+            "x": os.environ.get("CLOSING_X", str(self.data / ("xapiand" if smoke else "xapiand-x") / "xapiand")),
             "es": os.environ.get("CLOSING_ES", str(self.data / "elasticsearch-9.3.4" / "bin" / "elasticsearch")),
             "quickwit": os.environ.get("CLOSING_QUICKWIT", str(self.data / "quickwit-v0.9.3" / "quickwit")),
         }
@@ -435,6 +436,8 @@ def fits(estimate_s: float, end: float, now: float | None = None) -> bool:
 def run(args: argparse.Namespace) -> int:
     host = Host(args.smoke)
     by_id = {u.id: u for u in read_times(args.times, all_units())}
+    if args.smoke:  # a small machine and 20,000 documents: a unit takes a twentieth of its estimate
+        by_id = {k: Unit(u.id, u.phase, u.row, u.round, u.minutes / 20) for k, u in by_id.items()}
     root = Path(args.root)
     root.mkdir(parents=True, exist_ok=True)
     end = time.time() + args.deadline_min * 60

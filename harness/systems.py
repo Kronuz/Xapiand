@@ -262,6 +262,27 @@ class Cgroup:
         path = "/sys/fs/cgroup" + rel
         return Cgroup(path) if os.path.isdir(path) else None
 
+    @staticmethod
+    def of_tree(pid: int) -> Cgroup | None:
+        """The cgroup of `pid` or of the first of its descendants that sits outside the caller's own cgroup: a launcher
+        such as `sudo systemd-run --scope` stays where it started and its child runs in the new scope. None when
+        everything shares the caller's cgroup (the counters would be the whole run's)."""
+        own = Cgroup.of(os.getpid())
+        out = subprocess.run(["ps", "-A", "-o", "pid=,ppid="], capture_output=True, text=True, check=False).stdout
+        kids: dict[int, list[int]] = {}
+        for ln in out.splitlines():
+            parts = ln.split()
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                kids.setdefault(int(parts[1]), []).append(int(parts[0]))
+        stack = [pid]
+        while stack:
+            cur = stack.pop()
+            cg = Cgroup.of(cur)
+            if cg is not None and (own is None or cg.path != own.path):
+                return cg
+            stack.extend(kids.get(cur, ()))
+        return None
+
     def read(self, name: str) -> str | None:
         try:
             with open(os.path.join(self.path, name)) as fh:
@@ -345,15 +366,19 @@ class System(ABC):
         )
         self.wait_up(wait)
 
+    def ready(self, client: Client) -> bool:
+        """Whether the system answers its readiness request (a system may need more: Quickwit's cluster)."""
+        return client.call(self.ready_request())[0] == 200
+
     def wait_up(self, wait: float = 180.0) -> float:
-        """Seconds from now until the system answers its readiness request."""
+        """Seconds from now until the system is ready."""
         t0 = time.monotonic()
         client = Client(self.target, timeout=5)
         while time.monotonic() - t0 < wait:
             if self.proc is not None and self.proc.poll() is not None:
                 raise SystemExit(f"{self.name} exited with {self.proc.returncode}; see {self.workdir}/node.log")
             try:
-                if client.call(self.ready_request())[0] == 200:
+                if self.ready(client):
                     client.close()
                     return time.monotonic() - t0
             except (OSError, http.client.HTTPException):
@@ -433,7 +458,7 @@ class System(ABC):
         return total or None
 
     def cgroup(self) -> Cgroup | None:
-        return Cgroup.of(self.proc.pid) if self.proc is not None else None
+        return Cgroup.of_tree(self.proc.pid) if self.proc is not None else None
 
     # -- indexes and documents
     @abstractmethod
@@ -557,14 +582,21 @@ def clean_term(term: str) -> str:
 
 
 def drop_caches() -> bool:
-    """Drop the page cache (Linux, as root); False where it cannot be done."""
+    """Drop the page cache (Linux): directly as root, else through passwordless sudo; False where it cannot be done."""
+    subprocess.run(["sync"], check=False)
     try:
-        subprocess.run(["sync"], check=False)
         with open("/proc/sys/vm/drop_caches", "w") as fh:
             fh.write("3\n")
+        return True
+    except OSError:
+        pass
+    try:
+        res = subprocess.run(
+            ["sudo", "-n", "sh", "-c", "echo 3 > /proc/sys/vm/drop_caches"], capture_output=True, check=False
+        )
     except OSError:
         return False
-    return True
+    return res.returncode == 0
 
 
 def int_text(value: float) -> str:
@@ -1057,6 +1089,17 @@ class Quickwit(System):
 
     def ready_request(self) -> Request:
         return Request("GET", "/health/readyz")
+
+    @override
+    def ready(self, client: Client) -> bool:
+        """The REST server answers before the node has joined its own cluster; searches and ingests fail until it has."""
+        if not super().ready(client):
+            return False
+        status, body = client.call(Request("GET", "/api/v1/cluster"))
+        if status != 200:
+            return False
+        nodes = json.loads(body).get("ready_nodes")
+        return nodes is None or bool(nodes)
 
     def create_index(self, index: str, schema: Schema, bulk: bool = False) -> list[Request]:
         mapped: list[dict[str, Any]] = []

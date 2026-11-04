@@ -701,6 +701,7 @@ class Live(unittest.TestCase):
                         "class": "s",
                         "sort": {"field": "size", "order": "desc"},
                         "range": {"field": "@timestamp", "gte": T0, "lte": T0 + 3000},
+                        "command": "search_exact",
                     }
                 ),
             )
@@ -713,6 +714,7 @@ class Live(unittest.TestCase):
                         "class": "s",
                         "sort": {"field": "size", "order": "asc"},
                         "range": {"field": "@timestamp", "gte": T0, "lte": T0 + 3000},
+                        "command": "search_exact",
                     }
                 ),
             )

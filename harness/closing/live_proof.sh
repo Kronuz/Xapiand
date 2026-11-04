@@ -33,7 +33,10 @@ step() {
 	rc=$?
 	printf '%s\t%s\t%s\n' "$name" "$rc" "$(($(date +%s) - t0))" >>"$steps"
 	mkdir -p "$OUT/node-logs"
-	for f in "$W"/*/node.log; do [ -s "$f" ] && cp "$f" "$OUT/node-logs/$name-$(basename "$(dirname "$f")").log"; done
+	for f in "$W"/*/node.log; do
+		[ -s "$f" ] && tail -n 300 "$f" >"$OUT/node-logs/$name-$(basename "$(dirname "$f")").log"
+		rm -f "$f"
+	done
 	echo "step $name rc=$rc" >&2
 	return 0
 }
@@ -74,12 +77,15 @@ for sys in xapiand es quickwit; do
 	P=$(port "$sys")
 	B=$(bin "$sys")
 	T=127.0.0.1:$P
+	# Quickwit's runtime reads the cpuset it is started in, so its settings are asserted in the cgroup steps
+	assert=--assert-settings
+	[ "$sys" = quickwit ] && assert=
 	step "loadtest-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/lt-$sys" --target "$T" \
 		--corpus "$LOGS" --schema logs --limit 100000 --clients 4 --batch-docs 1000 --queries "$W/logs-q.jsonl" --latency --runs 3 \
-		--warm-secs 3 --duration 0 --restart --drop-caches --assert-settings --cpus 4 --out "$OUT/loadtest-$sys.json"
+		--warm-secs 3 --duration 0 --restart --drop-caches $assert --cpus 4 --out "$OUT/loadtest-$sys.json"
 	step "loadtest-wiki-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$B" --workdir "$W/ltw-$sys" --target "$T" \
 		--corpus "$WIKI" --schema wiki --limit 40000 --clients 4 --batch-docs 500 --queries "$W/wiki-q.jsonl" --latency --runs 3 \
-		--warm-secs 3 --duration 0 --assert-settings --cpus 4 --out "$OUT/loadtest-wiki-$sys.json"
+		--warm-secs 3 --duration 0 $assert --cpus 4 --out "$OUT/loadtest-wiki-$sys.json"
 	step "stall-saturate-$sys" 900 python3 "$H/stall_load.py" --system "$sys" --bin "$B" --workdir "$W/sat-$sys" \
 		--target "$T" --schema logs --queries "$Q" --corpus "$LOGS" --limit 50000 --class term --saturate \
 		--saturate-start 100 --saturate-max 1600 --bisect-steps 1 --step-secs 4 --procs 2 --cpus 4 --out "$OUT/stall-saturate-$sys.json"
@@ -102,7 +108,7 @@ for sys in xapiand es quickwit; do
 done
 
 # the cgroup envelope: a scope with a cpuset and a memory limit, and the counters read back from it
-for sys in xapiand es; do
+for sys in xapiand es quickwit; do
 	P=$(port "$sys")
 	step "cgroup-$sys" 900 python3 "$H/loadtest.py" --system "$sys" --bin "$(bin "$sys")" --workdir "$W/cg-$sys" \
 		--target "127.0.0.1:$P" --corpus "$LOGS" --schema logs --limit 20000 --clients 4 --batch-docs 1000 \
