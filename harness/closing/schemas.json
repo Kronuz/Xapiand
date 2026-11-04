@@ -13,7 +13,9 @@
       "clientip": "keyword",
       "request": "text",
       "status": "integer",
-      "size": "integer"
+      "size": "integer",
+      "stream": "keyword",
+      "seq": "integer"
     }
   },
   "tenants": {

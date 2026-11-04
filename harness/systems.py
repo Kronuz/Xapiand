@@ -304,6 +304,7 @@ class Launch:
     caches_on: bool = False  # the probe's default-cache run: Q's partial request cache at its default
     durability: str = "async"  # E: async (the comparison tier) or request (E's default, the report row)
     extra: tuple[str, ...] = ()
+    keep: bool = False  # start on the data already in workdir/data (a pristine copy), without wiping it
 
 
 class System(ABC):
@@ -327,8 +328,9 @@ class System(ABC):
         self.launch = launch
         self.workdir = os.path.abspath(launch.workdir)
         self.datadir = os.path.join(self.workdir, "data")
-        shutil.rmtree(self.workdir, ignore_errors=True)
-        os.makedirs(self.datadir)
+        if not launch.keep:
+            shutil.rmtree(self.workdir, ignore_errors=True)
+        os.makedirs(self.datadir, exist_ok=True)
         host, _, port = self.target.partition(":")
         with socket.socket() as probe:
             probe.settimeout(1)
@@ -484,6 +486,10 @@ class System(ABC):
     @abstractmethod
     def dump(self, client: Client, index: str) -> list[tuple[str, int]]:
         """Every (id, n) in the index, duplicates included."""
+
+    @abstractmethod
+    def dump_stream(self, client: Client, index: str, stream: str) -> list[int]:
+        """The `seq` of every document whose `stream` field is `stream`, duplicates included (T7's marked writes)."""
 
     # -- search
     @abstractmethod
@@ -671,6 +677,21 @@ class Xapiand(System):
         if status != 200:
             raise SystemExit(f"xapiand: DUMP {index}: HTTP {status}")
         return [(str(d["_id"]), int(d["n"])) for d in json.loads(body)]
+
+    @override
+    def dump_stream(self, client: Client, index: str, stream: str) -> list[int]:
+        out: list[int] = []
+        while True:
+            body = {"_query": {"stream": stream}, "_sort": [{"seq": "asc"}], "_limit": 1000, "_offset": len(out)}
+            status, raw = client.call(
+                Request("SEARCH", f"/{index}/?check_at_least={EXACT_AT_LEAST}", json.dumps(body).encode())
+            )
+            if status != 200:
+                raise SystemExit(f"xapiand: dump of stream {stream} in {index}: HTTP {status}: {raw[:200]!r}")
+            hits = json.loads(raw).get("hits", [])
+            out.extend(int(h["seq"]) for h in hits)
+            if len(hits) < 1000:
+                return out
 
     def clause(self, schema: Schema, q: Query) -> dict[str, Any] | None:
         parts: list[dict[str, Any]] = []
@@ -866,6 +887,24 @@ class Elasticsearch(System):
             status, raw = client.call(Request("POST", "/_search/scroll", more))
         if status != 200:
             raise SystemExit(f"es: scroll {index}: HTTP {status}")
+        return out
+
+    @override
+    def dump_stream(self, client: Client, index: str, stream: str) -> list[int]:
+        client.call(Request("POST", f"/{index}/_refresh"))
+        body = json.dumps({"size": 5000, "_source": ["seq"], "query": {"term": {"stream": stream}}}).encode()
+        status, raw = client.call(Request("POST", f"/{index}/_search?scroll=2m", body))
+        out: list[int] = []
+        while status == 200:
+            doc = json.loads(raw)
+            hits = doc["hits"]["hits"]
+            if not hits:
+                break
+            out.extend(int(h["_source"]["seq"]) for h in hits)
+            more = json.dumps({"scroll": "2m", "scroll_id": doc["_scroll_id"]}).encode()
+            status, raw = client.call(Request("POST", "/_search/scroll", more))
+        if status != 200:
+            raise SystemExit(f"es: scroll of stream {stream} in {index}: HTTP {status}")
         return out
 
     def commit_requests(self, index: str, bulk: bool = False) -> list[Request]:
@@ -1108,6 +1147,19 @@ class Quickwit(System):
                 raise SystemExit(f"quickwit: dump {index}: HTTP {status}")
             hits = json.loads(raw)["hits"]
             out.extend((str(h["id"]), int(h["n"])) for h in hits)
+            if len(hits) < 5000:
+                return out
+
+    @override
+    def dump_stream(self, client: Client, index: str, stream: str) -> list[int]:
+        out: list[int] = []
+        while True:
+            req = {"query": f'stream:"{stream}"', "max_hits": 5000, "start_offset": len(out), "sort_by": "seq"}
+            status, raw = client.call(Request("POST", f"/api/v1/{index}/search", json.dumps(req).encode()))
+            if status != 200:
+                raise SystemExit(f"quickwit: dump of stream {stream} in {index}: HTTP {status}: {raw[:200]!r}")
+            hits = json.loads(raw)["hits"]
+            out.extend(int(h["seq"]) for h in hits)
             if len(hits) < 5000:
                 return out
 

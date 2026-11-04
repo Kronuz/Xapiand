@@ -16,6 +16,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from typing import Any, ClassVar, override
 
@@ -204,6 +205,9 @@ class Fake(sy.System):
     def dump(self, client: sy.Client, index: str) -> list[tuple[str, int]]:
         return []
 
+    def dump_stream(self, client: sy.Client, index: str, stream: str) -> list[int]:
+        return []
+
     def search_request(self, index: str, schema: sy.Schema, q: sy.Query) -> sy.Request:
         return sy.Request("GET", "/")
 
@@ -364,6 +368,96 @@ class Audit(unittest.TestCase):
         self.assertEqual(closing_mixed.audit([], m, killed=None, grace=0.0, poke_ids=set())["lost_beyond_grace"], 1)
 
 
+class Stream(unittest.TestCase):
+    """T7's marked write stream (CB-R16): the writer's documents, its sent-id log and the audit's verdicts."""
+
+    stored: list[dict[str, Any]]
+    model: closing_mixed.Model
+
+    @override
+    def setUp(self) -> None:
+        stored: list[dict[str, Any]] = []
+        lock = threading.Lock()
+
+        class Stub(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def do_POST(self) -> None:
+                raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                with lock:
+                    stored.extend(json.loads(ln) for ln in raw.splitlines() if ln.strip())
+                self.send_response(200)
+                self.send_header("Content-Length", "2")
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+            @override
+            def log_message(self, format: str, *args: Any) -> None:
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Stub)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.shutdown)
+        lines = iter(
+            json.dumps({"@timestamp": T0 + n, "request": "GET /a", "status": 200, "size": n}).encode()
+            for n in range(10_000)
+        )
+        self.model = closing_mixed.Model()
+        stop = threading.Event()
+        worker = threading.Thread(
+            target=closing_mixed.stream_writer,
+            args=(
+                0,
+                Fake({}),
+                LOGS,
+                "logs",
+                f"127.0.0.1:{server.server_address[1]}",
+                self.model,
+                stop,
+                threading.Event(),
+                lines,
+                threading.Lock(),
+                500.0,
+                25,
+            ),
+        )
+        worker.start()
+        time.sleep(0.8)
+        stop.set()
+        worker.join(timeout=10)
+        self.stored = stored
+
+    def got(self) -> list[tuple[str, int]]:
+        return [(f"{d['stream']}-{d['seq']}", int(d["seq"])) for d in self.stored]
+
+    def test_documents_are_marked_numbered_and_every_id_is_logged(self) -> None:
+        self.assertGreater(len(self.stored), 200)
+        self.assertEqual([d["seq"] for d in self.stored], list(range(1, len(self.stored) + 1)))
+        self.assertEqual({d["stream"] for d in self.stored}, {"t7w0"})
+        self.assertEqual(self.model.attempted, {f"t7w0-{n}" for n in range(1, len(self.stored) + 1)})
+        path = os.path.join(tempfile.mkdtemp(dir=os.path.join(os.path.dirname(HERE), ".scratch")), "sent.tsv")
+        closing_mixed.write_sent_log(path, self.model, sorted(self.model.attempted))
+        rows = [ln.split("\t") for ln in open(path).read().splitlines()]
+        self.assertEqual(len(rows), len(self.stored))
+        self.assertTrue(all(r[1] == "ack" and float(r[2]) > 0 for r in rows))
+
+    def test_a_clean_stream_passes_and_each_fault_is_named(self) -> None:
+        killed = max(r.acked for r in self.model.records.values()) + 0.1
+        old = min(self.model.records, key=lambda i: self.model.records[i].acked)
+        recent = max(self.model.records, key=lambda i: self.model.records[i].acked)
+        clean = closing_mixed.audit(self.got(), self.model, killed, 2.0, set())
+        self.assertTrue(closing_mixed.passed(clean, False, []))
+        lost = closing_mixed.audit([g for g in self.got() if g[0] != old], self.model, killed, 2.0, set())
+        self.assertEqual(lost["lost_beyond_grace"], 1)
+        late = closing_mixed.audit([g for g in self.got() if g[0] != recent], self.model, killed, 2.0, set())
+        self.assertEqual((late["lost_beyond_grace"], late["late_inside_grace"]), (0, 1), "inside the window, counted")
+        dup = closing_mixed.audit([*self.got(), self.got()[3]], self.model, killed, 2.0, set())
+        self.assertEqual(dup["duplicated"], 1)
+        extra = closing_mixed.audit([*self.got(), ("t7w0-999999", 999999)], self.model, killed, 2.0, set())
+        self.assertEqual(extra["unwritten_present"], 1)
+        self.assertFalse(closing_mixed.passed({**clean, "base_unchanged": False}, False, []), "a changed base fails")
+
+
 class Tenants(unittest.TestCase):
     def test_the_corpus_is_cut_in_order(self) -> None:
         with tempfile.NamedTemporaryFile(
@@ -435,6 +529,24 @@ class Live(unittest.TestCase):
         self.assertEqual(report["agg_diffs"], [])
         probe = sy.probe_caches(members, LOGS, queries, 10)
         self.assertTrue(all(p["ok"] for p in probe.values()), probe)
+
+    @unittest.skipUnless(os.environ.get("CLOSING_QUERIES"), "set CLOSING_QUERIES to a closing_queries.py logs file")
+    def test_the_generated_logs_queries_agree(self) -> None:
+        members = []
+        for name, label in (("xapiand", "S"), ("es", "E"), ("quickwit", "Q")):
+            system, client = self.start(name)
+            members.append(sy.Member(label, system, client, "logs"))
+        queries = sy.load_queries(os.environ["CLOSING_QUERIES"])
+        report = sy.check_systems(members, LOGS, queries)
+        print(
+            f"generated queries: kept {len(report['kept'])}, dropped {len(report['dropped'])}, "
+            f"order differences {len(report['order_diffs'])}, aggregation differences {len(report['agg_diffs'])}"
+        )
+        for row in report["dropped"][:40]:
+            print("dropped:", row)
+        for row in report["agg_diffs"][:20]:
+            print("aggregation difference:", row)
+        self.assertFalse(report["stop"], "more than 5% of a class disagrees")
 
     def test_quickwit_sort_direction_and_elasticsearch_range_units(self) -> None:
         for name in ("quickwit", "es", "xapiand"):

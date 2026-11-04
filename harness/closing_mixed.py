@@ -13,21 +13,31 @@ data, and the audit follows engine_crash_check.sh:
   duplicated an id present more than once
 
 SIGKILL tests a process crash, not power loss. Without --kill-at the run ends cleanly and the audit has no grace.
+
+With --stream-corpus (T7 as the design runs it, CB-R16) the writes are the C-logs write stream: batches of --write-batch
+documents at --write-rate a second, each carrying `stream` (t7w<writer>) and `seq`, appended to an index that already
+holds the base (a pristine copy under --keep, or --base-corpus loaded first). The audit covers only the marked documents
+and checks the sent-id log against them; the base's count must be unchanged. The log of every id sent is written to
+--sent-log.
 """
 
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
+import os
 import random
 import re
 import shlex
 import threading
 import time
 from collections import Counter
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
+import loadtest as lt
 import systems as sy
 
 BULK = 20
@@ -204,7 +214,196 @@ def audit(
     }
 
 
+def stream_writer(
+    k: int,
+    system: sy.System,
+    schema: sy.Schema,
+    index: str,
+    target: str,
+    model: Model,
+    stop: threading.Event,
+    ending: threading.Event,
+    lines: Iterator[bytes],
+    pull: threading.Lock,
+    rate: float,
+    batch: int,
+) -> None:
+    """Appends marked batches of the write corpus at `rate` documents a second (open loop: the schedule does not wait
+    for an acknowledgement, only for this writer's previous request to return)."""
+    client = sy.Client(target, timeout=60)
+    stream = f"t7w{k}"
+    seq = 0
+    due = time.time()
+    while not stop.is_set():
+        if (wait := due - time.time()) > 0:
+            stop.wait(wait)
+            continue
+        due += batch / rate
+        with pull:
+            raw = list(itertools.islice(lines, batch))
+        if not raw:
+            return
+        ids: list[str] = []
+        payload: list[bytes] = []
+        for line in raw:
+            seq += 1
+            doc = json.loads(line)
+            doc["stream"], doc["seq"] = stream, seq
+            ids.append(f"{stream}-{seq}")
+            payload.append(json.dumps(doc).encode())
+        model.attempt(ids)
+        try:
+            status, body = client.call(system.bulk_request(index, schema, payload))
+            ok = status < 300 and system.parse_bulk(status, body, len(payload)).ok
+        except (OSError, ValueError) as e:
+            client.close()
+            ok, status = False, 599
+            if not ending.is_set():
+                model.fail(f"stream write exception {e!r}")
+        if ok:
+            model.ack(ids, list(range(seq - len(ids) + 1, seq + 1)), time.time())
+            model.count("write.stream.ok")
+        elif not ending.is_set():
+            model.count(f"write.stream.{status}")
+            model.fail(f"stream write {ids[0]}: HTTP {status}")
+
+
+def write_sent_log(path: str, model: Model, order: list[str]) -> None:
+    """One line per id sent: the id, whether it was acknowledged, and when."""
+    with open(path, "w") as fh:
+        for doc_id in order:
+            rec = model.records.get(doc_id)
+            fh.write(f"{doc_id}\t{'ack' if rec else 'unacked'}\t{rec.acked if rec else ''}\n")
+
+
+def passed(report: dict[str, Any], died: bool, failures: list[str]) -> bool:
+    """Nothing lost beyond the window, nothing present that was not sent, nothing duplicated, the base unchanged."""
+    return (
+        not died
+        and not failures
+        and report["lost_beyond_grace"] == 0
+        and report["unwritten_present"] == 0
+        and report["duplicated"] == 0
+        and report.get("base_unchanged", True)
+    )
+
+
+def run_stream(args: argparse.Namespace) -> int:
+    system = sy.make(args.system, args.target)
+    args.grace = args.grace or GRACE[args.system]
+    schema = sy.Schema.load(args.schema)
+    index = args.index
+    system.start(
+        sy.Launch(
+            args.bin,
+            args.out,
+            int(args.target.rpartition(":")[2]),
+            cpus=args.cpus,
+            prefix=tuple(shlex.split(args.launch_prefix)),
+            durability=args.durability,
+            keep=args.keep,
+        )
+    )
+    ctl = sy.Client(args.target, timeout=120)
+    count_all = sy.Query("all", command="count")
+    if args.keep:
+        system.commit(ctl, index)
+    else:
+        lt.load_index(system, args.target, index, schema, args.base_corpus, args.base_docs, 4, 1000)
+    base_before = system.run(ctl, index, schema, count_all).count
+    model = Model()
+    stop, ending = threading.Event(), threading.Event()
+    lines = lt.read_corpus(args.stream_corpus, 0)
+    pull = threading.Lock()
+    per_writer = args.write_rate / args.writers
+    threads = [
+        threading.Thread(
+            target=stream_writer,
+            args=(
+                k,
+                system,
+                schema,
+                index,
+                args.target,
+                model,
+                stop,
+                ending,
+                lines,
+                pull,
+                per_writer,
+                args.write_batch,
+            ),
+        )
+        for k in range(args.writers)
+    ] + [
+        threading.Thread(target=searcher, args=(s, system, schema, index, args.target, model, stop, ending))
+        for s in range(args.searchers)
+    ]
+    t0 = time.time()
+    for t in threads:
+        t.start()
+    killed: float | None = None
+    deadline = t0 + (args.kill_at or args.secs)
+    while time.time() < deadline and system.proc is not None and system.proc.poll() is None:
+        time.sleep(0.1)
+    died = system.proc is not None and system.proc.poll() is not None
+    if args.kill_at:
+        ending.set()
+        killed = time.time()
+        system.stop(kill=True)
+    stop.set()
+    for t in threads:
+        t.join(timeout=120)
+    restart_s = None
+    poke_ids: set[str] = set()
+    if args.kill_at:
+        restart_s = system.restart(kill=True)
+        ctl.close()
+        ctl = sy.Client(args.target, timeout=120)
+        poke = sy.Client(args.target, timeout=120)
+        poke.call(system.bulk_request(index, schema, [json.dumps({"stream": "t7poke", "seq": 0}).encode()]))
+        poke.close()
+        poke_ids.add("t7poke-0")
+    system.commit(ctl, index)
+    time.sleep(1.0)
+    got: list[tuple[str, int]] = []
+    for k in range(args.writers):
+        got.extend((f"t7w{k}-{n}", n) for n in system.dump_stream(ctl, index, f"t7w{k}"))
+    total = system.wait_count(ctl, index, schema, 0)
+    base_after = total - len(got) - len(poke_ids)
+    report = audit(got, model, killed, args.grace if args.kill_at else 0.0, poke_ids)
+    report["base_docs_before"], report["base_docs_after"] = base_before, base_after
+    report["base_unchanged"] = base_before == base_after
+    ok = passed(report, died, model.failures)
+    sent_log = args.sent_log or os.path.join(os.path.dirname(os.path.abspath(args.out)), "sent.tsv")
+    write_sent_log(sent_log, model, sorted(model.attempted))
+    result = {
+        "system": args.system,
+        "mode": "stream",
+        "secs": round(time.time() - t0, 1),
+        "kill_at": args.kill_at or None,
+        "grace_s": args.grace if args.kill_at else None,
+        "restart_to_ready_s": None if restart_s is None else round(restart_s, 3),
+        "node_died_before_kill": died,
+        "stats": dict(sorted(model.stats.items())),
+        "first_failures": model.failures[:5],
+        "audit": report,
+        "sent_log": sent_log,
+        "ok": ok,
+        "note": "SIGKILL is a process crash, not power loss" if args.kill_at else None,
+    }
+    system.stop()
+    text = json.dumps(result, indent=1)
+    if args.result:
+        with open(args.result, "w") as fh:
+            fh.write(text + "\n")
+    print(text)
+    return 0 if ok else 1
+
+
 def run(args: argparse.Namespace) -> int:
+    if args.stream_corpus:
+        return run_stream(args)
     system = sy.make(args.system, args.target)
     args.grace = args.grace or GRACE[args.system]
     schema = sy.Schema.load("mix")
@@ -260,13 +459,7 @@ def run(args: argparse.Namespace) -> int:
     time.sleep(1.0)
     got = [(i, n) for i, n in system.dump(ctl, index) if MARKED.fullmatch(i)]  # only the marked write stream is audited
     report = audit(got, model, killed, args.grace if args.kill_at else 0.0, poke_ids)
-    ok = (
-        not died
-        and not model.failures
-        and report["lost_beyond_grace"] == 0
-        and report["unwritten_present"] == 0
-        and report["duplicated"] == 0
-    )
+    ok = passed(report, died, model.failures)
     result = {
         "system": args.system,
         "secs": round(time.time() - t0, 1),
@@ -301,3 +494,13 @@ def add_arguments(ap: argparse.ArgumentParser) -> None:
     g.add_argument("--launch-prefix", default="")
     g.add_argument("--durability", choices=("async", "request"), default="async")
     g.add_argument("--result", help="write the JSON here")
+    st = ap.add_argument_group("the marked write stream (T7 on the C-logs copy)")
+    st.add_argument("--stream-corpus", help="the write corpus (C-logs writes); switches to the stream mode")
+    st.add_argument("--index", default="logs", help="the index written (stream mode)")
+    st.add_argument("--schema", default="logs", help="its schema, with the stream and seq fields")
+    st.add_argument("--keep", action="store_true", help="start on the data already in OUTDIR/data (a pristine copy)")
+    st.add_argument("--base-corpus", help="without --keep: load this base first")
+    st.add_argument("--base-docs", type=int, default=0)
+    st.add_argument("--write-rate", type=float, default=5000.0, help="documents a second, over all writers")
+    st.add_argument("--write-batch", type=int, default=100)
+    st.add_argument("--sent-log", help="the log of every id sent (default: beside OUTDIR)")

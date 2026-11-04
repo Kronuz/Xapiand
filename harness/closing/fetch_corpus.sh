@@ -5,6 +5,7 @@
 #   fetch_corpus.sh logs        C-logs: logs.ndjson (documents-181998 then -191998, 12,406,628 lines), logs-1M.ndjson
 #   fetch_corpus.sh logs-writes C-logs writes: logs-writes.ndjson (documents-201998, 13,053,463 lines)
 #   fetch_corpus.sh wiki        C-wiki: wiki.ndjson (5,032,104 lines), wiki-500k.ndjson
+#   fetch_corpus.sh wiki-queries  search-benchmark-game's queries.txt at its pinned commit (closing_queries.py samples it)
 #   options: --limit N  stop after N lines of each output (a sample; the sha256 and count are then not checked)
 #            --record   a download whose pin is "-" is accepted and printed as a pins line
 # A finished file is kept; a rerun skips it. A sample goes to corpora/sample-N/ (wiki is streamed, not stored whole).
@@ -98,6 +99,12 @@ wiki)
 	[ -s "$out/wiki-500k.ndjson" ] || {
 		head -n 500000 "$out/wiki.ndjson" >"$out/wiki-500k.ndjson.part"
 		finish "$out/wiki-500k.ndjson" -
+	}
+	;;
+wiki-queries)
+	[ -s "$out/queries.txt" ] || {
+		cp "$(download wiki-queries)" "$out/queries.txt"
+		echo "$out/queries.txt: $(wc -l <"$out/queries.txt" | tr -d ' ') lines"
 	}
 	;;
 *) echo "unknown corpus $what" >&2; exit 2 ;;
