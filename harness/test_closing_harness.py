@@ -544,6 +544,22 @@ class Report(unittest.TestCase):
         self.season([90, 91, 89, 90, 90], [100, 101, 99, 100, 100], x=[50, 50, 50, 50, 50], **kw)
         self.assertEqual(self.verdict("t1.docs_per_sec").status, "worse")
 
+    def test_the_anchor_of_a_throughput_is_the_highest_arm(self) -> None:
+        kw: dict[str, Any] = {"higher": True, "axis": "index", "metric": "t1.docs_per_sec"}
+        self.season([110, 111, 109, 110, 110], [100, 101, 99, 100, 100], x=[120, 121, 119, 120, 120], **kw)
+        v = self.verdict("t1.docs_per_sec")
+        self.assertEqual((v.anchor, v.status, v.regression), ("X", "worse", True))
+
+    def test_a_noisy_control_widens_the_band(self) -> None:
+        """Every round favors S by 5%, but S' differs from S by 20% in one round: the band swallows the win."""
+        self.put("S", [10, 10, 10, 10, 10])
+        self.put("Sp", [10, 12, 10, 10, 10])
+        self.put("E", [10.5, 10.5, 10.5, 10.5, 10.5])
+        self.put("X", [30, 30, 30, 30, 30])
+        v = self.verdict()
+        self.assertGreaterEqual(v.aa_dev or 0, 0.16)
+        self.assertEqual(v.status, "not distinguishable")
+
     def test_worse_than_the_anchor_and_a_regression_against_x(self) -> None:
         self.season([20, 20.1, 19.9, 20, 20], [10, 10.1, 9.9, 10, 10], x=[10, 10.1, 9.9, 10, 10])
         v = self.verdict()
