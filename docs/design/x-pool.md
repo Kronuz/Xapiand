@@ -89,6 +89,18 @@ indexes one search holds at once stays at most `soft_open`: today `max_indexes_p
 **D12. The gate's assertion.** Debug builds assert, after every turn and at unpin, that a `defer_io`
 index's `unleased_maps()` is zero; the docs E2E runs on such a build.
 
+**D13. What the catalog changes for a user** (the step 2 review's CR5), each a decision:
+1. The sweep closes an idle index by strata's times: a pass each second, a hot index demoted after 30 s idle and
+   closed after 10 min (`IndexSweep`; a node passes none). The old idle close took an hour, a minute when the pool
+   overflowed. Step 4's budget work sets the numbers.
+2. Every open replays the WAL, the restore's included; the restore no longer skips a log because its flags disable
+   the WAL, and it still deletes the log of what it replaced at its end.
+3. `FLUSH` commits every open index and no longer closes it; the reference documents it as a commit, and the sweep
+   closes what idles.
+4. A request for an index that does not exist leaves a negative catalog entry under its name until the sweep erases
+   it (`negative_ttl`, 10 s); step 4's budget work bounds them.
+None narrows what a request can do: each changes when resources are let go, not an answer.
+
 ## Rulings on the host interface
 
 `strata/docs/reviews/cold-tier-xpool-host.md` (2026-11-02) ruled the six gaps revision 1 raised; strata

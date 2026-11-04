@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the control plane, the caches and the stop as built through phase 7c step X6 and the task C3 wave; the design is `docs/design/phase7c.md` D1, D11, D13, D14, D16.
+> Status: CURRENT (2026-11-03) the control plane, the caches and the stop as built through phase 7c step X6, the task C3 wave and X-POOL step 3; the design is `docs/design/phase7c.md` D1, D11, D13, D14, D16.
 
 # The control plane and the caches
 
@@ -13,19 +13,19 @@ concurrent first uses of one schema, or of one index's settings, read it once.
 ```
  control loop (reactor::Reactor + AsioHost)
    signal_loop        co_await the self-pipe read              (cancelled by join)
-   Periodic           timer 60 s -> cleanup(), housekeeping(), schemas->cleanup()
-   Debounce<Endpoint> touch() from any thread -> one watch task per pending key -> committer_commit -> run_detached(autocommit)
+   Periodic           timer 60 s -> schemas->cleanup()
+   Debounce<Endpoint> touch() from any thread -> one watch task per pending key -> committer_commit -> run_detached(autocommit_and_rearm)
    setup, shutdown checks   spawned by the loop's signals
 ```
 
 1. **`control::Tasks`** (`src/control_plane.h`) spawns a task on a host and counts it until it ends; `join` runs the stopped loop on the main thread until the counts reach zero. A task
    that throws is logged, except the node setup and the shutdown checks, which end the process (`XapiandManager::control_task_failed`, status 70 or the `SystemExit` code, through the path a
-   negative signal takes). The signal reader logs a signal that fails to run and reads the next. The housekeeping tick, an autocommit and an idle close log their failure and are tried again.
-2. **`control::Periodic`** runs the minute housekeeping. Its wait is an event that the host's timer or `stop()` sets, so a stop does not wait out the minute. The registry's housekeeping pass is a
-   task of its own that looks at 256 entries per turn under the pool's lock, spawns a task only for an entry that owes work, and yields between turns (`DatabasePool::housekeeping`).
+   negative signal takes). The signal reader logs a signal that fails to run and reads the next. The housekeeping tick and an autocommit log their failure and are tried again.
+2. **`control::Periodic`** runs the minute housekeeping, the schema cache's cleanup. Its wait is an event that the host's timer or `stop()` sets, so a stop does not wait out the minute. Idle
+   indexes are closed by the index catalog's sweep, not here (`index-registry-on-catalog.md`).
 3. **`control::Debounce`** is the autocommit. A write calls `XapiandManager::schedule_autocommit` (a lock on a small map, `touch`); the first touch of a key starts a watch
    task, a later one moves its target (`busy` after the touch, never past the first touch plus a random 8 to 10 s) and the key fires once it has been quiet for `debounce`. `stop()` ends the watchers without firing: closing an index commits what it has pending, so nothing is lost. After
-   `stop()`, `touch` returns false and the writer commits now.
+   `stop()`, `touch` returns false and the writer commits now. An autocommit that leaves a merge pending, or whose turn did not come, touches its key again (x-pool D8).
 4. **`SingleFlight<Key, Value>`** (`src/single_flight.h`) is the caches' single flight. The first caller of `run(key, load)` loads; the others wait on a `task::event` and get the value, or
    the error. A leader that was cancelled or whose frame was destroyed leaves its waiters to load for themselves. The map's lock covers a lookup or an erase.
 5. **Where a flight is used.** `SchemasLRU` joins one flight for an index's schema metadata and one for a foreign schema, only on a first use (nothing cached) and only outside a nested load
@@ -53,11 +53,12 @@ A signal reaches a task on the control loop, which runs `shutdown_checks`: the l
    `IndexChores::cancel_all()` drops every index's queued chores (their awaiters resume with `task::cancelled`) and waits for the running ones; `HttpAsioService::close()` closes
    every reactor's scheduler (`post` drops, `spawn` destroys its task); then `destroy_roots()` destroys the tasks still suspended on them, which releases their turns and shard uses before the indexes close. A task is counted by its
    frame, and the control plane's published wakes are cleared by a scope guard, so a destroyed task leaves no count and no dead event behind.
-3. **Stop 2, the autocommits**: the scheduler stops; the waits that had not fired are dropped, because closing an index commits what it has pending. Then it drains.
-4. **Stop 3, the indexes**: `DatabasePool::finish()` and `join()` close every index nobody uses (its turn, then its close chore on the `WorkPool`), polling in slices of at most 500 ms.
+3. **Stop 2, the autocommits**: the scheduler stops; the waits that had not fired are dropped, because closing an index commits what it has pending. Then it drains. The control loop
+   stops, and its scheduler closes and destroys its roots: every root that may hold a pin is gone before Stop 3 awaits every pin (x-pool C24).
+4. **Stop 3, the indexes**: `DatabasePool::finish()` and `join()` await the catalog's shutdown, which commits each index through its entry and closes it once unpinned, polling in
+   slices of at most 500 ms.
 5. **Stop 4, the write-ahead logs** finish (closing an index appended to them, so they come after the indexes); **Stop 5, the fsync threads** finish.
-6. The control loop stops, and its host's scheduler closes and destroys its roots. The hosts are destroyed before the service whose io_contexts they post to; then the
-   registry (and with it the `WorkPool`), the logs and the schemas.
+6. The hosts are destroyed before the service whose io_contexts they post to; then the registry (and with it the `WorkPool`), the logs and the schemas.
 
 D16 states this order: the acceptors close at the start of `join()`, after the clients wait, and the loops stop before the indexes close (the registry closes on the main thread, so it needs none). The
 order is logged (`Stop 1` to `Stop 5`) and tested (`test_node`: `test_the_stop_runs_in_its_stated_order`).

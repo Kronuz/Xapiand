@@ -1,4 +1,4 @@
-> Status: DRAFT (2026-11-03) the index registry as strata's catalog's payload, as built on `phase7c/x-pool` (X-POOL step 2, the H and pins slice) against strata `phase/cold-tier-step2-item5b`; the design is `docs/design/x-pool.md` revision 2 (D1 to D8, D10). Not reviewed. Supersedes the open, close and housekeeping parts of `index-registry-and-lease.md`; the turn, the chores and the commit flight there still hold.
+> Status: DRAFT (2026-11-03) the index registry as strata's catalog's payload, as built on `phase7c/x-pool` (X-POOL step 2, the H and pins slice) and `phase7c/x-pool-step3` (the autocommit's re-arm, the sweep's times) against strata `phase/cold-tier-step2-item5b`; the design is `docs/design/x-pool.md` revision 2 (D1 to D8, D10). Not reviewed. Supersedes the open, close and housekeeping parts of `index-registry-and-lease.md`; the turn, the chores and the commit flight there still hold.
 
 # The index registry on strata's catalog
 
@@ -16,6 +16,7 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
    slot free/failed ─▶ open chore: resolve(<path>/strata) ─▶ open_index ─▶ open_payload: emplace ShardEndpoint,
                        borrow the index, open the blobs, replay the WAL ─▶ pins delivered
  autocommit, FLUSH ─▶ pool.pin_chore(path) ─▶ catalog.pin_chore(path, resident): never opens; empty when absent
+ autocommit ─▶ commit ─▶ settle_merges: check in, sync a merge's output ─▶ pending or busy? arm it again
  catalog chores (bound close, shutdown, replace, a merge-only demotion) ─▶ host::commit ─▶ commit_blocking()
 ```
 
@@ -41,17 +42,28 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
    `errc::database`; also `closed`, `reopen`, `corrupt`) marks the entry stale (`note_failure`), and every use of it
    hands its pin back when it ends (`Shard::release`). The catalog replaces the index once the other holders let go,
    and the new open replays the WAL (D2, F4).
-6. **FLUSH** pins every key of `catalog.snapshot()` resident and commits it, one key at a time (a task holds one
+6. **The autocommit** (`autocommit`, D8) commits under a resident pin, then settles the merges in a turn of its own
+   (`settle_merges`): in a flush chore it checks the index in, which publishes the merges that finished, and commits
+   the index when a published merge's output is all it has to sync (no revision, no WAL line). It returns true while
+   a merge is still pending or its output unsynced, or when a turn did not come (`busy`); the committer
+   (`autocommit_and_rearm`) then touches the debounce again. A busy index whose pins never all go, with no write to
+   take its turn, gets its merges published and synced this way, and a write whose autocommit met a held turn is
+   committed on a later one.
+7. **FLUSH** pins every key of `catalog.snapshot()` resident and commits it, one key at a time (a task holds one
    turn); a key closed meanwhile was committed before its close, since an idle close takes only a committed index (D8). `busy()`, `count()` and `dump_databases()` read the snapshot, and `shutdown_report()` once the
    shutdown began.
-7. **Shutdown** (D10, C24). `join()` starts `catalog.shutdown()` once and waits for it until its deadline; the
+8. **Shutdown** (D10, C24). `join()` starts `catalog.shutdown()` once and waits for it until its deadline; the
    awaiting coroutine is resumed inline by whoever releases the last pin. The manager's stop destroys every root that
    may hold a pin before it awaits `join()`: the HTTP loops' roots (stop 1), the autocommits drained (stop 2), then
    the control loop's suspended roots, and only then the indexes (stop 3). `~DatabasePool` waits for the shutdown before it destroys
    the catalog; past `patience_` (30 s) debug builds abort naming what still holds an index.
-8. **Tests** give the indexes' files another IO with `set_index_io` (strata's faultfs), so a sync can fail and fence.
-9. **The timer** the catalog needs is one `Scheduler` thread (the scheduler library's wheel); its callbacks only
+9. **Tests** give the indexes' files another IO with `set_index_io` (strata's faultfs), so a sync can fail and fence.
+10. **The timer** the catalog needs is one `Scheduler` thread (the scheduler library's wheel); its callbacks only
    post. The catalog is destroyed before it, while its timers can still fire.
+11. **The sweep** closes idle indexes, the only idle close: it demotes an unpinned hot index idle for `demote_idle`,
+    closes it idle for `close_idle`, and never touches a pinned one. `IndexSweep` (a `DatabasePool` argument) sets its period and those
+    times; zero keeps strata's (1 s, 30 s, 10 min), which a node uses. Its close syncs a finished merge's output through
+    the entry's commit chore before the demotion (S14).
 
 ## Why
 
@@ -68,6 +80,8 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 - `corrupt_segment` replaces the index (a reopen), not `heal()` under the turn (D2).
 - The restore's open replays a WAL that exists; the old open skipped the replay when the opener's flags disabled the WAL.
 - `map_owed` (D9), the budget's caps (D11) and the `unleased_maps()` assertion (D12) are step 4.
+- While a merge runs, the autocommit comes back at the debounce's period (a turn and a flush chore each time) until
+  the merge is published and synced; an index whose merges never end keeps it coming.
 - An idle close (the sweep's) takes only a committed index; an uncommitted one waits for its autocommit, the bound
   close, or the shutdown, which commit through the entry.
 - The shutdown's report names what holds an index as the catalog sees it (`pinned`, `a view is held`); a held turn
@@ -76,10 +90,15 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 ## Code
 
 `src/database/pool.{h,cc}` (`DatabasePool`, `IndexPin`, `ShardEndpoint` pin side, `Turn`), `src/database/shard.cc`
-(`open_blocking`, `commit_blocking`, `Shard` and its reopen), `src/database/lock.h`, `src/engine/strata/shard.cc`
+(`open_blocking`, `commit_blocking`, `settle_merges`, `autocommit`, `Shard` and its reopen), `src/database/handler.cc`
+(`autocommit_and_rearm`), `src/database/lock.h`, `src/engine/strata/shard.cc`
 (`borrow`, the Core's `borrowed` and `owned`). Tests: `tests/test_pool.cc` (`test_a_create_pin_passes_a_missing_index`,
 `test_a_pin_keeps_its_index_open`, `test_a_chore_pin_is_resident`, `test_flush_commits_every_index`,
 `test_the_shutdown_commits_through_the_entry`, `test_a_resident_commit_on_an_owed_index_lets_it_close`,
 `test_join_waits_for_every_pin`, `test_a_failed_use_hands_its_pin_back`, `test_a_finishing_pool_serves_an_open_index`,
 `test_a_cold_pin_reads_what_the_log_replays`, `test_a_fenced_index_is_replaced_and_replays_its_log`,
-`test_the_commit_chore_logs_nothing_when_nothing_was_applied`, `test_the_pool_waits_for_a_pin_released_during_its_end`).
+`test_the_commit_chore_logs_nothing_when_nothing_was_applied`, `test_the_pool_waits_for_a_pin_released_during_its_end`,
+`test_the_autocommit_comes_back_while_a_merge_is_pending`, `test_a_busy_autocommit_comes_back`,
+`test_the_sweep_closes_only_an_unpinned_index`, `test_the_shutdown_commits_and_logs_an_uncommitted_write`,
+`test_the_sweeps_close_syncs_a_merges_output`); `tests/test_node.cc` (`test_a_busy_autocommit_comes_back_for_its_write`,
+`test_a_control_root_lets_go_of_its_pin_before_the_indexes_stop`).

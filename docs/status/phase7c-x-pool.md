@@ -118,6 +118,30 @@ Linux (AWS lease, 16 cores, `~/xpool`; scripts `.scratch/linux-batch*.sh`). No r
 - gcc-13 with asserts and tests: an internal compiler error on `src/database/schemas_lru.cc:176` and
   `fuzz_body.cc` not compiling; the CI's gcc config builds neither asserts nor tests.
 
+## Design vs code (step 3, branch `phase7c/x-pool-step3`)
+
+Decisions recorded from the step 2 review (CR5, design D13): the sweep's times are strata's (1 s, 30 s, 600 s); every
+open replays the WAL (the restore's skip is gone); `FLUSH` commits and no longer closes; a 404 leaves a negative entry
+per name until the sweep erases it. None narrows a user-visible answer; `FLUSH` not closing is the closest call (the
+reference and changelog describe it as a commit only).
+
+Owed (CR6): the hostless path (`engine::open_local`, `Core::owned`, tests and the CLI) keeps the adapter's own
+registry, against D2's one way to hold an index. Not built in step 3.
+
+11. XP4's "committed by the sweep's close": the sweep closes only a committed index (a hot one demotes first, which
+    needs `warm_quiescent`; a cold one needs `close_ready`), so no sweep close commits a write. Its close commits only a
+    finished merge's output, through the entry's chore (S14); a write left uncommitted is committed by the shutdown, the
+    replace close, or the bound close of an owed slot whose wakes failed. The tests cover the shutdown's commit of a write
+    and the sweep's sync of a merge.
+12. XP4's "blobs synced" has no test of its own: the entry's chore runs `do_commit`, whose `storage_commit` precedes the
+    engine's commit, and no test observes the fsync.
+13. D8's re-arm also covers a busy autocommit: one whose turn did not come (`busy`) arms itself again, so its write is
+    committed later; before, it was logged and left to the next write or the close.
+14. `IndexSweep` (the sweep's period and idle times; zero keeps strata's) is new; a node passes none. D8 names
+    no times.
+15. `settle_merges` checks the index in inside its chore, though the turn's release checks in too: one call then
+    publishes and syncs, where the release's check-in alone takes two (mutant s5 survives, equivalent but slower).
+
 ## Design vs code (step 2; note `docs/mechanisms/index-registry-on-catalog.md`)
 
 1. D2's hostless private catalog is not built: `engine::open_local` (tests, the CLI) keeps the adapter's owned-index
