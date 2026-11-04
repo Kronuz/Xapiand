@@ -244,6 +244,8 @@ State (2026-11-03): A1, A2, A4, A5, A6, A7, A8, A10, A11, A12, A13, A14, A15, A1
 | A24 | done | `docs/package.json:6` and the root entry of `docs/package-lock.json` say `"license": "MIT"`. |
 | A25 | done | `CMakeLists.txt:1309-1310` installs `LICENSE`, `NOTICE` and `THIRD-PARTY-NOTICES` into `share/doc/xapiand`. |
 
+Build and test: a Release build (Ninja, `BUILD_TESTS=ON`, `LTO=OFF`, ccache) of the branch at `Xapiand:6a9218ef2` finished with exit 0, `ctest -j4` passed 37 of 37, and `cmake --install` staged `share/doc/xapiand/{LICENSE,NOTICE,THIRD-PARTY-NOTICES}`. The changes are comments, notice files and one CMake check (A16), so no mutant or revert test applies; a configure with the A16 replacement reported `HAVE_DIRENT_H - Success`. No fuzz target applies (no parser or decoder changed).
+
 Not done, by instruction: A3 (waits for `sortable_serialise`'s removal), A9 (`docs/discussions` must stay byte-identical with two other copies), A17, A18, A19, A21, A26, A27. `docs/public/assets/Lenna.*` (blocker 3) is untouched on this branch; an earlier local branch `fix/license-actions` (never pushed, worktree `Xapiand-wt/license-actions`) also replaces those images with a generated sample, which this branch left out.
 
 Design vs code: the audit asks for A1 as a rewritten `NOTICE` that carries the third-party texts; the code splits it into `NOTICE` (ownership, short) and a generated `THIRD-PARTY-NOTICES` (texts), both installed. No other differences.
