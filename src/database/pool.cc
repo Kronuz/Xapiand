@@ -701,6 +701,8 @@ DatabasePool::pin_chore(const Endpoint& endpoint)
 			co_return IndexPin();
 		}
 		co_return IndexPin(std::move(pinned), *this);
+	} catch (const task::cancelled&) {
+		throw;   // the caller was cancelled (a FLUSH's request): it ends, not the next key
 	} catch (...) {
 		// A resident pin that waited on an open that failed gets its error: there is nothing open to commit (C25).
 		co_return IndexPin();
