@@ -15,8 +15,8 @@ Host rule (the lead, 2026-11-02): sanitizer batches run on Linux through strata'
 
 Step 2 (the registry as the catalog's `H`, pins with intents) built against strata item 5b (`strata:c39e716`,
 `-DFETCHCONTENT_SOURCE_DIR_STRATA=<strata-wt/cold-tier-step2-item5b>`); it also carries the step 3 pieces the lead put
-in step 2's scope (autocommit and FLUSH on resident pins, C24, C25, the `map_asked_` note). macOS proof below;
-sanitizer runs in "Proof (step 2)". Repin to strata main when items 5 and 5b land.
+in step 2's scope (autocommit and FLUSH on resident pins, C24, C25, the `map_asked_` note). proof in "Proof (step 2)": macOS and Linux (local VM), plain, ASan+UBSan and
+TSan, all green with 0 sanitizer reports. Repin to strata main when items 5 and 5b land.
 
 ## Done criteria
 
@@ -41,6 +41,26 @@ macOS, Apple clang RelWithDebInfo `ASSERTS=ON` (`.scratch/build-x2`):
 - `graceful_shutdown_check.sh`: all scenarios pass. `path_boundary_check.sh`: 0 failures.
   `wide_search_check.py check`: PASS (batched equals unbatched, by list and pattern; nesting `/**/x/`, globs).
 - `async_check --strict --owed --extern strata=<item 5b>`: 250 hits, owed 0, unclassified 0; `test_gate_tools.py` OK.
+- Sanitizers on macOS, Homebrew LLVM 23 (`-DCMAKE_OSX_SYSROOT=.../MacOSX.sdk`, see Findings), RelWithDebInfo
+  `ASSERTS=ON`, separate builds `.scratch/build-asan` (ASan+UBSan, UBSan recoverable with rapidjson's and LZ4's
+  pointer-overflow suppressed, `.scratch/ubsan.supp`) and `.scratch/build-tsan`; runner `.scratch/san-tests.sh`:
+  - ASan+UBSan: `test_pool` 231, `test_reactor_requests` 59, `test_engine_host` 95, `test_node` 106,
+    `test_wide_search` 22301, `test_blocking_guard` 14 checks, all pass, 0 reports; docs E2E GREEN (666 of 666) with
+    0 reports in the node log; `graceful_shutdown_check.sh` all pass.
+  - TSan: the same suites pass with 0 race reports, with `die_after_fork=0` (the at-end tests fork a threaded
+    process, which TSan otherwise kills) and, for `test_node`, `report_thread_leaks=0`: the abandon children `_Exit`
+    with the node's thread unjoined (`test_node.cc`, the same on master), a leak report and not a race. Docs E2E GREEN
+    with 0 reports; `graceful_shutdown_check.sh` all pass.
+- Linux, the local QEMU VM (8 cores, Ubuntu 24.04, clang-18; AWS off), driven by `.scratch/linux2/ship-run.sh` with
+  the tree in `~/xpool2/src` and builds in `~/xpool2/{tsan,asan}` (task-named, not the shared `~/work`); script
+  `.scratch/linux2/build.sh`, logs `.scratch/linux2/out-{tsan,asan}/`:
+  - TSan (`die_after_fork=0`): `test_pool` 231, `test_reactor_requests` 59, `test_engine_host` 95, `test_node` 106,
+    `test_wide_search` 22301, `test_blocking_guard` 14 checks, all pass, 0 reports; `graceful_shutdown_check.sh` all
+    pass; `path_boundary_check.sh` 0 failures; docs E2E 666 of 666, 0 uncovered, 0 reports in the node log.
+  - ASan+UBSan (recoverable, the two third-party suppressions): the same, all pass, 0 reports.
+  Step 1's Linux failures do not recur here: `BlockingScheduler`'s race (fixed on master since), the at-end test's 5
+  failures and the intermittent "IndexChores ended with work outstanding" (the idle close and housekeeping are gone),
+  and `path_boundary_check.sh`'s 14 relative-path failures.
 - Mutants (`.scratch/mutants2/mutants.py`, each a one-string change, rebuilt, its test run, the source restored):
   | Mutant | Killed by |
   |---|---|
@@ -157,7 +177,8 @@ Linux (AWS lease, 16 cores, `~/xpool`; scripts `.scratch/linux-batch*.sh`). No r
 
 ## Next
 
-1. Step 2 to review (the lead's triage); the sanitizer runs below first.
+1. Step 2 to review (the lead's triage). It touches concurrency (pin lifetimes, the shutdown's order, a resident
+   pin under the request pin), so a code review at high effort fits.
 2. Step 3's rest: the autocommit re-armed while a commit leaves merges pending (D8), XP3 and XP4 rows at the sweep's
    rates. Step 4: `map_owed`, the gate assertion, the budget.
 3. Repin strata to main when items 5 and 5b land.
