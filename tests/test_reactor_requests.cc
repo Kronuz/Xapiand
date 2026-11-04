@@ -458,7 +458,7 @@ static void test_a_cancelled_request_leaves_the_turn_queue() {
 		loop.run([&]() -> task::task<void> {
 			try {
 				if (through_shard) {
-					Shard shard = use_index(entry, WRITE, source.token());
+					Shard shard(co_await pool.pin(Endpoint(entry->path), WRITE), WRITE, source.token());
 					(void)co_await shard.add_document(make("Kc"));
 				} else {
 					(void)co_await entry->take_turn(WRITE, source.token());
@@ -663,11 +663,15 @@ static void test_a_task_that_holds_a_view_waits_for_nothing() {
 		}), std::string("a pin"));
 	}
 	{
-		// Closing the index waits for its readers, and this task is one.
+		// Closing an index of its own (the hostless path; a catalog's is the catalog's to close) waits for its
+		// readers, and this task is one.
+		auto opened = engine::sync_wait(engine::strata::open_local(fresh("rules_drain"), true, true));
+		auto* own = dynamic_cast<engine::strata::Shard*>(opened.shard.get());
+		REQUIRE(own != nullptr);
 		Loop loop;
 		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
-			auto view = strata->view();
-			co_await strata->close();
+			auto view = own->view();
+			co_await own->close();
 		}), std::string("a drain"));
 	}
 }

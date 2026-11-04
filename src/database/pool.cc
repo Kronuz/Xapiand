@@ -657,6 +657,19 @@ DatabasePool::pin(const Endpoint& endpoint, int flags)
 	engine::check_no_view_held("a pin");
 	const std::string key = endpoint.path;
 	const auto intent = has_db_create_or_open(flags) ? strata::open_intent::create : strata::open_intent::open;
+	IndexCatalog::pin resident;
+	if (finished_.load()) {
+		// A finishing node serves the indexes it has open and opens no more: a resident pin finds the index open (or
+		// owed) and keeps it so while the request pin is taken; it applies nothing, so it never meets a debt.
+		try {
+			resident = co_await catalog_->pin_chore(key, false, strata::open_intent::resident);
+		} catch (...) {
+			rethrow_pin_failure(key);
+		}
+		if (!resident) {
+			throw engine::Error(engine::errc::not_available, "Shard is not available");
+		}
+	}
 	try {
 		co_return IndexPin(co_await catalog_->pin_request(key, true, intent), *this);
 	} catch (...) {
@@ -753,22 +766,18 @@ DatabasePool::flush()
 {
 	L_CALL("DatabasePool::flush()");
 
-	// Every key the catalog has, pinned resident and committed, all at once; the caller holds no turn.
-	std::vector<task::task<void>> tasks;
+	// Every key the catalog has, pinned resident and committed, one at a time: a task holds one turn at most.
 	for (auto& slot : catalog_->snapshot()) {
-		tasks.push_back([](DatabasePool& pool, std::string key) -> task::task<void> {
-			auto pinned = co_await pool.pin_chore(Endpoint(key));
-			if (!pinned) {
-				co_return;   // closed since the snapshot: its close committed it
-			}
-			try {
-				co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
-			} catch (const engine::Error& error) {
-				L_WARNING("Flushing {} failed: {}", repr(key), error.description());
-			}
-		}(*this, std::move(slot.key)));
+		auto pinned = co_await pin_chore(Endpoint(slot.key));
+		if (!pinned) {
+			continue;   // closed since the snapshot: its close committed it
+		}
+		try {
+			co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
+		} catch (const engine::Error& error) {
+			L_WARNING("Flushing {} failed: {}", repr(slot.key), error.description());
+		}
 	}
-	co_await task::when_all(std::move(tasks));
 }
 
 

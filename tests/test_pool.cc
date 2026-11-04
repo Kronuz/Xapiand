@@ -145,6 +145,20 @@ Shard use(const IndexPin& entry, int flags) {
 	return Shard(engine::sync_wait(entry.pool()->pin(Endpoint(entry->path), flags)), flags);
 }
 
+// The slot of the index a pin holds, and its state in the catalog's snapshot (free when it has none).
+std::uint32_t slot_of(const IndexPin& pin) {
+	return A::where(pin).slot;
+}
+
+strata::slot_state state_of(DatabasePool& pool, const std::string& path) {
+	for (const auto& slot : pool.catalog().snapshot()) {
+		if (slot.key == path) {
+			return slot.state;
+		}
+	}
+	return strata::slot_state::free;
+}
+
 // Waits for `flag`, up to a few seconds.
 bool eventually(const std::atomic<bool>& flag, std::chrono::milliseconds limit = 5s) {
 	const auto end = std::chrono::steady_clock::now() + limit;
@@ -785,6 +799,8 @@ void test_the_wal_order_is_the_apply_order() {
 			thread.join();
 		}
 	}
+	pool.finish();
+	CHECK_TRUE(pool.join());  // the shutdown's commit writes its line before the writer ends
 	writer.end();  // the queue drains, then the thread ends
 	writer.join(std::chrono::milliseconds(20000));
 	// The log, line by line: the ids of the replaced documents, in the order they reached it.
@@ -978,16 +994,28 @@ void test_a_commit_that_times_out_leaves_the_write_standing() {
 void test_a_finishing_pool_serves_an_open_index() {
 	Watchdog watchdog("a finishing pool");
 	DatabasePool pool(8);
-	auto open = pin(pool, fresh("finishing_open"));
-	auto closed = pin(pool, fresh("finishing_closed"));
+	const auto open_path = fresh("finishing_open"), closed_path = fresh("finishing_closed");
+	auto open = pin(pool, open_path);
 	Shard shard = use(open, WRITE);
-	Shard other = use(closed, WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	{
+		auto closed = pin(pool, closed_path);
+		const auto slot = slot_of(closed);
+		closed.release();
+		CHECK_TRUE(pool.catalog().begin_demote(slot));
+		pool.catalog().wait_chores();
+		CHECK_TRUE(pool.catalog().begin_close(slot));
+		pool.catalog().wait_chores();
+		CHECK_TRUE(state_of(pool, closed_path) == strata::slot_state::free);
+	}
 	pool.finish();
 	engine::sync_wait(shard.add_document(make("Kb", "b")));
 	CHECK_TRUE(engine::sync_wait(shard.commit()));
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(other.ready()); }) == engine::errc::not_available);
+	Shard again(pin(pool, open_path), WRITE);   // a new use of an open index is served
+	CHECK_EQ(engine::sync_wait(again.get_view(1))->data(), "a");
+	CHECK_TRUE(error_kind([&] { (void)pin(pool, closed_path); }) == engine::errc::not_available);
+	CHECK_EQ(pool.catalog().stats().opens, 2u);
 }
 
 // The engine's integrity check changes nothing but runs against the engine the node has open, so it takes the turn
@@ -1026,7 +1054,7 @@ void test_a_chore_needs_a_scheduler() {
 	std::fflush(nullptr);
 	pid_t pid = ::fork();
 	if (pid == 0) {
-		task::sync_wait(shard.ready());
+		task::sync_wait(A::chores(entry.entry()).run(engine::ChoreClass::query, [] { }));
 		::_exit(0);  // not reached when the assertion is on
 	}
 	int status = 0;
@@ -1261,7 +1289,7 @@ void check_at_end(const char* name, F&& scenario, const char* message) {
 void test_a_registry_that_ends_with_work_outstanding_aborts() {
 #ifndef NDEBUG
 	check_at_end("turn", at_end_turn, "pinned");
-	check_at_end("views", at_end_views, "a view is held");
+	check_at_end("views", at_end_views, "owner_break");   // the catalog's close finds a view held past its pin
 	check_at_end("chores", at_end_chores, "a chore is queued or running");
 	check_at_end("detached", at_end_detached, "detached tasks have not ended");
 	check_at_end("references", at_end_references, "pinned");
@@ -1364,20 +1392,6 @@ void test_a_chore_is_over_when_its_task_resumes() {
 }
 
 
-// The slot of the index a pin holds, and its state in the catalog's snapshot (free when it has none).
-std::uint32_t slot_of(const IndexPin& pin) {
-	return A::where(pin).slot;
-}
-
-strata::slot_state state_of(DatabasePool& pool, const std::string& path) {
-	for (const auto& slot : pool.catalog().snapshot()) {
-		if (slot.key == path) {
-			return slot.state;
-		}
-	}
-	return strata::slot_state::free;
-}
-
 // A missing index is a negative entry (x-pool D3, strata F1): pins that may not create fail not_found at once, every
 // one, and a create pin passes the entry and makes the index; the reads after it see it.
 void test_a_create_pin_passes_a_missing_index() {
@@ -1414,8 +1428,7 @@ void test_a_create_pin_passes_a_missing_index() {
 }
 
 // A pin keeps its index open (XP3): with a pin held the sweep's demotion and close are refused; once it goes, the
-// demotion and the close take, the close commits what the catalog's commit chore finds, and the next pin opens it
-// again with the writes in it.
+// demotion and the close take, and the next pin opens it again with the writes in it.
 void test_a_pin_keeps_its_index_open() {
 	Watchdog watchdog("a pin keeps its index open");
 	DatabasePool pool(8);
@@ -1424,7 +1437,8 @@ void test_a_pin_keeps_its_index_open() {
 	const auto slot = slot_of(held);
 	{
 		Shard shard = use(held, WRITE);
-		engine::sync_wait(shard.add_document(make("Ka", "a")));   // left uncommitted
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		engine::sync_wait(shard.commit());   // an idle close takes a committed index only (the autocommit's job)
 	}
 	CHECK_FALSE(pool.catalog().begin_demote(slot));
 	CHECK_FALSE(pool.catalog().begin_close(slot));
@@ -1454,6 +1468,7 @@ void test_a_chore_pin_is_resident() {
 		slot = slot_of(held);
 		Shard shard = use(held, WRITE);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		engine::sync_wait(shard.commit());
 		auto chore = engine::sync_wait(pool.pin_chore(Endpoint(path)));
 		CHECK_TRUE(static_cast<bool>(chore));
 		CHECK_TRUE(&chore.entry() == &held.entry());
@@ -1590,6 +1605,63 @@ void test_a_failed_use_hands_its_pin_back() {
 	CHECK_EQ(pool.catalog().stats().replaces, 1u);
 }
 
+// The catalog's commit chore with nothing applied writes no WAL line of its own (C25): the log has the commit of the
+// write and nothing for the chore's commits, the shutdown's included.
+void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
+	Watchdog watchdog("the commit chore logs nothing", 60s);
+	DatabasePool pool(8);
+	DatabaseWALWriter writer("WC{:02}", 1);
+	pool.set_wal_writer(&writer);
+	const auto path = fresh("chore_wal");
+	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
+	engine::rev revision;
+	{
+		auto held = pin(pool, path, flags);
+		Shard shard = use(held, flags);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+		revision = shard.engine().revision();
+		A::commit_blocking(held.entry());
+		A::commit_blocking(held.entry());
+		CHECK_EQ(shard.engine().revision(), revision);
+	}
+	pool.finish();
+	CHECK_TRUE(pool.join());
+	writer.end();
+	writer.join(std::chrono::milliseconds(20000));
+	std::size_t commits = 0, replaces = 0;
+	DatabaseWAL wal(path);
+	for (auto it = wal.begin(); it != wal.end(); ++it) {
+		const std::string line = *it;
+		const char* p = line.data();
+		const char* p_end = p + line.size();
+		(void)unserialise_length(&p, p_end);  // the revision
+		const auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&p, p_end));
+		commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
+		replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
+	}
+	CHECK_EQ(replaces, 1u);
+	CHECK_EQ(commits, 1u);
+}
+
+// The catalog is destroyed only once its shutdown ended (C24): a pin released while the pool's destructor waits is
+// released into a live catalog (ASan sees no use after free), and the destructor ends after it.
+void test_the_pool_waits_for_a_pin_released_during_its_end() {
+	Watchdog watchdog("the pool waits for a late pin");
+	auto pool = std::make_unique<DatabasePool>(8);
+	std::optional<IndexPin> held;
+	held.emplace(pin(*pool, fresh("late_pin")));
+	std::atomic<bool> released{false};
+	std::thread late([&] {
+		std::this_thread::sleep_for(200ms);
+		released = true;
+		held.reset();
+	});
+	pool.reset();
+	CHECK_TRUE(released.load());
+	late.join();
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1629,6 +1701,8 @@ int main(int argc, char** argv) {
 		{"test_a_resident_commit_on_an_owed_index_lets_it_close", test_a_resident_commit_on_an_owed_index_lets_it_close},
 		{"test_join_waits_for_every_pin", test_join_waits_for_every_pin},
 		{"test_a_failed_use_hands_its_pin_back", test_a_failed_use_hands_its_pin_back},
+		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
+		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},
 	};
 	for (const auto& c : cases) {

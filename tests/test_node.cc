@@ -722,7 +722,7 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}   // one bound (and the log flush), where two bounds took more than twice the bound
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(log.find("pinned") != std::string::npos);   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the HTTP stop ended in its grace: the write was destroyed, not abandoned
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 
@@ -793,7 +793,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(log.find("pinned") != std::string::npos);   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the service itself stopped
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 }
