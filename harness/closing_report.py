@@ -53,8 +53,14 @@ Rows = dict[str, Metric]
 
 
 def read_rows(path: Path) -> Rows:
-    raw = json.loads(path.read_text())
-    return {k: Metric(float(v["v"]), bool(v.get("higher", False)), str(v.get("axis", "other"))) for k, v in raw.items()}
+    """A rows file; any malformed content is a ValueError."""
+    try:
+        raw = json.loads(path.read_text())
+        return {
+            k: Metric(float(v["v"]), bool(v.get("higher", False)), str(v.get("axis", "other"))) for k, v in raw.items()
+        }
+    except (KeyError, TypeError, AttributeError) as e:
+        raise ValueError(f"{path}: malformed rows file: {e!r}") from e
 
 
 def write_rows(path: Path, rows: Rows) -> None:

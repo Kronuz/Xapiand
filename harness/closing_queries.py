@@ -39,12 +39,15 @@ def wiki_queries(source: str, per: int = PER_CLASS, seed: int = SEED) -> list[di
     by_class: dict[str, list[list[str]]] = defaultdict(list)
     vocabulary: set[str] = set()
     with open(source) as fh:
-        for line in fh:
+        for number, line in enumerate(fh, 1):
             if not line.strip():
                 continue
-            raw = json.loads(line)
-            tags = [t for t in raw["tags"] if ":" not in t]
-            tokens = TOKEN.findall(raw["query"].lower())
+            try:
+                raw = json.loads(line)
+                tags = [t for t in raw["tags"] if ":" not in t]
+                tokens = TOKEN.findall(raw["query"].lower())
+            except (KeyError, TypeError, AttributeError) as e:
+                raise ValueError(f"{source}:{number}: malformed query line: {e!r}") from e
             vocabulary.update(tokens)
             if len(tokens) >= 2 and tags and tags[0] in ("intersection", "union", "phrase"):
                 by_class[tags[0]].append(tokens)

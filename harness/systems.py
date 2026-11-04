@@ -119,7 +119,14 @@ class Query:
 
     @staticmethod
     def parse(line: str) -> Query:
-        raw = json.loads(line)
+        """One neutral query; any malformed line is a ValueError."""
+        try:
+            return Query.parse_raw(json.loads(line))
+        except (KeyError, TypeError, AttributeError, OverflowError, RecursionError) as e:
+            raise ValueError(f"malformed query {line.strip()[:80]!r}: {e!r}") from e
+
+    @staticmethod
+    def parse_raw(raw: dict[str, Any]) -> Query:
         rng = raw.get("range")
         srt = raw.get("sort")
         agg = raw.get("agg")
@@ -144,6 +151,8 @@ class Query:
             raise ValueError(f"unknown sort order {q.sort[1]}")
         if not (q.terms or q.range or q.agg or q.sort or q.filter or q.cls == "all"):
             raise ValueError("a query needs terms, a range, a filter, a sort or an aggregation")
+        if q.range and any(b is not None and not isinstance(b, (int, float)) for b in q.range[1:]):
+            raise ValueError("a range bound is a number")
         return q
 
     def dumps(self) -> str:

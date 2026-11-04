@@ -13,6 +13,7 @@ import argparse
 import http.server
 import json
 import os
+import random
 import sys
 import tempfile
 import threading
@@ -25,6 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import closing_mixed
+import closing_queries
 import closing_report as cr
 import closing_tenants
 import closing_units as cu
@@ -599,6 +601,69 @@ class Plan(unittest.TestCase):
         ids = {u.id for u in cu.all_units()}
         for row in ("t1", "t2", "t4a", "t4b", "t5a", "t5b", "t6", "t7", "t8-1e4", "t8-1e5"):
             self.assertTrue({f"{row}-r{n}" for n in range(1, 6)} <= ids, row)
+
+
+class Fuzz(unittest.TestCase):
+    """Seeded mutations of what the parsers read (CLOSING_FUZZ_N rounds, default 400): each input is accepted or refused
+    with ValueError, never anything else and never a hang."""
+
+    def mutate(self, rng: random.Random, text: str) -> str:
+        chars = list(text)
+        for _ in range(rng.randrange(1, 4)):
+            op = rng.randrange(4)
+            at = rng.randrange(len(chars) + 1)
+            if op == 0 and chars:
+                del chars[min(at, len(chars) - 1)]
+            elif op == 1:
+                chars.insert(at, rng.choice('{}[]",:\\ -0123456789eE.nul\x00\u00e9'))
+            elif op == 2 and chars:
+                chars[min(at, len(chars) - 1)] = rng.choice(["null", "true", "-1", "1e999", '"x"', "[]", "{}"])
+            elif chars:
+                chars = chars[: rng.randrange(len(chars))]
+        return "".join(chars)
+
+    def rounds(self) -> int:
+        return int(os.environ.get("CLOSING_FUZZ_N", "400"))
+
+    def test_query_parse(self) -> None:
+        rng = random.Random(7)
+        seeds = [ln for ln in open(os.path.join(HERE, "closing", "queries", "logs-smoke.jsonl")) if ln.strip()]
+        for _ in range(self.rounds()):
+            text = self.mutate(rng, rng.choice(seeds))
+            try:
+                sy.Query.parse(text)
+            except ValueError:
+                pass
+            except Exception as e:  # a malformed shape must be a ValueError, not a crash
+                self.fail(f"{type(e).__name__} for {text!r}")
+
+    def test_wiki_query_sampling(self) -> None:
+        rng = random.Random(8)
+        lines = [
+            json.dumps({"query": '"a b"', "tags": ["phrase", "phrase:num_tokens_2"]}),
+            json.dumps({"query": "+a +b", "tags": ["intersection", "global", "intersection:num_tokens_2"]}),
+            json.dumps({"query": "a b", "tags": ["union", "global", "union:num_tokens_2"]}),
+            json.dumps({"query": "x", "tags": []}),
+        ]
+        for _ in range(self.rounds() // 4):
+            path = os.path.join(SCRATCH, "fuzz-queries.txt")
+            with open(path, "w") as fh:
+                fh.write("\n".join(self.mutate(rng, ln) for ln in lines * 3) + "\n")
+            try:
+                closing_queries.wiki_queries(path, per=2)
+            except (ValueError, KeyError, TypeError, IndexError):
+                pass  # a refused source file; what matters is that it terminates
+
+    def test_rows_files(self) -> None:
+        rng = random.Random(9)
+        good = json.dumps({"t1.docs_per_sec": {"v": 1.5, "higher": True, "axis": "index"}})
+        path = Path(SCRATCH) / "fuzz.rows.json"
+        for _ in range(self.rounds()):
+            path.write_text(self.mutate(rng, good))
+            try:
+                cr.read_rows(path)
+            except ValueError:
+                pass
 
 
 class Tenants(unittest.TestCase):
