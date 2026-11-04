@@ -67,6 +67,7 @@
 #include "compressor_lz4.h"
 #include "length.h"
 #include "node.h"
+#include "strata/core/faultfs.hh"
 #include "task.hh"
 #include "utype.hh"
 #include "work_pool.hh"
@@ -1605,6 +1606,76 @@ void test_a_failed_use_hands_its_pin_back() {
 	CHECK_EQ(pool.catalog().stats().replaces, 1u);
 }
 
+// Indexes whose files are on `fs` (strata's faultfs), their logs and blobs on the disk at their path, and the log's
+// writer for them: a test can then fail the index's syncs, and see what the log replays.
+struct FaultyIndexes {
+	strata::faultfs::filesystem& fs;
+	DatabasePool pool{8};
+	DatabaseWALWriter writer{"WF{:02}", 1};
+
+	explicit FaultyIndexes(strata::faultfs::filesystem& fs_) : fs(fs_) {
+		pool.set_wal_writer(&writer);
+		pool.set_index_io([this](const std::string& path) -> std::unique_ptr<kronuz::journal::IO> {
+			std::filesystem::create_directories(path);
+			return std::make_unique<strata::faultfs::io>(fs);
+		});
+	}
+	~FaultyIndexes() {
+		pool.finish();
+		(void)pool.join();
+		writer.end();
+		writer.join(std::chrono::milliseconds(20000));
+	}
+};
+
+constexpr int LOGGED = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_SYNCHRONOUS_WAL | DB_DISABLE_AUTOCOMMIT;
+
+// A cold key's request pin opens the index and replays its log before the pin is handed (XP2, D6): a shutdown whose
+// commit failed leaves a write in the log only, and the next process's first pin reads it.
+void test_a_cold_pin_reads_what_the_log_replays() {
+	Watchdog watchdog("a cold pin replays the log", 60s);
+	strata::faultfs::filesystem fs;
+	const auto path = fresh("cold_replay");
+	{
+		FaultyIndexes indexes(fs);
+		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+		engine::sync_wait(shard.add_document(make("Kb", "b")));   // logged, not committed
+		fs.add_fault({strata::faultfs::op::sync});                 // the shutdown's commit fails
+	}
+	fs.clear_faults();
+	FaultyIndexes indexes(fs);
+	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
+	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
+	CHECK_EQ(indexes.pool.catalog().stats().opens, 1u);
+}
+
+// A fenced index is replaced by the catalog (XP2, D2, C23): the use whose commit met the fence hands its pin back,
+// the catalog closes the index once no other holder is left, and the next pin opens it again and reads the write
+// the failed commit left in the log.
+void test_a_fenced_index_is_replaced_and_replays_its_log() {
+	Watchdog watchdog("a fenced index is replaced", 60s);
+	strata::faultfs::filesystem fs;
+	const auto path = fresh("fenced");
+	FaultyIndexes indexes(fs);
+	{
+		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+		engine::sync_wait(shard.add_document(make("Kb", "b")));
+		fs.add_fault({strata::faultfs::op::sync});
+		CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.commit()); }) == engine::errc::database);
+		fs.clear_faults();
+		shard.release();   // the use ends: it hands its pin back
+	}
+	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
+	CHECK_EQ(indexes.pool.catalog().stats().replaces, 1u);
+	CHECK_EQ(indexes.pool.catalog().stats().opens, 2u);
+}
+
 // The catalog's commit chore with nothing applied writes no WAL line of its own (C25): the log has the commit of the
 // write and nothing for the chore's commits, the shutdown's included.
 void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
@@ -1701,6 +1772,8 @@ int main(int argc, char** argv) {
 		{"test_a_resident_commit_on_an_owed_index_lets_it_close", test_a_resident_commit_on_an_owed_index_lets_it_close},
 		{"test_join_waits_for_every_pin", test_join_waits_for_every_pin},
 		{"test_a_failed_use_hands_its_pin_back", test_a_failed_use_hands_its_pin_back},
+		{"test_a_cold_pin_reads_what_the_log_replays", test_a_cold_pin_reads_what_the_log_replays},
+		{"test_a_fenced_index_is_replaced_and_replays_its_log", test_a_fenced_index_is_replaced_and_replays_its_log},
 		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},

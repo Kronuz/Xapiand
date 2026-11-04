@@ -397,6 +397,8 @@ class DatabasePool {
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
 	std::chrono::milliseconds patience_{30s};           // how long the destructor waits for the shutdown before debug builds abort
+	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
+	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
 
 	// The catalog's timer, its budget, its shutdown, and the catalog, in the order they are made: the catalog goes
 	// first, while its timers can still fire (its destructor waits for them).
@@ -454,6 +456,12 @@ public:
 
 	void set_wal_writer(DatabaseWALWriter* writer) noexcept {
 		wal_writer_.store(writer, std::memory_order_release);
+	}
+
+	// Gives the indexes' files another IO (a test's strata::faultfs); set before the first pin. An IO with no index
+	// in it is a missing index, created by a create pin.
+	void set_index_io(std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> io) {
+		index_io_ = std::move(io);
 	}
 
 	// Runs a task that no request awaits (a timer's commit): on the control loop when there is one, else to its

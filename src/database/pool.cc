@@ -493,9 +493,12 @@ DatabasePool::make_host(std::size_t database_pool_size)
 	h.budget = budget_.get();
 	h.timer = [timer = timer_.get()](std::uint64_t delay_ns, std::function<void()> fn) { timer->after(delay_ns, std::move(fn)); };
 	// The key is the index's path; strata's files are in its "strata" directory (x-pool D6).
-	h.resolve = [](const IndexCatalog::opening& op) -> std::unique_ptr<kronuz::journal::IO> {
+	h.resolve = [this](const IndexCatalog::opening& op) -> std::unique_ptr<kronuz::journal::IO> {
 		namespace fs = std::filesystem;
 		const std::string path(op.key);
+		if (index_io_) {
+			return strata::counted_io::make(op.counts, [&] { return index_io_(path); });
+		}
 		const auto dir = (fs::path(path) / "strata").string();
 		std::error_code ec;
 		if (!fs::exists(dir, ec)) {
