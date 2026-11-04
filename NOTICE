@@ -17,5 +17,10 @@ derive from Xapian and are GPL licensed. They are being replaced before release.
 Elasticsearch
 -------------
 
-Xapiand's clients and documentation are heavily based upon the work of the
-Elasticsearch project, licensed under the Apache License, Version 2.0.
+The Python client in contrib/python/xapiand-py is a fork of elasticsearch-py,
+Copyright (c) 2017 Elasticsearch, licensed under the Apache License, Version
+2.0 (see contrib/python/xapiand-py/LICENSE). It is not part of any package.
+
+The documentation in docs/src/content/docs is heavily based upon Elasticsearch's
+documentation, whose code samples and text were licensed under the Apache
+License, Version 2.0. That attribution stays with the docs.
