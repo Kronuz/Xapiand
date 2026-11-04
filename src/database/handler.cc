@@ -39,7 +39,7 @@
 #include "exception_engine.h"                     // for QueryParserError, DocVersionConflictError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
-#include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION
+#include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "database/wal.h"                   // for DatabaseWAL
 #include "xapiand_exception.h"                      // for ClientError
 #include "sha256.h"                         // for SHA256
@@ -985,7 +985,7 @@ DatabaseHandler::restore_documents(int fd)
 	L_CALL("DatabaseHandler::restore_documents()");
 
 	SHA256 sha256;
-	msgpack::unpacker unpacker;
+	msgpack::unpacker unpacker = make_msgpack_unpacker();   // refuses a body nested deeper than MAX_JSON_DEPTH
 	query_field_t query_field;
 	query_field.commit = true;
 	DocIndexer indexer(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
