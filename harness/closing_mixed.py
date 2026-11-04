@@ -214,6 +214,19 @@ def audit(
     }
 
 
+def send_with_startup_retry(
+    client: sy.Client, req: sy.Request, stop: threading.Event, wait: float = 20.0
+) -> tuple[int, bytes]:
+    """The request, retried for up to `wait` seconds while the system answers 503: Quickwit refuses ingests for a moment
+    after a start, before its ingester has joined the router."""
+    deadline = time.time() + wait
+    while True:
+        status, body = client.call(req)
+        if status != 503 or time.time() > deadline or stop.is_set():
+            return status, body
+        stop.wait(0.2)
+
+
 def stream_writer(
     k: int,
     system: sy.System,
@@ -253,7 +266,7 @@ def stream_writer(
             payload.append(json.dumps(doc).encode())
         model.attempt(ids)
         try:
-            status, body = client.call(system.bulk_request(index, schema, payload))
+            status, body = send_with_startup_retry(client, system.bulk_request(index, schema, payload), stop)
             ok = status < 300 and system.parse_bulk(status, body, len(payload)).ok
         except (OSError, ValueError) as e:
             client.close()

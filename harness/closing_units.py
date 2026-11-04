@@ -320,7 +320,7 @@ def unit_arm_command(host: Host, unit: Unit, arm: str, root: Path) -> tuple[list
             *common(host, arm, work, out, pristine),
             "--keep", "--mixed", "--schema", "logs", "--index", "logs",
             "--queries", subset(queries / "logs.jsonl", ("term_range",), work.with_suffix(".q.jsonl")),
-            "--write-corpus", corpus(host, "logs-writes.ndjson", lim), "--write-rate", str(st.get("write_rate", 5000)),
+            "--write-corpus", corpus(host, "logs-writes.ndjson", lim), "--write-rate", str(st.get("write_rate", 500 if host.smoke else 5000)),
             "--write-batch", "100", "--rate", str(st.get("search_rate", 200)),
             "--duration", "20" if host.smoke else "180", "--warmup", "5" if host.smoke else "30",
             "--procs", str(max(1, len(host.gen_cpus.split(",")) // 2)),
@@ -333,7 +333,7 @@ def unit_arm_command(host: Host, unit: Unit, arm: str, root: Path) -> tuple[list
             sys.executable, str(HERE / "engine_mixed_load.py"), host.binary(arm), str(pristine),
             "--system", system, "--target", f"127.0.0.1:{port}", "--cpus", str(host.sys_n),
             "--launch-prefix", host.prefix(), "--keep", "--index", "logs", "--schema", "logs",
-            "--stream-corpus", corpus(host, "logs-writes.ndjson", lim), "--write-rate", str(st.get("write_rate", 5000)),
+            "--stream-corpus", corpus(host, "logs-writes.ndjson", lim), "--write-rate", str(st.get("write_rate", 500 if host.smoke else 5000)),
             "--kill-at", "15" if host.smoke else "60", "--secs", "40" if host.smoke else "90",
             "--sent-log", str(work.with_suffix(".sent.tsv")), "--result", str(out),
         ]  # fmt: skip
