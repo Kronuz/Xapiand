@@ -103,6 +103,15 @@ struct PoolTestAccess {
 		entry.applied_.fetch_add(1);
 		entry.modified.store(true);
 	}
+	// Wraps the pool's executor, which the indexes opened from here on run their merges on; call it before any pin.
+	// The catalog keeps the inner one, which the wrapper owns, so it lives as long as before.
+	template <typename Wrapper>
+	static Wrapper& wrap_executor(DatabasePool& pool) {
+		auto wrapper = std::make_unique<Wrapper>(std::move(pool.executor_));
+		auto* raw = wrapper.get();
+		pool.executor_ = std::move(wrapper);
+		return *raw;
+	}
 };
 
 namespace {
@@ -327,6 +336,67 @@ GateChores& gate_chores(ShardEndpoint& entry) {
 	auto* raw = gate.get();
 	A::set_chores(entry, std::move(gate));
 	return *raw;
+}
+
+
+// An executor whose work stops at its next checkpoint while held: a merge then stays pending until let go.
+class GatedExecutor final : public strata::executor {
+public:
+	explicit GatedExecutor(std::unique_ptr<strata::executor> inner) : inner_(std::move(inner)) { }
+	~GatedExecutor() override { let_go(); }
+
+	void hold() {
+		std::lock_guard<std::mutex> lk(m_);
+		held_ = true;
+	}
+	void let_go() {
+		{
+			std::lock_guard<std::mutex> lk(m_);
+			held_ = false;
+		}
+		cv_.notify_all();
+	}
+
+	std::unique_ptr<group> open() override { return inner_->open(); }
+	std::uint64_t now() override { return inner_->now(); }
+	bool sleep_until(std::uint64_t t, const task::cancel_token& stop) override { return inner_->sleep_until(t, stop); }
+	bool checkpoint(const task::cancel_token& stop) override {
+		std::unique_lock<std::mutex> lk(m_);
+		while (held_ && !stop.requested()) {
+			cv_.wait_for(lk, 1ms);
+		}
+		lk.unlock();
+		return inner_->checkpoint(stop);
+	}
+
+private:
+	std::unique_ptr<strata::executor> inner_;
+	std::mutex m_;
+	std::condition_variable cv_;
+	bool held_ = false;
+};
+
+// Waits for `pred`, up to a few seconds.
+template <typename Pred>
+bool until(Pred&& pred, std::chrono::milliseconds limit = 5s) {
+	const auto end = std::chrono::steady_clock::now() + limit;
+	while (!pred() && std::chrono::steady_clock::now() < end) {
+		std::this_thread::sleep_for(1ms);
+	}
+	return pred();
+}
+
+// A sweep at 1 kHz that demotes and closes an index idle for a millisecond.
+IndexSweep fast_sweep() {
+	return {1ms, 1ms, 1ms};
+}
+
+// Writes one-document segments until the index has a merge pending (the policy merges them).
+void make_a_merge(Shard& shard, prospect::index& index) {
+	for (int i = 0; i < 200 && index.merges_pending() == 0; ++i) {
+		engine::sync_wait(shard.add_document(make("K" + std::to_string(i), "d")));
+		engine::sync_wait(shard.engine_for_read());
+	}
 }
 
 
@@ -1754,6 +1824,183 @@ void test_the_pool_waits_for_a_pin_released_during_its_end() {
 	late.join();
 }
 
+
+// The autocommit settles what its commit leaves (D8): while a merge is pending it asks to come back, and once the
+// merges finish it publishes them and syncs their output with no revision of its own.
+void test_the_autocommit_comes_back_while_a_merge_is_pending() {
+	Watchdog watchdog("the autocommit comes back", 60s);
+	DatabasePool pool(8);
+	DatabaseWALWriter writer("WR{:02}", 1);   // the autocommit logs its commit
+	pool.set_wal_writer(&writer);
+	auto& gate = A::wrap_executor<GatedExecutor>(pool);
+	gate.hold();
+	Endpoint endpoint(fresh("rearm"));
+	auto entry = pin(pool, endpoint.path);
+	Shard shard = use(entry, WRITE);
+	auto& index = A::index(entry.entry());
+	make_a_merge(shard, index);
+	REQUIRE(index.merges_pending() > 0);
+	CHECK_TRUE(engine::sync_wait(autocommit(pool, endpoint)));   // the merge is held: come back for it
+	CHECK_FALSE(entry->is_modified());
+	const auto committed = revision_of(shard);
+	gate.let_go();
+	bool pending = true;
+	for (int i = 0; i < 1000 && pending; ++i) {
+		pending = engine::sync_wait(autocommit(pool, endpoint));
+		if (pending) {
+			std::this_thread::sleep_for(5ms);
+		}
+	}
+	CHECK_FALSE(pending);
+	{
+		auto turn = engine::sync_wait(entry->take_turn(WRITE));
+		CHECK_EQ(index.merges_pending(), 0u);
+		CHECK_FALSE(index.merge_output_unsynced());
+	}
+	CHECK_EQ(revision_of(shard), committed);   // the merges' sync made no revision
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "d");
+	writer.end();
+	writer.join(std::chrono::milliseconds(20000));
+}
+
+// An autocommit whose turn does not come asks to come back (D8), so a busy index's write is not left uncommitted.
+void test_a_busy_autocommit_comes_back() {
+	Watchdog watchdog("a busy autocommit comes back");
+	DatabasePool pool(8);
+	DatabaseWALWriter writer("WB{:02}", 1);   // the autocommit logs its commit
+	pool.set_wal_writer(&writer);
+	pool.set_turn_timeout(0.1);
+	Endpoint endpoint(fresh("busy_autocommit"));
+	auto entry = pin(pool, endpoint.path);
+	Shard shard = use(entry, WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	{
+		HoldTurn hold(entry.entry(), WRITE);
+		CHECK_TRUE(engine::sync_wait(autocommit(pool, endpoint)));
+		CHECK_TRUE(entry->is_modified());
+	}
+	const auto revision = revision_of(shard);
+	CHECK_FALSE(engine::sync_wait(autocommit(pool, endpoint)));
+	CHECK_FALSE(entry->is_modified());
+	CHECK_EQ(revision_of(shard), revision + 1);
+	writer.end();
+	writer.join(std::chrono::milliseconds(20000));
+}
+
+// The sweep is the only idle close (XP3): at 1 kHz it closes an unpinned idle index, and never one a use pins; with
+// strata's default times nothing closes an index idle for a second.
+void test_the_sweep_closes_only_an_unpinned_index() {
+	Watchdog watchdog("the sweep closes only an unpinned index");
+	const auto held_path = fresh("sweep_held"), idle_path = fresh("sweep_idle");
+	{
+		DatabasePool pool(8);
+		{
+			Shard shard(pin(pool, idle_path), WRITE);
+			engine::sync_wait(shard.add_document(make("Kb", "b")));
+			engine::sync_wait(shard.commit());
+		}
+		std::this_thread::sleep_for(1500ms);   // a pass of the default sweep, or more
+		CHECK_TRUE(state_of(pool, idle_path) == strata::slot_state::open);
+	}
+	DatabasePool pool(8, 0, engine::default_readers_per_index, fast_sweep());
+	{
+		Shard shard(pin(pool, held_path), WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		engine::sync_wait(shard.commit());
+	}
+	std::optional<Shard> held;
+	held.emplace(pin(pool, held_path, DB_OPEN), DB_OPEN);   // a use that holds its pin
+	{
+		Shard shard(pin(pool, idle_path), WRITE);
+		CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "b");
+	}
+	CHECK_TRUE(until([&] { return state_of(pool, idle_path) == strata::slot_state::free; }));
+	const auto stats = pool.catalog().stats();
+	CHECK_GE(stats.pass_closes, 1u);
+	std::this_thread::sleep_for(300ms);
+	CHECK_GE(pool.catalog().stats().passes, stats.passes + 10);   // the sweep went on passing over it
+	CHECK_TRUE(state_of(pool, held_path) == strata::slot_state::open);
+	held.reset();   // the use ends: its pin goes
+	CHECK_TRUE(until([&] { return state_of(pool, held_path) == strata::slot_state::free; }));
+}
+
+// The shutdown commits a write left uncommitted with the entry's commit chore (XP4): its WAL COMMIT line, a revision
+// more, and the write read back by the next pool.
+void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
+	Watchdog watchdog("the shutdown commits and logs", 60s);
+	const auto path = fresh("shutdown_wal");
+	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
+	engine::rev before;
+	{
+		DatabasePool pool(8);
+		DatabaseWALWriter writer("WS{:02}", 1);
+		pool.set_wal_writer(&writer);
+		{
+			Shard shard(pin(pool, path, flags), flags);
+			engine::sync_wait(shard.add_document(make("Ka", "a")));
+			before = shard.engine().revision();
+			CHECK_TRUE(shard.endpoint().is_modified());
+		}
+		pool.finish();
+		CHECK_TRUE(pool.join());
+		CHECK_EQ(pool.catalog().stats().shutdown_commits, 1u);
+		writer.end();
+		writer.join(std::chrono::milliseconds(20000));
+	}
+	std::size_t commits = 0, replaces = 0;
+	{
+		DatabaseWAL wal(path);
+		for (auto it = wal.begin(); it != wal.end(); ++it) {
+			const std::string line = *it;
+			const char* p = line.data();
+			const char* p_end = p + line.size();
+			(void)unserialise_length(&p, p_end);  // the revision
+			const auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&p, p_end));
+			commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
+			replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
+		}
+	}
+	CHECK_EQ(replaces, 1u);
+	CHECK_EQ(commits, 1u);
+	DatabasePool pool(8);
+	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(shard.engine().revision(), before + 1);
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
+}
+
+// The sweep's close syncs a finished merge's output through the entry's commit chore (XP4, S14): the index demotes
+// and closes with no revision of its own, and opens again with every document.
+void test_the_sweeps_close_syncs_a_merges_output() {
+	Watchdog watchdog("the sweep's close syncs a merge", 60s);
+	DatabasePool pool(8, 0, engine::default_readers_per_index, fast_sweep());
+	const auto path = fresh("sweep_merge");
+	engine::rev revision;
+	std::size_t written = 0;
+	{
+		auto entry = pin(pool, path);
+		Shard shard = use(entry, WRITE);
+		auto& index = A::index(entry.entry());
+		make_a_merge(shard, index);
+		REQUIRE(index.merges_pending() > 0);
+		written = static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count());
+		engine::sync_wait(shard.commit());
+		revision = shard.engine().revision();
+		bool unsynced = false;
+		const auto end = std::chrono::steady_clock::now() + 10s;
+		while (!unsynced && std::chrono::steady_clock::now() < end) {
+			auto turn = engine::sync_wait(entry->take_turn(WRITE));
+			index.check_in();
+			unsynced = index.merges_pending() == 0 && index.merge_output_unsynced();
+		}
+		REQUIRE(unsynced);
+	}
+	CHECK_TRUE(until([&] { return state_of(pool, path) == strata::slot_state::free; }, 10s));
+	CHECK_GE(pool.catalog().stats().merge_commits, 1u);
+	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(shard.engine().revision(), revision);
+	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), written);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1799,6 +2046,11 @@ int main(int argc, char** argv) {
 		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},
+		{"test_the_autocommit_comes_back_while_a_merge_is_pending", test_the_autocommit_comes_back_while_a_merge_is_pending},
+		{"test_a_busy_autocommit_comes_back", test_a_busy_autocommit_comes_back},
+		{"test_the_sweep_closes_only_an_unpinned_index", test_the_sweep_closes_only_an_unpinned_index},
+		{"test_the_shutdown_commits_and_logs_an_uncommitted_write", test_the_shutdown_commits_and_logs_an_uncommitted_write},
+		{"test_the_sweeps_close_syncs_a_merges_output", test_the_sweeps_close_syncs_a_merges_output},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

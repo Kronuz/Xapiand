@@ -2595,6 +2595,17 @@ Document::get_field(std::string_view slot_name, const MsgPack& obj)
 }
 
 
+// The autocommit, armed again while a merge of the index is pending (x-pool D8): the busy index's merges then publish
+// and sync with no write to take its turn.
+static task::task<void>
+autocommit_and_rearm(DatabasePool& pool, Endpoint endpoint)
+{
+	if (co_await autocommit(pool, endpoint)) {
+		XapiandManager::schedule_autocommit(endpoint);
+	}
+}
+
+
 void
 committer_commit(Endpoint endpoint) {
 	// The debouncer's thread only starts the commit: it is a task of the index, and takes its turn.
@@ -2602,5 +2613,5 @@ committer_commit(Endpoint endpoint) {
 	if (!manager || !manager->database_pool) {
 		return;
 	}
-	manager->database_pool->run_detached(autocommit(*manager->database_pool, endpoint));
+	manager->database_pool->run_detached(autocommit_and_rearm(*manager->database_pool, endpoint));
 }

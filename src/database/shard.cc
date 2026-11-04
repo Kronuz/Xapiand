@@ -616,6 +616,24 @@ ShardEndpoint::commit(int flags, bool wal_)
 
 
 task::task<bool>
+ShardEndpoint::settle_merges(int flags)
+{
+	L_CALL("ShardEndpoint::settle_merges(({}))", readable_flags(flags));
+
+	auto turn_ = co_await take_turn(flags);
+	bool pending = false;
+	co_await chores->run(engine::ChoreClass::flush, [this, &pending] {
+		index_->check_in();   // publishes the merges that finished
+		if (index_->merge_output_unsynced()) {
+			index_->commit();   // nothing else is uncommitted: no revision, so no WAL line (C25)
+		}
+		pending = index_->merges_pending() != 0 || index_->merge_output_unsynced();
+	});
+	co_return pending;
+}
+
+
+task::task<bool>
 ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags, [[maybe_unused]] bool wal_)
 {
 	L_CALL("ShardEndpoint::do_commit(({}), {})", readable_flags(flags), wal_);
@@ -1707,23 +1725,26 @@ Shard::__repr__() const
 }
 
 
-// The debounced autocommit of an index: a commit in its own turn, under a chore's pin; nothing when the index
-// is no longer in the registry.
-task::task<void>
+// The debounced autocommit of an index: a commit in its own turn, under a chore's pin, then its merges settled; nothing
+// when the index is not open. A busy index's merges are published and synced here, since no write's turn may come.
+task::task<bool>
 autocommit(DatabasePool& pool, Endpoint endpoint)
 {
 	auto entry = co_await pool.pin_chore(endpoint);
 	if (!entry) {
-		co_return;
+		co_return false;
 	}
 	const auto start = std::chrono::steady_clock::now();
 	std::string error;
+	bool pending = false;
 	try {
 		co_await entry->commit(DB_OPEN | DB_WRITABLE, true);
+		pending = co_await entry->settle_merges(DB_OPEN | DB_WRITABLE);
+	} catch (const engine::Error& exc) {
+		pending = exc.kind == engine::errc::busy;   // the turn did not come: try again later
+		error = exc.description();
 	} catch (const Exception& exc) {
 		error = exc.get_message();
-	} catch (const engine::Error& exc) {
-		error = exc.description();
 	} catch (const std::exception& exc) {
 		error = exc.what();
 	}
@@ -1731,6 +1752,7 @@ autocommit(DatabasePool& pool, Endpoint endpoint)
 	if (error.empty()) {
 		L_DEBUG("Autocommit of {} succeeded after {}", repr(entry->to_string()), strings::from_delta(start, end));
 	} else {
-		L_WARNING("Autocommit of {} falied after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
+		L_WARNING("Autocommit of {} failed after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
 	}
+	co_return pending;
 }

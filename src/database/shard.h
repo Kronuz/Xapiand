@@ -168,5 +168,6 @@ public:
 };
 
 
-// The debounced autocommit of an index: a commit in its own turn.
-task::task<void> autocommit(DatabasePool& pool, Endpoint endpoint);
+// The debounced autocommit of an index: a commit in its own turn, then its merges settled in another. True when a
+// merge is still pending, so the caller arms the autocommit again (x-pool D8).
+task::task<bool> autocommit(DatabasePool& pool, Endpoint endpoint);

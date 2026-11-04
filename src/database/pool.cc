@@ -486,7 +486,7 @@ rethrow_pin_failure(const std::string& path)
 
 
 IndexCatalog::host
-DatabasePool::make_host(std::size_t database_pool_size)
+DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 {
 	IndexCatalog::host h;
 	h.exec = executor_.get();
@@ -536,11 +536,19 @@ DatabasePool::make_host(std::size_t database_pool_size)
 		entry.commit_blocking();
 	};
 	h.soft_open = database_pool_size;
+	const auto set = [](std::uint64_t& field, std::chrono::nanoseconds value) {
+		if (value.count() > 0) {
+			field = static_cast<std::uint64_t>(value.count());
+		}
+	};
+	set(h.sweep_period_ns, sweep.period);
+	set(h.demote_idle_ns, sweep.demote_idle);
+	set(h.close_idle_ns, sweep.close_idle);
 	return h;
 }
 
 
-DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t readers_per_index) :
+DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t readers_per_index, IndexSweep sweep) :
 	finished_(false),
 	control_(nullptr),
 	turn_timeout_(DB_TIMEOUT),
@@ -556,7 +564,7 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, siz
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
 	timer_ = std::make_unique<Timer>();
 	budget_ = std::make_unique<strata::resource_budget>();
-	catalog_ = std::make_unique<IndexCatalog>(make_host(database_pool_size));
+	catalog_ = std::make_unique<IndexCatalog>(make_host(database_pool_size, sweep));
 	catalog_->start();
 }
 

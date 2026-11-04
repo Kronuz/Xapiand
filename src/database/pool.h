@@ -263,6 +263,10 @@ public:
 	// that a commit already in flight covers joins it. True when a commit made a new revision.
 	task::task<bool> commit(int flags, bool wal);
 
+	// In a turn of its own: publishes the merges that finished and syncs their output when nothing else is
+	// uncommitted (no revision, no WAL line). True while a merge is still pending or its output unsynced (x-pool D8).
+	task::task<bool> settle_merges(int flags);
+
 	engine::rev get_revision() const;
 	void set_revision(engine::rev revision);
 
@@ -376,6 +380,15 @@ public:
  *
  */
 
+// The catalog's sweep (x-pool D8): how often it runs, and how long an unpinned index idles before it is demoted, then
+// closed. Zero keeps strata's default (1 s, 30 s, 10 min).
+struct IndexSweep {
+	std::chrono::nanoseconds period{0};
+	std::chrono::nanoseconds demote_idle{0};
+	std::chrono::nanoseconds close_idle{0};
+};
+
+
 class DatabasePool {
 	friend ShardEndpoint;
 	friend IndexPin;
@@ -410,7 +423,7 @@ class DatabasePool {
 	std::shared_ptr<Shutdown> shutdown_;  // under shutdown_mtx_
 	std::unique_ptr<IndexCatalog> catalog_;
 
-	IndexCatalog::host make_host(std::size_t database_pool_size);
+	IndexCatalog::host make_host(std::size_t database_pool_size, const IndexSweep& sweep);
 
 	// Starts the catalog's shutdown once; what it awaits ends on the thread that releases the last pin or chore.
 	Shutdown& begin_shutdown();
@@ -419,7 +432,7 @@ public:
 	// `database_pool_size` is the open indexes the catalog's sweep keeps (soft_open). `readers_per_index` is the
 	// views of one index the host's threads hold at once (a search holds one per index it reads); a read past it
 	// answers busy (503).
-	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index);
+	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index, IndexSweep sweep = {});
 	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;
