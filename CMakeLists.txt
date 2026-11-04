@@ -657,7 +657,7 @@ add_compile_definitions(
 # hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
 # the commit with wordwise::hash32.
 FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG e3bf5b6167775f26dd14f89f210f687b0253241b)
-FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 4a1a97ca16bebe93f1e6c8aeb35fbac086f66817)
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
 add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
@@ -762,15 +762,15 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG d0807866aaace4bf916273a4bc0bee63f541978f)  # task main C3: cancellation, inline resume, roots and the four teardown phases
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG bdafa5f1ca96a2d34b1c5eb0bbb04e4b3ddb88c0)  # task main C3: cancellation, inline resume, roots and the four teardown phases
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
 # strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 3f564dc5b7e84325d0425d8c6344ab76b5667057)  # strata deps: drop-threadpool (threadpool without ThreadPool, task b406766)
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG bd782248009a994c677aef44827f3138f824529e)  # prospect drop-threadpool
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 356acbc8b5fb9c43e053f542d84e3e82ba53e88f)  # strata main
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -824,8 +824,8 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http so this pin wins over its (first declaration wins).
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 2fd30c80284a4224c1c6476fa5fb4ee3137a66be)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 73cfa02035a7da5edd229b2bbd838f2fdaaa72be)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG a59e9f8808e46b7d030aa2a936564038843100f4)  # reactor main step R (task sessions, owned scheduler, phased teardown)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 67622cc6845608b108255bac403c53bddc70ec80)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
