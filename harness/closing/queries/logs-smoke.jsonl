@@ -1,0 +1,14 @@
+{"class": "term", "field": "request", "terms": ["get"]}
+{"class": "term", "field": "request", "terms": ["images"]}
+{"class": "term", "field": "request", "terms": ["http"]}
+{"class": "and", "field": "request", "terms": ["get", "http"], "mode": "all"}
+{"class": "or", "field": "request", "terms": ["http", "images"], "mode": "any"}
+{"class": "phrase", "field": "request", "terms": ["get", "images"], "mode": "phrase"}
+{"class": "range_time", "range": {"field": "@timestamp", "gte": 893965217, "lte": 893966117}}
+{"class": "range_size", "range": {"field": "size", "gte": 1000, "lte": 5000}}
+{"class": "term_range", "field": "status", "terms": ["200"], "range": {"field": "@timestamp", "gte": 893964717, "lte": 893966617}}
+{"class": "agg_histogram", "agg": {"kind": "date_histogram", "field": "@timestamp", "interval": 3600}}
+{"class": "agg_terms", "agg": {"kind": "terms", "field": "status"}}
+{"class": "agg_stats", "agg": {"kind": "stats", "field": "size"}}
+{"class": "sort_time", "terms": ["200"], "field": "status", "sort": {"field": "@timestamp", "order": "desc"}}
+{"class": "sort_size", "sort": {"field": "size", "order": "asc"}, "range": {"field": "@timestamp", "gte": 893964617, "lte": 893967617}}

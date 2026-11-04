@@ -1,0 +1,18 @@
+# Quickwit (system Q): the node config. The partial request cache (leaf search results for an identical request) has
+# capacity 0; the other caches (split footer, fast fields, predicate) hold index data and stay at their defaults.
+version: 0.8
+cluster_id: closing
+node_id: q1
+listen_address: 127.0.0.1
+rest:
+  listen_port: {port}
+grpc_listen_port: {grpc}
+gossip_listen_port: {port}
+data_dir: {data}
+metastore_uri: file://{data}/indexes
+default_index_root_uri: file://{data}/indexes
+indexer:
+  enable_otlp_endpoint: false
+  cpu_capacity: {cpu_millis}m
+searcher:
+  partial_request_cache_capacity: 0

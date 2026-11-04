@@ -1,0 +1,8 @@
+{
+  "wiki": {"id": "id", "fields": {"text": "text", "sort_field": "integer"}},
+  "logs": {
+    "time": "@timestamp",
+    "fields": {"@timestamp": "date", "clientip": "keyword", "request": "text", "status": "integer", "size": "integer"}
+  },
+  "tenants": {"id": "id", "fields": {"text": "text", "sort_field": "integer"}}
+}

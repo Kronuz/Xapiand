@@ -1,0 +1,7 @@
+{
+  "version": "0.9",
+  "index_id": "{index}",
+  "doc_mapping": {"mode": "lenient"},
+  "indexing_settings": {"commit_timeout_secs": 60},
+  "search_settings": {}
+}

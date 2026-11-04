@@ -1,0 +1,14 @@
+# Elasticsearch (system E), appended to the tarball's elasticsearch.yml. Security off, plain HTTP over loopback (D2).
+cluster.name: closing
+node.name: e1
+path.data: {data}
+path.logs: {logs}
+network.host: 127.0.0.1
+http.port: {port}
+transport.port: {transport}
+discovery.type: single-node
+xpack.security.enabled: false
+xpack.ml.enabled: false
+ingest.geoip.downloader.enabled: false
+node.processors: {processors}
+bootstrap.memory_lock: {memory_lock}
