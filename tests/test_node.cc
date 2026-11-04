@@ -53,6 +53,7 @@
 #include "database/pool.h"
 #include "database/schemas_lru.h"
 #include "database/shard.h"
+#include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
 #include "engine/chores.h"
@@ -71,7 +72,10 @@
 using namespace std::chrono_literals;
 
 struct PoolTestAccess {
-	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) { entry.chores = std::move(chores); }
+	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) {
+		entry.chores = std::move(chores);
+		entry.engine_->use_chores(entry.chores.get());
+	}
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 };
 
@@ -292,16 +296,16 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	Watchdog watchdog("one schema load");
 	constexpr int N = 6;
 	const auto endpoints = endpoints_of("schema_once");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
 	// A write applied and not yet refreshed: a read of the index takes its turn to refresh first.
-	Shard shard(*entry.get(), WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("K1")));
 	const auto loads_before = manager()->schemas->loads();
 	std::atomic<int> done{0};
 	std::vector<std::shared_ptr<const MsgPack>> got(N);
 	std::vector<std::thread> threads;
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		for (int i = 0; i < N; ++i) {
 			threads.emplace_back([&, i] {
 				DatabaseHandler handler(endpoints, DB_OPEN);
@@ -333,14 +337,14 @@ static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	Watchdog watchdog("one settings load");
 	constexpr int N = 6;
 	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
-	auto entry = manager()->database_pool->spawn(reserved[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("settings_once_marker")));   // so that a read of the index takes its turn
 	const auto loads_before = manager()->index_settings_resolver->loads();
 	std::atomic<int> done{0};
 	std::vector<std::thread> threads;
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		for (int i = 0; i < N; ++i) {
 			threads.emplace_back([&] {
 				auto settings = engine::sync_wait(XapiandManager::resolve_index_settings("settings_once"));
@@ -429,11 +433,11 @@ static void test_the_control_loop_is_free_during_a_slow_commit() {
 	Watchdog watchdog("slow commit");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_commit");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
-	auto gate = std::make_unique<GateChores>(A::take_chores(*entry.get()));
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
+	auto gate = std::make_unique<GateChores>(A::take_chores(entry.entry()));
 	auto* raw = gate.get();
-	A::set_chores(*entry.get(), std::move(gate));
-	Shard shard(*entry.get(), WRITE);
+	A::set_chores(entry.entry(), std::move(gate));
+	Shard shard = use_index(entry, WRITE);
 	engine::sync_wait(shard.ready());
 	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit
 	raw->arm();                                           // and the commit it starts waits for release()
@@ -459,14 +463,14 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 	Watchdog watchdog("slow schema load");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_schema");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("K1")));   // applied and not refreshed: the schema read takes the turn
 	std::atomic<bool> loaded{false};
 	std::atomic<int> sentinels{0};
 	const auto before = manager()->control_lag().snapshot();
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		manager()->spawn_control([](const Endpoints& endpoints, std::atomic<bool>& loaded) -> task::task<void> {
 			DatabaseHandler handler(endpoints, DB_OPEN);
 			co_await manager()->schemas->get(&handler, nullptr);
@@ -555,8 +559,8 @@ struct AbandonSpec {
 		std::_Exit(2);
 	}
 	manager()->shutdown_write_bound = spec.bound;
-	auto entry = manager()->database_pool->spawn(endpoints_of("abandon")[0]);
-	HoldTurn hold(*entry.get(), WRITE);
+	auto entry = pin_index(*manager()->database_pool, endpoints_of("abandon")[0].path, WRITE);
+	HoldTurn hold(entry.entry(), WRITE);
 
 	if (spec.request) {
 		const int fd = connect_to(abandon_port);
@@ -589,7 +593,7 @@ struct AbandonSpec {
 	if (spec.release_after.count() != 0) {
 		std::this_thread::sleep_for(spec.release_after);
 		hold.release();
-		entry.reset();   // the registry closes the index only once nobody refers to it
+		entry.release();   // the catalog closes the index only once nobody pins it
 		if (!eventually([&] { return node.exited(); }, 60s)) {
 			std::_Exit(7);
 		}
@@ -890,14 +894,14 @@ static void test_the_control_loop_is_free_during_a_settings_load() {
 	Watchdog watchdog("slow settings load");
 	Pulse pulse;
 	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
-	auto entry = manager()->database_pool->spawn(reserved[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("slow_settings_marker")));   // so that a read of the index takes its turn
 	std::atomic<bool> resolved{false};
 	std::atomic<int> sentinels{0};
 	const auto before = manager()->control_lag().snapshot();
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		manager()->spawn_control([](std::atomic<bool>& resolved) -> task::task<void> {
 			co_await XapiandManager::resolve_index_settings("slow_settings");
 			resolved = true;

@@ -25,17 +25,25 @@
 
 #include <algorithm>              // for std::find, std::move
 #include <cassert>                // for assert
+#include <condition_variable>     // for std::condition_variable
+#include <coroutine>              // for std::suspend_never
+#include <filesystem>             // for std::filesystem
 #include <optional>               // for std::optional
+#include <system_error>           // for std::system_error
 #include <thread>                 // for std::this_thread
 #include <utility>                // for std::exchange
 
 #include "at_end.h"               // for at_end::assert_none
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
+#include "completion/posix.h"     // for kronuz::journal::PosixIO
 #include "engine/error.h"         // for engine::Error, engine::errc
+#include "engine/strata/shard.h"  // for engine::strata::index_options, engine::strata::new_uuid
 #include "engine/sync.h"          // for engine::check_may_block, engine::sync_wait
 #include "log.h"                  // for L_CALL
 #include "reactor.h"              // for reactor::inside_run
+#include "scheduler.h"            // for Scheduler, ScheduledTask
+#include "strata/core/counted_io.hh"          // for strata::counted_io
 #include "strata/core/work_pool_executor.hh"  // for strata::work_pool_executor
 #include "work_pool.hh"           // for WorkPool, WorkGroup, WorkItem
 #include "xapiand_exception.h"    // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -257,14 +265,14 @@ IndexChores::run(engine::ChoreClass cls, std::function<void()> fn)
  *   |_| \__,_|_|  |_| |_|
  */
 
-Turn::Turn(task::async_mutex::guard guard, int* held) noexcept
-	: guard_(std::move(guard)), held_(held)
+Turn::Turn(task::async_mutex::guard guard, int* held, prospect::index* index) noexcept
+	: guard_(std::move(guard)), held_(held), index_(index)
 {
 }
 
 
 Turn::Turn(Turn&& other) noexcept
-	: guard_(std::move(other.guard_)), held_(std::exchange(other.held_, nullptr))
+	: guard_(std::move(other.guard_)), held_(std::exchange(other.held_, nullptr)), index_(std::exchange(other.index_, nullptr))
 {
 }
 
@@ -276,6 +284,7 @@ Turn::operator=(Turn&& other) noexcept
 		release();
 		guard_ = std::move(other.guard_);
 		held_ = std::exchange(other.held_, nullptr);
+		index_ = std::exchange(other.index_, nullptr);
 	}
 	return *this;
 }
@@ -290,6 +299,11 @@ Turn::~Turn()
 void
 Turn::release() noexcept
 {
+	// The holder checks the index in while it still holds the turn: a check-in is safe only while no thread makes
+	// the owner's lease-less reads, which a writer makes under its turn (strata's checkout contract, x-pool D5).
+	if (auto* index = std::exchange(index_, nullptr); index && guard_) {
+		index->check_in();
+	}
 	if (held_) {
 		assert(*held_ > 0);
 		--*held_;
@@ -308,104 +322,6 @@ Turn::release() noexcept
  *                                                             |_|
  */
 
-// What the users of an opening index await: the leader's outcome.
-struct ShardEndpoint::OpenFlight {
-	task::event done;
-	std::exception_ptr error;
-};
-
-
-ShardEndpoint::State
-ShardEndpoint::state() const
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	return state_;
-}
-
-
-void
-ShardEndpoint::settle_open(State state, const std::shared_ptr<OpenFlight>& flight, std::exception_ptr error) noexcept
-{
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		state_ = state;
-		flight_.reset();
-	}
-	flight->error = std::move(error);
-	flight->done.set();
-}
-
-
-task::task<void>
-ShardEndpoint::ensure_open(int flags)
-{
-	L_CALL("ShardEndpoint::ensure_open(({}))", readable_flags(flags));
-
-	engine::check_no_view_held("an open");
-
-	for (;;) {
-		std::shared_ptr<OpenFlight> flight;
-		std::shared_ptr<task::event> closed;
-		bool leader = false;
-		bool reset = false;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			switch (state_) {
-				case State::open:
-					if (!stale_.load(std::memory_order_acquire)) {
-						co_return;
-					}
-					// A failure told us the engine cannot go on: this task closes it and the loop opens it again.
-					state_ = State::closing;
-					closed_ = std::make_shared<task::event>();
-					reset = true;
-					break;
-				case State::opening:
-					flight = flight_;
-					break;
-				case State::closing:
-					closed = closed_;
-					break;
-				case State::empty:
-					// A node that is finishing serves the indexes it has open and opens no more.
-					if (is_finished()) {
-						throw engine::Error(engine::errc::not_available, "Shard is not available");
-					}
-					state_ = State::opening;
-					flight_ = flight = std::make_shared<OpenFlight>();
-					leader = true;
-					break;
-			}
-		}
-		if (reset) {
-			co_await close_marked(false);
-			continue;
-		}
-		if (closed) {
-			co_await *closed;
-			continue;
-		}
-		if (!leader) {
-			co_await flight->done;
-			if (flight->error) {
-				std::rethrow_exception(flight->error);
-			}
-			continue;
-		}
-		std::exception_ptr error;
-		try {
-			co_await open_index(flags);
-		} catch (...) {
-			error = std::current_exception();
-		}
-		settle_open(error ? State::empty : State::open, flight, error);
-		if (error) {
-			std::rethrow_exception(error);
-		}
-	}
-}
-
-
 task::task<Turn>
 ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 {
@@ -413,65 +329,41 @@ ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 
 	engine::check_no_view_held("a turn");
 
-	for (;;) {
-		co_await ensure_open(flags);
-
-		task::async_mutex::guard guard;
-		int* held = nullptr;
-		if (auto* host = engine::Host::current()) {
-			const auto at = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
-			task::deadline<engine::Host> expiry(*host, at, cancel);
-			guard = co_await turn.lock(expiry.token());
-			if (auto* counters = host->counters()) {
-				held = &counters->turns;
-			}
-		} else {
-			guard = co_await turn.lock(cancel);
+	task::async_mutex::guard guard;
+	int* held = nullptr;
+	if (auto* host = engine::Host::current()) {
+		const auto at = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
+		task::deadline<engine::Host> expiry(*host, at, cancel);
+		guard = co_await turn.lock(expiry.token());
+		if (auto* counters = host->counters()) {
+			held = &counters->turns;
 		}
-		if (!guard) {
-			if (cancel.requested()) {
-				throw task::cancelled{};
-			}
-			throw engine::Error(engine::errc::busy, "The index is busy: its turn did not come in time");
-		}
-		if (held) {
-			assert(*held == 0 && "a task holds one index's turn at most");
-			++*held;
-		}
-		Turn mine(std::move(guard), held);
-
-		bool usable;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			usable = state_ == State::open && !stale_.load(std::memory_order_acquire) && engine_;
-		}
-		if (usable) {
-			co_return std::move(mine);
-		}
-		// Closed or replaced while the turn was queued: give it back and look again.
+	} else {
+		guard = co_await turn.lock(cancel);
 	}
+	if (!guard) {
+		if (cancel.requested()) {
+			throw task::cancelled{};
+		}
+		throw engine::Error(engine::errc::busy, "The index is busy: its turn did not come in time");
+	}
+	if (held) {
+		assert(*held == 0 && "a task holds one index's turn at most");
+		++*held;
+	}
+	co_return Turn(std::move(guard), held, index_);
 }
 
 
 task::task<void>
 ShardEndpoint::fresh(int flags, task::cancel_token cancel)
 {
-	co_await ensure_open(flags);
-	std::shared_ptr<engine::Shard> eng;
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		eng = engine_;
-	}
-	if (!eng || !eng->dirty()) {
+	if (!engine_->dirty()) {
 		co_return;
 	}
 	auto mine = co_await take_turn(flags, std::move(cancel));
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		eng = engine_;
-	}
-	if (eng->dirty()) {
-		co_await eng->refresh();
+	if (engine_->dirty()) {
+		co_await engine_->refresh();
 	}
 }
 
@@ -479,34 +371,7 @@ ShardEndpoint::fresh(int flags, task::cancel_token cancel)
 engine::Shard&
 ShardEndpoint::engine()
 {
-	std::lock_guard<std::mutex> lk(mtx);
-	if (!engine_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
 	return *engine_;
-}
-
-
-bool
-ShardEndpoint::is_used() const
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	return refs != 0 || state_ != State::empty;
-}
-
-
-std::string
-ShardEndpoint::busy_line(int own_refs)
-{
-	const bool turn_held = !turn.try_lock();
-	if (!turn_held) {
-		turn.unlock();
-	}
-	const int users = refs.load() - own_refs;
-	if (!turn_held && users <= 0) {
-		return {};
-	}
-	return strings::format("{} ({}{} reference{})", repr(to_string()), turn_held ? "turn held, " : "", users, users == 1 ? "" : "s");
 }
 
 
@@ -527,25 +392,9 @@ ShardEndpoint::set_revision(engine::rev revision_)
 std::string
 ShardEndpoint::__repr__() const
 {
-	static const char* const names[] = {"empty", "opening", "open", "closing"};
-	std::lock_guard<std::mutex> lk(mtx);
-	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {} ({}){}{}>",
-		refs.load(),
+	return strings::format(STEEL_BLUE + "<ShardEndpoint {}{}>",
 		repr(to_string()),
-		names[static_cast<int>(state_)],
-		stale_.load() ? " " + RED + "(stale)" + STEEL_BLUE : "",
-		is_finished() ? " " + ORANGE + "(finished)" + STEEL_BLUE : "");
-}
-
-
-std::string
-ShardEndpoint::dump_databases(int level) const
-{
-	std::string indent;
-	for (int l = 0; l < level; ++l) {
-		indent += "    ";
-	}
-	return indent + __repr__() + "\n";
+		is_modified() ? " " + ORANGE + "(modified)" + STEEL_BLUE : "");
 }
 
 
@@ -558,11 +407,139 @@ ShardEndpoint::dump_databases(int level) const
  *
  */
 
+// The catalog's timer (strata's host::timer): one thread running the scheduler's wheel; a due callback only posts
+// a chore. A timer that cannot arm throws, which the catalog takes as "not armed".
+struct DatabasePool::Timer {
+	struct Fire;
+	using Wheel = Scheduler<Fire>;
+	struct Fire : ScheduledTask<Wheel, Fire> {
+		std::function<void()> fn;
+		explicit Fire(std::function<void()> fn_) : fn(std::move(fn_)) { }
+		void operator()() { fn(); }
+	};
+
+	Wheel wheel{"DB-TIMER"};
+
+	void after(std::uint64_t delay_ns, std::function<void()> fn) {
+		const auto at = std::chrono::steady_clock::now() + std::chrono::nanoseconds(delay_ns);
+		if (wheel.add(std::make_shared<Fire>(std::move(fn)), at) != schedule_result::scheduled) {
+			throw std::system_error(std::make_error_code(std::errc::operation_canceled), "The index catalog's timer did not arm");
+		}
+	}
+};
+
+
+// What join() and the destructor await: the catalog's shutdown, set by the task that awaits it.
+struct DatabasePool::Shutdown {
+	std::mutex mtx;
+	std::condition_variable cv;
+	bool done = false;
+	bool reported = false;
+	std::vector<std::string> failed;  // the keys whose commit failed: their WAL replays them at the next open
+};
+
+
+namespace {
+
+// A coroutine nobody awaits: it runs until its first suspension when called, and its frame goes when it ends.
+struct Detached {
+	struct promise_type {
+		Detached get_return_object() noexcept { return {}; }
+		std::suspend_never initial_suspend() noexcept { return {}; }
+		std::suspend_never final_suspend() noexcept { return {}; }
+		void return_void() noexcept { }
+		void unhandled_exception() noexcept { std::terminate(); }
+	};
+};
+
+// A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
+// strata's own failures are translated; anything else (the WAL replay's) leaves as it is.
+[[noreturn]] void
+rethrow_pin_failure(const std::string& path)
+{
+	try {
+		throw;
+	} catch (const strata::index_not_created&) {
+		throw engine::Error(engine::errc::not_found, "No such database: " + path);
+	} catch (const strata::catalog_closed&) {
+		throw engine::Error(engine::errc::not_available, "Shard is not available");
+	} catch (const strata::too_many_open& exc) {
+		throw engine::Error(engine::errc::busy, std::string("Too many indexes are open: ") + exc.what());
+	} catch (const strata::wake_failed& exc) {
+		try {
+			std::rethrow_exception(exc.cause());
+		} catch (const strata::too_many_open& cause) {
+			throw engine::Error(engine::errc::busy, std::string("Too many indexes are open: ") + cause.what());
+		} catch (...) {
+			engine::strata::rethrow_translated();
+		}
+	} catch (const strata::index_fenced&) {
+		engine::strata::rethrow_translated();
+	} catch (const strata::corrupt_segment&) {
+		engine::strata::rethrow_translated();
+	} catch (const strata::corrupt_index&) {
+		engine::strata::rethrow_translated();
+	}
+}
+
+}  // namespace
+
+
+IndexCatalog::host
+DatabasePool::make_host(std::size_t database_pool_size)
+{
+	IndexCatalog::host h;
+	h.exec = executor_.get();
+	h.budget = budget_.get();
+	h.timer = [timer = timer_.get()](std::uint64_t delay_ns, std::function<void()> fn) { timer->after(delay_ns, std::move(fn)); };
+	// The key is the index's path; strata's files are in its "strata" directory (x-pool D6).
+	h.resolve = [](const IndexCatalog::opening& op) -> std::unique_ptr<kronuz::journal::IO> {
+		namespace fs = std::filesystem;
+		const std::string path(op.key);
+		const auto dir = (fs::path(path) / "strata").string();
+		std::error_code ec;
+		if (!fs::exists(dir, ec)) {
+			if (!op.create) {
+				throw strata::index_not_created("No such database: " + path);
+			}
+			fs::create_directories(dir);
+		}
+		return strata::counted_io::make(op.counts, [&] {
+			return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+		});
+	};
+	// The options are read at each open, so a test that resizes them affects the indexes opened from then on.
+	h.open_index = [this](kronuz::journal::IO& io, const prospect::index::options&, const IndexCatalog::opening& op) {
+		engine::OpenOptions host;
+		host.host = true;
+		host.background = executor_.get();
+		host.buffered_docs_cap = buffered_docs_cap_.load(std::memory_order_relaxed);
+		host.readers_per_index = readers_per_index_.load(std::memory_order_relaxed);
+		const auto options = engine::strata::index_options(host);
+		try {
+			return prospect::index::open(io, options);
+		} catch (const strata::index_not_created&) {
+			if (!op.create) {
+				throw;
+			}
+			return prospect::index::create(io, options, engine::strata::new_uuid());
+		}
+	};
+	h.open_payload = [this](const IndexCatalog::opening& op, prospect::index& index, std::optional<ShardEndpoint>& entry) {
+		entry.emplace(*this, op.key);
+		entry->open_blocking(index);
+	};
+	h.commit = [](ShardEndpoint& entry, prospect::index&) {
+		entry.commit_blocking();
+	};
+	h.soft_open = database_pool_size;
+	return h;
+}
+
+
 DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t readers_per_index) :
-	lru::lru(database_pool_size),
 	finished_(false),
 	control_(nullptr),
-	housekeeping_active_(false),
 	turn_timeout_(DB_TIMEOUT),
 	buffered_docs_cap_(0),
 	readers_per_index_(readers_per_index),
@@ -574,15 +551,52 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, siz
 	options.block_guard = &engine::check_may_block;
 	work_pool_ = std::make_unique<WorkPool>(options);
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
+	timer_ = std::make_unique<Timer>();
+	budget_ = std::make_unique<strata::resource_budget>();
+	catalog_ = std::make_unique<IndexCatalog>(make_host(database_pool_size));
+	catalog_->start();
 }
 
 
 DatabasePool::~DatabasePool()
 {
 	at_end::assert_none("DatabasePool", detached_.load() == 0 ? std::string() : strings::format("{} detached tasks have not ended", detached_.load()));
-	// The entries (their groups, their engines and the merges those run) end before the pool they run on.
-	std::lock_guard<std::mutex> lk(mtx);
-	lru::lru::clear();
+	// The catalog is destroyed only after its shutdown ended: no pin is held and none can be taken (C24). Something
+	// that holds an index past the pool (a root that holds a pin, a view kept past its pin) is reported, and debug
+	// builds abort; release builds wait, since destroying the catalog under a pin would free what the pin names.
+	auto& state = begin_shutdown();
+	std::unique_lock<std::mutex> lk(state.mtx);
+	if (!state.cv.wait_for(lk, patience_, [&] { return state.done; })) {
+		lk.unlock();
+		std::string left;
+		for (const auto& line : busy()) {
+			left += (left.empty() ? "" : "; ") + line;
+		}
+		at_end::assert_none("DatabasePool", left.empty() ? std::string("the index catalog's shutdown did not end") : left);
+		lk.lock();
+		state.cv.wait(lk, [&] { return state.done; });
+	}
+	lk.unlock();
+	catalog_.reset();
+}
+
+
+DatabasePool::Shutdown&
+DatabasePool::begin_shutdown()
+{
+	std::lock_guard<std::mutex> lk(shutdown_mtx_);
+	if (!shutdown_) {
+		shutdown_ = std::make_shared<Shutdown>();
+		// Resumed inline by whoever releases the last pin or ends the last chore (no scheduler is current here).
+		[](IndexCatalog& catalog, std::shared_ptr<Shutdown> state) -> Detached {
+			auto result = co_await catalog.shutdown();
+			std::lock_guard<std::mutex> lk(state->mtx);
+			state->failed = std::move(result.uncommitted);
+			state->done = true;
+			state->cv.notify_all();
+		}(*catalog_, shutdown_);
+	}
+	return *shutdown_;
 }
 
 
@@ -635,43 +649,19 @@ DatabasePool::run_detached(task::task<void> t)
 }
 
 
-ReferencedShardEndpoint
-DatabasePool::_spawn(const Endpoint& endpoint)
-{
-	L_CALL("DatabasePool::_spawn({})", repr(endpoint.to_string()));
-
-	ShardEndpoint* database_endpoint;
-
-	// Find or spawn the shard endpoint
-	auto it = find_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool, bool) {
-		assert(endpoint_database_endpoint.second);
-		endpoint_database_endpoint.second->renew_time = std::chrono::steady_clock::now();
-		return GetAction::renew;
-	}, endpoint);
-	if (it == end()) {
-		auto emplaced = emplace_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>&, bool, bool) {
-			return DropAction::stop;
-		}, endpoint, std::make_unique<ShardEndpoint>(*this, endpoint));
-		database_endpoint = emplaced.first->second.get();
-		if (finished_.load()) {
-			database_endpoint->finished.store(true);  // an entry made during the shutdown opens nothing
-		}
-	} else {
-		database_endpoint = it->second.get();
-	}
-
-	// Return a referenced shard endpoint so it cannot get deleted while the object exists
-	return ReferencedShardEndpoint(database_endpoint);
-}
-
-
 task::task<IndexPin>
-DatabasePool::pin(const Endpoint& endpoint)
+DatabasePool::pin(const Endpoint& endpoint, int flags)
 {
-	L_CALL("DatabasePool::pin({})", repr(endpoint.to_string()));
+	L_CALL("DatabasePool::pin({}, ({}))", repr(endpoint.to_string()), readable_flags(flags));
 
 	engine::check_no_view_held("a pin");
-	co_return IndexPin(spawn(endpoint));
+	const std::string key = endpoint.path;
+	const auto intent = has_db_create_or_open(flags) ? strata::open_intent::create : strata::open_intent::open;
+	try {
+		co_return IndexPin(co_await catalog_->pin_request(key, true, intent), *this);
+	} catch (...) {
+		rethrow_pin_failure(key);
+	}
 }
 
 
@@ -680,135 +670,81 @@ DatabasePool::pin_chore(const Endpoint& endpoint)
 {
 	L_CALL("DatabasePool::pin_chore({})", repr(endpoint.to_string()));
 
-	// Resident only: the reference keeps an open entry from the idle close, which marks only unreferenced ones.
-	auto ref = get(endpoint);
-	if (ref && ref->state() != ShardEndpoint::State::open) {
-		ref.reset();
+	const std::string key = endpoint.path;
+	try {
+		auto pinned = co_await catalog_->pin_chore(key, false, strata::open_intent::resident);
+		if (!pinned) {
+			co_return IndexPin();
+		}
+		co_return IndexPin(std::move(pinned), *this);
+	} catch (...) {
+		// A resident pin that waited on an open that failed gets its error: there is nothing open to commit (C25).
+		co_return IndexPin();
 	}
-	co_return IndexPin(std::move(ref));
 }
 
 
-ReferencedShardEndpoint
-DatabasePool::spawn(const Endpoint& endpoint)
+void
+IndexPin::reopen() noexcept
 {
-	L_CALL("DatabasePool::spawn({})", repr(endpoint.to_string()));
-
-	std::lock_guard<std::mutex> lk(mtx);
-	return _spawn(endpoint);
-}
-
-
-ReferencedShardEndpoint
-DatabasePool::_get(const Endpoint& endpoint) const
-{
-	L_CALL("DatabasePool::_get({})", repr(endpoint.to_string()));
-
-	ShardEndpoint* database_endpoint = nullptr;
-
-	auto it = find_and_leave(endpoint);
-	if (it != end()) {
-		database_endpoint = it->second.get();
+	if (pin_) {
+		pool_->catalog_->reopen(std::move(pin_));
 	}
-
-	// Return a referenced shard endpoint so it cannot get deleted while the object exists
-	return ReferencedShardEndpoint(database_endpoint);
 }
 
 
-ReferencedShardEndpoint
-DatabasePool::get(const Endpoint& endpoint) const
+namespace {
+
+const char*
+state_name(strata::slot_state state) noexcept
 {
-	L_CALL("DatabasePool::get({})", repr(endpoint.to_string()));
-
-	std::lock_guard<std::mutex> lk(mtx);
-	return _get(endpoint);
+	switch (state) {
+		case strata::slot_state::free: return "free";
+		case strata::slot_state::opening: return "opening";
+		case strata::slot_state::open: return "open";
+		case strata::slot_state::owed: return "owed";
+		case strata::slot_state::waking: return "waking";
+		case strata::slot_state::demoting: return "demoting";
+		case strata::slot_state::closing: return "closing";
+		case strata::slot_state::failed: return "failed";
+	}
+	return "?";
 }
+
+const char*
+hold_name(strata::shutdown_hold why) noexcept
+{
+	switch (why) {
+		case strata::shutdown_hold::pinned: return "pinned";
+		case strata::shutdown_hold::transition: return "in a transition";
+		case strata::shutdown_hold::lease_busy: return "its lease is busy";
+		case strata::shutdown_hold::close_throws: return "its close throws";
+		case strata::shutdown_hold::close_failed: return "its close failed";
+		case strata::shutdown_hold::view_held: return "a view is held";
+		case strata::shutdown_hold::waiting: return "waiting";
+	}
+	return "?";
+}
+
+}  // namespace
 
 
 std::vector<std::string>
 DatabasePool::busy()
 {
 	std::vector<std::string> lines;
-	for (auto& entry : endpoints()) {
-		auto line = entry->busy_line(1);   // this reference is one of the entry's refs
-		if (!line.empty()) {
-			lines.push_back(std::move(line));
+	if (catalog_->shutting_down()) {
+		for (const auto& holder : catalog_->shutdown_report()) {
+			lines.push_back(strings::format("{} ({}, {} pin{}, {})", repr(holder.key), state_name(static_cast<strata::slot_state>(holder.state)), holder.pins, holder.pins == 1 ? "" : "s", hold_name(holder.why)));
+		}
+		return lines;
+	}
+	for (const auto& slot : catalog_->snapshot()) {
+		if (slot.pins != 0 || (slot.state != strata::slot_state::open && slot.state != strata::slot_state::owed && slot.state != strata::slot_state::failed)) {
+			lines.push_back(strings::format("{} ({}, {} pin{})", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s"));
 		}
 	}
 	return lines;
-}
-
-
-std::vector<ReferencedShardEndpoint>
-DatabasePool::endpoints() const
-{
-	std::vector<ReferencedShardEndpoint> database_endpoints;
-
-	std::lock_guard<std::mutex> lk(mtx);
-	database_endpoints.reserve(size());
-	for (auto& endpoint_database_endpoint : *this) {
-		database_endpoints.emplace_back(endpoint_database_endpoint.second.get());
-	}
-	return database_endpoints;
-}
-
-
-// The close of an idle entry, which begin_idle_close marked: a failure is logged, not thrown.
-static task::task<void>
-close_idle(ReferencedShardEndpoint entry)
-{
-	try {
-		co_await entry->finish_idle_close();
-	} catch (const engine::Error& error) {
-		L_WARNING("Closing idle {} failed: {}", repr(entry->to_string()), error.description());
-	} catch (const std::exception& exc) {
-		L_WARNING("Closing idle {} failed: {}", repr(entry->to_string()), exc.what());
-	}
-}
-
-
-std::vector<ReferencedShardEndpoint>
-DatabasePool::begin_closes(bool immediate)
-{
-	auto now = std::chrono::steady_clock::now();
-
-	std::vector<ReferencedShardEndpoint> closing;
-
-	std::lock_guard<std::mutex> lk(mtx);
-
-	trim_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool overflowed, bool) {
-		auto& entry = *endpoint_database_endpoint.second;
-		const bool idle = immediate || entry.renew_time < now - (overflowed ? 60s : 3600s);
-		if (!idle) {
-			return overflowed ? DropAction::leave : DropAction::stop;
-		}
-		// Marking is under the map's lock, as every use of the entry is: a use that came first is seen
-		// in refs, and one that comes later awaits the close.
-		if (entry.begin_idle_close()) {
-			closing.emplace_back(&entry);
-		}
-		if (entry.is_used()) {
-			L_DATABASE("Leave used endpoint: {}", repr(entry.to_string()));
-			return DropAction::leave;
-		}
-		L_DATABASE("Evict endpoint: {}", repr(entry.to_string()));
-		return DropAction::evict;
-	});
-
-	return closing;
-}
-
-
-void
-DatabasePool::cleanup()
-{
-	L_CALL("DatabasePool::cleanup()");
-
-	// Each close is a task of its own; this returns without waiting for it.
-	for (auto& entry : begin_closes(false)) {
-		run_detached(close_idle(std::move(entry)));
-	}
 }
 
 
@@ -817,88 +753,22 @@ DatabasePool::flush()
 {
 	L_CALL("DatabasePool::flush()");
 
-	// One close task per open index, awaited together; the caller holds no turn.
+	// Every key the catalog has, pinned resident and committed, all at once; the caller holds no turn.
 	std::vector<task::task<void>> tasks;
-	for (auto& entry : begin_closes(true)) {
-		tasks.push_back(close_idle(std::move(entry)));
+	for (auto& slot : catalog_->snapshot()) {
+		tasks.push_back([](DatabasePool& pool, std::string key) -> task::task<void> {
+			auto pinned = co_await pool.pin_chore(Endpoint(key));
+			if (!pinned) {
+				co_return;   // closed since the snapshot: its close committed it
+			}
+			try {
+				co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
+			} catch (const engine::Error& error) {
+				L_WARNING("Flushing {} failed: {}", repr(key), error.description());
+			}
+		}(*this, std::move(slot.key)));
 	}
 	co_await task::when_all(std::move(tasks));
-}
-
-
-// One pass over the registry, a slice of entries per turn. The lock is held for one slice; the cursor is the
-// last entry looked at, so the pass resumes after it (from the front when it was evicted), and it ends after as
-// many entries as the registry held when it began.
-task::task<void>
-DatabasePool::housekeeping_pass(std::size_t slice)
-{
-	struct Done {
-		std::atomic_bool& active;
-		~Done() { active.store(false); }
-	} done{housekeeping_active_};
-
-	std::optional<Endpoint> cursor;
-	std::size_t budget = 0;
-	bool first = true;
-	for (;;) {
-		std::vector<ReferencedShardEndpoint> due;
-		bool more = false;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			if (finished_.load()) {
-				co_return;
-			}
-			if (first) {
-				budget = size();
-				first = false;
-			}
-			auto it = begin();
-			if (cursor) {
-				if (auto found = find_and_leave(*cursor); found != end()) {
-					it = ++found;
-				}
-			}
-			const Endpoint* last = nullptr;
-			std::size_t seen = 0;
-			for (; it != end() && seen < slice && seen < budget; ++it, ++seen) {
-				if (it->second->housekeeping_due()) {
-					due.emplace_back(it->second.get());
-				}
-				last = &it->first;
-			}
-			budget -= seen;
-			housekeeping_turns_.fetch_add(1);
-			more = it != end() && budget > 0;
-			if (more && last) {
-				cursor = *last;
-			}
-		}
-		housekeeping_spawned_.fetch_add(due.size());
-		for (auto& entry : due) {
-			run_detached([](ReferencedShardEndpoint entry) -> task::task<void> {
-				try {
-					co_await entry->housekeeping();
-				} catch (const engine::Error& error) {
-					L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), error.description());
-				} catch (const std::exception& exc) {
-					L_WARNING("Housekeeping of {} failed: {}", repr(entry->to_string()), exc.what());
-				}
-			}(std::move(entry)));
-		}
-		if (!more) {
-			co_return;
-		}
-		co_await task::yield();
-	}
-}
-
-
-void
-DatabasePool::housekeeping(std::size_t slice)
-{
-	if (!housekeeping_active_.exchange(true)) {
-		run_detached(housekeeping_pass(slice));
-	}
 }
 
 
@@ -909,11 +779,6 @@ DatabasePool::finish()
 
 	finished_.store(true);
 	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
-	std::lock_guard<std::mutex> lk(mtx);
-
-	for (auto& endpoint_database_endpoint : *this) {
-		endpoint_database_endpoint.second->finished.store(true);
-	}
 }
 
 
@@ -924,63 +789,16 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 
 	engine::check_may_block("DatabasePool::join");
 
-	for (;;) {
-		if (clear()) {
-			return true;
-		}
-		if (std::chrono::steady_clock::now() >= wakeup) {
-			return false;
-		}
-		std::this_thread::sleep_for(5ms);
-	}
-}
-
-
-bool
-DatabasePool::clear()
-{
-	L_CALL("DatabasePool::clear()");
-
-	engine::check_may_block("DatabasePool::clear");
-
-	bool cleared = true;
-
-	for (auto& entry : endpoints()) {
-		// This reference is one of the entry's refs.
-		bool marked;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			marked = entry->begin_idle_close(1);
-		}
-		if (marked) {
-			try {
-				engine::sync_wait(entry->finish_idle_close());
-			} catch (const engine::Error& error) {
-				L_WARNING("Closing {} failed: {}", repr(entry->to_string()), error.description());
-			} catch (const std::exception& exc) {
-				L_WARNING("Closing {} failed: {}", repr(entry->to_string()), exc.what());
-			}
-		}
-		if (entry->state() != ShardEndpoint::State::empty || entry->refs.load() > 1) {
-			cleared = false;
-		}
-		entry.reset();
-	}
-
-	if (!cleared) {
+	auto& state = begin_shutdown();
+	std::unique_lock<std::mutex> lk(state.mtx);
+	if (!state.cv.wait_until(lk, wakeup, [&] { return state.done; })) {
 		return false;
 	}
-
-	// Now lock to double-check and really clear the LRU:
-	std::lock_guard<std::mutex> lk(mtx);
-
-	for (auto& endpoint_database_endpoint : *this) {
-		if (endpoint_database_endpoint.second->is_used()) {
-			return false;
+	if (!std::exchange(state.reported, true)) {
+		for (const auto& key : state.failed) {
+			L_WARNING("The last commit of {} failed: its WAL replays it at the next open", repr(key));
 		}
 	}
-
-	lru::lru::clear();
 	return true;
 }
 
@@ -992,9 +810,9 @@ DatabasePool::count()
 
 	size_t endpoints_count = 0;
 	size_t databases_count = 0;
-	for (auto& entry : endpoints()) {
+	for (const auto& slot : catalog_->snapshot()) {
 		++endpoints_count;
-		if (entry->state() == ShardEndpoint::State::open) {
+		if (slot.state == strata::slot_state::open || slot.state == strata::slot_state::owed) {
 			++databases_count;
 		}
 	}
@@ -1022,11 +840,10 @@ DatabasePool::dump_databases(int level) const
 	ret += __repr__();
 	ret.push_back('\n');
 
-	for (auto& referenced_database_endpoint : endpoints()) {
+	for (const auto& slot : catalog_->snapshot()) {
 		ret += indent + indent;
-		ret += referenced_database_endpoint->__repr__();
+		ret += strings::format(STEEL_BLUE + "<Index {} ({}, {} pin{})>", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s");
 		ret.push_back('\n');
-		referenced_database_endpoint.reset();
 	}
 	return ret;
 }

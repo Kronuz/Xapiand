@@ -500,15 +500,11 @@ XapiandManager::signal_loop()
 }
 
 
-// The idle work of the registry and the schema cache, once a minute: closes the indexes idle too long and
-// starts the housekeeping of the open ones as tasks of their own. Nothing here waits.
+// The idle work of the schema cache, once a minute; the index catalog's sweep closes idle indexes on its own
+// (docs/design/x-pool.md D8). Nothing here waits.
 void
 XapiandManager::housekeeping_tick()
 {
-	if (database_pool) {
-		database_pool->cleanup();
-		database_pool->housekeeping();
-	}
 	if (schemas) {
 		schemas->cleanup();
 	}

@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <array>                   // for std::array
 #include <functional>              // for std::function
 #include <memory>                  // for std::shared_ptr, std::unique_ptr
 #include <string>                  // for std::string
@@ -31,6 +32,7 @@
 #include "engine/document.h"       // for FieldKind
 #include "engine/open.h"           // for OpenOptions, CheckResult
 #include "engine/shard.h"          // for engine::Shard
+#include "prospect/index.hh"       // for prospect::index
 
 
 namespace engine::strata {
@@ -111,7 +113,6 @@ public:
 	rev revision() const override;
 	doccount doc_count() const override;
 	std::string uuid() const override;
-	std::size_t readers_claimed() const noexcept override;
 
 	// The shard's current published view, held for a read (src/engine/strata/search.cc). A host refreshes
 	// first (engine_for_read), so the view has what was applied. It holds no lock: writes go on, and
@@ -120,10 +121,6 @@ public:
 
 	// The views refused so far because the index's readers were at their cap (an overload: busy).
 	std::uint64_t views_refused() const noexcept;
-
-	// How many hazard records the index's registry has allocated so far. The probe keeps the registry alive, so it
-	// can be called after the shard is gone (a teardown must not allocate records).
-	std::function<std::size_t()> reader_records_probe() const;
 
 	// The views' handles this index has published and keeps until it ends (one per open): a reader that loaded the
 	// pointer of a replaced index finds it valid.
@@ -147,8 +144,20 @@ struct Opened {
 	bool created = false;
 };
 
-// Opens (or, when create_missing, creates) the strata shard at a path.
+// Opens (or, when create_missing, creates) the strata shard at a path, for a caller with no catalog (tests, the CLI).
 task::task<Opened> open_local(const std::string& path, bool writable, bool create_missing, OpenOptions options = {});
+
+// A fresh index uuid (a version 4 uuid's bytes).
+std::array<char, 16> new_uuid();
+
+// How a strata index is opened for `host`: keyed, merging on its own, its readers' records capped at
+// `host.readers_per_index` in the index's own registry (strata R4.1), and `defer_io` under a host.
+prospect::index::options index_options(const OpenOptions& host);
+
+// A writable shard over an index a host's catalog owns (docs/design/x-pool.md D2). `index` and `readers` are the
+// slot's: the shard is destroyed before them (it lives in the slot's payload), and every call on it is made under
+// a pin. Its reopen and close are the catalog's: they raise.
+std::unique_ptr<Shard> borrow(prospect::index& index, const prospect::index::reader_handle& readers, const std::string& path, const OpenOptions& options);
 
 task::task<CheckResult> check(const std::string& path, OpenOptions options = {});
 

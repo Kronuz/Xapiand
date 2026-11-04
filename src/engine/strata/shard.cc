@@ -40,7 +40,6 @@
 #include <random>                  // for std::random_device
 #include <system_error>            // for std::system_error
 
-#include "reactor.h"                // for reactor::AdmissionGate
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
 #include "prospect/index.hh"       // for prospect::index
 
@@ -140,6 +139,9 @@ format_uuid(const std::array<char, 16>& bytes)
 	return text;
 }
 
+}  // namespace
+
+
 std::array<char, 16>
 new_uuid()
 {
@@ -156,7 +158,6 @@ new_uuid()
 	return bytes;
 }
 
-constexpr kronuz::journal::PosixIOOptions io_options{true, true};
 
 prospect::index::options
 index_options(const OpenOptions& host)
@@ -166,50 +167,37 @@ index_options(const OpenOptions& host)
 	options.auto_merge = true;
 	options.defer_io = host.host;
 	options.background = host.background;
+	options.reader_records = host.readers_per_index;
 	if (host.buffered_docs_cap != 0) {
 		options.buffered_docs_cap = host.buffered_docs_cap;
 	}
 	return options;
 }
 
-}  // namespace
 
 
-// What readers hold of an index: the handle that lends its published views.
-struct Readers {
-	prospect::index::reader_handle handle;
-};
-
-// The hazard records the readers of one index claim: one per view in use, owned by the index's Core.
-class StrataReaders {
-public:
-	explicit StrataReaders(std::size_t records) : registry(records), gate(static_cast<int>(records)) { }
-	// Whether a reader still holds a record: its guard writes the record back when it lets go. Walks the chunks
-	// that exist and allocates nothing (slot() would append a chunk per record up to the capacity).
-	bool claimed() noexcept { return registry.claimed(); }
-	::strata::reader_registry registry;
-	// Admits the readers of this index: a view past the cap is refused (busy) before it takes a record, so the
-	// registry never runs out (docs/mechanisms/reader-views.md, Limits). It lives with the registry, which
-	// outlives every guard, because a view returns its admission when it lets go.
-	reactor::AdmissionGate gate;
-};
 
 // The index of one shard and the state its handles share. Everything that changes the index (the writes,
 // refresh, commit, close, reopen and the housekeeping) runs one at a time, as the host's turn lets it;
-// the reads take no turn and no lock: each acquires the index's published view through `readers`.
+// the reads take no turn and no lock: each acquires the index's published view through `readers`, and the
+// index's own registry (strata R4.1) caps the views held at once (too_many_readers, a 503).
 struct Core {
 	std::string dir;
-	std::shared_ptr<StrataReaders> reader_registry;  // this index's records; outlives the index and every guard on them
 	std::chrono::milliseconds drain_timeout{30000};  // how long a close or a reopen waits for the readers of the old index
-	std::unique_ptr<kronuz::journal::PosixIO> io;
+	std::unique_ptr<kronuz::journal::PosixIO> io;  // the hostless path's; a catalog's index has the catalog's
 	prospect::index::options options;      // how the index is opened, again after a reopen
 	bool host = false;                     // a host serialises the writers and refreshes before it reads
-	std::optional<prospect::index> index;  // empty after a reopen that failed: recover() retries it
+	// A host's catalog owns the index, its IO and its views' handle for as long as the pin that made this Core
+	// holds the slot (docs/design/x-pool.md D2): a fence is the catalog's to replace, never this Core's.
+	bool borrowed = false;
+	std::optional<prospect::index> owned;  // the hostless path's index; empty after a reopen that failed
+	prospect::index* index = nullptr;      // owned's, or the catalog's
 	// The views' handle; null while there is no index to read. A reader loads it with no lock and no count: every
 	// handle ever published is kept in `handles` until the Core ends, so the pointer a reader holds stays valid
-	// (a handle of a replaced index raises index_closed when it is used).
-	std::atomic<const Readers*> readers{nullptr};
-	std::vector<std::unique_ptr<const Readers>> handles;   // the owner's: appended under the turn, never read by readers
+	// (a handle of a replaced index raises index_closed when it is used). A borrowed Core points at the slot's.
+	std::atomic<const prospect::index::reader_handle*> readers{nullptr};
+	std::vector<std::unique_ptr<const prospect::index::reader_handle>> handles;   // the owner's: appended under the turn
+	std::atomic<std::uint64_t> refused{0};  // views refused because the index's readers were at their cap
 	std::string uuid;
 	std::atomic<bool> fenced{false};  // the index refused to go on after an I/O error
 	std::atomic<bool> retiring{false};  // the index is being replaced or closed: its readers are let go of
@@ -225,12 +213,8 @@ struct Core {
 	std::atomic<std::size_t> owed{0};                // background work and views not yet freed
 
 	~Core() {
-		// A reader that outlived its entry (a drain that timed out) releases its record into this registry later.
-		if (reader_registry && reader_registry->claimed()) {
-			::strata::detail::keep_forever(reader_registry);
-		}
-		// A transaction that is still open is discarded.
-		if (index && pending && !transaction && !index->closing()) {
+		// A transaction that is still open is discarded. A borrowed index is committed by the catalog's commit chore.
+		if (!borrowed && index && pending && !transaction && !index->closing()) {
 			try {
 				index->commit();  // a dropped writer keeps its work
 			} catch (const std::exception& exc) {
@@ -252,7 +236,7 @@ struct Core {
 
 	// Gives the readers the index's views and records the owner's figures. Call it after the index is made.
 	void adopt_index() {
-		handles.push_back(std::make_unique<const Readers>(Readers{index->reader()}));
+		handles.push_back(std::make_unique<const prospect::index::reader_handle>(index->reader()));
 		readers.store(handles.back().get(), std::memory_order_release);
 		note();
 	}
@@ -297,12 +281,14 @@ struct Core {
 		}
 		pending = dirty = transaction = false;
 		closed = false;
-		index.reset();
-		index.emplace(prospect::index::open(*io, options));
+		index = nullptr;
+		owned.reset();
+		index = &owned.emplace(prospect::index::open(*io, options));
 		try {
 			verify_fields();
 		} catch (...) {
-			index.reset();  // a failed check leaves no index, as a failed open does
+			index = nullptr;  // a failed check leaves no index, as a failed open does
+			owned.reset();
 			readers.store(nullptr, std::memory_order_release);
 			throw;
 		}
@@ -459,21 +445,19 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		fs::create_directories(dir);
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
-		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, io_options);
-		core->reader_registry = std::make_shared<StrataReaders>(host.readers_per_index);
+		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
 		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
-		core->options.readers = &core->reader_registry->registry;
 		core->host = host.host;
 		const auto& options = core->options;
 		const auto create = [&] {
 			const auto uuid = new_uuid();
-			core->index.emplace(prospect::index::create(*core->io, options, uuid));
+			core->index = &core->owned.emplace(prospect::index::create(*core->io, options, uuid));
 			created = true;
 		};
 		if (exists) {
 			try {
-				core->index.emplace(prospect::index::open(*core->io, options));
+				core->index = &core->owned.emplace(prospect::index::open(*core->io, options));
 			} catch (const ::strata::index_not_created&) {
 				if (!create_missing) {
 					throw Error(errc::not_found, "No such database: " + path);
@@ -523,6 +507,10 @@ drain_readers(Core& core, Chores& chores)
 task::task<void>
 reopen_core(Core& core, Chores& chores, std::atomic<std::uint64_t>* seen)
 {
+	if (core.borrowed) {
+		// The catalog replaces its index (docs/design/x-pool.md D2): the pin's holder hands the pin back.
+		throw Error(errc::reopen, "The strata index is the catalog's to replace; reopen the shard");
+	}
 	bool replaced = false;
 	co_await chores.run(ChoreClass::flush, [&core, seen, &replaced] {
 		if (core.index) {
@@ -1371,6 +1359,9 @@ Shard::begin_close()
 {
 	try {
 		auto& core = *handle_->core;
+		if (core.borrowed) {
+			throw Error(errc::internal, "The strata index is the catalog's to close");
+		}
 		bool released = true;
 		co_await chores_->run(ChoreClass::flush, [&core, &released] {
 			if (!core.index) {
@@ -1385,7 +1376,8 @@ Shard::begin_close()
 			core.begin_retire();
 			released = core.finish_retire();
 			if (released) {
-				core.index.reset();
+				core.index = nullptr;
+				core.owned.reset();
 				core.owed.store(0, std::memory_order_relaxed);
 			}
 		});
@@ -1402,9 +1394,13 @@ Shard::finish_close()
 	try {
 		// Searches still read the index: it is closed when the last lets go of its view.
 		auto& core = *handle_->core;
+		if (core.borrowed) {
+			throw Error(errc::internal, "The strata index is the catalog's to close");
+		}
 		co_await drain_readers(core, *chores_);
 		co_await chores_->run(ChoreClass::flush, [&core] {
-			core.index.reset();
+			core.index = nullptr;
+			core.owned.reset();
 			core.owed.store(0, std::memory_order_relaxed);
 		});
 	} catch (...) {
@@ -1459,17 +1455,6 @@ Shard::uuid() const
 }
 
 
-std::size_t
-Shard::readers_claimed() const noexcept
-{
-	if (!handle_ || !handle_->core || !handle_->core->reader_registry) {
-		return 0;
-	}
-	const int in_use = handle_->core->reader_registry->gate.inflight.load(std::memory_order_acquire);
-	return in_use > 0 ? static_cast<std::size_t>(in_use) : 0;
-}
-
-
 std::vector<DeclaredField>
 Shard::declared_fields() const
 {
@@ -1492,14 +1477,7 @@ Shard::declared_fields() const
 std::uint64_t
 Shard::views_refused() const noexcept
 {
-	return handle_->core->reader_registry->gate.rejected.load(std::memory_order_relaxed);
-}
-
-
-std::function<std::size_t()>
-Shard::reader_records_probe() const
-{
-	return [registry = handle_->core->reader_registry] { return registry->registry.allocated(); };
+	return handle_->core->refused.load(std::memory_order_relaxed);
 }
 
 
@@ -1524,15 +1502,16 @@ Shard::view() const
 	try {
 		core.check_read(*handle_);
 		core.refresh_for_read();
-		const Readers* readers = core.readers.load(std::memory_order_acquire);
+		const auto* readers = core.readers.load(std::memory_order_acquire);
 		if (readers == nullptr) {
 			throw Error(errc::closed, "The strata index is closed");
 		}
-		auto lease = core.reader_registry->gate.enter();
-		if (!lease) {
-			throw Error(errc::busy, "Too many concurrent reads of this index");
+		try {
+			return Viewed(readers->acquire(), handle_->core);
+		} catch (const ::strata::too_many_readers&) {
+			core.refused.fetch_add(1, std::memory_order_relaxed);
+			throw;
 		}
-		return Viewed(readers->handle.acquire(), handle_->core, std::move(lease));
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -1556,6 +1535,33 @@ open_local(const std::string& path, bool writable, bool create_missing, OpenOpti
 		}
 		opened.shard = std::make_unique<Shard>(std::move(handle), writable, options);
 		co_return opened;
+	} catch (...) {
+		rethrow_translated();
+	}
+}
+
+
+std::unique_ptr<Shard>
+borrow(prospect::index& index, const prospect::index::reader_handle& readers, const std::string& path, const OpenOptions& options)
+{
+	try {
+		auto core = std::make_unique<Core>();
+		core->dir = (std::filesystem::path(path) / "strata").string();
+		core->host = options.host;
+		core->borrowed = true;
+		core->index = &index;
+		core->uuid = format_uuid(index.manifest().uuid);
+		core->verify_fields();
+		core->readers.store(&readers, std::memory_order_release);
+		core->note();
+		// An entry of its own, outside the hostless registry: the handle's end frees the Core, never the index.
+		auto entry = std::make_shared<Entry>();
+		entry->handles = 1;
+		entry->core = std::move(core);
+		auto* raw = entry->core.get();
+		auto handle = std::make_unique<Handle>(std::move(entry), raw);
+		handle->writable = true;
+		return std::make_unique<Shard>(std::move(handle), true, options);
 	} catch (...) {
 		rethrow_translated();
 	}
