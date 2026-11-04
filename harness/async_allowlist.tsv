@@ -4,17 +4,16 @@ src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and res
 src/database/handler.cc	pool	lock_shard	allow	25	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
 src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
 src/database/pool.cc	mutex	chores_mtx	allow	4	the list of live IndexChores: O(1) link and unlink; cancel_all walks it at shutdown on the main thread, after the loops stopped (task D8)
-src/database/pool.cc	mutex	.	allow	20	the registry: O(1) state sections of an entry and O(log n) map sections of the pool, none with I/O or a wait; the report of what a shutdown abandoned tries the turn and gives it back (D1)
+src/database/pool.cc	mutex	.	allow	5	the shutdown's state: O(1) sections that set or read its flag and the keys whose commit failed, none with I/O (x-pool D10)
+src/database/pool.cc	wait	state\.cv\.wait	allow	3	join() and ~DatabasePool await the catalog's shutdown on the main thread after the loops stopped; join is guarded by check_may_block (x-pool D10, C24)
+src/database/pool.cc	file	fs	allow	4	the catalog's resolve runs in its open chore on a WorkPool worker: it checks and makes the index directory there (x-pool D6)
 src/database/pool.cc	sleep	sleep_for\(std::chrono::milliseconds\(1\)\)	allow	1	IndexChores::cancel_all polls the groups at shutdown on the main thread, after the loops stopped (task D8)
-src/database/pool.cc	sleep	sleep_for	allow	1	DatabasePool::join polls on the main thread at shutdown; guarded by check_may_block (D16)
-src/database/pool.cc	sleep	task::yield	allow	1	the housekeeping pass suspends its task between slices of the registry and holds no thread (D13)
-src/database/pool.cc	sync_wait	finish_idle_close	allow	1	DatabasePool::clear, called by the shutdown on the main thread; guarded by check_may_block (D16)
 src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached task with no control loop runs to its end on the thread that started it (a timer thread, the CLI); guarded by check_may_block
 src/database/pool.h	mutex	.	allow	1	the entry's O(1) state lock, for the uuid (D5)
 src/database/pool.h	pool	storage_commit	allow	1	the declaration: the blob fsync runs as a flush chore (D7)
 src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
 src/database/schemas_lru.cc	mutex	.	allow	19	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11)
-src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	12	the entry: O(1) state sections under its mutex, and the turn, an async mutex a task awaits without blocking (D5)
+src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	6	the entry: O(1) state sections under its mutex, and the turn, an async mutex a task awaits without blocking; the catalog's commit chore tries it with no pin held (D5, x-pool D7)
 src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs in a flush chore, first in the commit chore (D7)
 src/database/shard.cc	pool	ShardEndpoint::storage_commit	allow	1	the definition: the commit is chores_.run(flush, ...) (D7)
 src/database/shard.cc	pool	writable_storage->	allow	11	the blob writes, reads and rollovers run in flush chores of the entry or the upload (D9)
@@ -26,7 +25,7 @@ src/engine/host.h	mutex	.	allow	8	BlockingScheduler: its queue (resumes and post
 src/engine/host.h	wait	.	allow	2	BlockingScheduler::drive waits for a resume or a timer on the thread that called engine::sync_wait; guarded by check_may_block
 src/engine/host.h	sleep	.	allow	2	SleepFor suspends the task on its host's timer; a task that runs on no host (a test, the CLI) sleeps its own thread, never a loop's
 src/engine/host_asio.h	mutex	.	compiled_out	3	NDEBUG: Counted exists only in debug builds, where a request's queued resumes sit under one mutex in O(1) sections (push, swap, empty check)
-src/engine/strata/shard.cc	file	.	allow	4	acquire runs only in a query chore (open_local, check): opening the core reads the directory there, never on a reactor (D4)
+src/engine/strata/shard.cc	file	.	allow	5	acquire runs only in a query chore (open_local, check): opening the core reads the directory there, never on a reactor (D4); borrow only names the directory, in the catalog's open chore (x-pool D2)
 src/engine/strata/shard.cc	mutex	entry->	allow	2	the entry lock: acquire holds it across the open I/O inside a chore, only while no handle exists, so no ~Handle can contend for it; ~Handle takes it for an O(1) count (D4, D5)
 src/engine/strata/shard.cc	sleep	sleep_for	allow	1	drain_readers suspends the closing task between polls for the readers of the old index (D6); it holds no thread
 src/engine/strata/shard.cc	mutex	registry_mutex	allow	1	map lookup and insert of the open-core registry: O(log n) under the lock, no I/O (D1)
