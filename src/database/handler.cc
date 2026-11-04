@@ -1353,10 +1353,10 @@ DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequ
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
-			std::vector<engine::Shard*> read(shards.size(), nullptr);   // each shard's engine; null when missing
+			std::vector<engine::Shard*> found(shards.size(), nullptr);   // each shard's engine; null when missing
 			for (size_t s = 0; s < shards.size(); ++s) {
 				try {
-					read[s] = co_await shards[s]->engine_for_read();
+					found[s] = co_await shards[s]->engine_for_read();
 				} catch (const engine::Error& error) {
 					if (error.kind != engine::errc::not_found) { throw; }
 				}
@@ -1366,10 +1366,10 @@ DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequ
 			std::vector<std::uint32_t> indexes;   // the index of each shard found
 			batch.positions.clear();
 			for (size_t i = 0; i < shard_of.size(); ++i) {
-				if (read[shard_of[i]] == nullptr) {
+				if (found[shard_of[i]] == nullptr) {
 					continue;
 				}
-				engines.push_back(read[shard_of[i]]);
+				engines.push_back(found[shard_of[i]]);
 				batch.positions.push_back(begin + i);
 				if (!request.index_of.empty()) {
 					indexes.push_back(request.index_of[i]);

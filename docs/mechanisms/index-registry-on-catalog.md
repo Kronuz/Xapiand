@@ -12,10 +12,10 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 ## How
 
 ```
- lock_shard::pin() ─▶ pool.pin(path, flags) ─▶ catalog.pin_request(path, use, open | create)
+ lock_shard::pin() ─▶ pool.pin(path, flags, token) ─▶ catalog.pin_request(path, use, open | create, token)
    slot free/failed ─▶ open chore: resolve(<path>/strata) ─▶ open_index ─▶ open_payload: emplace ShardEndpoint,
                        borrow the index, open the blobs, replay the WAL ─▶ pins delivered
- autocommit, FLUSH ─▶ pool.pin_chore(path) ─▶ catalog.pin_chore(path, resident): never opens; empty when absent
+ autocommit, FLUSH ─▶ pool.pin_chore(path, token) ─▶ catalog.pin_chore(path, resident, token): never opens; empty when absent
  autocommit ─▶ commit ─▶ settle_merges: check in, sync a merge's output ─▶ pending or busy? arm it again
  catalog chores (bound close, shutdown, replace, a merge-only demotion) ─▶ host::commit ─▶ commit_blocking()
 ```
@@ -26,6 +26,11 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
    Pins are awaited before any view (`check_no_view_held`, D4). Once `finish()` ran, a request pin is served only
    for an index that is open or owed: a resident pin taken first answers whether it is, and holds it while the
    request pin is taken; a closed one is `not_available` (N3).
+   Every pin waits with the request's token: `lock_shard` and `Shard::ready` pass theirs (the handler's budget's), and
+   FLUSH its request's. A requested token ends the wait with `task::cancelled`; a free pin is taken whatever the
+   token, and a requested one still starts the open or wake it asked for. The autocommit's pin has no token.
+   A request takes one pin per key: `search_batch` pins each path once and searches its engine at every position
+   that names it, since a task's second pin of a key waits for itself while the index is replaced.
 2. **The open** (`open_payload`, D6). `resolve` refuses a missing `<path>/strata` unless creating and returns a
    `counted_io` over a `PosixIO`; `open_index` reads the pool's options at each open. `ShardEndpoint::open_blocking`
    takes the index's reader handle, makes the engine shard with `engine::strata::borrow` (a Core that points at the
@@ -55,8 +60,10 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 8. **Shutdown** (D10, C24). `join()` starts `catalog.shutdown()` once and waits for it until its deadline; the
    awaiting coroutine is resumed inline by whoever releases the last pin. The manager's stop destroys every root that
    may hold a pin before it awaits `join()`: the HTTP loops' roots (stop 1), the autocommits drained (stop 2), then
-   the control loop's suspended roots, and only then the indexes (stop 3). `~DatabasePool` waits for the shutdown before it destroys
-   the catalog; past `patience_` (30 s) debug builds abort naming what still holds an index.
+   the control loop's suspended roots, and only then the indexes (stop 3). A root destroyed while it waits for a pin
+   abandons its waiter, and the catalog releases the pin it delivers to it (strata's destroy-safe waiters), so no
+   destroyed root keeps an index. `~DatabasePool` waits for the shutdown before it destroys the catalog; past
+   `patience_` (30 s) debug builds abort naming what still holds an index.
 9. **Tests** give the indexes' files another IO with `set_index_io` (strata's faultfs), so a sync can fail and fence.
 10. **The timer** the catalog needs is one `Scheduler` thread (the scheduler library's wheel); its callbacks only
    post. The catalog is destroyed before it, while its timers can still fire.
@@ -77,6 +84,8 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 - The hostless path (`engine::open_local`, tests and the CLI) still keeps the adapter's own registry of owned indexes
   and its in-place reopen; D2's private catalog for it is not built.
 - A task that holds two pins on one key and hands one back waits for itself: the replace drains the other pin.
+  `search_batch` takes one pin per key; any other caller must too. Only a request's token or deadline ends that wait.
+- A cancelled create request may still create its index: the open it started goes on.
 - `corrupt_segment` replaces the index (a reopen), not `heal()` under the turn (D2).
 - The restore's open replays a WAL that exists; the old open skipped the replay when the opener's flags disabled the WAL.
 - `map_owed` (D9), the budget's caps (D11) and the `unleased_maps()` assertion (D12) are step 4.
@@ -100,4 +109,7 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
 `test_the_commit_chore_logs_nothing_when_nothing_was_applied`, `test_the_pool_waits_for_a_pin_released_during_its_end`,
 `test_the_autocommit_comes_back_while_a_merge_is_pending`, `test_a_busy_autocommit_comes_back`,
 `test_the_sweep_closes_only_an_unpinned_index`, `test_the_shutdown_commits_and_logs_an_uncommitted_write`,
-`test_the_sweeps_close_syncs_a_merges_output`); `tests/test_node.cc` (`test_a_busy_autocommit_comes_back_for_its_write`).
+`test_the_sweeps_close_syncs_a_merges_output`, `test_a_root_destroyed_while_it_waits_for_a_pin_releases_it`,
+`test_a_destroyed_root_that_held_a_pin_lets_the_pool_join`, `test_a_cancelled_pin_stops_waiting`); `tests/test_node.cc`
+(`test_a_busy_autocommit_comes_back_for_its_write`, `test_a_search_batch_pins_a_repeated_index_once`,
+`test_a_cancelled_request_stops_waiting_for_its_index`, `test_a_cancelled_search_stops_waiting_for_its_index`).

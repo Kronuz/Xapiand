@@ -1921,9 +1921,9 @@ void test_a_cancelled_pin_stops_waiting() {
 	{
 		task::cancel_source requested;
 		requested.request();
-		auto free = engine::sync_wait(pool.pin(Endpoint(path), WRITE, requested.token()));
-		CHECK_TRUE(static_cast<bool>(free));
-		free.reopen();   // the catalog replaces the index once the holder lets go
+		auto taken = engine::sync_wait(pool.pin(Endpoint(path), WRITE, requested.token()));
+		CHECK_TRUE(static_cast<bool>(taken));
+		taken.reopen();   // the catalog replaces the index once the holder lets go
 	}
 	const auto waits = [&](auto call) {
 		task::cancel_source cancel;
@@ -1945,9 +1945,26 @@ void test_a_cancelled_pin_stops_waiting() {
 	CHECK_TRUE(waits([&](task::cancel_token token) { engine::sync_wait(pool.pin(Endpoint(path), WRITE, token)); }));
 	CHECK_TRUE(waits([&](task::cancel_token token) { engine::sync_wait(pool.pin_chore(Endpoint(path), token)); }));
 	CHECK_TRUE(waits([&](task::cancel_token token) { engine::sync_wait(pool.flush(token)); }));
+	CHECK_TRUE(waits([&](task::cancel_token token) {
+		Shard unpinned(pool, path, WRITE, token);   // as lock_shard makes one; its use pins with the token
+		engine::sync_wait(unpinned.ready());
+	}));
 	holder.reset();
 	auto after = pin(pool, path);   // the replace ends once the holder went
 	CHECK_TRUE(static_cast<bool>(after));
+	// A requested token never waits, but the open it asked for starts: a cancelled create still creates its index.
+	const auto cold = fresh("cancelled_cold");
+	task::cancel_source requested;
+	requested.request();
+	bool cancelled = false;
+	try {
+		engine::sync_wait(pool.pin(Endpoint(cold), WRITE, requested.token()));
+	} catch (const task::cancelled&) {
+		cancelled = true;
+	}
+	CHECK_TRUE(cancelled);
+	CHECK_TRUE(until([&] { return std::filesystem::exists(cold + "/strata"); }));
+	CHECK_TRUE(static_cast<bool>(pin(pool, cold, DB_OPEN)));
 }
 
 // The autocommit settles what its commit leaves (D8): while a merge is pending it asks to come back, and once the

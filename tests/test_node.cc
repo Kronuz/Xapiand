@@ -36,6 +36,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -50,6 +51,7 @@
 #include "database/data.h"
 #include "database/flags.h"
 #include "database/handler.h"
+#include "database/lock.h"
 #include "engine/query.h"
 #include "database/pool.h"
 #include "database/schemas_lru.h"
@@ -993,6 +995,68 @@ static void test_a_search_batch_pins_a_repeated_index_once() {
 }
 
 
+// A search's batch waits for its indexes with the request's token (its budget's): a cancelled search stops waiting.
+// Here its read waits for a turn another task holds.
+static void test_a_cancelled_search_stops_waiting_for_its_index() {
+	Watchdog watchdog("a cancelled search stops waiting");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("cancelled_search");
+	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: the search's read takes the turn
+	HoldTurn hold(entry.entry(), WRITE_QUIET);
+	task::cancel_source cancel;
+	task::budget budget(std::chrono::milliseconds(10), cancel.token());
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread search([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		handler.budget = &budget;
+		try {
+			engine::sync_wait(handler.get_mset(engine::Query::term("f", "body")));
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(100ms);
+	CHECK_FALSE(ended.load());
+	cancel.request();
+	CHECK(eventually([&] { return ended.load(); }, 3s));
+	hold.release();
+	search.join();
+	CHECK_TRUE(cancelled.load());
+}
+
+
+// A request's lock_shard waits for its index with the request's token: a cancelled request stops waiting with
+// task::cancelled. Here the index is being replaced, which waits for the pin still held.
+static void test_a_cancelled_request_stops_waiting_for_its_index() {
+	Watchdog watchdog("a cancelled request stops waiting");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("cancelled_request");
+	std::optional<IndexPin> holder(pin_index(pool, endpoints[0].path, WRITE_QUIET));
+	pin_index(pool, endpoints[0].path, WRITE_QUIET).reopen();   // the replace waits for the holder
+	task::cancel_source cancel;
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread request([&] {
+		lock_shard lk_shard(endpoints[0], WRITE_QUIET, cancel.token());
+		try {
+			engine::sync_wait(lk_shard.pin());
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(100ms);
+	CHECK_FALSE(ended.load());
+	cancel.request();
+	request.join();
+	CHECK_TRUE(cancelled.load());
+	holder.reset();
+	CHECK(static_cast<bool>(pin_index(pool, endpoints[0].path, WRITE_QUIET)));
+}
+
+
 // An autocommit whose turn does not come is armed again (x-pool D8): the write it could not commit is committed once
 // the turn is let go, with no other write to schedule it.
 static void test_a_busy_autocommit_comes_back_for_its_write() {
@@ -1062,6 +1126,8 @@ int main(int argc, char** argv) {
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
 		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
 		{"test_a_search_batch_pins_a_repeated_index_once", test_a_search_batch_pins_a_repeated_index_once},
+		{"test_a_cancelled_request_stops_waiting_for_its_index", test_a_cancelled_request_stops_waiting_for_its_index},
+		{"test_a_cancelled_search_stops_waiting_for_its_index", test_a_cancelled_search_stops_waiting_for_its_index},
 		{"test_a_busy_autocommit_comes_back_for_its_write", test_a_busy_autocommit_comes_back_for_its_write},
 	};
 	for (const auto& c : cases) {
