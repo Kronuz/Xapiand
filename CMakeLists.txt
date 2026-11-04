@@ -462,14 +462,14 @@ FetchContent_Declare(allocators  GIT_REPOSITORY https://github.com/Kronuz/alloca
 FetchContent_Declare(atomic_shared_ptr GIT_REPOSITORY https://github.com/Kronuz/atomic-shared-ptr.git GIT_TAG 9af0aa765fea19b4c7d05d6663ad3a7bff7c5530)
 FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 57613ed349bb4fa273806b78341a53f676089505)
 FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG a24942eabaad0b1c8e0b3404b4ae5a10b624b4c3)
-FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG 653fb34844e63517da14659cc8f063643bf4a085)
+FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG a7202ada8d27e7eb2d4713fbfd3b43eaa347fc91)
 FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG e040c2b383a1a19147cfcb0d14947d38d098e534)
-FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG 87450b43c6ff113a321e06d811d9b7a4857c9351)
+FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG d2eb8955d92be7229b371d493d4bab7b148c4d9b)
 FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 46561fad9f26f9b2b613568fe1a3dbcb016d4aba)
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 1f9190ca19bbb5291456c54f3ff34982e0083113)
 FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 05f91deaf86cddf33839d5a4de60ffb3ce73bed0)
-FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 1be38483a333d13544fbf6b0937409295c8ea3e0)
-FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 94df6e5e1cadebbba45cd1f5fbb679407550be56)  # track tip
+FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 6799a6e8a1741367bda269546d3f3999d0f1d80f)
+FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 76a400be217eec6043510d5a812e368eb1898153)  # track tip
 
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
@@ -547,7 +547,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + xapiand_colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 1e5ccc9c6dfc62611751dae2143467ef00305fc3)  # track tip
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG d57e8fc051097d84500b4036b85daadd00c00b14)  # track tip
 FetchContent_MakeAvailable(scheduler)
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
@@ -558,7 +558,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 2356791b1bc668bb23a27f0d14eb6d4105963ee1)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG f61d8df44ee524c49820ad42e630042103d3fb92)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
@@ -656,7 +656,7 @@ add_compile_definitions(
 # Xapiand's wrapper wins here.
 # hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
 # the commit with wordwise::hash32.
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG e3bf5b6167775f26dd14f89f210f687b0253241b)
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 03ab2d69f7e1b0af6039733e0e06cc1e0118a45e)
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
@@ -769,7 +769,7 @@ FetchContent_MakeAvailable(task)
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
 # strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 356acbc8b5fb9c43e053f542d84e3e82ba53e88f)  # strata main
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 276992822d49af3fcee678a72d04c43a9629adc7)  # strata main
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
 FetchContent_MakeAvailable(prospect)
 
@@ -813,7 +813,7 @@ include_directories(
 # state machine lives in http_parser.cc, compiled into XAPIAND_OBJ below (the
 # "logger way"), so we Populate + put the headers on the path here. This unifies
 # the parser with Kronuz/http, whose HttpConnection uses the same fork.
-FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-parser.git GIT_TAG c27615d24d40a2becfb42d40c5060a9803d6a75c)
+FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-parser.git GIT_TAG fcdad32fa8d8950da2dc3c237f3f91ad1b5eb211)
 FetchContent_MakeAvailable(http_parser)
 include_directories("${http_parser_SOURCE_DIR}")
 
@@ -824,8 +824,8 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 # reactor is declared before http so this pin wins over its (first declaration wins).
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG a59e9f8808e46b7d030aa2a936564038843100f4)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 67622cc6845608b108255bac403c53bddc70ec80)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG c813531cf893ce079e2737dff6274b2025f9b151)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
@@ -837,7 +837,7 @@ include_directories("${http_lib_SOURCE_DIR}")
 # include path, which is all http_log.h needs.
 FetchContent_Declare(http_log
   GIT_REPOSITORY https://github.com/Kronuz/http-log.git
-  GIT_TAG        616c80ab82a98501cf350db3bcf8ad47f236b775  # http-log phase/task-h1: AccessLog::handle on task, http H2 pin
+  GIT_TAG        4e4b79f565b1c6c38948b98cd4c1af6cdc1cf054  # http-log main
   SOURCE_SUBDIR  do-not-configure)
 FetchContent_MakeAvailable(http_log)
 include_directories("${http_log_SOURCE_DIR}")
@@ -868,7 +868,7 @@ include_directories("${datetime_SOURCE_DIR}")
 # Header-only ones just need their dir on the include path; the compiled ones
 # (md5/sha256/random/allocators/cartesian) are linked as targets by XAPIAND_OBJ below.
 FetchContent_Declare(md5         GIT_REPOSITORY https://github.com/Kronuz/md5.git         GIT_TAG 945987c5224b48c90cf0e3a3dbb5ebe5beadef5b)
-FetchContent_Declare(sha256      GIT_REPOSITORY https://github.com/Kronuz/sha256.git      GIT_TAG f4a3463310853ebc26133acd3a793a7019ce3000)
+FetchContent_Declare(sha256      GIT_REPOSITORY https://github.com/Kronuz/sha256.git      GIT_TAG f24692f0e8375d7069fa28f692305801f351de9e)
 FetchContent_Declare(epoch       GIT_REPOSITORY https://github.com/Kronuz/epoch.git       GIT_TAG de7efdf6a10bcf5983264c8e0d1a53b1969e0bd5)
 FetchContent_Declare(nanosleep   GIT_REPOSITORY https://github.com/Kronuz/nanosleep.git   GIT_TAG 974680bbd4f1ed4e253737ce8d9196d60d86c8a1)
 FetchContent_Declare(cartesian   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git   GIT_TAG 05cab81fe803532613e05fba65a37a8c14268cf7)
