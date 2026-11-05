@@ -161,6 +161,8 @@ class Host:
     def __init__(self, smoke: bool) -> None:
         self.data = Path(os.environ.get("CLOSING_DATA", os.path.expanduser("~/data")))
         self.smoke = smoke
+        # a smoke run reads samples of this many documents (CLOSING_LIMIT, default 20,000); a full run reads all
+        self.limit = int(os.environ.get("CLOSING_LIMIT", "20000")) if smoke else 0
         self.bins = {
             "xapiand": os.environ.get("CLOSING_XAPIAND", str(self.data / "xapiand" / "xapiand")),
             # the Xapian-only release; a smoke run has none and runs the same binary, which exercises the arm
@@ -287,7 +289,7 @@ def unit_arm_command(host: Host, unit: Unit, arm: str, root: Path) -> tuple[list
     out = root / unit.id.rsplit("-r", 1)[0] / arm / f"r{n}.json"
     work = host.data / "work" / f"{unit.id}-{arm}"
     st = settings(host)
-    lim = 20000 if host.smoke else 0
+    lim = host.limit
     logs, wiki = corpus(host, "logs.ndjson", lim), corpus(host, "wiki.ndjson", lim)
     queries = host.data / "queries"
     if unit.row in ("t1", "t2"):
@@ -358,7 +360,7 @@ def build_unit(host: Host, unit: Unit, root: Path) -> list[str]:
     per = max(1, host.sys_n // 4) if host.smoke else host.sys_n
     arms = ["S", "X", "E", "Q"]
     procs: list[tuple[str, subprocess.Popen[bytes]]] = []
-    lim = 20000 if host.smoke else 0
+    lim = host.limit
     for k, arm in enumerate(arms):
         mine = ",".join(cpus[k * per : (k + 1) * per])
         gen = ",".join(cpus[len(arms) * per :]) or ",".join(cpus)
