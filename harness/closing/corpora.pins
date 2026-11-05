@@ -2,5 +2,5 @@
 logs-181998 https://rally-tracks.elastic.co/http_logs/documents-181998.json.bz2 c791a8b86b4017fc3ca59ca0f4a858459e955795eb3973cb93725601a903535d 13843641 2708746
 logs-191998 https://rally-tracks.elastic.co/http_logs/documents-191998.json.bz2 e2d8fc363a507b3d4bf727e162508c27fb2357f450b0f2f1e6778bded84f5b6b 49546887 9697882
 logs-201998 https://rally-tracks.elastic.co/http_logs/documents-201998.json.bz2 cd7f00bf9d2d15497da571907fff7e6d718f1f783df5e5ae7509287e548c217d 65759419 13053463
-wiki-articles https://www.dropbox.com/s/wwnfnu441w1ec9p/wiki-articles.json.bz2?dl=1 - 2515058275 -
+wiki-articles https://www.dropbox.com/s/wwnfnu441w1ec9p/wiki-articles.json.bz2?dl=1 ab4e69b72a139b2dd9df28ee59dc82e0a8b65d3de24c478e2fcc131423b1ad7f 2515058275 -
 wiki-queries https://raw.githubusercontent.com/quickwit-oss/search-benchmark-game/32e281e8a870bfad617bd87a94380656fbf2f170/queries.txt a8e8f2c1a4bede53063de22fb13be83b585683da1c28208da4921de73ce254bd 82954 962
