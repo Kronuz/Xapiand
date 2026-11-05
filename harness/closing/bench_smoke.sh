@@ -27,9 +27,9 @@ step() {
 	echo "step $name rc=$rc" >&2
 }
 
-step fetch-logs 300 "$H/closing/fetch_corpus.sh" logs --limit "$LIMIT"
-step fetch-writes 300 "$H/closing/fetch_corpus.sh" logs-writes --limit "$LIMIT"
-step fetch-wiki 300 "$H/closing/fetch_corpus.sh" wiki --limit "$LIMIT"
+step fetch-logs 1800 "$H/closing/fetch_corpus.sh" logs --limit "$LIMIT"
+step fetch-writes 1800 "$H/closing/fetch_corpus.sh" logs-writes --limit "$LIMIT"
+step fetch-wiki 1800 "$H/closing/fetch_corpus.sh" wiki --limit "$LIMIT"
 step fetch-wiki-queries 60 "$H/closing/fetch_corpus.sh" wiki-queries
 step plan 60 bash "$H/closing_bench.sh" --plan --approved 250
 # UNITS picks other units on the built indexes (they stay in ~/data between runs); QW_PROBE=1 first runs the crash probe
