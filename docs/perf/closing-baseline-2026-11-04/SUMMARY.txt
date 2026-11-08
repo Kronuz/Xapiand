@@ -1,0 +1,69 @@
+2026-11-04 19:30:44 baseline 20261105T033044Z: harness ec4e6d937, limit 200000, deadline 300 min
+2026-11-04 19:30:46 sync rc=0
+2026-11-04 19:30:46 VM free disk 117 GiB before setup (needs 40)
+2026-11-04 19:39:38 setup rc=0
+2026-11-04 19:39:38 VM free disk 114 GiB before the rounds (needs 30)
+2026-11-04 22:39:25 bench rc=0
+report rc=0
+2026-11-04 22:39:28 results home: 5.4M
+--- steps (name rc seconds)
+fetch-logs	0	5
+fetch-writes	0	5
+fetch-wiki	0	28
+fetch-wiki-queries	0	0
+plan	0	0
+smoke	0	10648
+anchors	0	0
+report	0	3
+--- report
+unit,metric,axis,anchor,finalists,status,why,ratio,low,high,aa_dev,pairs,against_x,regression
+t1,t1.cpu_s_per_1000_docs,report,E,E,worse,,2.232,2.117,2.366,0.01842,5,not distinguishable,
+t1,t1.docs_per_sec,index,E,E,worse,,3.466,3.239,3.612,0.0634,5,not distinguishable,
+t1,t1.peak_memory_bytes,memory,X,X,not distinguishable,,0.9867,0.8906,1.033,0.09434,5,not distinguishable,
+t1,t3.t1.bytes_per_doc,disk,E,E X,not distinguishable,,1,0.4757,1.139,0.2274,5,not distinguishable,
+t2,t2.cpu_s_per_1000_docs,report,Q,Q,worse,,37.37,36.29,40.08,0.06406,5,not distinguishable,
+t2,t2.docs_per_sec,index,Q,Q,worse,,12.23,11.32,12.67,0.1787,5,not distinguishable,
+t2,t2.peak_memory_bytes,memory,X,X,not distinguishable,,1.036,0.9925,1.164,0.09536,5,not distinguishable,
+t2,t3.t2.bytes_per_doc,disk,X,X,not distinguishable,,1.005,0.9896,1.284,0.3061,5,not distinguishable,
+t4a,t11.idle_memory_current,memory,X,X,not distinguishable,,0.9917,0.9883,0.9956,0.005293,5,not distinguishable,
+t4a,t4.and/count.geomean_ms,query,X,X,not distinguishable,,0.9845,0.9693,0.9863,0.09228,5,not distinguishable,
+t4a,t4.and/search.geomean_ms,query,X,X,not distinguishable,,0.9745,0.9513,0.9954,0.1143,5,not distinguishable,
+t4a,t4.or/count.geomean_ms,query,X,X,not distinguishable,,0.9944,0.9782,1.051,0.04749,5,not distinguishable,
+t4a,t4.or/search.geomean_ms,query,E,E,worse,,1.169,1.06,1.243,0.05358,5,not distinguishable,
+t4a,t4.phrase/count.geomean_ms,query,X,X,not distinguishable,,0.9856,0.967,1.004,0.1166,5,not distinguishable,
+t4a,t4.phrase/search.geomean_ms,query,X,X,not distinguishable,,0.9979,0.952,1.015,0.107,5,not distinguishable,
+t4a,t4.server_cpu_us_per_query,report,X,X,not distinguishable,,1.047,1.023,1.058,0.1414,5,not distinguishable,
+t4a,t4.term/count.geomean_ms,query,X,X,not distinguishable,,0.9857,0.9353,1.027,0.1198,5,not distinguishable,
+t4a,t4.term/search.geomean_ms,query,X,X,not distinguishable,,1.03,0.9274,1.061,0.103,5,not distinguishable,
+t4b,t11.idle_memory_current,memory,X,X,worse,,1.28,1.259,1.308,0.01535,5,worse,REGRESSION
+t4b,t4.agg_histogram/search.geomean_ms,query,E,E,worse,,71.59,69.74,75.67,0.09631,5,not distinguishable,
+t4b,t4.agg_stats/search.geomean_ms,query,Q,Q,worse,,9.923,9.337,9.999,0.02364,5,better,
+t4b,t4.agg_terms/search.geomean_ms,query,Q,Q,worse,,14.22,14.01,14.9,0.08791,5,not distinguishable,
+t4b,t4.range_size/count.geomean_ms,query,E,E,worse,,9.84,9.477,9.891,0.03589,5,not distinguishable,
+t4b,t4.range_size/search.geomean_ms,query,E,E,worse,,8.068,7.848,8.112,0.03597,5,not distinguishable,
+t4b,t4.range_time/count.geomean_ms,query,E,E,worse,,7.491,7.048,8.822,0.06929,5,better,
+t4b,t4.range_time/search.geomean_ms,query,E,E,worse,,6.483,6.289,7.39,0.08534,5,not distinguishable,
+t4b,t4.server_cpu_us_per_query,report,E,E,worse,,5.35,5.274,5.636,0.02581,5,not distinguishable,
+t4b,t4.sort_size/count.geomean_ms,query,E,E,worse,,4.365,4.177,4.55,0.04924,5,better,
+t4b,t4.sort_size/search.geomean_ms,query,E,E,worse,,8.057,7.727,8.761,0.06314,5,not distinguishable,
+t4b,t4.sort_time/count.geomean_ms,query,E,E,worse,,3.877,3.729,3.926,0.0237,5,better,
+t4b,t4.sort_time/search.geomean_ms,query,E,E,worse,,1.786,1.673,1.864,0.04517,5,not distinguishable,
+t4b,t4.term_range/count.geomean_ms,query,E,E,worse,,1.537,1.527,1.559,0.01098,5,better,
+t4b,t4.term_range/search.geomean_ms,query,E,E,worse,,1.842,1.815,1.848,0.039,5,better,
+t5a,t5.phrase.cpu_us_per_query,report,X,X,not distinguishable,,0.9942,0.9823,1.095,0.02386,5,not distinguishable,
+t5a,t5.phrase.rate,query,X,X,not distinguishable,,1,1,1,0,5,not distinguishable,
+t5a,t5.term.cpu_us_per_query,report,X,X,not distinguishable,,1.071,1.013,1.11,0.113,5,not distinguishable,
+t5a,t5.term.rate,query,X,X,not distinguishable,,1,1,2,1,5,not distinguishable,
+t5b,t5.agg_histogram.cpu_us_per_query,report,E,E,not distinguishable,E: no pairs,,,,,0,not distinguishable,
+t5b,t5.agg_histogram.rate,query,E,E,not distinguishable,E: no pairs,,,,,0,not distinguishable,
+t5b,t5.term_range.cpu_us_per_query,report,E,E,not distinguishable,E: no pairs,,,,,0,not distinguishable,
+t5b,t5.term_range.rate,query,E,E,not distinguishable,E: no pairs,,,,,0,not distinguishable,
+t6,t6.search_p50_us,query,E,E,worse,,10.1,9.057,11.39,0.4469,5,not distinguishable,
+t6,t6.search_p99_us,query,E,E,worse,,32.34,22.55,61.22,1.378,5,not distinguishable,
+t6,t6.visibility_lag_p99_us,query,X,X,not distinguishable,,1.536,0.987,3.124,1.009,5,not distinguishable,
+t6,t6.write_ack_p99_us,query,Q,Q,worse,,267.2,79.98,396.4,0.5841,5,not distinguishable,
+t7,t7.crash_restart_to_ready_s,query,Q,Q,worse,,1.392,1.335,1.44,0.009677,5,not distinguishable,
+t7-t4a,t7.clean_first_search_ms,query,Q,,not distinguishable,the anchor ran fewer than five rounds,1.968,1.781,2.154,0.9482,2,not distinguishable,
+t7-t4a,t7.clean_start_to_first_answer_s,query,X,X,not distinguishable,,1.021,0.9852,1.098,0.08589,5,not distinguishable,
+t7-t4b,t7.clean_first_search_ms,query,Q,Q,worse,,10.67,4.831,11.27,0.3192,5,not distinguishable,
+t7-t4b,t7.clean_start_to_first_answer_s,query,X,X,not distinguishable,,0.9947,0.9755,1.081,0.05099,5,not distinguishable,
