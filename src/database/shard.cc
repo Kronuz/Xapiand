@@ -64,6 +64,25 @@
 #define RANDOM_ERRORS_DB_THROW(...)
 #endif
 
+// CR1 review probe: SIGKILL at a named point of the WAL replay commit (CR1_CRASH=point, CR1_CRASH_N=k).
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <atomic>
+static thread_local bool cr1_in_replay_commit = false;
+static void cr1_probe(const char* point, const std::string& path) {
+	if (std::strcmp(point, "replayed") != 0 && !cr1_in_replay_commit) return;
+	const char* want = std::getenv("CR1_CRASH");
+	if (!want || std::strcmp(want, point) != 0) return;
+	static std::atomic<int> hits{0};
+	const char* n = std::getenv("CR1_CRASH_N");
+	int k = n ? std::atoi(n) : 1;
+	int h = ++hits;
+	std::fprintf(stderr, "CR1PROBE hit %s #%d %s\n", point, h, path.c_str());
+	if (h == k) { std::fprintf(stderr, "CR1PROBE KILL at %s #%d %s\n", point, h, path.c_str()); std::fflush(stderr); std::raise(SIGKILL); }
+}
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -473,10 +492,11 @@ Shard::reopen_writable()
 			replayed = wal.execute();
 		}
 		if (replayed) {
-			// Commits the replay like any commit (readers see it, the WAL gets its COMMIT line,
-			// replicas are told); a failure propagates and no shard is left open with it pending.
+			cr1_probe("replayed", endpoint.path);
 			_modified.store(true, std::memory_order_relaxed);
+			struct G { G() { cr1_in_replay_commit = true; } ~G() { cr1_in_replay_commit = false; } } g;
 			commit(true, true);
+			cr1_probe("done", endpoint.path);
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
@@ -957,6 +977,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
+			cr1_probe("storage", endpoint.path);
 			auto prior_revision = wdb->revision();
 			auto transaction = transactional();
 			engine::sync_wait(wdb->commit(
@@ -964,6 +985,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				transaction == Transaction::unflushed ? engine::Transaction::unflushed :
 				engine::Transaction::none));
 			_modified.store(false, std::memory_order_relaxed);
+			cr1_probe("engine", endpoint.path);
 			if (local) {
 				auto current_revision = wdb->revision();
 				if (prior_revision == current_revision) {
@@ -985,6 +1007,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 						std::move(uuid),
 						prior_revision,
 						send_update);
+					cr1_probe("walq", endpoint.path);
 				}
 #endif
 #ifdef XAPIAND_CLUSTERING
