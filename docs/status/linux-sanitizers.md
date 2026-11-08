@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) the developer's ledger for making local master clean under the Linux sanitizers; local branch `fix/linux-sanitizers`, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-03) the developer's ledger for making local master clean under the Linux sanitizers; local branch `fix/linux-sanitizers`, not pushed.
 
 # linux-sanitizers (build): master clean under ASan, UBSan and TSan on Linux
 

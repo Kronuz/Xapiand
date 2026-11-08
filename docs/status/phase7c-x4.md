@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the X4 developer's ledger (phase 7c step X4: Lua runs in a coroutine that yields, D10); the four blockers of the security review are fixed and proved, awaiting the security reviewer's re-check; not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-02) the X4 developer's ledger (phase 7c step X4: Lua runs in a coroutine that yields, D10); the four blockers of the security review are fixed and proved, awaiting the security reviewer's re-check; not pushed.
 
 # phase7c X4 (build): Lua in a yielding coroutine
 

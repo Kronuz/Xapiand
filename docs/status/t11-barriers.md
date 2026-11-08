@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-29) ledger of the `phase7a/t11-barriers` workstream (performance engineer); not landed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-29) ledger of the `phase7a/t11-barriers` workstream (performance engineer); not landed.
 
 # Ledger: T11 commit barriers
 

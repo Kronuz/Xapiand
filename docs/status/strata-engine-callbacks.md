@@ -1,6 +1,6 @@
 # strata-engine-callbacks (S3, phase 7a)
 
-> Status: DONE, MERGED LOCALLY (2026-10-28); review fixes CR1, CR2 and the follow-ups below on the branch (2026-10-29) workstream `strata-engine-callbacks`; branch `phase7a/strata-engine-callbacks` (merged into Xapiand master, not pushed, no CI run).
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was:, MERGED LOCALLY (2026-10-28); review fixes CR1, CR2 and the follow-ups below on the branch (2026-10-29) workstream `strata-engine-callbacks`; branch `phase7a/strata-engine-callbacks` (merged into Xapiand master, not pushed, no CI run).
 
 Design: `docs/design/xapiand-on-strata.md` (row S3, D4, G4, G5, G6, G8; ruling R-P2: no term lists in strata or prospect).
 

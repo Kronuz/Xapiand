@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the X6 developer's ledger (phase 7c step X6: the deletions, the destructor asserts, the stop's one bound, `async_check --strict` in CI); built and proved on Release, Debug, ASan+UBSan and TSan; not reviewed; local branch `phase7c/x6-deletions`, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-02) the X6 developer's ledger (phase 7c step X6: the deletions, the destructor asserts, the stop's one bound, `async_check --strict` in CI); built and proved on Release, Debug, ASan+UBSan and TSan; not reviewed; local branch `phase7c/x6-deletions`, not pushed.
 
 # phase7c X6 (build): delete what 7c replaced, enforce the never-block rule
 

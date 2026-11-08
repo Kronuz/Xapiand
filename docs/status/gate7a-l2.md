@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-29) gate 7a, blocker L2 and conditions C1, C2, C4 of `docs/reviews/phase-7a-gate.md` (strata); branch `phase7a/gate-l2` from master `3bc11f31f`; workstream gate7a-l2, developer.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-29) gate 7a, blocker L2 and conditions C1, C2, C4 of `docs/reviews/phase-7a-gate.md` (strata); branch `phase7a/gate-l2` from master `3bc11f31f`; workstream gate7a-l2, developer.
 
 # Gate 7a: L2 (every-gate checks) and C1, C2, C4
 

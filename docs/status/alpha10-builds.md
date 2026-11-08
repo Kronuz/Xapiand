@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # alpha10-builds
 
 State: branch `fix/alpha10-builds` (on `origin/xapiand`); CI green on every job at the last push before the final commit; the Release, FreeBSD and Bottles workflows are not run on the branch (they publish).

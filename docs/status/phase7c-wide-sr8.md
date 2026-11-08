@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) the developer's ledger for `fix/wide-search-sr8`: the SR8 follow-up, then the owner's ruling that indexes nest (nesting refusal removed, the pattern walk descends into index directories) and the lead's direction that patterns are path globs. Local branch from master `Xapiand:4f1cc9a94`, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-03) the developer's ledger for `fix/wide-search-sr8`: the SR8 follow-up, then the owner's ruling that indexes nest (nesting refusal removed, the pattern walk descends into index directories) and the lead's direction that patterns are path globs. Local branch from master `Xapiand:4f1cc9a94`, not pushed.
 
 # phase7c wide search, SR8 follow-up and nested indexes (build)
 
