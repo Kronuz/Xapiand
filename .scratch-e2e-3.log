@@ -1,0 +1,11 @@
+== run_all: binary /Users/kronuz/code/Kronuz/Xapiand-wt/repin-libs/build/bin/xapiand ==
+== layers: e2e ==
+== [e2e] functional (doc assertions) ==
+  ✅ e2e
+
+===================== SUMMARY =====================
+  passed:  1   e2e
+  failed:  0   
+  skipped: 0
+===================================================
+VERDICT: GREEN

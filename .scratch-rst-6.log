@@ -1,0 +1,6 @@
+ok   ndjson: 20000 documents indexed and counted
+ok   msgpack: 5000 documents indexed and counted
+ok   chunked: 1000 documents indexed and counted
+ok   badline: 1000 documents indexed and counted
+ok   a client that left mid-stream: 13074 of 20000 documents stay, the node serves
+ok   after kill -9 and a restart: 13074 documents
