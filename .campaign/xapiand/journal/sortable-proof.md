@@ -1,6 +1,6 @@
 # sortable-proof: journal
 
-State: waiting on jobs 261109-143158-fe1ab9 261109-143159-afc24c 261109-143200-4055ce 261109-143200-a3b59d
+State: waiting on jobs 261109-143159-afc24c 261109-143200-4055ce
 Quest: .campaign/xapiand/quests/sortable-proof.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,15 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Jobs at sortable:f6dc3d4: A1 exhaustive 261109-143158-fe1ab9, A2 fuzz hour 261109-143159-afc24c,
-A4 preflight 261109-143200-4055ce, build-test (A3) 261109-143200-a3b59d.
+Jobs at sortable:f6dc3d4 still running: A2 fuzz hour 261109-143159-afc24c (ends about 15:36), A4
+preflight 261109-143200-4055ce (mac hardened, mac ASan+UBSan and Linux ok; FreeBSD running).
 
 ## Next
 
-1. When the jobs finish: fill Evidence and Result; ask the lead to push the branch and dispatch CI for A4's CI part.
+1. When A2 and A4's preflight finish: their rows, the fuzz run count in Result, State "ready for review".
+2. Lead: push quest/xapiand/sortable-proof and run CI on it (ci.yml triggers on push to main/master,
+   pull_request or workflow_dispatch only: `gh workflow run ci.yml --ref quest/xapiand/sortable-proof`
+   or a PR) for A4's CI part and the `asan` (ci:linux-asan-ubsan) check.
 
 ## Blocked on
 
@@ -24,8 +27,22 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
+| A1 | 261109-143158-fe1ab9: `checked 4294967296 floats`, `all floats passed`, 6 min 05 s (Release, light) |
+| A3 | 261109-143200-a3b59d (build-test): 5 of 5 tests, `sortable_cli` 40 s |
 
 ## Result
+
+At sortable:f6dc3d4 (so far):
+
+1. `tools/cli.cc` (`sortable_cli encode|decode`) and `tools/check_cli.py` (CTest `sortable_cli`): 213,491
+   encode lines, 741,467 decode lines and 382,806 decode-then-encode lines, 0 mismatches against the
+   model. Probes: a CLI mutant printing integers as `f` gave 113,403 failures; one accepting short `f`
+   hex failed the malformed-line check.
+2. `test/exhaustive_float.cc` covers and counts all 2^32 patterns: 4,294,967,296, 0 failures, 6 min 05 s.
+3. `fuzz/decode_fuzz.cc` checks every conversion of an accepted value (Rulings 4).
+4. Docs: `docs/mechanisms/sortable.md` ("How the decoder is proven", "The command-line driver"),
+   `docs/status/sortable.md` items 8-10. Ledger item 9 states the fuzz hour's outcome ahead of
+   261109-143159-afc24c; if that job fails, it is corrected with the fix.
 
 ## Rulings I made
 
