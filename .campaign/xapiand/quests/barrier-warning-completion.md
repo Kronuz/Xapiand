@@ -20,6 +20,11 @@ Repository: Kronuz/completion.
 
 Provides the warning hook and the `full_flush_ordering` option to strata (`barrier-warning-strata`).
 
+Keeps `SyncFiles`, `OrderFiles` and `PreparationFilePolicy::Stage` with their signatures and default
+sequences unchanged: Detent's `namespace-s1-s2` pins completion:560c288 and consumes them (Detent's lead,
+2026-11-08, xapiand msg-1). The new warning and `full_flush_ordering` are additive and opt-in. Any change to
+those three is messaged to Detent (`campaign message detent: ...`) before landing.
+
 ## Decisions
 
 - "Not a priority" (lead, 2026-10-30); before the release.
