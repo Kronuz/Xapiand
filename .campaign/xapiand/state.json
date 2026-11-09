@@ -5593,6 +5593,8 @@
     "wbuf-inline": {
       "accepted": {},
       "after": [],
+      "base": "9e344d8605edb3ccd24662a51d44ac623afc3cae",
+      "branch": "quest/xapiand/wbuf-inline",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
@@ -5623,6 +5625,7 @@
         "docs/status/wbuf-inline.md",
         "docs/reviews/wbuf-inline-code.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/wbuf-inline",
       "landed": [],
       "lenses": [
         "correctness"
@@ -5632,9 +5635,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Inline key and stored bytes in the write buffer",
-      "updated": "2026-11-08T15:39:35"
+      "updated": "2026-11-08T21:19:37",
+      "worktree": "../strata-wt/xapiand/wbuf-inline"
     },
     "wbuf-inline-prospect": {
       "accepted": {},
