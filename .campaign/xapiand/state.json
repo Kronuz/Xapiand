@@ -859,6 +859,8 @@
     "cjk-segmenter": {
       "accepted": {},
       "after": [],
+      "base": "a0825b1a376754d4718ac6dd89b7b31c6dd96738",
+      "branch": "quest/xapiand/cjk-segmenter",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -882,6 +884,7 @@
         "NOTICE*",
         "README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/cjk-segmenter",
       "landed": [],
       "lenses": [
         "correctness"
@@ -893,9 +896,10 @@
       ],
       "repo": "../analysis",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A CJK word segmenter in Kronuz/analysis",
-      "updated": "2026-11-09T14:21:59"
+      "updated": "2026-11-09T14:22:17",
+      "worktree": "../analysis-wt/xapiand/cjk-segmenter"
     },
     "cjk-words": {
       "accepted": {},
