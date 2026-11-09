@@ -68,6 +68,11 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | wbuf-inline-prospect | contributor, sonnet, medium | 77k | 9% weekly | 13m | repin + 16,000-record budget test; ready for review; lead rebased and re-cited evidence |
 | 11-09 | manifest-log | contributor, opus, high (step 3a) | 295k | 9% weekly | 32m | log layer at strata:6a8bb32; folded C4-C6, D41; handed off before 3b |
 | 11-09 | manifest-log | contributor, opus, high (step 3b) | 279k | 10% weekly | 1h48m | D42 adaptive deleted set (128 deletes 8.9 s to 0.03 ms local), index on the log, 4 bugs found by ported tests; build-test 70/75 at strata:7ffabab, mutants 23/23 |
+| 11-09 | manifest-log | contributor, opus, high (3b fixes, codec retirement, 3c part) | 286k | 13% weekly | 1h16m | 5 red tests were the branch's (main 74/74); fixed, build-test 72/72 at strata:4d2a541; T4 cases 4-9 |
+| 11-09 | cjk-words | contributor, sonnet, medium | 78k | 12% | 3m | blocked: no segmenter exists; options led to D43 and cjk-segmenter |
+| 11-09 | x-pool-followups | contributor, sonnet, medium (2 turns) | 119k | 12% | 19m | C3, C5, C6, restore wait fixed; jobs queued |
+| 11-09 | sortable-proof | contributor, opus, high (2 turns) | 176k | 13% | 31m | A1 2^32 floats 0 failures; CLI 213,491 + 741,467 lines 0 mismatches; docs edit voided all evidence (hunt row) |
+| 11-09 | (tool) | general-purpose, opus, high: parallelism changes | 162k | 12% | 21m | agent-campaign:c43dc00, dotfiles:6e0d8af; suite 181 OK |
 
 ## Landings
 
