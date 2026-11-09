@@ -7567,7 +7567,7 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j8 && ctest --test-dir build --output-on-failure",
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
@@ -7581,6 +7581,34 @@
         "CMakeLists.txt",
         "cmake/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-08T22:36:02",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j8 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "cap build parallelism at the light hold's 4 jobs (owner's host rule; Detent msg-2: load 126 on 16 CPUs); commands otherwise unchanged",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -7592,7 +7620,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-08T15:40:12"
+      "updated": "2026-11-08T22:36:02"
     },
     "xapiand-on-strata": {
       "accepted": {},
