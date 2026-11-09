@@ -5,27 +5,23 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+prospect pins strata at the head of `manifest-log` (later its landed main commit) and its tests read and damage the manifest log instead of the retired files (`files::manifest`, live-docs, metadata and `fields-*` files, `meta-1.kv`); prospect's behavior is unchanged (Kronuz/prospect; manifest-log journal, Blocked on 2 and the lead's L1).
 
 ## Acceptance criteria
 
-One line each: `- A1 <criterion>: <the job, test or check that shows it>`. An untagged criterion
-needs a job that passed at the landed code; tag one `[artifact]` (a committed `path`),
-`[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
-cannot show it.
-
-- A1 <criterion>: <evidence>
+- A1 `format13_test.cc`, `reclaim_test.cc`, `media_test.cc`, `fixtures_test.cc` and `directory_test.cc` exercise the same cases on the manifest log (no case dropped; each damage case still damages what it names): the `build-test` check
+- A2 prospect pins strata at the commit where `manifest-log` lands: the `build-test` check at the landed `CMakeLists.txt`
+- A3 prospect's suite passes and its churn and dump output is identical to prospect on strata's main before `manifest-log` at flush threads 1 and 2: the `build-test` check and a churn job run in prospect's repository (`--ref strata=../strata@... --ref main=../strata@...`, strata's `test/prospect_integration.sh`)
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes `strata-manifest-log` (strata `docs/design/manifest-log.md`).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Built against the `manifest-log` branch head while it is open; repinned to strata's main commit before landing (`--after manifest-log`, landing ordered, never atomic).
+- manifest-log's A9 jobs run prospect at this quest's branch.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+None.
