@@ -20,7 +20,7 @@ Jobs at strata:e4fe8f7: build-test 261108-230850-b72759, asan 261108-230850-ae76
 
 ## Next
 
-1. Read the jobs at strata:e4fe8f7; fill A1 to A11 in Evidence; add the landing A/B to
+1. (Waited once, 600 s: tsan running, the rest queued behind the host's light slots.) Read the jobs at strata:e4fe8f7; fill A1 to A11 in Evidence; add the landing A/B to
    `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head, the
    other jobs' code is unchanged).
 2. Ready for the correctness review.
@@ -56,4 +56,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   checkout's `tools/vm/aws-linux.sh run-local`, as A11 drives the FreeBSD VM; CI on the landed
   commit stays the lead's.
 - Superseded jobs: 261108-225901-3a3729 (build-test at strata:14ed454, the rebase before the
-  scripts) and those cancelled at strata:14ed454, strata:502b330 and strata:abea21e (the head moved).
+  scripts: passed, ctest 74 of 74; same C++ as strata:e4fe8f7) and those cancelled at strata:14ed454, strata:502b330 and strata:abea21e (the head moved).
