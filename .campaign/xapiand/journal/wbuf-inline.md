@@ -1,6 +1,6 @@
 # wbuf-inline: journal
 
-State: waiting on jobs 261108-230850-b72759 261108-230850-ae766d 261108-230850-119b9c 261108-230851-b11787 261108-230851-c6dcbb 261108-230852-0806c9 261108-230853-7da613 261108-230854-8255bb 261108-230855-fae46b 261108-230856-f04186
+State: waiting on jobs 261109-012436-323159 261109-012436-24bfa7 261109-012436-43f2fe 261109-012437-13d8c1 261109-012438-75c07d 261109-012439-4268e8 261109-012440-05ac8b 261109-012441-072616 261109-012442-0cf880 261109-012442-7003e7
 Quest: .campaign/xapiand/quests/wbuf-inline.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,20 +9,34 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Rebased onto strata main (strata:70df28d), clean, no conflicts (main touched `index.hh` in two
-hunks the branch does not). Head strata:e4fe8f7 adds four job scripts, no engine change:
-`test/wbuf_mutants.sh` (A1, A2, A4), `test/prospect_integration.sh` with
-`test/prospect_churn_gen.py` (A7), `test/linux_asan.sh` (A6), `docs/perf/wbuf-inline/landed-ab.sh` (A8).
-Jobs at strata:e4fe8f7: build-test 261108-230850-b72759, asan 261108-230850-ae766d, tsan
-261108-230850-119b9c, A11 261108-230851-b11787, mutants 261108-230851-c6dcbb, prospect
-261108-230852-0806c9, Linux ASan 261108-230853-7da613, A/B build 261108-230854-8255bb, share sweep
-261108-230855-fae46b, wbufrr 261108-230856-f04186.
+Head strata:efc5663 (rebased on strata main strata:70df28d). Fixes after the lead's message on the
+jobs at strata:e4fe8f7:
+- Mutants 261108-230851-c6dcbb reported "m1 write_buffer_test: SURVIVED (rc=134)". The pattern was
+  wrong, the test was not: in the whole binary m1 aborts an earlier test on the same uncaught
+  `logic_error` ("past a chunk") before `long_key_records` runs. The log the lead read was M1's:
+  `M1-write_buffer_test.log` overwrote `m1-write_buffer_test.log` on the case-insensitive disk,
+  which is where :691 and :723 came from. A probe build (m1, Release, under `quiet light`) showed
+  `write_buffer_test long_key_records` alone: rc 1, `long key cap: strata: a write buffer record
+  past a chunk`, 5 failures; whole binary: rc 134, `terminating due to uncaught exception of type
+  std::logic_error`. Fix: `write_buffer_test` runs one named test (an unknown name fails, rc 2);
+  the script runs m1 and m2 on `long_key_records` alone (the review's claim) plus m1 on the whole
+  binary, and numbers its logs.
+- A8 build 261108-230854-8255bb: `kv_proto_bufmem` exists only with `STRATA_KV_PROTO=ON` on both
+  sides. `landed-ab.sh` compiles flush_cadence with kv_strata's commands instead (dry-run of the
+  substitutions on strata main's build dir).
+
+Jobs at strata:efc5663: build-test 261109-012436-323159, asan 261109-012436-24bfa7, tsan
+261109-012436-43f2fe, mutants 261109-012437-13d8c1, A11 261109-012438-75c07d, A7
+261109-012439-4268e8, A6 261109-012440-05ac8b (after 261108-230853-7da613, so the VM runs one at
+a time), A/B build 261109-012441-072616, share sweep 261109-012442-0cf880, wbufrr 261109-012442-7003e7.
+Green at strata:e4fe8f7 (same engine code; e4fe8f7..efc5663 changes only `test/write_buffer_test.cc`'s
+main and the scripts): tsan 261108-230850-119b9c, asan 261108-230850-ae766d, build-test
+261108-230850-b72759, A11 261108-230851-b11787, A7 261108-230852-0806c9; A6 261108-230853-7da613 running.
 
 ## Next
 
-1. (Waited once, 600 s: tsan running, the rest queued behind the host's light slots.) Read the jobs at strata:e4fe8f7; fill A1 to A11 in Evidence; add the landing A/B to
-   `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head, the
-   other jobs' code is unchanged).
+1. Read the jobs at strata:efc5663; fill A1 to A11 in Evidence; add the landing A/B to
+   `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head).
 2. Ready for the correctness review.
 
 ## Blocked on
@@ -57,3 +71,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   commit stays the lead's.
 - Superseded jobs: 261108-225901-3a3729 (build-test at strata:14ed454, the rebase before the
   scripts: passed, ctest 74 of 74; same C++ as strata:e4fe8f7) and those cancelled at strata:14ed454, strata:502b330 and strata:abea21e (the head moved).
+- `write_buffer_test NAME` runs one test: the smallest change that lets a mutant be checked
+  against the test the review named, not just against the binary.
