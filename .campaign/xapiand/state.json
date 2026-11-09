@@ -4336,10 +4336,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -4392,6 +4399,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:28",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -4409,7 +4461,7 @@
       "risk": "high",
       "status": "blocked",
       "title": "Phase 3R, replication groups",
-      "updated": "2026-11-08T22:35:48"
+      "updated": "2026-11-09T04:14:28"
     },
     "phase4-gate": {
       "accepted": {},
