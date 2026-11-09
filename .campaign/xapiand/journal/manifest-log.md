@@ -9,32 +9,39 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Step 3a, the log layer (strata `include/strata/core/manifest_log.hh`, nothing in `index.hh` yet):
+the design text for C4 to C6 and D41; `apply()` in proportion to the edit; the log reader (D6.3's
+caller rules, D7's bounds on read); the log writer (one write per append, the truncate-back, one
+record in flight); crash-image and bit-flip tests over the reader.
 
 ## Next
 
-1. <step>
+1. Step 3a as above, with its tests and mutants, as jobs.
+2. Step 3b: `index.hh` on the log (`m_` becomes the log's state, `commit_files` appends or rolls
+   over, `recover` replays and issues the open's one `sync_data`, `retain` by D8, `check()`, the
+   live-docs, metadata and field files retired, the allowance, `pre_freeze`).
+3. Step 3c: T4's cases on faultfs, T6's oracle through the index, `media_test`; A9's integration
+   jobs (prospect needs a companion change, Blocked on).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+<filled as found>
 
 ## Evidence
 
-One row per criterion, with what its kind needs: a job id (it, or the same job rerun, passed at
-the current code), a `path`, a decision id, or for a [manual] one who checked what. Name every job
-you examined, failures included, and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+<When ready for review.>
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- R1 (scope): step 3 does not fit one review: `index.hh`'s commit, recovery, retention, `check()`,
+  install and the retired files touch about 160 lines that name the manifest, live-docs, metadata
+  and field files, plus about 90 test sites in strata and prospect's tests that read the old files.
+  I split it into 3a (the log layer, reviewable alone), 3b (the index on the log) and 3c (the crash
+  suite and integration), each its own commits, as the lead's prompt allows.
+- R2: merged strata `main` (strata:3df7af4) into the branch rather than rebasing, so the
+  reviewed design commits (strata:1c8ff50, strata:79beaf4) the reviews cite stay reachable.
