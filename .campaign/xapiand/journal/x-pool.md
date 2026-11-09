@@ -1,6 +1,6 @@
 # x-pool: journal
 
-State: waiting on jobs 261109-024405-538134 261109-024406-e5ab5b 261109-024407-9f4080 261109-025021-2dfba3 261109-025023-89b71a 261109-014336-a36d6f 261109-014336-74371a 261109-014336-d6fd48 261109-014336-8c1b28
+State: ready for review
 Quest: .campaign/xapiand/quests/x-pool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,23 +9,8 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Investigating, as durability, the asan check's failure at Xapiand:41dba47c5 (261109-014325-c420dd; it passed at
-465f56bb5, 261108-224742-9b5d88). All 37 ctest tests passed; `harness/restore_stream_check.sh` then failed:
-"a client that left mid-stream: 2629 of 20000 documents stay", then "after kill -9 and a restart: 43 documents,
-had 2629". What that layer asserts: a RESTORE whose client leaves keeps what it indexed, by the closing commit
-(`restore_database_view`: `indexer->commit()` on every exit). The documents are neither acknowledged (the client
-left) nor WAL-logged (RESTORE runs `DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT`), so only that commit makes them
-durable. The script waits for the count to hold still over 1 s, then 5 s for the commit, then kills; it never
-checks that the restore has ended. Open question: whether the 2629 were committed and then lost (a durability
-bug), or the closing commit had not run by the kill (a timing assumption under ASan on a loaded host).
-Jobs:
-- 261109-024405-538134 (master Xapiand:6fded97cc) and 261109-024406-e5ab5b (41dba47c5): the layer 5 times on ASan.
-- 261109-024407-9f4080: the asan check rerun at 41dba47c5 (`--force`).
-- 261109-025021-2dfba3 (master) and 261109-025023-89b71a (branch): `.scratch/left_probe.sh`, the same step with
-  the count sampled every 0.5 s for 20 s, the node's restore and commit log lines, and the count after kill -9.
-
-At 41dba47c5 build-test 261109-014325-59bf18, e2e (strict) 261109-014325-433dc2 and tsan 261109-014325-aad33e
-passed. tsan is the fixes' passing side; master's 261108-223749-0e083d is the failing side.
+Nothing: ready for review at Xapiand:41dba47c5 (code). The asan/tsan gates move to CI (`ci:AddressSanitizer`,
+`ci:ThreadSanitizer`, lead); their rows cite the local jobs until the branch is pushed.
 
 Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test run, restored): 6 of 6 killed.
 | Mutant | Killed by |
@@ -39,44 +24,57 @@ Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test
 
 ## Next
 
-1. Read the five restore jobs above. If the branch loses documents and master does not, find the cause, fix it in
-   the file set with a test that fails without it, and rerun the asan check. If master loses them too, put it
-   under Blocked on with the job ids.
-2. Evidence reruns at 41dba47c5: docs E2E 261109-014336-a36d6f; Linux VM tsan 261109-014336-74371a, asan
-   261109-014336-d6fd48; wide search 261109-014336-8c1b28.
-3. When everything passes, point the Evidence rows at the new jobs, write Result, State "ready for review".
+1. After the push, add `ci:AddressSanitizer` and `ci:ThreadSanitizer` to the A6 and A8 rows.
+2. One correctness review of steps 2 to 4 at the landing commit (the lead launches it).
 
 ## Blocked on
 
-Nothing. (Resolved: the tsan check's failures are master's tests, which the lead ruled this quest fixes, R4.
-The `e2e` check's stale report and newman 4.5 were fixed by e2e-harness, Xapiand:c60138850.)
+Follow-up for the lead (`harness/`, outside this quest's files), not blocking this quest:
+`harness/restore_stream_check.sh` sends kill -9 before the restore has ended. After a client leaves, the node goes
+on indexing what it had buffered (more than 20 s on ASan: R6). The script breaks out once the count holds still
+for 1 s, then waits 5 s. Under load a 1 s pause ends that wait while the restore still runs, so the kill comes
+before the closing commit and the uncommitted documents go (`DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT`). That is
+the one failure in 261109-014325-c420dd. Fix: wait for the restore to end before the kill, for example by polling
+until the node logs the restore's end or the count holds still for several seconds, or by giving the node an
+explicit "restore over" signal. Then assert that the count survives.
 
 ## Evidence
 
-Code at Xapiand:161e1db5d = 465f56bb5 (the merge changes only docs). Pending rows name the job that proves them.
+Code at Xapiand:41dba47c5: the tsan fixes, on top of master merged at 9851b57e2 (product code unchanged since
+161e1db5d). Jobs at 41dba47c5: build-test 261109-014325-59bf18 (37 of 37), e2e (strict, newman 6)
+261109-014325-433dc2, tsan 261109-014325-aad33e (37 of 37), asan 261109-014325-c420dd (37 of 37 in ctest,
+0 ASan/UBSan reports, docs E2E 666 of 666; failed only at the harness's restore kill -9 step: R6).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261108-224742-122302 (`test_reactor_requests` "a pin"); docs E2E on an asserts build 261108-223127-f35eff; mutant "no check in `pin`": M1 in `docs/status/phase7c-x-pool.md` (step 1), the check unchanged since |
-| A2 | build-test 261108-224742-122302 (`test_pool`: `test_a_cold_pin_reads_what_the_log_replays`, `test_a_fenced_index_is_replaced_and_replays_its_log`, `test_a_resident_commit_on_an_owed_index_lets_it_close`); mutants m1, m2 in `docs/status/phase7c-x-pool.md` |
-| A3 | build-test 261108-224742-122302 (`test_the_sweep_closes_only_an_unpinned_index`, sweep at 1 kHz); mutants s6, s7 in the ledger |
-| A4 | build-test 261108-224742-122302 (`test_the_shutdown_commits_and_logs_an_uncommitted_write`, `test_the_sweeps_close_syncs_a_merges_output`); mutant s8 in the ledger |
-| A5 | build-test 261108-224742-122302 (`test_a_write_to_a_demoted_index_applies_after_one_promote`, `test_a_third_owed_answer_is_internal`, `test_soft_open_is_at_most_the_descriptor_cap`); mutants x1 to x4 above |
-| A6 | asan 261108-224742-9b5d88, tsan 261108-224742-6f7cbc; Linux VM 261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan) |
-| A7 | build-test 261108-224742-122302 (`async_check --strict --owed --extern strata=.deps/strata-src`) |
-| A8 | `test_a_root_destroyed_while_it_waits_for_a_pin_releases_it` in asan 261108-224742-9b5d88 and tsan 261108-224742-6f7cbc |
+| A1 | build-test 261109-014325-59bf18 (`test_reactor_requests` "a pin"); docs E2E on an asserts build 261109-014336-a36d6f (666 of 666, 0 asserts or aborts in the node log); mutant "no check in `pin`": M1 in `docs/status/phase7c-x-pool.md` (step 1), the check unchanged since |
+| A2 | build-test 261109-014325-59bf18 (`test_pool`: `test_a_cold_pin_reads_what_the_log_replays`, `test_a_fenced_index_is_replaced_and_replays_its_log`, `test_a_resident_commit_on_an_owed_index_lets_it_close`); mutants m1, m2 in `docs/status/phase7c-x-pool.md` |
+| A3 | build-test 261109-014325-59bf18 (`test_the_sweep_closes_only_an_unpinned_index`, sweep at 1 kHz); mutants s6, s7 in the ledger |
+| A4 | build-test 261109-014325-59bf18 (`test_the_shutdown_commits_and_logs_an_uncommitted_write`, `test_the_sweeps_close_syncs_a_merges_output`); mutant s8 in the ledger |
+| A5 | build-test 261109-014325-59bf18 (`test_a_write_to_a_demoted_index_applies_after_one_promote`, `test_a_third_owed_answer_is_internal`, `test_soft_open_is_at_most_the_descriptor_cap`); mutants x1 to x4 above |
+| A6 | tsan 261109-014325-aad33e (37 of 37, 0 reports); asan 261109-014325-c420dd (ctest 37 of 37 and the docs E2E 666 of 666, 0 ASan/UBSan reports; its one failure is the harness's timing, R6); Linux VM tsan 261109-014336-74371a (suites, graceful shutdown, path boundary, docs E2E: 0 reports); restore layer on ASan 5 of 5 261109-024406-e5ab5b (0 reports); CI `ci:AddressSanitizer`, `ci:ThreadSanitizer` after the push |
+| A7 | build-test 261109-014325-59bf18 (`async_check --strict --owed --extern strata=.deps/strata-src`) |
+| A8 | `test_a_root_destroyed_while_it_waits_for_a_pin_releases_it` (`tests/test_pool.cc`) in asan 261109-014325-c420dd and tsan 261109-014325-aad33e (`test_pool` passed in both) |
 | A9 | `docs/design/x-pool.md` D3 ("The step 2 review's CR2, ruled") |
-| A10 | build-test 261108-224742-122302 (`test_a_destroyed_root_that_held_a_pin_lets_the_pool_join`) |
-| A11 | build-test 261108-224742-122302 (`test_a_cancelled_pin_stops_waiting`: resident pin and FLUSH cancelled; `pin_chore` rethrows `task::cancelled`) |
-| A12 | build-test 261108-224742-122302 (`test_pool` `test_a_cancelled_pin_stops_waiting`; `test_reactor_requests` `test_a_cancelled_request_leaves_the_pin_queue`); mutant x6 |
-| A13 | `docs/design/x-pool.md` D13 (budget numbers); `test_the_sweep_erases_a_missing_index_negative_entries` in build-test 261108-224742-122302; mutant x5 |
-| A14 | `docs/design/x-pool.md` D2 (why not, ruled); `test_the_hostless_path_and_the_catalog_never_share_an_index` in build-test 261108-224742-122302 |
-| A15 | build-test 261108-224742-122302 (`test_node` `test_a_search_batch_pins_a_repeated_index_once`, `test_pool` soft_open); `wide_search_check.py check` 261108-223539-df1848 |
-| A16 | build-test 261108-224742-122302 at `CMakeLists.txt` pinning strata:5d742b2 (strata main, items 5 and 5b merged) |
-| A17 | docs E2E with newman 6, 666 of 666 required: 261108-223127-f35eff (the `e2e` check cannot show it: Blocked on) |
+| A10 | build-test 261109-014325-59bf18 (`test_a_destroyed_root_that_held_a_pin_lets_the_pool_join`) |
+| A11 | build-test 261109-014325-59bf18 (`test_a_cancelled_pin_stops_waiting`: resident pin and FLUSH cancelled; `pin_chore` rethrows `task::cancelled`) |
+| A12 | build-test 261109-014325-59bf18 (`test_pool` `test_a_cancelled_pin_stops_waiting`; `test_reactor_requests` `test_a_cancelled_request_leaves_the_pin_queue`); mutant x6 |
+| A13 | `docs/design/x-pool.md` D13 (budget numbers); `test_the_sweep_erases_a_missing_index_negative_entries` in build-test 261109-014325-59bf18; mutant x5 |
+| A14 | `docs/design/x-pool.md` D2 (why not, ruled); `test_the_hostless_path_and_the_catalog_never_share_an_index` in build-test 261109-014325-59bf18 |
+| A15 | build-test 261109-014325-59bf18 (`test_node` `test_a_search_batch_pins_a_repeated_index_once`, `test_pool` soft_open); `wide_search_check.py check` 261109-014336-8c1b28 |
+| A16 | build-test 261109-014325-59bf18 at `CMakeLists.txt` pinning strata:5d742b2 (strata main, items 5 and 5b merged) |
+| A17 | e2e check 261109-014325-433dc2 (strict, newman 6: smoke, e2e, tls passed, 0 skipped); docs E2E 261109-014336-a36d6f: 666 of 666, plain and asserts builds |
 | A18 | `docs/mechanisms/index-registry-on-catalog.md` |
 
 ## Result
+
+Steps 2 to 4 of `docs/design/x-pool.md` (revision 3): the index registry is strata's catalog payload. Requests pin
+before views, cold pins open and replay, the sweep alone closes, commits run as catalog chores, `map_owed` gets
+one `promote()` retry, and pins take the request's token. Code in `src/database/` (pool, shard, handler, lock),
+`src/engine/strata/` and `src/manager.cc`; tests in `tests/test_pool.cc`, `tests/test_reactor_requests.cc` and
+`tests/test_node.cc`. How it works: `docs/mechanisms/index-registry-on-catalog.md`. The proof ledger is
+`docs/status/phase7c-x-pool.md`. The tsan check's two test-side failures (master's tests) are fixed here (R4).
+Evidence above, all at Xapiand:41dba47c5.
 
 ## Rulings I made
 
@@ -102,3 +100,13 @@ Code at Xapiand:161e1db5d = 465f56bb5 (the merge changes only docs). Pending row
   parent's race report, so fixing the race alone likely fixes them; running it first keeps it independent.
 - R5. Merged master instead of rebasing: the branch already carries merges of master, and master changed only
   `harness/` and campaign files.
+- R6. The asan check's one failure (261109-014325-c420dd: 2629 counted, 43 after kill -9) is the harness's
+  timing, not durability, and not this branch. The layer passes 5 of 5 on ASan at master 6fded97cc
+  (261109-024405-538134) and 5 of 5 at 41dba47c5 (261109-024406-e5ab5b), each run keeping 12,886 to 13,076
+  documents across the kill. The failing run came at host load 21 to 28. RESTORE runs `DB_DISABLE_WAL |
+  DB_DISABLE_AUTOCOMMIT`, so only its closing commit makes what a departed client sent durable, and the
+  script can kill before that commit runs. The timeline probe (`.scratch/left_probe.sh`, 261109-025021-2dfba3
+  at master, 261109-025023-89b71a at the branch) ran correctly, but its fixed 20 s window cut the restore off.
+  The count still rose in every 0.5 s sample (for example 9 to 2,352 in 20 s at load 10), so every run killed
+  before the closing commit, on master and on the branch alike (master kept 309 to 528, the branch 112 to 487).
+  It shows no documents lost after a commit ran. The probe is dropped; the harness fix is the lead's (Blocked on).
