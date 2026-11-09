@@ -4233,6 +4233,8 @@
     "perf-watch-peek": {
       "accepted": {},
       "after": [],
+      "base": "66050ec19adbc38f35c2a45b36a5c0ad05c65557",
+      "branch": "quest/xapiand/perf-watch-peek",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4277,6 +4279,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/perf-watch-peek",
       "landed": [],
       "lenses": [
         "correctness"
@@ -4286,9 +4289,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-08T22:35:47"
+      "updated": "2026-11-09T14:15:49",
+      "worktree": "../http-wt/xapiand/perf-watch-peek"
     },
     "phase0": {
       "accepted": {},
