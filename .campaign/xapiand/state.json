@@ -3612,6 +3612,39 @@
       "updated": "2026-11-09T13:25:40",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
+    "manifest-log-prospect": {
+      "accepted": {},
+      "after": [
+        "manifest-log"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "strata-manifest-log"
+      ],
+      "files": [
+        "test/**",
+        "src/**",
+        "include/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "The document profile gate",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "planned",
+      "title": "prospect moves to strata's manifest log",
+      "updated": "2026-11-09T13:26:04"
+    },
     "manifest-log-steps12": {
       "accepted": {},
       "after": [],
