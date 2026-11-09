@@ -47,19 +47,19 @@ Code at Xapiand:41dba47c5: the tsan fixes, on top of master merged at 9851b57e2 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261109-014325-59bf18 (`test_reactor_requests` "a pin"); docs E2E on an asserts build 261109-014336-a36d6f (666 of 666, 0 asserts or aborts in the node log); mutant "no check in `pin`": M1 in `docs/status/phase7c-x-pool.md` (step 1), the check unchanged since |
+| A1 | build-test 261109-014325-59bf18 (`test_reactor_requests` `test_a_task_that_holds_a_view_waits_for_nothing`, its "a pin" case); docs E2E on an asserts build 261109-014336-a36d6f (666 of 666, 0 asserts or aborts in the node log); mutant "no check in `pin`": M1 in `docs/status/phase7c-x-pool.md` (step 1), the check unchanged since |
 | A2 | build-test 261109-014325-59bf18 (`test_pool`: `test_a_cold_pin_reads_what_the_log_replays`, `test_a_fenced_index_is_replaced_and_replays_its_log`, `test_a_resident_commit_on_an_owed_index_lets_it_close`); mutants m1, m2 in `docs/status/phase7c-x-pool.md` |
 | A3 | build-test 261109-014325-59bf18 (`test_the_sweep_closes_only_an_unpinned_index`, sweep at 1 kHz); mutants s6, s7 in the ledger |
 | A4 | build-test 261109-014325-59bf18 (`test_the_shutdown_commits_and_logs_an_uncommitted_write`, `test_the_sweeps_close_syncs_a_merges_output`); mutant s8 in the ledger |
 | A5 | build-test 261109-014325-59bf18 (`test_a_write_to_a_demoted_index_applies_after_one_promote`, `test_a_third_owed_answer_is_internal`, `test_soft_open_is_at_most_the_descriptor_cap`); mutants x1 to x4 above |
-| A6 | tsan 261109-014325-aad33e (37 of 37, 0 reports); asan 261109-014325-c420dd (ctest 37 of 37 and the docs E2E 666 of 666, 0 ASan/UBSan reports; its one failure is the harness's timing, R6); Linux VM tsan 261109-014336-74371a (suites, graceful shutdown, path boundary, docs E2E: 0 reports); restore layer on ASan 5 of 5 261109-024406-e5ab5b (0 reports); CI `ci:AddressSanitizer`, `ci:ThreadSanitizer` after the push |
+| A6 | tsan 261109-014325-aad33e (37 of 37, 0 reports); ASan: `ci:AddressSanitizer` after the push (the local asan check at 41dba47c5 had ctest 37 of 37, the docs E2E 666 of 666 and 0 reports, and failed at the harness's restore step: R6); Linux VM tsan 261109-014336-74371a (suites, graceful shutdown, path boundary, docs E2E: 0 reports); restore layer on ASan 5 of 5 261109-024406-e5ab5b (0 reports); CI `ci:AddressSanitizer`, `ci:ThreadSanitizer` after the push |
 | A7 | build-test 261109-014325-59bf18 (`async_check --strict --owed --extern strata=.deps/strata-src`) |
-| A8 | `test_a_root_destroyed_while_it_waits_for_a_pin_releases_it` (`tests/test_pool.cc`) in asan 261109-014325-c420dd and tsan 261109-014325-aad33e (`test_pool` passed in both) |
+| A8 | `test_a_root_destroyed_while_it_waits_for_a_pin_releases_it` (`tests/test_pool.cc`) in tsan 261109-014325-aad33e (`test_pool` passed) and `ci:AddressSanitizer` after the push (passed in the local asan check: R6) |
 | A9 | `docs/design/x-pool.md` D3 ("The step 2 review's CR2, ruled") |
 | A10 | build-test 261109-014325-59bf18 (`test_a_destroyed_root_that_held_a_pin_lets_the_pool_join`) |
 | A11 | build-test 261109-014325-59bf18 (`test_a_cancelled_pin_stops_waiting`: resident pin and FLUSH cancelled; `pin_chore` rethrows `task::cancelled`) |
 | A12 | build-test 261109-014325-59bf18 (`test_pool` `test_a_cancelled_pin_stops_waiting`; `test_reactor_requests` `test_a_cancelled_request_leaves_the_pin_queue`); mutant x6 |
-| A13 | `docs/design/x-pool.md` D13 (budget numbers); `test_the_sweep_erases_a_missing_index_negative_entries` in build-test 261109-014325-59bf18; mutant x5 |
+| A13 | `docs/design/x-pool.md` D13 (budget numbers); `tests/test_pool.cc` (test_the_sweep_erases_a_missing_index_negative_entries, passed in build-test 261109-014325-59bf18); mutant x5 |
 | A14 | `docs/design/x-pool.md` D2 (why not, ruled); `test_the_hostless_path_and_the_catalog_never_share_an_index` in build-test 261109-014325-59bf18 |
 | A15 | build-test 261109-014325-59bf18 (`test_node` `test_a_search_batch_pins_a_repeated_index_once`, `test_pool` soft_open); `wide_search_check.py check` 261109-014336-8c1b28 |
 | A16 | build-test 261109-014325-59bf18 at `CMakeLists.txt` pinning strata:5d742b2 (strata main, items 5 and 5b merged) |
