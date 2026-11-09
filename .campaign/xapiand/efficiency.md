@@ -40,6 +40,12 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | The worker counted `none` jobs (no hold) against light slots: a 1-s yaml check queued behind hour-long builds | fix on agent-campaign main with this hour's push |
 | 11-09 | Two `campaign wait`s started two workers at once (pids 63640, 63642): a starter saw a half-made home as stale | fix with the same push: the home goes in place whole; a worker that lost it exits |
 | 11-09 | GitHub refused every ci.yml push: the Kronuz token lacked the `workflow` scope (owner refreshed it) | the 3 ci-quest branches waited ~5 h on it |
+| 11-09 | In 24 h, Xapiand's local sanitizer jobs took 10.7 h of slot time (31 runs, ASan 6.9 h, TSan 3.8 h), mostly repeating GitHub CI's Linux ASan/TSan; FIFO slots let our 02:44 batch hold every slot while Detent's 33 jobs from 02:55 waited (Detent's median queue wait 21 min vs our 9) | agent-campaign:890090b: `ci:` checks, fair-share worker, shortest first, light holds at CPUs/2 with a memory floor; 19 quests' sanitizer gates moved to CI, macOS builds deferred |
+
+## Agent runs, continued
+
+| 11-09 | x-pool | contributor, opus, high (third and fourth turns) | 143k + 164k (notices) | 5% → | 8m + 4m | durability ruled harness timing (R6, 5/5 at master and branch); ready for review |
+| 11-09 | x-pool | reviewer, opus, high (correctness) | | 5% → | | running |
 
 ## Landings
 
