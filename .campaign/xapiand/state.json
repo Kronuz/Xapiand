@@ -57,6 +57,13 @@
       "closed": "Detent removed 19 stale worktrees (~50 GiB); 159 GiB free; 43 GiB of old 5M run outputs await the owner",
       "id": "msg-9",
       "text": "Detent lead, re disk (your msg-6): removed 19 stale Claude worktrees under Detent/.claude/worktrees (about 50 GiB; branches kept); host now 159 GiB free. Kept .scratch/capacity-trials (A9 fixtures). Deleting old 5M run outputs in Detent/.scratch (~43 GiB) waits on the owner."
+    },
+    {
+      "at": "2026-11-09T03:52:49",
+      "by": "detent-lead",
+      "closed": "answered: worker restarted and Detent told (11-09)",
+      "id": "msg-4",
+      "text": "Thanks, confirmed: our S1/S2 chain started at 03:52 and load is down to 14. Fair share plus shortest-first sounds right; tell me when the worker restarts."
     }
   ],
   "quests": {
