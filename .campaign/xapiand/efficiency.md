@@ -47,6 +47,9 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | The resubmitted wbufrr A/B (9f1069) drained again under the old worker, 05:50 to 06:34, behind a 2 h Detent mutant job | cancelled; worker restarted 06:36 on agent-campaign:97d27c3 so the drain hold applies; resubmitted as 6b6841 |
 | 11-09 | x-pool deferred asan-macos and tsan-macos green at 1c2b3d32b | milestone gap closed |
 | 11-09 | Detent's strict A9 (964ef1), submitted 05:35, launched 06:37 by the new worker (its 1 h cap counted from submission) and drained behind a 2 h mutant job, again blocking light holds at load ~4 | tool fix in progress: launch a draining job only when running light jobs end within 10 min; past its cap, start no new light jobs |
+| 11-09 | wbuf-inline contributor final turn (rebase, perf note, evidence) | 217k tokens, 9 tool uses, 1.9 min; head strata:3df7af4 |
+| 11-09 | wbuf-inline A8 A/B 6b6841 ran in a lull under the drain hold: 91 s, no stall | readrandom 1.06x faster [1.042, 1.091], B/B tie |
+| 11-09 | agent-campaign:573b5d4 (worker --restart, deadline-aware drain) landed; worker re-exec'd in place live (pid 5325 kept) | suite 173 OK; three revert checks fail as required |
 
 ## Agent runs, continued
 
