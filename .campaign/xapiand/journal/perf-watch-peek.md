@@ -1,6 +1,6 @@
 # perf-watch-peek: journal
 
-State: waiting on jobs 261109-144804-ff5f5b 261109-145852-514f5a 261109-145905-5a00d5
+State: waiting on jobs 261109-144804-ff5f5b 261109-150350-f39012
 Quest: .campaign/xapiand/quests/perf-watch-peek.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,17 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Screen (strict) of base/E1/E2 running; gate check and the fails-without job queued at http:13933f0.
+Waiting on the strict screen 261109-144804-ff5f5b (at 90cf235, library code = head) and the
+exclusive confirm 261109-150350-f39012 (at head 13933f0, after the screen); both queue for a
+drain. docs/perf/watch-peek.md is drafted in the http worktree, uncommitted on purpose: a
+docs commit moves the head off the confirm's commit, so it lands with the confirm's numbers.
 
 ## Next
 
-1. Read the screen; submit the exclusive confirm (head against base 8262172, A/A) at the final head, slot pwp-ab.
-2. Rerun the mutants job at the final head.
-3. Write docs/perf/watch-peek.md with the numbers (A3); A4 is docs/mechanisms/coroutine-handlers.md.
+1. When the confirm finishes: read `$JOB_OUT/watch-ab/` (report-base.txt, report-e1.txt,
+   medians.txt, counts-*.txt) from its log dir; fill the Timing section of docs/perf/watch-peek.md,
+   commit it, rerun `campaign verify` and the mutants at that head.
+2. Fill the Evidence table and Result; State ready for review.
 
 ## Blocked on
 
@@ -25,6 +29,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
+| A2 | 261109-145852-514f5a (build-test at 13933f0); mutants 261109-150416-197873; fails-without 261109-145905-5a00d5 |
+| A4 | `docs/mechanisms/coroutine-handlers.md` (http:6ec7324) |
 
 ## Attribution (before, http main 66050ec, i9-9980HK, counting build, local probe, not evidence)
 
@@ -66,3 +72,8 @@ Experiments (http branch quest/xapiand/perf-watch-peek):
 - 261109-144744-19e463 mutants at 90cf235: all five killed (no-resume, no-cancel, engage-lazy,
   engage-data, eof-as-data); rerun at the final head.
 - 261109-144745-8e7df2 A/B builds (slot pwp-ab): ok.
+- 261109-145852-514f5a build-test at 13933f0: ok (handler_count /asks 1.000 = raw).
+- 261109-145905-5a00d5 handler_count with base's http_asio.h: fails as it must (/asks 3.000,
+  /stream-asks 9.000 against raw 1.000, streamed 7.000).
+- 261109-150349-93e938 A/B builds at head (slot pwp-ab): ok.
+- 261109-150416-197873 mutants at 13933f0: all five killed.
