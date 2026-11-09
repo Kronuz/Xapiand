@@ -1,6 +1,6 @@
 # x-pool-followups: journal
 
-State: waiting on jobs 261109-143205-f12ec7 261109-143234-23ccac 261109-143234-a09d65
+State: ready for review
 Quest: .campaign/xapiand/quests/x-pool-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-All four fixes committed at the branch head (confirmed on main by reading, not by a job): C3 `tests/test_pool.cc`
+All four fixes committed and verified at the branch head (confirmed on main by reading, not by a job): C3 `tests/test_pool.cc`
 (sweep test: TTL 3 s, entries still all there at 1.5 s, gone within 7 s, under strata's 10 s default); C5
 `tests/test_node.cc` (`names_the_abandoned_index`: one line with `abandon' (` and `, 1 pin, pinned)`); C6 (`pool.cc:690`
 passed `use = true` on every pin; `DatabasePool::pin` takes `use`, `Shard::reopen` passes `!held`; the review's
@@ -18,8 +18,7 @@ passed `use = true` on every pin; `DatabasePool::pin` takes `use`, `Shard::reope
 
 ## Next
 
-1. When jobs end: read build-test (f12ec7), mutants (23ccac: x5 TTL ignored must be KILLED; "m-c6" re-pin counted must be KILLED), restore x20 (a09d65).
-2. Fill the Evidence table, run `campaign verify x-pool-followups`, set ready for review.
+1. Review.
 
 ## Blocked on
 
@@ -36,7 +35,11 @@ Nothing.
 
 ## Result
 
-Written when the jobs end.
+C3, C5, C6 and the restore check are fixed; the head's code equals 72203782 (the later commit is the journal). build-test
+261109-143205-f12ec7 passes at 72203782. Mutants (261109-143234-23ccac): x5 (negative TTL ignored) killed at
+test_pool.cc:2298 and the C6 mutant (re-pin counted as a use) killed at test_pool.cc:1702, 2 of 2. The restore check
+passed 20 of 20 (261109-143234-a09d65, 12,679 documents kept across kill -9 in the last run). Open: the restore-end wait is a
+10 s still-count heuristic; an exact signal needs a log line in search_views.cc (outside the file set).
 
 ## Rulings I made
 
