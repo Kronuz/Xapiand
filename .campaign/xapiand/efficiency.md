@@ -19,7 +19,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-08 | x-pool | contributor, opus, high | 363k (notice); 44.5M cumulative at 1h15m, 99% cached | 0% → 2% at 22:34 (all work) | 1h27m, 228 tool calls | RESTORE E2E ruled host overload (R1); built map_owed, assertions, clamps, design rev 3, mechanism note; found the E2E checks prove nothing; waiting on 7 jobs; ended at 360k context, so a fresh contributor resumed it from the journal |
 | 11-08 | wbuf-inline | contributor, opus, high | 152k (notice) | 2% → 3% at 00:34 (both agents idle on jobs since) | 22m, 69 tool calls | rebased clean onto strata:70df28d; job scripts for every criterion; waiting on 10 jobs |
 | 11-09 | wbuf-inline | contributor, opus, high (resumed) | 183k (notice) | 3% → 4% at 01:34 | 7m49s, 20 tool calls | m1 "survivor" was a log overwritten on the case-insensitive disk (M1 vs m1); single-test runner, numbered logs; A8 script fixed; 10 jobs at strata:efc5663 |
-| 11-09 | x-pool | contributor, opus, high (fresh, Resume prompt) | | 4% → | | rebase onto e2e-harness, real E2E reruns, rule on tsan (test_node and test_index_pattern also fail at master) |
+| 11-09 | x-pool | contributor, opus, high (fresh, Resume prompt; resumed once) | 78k + 101k (notices) | 4% → | 5m16s + 2m37s, 32 tool calls | merged master (R5); first real strict E2E GREEN (261109-013630-5e7a1c); fixed master's 3 TSan test bugs on the lead's reading of the logs (Xapiand:41dba47c5); 8 jobs queued |
 
 ## Lead-only work (no agent)
 
