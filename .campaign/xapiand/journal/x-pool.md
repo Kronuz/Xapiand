@@ -22,15 +22,27 @@ Local tools in `.scratch/` (untracked): `build.sh plain|asan|tsan [targets]` (cc
 
 ## Next
 
-1. Run the new tests locally, commit, then `campaign verify x-pool` at the new head.
-2. Jobs at 3f4114f30 (the adopted code, the last four commits): build-test 261108-214834-ad7d40, e2e
-   261108-214834-bcc874, asan 261108-214834-1c3b6b, tsan 261108-214834-44536b.
-3. Mutants for A5 ("no retry") and the D12 assertion; the Linux VM job for A6; `wide_search_check.py` for A15.
-4. Ledger `docs/status/phase7c-x-pool.md` brought current.
+1. Jobs at 3f4114f30 (the adopted code: the last four commits verified): build-test 261108-214834-ad7d40 done
+   exit 0, asan 261108-214834-1c3b6b done exit 0 (its docs E2E did not run: newman 4.5.0, see Blocked on), e2e
+   261108-214834-bcc874 "GREEN" from a stale report (Blocked on), tsan 261108-214834-44536b running.
+2. Jobs at 8c06fff93: the real docs E2E 261108-223127-f35eff (newman 6, plain and asserts builds); Linux VM
+   261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan); the e2e check at master 261108-221920-0fcf05.
+3. Local mutants for step 4 (`.scratch/mutants.py`), then merge master (only the ledger conflicts: master marks it
+   HISTORY), then `campaign verify x-pool` at the merged head.
+4. `wide_search_check.py check` job (A15).
 
 ## Blocked on
 
-Nothing.
+The lead (the checks' definitions and `harness/`, outside this quest's files): the `e2e` check proves nothing on
+this host. The job's PATH has newman 4.5.0, so `e2e_capture.sh` exits before it writes a report ("needs newman 6 or
+later"), and `run_all.sh`'s `run_e2e` then grades the fixed path `/tmp/xa_e2e_ours.json`, a stale report of
+2026-11-04 01:38, as GREEN (job 261108-214834-bcc874; the `tls` layer is skipped for the same reason). The `asan`
+check's `engine_e2e.sh` hits the same newman and its failure does not fail the check (261108-214834-1c3b6b exits 0
+with a Python traceback for the missing `strata.json`). Options: put newman 6 first on the jobs' PATH (a wrapper
+`exec npx -y newman@6.2.3`, as `tests/vm_sanitizers.sh` does), make `run_e2e` write to a fresh per-run path and fail
+when the capture fails, and make `engine_e2e.sh` exit with the assert's status. Recommendation: all three. Until
+then this quest's A17 evidence is its own job with newman 6 (261108-223127-f35eff). The same check at master's
+commit (261108-221920-0fcf05) shows it is pre-existing.
 
 ## Evidence
 
