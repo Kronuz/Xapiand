@@ -1,6 +1,6 @@
 # e2e-harness: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/e2e-harness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Nothing: ready to land (low risk: checks green, the lead reads the diff).
 
 ## Next
 
-1. <step>
+1. Land.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -27,13 +27,14 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+| A1 | probe check 261108-225615-8a07ff at Xapiand:029b324e1 (a binary that exits 1: `run_all.sh e2e` exits 1) |
+| A2 | probe check 261108-225615-8a07ff (`engine_e2e.sh` exits 1 when the capture fails) |
+| A3 | probe check 261108-225615-8a07ff (`RUN_ALL_STRICT=1 run_all.sh tls` without newman 6 exits 1) |
+| A4 | manual, the lead 2026-11-08 22:55: at master (Xapiand:6756e1be9 tree, the main checkout) `BIN=<a binary that exits 1> harness/run_all.sh e2e` exits 0, VERDICT GREEN, graded from the stale /tmp/xa_e2e_ours.json of 2026-11-04; job 261108-225616-82557c reruns the probe there |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+The docs E2E fails when its capture fails: a fresh report per run in run_all.sh, engine_e2e.sh's exit status, RUN_ALL_STRICT=1 for gate checks (harness/run_all.sh, harness/engine_e2e.sh). Every earlier E2E pass on this host with newman 4.5 first on PATH is void.
 
 ## Rulings I made
 
