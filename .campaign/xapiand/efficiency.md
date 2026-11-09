@@ -19,7 +19,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-08 | x-pool | contributor, opus, high | 363k (notice); 44.5M cumulative at 1h15m, 99% cached | 0% → 2% at 22:34 (all work) | 1h27m, 228 tool calls | RESTORE E2E ruled host overload (R1); built map_owed, assertions, clamps, design rev 3, mechanism note; found the E2E checks prove nothing; waiting on 7 jobs; ended at 360k context, so a fresh contributor resumed it from the journal |
 | 11-08 | wbuf-inline | contributor, opus, high | 152k (notice) | 2% → 3% at 00:34 (both agents idle on jobs since) | 22m, 69 tool calls | rebased clean onto strata:70df28d; job scripts for every criterion; waiting on 10 jobs |
 | 11-09 | wbuf-inline | contributor, opus, high (resumed) | 183k (notice) | 3% → 4% at 01:34 | 7m49s, 20 tool calls | m1 "survivor" was a log overwritten on the case-insensitive disk (M1 vs m1); single-test runner, numbered logs; A8 script fixed; 10 jobs at strata:efc5663 |
-| 11-09 | x-pool | contributor, opus, high (fresh, Resume prompt; resumed once) | 78k + 101k (notices) | 4% → | 5m16s + 2m37s, 32 tool calls | merged master (R5); first real strict E2E GREEN (261109-013630-5e7a1c); fixed master's 3 TSan test bugs on the lead's reading of the logs (Xapiand:41dba47c5); 8 jobs queued |
+| 11-09 | x-pool | contributor, opus, high (fresh, Resume prompt; resumed once) | 78k + 101k (notices) | 4% → 5% at 03:33 (with a third turn, 143k: kill -9 durability probes) | 5m16s + 2m37s + 8m03s, 60 tool calls | merged master (R5); first real strict E2E GREEN (261109-013630-5e7a1c); fixed master's 3 TSan test bugs on the lead's reading of the logs (Xapiand:41dba47c5); 8 jobs queued |
 
 ## Lead-only work (no agent)
 
@@ -37,6 +37,9 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-08 | ci-quest-branches (3 quests): my `yaml` check's quoting broke python (SyntaxError), all 3 failed | 3 jobs of ~1 s each; check fixed to `grep -F` and rerun (261109-003516-d9144b and 2 others) |
 | 11-09 | Detent's lead reached this lead directly through the new cmux wake (agent-campaign:d15a35d): msg-3 asked and answered in minutes, where msg-1 to msg-3 had waited hours unread | none; this validates the tool fix |
 | 11-09 | wbuf-inline's A6 (261109-012440-05ac8b) died 38 min in and read as "the host rebooted": macOS kern.boottime drifts, so the reaper never matched the boot (fixed: agent-campaign:0ca1963, dotfiles:b76959e). Why the runner itself died is unknown (empty log) | 38 min of VM time; resubmitted as 261109-032020-5807c6 at strata:bb2f58d |
+| 11-09 | The worker counted `none` jobs (no hold) against light slots: a 1-s yaml check queued behind hour-long builds | fix on agent-campaign main with this hour's push |
+| 11-09 | Two `campaign wait`s started two workers at once (pids 63640, 63642): a starter saw a half-made home as stale | fix with the same push: the home goes in place whole; a worker that lost it exits |
+| 11-09 | GitHub refused every ci.yml push: the Kronuz token lacked the `workflow` scope (owner refreshed it) | the 3 ci-quest branches waited ~5 h on it |
 
 ## Landings
 
