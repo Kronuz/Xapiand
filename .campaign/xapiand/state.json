@@ -8766,9 +8766,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Inline key and stored bytes in the write buffer",
-      "updated": "2026-11-09T04:14:36",
+      "updated": "2026-11-09T08:08:32",
       "worktree": "../strata-wt/xapiand/wbuf-inline"
     },
     "wbuf-inline-prospect": {
