@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: working
+State: waiting on jobs 261109-132138-e24cab 261109-132129-838913
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,24 +9,30 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Step 3b (the index on the log), second contributor. Committed: the damage mutant fix
-(strata:9529bd1), D42's `log_deleted` and `check_edit` (strata:3fabbfd). Being committed (see
-Next 1): faultfs's barrier rule, then the index on the log with strata's tests ported and
-`docs/mechanisms/index-on-the-log.md`. A full build and `ctest` at that tree was running when this
-was written; its result decides the commit.
+Step 3b (the index on the log), second contributor, committed at strata:7ffabab:
+- strata:ea3f8a5 faultfs models the barrier's second phase (R16), with two faultfs_test cases.
+- strata:f2089f9 the index on the manifest log, strata's tests ported,
+  `docs/mechanisms/index-on-the-log.md`.
+- strata:7ffabab `field_table_bench` counts the logs (outside the file set: Blocked on 2).
+
+Jobs at strata:7ffabab: build-test 261109-132138-e24cab (the gate check, `campaign verify`),
+mutants 261109-132129-838913. Locally every touched suite passed (retention, defer_io, directory,
+lifecycle, fields, faultfs, warm, manifest_log) except index_test, whose last three fixes
+(`settle_storage` at open, the fallback's first generation, the drain's owed retention) were
+committed without a local rerun: the build-test job is their first run. Suites not touched by
+this step were not run locally at this head.
 
 ## Next
 
-1. If the full `ctest` is green: commit faultfs's barrier rule (`faultfs.hh`, `faultfs_test.cc`)
-   alone, then the index on the log (`index.hh`, `manifest_log.hh`, the ported tests, the two
-   mechanism docs), then `bench/field_table/field_table.cc` alone (outside the file set: Blocked
-   on 2). Submit build-test and mutants jobs at that head. If not green, fix what is red first.
+1. Read 261109-132138-e24cab and 261109-132129-838913. Fix what is red (index_test first), with
+   a rerun as a job. When green, A1's index half has its build-test row.
 2. Retire `files::manifest`, the live-docs, metadata and field-table file codecs (`files.hh`,
    `fields.hh` encode/decode), `files_test`'s codec stages, `fuzz_files`, fields_test's decoder
    stage, `tools/mutants/fields.py`'s file mutants; `bench/manifest-log/open_probe.cc` models
-   `main` with them (keep a private copy there or retire the probe after A8). `pre_freeze` to
+   `main` with them (keep a private copy there, or retire the probe after A8). `pre_freeze` to
    0x8000'0008 (D11). Own commit.
-3. Step 3c: T4's cases on faultfs, media_test on the log, the fuzz runs at the ready head, A9.
+3. Step 3c: T4's cases on faultfs, media_test on the log (it still damages by offsets that the
+   old files had; check it), the fuzz runs at the ready head, A9 (prospect waits for L1's quest).
 
 ## Blocked on
 
