@@ -6822,7 +6822,7 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -6832,6 +6832,34 @@
       "files": [
         "docs/perf/**",
         "bench/quick/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-08T22:35:58",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "cap build parallelism at the light hold's 4 jobs (owner's host rule; Detent msg-2: load 126 on 16 CPUs); commands otherwise unchanged",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [
@@ -6844,7 +6872,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-08T15:38:48"
+      "updated": "2026-11-08T22:35:58"
     },
     "wbuf-inline": {
       "accepted": {},
