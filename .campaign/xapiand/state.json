@@ -9584,6 +9584,8 @@
     "x-pool-followups": {
       "accepted": {},
       "after": [],
+      "base": "a188911363d1ab8d6f80c9a0b9aa26ed00c57211",
+      "branch": "quest/xapiand/x-pool-followups",
       "checks": [
         {
           "cmd": "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -9610,9 +9612,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "x-pool review follow-ups and the restore check's race",
-      "updated": "2026-11-09T14:23:17"
+      "updated": "2026-11-09T14:23:41",
+      "worktree": "../Xapiand-wt/xapiand/x-pool-followups"
     },
     "x-pool-step1": {
       "accepted": {},
