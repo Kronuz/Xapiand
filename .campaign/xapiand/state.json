@@ -852,6 +852,8 @@
     "cjk-words": {
       "accepted": {},
       "after": [],
+      "base": "45a5ed56dbd568aaa832efa5f367fbd63d0a1a4d",
+      "branch": "quest/xapiand/cjk-words",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -965,9 +967,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-08T22:56:35"
+      "updated": "2026-11-09T14:15:54",
+      "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "closing-benchmark": {
       "accepted": {},
