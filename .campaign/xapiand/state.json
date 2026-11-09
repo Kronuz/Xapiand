@@ -9382,8 +9382,8 @@
       "risk": "high",
       "status": "landed",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-09T05:46:17",
-      "worktree": "../Xapiand-wt/xapiand/x-pool"
+      "updated": "2026-11-09T10:50:31",
+      "worktree": ""
     },
     "x-pool-step1": {
       "accepted": {},
