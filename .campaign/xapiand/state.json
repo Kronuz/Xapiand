@@ -1261,7 +1261,7 @@
       ],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -1276,6 +1276,34 @@
         "docs/perf/**",
         "docs/mechanisms/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-08T22:35:42",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "cap build parallelism at the light hold's 4 jobs (owner's host rule; Detent msg-2: load 126 on 16 CPUs); commands otherwise unchanged",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "durability"
@@ -1287,7 +1315,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-08T15:38:53"
+      "updated": "2026-11-08T22:35:42"
     },
     "drop-threadpool": {
       "accepted": {},
