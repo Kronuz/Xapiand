@@ -1,6 +1,6 @@
 # wbuf-inline-prospect: journal
 
-State: waiting on jobs 261109-105845-6fd04e 261109-105846-df7232
+State: ready for review
 Quest: .campaign/xapiand/quests/wbuf-inline-prospect.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Pin commit prospect:63e11d3 (strata 9d52824 -> 3df7af4ff4ac, pin line only) on the branch. Jobs: 6fd04e = strata test/prospect_integration.sh (prospect branch vs strata 9d52824; ctest + churn/dump identity at threads 1,2); df7232 = build-test check.
+Done.
 
 ## Next
 
-1. When both pass, fill Evidence (A1,A3 from 6fd04e; A2 from df7232) and Result; set ready for review.
+1. Lead: rebase onto prospect main (ci.yml changed), re-verify, land after wbuf-inline.
 
 ## Blocked on
 
@@ -27,13 +27,13 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+| A1 | 261109-105845-6fd04e (ctest 51 of 51 incl. the 16,000-record budget case) and 261109-105846-df7232 (build-test) |
+| A2 | 261109-105846-df7232 (build-test at prospect:63e11d3, strata pin 3df7af4ff4ac) |
+| A3 | 261109-105845-6fd04e: ctest 51/51; churn plain 132 lines, longkey 2 lines, dump 36 lines identical to prospect on strata 9d52824 at flush threads 1 and 2 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Repinned strata 9d52824 -> 3df7af4ff4ac in CMakeLists.txt (prospect:63e11d3); budget test (prospect:c0c4260) unchanged. No behavior difference vs earlier pin in churn/dump. No docs needed.
 
 ## Rulings I made
 
