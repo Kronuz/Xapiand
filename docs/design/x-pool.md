@@ -1,4 +1,4 @@
-> Status: DRAFT (2026-11-02) revision 2, X-POOL, Xapiand on strata's catalog: the architect's rulings on F1 to F6 (`strata/docs/reviews/cold-tier-xpool-host.md`, approve with conditions) folded in; step 1 (the seam) built on `phase7c/x-pool`, step 2 planned against item 5b's host interface. Workstream `phase7c/x-pool`, ledger `docs/status/phase7c-x-pool.md`.
+> Status: DRAFT (2026-11-08) revision 3, X-POOL, Xapiand on strata's catalog: revision 2 with the architect's rulings on F1 to F6 (`strata/docs/reviews/cold-tier-xpool-host.md`), plus the step 2 review's rulings (CR2 in D3, CR5 in D13, CR6 in D2) and step 4 as built (D9, D11, D12). Steps 1 to 4 built on `quest/xapiand/x-pool` against strata main (strata:5d742b2, items 5 and 5b). Ledger `docs/status/phase7c-x-pool.md`.
 
 # X-POOL: the registry becomes the catalog's payload
 
@@ -33,8 +33,16 @@ pointer to the pinned `prospect::index` for the pin's life (I7). The adapter's o
 `Entry`, `Handle` in `src/engine/strata/shard.cc`), `drain_readers`, the `handles` vector, `fenced`,
 `retiring`, `epoch` and `mark_stale` go: the catalog closes only at zero pins, and a fenced index is
 replaced by the catalog. A call that throws `index_fenced` hands its pin to `reopen(std::move(pin))` and
-retries by key; `corrupt_segment` runs `heal()` under the turn. The hostless path (tests, the CLI) keeps a
-private catalog of its own, so there is one way to hold an index.
+retries by key; `corrupt_segment` runs `heal()` under the turn.
+
+The hostless path (`engine::open_local`, `engine::check`, the adapter's owned `Core`) is not on a catalog (CR6, ruled
+2026-11-08). No request reaches it: the node opens every index by a pin, and the hostless open is called only by the
+engine's own tests and `engine::check` on a path no host has open. A private catalog would need a host the hostless
+caller does not have (an executor, a timer, a scheduler for its waiters) and would serve one index for the process's
+life, so it adds a second way to run a catalog without removing one. The two never hold one index at once: the
+index's directory lock refuses the second holder either way (`test_pool`
+`test_the_hostless_path_and_the_catalog_never_share_an_index`). The registry the hostless path keeps goes when its
+callers move to the pool (the engine tests to a `DatabasePool`), a follow-up of its own.
 
 **D3. One seam.** `IndexPin` in `src/database/pool.h` wraps the pin and is the only Xapiand type that will
 name the catalog. `co_await pool.pin(endpoint)` is a request pin and a use (one per request, by key);
@@ -42,7 +50,16 @@ name the catalog. `co_await pool.pin(endpoint)` is a request pin and a use (one 
 open gives an empty pin. `lock_shard` holds an `IndexPin` and is taken with `co_await lk_shard.pin()` at
 all of its callers; the autocommit takes `pin_chore`. Step 2 adds the write intent: a pin made with
 `DB_CREATE_OR_OPEN` asks `open_intent::create`, any other `open`. Wide-search's
-`DatabaseHandler::search_batch` pins its batch through `IndexPin` once it lands.
+`DatabaseHandler::search_batch` pins its batch through `IndexPin`.
+
+The step 2 review's CR2, ruled (strata's catalog note, "Cancelled pins"; the strata pin review):
+1. `pin()` and `pin_chore()` take the request's `task::cancel_token` and hand it to the catalog, as `take_turn`
+   does: a cancelled or timed-out request stops waiting for its index with `task::cancelled`. A pin that need not
+   wait is taken whatever the token, and a requested token still starts the open it asked for, so a cancelled
+   create still creates its index. `lock_shard`, `Shard::ready`, FLUSH and `search_batch` pass their request's.
+2. A task's second pin of a key does not reuse its first. The catalog has no notion of a task, and reuse would hand
+   out a pin on an index a fence is replacing. Xapiand holds one pin per key per request instead: `search_batch` pins
+   a path named twice once and searches it at both positions, so no request waits for its own pin.
 
 **D4. Pin before view.** A request awaits every pin it will read before it takes any view, since a pin
 may open or wake. `DatabasePool::pin` calls `engine::check_no_view_held`, so a pin taken under a view
@@ -75,7 +92,10 @@ leaves merges pending, which covers a read-only busy index. `FLUSH` takes `snaps
 **D9. `map_owed`.** `apply_t` answers `verdict::map_owed` as it answers `flush_owed`: a query chore
 runs `promote()` under the turn, then the same transaction is applied again. strata ends the answer
 (CT-R22's owner bit); Xapiand bounds its loop at two owed answers per transaction of any kind and
-raises `errc::internal` past it, so a strata regression is an error, not a spin.
+raises `errc::internal` past it, so a strata regression is an error, not a spin. Two suffice: strata answers each
+kind at most once per transaction, a demoted index holds no buffered record (`demote()` needs `warm_quiescent`), so
+after `promote()` no flush is owed, and the one sequence of two is a map or a flush followed by a drain. Built as
+`apply_settling` (`src/engine/strata/owed.h`), which `apply_t` runs with the turn's chores.
 
 **D10. Shutdown.** `DatabasePool::join`, on the main thread that may wait (`pool.cc:807`), waits for
 `catalog.shutdown()`, which runs on the executor, never a reactor; a key whose commit failed is logged,
@@ -84,21 +104,30 @@ and the WAL replays it at the next open.
 **D11. The budget.** One `resource_budget` per process. `soft_open` is the pool size (`main.cc`'s
 descriptor computation), at most the derived cap; `soft_hot` is strata's default. CT-R39: the cap on
 indexes one search holds at once stays at most `soft_open`: today `max_indexes_per_search`
-(`main.cc:487`), after wide-search lands its `--concurrent-search-indexes` (K), clamped the same way.
+(`main.cc:487`), after wide-search lands its `--concurrent-search-indexes` (K), clamped the same way. As built:
+`DatabasePool::soft_open()` is the pool size clamped to the budget's descriptor soft cap (a warm index holds one
+descriptor), and `search_batch_indexes()` clamps K to it.
 
 **D12. The gate's assertion.** Debug builds assert, after every turn and at unpin, that a `defer_io`
-index's `unleased_maps()` is zero; the docs E2E runs on such a build.
+index's `unleased_maps()` is zero; the docs E2E runs on such a build. As built: `Turn::release` asserts it after its
+check-in, and `Shard::release` (a use's end, where its pin goes) before the pin is handed back.
 
-**D13. What the catalog changes for a user** (the step 2 review's CR5), each a decision:
+**D13. What the catalog changes for a user** (the step 2 review's CR5), each a decision, with step 4's budget:
 1. The sweep closes an idle index by strata's times: a pass each second, a hot index demoted after 30 s idle and
    closed after 10 min (`IndexSweep`; a node passes none). The old idle close took an hour, a minute when the pool
-   overflowed. Step 4's budget work sets the numbers.
+   overflowed. Budget: a pass visits at most 256 slots and posts at most 16 transitions, so a node with N open
+   indexes visits each every max(1, N / 256) s; the caps (`soft_open`, D11) close the oldest first whenever they
+   are over, whatever the idle times. An idle index holds its descriptor for 10 min at most, against an hour before.
 2. Every open replays the WAL, the restore's included; the restore no longer skips a log because its flags disable
-   the WAL, and it still deletes the log of what it replaced at its end.
+   the WAL, and it still deletes the log of what it replaced at its end. Budget: a restore writes no log, so the
+   replay at its next open reads only what was written after it.
 3. `FLUSH` commits every open index and no longer closes it; the reference documents it as a commit, and the sweep
    closes what idles.
 4. A request for an index that does not exist leaves a negative catalog entry under its name until the sweep erases
-   it (`negative_ttl`, 10 s); step 4's budget work bounds them.
+   it. Budget: one slot per name (184 B with libc++, 192 B with libstdc++, plus the key), erased by the first pass
+   that visits it once it is `negative_ttl` (10 s) old; a scan of N missing names holds at most N slots for
+   10 s + N / 256 s, and the slots are reused by the next opens (`IndexSweep::negative_ttl`; `test_pool`
+   `test_the_sweep_erases_a_missing_index_negative_entries`). A scan of 10,000 names holds about 2 MB for 49 s at most.
 None narrows what a request can do: each changes when resources are let go, not an answer.
 
 ## Rulings on the host interface
