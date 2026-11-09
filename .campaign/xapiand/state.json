@@ -1853,6 +1853,8 @@
       "after": [
         "sortable-encoding"
       ],
+      "base": "19a67bd67a436bd3d4d3ec4519070469585c3134",
+      "branch": "quest/xapiand/docs-upgrade-page",
       "checks": [
         {
           "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
@@ -1930,9 +1932,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Upgrading from alpha.9 and alpha.10 data",
-      "updated": "2026-11-08T22:56:36"
+      "updated": "2026-11-09T15:21:48",
+      "worktree": "../Xapiand-wt/xapiand/docs-upgrade-page"
     },
     "document-gate": {
       "accepted": {},
