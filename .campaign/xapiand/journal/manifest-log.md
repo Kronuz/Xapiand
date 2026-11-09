@@ -9,32 +9,24 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Step 3b (the index on the log), second contributor. At strata:9529bd1: the mutants job
-261109-112951-b8f62d at strata:6a8bb32 failed only because the "damage read as a torn tail" mutant
-did not apply (its text was the one-line form; the reader's check is multi-line), fixed and renamed
-"damage without `to` passes the open". Uncommitted in the worktree, being built:
-- D42 in `manifest_log.hh`: `log_deleted` (words from doc_count / 64 deleted, sorted ordinals
-  below; delta bytes kept; `insert` walks only to each new ordinal's old neighbours), the decoder
-  choosing the form from the count before allocating, the "deleted sets" stage, four mutants.
-- `check_edit()` (D3's checks plus the `log_shape` an edit leads to, nothing changed) and `apply()`
-  as check-then-change, so the writer decides D7 on the post-edit S before writing.
-- `index.hh` on the log: `m_` is the head (`files::log_state`), the live scalars are `cur_`,
-  the change list (`deleted_since_` from apply_pending, `meta_since_` with undo),
-  `commit_files` = edit_now/check_edit/append_edit or state_now/roll_over, recover per D6,
-  retain per D8 (`kept_files`), install via `read_generation`, check() replays the log,
-  allowance per C5, demote/close drop the log's descriptor. Not yet compiled.
+Step 3b (the index on the log), second contributor. Committed: the damage mutant fix
+(strata:9529bd1), D42's `log_deleted` and `check_edit` (strata:3fabbfd). Being committed (see
+Next 1): faultfs's barrier rule, then the index on the log with strata's tests ported and
+`docs/mechanisms/index-on-the-log.md`. A full build and `ctest` at that tree was running when this
+was written; its result decides the commit.
 
 ## Next
 
-1. Build and pass `manifest_log_test`; commit D42 (with its stage and mutants) alone, then
-   check_edit.
-2. Compile `index.hh` (core_kv_test first), then port strata's tests that read the old files
-   (about 94 sites: index_test 32, files_test 29, retention 9, format14 7, lifecycle 7, directory
-   6, fields 6, reclaim 6, cold_segment 5, warm 5, background_merge 5, apply_atomic 3,
-   reclaim_bg 3, reclaim_backlog 3, media 2, defer_io 1). Commit the index on the log.
-3. Retire `files::manifest`, live-docs, metadata and the field table's file codecs (files.hh,
-   fields.hh), their tests and `fuzz_files`; `pre_freeze` to 0x8000'0008 (D11). Own commit.
-4. Step 3c as before (T4 cases on faultfs, media_test, fuzz at the ready head, A9 jobs).
+1. If the full `ctest` is green: commit faultfs's barrier rule (`faultfs.hh`, `faultfs_test.cc`)
+   alone, then the index on the log (`index.hh`, `manifest_log.hh`, the ported tests, the two
+   mechanism docs), then `bench/field_table/field_table.cc` alone (outside the file set: Blocked
+   on 2). Submit build-test and mutants jobs at that head. If not green, fix what is red first.
+2. Retire `files::manifest`, the live-docs, metadata and field-table file codecs (`files.hh`,
+   `fields.hh` encode/decode), `files_test`'s codec stages, `fuzz_files`, fields_test's decoder
+   stage, `tools/mutants/fields.py`'s file mutants; `bench/manifest-log/open_probe.cc` models
+   `main` with them (keep a private copy there or retire the probe after A8). `pre_freeze` to
+   0x8000'0008 (D11). Own commit.
+3. Step 3c: T4's cases on faultfs, media_test on the log, the fuzz runs at the ready head, A9.
 
 ## Blocked on
 
@@ -45,6 +37,12 @@ did not apply (its text was the one-line form; the reader's check is multi-line)
    `meta-1.kv`. They move to the log in prospect, outside this quest's repository. Recommendation:
    the lead opens a prospect companion quest (or branch) to land with step 3b; the A9 job runs
    prospect at that branch.
+
+2. **The file set lacks `bench/field_table/**`.** `field_table_bench` (T8 of fields-and-keys)
+   counts bytes in `fields-*` files, which no longer exist; it does not compile against the index
+   on the log. The fix is two lines (count the logs instead). Options: (1) add
+   `bench/field_table/**` to the quest's file set and keep the commit; (2) the lead lands the
+   two-line change itself. Recommendation: 1; the change is its own commit so it can be dropped.
 
 ## Evidence
 
@@ -131,4 +129,32 @@ Not ready for review. Step 3a, the log layer, at strata:6a8bb32 (index.hh untouc
 - R12 (retention): a predecessor generation whose log ends before it (a generation a torn tail
   skipped, D6.7) names nothing and does not block; a pin that cannot be read, or any other read
   failure, blocks the round as `main` does.
+- R13 (`fallback()`): with the log, `newest` is the newest generation the logs hold whole or the
+  first damaged one (D41's Q2: "damage at generation x"), and `discarded = newest - to`, counting a
+  pinned checkpoint's gap; retention_test checks both. The fallback's rollover starts above
+  `newest`, so its log never reuses a generation another log holds (index_test's recover --to).
+- R14 (retention at 0): the predecessors are edits of the head's log, so `open(..., to)` at a
+  predecessor reads it whole while its files are on disk, at any `retained_predecessors`; D8
+  promises nothing for an obsolete one. retention_test asserts the open at 0 and 1 alike.
+- R15 (D6.6): the open runs no retention; it is owed to the first commit, `reclaim()` or a drain
+  (admission's, or `reclaim_for_space()` under defer_io, which never reads logs inside apply).
+  Tests that saw a queue or a blocked round right after an open now see it after that step.
+- R16 (faultfs): an ordering point staged bytes and names only ahead of later namespace changes;
+  a later file sync (the log's append) did not make them durable, so faultfs let the log's record
+  survive without the segment it names. The barrier's second phase is now modelled: a file sync,
+  or one that fails after its effect, makes everything staged before it durable, as
+  `F_FULLFSYNC` after `F_BARRIERFSYNC` does (Linux's ordering point already fsyncs). Two
+  faultfs_test cases fail without it.
+- R17 (goldens and counts): defer_io's default-path golden is re-captured (one apply more meets
+  the 150 KiB budget, a log's edits holding more bytes than one rewritten manifest; 117
+  mutations, not 163); warm's crash workload is 32 mutations (bound 25, was 40); a create makes 1
+  file sync and 2 directory syncs (was 2 and 2); an index whose only file is its log reads as never
+  created once the log is gone (lifecycle).
+- R18 (the allowance): a demoted index's closed log descriptor does not owe a rollover, so the
+  allowance holds a snapshot only while `rollover_owed_` (warm's turn-bound drain caught it);
+  the open settles the storage permit (index_test's permit check caught it missing).
+- R19 (tests removed): the index tests that crafted live-docs or metadata files (another
+  generation's, another index's, a wrapping bitset or delta) have no file left to craft; the
+  decoder's own bounds are manifest_log_test's "bounds on read", "bit flips" and the fuzz target.
+  The install and open damage cases are re-made as resealed snapshots.
 
