@@ -1611,17 +1611,40 @@
         "harness/run_all.sh",
         "harness/engine_e2e.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-08T23:34:42",
+          "commit": "c601388504c0aadde6503e186208b48db1f7d201",
+          "evidence": [
+            {
+              "cmd": "bash -n harness/run_all.sh && bash -n harness/engine_e2e.sh && printf \"#!/bin/sh\\nexit 1\\n\" > fakebin && chmod +x fakebin && ! BIN=$PWD/fakebin harness/run_all.sh e2e && ! harness/engine_e2e.sh $PWD/fakebin $JOB_OUT/e2e && ! RUN_ALL_STRICT=1 PATH=/usr/bin:/bin BIN=$PWD/fakebin harness/run_all.sh tls",
+              "commit": "029b324e160b207e36410eef621be68e1fa546c8",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261108-225615-8a07ff",
+              "level": "light",
+              "seconds": 5.2,
+              "state": "done",
+              "what": "e2e-harness check probe at 029b324e160b"
+            }
+          ],
+          "final": true,
+          "from": "448e0985959fe77ccbbb14b8066afe1e4f5b1094",
+          "reason": "",
+          "tested": "6e5c3283f6e0aba12905375d62f43dcdd73995d1"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "The E2E harness fails when it proves nothing",
-      "updated": "2026-11-08T22:55:10",
-      "worktree": "../Xapiand-wt/xapiand/e2e-harness"
+      "updated": "2026-11-08T23:34:43",
+      "worktree": ""
     },
     "engine-core": {
       "accepted": {},
