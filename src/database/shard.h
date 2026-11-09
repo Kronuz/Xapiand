@@ -110,7 +110,7 @@ public:
 	void release() noexcept;
 
 	// Pins the index again when a reopen gave the pin back (a missing one is created when the flags say so).
-	task::task<void> ready();
+	task::task<void> ready(bool use = true);
 
 	// The engine of the pinned index; raises `closed` with no pin.
 	engine::Shard& engine();

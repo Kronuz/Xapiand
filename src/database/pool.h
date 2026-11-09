@@ -499,8 +499,8 @@ public:
 	// created when `flags` ask for DB_CREATE_OR_OPEN (the create intent, F1); otherwise it raises not_found. A task
 	// that holds a view and pins fails the view rule (debug builds): a pin may open or wake its index, which a held
 	// view could be keeping from happening. A requested `cancel` ends the wait with task::cancelled (the open it
-	// started goes on); a pin of a key the task already pins waits for itself while that index is replaced.
-	task::task<IndexPin> pin(const Endpoint& endpoint, int flags, task::cancel_token cancel = {});
+	// started goes on); `use` is false for a re-pin within the request, which the closing policy does not count (CT-R31); a pin of a key the task already pins waits for itself while that index is replaced.
+	task::task<IndexPin> pin(const Endpoint& endpoint, int flags, task::cancel_token cancel = {}, bool use = true);
 
 	// A chore's resident pin (the autocommit, FLUSH): it opens nothing, and an index that is not open gives an
 	// empty pin (one that closed was committed by its close), as does one whose open failed (C25). A requested
