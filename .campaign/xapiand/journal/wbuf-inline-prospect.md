@@ -27,9 +27,9 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261109-111103-9cdc6b (ctest 51 of 51 incl. the 16,000-record budget case) and 261109-111045-1a22ee (build-test) |
+| A1 | 261109-111045-1a22ee (build-test: ctest 51 of 51 incl. the 16,000-record budget case) |
 | A2 | 261109-111045-1a22ee (build-test at prospect:9b88263, strata pin 3df7af4ff4ac) |
-| A3 | 261109-111103-9cdc6b: ctest 51/51; churn plain 132 lines, longkey 2 lines, dump 36 lines identical to prospect on strata 9d52824 at flush threads 1 and 2 |
+| A3 | 261109-111733-2a6ffd: ctest 51/51; churn plain 132 lines, longkey 2 lines, dump 36 lines identical to prospect on strata 9d52824 at flush threads 1 and 2 |
 
 ## Result
 
