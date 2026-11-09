@@ -57,7 +57,11 @@ LAYERS="${*:-$DEFAULT_LAYERS}"
 PASS=(); FAIL=(); SKIP=()
 pass() { PASS+=("$1"); echo "  ✅ $1"; }
 fail() { FAIL+=("$1"); echo "  ❌ $1"; }
-skip() { SKIP+=("$1: $2"); echo "  ⏭️  $1 (skipped: $2)"; }
+# RUN_ALL_STRICT=1 (gate checks): a layer that cannot run fails instead of passing as skipped.
+skip() {
+	if [ "${RUN_ALL_STRICT:-0}" = 1 ]; then fail "$1 (cannot run: $2)"; return; fi
+	SKIP+=("$1: $2"); echo "  ⏭️  $1 (skipped: $2)"
+}
 
 if [ ! -x "$BIN" ]; then
 	echo "missing binary: $BIN"
@@ -133,10 +137,18 @@ run_e2e() {
 	# demos). The gate (e2e_assert.py) is GREEN only when EVERY documented assertion
 	# passes and every request is covered -- no baseline, no allowlist, no skips. So
 	# this runs anywhere (incl. CI) straight from the docs.
-	local out="/tmp/xa_e2e_ours.json"
-	local cap rep
-	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)"
+	# A fresh report per run: grading a file an earlier run left would pass without testing anything.
+	local dir out cap rep rc=0
+	dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_e2e.XXXXXX")"; out="$dir/ours.json"
+	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)" || rc=$?
+	if [ "$rc" -ne 0 ] || [ ! -s "$out" ]; then
+		fail "e2e (capture failed, exit $rc)"
+		printf '%s\n' "$cap" | tail -8
+		rm -rf "$dir"
+		return
+	fi
 	rep="$("$PY" "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
+	rm -rf "$dir"
 	if printf '%s\n' "$rep" | grep -q '^GREEN'; then
 		pass "e2e"
 	else
