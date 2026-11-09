@@ -657,9 +657,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "CI runs on campaign quest branches (strata)",
-      "updated": "2026-11-09T00:35:16",
+      "updated": "2026-11-09T03:28:54",
       "worktree": "../strata-wt/xapiand/ci-quest-branches-strata"
     },
     "cjk-words": {
