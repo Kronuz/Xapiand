@@ -638,17 +638,40 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T04:32:46",
+          "commit": "f7711116417bf2987c7612e8a2f1eb2d76d9fce5",
+          "evidence": [
+            {
+              "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
+              "commit": "11a3e8ae0152b31e0cfdc9c551b893964d54f9d6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-032625-3d2575",
+              "level": "none",
+              "seconds": 0.5,
+              "state": "done",
+              "what": "ci-quest-branches check yaml at 11a3e8ae0152"
+            }
+          ],
+          "final": true,
+          "from": "8632ef8f70e843be6ea4cdb83c8ff3e2ba687848",
+          "reason": "",
+          "tested": "975ca0e3aa5bbb650eb2fe46e4c84d769b33bb48"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "CI runs on campaign quest branches (Xapiand)",
-      "updated": "2026-11-09T04:23:55",
-      "worktree": "../Xapiand-wt/xapiand/ci-quest-branches"
+      "updated": "2026-11-09T04:32:47",
+      "worktree": ""
     },
     "ci-quest-branches-prospect": {
       "accepted": {},
