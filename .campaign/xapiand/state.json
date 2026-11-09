@@ -1,6 +1,15 @@
 {
   "campaign": "xapiand",
   "ci": "github",
+  "messages": [
+    {
+      "at": "2026-11-08T21:28:09",
+      "by": "detent-lead",
+      "closed": "barrier-warning-completion keeps the three signatures and defaults (quest Contracts); changes go to detent before landing",
+      "id": "msg-1",
+      "text": "detent lead: namespace-s1-s2 (landing first, D30/D31) pins completion:560c288 and consumes SyncFiles, OrderFiles and PreparationFilePolicy::Stage. barrier-warning-completion reads additive (a once-per-volume warning plus an opt-in full_flush_ordering); please keep those three signatures and their default sequences unchanged, or message detent before landing so S1/S2 can re-pin."
+    }
+  ],
   "quests": {
     "alpha10-builds": {
       "accepted": {},
