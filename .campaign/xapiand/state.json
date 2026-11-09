@@ -7739,12 +7739,11 @@
       "provides": [
         "value-encoding"
       ],
-      "reason": "owner: Q1 to Q3 and approval of a critical format change (PLAN open question 5); the lead may unblock step 2 (no byte change) before Q1",
       "repo": ".",
       "risk": "critical",
-      "status": "blocked",
+      "status": "planned",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-09T04:14:34"
+      "updated": "2026-11-09T15:34:35"
     },
     "sortable-proof": {
       "accepted": {},
