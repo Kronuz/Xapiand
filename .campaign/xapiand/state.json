@@ -8906,7 +8906,7 @@
       "risk": "high",
       "status": "landed",
       "title": "Inline key and stored bytes in the write buffer",
-      "updated": "2026-11-09T10:56:40",
+      "updated": "2026-11-09T10:56:59",
       "worktree": ""
     },
     "wbuf-inline-prospect": {
