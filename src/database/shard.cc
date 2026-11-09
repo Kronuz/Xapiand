@@ -1311,10 +1311,10 @@ Shard::release() noexcept
 
 
 task::task<void>
-Shard::ready()
+Shard::ready(bool use)
 {
 	if (!pin_) {
-		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel);
+		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel, use);
 		missing_ = false;
 	}
 }
@@ -1346,10 +1346,7 @@ Shard::reopen()
 	if (std::exchange(stale_, false) || (pin_ && pin_->stale_.load(std::memory_order_acquire))) {
 		pin_.reopen();   // the catalog replaces the index once its other holders let go (x-pool D2)
 	}
-	if (!pin_) {
-		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel, !held);   // the re-pin of a pin handed back is not a use (CT-R31)
-		missing_ = false;
-	}
+	co_await ready(!held);   // the re-pin of a pin handed back is not a use (CT-R31)
 	co_return replaced;
 }
 
