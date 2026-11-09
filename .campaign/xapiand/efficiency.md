@@ -52,3 +52,4 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | Quest | Started | Landed | Agent tokens | Quota points | Review rounds | Fix rounds |
 |---|---|---|---|---|---|---|
 | e2e-harness | 11-08 22:52 | 11-08 23:36 (Xapiand:6e5c3283f, merge c60138850) | 0 (lead) | ~0 | none (low) | 1 (A4 row retagged) |
+| ci-quest-branches (Xapiand, strata, prospect) | 11-08 23:16 | 11-09 04:2x (Xapiand:975ca0e3a, merge Xapiand:f77111164; strata:446410f; prospect:b0c8665) | 0 (lead) | ~0 | none (low) | 1 (yaml check quoting); ~5 h waiting on the token's `workflow` scope |
