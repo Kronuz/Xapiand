@@ -576,15 +576,43 @@
       "branch": "quest/xapiand/ci-quest-branches-strata",
       "checks": [
         {
-          "cmd": "python3 -c \"import sys;t=open(\\x27.github/workflows/ci.yml\\x27).read();sys.exit(0 if \\x27quest/**\\x27 in t else 1)\"",
+          "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
           "level": "none",
-          "minutes": 5,
+          "minutes": 2,
           "name": "yaml"
         }
       ],
       "consumes": [],
       "files": [
         ".github/workflows/ci.yml"
+      ],
+      "history": [
+        {
+          "at": "2026-11-09T00:35:16",
+          "checks": [
+            [
+              {
+                "cmd": "python3 -c \"import sys;t=open(\\x27.github/workflows/ci.yml\\x27).read();sys.exit(0 if \\x27quest/**\\x27 in t else 1)\"",
+                "level": "none",
+                "minutes": 5,
+                "name": "yaml"
+              }
+            ],
+            [
+              {
+                "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
+                "level": "none",
+                "minutes": 2,
+                "name": "yaml"
+              }
+            ]
+          ],
+          "reason": "same check; the old command's quoting broke python (SyntaxError), grep -F tests the same string",
+          "voided": [],
+          "weakened": [
+            "gate check yaml changed"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/ci-quest-branches-strata",
       "landed": [],
@@ -596,7 +624,7 @@
       "risk": "low",
       "status": "active",
       "title": "CI runs on campaign quest branches (strata)",
-      "updated": "2026-11-08T23:15:17",
+      "updated": "2026-11-09T00:35:16",
       "worktree": "../strata-wt/xapiand/ci-quest-branches-strata"
     },
     "cjk-words": {
