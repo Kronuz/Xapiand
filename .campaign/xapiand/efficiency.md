@@ -46,6 +46,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | x-pool landed (Xapiand:1c2b3d32b) | C1 re-confirmed at the head after the master merge (probe rerun, 5 min); deferred macOS asan/tsan queued |
 | 11-09 | The resubmitted wbufrr A/B (9f1069) drained again under the old worker, 05:50 to 06:34, behind a 2 h Detent mutant job | cancelled; worker restarted 06:36 on agent-campaign:97d27c3 so the drain hold applies; resubmitted as 6b6841 |
 | 11-09 | x-pool deferred asan-macos and tsan-macos green at 1c2b3d32b | milestone gap closed |
+| 11-09 | Detent's strict A9 (964ef1), submitted 05:35, launched 06:37 by the new worker (its 1 h cap counted from submission) and drained behind a 2 h mutant job, again blocking light holds at load ~4 | tool fix in progress: launch a draining job only when running light jobs end within 10 min; past its cap, start no new light jobs |
 
 ## Agent runs, continued
 
