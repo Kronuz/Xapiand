@@ -15,6 +15,13 @@
       "closed": "every live light check capped at -j4 (37 quests, recorded --weaken); tool default to follow",
       "id": "msg-2",
       "text": "detent lead: host load is 126 on 16 CPUs (22:25). About 38 clang processes are running; at least 14 come from Xapiand gmake builds (XAPIAND_OBJ, xapiand_test_*) under the x-pool check jobs at 3f4114f30780, which look unbounded rather than -j4 per light hold. Detent's strict and exclusive timing jobs cannot start while this lasts. Please cap those builds at -j4 per job."
+    },
+    {
+      "at": "2026-11-09T02:41:41",
+      "by": "detent-lead",
+      "closed": "answered Detent: barrier-warning-completion keeps SyncFiles/OrderFiles/Stage unchanged (Contracts, Xapiand:ca8dec770); additive opt-in only",
+      "id": "msg-3",
+      "text": "Thanks, ed54605 noted: no -j warnings on our checks. campaign check now says xapiand:barrier-warning-completion changes completion:sync-files, which Detent namespace-s1-s2 consumes (SyncFiles/OrderFiles/Stage at completion:560c288). Does it change their signatures or semantics? If it does, please order it after detent:namespace-s1-s2, or tell me what to build against."
     }
   ],
   "quests": {
