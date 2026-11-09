@@ -15,6 +15,13 @@
       "closed": "every live light check capped at -j4 (37 quests, recorded --weaken); tool default to follow",
       "id": "msg-2",
       "text": "detent lead: host load is 126 on 16 CPUs (22:25). About 38 clang processes are running; at least 14 come from Xapiand gmake builds (XAPIAND_OBJ, xapiand_test_*) under the x-pool check jobs at 3f4114f30780, which look unbounded rather than -j4 per light hold. Detent's strict and exclusive timing jobs cannot start while this lasts. Please cap those builds at -j4 per job."
+    },
+    {
+      "at": "2026-11-09T02:41:41",
+      "by": "detent-lead",
+      "closed": "answered Detent: barrier-warning-completion keeps SyncFiles/OrderFiles/Stage unchanged (Contracts, Xapiand:ca8dec770); additive opt-in only",
+      "id": "msg-3",
+      "text": "Thanks, ed54605 noted: no -j warnings on our checks. campaign check now says xapiand:barrier-warning-completion changes completion:sync-files, which Detent namespace-s1-s2 consumes (SyncFiles/OrderFiles/Stage at completion:560c288). Does it change their signatures or semantics? If it does, please order it after detent:namespace-s1-s2, or tell me what to build against."
     }
   ],
   "quests": {
@@ -244,10 +251,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -295,6 +309,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:23",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -310,7 +369,7 @@
       "risk": "high",
       "status": "planned",
       "title": "PosixIO warns when a barrier only orders",
-      "updated": "2026-11-08T22:35:39"
+      "updated": "2026-11-09T04:14:23"
     },
     "barrier-warning-strata": {
       "accepted": {},
@@ -325,10 +384,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [
@@ -380,6 +446,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:24",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -393,7 +504,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-08T22:35:39"
+      "updated": "2026-11-09T04:14:24"
     },
     "behavior-changes-audit": {
       "accepted": {},
@@ -527,17 +638,40 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T04:32:46",
+          "commit": "f7711116417bf2987c7612e8a2f1eb2d76d9fce5",
+          "evidence": [
+            {
+              "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
+              "commit": "11a3e8ae0152b31e0cfdc9c551b893964d54f9d6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-032625-3d2575",
+              "level": "none",
+              "seconds": 0.5,
+              "state": "done",
+              "what": "ci-quest-branches check yaml at 11a3e8ae0152"
+            }
+          ],
+          "final": true,
+          "from": "8632ef8f70e843be6ea4cdb83c8ff3e2ba687848",
+          "reason": "",
+          "tested": "975ca0e3aa5bbb650eb2fe46e4c84d769b33bb48"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "CI runs on campaign quest branches (Xapiand)",
-      "updated": "2026-11-09T00:35:14",
-      "worktree": "../Xapiand-wt/xapiand/ci-quest-branches"
+      "updated": "2026-11-09T04:32:47",
+      "worktree": ""
     },
     "ci-quest-branches-prospect": {
       "accepted": {},
@@ -584,18 +718,41 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/ci-quest-branches-prospect",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-09T04:23:24",
+          "commit": "b0c866541326dbf06169419e54fe87a2aa6c4cbb",
+          "evidence": [
+            {
+              "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
+              "commit": "b0c866541326dbf06169419e54fe87a2aa6c4cbb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-003520-36a076",
+              "level": "none",
+              "seconds": 0.6,
+              "state": "done",
+              "what": "ci-quest-branches-prospect check yaml at b0c866541326"
+            }
+          ],
+          "final": true,
+          "from": "1fe7be9bcb5cb5fcaddf8ddcecf98a166efc614c",
+          "reason": "",
+          "tested": "b0c866541326dbf06169419e54fe87a2aa6c4cbb"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "CI runs on campaign quest branches (prospect)",
-      "updated": "2026-11-09T00:35:19",
-      "worktree": "../prospect-wt/xapiand/ci-quest-branches-prospect"
+      "updated": "2026-11-09T04:23:30",
+      "worktree": ""
     },
     "ci-quest-branches-strata": {
       "accepted": {},
@@ -642,18 +799,41 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/ci-quest-branches-strata",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-09T04:23:04",
+          "commit": "446410f6be2e05dd42e0cd665db76545cdd7782e",
+          "evidence": [
+            {
+              "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
+              "commit": "446410f6be2e05dd42e0cd665db76545cdd7782e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-003518-12bda2",
+              "level": "none",
+              "seconds": 0.7,
+              "state": "done",
+              "what": "ci-quest-branches-strata check yaml at 446410f6be2e"
+            }
+          ],
+          "final": true,
+          "from": "70df28d37cae04ee1253e2139dfffca16f5d7fc1",
+          "reason": "",
+          "tested": "446410f6be2e05dd42e0cd665db76545cdd7782e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "CI runs on campaign quest branches (strata)",
-      "updated": "2026-11-09T00:35:16",
-      "worktree": "../strata-wt/xapiand/ci-quest-branches-strata"
+      "updated": "2026-11-09T04:23:09",
+      "worktree": ""
     },
     "cjk-words": {
       "accepted": {},
@@ -891,16 +1071,30 @@
           "name": "build-test"
         },
         {
-          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
           "name": "asan"
         },
         {
+          "cmd": "ci:linux-tsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
+        },
+        {
           "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 --timeout 3600",
+          "later": true,
           "level": "light",
           "minutes": 360,
-          "name": "tsan"
+          "name": "tsan-macos"
         }
       ],
       "consumes": [],
@@ -967,6 +1161,71 @@
             "gate check asan changed",
             "gate check tsan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:25",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 --timeout 3600",
+                "level": "light",
+                "minutes": 360,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              },
+              {
+                "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 --timeout 3600",
+                "later": true,
+                "level": "light",
+                "minutes": 360,
+                "name": "tsan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed",
+            "gate check tsan changed"
+          ]
         }
       ],
       "landed": [],
@@ -980,7 +1239,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-08T22:35:40"
+      "updated": "2026-11-09T04:14:25"
     },
     "cold-tier-step2-item1": {
       "accepted": {},
@@ -2045,10 +2304,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -2096,6 +2362,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:26",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -2111,7 +2422,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The freeze-readiness review before the first release",
-      "updated": "2026-11-08T22:35:43"
+      "updated": "2026-11-09T04:14:26"
     },
     "format13": {
       "accepted": {},
@@ -3127,10 +3438,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -3185,6 +3503,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:26",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -3202,7 +3565,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-08T22:35:45"
+      "updated": "2026-11-09T04:14:26"
     },
     "manifest-log-steps12": {
       "accepted": {},
@@ -3466,10 +3829,17 @@
           "name": "e2e"
         },
         {
+          "cmd": "ci:AddressSanitizer",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [
@@ -3587,6 +3957,63 @@
             "gate check e2e changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:27",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -3601,7 +4028,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-08T22:56:38"
+      "updated": "2026-11-09T04:14:27"
     },
     "no-stalls": {
       "accepted": {},
@@ -3978,10 +4405,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -4034,6 +4468,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:28",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -4051,7 +4530,7 @@
       "risk": "high",
       "status": "blocked",
       "title": "Phase 3R, replication groups",
-      "updated": "2026-11-08T22:35:48"
+      "updated": "2026-11-09T04:14:28"
     },
     "phase4-gate": {
       "accepted": {},
@@ -4066,10 +4545,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -4124,6 +4610,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:29",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -4138,7 +4669,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Phase 4's remaining items and its gate",
-      "updated": "2026-11-08T22:35:49"
+      "updated": "2026-11-09T04:14:29"
     },
     "phase5": {
       "accepted": {},
@@ -4153,10 +4684,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -4209,6 +4747,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:30",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -4223,7 +4806,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Phase 5, analysis and the query language's long tail",
-      "updated": "2026-11-08T22:35:49"
+      "updated": "2026-11-09T04:14:30"
     },
     "phase6": {
       "accepted": {},
@@ -4998,10 +5581,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [
@@ -5055,6 +5645,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:30",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -5071,7 +5706,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-08T22:35:52"
+      "updated": "2026-11-09T04:14:30"
     },
     "pins-2026-11": {
       "accepted": {},
@@ -5146,10 +5781,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -5197,6 +5839,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:31",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -5210,7 +5897,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-08T22:35:52"
+      "updated": "2026-11-09T04:14:31"
     },
     "pressure-flush": {
       "accepted": {},
@@ -5897,10 +6584,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -5951,6 +6645,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:32",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -5966,7 +6705,7 @@
       "risk": "high",
       "status": "blocked",
       "title": "Recovery tooling, the strata command-line tool",
-      "updated": "2026-11-08T22:35:53"
+      "updated": "2026-11-09T04:14:32"
     },
     "release": {
       "accepted": {},
@@ -6107,10 +6846,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -6160,6 +6906,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:33",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -6173,7 +6964,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-08T22:35:55"
+      "updated": "2026-11-09T04:14:33"
     },
     "repo-split": {
       "accepted": {},
@@ -6533,9 +7324,9 @@
           "name": "e2e"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:AddressSanitizer",
+          "level": "none",
+          "minutes": 1,
           "name": "asan"
         },
         {
@@ -6543,6 +7334,13 @@
           "level": "none",
           "minutes": 5,
           "name": "no-gpl"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
         }
       ],
       "consumes": [
@@ -6690,6 +7488,75 @@
             "gate check e2e changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:34",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "! git grep -n sortable_serialise -- src contrib",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-gpl"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "! git grep -n sortable_serialise -- src contrib",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-gpl"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -6707,7 +7574,7 @@
       "risk": "critical",
       "status": "blocked",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-08T22:56:41"
+      "updated": "2026-11-09T04:14:34"
     },
     "sortable-proof": {
       "accepted": {},
@@ -6720,10 +7587,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -6774,6 +7648,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:34",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -6789,7 +7708,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The sortable codec's remaining proof",
-      "updated": "2026-11-08T22:35:56"
+      "updated": "2026-11-09T04:14:34"
     },
     "sortable-step1": {
       "accepted": {},
@@ -7481,10 +8400,17 @@
           "name": "build-test"
         },
         {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        },
+        {
           "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "asan"
+          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -7536,6 +8462,51 @@
             "gate check build-test changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:35",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed"
+          ]
         }
       ],
       "landed": [],
@@ -7551,7 +8522,7 @@
       "risk": "high",
       "status": "blocked",
       "title": "Track D, distribution",
-      "updated": "2026-11-08T22:35:57"
+      "updated": "2026-11-09T04:14:35"
     },
     "track-p": {
       "accepted": {},
@@ -7623,16 +8594,30 @@
           "name": "build-test"
         },
         {
-          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
           "name": "asan"
         },
         {
+          "cmd": "ci:linux-tsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
+        },
+        {
           "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 --timeout 3600",
+          "later": true,
           "level": "light",
           "minutes": 360,
-          "name": "tsan"
+          "name": "tsan-macos"
         }
       ],
       "consumes": [],
@@ -7697,6 +8682,71 @@
             "gate check asan changed",
             "gate check tsan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:36",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 --timeout 3600",
+                "level": "light",
+                "minutes": 360,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              },
+              {
+                "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 --timeout 3600",
+                "later": true,
+                "level": "light",
+                "minutes": 360,
+                "name": "tsan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed",
+            "gate check tsan changed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/wbuf-inline",
@@ -7711,7 +8761,7 @@
       "risk": "high",
       "status": "active",
       "title": "Inline key and stored bytes in the write buffer",
-      "updated": "2026-11-08T22:35:59",
+      "updated": "2026-11-09T04:14:36",
       "worktree": "../strata-wt/xapiand/wbuf-inline"
     },
     "wbuf-inline-prospect": {
@@ -7834,7 +8884,69 @@
       "updated": "2026-11-08T15:39:30"
     },
     "x-pool": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-09T04:51:42",
+          "base": "c243ffab0bc4ed6287dd25fb8fb1bb5df93af26c",
+          "blobs": {
+            "CMakeLists.txt": "100644:f61d9b5e6a187fa2ebb372d8ff9954e843222e3d",
+            "docs/design/x-pool.md": "100644:93f06aa7e025ec3d1c9ba7aa8b3f1f1ed5c3bb71",
+            "docs/mechanisms/control-plane.md": "100644:d354f036109c41d5b1f0557d9b98cd2a13cd9c62",
+            "docs/mechanisms/index-registry-on-catalog.md": "100644:b025889aa396e14fed90a12dac232172153de9ab",
+            "docs/reviews/phase7c-x-pool-step2-code.md": "100644:1b056e511dee52189ffb5d27fe8203115b2e3e76",
+            "docs/status/phase7c-x-pool.md": "100644:aca94cd774023a4d873b3e13e4562026ad25edca",
+            "harness/async_allowlist.tsv": "100644:18878812fbb783f991241d0f37771274b44c5a08",
+            "src/database/handler.cc": "100644:62f3a5ee36c6b64281dcc57d43672064ccafafe9",
+            "src/database/lock.h": "100644:438e7d963ea42f68cafecfd5ef5906e7efc0dde9",
+            "src/database/pool.cc": "100644:eeb5c24ddcb81d14d5947c2877d6d8a2196f4074",
+            "src/database/pool.h": "100644:3396d3dc30ccad1d603ffb5743bda29ed2c9a6a5",
+            "src/database/shard.cc": "100644:d156f2dad631088a0a360aa11245771ffdd68031",
+            "src/database/shard.h": "100644:138db346f1388045b9e9fa080964f3445befe385",
+            "src/engine/shard.h": "100644:67c0b423d35805091d635d15c1ab32440a7001bb",
+            "src/engine/strata/owed.h": "100644:245b446f3daeb709379d9b293883d29ccd0a2be8",
+            "src/engine/strata/shard.cc": "100644:9784152fe31b36f93981adc1e801914e1bdb4400",
+            "src/engine/strata/shard.h": "100644:1157649ddb6f0d1ec3eccfe8efdf77f28500590d",
+            "src/engine/strata/viewed.h": "100644:71343aa2881a7e230a44aff8b1aa2c557cc503b9",
+            "src/manager.cc": "100644:3100a0abb66af5b8e2cae51c047872819e223945",
+            "src/server/search_views.cc": "100644:d557271ced8535578af34d1f33e39a448c4c3075",
+            "tests/pool_support.h": "100644:b6eb4c00c9212db43c20bef824f224ab971792bf",
+            "tests/test_blocking_guard.cc": "100644:d9eaf8b781f0bbb0b6b4cbf4922d911b18d10971",
+            "tests/test_engine_host.cc": "100644:4a0a193f2d13e4d2984aac96bfa5a34215f55da4",
+            "tests/test_index_pattern.cc": "100644:04a07d8445d968161d981d643b39572948c10165",
+            "tests/test_node.cc": "100644:c8e5b54585d1ffe1514b57e3a7d472297e481e76",
+            "tests/test_pool.cc": "100644:a65e34ac40e95b441a28e601de69692e023a64ff",
+            "tests/test_reactor_requests.cc": "100644:4360eea0dd05e0f1d8a19412c839e5c8ba543d84",
+            "tests/test_wide_search.cc": "100644:32048ba348f3ae8788b8bc35da66b7dd444075ee",
+            "tests/vm_sanitizers.sh": "100755:e4153ccc4097f70bdd3ca53c208405bad6a0d79c"
+          },
+          "brief": "9f9b59409602399e",
+          "by": "review",
+          "commit": "a5af5c6977e1b4059b61d7d8f70f74fbdc449b60",
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-x-pool-correctness/missing_index_write.sh",
+                  "commit": "fe3fc2b12c1d786a4c218d4c5c21cd813ea87ca9",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261109-043218-12479c",
+                  "level": "light",
+                  "seconds": 288.2,
+                  "state": "done",
+                  "what": "review probe C1: missing_index_write.sh at fe3fc2b12"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            }
+          },
+          "note": "",
+          "review": "d74175a73d5097a4174446d0c826bfcc385e20ab",
+          "reviewed": "41dba47c549e818429d0f4ba5d3ac78271a3e509",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "9ff11c0c68b84eec7d570b21a8c72ff533d4a550",
       "branch": "quest/xapiand/x-pool",
@@ -7852,16 +8964,30 @@
           "name": "e2e"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:AddressSanitizer",
+          "level": "none",
+          "minutes": 1,
           "name": "asan"
         },
         {
-          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+          "cmd": "ci:ThreadSanitizer",
+          "level": "none",
+          "minutes": 1,
+          "name": "tsan"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "tsan"
+          "name": "asan-macos"
+        },
+        {
+          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "tsan-macos"
         }
       ],
       "consumes": [
@@ -8008,6 +9134,83 @@
             "gate check e2e changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:37",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "tsan"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed",
+            "gate check tsan changed"
+          ]
         }
       ],
       "landed": [],
@@ -8021,9 +9224,9 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-08T22:56:42",
+      "updated": "2026-11-09T04:51:42",
       "worktree": "../Xapiand-wt/xapiand/x-pool"
     },
     "x-pool-step1": {
@@ -8197,15 +9400,15 @@
           "name": "e2e"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:AddressSanitizer",
+          "level": "none",
+          "minutes": 1,
           "name": "asan"
         },
         {
-          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:ThreadSanitizer",
+          "level": "none",
+          "minutes": 1,
           "name": "tsan"
         },
         {
@@ -8225,6 +9428,20 @@
           "level": "light",
           "minutes": 150,
           "name": "removed"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
+        },
+        {
+          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "tsan-macos"
         }
       ],
       "consumes": [
@@ -8442,6 +9659,119 @@
             "gate check asan changed",
             "gate check recovery changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:37",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && TSAN_OPTIONS=log_path=\"$JOB_OUT/san\" python3 harness/engine_mixed_load.py build-tsan/bin/xapiand \"$JOB_OUT/t7\" --engine strata --secs 600 --term-at 300",
+                "level": "light",
+                "minutes": 120,
+                "name": "t7-tsan"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+                "level": "light",
+                "minutes": 120,
+                "name": "recovery"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && harness/removed_options_check.sh build/bin/xapiand && ! git grep -n -E 'num_committers|DatabaseCleanup' -- src ARCHITECTURE.md",
+                "level": "light",
+                "minutes": 150,
+                "name": "removed"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "tsan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && TSAN_OPTIONS=log_path=\"$JOB_OUT/san\" python3 harness/engine_mixed_load.py build-tsan/bin/xapiand \"$JOB_OUT/t7\" --engine strata --secs 600 --term-at 300",
+                "level": "light",
+                "minutes": 120,
+                "name": "t7-tsan"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+                "level": "light",
+                "minutes": 120,
+                "name": "recovery"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && harness/removed_options_check.sh build/bin/xapiand && ! git grep -n -E 'num_committers|DatabaseCleanup' -- src ARCHITECTURE.md",
+                "level": "light",
+                "minutes": 150,
+                "name": "removed"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed",
+            "gate check tsan changed"
+          ]
         }
       ],
       "landed": [],
@@ -8459,7 +9789,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-08T22:56:42"
+      "updated": "2026-11-09T04:14:37"
     },
     "xapiand-final-release": {
       "accepted": {},
