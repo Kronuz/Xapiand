@@ -1,6 +1,6 @@
 # wbuf-inline: journal
 
-State: waiting on jobs 261109-012436-323159 261109-012436-24bfa7 261109-012436-43f2fe 261109-012437-13d8c1 261109-012438-75c07d 261109-012439-4268e8 261109-012440-05ac8b 261109-012441-072616 261109-012442-0cf880 261109-012442-7003e7
+State: waiting on jobs 261109-024405-35d764 261109-024406-5881b6 261109-024407-5fdab0 261109-012440-05ac8b
 Quest: .campaign/xapiand/quests/wbuf-inline.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -33,9 +33,20 @@ Green at strata:e4fe8f7 (same engine code; e4fe8f7..efc5663 changes only `test/w
 main and the scripts): tsan 261108-230850-119b9c, asan 261108-230850-ae766d, build-test
 261108-230850-b72759, A11 261108-230851-b11787, A7 261108-230852-0806c9; A6 261108-230853-7da613 running.
 
+Passed at strata:efc5663 (the lead): build-test 261109-012436-323159, asan 261109-012436-24bfa7,
+tsan 261109-012436-43f2fe, mutants 261109-012437-13d8c1, A11 261109-012438-75c07d, A7
+261109-012439-4268e8. A6 261109-012440-05ac8b is still running.
+A8 build 261109-012441-072616 failed: a build directory in the shared slot `xapiand-wbuf-inline-ab`
+was configured from the previous job's `ref-main`. strata:bb2f58d keys each arm's build directory
+by its commit, drops a CMakeCache from another source path, and removes only its own directory.
+That commit changes only `docs/perf/wbuf-inline/landed-ab.sh`. Resubmitted at strata:bb2f58d: build
+261109-024405-35d764, share sweep 261109-024406-5881b6, wbufrr (strict) 261109-024407-5fdab0. The gate
+checks I queued there (261109-024404-c71a6a, -55cb2e, -0b7c81) are cancelled: verify runs once at
+the final head, after the perf note's docs commit.
+
 ## Next
 
-1. Read the jobs at strata:efc5663; fill A1 to A11 in Evidence; add the landing A/B to
+1. Read the A8 jobs at strata:bb2f58d and A6; fill A1 to A11 in Evidence; add the landing A/B to
    `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head).
 2. Ready for the correctness review.
 
@@ -73,3 +84,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   scripts: passed, ctest 74 of 74; same C++ as strata:e4fe8f7) and those cancelled at strata:14ed454, strata:502b330 and strata:abea21e (the head moved).
 - `write_buffer_test NAME` runs one test: the smallest change that lets a mutant be checked
   against the test the review named, not just against the binary.
+- Gate checks run once more at the final head (after the docs-only perf-note commit), not at each
+  script fix: strata:efc5663..bb2f58d changes only `landed-ab.sh`.
