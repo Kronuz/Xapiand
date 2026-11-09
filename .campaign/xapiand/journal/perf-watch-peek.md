@@ -1,6 +1,6 @@
 # perf-watch-peek: journal
 
-State: working
+State: waiting on jobs 261109-144804-ff5f5b 261109-145852-514f5a 261109-145905-5a00d5
 Quest: .campaign/xapiand/quests/perf-watch-peek.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,12 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Building and testing E2 locally (http worktree `build-dev`), then the A/B jobs.
+Screen (strict) of base/E1/E2 running; gate check and the fails-without job queued at http:13933f0.
 
 ## Next
 
-1. Commit E2 and bench/watch_ab.sh; `campaign verify perf-watch-peek` (build-test, A2).
-2. Light job `watch_ab.sh build` (slot pwp-ab), strict smoke/screen (base, E1, E2), then the exclusive confirm (base against head, A/A) for A1.
+1. Read the screen; submit the exclusive confirm (head against base 8262172, A/A) at the final head, slot pwp-ab.
+2. Rerun the mutants job at the final head.
 3. Write docs/perf/watch-peek.md with the numbers (A3); A4 is docs/mechanisms/coroutine-handlers.md.
 
 ## Blocked on
@@ -41,7 +41,7 @@ Experiments (http branch quest/xapiand/perf-watch-peek):
 - E1 http:f43dee4: engage reads without waiting into the input buffer (decides inline as the peek
   did), and the armed read on plain TCP is `async_wait(wait_read)` then a recv that does not wait:
   -1 recv per asking request.
-- E2: the pending read resumes the next reader directly (task's await_asio rule: in place in a
+- E2 http:6ec7324: the pending read resumes the next reader directly (task's await_asio rule: in place in a
   top-level handler on its loop, else posted); no read_held/drain frames, no channel.
 
 ## Result
@@ -56,3 +56,13 @@ Experiments (http branch quest/xapiand/perf-watch-peek):
   it now checks that engage reads ahead kReadAhead bytes, ends the watch, fires nothing, and the
   stream stays intact and in order. The 4096-byte bound is unchanged.
 - R3 `httpc` kind added to bench/server_compare.cc so the cost is measured where it is paid.
+- R4 handler_count (f) asserted that an asking handler costs more handlers (`asks > raw`); with
+  E2 it costs none more (1.000 = 1.000, job 261109-144734-7f8a70 failed on exactly that), so the
+  check is now equality, and job 261109-145905-5a00d5 shows it fails against base's header.
+
+## Job history
+
+- 261109-144734-7f8a70 build-test at 90cf235: failed, handler_count (f) only (see R4).
+- 261109-144744-19e463 mutants at 90cf235: all five killed (no-resume, no-cancel, engage-lazy,
+  engage-data, eof-as-data); rerun at the final head.
+- 261109-144745-8e7df2 A/B builds (slot pwp-ab): ok.
