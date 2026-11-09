@@ -31,8 +31,8 @@ this step were not run locally at this head.
    stage, `tools/mutants/fields.py`'s file mutants; `bench/manifest-log/open_probe.cc` models
    `main` with them (keep a private copy there, or retire the probe after A8). `pre_freeze` to
    0x8000'0008 (D11). Own commit.
-3. Step 3c: T4's cases on faultfs, media_test on the log (it still damages by offsets that the
-   old files had; check it), the fuzz runs at the ready head, A9 (prospect waits for L1's quest).
+3. Step 3c: T4's cases on faultfs, media_test on the log (ported by renames only, not run locally;
+   check its cases cover the log), the fuzz runs at the ready head, A9 (prospect waits for L1's quest).
 
 ## Blocked on
 
