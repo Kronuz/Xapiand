@@ -9,32 +9,33 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Root cause of the docs E2E failure at Xapiand:0638e61fd. Local tools in the worktree's `.scratch/`
+(untracked): `build.sh plain|asan|tsan` (ccache, `.scratch/build-<kind>`), `probe.sh` (one RESTORE
+alone), `probe2.sh` (the E2E's twitter writes, then the RESTORE), `e2e.sh BIN TAG PORT`.
+
+Findings so far:
+- The RESTORE of the 1,000 accounts is not stuck but slow in the E2E: 29.3 s under ASan (passed by
+  0.7 s), over the 30 s newman timeout plain and under TSan (the node logs "took ~30852 ms"); the
+  `cities` RESTORE 18 to 24 s. Step 2 (`Xapiand-wt/x-pool/.scratch/e2e*`): 1.8 s plain, 4.6 s ASan,
+  13 s TSan. Alone, on a fresh node, the RESTORE takes 3.6 s on step 3's build, step 2's and a
+  pre-pool build alike (load ~11 of 16 cores).
 
 ## Next
 
-1. <step>
+1. Reproduce in the E2E's context (probe2, e2e.sh on step 3's build), sample the node, find the cause.
+2. Fix with a regression test that fails without it (jobs at both commits); A17 e2e plain, A6 TSan.
+3. Verify the last four commits (build-test); then A8, A10 to A12, A14 to A16; A9, A13 in the design;
+   A18 the note; step 4 (A5).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-One row per criterion, with what its kind needs: a job id (it, or the same job rerun, passed at
-the current code), a `path`, a decision id, or for a [manual] one who checked what. Name every job
-you examined, failures included, and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
-
 ## Rulings I made
-
-<Decisions inside the quest's scope, so the reviewer can check them.>
