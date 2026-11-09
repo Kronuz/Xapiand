@@ -1367,6 +1367,8 @@
     "e2e-harness": {
       "accepted": {},
       "after": [],
+      "base": "032dd6266b6b74922387bb0a67aa2b5c9736e98d",
+      "branch": "quest/xapiand/e2e-harness",
       "checks": [
         {
           "cmd": "bash -n harness/run_all.sh && bash -n harness/engine_e2e.sh && printf \"#!/bin/sh\\nexit 1\\n\" > fakebin && chmod +x fakebin && ! BIN=$PWD/fakebin harness/run_all.sh e2e && ! harness/engine_e2e.sh $PWD/fakebin $JOB_OUT/e2e && ! RUN_ALL_STRICT=1 PATH=/usr/bin:/bin BIN=$PWD/fakebin harness/run_all.sh tls",
@@ -1387,9 +1389,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "The E2E harness fails when it proves nothing",
-      "updated": "2026-11-08T22:54:50"
+      "updated": "2026-11-08T22:55:10",
+      "worktree": "../Xapiand-wt/xapiand/e2e-harness"
     },
     "engine-core": {
       "accepted": {},
