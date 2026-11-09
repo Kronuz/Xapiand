@@ -1200,7 +1200,7 @@
       ],
       "checks": [
         {
-          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j8 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -1214,6 +1214,34 @@
         "docs/src/content/docs/**",
         "docs/public/assets/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-08T22:35:42",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j8 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "cap build parallelism at the light hold's 4 jobs (owner's host rule; Detent msg-2: load 126 on 16 CPUs); commands otherwise unchanged",
+          "voided": [],
+          "weakened": [
+            "gate check e2e changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "Phase 8",
@@ -1223,7 +1251,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Upgrading from alpha.9 and alpha.10 data",
-      "updated": "2026-11-08T13:25:00"
+      "updated": "2026-11-08T22:35:42"
     },
     "document-gate": {
       "accepted": {},
