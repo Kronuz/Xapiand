@@ -8028,9 +8028,9 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-08T22:56:42",
+      "updated": "2026-11-09T04:10:42",
       "worktree": "../Xapiand-wt/xapiand/x-pool"
     },
     "x-pool-step1": {
