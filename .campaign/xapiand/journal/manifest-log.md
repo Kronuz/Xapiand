@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: waiting on jobs 261109-112947-1006c3 261109-112951-b8f62d
+State: working
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,45 +9,36 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Step 3a (the log layer) is built and committed at strata:6a8bb32; its jobs run (build-test
-261109-112947-1006c3, mutants 261109-112951-b8f62d). This contributor hands off here, before step
-3b's building, at its context budget; step 3b starts fresh from Next 2.
+Step 3b (the index on the log), second contributor. At strata:9529bd1: the mutants job
+261109-112951-b8f62d at strata:6a8bb32 failed only because the "damage read as a torn tail" mutant
+did not apply (its text was the one-line form; the reader's check is multi-line), fixed and renamed
+"damage without `to` passes the open". Uncommitted in the worktree, being built:
+- D42 in `manifest_log.hh`: `log_deleted` (words from doc_count / 64 deleted, sorted ordinals
+  below; delta bytes kept; `insert` walks only to each new ordinal's old neighbours), the decoder
+  choosing the form from the count before allocating, the "deleted sets" stage, four mutants.
+- `check_edit()` (D3's checks plus the `log_shape` an edit leads to, nothing changed) and `apply()`
+  as check-then-change, so the writer decides D7 on the post-edit S before writing.
+- `index.hh` on the log: `m_` is the head (`files::log_state`), the live scalars are `cur_`,
+  the change list (`deleted_since_` from apply_pending, `meta_since_` with undo),
+  `commit_files` = edit_now/check_edit/append_edit or state_now/roll_over, recover per D6,
+  retain per D8 (`kept_files`), install via `read_generation`, check() replays the log,
+  allowance per C5, demote/close drop the log's descriptor. Not yet compiled.
 
 ## Next
 
-1. Record the two jobs' results in Evidence (cite them only if they passed at strata:6a8bb32).
-2. Step 3b, everything that does not touch the deleted set (lead, L3): `index.hh` on the log. `m_` becomes the log's state (`files::manifest` retires, and
-   `manifest()` returns it); `commit_files` builds the edit from the head and the change list (D3)
-   and appends it through `log_appender`, or rolls over by `log_within` (D7); `recover` reads with
-   `read_log` and issues the open's one `sync_data` (D6.6, C4); `retain` keeps generations by D8,
-   reading older logs with `read_log(..., to)`; `check()` replays the log against memory; the
-   live-docs, metadata and field files retire; the allowance holds S only while a rollover is
-   forced (C5); `pre_freeze` moves to 0x8000'0008; the writer drops its head on any exception from
-   `apply()` (A5's writer half). The deleted-set representation (Blocked on 1) goes in its own
-   commit once the owner answers; until then segments keep today's ordinal vectors.
-3. Step 3c: T4's cases 1 to 9 on faultfs (case 9 the kill between `pwrite` and `sync_data`), T6's
-   oracle through the index, `media_test`; the 5-minute ASan+UBSan fuzz of `fuzz_manifest_log_file`
-   and `fuzz_manifest_log` at the head marked ready; A9's integration jobs.
+1. Build and pass `manifest_log_test`; commit D42 (with its stage and mutants) alone, then
+   check_edit.
+2. Compile `index.hh` (core_kv_test first), then port strata's tests that read the old files
+   (about 94 sites: index_test 32, files_test 29, retention 9, format14 7, lifecycle 7, directory
+   6, fields 6, reclaim 6, cold_segment 5, warm 5, background_merge 5, apply_atomic 3,
+   reclaim_bg 3, reclaim_backlog 3, media 2, defer_io 1). Commit the index on the log.
+3. Retire `files::manifest`, live-docs, metadata and the field table's file codecs (files.hh,
+   fields.hh), their tests and `fuzz_files`; `pre_freeze` to 0x8000'0008 (D11). Own commit.
+4. Step 3c as before (T4 cases on faultfs, media_test, fuzz at the ready head, A9 jobs).
 
 ## Blocked on
 
-1. **(With the owner; the lead recommended option 1.) SR3's deleted-set representation (A4, and A3's delete cost): the owner's call, per the quest.**
-   Today a decoded segment holds its deleted set as 64-bit ordinals: a bitset decodes to 64x its
-   bytes, and a delete edit merges into the whole vector, O(n) (SR2's 8.9 s for 128 one-ordinal
-   edits on 20M documents, 10M deleted). Options:
-   1. Words when they are no larger than the ordinals (n >= doc_count / 64), sorted ordinals
-      otherwise; a bitset record decodes straight to words (1x), a deltas record to ordinals (at
-      most 8x its bytes, and a deltas form exists only while it is smaller than the bitset). Memory
-      stays within 8x the record either way; deletes into words cost O(k); a merge into ordinals is
-      bounded by doc_count / 64. The index converts to its own `deleted_bits` at open, after the
-      segment's size check. **Recommended.**
-   2. Words always (the index's `deleted_bits`): O(k) deletes and no conversion at open, but a
-      deltas body of B bytes allocates doc_count / 8 bytes, which the decoder alone cannot bound
-      (doc_count is checked against the segment file only at open).
-   3. Ordinals always (today), with an ordered container for O(k log n) deletes: 64x per bitset
-      byte stays, plus the container's per-node overhead.
-   Step 3a stopped there: nothing on the deleted set changed. The rest of 3a does not depend on it.
-2. **Resolved by the lead (L1): a prospect companion quest after manifest-log.** prospect's suite (A9) needs a companion change once step 3b lands. prospect's tests read
+1. **Resolved by the lead (L1): a prospect companion quest after manifest-log.** prospect's suite (A9) needs a companion change once step 3b lands. prospect's tests read
    the old files: `format13_test.cc` rewrites manifests through `files::manifest` (about 30 sites),
    `reclaim_test.cc` decodes manifests and live-docs and metadata files, `media_test.cc` damages
    `fields-*` offsets, `fixtures_test.cc` pins `files::pre_freeze`, `directory_test.cc` plants
@@ -122,4 +113,22 @@ Not ready for review. Step 3a, the log layer, at strata:6a8bb32 (index.hh untouc
   - L3: Blocked on 1 is with the owner (the lead recommended option 1). Step 3b continues on
     everything that does not touch the deleted set; the deleted-set change lands in its own commit
     when the answer arrives.
+- Owner's ruling D42 (PLAN.md, 2026-11-09), formerly Blocked on 1 (SR3's deleted-set
+  representation, A4 and A3's delete cost): option 1, an adaptive deleted set, bitset words when
+  deleted >= doc_count / 64 and sorted ordinals otherwise; a bitset record decodes to words, a
+  deltas record to ordinals (memory at most 8x the record); the index converts to `deleted_bits`
+  at open after the size check.
+- R9 (D42's cost): a delete edit's walk to each new ordinal's old neighbours (for the delta bytes
+  S needs exactly, C7) covers disjoint stretches, so it costs O(k log n) on ordinals and at most
+  the set's words once on words, the same order D42 accepted for a merge into ordinals.
+- R10 (change list): strata has no commit of a past generation yet (durability-modes D1's
+  checkpoint is K2's), so the change list holds the changes since the head without marks; the
+  edit is always head to current state. Marks come with the first caller that commits a past
+  target. T6's past-target cases stay at the log layer (diff/apply round trips).
+- R11 (head memory): the writer keeps the head as a full `log_state`: its deleted sets (at most
+  the segments' bits again, by D42's forms), metadata map and field table duplicate the index's.
+  Sharing the table's prefix and the metadata is a follow-up if T9 or a heap row shows it.
+- R12 (retention): a predecessor generation whose log ends before it (a generation a torn tail
+  skipped, D6.7) names nothing and does not block; a pin that cannot be read, or any other read
+  failure, blocks the round as `main` does.
 
