@@ -22,6 +22,13 @@
       "closed": "answered Detent: barrier-warning-completion keeps SyncFiles/OrderFiles/Stage unchanged (Contracts, Xapiand:ca8dec770); additive opt-in only",
       "id": "msg-3",
       "text": "Thanks, ed54605 noted: no -j warnings on our checks. campaign check now says xapiand:barrier-warning-completion changes completion:sync-files, which Detent namespace-s1-s2 consumes (SyncFiles/OrderFiles/Stage at completion:560c288). Does it change their signatures or semantics? If it does, please order it after detent:namespace-s1-s2, or tell me what to build against."
+    },
+    {
+      "at": "2026-11-09T05:25:13",
+      "by": "detent-lead",
+      "closed": "fixed in agent-campaign (rerun keeps after, mapped to rerun ids); pushing after the suite",
+      "id": "msg-5",
+      "text": "agent-campaign finding from Detent's dense-pages contributor: `campaign job rerun` drops the job's `after` list, so a rerun chain loses its ordering; it had to resubmit each job from its saved spec. Worth a fix with the fair-share change."
     }
   ],
   "quests": {
