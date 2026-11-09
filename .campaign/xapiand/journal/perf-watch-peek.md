@@ -9,32 +9,50 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Building and testing E2 locally (http worktree `build-dev`), then the A/B jobs.
 
 ## Next
 
-1. <step>
+1. Commit E2 and bench/watch_ab.sh; `campaign verify perf-watch-peek` (build-test, A2).
+2. Light job `watch_ab.sh build` (slot pwp-ab), strict smoke/screen (base, E1, E2), then the exclusive confirm (base against head, A/A) for A1.
+3. Write docs/perf/watch-peek.md with the numbers (A3); A4 is docs/mechanisms/coroutine-handlers.md.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-One row per criterion, with what its kind needs: a job id (it, or the same job rerun, passed at
-the current code), a `path`, a decision id, or for a [manual] one who checked what. Name every job
-you examined, failures included, and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+
+## Attribution (before, http main 66050ec, i9-9980HK, counting build, local probe, not evidence)
+
+The quest's "extra read" is CancelWatch::engage: `httpc` (a handler that asks for its token, as
+Xapiand's SearchService::handle does on every request) against `http` (never asks):
+allocs/req 6.00 against 3.00, Asio handlers/req 3.00 against 1.00. Read from Asio 1.36
+(`kqueue_reactor::start_op`, `epoll_reactor::start_op`): async_read_some tries the recv at once
+(speculative), so engage costs a MSG_PEEK recv (EAGAIN) plus the armed read's speculative recv
+(EAGAIN) before the data recv: three recv per asking request against two. The next request's
+read then goes through `read_held` and `drain` (two task frames) and the `done_` channel (one
+op, one more handler).
+
+Experiments (http branch quest/xapiand/perf-watch-peek):
+- E1 http:f43dee4: engage reads without waiting into the input buffer (decides inline as the peek
+  did), and the armed read on plain TCP is `async_wait(wait_read)` then a recv that does not wait:
+  -1 recv per asking request.
+- E2: the pending read resumes the next reader directly (task's await_asio rule: in place in a
+  top-level handler on its loop, else posted); no read_held/drain frames, no channel.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+<pending the A/B jobs>
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- R1 Retargeting confirmed from code: "the keep-alive watch byte's extra read" is CancelWatch's
+  peek and the armed read behind it (quest Decisions, first bullet).
+- R2 The [L] check "engage() with data waiting ... reads nothing" pinned the peek, not behavior:
+  it now checks that engage reads ahead kReadAhead bytes, ends the watch, fires nothing, and the
+  stream stays intact and in order. The 4096-byte bound is unchanged.
+- R3 `httpc` kind added to bench/server_compare.cc so the cost is measured where it is paid.
