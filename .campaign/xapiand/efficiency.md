@@ -66,6 +66,8 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | x-pool | contributor, opus, high (third and fourth turns) | 143k + 164k (notices) | 5% → 6% at 05:33 | 8m + 4m (+ C1 fix 6m, merge 1m) | durability ruled harness timing (R6, 5/5 at master and branch); ready for review |
 | 11-09 | x-pool | reviewer, opus, high (correctness) | 262k (notice) | 5% → | 18m10s, 86 tool calls | CHANGES: C1 blocking (missing-index write 500 instead of 404, found by a probe job); C2-C7 non-blocking |
 | 11-09 | wbuf-inline-prospect | contributor, sonnet, medium | 77k | 9% weekly | 13m | repin + 16,000-record budget test; ready for review; lead rebased and re-cited evidence |
+| 11-09 | manifest-log | contributor, opus, high (step 3a) | 295k | 9% weekly | 32m | log layer at strata:6a8bb32; folded C4-C6, D41; handed off before 3b |
+| 11-09 | manifest-log | contributor, opus, high (step 3b) | 279k | 10% weekly | 1h48m | D42 adaptive deleted set (128 deletes 8.9 s to 0.03 ms local), index on the log, 4 bugs found by ported tests; build-test 70/75 at strata:7ffabab, mutants 23/23 |
 
 ## Landings
 
