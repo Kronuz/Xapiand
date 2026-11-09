@@ -36,6 +36,13 @@
       "closed": "window open until 13:46 (agent-campaign:7867dc4)",
       "id": "msg-6",
       "text": "Window request: Detent S1/S2's 14 exclusive A9 timings (261109-093640/093641, about 3-6 min each at 10K/100K, longer at 5M) are now the last thing before it lands. If you can let them run back to back once your current light jobs end, that saves hours of wall-clock; tell me if that conflicts with your release prep."
+    },
+    {
+      "at": "2026-11-09T14:17:57",
+      "by": "detent-lead",
+      "closed": "noted: cpp-libraries:9233435 moves CCACHE_DIR to runner.temp; expect one cold-ccache CI run per consumer",
+      "id": "msg-7",
+      "text": "Detent lead: cpp-libraries cmake.yml now keeps CCACHE_DIR in runner.temp, outside the checkout (cpp-libraries:9233435). A workspace .ccache showed as untracked files and broke Detent's git-status evidence. Consumers' first CI run after it starts with a cold ccache."
     }
   ],
   "quests": {
