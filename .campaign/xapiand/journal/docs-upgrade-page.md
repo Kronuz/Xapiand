@@ -1,6 +1,6 @@
 # docs-upgrade-page: journal
 
-State: waiting on jobs 261109-152541-04dbf7
+State: waiting on jobs 261109-152541-04dbf7 261109-153551-16cd29
 Quest: .campaign/xapiand/quests/docs-upgrade-page.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,25 +10,19 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 ## Doing
 
 Page written and committed (`docs/src/content/docs/upgrade.md`). The `e2e` check is queued
-(261109-152541-04dbf7, light, 120 min: cmake build plus `run_all.sh smoke e2e tls`). A2 not started.
+(261109-152541-04dbf7, light, 120 min: cmake build plus `run_all.sh smoke e2e tls`). A2 job 261109-153551-16cd29 queued (240 min: builds `origin/xapiand` e692a64b1 via --ref old, and the head; indexes 3000 docs on old, CLI --dump, new --restore, compares HTTP dumps of both, and checks the new binary exits 65 on the old dir).
 
 ## Next
 
 1. When the e2e job passes at the head, fill A4's row (and A3's, with the reviewer's read).
-2. A2: needs an alpha.10-line (Xapian) binary, which does not exist on this machine (the root `xapiand` is an
+2. A2 (job queued): needed an alpha.10-line (Xapian) binary, which does not exist on this machine (the root `xapiand` is an
    x86 Mach-O that does not run on this arm64 host). Build `origin/xapiand` (Xapiand:e692a64b1) and the
    head in one job, index documents with the old binary, `--dump`, `--restore` with the new one, compare. Needs the lead's go-ahead (two full builds at load 84).
-3. When `sortable-encoding` lands, re-read the "Stored documents and numbers" first bullet against its changelog line.
+3. (Done against D44; sortable-encoding lands after this page.) Re-read the "Stored documents and numbers" first bullet against its changelog line.
 
 ## Blocked on
 
-1. A2: lead decision. Recommendation: after `xapiand-final-release` produces a Xapian binary, run the two-binary
-   round trip once as a light job (about 2 builds); until then A2 has no evidence.
-2. `sortable-encoding` is not landed (blocked on the owner's Q1-Q3). The numbers bullet follows its design
-   D1/D4/D5 (exact cross-type order; NaN, uint64 >= 2^63 answer 400; -0.0 is 0) and must be confirmed against the owner's answers.
-3. For the lead (outside my file set): the refusal message in `src/main.cc:663` and the changelog entry say
-   "alpha.9 or earlier", but alpha.10 data is Xapian too (audit gap 4); the binary links
-   `/upgrade/#upgrading-from-100-alpha9`, which the page keeps with an explicit anchor.
+Nothing. (Lead rulings: A2 built in-job; numbers bullet confirmed against PLAN D44 (variable width, NaN and out-of-range integers 400, -0.0 as 0); the alpha.10 refusal text is on the lead's hunt list.)
 
 ## Evidence
 
