@@ -1,6 +1,6 @@
 # x-pool: journal
 
-State: waiting on jobs 261108-224742-122302 261108-224742-404c84 261108-224742-9b5d88 261108-224742-6f7cbc 261108-223127-f35eff 261108-223155-2703e7 261108-223156-d3fd0f 261108-223539-df1848 261108-221920-0fcf05 261108-223749-0e083d
+State: waiting on jobs 261109-013630-b41a01 261109-013630-5e7a1c 261109-013630-ac1ee7 261109-013630-aaa963 261109-013631-fc75f6 261109-013631-8d4305 261109-013631-bfd35f 261109-013631-0a4c44
 Quest: .campaign/xapiand/quests/x-pool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,8 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Waiting on jobs. Head Xapiand:465f56bb5 (master merged in; it changes no code, only the ledger's status line).
-Code last changed at Xapiand:161e1db5d (step 4, tests); design revision 3 at 3df4d681a.
+Waiting on jobs at head Xapiand:9851b57e2 (master merged: e2e-harness's `harness/run_all.sh` and
+`harness/engine_e2e.sh`, campaign files; no `src/` or `tests/` change). Code last changed at Xapiand:161e1db5d.
 
 Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test run, restored): 6 of 6 killed.
 | Mutant | Killed by |
@@ -24,32 +24,27 @@ Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test
 
 ## Next
 
-1. Gate checks at 465f56bb5 (the lead's -j4 commands): build-test 261108-224742-122302, e2e 261108-224742-404c84,
-   asan 261108-224742-9b5d88, tsan 261108-224742-6f7cbc.
-2. At 8c06fff93 (the same code): the real docs E2E 261108-223127-f35eff (newman 6, plain and asserts builds);
-   Linux VM 261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan); wide search 261108-223539-df1848.
-3. At master: the e2e check 261108-221920-0fcf05; tsan's two failing tests 261108-223749-0e083d.
-4. At the adopted code 3f4114f30 (the last four commits verified): build-test 261108-214834-ad7d40 exit 0; asan
-   261108-214834-1c3b6b exit 0 (its docs E2E did not run, newman 4.5.0); e2e 261108-214834-bcc874 "GREEN" from a
-   stale report (Blocked on); tsan 261108-214834-44536b exit 8: 35 of 37 pass; `test_index_pattern` (a TSan race
-   inside its own `test_the_walk_queue_is_bounded`, and `test_a_zero_cap_is_refused`'s option exits) and
-   `test_node`'s `test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time` (the abandon child's
-   thread-leak report makes its exit non-zero; the old ledger ran `test_node` with `report_thread_leaks=0`). Both
-   are master's tests, untouched here.
-5. When they pass, fill the Evidence rows and Result; State "ready for review".
+1. Gate checks at 9851b57e2 (`campaign verify`, e2e now strict with newman 6): build-test 261109-013630-b41a01,
+   e2e 261109-013630-5e7a1c, asan 261109-013630-ac1ee7, tsan 261109-013630-aaa963.
+2. Reruns at 9851b57e2: docs E2E newman 6 261109-013631-fc75f6 (was f35eff); Linux VM tsan 261109-013631-8d4305
+   (was 2703e7), asan 261109-013631-bfd35f (was d3fd0f); wide search 261109-013631-0a4c44 (was df1848).
+3. When they finish, point the Evidence rows at them, write Result, State "ready for review".
+4. History: at 465f56bb5 build-test 261108-224742-122302, asan …-9b5d88 passed; tsan …-6f7cbc exit 8 (Blocked on);
+   the old e2e …-404c84 was cancelled (pre-fix command).
 
 ## Blocked on
 
-The lead (the checks' definitions and `harness/`, outside this quest's files): the `e2e` check proves nothing on
-this host. The job's PATH has newman 4.5.0, so `e2e_capture.sh` exits before it writes a report ("needs newman 6 or
-later"), and `run_all.sh`'s `run_e2e` then grades the fixed path `/tmp/xa_e2e_ours.json`, a stale report of
-2026-11-04 01:38, as GREEN (job 261108-214834-bcc874; the `tls` layer is skipped for the same reason). The `asan`
-check's `engine_e2e.sh` hits the same newman and its failure does not fail the check (261108-214834-1c3b6b exits 0
-with a Python traceback for the missing `strata.json`). Options: put newman 6 first on the jobs' PATH (a wrapper
-`exec npx -y newman@6.2.3`, as `tests/vm_sanitizers.sh` does), make `run_e2e` write to a fresh per-run path and fail
-when the capture fails, and make `engine_e2e.sh` exit with the assert's status. Recommendation: all three. Until
-then this quest's A17 evidence is its own job with newman 6 (261108-223127-f35eff). The same check at master's
-commit (261108-221920-0fcf05) shows it is pre-existing.
+The lead: the `tsan` check fails on master's own tests, the same way at master and on this branch. Job
+261108-224742-6f7cbc (branch, Xapiand:465f56bb5) and 261108-223749-0e083d (master, Xapiand:2173c17fe) fail the
+same two tests with the same reports: `test_index_pattern` (`test_a_zero_cap_is_refused`, lines 697/699/701;
+TSan data race in `test_the_walk_queue_is_bounded`) and `test_node`
+(`test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time`, `result.code == 0`; TSan thread
+leak in `RunningNode::RunningNode`). The other 35 of 37 pass on the branch. Pre-existing; not fixed here.
+Options: run `test_node` with `report_thread_leaks=0` as the old ledger did and fix the walk-queue race in its
+own quest, or accept the tsan check with these two named. Recommendation: the first. The A6/A8 TSan evidence
+meanwhile is the tsan check's other 35 tests plus the Linux VM tsan job.
+
+(Resolved: the `e2e` check's stale report and newman 4.5 were fixed by e2e-harness, Xapiand:c60138850.)
 
 ## Evidence
 
