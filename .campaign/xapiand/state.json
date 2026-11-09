@@ -753,18 +753,41 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/ci-quest-branches-strata",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-09T04:23:04",
+          "commit": "446410f6be2e05dd42e0cd665db76545cdd7782e",
+          "evidence": [
+            {
+              "cmd": "grep -qF \"'quest/**'\" .github/workflows/ci.yml",
+              "commit": "446410f6be2e05dd42e0cd665db76545cdd7782e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-003518-12bda2",
+              "level": "none",
+              "seconds": 0.7,
+              "state": "done",
+              "what": "ci-quest-branches-strata check yaml at 446410f6be2e"
+            }
+          ],
+          "final": true,
+          "from": "70df28d37cae04ee1253e2139dfffca16f5d7fc1",
+          "reason": "",
+          "tested": "446410f6be2e05dd42e0cd665db76545cdd7782e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "CI runs on campaign quest branches (strata)",
-      "updated": "2026-11-09T03:28:54",
-      "worktree": "../strata-wt/xapiand/ci-quest-branches-strata"
+      "updated": "2026-11-09T04:23:09",
+      "worktree": ""
     },
     "cjk-words": {
       "accepted": {},
