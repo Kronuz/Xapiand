@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: working
+State: waiting on jobs 261109-112947-1006c3 261109-112951-b8f62d
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,27 +10,28 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 ## Doing
 
 Step 3a (the log layer) is built and committed at strata:6a8bb32; its jobs run (build-test
-261109-112947-1006c3, mutants 261109-112951-b8f62d). Step 3b waits for the lead: Blocked on 1
-decides the deleted set it is built on, and the lead may want 3a reviewed alone first.
+261109-112947-1006c3, mutants 261109-112951-b8f62d). This contributor hands off here, before step
+3b's building, at its context budget; step 3b starts fresh from Next 2.
 
 ## Next
 
-1. The lead: rule on Blocked on 1 (the owner's) and 2, and on reviewing step 3a alone.
-2. Step 3b: `index.hh` on the log. `m_` becomes the log's state (`files::manifest` retires, and
+1. Record the two jobs' results in Evidence (cite them only if they passed at strata:6a8bb32).
+2. Step 3b, everything that does not touch the deleted set (lead, L3): `index.hh` on the log. `m_` becomes the log's state (`files::manifest` retires, and
    `manifest()` returns it); `commit_files` builds the edit from the head and the change list (D3)
    and appends it through `log_appender`, or rolls over by `log_within` (D7); `recover` reads with
    `read_log` and issues the open's one `sync_data` (D6.6, C4); `retain` keeps generations by D8,
    reading older logs with `read_log(..., to)`; `check()` replays the log against memory; the
    live-docs, metadata and field files retire; the allowance holds S only while a rollover is
    forced (C5); `pre_freeze` moves to 0x8000'0008; the writer drops its head on any exception from
-   `apply()` (A5's writer half).
+   `apply()` (A5's writer half). The deleted-set representation (Blocked on 1) goes in its own
+   commit once the owner answers; until then segments keep today's ordinal vectors.
 3. Step 3c: T4's cases 1 to 9 on faultfs (case 9 the kill between `pwrite` and `sync_data`), T6's
    oracle through the index, `media_test`; the 5-minute ASan+UBSan fuzz of `fuzz_manifest_log_file`
    and `fuzz_manifest_log` at the head marked ready; A9's integration jobs.
 
 ## Blocked on
 
-1. **SR3's deleted-set representation (A4, and A3's delete cost): the owner's call, per the quest.**
+1. **(With the owner; the lead recommended option 1.) SR3's deleted-set representation (A4, and A3's delete cost): the owner's call, per the quest.**
    Today a decoded segment holds its deleted set as 64-bit ordinals: a bitset decodes to 64x its
    bytes, and a delete edit merges into the whole vector, O(n) (SR2's 8.9 s for 128 one-ordinal
    edits on 20M documents, 10M deleted). Options:
@@ -46,7 +47,7 @@ decides the deleted set it is built on, and the lead may want 3a reviewed alone 
    3. Ordinals always (today), with an ordered container for O(k log n) deletes: 64x per bitset
       byte stays, plus the container's per-node overhead.
    Step 3a stopped there: nothing on the deleted set changed. The rest of 3a does not depend on it.
-2. **prospect's suite (A9) needs a companion change once step 3b lands.** prospect's tests read
+2. **Resolved by the lead (L1): a prospect companion quest after manifest-log.** prospect's suite (A9) needs a companion change once step 3b lands. prospect's tests read
    the old files: `format13_test.cc` rewrites manifests through `files::manifest` (about 30 sites),
    `reclaim_test.cc` decodes manifests and live-docs and metadata files, `media_test.cc` damages
    `fields-*` offsets, `fixtures_test.cc` pins `files::pre_freeze`, `directory_test.cc` plants
@@ -111,4 +112,14 @@ Not ready for review. Step 3a, the log layer, at strata:6a8bb32 (index.hh untouc
   costs the edit; equality stays a function of the segments.
 - R8: the sanitizer fuzz runs (both log targets, 5 minutes each) wait for the head marked ready,
   as the prompt asks; the replay of their corpora runs in every build.
+- Lead's rulings, 2026-11-09:
+  - L1: Blocked on 2 yes: the lead opens a prospect companion quest after manifest-log that repins
+    strata and moves prospect's tests to the log (the list under Blocked on 2 is its scope); A9's
+    jobs run prospect at its branch. This quest does not edit prospect.
+  - L2: step 3a gets no separate review; one durability and one security review at the head marked
+    ready. The decoder's fuzz targets (`fuzz_manifest_log`, `fuzz_manifest_log_file`) stay ready
+    for the security reviewer.
+  - L3: Blocked on 1 is with the owner (the lead recommended option 1). Step 3b continues on
+    everything that does not touch the deleted set; the deleted-set change lands in its own commit
+    when the answer arrives.
 
