@@ -30,7 +30,7 @@ you examined, failures included, and answer each message by its id (msg-N).
 | A1 | probe check 261108-225615-8a07ff at Xapiand:029b324e1 (a binary that exits 1: `run_all.sh e2e` exits 1) |
 | A2 | probe check 261108-225615-8a07ff (`engine_e2e.sh` exits 1 when the capture fails) |
 | A3 | probe check 261108-225615-8a07ff (`RUN_ALL_STRICT=1 run_all.sh tls` without newman 6 exits 1) |
-| A4 | manual, the lead 2026-11-08 22:55: at master (Xapiand:6756e1be9 tree, the main checkout) `BIN=<a binary that exits 1> harness/run_all.sh e2e` exits 0, VERDICT GREEN, graded from the stale /tmp/xa_e2e_ours.json of 2026-11-04; job 261108-225616-82557c reruns the probe there |
+| A4 | manual, the lead 2026-11-08 22:55: at master (Xapiand:6756e1be9 tree, the main checkout) `BIN=<a binary that exits 1> harness/run_all.sh e2e` exits 0, VERDICT GREEN, graded from the stale /tmp/xa_e2e_ours.json of 2026-11-04 (the revert check: the same probe exits 0 there, where it must exit 1) |
 
 ## Result
 
