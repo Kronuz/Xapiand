@@ -8987,18 +8987,41 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/wbuf-inline-prospect",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-09T11:44:38",
+          "commit": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-111045-1a22ee",
+              "level": "light",
+              "seconds": 154.9,
+              "state": "done",
+              "what": "wbuf-inline-prospect check build-test at 9b8826349cfe"
+            }
+          ],
+          "final": true,
+          "from": "b0c866541326dbf06169419e54fe87a2aa6c4cbb",
+          "reason": "",
+          "tested": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect repins strata with the inline write buffer",
-      "updated": "2026-11-09T10:57:44",
-      "worktree": "../prospect-wt/xapiand/wbuf-inline-prospect"
+      "updated": "2026-11-09T11:44:42",
+      "worktree": ""
     },
     "write-buffer": {
       "accepted": {},
