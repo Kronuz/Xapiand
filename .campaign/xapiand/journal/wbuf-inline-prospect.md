@@ -1,6 +1,6 @@
 # wbuf-inline-prospect: journal
 
-State: working
+State: waiting on jobs 261109-105845-6fd04e 261109-105846-df7232
 Quest: .campaign/xapiand/quests/wbuf-inline-prospect.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Pin commit prospect:63e11d3 (strata 9d52824 -> 3df7af4ff4ac, pin line only) on the branch. Jobs: 6fd04e = strata test/prospect_integration.sh (prospect branch vs strata 9d52824; ctest + churn/dump identity at threads 1,2); df7232 = build-test check.
 
 ## Next
 
-1. <step>
+1. When both pass, fill Evidence (A1,A3 from 6fd04e; A2 from df7232) and Result; set ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
