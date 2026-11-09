@@ -917,7 +917,7 @@
         }
       ],
       "consumes": [
-        "analysis"
+        "analysis:cjk-segmenter"
       ],
       "files": [
         "src/**",
@@ -1011,13 +1011,15 @@
         "correctness"
       ],
       "milestone": "Phase 5",
-      "needs": [],
+      "needs": [
+        "cjk-segmenter"
+      ],
       "provides": [],
       "repo": ".",
       "risk": "normal",
       "status": "active",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-09T14:15:54",
+      "updated": "2026-11-09T14:22:00",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "closing-benchmark": {
