@@ -3500,6 +3500,7 @@
         "test/**",
         "fuzz/**",
         "bench/manifest-log/**",
+        "bench/field_table/**",
         "docs/design/manifest-log.md",
         "docs/status/manifest-log*.md",
         "docs/reviews/manifest-log*.md",
@@ -3608,7 +3609,7 @@
       "risk": "high",
       "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-09T11:02:20",
+      "updated": "2026-11-09T13:25:40",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-steps12": {
