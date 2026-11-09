@@ -3563,7 +3563,8 @@
         "docs/status/manifest-log*.md",
         "docs/reviews/manifest-log*.md",
         "docs/mechanisms/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "tools/mutants/**"
       ],
       "history": [
         {
@@ -3667,7 +3668,7 @@
       "risk": "high",
       "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-09T13:25:40",
+      "updated": "2026-11-09T14:57:52",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
