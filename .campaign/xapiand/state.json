@@ -9581,6 +9581,39 @@
       "updated": "2026-11-09T10:50:31",
       "worktree": ""
     },
+    "x-pool-followups": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_pool.cc",
+        "tests/test_node.cc",
+        "src/database/pool.cc",
+        "src/database/pool.h",
+        "src/database/shard.cc",
+        "harness/restore_stream_check.sh"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "x-pool review follow-ups and the restore check's race",
+      "updated": "2026-11-09T14:23:17"
+    },
     "x-pool-step1": {
       "accepted": {},
       "after": [],
