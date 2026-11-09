@@ -500,15 +500,11 @@ XapiandManager::signal_loop()
 }
 
 
-// The idle work of the registry and the schema cache, once a minute: closes the indexes idle too long and
-// starts the housekeeping of the open ones as tasks of their own. Nothing here waits.
+// The idle work of the schema cache, once a minute; the index catalog's sweep closes idle indexes on its own
+// (docs/design/x-pool.md D8). Nothing here waits.
 void
 XapiandManager::housekeeping_tick()
 {
-	if (database_pool) {
-		database_pool->cleanup();
-		database_pool->housekeeping();
-	}
 	if (schemas) {
 		schemas->cleanup();
 	}
@@ -1100,6 +1096,15 @@ XapiandManager::join()
 	}
 
 
+	// The control loop's tasks still suspended (an autocommit that did not run, a wait the drains gave up on) go
+	// the same way, with the loop stopped: its scheduler closes and destroys them. Every root that may hold a pin
+	// is gone before the catalog's shutdown is awaited, which waits for every pin (x-pool C24).
+	if (!abandoned_) {
+		_rx->reactor.io().stop();
+		_rx->reactor.scheduler().close();
+		_rx->reactor.scheduler().destroy_roots();
+	}
+
 	////////////////////////////////////////////////////////////////////
 	if (database_pool) {
 		L(-LOG_NOTICE, NOTICE_COL, "Stop 3: the indexes");
@@ -1175,12 +1180,6 @@ XapiandManager::join()
 	}
 
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
-
-	// The control loop's tasks still suspended (an autocommit that did not run, a wait the drains gave up on) go
-	// the same way, with the loop stopped: its scheduler closes and destroys them.
-	_rx->reactor.io().stop();
-	_rx->reactor.scheduler().close();
-	_rx->reactor.scheduler().destroy_roots();
 
 	// The hosts before the reactors whose schedulers they wrap; the service destroys its reactors (phase 4).
 	http_hosts.clear();

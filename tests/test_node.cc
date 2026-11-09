@@ -36,6 +36,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -50,9 +51,12 @@
 #include "database/data.h"
 #include "database/flags.h"
 #include "database/handler.h"
+#include "database/lock.h"
+#include "engine/query.h"
 #include "database/pool.h"
 #include "database/schemas_lru.h"
 #include "database/shard.h"
+#include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
 #include "engine/chores.h"
@@ -71,7 +75,10 @@
 using namespace std::chrono_literals;
 
 struct PoolTestAccess {
-	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) { entry.chores = std::move(chores); }
+	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) {
+		entry.chores = std::move(chores);
+		entry.engine_->use_chores(entry.chores.get());
+	}
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 };
 
@@ -263,9 +270,16 @@ public:
 
 	bool ready() const { return ready_; }
 
-	// Whether run() ended (the node stopped itself), and the status the process would end with.
+	// Whether run() ended (the node stopped itself).
 	bool exited() const { return exited_.load(); }
-	int exit_code() const { return exit_code_.load(); }
+
+	// Joins the control loop's thread once run() ended, and gives the status the process ends with.
+	int join() {
+		if (thread_.joinable()) {
+			thread_.join();
+		}
+		return exit_code_.load();
+	}
 
 private:
 	std::thread thread_;
@@ -292,16 +306,16 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	Watchdog watchdog("one schema load");
 	constexpr int N = 6;
 	const auto endpoints = endpoints_of("schema_once");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
 	// A write applied and not yet refreshed: a read of the index takes its turn to refresh first.
-	Shard shard(*entry.get(), WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("K1")));
 	const auto loads_before = manager()->schemas->loads();
 	std::atomic<int> done{0};
 	std::vector<std::shared_ptr<const MsgPack>> got(N);
 	std::vector<std::thread> threads;
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		for (int i = 0; i < N; ++i) {
 			threads.emplace_back([&, i] {
 				DatabaseHandler handler(endpoints, DB_OPEN);
@@ -333,14 +347,14 @@ static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	Watchdog watchdog("one settings load");
 	constexpr int N = 6;
 	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
-	auto entry = manager()->database_pool->spawn(reserved[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("settings_once_marker")));   // so that a read of the index takes its turn
 	const auto loads_before = manager()->index_settings_resolver->loads();
 	std::atomic<int> done{0};
 	std::vector<std::thread> threads;
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		for (int i = 0; i < N; ++i) {
 			threads.emplace_back([&] {
 				auto settings = engine::sync_wait(XapiandManager::resolve_index_settings("settings_once"));
@@ -429,11 +443,11 @@ static void test_the_control_loop_is_free_during_a_slow_commit() {
 	Watchdog watchdog("slow commit");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_commit");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
-	auto gate = std::make_unique<GateChores>(A::take_chores(*entry.get()));
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
+	auto gate = std::make_unique<GateChores>(A::take_chores(entry.entry()));
 	auto* raw = gate.get();
-	A::set_chores(*entry.get(), std::move(gate));
-	Shard shard(*entry.get(), WRITE);
+	A::set_chores(entry.entry(), std::move(gate));
+	Shard shard = use_index(entry, WRITE);
 	engine::sync_wait(shard.ready());
 	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit
 	raw->arm();                                           // and the commit it starts waits for release()
@@ -459,14 +473,14 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 	Watchdog watchdog("slow schema load");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_schema");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("K1")));   // applied and not refreshed: the schema read takes the turn
 	std::atomic<bool> loaded{false};
 	std::atomic<int> sentinels{0};
 	const auto before = manager()->control_lag().snapshot();
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		manager()->spawn_control([](const Endpoints& endpoints, std::atomic<bool>& loaded) -> task::task<void> {
 			DatabaseHandler handler(endpoints, DB_OPEN);
 			co_await manager()->schemas->get(&handler, nullptr);
@@ -555,8 +569,8 @@ struct AbandonSpec {
 		std::_Exit(2);
 	}
 	manager()->shutdown_write_bound = spec.bound;
-	auto entry = manager()->database_pool->spawn(endpoints_of("abandon")[0]);
-	HoldTurn hold(*entry.get(), WRITE);
+	auto entry = pin_index(*manager()->database_pool, endpoints_of("abandon")[0].path, WRITE);
+	HoldTurn hold(entry.entry(), WRITE);
 
 	if (spec.request) {
 		const int fd = connect_to(abandon_port);
@@ -589,13 +603,14 @@ struct AbandonSpec {
 	if (spec.release_after.count() != 0) {
 		std::this_thread::sleep_for(spec.release_after);
 		hold.release();
-		entry.reset();   // the registry closes the index only once nobody refers to it
+		entry.release();   // the catalog closes the index only once nobody pins it
 		if (!eventually([&] { return node.exited(); }, 60s)) {
 			std::_Exit(7);
 		}
+		const int code = node.join();
 		Logging::finish();
 		Logging::join();
-		std::_Exit(node.exit_code());
+		std::_Exit(code);
 	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);
@@ -718,7 +733,7 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}   // one bound (and the log flush), where two bounds took more than twice the bound
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(log.find("pinned") != std::string::npos);   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the HTTP stop ended in its grace: the write was destroyed, not abandoned
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 
@@ -789,7 +804,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(log.find("pinned") != std::string::npos);   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the service itself stopped
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 }
@@ -867,9 +882,10 @@ static void test_a_second_signal_ends_the_shutdowns_wait() {
 	if (!eventually([&] { return node.exited(); }, 20s)) {
 		std::_Exit(5);   // still up, serving nothing
 	}
+	const int code = node.join();
 	Logging::finish();
 	Logging::join();
-	std::_Exit(node.exit_code());
+	std::_Exit(code);
 }
 
 static void test_a_node_on_a_taken_port_ends_the_process() {
@@ -890,14 +906,14 @@ static void test_the_control_loop_is_free_during_a_settings_load() {
 	Watchdog watchdog("slow settings load");
 	Pulse pulse;
 	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
-	auto entry = manager()->database_pool->spawn(reserved[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("slow_settings_marker")));   // so that a read of the index takes its turn
 	std::atomic<bool> resolved{false};
 	std::atomic<int> sentinels{0};
 	const auto before = manager()->control_lag().snapshot();
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		manager()->spawn_control([](std::atomic<bool>& resolved) -> task::task<void> {
 			co_await XapiandManager::resolve_index_settings("slow_settings");
 			resolved = true;
@@ -922,6 +938,170 @@ static void test_the_control_loop_is_free_during_a_settings_load() {
 	CHECK_LE(lag.p99_us, 16384u);
 }
 
+
+// A search over several indexes skips one that does not exist (a list or a pattern may name it): its pin's not_found
+// comes at the use, inside the read, where the batch skips it, not at lock_shard's pin.
+static void test_a_search_batch_skips_a_missing_index() {
+	Watchdog watchdog("a search batch skips a missing index");
+	auto endpoints = endpoints_of("batch_present");
+	{
+		auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE_QUIET);
+		Shard shard = use_index(entry, WRITE_QUIET);
+		engine::sync_wait(shard.add_document(make("K1")));
+		engine::sync_wait(shard.commit());
+	}
+	const auto missing = endpoints_of("batch_missing");
+	endpoints.add(missing[0]);
+	DatabaseHandler handler(endpoints, DB_OPEN);
+	const auto result = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body")));   // its batches
+	CHECK_EQ(result.hits.size(), 1u);
+	CHECK_FALSE(std::filesystem::exists(missing[0].path));
+}
+
+
+// A write that may not create its index, to an index that does not exist, is not_found (a 404), as a read of it
+// is: its use has no pin, and that use names the missing index rather than a closed one.
+static void test_a_write_to_a_missing_index_is_not_found() {
+	Watchdog watchdog("a write to a missing index is not_found");
+	const auto endpoints = endpoints_of("write_missing");
+	DatabaseHandler handler(endpoints, DB_OPEN | DB_WRITABLE);
+	engine::errc kind = engine::errc::internal;
+	try {
+		engine::sync_wait(handler.set_metadata(std::string("foo"), std::string("bar")));
+	} catch (const engine::Error& error) {
+		kind = error.kind;
+	}
+	CHECK(kind == engine::errc::not_found);
+	CHECK_FALSE(std::filesystem::exists(endpoints[0].path));
+}
+
+
+// A search that names one index twice pins it once and searches it at both positions: a second pin of a key in one
+// request would wait for itself while its index is replaced. The read waits for the held turn with every pin taken.
+static void test_a_search_batch_pins_a_repeated_index_once() {
+	Watchdog watchdog("a search batch pins a repeated index once");
+	auto& pool = *manager()->database_pool;
+	auto endpoints = endpoints_of("batch_repeated");
+	const std::string key = endpoints[0].path;
+	auto entry = pin_index(pool, key, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));
+	engine::sync_wait(shard.commit());
+	const auto once = engine::sync_wait(DatabaseHandler(endpoints, DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	Endpoint again = endpoints[0];
+	again.node_name += "_again";
+	endpoints.add(again);
+	REQUIRE(endpoints.size() == 2u);
+	const auto pins = [&] {
+		for (const auto& slot : pool.catalog().snapshot()) {
+			if (slot.key == key) {
+				return slot.pins;
+			}
+		}
+		return std::uint64_t{0};
+	};
+	const auto before = pins();
+	engine::sync_wait(shard.add_document(make("K2")));   // applied, not refreshed: the search's read takes the turn
+	std::size_t twice = 0;
+	{
+		HoldTurn hold(entry.entry(), WRITE_QUIET);
+		std::thread search([&] {
+			DatabaseHandler handler(endpoints, DB_OPEN);
+			twice = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body"))).hits.size();
+		});
+		CHECK(eventually([&] { return pins() > before; }, 3s));
+		std::this_thread::sleep_for(200ms);   // a second pin would come before the read, which waits for the turn
+		CHECK_EQ(pins(), before + 1);
+		hold.release();
+		search.join();
+	}
+	const auto after = engine::sync_wait(DatabaseHandler(endpoints_of("batch_repeated"), DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	CHECK_EQ(once, 1u);
+	CHECK_EQ(twice, 2 * after);
+}
+
+
+// A search's batch waits for its indexes with the request's token (its budget's): a cancelled search stops waiting.
+// Here its read waits for a turn another task holds.
+static void test_a_cancelled_search_stops_waiting_for_its_index() {
+	Watchdog watchdog("a cancelled search stops waiting");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("cancelled_search");
+	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: the search's read takes the turn
+	HoldTurn hold(entry.entry(), WRITE_QUIET);
+	task::cancel_source cancel;
+	task::budget budget(std::chrono::milliseconds(10), cancel.token());
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread search([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		handler.budget = &budget;
+		try {
+			engine::sync_wait(handler.get_mset(engine::Query::term("f", "body")));
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(100ms);
+	CHECK_FALSE(ended.load());
+	cancel.request();
+	CHECK(eventually([&] { return ended.load(); }, 3s));
+	hold.release();
+	search.join();
+	CHECK_TRUE(cancelled.load());
+}
+
+
+// A request's lock_shard waits for its index with the request's token: a cancelled request stops waiting with
+// task::cancelled. Here the index is being replaced, which waits for the pin still held.
+static void test_a_cancelled_request_stops_waiting_for_its_index() {
+	Watchdog watchdog("a cancelled request stops waiting");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("cancelled_request");
+	std::optional<IndexPin> holder(pin_index(pool, endpoints[0].path, WRITE_QUIET));
+	pin_index(pool, endpoints[0].path, WRITE_QUIET).reopen();   // the replace waits for the holder
+	task::cancel_source cancel;
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread request([&] {
+		lock_shard lk_shard(endpoints[0], WRITE_QUIET, cancel.token());
+		try {
+			engine::sync_wait(lk_shard.pin());
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(100ms);
+	CHECK_FALSE(ended.load());
+	cancel.request();
+	request.join();
+	CHECK_TRUE(cancelled.load());
+	holder.reset();
+	CHECK(static_cast<bool>(pin_index(pool, endpoints[0].path, WRITE_QUIET)));
+}
+
+
+// An autocommit whose turn does not come is armed again (x-pool D8): the write it could not commit is committed once
+// the turn is let go, with no other write to schedule it.
+static void test_a_busy_autocommit_comes_back_for_its_write() {
+	Watchdog watchdog("busy autocommit");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("busy_autocommit");
+	auto entry = pin_index(pool, endpoints[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE);
+	engine::sync_wait(shard.ready());
+	pool.set_turn_timeout(0.1);
+	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit (200 ms)
+	{
+		HoldTurn hold(entry.entry(), WRITE);
+		std::this_thread::sleep_for(700ms);   // its commit times out with busy, at least twice
+		CHECK(entry->is_modified());
+	}
+	CHECK(eventually([&] { return !entry->is_modified(); }, 3s));
+	pool.set_turn_timeout(DB_TIMEOUT);
+}
 
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
@@ -970,6 +1150,12 @@ int main(int argc, char** argv) {
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
+		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
+		{"test_a_write_to_a_missing_index_is_not_found", test_a_write_to_a_missing_index_is_not_found},
+		{"test_a_search_batch_pins_a_repeated_index_once", test_a_search_batch_pins_a_repeated_index_once},
+		{"test_a_cancelled_request_stops_waiting_for_its_index", test_a_cancelled_request_stops_waiting_for_its_index},
+		{"test_a_cancelled_search_stops_waiting_for_its_index", test_a_cancelled_search_stops_waiting_for_its_index},
+		{"test_a_busy_autocommit_comes_back_for_its_write", test_a_busy_autocommit_comes_back_for_its_write},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

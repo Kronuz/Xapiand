@@ -35,10 +35,9 @@
 
 
 // A use of an index: it pins the index (docs/design/x-pool.md D3) and makes the Shard through which the index is
-// read and written. `co_await pin()` takes the pin, before any view the request takes (D4); the index is opened,
-// and its turn taken, by the operations that need them.
+// read and written. `co_await pin()` takes the pin, before any view the request takes (D4): it opens or wakes the
+// index, and creates it when the flags ask; the turn is taken by the operations that need it.
 class lock_shard {
-	IndexPin _pin;
 	std::optional<Shard> _shard;
 
 	lock_shard(const lock_shard&) = delete;
@@ -50,7 +49,6 @@ public:
 	const task::cancel_token cancel;   // the request's token, for the Shard's turn waits
 
 	lock_shard(lock_shard&& other) noexcept :
-		_pin(std::move(other._pin)),
 		_shard(std::move(other._shard)),
 		flags(other.flags),
 		endpoint(other.endpoint),
@@ -68,7 +66,7 @@ public:
 		unlock();
 	}
 
-	// Pins the index and makes its Shard; a second call does nothing.
+	// Pins the index and makes its Shard; a second call does nothing. A missing index leaves the Shard unpinned.
 	task::task<void> pin()
 	{
 		if (!_shard) {
@@ -76,8 +74,16 @@ public:
 			if (!manager) {
 				throw engine::Error(engine::errc::internal, "No manager");
 			}
-			_pin = co_await manager->database_pool->pin(endpoint);
-			_shard.emplace(_pin.entry(), flags, cancel);
+			auto& pool = *manager->database_pool;
+			try {
+				_shard.emplace(co_await pool.pin(endpoint, flags, cancel), flags, cancel);
+			} catch (const engine::Error& error) {
+				if (error.kind != engine::errc::not_found) {
+					throw;
+				}
+				// A missing index fails at its use, where a search over several indexes skips it.
+				_shard.emplace(pool, endpoint.path, flags, cancel);
+			}
 		}
 	}
 
@@ -87,7 +93,6 @@ public:
 			_shard->release();
 			_shard.reset();
 		}
-		_pin.release();
 	}
 
 	Shard& operator*() const noexcept

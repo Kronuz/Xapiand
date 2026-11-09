@@ -42,6 +42,7 @@
 #include "database/handler.h"
 #include "database/pool.h"
 #include "database/shard.h"
+#include "pool_support.h"
 #include "engine/callbacks.h"
 #include "engine/document.h"
 #include "engine/error.h"
@@ -75,7 +76,6 @@ int docs_in(std::size_t i) {
 // 3K+2 shards, built once; a case searches the first n.
 struct Corpus {
 	DatabasePool pool{64};
-	std::vector<ReferencedShardEndpoint> entries;
 	std::vector<std::unique_ptr<Shard>> shards;
 	std::vector<engine::Shard*> engines;
 
@@ -84,8 +84,7 @@ struct Corpus {
 		for (std::size_t i = 0; i < SHARDS; ++i) {
 			const std::string path = "wide_test_" + std::to_string(i) + ".db";
 			std::filesystem::remove_all(path);
-			entries.push_back(pool.spawn(Endpoint(path)));
-			shards.push_back(std::make_unique<Shard>(*entries.back().get(), WRITE));
+			shards.push_back(std::make_unique<Shard>(pin_index(pool, path, WRITE), WRITE));
 			for (int j = 0; j < docs_in(i); ++j, ++n) {
 				engine::Document doc;
 				doc.set_key("k" + std::to_string(n));
@@ -117,7 +116,6 @@ struct Corpus {
 	}
 	~Corpus() {
 		shards.clear();
-		entries.clear();
 		for (std::size_t i = 0; i < SHARDS; ++i) {
 			std::filesystem::remove_all("wide_test_" + std::to_string(i) + ".db");
 		}

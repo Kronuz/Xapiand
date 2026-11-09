@@ -769,7 +769,7 @@ FetchContent_MakeAvailable(task)
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links (the pins above win where the same library is declared).
 # strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 276992822d49af3fcee678a72d04c43a9629adc7)  # strata main
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 5d742b2407f5048713cb39a625c017c455cb814e)  # strata main: the catalog host interface, destroy-safe pins with cancel tokens
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
 FetchContent_MakeAvailable(prospect)
 

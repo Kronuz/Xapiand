@@ -577,8 +577,8 @@ struct Walker {
 					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}
 			} catch (const index_pattern::WalkRefused& refused) {
+				retry_after = refused.retry_after;   // stored before `state`, which publishes it
 				state = refused.status == 429 ? over_queue : too_late;
-				retry_after = refused.retry_after;
 			} catch (const task::cancelled&) {
 				state = cancelled;
 			} catch (...) {
@@ -710,6 +710,7 @@ void test_a_zero_cap_is_refused() {
 int main(int argc, char** argv) {
 	struct TestCase { const char* name; void (*fn)(); };
 	const TestCase cases[] = {
+		{"test_a_zero_cap_is_refused", test_a_zero_cap_is_refused},   // first: it forks, before any test starts threads
 		{"test_match", test_match},
 		{"test_many_globstars_stay_linear", test_many_globstars_stay_linear},
 		{"test_expand", test_expand},
@@ -728,7 +729,6 @@ int main(int argc, char** argv) {
 		{"test_the_walk_queue_is_bounded", test_the_walk_queue_is_bounded},
 		{"test_a_walk_waits_for_the_deadline_at_most", test_a_walk_waits_for_the_deadline_at_most},
 		{"test_a_walk_that_is_cancelled_gives_its_place_back", test_a_walk_that_is_cancelled_gives_its_place_back},
-		{"test_a_zero_cap_is_refused", test_a_zero_cap_is_refused},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

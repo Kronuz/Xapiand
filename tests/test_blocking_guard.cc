@@ -22,7 +22,7 @@
 
 
 // The blocking guard (engine::check_may_block): engine::sync_wait and the registry's waiting entry points
-// (an immediate cleanup, clear) refuse to run inside a reactor loop's run() or on a task scheduler's
+// (a flush, the pool's join) refuse to run inside a reactor loop's run() or on a task scheduler's
 // thread, and run off the loop on a plain thread, and on the loop's thread after run() returns.
 
 #include "test_harness.h"
@@ -84,11 +84,12 @@ void on_loop(const std::function<void()>& fn) {
 // Opens an index through the registry: a wait for the open.
 void open_through_the_registry() {
 	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint("blocking_guard_test"));
-	Shard shard(*entry.get(), DB_WRITABLE | DB_CREATE_OR_OPEN);
-	engine::sync_wait(shard.ready());
-	entry.reset();
-	pool.clear();
+	{
+		Shard shard(engine::sync_wait(pool.pin(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN)), DB_WRITABLE | DB_CREATE_OR_OPEN);
+		engine::sync_wait(shard.ready());
+	}
+	pool.finish();
+	pool.join();
 }
 
 // An object whose destructor does database work.
@@ -105,9 +106,10 @@ void cleanup() {
 	engine::sync_wait(pool.flush());
 }
 
-void clear() {
+void join() {
 	DatabasePool pool(8);
-	pool.clear();
+	pool.finish();
+	pool.join();
 }
 
 void wait_answer() {
@@ -126,7 +128,7 @@ static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires([] { on_loop(wait_answer); }));
 	CHECK_TRUE(guard_fires([] { on_loop(open_through_the_registry); }));
 	CHECK_TRUE(guard_fires([] { on_loop(cleanup); }));
-	CHECK_TRUE(guard_fires([] { on_loop(clear); }));
+	CHECK_TRUE(guard_fires([] { on_loop(join); }));
 	CHECK_TRUE(guard_fires(destroy_on_loop));
 }
 
@@ -172,7 +174,7 @@ static void test_quiet_off_loop() {
 		on_loop([] { });
 		open_through_the_registry();  // the loop's thread, after run() returns
 		cleanup();
-		clear();
+		join();
 		wait_answer();
 	}));
 
@@ -184,7 +186,7 @@ static void test_quiet_off_loop() {
 		worker = std::thread([&] {
 			open_through_the_registry();
 			cleanup();
-			clear();
+			join();
 			wait_answer();
 			done.set_value();
 		});

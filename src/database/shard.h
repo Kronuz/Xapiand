@@ -50,20 +50,31 @@ class Locator;
 //   ___) | | | | (_| | | | (_| |
 //  |____/|_| |_|\__,_|_|  \__,_|
 //
-// One use of an index: its registry entry and the flags the user asked with. Cheap to make and to drop.
+// One use of an index: its pin and the flags the user asked with. Cheap to make and to drop.
 // Every operation that can wait is a task, so the callers decide where it runs; a write takes the
 // index's turn and holds it for its apply, its revision update and its WAL line, nothing longer.
 class Shard {
-	std::shared_ptr<engine::Shard> kept_;  // the engine of the last ready(): a replacement cannot free it under a call
+	IndexPin pin_;
+	DatabasePool* pool_;
+	std::string path_;
+	bool stale_ = false;  // a failure asked for a fresh index: reopen() hands the pin back and pins again
+	bool missing_ = false;  // its index was missing at the pin: a use with no pin is not_found, not `closed`
 
 public:
-	ShardEndpoint& endpoint;
 	int flags;
 	// The request's token: this use's turn waits (a write's, a read's refresh) end when it is requested. Empty for
 	// work that is not cancelled, such as an admitted write (docs/design/phase7c.md D3).
 	task::cancel_token cancel;
 
-	Shard(ShardEndpoint& endpoint_, int flags_, task::cancel_token cancel_ = {});
+	// `pin` is the use's pin (lock_shard's, taken before any view, x-pool D4).
+	Shard(IndexPin pin, int flags_, task::cancel_token cancel_ = {});
+
+	// A use with no pin yet (its index was missing when it pinned): ready() pins it, or raises not_found again.
+	Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_ = {});
+
+	// The index's entry, under the pin; raises not_found while the index is missing, `closed` while a reopen left
+	// the use with no pin.
+	ShardEndpoint& endpoint() const;
 
 	bool is_local() const {
 		return true;
@@ -98,10 +109,10 @@ public:
 	// The end of the use: a restore that finishes deletes the log it did not write.
 	void release() noexcept;
 
-	// Opens the index when need be (a missing one is created when the flags say so) and keeps its engine.
+	// Pins the index again when a reopen gave the pin back (a missing one is created when the flags say so).
 	task::task<void> ready();
 
-	// The engine ready() kept; raises `closed` before one was.
+	// The engine of the pinned index; raises `closed` with no pin.
 	engine::Shard& engine();
 
 	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
@@ -110,10 +121,11 @@ public:
 	// The engine's integrity check of the index, in its turn (a missing index is opened, or created by the flags).
 	task::task<engine::CheckResult> check();
 
-	// Replaces an engine a failure marked stale; true when this call opened a new one.
+	// Hands the pin back when a failure marked the use stale, so the catalog replaces the index, and pins again;
+	// true when the use had no usable pin.
 	task::task<bool> reopen();
 
-	// Called from a catch block of a read ladder: marks the entry as the failure demands and rethrows when
+	// Called from a catch block of a read ladder: marks the use stale as the failure demands and rethrows when
 	// it is final or not a failure of the shard; otherwise the caller reopens.
 	void retry_read(const engine::Error& error, int t);
 
@@ -158,5 +170,6 @@ public:
 };
 
 
-// The debounced autocommit of an index: a commit in its own turn.
-task::task<void> autocommit(DatabasePool& pool, Endpoint endpoint);
+// The debounced autocommit of an index: a commit in its own turn, then its merges settled in another. True when a
+// merge is still pending, so the caller arms the autocommit again (x-pool D8).
+task::task<bool> autocommit(DatabasePool& pool, Endpoint endpoint);

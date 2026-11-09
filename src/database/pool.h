@@ -23,11 +23,11 @@
 
 #pragma once
 
-// The index registry (docs/design/phase7c.md D5). DatabasePool maps a path to a ShardEndpoint, the
-// entry of one index: its engine shard, the turn that serialises every operation on it, the
-// WorkGroup its device work runs in, and the state of its open and close. Nothing in it makes a
-// thread wait for another: opening is a single flight that concurrent users await as a task, a
-// close is announced by an event, and a turn is an async mutex with a deadline.
+// The index registry (docs/design/x-pool.md). DatabasePool is one strata catalog over the indexes of this
+// process, keyed by path; its payload, ShardEndpoint, is the entry of one index: its engine shard over the
+// catalog's index, the turn that serialises every write on it, and the WorkGroup its device work runs in. The
+// catalog opens, wakes, replaces and closes; a request names an index only through an IndexPin. Nothing in it
+// makes a thread wait for another: a pin is awaited as a task, and a turn is an async mutex with a deadline.
 
 #include "config.h"               // for XAPIAND_DATA_STORAGE
 
@@ -38,6 +38,7 @@
 #include <exception>            // for std::exception_ptr
 #include <functional>           // for std::function
 #include <memory>               // for std::shared_ptr
+#include <optional>             // for std::optional
 #include <mutex>                // for std::mutex
 #include <string>               // for std::string
 #include <utility>              // for std::pair
@@ -53,8 +54,14 @@
 #include "engine/open.h"        // for engine::default_readers_per_index
 #include "engine/shard.h"       // for engine::Shard
 #include "engine/types.h"       // for engine::rev, docid
-#include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
+#include "prospect/index.hh"    // for prospect::index
+#include "strata/core/catalog.hh"          // for strata::catalog
+#include "strata/core/resource_budget.hh"  // for strata::resource_budget
 #include "task.hh"              // for task::task, task::async_mutex, task::event
+
+// <sys/sysctl.h> (strata's resource budget, outside Linux) defines MIN and MAX, which Xapiand's enums name.
+#undef MIN
+#undef MAX
 
 
 using namespace std::chrono_literals;
@@ -69,7 +76,6 @@ class DatabaseWALWriter;
 class ReplayTarget;
 class DataStorage;
 class DatabasePool;
-class ReferencedShardEndpoint;
 class IndexPin;
 
 class WorkPool;
@@ -114,11 +120,12 @@ private:
 
 // Holds an index's turn. The turn covers an operation's apply, its revision update and its WAL
 // enqueue as one unit, so the WAL's order is the apply's order. A task holds one turn at most
-// (checked in debug builds when its host counts them).
+// (checked in debug builds when its host counts them). Its release checks the index in first
+// (strata's checkout contract): finished merges are published and released views freed (x-pool D5).
 class Turn {
 public:
 	Turn() noexcept = default;
-	Turn(task::async_mutex::guard guard, int* held) noexcept;
+	Turn(task::async_mutex::guard guard, int* held, prospect::index* index = nullptr) noexcept;
 	Turn(Turn&& other) noexcept;
 	Turn& operator=(Turn&& other) noexcept;
 	Turn(const Turn&) = delete;
@@ -133,6 +140,7 @@ public:
 private:
 	task::async_mutex::guard guard_;
 	int* held_ = nullptr;
+	prospect::index* index_ = nullptr;
 };
 
 
@@ -180,51 +188,35 @@ private:
 };
 
 
-// One registry entry: an index by path.
+// One index's entry (docs/design/x-pool.md D1): the catalog's payload, built in place by the open (open_payload,
+// which replays the WAL) and destroyed by the close, before the index. It holds what the catalog does not: the
+// turn, the device chores, the engine shard over the borrowed index, the revision, the commit's flight and the
+// blob storage. It is valid only under a pin.
 class ShardEndpoint : public Endpoint
 {
 	friend Shard;
 	friend ReplayTarget;
 	friend DatabasePool;
-	friend ReferencedShardEndpoint;
 	friend struct PoolTestAccess;  // tests/test_pool.cc
 
-public:
-	enum class State : std::uint8_t {
-		empty,    // no engine: the next user opens it
-		opening,  // one task is opening it; the others await it
-		open,
-		closing,  // one task is closing it; the others await `closed`
-	};
-
-private:
 	DatabasePool& database_pool;
 
-	std::atomic_int refs;           // the lock_shards and tasks that name this entry: it is not idle while any
-	std::atomic_bool finished;      // the node is shutting down
-
 	std::atomic<engine::rev> revision;
-	std::chrono::steady_clock::time_point renew_time;  // under the pool's mtx
 
-	// The state machine and what its waiters await, all under mtx (O(1) sections, no I/O).
-	mutable std::mutex mtx;
-	State state_ = State::empty;
-	struct OpenFlight;
-	std::shared_ptr<OpenFlight> flight_;
-	std::shared_ptr<task::event> closed_;
+	mutable std::mutex mtx;  // commit_flight_, uuid_ (O(1) sections, no I/O)
 
-	// A failure told the entry its engine cannot go on: the next user closes it and opens it again.
-	std::atomic_bool stale_;
-
-	// Every operation on the index takes this turn: a write's apply, revision update and WAL enqueue,
-	// a refresh, a commit, a close, the idle housekeeping.
+	// Every write on the index takes this turn: a write's apply, revision update and WAL enqueue, a refresh,
+	// a commit. A turn is held only under a pin, so with no pin it is free (the catalog's commit chore).
 	task::async_mutex turn;
-	std::unique_ptr<engine::Chores> chores;  // an IndexChores; tests put a wrapper in its place before the first open
+	std::unique_ptr<engine::Chores> chores;  // an IndexChores
 
-	// Set while open. Replaced only by a task that holds the turn.
-	std::shared_ptr<engine::Shard> engine_;
+	// The engine shard over the catalog's index and its views' handle, made by the open and never replaced: a
+	// fenced index is replaced by the catalog with a new entry (x-pool D2).
+	prospect::index::reader_handle readers_;
+	std::unique_ptr<engine::Shard> engine_;
+	prospect::index* index_ = nullptr;  // the catalog's, for the turn's check-in
 
-	// Written only under the turn.
+	// Written only under the turn (or by the catalog's commit chore, which no pin can overlap).
 	std::atomic_bool modified;              // applied since the last commit
 	std::atomic<std::uint64_t> applied_;    // the writes applied so far (a position of the commits)
 	std::uint64_t committed_ = 0;           // the writes the last commit covered
@@ -239,104 +231,72 @@ private:
 	struct CommitFlight;
 	std::shared_ptr<CommitFlight> commit_flight_;  // under mtx
 
-	std::atomic<int> last_flags_;            // the flags of the last write: the commit of a close follows its WAL setting
-	std::atomic<std::uint64_t> opens_;       // how many times the index was opened (the single flight keeps it at one per close)
+	std::atomic<int> last_flags_;            // the flags of the last write: the catalog's commit follows its WAL setting
+
+	// A write failed as only a fresh open fixes (fenced, corrupt): every use that ends hands its pin back, so the
+	// catalog replaces the index once its holders let go (x-pool D2).
+	std::atomic_bool stale_{false};
+	void note_failure(const engine::Error& error) noexcept;
 
 public:
-	ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
+	ShardEndpoint(DatabasePool& database_pool, std::string_view path);
+	ShardEndpoint(const ShardEndpoint&) = delete;
+	ShardEndpoint& operator=(const ShardEndpoint&) = delete;
 
 	~ShardEndpoint();   // debug builds abort when `outstanding()` is not empty (D14)
 
-	// What still uses the entry, or empty: references, the turn (held or awaited), the views readers hold.
+	// What still uses the entry, or empty: the turn (held or awaited).
 	std::string outstanding();
 
-	State state() const;
-	bool is_open() const {
-		return state() == State::open;
-	}
-
-	// The state is `open` when this returns, or it throws: it opens the index when it is empty (the
-	// first caller does, the others await it), awaits a close in progress, and replaces an engine a
-	// failure marked stale. `flags` decide whether a missing index is created.
-	task::task<void> ensure_open(int flags);
-
-	// The index's turn, with the index open: awaits the turn with a deadline of DB_TIMEOUT and answers
-	// engine::errc::busy when it does not come, or task::cancelled when `cancel` (the request's token) is
-	// requested first. A turn that came for an entry that closed meanwhile is given back and the open awaited again.
+	// The index's turn, under the caller's pin: awaits the turn with a deadline of DB_TIMEOUT and answers
+	// engine::errc::busy when it does not come, or task::cancelled when `cancel` (the request's token) is requested first.
 	task::task<Turn> take_turn(int flags, task::cancel_token cancel = {});
 
 	// Awaits a refresh when something was applied since the last one, so a read sees it (a turn and a
 	// query chore); nothing otherwise.
 	task::task<void> fresh(int flags, task::cancel_token cancel = {});
 
-	// The engine, for a caller that has seen the index open.
+	// The engine, for a caller that holds a pin.
 	engine::Shard& engine();
 
 	// Commits what is applied: the blob storage, the engine, then the WAL line, all in one turn. A write
-	// that a commit already in flight covers joins it. True when a commit made a new revision.
-	task::task<bool> commit(int flags, bool wal);
+	// that a commit already in flight covers joins it. True when a commit made a new revision. `cancel` ends the
+	// wait for the turn (a FLUSH's request).
+	task::task<bool> commit(int flags, bool wal, task::cancel_token cancel = {});
 
-	// Marks the index closing if it is open and no more than `own_refs` name it. Called under the pool's
-	// lock, which every use of the entry also takes: a use that came first is seen in refs, and one that
-	// comes after awaits the close. True when it marked.
-	bool begin_idle_close(int own_refs = 0);
-
-	// The close that begin_idle_close started: the turn, a commit of what is pending, the close chore.
-	task::task<void> finish_idle_close();
-
-	// The idle housekeeping: publishes finished merges and frees what is queued for removal.
-	task::task<void> housekeeping();
-
-	// True when the housekeeping has something to do: the entry is open and owes background work.
-	bool housekeeping_due() const;
-
-	// Tells the entry the engine cannot go on; the next user closes it and opens it again.
-	void mark_stale() noexcept {
-		stale_.store(true, std::memory_order_release);
-	}
+	// In a turn of its own: publishes the merges that finished and syncs their output when nothing else is
+	// uncommitted (no revision, no WAL line). True while a merge is still pending or its output unsynced (x-pool D8).
+	task::task<bool> settle_merges(int flags);
 
 	engine::rev get_revision() const;
 	void set_revision(engine::rev revision);
-
-	bool is_finished() const {
-		return finished.load(std::memory_order_relaxed);
-	}
-
-	// How many times the index has been opened.
-	std::uint64_t opens() const {
-		return opens_.load(std::memory_order_relaxed);
-	}
-
-	// In use or not empty: the pool keeps the entry.
-	bool is_used() const;
-
-	// What still uses the entry, for the shutdown's report: its path, whether its turn is held and by how many
-	// references; empty when nothing does. `own_refs` are the references of the caller's own.
-	std::string busy_line(int own_refs = 0);
 
 	// Applied since the last commit.
 	bool is_modified() const {
 		return modified.load(std::memory_order_relaxed);
 	}
 
-	// The engine's uuid, once open; the data storage's volumes carry it.
+	// The engine's uuid; the data storage's volumes carry it.
 	std::string uuid() const {
 		std::lock_guard<std::mutex> lk(mtx);
 		return uuid_;
 	}
 
 	std::string __repr__() const;
-	std::string dump_databases(int level) const;
 
 private:
-	std::string uuid_;  // set when opened, under mtx; the data storage's volumes carry it
+	std::string uuid_;  // set by the open, under mtx
 
 	DatabaseWALWriter& wal_writer() const;
 
-	std::shared_ptr<engine::Shard> engine_ptr() const;
+	// The open's work on the catalog's index (open_payload, x-pool D6): the engine shard over it, the blob
+	// storage, and the WAL replayed with chores inline. The slot is `opening`, so no pin sees any of it first.
+	void open_blocking(prospect::index& index);
 
-	// A failure the engine reports: one it cannot go on from marks the entry stale.
-	void note_failure(const engine::Error& error) noexcept;
+	// The catalog's commit chore (x-pool D7, C24): runs with no pin held, under the chore's lease, at the bound
+	// close, at shutdown, in a replace close and in a demotion that only syncs a merge's output. With nothing
+	// applied since the last commit it writes nothing, no WAL line included (C25).
+	void commit_blocking();
 
 	// The operations of a write, which run under the index's turn (or alone, while the index is opened and
 	// its log replayed) on the engine and the chores they are given. A write is applied, counted and logged here.
@@ -362,72 +322,23 @@ private:
 	std::string storage_read_blocking(const Locator& locator);
 	std::string storage_read_blocking(std::string_view key);
 #endif /* XAPIAND_DATA_STORAGE */
-
-	// Opens the engine and the blob storage, and replays the WAL (shard.cc).
-	void open_index_blocking(int flags);
-	task::task<void> open_index(int flags);
-	task::task<void> close_marked(bool commit_);
-	void settle_open(State state, const std::shared_ptr<OpenFlight>& flight, std::exception_ptr error) noexcept;
 };
 
 
-class ReferencedShardEndpoint {
-	ShardEndpoint* ptr;
-
-public:
-	ReferencedShardEndpoint(ShardEndpoint* ptr) : ptr(ptr) {
-		if (ptr) {
-			++ptr->refs;
-		}
-	}
-
-	ReferencedShardEndpoint(const ReferencedShardEndpoint& other) = delete;
-	ReferencedShardEndpoint& operator=(const ReferencedShardEndpoint& other) = delete;
-
-	ReferencedShardEndpoint(ReferencedShardEndpoint&& other) : ptr(other.ptr) {
-		other.ptr = nullptr;
-	}
-
-	ReferencedShardEndpoint& operator=(ReferencedShardEndpoint&& other) {
-		reset();
-		ptr = other.ptr;
-		other.ptr = nullptr;
-		return *this;
-	}
-
-	~ReferencedShardEndpoint() noexcept {
-		reset();
-	}
-
-	void reset() noexcept {
-		if (ptr) {
-			ptr->refs.fetch_sub(1);
-			ptr = nullptr;
-		}
-	}
-
-	explicit operator bool() const {
-		return !!ptr;
-	}
-
-	ShardEndpoint* operator->() const {
-		return ptr;
-	}
-
-	ShardEndpoint* get() const {
-		return ptr;
-	}
-};
+// The catalog of this process's indexes (strata's, docs/mechanisms/catalog.md), keyed by path.
+using IndexCatalog = strata::catalog<prospect::index, ShardEndpoint>;
 
 
 // A pin on an index (docs/design/x-pool.md D3): while held, the index stays open and its entry valid. Taken with
 // `co_await pool.pin(...)`, before any view the request takes (D4). Outside the registry, it is the only way
-// Xapiand names an index; it is backed by the entry's `refs` until the catalog's pins replace them.
+// Xapiand names an index.
 class IndexPin {
-	ReferencedShardEndpoint ref_{nullptr};
+	IndexCatalog::pin pin_;
+	DatabasePool* pool_ = nullptr;
 
 	friend DatabasePool;
-	explicit IndexPin(ReferencedShardEndpoint ref) noexcept : ref_(std::move(ref)) { }
+	friend struct PoolTestAccess;  // tests/test_pool.cc
+	IndexPin(IndexCatalog::pin pin, DatabasePool& pool) noexcept : pin_(std::move(pin)), pool_(&pool) { }
 
 public:
 	IndexPin() noexcept = default;
@@ -435,19 +346,28 @@ public:
 	IndexPin& operator=(IndexPin&&) noexcept = default;
 
 	explicit operator bool() const noexcept {
-		return static_cast<bool>(ref_);
+		return static_cast<bool>(pin_);
 	}
 
 	// The index's entry, valid for the pin's life only.
 	ShardEndpoint& entry() const noexcept {
-		return *ref_.get();
+		return pin_.payload();
 	}
 	ShardEndpoint* operator->() const noexcept {
-		return ref_.get();
+		return &pin_.payload();
 	}
 
+	// The registry the pin is of; null for an empty pin.
+	DatabasePool* pool() const noexcept {
+		return pin_ ? pool_ : nullptr;
+	}
+
+	// The holder of an index that cannot go on (fenced, or failing as only a fresh open fixes) hands its pin back:
+	// the catalog replaces the index once its other holders let go, and the holder pins again by key (x-pool D2).
+	void reopen() noexcept;
+
 	void release() noexcept {
-		ref_.reset();
+		pin_.release();
 	}
 };
 
@@ -461,42 +381,61 @@ public:
  *
  */
 
-class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
-	friend ShardEndpoint;
-	friend struct PoolTestAccess;  // tests/test_pool.cc
+// The catalog's sweep (x-pool D8, D13): how often it runs, how long an unpinned index idles before it is demoted, then
+// closed, and how long a missing index's negative entry stays. Zero keeps strata's default (1 s, 30 s, 10 min, 10 s).
+struct IndexSweep {
+	std::chrono::nanoseconds period{0};
+	std::chrono::nanoseconds demote_idle{0};
+	std::chrono::nanoseconds close_idle{0};
+	std::chrono::nanoseconds negative_ttl{0};
+};
 
-	mutable std::mutex mtx;        // the map: O(log n) work, no I/O
+
+class DatabasePool {
+	friend ShardEndpoint;
+	friend IndexPin;
+	friend struct PoolTestAccess;  // tests/test_pool.cc
 
 	std::atomic_bool finished_;
 
-	// The host's workers: one pool for every index, each index a group on it.
+	// The host's workers: one pool for every index, each index a group on it; the catalog's chores and the
+	// indexes' background work run on the executor over it.
 	std::unique_ptr<WorkPool> work_pool_;
 	std::unique_ptr<strata::executor> executor_;
 
 	// Where tasks started by a timer run (the control loop); null runs them to their end on the calling thread.
 	std::atomic<engine::Host*> control_;
 
-	// Marks the entries to close under the map's lock: the idle ones, or every unused one when immediate.
-	std::vector<ReferencedShardEndpoint> begin_closes(bool immediate);
-
 	std::atomic<double> turn_timeout_;                  // seconds a turn may be awaited before the request is told `busy`
 	std::atomic<std::uint64_t> buffered_docs_cap_;      // documents an index buffers before a write owes a flush; 0: the index's own bound
-	std::atomic<std::size_t> readers_per_index_;        // the hazard records each index gives its readers (D6, C9)
+	std::atomic<std::size_t> readers_per_index_;        // the views of one index held at once (strata R4.1's reader_records)
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
-	std::atomic_bool housekeeping_active_;              // a housekeeping pass is running
-	std::atomic<std::uint64_t> housekeeping_turns_{0};    // slices the passes looked at
-	std::atomic<std::uint64_t> housekeeping_spawned_{0};  // entries the passes started the housekeeping of
+	std::size_t soft_open_ = 0;                         // the catalog's soft_open (D11)
+	std::chrono::milliseconds patience_{30s};           // how long the destructor waits for the shutdown before debug builds abort
+	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
+	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
 
-	task::task<void> housekeeping_pass(std::size_t slice);
+	// The catalog's timer, its budget, its shutdown, and the catalog, in the order they are made: the catalog goes
+	// first, while its timers can still fire (its destructor waits for them).
+	struct Timer;
+	std::unique_ptr<Timer> timer_;
+	std::unique_ptr<strata::resource_budget> budget_;
+	struct Shutdown;
+	std::mutex shutdown_mtx_;
+	std::shared_ptr<Shutdown> shutdown_;  // under shutdown_mtx_
+	std::unique_ptr<IndexCatalog> catalog_;
 
-	ReferencedShardEndpoint _spawn(const Endpoint& endpoint);
-	ReferencedShardEndpoint _get(const Endpoint& endpoint) const;
+	IndexCatalog::host make_host(std::size_t database_pool_size, const IndexSweep& sweep);
+
+	// Starts the catalog's shutdown once; what it awaits ends on the thread that releases the last pin or chore.
+	Shutdown& begin_shutdown();
 
 public:
-	// `readers_per_index` is the views of one index the host's threads hold at once (a search holds one per index it
-	// reads); a read that finds none free in its index answers busy (503).
-	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index);
+	// `database_pool_size` is the open indexes the catalog's sweep keeps (soft_open). `readers_per_index` is the
+	// views of one index the host's threads hold at once (a search holds one per index it reads); a read past it
+	// answers busy (503).
+	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index, IndexSweep sweep = {});
 	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;
@@ -509,6 +448,14 @@ public:
 	}
 	strata::executor& executor() noexcept {
 		return *executor_;
+	}
+	IndexCatalog& catalog() noexcept {
+		return *catalog_;
+	}
+
+	// The open indexes the sweep keeps (soft_open): the pool size, at most what the descriptors' soft cap holds (D11).
+	std::size_t soft_open() const noexcept {
+		return soft_open_;
 	}
 
 	void set_control(engine::Host* control) noexcept {
@@ -532,8 +479,14 @@ public:
 		wal_writer_.store(writer, std::memory_order_release);
 	}
 
-	// Runs a task that no request awaits (a timer's commit, an idle close): on the control loop when
-	// there is one, else to its end on this thread.
+	// Gives the indexes' files another IO (a test's strata::faultfs); set before the first pin. An IO with no index
+	// in it is a missing index, created by a create pin.
+	void set_index_io(std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> io) {
+		index_io_ = std::move(io);
+	}
+
+	// Runs a task that no request awaits (a timer's commit): on the control loop when there is one, else to its
+	// end on this thread.
 	void run_detached(task::task<void> t);
 
 	// The tasks run_detached posted to the control loop that have not ended. A shutdown that stops the loop
@@ -542,58 +495,38 @@ public:
 		return detached_.load();
 	}
 
-	// A request's pin on the index of this path (D3, D4). A task that holds a view and pins fails the view rule
-	// (debug builds): a pin may open or wake its index, which a held view could be keeping from happening.
-	task::task<IndexPin> pin(const Endpoint& endpoint);
+	// A request's pin on the index of this path (D3, D4): it opens the index, or wakes it, and a missing one is
+	// created when `flags` ask for DB_CREATE_OR_OPEN (the create intent, F1); otherwise it raises not_found. A task
+	// that holds a view and pins fails the view rule (debug builds): a pin may open or wake its index, which a held
+	// view could be keeping from happening. A requested `cancel` ends the wait with task::cancelled (the open it
+	// started goes on); a pin of a key the task already pins waits for itself while that index is replaced.
+	task::task<IndexPin> pin(const Endpoint& endpoint, int flags, task::cancel_token cancel = {});
 
-	// A chore's resident pin (the autocommit): it opens nothing, and an index that is not open gives an empty pin
-	// (one that closed was committed by its close).
-	task::task<IndexPin> pin_chore(const Endpoint& endpoint);
+	// A chore's resident pin (the autocommit, FLUSH): it opens nothing, and an index that is not open gives an
+	// empty pin (one that closed was committed by its close), as does one whose open failed (C25). A requested
+	// `cancel` ends the wait with task::cancelled.
+	task::task<IndexPin> pin_chore(const Endpoint& endpoint, task::cancel_token cancel = {});
 
-	// The entry of this path, referenced so that it stays until the reference ends. Never waits. The registry's
-	// own and its tests'; requests and chores take a pin.
-	ReferencedShardEndpoint spawn(const Endpoint& endpoint);
-	ReferencedShardEndpoint get(const Endpoint& endpoint) const;
-
-	std::vector<ReferencedShardEndpoint> endpoints() const;
-
-	// The entries something still uses (a task on a turn, a lease, a view), one line each. For the shutdown's
-	// report of what it abandoned.
+	// The indexes something still holds (a pin, a transition), one line each. For the shutdown's report of what
+	// it abandoned.
 	std::vector<std::string> busy();
 
-	// Closes the entries nobody uses that have been idle long, and the ones past the pool's size.
-	// A close is a task of its own: this returns without waiting for it.
-	void cleanup();
+	// Commits every open index (FLUSH, x-pool D8): each key of the catalog's snapshot is pinned resident and
+	// committed; one closed in between was committed by its close. A requested `cancel` ends it at its next pin.
+	task::task<void> flush(task::cancel_token cancel = {});
 
-	// Closes every index nobody uses (FLUSH) and returns once they are closed.
-	task::task<void> flush();
-
-	// The entries a housekeeping turn looks at before it yields the control loop.
-	static constexpr std::size_t housekeeping_slice = 256;
-
-	// The idle housekeeping of every open index that owes work: publishes finished merges and frees queued
-	// files. The pass is a task of its own that looks at `slice` entries per turn and yields between turns, so
-	// it never holds the control loop (or the registry's lock) for more than one slice; a pass still running
-	// makes this a no-op.
-	void housekeeping(std::size_t slice = housekeeping_slice);
-
-	// The slices the passes have looked at, and the entries they started a housekeeping task for.
-	std::uint64_t housekeeping_turns() const noexcept { return housekeeping_turns_.load(); }
-	std::uint64_t housekeeping_spawned() const noexcept { return housekeeping_spawned_.load(); }
-
-	// Shutdown: no new use. join() is called until it returns true; it closes the entries nobody
-	// uses and runs on a thread that may wait (the main thread), never on a loop.
+	// Shutdown: no new use. join() is called until it returns true; it runs on a thread that may wait (the main
+	// thread), never on a loop. Every root that holds a pin is destroyed before (C24).
 	void finish();
 
+	// Awaits the catalog's shutdown until `wakeup`: every index committed and closed. True once it ended.
 	bool join(std::chrono::steady_clock::time_point wakeup);
 
 	bool join(std::chrono::milliseconds timeout = 60s) {
 		return join(std::chrono::steady_clock::now() + timeout);
 	}
 
-	// Closes every entry nobody uses; false while any is still open or in use.
-	bool clear();
-
+	// The indexes the catalog has (any state but free), and of them the ones open (open or owed).
 	std::pair<size_t, size_t> count();
 
 	std::string __repr__() const;

@@ -37,7 +37,8 @@
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
 #include "engine/chores.h"          // for engine::Chores
-#include "engine/open.h"            // for engine::open_local
+#include "engine/open.h"            // for engine::OpenOptions
+#include "engine/strata/shard.h"    // for engine::strata::borrow
 #include "engine/sync.h"            // for engine::sync_wait
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
@@ -330,19 +331,14 @@ DataStorage::open(std::string_view relative_path)
  * the parts that touch the engine, the blob storage and the WAL
  */
 
-ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint) :
-	Endpoint(endpoint),
-	database_pool(database_pool),
-	refs(0),
-	finished(false),
+ShardEndpoint::ShardEndpoint(DatabasePool& database_pool_, std::string_view path_) :
+	Endpoint(path_),
+	database_pool(database_pool_),
 	revision(0),
-	renew_time(std::chrono::steady_clock::now()),
-	stale_(false),
-	chores(std::make_unique<IndexChores>(*database_pool.work_pool_)),
+	chores(std::make_unique<IndexChores>(*database_pool_.work_pool_)),
 	modified(false),
 	applied_(0),
-	last_flags_(0),
-	opens_(0)
+	last_flags_(0)
 {
 }
 
@@ -350,23 +346,10 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 std::string
 ShardEndpoint::outstanding()
 {
-	if (const auto users = refs.load(); users != 0) {
-		return strings::format("{} references", users);
-	}
 	if (!turn.try_lock()) {
 		return "the turn is held or awaited";
 	}
 	turn.unlock();
-	std::shared_ptr<engine::Shard> eng;
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		eng = engine_;
-	}
-	if (eng) {
-		if (const auto claimed = eng->readers_claimed(); claimed != 0) {
-			return strings::format("{} views are claimed by readers", claimed);
-		}
-	}
 	return {};
 }
 
@@ -387,14 +370,6 @@ ShardEndpoint::wal_writer() const
 }
 
 
-std::shared_ptr<engine::Shard>
-ShardEndpoint::engine_ptr() const
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	return engine_;
-}
-
-
 void
 ShardEndpoint::note_failure(const engine::Error& error) noexcept
 {
@@ -403,7 +378,7 @@ ShardEndpoint::note_failure(const engine::Error& error) noexcept
 		case engine::errc::reopen:
 		case engine::errc::corrupt:
 		case engine::errc::database:
-			mark_stale();
+			stale_.store(true, std::memory_order_release);
 			break;
 		default:
 			break;
@@ -475,31 +450,29 @@ public:
 };
 
 
-// Opens the engine and the blob storage and replays the WAL, all in one chore: nobody else is on the
-// index (it is `opening`), so replay holds no turn and its writes run their chores inline. The engine
-// then takes the index's chores.
+// The open's work (open_payload, x-pool D6), in the catalog's open chore with the slot `opening`: nobody else is on
+// the index, so the replay holds no turn and its writes run their chores inline. The engine then takes the index's
+// chores. A throw fails the open, and the catalog destroys this entry, then the index.
 void
-ShardEndpoint::open_index_blocking(int flags)
+ShardEndpoint::open_blocking(prospect::index& index)
 {
-	L_CALL("ShardEndpoint::open_index_blocking(({}))", readable_flags(flags));
+	L_CALL("ShardEndpoint::open_blocking()");
 
-	L_DATABASE("Opening shard {} ({})", repr(to_string()), readable_flags(flags));
+	L_DATABASE("Opening shard {}", repr(to_string()));
 
 	engine::OpenOptions options;
 	options.chores = &engine::inline_chores();
 	options.host = true;
 	options.background = &database_pool.executor();
-	options.buffered_docs_cap = database_pool.buffered_docs_cap_.load(std::memory_order_relaxed);
-	options.readers_per_index = database_pool.readers_per_index_.load(std::memory_order_relaxed);
-	auto opened = engine::sync_wait(engine::open_local(path, true, has_db_create_or_open(flags), options));
-	std::shared_ptr<engine::Shard> eng(std::move(opened.shard));
+	index_ = &index;
+	readers_ = index.reader();
+	engine_ = engine::strata::borrow(index, readers_, path, options);
 
 	{
 		std::lock_guard<std::mutex> lk(mtx);
-		uuid_ = eng->uuid();
+		uuid_ = engine_->uuid();
 	}
-	opens_.fetch_add(1, std::memory_order_relaxed);
-	set_revision(eng->revision());
+	set_revision(engine_->revision());
 	modified.store(false, std::memory_order_relaxed);
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -516,9 +489,9 @@ ShardEndpoint::open_index_blocking(int flags)
 #endif  // XAPIAND_DATA_STORAGE
 
 #if XAPIAND_DATABASE_WAL
-	// A log that is ahead of the committed revision is replayed, whoever opens the index first.
-	if (!has_db_disable_wal(flags)) {
-		ReplayTarget target(*this, *eng, DB_WRITABLE | DB_OPEN);
+	// A log that is ahead of the committed revision is replayed by whoever opens the index: the open holds it.
+	{
+		ReplayTarget target(*this, *engine_, DB_WRITABLE | DB_OPEN);
 		DatabaseWAL wal(&target);
 		if (wal.execute()) {
 			modified.store(true, std::memory_order_relaxed);
@@ -528,115 +501,42 @@ ShardEndpoint::open_index_blocking(int flags)
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
-	eng->use_chores(chores.get());
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		engine_ = std::move(eng);
-		stale_.store(false, std::memory_order_release);
+	engine_->use_chores(chores.get());
+}
+
+
+// The catalog's commit chore (x-pool D7): no pin is held, so the turn is free, and the engine's chores run inline,
+// since this runs in a chore of the pool its group is on.
+void
+ShardEndpoint::commit_blocking()
+{
+	L_CALL("ShardEndpoint::commit_blocking()");
+
+	if (!modified.load()) {
+		// Nothing applied since the last commit: no revision and no WAL line (C25). A finished merge's output is all
+		// the index has to sync, which its commit does without a new revision.
+		if (index_->merge_output_unsynced()) {
+			index_->commit();
+		}
+		return;
 	}
-}
-
-
-task::task<void>
-ShardEndpoint::open_index(int flags)
-{
-	co_await chores->run(engine::ChoreClass::query, [this, flags] { open_index_blocking(flags); });
-}
-
-
-bool
-ShardEndpoint::begin_idle_close(int own_refs)
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	if (state_ != State::open || refs.load() > own_refs) {
-		return false;
-	}
-	state_ = State::closing;
-	closed_ = std::make_shared<task::event>();
-	return true;
-}
-
-
-task::task<void>
-ShardEndpoint::finish_idle_close()
-{
-	co_await close_marked(true);
-}
-
-
-// The close of an entry that is `closing`: the turn (so no operation is mid-call), a commit of what is
-// pending, the close chore, then `empty` and the event that the users who found it closing await.
-task::task<void>
-ShardEndpoint::close_marked(bool commit_)
-{
-	std::exception_ptr error;
-	{
-		// The turn covers the commit and the retirement; the wait for the readers that hold views of the
-		// index happens after it is released, so no reader waits on a turn that waits for it. The entry is
-		// `closing`, so whoever takes the turn next finds it unusable and awaits the close.
-		task::async_mutex::guard guard = co_await turn.lock();
-		auto eng = engine_ptr();
-		try {
-			if (eng) {
-				if (commit_ && modified.load() && !stale_.load()) {
-					const int saved = last_flags_.load();
-					co_await do_commit(*eng, *chores, saved ? saved : (DB_WRITABLE | DB_OPEN), true);
-				}
-				const bool released = co_await eng->begin_close();
-				guard.unlock();
-				if (!released) {
-					co_await eng->finish_close();
-				}
+	const bool locked = turn.try_lock();
+	assert(locked && "the catalog's commit chore runs with no pin, so with no turn held");
+	struct Restore {
+		ShardEndpoint& entry;
+		bool locked;
+		~Restore() {
+			entry.engine_->use_chores(entry.chores.get());
+			if (locked) {
+				entry.turn.unlock();
 			}
-		} catch (...) {
-			error = std::current_exception();
 		}
-#ifdef XAPIAND_DATA_STORAGE
-		writable_storage.reset();
-#endif  // XAPIAND_DATA_STORAGE
-		modified.store(false, std::memory_order_relaxed);
-		std::shared_ptr<task::event> closed;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			engine_.reset();
-			state_ = State::empty;
-			stale_.store(false, std::memory_order_release);
-			closed = std::move(closed_);
-		}
-		if (closed) {
-			closed->set();
-		}
-	}
-	if (error) {
-		try {
-			std::rethrow_exception(error);
-		} catch (const engine::Error& exc) {
-			L_WARNING("Closing {} failed: {}", repr(to_string()), exc.description());
-		} catch (const std::exception& exc) {
-			L_WARNING("Closing {} failed: {}", repr(to_string()), exc.what());
-		}
-	}
-}
-
-
-bool
-ShardEndpoint::housekeeping_due() const
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	return state_ == State::open && engine_ && engine_->merges_pending() > 0;
-}
-
-
-task::task<void>
-ShardEndpoint::housekeeping()
-{
-	auto eng = engine_ptr();
-	if (!eng || eng->merges_pending() == 0 || state() != State::open) {
-		co_return;
-	}
-	auto mine = co_await take_turn(DB_OPEN | DB_WRITABLE);
-	eng = engine_ptr();
-	co_await eng->reclaim();
+	} restore{*this, locked};
+	engine_->use_chores(&engine::inline_chores());
+	const int saved = last_flags_.load();
+	engine::BlockingAllowed blocking("the catalog's commit chore runs on a worker");
+	engine::sync_wait(do_commit(*engine_, engine::inline_chores(), saved ? saved : (DB_WRITABLE | DB_OPEN), true));
+	committed_ = applied_.load();
 }
 
 
@@ -653,7 +553,7 @@ struct ShardEndpoint::CommitFlight {
 
 
 task::task<bool>
-ShardEndpoint::commit(int flags, bool wal_)
+ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 {
 	L_CALL("ShardEndpoint::commit(({}), {})", readable_flags(flags), wal_);
 
@@ -680,11 +580,10 @@ ShardEndpoint::commit(int flags, bool wal_)
 		co_return joined->changed;
 	}
 
-	auto turn_ = co_await take_turn(flags);
+	auto turn_ = co_await take_turn(flags, std::move(cancel));
 	if (committed_ >= mine || !modified.load()) {
 		co_return false;  // a commit that ran while this one waited covers it
 	}
-	auto eng = engine_ptr();
 	auto flight = std::make_shared<CommitFlight>();
 	flight->covers = applied_.load();
 	{
@@ -694,7 +593,7 @@ ShardEndpoint::commit(int flags, bool wal_)
 	std::exception_ptr error;
 	bool changed = false;
 	try {
-		changed = co_await do_commit(*eng, *chores, flags, wal_);
+		changed = co_await do_commit(*engine_, *chores, flags, wal_);
 		committed_ = flight->covers;
 	} catch (const engine::Error& exc) {
 		note_failure(exc);
@@ -713,6 +612,24 @@ ShardEndpoint::commit(int flags, bool wal_)
 		std::rethrow_exception(error);
 	}
 	co_return changed;
+}
+
+
+task::task<bool>
+ShardEndpoint::settle_merges(int flags)
+{
+	L_CALL("ShardEndpoint::settle_merges(({}))", readable_flags(flags));
+
+	auto turn_ = co_await take_turn(flags);
+	bool pending = false;
+	co_await chores->run(engine::ChoreClass::flush, [this, &pending] {
+		index_->check_in();   // publishes the merges that finished
+		if (index_->merge_output_unsynced()) {
+			index_->commit();   // nothing else is uncommitted: no revision, so no WAL line (C25)
+		}
+		pending = index_->merges_pending() != 0 || index_->merge_output_unsynced();
+	});
+	co_return pending;
 }
 
 
@@ -1332,18 +1249,43 @@ ShardEndpoint::storage_read_blocking(std::string_view key)
  *
  */
 
-Shard::Shard(ShardEndpoint& endpoint_, int flags_, task::cancel_token cancel_)
-	: endpoint(endpoint_),
+Shard::Shard(IndexPin pin, int flags_, task::cancel_token cancel_)
+	: pin_(std::move(pin)),
+	  pool_(pin_.pool()),
+	  path_(pin_->path),
 	  flags(flags_),
 	  cancel(std::move(cancel_))
 {
 }
 
 
+Shard::Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_)
+	: pool_(&pool),
+	  path_(std::move(path)),
+	  missing_(true),
+	  flags(flags_),
+	  cancel(std::move(cancel_))
+{
+}
+
+
+ShardEndpoint&
+Shard::endpoint() const
+{
+	if (!pin_) {
+		if (missing_) {
+			throw engine::Error(engine::errc::not_found, "No such database: " + path_);
+		}
+		throw engine::Error(engine::errc::closed, "Database has been closed");
+	}
+	return pin_.entry();
+}
+
+
 std::shared_ptr<const Node>
 Shard::node() const
 {
-	return endpoint.node();
+	return pin_ ? endpoint().node() : Endpoint(path_).node();
 }
 
 
@@ -1352,24 +1294,28 @@ Shard::release() noexcept
 {
 #if XAPIAND_DATABASE_WAL
 	// A restore writes no log, so the log of what it replaced must not be replayed over it.
-	if (is_restore() && is_writable()) {
+	if (is_restore() && is_writable() && pin_) {
 		try {
-			endpoint.wal_writer().delete_wal(is_synchronous_wal(), endpoint.path);
+			endpoint().wal_writer().delete_wal(is_synchronous_wal(), endpoint().path);
 		} catch (...) {
-			L_EXC("Unable to delete the WAL of {}", repr(endpoint.to_string()));
+			L_EXC("Unable to delete the WAL of {}", repr(endpoint().to_string()));
 		}
 	}
 #endif
+	// A use ends with no map made outside the index's lease (x-pool D12).
+	assert(!pin_ || pin_->index_ == nullptr || pin_->index_->unleased_maps() == 0);
+	if (pin_ && pin_->stale_.load(std::memory_order_acquire)) {
+		pin_.reopen();   // a write found the index unusable: the catalog replaces it once its holders let go
+	}
 }
 
 
 task::task<void>
 Shard::ready()
 {
-	co_await endpoint.ensure_open(flags);
-	kept_ = endpoint.engine_ptr();
-	if (!kept_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
+	if (!pin_) {
+		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel);
+		missing_ = false;
 	}
 }
 
@@ -1377,29 +1323,28 @@ Shard::ready()
 engine::Shard&
 Shard::engine()
 {
-	if (!kept_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
-	return *kept_;
+	return endpoint().engine();
 }
 
 
 task::task<engine::Shard*>
 Shard::engine_for_read()
 {
-	co_await endpoint.fresh(flags, cancel);
-	kept_ = endpoint.engine_ptr();
-	if (!kept_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
-	co_return kept_.get();
+	co_await ready();
+	co_await endpoint().fresh(flags, cancel);
+	co_return &endpoint().engine();
 }
 
 
 task::task<bool>
 Shard::reopen()
 {
-	const bool replaced = endpoint.stale_.load(std::memory_order_acquire) || !kept_;
+	// A reopen may wait for the index's replacement, which waits for its views: a held view could be one.
+	engine::check_no_view_held("an open");
+	const bool replaced = stale_ || !pin_ || pin_->stale_.load(std::memory_order_acquire);
+	if (std::exchange(stale_, false) || (pin_ && pin_->stale_.load(std::memory_order_acquire))) {
+		pin_.reopen();   // the catalog replaces the index once its other holders let go (x-pool D2)
+	}
 	co_await ready();
 	co_return replaced;
 }
@@ -1410,14 +1355,14 @@ Shard::retry_read(const engine::Error& error, int t)
 {
 	switch (engine::read_fate(error.kind)) {
 		case engine::fate::retry_close:
-			if (t == 0) { endpoint.mark_stale(); throw; }
+			if (t == 0) { stale_ = true; throw; }
 			return;
 		case engine::fate::close_retry:
-			endpoint.mark_stale();
+			stale_ = true;
 			if (t == 0) { throw; }
 			return;
 		case engine::fate::close_fail:
-			endpoint.mark_stale();
+			stale_ = true;
 			throw;
 		case engine::fate::fail:
 			throw;
@@ -1438,12 +1383,12 @@ Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, siz
 			--valid;
 			return;
 		case engine::fate::close_retry:
-			endpoint.mark_stale();
+			stale_ = true;
 			eptr = std::current_exception();
 			--valid;
 			return;
 		case engine::fate::close_fail:
-			endpoint.mark_stale();
+			stale_ = true;
 			throw;
 		case engine::fate::fail:
 			throw;
@@ -1459,7 +1404,7 @@ Shard::commit(bool wal_)
 	assert(is_writable());
 	assert(is_write_active());
 
-	co_return co_await endpoint.commit(flags, wal_);
+	co_return co_await endpoint().commit(flags, wal_);
 }
 
 
@@ -1467,9 +1412,9 @@ Shard::commit(bool wal_)
 static void
 schedule_autocommit(const Shard& shard)
 {
-	if (shard.is_autocommit_active() && shard.endpoint.is_modified()) {
-		if (!XapiandManager::schedule_autocommit(shard.endpoint)) {
-			committer_commit(Endpoint(shard.endpoint));   // no control loop to wait on (the shutdown began): commit now
+	if (shard.is_autocommit_active() && shard.endpoint().is_modified()) {
+		if (!XapiandManager::schedule_autocommit(shard.endpoint())) {
+			committer_commit(Endpoint(shard.endpoint()));   // no control loop to wait on (the shutdown began): commit now
 		}
 	}
 }
@@ -1492,7 +1437,7 @@ Shard::finish_write(bool commit_, bool wal_)
 		if (error.kind != engine::errc::busy) {
 			throw;
 		}
-		L_WARNING("The commit of a write on {} waited too long for the index and was left to the autocommit", repr(endpoint.to_string()));
+		L_WARNING("The commit of a write on {} waited too long for the index and was left to the autocommit", repr(endpoint().to_string()));
 		schedule_autocommit(*this);
 	}
 }
@@ -1507,10 +1452,10 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_delete(*eng, flags, shard_did, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_delete(*eng, flags, shard_did, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1525,10 +1470,10 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_delete_term(*eng, flags, term, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_delete_term(*eng, flags, term, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1544,10 +1489,10 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		info = co_await endpoint.do_add(*eng, *endpoint.chores, flags, std::move(doc), wal_, version_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		info = co_await endpoint().do_add(*eng, *endpoint().chores, flags, std::move(doc), wal_, version_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1564,10 +1509,10 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		info = co_await endpoint.do_replace(*eng, *endpoint.chores, flags, shard_did, std::move(doc), wal_, version_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1584,10 +1529,10 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		info = co_await endpoint.do_replace_term(*eng, *endpoint.chores, flags, term, std::move(doc), wal_, version_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		info = co_await endpoint().do_replace_term(*eng, *endpoint().chores, flags, term, std::move(doc), wal_, version_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1603,10 +1548,10 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_add_spelling(*eng, flags, word, freqinc, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_add_spelling(*eng, flags, word, freqinc, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1622,10 +1567,10 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 
 	engine::termcount result;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		result = co_await endpoint.do_remove_spelling(*eng, flags, word, freqdec, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		result = co_await endpoint().do_remove_spelling(*eng, flags, word, freqdec, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return result;
@@ -1641,10 +1586,10 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_set_metadata(*eng, flags, key, value, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_set_metadata(*eng, flags, key, value, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1656,8 +1601,8 @@ Shard::check()
 	L_CALL("Shard::check()");
 
 	co_await ready();
-	auto turn = co_await endpoint.take_turn(flags, cancel);
-	co_return co_await endpoint.engine().check();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	co_return co_await endpoint().engine().check();
 }
 
 
@@ -1698,7 +1643,7 @@ Shard::get_metadata(const std::string& key)
 	if (!key.empty() && key[0] == '\x00') {
 		// The locator of a blob: a read of the data storage, in a chore.
 		co_await ready();
-		co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(std::string_view(key)); });
+		co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(std::string_view(key)); });
 		co_return value;
 	}
 #endif  // XAPIAND_DATA_STORAGE
@@ -1753,7 +1698,7 @@ Shard::storage_get_stored(const Locator& locator)
 
 	std::string value;
 	co_await ready();
-	co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(locator); });
+	co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(locator); });
 	co_return value;
 }
 
@@ -1764,7 +1709,7 @@ Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t s
 	L_CALL("Shard::upload_begin()");
 
 	co_await ready();
-	co_return co_await endpoint.upload_begin(chores, std::move(ct_type), size);
+	co_return co_await endpoint().upload_begin(chores, std::move(ct_type), size);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -1772,7 +1717,7 @@ Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t s
 std::string
 Shard::to_string() const
 {
-	return endpoint.to_string();
+	return pin_ ? endpoint().to_string() : Endpoint(path_).to_string();
 }
 
 
@@ -1787,23 +1732,26 @@ Shard::__repr__() const
 }
 
 
-// The debounced autocommit of an index: a commit in its own turn, under a chore's pin; nothing when the index
-// is no longer in the registry.
-task::task<void>
+// The debounced autocommit of an index: a commit in its own turn, under a chore's pin, then its merges settled; nothing
+// when the index is not open. A busy index's merges are published and synced here, since no write's turn may come.
+task::task<bool>
 autocommit(DatabasePool& pool, Endpoint endpoint)
 {
 	auto entry = co_await pool.pin_chore(endpoint);
 	if (!entry) {
-		co_return;
+		co_return false;
 	}
 	const auto start = std::chrono::steady_clock::now();
 	std::string error;
+	bool pending = false;
 	try {
 		co_await entry->commit(DB_OPEN | DB_WRITABLE, true);
+		pending = co_await entry->settle_merges(DB_OPEN | DB_WRITABLE);
+	} catch (const engine::Error& exc) {
+		pending = exc.kind == engine::errc::busy;   // the turn did not come: try again later
+		error = exc.description();
 	} catch (const Exception& exc) {
 		error = exc.get_message();
-	} catch (const engine::Error& exc) {
-		error = exc.description();
 	} catch (const std::exception& exc) {
 		error = exc.what();
 	}
@@ -1811,6 +1759,7 @@ autocommit(DatabasePool& pool, Endpoint endpoint)
 	if (error.empty()) {
 		L_DEBUG("Autocommit of {} succeeded after {}", repr(entry->to_string()), strings::from_delta(start, end));
 	} else {
-		L_WARNING("Autocommit of {} falied after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
+		L_WARNING("Autocommit of {} failed after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
 	}
+	co_return pending;
 }
