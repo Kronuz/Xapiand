@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) the developer's ledger for the Phase 7c Linux gate dry-run fixes and the two CI breaks of `ci/master-candidate`; local branch `phase7c/linux-gate-fixes`, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-03) the developer's ledger for the Phase 7c Linux gate dry-run fixes and the two CI breaks of `ci/master-candidate`; local branch `phase7c/linux-gate-fixes`, not pushed.
 
 # phase7c linux-gate-fixes (build): repair what the Linux dry run found
 

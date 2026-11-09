@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-29) Phase 7c step X1, branch `phase7c/x1-delete-xapian` (from master `Xapiand:3b0dc433f`); workstream x1-delete-xapian, developer. Local only, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-29) Phase 7c step X1, branch `phase7c/x1-delete-xapian` (from master `Xapiand:3b0dc433f`); workstream x1-delete-xapian, developer. Local only, not pushed.
 
 # X1: delete the Xapian path
 

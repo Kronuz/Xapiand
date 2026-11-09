@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-27) numeric-range workstream ledger; branch `fix/numeric-range`, local only, CR1 fixed, ready for re-check.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-27) numeric-range workstream ledger; branch `fix/numeric-range`, local only, CR1 fixed, ready for re-check.
 
 # numeric-range (fix, from side findings)
 

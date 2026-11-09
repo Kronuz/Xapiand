@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # strata-engine-write (S1, phase 7a)
 
 Branch `phase7a/strata-engine-write` from Xapiand master `eb83813a8`. Local only, not pushed, no CI run.

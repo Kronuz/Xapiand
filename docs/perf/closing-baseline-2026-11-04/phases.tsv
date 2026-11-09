@@ -1,0 +1,42 @@
+B1	143.9	S X E
+B2	86.2	S X E Q
+t1-r1	420.8	S Sp X E
+t2-r1	309.9	S Sp X E Q
+t4a-r1	149.1	S Sp X E Q
+t4b-r1	449.1	S Sp X E Q
+t5a-r1	287.2	S Sp X E Q
+t5b-r1	175.3	S Sp X E Q
+t6-r1	276.2	S Sp X E Q
+t7-r1	287.7	S Sp X E Q
+t1-r2	421.3	Sp X E S
+t2-r2	316.7	Sp X E Q S
+t4a-r2	147.9	Sp X E Q S
+t4b-r2	448.7	Sp X E Q S
+t5a-r2	260.1	Sp X E Q S
+t5b-r2	175.6	Sp X E Q S
+t6-r2	275.2	Sp X E Q S
+t7-r2	285.7	Sp X E Q S
+t1-r3	271.5	X E S Sp
+t2-r3	276.2	X Q S Sp
+t4a-r3	103.1	X E S Sp
+t4b-r3	461.7	X E Q S Sp
+t5a-r3	165.2	X S Sp
+t5b-r3	124.0	X E S Sp
+t6-r3	280.8	X E Q S Sp
+t7-r3	221.7	X Q S Sp
+t1-r4	305.5	E S Sp X
+t2-r4	278.6	Q S Sp X
+t4a-r4	97.9	E S Sp X
+t4b-r4	448.4	E Q S Sp X
+t5a-r4	166.0	S Sp X
+t5b-r4	124.8	E S Sp X
+t6-r4	274.0	E Q S Sp X
+t7-r4	220.3	Q S Sp X
+t1-r5	273.1	S Sp X E
+t2-r5	284.0	S Sp X Q
+t4a-r5	102.7	S Sp X E
+t4b-r5	451.1	Q S Sp X E
+t5a-r5	166.3	Sp X S
+t5b-r5	122.5	S Sp X E
+t6-r5	279.2	Q S Sp X E
+t7-r5	220.1	S Sp X Q

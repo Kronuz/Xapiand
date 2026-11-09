@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # Status: strata PHRASE with positions (phase7a/phrase)
 
 ## State

@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) the ledger for the task wave's second half: Xapiand on reactor R and http H1.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-03) the ledger for the task wave's second half: Xapiand on reactor R and http H1.
 
 # phase7c-http-wave
 

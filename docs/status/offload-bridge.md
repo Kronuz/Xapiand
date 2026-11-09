@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # offload-bridge (engine-core CR1, CR2; pool CR5)
 
 Branch `fix/offload-bridge` from Xapiand master `2726fd225` (local only, never pushed). Ruling:

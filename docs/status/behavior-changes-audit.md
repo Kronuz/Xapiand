@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03). Audit of every user-facing behaviour change in Xapiand since
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-03). Audit of every user-facing behaviour change in Xapiand since
 > v1.0.0-alpha.10 (`Xapiand:3fe13a2fb`): local master `Xapiand:b4636078d`, plus branches
 > `phase7c/http-wave` and `fix/wide-search-sr8`. Sources: the changelog's `[Unreleased]`, `git log
 > v1.0.0-alpha.10..master` (338 non-merge commits), an option-by-option diff of `src/opts.cc` and

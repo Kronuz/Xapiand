@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the gate-prep developer's ledger (phase 7c, before X7): the owed async rows, D16, absolute index paths, the security-review fixes (SR1 and the rest), dead includes; local branch `phase7c/gate-prep`, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-02) the gate-prep developer's ledger (phase 7c, before X7): the owed async rows, D16, absolute index paths, the security-review fixes (SR1 and the rest), dead includes; local branch `phase7c/gate-prep`, not pushed.
 
 # phase7c gate-prep (build): get master ready for the X7 gate
 

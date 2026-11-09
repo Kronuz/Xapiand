@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the X4 security re-check's conditions (X4-R1 to R4) are closed and proved on `phase7c/x4-r1`; not pushed, awaiting the reviewer's probes.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-02) the X4 security re-check's conditions (X4-R1 to R4) are closed and proved on `phase7c/x4-r1`; not pushed, awaiting the reviewer's probes.
 
 # phase7c X4-R1 (build): close the re-check's conditions
 
