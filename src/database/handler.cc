@@ -1289,12 +1289,16 @@ check_search_fanout(size_t shards, size_t max_search_indexes)
 size_t
 search_batch_indexes()
 {
+	// What the pool keeps open (soft_open): a batch never holds more (CT-R39).
+	auto manager = XapiandManager::manager();
+	const auto open = manager && manager->database_pool ? std::max<size_t>(1, manager->database_pool->soft_open())
+		: static_cast<size_t>(std::max<ssize_t>(1, opts.database_pool_size));
 	if (opts.concurrent_search_indexes > 0) {
-		return static_cast<size_t>(opts.concurrent_search_indexes);
+		return std::min(static_cast<size_t>(opts.concurrent_search_indexes), open);
 	}
 	// A reactor's share of the open indexes the pool holds.
 	const auto reactors = static_cast<size_t>(std::max<ssize_t>(1, opts.num_http_servers));
-	return std::max<size_t>(1, static_cast<size_t>(std::max<ssize_t>(1, opts.database_pool_size)) / reactors);
+	return std::max<size_t>(1, open / reactors);
 }
 
 

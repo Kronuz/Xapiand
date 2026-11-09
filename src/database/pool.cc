@@ -303,6 +303,8 @@ Turn::release() noexcept
 	// the owner's lease-less reads, which a writer makes under its turn (strata's checkout contract, x-pool D5).
 	if (auto* index = std::exchange(index_, nullptr); index && guard_) {
 		index->check_in();
+		// Under defer_io every map is made under the lease: a turn's apply never maps (x-pool D12).
+		assert(index->unleased_maps() == 0 && "an index mapped a record outside its lease");
 	}
 	if (held_) {
 		assert(*held_ > 0);
@@ -535,7 +537,9 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 	h.commit = [](ShardEndpoint& entry, prospect::index&) {
 		entry.commit_blocking();
 	};
-	h.soft_open = database_pool_size;
+	// A warm index holds one descriptor, so the pool keeps no more open than the descriptors' soft cap (D11).
+	soft_open_ = std::min<std::size_t>(database_pool_size, budget_->soft(strata::resource::descriptors));
+	h.soft_open = soft_open_;
 	const auto set = [](std::uint64_t& field, std::chrono::nanoseconds value) {
 		if (value.count() > 0) {
 			field = static_cast<std::uint64_t>(value.count());
@@ -544,6 +548,7 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 	set(h.sweep_period_ns, sweep.period);
 	set(h.demote_idle_ns, sweep.demote_idle);
 	set(h.close_idle_ns, sweep.close_idle);
+	set(h.negative_ttl_ns, sweep.negative_ttl);
 	return h;
 }
 

@@ -66,6 +66,7 @@
 #include "engine/query.h"
 #include "engine/search.h"
 #include "engine/sync.h"
+#include "engine/strata/owed.h"
 #include "compressor_lz4.h"
 #include "length.h"
 #include "node.h"
@@ -2154,6 +2155,135 @@ void test_the_sweeps_close_syncs_a_merges_output() {
 	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), written);
 }
 
+// A write to a demoted defer_io index applies after one promote() (XP5, D9): a resident pin is granted on `owed`
+// without a wake, so the write's apply answers map_owed; the turn's chore maps the bodies under the lease and the
+// same transaction is applied again. No map is made outside the lease (D12).
+void test_a_write_to_a_demoted_index_applies_after_one_promote() {
+	Watchdog watchdog("a write to a demoted index");
+	DatabasePool pool(8);
+	const auto path = fresh("map_owed");
+	std::uint32_t slot;
+	{
+		auto held = pin(pool, path);
+		slot = slot_of(held);
+		Shard shard = use(held, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		engine::sync_wait(shard.commit());
+	}
+	CHECK_TRUE(pool.catalog().begin_demote(slot));
+	pool.catalog().wait_chores();
+	CHECK_TRUE(state_of(pool, path) == strata::slot_state::owed);
+	const auto wakes = pool.catalog().stats().wakes_posted;
+	{
+		auto resident = engine::sync_wait(pool.pin_chore(Endpoint(path)));
+		CHECK_TRUE(static_cast<bool>(resident));
+		auto& index = A::index(resident.entry());
+		CHECK_TRUE(index.promote_owed());
+		Shard shard(std::move(resident), WRITE);
+		engine::sync_wait(shard.add_document(make("Kb", "b")));
+		CHECK_FALSE(index.promote_owed());   // promoted once, by the write's chore
+		CHECK_EQ(index.unleased_maps(), 0u);
+		engine::sync_wait(shard.commit());
+		CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
+	}
+	CHECK_EQ(pool.catalog().stats().wakes_posted, wakes);   // the write's own promote, not a wake
+	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), 2u);
+}
+
+// The owed answers' loop gives a transaction two owed answers and raises errc::internal at a third (XP5, D9), against
+// a stub that answers owed forever; one that is owed twice is applied after two settles.
+void test_a_third_owed_answer_is_internal() {
+	int applies = 0, settles = 0;
+	const auto settle = [&](strata::verdict::outcome) -> task::task<void> {
+		++settles;
+		co_return;
+	};
+	const auto forever = [&] {
+		++applies;
+		strata::verdict verdict;
+		verdict.result = strata::verdict::map_owed;
+		return verdict;
+	};
+	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(engine::strata::apply_settling(forever, settle)); }) == engine::errc::internal);
+	CHECK_EQ(applies, 3);
+	CHECK_EQ(settles, 2);
+	applies = settles = 0;
+	const auto twice = [&] {
+		strata::verdict verdict;
+		verdict.result = ++applies == 1 ? strata::verdict::map_owed : applies == 2 ? strata::verdict::drain_owed : strata::verdict::accepted;
+		return verdict;
+	};
+	CHECK_TRUE(engine::sync_wait(engine::strata::apply_settling(twice, settle)).result == strata::verdict::accepted);
+	CHECK_EQ(settles, 2);
+}
+
+// A request for a missing index leaves a negative entry under its name, and the sweep erases it once it is older than
+// its TTL (D13's fourth change): a scan of missing names holds one slot per name for the TTL and the passes after it.
+void test_the_sweep_erases_a_missing_index_negative_entries() {
+	Watchdog watchdog("negative entries");
+	IndexSweep sweep;
+	sweep.period = 1ms;
+	sweep.negative_ttl = 2s;
+	DatabasePool pool(8, 0, engine::default_readers_per_index, sweep);
+	constexpr int names = 100;
+	const auto failed = [&] {
+		int n = 0;
+		for (const auto& slot : pool.catalog().snapshot()) {
+			n += slot.state == strata::slot_state::failed;
+		}
+		return n;
+	};
+	for (int i = 0; i < names; ++i) {
+		const auto path = fresh(("missing_" + std::to_string(i)).c_str());
+		CHECK_TRUE(error_kind([&] { (void)pin(pool, path, DB_OPEN); }) == engine::errc::not_found);
+	}
+	CHECK_GE(failed(), 1);
+	CHECK_TRUE(until([&] { return failed() == 0; }, 10s));
+	CHECK_GE(pool.catalog().stats().erased, static_cast<std::uint64_t>(names));
+}
+
+// The hostless path (engine::open_local, the adapter's owned Core) is not the catalog's (D2 as built, CR6): an index is
+// held by one of them at a time, since the index's directory lock refuses the second holder either way.
+void test_the_hostless_path_and_the_catalog_never_share_an_index() {
+	Watchdog watchdog("hostless and catalog");
+	const auto path = fresh("hostless");
+	const auto refused = [](auto&& f) {
+		try {
+			f();
+		} catch (...) {
+			return true;
+		}
+		return false;
+	};
+	{
+		DatabasePool pool(8);
+		auto held = pin(pool, path);
+		Shard shard = use(held, WRITE);
+		engine::sync_wait(shard.add_document(make("Ka", "a")));
+		engine::sync_wait(shard.commit());
+		CHECK_TRUE(refused([&] { (void)engine::sync_wait(engine::open_local(path, true, false)); }));
+	}
+	{
+		auto opened = engine::sync_wait(engine::open_local(path, true, false));
+		CHECK_EQ(static_cast<std::size_t>(opened.shard->doc_count()), 1u);
+		DatabasePool pool(8);
+		CHECK_TRUE(refused([&] { (void)pin(pool, path, DB_OPEN); }));
+	}
+	DatabasePool pool(8);
+	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
+	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), 1u);
+}
+
+// The pool keeps open at most what the descriptors' soft cap holds, whatever size it is given (D11).
+void test_soft_open_is_at_most_the_descriptor_cap() {
+	DatabasePool small(8);
+	CHECK_EQ(small.soft_open(), 8u);
+	DatabasePool huge(std::size_t(1) << 40);
+	CHECK_GE(huge.soft_open(), 64u);   // strata's floor: room for 64 indexes
+	CHECK_TRUE(huge.soft_open() < (std::size_t(1) << 40));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -2207,6 +2337,11 @@ int main(int argc, char** argv) {
 		{"test_the_sweep_closes_only_an_unpinned_index", test_the_sweep_closes_only_an_unpinned_index},
 		{"test_the_shutdown_commits_and_logs_an_uncommitted_write", test_the_shutdown_commits_and_logs_an_uncommitted_write},
 		{"test_the_sweeps_close_syncs_a_merges_output", test_the_sweeps_close_syncs_a_merges_output},
+		{"test_a_write_to_a_demoted_index_applies_after_one_promote", test_a_write_to_a_demoted_index_applies_after_one_promote},
+		{"test_a_third_owed_answer_is_internal", test_a_third_owed_answer_is_internal},
+		{"test_soft_open_is_at_most_the_descriptor_cap", test_soft_open_is_at_most_the_descriptor_cap},
+		{"test_the_hostless_path_and_the_catalog_never_share_an_index", test_the_hostless_path_and_the_catalog_never_share_an_index},
+		{"test_the_sweep_erases_a_missing_index_negative_entries", test_the_sweep_erases_a_missing_index_negative_entries},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

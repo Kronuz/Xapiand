@@ -33,12 +33,14 @@
 #include <ctime>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "completion/posix.h"
 #include "database/flags.h"
 #include "database/pool.h"
 #include "database/shard.h"
@@ -478,6 +480,52 @@ static void test_a_cancelled_request_leaves_the_turn_queue() {
 	(void)engine::sync_wait(entry->take_turn(WRITE));   // the cancelled waiters left the queue
 }
 
+// A request's token ends its wait for its index's pin too (CR2): a use's pin passes the request's token, so a request
+// waiting on a cold open leaves at once with task::cancelled, and the open it started goes on.
+static void test_a_cancelled_request_leaves_the_pin_queue() {
+	DatabasePool pool(8);
+	std::promise<void> gate;
+	std::shared_future<void> opens = gate.get_future().share();
+	std::atomic<bool> opening{false};
+	pool.set_index_io([&](const std::string& at) -> std::unique_ptr<kronuz::journal::IO> {
+		opening = true;
+		opens.wait();
+		const auto dir = (std::filesystem::path(at) / "strata").string();
+		std::filesystem::create_directories(dir);
+		return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+	});
+	const auto path = fresh("pin_cancel");
+	std::thread opener([&] { (void)pin_index(pool, path, WRITE); });
+	while (!opening.load()) {
+		std::this_thread::sleep_for(1ms);
+	}
+	Loop loop;
+	task::cancel_source source;
+	asio::steady_timer timer(loop.reactor.io(), 50ms);
+	timer.async_wait([&](const asio::error_code& ec) {
+		if (!ec) { source.request(); }
+	});
+	std::string outcome;
+	const auto began = std::chrono::steady_clock::now();
+	loop.run([&]() -> task::task<void> {
+		try {
+			Shard shard(pool, path, WRITE, source.token());   // as lock_shard makes one: its use pins with the token
+			co_await shard.ready();
+			outcome = "pinned";
+		} catch (const task::cancelled&) {
+			outcome = "cancelled";
+		} catch (const engine::Error& error) {
+			outcome = error.reason();
+		}
+	});
+	const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - began).count();
+	CHECK_EQ(outcome, std::string("cancelled"));
+	CHECK_LT(ms, 5000.0);
+	gate.set_value();
+	opener.join();
+	CHECK_TRUE(static_cast<bool>(pin_index(pool, path, DB_OPEN)));
+}
+
 // The request's token ends a read that waits for the streamed body: Request::read_chunk passes it to
 // BodyStream::read, and the read raises task::cancelled.
 static void test_a_cancelled_request_ends_its_body_read() {
@@ -707,6 +755,7 @@ TEST_MAIN(
 	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests,
 	test_a_cancelled_request_leaves_the_turn_queue,
+	test_a_cancelled_request_leaves_the_pin_queue,
 	test_a_cancelled_request_ends_its_body_read,
 	test_service_phases_end_or_destroy_requests_waiting_for_a_turn,
 	test_a_task_that_holds_a_view_waits_for_nothing,
@@ -721,6 +770,7 @@ TEST_MAIN(
 	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests,
 	test_a_cancelled_request_leaves_the_turn_queue,
+	test_a_cancelled_request_leaves_the_pin_queue,
 	test_a_cancelled_request_ends_its_body_read,
 	test_service_phases_end_or_destroy_requests_waiting_for_a_turn
 )

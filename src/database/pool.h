@@ -380,12 +380,13 @@ public:
  *
  */
 
-// The catalog's sweep (x-pool D8): how often it runs, and how long an unpinned index idles before it is demoted, then
-// closed. Zero keeps strata's default (1 s, 30 s, 10 min).
+// The catalog's sweep (x-pool D8, D13): how often it runs, how long an unpinned index idles before it is demoted, then
+// closed, and how long a missing index's negative entry stays. Zero keeps strata's default (1 s, 30 s, 10 min, 10 s).
 struct IndexSweep {
 	std::chrono::nanoseconds period{0};
 	std::chrono::nanoseconds demote_idle{0};
 	std::chrono::nanoseconds close_idle{0};
+	std::chrono::nanoseconds negative_ttl{0};
 };
 
 
@@ -409,6 +410,7 @@ class DatabasePool {
 	std::atomic<std::size_t> readers_per_index_;        // the views of one index held at once (strata R4.1's reader_records)
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
+	std::size_t soft_open_ = 0;                         // the catalog's soft_open (D11)
 	std::chrono::milliseconds patience_{30s};           // how long the destructor waits for the shutdown before debug builds abort
 	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
@@ -448,6 +450,11 @@ public:
 	}
 	IndexCatalog& catalog() noexcept {
 		return *catalog_;
+	}
+
+	// The open indexes the sweep keeps (soft_open): the pool size, at most what the descriptors' soft cap holds (D11).
+	std::size_t soft_open() const noexcept {
+		return soft_open_;
 	}
 
 	void set_control(engine::Host* control) noexcept {

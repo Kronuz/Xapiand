@@ -1298,6 +1298,8 @@ Shard::release() noexcept
 		}
 	}
 #endif
+	// A use ends with no map made outside the index's lease (x-pool D12).
+	assert(!pin_ || pin_->index_ == nullptr || pin_->index_->unleased_maps() == 0);
 	if (pin_ && pin_->stale_.load(std::memory_order_acquire)) {
 		pin_.reopen();   // a write found the index unusable: the catalog replaces it once its holders let go
 	}

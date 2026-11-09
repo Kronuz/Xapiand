@@ -51,6 +51,7 @@
 #include "engine/error.h"          // for Error, errc
 #include "engine/host.h"           // for engine::sleep_for
 #include "engine/strata/document.h"  // for StrataDocument
+#include "engine/strata/owed.h"  // for apply_settling
 #include "engine/strata/viewed.h"  // for Viewed
 #include "engine/strata/doc_view.h"  // for SegmentDocView, OwnedDocView
 #include "engine/strata/values.h"  // for the value columns
@@ -729,40 +730,37 @@ replay_applies(const StrataDocument& native, const std::optional<rev>& stored)
 }
 
 // Applies `t`, which the caller built from the index as it stands; the host's turn keeps any other write
-// from changing it meanwhile. A host's index owes a flush or a drain before it takes the transaction
-// (nothing was applied): that runs as a chore and the same transaction is applied again. `visible` says the
-// transaction changed what a read sees, so reads need a refresh.
+// from changing it meanwhile. A host's index owes a flush, a drain or its bodies' maps before it takes the
+// transaction (nothing was applied): that runs as a chore and the same transaction is applied again (x-pool D9).
+// `visible` says the transaction changed what a read sees, so reads need a refresh.
 task::task<::strata::verdict>
 apply_t(Core& core, const Handle& handle, Chores& chores, prospect::transaction& t, bool visible)
 {
-	constexpr int max_rounds = 4;  // an owed answer ends after one round (strata's contract); a loop is a bug
-	for (int round = 0;; ++round) {
-		core.check(handle);
-		auto verdict = core.index->apply(t, {});
-		if (verdict.result == ::strata::verdict::accepted) {
-			core.dirty = core.dirty.load() || visible;
-			core.pending = true;
-			co_return verdict;
-		}
-		if (verdict.result != ::strata::verdict::flush_owed && verdict.result != ::strata::verdict::drain_owed) {
-			reject(verdict);
-		}
-		if (round >= max_rounds) {
-			throw Error(errc::internal, "The index kept owing I/O before it took a transaction");
-		}
-		// The flush or the drain is a chore; the next round finds room.
-		const auto owed = verdict.result;
-		co_await chores.run(ChoreClass::flush, [&core, &handle, owed] {
+	auto verdict = co_await apply_settling(
+		[&] {
 			core.check(handle);
-			if (owed == ::strata::verdict::flush_owed) {
-				core.index->refresh();
-				core.dirty = false;
-			} else {
-				core.index->reclaim_for_space();
-			}
-			core.note();
+			return core.index->apply(t, {});
+		},
+		[&](::strata::verdict::outcome owed) -> task::task<void> {
+			co_await chores.run(ChoreClass::flush, [&core, &handle, owed] {
+				core.check(handle);
+				if (owed == ::strata::verdict::flush_owed) {
+					core.index->refresh();
+					core.dirty = false;
+				} else if (owed == ::strata::verdict::drain_owed) {
+					core.index->reclaim_for_space();
+				} else {
+					core.index->promote();   // a demoted index's bodies, mapped under the lease
+				}
+				core.note();
+			});
 		});
+	if (verdict.result != ::strata::verdict::accepted) {
+		reject(verdict);
 	}
+	core.dirty = core.dirty.load() || visible;
+	core.pending = true;
+	co_return verdict;
 }
 
 // Reads the id and version the index assigned to a write that apply_t accepted.
