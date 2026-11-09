@@ -856,6 +856,47 @@
       "updated": "2026-11-09T04:23:09",
       "worktree": ""
     },
+    "cjk-segmenter": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 20,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "analysis.hh",
+        "cjk/**",
+        "data/**",
+        "test/**",
+        "fuzz/**",
+        "bench/**",
+        "tools/**",
+        "docs/**",
+        "CMakeLists.txt",
+        "LICENSE*",
+        "NOTICE*",
+        "README.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 5",
+      "needs": [],
+      "provides": [
+        "analysis:cjk-segmenter"
+      ],
+      "repo": "../analysis",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A CJK word segmenter in Kronuz/analysis",
+      "updated": "2026-11-09T14:21:59"
+    },
     "cjk-words": {
       "accepted": {},
       "after": [],
