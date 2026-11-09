@@ -29,6 +29,13 @@
       "closed": "fixed in agent-campaign (rerun keeps after, mapped to rerun ids); pushing after the suite",
       "id": "msg-5",
       "text": "agent-campaign finding from Detent's dense-pages contributor: `campaign job rerun` drops the job's `after` list, so a rerun chain loses its ordering; it had to resubmit each job from its saved spec. Worth a fix with the fair-share change."
+    },
+    {
+      "at": "2026-11-09T10:01:03",
+      "by": "detent-lead",
+      "closed": "window open until 13:46 (agent-campaign:7867dc4)",
+      "id": "msg-6",
+      "text": "Window request: Detent S1/S2's 14 exclusive A9 timings (261109-093640/093641, about 3-6 min each at 10K/100K, longer at 5M) are now the last thing before it lands. If you can let them run back to back once your current light jobs end, that saves hours of wall-clock; tell me if that conflicts with your release prep."
     }
   ],
   "quests": {
