@@ -5730,6 +5730,8 @@
     "x-pool": {
       "accepted": {},
       "after": [],
+      "base": "9ff11c0c68b84eec7d570b21a8c72ff533d4a550",
+      "branch": "quest/xapiand/x-pool",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j8 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -5783,9 +5785,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-08T13:24:53"
+      "updated": "2026-11-08T21:19:33",
+      "worktree": "../Xapiand-wt/xapiand/x-pool"
     },
     "x-pool-step1": {
       "accepted": {},
