@@ -9,15 +9,22 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Pinned strata at the manifest-log head strata:4d2a541 (CMakeLists.txt). Ported the tests in the
+prospect worktree (uncommitted until the first local build is read): reclaim_test, media_test,
+directory_test, fixtures_test (a manifest-log.bin golden replaces the retired manifest/live/meta .bin),
+format13_test (rewrite via read_state/recount/frame_snapshot), index_test, lifecycle_test,
+churn_test, background_merge_test (API shape). Local build against a strata archive of 4d2a541.
 
 ## Next
 
-1. <step>
+1. Read the local build's errors, fix, run the suite; commit.
+2. Submit build-test and the A3 identity job at the head; fill Evidence.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Strata:4d2a541 is not on origin (origin's branch is at strata:79beaf4), so the `build-test`
+check, which fetches the pinned commit from GitHub, cannot run until the lead pushes it or the
+check passes `--ref`. Local builds use FETCHCONTENT_SOURCE_DIR_STRATA.
 
 ## Evidence
 
