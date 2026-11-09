@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: working
+State: waiting on jobs 261109-143551-b9d053 261109-143552-5afa2f
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,24 +9,55 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Third contributor. Step 3b's red tests fixed at strata:cd8156d (R20, R21); the five failures at
-strata:7ffabab were this branch's: build-test at strata `main` (strata:3df7af4) 261109-133205-fdea61
-passed 74 of 74. Retiring the old codecs (Next 1), uncommitted.
+Third contributor, handing off for context at strata:4d2a541. Step 3b done (red tests fixed,
+the old codecs retired); step 3c started (T4 cases 4 to 9). Jobs at strata:4d2a541: build-test
+261109-143551-b9d053 (`campaign verify`), mutants 261109-143552-5afa2f. Locally at
+strata:4d2a541 every suite touched passed (index, retention, media, manifest_log, defer_io,
+fields, reclaim_bg, background_merge, apply_atomic); the whole suite passed at strata:1b9e46b
+(261109-141152-dd1c67, 72 of 72) and the mutants there (261109-141158-ddaa45, 23 of 23).
+
+Commits this session:
+- strata:cd8156d identities reseeded per open generation (R20); background_merge and reclaim_bg
+  take D6.6's owed retention, reclaim_bg's threaded permit check drains first (R21).
+- strata:074129c the manifest, live-docs, metadata and field-table codecs retired; `pre_freeze`
+  0x8000'0008 (D11); the log's fixtures, fuzz seeds and defer_io's file hash re-captured (R23).
+- strata:1b9e46b T4 cases 5 and 6 (retention_test), strata:68a7eab case 8 (media_test, the log
+  byte by byte), strata:1cc90f6 case 9 (index_test), strata:39b051d case 4 (manifest_log_test's
+  appender), strata:4d2a541 case 7 (index_test). Each case's mutant was run by hand and failed it
+  (R24).
+
+**Formats:** strata's file formats are final enough for manifest-log-prospect to start: the log
+is the only metadata file, `files::pre_freeze` is 0x8000'0008, `files.hh` keeps only what the
+records share (no `files::manifest`, `live_docs`, `metadata`, `encode`/`decode_*`, `file_ref`,
+`trailing_crc`, `seal`), `fields.hh` no file codec. Byte changes after this land only on proof
+(formats open until release), and would bump `pre_freeze` again.
 
 ## Next
 
-1. Retire `files::manifest`, the live-docs, metadata and field-table file codecs, `files_test`,
-   `fuzz_files`, `fuzz_fields` and their corpora, fields_test's decoder stage, the golden
-   fixtures; `pre_freeze` to 0x8000'0008 (D11); regenerate `test/fixtures/manifest_log` and the
-   log fuzz seeds; own commit, build-test job.
-2. Step 3c: T4's cases on faultfs, media_test on the log (ported by renames only; check its cases
-   cover the log), A3's 20M-doc delete row, the fuzz runs at the ready head, A9 (prospect waits for
-   manifest-log-prospect).
+1. Read 261109-143551-b9d053 and 261109-143552-5afa2f; fix what is red with a rerun.
+2. T4 case 1: lifecycle's crash points over a rollover (none of its 150-step workloads reaches
+   R = 128 edits or 2 S; a torn tail's rollover is only in recoveries), a truncate-back and lazy
+   cleanup, over 3 to 100 indexes with batched commits; mutant: two edits of one log in flight.
+   Measure first how many lifecycle crash points land in a rollover.
+3. T6's digest equal to `main`'s on the same streams (R10 keeps the oracle at the log layer); A5's
+   writer half (an exception from the head's `apply()` after a durable edit fences: find or add
+   its allocation test).
+4. A9: Xapiand's suite on this strata (integration job); prospect's after manifest-log-prospect.
+5. At the head marked ready: the sanitizer fuzz runs (both log targets, 5 minutes each), then
+   the Evidence rows for A1 to A7 at that head.
 
 ## Blocked on
 
-Nothing open. (Former 1 resolved by L1; former 2 resolved by the lead's file-set change,
-Xapiand:143eddeef: R22.)
+1. **`tools/mutants/` is outside the file set.** `tools/mutants/fields.py`'s five decoder mutants
+   (`decoder-skips-block-crc` to `decoder-allows-trailing-bytes`) and `tools/mutants/keys.py`'s
+   `manifest-keeps-a-prefix-field` target `decode_fields` and the manifest encoder, retired at
+   strata:074129c; they no longer apply. Options: (1) add `tools/mutants/**` to the file set and
+   I delete those six entries (the log decoder's rules are `test/manifest_log_mutants.py`'s);
+   (2) the lead deletes them. Recommendation: 1.
+2. **A3's "T7 job".** A3 asks for a test with a time bound (manifest_log_test's "deleted sets":
+   128 one-ordinal delete edits on 20M documents, 10M deleted, under 50 ms) and the T7 job. T7 is
+   the lead's open-cost measurement (A8, after landing). Recommendation: A3's T7 half is A8's T7
+   run; the row cites the test now.
 
 ## Evidence
 
@@ -43,7 +74,17 @@ the damage check, rewritten).
 
 ## Result
 
-Not ready for review. Step 3a, the log layer, at strata:6a8bb32 (index.hh untouched):
+Not ready for review. Steps 3a and 3b done, 3c begun.
+
+Step 3b, the index on the log (strata:f2089f9 to strata:074129c): commit appends the edit or rolls
+over by D7, recover replays and syncs only the log, retention reads kept generations from the log
+holding them, `check()` replays the log; the manifest, live-docs, metadata and field-table files
+and their codecs retired, `pre_freeze` 0x8000'0008. Measured locally: media_test faults every byte
+of the log (669 bytes, 861 offsets in all, 1,722 faults of each kind), every sticky log fault
+fails the open, the digest never wrong. Docs: `docs/mechanisms/index-on-the-log.md`; field-table,
+manifest-log-codec, segment-records and warm-indexes notes updated for the retired files.
+
+Step 3a, the log layer, at strata:6a8bb32 (index.hh untouched):
 
 - `read_log` (D6.2 to D6.4, D6.8): journal's scan, then D6.3's caller rules, replay within twice
   D7's bounds (SR2-strata), `to` with damage past it reported, `log_damage` naming the damaged
@@ -151,3 +192,15 @@ Not ready for review. Step 3a, the log layer, at strata:6a8bb32 (index.hh untouc
   measured) awaited its directory sync, failing 1 run in about 20; it drains first (200 runs clean).
 - R22 (former Blocked on 2): the lead added `bench/field_table/**` to the file set
   (Xapiand:143eddeef); strata:7ffabab stays.
+- R23 (the retirement): `files_test`, `fuzz_files`, `fuzz_fields` and their corpora, fields_test's
+  decoder stage and the golden manifest, live-docs and metadata fixtures leave with the codecs;
+  `format12/manifest.bin` and `pre-d2/manifest-2` stay as real old manifests that read_log refuses
+  as `unsupported_index` (manifest_log_test). `open_probe.cc` is not part of the build and models
+  `main`: it is pinned to strata:7ffabab instead of carrying a private copy of the codecs.
+  `field_table_bench` reports the final table as snapshot bytes (`decl_bytes`). The defer_io
+  default-path hash moves only by the version byte (verdicts, mutations and digest unchanged).
+- R24 (T4 mutants by hand): case 4 needs no new mutant (no truncate-back fails the short-write
+  case); case 6, retention from the current log alone, fails retention_test; case 7, no snapshot
+  in the allowance while a rollover is owed, admits 298 documents instead of 171 and the commit
+  fails; case 9, the open without its log sync, loses the edit on 31 of 64 seeds. They are not in
+  `manifest_log_mutants.py`, which mutates only the log layer.
