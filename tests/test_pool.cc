@@ -1979,6 +1979,35 @@ void test_a_cancelled_pin_stops_waiting() {
 	CHECK_TRUE(static_cast<bool>(pin(pool, cold, DB_OPEN)));
 }
 
+// A cancelled FLUSH ends while an index's turn is held (review C2): its commit's wait for the turn takes the
+// request's token, so the FLUSH throws task::cancelled at once rather than after the turn's timeout.
+void test_a_cancelled_flush_stops_waiting_for_a_held_turn() {
+	Watchdog watchdog("a cancelled flush stops waiting for a held turn");
+	DatabasePool pool(8);
+	auto entry = pin(pool, fresh("flush_cancel"));
+	Shard shard = use(entry, WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));   // uncommitted: the FLUSH must commit it
+	HoldTurn hold(entry.entry(), WRITE);
+	task::cancel_source cancel;
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread flusher([&] {
+		try {
+			engine::sync_wait(pool.flush(cancel.token()));
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(150ms);
+	CHECK_FALSE(ended.load());   // it waits for the held turn
+	cancel.request();
+	CHECK_TRUE(until([&] { return ended.load(); }, 5s));   // well before the turn's 30 s timeout
+	hold.release();
+	flusher.join();
+	CHECK_TRUE(cancelled.load());
+	CHECK_TRUE(entry->is_modified());   // the cancelled FLUSH committed nothing
+}
+
 // The autocommit settles what its commit leaves (D8): while a merge is pending it asks to come back, and once the
 // merges finish it publishes them and syncs their output with no revision of its own.
 void test_the_autocommit_comes_back_while_a_merge_is_pending() {
@@ -2331,6 +2360,7 @@ int main(int argc, char** argv) {
 		{"test_a_root_destroyed_while_it_waits_for_a_pin_releases_it", test_a_root_destroyed_while_it_waits_for_a_pin_releases_it},
 		{"test_a_destroyed_root_that_held_a_pin_lets_the_pool_join", test_a_destroyed_root_that_held_a_pin_lets_the_pool_join},
 		{"test_a_cancelled_pin_stops_waiting", test_a_cancelled_pin_stops_waiting},
+		{"test_a_cancelled_flush_stops_waiting_for_a_held_turn", test_a_cancelled_flush_stops_waiting_for_a_held_turn},
 		{"test_a_detached_task_may_block_once_the_control_is_gone", test_a_detached_task_may_block_once_the_control_is_gone},
 		{"test_the_autocommit_comes_back_while_a_merge_is_pending", test_the_autocommit_comes_back_while_a_merge_is_pending},
 		{"test_a_busy_autocommit_comes_back", test_a_busy_autocommit_comes_back},

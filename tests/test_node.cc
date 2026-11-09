@@ -959,6 +959,23 @@ static void test_a_search_batch_skips_a_missing_index() {
 }
 
 
+// A write that may not create its index, to an index that does not exist, is not_found (a 404), as a read of it
+// is: its use has no pin, and that use names the missing index rather than a closed one.
+static void test_a_write_to_a_missing_index_is_not_found() {
+	Watchdog watchdog("a write to a missing index is not_found");
+	const auto endpoints = endpoints_of("write_missing");
+	DatabaseHandler handler(endpoints, DB_OPEN | DB_WRITABLE);
+	engine::errc kind = engine::errc::internal;
+	try {
+		engine::sync_wait(handler.set_metadata(std::string("foo"), std::string("bar")));
+	} catch (const engine::Error& error) {
+		kind = error.kind;
+	}
+	CHECK(kind == engine::errc::not_found);
+	CHECK_FALSE(std::filesystem::exists(endpoints[0].path));
+}
+
+
 // A search that names one index twice pins it once and searches it at both positions: a second pin of a key in one
 // request would wait for itself while its index is replaced. The read waits for the held turn with every pin taken.
 static void test_a_search_batch_pins_a_repeated_index_once() {
@@ -1134,6 +1151,7 @@ int main(int argc, char** argv) {
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
 		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
+		{"test_a_write_to_a_missing_index_is_not_found", test_a_write_to_a_missing_index_is_not_found},
 		{"test_a_search_batch_pins_a_repeated_index_once", test_a_search_batch_pins_a_repeated_index_once},
 		{"test_a_cancelled_request_stops_waiting_for_its_index", test_a_cancelled_request_stops_waiting_for_its_index},
 		{"test_a_cancelled_search_stops_waiting_for_its_index", test_a_cancelled_search_stops_waiting_for_its_index},

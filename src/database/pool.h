@@ -260,8 +260,9 @@ public:
 	engine::Shard& engine();
 
 	// Commits what is applied: the blob storage, the engine, then the WAL line, all in one turn. A write
-	// that a commit already in flight covers joins it. True when a commit made a new revision.
-	task::task<bool> commit(int flags, bool wal);
+	// that a commit already in flight covers joins it. True when a commit made a new revision. `cancel` ends the
+	// wait for the turn (a FLUSH's request).
+	task::task<bool> commit(int flags, bool wal, task::cancel_token cancel = {});
 
 	// In a turn of its own: publishes the merges that finished and syncs their output when nothing else is
 	// uncommitted (no revision, no WAL line). True while a merge is still pending or its output unsynced (x-pool D8).

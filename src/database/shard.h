@@ -58,6 +58,7 @@ class Shard {
 	DatabasePool* pool_;
 	std::string path_;
 	bool stale_ = false;  // a failure asked for a fresh index: reopen() hands the pin back and pins again
+	bool missing_ = false;  // its index was missing at the pin: a use with no pin is not_found, not `closed`
 
 public:
 	int flags;
@@ -71,7 +72,8 @@ public:
 	// A use with no pin yet (its index was missing when it pinned): ready() pins it, or raises not_found again.
 	Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_ = {});
 
-	// The index's entry, under the pin; raises `closed` while a reopen left the use with none.
+	// The index's entry, under the pin; raises not_found while the index is missing, `closed` while a reopen left
+	// the use with no pin.
 	ShardEndpoint& endpoint() const;
 
 	bool is_local() const {

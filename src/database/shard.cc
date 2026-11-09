@@ -553,7 +553,7 @@ struct ShardEndpoint::CommitFlight {
 
 
 task::task<bool>
-ShardEndpoint::commit(int flags, bool wal_)
+ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 {
 	L_CALL("ShardEndpoint::commit(({}), {})", readable_flags(flags), wal_);
 
@@ -580,7 +580,7 @@ ShardEndpoint::commit(int flags, bool wal_)
 		co_return joined->changed;
 	}
 
-	auto turn_ = co_await take_turn(flags);
+	auto turn_ = co_await take_turn(flags, std::move(cancel));
 	if (committed_ >= mine || !modified.load()) {
 		co_return false;  // a commit that ran while this one waited covers it
 	}
@@ -1262,6 +1262,7 @@ Shard::Shard(IndexPin pin, int flags_, task::cancel_token cancel_)
 Shard::Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_)
 	: pool_(&pool),
 	  path_(std::move(path)),
+	  missing_(true),
 	  flags(flags_),
 	  cancel(std::move(cancel_))
 {
@@ -1272,6 +1273,9 @@ ShardEndpoint&
 Shard::endpoint() const
 {
 	if (!pin_) {
+		if (missing_) {
+			throw engine::Error(engine::errc::not_found, "No such database: " + path_);
+		}
 		throw engine::Error(engine::errc::closed, "Database has been closed");
 	}
 	return pin_.entry();
@@ -1311,6 +1315,7 @@ Shard::ready()
 {
 	if (!pin_) {
 		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel);
+		missing_ = false;
 	}
 }
 

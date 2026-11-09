@@ -785,12 +785,15 @@ DatabasePool::flush(task::cancel_token cancel)
 
 	// Every key the catalog has, pinned resident and committed, one at a time: a task holds one turn at most.
 	for (auto& slot : catalog_->snapshot()) {
+		if (cancel.requested()) {
+			throw task::cancelled{};   // the request left: the keys after it are not pinned
+		}
 		auto pinned = co_await pin_chore(Endpoint(slot.key), cancel);
 		if (!pinned) {
 			continue;   // closed since the snapshot: its close committed it
 		}
 		try {
-			co_await pinned->commit(DB_OPEN | DB_WRITABLE, true);
+			co_await pinned->commit(DB_OPEN | DB_WRITABLE, true, cancel);
 		} catch (const engine::Error& error) {
 			L_WARNING("Flushing {} failed: {}", repr(slot.key), error.description());
 		}
