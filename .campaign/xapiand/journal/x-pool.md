@@ -1,6 +1,6 @@
 # x-pool: journal
 
-State: waiting on jobs 261109-013630-b41a01 261109-013630-5e7a1c 261109-013630-ac1ee7 261109-013630-aaa963 261109-013631-fc75f6 261109-013631-8d4305 261109-013631-bfd35f 261109-013631-0a4c44
+State: waiting on jobs 261109-014325-59bf18 261109-014325-433dc2 261109-014325-c420dd 261109-014325-aad33e 261109-014336-a36d6f 261109-014336-74371a 261109-014336-d6fd48 261109-014336-8c1b28
 Quest: .campaign/xapiand/quests/x-pool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,8 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Waiting on jobs at head Xapiand:9851b57e2 (master merged: e2e-harness's `harness/run_all.sh` and
-`harness/engine_e2e.sh`, campaign files; no `src/` or `tests/` change). Code last changed at Xapiand:161e1db5d.
+Waiting on jobs at head Xapiand:41dba47c5: the tsan check's two test-side failures fixed (lead's ruling, below),
+on top of master merged at Xapiand:9851b57e2. Product code last changed at Xapiand:161e1db5d.
 
 Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test run, restored): 6 of 6 killed.
 | Mutant | Killed by |
@@ -24,27 +24,18 @@ Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test
 
 ## Next
 
-1. Gate checks at 9851b57e2 (`campaign verify`, e2e now strict with newman 6): build-test 261109-013630-b41a01,
-   e2e 261109-013630-5e7a1c, asan 261109-013630-ac1ee7, tsan 261109-013630-aaa963.
-2. Reruns at 9851b57e2: docs E2E newman 6 261109-013631-fc75f6 (was f35eff); Linux VM tsan 261109-013631-8d4305
-   (was 2703e7), asan 261109-013631-bfd35f (was d3fd0f); wide search 261109-013631-0a4c44 (was df1848).
-3. When they finish, point the Evidence rows at them, write Result, State "ready for review".
-4. History: at 465f56bb5 build-test 261108-224742-122302, asan …-9b5d88 passed; tsan …-6f7cbc exit 8 (Blocked on);
-   the old e2e …-404c84 was cancelled (pre-fix command).
+1. Gate checks at 41dba47c5: build-test 261109-014325-59bf18, e2e 261109-014325-433dc2, asan 261109-014325-c420dd,
+   tsan 261109-014325-aad33e (the fixes' passing side; master's 261108-223749-0e083d is the failing side).
+2. Reruns at 41dba47c5: docs E2E newman 6 261109-014336-a36d6f (was f35eff); Linux VM tsan 261109-014336-74371a,
+   asan 261109-014336-d6fd48; wide search 261109-014336-8c1b28.
+3. When they pass, point the Evidence rows at them, write Result, State "ready for review".
+4. History: the strict e2e check at 9851b57e2 (the same product code) passed: 261109-013630-5e7a1c, VERDICT GREEN,
+   smoke e2e tls passed, 0 skipped. The other jobs at 9851b57e2 were cancelled for 41dba47c5.
 
 ## Blocked on
 
-The lead: the `tsan` check fails on master's own tests, the same way at master and on this branch. Job
-261108-224742-6f7cbc (branch, Xapiand:465f56bb5) and 261108-223749-0e083d (master, Xapiand:2173c17fe) fail the
-same two tests with the same reports: `test_index_pattern` (`test_a_zero_cap_is_refused`, lines 697/699/701;
-TSan data race in `test_the_walk_queue_is_bounded`) and `test_node`
-(`test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time`, `result.code == 0`; TSan thread
-leak in `RunningNode::RunningNode`). The other 35 of 37 pass on the branch. Pre-existing; not fixed here.
-Options: run `test_node` with `report_thread_leaks=0` as the old ledger did and fix the walk-queue race in its
-own quest, or accept the tsan check with these two named. Recommendation: the first. The A6/A8 TSan evidence
-meanwhile is the tsan check's other 35 tests plus the Linux VM tsan job.
-
-(Resolved: the `e2e` check's stale report and newman 4.5 were fixed by e2e-harness, Xapiand:c60138850.)
+Nothing. (Resolved: the tsan check's failures are master's tests, which the lead ruled this quest fixes, R4.
+The `e2e` check's stale report and newman 4.5 were fixed by e2e-harness, Xapiand:c60138850.)
 
 ## Evidence
 
@@ -88,3 +79,12 @@ Code at Xapiand:161e1db5d = 465f56bb5 (the merge changes only docs). Pending row
 - R3. CR6 (A14) is recorded, not built: the hostless path serves only the engine's tests and `engine::check`;
   a private catalog would need a host it lacks. Moving those tests to a `DatabasePool` is the follow-up that
   deletes the adapter's registry.
+- R4. The lead ruled (reversing "don't fix") that the tsan check's two pre-existing failures are fixed here,
+  in `tests/`: they failed the same at master (261108-223749-0e083d) and the branch (261108-224742-6f7cbc).
+  Fixed at Xapiand:41dba47c5: the Walker stores `retry_after` before the atomic `state` that publishes it;
+  `test_a_zero_cap_is_refused` runs first, before any thread; `RunningNode::join()` joins the control
+  loop's thread before the children's `_Exit` (`exit_code()` removed; no `report_thread_leaks=0`). Cause of
+  697/701: TSan's `_exit` interceptor exits 66 when reports were counted, and the forked child inherited the
+  parent's race report, so fixing the race alone likely fixes them; running it first keeps it independent.
+- R5. Merged master instead of rebasing: the branch already carries merges of master, and master changed only
+  `harness/` and campaign files.
