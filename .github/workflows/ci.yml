@@ -5,7 +5,7 @@ name: CI
 
 on:
   push:
-    branches: [master, xapiand, 'fix/**']
+    branches: [master, xapiand, 'fix/**', 'quest/**']
   pull_request:
   workflow_dispatch:
 
