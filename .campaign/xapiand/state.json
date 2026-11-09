@@ -7750,7 +7750,9 @@
         "fuzz/**",
         "tools/**",
         "CMakeLists.txt",
-        "docs/**"
+        "docs/**",
+        "README.md",
+        "AGENTS.md"
       ],
       "history": [
         {
@@ -7852,7 +7854,7 @@
       "risk": "high",
       "status": "active",
       "title": "The sortable codec's remaining proof",
-      "updated": "2026-11-09T14:15:51",
+      "updated": "2026-11-09T14:57:55",
       "worktree": "../sortable-wt/xapiand/sortable-proof"
     },
     "sortable-step1": {
