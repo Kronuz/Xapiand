@@ -24,7 +24,12 @@ Local tools in `.scratch/` (untracked): `build.sh plain|asan|tsan [targets]` (cc
 
 1. Jobs at 3f4114f30 (the adopted code: the last four commits verified): build-test 261108-214834-ad7d40 done
    exit 0, asan 261108-214834-1c3b6b done exit 0 (its docs E2E did not run: newman 4.5.0, see Blocked on), e2e
-   261108-214834-bcc874 "GREEN" from a stale report (Blocked on), tsan 261108-214834-44536b running.
+   261108-214834-bcc874 "GREEN" from a stale report (Blocked on), tsan 261108-214834-44536b failed exit 8: 35 of
+   37 pass; `test_index_pattern` (a TSan race inside its own `test_the_walk_queue_is_bounded`, and
+   `test_a_zero_cap_is_refused`'s option exits) and `test_node`'s
+   `test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time` (the abandon child's thread-leak
+   report makes its exit non-zero; the ledger ran `test_node` with `report_thread_leaks=0` for this). Both tests are
+   master's, untouched here; job 261108-223749-0e083d runs them at master 2173c17fe.
 2. Jobs at 8c06fff93: the real docs E2E 261108-223127-f35eff (newman 6, plain and asserts builds); Linux VM
    261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan); the e2e check at master 261108-221920-0fcf05.
 3. Local mutants for step 4 (`.scratch/mutants.py`), then merge master (only the ledger conflicts: master marks it
