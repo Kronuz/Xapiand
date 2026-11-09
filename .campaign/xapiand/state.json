@@ -7661,6 +7661,8 @@
     "sortable-proof": {
       "accepted": {},
       "after": [],
+      "base": "67b2a907e2411e2e59dc249b96bfc1d229016ede",
+      "branch": "quest/xapiand/sortable-proof",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -7777,6 +7779,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/sortable-proof",
       "landed": [],
       "lenses": [
         "security"
@@ -7788,9 +7791,10 @@
       ],
       "repo": "../sortable",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The sortable codec's remaining proof",
-      "updated": "2026-11-09T04:14:34"
+      "updated": "2026-11-09T14:15:51",
+      "worktree": "../sortable-wt/xapiand/sortable-proof"
     },
     "sortable-step1": {
       "accepted": {},
