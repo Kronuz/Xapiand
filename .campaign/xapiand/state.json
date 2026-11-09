@@ -645,9 +645,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "CI runs on campaign quest branches (Xapiand)",
-      "updated": "2026-11-09T00:35:14",
+      "updated": "2026-11-09T04:23:55",
       "worktree": "../Xapiand-wt/xapiand/ci-quest-branches"
     },
     "ci-quest-branches-prospect": {
