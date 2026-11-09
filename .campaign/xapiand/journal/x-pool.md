@@ -1,6 +1,6 @@
 # x-pool: journal
 
-State: ready for review
+State: waiting on jobs 261109-043217-4b0f0b 261109-043218-12479c 261109-043219-431f4f
 Quest: .campaign/xapiand/quests/x-pool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,23 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Nothing: ready for review at Xapiand:41dba47c5 (code). The asan/tsan gates move to CI (`ci:AddressSanitizer`,
-`ci:ThreadSanitizer`, lead); their rows cite the local jobs until the branch is pushed.
+Fixing the correctness review's findings (`.campaign/xapiand/reviews/x-pool-correctness.md`, CHANGES at
+41dba47c5). Fixed at Xapiand:fe3fc2b12:
+- C1 (blocking): a `Shard` made for an index that was missing at its pin (`lock_shard::pin`'s not_found catch)
+  remembers that (`missing_`), so its `endpoint()` raises not_found "No such database" (404) rather than `closed`
+  (500). `ready()` clears it on a successful pin. Search batches skip a missing index as before
+  (`test_a_search_batch_skips_a_missing_index`). Test: `test_node` `test_a_write_to_a_missing_index_is_not_found`
+  (`set_metadata` with `DB_OPEN | DB_WRITABLE` is not_found, and no index directory appears).
+- C2: `ShardEndpoint::commit(flags, wal, cancel)` passes the token to `take_turn`. `DatabasePool::flush` passes
+  its token and stops before the next key once cancelled. Test: `test_pool`
+  `test_a_cancelled_flush_stops_waiting_for_a_held_turn` (a held turn; the cancelled FLUSH ends within 5 s, not
+  after 30 s, with `task::cancelled`, and commits nothing). A joined commit flight is still waited for without
+  the token; it holds the turn and is already running, so it ends without waiting on another holder.
+Jobs at fe3fc2b12:
+- build-test 261109-043217-4b0f0b.
+- The reviewer's probe `missing_index_write.sh`, slot `xapiand-x-pool`: 261109-043218-12479c.
+- The revert check 261109-043219-431f4f: both fixes reverted in `src/database`; both new tests must fail.
+asan and tsan are CI's (`ci:AddressSanitizer`, `ci:ThreadSanitizer`) once the lead pushes.
 
 Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test run, restored): 6 of 6 killed.
 | Mutant | Killed by |
@@ -24,12 +39,23 @@ Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test
 
 ## Next
 
-1. After the push, add `ci:AddressSanitizer` and `ci:ThreadSanitizer` to the A6 and A8 rows.
-2. One correctness review of steps 2 to 4 at the landing commit (the lead launches it).
+1. Read the three jobs at fe3fc2b12. Once they pass, repoint the Evidence rows to fe3fc2b12 (the code changed), and
+   cite C1's probe for `campaign accept x-pool correctness --confirm C1=261109-043218-12479c`.
+2. After the lead pushes: `ci:AddressSanitizer` and `ci:ThreadSanitizer` in the A6 and A8 rows.
 
 ## Blocked on
 
-Follow-up for the lead (`harness/`, outside this quest's files), not blocking this quest:
+Follow-ups for the lead, none blocking this quest:
+
+1. The correctness review's non-blocking C3 to C7, not done here:
+   - C3: `test_the_sweep_erases_a_missing_index_negative_entries` checks only an upper bound. Add a check that
+     the entries are still there at about TTL / 2, and widen the gap between the TTL and the wait.
+   - C4: a debug check (a per-task pinned-key count on `TaskCounters`) for the one-pin-per-key rule (optional).
+   - C5: the node stop tests should match "abandon" and "1 pin" on the abandoned index's own line.
+   - C6: `Shard::ready()` re-pins with `use = true`, so a request that reopens counts two uses (CT-R31).
+   - C7: rerun the mutants m1, m2, s6 to s8 and x1 to x6 as one job at the landing commit.
+   Recommendation: C3 and C5 are small test edits worth a follow-up quest along with C6. C4 and C7 are optional.
+2. In `harness/`, outside this quest's files:
 `harness/restore_stream_check.sh` sends kill -9 before the restore has ended. After a client leaves, the node goes
 on indexing what it had buffered (more than 20 s on ASan: R6). The script breaks out once the count holds still
 for 1 s, then waits 5 s. Under load a 1 s pause ends that wait while the restore still runs, so the kill comes
