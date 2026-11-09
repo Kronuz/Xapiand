@@ -17,6 +17,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | Date | Quest | Role, model, effort | Tokens | Quota before → after | Wall | Outcome |
 |---|---|---|---|---|---|---|
 | 11-08 | x-pool | contributor, opus, high | 363k (notice); 44.5M cumulative at 1h15m, 99% cached | 0% → 2% at 22:34 (all work) | 1h27m, 228 tool calls | RESTORE E2E ruled host overload (R1); built map_owed, assertions, clamps, design rev 3, mechanism note; found the E2E checks prove nothing; waiting on 7 jobs |
+| 11-08 | wbuf-inline | contributor, opus, high | 152k (notice) | 2% → | 22m, 69 tool calls | rebased clean onto strata:70df28d; job scripts for every criterion; waiting on 10 jobs |
 
 ## Lead-only work (no agent)
 
