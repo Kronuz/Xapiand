@@ -1,6 +1,6 @@
 # wbuf-inline: journal
 
-State: waiting on jobs 261109-024405-35d764 261109-024406-5881b6 261109-024407-5fdab0 261109-012440-05ac8b
+State: waiting on jobs 261109-043525-e7d3ad
 Quest: .campaign/xapiand/quests/wbuf-inline.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -44,9 +44,14 @@ That commit changes only `docs/perf/wbuf-inline/landed-ab.sh`. Resubmitted at st
 checks I queued there (261109-024404-c71a6a, -55cb2e, -0b7c81) are cancelled: verify runs once at
 the final head, after the perf note's docs commit.
 
+The lead cancelled the strict A/B 261109-024407-5fdab0 and the Linux VM A6 261109-032020-5807c6
+to free the host: CI's `linux-asan-ubsan` covers A6. The strict wbufrr A/B was resubmitted at
+strata:bb2f58d as 261109-043525-e7d3ad. Share sweep 261109-024406-5881b6: B/A records per flush
+1.07-1.67x, digests identical at all 21 shares, counts equal to the ledger's A and G columns.
+
 ## Next
 
-1. Read the A8 jobs at strata:bb2f58d and A6; fill A1 to A11 in Evidence; add the landing A/B to
+1. Read wbufrr 261109-043525-e7d3ad; write the landing A/B into `docs/perf/wbuf-inline.md`; rebase on strata main (CI trigger); give the lead the head; build-test plus macOS asan and tsan at it; A6 = `ci:linux-asan-ubsan`, `ci:linux-tsan`; fill A1 to A11 in Evidence; add the landing A/B to
    `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head).
 2. Ready for the correctness review.
 
