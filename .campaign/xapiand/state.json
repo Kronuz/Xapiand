@@ -9588,9 +9588,9 @@
       "branch": "quest/xapiand/x-pool-followups",
       "checks": [
         {
-          "cmd": "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
           "level": "light",
-          "minutes": 60,
+          "minutes": 150,
           "name": "build-test"
         }
       ],
@@ -9603,6 +9603,34 @@
         "src/database/shard.cc",
         "harness/restore_stream_check.sh"
       ],
+      "history": [
+        {
+          "at": "2026-11-09T14:23:57",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "replace the placeholder build-test with x-pool's full build-test before any job ran",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -9614,7 +9642,7 @@
       "risk": "normal",
       "status": "active",
       "title": "x-pool review follow-ups and the restore check's race",
-      "updated": "2026-11-09T14:23:41",
+      "updated": "2026-11-09T14:23:57",
       "worktree": "../Xapiand-wt/xapiand/x-pool-followups"
     },
     "x-pool-step1": {
