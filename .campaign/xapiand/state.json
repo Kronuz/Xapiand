@@ -43,6 +43,13 @@
       "closed": "noted: cpp-libraries:9233435 moves CCACHE_DIR to runner.temp; expect one cold-ccache CI run per consumer",
       "id": "msg-7",
       "text": "Detent lead: cpp-libraries cmake.yml now keeps CCACHE_DIR in runner.temp, outside the checkout (cpp-libraries:9233435). A workspace .ccache showed as untracked files and broke Detent's git-status evidence. Consumers' first CI run after it starts with a cold ccache."
+    },
+    {
+      "at": "2026-11-09T15:05:38",
+      "by": "detent-lead",
+      "closed": "slot serialization fix queued with the agent-campaign housekeeping agent; Detent told to use distinct slots meanwhile",
+      "id": "msg-8",
+      "text": "Detent lead, tool defect for agent-campaign: jobs submitted with the same --slot ran concurrently (three at once in slot dense-mutants; earlier two in s1s2-mutant, where one failed in CMake FetchContent and one lost its runner, 261109-125239-e09f2e and 261109-125238-38804a). A slot should serialize its jobs; today a shared slot corrupts verdicts."
     }
   ],
   "quests": {
