@@ -9,15 +9,20 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Segmenter written and matching ICU (analysis:9623a02): rules DFA from ICU (cjk/tables.hh), dictionary
+DP over a Kronuz/fst (data/cjdict.txt built at build time), ICU oracle in tools/icu_compare.cc.
+Local dev runs (not evidence): 3,034 vectors pass, zh/ja/ko corpora 0 differences, dict identical,
+sweep 0 differences outside Complex_Context scripts (Lao/Khmer/Myanmar: ICU's own engines).
+Now: timing smoke vs ICU, then docs (mechanism note, README), then jobs.
 
 ## Next
 
-1. <step>
+1. Timing smoke (A5), docs/cjk-segmenter.md (A6), README + LICENSE-ICU naming (A3).
+2. Jobs: build-test (`campaign verify`), A2 corpus+sweep+dict job, A4 fuzz 5 min ASan+UBSan, A5 bench.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
