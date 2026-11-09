@@ -45,7 +45,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 ## Agent runs, continued
 
 | 11-09 | x-pool | contributor, opus, high (third and fourth turns) | 143k + 164k (notices) | 5% → | 8m + 4m | durability ruled harness timing (R6, 5/5 at master and branch); ready for review |
-| 11-09 | x-pool | reviewer, opus, high (correctness) | | 5% → | | running |
+| 11-09 | x-pool | reviewer, opus, high (correctness) | 262k (notice) | 5% → | 18m10s, 86 tool calls | CHANGES: C1 blocking (missing-index write 500 instead of 404, found by a probe job); C2-C7 non-blocking |
 
 ## Landings
 
