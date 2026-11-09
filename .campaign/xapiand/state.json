@@ -508,6 +508,32 @@
       "title": "CI runs on campaign quest branches (Xapiand)",
       "updated": "2026-11-08T23:15:02"
     },
+    "ci-quest-branches-prospect": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 -c \"import sys;t=open(\\x27.github/workflows/ci.yml\\x27).read();sys.exit(0 if \\x27quest/**\\x27 in t else 1)\"",
+          "level": "none",
+          "minutes": 5,
+          "name": "yaml"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "planned",
+      "title": "CI runs on campaign quest branches (prospect)",
+      "updated": "2026-11-08T23:15:04"
+    },
     "ci-quest-branches-strata": {
       "accepted": {},
       "after": [],
