@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: waiting on jobs 261109-132138-e24cab 261109-132129-838913
+State: working
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,46 +9,24 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Step 3b (the index on the log), second contributor, committed at strata:7ffabab:
-- strata:ea3f8a5 faultfs models the barrier's second phase (R16), with two faultfs_test cases.
-- strata:f2089f9 the index on the manifest log, strata's tests ported,
-  `docs/mechanisms/index-on-the-log.md`.
-- strata:7ffabab `field_table_bench` counts the logs (outside the file set: Blocked on 2).
-
-Jobs at strata:7ffabab: build-test 261109-132138-e24cab (the gate check, `campaign verify`),
-mutants 261109-132129-838913. Locally every touched suite passed (retention, defer_io, directory,
-lifecycle, fields, faultfs, warm, manifest_log) except index_test, whose last three fixes
-(`settle_storage` at open, the fallback's first generation, the drain's owed retention) were
-committed without a local rerun: the build-test job is their first run. Suites not touched by
-this step were not run locally at this head.
+Third contributor. Step 3b's red tests fixed at strata:cd8156d (R20, R21); the five failures at
+strata:7ffabab were this branch's: build-test at strata `main` (strata:3df7af4) 261109-133205-fdea61
+passed 74 of 74. Retiring the old codecs (Next 1), uncommitted.
 
 ## Next
 
-1. Read 261109-132138-e24cab and 261109-132129-838913. Fix what is red (index_test first), with
-   a rerun as a job. When green, A1's index half has its build-test row.
-2. Retire `files::manifest`, the live-docs, metadata and field-table file codecs (`files.hh`,
-   `fields.hh` encode/decode), `files_test`'s codec stages, `fuzz_files`, fields_test's decoder
-   stage, `tools/mutants/fields.py`'s file mutants; `bench/manifest-log/open_probe.cc` models
-   `main` with them (keep a private copy there, or retire the probe after A8). `pre_freeze` to
-   0x8000'0008 (D11). Own commit.
-3. Step 3c: T4's cases on faultfs, media_test on the log (ported by renames only, not run locally;
-   check its cases cover the log), the fuzz runs at the ready head, A9 (prospect waits for L1's quest).
+1. Retire `files::manifest`, the live-docs, metadata and field-table file codecs, `files_test`,
+   `fuzz_files`, `fuzz_fields` and their corpora, fields_test's decoder stage, the golden
+   fixtures; `pre_freeze` to 0x8000'0008 (D11); regenerate `test/fixtures/manifest_log` and the
+   log fuzz seeds; own commit, build-test job.
+2. Step 3c: T4's cases on faultfs, media_test on the log (ported by renames only; check its cases
+   cover the log), A3's 20M-doc delete row, the fuzz runs at the ready head, A9 (prospect waits for
+   manifest-log-prospect).
 
 ## Blocked on
 
-1. **Resolved by the lead (L1): a prospect companion quest after manifest-log.** prospect's suite (A9) needs a companion change once step 3b lands. prospect's tests read
-   the old files: `format13_test.cc` rewrites manifests through `files::manifest` (about 30 sites),
-   `reclaim_test.cc` decodes manifests and live-docs and metadata files, `media_test.cc` damages
-   `fields-*` offsets, `fixtures_test.cc` pins `files::pre_freeze`, `directory_test.cc` plants
-   `meta-1.kv`. They move to the log in prospect, outside this quest's repository. Recommendation:
-   the lead opens a prospect companion quest (or branch) to land with step 3b; the A9 job runs
-   prospect at that branch.
-
-2. **The file set lacks `bench/field_table/**`.** `field_table_bench` (T8 of fields-and-keys)
-   counts bytes in `fields-*` files, which no longer exist; it does not compile against the index
-   on the log. The fix is two lines (count the logs instead). Options: (1) add
-   `bench/field_table/**` to the quest's file set and keep the commit; (2) the lead lands the
-   two-line change itself. Recommendation: 1; the change is its own commit so it can be dropped.
+Nothing open. (Former 1 resolved by L1; former 2 resolved by the lead's file-set change,
+Xapiand:143eddeef: R22.)
 
 ## Evidence
 
@@ -163,4 +141,13 @@ Not ready for review. Step 3a, the log layer, at strata:6a8bb32 (index.hh untouc
   generation's, another index's, a wrapping bitset or delta) have no file left to craft; the
   decoder's own bounds are manifest_log_test's "bounds on read", "bit flips" and the fuzz target.
   The install and open damage cases are re-made as resealed snapshots.
-
+- R20 (seeded identities): a seeded index restarted its identity count at every open, so a reopen
+  drew a segment identity its log already held and the log refused the edit (apply_atomic aborted;
+  `main` never checked I13 on write). The seeded base is the seed plus 2^32 per generation
+  committed before the open, set after recovery; index_test's seeded-reopen case fails without it.
+- R21 (D6.6 in tests): background_merge and reclaim_bg expected the open to queue its orphans; under
+  D6.6 that is owed to `reclaim()` or the drain, so they call it or expect it there. reclaim_bg's
+  threaded case compared the permit with a fresh count while a rolled-over log's removal (91 KB
+  measured) awaited its directory sync, failing 1 run in about 20; it drains first (200 runs clean).
+- R22 (former Blocked on 2): the lead added `bench/field_table/**` to the file set
+  (Xapiand:143eddeef); strata:7ffabab stays.
