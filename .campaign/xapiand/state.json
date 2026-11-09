@@ -8833,16 +8833,30 @@
           "name": "e2e"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
-          "level": "light",
-          "minutes": 240,
+          "cmd": "ci:AddressSanitizer",
+          "level": "none",
+          "minutes": 1,
           "name": "asan"
         },
         {
-          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+          "cmd": "ci:ThreadSanitizer",
+          "level": "none",
+          "minutes": 1,
+          "name": "tsan"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+          "later": true,
           "level": "light",
           "minutes": 240,
-          "name": "tsan"
+          "name": "asan-macos"
+        },
+        {
+          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "tsan-macos"
         }
       ],
       "consumes": [
@@ -8989,6 +9003,83 @@
             "gate check e2e changed",
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-09T04:14:37",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "none",
+                "minutes": 1,
+                "name": "tsan"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan-macos"
+              }
+            ]
+          ],
+          "reason": "CI first: the Linux sanitizer gate is CI's job at the exact commit (ci: check); the macOS sanitizer build runs once, deferred, on the landed code",
+          "voided": [],
+          "weakened": [
+            "gate check asan changed",
+            "gate check tsan changed"
+          ]
         }
       ],
       "landed": [],
@@ -9004,7 +9095,7 @@
       "risk": "high",
       "status": "review",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-09T04:10:42",
+      "updated": "2026-11-09T04:14:37",
       "worktree": "../Xapiand-wt/xapiand/x-pool"
     },
     "x-pool-step1": {
