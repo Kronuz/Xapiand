@@ -540,6 +540,8 @@
     "ci-quest-branches-strata": {
       "accepted": {},
       "after": [],
+      "base": "70df28d37cae04ee1253e2139dfffca16f5d7fc1",
+      "branch": "quest/xapiand/ci-quest-branches-strata",
       "checks": [
         {
           "cmd": "python3 -c \"import sys;t=open(\\x27.github/workflows/ci.yml\\x27).read();sys.exit(0 if \\x27quest/**\\x27 in t else 1)\"",
@@ -552,6 +554,7 @@
       "files": [
         ".github/workflows/ci.yml"
       ],
+      "journal": "../Xapiand-wt/xapiand/ci-quest-branches-strata",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -559,9 +562,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "CI runs on campaign quest branches (strata)",
-      "updated": "2026-11-08T23:15:03"
+      "updated": "2026-11-08T23:15:17",
+      "worktree": "../strata-wt/xapiand/ci-quest-branches-strata"
     },
     "cjk-words": {
       "accepted": {},
