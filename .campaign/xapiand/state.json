@@ -9671,9 +9671,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "x-pool review follow-ups and the restore check's race",
-      "updated": "2026-11-09T14:23:57",
+      "updated": "2026-11-09T15:47:07",
       "worktree": "../Xapiand-wt/xapiand/x-pool-followups"
     },
     "x-pool-step1": {
