@@ -3676,6 +3676,8 @@
       "after": [
         "manifest-log"
       ],
+      "base": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
+      "branch": "quest/xapiand/manifest-log-prospect",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3693,6 +3695,7 @@
         "include/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/manifest-log-prospect",
       "landed": [],
       "lenses": [],
       "milestone": "The document profile gate",
@@ -3700,9 +3703,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect moves to strata's manifest log",
-      "updated": "2026-11-09T13:26:04"
+      "updated": "2026-11-09T14:58:08",
+      "worktree": "../prospect-wt/xapiand/manifest-log-prospect"
     },
     "manifest-log-steps12": {
       "accepted": {},
