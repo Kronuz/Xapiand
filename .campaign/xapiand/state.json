@@ -3444,6 +3444,8 @@
     "manifest-log": {
       "accepted": {},
       "after": [],
+      "base": "276992822d49af3fcee678a72d04c43a9629adc7",
+      "branch": "quest/xapiand/manifest-log",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3564,6 +3566,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/manifest-log",
       "landed": [],
       "lenses": [
         "design",
@@ -3577,9 +3580,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-09T04:14:26"
+      "updated": "2026-11-09T11:02:13",
+      "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-steps12": {
       "accepted": {},
