@@ -57,6 +57,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | wbuf-inline CI linux-tsan rerun green in 58 min against the 60 min job cap | catalog_s8_smoke (41.6 min under TSan) is a near-miss for every strata change: follow-up quest |
 | 11-09 | Evidence jobs queued with --after never counted (filed under KEY-ORDER, looked up by KEY): wbuf-inline's sweep showed 'ran other code' | fixed in agent-campaign:6105637 |
 | 11-09 | Sidebar clutter: hand-set pills never expired, a pill per blocked quest, Detent's pills drawn here by my timing runs | agent-campaign:6105637: report pills expire (--ttl 120 min), quests' pills only active/review; AGENTS.md rule (dotfiles:776b943) |
+| 11-09 | wbuf-inline landed on strata main (strata:3df7af4) | A/B at the head 1.048 [1.013, 1.078] (1.05× faster), B/B tie; deferred macOS sanitizers reused from the head's gate jobs |
 
 ## Agent runs, continued
 
