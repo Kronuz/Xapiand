@@ -29,6 +29,9 @@ BIN="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 OUT="$(mkdir -p "$2" && cd "$2" && pwd)"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 export PORT="${PORT:-18951}" E2E_TMP="$OUT"
-"$HERE/e2e_capture.sh" "$BIN" "$OUT/strata.json" "$OUT/data" > "$OUT/capture.log" 2>&1
-python3 "$HERE/e2e_assert.py" "$OUT/strata.json" > "$OUT/assert.txt"; head -1 "$OUT/assert.txt"
+rm -f "$OUT/strata.json"
+cap=0; "$HERE/e2e_capture.sh" "$BIN" "$OUT/strata.json" "$OUT/data" > "$OUT/capture.log" 2>&1 || cap=$?
 rm -rf "$OUT/data"
+[ "$cap" -eq 0 ] && [ -s "$OUT/strata.json" ] || { echo "capture failed (exit $cap): $OUT/capture.log"; tail -5 "$OUT/capture.log"; exit 1; }
+python3 "$HERE/e2e_assert.py" "$OUT/strata.json" > "$OUT/assert.txt"; rc=$?; head -1 "$OUT/assert.txt"
+grep -q '^GREEN' "$OUT/assert.txt" || exit "$(( rc ? rc : 1 ))"
