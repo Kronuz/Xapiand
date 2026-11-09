@@ -51,6 +51,9 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | wbuf-inline A8 A/B 6b6841 ran in a lull under the drain hold: 91 s, no stall | readrandom 1.06x faster [1.042, 1.091], B/B tie |
 | 11-09 | agent-campaign:573b5d4 (worker --restart, deadline-aware drain) landed; worker re-exec'd in place live (pid 5325 kept) | suite 173 OK; three revert checks fail as required |
 | 11-09 | My overdue-drain reservation (agent-campaign:573b5d4) held all new light jobs for Detent's 11 queued exclusives, waiting on a light TSan job declared at 6 h: 1 job running with 21 queued, load ~7, from about 08:00 | fix: a drain's wait counts from the last drain's end (turns), and an overdue drain queues its hold at once; agent-campaign:60e4e75, worker restarted in place 08:42, 7 light jobs started at once; ~40 min of host lost |
+| 11-09 | wbuf-inline correctness review (opus, high): APPROVE, no blocking, N1-N4 doc nits | 188k tokens, 72 tool uses, 50 min; 2 of 3 probe submissions failed on the probe's own compile errors |
+| 11-09 | campaign status 41 s → 3.5 s (Xapiand), 17 s → 3.3 s (Detent) at load 11-17: disk caches for gh and git facts (agent-campaign:0c7ed06) | ~590 subprocesses per call before; output identical |
+| 11-09 | wbuf-inline CI linux-tsan cancelled at the 60 min job cap, no TSan report: catalog_s8_smoke takes 41.6 min under TSan on main too | rerun; follow-up: shorten or split that test |
 
 ## Agent runs, continued
 
