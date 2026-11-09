@@ -9,16 +9,16 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Segmenter written and matching ICU (analysis:9623a02): rules DFA from ICU (cjk/tables.hh), dictionary
-DP over a Kronuz/fst (data/cjdict.txt built at build time), ICU oracle in tools/icu_compare.cc.
-Local dev runs (not evidence): 3,034 vectors pass, zh/ja/ko corpora 0 differences, dict identical,
-sweep 0 differences outside Complex_Context scripts (Lao/Khmer/Myanmar: ICU's own engines).
-Now: timing smoke vs ICU, then docs (mechanism note, README), then jobs.
+At analysis:edf34a2 (segmenter, NFKC fast path, docs/cjk-segmenter.md, README, LICENSE-ICU), jobs
+submitted: build-test 261109-153713-c159bf, A2 261109-153714-0ad2b4, A4 261109-153716-29ddc3,
+A5 261109-153718-704c19 (exclusive). Local mutants of the DP (tie-break, unknown cost) re-run
+against the corpora in a light hold (.scratch/mutants.sh in the worktree).
 
 ## Next
 
-1. Timing smoke (A5), docs/cjk-segmenter.md (A6), README + LICENSE-ICU naming (A3).
-2. Jobs: build-test (`campaign verify`), A2 corpus+sweep+dict job, A4 fuzz 5 min ASan+UBSan, A5 bench.
+1. Read the jobs; fill the Evidence table and Result with their numbers.
+2. If the tie-break or unknown-cost mutant survives ctest but the corpora kill it, add vectors that
+   kill it in ctest (cases from the corpora).
 
 ## Blocked on
 
