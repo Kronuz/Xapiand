@@ -1,6 +1,6 @@
 # wbuf-inline: journal
 
-State: working
+State: waiting on jobs 261108-230850-b72759 261108-230850-ae766d 261108-230850-119b9c 261108-230851-b11787 261108-230851-c6dcbb 261108-230852-0806c9 261108-230853-7da613 261108-230854-8255bb 261108-230855-fae46b 261108-230856-f04186
 Quest: .campaign/xapiand/quests/wbuf-inline.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,21 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-A11 is done at strata:8f34321 (the lead's work, 2026-11-08). Next: rebase onto strata main.
+Rebased onto strata main (strata:70df28d), clean, no conflicts (main touched `index.hh` in two
+hunks the branch does not). Head strata:e4fe8f7 adds four job scripts, no engine change:
+`test/wbuf_mutants.sh` (A1, A2, A4), `test/prospect_integration.sh` with
+`test/prospect_churn_gen.py` (A7), `test/linux_asan.sh` (A6), `docs/perf/wbuf-inline/landed-ab.sh` (A8).
+Jobs at strata:e4fe8f7: build-test 261108-230850-b72759, asan 261108-230850-ae766d, tsan
+261108-230850-119b9c, A11 261108-230851-b11787, mutants 261108-230851-c6dcbb, prospect
+261108-230852-0806c9, Linux ASan 261108-230853-7da613, A/B build 261108-230854-8255bb, share sweep
+261108-230855-fae46b, wbufrr 261108-230856-f04186.
 
 ## Next
 
-1. Rebase quest/xapiand/wbuf-inline onto strata main (162 files changed since the branch point), then
-   `campaign verify wbuf-inline` and resubmit the A11 repeat at the rebased head:
-   `campaign job submit --quest wbuf-inline --level light --minutes 120 -- test/vm_repeat.sh write_buffer_test 300 4 branch=.`
-2. Fill A1 to A10 from the branch's ledger (strata `docs/status/wbuf-inline.md`, Status: HISTORY) with jobs at the rebased head.
-3. Ready for the correctness review.
+1. Read the jobs at strata:e4fe8f7; fill A1 to A11 in Evidence; add the landing A/B to
+   `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head, the
+   other jobs' code is unchanged).
+2. Ready for the correctness review.
 
 ## Blocked on
 
@@ -42,3 +48,12 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 - The lead: A11's repeat harness is `test/vm_repeat.sh` (strata:c15019c, strata:287b461); it drives strata's FreeBSD VM from the main checkout (STRATA), like cpp-libraries' preflight.
+- Rebase onto strata main kept main's behavior: no conflict; `index.hh`'s main hunks
+  (strata:fd2ed66, strata:f70fb2c) apply beside the branch's.
+- The share sweep (A8's records per flush) runs as a light job: its counts and digests are
+  deterministic; max RSS from it is noisy and not claimed. The wbufrr timing runs `strict`.
+- A6's Linux ASan+UBSan runs on strata's local Linux VM (port 18772, no AWS) through the main
+  checkout's `tools/vm/aws-linux.sh run-local`, as A11 drives the FreeBSD VM; CI on the landed
+  commit stays the lead's.
+- Superseded jobs: 261108-225901-3a3729 (build-test at strata:14ed454, the rebase before the
+  scripts) and those cancelled at strata:14ed454, strata:502b330 and strata:abea21e (the head moved).
