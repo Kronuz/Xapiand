@@ -270,9 +270,16 @@ public:
 
 	bool ready() const { return ready_; }
 
-	// Whether run() ended (the node stopped itself), and the status the process would end with.
+	// Whether run() ended (the node stopped itself).
 	bool exited() const { return exited_.load(); }
-	int exit_code() const { return exit_code_.load(); }
+
+	// Joins the control loop's thread once run() ended, and gives the status the process ends with.
+	int join() {
+		if (thread_.joinable()) {
+			thread_.join();
+		}
+		return exit_code_.load();
+	}
 
 private:
 	std::thread thread_;
@@ -600,9 +607,10 @@ struct AbandonSpec {
 		if (!eventually([&] { return node.exited(); }, 60s)) {
 			std::_Exit(7);
 		}
+		const int code = node.join();
 		Logging::finish();
 		Logging::join();
-		std::_Exit(node.exit_code());
+		std::_Exit(code);
 	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);
@@ -874,9 +882,10 @@ static void test_a_second_signal_ends_the_shutdowns_wait() {
 	if (!eventually([&] { return node.exited(); }, 20s)) {
 		std::_Exit(5);   // still up, serving nothing
 	}
+	const int code = node.join();
 	Logging::finish();
 	Logging::join();
-	std::_Exit(node.exit_code());
+	std::_Exit(code);
 }
 
 static void test_a_node_on_a_taken_port_ends_the_process() {
