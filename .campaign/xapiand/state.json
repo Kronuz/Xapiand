@@ -514,6 +514,8 @@
     "ci-quest-branches-prospect": {
       "accepted": {},
       "after": [],
+      "base": "1fe7be9bcb5cb5fcaddf8ddcecf98a166efc614c",
+      "branch": "quest/xapiand/ci-quest-branches-prospect",
       "checks": [
         {
           "cmd": "python3 -c \"import sys;t=open(\\x27.github/workflows/ci.yml\\x27).read();sys.exit(0 if \\x27quest/**\\x27 in t else 1)\"",
@@ -526,6 +528,7 @@
       "files": [
         ".github/workflows/ci.yml"
       ],
+      "journal": "../Xapiand-wt/xapiand/ci-quest-branches-prospect",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -533,9 +536,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "CI runs on campaign quest branches (prospect)",
-      "updated": "2026-11-08T23:15:04"
+      "updated": "2026-11-08T23:15:22",
+      "worktree": "../prospect-wt/xapiand/ci-quest-branches-prospect"
     },
     "ci-quest-branches-strata": {
       "accepted": {},
