@@ -7995,13 +7995,13 @@
           "name": "build-test"
         },
         {
-          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
         },
         {
-          "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
           "level": "light",
           "minutes": 240,
           "name": "asan"
@@ -8019,7 +8019,7 @@
           "name": "t7-tsan"
         },
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
           "level": "light",
           "minutes": 120,
           "name": "recovery"
@@ -8146,6 +8146,106 @@
             "gate check recovery changed",
             "gate check removed changed"
           ]
+        },
+        {
+          "at": "2026-11-08T22:56:42",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && TSAN_OPTIONS=log_path=\"$JOB_OUT/san\" python3 harness/engine_mixed_load.py build-tsan/bin/xapiand \"$JOB_OUT/t7\" --engine strata --secs 600 --term-at 300",
+                "level": "light",
+                "minutes": 120,
+                "name": "t7-tsan"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+                "level": "light",
+                "minutes": 120,
+                "name": "recovery"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && harness/removed_options_check.sh build/bin/xapiand && ! git grep -n -E 'num_committers|DatabaseCleanup' -- src ARCHITECTURE.md",
+                "level": "light",
+                "minutes": 150,
+                "name": "removed"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) && harness/engine_e2e.sh build-asan/bin/xapiand \"$JOB_OUT/e2e\" && harness/stored_stream.sh build-asan/bin/xapiand && harness/restore_stream_check.sh build-asan/bin/xapiand",
+                "level": "light",
+                "minutes": 240,
+                "name": "asan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && (cd build-tsan && ctest -j3 --output-on-failure)",
+                "level": "light",
+                "minutes": 240,
+                "name": "tsan"
+              },
+              {
+                "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && TSAN_OPTIONS=log_path=\"$JOB_OUT/san\" python3 harness/engine_mixed_load.py build-tsan/bin/xapiand \"$JOB_OUT/t7\" --engine strata --secs 600 --term-at 300",
+                "level": "light",
+                "minutes": 120,
+                "name": "t7-tsan"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+                "level": "light",
+                "minutes": 120,
+                "name": "recovery"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && harness/removed_options_check.sh build/bin/xapiand && ! git grep -n -E 'num_committers|DatabaseCleanup' -- src ARCHITECTURE.md",
+                "level": "light",
+                "minutes": 150,
+                "name": "removed"
+              }
+            ]
+          ],
+          "reason": "the docs E2E needs newman 6 first on PATH and RUN_ALL_STRICT=1 to prove anything (e2e-harness); the check was passing on a stale report",
+          "voided": [],
+          "weakened": [
+            "gate check e2e changed",
+            "gate check asan changed",
+            "gate check recovery changed"
+          ]
         }
       ],
       "landed": [],
@@ -8163,7 +8263,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-08T22:36:01"
+      "updated": "2026-11-08T22:56:42"
     },
     "xapiand-final-release": {
       "accepted": {},
