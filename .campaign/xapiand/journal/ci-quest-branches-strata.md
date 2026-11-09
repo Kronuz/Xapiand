@@ -1,6 +1,6 @@
 # ci-quest-branches-strata: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/ci-quest-branches-strata.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,7 +17,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -27,13 +27,12 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+| A1 | 261109-003518-12bda2 (`yaml`: `'quest/**'` in ci.yml's push branches) |
+| A2 | lead, 2026-11-09: pushing quest/xapiand/ci-quest-branches-strata at strata:446410f started GitHub Actions CI run 42608975510 (event push), with no manual dispatch |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`.github/workflows/ci.yml` in strata runs on pushes to `quest/**`, so a campaign quest branch gets CI by being pushed.
 
 ## Rulings I made
 
