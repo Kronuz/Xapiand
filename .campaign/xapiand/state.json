@@ -8893,8 +8893,8 @@
     "x-pool": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-09T04:51:42",
-          "base": "c243ffab0bc4ed6287dd25fb8fb1bb5df93af26c",
+          "at": "2026-11-09T05:45:57",
+          "base": "41978149f88cf291fb10dfc231112c7f3be42217",
           "blobs": {
             "CMakeLists.txt": "100644:f61d9b5e6a187fa2ebb372d8ff9954e843222e3d",
             "docs/design/x-pool.md": "100644:93f06aa7e025ec3d1c9ba7aa8b3f1f1ed5c3bb71",
@@ -8928,20 +8928,20 @@
           },
           "brief": "9f9b59409602399e",
           "by": "review",
-          "commit": "a5af5c6977e1b4059b61d7d8f70f74fbdc449b60",
+          "commit": "42572c2fa74d0c83d8bedd8c364638a6a918762d",
           "findings": {
             "C1": {
               "jobs": [
                 {
                   "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-x-pool-correctness/missing_index_write.sh",
-                  "commit": "fe3fc2b12c1d786a4c218d4c5c21cd813ea87ca9",
+                  "commit": "42572c2fa74d0c83d8bedd8c364638a6a918762d",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261109-043218-12479c",
+                  "job": "261109-053944-94b416",
                   "level": "light",
-                  "seconds": 288.2,
+                  "seconds": 269.7,
                   "state": "done",
-                  "what": "review probe C1: missing_index_write.sh at fe3fc2b12"
+                  "what": "review probe C1: missing_index_write.sh at fe3fc2b12 at 42572c2fa74d"
                 }
               ],
               "kind": "defect",
@@ -9233,7 +9233,7 @@
       "risk": "high",
       "status": "review",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-09T04:51:42",
+      "updated": "2026-11-09T05:45:57",
       "worktree": "../Xapiand-wt/xapiand/x-pool"
     },
     "x-pool-step1": {
