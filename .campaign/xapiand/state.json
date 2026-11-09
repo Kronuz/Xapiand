@@ -485,6 +485,8 @@
     "ci-quest-branches": {
       "accepted": {},
       "after": [],
+      "base": "4a3cbc73ae8f0bf6173bb9c2c80cce2252b06aba",
+      "branch": "quest/xapiand/ci-quest-branches",
       "checks": [
         {
           "cmd": "python3 -c \"import sys;t=open(\\x27.github/workflows/ci.yml\\x27).read();sys.exit(0 if \\x27quest/**\\x27 in t else 1)\"",
@@ -504,9 +506,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "CI runs on campaign quest branches (Xapiand)",
-      "updated": "2026-11-08T23:15:02"
+      "updated": "2026-11-08T23:15:14",
+      "worktree": "../Xapiand-wt/xapiand/ci-quest-branches"
     },
     "ci-quest-branches-prospect": {
       "accepted": {},
