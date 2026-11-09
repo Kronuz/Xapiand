@@ -4336,7 +4336,8 @@
         "test/**",
         "bench/**",
         "docs/perf/**",
-        "docs/mechanisms/coroutine-handlers.md"
+        "docs/mechanisms/coroutine-handlers.md",
+        "CHANGELOG.md"
       ],
       "history": [
         {
@@ -4378,7 +4379,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-09T14:15:49",
+      "updated": "2026-11-09T15:25:38",
       "worktree": "../http-wt/xapiand/perf-watch-peek"
     },
     "phase0": {
