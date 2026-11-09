@@ -15,7 +15,7 @@ layer is a failure, not a pass.
 - A1 A failed capture fails `run_all.sh e2e`, even with an old report left from an earlier run: the `probe` check (a binary that exits 1)
 - A2 `engine_e2e.sh` exits non-zero when the capture or the assertions fail: the `probe` check
 - A3 Under `RUN_ALL_STRICT=1` a skipped layer fails the run (`tls` without newman 6): the `probe` check
-- A4 The `probe` check fails at master (revert check): a job of the same command at master's commit
+- A4 [manual] The `probe` check fails at master (revert check): the lead names the job of the same command at master's commit and its exit
 
 ## Contracts
 
