@@ -51,7 +51,7 @@ strata:bb2f58d as 261109-043525-e7d3ad. Share sweep 261109-024406-5881b6: B/A re
 
 ## Next
 
-1. Read wbufrr 261109-043525-e7d3ad; write the landing A/B into `docs/perf/wbuf-inline.md`; rebase on strata main (CI trigger); give the lead the head; build-test plus macOS asan and tsan at it; A6 = `ci:linux-asan-ubsan`, `ci:linux-tsan`; fill A1 to A11 in Evidence; add the landing A/B to
+1. (Waited once, 600 s: 261109-043525-e7d3ad running under its strict hold.) Read wbufrr 261109-043525-e7d3ad; write the landing A/B into `docs/perf/wbuf-inline.md`; rebase on strata main (CI trigger); give the lead the head; build-test plus macOS asan and tsan at it; A6 = `ci:linux-asan-ubsan`, `ci:linux-tsan`; fill A1 to A11 in Evidence; add the landing A/B to
    `docs/perf/wbuf-inline.md` (a docs-only commit; then rerun `campaign verify` at that head).
 2. Ready for the correctness review.
 
