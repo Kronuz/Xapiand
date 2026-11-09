@@ -1,6 +1,6 @@
 # x-pool: journal
 
-State: working
+State: waiting on jobs 261108-224742-122302 261108-224742-404c84 261108-224742-9b5d88 261108-224742-6f7cbc 261108-223127-f35eff 261108-223155-2703e7 261108-223156-d3fd0f 261108-223539-df1848 261108-221920-0fcf05 261108-223749-0e083d
 Quest: .campaign/xapiand/quests/x-pool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,32 +9,34 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Step 4 and the review's items, built locally (`.scratch/build-plain`), not yet committed: `apply_settling`
-(`src/engine/strata/owed.h`) with `map_owed` and two owed answers at most (D9, A5), the `unleased_maps()`
-assertions in `Turn::release` and `Shard::release` (D12), `soft_open()` clamped to the descriptor cap and K to it
-(D11, A15), `IndexSweep::negative_ttl`; tests in `test_pool` (XP5 x2, D11, negative entries, hostless vs catalog
-for A14) and `test_reactor_requests` (the pin's token, A12); design revision 3 (A9, A13, A14) and the note (A18).
+Waiting on jobs. Head Xapiand:465f56bb5 (master merged in; it changes no code, only the ledger's status line).
+Code last changed at Xapiand:161e1db5d (step 4, tests); design revision 3 at 3df4d681a.
 
-The docs E2E failure at Xapiand:0638e61fd is host overload, not a defect (ruling R1): see Rulings.
-
-Local tools in `.scratch/` (untracked): `build.sh plain|asan|tsan [targets]` (ccache), `probe.sh`, `probe2.sh`,
-`probe3.sh` (RESTORE wall and node CPU), `e2e.sh BIN TAG PORT`.
+Step 4 mutants (local, `.scratch/mutants.py`, one string each, rebuilt, its test run, restored): 6 of 6 killed.
+| Mutant | Killed by |
+|---|---|
+| x1 no retry (an owed answer returned) | `test_a_write_to_a_demoted_index_applies_after_one_promote` (internal: "did not apply") |
+| x2 `promote()` not run on map_owed | the same ("kept owing I/O") |
+| x3 the bound unchecked | `test_a_third_owed_answer_is_internal` (applies 3, settles 2) |
+| x4 `soft_open` not clamped | `test_soft_open_is_at_most_the_descriptor_cap` |
+| x5 `negative_ttl` ignored | `test_the_sweep_erases_a_missing_index_negative_entries` |
+| x6 the use's pin without the token | `test_a_cancelled_request_leaves_the_pin_queue` (hangs: killed by the 300 s timeout) |
 
 ## Next
 
-1. Jobs at 3f4114f30 (the adopted code: the last four commits verified): build-test 261108-214834-ad7d40 done
-   exit 0, asan 261108-214834-1c3b6b done exit 0 (its docs E2E did not run: newman 4.5.0, see Blocked on), e2e
-   261108-214834-bcc874 "GREEN" from a stale report (Blocked on), tsan 261108-214834-44536b failed exit 8: 35 of
-   37 pass; `test_index_pattern` (a TSan race inside its own `test_the_walk_queue_is_bounded`, and
-   `test_a_zero_cap_is_refused`'s option exits) and `test_node`'s
-   `test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time` (the abandon child's thread-leak
-   report makes its exit non-zero; the ledger ran `test_node` with `report_thread_leaks=0` for this). Both tests are
-   master's, untouched here; job 261108-223749-0e083d runs them at master 2173c17fe.
-2. Jobs at 8c06fff93: the real docs E2E 261108-223127-f35eff (newman 6, plain and asserts builds); Linux VM
-   261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan); the e2e check at master 261108-221920-0fcf05.
-3. Local mutants for step 4 (`.scratch/mutants.py`), then merge master (only the ledger conflicts: master marks it
-   HISTORY), then `campaign verify x-pool` at the merged head.
-4. `wide_search_check.py check` job (A15).
+1. Gate checks at 465f56bb5 (the lead's -j4 commands): build-test 261108-224742-122302, e2e 261108-224742-404c84,
+   asan 261108-224742-9b5d88, tsan 261108-224742-6f7cbc.
+2. At 8c06fff93 (the same code): the real docs E2E 261108-223127-f35eff (newman 6, plain and asserts builds);
+   Linux VM 261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan); wide search 261108-223539-df1848.
+3. At master: the e2e check 261108-221920-0fcf05; tsan's two failing tests 261108-223749-0e083d.
+4. At the adopted code 3f4114f30 (the last four commits verified): build-test 261108-214834-ad7d40 exit 0; asan
+   261108-214834-1c3b6b exit 0 (its docs E2E did not run, newman 4.5.0); e2e 261108-214834-bcc874 "GREEN" from a
+   stale report (Blocked on); tsan 261108-214834-44536b exit 8: 35 of 37 pass; `test_index_pattern` (a TSan race
+   inside its own `test_the_walk_queue_is_bounded`, and `test_a_zero_cap_is_refused`'s option exits) and
+   `test_node`'s `test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time` (the abandon child's
+   thread-leak report makes its exit non-zero; the old ledger ran `test_node` with `report_thread_leaks=0`). Both
+   are master's tests, untouched here.
+5. When they pass, fill the Evidence rows and Result; State "ready for review".
 
 ## Blocked on
 
@@ -51,8 +53,28 @@ commit (261108-221920-0fcf05) shows it is pre-existing.
 
 ## Evidence
 
+Code at Xapiand:161e1db5d = 465f56bb5 (the merge changes only docs). Pending rows name the job that proves them.
+
 | Criterion | Evidence |
 |---|---|
+| A1 | build-test 261108-224742-122302 (`test_reactor_requests` "a pin"); docs E2E on an asserts build 261108-223127-f35eff; mutant "no check in `pin`": M1 in `docs/status/phase7c-x-pool.md` (step 1), the check unchanged since |
+| A2 | build-test 261108-224742-122302 (`test_pool`: `test_a_cold_pin_reads_what_the_log_replays`, `test_a_fenced_index_is_replaced_and_replays_its_log`, `test_a_resident_commit_on_an_owed_index_lets_it_close`); mutants m1, m2 in `docs/status/phase7c-x-pool.md` |
+| A3 | build-test 261108-224742-122302 (`test_the_sweep_closes_only_an_unpinned_index`, sweep at 1 kHz); mutants s6, s7 in the ledger |
+| A4 | build-test 261108-224742-122302 (`test_the_shutdown_commits_and_logs_an_uncommitted_write`, `test_the_sweeps_close_syncs_a_merges_output`); mutant s8 in the ledger |
+| A5 | build-test 261108-224742-122302 (`test_a_write_to_a_demoted_index_applies_after_one_promote`, `test_a_third_owed_answer_is_internal`, `test_soft_open_is_at_most_the_descriptor_cap`); mutants x1 to x4 above |
+| A6 | asan 261108-224742-9b5d88, tsan 261108-224742-6f7cbc; Linux VM 261108-223155-2703e7 (tsan), 261108-223156-d3fd0f (asan) |
+| A7 | build-test 261108-224742-122302 (`async_check --strict --owed --extern strata=.deps/strata-src`) |
+| A8 | `test_a_root_destroyed_while_it_waits_for_a_pin_releases_it` in asan 261108-224742-9b5d88 and tsan 261108-224742-6f7cbc |
+| A9 | `docs/design/x-pool.md` D3 ("The step 2 review's CR2, ruled") |
+| A10 | build-test 261108-224742-122302 (`test_a_destroyed_root_that_held_a_pin_lets_the_pool_join`) |
+| A11 | build-test 261108-224742-122302 (`test_a_cancelled_pin_stops_waiting`: resident pin and FLUSH cancelled; `pin_chore` rethrows `task::cancelled`) |
+| A12 | build-test 261108-224742-122302 (`test_pool` `test_a_cancelled_pin_stops_waiting`; `test_reactor_requests` `test_a_cancelled_request_leaves_the_pin_queue`); mutant x6 |
+| A13 | `docs/design/x-pool.md` D13 (budget numbers); `test_the_sweep_erases_a_missing_index_negative_entries` in build-test 261108-224742-122302; mutant x5 |
+| A14 | `docs/design/x-pool.md` D2 (why not, ruled); `test_the_hostless_path_and_the_catalog_never_share_an_index` in build-test 261108-224742-122302 |
+| A15 | build-test 261108-224742-122302 (`test_node` `test_a_search_batch_pins_a_repeated_index_once`, `test_pool` soft_open); `wide_search_check.py check` 261108-223539-df1848 |
+| A16 | build-test 261108-224742-122302 at `CMakeLists.txt` pinning strata:5d742b2 (strata main, items 5 and 5b merged) |
+| A17 | docs E2E with newman 6, 666 of 666 required: 261108-223127-f35eff (the `e2e` check cannot show it: Blocked on) |
+| A18 | `docs/mechanisms/index-registry-on-catalog.md` |
 
 ## Result
 
