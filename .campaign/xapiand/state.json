@@ -703,9 +703,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "CI runs on campaign quest branches (prospect)",
-      "updated": "2026-11-09T00:35:19",
+      "updated": "2026-11-09T04:23:21",
       "worktree": "../prospect-wt/xapiand/ci-quest-branches-prospect"
     },
     "ci-quest-branches-strata": {
