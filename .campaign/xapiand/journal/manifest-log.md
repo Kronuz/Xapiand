@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: waiting on jobs 261109-143551-b9d053 261109-143552-5afa2f
+State: waiting on jobs 261109-143552-5afa2f
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -34,7 +34,8 @@ records share (no `files::manifest`, `live_docs`, `metadata`, `encode`/`decode_*
 
 ## Next
 
-1. Read 261109-143551-b9d053 and 261109-143552-5afa2f; fix what is red with a rerun.
+1. Read mutants 261109-143552-5afa2f (build-test 261109-143551-b9d053 passed, 72 of 72); fix
+   what is red with a rerun.
 2. T4 case 1: lifecycle's crash points over a rollover (none of its 150-step workloads reaches
    R = 128 edits or 2 S; a torn tail's rollover is only in recoveries), a truncate-back and lazy
    cleanup, over 3 to 100 indexes with batched commits; mutant: two edits of one log in flight.
@@ -63,6 +64,9 @@ records share (no `files::manifest`, `live_docs`, `metadata`, `encode`/`decode_*
 
 | Criterion | Evidence |
 |---|---|
+| A1 | build-test 261109-143551-b9d053 at strata:4d2a541 (72 of 72): manifest_log ("appender": one write per append, the truncate-back, one record in flight), index (commit, recover, `check()`), retention (D8 across a rollover), lifecycle; the retired files' codecs are gone (strata:074129c) |
+| A6 | build-test 261109-143551-b9d053 at strata:4d2a541: manifest_log_test stage "caller rules" |
+| A7 | build-test 261109-143551-b9d053 at strata:4d2a541: manifest_log_test stages "crash images" and "bit flips", media_test (every byte of the log) |
 | A10 | D41 (PLAN.md, 2026-11-09): Q1 the manifest log first, Q2 a count of generations with `fallback()` reporting the damaged generation, Q3 accepted; folded into `docs/design/manifest-log.md` at strata:49ab291 |
 
 Step 3a's checks, which A3, A5, A6 and A7 build on (rows when the index runs on them, step 3c):
