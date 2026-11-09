@@ -50,7 +50,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | wbuf-inline contributor final turn (rebase, perf note, evidence) | 217k tokens, 9 tool uses, 1.9 min; head strata:3df7af4 |
 | 11-09 | wbuf-inline A8 A/B 6b6841 ran in a lull under the drain hold: 91 s, no stall | readrandom 1.06x faster [1.042, 1.091], B/B tie |
 | 11-09 | agent-campaign:573b5d4 (worker --restart, deadline-aware drain) landed; worker re-exec'd in place live (pid 5325 kept) | suite 173 OK; three revert checks fail as required |
-| 11-09 | My overdue-drain reservation (agent-campaign:573b5d4) held all new light jobs for Detent's 11 queued exclusives, waiting on a light TSan job declared at 6 h: 1 job running with 21 queued, load ~7, from about 08:00 | fix: a drain's wait counts from the last drain's end (turns), and an overdue drain queues its hold at once; testing |
+| 11-09 | My overdue-drain reservation (agent-campaign:573b5d4) held all new light jobs for Detent's 11 queued exclusives, waiting on a light TSan job declared at 6 h: 1 job running with 21 queued, load ~7, from about 08:00 | fix: a drain's wait counts from the last drain's end (turns), and an overdue drain queues its hold at once; agent-campaign:60e4e75, worker restarted in place 08:42, 7 light jobs started at once; ~40 min of host lost |
 
 ## Agent runs, continued
 
