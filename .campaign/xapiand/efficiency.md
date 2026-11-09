@@ -54,6 +54,9 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | wbuf-inline correctness review (opus, high): APPROVE, no blocking, N1-N4 doc nits | 188k tokens, 72 tool uses, 50 min; 2 of 3 probe submissions failed on the probe's own compile errors |
 | 11-09 | campaign status 41 s → 3.5 s (Xapiand), 17 s → 3.3 s (Detent) at load 11-17: disk caches for gh and git facts (agent-campaign:0c7ed06) | ~590 subprocesses per call before; output identical |
 | 11-09 | wbuf-inline CI linux-tsan cancelled at the 60 min job cap, no TSan report: catalog_s8_smoke takes 41.6 min under TSan on main too | rerun; follow-up: shorten or split that test |
+| 11-09 | wbuf-inline CI linux-tsan rerun green in 58 min against the 60 min job cap | catalog_s8_smoke (41.6 min under TSan) is a near-miss for every strata change: follow-up quest |
+| 11-09 | Evidence jobs queued with --after never counted (filed under KEY-ORDER, looked up by KEY): wbuf-inline's sweep showed 'ran other code' | fixed in agent-campaign:6105637 |
+| 11-09 | Sidebar clutter: hand-set pills never expired, a pill per blocked quest, Detent's pills drawn here by my timing runs | agent-campaign:6105637: report pills expire (--ttl 120 min), quests' pills only active/review; AGENTS.md rule (dotfiles:776b943) |
 
 ## Agent runs, continued
 
