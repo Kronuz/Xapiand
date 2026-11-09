@@ -3171,7 +3171,7 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -3185,6 +3185,34 @@
         "docs/perf/**",
         "docs/mechanisms/coroutine-handlers.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-08T22:35:47",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "cap build parallelism at the light hold's 4 jobs (owner's host rule; Detent msg-2: load 126 on 16 CPUs); commands otherwise unchanged",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -3196,7 +3224,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-08T13:24:54"
+      "updated": "2026-11-08T22:35:47"
     },
     "phase0": {
       "accepted": {},
