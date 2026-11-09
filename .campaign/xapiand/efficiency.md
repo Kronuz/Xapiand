@@ -27,6 +27,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 |---|---|---|---|
 | 11-08 | e2e-harness | The E2E harness fails when it proves nothing (Xapiand:029b324e1) | 2 |
 | 11-08 | wbuf-inline | A11: deadline wait (strata:47628b2), repeat harness (strata:c15019c, strata:287b461) | 4 (2 failed on the VM key, rerun); A11 done: branch 0/300, main 49/300 |
+| 11-09 | (tool) | rerun bug fixed: `job rerun` moves the `--ref` that holds the quest's code (agent-campaign:0ed7653, dotfiles:ee3d5f7); suite 180 OK, revert check fails as it should | 2 suite runs (light) |
 
 ## Incidents
 
