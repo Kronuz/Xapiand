@@ -36,6 +36,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-08 | Every `e2e` check graded a stale /tmp report as GREEN (newman 4.5 on the jobs' PATH); found by the x-pool contributor | every earlier E2E pass on this host is void; e2e-harness fixes it, 14 quests' E2E checks now set newman 6 and RUN_ALL_STRICT |
 | 11-08 | ci-quest-branches (3 quests): my `yaml` check's quoting broke python (SyntaxError), all 3 failed | 3 jobs of ~1 s each; check fixed to `grep -F` and rerun (261109-003516-d9144b and 2 others) |
 | 11-09 | Detent's lead reached this lead directly through the new cmux wake (agent-campaign:d15a35d): msg-3 asked and answered in minutes, where msg-1 to msg-3 had waited hours unread | none; this validates the tool fix |
+| 11-09 | wbuf-inline's A6 (261109-012440-05ac8b) died 38 min in and read as "the host rebooted": macOS kern.boottime drifts, so the reaper never matched the boot (fixed: agent-campaign:0ca1963, dotfiles:b76959e). Why the runner itself died is unknown (empty log) | 38 min of VM time; resubmitted as 261109-032020-5807c6 at strata:bb2f58d |
 
 ## Landings
 
