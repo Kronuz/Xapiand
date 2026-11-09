@@ -43,6 +43,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | In 24 h, Xapiand's local sanitizer jobs took 10.7 h of slot time (31 runs, ASan 6.9 h, TSan 3.8 h), mostly repeating GitHub CI's Linux ASan/TSan; FIFO slots let our 02:44 batch hold every slot while Detent's 33 jobs from 02:55 waited (Detent's median queue wait 21 min vs our 9) | agent-campaign:890090b: `ci:` checks, fair-share worker, shortest first, light holds at CPUs/2 with a memory floor; 19 quests' sanitizer gates moved to CI, macOS builds deferred |
 | 11-09 | Our strict wbufrr A/B waited 04:35 to 05:33 for the machine to empty (macOS strict acts as exclusive), and its pending request blocked new light holds: Detent's 39 jobs stalled at load 3 | ~1 h of Detent's queue; cancelled; the worker will hold strict and exclusive jobs back while other campaigns' light work is queued (up to an hour) |
 | 11-09 | `campaign job rerun` dropped `after` (Detent's finding, msg-5) | fixed in agent-campaign, pushing with the suite |
+| 11-09 | x-pool landed (Xapiand:1c2b3d32b) | C1 re-confirmed at the head after the master merge (probe rerun, 5 min); deferred macOS asan/tsan queued |
 
 ## Agent runs, continued
 
