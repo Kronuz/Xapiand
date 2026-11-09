@@ -9,23 +9,24 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Root cause of the docs E2E failure at Xapiand:0638e61fd. Local tools in the worktree's `.scratch/`
-(untracked): `build.sh plain|asan|tsan` (ccache, `.scratch/build-<kind>`), `probe.sh` (one RESTORE
-alone), `probe2.sh` (the E2E's twitter writes, then the RESTORE), `e2e.sh BIN TAG PORT`.
+Step 4 and the review's items, built locally (`.scratch/build-plain`), not yet committed: `apply_settling`
+(`src/engine/strata/owed.h`) with `map_owed` and two owed answers at most (D9, A5), the `unleased_maps()`
+assertions in `Turn::release` and `Shard::release` (D12), `soft_open()` clamped to the descriptor cap and K to it
+(D11, A15), `IndexSweep::negative_ttl`; tests in `test_pool` (XP5 x2, D11, negative entries, hostless vs catalog
+for A14) and `test_reactor_requests` (the pin's token, A12); design revision 3 (A9, A13, A14) and the note (A18).
 
-Findings so far:
-- The RESTORE of the 1,000 accounts is not stuck but slow in the E2E: 29.3 s under ASan (passed by
-  0.7 s), over the 30 s newman timeout plain and under TSan (the node logs "took ~30852 ms"); the
-  `cities` RESTORE 18 to 24 s. Step 2 (`Xapiand-wt/x-pool/.scratch/e2e*`): 1.8 s plain, 4.6 s ASan,
-  13 s TSan. Alone, on a fresh node, the RESTORE takes 3.6 s on step 3's build, step 2's and a
-  pre-pool build alike (load ~11 of 16 cores).
+The docs E2E failure at Xapiand:0638e61fd is host overload, not a defect (ruling R1): see Rulings.
+
+Local tools in `.scratch/` (untracked): `build.sh plain|asan|tsan [targets]` (ccache), `probe.sh`, `probe2.sh`,
+`probe3.sh` (RESTORE wall and node CPU), `e2e.sh BIN TAG PORT`.
 
 ## Next
 
-1. Reproduce in the E2E's context (probe2, e2e.sh on step 3's build), sample the node, find the cause.
-2. Fix with a regression test that fails without it (jobs at both commits); A17 e2e plain, A6 TSan.
-3. Verify the last four commits (build-test); then A8, A10 to A12, A14 to A16; A9, A13 in the design;
-   A18 the note; step 4 (A5).
+1. Run the new tests locally, commit, then `campaign verify x-pool` at the new head.
+2. Jobs at 3f4114f30 (the adopted code, the last four commits): build-test 261108-214834-ad7d40, e2e
+   261108-214834-bcc874, asan 261108-214834-1c3b6b, tsan 261108-214834-44536b.
+3. Mutants for A5 ("no retry") and the D12 assertion; the Linux VM job for A6; `wide_search_check.py` for A15.
+4. Ledger `docs/status/phase7c-x-pool.md` brought current.
 
 ## Blocked on
 
@@ -39,3 +40,17 @@ Nothing.
 ## Result
 
 ## Rulings I made
+
+- R1. The docs E2E failure at Xapiand:0638e61fd needs no fix: the 1,000-document RESTORE outran newman's 30 s
+  request timeout on a host at load 120 on 16 cores (`x-pool-step3/.scratch/chain5.log` records "load 119.76" and
+  "121.92" at the ASan and TSan E2E runs). The node finished it ("Request took too long ~30852 ms"); the client had
+  gone, so the docs saw no response and 679 documents. The very binary that failed then (`x-pool-step3/.scratch/build-x3`,
+  banner git:2711eae31; 0638e61fd changes only a report string in `src/`) passes on this host at load ~9: 666 of
+  666, RESTORE 2.1 s (`.scratch/e2e-x3/`). Its cost is not a regression: node CPU for the
+  RESTORE, three runs each (`probe3.sh`, load ~6): step 3 2.28/2.33/2.48 s, step 2 2.27/2.29/2.70 s, pre-pool
+  (restore-stream) 2.07/2.02/2.59 s. The race the lead suspected leaves no trace: no sanitizer report in any run.
+- R2. D9's bound is two owed answers: strata answers each kind once per transaction, and a demoted index holds no
+  buffered record, so after `promote()` no flush is owed; map or flush then drain is the longest sequence.
+- R3. CR6 (A14) is recorded, not built: the hostless path serves only the engine's tests and `engine::check`;
+  a private catalog would need a host it lacks. Moving those tests to a `DatabasePool` is the follow-up that
+  deletes the adapter's registry.
