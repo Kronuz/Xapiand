@@ -5,27 +5,22 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+strata's `ci.yml` runs on pushes to `quest/**`, so a campaign landing finds CI at its exact commit
+(the campaign has `ci=github`). Before this, quest branches got CI only by a manual `workflow_dispatch`.
 
 ## Acceptance criteria
 
-One line each: `- A1 <criterion>: <the job, test or check that shows it>`. An untagged criterion
-needs a job that passed at the landed code; tag one `[artifact]` (a committed `path`),
-`[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
-cannot show it.
-
-- A1 <criterion>: <evidence>
+- A1 `ci.yml`'s push branches include `quest/**`: the `yaml` check
+- A2 [manual] A push of the quest branch starts CI: the lead names the run
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- The lead, 2026-11-08: found when e2e-harness had no CI run after its push.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+None: one line.
