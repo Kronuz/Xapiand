@@ -3442,7 +3442,33 @@
       "updated": "2026-11-08T15:41:29"
     },
     "manifest-log": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-09T11:02:20",
+          "base": "276992822d49af3fcee678a72d04c43a9629adc7",
+          "blobs": {
+            "bench/manifest-log/mlog_probe.c": "100644:0e9359f49b89643f593cf5da3167c3677638f2f8",
+            "bench/manifest-log/open_probe.cc": "100644:452944cc109d04e43d50f1a9615e73315a3680a3",
+            "bench/manifest-log/results/2026-11-04-floors-rerun.txt": "100644:2129b428f088f606fe8dd693ef2ef7a7c31f567d",
+            "bench/manifest-log/results/2026-11-04-floors.txt": "100644:a46039f88dcaa1d2737e17b5e9309e5791369611",
+            "bench/manifest-log/results/2026-11-04-r1.txt": "100644:a23655697161b48df207497e4fd114b9c8d22b90",
+            "bench/manifest-log/run_r1.sh": "100755:f78219871e6f52cc8b0d74042b822ed7d7d8689b",
+            "bench/manifest-log/t8_model.py": "100644:810527971c7b9076ac937f4ae860e0f4493eca76",
+            "bench/manifest-log/tail_model.py": "100644:bac93e33889e0bdbef527e680b1c5be53d2bff31",
+            "docs/design/manifest-log.md": "100644:1f3cc7e7bf1b9bd9a41d69654a0dd36375235cb9",
+            "docs/reviews/manifest-log-design.md": "100644:398ae6d60df373d7e0658fdd8ee9b88d8ba3e656",
+            "docs/status/manifest-log.md": "100644:091e5602aa45d1ee761db6a0348b71c8b0aa8d3f"
+          },
+          "brief": "29036e07e72592c9",
+          "by": "review",
+          "commit": "79beaf4b52422ef0c1fed83bd982df15d87d188d",
+          "findings": {},
+          "note": "",
+          "review": "0e61b70bec4bc2d27298f284b8793fabed6ab456",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "276992822d49af3fcee678a72d04c43a9629adc7",
       "branch": "quest/xapiand/manifest-log",
@@ -3582,7 +3608,7 @@
       "risk": "high",
       "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-09T11:02:13",
+      "updated": "2026-11-09T11:02:20",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-steps12": {
