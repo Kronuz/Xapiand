@@ -8914,6 +8914,8 @@
       "after": [
         "wbuf-inline"
       ],
+      "base": "850d4e8ce9a76fdf15c8e0028c6fd578a3374d34",
+      "branch": "quest/xapiand/wbuf-inline-prospect",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -8955,6 +8957,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/wbuf-inline-prospect",
       "landed": [],
       "lenses": [],
       "milestone": "The document profile gate",
@@ -8962,9 +8965,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect repins strata with the inline write buffer",
-      "updated": "2026-11-08T22:36:00"
+      "updated": "2026-11-09T10:57:44",
+      "worktree": "../prospect-wt/xapiand/wbuf-inline-prospect"
     },
     "write-buffer": {
       "accepted": {},
