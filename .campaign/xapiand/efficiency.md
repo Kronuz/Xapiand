@@ -58,11 +58,13 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | Evidence jobs queued with --after never counted (filed under KEY-ORDER, looked up by KEY): wbuf-inline's sweep showed 'ran other code' | fixed in agent-campaign:6105637 |
 | 11-09 | Sidebar clutter: hand-set pills never expired, a pill per blocked quest, Detent's pills drawn here by my timing runs | agent-campaign:6105637: report pills expire (--ttl 120 min), quests' pills only active/review; AGENTS.md rule (dotfiles:776b943) |
 | 11-09 | wbuf-inline landed on strata main (strata:3df7af4) | A/B at the head 1.048 [1.013, 1.078] (1.05× faster), B/B tie; deferred macOS sanitizers reused from the head's gate jobs |
+| 11-09 | `campaign job rerun` of a job whose `--ref` names another repository's branch re-resolves the name in the job's own repository (strata) and fails; the A1/A3 rows also cited a strata-repo job, which never counts for prospect's code | two resubmits (~15 min of light CPU); tool fix to file: rerun keeps refs' pinned commits |
 
 ## Agent runs, continued
 
 | 11-09 | x-pool | contributor, opus, high (third and fourth turns) | 143k + 164k (notices) | 5% → 6% at 05:33 | 8m + 4m (+ C1 fix 6m, merge 1m) | durability ruled harness timing (R6, 5/5 at master and branch); ready for review |
 | 11-09 | x-pool | reviewer, opus, high (correctness) | 262k (notice) | 5% → | 18m10s, 86 tool calls | CHANGES: C1 blocking (missing-index write 500 instead of 404, found by a probe job); C2-C7 non-blocking |
+| 11-09 | wbuf-inline-prospect | contributor, sonnet, medium | 77k | 9% weekly | 13m | repin + 16,000-record budget test; ready for review; lead rebased and re-cited evidence |
 
 ## Landings
 
