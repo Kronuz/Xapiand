@@ -9632,7 +9632,8 @@
         "src/database/pool.cc",
         "src/database/pool.h",
         "src/database/shard.cc",
-        "harness/restore_stream_check.sh"
+        "harness/restore_stream_check.sh",
+        "src/database/shard.h"
       ],
       "history": [
         {
@@ -9673,7 +9674,7 @@
       "risk": "normal",
       "status": "review",
       "title": "x-pool review follow-ups and the restore check's race",
-      "updated": "2026-11-09T15:47:07",
+      "updated": "2026-11-09T15:47:46",
       "worktree": "../Xapiand-wt/xapiand/x-pool-followups"
     },
     "x-pool-step1": {
