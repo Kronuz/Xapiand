@@ -72,3 +72,4 @@ rework (fix rounds, relaunches), jobs and their machine time.
 |---|---|---|---|---|---|---|
 | e2e-harness | 11-08 22:52 | 11-08 23:36 (Xapiand:6e5c3283f, merge c60138850) | 0 (lead) | ~0 | none (low) | 1 (A4 row retagged) |
 | ci-quest-branches (Xapiand, strata, prospect) | 11-08 23:16 | 11-09 04:2x (Xapiand:975ca0e3a, merge Xapiand:f77111164; strata:446410f; prospect:b0c8665) | 0 (lead) | ~0 | none (low) | 1 (yaml check quoting); ~5 h waiting on the token's `workflow` scope |
+| wbuf-inline-prospect | 11-09 10:5x | 11-09 (prospect:9b88263, Xapiand:2a647a916) | 77k | ~0.5 | none (low; lead read the diff) | 1 (rebase; evidence re-cited from prospect-repo jobs) |
