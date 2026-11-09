@@ -9220,10 +9220,60 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T05:46:16",
+          "commit": "1c2b3d32b004c105822b695abd215bbc87c59ab2",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "fe749472ff4ae6a6c7d84080c403dc1654b6cf81",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-045211-0363e7",
+              "level": "light",
+              "seconds": 417.9,
+              "state": "done",
+              "what": "x-pool check build-test at fe749472ff4a"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "fe749472ff4ae6a6c7d84080c403dc1654b6cf81",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-045211-8a6e8e",
+              "level": "light",
+              "seconds": 431.3,
+              "state": "done",
+              "what": "x-pool check e2e at fe749472ff4a"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "42572c2fa74d0c83d8bedd8c364638a6a918762d",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:ThreadSanitizer",
+              "commit": "42572c2fa74d0c83d8bedd8c364638a6a918762d",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "bca1b1f4bafb98db43d1d349c48e2b301254b8e8",
+          "later": [
+            "261109-054616-9a58c2",
+            "261109-054616-5253ef"
+          ],
+          "reason": "",
+          "tested": "42572c2fa74d0c83d8bedd8c364638a6a918762d"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [
@@ -9231,9 +9281,9 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The index registry becomes the catalog's payload",
-      "updated": "2026-11-09T05:45:57",
+      "updated": "2026-11-09T05:46:17",
       "worktree": "../Xapiand-wt/xapiand/x-pool"
     },
     "x-pool-step1": {
