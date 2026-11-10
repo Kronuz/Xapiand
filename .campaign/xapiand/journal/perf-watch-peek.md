@@ -11,8 +11,10 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 Waiting on the strict screen 261109-144804-ff5f5b (at 90cf235, library code = head) and the
 exclusive confirm 261109-150350-f39012 (at head 13933f0, after the screen); both queue for a
-drain. docs/perf/watch-peek.md is drafted in the http worktree, uncommitted on purpose: a
-docs commit moves the head off the confirm's commit, so it lands with the confirm's numbers.
+drain; at 16:25 both still queued after 90 minutes behind light jobs held to 19:45.
+docs/perf/watch-peek.md and the CHANGELOG.md entry (msg from the lead: CHANGELOG is in the
+file set) are drafted in the http worktree, uncommitted on purpose until the docs-only
+evidence fix lands; the CHANGELOG's TIMING-LINE placeholder takes the confirm's numbers.
 
 ## Next
 
@@ -23,7 +25,8 @@ docs commit moves the head off the confirm's commit, so it lands with the confir
 
 ## Blocked on
 
-Nothing.
+Lead: the drain for 261109-144804-ff5f5b / 261109-150350-f39012 is starved by long light jobs;
+a `campaign window` would run them back to back (about 25 minutes in all).
 
 ## Evidence
 
@@ -77,3 +80,9 @@ Experiments (http branch quest/xapiand/perf-watch-peek):
   /stream-asks 9.000 against raw 1.000, streamed 7.000).
 - 261109-150349-93e938 A/B builds at head (slot pwp-ab): ok.
 - 261109-150416-197873 mutants at 13933f0: all five killed.
+
+## Messages
+
+- Lead (CHANGELOG in the file set; docs-only commits keep evidence once the tool fix lands; no
+  timing rerun for a docs change): entry drafted in http CHANGELOG.md, uncommitted with the perf
+  doc; no timing job resubmitted.
