@@ -287,7 +287,28 @@
       "updated": "2026-11-08T22:56:34"
     },
     "barrier-warning-completion": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-09T17:24:54",
+          "base": "560c288b40ba55a8d42ff048bcb1c7eaa3624645",
+          "blobs": {
+            "docs/PLATFORM_FINDINGS.md": "100644:baf9cfc95ca454bb8d50e2d58487796587bbf43c",
+            "docs/mechanisms/barriers.md": "100644:ea6e124e7d1a2103300d467a6525e429c724220b",
+            "docs/mechanisms/commit-barriers.md": "100644:39cc7c8a101dc25a601360ee916a7a43da1942a2",
+            "include/completion/api.h": "100644:782df15b6883739c488418faa6a3b7686a27acb3",
+            "include/completion/posix.h": "100644:c640a24f6ecaa7bbeb534226f250cbf5fc5eb330",
+            "test/sync_calls_test.cc": "100644:ace68383110b017f36cc85f4417269fab33553ab"
+          },
+          "brief": "276ea3aaff345050",
+          "by": "review",
+          "commit": "e49f288fb1438a96d9a21b59cf0eeaa770fc690d",
+          "findings": {},
+          "note": "",
+          "review": "7348e8685bb33956b619630bf5d1b758d915e399",
+          "reviewed": "e49f288fb1438a96d9a21b59cf0eeaa770fc690d",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "560c288b40ba55a8d42ff048bcb1c7eaa3624645",
       "branch": "quest/xapiand/barrier-warning-completion",
@@ -418,7 +439,7 @@
       "risk": "high",
       "status": "review",
       "title": "PosixIO warns when a barrier only orders",
-      "updated": "2026-11-09T17:09:18",
+      "updated": "2026-11-09T17:24:54",
       "worktree": "../completion-wt/xapiand/barrier-warning-completion"
     },
     "barrier-warning-strata": {
