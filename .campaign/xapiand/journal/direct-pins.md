@@ -1,6 +1,6 @@
 # direct-pins: journal
 
-State: waiting on jobs 261109-205508-e1f1e0 261109-205508-a1b8ee (rebased on master, head 1cde08b39)
+State: waiting on jobs 261110-021214-0b13b3 261110-021215-ec2183 (concurrency test) and the verify jobs below
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
@@ -63,6 +63,15 @@ library pins and are bumped to it: char_classify, compressors, constexpr_phf, en
 static_string, threadpool. 23 stale pins remain inside libraries (Blocked on).
 
 ## Rulings I made
+
+- e2e collision (lead's finding; 261109-205508-a1b8ee and 261109-192429-4ceb58 were SIGKILLed by a concurrent
+  e2e, and 9ee666 likely the same): xapiand:8677ec94f gives each e2e_capture.sh run an OS-assigned port (PORT still
+  pins one) and a private mktemp work directory (collection, node log, newman log were fixed /tmp paths); a squatter
+  on an explicit PORT is killed only if it LISTENs on it (lsof -sTCP:LISTEN, else ss); run_all.sh (smoke, load,
+  stress, bench, tls), tls_check.sh and wal_recovery_check.sh take free ports too. docs_to_postman.py takes the
+  base URL from XAPIAND_URL, which the capture already sets from PORT, so no collection edit was needed.
+  Test: harness/e2e_concurrent_check.sh (two captures at once, both GREEN); run against the old capture script it
+  should fail, which shows the test sees the bug (jobs below).
 
 - A2 read literally: a declaration of a directly included library is not an override; what is removed
   is the claim that it exists to win, and any pin older than a library's. The declaration stays because
