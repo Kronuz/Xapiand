@@ -1,6 +1,6 @@
 # docs-upgrade-page: journal
 
-State: waiting on jobs 261109-174137-865a4a
+State: waiting on jobs 261109-181209-acc42a
 Quest: .campaign/xapiand/quests/docs-upgrade-page.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-A2 v3 (261109-174137-865a4a, light, 75 min) runs the round trip fail-loud: HTTP status checked on every call,
+A2 v4 (261109-181209-acc42a, light, 75 min) runs the round trip fail-loud: HTTP status checked on every call,
 one log per server under `.a2/logs/`, COUNT awaited at 3000 on the old node before dumping, DUMP as JSON.
 It restores the old CLI dump twice: path 1 the page's `--restore` (expected to fail on the defect below),
 path 2 `RESTORE` over HTTP of the same msgpack dump; compares each against the old node's DUMP.
@@ -31,7 +31,7 @@ Lead's two problems, answered:
 
 ## Next
 
-1. When 865a4a ends: record path 2 (HTTP) result as A2's evidence for the HTTP route; path 1 stays failed
+1. When acc42a ends: record path 2 (HTTP) result as A2's evidence for the HTTP route; path 1 stays failed
    until the defect is fixed, then rerun the same job command (in its spec.json) at the fixed head.
 2. A3's reviewer read; A4 stands (e2e 261109-152541-04dbf7).
 
@@ -64,7 +64,10 @@ text is on the lead's hunt list.)
 History: A2 job 261109-153551-16cd29 exited 65 after "new restore exit 0" (dump and restore sha256 matched): my script's
 `rc=$?` line ran under `set -e`, so the new binary's expected exit 65 on the old directory ended the script. Fixed with
 `|| rc=$?`; resubmitted as 261109-162803-b8445a (slot a2-roundtrip, 90 min), which failed: old docs 0 new docs 0
-(406 to the NDJSON DUMP, and the CLI `--restore` defect above). v3 is 261109-174137-865a4a.
+(406 to the NDJSON DUMP, and the CLI `--restore` defect above). v3 261109-174137-865a4a failed before running:
+the old build's CMake cache named the previous job's ref checkout (`.../261109-162803-b8445a/ref-old`), and each
+job gets its own. v4 symlinks the ref to `.a2/src-old` and drops a cache that names another source; v4 is
+261109-181209-acc42a.
 
 ## Result
 
@@ -77,5 +80,5 @@ History: A2 job 261109-153551-16cd29 exited 65 after "new restore exit 0" (dump 
 2. Kept the 0.40.0 content (ids, rolling back) in the same page; the alpha.9/alpha.10 section leads.
 3. Left out the audit's nested-index refusal (#21): the changelog now says indexes nest (the owner reversed it).
 4. Left out limits for the not-yet-landed `--search-walk-queue` rows and #36-37 details beyond shutdown bound.
-5. A2's harness lives in the job command (spec.json of 865a4a; drafts in this worktree's ignored `.scratch/a2/`),
+5. A2's harness lives in the job command (spec.json of acc42a; drafts in this worktree's ignored `.scratch/a2/`),
    not in `harness/`, which is outside this quest's file set.
