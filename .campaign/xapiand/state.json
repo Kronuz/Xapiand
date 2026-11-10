@@ -6953,6 +6953,8 @@
     "query-dsl-fixes": {
       "accepted": {},
       "after": [],
+      "base": "2fdc48388f1182ede64aff6fae4960b4ab842114",
+      "branch": "quest/xapiand/query-dsl-fixes",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -6978,9 +6980,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "_not over several subqueries and open-ended integer ranges",
-      "updated": "2026-11-09T18:41:33"
+      "updated": "2026-11-09T18:41:50",
+      "worktree": "../Xapiand-wt/xapiand/query-dsl-fixes"
     },
     "reclaim-backlog": {
       "accepted": {},
