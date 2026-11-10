@@ -90,6 +90,19 @@ PUT /updateapi/doc/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Update: the document to patch
+---
+
+```js
+pm.test("The document is written at version 1", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._version).to.equal(1);
+});
+```
+e2e:end -->
+
 ```rest
 PATCH /updateapi/doc/1
 
@@ -98,6 +111,22 @@ PATCH /updateapi/doc/1
   { "op": "add", "path": "/title", "value": "Patched" }
 ]
 ```
+
+<!-- e2e:begin
+---
+description: Update: PATCH answers the patched document with echo
+---
+
+```js
+pm.test("PATCH with echo answers the patched document", function () {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json().likes).to.equal(5);
+});
+```
+e2e:end -->
+
+Like every write, `PATCH` answers `204 No Content`, and with the `echo` query
+param `200 OK` with the patched document. Reading it back:
 
 ```rest
 GET /updateapi/doc/1

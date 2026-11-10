@@ -16,6 +16,22 @@ PUT /twitter/tweet/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Index: a document by its ID
+---
+
+```js
+pm.test("The write answers the document", function () {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc.message).to.equal("Trying out Xapiand");
+  pm.expect(doc._version).to.be.a("number");
+});
+```
+e2e:end -->
+
 The result of the above index operation is a `204 No Content` HTTP response code
 with no body. The document is searchable right away (reads see the writes of the
 node). To have the operation answer the indexed document, pass the `echo` query
@@ -68,6 +84,23 @@ POST /twitter/tweet/
 }
 ```
 
+<!-- e2e:begin
+---
+description: Index: a new ID
+---
+
+```js
+pm.test("POST answers 201 Created with a new integer ID", function () {
+  pm.response.to.have.status(201);
+  pm.response.to.have.header("Location");
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.be.a("number");
+  pm.expect(doc._id).to.not.equal(1);
+  pm.expect(doc._version).to.equal(1);
+});
+```
+e2e:end -->
+
 The result of the above index operation is a `201 Created` HTTP response code
 with the new document's URL in the `Location` header (with `echo`, the document
 too, with its `_id` and `_version`). The ID is minted from the type of the
@@ -79,6 +112,137 @@ index's `_id` field, which the first document sets:
 
 Sources: `src/server/search_views.cc:938-985`; `src/database/schema.cc:2713-2717,
 2745-2870`; `src/opts.cc:235-238`.
+
+## Document IDs
+
+The ID in the path takes the type of the index's `_id` field. Where the IDs are
+integers, any integer is an ID, `0` and negative numbers included, and the
+document answers it as a number. Where the IDs are keywords, `0` and `00` are
+two IDs, each answered as a string.
+
+```rest
+PUT /idsapi/numbers/7
+
+{
+  "n": "seven"
+}
+```
+
+<!-- e2e:begin
+---
+description: Index: the first ID sets the ID type
+---
+
+```js
+pm.test("An integer ID makes the IDs integers", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._id).to.equal(7);
+});
+```
+e2e:end -->
+
+```rest
+PUT /idsapi/numbers/0
+
+{
+  "n": "zero"
+}
+```
+
+<!-- e2e:begin
+---
+description: Index: the integer ID 0
+---
+
+```js
+pm.test("0 is an ID like any other", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._id).to.equal(0);
+});
+```
+e2e:end -->
+
+```rest
+GET /idsapi/numbers/0
+```
+
+<!-- e2e:begin
+---
+description: Index: the integer ID 0 reads back
+---
+
+```js
+pm.test("The document with ID 0 reads back", function () {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json()._id).to.equal(0);
+  pm.expect(pm.response.json().n).to.equal("zero");
+});
+```
+e2e:end -->
+
+```rest
+PUT /idsapi/names/a
+
+{
+  "n": "a"
+}
+```
+
+<!-- e2e:begin
+---
+description: Index: a keyword ID sets the ID type
+---
+
+```js
+pm.test("A word ID makes the IDs keywords", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._id).to.equal("a");
+});
+```
+e2e:end -->
+
+```rest
+PUT /idsapi/names/0
+
+{
+  "n": "zero"
+}
+```
+
+<!-- e2e:begin
+---
+description: Index: the keyword ID "0"
+---
+
+```js
+pm.test("\"0\" is a keyword ID", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._id).to.equal("0");
+});
+```
+e2e:end -->
+
+```rest
+GET /idsapi/names/0
+```
+
+<!-- e2e:begin
+---
+description: Index: the keyword ID "0" reads back
+---
+
+```js
+pm.test("The document with ID \"0\" reads back", function () {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json()._id).to.equal("0");
+  pm.expect(pm.response.json().n).to.equal("zero");
+});
+```
+e2e:end -->
+
+Sources: `docs/mechanisms/document-ids-and-versions.md`; `has_document_id`
+(`src/database/handler.h`: any number is an ID); `tests/test_node.cc`
+(`test_document_ids_are_themselves`).
 
 ## Scripting
 
@@ -103,6 +267,14 @@ current document version matches the passed `version` in the query param (or the
 
 ## Routing
 
-The index operation is directed to one of the index's shards based on the hash of
-its ID (FNV-1a over the ID's term; an index has 5 shards by default,
-see [Create Index](/Xapiand/reference-guide/indexes/create-api)).
+A write is directed to one of the index's shards by its ID (an index has 5
+shards by default, see [Create Index](/Xapiand/reference-guide/indexes/create-api)):
+
+- A document that exists is written in the shard that holds it.
+- A new integer ID `k` from 1 to 4,294,967,294 goes to shard `(k - 1) mod n` of
+  the `n` shards, where it takes its own document number when that is free.
+- Any other new ID goes to the shard the hash of its term names (FNV-1a).
+- A `POST` to an index whose IDs are integers goes to the least used shard,
+  which numbers the new ID after its last document.
+
+Source: `docs/mechanisms/document-ids-and-versions.md`.
