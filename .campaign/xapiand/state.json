@@ -2318,7 +2318,8 @@
         "docs/src/content/docs/tests.md",
         "docs/src/content/docs/benchmarks.md",
         "docs/src/content/docs/contributing.md",
-        "docs/src/lib/**"
+        "docs/src/lib/**",
+        "docs/src/content/docs/welcome.md"
       ],
       "landed": [],
       "lenses": [],
@@ -2329,7 +2330,7 @@
       "risk": "low",
       "status": "active",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T08:15:25",
+      "updated": "2026-11-10T15:24:03",
       "worktree": "../Xapiand-wt/xapiand/docs-site-refresh-reference"
     },
     "docs-upgrade-page": {
