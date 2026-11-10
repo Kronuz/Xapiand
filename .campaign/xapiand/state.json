@@ -1916,6 +1916,8 @@
     "docs-site-audit": {
       "accepted": {},
       "after": [],
+      "base": "e45816babee436e37baa110973a78da3653289e3",
+      "branch": "quest/xapiand/docs-site-audit",
       "checks": [],
       "consumes": [],
       "files": [
@@ -1928,9 +1930,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Audit the public docs site against the engine as it is",
-      "updated": "2026-11-09T17:45:18"
+      "updated": "2026-11-09T17:50:39",
+      "worktree": "../Xapiand-wt/xapiand/docs-site-audit"
     },
     "docs-site-refresh": {
       "accepted": {},
