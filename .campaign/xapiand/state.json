@@ -10761,6 +10761,38 @@
       "title": "Chunked lock-free reader registry",
       "updated": "2026-11-08T15:39:49"
     },
+    "x7-cancel-rows": {
+      "accepted": {},
+      "after": [
+        "write-path-fixes"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/**",
+        "tests/test_node.cc",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
+      "updated": "2026-11-10T05:35:28"
+    },
     "x7-gate": {
       "accepted": {},
       "after": [],
