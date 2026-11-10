@@ -1107,7 +1107,7 @@ std::map<std::string, std::int64_t> range_counts(const char* field, const MsgPac
 
 // The keys of the buckets a range aggregation makes, in the order the aggregation returns them under `sort`.
 std::vector<std::string> range_order(const char* field, const MsgPack& ranges, engine::valueno slot, const std::vector<std::string>& serialised, const MsgPack& sort) {
-	const auto config = MsgPack({ { "_aggs", { { "r", { { "_range", { { "_field", field }, { "_ranges", ranges } } }, { "_sort", sort } } } } } });
+	const auto config = MsgPack({ { "_aggs", { { "r", { { "_range", { { "_field", field }, { "_ranges", ranges }, { "_sort", sort } } } } } } } });
 	AggregationMatchSpy spy(config, range_schema());
 	for (const auto& value : serialised) {
 		const std::vector<std::string> one = { value };
@@ -1243,6 +1243,41 @@ static void test_range_aggregation_open_bounds() {
 		list.push_back(empty);
 		const auto got = range_counts("p", list, POS_SLOT, serialised);
 		CHECK_EQ(got, (std::map<std::string, std::int64_t>{ { "below", 5 }, { "within", 2 } }));
+	}
+
+	// Default keys show the bounds as written, so ranges that differ as written never share a bucket.
+	{
+		const auto bound = [](const char* name, MsgPack value) {
+			MsgPack r = MsgPack::MAP();
+			r[name] = value;
+			return r;
+		};
+		const auto both = [](MsgPack from, MsgPack to) {
+			MsgPack r = MsgPack::MAP();
+			r["_from"] = from;
+			r["_to"] = to;
+			return r;
+		};
+		using Counts = std::map<std::string, std::int64_t>;
+		const std::vector<std::int64_t> ints = { 1, 3, 5 };
+		std::vector<std::string> serialised;
+		for (auto v : ints) {
+			serialised.push_back(Serialise::integer(v));
+		}
+		MsgPack list = MsgPack::ARRAY();
+		list.push_back(bound("_from", MsgPack(2.5)));
+		list.push_back(bound("_from", MsgPack(3)));
+		CHECK_EQ(range_counts("i", list, INT_SLOT, serialised), (Counts{ { "2.5..", 2 }, { "3..", 2 } }));
+
+		const std::vector<std::uint64_t> naturals = { 1, 3, 5 };
+		serialised.clear();
+		for (auto v : naturals) {
+			serialised.push_back(Serialise::positive(v));
+		}
+		list = MsgPack::ARRAY();
+		list.push_back(both(MsgPack(-5), MsgPack(4)));
+		list.push_back(bound("_to", MsgPack(4)));
+		CHECK_EQ(range_counts("p", list, POS_SLOT, serialised), (Counts{ { "-5..4", 2 }, { "..4", 2 } }));
 	}
 
 	// Sorted by key, an open lower bound comes first (below every bound), last when descending.

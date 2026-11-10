@@ -1006,13 +1006,6 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 		long double slot() const {
 			return from ? static_cast<long double>(*from) : -std::numeric_limits<long double>::infinity();
 		}
-
-		std::string key() const {
-			if (!from && !to) {
-				return "..";
-			}
-			return strings::format("{}..{}", from ? strings::format("{}", *from) : std::string(), to ? strings::format("{}", *to) : std::string());
-		}
 	};
 
 	template <typename T>
@@ -1068,6 +1061,25 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 		}
 	}
 
+	// A bound as the request wrote it.
+	static std::string bound_text(const MsgPack& value) {
+		switch (value.get_type()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+				return strings::format("{}", value.as_u64());
+			case MsgPack::Type::NEGATIVE_INTEGER:
+				return strings::format("{}", value.as_i64());
+			default:
+				return strings::format("{}", value.as_f64());
+		}
+	}
+
+	// The default key of a range: its bounds as written, ".." when it has none.
+	static std::string default_key(const MsgPack& range) {
+		const auto from = range.find(RESERVED_AGGS_FROM);
+		const auto to = range.find(RESERVED_AGGS_TO);
+		return strings::format("{}..{}", from != range.end() ? bound_text(from.value()) : std::string(), to != range.end() ? bound_text(to.value()) : std::string());
+	}
+
 	template <typename T>
 	void configure(Ranges<T>& ranges) {
 		const auto it = _conf.find(RESERVED_AGGS_RANGES);
@@ -1121,7 +1133,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 					case Reach::above: break;  // open
 				}
 			}
-			ranges.emplace_back(key.empty() ? bounds.key() : std::string(key), bounds);
+			ranges.emplace_back(key.empty() ? default_key(range) : std::string(key), bounds);
 		}
 	}
 
