@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: ready for acceptance; waiting on jobs 261110-052344-8c7d40 261110-052344-a327eb 261110-052416-ba4935 261110-052416-175bb3 261110-052416-515a60 261110-052417-986c87 261110-052417-4aa2c7 261110-052417-b12155 261110-052417-eafd75 261110-052417-bb7303 261110-052417-7d6ef1
+State: ready for acceptance; waiting on jobs 261110-073918-41b1cd 261110-073919-5715ab 261110-073919-be3d07 261110-073919-39ecdc 261110-073919-d5b7af 261110-073919-042f92 261110-073919-3c6722 261110-073919-e779e6 261110-073919-a0029a 261110-073919-cf69ef 261110-073919-b09fa0
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,8 +13,10 @@ Fix round 1 is in (strata:c78f870 to strata:08a11ab, one commit per finding; tab
 jobs at strata:08a11ab all passed but the mutants job, 36 of 37 killed: "a durability fence set
 only once its message is allocated (A5)" survived. Not equivalent (R37): strata:8b532c8 tightens
 apply_atomic's commit sweep so an unfenced failure must leave every manifest log byte-identical.
-Every evidence job reruns at strata:8b532c8 (the jobs in State); the code under test differs from
-strata:08a11ab only in `test/apply_atomic_test.cc`.
+The new check failed at strata:8b532c8 (build-test 261110-052344-8c7d40, CI config
+261110-052416-ba4935: "unfenced with its log changed" at the commit's last 7 allocation points,
+both bursts): commit() ran publication, retention and reclaim outside the fence rule. Fixed at
+strata:6ab3983 (R39). Every evidence job reruns there (the jobs in State).
 
 | Finding | Cause | Fix | Commit |
 |---|---|---|---|
@@ -25,6 +27,7 @@ strata:08a11ab only in `test/apply_atomic_test.cc`.
 | fable F2 (non-blocking) | append_edit's broken-appender fence built its message before setting `fenced_` | `fenced_` first, as R32 | strata:9915cec |
 | security F3 (non-blocking) | the file fuzz target never read with `to` | the input's last byte picks a `to` | strata:08a11ab |
 | mutant survivor (A5) | the sweep accepted an unfenced failure whenever the retry reached the twin's digest | an unfenced failure must leave the logs unchanged (R37) | strata:8b532c8 |
+| post-commit failures (A5, found by R37's check) | publish_point, free_views, retain and reclaim_files ran after the log moved, unfenced | they run under `durable()`, in commit() and install (R39) | strata:6ab3983 |
 
 Not mine, in no journal: 261110-022840-bb16af, 261110-023641-b98c95, 261110-023723-c93eff,
 261110-024750-6ae64c are the second durability reviewer's probes (cited in its review file). The
@@ -34,9 +37,9 @@ stale reruns at strata:e0508e9 (9e3973, a9800f, 23571b) ran superseded code.
 
 1. Read the jobs in State; for any red one, fix and rerun only that probe or check.
 2. The lead accepts each review with the Confirmations table's jobs (`campaign accept manifest-log
-   durability --confirm F1=261110-052417-b12155 F2=261110-052344-8c7d40`, `... security --confirm
-   F1=261110-052417-eafd75 F2=261110-052417-bb7303`, fable's F1 with bb7303) and pushes the branch
-   for CI's linux-asan-ubsan at strata:8b532c8.
+   durability --confirm F1=261110-073919-e779e6 F2=261110-073918-41b1cd`, `... security --confirm
+   F1=261110-073919-a0029a F2=261110-073919-cf69ef`, fable's F1 with bb7303) and pushes the branch
+   for CI's linux-asan-ubsan at strata:6ab3983.
 
 ## Blocked on
 
@@ -44,20 +47,20 @@ Nothing. The last Blocked on is answered by the lead's rulings L4 and L5 below.
 
 ## Evidence
 
-All at strata:8b532c8 (the head). Figures in parentheses are the same jobs at strata:08a11ab,
-whose code differs only in `test/apply_atomic_test.cc`; the head's runs replace them when done.
+All at strata:6ab3983 (the head). Figures in parentheses are the same jobs at strata:08a11ab,
+whose code differs in `test/apply_atomic_test.cc` and commit()'s and install's post-commit fence (R39); the head's runs replace them when done.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261110-052344-8c7d40 (ctest 73 of 73 at 08a11ab): manifest_log_test "appender" (one write per append, the truncate-back, one record in flight), index_test (commit, recover, `check()`, T4 cases 10 and 11), retention_test (D8 across a rollover), lifecycle_test; the retired files' codecs are gone (strata:074129c) |
-| A2 | T4: build-test 261110-052344-8c7d40 (lifecycle case 1, cases 4 to 11 in manifest_log, index, retention, lifecycle, apply_atomic; media_test every byte of the log) and CI's config 261110-052416-ba4935 (assertions, clang ctest, libstdc++); T6: 261110-052416-175bb3 (digests equal to strata main 3df7af4f on 80 streams) |
-| A3 | manifest_log_test "replay cost" and "deleted sets" in 261110-052344-8c7d40 and 261110-052416-ba4935 (128 one-ordinal delete edits on 20M docs: 0.04 ms; at 2x D7's edit bound, 5M docs: clumped dense 1.5x the snapshot alone, sparse 1.7x; bound 4x); T7 row 261110-052416-515a60 (strict); the review's replay probe 261110-052417-eafd75 (worst ratio 1.5x at 60M docs, 2x bound); mutants 261110-052344-a327eb: "declaration names scanned per declaration", "identities scanned per edit", "a delete edit walks the whole set (A3)", "a dense neighbour walks the words (SR2)", "ordinals merged into one run per insert (SR2)", "no bounds on read" |
-| A4 | manifest_log_test "deleted sets" in 261110-052344-8c7d40 (bitset 125,000 bytes to 127,496 allocated; deltas 2,007 to 8,384, dense deltas 1,000 to 8,536); fuzz 261110-052417-986c87 (ASan+UBSan, both log targets 301 s each, no crash; 673,092 and 1,683,207 runs at 08a11ab); coverage 261110-052417-7d6ef1; mutants 261110-052344-a327eb: "a bitset decodes to ordinals (D42)", "a deltas body decodes to ordinals past the threshold (D42)", "a set bit's summary not marked" |
-| A5 | open's half: manifest_log_test "allocation failure" in 261110-052344-8c7d40 (63 points, 63 bad_alloc, 0 misreported); writer's half: apply_atomic's commit sweep, alone and with the next allocation failing too, an unfenced failure leaving the logs unchanged (R37), in 261110-052344-8c7d40 and under clang and libstdc++ in 261110-052416-ba4935; mutants 261110-052344-a327eb: "the head's replay fences only on damage", "the log's barrier fences only on a system error", "a durability fence set only once its message is allocated", "a failed barrier not truncated back" |
-| A6 | build-test 261110-052344-8c7d40: manifest_log_test stage "caller rules" |
-| A7 | build-test 261110-052344-8c7d40: manifest_log_test "crash images" and "bit flips" (35,200 flips, 0 silent), media_test (every byte of the log) |
+| A1 | build-test 261110-073918-41b1cd (ctest 73 of 73 at 08a11ab): manifest_log_test "appender" (one write per append, the truncate-back, one record in flight), index_test (commit, recover, `check()`, T4 cases 10 and 11), retention_test (D8 across a rollover), lifecycle_test; the retired files' codecs are gone (strata:074129c) |
+| A2 | T4: build-test 261110-073918-41b1cd (lifecycle case 1, cases 4 to 11 in manifest_log, index, retention, lifecycle, apply_atomic; media_test every byte of the log) and CI's config 261110-073919-be3d07 (assertions, clang ctest, libstdc++); T6: 261110-073919-39ecdc (digests equal to strata main 3df7af4f on 80 streams) |
+| A3 | manifest_log_test "replay cost" and "deleted sets" in 261110-073918-41b1cd and 261110-073919-be3d07 (128 one-ordinal delete edits on 20M docs: 0.04 ms; at 2x D7's edit bound, 5M docs: clumped dense 1.5x the snapshot alone, sparse 1.7x; bound 4x); T7 row 261110-073919-d5b7af (strict); the review's replay probe 261110-073919-a0029a (worst ratio 1.5x at 60M docs, 2x bound); mutants 261110-073919-5715ab: "declaration names scanned per declaration", "identities scanned per edit", "a delete edit walks the whole set (A3)", "a dense neighbour walks the words (SR2)", "ordinals merged into one run per insert (SR2)", "no bounds on read" |
+| A4 | manifest_log_test "deleted sets" in 261110-073918-41b1cd (bitset 125,000 bytes to 127,496 allocated; deltas 2,007 to 8,384, dense deltas 1,000 to 8,536); fuzz 261110-073919-042f92 (ASan+UBSan, both log targets 301 s each, no crash; 673,092 and 1,683,207 runs at 08a11ab); coverage 261110-073919-b09fa0; mutants 261110-073919-5715ab: "a bitset decodes to ordinals (D42)", "a deltas body decodes to ordinals past the threshold (D42)", "a set bit's summary not marked" |
+| A5 | open's half: manifest_log_test "allocation failure" in 261110-073918-41b1cd (63 points, 63 bad_alloc, 0 misreported); writer's half: apply_atomic's commit sweep, alone and with the next allocation failing too, an unfenced failure leaving the logs unchanged (R37) and failures after the commit fencing (R39), in 261110-073918-41b1cd and under clang and libstdc++ in 261110-073919-be3d07; mutants 261110-073919-5715ab: "the head's replay fences only on damage", "the log's barrier fences only on a system error", "a durability fence set only once its message is allocated", "a failed barrier not truncated back" |
+| A6 | build-test 261110-073918-41b1cd: manifest_log_test stage "caller rules" |
+| A7 | build-test 261110-073918-41b1cd: manifest_log_test "crash images" and "bit flips" (35,200 flips, 0 silent), media_test (every byte of the log) |
 | A8 | lead's ruling L5 (2026-11-09): T1 to T3, T5, T7 to T9 are the lead's `strict`/`exclusive` jobs on `main` after landing; this quest's T7 row is A3's |
-| A9 | 261110-052417-4aa2c7: prospect ff99494 (manifest-log-prospect) suite and churn/dump identity against strata main, then Xapiand master Xapiand:3ed4270d3's suite, on strata:8b532c8 |
+| A9 | 261110-073919-3c6722: prospect ff99494 (manifest-log-prospect) suite and churn/dump identity against strata main, then Xapiand master Xapiand:3ed4270d3's suite, on strata:6ab3983 |
 | A10 | D41 (PLAN.md, 2026-11-09): Q1 the manifest log first, Q2 a count of generations with `fallback()` reporting the damaged generation, Q3 accepted; folded into `docs/design/manifest-log.md` at strata:49ab291 |
 
 ## Confirmations
@@ -65,19 +68,19 @@ whose code differs only in `test/apply_atomic_test.cc`; the head's runs replace 
 Each blocking finding: the job that confirms the fix at the head, and the same probe at the
 reviewed commit strata:e0508e9 (fixed commit strata:08a11ab in parentheses where it already ran).
 
-| Finding | At the head (strata:8b532c8) | At strata:08a11ab | At the reviewed commit (strata:e0508e9) |
+| Finding | At the head (strata:6ab3983) | At strata:08a11ab | At the reviewed commit (strata:e0508e9) |
 |---|---|---|---|
-| durability F1 | rename probe 261110-052417-b12155; T4 case 10 and mutant "the open syncs the log only" in 261110-052344-8c7d40, 261110-052344-a327eb | 261110-032812-8afcbd: "NO LOSS (0 acknowledged commits lost)", every case 0 of 64 | 261110-022246-d64be6: "LOSS (128 acknowledged commits lost over the no-file cases)", 32 of 64 seeds per case, 14 opens "no manifest log" |
-| durability F2 | build-test 261110-052344-8c7d40 (T4 case 11 under faultfs `fault::keep`; faultfs_test's keep cases) and mutants 261110-052344-a327eb ("a failed barrier not truncated back" killed by index_test) | 261110-032812-0a35ed, 261110-032812-9c02e2 (that mutant killed) | none: the reviewer's `sync_error_probe` (in d64be6) writes the failed edit's image by hand and prints the same result at any commit (8afcbd shows it unchanged); the mutant is the fix reverted |
-| security F1 | replay probe 261110-052417-eafd75; manifest_log_test "deleted sets" at 2x the edit bound in 261110-052344-8c7d40 | 261110-032812-618943: the open's read at most 1.5x the snapshot alone over 18 rows (5M to 60M docs, 1x and 2x) | 261110-022216-4197e2: sparse below the threshold 796.8x at 20M docs, 2x (3,545 ms against 4.45 ms) and 924.7x at 60M (19,802 ms); clumped dense 295.1x at 60M |
-| security F2 | fable's probe 261110-052417-bb7303 (exit 0 expected); index_test's sustained-ENOSPC case in 261110-052344-8c7d40; mutant "an unforced rollover's ENOSPC owes nothing" in 261110-052344-a327eb | 261110-032812-618943 `enospc_bounds`: "reopen: ok", 128 commits acknowledged, 172 refused ENOSPC, 272 live = 400 - 128 (R38) | 261110-022216-4197e2 `enospc_bounds`: 300 of 300 acknowledged, "reopen: FAILED: manifest log: past its bounds at generation 258", exit 3 |
-| fable F1 (= security F2) | 261110-052417-bb7303 | 261110-032812-3886e3 exit 0: 129 acknowledged, 271 refused, 0 rollovers, plain open reads generation 259 (acknowledged 259), digest equal | 261110-023641-b98c95 exit 1: 400 acknowledged, 0 refused, plain open "past its bounds at generation 387", `open(to=386)` discards 144 acknowledged generations |
+| durability F1 | rename probe 261110-073919-e779e6; T4 case 10 and mutant "the open syncs the log only" in 261110-073918-41b1cd, 261110-073919-5715ab | 261110-032812-8afcbd: "NO LOSS (0 acknowledged commits lost)", every case 0 of 64 | 261110-022246-d64be6: "LOSS (128 acknowledged commits lost over the no-file cases)", 32 of 64 seeds per case, 14 opens "no manifest log" |
+| durability F2 | build-test 261110-073918-41b1cd (T4 case 11 under faultfs `fault::keep`; faultfs_test's keep cases) and mutants 261110-073919-5715ab ("a failed barrier not truncated back" killed by index_test) | 261110-032812-0a35ed, 261110-032812-9c02e2 (that mutant killed) | none: the reviewer's `sync_error_probe` (in d64be6) writes the failed edit's image by hand and prints the same result at any commit (8afcbd shows it unchanged); the mutant is the fix reverted |
+| security F1 | replay probe 261110-073919-a0029a; manifest_log_test "deleted sets" at 2x the edit bound in 261110-073918-41b1cd | 261110-032812-618943: the open's read at most 1.5x the snapshot alone over 18 rows (5M to 60M docs, 1x and 2x) | 261110-022216-4197e2: sparse below the threshold 796.8x at 20M docs, 2x (3,545 ms against 4.45 ms) and 924.7x at 60M (19,802 ms); clumped dense 295.1x at 60M |
+| security F2 | fable's probe 261110-073919-cf69ef (exit 0 expected); index_test's sustained-ENOSPC case in 261110-073918-41b1cd; mutant "an unforced rollover's ENOSPC owes nothing" in 261110-073919-5715ab | 261110-032812-618943 `enospc_bounds`: "reopen: ok", 128 commits acknowledged, 172 refused ENOSPC, 272 live = 400 - 128 (R38) | 261110-022216-4197e2 `enospc_bounds`: 300 of 300 acknowledged, "reopen: FAILED: manifest log: past its bounds at generation 258", exit 3 |
+| fable F1 (= security F2) | 261110-073919-cf69ef | 261110-032812-3886e3 exit 0: 129 acknowledged, 271 refused, 0 rollovers, plain open reads generation 259 (acknowledged 259), digest equal | 261110-023641-b98c95 exit 1: 400 acknowledged, 0 refused, plain open "past its bounds at generation 387", `open(to=386)` discards 144 acknowledged generations |
 
 ## Result
 
-Ready for acceptance at strata:8b532c8, pending the jobs in State. Fix round 1 (strata:c78f870
+Ready for acceptance at strata:6ab3983, pending the jobs in State. Fix round 1 (strata:c78f870
 to strata:08a11ab) fixes durability F1 and F2, security F1 and F2, and fable F1 and F2, and fuzzes
-security F3's `to` paths; strata:8b532c8 closes the mutant gap in apply_atomic's sweep (R37). At
+security F3's `to` paths; strata:8b532c8 closes the mutant gap in apply_atomic's sweep (R37), and strata:6ab3983 fixes the defect it found (R39). At
 strata:08a11ab: 37 mutants, 36 killed; build-test 73 of 73; replay at most 1.5x the snapshot
 alone where the reviewed commit took up to 924.7x; sustained ENOSPC refuses commits instead of
 acknowledging a log the reader refuses; no acknowledged commit lost after a half-synced rollover.
@@ -303,13 +306,22 @@ Step 3a, the log layer, at strata:6a8bb32 (index.hh untouched):
   directory sync. There the edit or new log is durable, the writer is unfenced, and the retry
   committed nothing new and matched the twin's digest, so the sweep passed. The sweep now requires
   an unfenced failure to leave every `manifest-<g>` byte-identical (SR4's "unfenced, the index is
-  as it was" includes its log). Mutants job 261110-052344-a327eb at strata:8b532c8 confirms it.
+  as it was" includes its log). At strata:8b532c8 the mutants job killed 37 of 37, and build-test failed: the new check caught the code itself (R39).
 - R38 (security F2's probe at the fix): `enospc_bounds` exits 1 at strata:08a11ab on its line 54,
   `contents(again) == before`. `before` reads the index's memory, which holds the 172 deletes whose
   commits were refused; close drops uncommitted transactions. The reopen holds 272 = 400 - 128
   live documents, every acknowledged delete and nothing refused, so the check expects all 300
   commits to be acknowledged, which the fix refuses by design. The confirmation is fable's probe
   (digest equal to the acknowledged state) and index_test's sustained case.
+- R39 (A5, found by R37's check): after `commit_files`, commit() published the view, freed views,
+  ran retention and a reclaim slice, and install the first three, all outside `durable()`. An
+  allocation failing there (retention's maps and sets, the view's vectors) threw bad_alloc with
+  the edit durable and the writer unfenced: the caller saw a failed commit that had taken effect,
+  and retention could stop halfway (`retain_owed_` already cleared). Of the two outcomes the test
+  allows, fencing is the one the rule already gives everywhere past the log's sync ("any failure
+  after the sync fences", index-on-the-log); swallowing would hide an allocation failure. Cost: a
+  writer that runs out of memory in retention reopens instead of continuing. `reclaim_files`
+  still keeps its own system errors (the file stays queued), so only what escaped before fences.
 
 ## Follow-ups
 
