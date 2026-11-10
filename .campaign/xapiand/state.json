@@ -4974,20 +4974,47 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/perf-watch-peek",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T05:01:59",
+          "commit": "51d153aa1bc33a433b0c1b4dad56671d01f89d27",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "13933f0a12710320a267dbfcadffb0135aca78a1",
+              "docs": [
+                "CHANGELOG.md",
+                "docs/perf/watch-peek.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-145852-514f5a",
+              "level": "light",
+              "seconds": 115.7,
+              "state": "done",
+              "what": "perf-watch-peek check build-test at 13933f0a1271"
+            }
+          ],
+          "final": true,
+          "from": "66050ec19adbc38f35c2a45b36a5c0ad05c65557",
+          "reason": "",
+          "tested": "51d153aa1bc33a433b0c1b4dad56671d01f89d27"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-10T02:46:21",
-      "worktree": "../http-wt/xapiand/perf-watch-peek"
+      "updated": "2026-11-10T05:02:02",
+      "worktree": ""
     },
     "phase0": {
       "accepted": {},
