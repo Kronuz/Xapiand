@@ -5,27 +5,30 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`xapiand --restore INDEX --in FILE` into a new, empty data directory leaves an index a server then
+serves in full: the same documents as a RESTORE over HTTP, any shard count. Today the CLI path leaves
+`.xapiand/indexes` without the `rt/.__N` shard records, so a served COUNT fails with "Inconsistency in
+number of replicas configured" (default shards) or returns 0 (`--shards 1`) (docs-upgrade-page,
+reproduction job 261109-174137-c5db06). It is the upgrade page's documented path for alpha.9 and
+alpha.10 data. The refusal text at `src/main.cc:666` also names alpha.10 data, which is Xapian too
+(hunt row).
 
 ## Acceptance criteria
 
-One line each: `- A1 <criterion>: <the job, test or check that shows it>`. An untagged criterion
-needs a job that passed at the landed code; tag one `[artifact]` (a committed `path`),
-`[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
-cannot show it.
-
-- A1 <criterion>: <evidence>
+- A1 A CLI restore into an empty directory, then serving it, answers COUNT and DUMP with exactly the restored documents, for the default shard count and for `--shards 1` and `--shards 3`: `harness/restore_cli_check.sh` run as a job, and the same check fails at main's code (the job at main, or the fix reverted)
+- A2 The cause is fixed where the records are written, not by a second code path for the CLI: the journal names the function that writes shard records on the HTTP path and shows the CLI path now goes through it; a mutant removing the fix is killed by A1's check or a unit test
+- A3 A CLI restore into an index that already exists (created by `PUT`) still restores its documents (reproduction case 4 stays green): in A1's check
+- A4 The refusal message names "alpha.10 or earlier" (or every Xapian-based release), and CHANGELOG.md notes the fix: [artifact] quote in the journal row; the `build-test` check
+- A5 The `build-test` check passes, and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changed: the CLI flags and the HTTP API stay as they are.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-09: a defect fix, not a narrowing; the page keeps documenting the CLI path.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Nothing; one landing.
