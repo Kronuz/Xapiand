@@ -95,5 +95,8 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
 - **`engine_crash_check.sh`** needs the `strata_check` tool: `cmake --build build --target strata_check`
   (found next to the binary, or `CHECK_TOOL=`).
 - **`baseline_7c.sh`, `baseline_report.py`** -- the pre-7c rows (T4, T5, T8, T11, T12) in one hold, and their tables.
+- **`gate7c_rows.sh REL ASAN OUT`** -- the 7c gate's functional rows (T1 census and `--strict --owed`, T2 on ASan, T3
+  `--reactors 2`, T7 on ASan, T8's overloads, T10, X6's shutdown) on a Release and an ASan binary, each row to its end;
+  `OUT/rows.tsv` holds each row's exit code. It runs no timing row.
 - **`test_gate_tools.py`** -- unit tests for `async_check` and `stall_load` (no node; `python3 -I harness/test_gate_tools.py`).
 - **`ruff.toml`, `pyrefly.toml`** -- the lint and strict type configuration for these scripts.
