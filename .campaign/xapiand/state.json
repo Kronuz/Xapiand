@@ -6967,9 +6967,7 @@
         "src/query_dsl.h",
         "src/aggregations/bucket.h",
         "src/aggregations/bucket.cc",
-        "tests/test_engine_query.cc",
-        "tests/test_aggregations.cc",
-        "tests/CMakeLists.txt"
+        "tests/test_engine_query.cc"
       ],
       "landed": [],
       "lenses": [
@@ -6982,7 +6980,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "_not over several subqueries and open-ended integer ranges",
-      "updated": "2026-11-09T18:41:06"
+      "updated": "2026-11-09T18:41:33"
     },
     "reclaim-backlog": {
       "accepted": {},
