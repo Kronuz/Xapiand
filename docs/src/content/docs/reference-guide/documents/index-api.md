@@ -90,8 +90,8 @@ description: Index: a new ID
 ---
 
 ```js
-pm.test("POST answers 201 Created with a new integer ID", function () {
-  pm.response.to.have.status(201);
+pm.test("POST with echo answers 200 with a new integer ID", function () {
+  pm.response.to.have.status(200);
   pm.response.to.have.header("Location");
   var doc = pm.response.json();
   pm.expect(doc._id).to.be.a("number");
@@ -102,8 +102,8 @@ pm.test("POST answers 201 Created with a new integer ID", function () {
 e2e:end -->
 
 The result of the above index operation is a `201 Created` HTTP response code
-with the new document's URL in the `Location` header (with `echo`, the document
-too, with its `_id` and `_version`). The ID is minted from the type of the
+with the new document's URL in the `Location` header; with `echo` it is `200 OK`
+with the same header and the document, with its `_id` and `_version`. The ID is minted from the type of the
 index's `_id` field, which the first document sets:
 
 - On a new index, a UUID (version 6 by default, `--legacy-ids` mints version 1).
