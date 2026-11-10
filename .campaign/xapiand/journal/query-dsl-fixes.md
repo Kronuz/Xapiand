@@ -1,6 +1,6 @@
 # query-dsl-fixes: journal
 
-State: waiting on jobs 261109-185346-2edf6c 261109-185347-50ec8a 261109-185356-68cd98 261109-185357-8fe848
+State: waiting on jobs 261109-192344-c4ac9a 261109-192345-1c7534 (261109-185357-8fe848 still queued)
 Quest: .campaign/xapiand/quests/query-dsl-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,18 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Code and tests are written and committed (tests-only commit 38f22b685, then the fix b56c33db7);
-nothing has been compiled yet, so the first job result may be a compile error to fix.
+First results (head b56c33db7): tests alone 261109-185346-2edf6c fail as intended (8 FAIL); with the fix
+261109-185347-50ec8a and UBSan 261109-185356-68cd98 failed 4 checks: (1) test setup: the DSL returns
+an append node, not a term, so `term_of` found no term and indexed an empty field name ("index rejected
+the operation") - fixed in a8ca32c7f by unwrapping append; (2) the positive-field manual case
+(`_from:-5`, `_to:4`, `_to:-1` on a positive field) differed from {below 5, within 2}; cause unknown,
+a8ca32c7f prints the buckets. Reruns at a8ca32c7f: 261109-192344-c4ac9a (test), 261109-192345-1c7534 (UBSan).
 
 ## Next
 
-1. Read the four jobs: tests alone (expect FAIL on both new tests), with the fix (expect pass), UBSan with the fix (pass), UBSan tests alone (expect a report or FAIL).
-2. Fix any compile or test error, resubmit; then `campaign verify query-dsl-fixes` for build-test (A5).
-3. Fill the Evidence table; set ready for review.
+1. Read the reruns; if the positive case still fails, decide from the printed buckets whether the
+   expectation or reach_of/`bound` is wrong, fix, rerun.
+2. Then `campaign verify query-dsl-fixes` (A5), fill the Evidence table.
 
 ## Blocked on
 
