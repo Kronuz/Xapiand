@@ -986,9 +986,9 @@
       ],
       "repo": "../analysis",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "A CJK word segmenter in Kronuz/analysis",
-      "updated": "2026-11-09T16:08:21",
+      "updated": "2026-11-09T20:00:24",
       "worktree": "../analysis-wt/xapiand/cjk-segmenter"
     },
     "cjk-words": {
