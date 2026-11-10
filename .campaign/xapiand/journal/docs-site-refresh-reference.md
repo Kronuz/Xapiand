@@ -1,6 +1,6 @@
 # docs-site-refresh-reference: journal
 
-State: waiting on jobs 261110-081109-6b28b2 261110-081100-c65ac6
+State: waiting on jobs 261110-144359-49fcfb 261110-144400-f2e780
 Quest: .campaign/xapiand/quests/docs-site-refresh-reference.md (the lead's; never edit it)
 
 ## Doing
@@ -14,8 +14,10 @@ boolean, keyword, text, uuid, date, geospatial, foreign-schemas, index-api) and 
 
 ## Next
 
-1. Probe the new assertions (`~/.scratch/ref-probe/run.sh`, Nov 3 binary: version cases fail there by design); fix.
-2. Submit the site build + link check and `campaign verify` once, at the final head.
+1. `campaign wait` 261110-144359-49fcfb (A4) and 261110-144400-f2e780 (e2e, A2/A7); fix what fails.
+
+Probe (Nov 3 binary, before write-path-fixes): 487 requests, 761 assertions, 752 pass; the 9 failures were the
+POST-with-echo status (200, fixed in the page) and 8 cases that binary predates (id 0, DELETE and 409 `_version`).
 
 ## Blocked on
 
@@ -46,12 +48,12 @@ Code questions (documented as the code behaves today; the lead rules whether the
 | Criterion | Evidence |
 |---|---|
 | A1 | the table below: the audit rows of the reference guide, each with its fix and source. Rows owned by other quests or by sortable-encoding are under "Left alone" |
-| A2 | job 261110-081109-6b28b2 (`campaign verify`, the quest's `e2e` check at the head; pending) |
+| A2 | job 261110-144400-f2e780 (`campaign verify`, the `e2e` check at the final head; pending) |
 | A3 | job 261110-081103-557fe4 (`git grep -niw xapian` over the site content, minus changelog and upgrade): one hit, `copyright.md:19` (sortable-encoding's, Blocked on 8); nothing in the reference guide |
-| A4 | job 261110-081100-c65ac6 (`npm ci`, `npm run build`, `linkcheck.py` over every page of the site, exit 1 on any broken link; pending). The 11-10 job 261110-043755-c5fb2d listed the 5 pages |
-| A5 | request count 425 before (job 261110-043757-b6665c) and 477 after (job 261110-081101-d566fc: `requests 477`); the new sections are under Result |
-| A6 | not in this launch |
-| A7 | not in this launch |
+| A4 | job 261110-144359-49fcfb (`npm ci`, `npm run build`, `linkcheck.py` over every page, exit 1 on a broken link; pending) |
+| A5 | request count 425 before (job 261110-043757-b6665c) and 477 after (job 261110-081101-d566fc); 487 at the final head (probe) |
+| A6 | `docs/src/content/docs/tests/coverage.md`: "## Coverage" (feature, page, tests) and "## Not covered by a request" |
+| A7 | job 261110-144400-f2e780 (its site build). Quote, `docs/src/lib/sidebar.mjs` Quick-start items now end `{ "slug": "exploration" } ]`; `next.md` deleted |
 
 ### A1: audit row, fix, source
 
@@ -116,6 +118,16 @@ Code questions (documented as the code behaves today; the lead rules whether the
 | stop-words.md: `few`, `far`, `between`; `_stopwords`; list needs `_language` | only `days` is searched; `_stopwords` is 400; list needs a language | stopwords/en.txt; stopper.cc:85-92 |
 | wildcard.md: `?`, no cap | `?` rules; uncapped | query_dsl.cc:71,733-739,775-790; expand.cc:70-100 |
 
+| delete-api.md, versioning.md, index-api.md, update-api.md, api.md (write-path-fixes) | `?version` on PUT, PATCH, UPDATE, UPSERT, DELETE; 409 `_version`; version 0 semantics; ids 0 and "0"; routing by key; PATCH 204; POST with echo 200 + Location | docs/mechanisms/document-ids-and-versions.md; tests/test_node.cc:1309-1470; search_views.cc write_document_view, on_error |
+| tutorials/home.md: missing content | index of the tutorials; spatial-search in the sidebar | pages |
+| tests.md: 15 of 21 pages, stray request, "Replace Value by Null" | every page listed; request moved to tests/schema/reserved-subfield.md; title | sidebar.mjs; schema.cc ("is not valid") |
+| tests/comments/ignore-comments.md: vacuous assertion | GET the index, walk `_schema` keys, must be non-empty | search_views.cc write_database_view (echo = retrieve_database) |
+| tests/querydsl/wildcard.md: keyword half asserts nothing, typo | `field:dynamic*` asserts the hit; typo | query_dsl.cc:710-731 |
+| tests/namespace/namespace.md: js outside e2e, unasserted PUT, reused heading, dead helper | fixed; `number_of_replicas` kept (Blocked on 9) | index_resolver_lru.cc:568-588 |
+| stem-language.md, basque-language.md: orphans | in the sidebar | |
+| next.md: delete | deleted, sidebar entry dropped | |
+| close-api.md: future-tense feature text | `CLOSE`/`OPEN` answer 501, asserted | search_views.cc:656-672 |
+
 ### Left alone (not mine, or no source)
 
 - numeric-type.md, the accuracy paragraphs of date-type.md and geospatial-type.md, the "stored as seconds" line of date-type.md: how values are encoded is sortable-encoding's.
@@ -124,6 +136,8 @@ Code questions (documented as the code behaves today; the lead rules whether the
 - store-api.md Lenna examples: license-closure; text-type.md CJK note: cjk-words.
 - store-api.md `UPDATE` with `Content-Length: 0`, bucket.md "Mixing field types" warning, explicit-types.md negative `positive`: audit "Unverified", no probe settled them; text left as is.
 - near.md and phrase.md say "words only": phrase-expansion extends that.
+- benchmarks.md: closing-benchmark's. conduct.md, astro.config.mjs, docs/README.md: outside the file set. contributing.md: audit "current".
+- Sidebar still lacks about, help, options, wal, htm (they run after the sidebar pages); adding them reorders the E2E, not done here.
 
 ## Result
 
