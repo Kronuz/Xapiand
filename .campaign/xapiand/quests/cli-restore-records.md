@@ -18,7 +18,7 @@ alpha.10 data. The refusal text at `src/main.cc:666` also names alpha.10 data, w
 - A1 A CLI restore into an empty directory, then serving it, answers COUNT and DUMP with exactly the restored documents, for the default shard count and for `--shards 1` and `--shards 3`: `tests/restore_cli_check.sh` run as a job, and the same check fails at main's code (the job at main, or the fix reverted)
 - A2 The cause is fixed where the records are written, not by a second code path for the CLI: the journal names the function that writes shard records on the HTTP path and shows the CLI path now goes through it; a mutant removing the fix is killed by A1's check or a unit test
 - A3 A CLI restore into an index that already exists (created by `PUT`) still restores its documents (reproduction case 4 stays green): in A1's check
-- A4 The refusal message names "alpha.10 or earlier" (or every Xapian-based release), and CHANGELOG.md notes the fix: [artifact] quote in the journal row; the `build-test` check
+- A4 The refusal message (`src/main.cc` and `src/xapian_data_guard.h`) names "alpha.10 or earlier" (or every Xapian-based release): [artifact] a quote in the journal row and the `build-test` check. The changelog entry is written by docs-upgrade-page, which owns `docs/src/content/docs/changelog.md` and lands after this quest (lead, 11-09).
 - A5 The `build-test` check passes, and CI is green
 
 ## Contracts
