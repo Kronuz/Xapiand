@@ -46,10 +46,10 @@ in one library changes its tree, so the script is rerun after each (heads can mo
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261110-030044-61a1f7 at xapiand:16b72ecc3 (pins_check.py A1 table: 57 declarations, each with an include site) |
-| A2 | job 261110-030044-61a1f7 (pins_check.py A2: no comment justifying a pin by winning) |
-| A3 | job 261110-030044-61a1f7 (Xapiand's pin is the head for all 57 declarations; 23 library-side stale pins listed in Blocked on, to be bumped in their repositories) |
-| A4 | build-test 261110-021225-4cdcaa passed (xapiand:e13a10a35; 16b72ecc3 differs by the journal only); e2e 261110-030028-b6051d passed at 16b72ecc3 (smoke, e2e, tls GREEN, VERDICT GREEN). Earlier red e2e runs were the fixed-port collision (see Rulings): concurrency test 261110-021214-0b13b3 passes with the fix, 261110-021215-ec2183 fails (bind in use) with the old script. The tls_check flake in 261110-021226-edb1ac did not recur. |
+| A1 | job 261110-032056-a735b0 at Xapiand:adfe69916 (pins_check.py A1 table: 57 declarations, each with an include site) |
+| A2 | job 261110-032056-a735b0 (pins_check.py A2: no comment justifying a pin by winning) |
+| A3 | job 261110-032056-a735b0 (Xapiand's pin is the head for all 57 declarations; 23 library-side stale pins listed in Blocked on, to be bumped in their repositories) |
+| A4 | build-test 261110-032054-0d5177 and e2e 261110-032054-4e0406 passed at Xapiand:adfe69916 (ed84c3759 differs by the journal only). The earlier red e2e runs were the fixed-port collision (see Rulings), shown by the concurrency check in Rulings. |
 
 ## Result
 
