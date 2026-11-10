@@ -1,6 +1,6 @@
 # docs-site-refresh-reference: journal
 
-State: waiting on jobs 261110-144400-f2e780
+State: waiting on jobs 261110-152441-ff97e2 261110-152436-5a4262 261110-152436-8d70e6 261110-152436-3a9623
 Quest: .campaign/xapiand/quests/docs-site-refresh-reference.md (the lead's; never edit it)
 
 ## Doing
@@ -14,10 +14,8 @@ boolean, keyword, text, uuid, date, geospatial, foreign-schemas, index-api) and 
 
 ## Next
 
-1. `campaign wait` 261110-144400-f2e780 (e2e, A2/A7); a failing assertion names its request. A4 passed (261110-144359-49fcfb).
-
-Probe (Nov 3 binary, before write-path-fixes): 487 requests, 761 assertions, 752 pass; the 9 failures were the
-POST-with-echo status (200, fixed in the page) and 8 cases that binary predates (id 0, DELETE and 409 `_version`).
+1. Master merged again at a637c2af0 (ci.yml only). `campaign wait` the jobs at a637c2af0: e2e 261110-152441-ff97e2,
+   link check 261110-152436-5a4262, request count 261110-152436-8d70e6, xapian grep 261110-152436-3a9623.
 
 ## Blocked on
 
@@ -36,7 +34,7 @@ Code questions (documented as the code behaves today; the lead rules whether the
    "read and ignored". `_missing` in a bucket aggregation is ignored the same way.
 7. The variance of one value divides by zero (`src/aggregations/metrics.h`, `n - 1`) and range-aggregation open ends of an `integer` field
    are narrowed into 64-bit pairs (`bucket.h`); both pages hedge. No probe was run (audit "Unverified").
-9. A strict new index must name `number_of_replicas` as well as `number_of_shards` (`src/index_resolver_lru.cc:568-588`), though
+9. Ruled by the lead: kept. A strict new index must name `number_of_replicas` as well as `number_of_shards` (`src/index_resolver_lru.cc:568-588`), though
    replicas do nothing on one node (audit, namespace.md row: a decision for the owner). create-api.md states the requirement;
    namespace.md keeps its six `number_of_replicas: 1`. Options: keep it, or stop requiring replicas in strict mode (code).
 8. Outside my file set: `copyright.md:19` says `src/sortable_serialise` derives from Xapian (A3 is clean for every page but this, the
@@ -47,13 +45,13 @@ Code questions (documented as the code behaves today; the lead rules whether the
 
 | Criterion | Evidence |
 |---|---|
-| A1 | the table below: the audit rows of the reference guide, each with its fix and source. Rows owned by other quests or by sortable-encoding are under "Left alone" |
-| A2 | job 261110-144400-f2e780 (`campaign verify`, the `e2e` check at the final head; pending) |
-| A3 | job 261110-081103-557fe4 (`git grep -niw xapian` over the site content, minus changelog and upgrade): one hit, `copyright.md:19` (sortable-encoding's, Blocked on 8); nothing in the reference guide |
-| A4 | job 261110-144359-49fcfb (`npm ci`, `npm run build`, `linkcheck.py` over every page, exit 1 on a broken link): passed at 07d7f71db |
-| A5 | request count 425 before (job 261110-043757-b6665c) and 477 after (job 261110-081101-d566fc); 487 at the final head (probe) |
+| A1 | `.campaign/xapiand/journal/docs-site-refresh-reference.md` "A1: audit row, fix, source" (every row of `docs/dev/docs-site-audit.md` for these pages, with its fix and source; rows owned elsewhere under "Left alone") |
+| A2 | job 261110-151638-c40876 (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-152441-ff97e2 |
+| A3 | job 261110-152436-3a9623 (rerun of 557fe4 at a637c2af0): the only hit is `copyright.md:19` (sortable-encoding's) |
+| A4 | job 261110-144359-49fcfb (site build + link check over every page, passed at 07d7f71db); rerun 261110-152436-5a4262 at a637c2af0 |
+| A5 | request count 425 before (job 261110-043757-b6665c, the base) and after: job 261110-152436-8d70e6 at a637c2af0 (487 in the probe) |
 | A6 | `docs/src/content/docs/tests/coverage.md`: "## Coverage" (feature, page, tests) and "## Not covered by a request" |
-| A7 | job 261110-144400-f2e780 (its site build). Quote, `docs/src/lib/sidebar.mjs` Quick-start items now end `{ "slug": "exploration" } ]`; `next.md` deleted |
+| A7 | job 261110-151638-c40876 (its site build, at d148eac88). Quote, `docs/src/lib/sidebar.mjs` Quick-start items end `{ "slug": "exploration" } ]`; `next.md` deleted |
 
 ### A1: audit row, fix, source
 
