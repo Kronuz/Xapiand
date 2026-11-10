@@ -1162,7 +1162,29 @@
         "src/xapian_data_guard.h",
         "tests/restore_cli_check.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T19:53:21",
+          "commit": "3542ee9a30478d43119b221128b5eb44693dab38",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "7713e7ce6f6f8cc3bcd014b4bbc0242fe8cacff4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-193503-79eae3",
+              "level": "light",
+              "seconds": 228.2,
+              "state": "done",
+              "what": "cli-restore-records check build-test at 7713e7ce6f6f"
+            }
+          ],
+          "final": true,
+          "from": "a8abbaf19c894870c8bda0e3b950918d38762d33",
+          "reason": "",
+          "tested": "7713e7ce6f6f8cc3bcd014b4bbc0242fe8cacff4"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
@@ -1171,9 +1193,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "CLI --restore into an empty data directory writes the index's shard records",
-      "updated": "2026-11-09T19:17:41",
+      "updated": "2026-11-09T19:53:21",
       "worktree": "../Xapiand-wt/xapiand/cli-restore-records"
     },
     "closing-benchmark": {
