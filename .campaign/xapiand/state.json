@@ -9846,19 +9846,42 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T17:42:42",
+          "commit": "f332e5989df5f88f525605aee00f3f359cc84120",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "ad641a000ec123cec666bc257d8b4eb2b2f7bcfb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-154800-ae210c",
+              "level": "light",
+              "seconds": 990.5,
+              "state": "done",
+              "what": "x-pool-followups check build-test at ad641a000ec1"
+            }
+          ],
+          "final": true,
+          "from": "c488d58b30a6c76eca43e51c848ff73ca05d2eb6",
+          "reason": "",
+          "tested": "05eccd0fbe08e061102f350165c1497a079f601b"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "x-pool review follow-ups and the restore check's race",
-      "updated": "2026-11-09T17:33:20",
-      "worktree": "../Xapiand-wt/xapiand/x-pool-followups"
+      "updated": "2026-11-09T17:42:49",
+      "worktree": ""
     },
     "x-pool-step1": {
       "accepted": {},
