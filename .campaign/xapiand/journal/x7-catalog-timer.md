@@ -1,6 +1,6 @@
 # x7-catalog-timer: journal
 
-State: working
+State: blocked on lead: no debouncer wheel can carry the catalog's timer (D56's mechanism)
 Quest: .campaign/xapiand/quests/x7-catalog-timer.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,35 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Stopped before code: D56's mechanism does not exist as written (Blocked on 1).
 
 ## Next
 
-1. <step>
+1. On the lead's ruling for Blocked on 1, implement the chosen option in src/database/pool.{cc,h}, then A1-A3 jobs.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+1. **D56 names a wheel that cannot take the catalog's timer** (lead decides). Findings, at master:
+   - The autocommit debouncer that had the `AC--` wheel is now `control::Debounce` (src/control_plane.h:184), tasks
+     on the control loop; no thread. Section 2's "the debouncer wheel" has no thread behind it today.
+   - The only debouncer wheel left is the FS fsyncher's `FS--` (src/xapiand_fsyncher.h:73), which section 2 retires
+     in 7b (D8), and it is outside this quest's file set.
+   - A scheduler wheel is typed by its one task type: `ThreadedScheduler<DebouncerTask<int, F, Tuple>>`, and
+     `ScheduledTask::operator()` static_casts to that type (scheduler d57e8fc scheduler.h:170-179). A catalog `Fire`
+     task cannot be added to it; the debouncer's API only calls `fsyncher_fsync(int, bool)`.
+   - The x7-gate census at master: unnamed 16, W 16, FS 9 (8 workers + FS--), WL 8, LOG 1, main 1, DB-TIMER 1.
+   Options:
+   a. The control loop: the catalog's timer arms `engine::Host::start_timer` on the control loop's AsioHost (section 2's
+      diagram already puts idle-close there; D1 too). Costs: the host is set after the pool is built and cleared
+      before Stop 3, and test_pool runs without one, while the catalog's destructor waits for its armed timers; needs
+      the control loop to own the timer for the pool's whole life (manager.cc, outside the file set) or a fallback,
+      which is two mechanisms.
+   b. One shared, type-erased wheel: Kronuz/scheduler gains a task type that runs a callable, the FS debouncer and
+      the catalog share it (scheduler repo, xapiand_fsyncher.h). FS goes in 7b, so the catalog would move again.
+   c. Keep DB-TIMER and amend section 2's list (D56 rejected this).
+   Recommendation: (a), with the quest's file set widened to src/manager.cc and the pool's tests: the catalog timer
+   becomes a control-loop timer like the autocommit, one timer mechanism on a thread that exists for good; the pool
+   takes its timer host at construction (the manager's reactor exists before the pool) and tests pass a test host.
 
 ## Evidence
 
