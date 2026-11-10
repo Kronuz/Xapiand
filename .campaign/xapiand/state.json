@@ -3732,9 +3732,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "prospect moves to strata's manifest log",
-      "updated": "2026-11-09T14:58:08",
+      "updated": "2026-11-09T17:18:47",
       "worktree": "../prospect-wt/xapiand/manifest-log-prospect"
     },
     "manifest-log-steps12": {
