@@ -903,7 +903,8 @@
         "CMakeLists.txt",
         "LICENSE*",
         "NOTICE*",
-        "README.md"
+        "README.md",
+        "AGENTS.md"
       ],
       "journal": "../Xapiand-wt/xapiand/cjk-segmenter",
       "landed": [],
@@ -919,7 +920,7 @@
       "risk": "normal",
       "status": "active",
       "title": "A CJK word segmenter in Kronuz/analysis",
-      "updated": "2026-11-09T14:22:17",
+      "updated": "2026-11-09T16:08:21",
       "worktree": "../analysis-wt/xapiand/cjk-segmenter"
     },
     "cjk-words": {
