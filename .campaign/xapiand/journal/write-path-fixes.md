@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261110-070643-84a084 261110-070651-fc53d2 261110-070652-14568c 261110-070653-a8b427 261110-070654-52cc01 261110-070706-76fe8d 261110-070644-8a0005 261110-070646-7bc0a6 261110-070647-fb8378 261110-070648-92a14b 261110-070650-744839
+State: waiting on jobs 261110-102948-c09ca1 261110-102949-d27275 261110-103007-ce2626 261110-103008-973d5e 261110-103009-55d7f2 261110-103010-7bd7e0 261110-103011-293ea2
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,26 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
+Fix round 2 (lead's 4 items at a14d42ac8). Code head 24f2ba086.
+
+- n4 and f1a "survived" (261110-092612-dfb4f2, -eff58f) because those resubmissions ran at the head
+  a14d42ac8, not at the mutant refs (their spec's commit; the 07:06 originals at refs/scratch/wpf-r1-*
+  were lost to the reboot): no fix was reverted, so nothing could fail. Strengthened anyway
+  (24f2ba086): the false-id case restores two `_id:false` documents and checks two distinct UUID ids,
+  each with its own `n` read back by GET; numbering_ends commits and scans the shard (only "far" at
+  docid::max). Mutants rebuilt on 24f2ba086 as refs/scratch/wpf-r2-{n4,f1a,f1b} (same reverts).
+- Probe P3's `PATCH /w/1?version=2 -> 204 (want 200)`: the expectation is wrong, see ruling 10.
+
+Jobs (at 24f2ba086 unless named):
+
+- 261110-102948-c09ca1: build + engine strata and node tests (A1, A2, the strengthened tests).
+- 261110-102949-d27275: build-test (A3, A5).
+- Mutants (exit 0 = KILLED): n4 261110-103007-ce2626, f1a 261110-103008-973d5e, f1b 261110-103009-55d7f2.
+- PATCH status, script .scratch/wpf-r2/patch_status.sh: at master 261110-103010-7bd7e0, at the head
+  261110-103011-293ea2.
+
 Fix round 1 (reviews write-path-fixes-correctness.md and -correctness-fable.md, CHANGES at 60a5e3736).
-Code head e30d1c9fc:
+Code e30d1c9fc:
 
 - D1 / WPF-F2 (97fae064e): multi-shard `delete_document_term` uses the found docid only to pick the
   shard, then erases by key in that shard's turn (`erase_by_key`, the version checked there); a key
@@ -49,7 +67,7 @@ Jobs (all at e30d1c9fc unless a mutant):
 
 ## Next
 
-1. Read the jobs; fill Evidence and Confirmations at the head; State "ready for review".
+1. Read the round-2 jobs; fill Evidence and Confirmations at 24f2ba086; State "ready for review".
 
 ## Cause (A1)
 
@@ -145,3 +163,9 @@ tests/test_node.cc (four cases), tests/test_engine_strata.cc. Evidence is in the
 9. test_node's nodes take ports the OS hands out (`free_port`), not 18781-18783: concurrent runs on
    one host clashed (261110-063937-1a67cb). Inside the file set; the review probe's patch anchors
    are unchanged.
+10. Probe P3's line `expect 200 PATCH "/w/1?version=2" ...` expects the wrong status: a PATCH without
+    `?echo` answers 204 No Content, on master as at the head (`update_document_view`: 200 with the
+    document only when `request.echo`, else 204; this quest does not change it), the same as the PUTs
+    the probe expects 204 for. The PATCH applied (the probe's later `GET /w/1 -> v=v3 _version=3`).
+    Corrected expectation: `expect 204 PATCH "/w/1?version=2" ...`. Proof: jobs 261110-103010-7bd7e0
+    (master) and 261110-103011-293ea2 (head). The reviewer's probe is not edited.
