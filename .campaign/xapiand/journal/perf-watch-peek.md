@@ -1,6 +1,6 @@
 # perf-watch-peek: journal
 
-State: waiting on jobs 261109-144804-ff5f5b 261109-150350-f39012
+State: ready for review
 Quest: .campaign/xapiand/quests/perf-watch-peek.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,30 +9,24 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Waiting on the strict screen 261109-144804-ff5f5b (at 90cf235, library code = head) and the
-exclusive confirm 261109-150350-f39012 (at head 13933f0, after the screen); both queue for a
-drain; at 16:25 both still queued after 90 minutes behind light jobs held to 19:45.
-docs/perf/watch-peek.md and the CHANGELOG.md entry (msg from the lead: CHANGELOG is in the
-file set) are drafted in the http worktree, uncommitted on purpose until the docs-only
-evidence fix lands; the CHANGELOG's TIMING-LINE placeholder takes the confirm's numbers.
+Done: both timing jobs read, docs/perf/watch-peek.md Timing filled and the CHANGELOG entry
+committed (http:51d153a, docs only; build-test 261109-145852-514f5a carries across it).
 
 ## Next
 
-1. When the confirm finishes: read `$JOB_OUT/watch-ab/` (report-base.txt, report-e1.txt,
-   medians.txt, counts-*.txt) from its log dir; fill the Timing section of docs/perf/watch-peek.md,
-   commit it, rerun `campaign verify` and the mutants at that head.
-2. Fill the Evidence table and Result; State ready for review.
+1. Correctness review (lead launches). Xapiand's pin of the landed http commit is the lead's.
 
 ## Blocked on
 
-Lead: the drain for 261109-144804-ff5f5b / 261109-150350-f39012 is starved by long light jobs;
-a `campaign window` would run them back to back (about 25 minutes in all).
+Nothing.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
+| A1 | exclusive confirm 261109-150350-f39012 (http:13933f0 vs base http:8262172 and E1 http:f43dee4, A/A copy; 6 rounds x 4 s); strict screen 261109-144804-ff5f5b agrees |
 | A2 | 261109-145852-514f5a (build-test at 13933f0); mutants 261109-150416-197873; fails-without 261109-145905-5a00d5 |
+| A3 | `docs/perf/watch-peek.md` (http:51d153a) |
 | A4 | `docs/mechanisms/coroutine-handlers.md` (http:6ec7324) |
 
 ## Attribution (before, http main 66050ec, i9-9980HK, counting build, local probe, not evidence)
@@ -55,7 +49,14 @@ Experiments (http branch quest/xapiand/perf-watch-peek):
 
 ## Result
 
-<pending the A/B jobs>
+Asking request (`httpc`), after vs before, median per-round ratio (range) against A/A range:
+1 conn 1.39x faster (1.37-1.98 vs A/A 1.00-1.05), CPU 24.4 -> 18.8 us/req (21% less);
+8 conns 1.10x faster (1.06-1.18 vs A/A 0.95-1.08; low end touches A/A), CPU 17.4 -> 15.3 us;
+64 conns noise (0.82-1.11 vs 0.91-1.22). Non-asking `http`: noise at 1/8/64. E1 alone: noise
+everywhere (0.99-1.02); E2 (no frames, no channel) carries the gain. Asking's extra CPU over a
+non-asking request: 5.5/3.1/1.3 us before, 0.7/1.1/0.7 us after (residual not attributed).
+Handlers/req 3 -> 1, allocs/req 6 -> 3 (counting build). Write-up: http docs/perf/watch-peek.md,
+CHANGELOG.md 2026-11-09 entry.
 
 ## Rulings I made
 
@@ -80,6 +81,8 @@ Experiments (http branch quest/xapiand/perf-watch-peek):
   /stream-asks 9.000 against raw 1.000, streamed 7.000).
 - 261109-150349-93e938 A/B builds at head (slot pwp-ab): ok.
 - 261109-150416-197873 mutants at 13933f0: all five killed.
+- 261109-144804-ff5f5b strict screen at 90cf235: httpc 1.40x at 1 conn, 1.09x at 8.
+- 261109-150350-f39012 exclusive confirm at 13933f0: numbers in Result.
 
 ## Messages
 
