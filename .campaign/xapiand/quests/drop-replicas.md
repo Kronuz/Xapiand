@@ -5,27 +5,30 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The replica settings the removed cluster left behind are gone (remove-not-refuse, D7): a strict new
+index no longer requires `number_of_replicas` (`src/index_resolver_lru.cc:586`), a request that sends
+it is accepted and the key ignored, as other unknown `_settings` keys already are, and GET `_settings`
+no longer shows it, for new and old indexes alike. `num_replicas_plus_master`, `settle_replicas` and
+`opts.num_replicas` are deleted; the shard-record guard that remains ("a shard record names no
+node") keeps its check under a name that says so. `number_of_shards` and the `.__N` records stay.
+Explorer report (code reading, 11-09): every replica use is vestigial except that guard.
 
 ## Acceptance criteria
 
-One line each: `- A1 <criterion>: <the job, test or check that shows it>`. An untagged criterion
-needs a job that passed at the landed code; tag one `[artifact]` (a committed `path`),
-`[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
-cannot show it.
-
-- A1 <criterion>: <evidence>
+- A1 A strict `PUT /idx/` without `number_of_replicas` answers 2xx; with `number_of_replicas: 2` answers 2xx and GET `/idx/_settings` has no `number_of_replicas`: `harness/replicas_check.sh` as a job, failing at master's code for the first case
+- A2 A data directory written by master's binary (with `number_of_replicas` in its records) still opens, COUNTs and DUMPs the same documents under the new binary: in A1's check
+- A3 `git grep -nE 'num_replicas|settle_replicas|plus_master'` in `src/` is empty, and the guard's error message names the missing node instead of replicas: a job running the grep, and the `build-test` check
+- A4 `harness/terms_cap_check.py` no longer sends the key; ARCHITECTURE.md no longer describes replicas: [artifact] quotes in the journal
+- A5 The `build-test` check passes, and CI is green; the docs pages (create-api.md, namespace.md) are docs-site-refresh's, listed in the journal for it
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+HTTP: `number_of_replicas` in `_settings` becomes an ignored key; GET `_settings` drops it.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-09: accept and ignore, not 400 (a refusal would break remove-not-refuse and Elasticsearch-style clients). The per-shard node list is vestigial too, but changing the record layout is a separate decision.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Nothing; one landing.
