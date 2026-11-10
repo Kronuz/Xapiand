@@ -22,6 +22,10 @@ Wave 2 (gate VM, engine main `9b88263`):
 - A2 1M trials I1-5 (exclusive, prospect at 1,039 MB vs Tantivy-st, order alternating):
   022435-14ea61 022440-084be4 022446-d9749a 022452-3e9f96 022457-9bd18c (ids prefixed 261110-).
 - A7 coverage on the host 261110-022513-292125 (light).
+- A2 8-thread row (harness `61be43a`: LUCENE_THREADS, TANTIVY_THREADS): prepare 261110-023211-4c1f94
+  (after the I and QB jobs) -> smoke 20k 261110-023212-dd083e -> trials M1-5 at 1M, exclusive,
+  order rotated: 261110-023213-439939 023215-c412cf 023216-903d9c 023218-de1101 023219-e92006;
+  5M confirmation 261110-023221-07f41b (strict).
 
 ## Wave 1 read (jobs passed; engine main `9b88263`, gate VM, Linux x86_64, 8 vCPUs)
 
@@ -43,9 +47,8 @@ Wave 2 (gate VM, engine main `9b88263`):
 1. Read wave 2; score A1 with `bench/phase2/gate.py --md --target 1.0 --prospect prospect-merged`
    (after) and `--as lucene-10.4.0-st=lucene-10.4.0 --as tantivy-0.26-st=tantivy-0.26` (before).
 2. Write A11's report rows; A9 tool list; A7 parity.md rows with the coverage numbers.
-3. Owed and not yet submitted: the 8-thread row (A2: the keyed NO_MERGE builders are one-thread;
-   tantivy-0.26-st needs a thread count, Lucene-st a threaded BuildIndex), the many-index rows
-   (A3: no harness), A8 FreeBSD/arm64 (deferred checks).
+3. Owed and not submitted: the many-index rows (A3: no harness), A8 FreeBSD/arm64 (deferred).
+4. A9 runner: `bench/gate3_report.py DIR...` (prospect `b97171d`) scores all four axes.
 
 ## Blocked on
 
