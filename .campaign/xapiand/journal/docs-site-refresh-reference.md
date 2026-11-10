@@ -1,6 +1,6 @@
 # docs-site-refresh-reference: journal
 
-State: waiting on jobs 261110-152441-ff97e2 261110-152436-5a4262 261110-152436-8d70e6 261110-152436-3a9623
+State: waiting on jobs 261110-152519-7a2db9 261110-152514-a87e19
 Quest: .campaign/xapiand/quests/docs-site-refresh-reference.md (the lead's; never edit it)
 
 ## Doing
@@ -14,8 +14,8 @@ boolean, keyword, text, uuid, date, geospatial, foreign-schemas, index-api) and 
 
 ## Next
 
-1. Master merged again at a637c2af0 (ci.yml only). `campaign wait` the jobs at a637c2af0: e2e 261110-152441-ff97e2,
-   link check 261110-152436-5a4262, request count 261110-152436-8d70e6, xapian grep 261110-152436-3a9623.
+1. Master merged again at a637c2af0 (ci.yml only); head b5de25700 (coverage.md rewording for A3). `campaign wait` the jobs at b5de25700: e2e 261110-152519-7a2db9,
+   link check 261110-152514-a87e19, request count 261110-152514-91fbb0, xapian grep 261110-152514-d0f0db.
 
 ## Blocked on
 
@@ -46,10 +46,10 @@ Code questions (documented as the code behaves today; the lead rules whether the
 | Criterion | Evidence |
 |---|---|
 | A1 | `.campaign/xapiand/journal/docs-site-refresh-reference.md` "A1: audit row, fix, source" (every row of `docs/dev/docs-site-audit.md` for these pages, with its fix and source; rows owned elsewhere under "Left alone") |
-| A2 | job 261110-151638-c40876 (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-152441-ff97e2 |
-| A3 | job 261110-152436-3a9623 (rerun of 557fe4 at a637c2af0): the only hit is `copyright.md:19` (sortable-encoding's) |
-| A4 | job 261110-144359-49fcfb (site build + link check over every page, passed at 07d7f71db); rerun 261110-152436-5a4262 at a637c2af0 |
-| A5 | request count 425 before (job 261110-043757-b6665c, the base) and after: job 261110-152436-8d70e6 at a637c2af0 (487 in the probe) |
+| A2 | job 261110-151638-c40876 (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-152519-7a2db9 |
+| A3 | job 261110-152514-d0f0db (rerun of 557fe4 at b5de25700, done): the only hit is `copyright.md:19` (sortable-encoding's) |
+| A4 | job 261110-144359-49fcfb (site build + link check over every page, passed at 07d7f71db); rerun 261110-152514-a87e19 at b5de25700 |
+| A5 | request count 425 before (job 261110-043757-b6665c, the base) and after: job 261110-152514-91fbb0 at b5de25700: `requests 487` |
 | A6 | `docs/src/content/docs/tests/coverage.md`: "## Coverage" (feature, page, tests) and "## Not covered by a request" |
 | A7 | job 261110-151638-c40876 (its site build, at d148eac88). Quote, `docs/src/lib/sidebar.mjs` Quick-start items end `{ "slug": "exploration" } ]`; `next.md` deleted |
 
