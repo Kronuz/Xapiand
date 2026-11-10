@@ -20,13 +20,13 @@ import OSDetect from '../../components/OSDetect.astro';
 	</div>
 	<div class="kz-feature">
 		<h2>😎 Modern</h2>
-		<p>(Near) <em>Real Time Search</em> and data <em>Storage</em> with <em>Multi&#8209;Tenant</em> and <em>Multi&#8209;Types</em> indexes.</p>
+		<p><em>Real Time Search</em> and data <em>Storage</em>, with <em>Multi&#8209;Tenant</em> indexes that nest and a search that spans many of them.</p>
 		<a href="/Xapiand/welcome/">Getting Started →</a>
 	</div>
 	<div class="kz-feature">
 		<h2>🚀 Fast</h2>
 		<p>Xapiand is <em>fast</em>, it searches with <a href="https://github.com/Kronuz/strata">strata</a>, its own MIT&#8209;licensed search engine.</p>
-		<a href="/Xapiand/benchmarks/">Benchmarks →</a>
+		<a href="/Xapiand/architecture/">Architecture →</a>
 	</div>
 </div>
 
@@ -76,12 +76,12 @@ docker run -p 8880:8880 --rm \
 <div class="kz-features">
 	<div class="kz-feature">
 		<h2>🍂 Lightweight</h2>
-		<p>Written in modern <em>C++</em> for <em>efficiency</em> and <em>scalability</em>, so it has a <em>Small Footprint</em> with very <em>Low Memory Usage</em>.</p>
-		<a href="/Xapiand/benchmarks/#results">Memory Usage →</a>
+		<p>Written in modern <em>C++</em>, it runs as <em>one process</em>: the server, the search engine and the storage, with no separate services to run.</p>
+		<a href="/Xapiand/options/">Options →</a>
 	</div>
 	<div class="kz-feature">
 		<h2>⚖️ Sharded</h2>
-		<p>Splits each index into <em>Shards</em> on a single <em>Node</em>, and keeps a <em>Write&#8209;Ahead Log</em> for recovery.</p>
+		<p>Splits each index into <em>Shards</em> on a single <em>Node</em>, keeps a <em>Write&#8209;Ahead Log</em> for recovery, and serves <em>HTTPS</em>.</p>
 		<a href="/Xapiand/basics/#shard">Shards →</a>
 	</div>
 	<div class="kz-feature">

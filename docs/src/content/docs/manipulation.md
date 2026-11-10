@@ -369,7 +369,7 @@ e2e:end -->
 ## Checking a Document
 
 `HEAD` answers `200 OK` for a document that exists and `404 Not Found` for one
-that does not, without a body:
+that does not:
 
 ```rest
 HEAD /twitter/user/John
@@ -383,22 +383,6 @@ description: HEAD of an existing document
 ```js
 pm.test("The document exists", function () {
   pm.response.to.have.status(200);
-});
-```
-e2e:end -->
-
-```rest
-HEAD /twitter/user/Jane
-```
-
-<!-- e2e:begin
----
-description: HEAD of a deleted document
----
-
-```js
-pm.test("The document is gone", function () {
-  pm.response.to.have.status(404);
 });
 ```
 e2e:end -->

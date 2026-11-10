@@ -286,7 +286,7 @@ The fields that start with `#` in each hit (`#docid`, `#shard`, `#rank`,
 document's `_id` and `_version`.
 
 ```rest
-SEARCH /bank/?limit=1&comments
+SEARCH /bank/?limit=1&comments=true
 ```
 
 <!-- e2e:begin
