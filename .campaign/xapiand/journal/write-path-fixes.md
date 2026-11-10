@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261110-045411-83e91d 261110-045423-57a7f5 261110-045424-bc00ed
+State: ready for review
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -22,9 +22,7 @@ docs/mechanisms/document-ids-and-versions.md (9fec11038). Jobs at the head:
 
 ## Next
 
-1. Read the four jobs; fill A3-A5 rows with them and A1/A2 with 261110-045430-4ed4e9; set State to
-   "ready for review". E2E exit 137 / "Killed: 9" is the port-8880 clash: rerun.
-2. CI (A5's second half) runs when the lead pushes; nothing to push from here.
+1. Correctness review (the lead launches it); CI runs once the lead pushes the branch.
 
 ## Cause (A1)
 
@@ -49,9 +47,9 @@ became an out-of-range double-to-uint32 conversion, and a new id whose docid hel
 |---|---|
 | A1 | Fixed: 261109-202752-ca0659 (1a72d3a7e, test_node all ok incl. test_document_ids_are_themselves; test_engine_strata 9768 ok). Fails at the base: 261109-202740-e5400a (555ceb738 = base b4acd8419 + only test_node.cc, same blob as head): the id test aborts on its first write, `PUT /ids_int/-1`, at `assert(did != 0)` in wal.cc:1101 (write_replace_document): id -1 converted to docid 0, the "ids double as docids" defect in Cause; setup is fine (the other three cases run on the same node). Asserts-off base run (no abort, every id checked): 261110-022045-f81f3a, 48 of 176 checks fail (GET/SEARCH/DELETE of the ids, test_node.cc:1217-1277). Mutants killed (each job exits 0 only when a named test fails): a 261110-022018-630bfa (19 of 176), e 261110-022023-91414c (engine placement :1224-1230 and node :1267), f 261110-022025-8d9d38 (engine :1243-1246), g 261110-022026-0969a8 (:1276-1277). At the head 60a5e3736: 261110-045430-4ed4e9 exit 0 |
 | A2 | Fixed: 261109-202752-ca0659 (precondition, apply-once and model cases ok; model "48 won, 48 refused"). Fails at the base: 261109-202740-e5400a: precondition 33/111 checks fail (409 expected, `_version` 2/0 in the body, document kept at v2: test_node.cc:1300-1318), apply-once 16/38 (:1363 conflict `_version`, :1367 conflicts == writers-1), model 37/68 ("48 writes won, 0 refused"). Mutants killed: b 261110-022019-13681d (15 of 111), c 261110-022021-d4da86 (apply-once wins == 1, model version == seen + 1), d 261110-022022-9e2089 (missing doc 409, engine :1259), h 261110-022028-c214c0 (`_version` in the 409 body), i 261110-022029-baabc5 (missing doc with a version: 409). At the head 60a5e3736: 261110-045430-4ed4e9 exit 0 |
-| A3 | build-test 261110-045411-83e91d and docs E2E 261110-045423-57a7f5 at 60a5e3736 (pending) |
-| A4 | TSan 261110-045424-bc00ed at 60a5e3736 (pending) |
-| A5 | build-test 261110-045411-83e91d (pending); CI when the lead pushes |
+| A3 | At 60a5e3736: build-test 261110-045411-83e91d exit 0 (ctest 37 of 37, async_check, removed_options); docs E2E 261110-045423-57a7f5 exit 0 (smoke, e2e, tls passed; VERDICT GREEN) |
+| A4 | TSan 261110-045424-bc00ed at 60a5e3736 exit 0: test_engine_strata and the four node cases x3 (apply-once, sequential model included), every rc=0, 0 ThreadSanitizer reports |
+| A5 | build-test 261110-045411-83e91d exit 0 at 60a5e3736; CI: not run yet, the branch is not pushed (contributors do not push; the lead pushes) |
 
 Jobs examined: 261109-183815-526fac (the explorer's probe at master 61ddc922d: Q3 and the id-0 side
 check; its "control PUT ?version=1" ran after a DELETE and a PUT recreated the document at version 1,
@@ -60,7 +58,10 @@ and 261109-202042-42e7bb cancelled before running (superseded).
 
 ## Result
 
-<When ready for review.>
+Head 60a5e3736 (code), rebased on master. Id 0 is stored as id 0, and every explicit id is written
+by its key; `?version=N` is a precondition on PUT, PATCH, UPDATE, UPSERT and DELETE, answering 409
+with the current `_version`. How it works: docs/mechanisms/document-ids-and-versions.md. Tests:
+tests/test_node.cc (four cases), tests/test_engine_strata.cc. Evidence is in the table above.
 
 ## Rulings I made
 
