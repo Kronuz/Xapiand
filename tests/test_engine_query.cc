@@ -937,12 +937,17 @@ std::shared_ptr<Schema> keyword_schema() {
 
 std::pair<std::string, std::string> term_of(QueryDSL& dsl, const char* field, const char* value) {
 	const auto query = dsl.get_query(MsgPack({ { field, value } }));
-	if (query.node() == nullptr || query.node()->kind != engine::QueryKind::term) {
+	// The DSL appends a clause onto the empty query; the term is the appended side.
+	auto node = query.node();
+	while (node != nullptr && node->kind == engine::QueryKind::append) {
+		node = node->subqueries.back().node();
+	}
+	if (node == nullptr || node->kind != engine::QueryKind::term) {
 		++testh::failures;
-		std::fprintf(stderr, "  FAIL: %s=%s is not a term query\n", field, value);
+		std::fprintf(stderr, "  FAIL: %s=%s is not a term query (kind %d)\n", field, value, query.node() ? static_cast<int>(query.node()->kind) : -1);
 		return {};
 	}
-	return { query.node()->field, query.node()->str };
+	return { node->field, node->str };
 }
 
 struct Person {
@@ -1220,7 +1225,11 @@ static void test_range_aggregation_open_bounds() {
 		list.push_back(below);
 		list.push_back(within);
 		list.push_back(empty);
-		CHECK_EQ(range_counts("p", list, POS_SLOT, serialised), (std::map<std::string, std::int64_t>{ { "below", 5 }, { "within", 2 } }));
+		const auto got = range_counts("p", list, POS_SLOT, serialised);
+		for (const auto& [key, n] : got) {
+			std::fprintf(stderr, "  positive bucket %s = %lld\n", key.c_str(), static_cast<long long>(n));
+		}
+		CHECK_EQ(got, (std::map<std::string, std::int64_t>{ { "below", 5 }, { "within", 2 } }));
 	}
 
 	// Float and date fields: open sides cover the negative values too.
