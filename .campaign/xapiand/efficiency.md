@@ -88,3 +88,4 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | wbuf-inline-prospect | 11-09 10:5x | 11-09 (prospect:9b88263, Xapiand:2a647a916) | 77k | ~0.5 | none (low; lead read the diff) | 1 (rebase; evidence re-cited from prospect-repo jobs) |
 | 11-09 17:2x hourly | — | — | — | weekly 16% used, 0.79%/h | — | launched automata-evaluation (opus, design), phase3-ratchets (opus, performance), sortable-followups (sonnet); disk 134 GiB free; load 17/36/39 |
 | barrier-warning-completion | 11-09 | 11-09 17:2x (completion:e49f288, Xapiand:3b9c774b8) | review 160k | ~1 | 1 durability APPROVE, 0 blocking | 0 |
+| x-pool-followups | 11-09 14:2x | 11-09 18:xx (Xapiand:05eccd0fb, merge Xapiand:f332e5989) | ~150k contributor + lead | ~1 | waived (normal; mutants + 20/20 restore + CI) | 2 (ready() refactor; mutant retarget) |
