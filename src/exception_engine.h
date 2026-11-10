@@ -61,14 +61,6 @@ public:
 };
 
 
-// A client error that is also an engine error of one kind.
-class DocVersionConflictError : public ClientError, public engine::Error {
-public:
-	template<typename... Args>
-	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::version_conflict, message) { }
-};
-
-
 class SerialisationError : public ClientError {
 public:
 	template<typename... Args>

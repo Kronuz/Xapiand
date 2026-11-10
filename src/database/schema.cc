@@ -2749,7 +2749,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		std::string unprefixed_term_id;
 		std::string term_id;
 
-		if (!document_id) {
+		if (!has_document_id(document_id)) {
 			switch (id_type) {
 				case FieldType::empty:
 					id_type = FieldType::uuid;
@@ -2807,20 +2807,18 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				}
+				// A new numeric id: the shard numbers it when it is written; 0 holds its place until then.
 				case FieldType::integer:
 					document_id = MsgPack(0).as_i64();
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
+					term_id = NEW_NUMERIC_KEY;
 					break;
 				case FieldType::positive:
 					document_id = MsgPack(0).as_u64();
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
+					term_id = NEW_NUMERIC_KEY;
 					break;
 				case FieldType::floating:
 					document_id = MsgPack(0).as_f64();
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
+					term_id = NEW_NUMERIC_KEY;
 					break;
 				case FieldType::text:
 				case FieldType::keyword: {
@@ -2982,8 +2980,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			L_INDEX("Slot: {}  Values: {}", elem.first, repr(val_ser));
 		}
 
-		if (term_id != "N\x80") {
-			doc.set_key(term_id);  // make sure the key is ALWAYS set!
+		if (term_id != NEW_NUMERIC_KEY) {
+			doc.set_key(term_id);  // a new numeric id's key is set when the shard numbers it
 		}
 
 		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
@@ -5288,10 +5286,6 @@ Schema::index_term(engine::Document& doc, std::string_view field, std::string_vi
 	L_CALL("Schema::index_term(<doc>, {}, {}, <field_spc>, {})", repr(field), repr(term), pos);
 
 	const bool is_key = field_spc.prefix.field == DOCUMENT_ID_TERM_PREFIX && field == field_name(field_spc.prefix.field, field_spc.get_ctype());
-	if (is_key && field_spc.get_ctype() == 'N' && term == "\x80") {
-		// Term reserved for numeric (autoincremented) IDs
-		return;
-	}
 
 	// The limit is on the whole term, the field's name included.
 	if (field.size() + term.size() > 245) {

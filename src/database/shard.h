@@ -27,6 +27,7 @@
 
 #include <exception>              // for std::exception_ptr
 #include <memory>                 // for std::shared_ptr
+#include <optional>               // for std::optional
 #include <string>                 // for std::string
 #include <vector>                 // for std::vector
 
@@ -140,8 +141,9 @@ public:
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
 	task::task<bool> commit(bool wal_ = true);
 
-	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	// A delete with an expected version removes the document only while it has that version (0: it does not exist).
+	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);

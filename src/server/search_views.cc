@@ -30,6 +30,7 @@
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
 #include <functional>                       // for std::function
+#include <optional>                         // for std::optional
 #include <signal.h>                         // for SIGTERM
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
@@ -42,6 +43,7 @@
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
 #include "engine/host_asio.h"               // for engine::AsioHost
 #include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
+#include "engine/error.h"                   // for engine::Error
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
 #include "database/schema.h"                // for Schema
@@ -145,7 +147,7 @@ static task::task<size_t> resolve_index_endpoints(Request& request, const query_
 // response is formatted from `request` state (content negotiation, serialization) and
 // emitted through the library's ResponseWriter, which frames the bytes and applies the
 // negotiated Content-Encoding. Forward-declared here since prepare()/views call them above.
-static void write_status_response(Request& request, enum http_status status, const std::string& message = "");
+static void write_status_response(Request& request, enum http_status status, const std::string& message = "", std::optional<engine::rev> current_version = std::nullopt);
 static void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
 
 // The ~23 endpoint views lifted off HttpClient `this` (Leg 2 stage 3c-3). Their
@@ -845,7 +847,7 @@ delete_document_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
-	co_await db_handler.delete_document(document_id, query_field.commit);
+	co_await db_handler.delete_document(document_id, query_field.version, query_field.commit);
 	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
@@ -2143,7 +2145,7 @@ count_view(Request& request)
 
 
 static void
-write_status_response(Request& request, enum http_status status, const std::string& message)
+write_status_response(Request& request, enum http_status status, const std::string& message, std::optional<engine::rev> current_version)
 {
 	L_CALL("write_status_response()");
 
@@ -2153,6 +2155,9 @@ write_status_response(Request& request, enum http_status status, const std::stri
 	});
 	if (!message.empty()) {
 		response[RESPONSE_MESSAGE] = message;
+	}
+	if (current_version) {
+		response[VERSION_FIELD_NAME] = *current_version;  // a version conflict's: what to expect next, 0 for no document
 	}
 	write_http_response(request, status, response);
 }
@@ -3224,8 +3229,14 @@ SearchService::on_error(std::exception_ptr error, const http::Request& hreq, htt
 	Request& request = hreq.ext<Request>();
 
 	auto http_errors = catch_http_errors([&]{ std::rethrow_exception(error); return 0; });
+	std::optional<engine::rev> current_version;
+	try {
+		std::rethrow_exception(error);
+	} catch (const engine::Error& exc) {
+		current_version = exc.current_version;
+	} catch (...) { }
 	if (request.response_status == static_cast<http_status>(0)) {
-		write_status_response(request, http_errors.error_code, http_errors.error);
+		write_status_response(request, http_errors.error_code, http_errors.error, current_version);
 	} else {
 		// A response was already emitted before the error; the writer is one-shot,
 		// so just close the connection (mirrors handled_errors' detach()).
