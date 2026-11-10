@@ -49,3 +49,5 @@ passed 20 of 20 (261109-163822-60fbd2, 12,679 documents kept across kill -9 in t
 - A4 job uses the plain build (`build/bin/xapiand`, asserts on) instead of the ASan build of the probe, to avoid a second full build; the race is the harness's timing, not a sanitizer matter.
 
 Lead, 11-09: the C6 re-pin goes through `Shard::ready(bool use)` (Xapiand:ad641a000) instead of an inlined copy; `shard.h` joined the file set. Evidence rows cite the jobs at that head; the earlier jobs at 72203782 (f12ec7, 23ccac, a09d65) passed too.
+
+Lead, 11-09: job 261109-154759-439c43 skipped the C6 mutant (its string was no longer unique after the ready() refactor); the retargeted 261109-162043-d6456d killed 2 of 2 and replaces it.
