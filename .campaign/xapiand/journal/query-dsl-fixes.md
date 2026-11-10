@@ -32,19 +32,22 @@ Not changed pending the owner.
 
 ## Evidence
 
-Jobs: tests alone (38f22b685, no fix) fail: 261109-185346-2edf6c (exit 8, 8 FAIL) and under UBSan
-261109-185357-8fe848 (exit 8). With the fix (ffc7e9517) both pass: 261109-193622-6d23b4 (RelWithDebInfo,
-ASSERTS=ON) and 261109-193623-40183f (UBSan with float-cast-overflow, separate build and deps tree).
-Examined and superseded: 261109-185347-50ec8a and 261109-185356-68cd98 (test setup bug, see Rulings 7),
-261109-192344-c4ac9a and 261109-192345-1c7534 (bound-tag bug in my fix, Rulings 8).
+Jobs, with the fix at the head (9ea2fc771, code same as the final head): 261110-021740-4105e9
+(RelWithDebInfo, ASSERTS=ON), 261110-021740-d286d4 (UBSan with float-cast-overflow), build-test
+261110-021752-462316 (all pending). Mutant (open lower slot 0, c57ee057d, must fail the key-order check):
+261110-021741-fbcbbf (pending). Earlier, at ffc7e9517: 261109-193622-6d23b4, 261109-193623-40183f pass.
+Without the fix: tests alone (38f22b685) 261109-185346-2edf6c (range test: A2, A3) and under UBSan
+261109-185357-8fe848. Reviewer probe at master's query_dsl.cc with the final tests, part A:
+261109-195413-671cc0 (A1, A4). Superseded: 261109-185347-50ec8a, 261109-185356-68cd98 (test setup bug,
+Rulings 7), 261109-192344-c4ac9a, 261109-192345-1c7534 (bound-tag bug, Rulings 8).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `test_dsl_not_is_none_of`: fails without the fix 261109-185346-2edf6c; passes with it 261109-193622-6d23b4 |
-| A2 | `test_range_aggregation_open_bounds`: fails without the fix 261109-185346-2edf6c; passes with it 261109-193622-6d23b4; UBSan with it 261109-193623-40183f (without: 261109-185357-8fe848) |
-| A3 | float and date cases in the same test (261109-193622-6d23b4). Note: negative float/date values with an open lower bound were dropped at master (min() is positive); the test counts them |
-| A4 | served as the one-subquery form (Rulings 2); bare-object checks in `test_dsl_not_is_none_of`, 261109-193622-6d23b4 |
-| A5 | build-test: 261109-193856-6e3365 (pending); CI after landing |
+| A1 | `test_dsl_not_is_none_of`: fails without the fix at master's query_dsl.cc (the `_not` checks and audit cases) 261109-195413-671cc0 (part A; 261109-185346-2edf6c failed on test setup before the `_not` checks, not cited); passes with it 261110-021740-4105e9 |
+| A2 | `test_range_aggregation_open_bounds`: fails without the fix 261109-185346-2edf6c; passes with it 261110-021740-4105e9; UBSan with it 261110-021740-d286d4 (without: 261109-185357-8fe848); key-order check (Rulings 5) killed by mutant 261110-021741-fbcbbf |
+| A3 | float and date cases in the same test (261110-021740-4105e9). Note: negative float/date values with an open lower bound were dropped at master (min() is positive); the test counts them |
+| A4 | served as the one-subquery form (Rulings 2); bare-object checks in `test_dsl_not_is_none_of`, fail at master 261109-195413-671cc0, pass 261110-021740-4105e9 |
+| A5 | build-test: 261110-021752-462316; CI after landing |
 
 ## Result
 
