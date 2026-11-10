@@ -74,7 +74,9 @@ PUT /twitter/tweet_sharded/
 
 The default for `number_of_shards` is `5`; the above command creates an index
 with `3` shards. `number_of_replicas` is accepted and stored, but has no effect
-on a single node.
+on a single node. A new index created with `_strict` must name both settings:
+without either one the write answers `400` ("Value of 'number_of_shards' is
+missing", `src/index_resolver_lru.cc`).
 
 :::hint[Only for New Indexes]{.info}
 `number_of_shards` can be specified like this only for new indexes and any

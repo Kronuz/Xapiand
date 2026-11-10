@@ -30,7 +30,20 @@ export const sidebar = [
         ]
       },
       {
-        "slug": "tutorials/home"
+        "label": "Tutorials",
+        "collapsed": true,
+        "items": [
+          {
+            "label": "Overview",
+            "link": "/tutorials/home",
+            "attrs": {
+              "data-overview": ""
+            }
+          },
+          {
+            "slug": "tutorials/spatial-search"
+          }
+        ]
       },
       {
         "slug": "benchmarks"
@@ -491,7 +504,7 @@ export const sidebar = [
         "slug": "tests/nulltype/null-type"
       },
       {
-        "label": "Replace Value by Null",
+        "label": "Set Value With Null",
         "slug": "tests/nulltype/replace-null"
       },
       {
@@ -501,6 +514,10 @@ export const sidebar = [
       {
         "label": "Create Schema",
         "slug": "tests/schema/create-schema"
+      },
+      {
+        "label": "Reserved Subfield",
+        "slug": "tests/schema/reserved-subfield"
       },
       {
         "label": "Define Prefix",
@@ -521,6 +538,14 @@ export const sidebar = [
       {
         "label": "UUID Field",
         "slug": "tests/schema/uuid-field"
+      },
+      {
+        "label": "Stem Language",
+        "slug": "tests/schema/stem-language"
+      },
+      {
+        "label": "Basque Language",
+        "slug": "tests/schema/basque-language"
       },
       {
         "label": "Arrays",
