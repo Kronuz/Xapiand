@@ -33,6 +33,9 @@ requests it. Reads stop at their next checkpoint; a write that was admitted comp
 - The demoted peak is sampled at admissions only: a loop whose demoted queue grows while no request arrives shows it at
   the next admission, or not at all. It is what the demoted cap saw, not the queue's own maximum.
 - The peaks never reset; a scrape reads the most since the node started.
+- A schema load waits for its index's turn without the request's token (`SchemasLRU` reads the metadata through a
+  `DatabaseHandler` of its own, with no budget): the first search of an index whose schema is not cached, while another
+  task holds the turn, is not cancelled until the turn comes.
 - A cancel that ends a request before `handle` (a 503 at admission, a client that leaves mid-headers) is not counted.
 
 ## Code

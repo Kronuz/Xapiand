@@ -1721,6 +1721,7 @@ static double metric(const std::string& name) {
 static void test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted() {
 	Watchdog watchdog("a search whose client leaves", 60s);
 	create_index("left_search", 1);
+	CHECK(success(call("SEARCH", "/left_search/?volatile", "{}")));   // caches the schema: a schema load waits for the turn without the token
 	auto& pool = *manager()->database_pool;
 	const auto endpoints = endpoints_of("left_search");
 	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
