@@ -17,7 +17,7 @@ Done: the five dependency ranges are bumped (one commit, Xapiand:71acc13ea) and 
 
 ## Blocked on
 
-Nothing. For the owner (asked once, in `docs/dev/github-triage.md` "## Owner calls"): "not planned" for #24, #26, #34, the at-rest half of #25, and #28 unless retested; wording of #33 (license) and whether #27's reply may state that a smoke run was behind Elasticsearch.
+Nothing. The owner's calls are resolved (PLAN.md D48) and folded into the note: not-planned batch approved; #33 names alpha.10 as Xapian-based; #27 has no Elasticsearch comparison; #14 and #21 are quests after the document gate; #35 says a fix is planned.
 
 ## Evidence
 
@@ -62,3 +62,4 @@ Not run: any node, any Cloud Run or gVisor container, a Linux build on the repor
 3. #35 is not filed as a new hunt row: `hunt.md:28` already holds it.
 4. #28 gets a retest request rather than a verdict: the SO_LINGER reading is an inference from the syscall's numbers.
 5. Replies carry claims about the plan (the final Xapian-only release in #34, the first MIT-clean release in #33) only where PLAN.md decides them, and the note flags each for the owner.
+6. msg (owner rulings, D48) folded into `docs/dev/github-triage.md`: replies of #14, #21, #27, #33, #35 changed as ruled, "## Owner calls" marked resolved; reply word counts stay under 120. The site build 261109-184442-cdf29d and the other jobs at Xapiand:0aff10e6d passed; the edits since touch only `docs/dev/github-triage.md`.

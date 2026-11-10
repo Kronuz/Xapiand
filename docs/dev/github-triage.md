@@ -10,7 +10,7 @@
 
 Verdicts: fixed or works now 5 (#2, #11, #13, #29, #39), answered as removed 3 (#24, #26, #34), answered with the current behavior 3 (#25, #27, #33), becomes new work 4 (#14, #18, #21, #35; #35 is already a hunt row), cannot verify 1 (#28).
 
-The owner's "not planned" call (one batch, below): #24, #26, #34, the at-rest half of #25, and #28 unless the reporter retests.
+The owner approved the "not planned" batch (D48): #24, #26, #34, the at-rest half of #25, and #28 if the reporter does not retest.
 
 ## Dependabot pull requests
 
@@ -40,9 +40,9 @@ The jobs that prove it (site build, worker tests, `npm audit` before and after) 
 | 2 | Documentation Status | works now: the site is audited and being rewritten | no |
 | 11 | Add Xapiand as a Debian package | works now: a `.deb` ships with every release | yes (packaging) |
 | 13 | Update README.md with usage guide | works now: the README has install and quick start | no |
-| 14 | N-Gram index/search example | new work: n-gram terms for text (hunt row H1); typos are served by `word~` | no |
+| 14 | N-Gram index/search example | planned: n-gram terms for text (quest after the document gate, H1); typos are served by `word~` | no |
 | 18 | Limit query execution time | new work: a per-search time limit (hunt row H2) | yes (query deadlines) |
-| 21 | Result Highlighting | new work: highlighting (hunt row H3, owner scope call) | no |
+| 21 | Result Highlighting | planned: highlighting (quest after the document gate, H3) | no |
 | 24 | Xapaind Glossary Terms | removed: the cluster is gone from this release; not planned (owner) | yes (glossary) |
 | 25 | Data Encryption | answered: TLS in transit, volume encryption at rest; at rest not planned (owner) | yes (encryption at rest) |
 | 26 | How to config a cluster without multicast? | removed: discovery is gone; not planned (owner) | yes (seed-list discovery) |
@@ -51,7 +51,7 @@ The jobs that prove it (site build, worker tests, `npm audit` before and after) 
 | 29 | compile with cmake : linking (error) | fixed (Xapiand:009cfac58, 2020) | no |
 | 33 | License question | answered, owner to review the wording | yes (notices) |
 | 34 | upgrade to Xapian 1.4.16 | removed: master has no Xapian; not planned (owner) | no |
-| 35 | DELETE all  documents | new work: index deletion (hunt row already filed) | yes (replicated drop) |
+| 35 | DELETE all  documents | planned: index deletion (hunt row already filed) | yes (replicated drop) |
 | 39 | Is this project dead? | works now: it is active | no |
 
 Each reply is under 120 words. "Cites" lists the `file:line` or docs page behind each claim about current behavior.
@@ -94,11 +94,11 @@ Detent: no.
 
 ### #14 N-Gram index/search example
 
-Verdict: becomes a hunt row (H1). Typo tolerance works now through fuzzy terms; n-gram terms for Latin text are not generated, and the `_ngram` schema flag is accepted but unused.
+Verdict: becomes a quest after the document gate (owner, D48; H1). Typo tolerance works now through fuzzy terms; n-gram terms for Latin text are not generated, and the `_ngram` schema flag is accepted but unused.
 
 Reply:
 
-> Xapiand does not generate n-grams for ordinary text. For your example, a fuzzy term finds it: `message:storaeg~` matches `storage` within the default edit distance of 2, and `stor*` matches by prefix; see the Fuzzy and Wildcard pages under Text Queries. A `_cjk_ngram` option exists for CJK text only. The `_ngram` schema property is accepted and does nothing today; we are tracking either implementing it or removing it. Until then, send n-grams as a keyword array from the client.
+> Xapiand does not generate n-grams for ordinary text. For your example, a fuzzy term finds it: `message:storaeg~` matches `storage` within the default edit distance of 2, and `stor*` matches by prefix; see the Fuzzy and Wildcard pages under Text Queries. A `_cjk_ngram` option exists for CJK text only. The `_ngram` schema property is accepted and does nothing today. N-gram analysis is planned, with no date. Until then, send n-grams as a keyword array from the client.
 
 Cites: `src/query_dsl.cc:74` (`DEFAULT_FUZZY_EDIT_DISTANCE 2`), `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/fuzzy.md` and `wildcard.md`, `docs/src/content/docs/tests/querydsl/fuzzy.md` (`unserten~3` finds `uncertain`), `src/multivalue/generate_terms.cc:521-540` (only `cjk_ngram` reaches the term generator), `src/database/schema.cc:5631,5663,5673` (the callers pass `cjk_ngram`, never `ngram`), `src/database/schema.cc:7018` (`_ngram` read into `flags.ngram`; elsewhere only echoed at `:4983` and compared in the change check at `:8510`). Not run: that `storaeg~` matches `storage` (the edit distance is Levenshtein-or-better, two substitutions; the E2E fuzzy page covers `unserten~3`).
 
@@ -118,11 +118,11 @@ Detent: yes. A search that fans out over shards needs one deadline that every le
 
 ### #21 Result Highlighting
 
-Verdict: becomes a hunt row (H3), and a scope call for the owner. Never served on this code; the Xapian call named in the issue is gone with Xapian.
+Verdict: becomes a quest after the document gate (owner, D48; H3). Never served on this code; the Xapian call named in the issue is gone with Xapian.
 
 Reply:
 
-> Highlighting is not supported. The issue names Xapian's MSet::snippet, and Xapiand no longer uses Xapian, so there is nothing to expose. Elasticsearch, Tantivy and Quickwit all offer it and it would fit the engine, since a field's stored text can be re-run through the same analyzers to find the matched words. It is on the list as a candidate, with no date.
+> Highlighting is not supported. The issue names Xapian's MSet::snippet, and Xapiand no longer uses Xapian, so there is nothing to expose. Elasticsearch, Tantivy and Quickwit all offer it and it would fit the engine, since a field's stored text can be re-run through the same analyzers to find the matched words. Highlighting is planned, with no date.
 
 Cites: no `highlight` or `snippet` in `src/` outside a JSON error excerpt (`src/database/utils.cc:214`, grep), `docs/src/content/docs/changelog.md:244-246` (strata is the only engine). The peers' support is from memory and unchecked here; D40's test for bringing a feature back is "Elasticsearch, Quickwit or peers serve it and it fits naturally" (PLAN.md D40).
 
@@ -172,13 +172,13 @@ Detent: yes. Peer discovery without multicast (a static seed list, DNS names, or
 
 ### #27 Write performance problem, can not reach 1000qps
 
-Verdict: answered. The `doc_preparer` queue in the reporter's profile no longer exists; there is no published throughput number for the new engine yet.
+Verdict: answered. The `doc_preparer` queue in the reporter's profile no longer exists; numbers come with the published benchmark. The reply makes no comparison with Elasticsearch (owner, D48).
 
 Reply:
 
-> The doc_preparer and doc_indexer threads and their queues in your profile were deleted; bulk indexing now runs as tasks on the shared worker pool, on a different search engine. A first local smoke run still had bulk indexing slower than Elasticsearch, so I won't claim parity. The numbers will come from a published benchmark against Elasticsearch and Quickwit on the new engine, with the losses included.
+> The doc_preparer and doc_indexer threads and their queues in your profile were deleted; bulk indexing now runs as tasks on the shared worker pool, on a different search engine, so that profile no longer describes the code. New numbers will come with a published benchmark of the new engine, losses included. If you can retest when the next release is out, a fresh profile of your workload would be very useful.
 
-Cites: `docs/status/phase7c-x3.md:35` (`DocPreparer`, the `DocIndexer` threads and pools, and their options deleted; `grep DocPreparer src` is empty), `docs/perf/bulk-index-profile.md:17` (4,510 docs/s, the pre-strata profile), `docs/perf/closing-baseline-2026-11-04/README.md` table (T1: strata behind Elasticsearch by 3.47x on documents/s in a 200,000-document smoke run, "not a published or gate measurement"), PLAN.md Goals (the closing benchmark). The smoke figure is a draft-reply fact: owner decides whether to say it.
+Cites: `docs/status/phase7c-x3.md:35` (`DocPreparer`, the `DocIndexer` threads and pools, and their options deleted; `grep DocPreparer src` is empty), PLAN.md Goals (the closing benchmark).
 
 Detent: yes. The write path's hand-offs between preparing and indexing threads (a spin-locked queue) were the cost; the same shape appears in any group-commit or replicated-log append path, and the closing benchmark's write rows are the reference.
 
@@ -210,13 +210,13 @@ Detent: no.
 
 ### #33 License question
 
-Verdict: answered, and the wording is the owner's. Releases through alpha.9 link Xapian; master does not; two Xapian-derived files remain until the sortable-encoding work lands.
+Verdict: answered; the owner approved the wording (D48) with alpha.10 named as Xapian-based. Releases up to v1.0.0-alpha.10 link Xapian (alpha.10 is Xapian too); master does not; two Xapian-derived files remain until the sortable-encoding work lands.
 
 Reply:
 
-> Releases up to v1.0.0-alpha.9 link Xapian, which is GPL, so treat those binaries as GPL. The development tree no longer uses Xapian: the engine is strata (MIT). Two files derived from Xapian, `src/sortable_serialise.{cc,h}` and the Python client's `sortable.py`, are still GPL and are being replaced; the first release without them will be fully MIT. An application that only talks to the server over HTTP does not link it, but I can't give legal advice; ask your counsel.
+> Releases up to v1.0.0-alpha.10 link Xapian, which is GPL, so treat those binaries as GPL. The development tree no longer uses Xapian: the engine is strata (MIT). Two files derived from Xapian, `src/sortable_serialise.{cc,h}` and the Python client's `sortable.py`, are still GPL and are being replaced; the first release without them will be fully MIT. An application that only talks to the server over HTTP does not link it, but I can't give legal advice; ask your counsel.
 
-Cites: `docs/src/content/docs/changelog.md:244-246` (Xapian engine removed), `CMakeLists.txt` (no Xapian; grep), `docs/status/license-audit.md` "Summary" (blockers 1 and 2), `README.md:127-129`, `docs/src/content/docs/copyright.md` (the note on `sortable_serialise`), PLAN.md D44 (sortable-encoding) and the quest `license-closure`. The Xapian-era binaries' status is a legal reading: owner confirms before it is posted.
+Cites: `docs/src/content/docs/changelog.md:244-246` (Xapian engine removed), `CMakeLists.txt` (no Xapian; grep), `docs/status/license-audit.md` "Summary" (blockers 1 and 2), `README.md:127-129`, `docs/src/content/docs/copyright.md` (the note on `sortable_serialise`), PLAN.md D44 (sortable-encoding) and the quest `license-closure`. The reply posts as drafted with alpha.10 (owner, D48).
 
 Detent: yes. Detent shares the MIT libraries; the license audit's notice work (a `THIRD-PARTY-NOTICES` file installed with each package) applies to its binaries too.
 
@@ -236,11 +236,11 @@ Detent: no.
 
 ### #35 DELETE all  documents
 
-Verdict: new work, already a hunt row. `DELETE /index/` still answers 501; there is no delete-by-query.
+Verdict: new work, already a hunt row; the reply says a fix is planned (owner, D48). `DELETE /index/` still answers 501; there is no delete-by-query.
 
 Reply:
 
-> `DELETE` on an index path still answers 501 Not Implemented, as in your report; the docs page for it says so. Deleting a whole index over HTTP is on the work list, since the engine can drop an index. Until then, delete documents by id; there is no delete-by-query. I'll update this issue when the endpoint exists.
+> `DELETE` on an index path still answers 501 Not Implemented, as in your report; the docs page for it says so. A fix is planned: deleting a whole index over HTTP, since the engine can drop an index. Until then, delete documents by id; there is no delete-by-query.
 
 Cites: `src/server/search_views.cc:1478-1491` (`delete_database_view` answers 501 with a path, 405 without), `docs/src/content/docs/reference-guide/indexes/delete-api.md` (the banner and the 501 E2E), `.campaign/xapiand/hunt.md:28` (the row), `docs/design/xapiand-on-strata.md:97` (delete by query: Xapiand never calls it). The reply offers no workaround beyond deleting by id (`DELETE /index/type/id`, `docs/src/content/docs/reference-guide/documents/delete-api.md`); not run.
 
@@ -273,13 +273,13 @@ For the lead to file in `.campaign/xapiand/hunt.md`. Format: target, evidence, s
 
 ## Owner calls
 
-One batch, as the quest asks.
+Resolved by the owner in PLAN.md D48.
 
-1. Close as "not planned": #24 (glossary of cluster terms), #26 (cluster without multicast), #34 (upgrade Xapian). Each is a removed feature answered as removed.
-2. #25: close with the reply, the at-rest encryption part as "not planned".
-3. #28: close as "not planned" if the reporter does not retest after the reply.
-4. Confirm the wording of #33 (license) and the Xapian-era GPL reading before it is posted, and whether #27's reply may state that a smoke run was behind Elasticsearch.
-5. #21 (highlighting) and #14 (n-grams) are scope calls under D40 before they become quests.
+1. Not planned, approved as proposed: #24, #26, #34, the at-rest half of #25, and #28 if the reporter does not retest.
+2. #33 posts as drafted, with releases "up to v1.0.0-alpha.10" named as Xapian-based.
+3. #27's reply makes no Elasticsearch comparison: the old pipeline is gone and numbers come with the published benchmark.
+4. #14 (n-grams) and #21 (highlighting) become quests after the document gate; their replies say it is planned, without dates.
+5. #35 and the `DELETE /index/` 501: the reply says a fix is planned.
 
 ## For Detent
 
