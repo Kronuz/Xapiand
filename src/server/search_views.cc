@@ -147,7 +147,7 @@ static task::task<size_t> resolve_index_endpoints(Request& request, const query_
 // response is formatted from `request` state (content negotiation, serialization) and
 // emitted through the library's ResponseWriter, which frames the bytes and applies the
 // negotiated Content-Encoding. Forward-declared here since prepare()/views call them above.
-static void write_status_response(Request& request, enum http_status status, const std::string& message = "");
+static void write_status_response(Request& request, enum http_status status, const std::string& message = "", std::optional<engine::rev> current_version = std::nullopt);
 static void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
 
 // The ~23 endpoint views lifted off HttpClient `this` (Leg 2 stage 3c-3). Their
@@ -2145,7 +2145,7 @@ count_view(Request& request)
 
 
 static void
-write_status_response(Request& request, enum http_status status, const std::string& message, std::optional<engine::rev> current_version = std::nullopt)
+write_status_response(Request& request, enum http_status status, const std::string& message, std::optional<engine::rev> current_version)
 {
 	L_CALL("write_status_response()");
 

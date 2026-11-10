@@ -35,6 +35,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <random>
 #include <string>
 #include <thread>
@@ -1154,6 +1155,98 @@ void check_shard() {
 	CHECK_TRUE(bad.errors != 0 || !bad.failure.empty());
 }
 
+// The current version a version conflict reports (nullopt: no conflict; 999: a conflict without one).
+template <typename F>
+std::optional<engine::rev> conflict_version(F&& f) {
+	try {
+		f();
+	} catch (const engine::Error& error) {
+		if (error.kind == engine::errc::version_conflict) {
+			return error.current_version.value_or(999);
+		}
+		throw;
+	}
+	return std::nullopt;
+}
+
+// A version conflict reports the document's version, 0 when it does not exist; an expected version on a missing
+// document conflicts before the miss (Elasticsearch's if_seq_no), and none or 0 leaves it a miss.
+void conflicts() {
+	const auto path = scratch("conflicts");
+	auto opened = open_shard(path);
+	auto& shard = *opened.shard;
+	engine::WriteArgs plain;
+	auto a = make("Ka", "a");
+	CHECK_EQ(engine::sync_wait(shard.add(a, plain)).did, 1u);
+	auto a2 = make("Ka", "a2");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Ka", a2, plain)).version, 2u);
+	const auto expecting = [](engine::rev v) {
+		engine::WriteArgs args;
+		args.expected_version = v;
+		return args;
+	};
+
+	auto stale = make("Ka", "stale");
+	CHECK(conflict_version([&] { engine::sync_wait(shard.replace(1, stale, expecting(1))); }) == std::optional<engine::rev>(2));
+	CHECK(conflict_version([&] { engine::sync_wait(shard.replace_by_key("Ka", stale, expecting(3))); }) == std::optional<engine::rev>(2));
+	auto missing = make("Kmissing", "m");
+	CHECK(conflict_version([&] { engine::sync_wait(shard.replace_by_key("Kmissing", missing, expecting(1))); }) == std::optional<engine::rev>(0));
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kmissing")), 0u);
+
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase(1, true, 1)); }) == std::optional<engine::rev>(2));
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase_by_key("Ka", true, 3)); }) == std::optional<engine::rev>(2));
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase_by_key("Ka", true, 0)); }) == std::optional<engine::rev>(2));
+	CHECK_EQ(engine::sync_wait(shard.get(1))->data(), "a2");   // nothing changed
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase(9, true, 1)); }) == std::optional<engine::rev>(0));
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase_by_key("Kmissing", true, 4)); }) == std::optional<engine::rev>(0));
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.erase(9, true, 0)); }) == engine::errc::doc_not_found);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.erase_by_key("Kmissing", true, 0)); }) == engine::errc::doc_not_found);
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.erase_by_key("Kmissing", true, std::nullopt)); }) == engine::errc::doc_not_found);
+
+	CHECK_EQ(engine::sync_wait(shard.erase_by_key("Ka", true, 2)), 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Ka")), 0u);
+}
+
+// A new key with a docid to take takes it when it is free, and goes after the last when another document holds it;
+// a key that exists stays where it is. A replace by an id that holds another key's document refuses and leaves it.
+void placement() {
+	const auto path = scratch("placement");
+	auto opened = open_shard(path);
+	auto& shard = *opened.shard;
+	engine::WriteArgs plain;
+	const auto at = [](engine::docid did) {
+		engine::WriteArgs args;
+		args.new_did = did;
+		return args;
+	};
+	auto b = make("Kb", "b");
+	auto placed = engine::sync_wait(shard.replace_by_key("Kb", b, at(5)));
+	CHECK_EQ(placed.did, 5u);
+	CHECK_EQ(placed.version, 1u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kb")), 5u);
+	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 5u);
+
+	auto c = make("Kc", "c");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kc", c, at(5))).did, 6u);   // 5 is Kb's
+	CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "b");
+	auto b2 = make("Kb", "b2");
+	const auto again = engine::sync_wait(shard.replace_by_key("Kb", b2, at(7)));
+	CHECK_EQ(again.did, 5u);
+	CHECK_EQ(again.version, 2u);
+	auto d = make("Kd", "d");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kd", d, at(3))).did, 3u);   // a free id under the last
+	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 6u);
+	auto e = make("Ke", "e");
+	CHECK_EQ(engine::sync_wait(shard.add(e, plain)).did, 7u);
+
+	auto clash = make("Kz", "z");
+	CHECK(conflict_version([&] { engine::sync_wait(shard.replace(5, clash, plain)); }) == std::optional<engine::rev>(0));
+	CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "b2");
+	CHECK_EQ(engine::sync_wait(shard.get(5))->version(), 2u);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kz")), 0u);
+	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 4u);
+}
+
 }  // namespace
 
 // An engine error that escapes a test is a failure with its text, not an abort.
@@ -1184,7 +1277,9 @@ static void test_replay_idempotent() { guarded("replay idempotent", [] { replay_
 static void test_old_format() { guarded("old format", [] { old_format(); }); }
 static void test_check() { guarded("check", [] { check_shard(); }); }
 static void test_version_slot() { guarded("version slot", [] { version_slot(); }); }
+static void test_conflicts() { guarded("conflicts", [] { conflicts(); }); }
+static void test_placement() { guarded("placement", [] { placement(); }); }
 static void test_length_bounds() { guarded("length bounds", [] { length_bounds(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared, test_replay, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format, test_check, test_version_slot, test_length_bounds)
+TEST_MAIN(test_shared, test_replay, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format, test_check, test_version_slot, test_conflicts, test_placement, test_length_bounds)
