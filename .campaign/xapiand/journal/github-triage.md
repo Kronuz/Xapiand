@@ -1,6 +1,6 @@
 # github-triage: journal
 
-State: waiting on jobs 261109-184442-cdf29d
+State: ready for review
 Quest: .campaign/xapiand/quests/github-triage.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Done: the five dependency ranges are bumped (one commit, Xapiand:71acc13ea) and 
 
 ## Next
 
-1. On the jobs' success, set State to ready for review and commit the journal.
+1. Review.
 
 ## Blocked on
 
