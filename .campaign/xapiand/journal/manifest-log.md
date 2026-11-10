@@ -79,7 +79,7 @@ whose code differs in `test/apply_atomic_test.cc` and commit()'s and install's p
 | A5 | F3 (a held view across every allocation failure of commit and install): apply_atomic_test in 261110-114552-f6a3b2 and ASan+UBSan 261110-114551-711f81; open's half: manifest_log_test "allocation failure" in 261110-114552-f6a3b2 (63 points, 63 bad_alloc, 0 misreported); writer's half: apply_atomic's commit sweep, alone and with the next allocation failing too, an unfenced failure leaving the logs unchanged (R37) and failures after the commit fencing (R39), in 261110-114552-f6a3b2 and under clang and libstdc++ in 261110-114922-b6ea81; mutants 261110-114923-e92fca: "the head's replay fences only on damage", "the log's barrier fences only on a system error", "a durability fence set only once its message is allocated", "a failed barrier not truncated back" |
 | A6 | build-test 261110-114552-f6a3b2: manifest_log_test stage "caller rules" |
 | A7 | build-test 261110-114552-f6a3b2: manifest_log_test "crash images" and "bit flips" (35,200 flips, 0 silent), media_test (every byte of the log) |
-| A8 | lead's ruling L5 (2026-11-09): T1 to T3, T5, T7 to T9 are the lead's `strict`/`exclusive` jobs on `main` after landing; this quest's T7 row is A3's |
+| A8 | D57 (PLAN.md): T1 to T3, T5, T7 to T9 are milestone checks the lead runs on main after landing |
 | A9 | 261110-114922-921ed5: prospect ff99494 (manifest-log-prospect) suite and churn/dump identity against strata main, then Xapiand master Xapiand:3ed4270d3's suite, on strata:1ebeff87 |
 | A10 | D41 (PLAN.md, 2026-11-09): Q1 the manifest log first, Q2 a count of generations with `fallback()` reporting the damaged generation, Q3 accepted; folded into `docs/design/manifest-log.md` at strata:49ab291 |
 
