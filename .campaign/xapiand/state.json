@@ -9818,7 +9818,9 @@
         "src/database/schema.cc",
         "src/engine/**",
         "tests/test_engine_document.cc",
-        "tests/test_engine_strata.cc"
+        "tests/test_engine_strata.cc",
+        "src/database/pool.h",
+        "tests/test_node.cc"
       ],
       "landed": [],
       "lenses": [
@@ -9833,7 +9835,7 @@
       "risk": "high",
       "status": "active",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-09T19:54:33",
+      "updated": "2026-11-09T20:21:53",
       "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
