@@ -3119,17 +3119,51 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T19:09:52",
+          "commit": "9e4edcda6a8084f48266867f652cca8df020d91d",
+          "evidence": [
+            {
+              "cmd": "cd docs/discussions/worker && npm ci && npm test",
+              "commit": "00bfe965e8f9068e04544a5ed6e1f32309d62229",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-190647-007bc8",
+              "level": "light",
+              "seconds": 31.4,
+              "state": "done",
+              "what": "github-triage check worker at 00bfe965e8f9"
+            },
+            {
+              "cmd": "cd docs && npm ci && npm run build",
+              "commit": "00bfe965e8f9068e04544a5ed6e1f32309d62229",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-190726-17c992",
+              "level": "light",
+              "seconds": 33.4,
+              "state": "done",
+              "what": "github-triage check site at 00bfe965e8f9"
+            }
+          ],
+          "final": true,
+          "from": "f0589c1aedd730e5cb9bbb54c957bda8c90e6839",
+          "reason": "",
+          "tested": "00bfe965e8f9068e04544a5ed6e1f32309d62229"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Address and close the GitHub issues and PRs",
-      "updated": "2026-11-09T19:07:20",
-      "worktree": "../Xapiand-wt/xapiand/github-triage"
+      "updated": "2026-11-09T19:10:05",
+      "worktree": ""
     },
     "hashes-cl-1": {
       "accepted": {},
