@@ -12345,6 +12345,8 @@
       "after": [
         "write-path-fixes"
       ],
+      "base": "a97fc7f5801d23b6827383825c9a91eeccc0f668",
+      "branch": "quest/xapiand/x7-catalog-timer",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -12368,9 +12370,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T08:14:22"
+      "updated": "2026-11-10T14:23:06",
+      "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
     },
     "x7-coverage": {
       "accepted": {},
