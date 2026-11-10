@@ -23,9 +23,9 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | docs/mechanisms/sortable.md, "Every conversion is defined for every `number`, with no undefined behavior: every shift count is bounded and `-1022 - exponent` cannot overflow an `int`." |
+| A1 | `docs/mechanisms/sortable.md`: "with no undefined behavior: every shift count is bounded" |
 | A2 | 261109-172719-1f0b22 (done at sortable:2e85e15): cmake -DSORTABLE_FUZZ=ON with Homebrew clang 23 (fuzzer,address,undefined), 722 s, 73,198,582 runs, exit 0, no crash or timeout, from make_corpus.py seeds plus fuzz/corpus. 261109-172720-e7310a (done): D5.9 2^1024 mutant, time to the kill, 4 seeds each: old fuzzer and corpus median 10.0 s (4.2-21.4); new fuzzer, old corpus 1.1 s (0.9-1.5); old fuzzer, new corpus 3.7 s (2.0-4.4); new fuzzer and corpus 1.1 s (0.8-1.3). Every kill was `accepted, not canonical: 01fc3f`. Reviewer's single sample at 937c7c6 was 60.5 s. |
-| A3 | docs/mechanisms/sortable.md, "The readers are lenient in three ways, all accepted: an `i` number may have leading zeros (`i 007`) or be `-0` (the integer 0), and hex digits, in `f HEX16` and in `decode` lines, may be upper or lower case."; probe 261109-172802-a74c02 (done, exit 0: `i 007` and `i 7` give c0c0, `i -0` and `i 0` give 80, upper and lower case `f` HEX16 give be; upper and lower case decode lines parse the same) |
+| A3 | `docs/mechanisms/sortable.md`: "The readers are lenient in three ways, all accepted"; probe 261109-172802-a74c02 confirmed all three |
 | A4 | build-test 261109-172754-1f56b7 done, exit 0 at sortable:2e85e15; asan is CI after the lead pushes |
 
 ## Result
