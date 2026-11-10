@@ -198,7 +198,8 @@ the path does not accept answers `405 Method Not Allowed`.
 | `WAL` | one single-shard index | The [write-ahead log](/Xapiand/reference-guide/wal) |
 | `FLUSH`, `QUIT` | `/` | [Administrative commands](#administrative-commands), only with `--admin-commands` |
 | `OPTIONS` | any | `200` with an `Allow` header |
-| `OPEN`, `CLOSE` | any | `501 Not Implemented` |
+| `OPEN`, `CLOSE` | any | `429 Too Many Requests` | Too many searches wait to look up the index names of their patterns (`--search-walk-queue`); `Retry-After` says when to try again. |
+| `501 Not Implemented` |
 | `LOCK`, `UNLOCK`, `COPY`, `MOVE`, `PURGE`, `LINK`, `UNLINK`, `TRACE`, `CONNECT` | any | `405` |
 
 Sources: the verb list and the route table, `src/server/search_views.cc:187-218` and

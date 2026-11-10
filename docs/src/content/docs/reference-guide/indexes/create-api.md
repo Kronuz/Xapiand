@@ -20,17 +20,38 @@ PUT /twitter/tweet/
 [Trailing slashes are important](/Xapiand/reference-guide/api#trailing-slashes-are-important).
 :::
 
-### Index Name Limitations
+### Index Names
 
-There are several limitations to what you can name your index. The complete
-list of limitations is:
+An index name is a path: segments separated by `/` (see
+[Index](/Xapiand/basics#index)). What a name cannot hold:
 
-- Cannot be `.` or `..`
-- Cannot include `\`, `*`, `?`, `"`, `<`, `>`, `|`, ` ` (space character), `,`, `#`, `:`
-- Cannot include `/` (as part of the name, it's used for paths)
-- Connot include `.` (except for the first character)
-- Full path cannot be longer than 243 bytes (note it is bytes, so multi-byte
-  characters will count towards that limit faster)
+- Bytes that are not well-formed UTF-8, NUL, control characters (below U+0020 and DEL)
+  and `\`: the request answers `400`.
+- A path that is empty or that, once `..` and `.` segments are resolved, is outside the
+  data directory: `400`.
+- About 240 bytes or more in all (bytes, so multi-byte characters count faster): the
+  index's entry in `.xapiand/indexes` is a keyword term, which is at most 245 bytes
+  with its prefix, and the request answers `400` "Keyword too long".
+
+Spaces, dots and `:` are accepted. The characters `*`, `?` and `[` are accepted in a
+name too, but a [search](/Xapiand/reference-guide/api#multiple-indexes) reads them as a
+pattern, so an index named with them cannot be searched by name.
+
+```rest
+PUT /createapi/back%5Cslash/
+```
+
+<!-- e2e:begin
+---
+description: Create: a backslash is refused
+---
+
+```js
+pm.test("A backslash is not allowed in an index name", function () {
+  pm.response.to.have.status(400);
+});
+```
+e2e:end -->
 
 Indexes can be paths (including `/` as part of the path).
 
