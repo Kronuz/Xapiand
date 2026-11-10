@@ -7845,9 +7845,9 @@
       "provides": [],
       "repo": "../sortable",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "sortable-proof review nits S1, S3, S4",
-      "updated": "2026-11-09T17:24:08",
+      "updated": "2026-11-09T17:41:02",
       "worktree": "../sortable-wt/xapiand/sortable-followups"
     },
     "sortable-proof": {
