@@ -7154,7 +7154,25 @@
       "updated": "2026-11-08T15:41:01"
     },
     "query-dsl-fixes": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T02:13:40",
+          "base": "2fdc48388f1182ede64aff6fae4960b4ab842114",
+          "blobs": {
+            "src/aggregations/bucket.h": "100644:3067def15494db4ed45aa9664f6651748c753ed9",
+            "src/query_dsl.cc": "100644:9261a2220674fb1acc7b7dfcce8c737582eba854",
+            "tests/test_engine_query.cc": "100644:67118d0bf5d3d1aec8a691bca4ea54d2876ace66"
+          },
+          "brief": "d57be8a379b9e54c",
+          "by": "review",
+          "commit": "f15ad28c9fa4f8a6857f88dc131e309c4430b687",
+          "findings": {},
+          "note": "",
+          "review": "75df119e301ae2e1e34423905c9da92b58a7cc2f",
+          "reviewed": "f176d8896f4089a5b6dbc7680f390a83b56386f0",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "2fdc48388f1182ede64aff6fae4960b4ab842114",
       "branch": "quest/xapiand/query-dsl-fixes",
@@ -7185,7 +7203,7 @@
       "risk": "normal",
       "status": "review",
       "title": "_not over several subqueries and open-ended integer ranges",
-      "updated": "2026-11-09T19:48:17",
+      "updated": "2026-11-10T02:13:40",
       "worktree": "../Xapiand-wt/xapiand/query-dsl-fixes"
     },
     "reclaim-backlog": {
