@@ -7897,11 +7897,43 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/sortable-proof",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-09T17:04:31",
+          "commit": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-145956-b3bf94",
+              "level": "light",
+              "seconds": 26.4,
+              "state": "done",
+              "what": "sortable-proof check build-test at 937c7c6782e9"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "67b2a907e2411e2e59dc249b96bfc1d229016ede",
+          "later": [
+            "261109-170432-eaadfe"
+          ],
+          "reason": "",
+          "tested": "937c7c6782e99937be0eb6b74dea29c2cc23293d"
+        }
+      ],
       "lenses": [
         "security"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -7909,10 +7941,10 @@
       ],
       "repo": "../sortable",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The sortable codec's remaining proof",
-      "updated": "2026-11-09T17:04:25",
-      "worktree": "../sortable-wt/xapiand/sortable-proof"
+      "updated": "2026-11-09T17:04:34",
+      "worktree": ""
     },
     "sortable-step1": {
       "accepted": {},
