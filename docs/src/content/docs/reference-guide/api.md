@@ -916,7 +916,7 @@ A failed request answers a JSON body with the `status`, its `type` and a `messag
 | `404 Not Found` | The document or index is not there. |
 | `405 Method Not Allowed` | The verb is not served at that path. |
 | `406 Not Acceptable` | No format in `Accept` can be served. |
-| `409 Conflict` | A write's `?version` does not match the document's version. |
+| `409 Conflict` | A write's `?version` does not match the document's version; the body's `_version` is the current one (`0`: no document). |
 | `412 Precondition Failed` | A strict index refuses a field or setting that has no type. |
 | `413 Payload Too Large` | The body is past the limit of the request. |
 | `501 Not Implemented` | The verb is known and not implemented here (`OPEN`, `CLOSE`, `DELETE` on an index). |
