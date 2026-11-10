@@ -22,6 +22,7 @@ bound is undefined behavior: `[{"_to":10},{"_from":0}]` over 3, 10, 2^62, -2^62 
 - A3 Float and date range aggregations with open bounds keep their counts (no regression): in A2's test
 - A4 `_not` with a bare object (`{"_not": {...}}`) is either served as the one-subquery form or keeps its 400 with a message naming the expected list; the journal says which and why (lead's preference: serve it, as `_and`/`_or` accept): in A1's test
 - A5 The `build-test` check passes, and CI is green
+- A6 Range buckets' default keys come from the request's bounds as written (D50): integer `[{_from:2.5},{_from:3}]` gives two buckets `2.5..` and `3..`, positive `[{_from:-5,_to:4},{_to:4}]` gives `-5..4` and `..4`, each with its own count; a test that fails at the reviewed commit f176d8896, run by `build-test`
 
 ## Contracts
 
