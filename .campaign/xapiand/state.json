@@ -10969,5 +10969,8 @@
       "updated": "2026-11-08T13:25:34"
     }
   },
+  "tested_docs": [
+    "docs/src/content/docs/**"
+  ],
   "version": 2
 }
