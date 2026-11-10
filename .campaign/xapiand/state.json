@@ -2309,8 +2309,7 @@
         "docs/src/content/docs/tests.md",
         "docs/src/content/docs/benchmarks.md",
         "docs/src/content/docs/contributing.md",
-        "docs/src/lib/**",
-        "docs/dev/docs-coverage.md"
+        "docs/src/lib/**"
       ],
       "landed": [],
       "lenses": [],
@@ -2321,7 +2320,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T07:27:01"
+      "updated": "2026-11-10T07:27:13"
     },
     "docs-upgrade-page": {
       "accepted": {},
