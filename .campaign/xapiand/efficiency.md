@@ -120,3 +120,8 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | write-path-fixes fix round 1 | — | — | resumed contributor to 233k (opus) | — | D1 + F1 + N4 + F7 fixed; 1a failed on a wrong test and a fixed-port clash, fixed; jobs resubmitted | — |
 | CI quest trigger | — | 82 libraries on main | 69k (sonnet) | — | owner authorized | — |
 | 11-10 07:2x hourly | — | — | — | weekly 30%, 0.87%/h (exhaustion 80 h vs reset 134 h) | — | nothing launchable; docs split (D55) and landing on CI; durability concerns into strata design (strata:77adb056); 44 jobs queued, load 11; disk 82 GiB (ccache evicted nothing; slots 60 GiB in open quests) |
+| docs-site-refresh (first two areas) | 11-10 03:2x | 11-10 07:3x (Xapiand:c1df4fbe2, merge 1e56dd22b) | getting-started 288k (sonnet), architecture 304k (opus) | ~4 | low: owner read (A7) | 2 (link-check #_top fix; D52 cycle; D55 split) |
+| docs-site-refresh-reference (reference guide) | 11-10 07:3x | — | 398k (sonnet; over the 300k target) | — | 8 findings → 5 hunt rows | — |
+| x7-gate rows triage | — | — | resumed to 242k (opus) | — | 2 master gaps (DB-TIMER thread, T8 peaks) → D56; 2 harness bugs fixed | — |
+| manifest-log round 2 | — | — | resumed to 152k (opus) | — | new A5 test found a real unfenced-after-log-moved defect; fixed R39 | — |
+| 11-10 08:2x hourly | — | — | — | weekly 31%, 0.88%/h (exhaustion 79 h vs reset 133 h) | — | nothing launchable; 60 jobs queued behind another campaign's exclusive hold; disk 80 GiB |
