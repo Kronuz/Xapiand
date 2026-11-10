@@ -425,11 +425,43 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/barrier-warning-completion",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-09T17:25:12",
+          "commit": "e49f288fb1438a96d9a21b59cf0eeaa770fc690d",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e49f288fb1438a96d9a21b59cf0eeaa770fc690d",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-165717-c9c7ba",
+              "level": "light",
+              "seconds": 141.4,
+              "state": "done",
+              "what": "barrier-warning-completion check build-test at e49f288fb143"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "e49f288fb1438a96d9a21b59cf0eeaa770fc690d",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "560c288b40ba55a8d42ff048bcb1c7eaa3624645",
+          "later": [
+            "261109-172512-203112"
+          ],
+          "reason": "",
+          "tested": "e49f288fb1438a96d9a21b59cf0eeaa770fc690d"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -437,10 +469,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "PosixIO warns when a barrier only orders",
-      "updated": "2026-11-09T17:24:54",
-      "worktree": "../completion-wt/xapiand/barrier-warning-completion"
+      "updated": "2026-11-09T17:25:13",
+      "worktree": ""
     },
     "barrier-warning-strata": {
       "accepted": {},
