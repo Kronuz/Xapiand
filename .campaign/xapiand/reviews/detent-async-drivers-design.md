@@ -1,7 +1,7 @@
 # detent async-drivers-design review: design, from Xapiand's side (A8)
 
-Commit: Detent:f48f7cb8961cf8a760c16bcf81a06d6f3881fce7
-Verdict: CHANGES
+Commit: Detent:1ece2ff4ccb07408f9523b273a8f50f34e544aeb
+Verdict: APPROVE
 Date: 2026-11-10
 
 APPROVE: lands as is, at this commit's code. CHANGES: lands after each blocking finding is fixed
@@ -206,3 +206,41 @@ and is never blocking.
   group's checkpoint names an index without copying it. X9 states only the constraint.
 - A deadline across nodes is 7b's shard RPC, not this design: the remote leg makes its own
   deadline from the remaining budget.
+
+## Re-review
+
+Date: 2026-11-10. Scope: the fold of X1-X15 at Detent:1ece2ff (design `docs/design/async-drivers.md`,
+bench under `docs/design/async-drivers-bench/`). The first review above was at Detent:f48f7cb.
+Verdict: APPROVE. All five blocking findings are closed; X10 is closed in the design and its
+decisions record is still open (non-blocking, with the lead).
+
+Do the jobs still hold at 1ece2ff? `git diff 9e7237c..1ece2ff` touches only the journal and four
+job ids in the design's table (`async-drivers.md:651`), so the three X2 jobs at 9e7237c apply to
+head. `git diff c351fc1..1ece2ff` in the bench touches only `waiter_test.cc` (the TSan fix at
+9e7237c), so the X3, X4 and X5 jobs at c351fc1 (`blocking_entry`, `placement_test`, `lone_voter`)
+run code unchanged at head. Every job was read in the job store (`campaign job show`, `a1/log`).
+
+| ID | Status | Design / code | Jobs |
+|---|---|---|---|
+| X1 | closed | D10 "Identity (Q7)" `async-drivers.md:466-474`: accept a frame from a node the loop's pins authenticate for the cluster naming a group and destination incarnation the loop holds; Core decides; no membership check. Q7 (a) :634-640; quest 5 criterion (joiner installs, lagging follower catches up), :597 | none; text only, as the journal says. Quest 5 owns the proof. |
+| X2 | closed | D8 "Close, teardown and shutdown" :354-375 (destructor unlinks; `close` refuses, unlinks, resumes with `closed`, drains staged, frees once nothing is queued; host-wide two-step shutdown); calls by group id :118-124; table row :328; quest 4 criteria. The model's group counters stay on the group's loop (`waiter_test.cc`, `in_flight`, 9e7237c). | 261110-042826-5c2da9 plain, 261110-042827-fb0e1d ASan+UBSan, 261110-042829-5f86fb TSan: all exit 0, "waiter_test: ok". No sanitizer report in the logs. `close` 1,796 and 1,014,239 schedules, `teardown` 319 and 133,406, 0 violations. Controls: `close-naive` breaks 977/1,824, `teardown-naive` 27/319, matching :371-375. The earlier TSan failure (76a5a7) was the model's race, fixed at 9e7237c. |
+| X3 | closed | D5 :237-266 over `task::blocking_scheduler` (Xapiand's `engine::BlockingScheduler` moved into task with the wheel); `inline_scheduler` stays the simulator's; step 5 waits while a linked waiter's token can still be requested. Quest 1 criterion :593. | 261110-031128-58310d (all) and 261110-031130-32585e (`threads`, TSan): exit 0; a cross-thread cancel returns `cancelled` in 51 and 60 ms, 300 rounds. Before-job 261110-031132-189172 (`inline`) exit 1: "how=stalled dropped_post_calls=1 want=cancelled". |
+| X4 | closed | D10 :389-420: placement `(slot * L) >> 12` for any L from 1 to 4,096; L may change at restart by re-partitioning at open (recover, write to the next generation, sync, commit by the layout record); hello and `misrouted` kept. Quest 3 criterion :595. | 261110-031134-9f199a: exit 0; `remap` 8->6, 6->12, 16->3, 3->1 keep every group's live bytes (copied = live) across the crash points; `share` bound holds for L pairs 6/8, 24/32, 8/6. Before-job 261110-031136-e8b259 (`placement_test mod`) exit 1, "117629 over the bound". |
+| X5 | closed | D5 step 4 :260-263 counts no election; Core campaigns at `Start` for a lone voter with no witness; quest 4 criterion :596. | 261110-031128-58310d: `rule=d5 case=first-election advances=0`, and the `core=today` control fails with 1,500 ms as expected. Before-job 261110-031138-999c25 (`lone_voter` on consensus:ab05507) exit 1, first leader at 1,501 ms. This proves the rule in the model; the real Core change is quest 4's and `lone_voter` stays red until it lands. |
+| X6 | closed | Q6 restated as (b), with the list of what moves, :626-633. | text |
+| X7 | closed | D4 :207-213 says what moves and what stays, and that `LagProbe` stays off the wheel; owner check binds when the loop starts (quest 1, :593); Limits :581-582 say up to 1 ms late. | text |
+| X8 | closed | Q4 :620-623 and the build plan :603-605 put the closed state before 7b; D10 :476-479 opens a stored closed group on a frame. | text |
+| X9 | closed | Q3 (b) :615-619, and the five conditions as quest 3 criteria :595. Per host rather than per core, which follows from X4. | text |
+| X10 | partially closed | D2 :130-135: the Sink applies nothing inline and `applied` comes later by `post_call`; it supersedes the November 2 line. The Detent decisions record still carries the old line: `docs/SHARED_LIBRARY_DECISIONS.md:261` (Detent:4c09b5c, unchanged). | n/a. The journal lists it for the lead (Next 3); it is outside the quest's file set. |
+| X11 | closed | D8 table row 2, :323. | text |
+| X12 | closed | D10 Cost :442-452; quest 5 measures keepalives per node pair, :597. | text |
+| X13 | closed | D6 :297-300; quest 2 criterion :594. | text |
+| X14 | closed | D2 :122-124 (`scheduler_ref::wheel()`); quest 1 criterion :593. | text |
+| X15 | closed | D8 table, `create`/`recover` row, :327 (the host owns opens, single flight). | text |
+
+New notes, non-blocking:
+- The X2, X3 and X5 jobs run the bench's models of the protocols (`waiter.hh`, `blocking.hh`, the
+  `Core` rule), not the production types. That is the right level for a design. Each quest's
+  criteria say the same tests are re-run against the real types.
+- X10's remaining step is a one-line edit to `SHARED_LIBRARY_DECISIONS.md:261`, which the lead
+  makes. Xapiand's 7b design follows D2's Sink text in the meantime.
