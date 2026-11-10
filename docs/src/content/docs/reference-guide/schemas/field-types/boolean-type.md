@@ -15,6 +15,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Boolean: a detected boolean
+---
+
+```js
+pm.test("A JSON boolean is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc.isPublished).to.deep.equal(true);
+});
+```
+e2e:end -->
+
 ```rest
 UPDATE /bank/1
 
@@ -25,6 +40,21 @@ UPDATE /bank/1
     }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Boolean: an explicit boolean
+---
+
+```js
+pm.test("A typed boolean is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("isPublished");
+});
+```
+e2e:end -->
 
 When using strings, you can use any of the following and it gets interpreted
 as either `true` or `false`:

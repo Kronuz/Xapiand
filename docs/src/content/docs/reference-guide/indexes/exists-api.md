@@ -10,6 +10,18 @@ For example:
 HEAD /twitter/tweet/
 ```
 
+<!-- e2e:begin
+---
+description: Index Exists: an existing index
+---
+
+```js
+pm.test("HEAD of an existing index answers 200", function() {
+  pm.response.to.have.status(200);
+});
+```
+e2e:end -->
+
 The answer is `200 OK` when the index exists and `404 Not Found` when it does not.
 
 :::hint{.warning}

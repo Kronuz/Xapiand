@@ -21,6 +21,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Keyword: an explicit keyword
+---
+
+```js
+pm.test("A typed keyword is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("username");
+});
+```
+e2e:end -->
+
 :::hint[Caution]{.caution}
 Notice we are using the same "bank" index as before. If you already indexed into it with previous examples, changing an existing field's type (for example from `text` to `keyword`) will return an error.
 :::

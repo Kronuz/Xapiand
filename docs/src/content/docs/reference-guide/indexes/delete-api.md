@@ -16,8 +16,14 @@ DELETE /twitter/tweet/
 
 <!-- e2e:begin
 ---
-status: 501
+description: Delete Index: not implemented
 ---
+
+```js
+pm.test("DELETE of an index answers 501 Not Implemented", function() {
+  pm.response.to.have.status(501);
+});
+```
 e2e:end -->
 
 :::hint{.warning}

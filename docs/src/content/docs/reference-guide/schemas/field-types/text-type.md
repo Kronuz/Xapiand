@@ -29,6 +29,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Text: an explicit text
+---
+
+```js
+pm.test("A typed text is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("resume");
+});
+```
+e2e:end -->
+
 ## Stemmers
 
 A common form of normalisation is stemming. This process converts various

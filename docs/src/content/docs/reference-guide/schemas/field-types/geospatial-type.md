@@ -32,6 +32,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Geospatial: a point
+---
+
+```js
+pm.test("A point is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("checkin");
+});
+```
+e2e:end -->
+
 ## Circle
 
 Use `_circle`.
@@ -49,6 +64,21 @@ UPDATE /bank/2
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Geospatial: a circle
+---
+
+```js
+pm.test("A circle is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(2);
+  pm.expect(doc).to.have.property("neighborhood");
+});
+```
+e2e:end -->
 
 The example show circle with radius of **1000 meters**.
 
@@ -78,6 +108,21 @@ UPDATE /bank/3
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Geospatial: a polygon
+---
+
+```js
+pm.test("A polygon is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(3);
+  pm.expect(doc).to.have.property("neighborhood");
+});
+```
+e2e:end -->
 
 :::hint{.warning}
 _**Concave Polygons**_<br>
@@ -112,6 +157,21 @@ UPDATE /bank/4
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Geospatial: a convex hull
+---
+
+```js
+pm.test("A convex hull is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(4);
+  pm.expect(doc).to.have.property("neighborhood");
+});
+```
+e2e:end -->
 
 This is the set of coordinates generated for the convex hull for the above example (points on the
 unit sphere, as Cartesian `x`, `y`, `z`: each row's squares add up to 1):
@@ -158,6 +218,21 @@ UPDATE /bank/5
 }
 ```
 
+<!-- e2e:begin
+---
+description: Geospatial: EWKT
+---
+
+```js
+pm.test("An EWKT shape is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(5);
+  pm.expect(doc).to.have.property("location");
+});
+```
+e2e:end -->
+
 :::hint[Caution]{.caution}
 Notice that for points in EWKT expressions, the correct coordinate order is
 `POINT(longitude latitude)`, "longitude" first.
@@ -198,6 +273,21 @@ UPDATE /bank/6
   "checkin": [ -74.01042, 41.50343 ]
 }
 ```
+
+<!-- e2e:begin
+---
+description: Geospatial: a coordinate pair
+---
+
+```js
+pm.test("A coordinate pair is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(6);
+  pm.expect(doc.checkin).to.deep.equal([-74.01042, 41.50343]);
+});
+```
+e2e:end -->
 
 :::hint[Caution]{.caution}
 Notice that for points in array mode, the correct coordinate order is

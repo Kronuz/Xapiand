@@ -14,6 +14,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: UUID: a detected UUID
+---
+
+```js
+pm.test("A UUID string is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc.guid).to.deep.equal("1f1e8f3f-471f-4b3d-a2a4-7aefb43a9087");
+});
+```
+e2e:end -->
+
 ## Condensed UUIDs
 
 Xapiand supports a subset of UUID 1 (and the version 6 codec the node mints by default)
@@ -45,6 +60,21 @@ UPDATE /bank/1
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: UUID: UUIDs as field names
+---
+
+```js
+pm.test("UUID field names are stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("uuids");
+});
+```
+e2e:end -->
 
 `_index_uuid_field` can be used to specify how the UUID field namess will be
 indexed:
