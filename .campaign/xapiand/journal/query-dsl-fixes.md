@@ -1,6 +1,6 @@
 # query-dsl-fixes: journal
 
-State: waiting on jobs 261109-193856-6e3365
+State: waiting on jobs 261110-021740-4105e9 261110-021740-d286d4 261110-021741-fbcbbf (+ build-test verify)
 Quest: .campaign/xapiand/quests/query-dsl-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,26 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Code final at ffc7e9517 (tests alone 38f22b685). Waiting on the build-test gate 261109-193856-6e3365
-(`campaign verify`, at the head, which only adds journal commits).
+Rebased onto master (code at 9ea2fc771: review F4 print removed, F3 key-order test added). Reviewer
+approved f176d8896 (APPROVE, accepted). Reruns at the new head are in flight.
 
 ## Next
 
-1. When 261109-193856-6e3365 passes: set State "ready for review".
-2. If it fails on something other than these tests, show it also fails at main and report.
+1. When the jobs pass: record them in Evidence, set State "ready for review" (F2 stays open: owner's call).
+2. The mutant job 261110-021741-fbcbbf (c57ee057d: open lower slot 0, otherwise 9ea2fc771) must FAIL on the new key-order check.
+3. If a job fails on something other than these tests, show it also fails at main and report.
 
 ## Blocked on
 
-Nothing.
+Owner, F2 (review query-dsl-fixes-correctness): range bucket default keys are built from the effective
+bound in the field's type, so two requests distinct as written can share a key and be counted into one
+bucket (integer `[{_from: 2.5}, {_from: 3}]` gives one `3..` = 6, brute force 3 each; positive
+`[{_from: -5, _to: 4}, {_to: 4}]` gives `..4` = 4, brute force 2 each); visible keys also change
+(`2.5..` shown as `3..`, `-5..4` on positive as `..4`). Merging by key was already at master for identical
+requests. Options: (a) keep as is; (b) format the default key from the request's bounds as written
+(`2.5..`, `-5..4`): keeps the requested text, stops distinct requests colliding, small and local to
+`configure` (reviewer's recommendation); (c) key buckets by range index (root fix, outside this quest).
+Not changed pending the owner.
 
 ## Evidence
 
