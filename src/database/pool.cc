@@ -413,16 +413,14 @@ ShardEndpoint::__repr__() const
 // The catalog's timer (strata's host::timer) on the control loop: each callback is an Asio timer armed there with
 // Host::start_timer, and only posts a chore. close() runs at once what is still armed; later ones run when armed.
 struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
-	struct Armed {
-		std::function<void()> fn;
-		std::unique_ptr<engine::Host::Timer> timer;  // set and destroyed on the loop's thread only
-	};
-
 	engine::AsioHost& host;
-	std::mutex mtx;
+	// The callbacks not yet run, which any thread arms and close() takes: O(1) sections, no I/O.
+	std::mutex pending_mtx;
 	bool closed = false;
 	std::uint64_t last = 0;
-	std::unordered_map<std::uint64_t, Armed> armed;
+	std::unordered_map<std::uint64_t, std::function<void()>> pending;
+	// Their Asio timers: the loop's thread only.
+	std::unordered_map<std::uint64_t, std::unique_ptr<engine::Host::Timer>> timers;
 
 	explicit Timer(engine::AsioHost& host_) : host(host_) { }
 
@@ -439,10 +437,10 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 		const auto at = std::chrono::steady_clock::now() + std::chrono::nanoseconds(delay_ns);
 		std::uint64_t id = 0;
 		{
-			std::lock_guard<std::mutex> lk(mtx);
+			std::lock_guard<std::mutex> lk(pending_mtx);
 			if (!closed) {
 				id = ++last;
-				armed.emplace(id, Armed{std::move(fn), nullptr});
+				pending.emplace(id, std::move(fn));
 			}
 		}
 		if (id == 0) {
@@ -451,47 +449,42 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 		}
 		// Armed on the loop's thread: the raw executor still runs once the loop's task scheduler has closed.
 		asio::post(host.scheduler().executor(), [self = shared_from_this(), id, at] {
-			auto timer = self->host.start_timer(at, [weak = std::weak_ptr<Timer>(self), id] {
+			self->timers.emplace(id, self->host.start_timer(at, [weak = std::weak_ptr<Timer>(self), id] {
 				if (auto self = weak.lock()) {
 					self->fire(id);
 				}
-			});
-			std::lock_guard<std::mutex> lk(self->mtx);
-			if (auto it = self->armed.find(id); it != self->armed.end()) {
-				it->second.timer = std::exchange(timer, nullptr);
-			}
+			}));
 		});
 	}
 
 	// The loop's thread, at the deadline.
 	void fire(std::uint64_t id) {
-		Armed done;
+		auto timer = timers.extract(id);   // destroyed after its own callback returns
+		std::function<void()> fn;
 		{
-			std::lock_guard<std::mutex> lk(mtx);
-			auto it = armed.find(id);
-			if (it == armed.end()) {
-				return;
+			std::lock_guard<std::mutex> lk(pending_mtx);
+			auto it = pending.find(id);
+			if (it == pending.end()) {
+				return;   // close() ran it
 			}
-			done = std::move(it->second);
-			armed.erase(it);
+			fn = std::move(it->second);
+			pending.erase(it);
 		}
-		run(done.fn);
+		run(fn);
 	}
 
 	// Runs every callback still armed now; their Asio timers are destroyed on the loop's thread.
 	void close() {
-		std::unordered_map<std::uint64_t, Armed> left;
+		std::unordered_map<std::uint64_t, std::function<void()>> left;
 		{
-			std::lock_guard<std::mutex> lk(mtx);
+			std::lock_guard<std::mutex> lk(pending_mtx);
 			closed = true;
-			left.swap(armed);
+			left.swap(pending);
 		}
-		auto timers = std::make_shared<std::vector<std::unique_ptr<engine::Host::Timer>>>();
-		for (auto& [id, entry] : left) {
-			run(entry.fn);
-			timers->push_back(std::move(entry.timer));
+		for (auto& [id, fn] : left) {
+			run(fn);
 		}
-		asio::post(host.scheduler().executor(), [timers] { timers->clear(); });
+		asio::post(host.scheduler().executor(), [self = shared_from_this()] { self->timers.clear(); });
 	}
 };
 
