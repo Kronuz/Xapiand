@@ -1932,6 +1932,38 @@
       "title": "Audit the public docs site against the engine as it is",
       "updated": "2026-11-09T17:45:18"
     },
+    "docs-site-refresh": {
+      "accepted": {},
+      "after": [
+        "sortable-encoding"
+      ],
+      "checks": [
+        {
+          "cmd": "harness/run_all.sh",
+          "level": "light",
+          "minutes": 60,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/src/content/docs/**",
+        "docs/public/assets/**",
+        "README.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "The document profile gate",
+      "needs": [
+        "docs-site-audit"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
+      "updated": "2026-11-09T17:45:19"
+    },
     "docs-upgrade-page": {
       "accepted": {},
       "after": [
