@@ -1,6 +1,6 @@
 # docs-site-refresh-reference: journal
 
-State: waiting on jobs 261110-144359-49fcfb 261110-144400-f2e780
+State: waiting on jobs 261110-144400-f2e780
 Quest: .campaign/xapiand/quests/docs-site-refresh-reference.md (the lead's; never edit it)
 
 ## Doing
@@ -14,7 +14,7 @@ boolean, keyword, text, uuid, date, geospatial, foreign-schemas, index-api) and 
 
 ## Next
 
-1. `campaign wait` 261110-144359-49fcfb (A4) and 261110-144400-f2e780 (e2e, A2/A7); fix what fails.
+1. `campaign wait` 261110-144400-f2e780 (e2e, A2/A7); a failing assertion names its request. A4 passed (261110-144359-49fcfb).
 
 Probe (Nov 3 binary, before write-path-fixes): 487 requests, 761 assertions, 752 pass; the 9 failures were the
 POST-with-echo status (200, fixed in the page) and 8 cases that binary predates (id 0, DELETE and 409 `_version`).
@@ -50,7 +50,7 @@ Code questions (documented as the code behaves today; the lead rules whether the
 | A1 | the table below: the audit rows of the reference guide, each with its fix and source. Rows owned by other quests or by sortable-encoding are under "Left alone" |
 | A2 | job 261110-144400-f2e780 (`campaign verify`, the `e2e` check at the final head; pending) |
 | A3 | job 261110-081103-557fe4 (`git grep -niw xapian` over the site content, minus changelog and upgrade): one hit, `copyright.md:19` (sortable-encoding's, Blocked on 8); nothing in the reference guide |
-| A4 | job 261110-144359-49fcfb (`npm ci`, `npm run build`, `linkcheck.py` over every page, exit 1 on a broken link; pending) |
+| A4 | job 261110-144359-49fcfb (`npm ci`, `npm run build`, `linkcheck.py` over every page, exit 1 on a broken link): passed at 07d7f71db |
 | A5 | request count 425 before (job 261110-043757-b6665c) and 477 after (job 261110-081101-d566fc); 487 at the final head (probe) |
 | A6 | `docs/src/content/docs/tests/coverage.md`: "## Coverage" (feature, page, tests) and "## Not covered by a request" |
 | A7 | job 261110-144400-f2e780 (its site build). Quote, `docs/src/lib/sidebar.mjs` Quick-start items now end `{ "slug": "exploration" } ]`; `next.md` deleted |
