@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: waiting on jobs 261109-212058-c999f8 261109-212222-4d4b55 261109-212117-5b1128 261109-212247-2389ea
+State: waiting on jobs 261110-032812-0a35ed 261110-032812-29679a 261110-032812-9c02e2 261110-032812-8afcbd 261110-032812-618943 261110-032812-3886e3 261110-032825-b68549 261110-032825-44cab9 261110-032825-492677 261110-032826-e94408 261110-032826-c5efc1
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,40 +9,34 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Fifth contributor. GitHub CI at strata:9d4630c (run 42725685700) was red on every platform; strata
-`main`'s last run (42678605136 at strata:3df7af4) is green but for macos-arm64, which no runner
-acquired, so every failure is this quest's. Causes and fixes in strata:e0508e9 (R29 to R32):
+Fix round 1 (sixth contributor): the durability review (manifest-log-durability.md, F1 and F2),
+the security review (manifest-log-security.md, F1 and F2) and the second durability review
+(manifest-log-durability-fable.md, F1 = security F2, plus its non-blocking F2), one commit each,
+at strata:c78f870 to strata:08a11ab. Nothing compiled locally (the host held no free memory for a
+light hold); every claim below waits on the jobs in State.
 
-1. cold_segment aborted everywhere: CI builds RelWithDebInfo `-O2 -g` with assertions; our jobs
-   were Release. A lazy install's records have no body, and the install's own commit read the
-   live length from the body (`mapped()` asserts). Reproduced locally (exit 134), fixed (R29).
-2. apply_atomic terminated on Linux (libstdc++ only): `detail::stable_bytes`'s noexcept
-   constructor holds a `std::deque`, which libstdc++ allocates on construction; the commit sweep's
-   injected bad_alloc there terminated. Reproduced with g++-16 on macOS, backtrace
-   `flush_documents` > `_Deque_base::_M_initialize_map` (R30). Pre-existing on `main`, exposed by
-   this quest's sweep; writer.hh is in the file set.
-3. linux-tsan: manifest_log_test's operator new collides with TSan's at link (R31).
-4. Timing: `deleted sets` "below < 0.5" under ASan (552 ms) and `replay cost` fields_ratio 43.1x on
-   macos-x86_64 (R31).
-5. Found while fixing 2: a fence whose message allocation fails let bad_alloc escape unfenced
-   (R32).
+| Finding | Cause | Fix | Commit | Confirming job |
+|---|---|---|---|---|
+| durability F1 | the open synced only the log; a rollover stopped between rename and directory sync kept a head a power loss reverts, and later no-file commits rode on it | the open syncs the directory, then the log (D6.6); T4 case 10 in index_test; mutant "the open syncs the log only" | strata:c78f870 | probe rerun 261110-032812-8afcbd (rename_probe: 0 lost expected) |
+| durability F2 | a failed sync_data fenced but left the edit's bytes (Linux keeps them clean in cache) | the appender truncates back to E and syncs before breaking; faultfs `fault::keep` models the clean-but-not-durable page; T4 case 11; mutant "a failed barrier not truncated back" | strata:f9fdcca | build-test 261110-032812-0a35ed and mutants 261110-032812-9c02e2 (the probe's sync_error_probe writes the failed edit by hand, so it shows the same image at any commit: it is not this fix's confirmation) |
+| security F1 | a delete edit walked the dense words to a far neighbour or copied the sparse ordinals: replay O(S^2/c) | dense words carry a summary (bit per nonzero word, level over level, 1/63 memory); sparse ordinals are runs each more than twice the next, so inserts merge O(log n) per ordinal; manifest_log_test reads logs at 2x D7's edit bound (5M docs) within 4x the snapshot; three mutants | strata:77e5f0c | probe rerun 261110-032812-618943 (replay_cost) |
+| security F2 = fable F1 | an unforced rollover's ENOSPC appended and owed nothing, so sustained ENOSPC grew the log past the reader's 2x bound | the ENOSPC rollover owes the rollover (the next commit is forced and reports ENOSPC until a snapshot fits), and the waiting edit appends only within `log_within(..., 2)`, the reader's own check; index_test's sustained case; mutant "an unforced rollover's ENOSPC owes nothing" | strata:13d87b2 | 261110-032812-618943 (enospc_bounds) and 261110-032812-3886e3 (the fable probe, exit 0 expected) |
+| fable F2 (non-blocking) | append_edit's broken-appender fence built its message before setting `fenced_` | `fenced_` first, as R32 | strata:9915cec | by reading (faultfs's truncate does not allocate, so no sweep reaches it) |
+| security F3 (non-blocking) | the file fuzz target never read with `to` | the input's last byte picks a `to`: damage past it, not-retained generations, every whole generation | strata:08a11ab | fuzz 261110-032825-b68549, coverage 261110-032826-c5efc1 |
 
-Jobs at strata:e0508e9: build-test 261109-212058-c999f8; CI's config 261109-212222-4d4b55
-(assertions, full ctest with clang, three tests under libstdc++, then stable_bytes' noexcept put
-back must terminate apply_atomic); mutants 261109-212117-5b1128 (31 log and index, assertions on,
-then fields.py); A9 261109-212247-2389ea (prospect ff99494 suite and identity vs strata main,
-then Xapiand master Xapiand:3ed4270d3).
+Reruns at strata:08a11ab: CI's config 261110-032812-29679a, T6 261110-032825-44cab9, T7 row
+261110-032825-492677, A9 261110-032826-e94408.
 
-Locally at strata:e0508e9 (macOS, RelWithDebInfo with assertions): cold_segment ok; apply_atomic
-ok under clang (152 commit points, burst 0 and 1 each 12 fenced durable) and g++-16 (157 points);
-without R32 the burst sweep fails (N=140 unfenced, retry refused "segment identity twice", 0
-fenced); manifest_log ok in 3.7 s (ratios 13.6x and 1.2x).
+Not mine, in no journal: 261110-022840-bb16af, 261110-023641-b98c95, 261110-023723-c93eff,
+261110-024750-6ae64c are the second durability reviewer's probes (cited in its review file). The
+stale reruns at strata:e0508e9 (9e3973, a9800f, 23571b) run superseded code; cancelling them was
+refused to me, so they stay queued or running.
 
 ## Next
 
-1. Read the four jobs at strata:e0508e9; fix what is red with a rerun of that probe only.
-2. Then State "ready for review"; the lead pushes strata:e0508e9 for CI (the asan, tsan and
-   Linux matrix are CI's).
+1. Read the jobs in State; for any red one, fix and rerun only that probe or check.
+2. Record each finding's confirming job in Evidence, then State "ready for review"; the lead accepts
+   with `--confirm F1=JOB` per finding and pushes for CI.
 
 ## Blocked on
 
@@ -257,3 +251,48 @@ Step 3a, the log layer, at strata:6a8bb32 (index.hh untouched):
   the fence's message, so an allocation failing there too still fences. apply_atomic's sweep runs
   a second pass with the next allocation failing as well; without the fix it fails (N=140
   unfenced, the retry refused). The first index mutant's text follows the new line.
+- R33 (security F2 / fable F1: which fix): both of the reviews' options, as one rule, "the writer
+  never acknowledges a log its reader refuses". The ENOSPC rollover owes the rollover, so D8's
+  "the rollover waits one commit" holds as written and the caller learns the disk is full at the
+  next commit (space_error, index unchanged) instead of the log growing; and the waiting edit
+  appends only within `log_within(..., 2)`, the function `read_log` applies, because an edit can
+  itself be larger than the room between 1x and 2x (a delete edit's deltas can exceed the
+  snapshot's bitset). Forcing the rollover alone would leave that gap; refusing at 2x alone would
+  let every commit up to 2x skip the rollover under ENOSPC. The 2x guard has no test of its own: an
+  honest edit that large needs a state built for it; the sustained-ENOSPC test holds the owed
+  rollover.
+- R34 (security F1: the representation, not the bound): D42's forms and memory bounds stay. Words
+  gain a summary, a bit per nonzero word up to one word (1/63 more; A4's bitset bound now
+  `body + body/63 + 64 + slack`); ordinals become ascending runs, each more than twice the next (at
+  most 64), merged from the tail, so each ordinal moves O(log n) times and a lookup is a binary
+  search per run. A merge's allocation failure leaves the set whole with one run more (apply() and
+  its callers already drop or fence on any failure). `operator==` compares members, so a replayed
+  state equals the writer's however its runs fell.
+- R35 (durability F1: option a): the open syncs the directory before the log, the reviewer's
+  recommendation: the open must not report a generation a power loss can revoke, which option b
+  still did. Cost: one fsync(dir) per writer open, unmeasured here (the open-cost row is T-row
+  work, the lead's after landing per L5).
+- R36 (durability F2: faultfs's model): `fault::keep` marks every page differing from the durable
+  bytes as lost at the failed sync; a later sync or ordering point makes the current bytes durable
+  except lost pages, which keep their durable bytes (zeros past the durable size); a write or
+  truncate dirties its pages again, and a crash reads lost pages' durable bytes. The appender stays
+  broken after the undo, so the index still fences on a failed sync.
+
+## Follow-ups
+
+- Durability N1 / fable F3: a short `pwrite` count on a full disk is EIO (fences) where D4 reads
+  as ENOSPC; faultfs's capacity never writes part of a request. Owner's call.
+- Durability N2: the append's ordering point sits outside `durable()`; safe (nothing in the log
+  changed), a comment would help.
+- Durability N3 / fable F5: macOS ordering rests on F_BARRIERFSYNC; `full_flush_ordering` is
+  opt-in. Unchanged from `main`.
+- Fable F4: `open(..., to)` at a generation in an obsolete log cut below its snapshot reads as
+  `corrupt_index("no whole snapshot")`, not `generation_not_retained` (D6.8).
+- Fable F6: APFS, ZFS and UFS size-versus-data crash semantics unchecked (D4).
+- Security F3's rest: a non-default `readable_by` and recover()'s fallback are not fuzzed.
+- Security F4: decoded metadata and declarations cost about 50x their bytes in map nodes; bounded.
+- Security F5 (pre-existing on main): open_segment sizes its deleted bitmap from the log's
+  doc_count before the segment file's is checked.
+- A process kill between a failed sync and the truncate-back leaves the failed edit's clean pages
+  for a same-boot reopen (Linux reports the writeback error once): no writer-side fix exists; an
+  open could compare against a re-read with O_DIRECT, out of scope.
