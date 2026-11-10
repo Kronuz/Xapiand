@@ -960,7 +960,7 @@
     "cjk-segmenter": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-10T03:40:23",
+          "at": "2026-11-10T03:41:21",
           "base": "0d441669e5684d83638c3b495eeb6da038481f31",
           "blobs": {
             "CMakeLists.txt": "100644:e44e9945db4afbaeec4e16216431b8fbbdcd37d9",
@@ -971,7 +971,7 @@
             "cjk/tables.hh": "100644:8091af4960ae6968c5cea3f9921905412de05f0a",
             "data/cjdict.txt": "100644:8d2bd6b8ac689bbc52a6dfe0b4c28d54ed5b9b77",
             "docs/RULES.md": "100644:b63a41007c68279f63af25b34edc4d09999e0eba",
-            "docs/cjk-segmenter.md": "100644:71b5f2ee751bdf6874c1872f9267fca808a90347",
+            "docs/cjk-segmenter.md": "100644:fb78bf77da02c7a627156f74272716d6111ab66a",
             "fuzz/fuzz_cjk.cc": "100644:32a3f2cdcc0f1e1a73e6d47071173c4a5bc12c76",
             "test/cjk_test.cc": "100644:d7c681d8e8e47e64b3fa642c79914d44cf0b6cdb",
             "test/corpora/README.md": "100644:3d151e5a5d58214cdab88f50f3cae7eb9ec39603",
@@ -992,11 +992,11 @@
           },
           "brief": "7baf8e13328539a8",
           "by": "review",
-          "commit": "8ce3f0cac31d444a92d30af0737e48fccda3cb7c",
+          "commit": "fbf5b7d4150406b2f61140e9960da8d07124c91e",
           "findings": {},
           "note": "",
-          "review": "22eb8aa149a0f711958a8a9cf3e6d69f02197385",
-          "reviewed": "8ce3f0cac31d444a92d30af0737e48fccda3cb7c",
+          "review": "c75bba864c86cc4cfb7c53429c26be8547d25bbb",
+          "reviewed": "fbf5b7d4150406b2f61140e9960da8d07124c91e",
           "verdict": "APPROVE"
         }
       },
@@ -1041,7 +1041,7 @@
       "risk": "normal",
       "status": "review",
       "title": "A CJK word segmenter in Kronuz/analysis",
-      "updated": "2026-11-10T03:40:23",
+      "updated": "2026-11-10T03:41:21",
       "worktree": "../analysis-wt/xapiand/cjk-segmenter"
     },
     "cjk-words": {
