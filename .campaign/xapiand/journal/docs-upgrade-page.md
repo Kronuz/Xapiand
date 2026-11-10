@@ -43,9 +43,13 @@ Options: (a) file and fix the defect, keep the page as written, rerun A2 path 1 
 release docs should not carry a workaround for a bug); (b) the page tells users to create each index on the
 new node first (start, `PUT /<index>/`, stop) or to restore over HTTP (under 16 MiB), and A2 proves that route.
 
-Also for the lead's hunt list (pre-existing, not blocking): `docs/src/content/docs/reference-guide/indexes/backups.md`
-("MessagePack (or NDJSON)") says `DUMP` with `Accept: application/x-ndjson` works; both binaries answer 406.
-Either the doc drops NDJSON for DUMP (in this file set; I can do it on a ruling) or DUMP gains NDJSON.
+Lead ruled (a): the defect is quest `cli-restore-records`; this quest lands after it and the page keeps
+the CLI path; A2 path 1 reruns at this head rebased on it.
+
+Fixed on the lead's ruling: `reference-guide/indexes/backups.md` said `DUMP` serves NDJSON; it now says a
+dump is JSON, YAML or MessagePack and `Accept: application/x-ndjson` answers 406 (`src/database/data.h:99`
+`msgpack_serializers`; 406 shown by jobs 261109-173432-6270fa and 261109-174137-c5db06). Section renamed
+"MessagePack"; no links pointed at the old anchor.
 (Earlier lead rulings: A2 built in-job; numbers bullet confirmed against PLAN D44; the alpha.10 refusal
 text is on the lead's hunt list.)
 

@@ -38,7 +38,8 @@ For all the above commands you _must_ additionally use the
 ## Online Dump and Restore
 
 It's also possible (for rather small databases) to dump and restore documents
-to and from JSON, NDJSON or MessagePack over HTTP, using the online API.
+over HTTP, using the online API. A dump is JSON, YAML or MessagePack; a restore
+takes JSON, NDJSON or MessagePack.
 
 ### Dump
 
@@ -69,11 +70,12 @@ RESTORE /twitter/tweet/
 
 ---
 
-## MessagePack (or NDJSON)
+## MessagePack
 
-Instead of using plain JSON dumps, it's more efficient to use MessagePack. By
-setting the `Accept` header to either `application/x-msgpack` or
-`application/x-ndjson`, you can dump data to any of those formats:
+Instead of using plain JSON dumps, it's more efficient to use MessagePack. Set
+the `Accept` header to `application/x-msgpack` to dump in that format. A `DUMP`
+does not produce NDJSON: `Accept: application/x-ndjson` answers `406`. A
+`RESTORE` takes NDJSON (`Content-Type: application/x-ndjson`).
 
 ```rest
 DUMP /twitter/tweet/
