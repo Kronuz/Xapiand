@@ -1,6 +1,6 @@
 # query-dsl-fixes: journal
 
-State: waiting on jobs 261110-024407-b289b5 (reviewer probe rerun at the head; the other jobs passed)
+State: waiting on jobs 261110-030126-7ce5bf 261110-030126-f64c97 261110-030126-19d97e 261110-030127-46d106 (rebased onto master; reviewer re-reviewing D50 in bucket.h)
 Quest: .campaign/xapiand/quests/query-dsl-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,55 +9,42 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Rebased onto master (has A6 and D50). Code head Xapiand:c73e3c7f1: F4 print removed, F3 key-order test
-(its `_sort` was misplaced beside `_range` in the first version, which failed 261110-021740-4105e9;
-now inside `_range`), and A6 (owner's F2 = option b, D50): range bucket default keys are the request's
-bounds as written (`bound_text`, `default_key` in bucket.h; `Bounds::key()` removed); the effective bounds
-still drive matching and order. Sent to the reviewer's acceptance by confirm jobs.
+Rebased onto master (head ace371929, code same as Xapiand:c73e3c7f1: F4, F3, A6 / D50 in bucket.h). The
+reviewer is re-reviewing the D50 change; I do not touch code. Evidence jobs rerun at the head.
 
 ## Next
 
-0. Lead msg on 261110-021740-4105e9 (key-order test failed at the fix head): cause found by reading, not yet
-   by a job: `range_order` put `_sort` beside `_range` in the request, where the aggregation does not read
-   it (it reads its conf, the `_range` object), so the order stayed by index and both asc and desc
-   differed. The test was wrong, not ruling 5. Fixed at c73e3c7f1 (`_sort` inside `_range`). Proof is
-   261110-022726-fafa29 passing and the mutant 261110-022803-ef3749 failing on those checks; if
-   fafa29 still fails them, the code is what is off: then fix it against D50 keys or put the order under
-   Blocked on.
-
-1. When 261110-024407-b289b5 passes, set State "ready for review" (all other jobs came out as planned).
+1. When the four jobs below pass: set State "ready for review".
 2. If a job fails on something other than these tests, show it also fails at main and report.
 
 ## Blocked on
 
-Nothing. (F2 ruled by the owner: option b, D50, done as A6.)
+Nothing.
 
 ## Evidence
 
-Jobs at the code head Xapiand:c73e3c7f1 (journal commits after it change no code):
-- test_engine_query with the fix, RelWithDebInfo, ASSERTS=ON: 261110-022726-fafa29.
-- same under UBSan with float-cast-overflow: 261110-022726-f81866.
-- build-test (`campaign verify`): 261110-022824-c5a2f4 (passed). fafa29 and f81866 passed.
-- reviewer part-A probe rerun at the head: 261110-024407-b289b5.
-- A6 job, reviewed code with the new tests: 261110-022727-1dd71e runs Xapiand:163305050 (= reviewed
-  Xapiand:f176d8896 with tests/test_engine_query.cc of the head; must FAIL on the two default-key checks).
-- F3 mutant job: 261110-022803-ef3749 runs Xapiand:5ab7ab4b6 (head with the open lower slot 0; must FAIL
-  on the key-order checks).
-Without the fix: tests alone (38f22b685) 261109-185346-2edf6c (range test: A2, A3) and under UBSan
-261109-185357-8fe848. Reviewer probe at master's query_dsl.cc with the final tests, part A:
-261109-195413-671cc0 (A1, A4). Superseded: 261110-021740-4105e9 (my misplaced `_sort`), 261110-021741-fbcbbf
-(same, mutant), 261109-193622-6d23b4 and 261109-193623-40183f (at ffc7e9517, before A6),
-261109-185347-50ec8a, 261109-185356-68cd98 (test setup bug, Rulings 7), 261109-192344-c4ac9a,
-261109-192345-1c7534 (bound-tag bug, Rulings 8).
+Jobs at the head (Xapiand:ace371929): test_engine_query with the fix, ASSERTS=ON 261110-030126-19d97e;
+under UBSan with float-cast-overflow 261110-030126-f64c97; reviewer part-A probe 261110-030126-7ce5bf;
+build-test 261110-030127-46d106.
+
+Expected failures, at other commits on purpose (listed here, not in the rows): without the fix, tests
+alone (38f22b685) 261109-185346-2edf6c (range test: A2, A3), under UBSan 261109-185357-8fe848; the
+probe's part A at master's query_dsl.cc 261109-195413-671cc0 (A1, A4; its rerun at the head is the part-A
+job above); A6 job 261110-022727-1dd71e (reviewed f176d8896 plus the head's test file; fails only on the
+two default-key checks, :1270, :1280); F3 mutant 261110-022803-ef3749 (head with open lower slot 0; fails
+only on the two key-order checks, :1309, :1310). Superseded: 261110-021740-4105e9 and 261110-021741-fbcbbf
+(my misplaced `_sort` in the key-order test), 261109-185347-50ec8a, 261109-185356-68cd98 (test setup bug,
+Rulings 7), 261109-192344-c4ac9a, 261109-192345-1c7534 (bound-tag bug, Rulings 8), the earlier passes at
+c73e3c7f1 (261110-022726-fafa29, -f81866, 261110-022824-c5a2f4, 261110-024407-b289b5).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `test_dsl_not_is_none_of`: fails without the fix at master's query_dsl.cc (the `_not` checks and audit cases) 261109-195413-671cc0 and its rerun at the head 261110-024407-b289b5 (part A; 261109-185346-2edf6c failed on test setup first, not cited); passes with it 261110-022726-fafa29 |
-| A2 | `test_range_aggregation_open_bounds`: fails without the fix 261109-185346-2edf6c; passes with it 261110-022726-fafa29; UBSan with it 261110-022726-f81866 (without: 261109-185357-8fe848); key-order check (Rulings 5) killed by mutant 261110-022803-ef3749 (fails only on the two order checks, :1309, :1310; the earlier 4105e9 failure was the test's own misplaced `_sort`) |
-| A3 | float and date cases in the same test (261110-022726-fafa29). Note: negative float/date values with an open lower bound were dropped at master (min() is positive); the test counts them |
-| A4 | served as the one-subquery form (Rulings 2); bare-object checks in `test_dsl_not_is_none_of`, fail at master 261109-195413-671cc0 / 261110-024407-b289b5, pass 261110-022726-fafa29 |
-| A5 | build-test at the head 261110-022824-c5a2f4; CI after landing |
-| A6 | default keys `2.5..`/`3..` (integer) and `-5..4`/`..4` (positive), each with its own count, in `test_range_aggregation_open_bounds`: passes 261110-022726-fafa29; fails at the reviewed commit f176d8896 with the new test: A6 job 261110-022727-1dd71e: fails only on the two default-key checks (:1270, :1280) |
+| A1 | `test_dsl_not_is_none_of` passes with the fix 261110-030126-19d97e; the same checks (`_not` and the audit cases) fail at master's query_dsl.cc in part A of the probe (expected failures above), whose rerun at the head is 261110-030126-7ce5bf |
+| A2 | `test_range_aggregation_open_bounds` passes with the fix 261110-030126-19d97e and under UBSan 261110-030126-f64c97; it fails without the fix (expected failures above); the key-order check (Rulings 5) is killed by the F3 mutant (above) |
+| A3 | float and date cases in the same test, 261110-030126-19d97e. Note: negative float/date values with an open lower bound were dropped at master (min() is positive); the test counts them |
+| A4 | served as the one-subquery form (Rulings 2); bare-object checks in `test_dsl_not_is_none_of`, 261110-030126-19d97e; they fail at master in the probe's part A (above), rerun 261110-030126-7ce5bf |
+| A5 | build-test at the head 261110-030127-46d106; CI after landing |
+| A6 | default keys `2.5..`/`3..` (integer) and `-5..4`/`..4` (positive), each with its own count, in `test_range_aggregation_open_bounds`: passes 261110-030126-19d97e; fails at the reviewed commit f176d8896 with the new test (A6 job above) |
 
 ## Result
 
