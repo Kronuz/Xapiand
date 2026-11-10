@@ -209,15 +209,15 @@ pm.test("Response values are valid", function() {
 ```
 e2e:end -->
 
-Let's first dissect the search call. We are searching in the `/bank/` index,
-and the `q=*` query parameter instructs Xapiand to _match all_ documents in the
-index (the default if not specified). The `sort=accountNumber` parameter
+Let's first dissect the search call. We are searching in the `/bank/` index.
+Without a `q` parameter the search _matches all_ documents in the index (the
+default; `q=*` says it explicitly). The `sort=accountNumber` parameter
 indicates to sort the results using the `accountNumber` field of each document
 in an ascending order. The `pretty` parameter just tells Xapiand to return
 pretty-printed JSON results, a similar effect can be achieved by using the
 `Accept` header as in: `Accept: application/json; indent: 2`.
 
-And the response (partially shown):
+And the response (partially shown), as a node started with `-vvvv` returns it:
 
 ```json
 {
@@ -276,12 +276,67 @@ As for the response, we see the following parts:
 * `total` - Number of estimated documents that match the query.
 * `count` - Total number of returned hits.
 * `hits`  - Search results.
-* `took`  - Time it took to execute the query.
+* `aggregations` - The results of the aggregations of the request, when it has any.
+* `took`  - Time it took to execute the query: seconds as a number, or a
+  humanized string such as `39.889ms` when `human` is on (`--human`, `-vvvv`).
+
+The fields that start with `#` in each hit (`#docid`, `#shard`, `#rank`,
+`#weight` and `#percent`) are comments: they appear only when `comments` is on
+(`--comments`, `-vvvv`, or `?comments` on the request). A hit always carries its
+document's `_id` and `_version`.
+
+```rest
+SEARCH /bank/?limit=1&comments
+```
+
+<!-- e2e:begin
+---
+description: Search with comments
+---
+
+```js
+pm.test("A hit carries its comments", function () {
+  pm.response.to.be.success;
+  var hit = pm.response.json().hits[0];
+  pm.expect(hit).to.have.property("_id");
+  pm.expect(hit).to.have.property("_version");
+  ["#docid", "#shard", "#rank", "#weight", "#percent"].forEach(function (key) {
+    pm.expect(hit).to.have.property(key);
+  });
+});
+```
+e2e:end -->
+
+The `COUNT` method takes the same parameters and body as `SEARCH`, and returns
+only the `total`:
+
+```rest
+COUNT /bank/
+
+{
+  "_query": {
+    "gender": "female"
+  }
+}
+```
+
+<!-- e2e:begin
+---
+description: COUNT the female accounts
+---
+
+```js
+pm.test("COUNT answers the total", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().total).to.equal(459);
+});
+```
+e2e:end -->
 
 ## Introducing the Query Language
 
 Xapiand provides a JSON-style _domain-specific language_ that you can use to
-execute queries. This is referred to as the [Query DSL](reference-guide/query-dsl).
+execute queries. This is referred to as the [Query DSL](/Xapiand/reference-guide/search/query-dsl).
 The query language is quite comprehensive and can be intimidating at first
 glance but the best way to actually learn it is to start with a few basic
 examples.
@@ -291,7 +346,7 @@ The **Query DSL** method for searching is much more efficient.
 :::
 
 Going back to our last example, we executed a query to retrieve all documents
-using `q=*`. Here is the same exact search using the alternative request body
+with no `q`. Here is the same exact search using the alternative request body
 method:
 
 ```rest
@@ -320,13 +375,12 @@ pm.test("Introducing the Query Language results", function() {
 ```
 e2e:end -->
 
-The difference here is that instead of passing `q=*` in the URI, we `POST` a
-JSON-style query request body to the `SEARCH` method.
+The difference here is that instead of passing `sort` in the URI, we send a
+JSON-style query request body with the `SEARCH` method.
 
-Dissecting the above, the query part tells us what our query definition is and
-the `_query` part is simply the type of query that we want to run. The
-`*` query is simply a search for all documents in the specified index (the
-default).
+Dissecting the above, the `_query` key holds the query definition and `_sort`
+the order of the results. The `*` query is simply a search for all documents in
+the specified index (the default).
 
 In addition to the query parameter, we also can pass other parameters to
 influence the search results. In the example in the section above we passed in
@@ -427,6 +481,41 @@ pm.test("Response values are valid", function() {
   var expected = [12699.46, 10857.55, 10819.51, 10729.87, 10663.25, 10643.84, 10513.99, 10448.36, 10087.41, 10073.05];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i].balance).to.equal(expected[i]);
+  }
+});
+```
+e2e:end -->
+
+To sort by several fields, give a list; each entry names a field and its order
+(`asc` or `desc`):
+
+```rest
+SEARCH /bank/
+
+{
+  "_query": "*",
+  "_sort": [
+    {"age": "asc"},
+    {"balance": "desc"}
+  ]
+}
+```
+
+<!-- e2e:begin
+---
+description: Search ordered by age, then balance
+---
+
+```js
+pm.test("Hits are ordered by age, then by balance descending", function () {
+  pm.response.to.be.success;
+  var hits = pm.response.json().hits;
+  pm.expect(hits.length).to.equal(10);
+  for (var i = 1; i < hits.length; ++i) {
+    pm.expect(hits[i].age).to.be.at.least(hits[i - 1].age);
+    if (hits[i].age === hits[i - 1].age) {
+      pm.expect(hits[i].balance).to.be.at.most(hits[i - 1].balance);
+    }
   }
 });
 ```
@@ -640,3 +729,15 @@ And the response (partially shown):
 There are many other aggregations capabilities that we won't go into detail here.
 The [Aggregations Reference Guide](/Xapiand/reference-guide/search/aggregations)
 is a great starting point if you want to do further experimentation.
+
+## Where to go from here
+
+You have now indexed, updated, searched and aggregated documents. From here:
+
+* The [Reference Guide](/Xapiand/reference-guide/api) describes every request
+  and every query, schema and aggregation in detail.
+* The [Tutorials](/Xapiand/tutorials/home) walk through complete scenarios,
+  such as [spatial search](/Xapiand/tutorials/spatial-search).
+* [Options](/Xapiand/options) lists every setting of the node, and how to stop it.
+* [Basic Concepts](/Xapiand/basics) explains documents, indexes, nodes and
+  shards.

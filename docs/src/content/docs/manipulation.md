@@ -2,11 +2,19 @@
 title: "Data Manipulation"
 ---
 
-Xapiand provides data manipulation and search capabilities in near real time.
-By default, you can expect a one second delay (refresh interval) from the time
-you index/update/delete your data until the time that it appears in your search
-results. This is an important distinction from other platforms like SQL wherein
-data is immediately available after a transaction is completed.
+Xapiand reads its own writes: a document you index, update or delete is
+visible to the next search or get as soon as the node has answered the write.
+The index commits to disk 1 s after its last write (3 s while writes keep
+coming, and 8 to 10 s after the first of them at the latest), or before the
+answer when the request carries `?commit`. A write the node answered with a 2xx
+is in the write-ahead log and survives a crash either way.
+
+Every `PUT`, `POST`, `UPDATE`, `PATCH`, `UPSERT` and `DELETE` below addresses a
+document in an index by its path: in `/twitter/user/John` the index is
+`twitter/user` and the document ID is `John`. The responses shown are those of
+a node that echoes writes (`--echo`, `-vvvv`, or `?echo` on the request); see
+[What a write answers](/Xapiand/quickstart#what-a-write-answers) for the
+answers without it.
 
 ## Indexing/Replacing Documents
 
@@ -33,8 +41,8 @@ pm.test("Response is success", function() {
 ```
 e2e:end -->
 
-The above will index the specified document into the user index, with the ID of
-`John`. If we then executed the above command again with a different (or same)
+The above will index the specified document into the `twitter/user` index, with
+the ID of `John`. If we then executed the above command again with a different (or same)
 document, Xapiand will replace (i.e. reindex) a new document on top of the
 existing one with the ID of `John`:
 
@@ -178,6 +186,101 @@ pm.test("Response is success", function() {
 ```
 e2e:end -->
 
+### Patching Documents
+
+`PATCH` applies a [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902) (an
+array of operations) to a document. A body that is not an array of objects
+answers `400`. This example creates a document and then replaces one field,
+adds another and removes a third:
+
+```rest
+PUT /twitter/user/Mary
+
+{
+  "name": "Mary Major",
+  "age": 31
+}
+```
+
+```rest
+PATCH /twitter/user/Mary
+
+[
+  {"op": "replace", "path": "/name", "value": "Mary Minor"},
+  {"op": "add", "path": "/city", "value": "Oslo"},
+  {"op": "remove", "path": "/age"}
+]
+```
+
+<!-- e2e:begin
+---
+description: PATCH Mary -> JSON Patch applied
+---
+
+```js
+pm.test("The patch is applied", function () {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.name).to.equal("Mary Minor");
+  pm.expect(jsonData.city).to.equal("Oslo");
+  pm.expect(jsonData).to.not.have.property("age");
+});
+```
+e2e:end -->
+
+### Upserting Documents
+
+`UPDATE` of a document that does not exist answers `404 Not Found`. `UPSERT`
+merges like `UPDATE` when the document exists and creates it when it does not:
+
+```rest
+UPSERT /twitter/user/Nora
+
+{
+  "name": "Nora North"
+}
+```
+
+<!-- e2e:begin
+---
+description: UPSERT Nora -> created
+---
+
+```js
+pm.test("UPSERT creates the document", function () {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.name).to.equal("Nora North");
+  pm.expect(jsonData._id).to.equal("Nora");
+  pm.expect(jsonData._version).to.equal(1);
+});
+```
+e2e:end -->
+
+```rest
+UPSERT /twitter/user/Nora
+
+{
+  "age": 40
+}
+```
+
+<!-- e2e:begin
+---
+description: UPSERT Nora -> merged
+---
+
+```js
+pm.test("UPSERT merges into the existing document", function () {
+  pm.response.to.be.success;
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.name).to.equal("Nora North");
+  pm.expect(jsonData.age).to.equal(40);
+  pm.expect(jsonData._version).to.equal(2);
+});
+```
+e2e:end -->
+
 ### Updating With Scripts
 
 Updates can also be performed by using simple scripts. This example uses a
@@ -239,6 +342,110 @@ description: Index: DELETE Jane
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+Deleting answers `204 No Content`, and `404 Not Found` when the document does
+not exist. There is no request that deletes an index; `DELETE /twitter/user/`
+answers `501 Not Implemented`:
+
+```rest
+DELETE /twitter/user/
+```
+
+<!-- e2e:begin
+---
+description: DELETE of an index is not implemented
+---
+
+```js
+pm.test("Deleting an index answers 501", function () {
+  pm.response.to.have.status(501);
+});
+```
+e2e:end -->
+
+## Checking a Document
+
+`HEAD` answers `200 OK` for a document that exists and `404 Not Found` for one
+that does not, without a body:
+
+```rest
+HEAD /twitter/user/John
+```
+
+<!-- e2e:begin
+---
+description: HEAD of an existing document
+---
+
+```js
+pm.test("The document exists", function () {
+  pm.response.to.have.status(200);
+});
+```
+e2e:end -->
+
+```rest
+HEAD /twitter/user/Jane
+```
+
+<!-- e2e:begin
+---
+description: HEAD of a deleted document
+---
+
+```js
+pm.test("The document is gone", function () {
+  pm.response.to.have.status(404);
+});
+```
+e2e:end -->
+
+## Committing and Checking an Index
+
+The index commits on its own, as described at the top of this page. `COMMIT`
+commits an index now and answers `200 OK` once it is done; the `?commit`
+parameter does the same as part of a write:
+
+```rest
+COMMIT /twitter/user/
+```
+
+<!-- e2e:begin
+---
+description: COMMIT the twitter/user index
+---
+
+```js
+pm.test("The index is committed", function () {
+  pm.response.to.have.status(200);
+});
+```
+e2e:end -->
+
+`CHECK` verifies an index and reports, for each of its shards, the number of
+errors it found (`0` for a sound shard):
+
+```rest
+CHECK /twitter/user/
+```
+
+<!-- e2e:begin
+---
+description: CHECK the twitter/user index
+---
+
+```js
+pm.test("Every shard is sound", function () {
+  pm.response.to.be.success;
+  var errors = pm.response.json().errors;
+  var shards = Object.keys(errors);
+  pm.expect(shards.length).to.equal(5);
+  shards.forEach(function (shard) {
+    pm.expect(errors[shard]).to.equal(0);
+  });
 });
 ```
 e2e:end -->
