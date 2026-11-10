@@ -167,3 +167,76 @@ Scripts in `/Users/kronuz/code/Kronuz/Xapiand/.scratch/review-manifest-log-durab
 - The security review's findings and the A9 rerun are outside this re-check.
 
 Tokens: ~160k
+
+## Re-check 2
+
+Commit: strata:1ebeff876de93af2442045d89757f91076117520
+Verdict: APPROVE
+Date: 2026-11-10
+
+Scope: `git show f39abc3e` (F3's fix) and `git show 1ebeff87` (the N2 sweep) against F3. No new probe job;
+I used the jobs below and read the code at the head.
+
+### Evidence used
+
+- 261110-114551-711f81 (ASan+UBSan, assertions on: the script overrides `CMAKE_CXX_FLAGS_RELWITHDEBINFO`, so
+  no `NDEBUG`), `apply_atomic_test` and `hazard_test` at 1ebeff87, exit 0. The ten sweeps print: commit 153
+  points, commit with a held view 161, reclaiming commit 150, install 98, install with a held view 109, each
+  at burst 0 and 1, no report; hazard: ok.
+- 261110-114602-96a9cd (ASan) and 261110-114604-0667d8 (Release) run at 3b672c41. `git diff 1ebeff87
+  3b672c41` is exactly the fix reverted (`reserve()`, the `noexcept`/assert, the two `reserve()` calls) and
+  no test file, so they are the same test against the old code. ASan: `heap-use-after-free` read in
+  `view_state` (`apply_atomic_test.cc:204`), freed by `publish_view`, from `durable_sweep`
+  (`apply_atomic_test.cc:326`), exit 134. Release: segmentation fault, exit 139.
+
+### F3: closed
+
+`basic_retired::reserve()` (`hazard.hh:379-381`) grows `list_` before the publish and `retire()` is
+`noexcept` on that room (`hazard.hh:384-387`). `publish_view` reserves first (`index.hh:3028`) and retires
+after the stores (`:3038`); `retire_current` reserves first (`:3046`).
+
+1. Every caller. `retire(` has two call sites in the library (`index.hh:3038`, `:3048`) and `reserve()` two
+   (`:3028`, `:3046`), each ahead of its own publish with nothing but atomic stores, the test-only
+   `rs.probe` and a move in between. `publish_view` has two callers, `publish_point` (`:2944`) and
+   `publish_cover` (`:2993`); `publish_point` is reached from `commit()` (`:962`), install (`:1694`),
+   `refresh` (`:881`), the merge installs (`:1077`, `:1102`), `:2911` and `:3422`; `retire_current` from
+   `close()` (`:665`) and `~basic_index` (`:631`). All go through the two reserved functions, so install
+   and the other paths are covered. In the destructor a throwing `reserve()` terminates, as the old
+   `push_back` did; in `close()` it throws before anything is published, so readers are untouched.
+   `hazard_test`'s three owner loops reserve before their publish.
+2. Concurrency. `list_` has one owner: `retire`, `reclaim` (including its `erase_if`), `for_each`, `leak`,
+   `size` and `empty` are all called from the writer under its lease (`writer_scope` in `try_finish_close`,
+   `commit`, `close`, the destructor; `free_views`, `retire_current`, `publish_view` under the callers
+   above). Readers touch the registry's records, never `list_`; `reclaim` reads the registry, not the
+   reverse. `reserve()` is called by the same owner as `retire()`; it moves the elements (a noexcept move
+   of `unique_ptr`) before adopting the new buffer, so a failed `reserve` leaves the list as it was, and
+   `reclaim`/`leak` keep the capacity. Nothing a scan could read mid-way. `retire()` with no room, in a
+   build without assertions, terminates (noexcept) instead of freeing a held pointer.
+3. The sweep. `durable_attempt` reads the held view after every step, whether or not it threw
+   (`apply_atomic_test.cc:266-270`, `view_state(*held) != seen` is `wrong`), then a fresh `acquire()`.
+   With the fix reverted the same test fails in ASan and Release (jobs above), and the held case adds
+   points (161 against 153, 109 against 98), so the reader changes what is allocated. The failure shows
+   at the held read, so it is a real gate.
+
+### N2: M2 closed, M3 not
+
+The new install cases kill M2 (install's post-log steps outside `durable()`): reviewer's `mutants.py` at
+1ebeff87, job 261110-114559-823541 (`killed: M1`, `killed: M2`, `SURVIVED: M3`, `killed: M4`; 3 of 4), and
+the contributor's M2 mutant, job 261110-114607-d6584b (failed, as it must). M3 (`reclaim_files` alone
+outside `durable()` in `commit()`) still survives the "commit reclaiming a merge's sources" case: the same
+job, and the contributor's 261110-114609-102757 at 4bb2e08 (the diff is that move alone) exit 0. So the
+sweep does not yet fail an allocation inside `reclaim_files` after a durable commit; either the queue is
+empty at that point or the allocation is absorbed. The code is correct by reading (`index.hh:961-966`).
+
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Status / fix |
+|---|---|---|---|---|---|
+| F3 | yes | defect | Closed: the room is reserved before the publish in both functions that publish then retire (`index.hh:3028`, `:3046`), `retire` is `noexcept` (`hazard.hh:384`), no other call site exists, and the retired list has a single owner. The held-view sweep reads the held view and a fresh acquire after every failure (`apply_atomic_test.cc:266-276`) and fails with the fix reverted. | 261110-114551-711f81 (pass); 261110-114602-96a9cd (ASan, 134, use-after-free at `view_state`), 261110-114604-0667d8 (Release, segfault) at 3b672c41 = the fix reverted | none |
+| N2 | no | gap | Half closed: M2 killed, M3 (`reclaim_files` outside `durable()` in `commit()`) survives the reclaiming-commit case, so the commit message's "or reclaim_files alone" is not yet true. | 261110-114559-823541 (`SURVIVED: M3`); 261110-114609-102757 exit 0 at 4bb2e08 | Make that case's reclaim queue non-empty at the commit's `reclaim_files` and fail an allocation in it, or note the queue as untested. Not blocking: correct by reading. |
+| N5 | no | note | `retire()`'s precondition is an `assert`, so in a build without assertions a caller that forgets `reserve()` terminates on allocation failure instead of misbehaving: safe, and the ASan job runs with assertions on. | `hazard.hh:384-387` | none |
+
+### Not run
+
+- No new probe; no `alloc_crash_probe` rerun at 1ebeff87 (the sweep and the mutant pair cover F3; my probe's
+  scenario with a reader is the same shape). No TSan or Linux run at this head.
