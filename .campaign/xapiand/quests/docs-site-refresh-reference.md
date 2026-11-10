@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The rest of docs-site-refresh (D45, D47, D55): the HTTP API reference guide, the usage tutorials and the remaining pages describe Xapiand as it runs on strata, each true of the code at the landed commit, with their request examples run as the docs E2E, and `docs/dev/docs-coverage.md` maps every served feature to its page and tests. Split from docs-site-refresh, whose getting-started and architecture areas landed first.
 
 ## Acceptance criteria
 
@@ -14,18 +14,22 @@ needs a job that passed at the landed code; tag one `[artifact]` (a committed `p
 `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
 cannot show it.
 
-- A1 <criterion>: <evidence>
+- A1 [artifact] Every audit row (`docs/dev/docs-site-audit.md`) for the pages docs-site-refresh did not cover, marked stale, wrong or missing, is fixed or deleted, each fixed claim citing its source in the journal: the rows checked off in the journal's table
+- A2 The docs E2E passes at the landed code: the `e2e` check
+- A3 No page says Xapiand stores or searches through Xapian, except the upgrade page, the changelog and history pages: a `git grep -niw xapian docs/src/content/docs` job
+- A4 The whole site builds without broken internal links: a light job running the site build and its link check (the 5 reference-guide pages listed on 11-10 included)
+- A5 Every feature the audit lists as undocumented that docs-site-refresh did not cover (FLUSH, QUIT, WAL; search parameters; limits; the queryparser grammar) has a page section with `rest` requests and `pm.test` assertions (D47), and the request count never falls: the `e2e` check and `docs_to_postman.py` as a job before and after
+- A6 [artifact] `docs/dev/docs-coverage.md` maps each served feature to its page and its tests, and lists what is still uncovered with the reason: `docs/dev/docs-coverage.md`: "## Coverage"
+- A7 changelog.md:40 no longer promises that a 2xx write survives a crash (it survives a stop; D13, D54), and the sidebar drops `next` with its page: the `e2e` check's site build, and quotes in the journal
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-10 (D55): split from docs-site-refresh. The value-encoding pages and the About page's licence sentence stay sortable-encoding's (D52).
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Whole areas (one task each) once their pages pass A2 and A4 for their own pages.
