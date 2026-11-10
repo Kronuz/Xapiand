@@ -3030,6 +3030,8 @@
     "github-triage": {
       "accepted": {},
       "after": [],
+      "base": "d139ac6ca9801884c95699879898932449f2247d",
+      "branch": "quest/xapiand/github-triage",
       "checks": [
         {
           "cmd": "cd docs/discussions/worker && npm ci && npm test",
@@ -3081,9 +3083,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Address and close the GitHub issues and PRs",
-      "updated": "2026-11-09T18:33:00"
+      "updated": "2026-11-09T18:33:09",
+      "worktree": "../Xapiand-wt/xapiand/github-triage"
     },
     "hashes-cl-1": {
       "accepted": {},
