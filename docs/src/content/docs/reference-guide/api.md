@@ -910,7 +910,7 @@ A failed request answers a JSON body with the `status`, its `type` and a `messag
 |---|---|
 | `200 OK` | The request succeeded and has a body. |
 | `201 Created` | `POST` without an ID: the new document's URL is in `Location`. |
-| `204 No Content` | A write succeeded and echoes nothing (the default; see [Options](/Xapiand/options#what-a-write-answers)). |
+| `204 No Content` | A write succeeded and echoes nothing (the default; see [Quick-start](/Xapiand/quickstart#what-a-write-answers)). |
 | `400 Bad Request` | The request is malformed or past a limit; the `message` says which. |
 | `404 Not Found` | The document or index is not there. |
 | `405 Method Not Allowed` | The verb is not served at that path. |

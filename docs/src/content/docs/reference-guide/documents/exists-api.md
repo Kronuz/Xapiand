@@ -11,7 +11,8 @@ For example:
 HEAD /twitter/tweet/1
 ```
 
-The result of the above operation is a `200 OK` HTTP response code with no body.
+The result of the above operation is a `200 OK` HTTP response code with no body,
+or `404 Not Found` when the document is not there.
 
 :::hint{.warning}
 [Trailing slashes are important](/Xapiand/reference-guide/api#trailing-slashes-are-important).

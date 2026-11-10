@@ -2,16 +2,16 @@
 title: "Versioning"
 ---
 
-Xapiand is asynchronous and concurrent. When documents are created, updated, or
-deleted, several requests can change the same document at once, and they may
-arrive _out of sequence_. Xapiand needs a way of ensuring that an older version of a
-document never overwrites a newer version.
+Xapiand is concurrent. When documents are created or updated, several requests can
+change the same document at once, and a client may write from a copy of the
+document that is already out of date. Xapiand needs a way of telling the client
+that the document changed under it.
 
-To ensure an older version of a document doesn't overwrite a newer version,
-every document has a `_version` number that is incremented whenever a document
-is changed. Xapiand uses this `_version` number to ensure that changes are
-applied in the correct order. If an older version of a document arrives after a
-new version, it can simply be ignored.
+Every document has a `_version` number that is incremented whenever the document
+is written. A write that carries no version always applies, and the last write
+wins. A write that names the version it expects (the `version` query param, or a
+`_version` in the document body) applies only if that is the document's current
+version; otherwise it answers `409 Conflict` and changes nothing.
 
 For example, the following indexing command will create a document and assign
 a version to it:
@@ -24,7 +24,9 @@ PUT /twitter/user/Kronuz
 }
 ```
 
-This is all business as usual, the interesting bit is in the response:
+This is all business as usual. The write answers `204 No Content`; with the
+`echo` query param it answers the document, and the interesting bit is its
+`_version`:
 
 ```json
 {
@@ -143,3 +145,92 @@ been incremented to 2:
 
 However, if we were to rerun the same index request, still specifying
 version `1`, Xapiand would respond with a `409 Conflict` HTTP response code.
+
+The version is checked by `PUT`, `POST`, `UPDATE`, `PATCH` and `UPSERT`. `DELETE` does not
+check it (see [Delete](../delete-api#version)).
+
+## Creating only when missing
+
+A version of `0` stands for a document that does not exist: the write applies only
+when no document has that ID. Any other version names a document that must be there,
+so it also answers `409` when the document is missing.
+
+```rest
+PUT /versions/doc/1?version=0
+
+{
+  "title": "first"
+}
+```
+
+```rest
+PUT /versions/doc/1?version=0
+
+{
+  "title": "second"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: version 0 is create-only
+---
+
+```js
+pm.test("Version 0 refuses an existing document", function () {
+  pm.response.to.have.status(409);
+});
+```
+e2e:end -->
+
+```rest
+PUT /versions/doc/1?version=1
+
+{
+  "title": "second"
+}
+```
+
+```rest
+GET /versions/doc/1
+```
+
+<!-- e2e:begin
+---
+description: Versioning: the version moved to 2
+---
+
+```js
+pm.test("The write moved the version to 2", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._version).to.equal(2);
+  pm.expect(pm.response.json().title).to.equal("second");
+});
+```
+e2e:end -->
+
+```rest
+PUT /versions/doc/1?version=1
+
+{
+  "title": "third"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: a stale version
+---
+
+```js
+pm.test("A stale version answers 409", function () {
+  pm.response.to.have.status(409);
+});
+```
+e2e:end -->
+
+Sources: `src/database/handler.cc:339-342` (the check in `prepare`);
+`src/engine/strata/shard.cc:604-611,626-629` (`check_version`: a missing document
+has version 0); the `version` query param is read
+at `src/server/search_views.cc:2363-2367`, and `_version` in the body at
+`src/database/schema.cc:2933`.
