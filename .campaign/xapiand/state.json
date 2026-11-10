@@ -1113,6 +1113,8 @@
     "cli-restore-records": {
       "accepted": {},
       "after": [],
+      "base": "a5b8ccf49b83fb1a1e63b5ff946cdfa101cea3b0",
+      "branch": "quest/xapiand/cli-restore-records",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -1142,9 +1144,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "CLI --restore into an empty data directory writes the index's shard records",
-      "updated": "2026-11-09T18:09:48"
+      "updated": "2026-11-09T18:10:15",
+      "worktree": "../Xapiand-wt/xapiand/cli-restore-records"
     },
     "closing-benchmark": {
       "accepted": {},
