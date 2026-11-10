@@ -467,6 +467,10 @@ export const sidebar = [
         }
       },
       {
+        "label": "Coverage",
+        "slug": "tests/coverage"
+      },
+      {
         "label": "Check Datatypes",
         "slug": "tests/datatypes/check-data-types"
       },

@@ -2,6 +2,7 @@
 title: "Tests"
 ---
 
+* [**_Coverage_**](/Xapiand/tests/coverage): each feature, its page and its tests
 * [**_Check Datatypes_**](/Xapiand/tests/datatypes/check-data-types)
 * [**_Check DateType_**](/Xapiand/tests/datatypes/date-type)
 * [**_Global terms_**](/Xapiand/tests/globalterms/global-terms)
