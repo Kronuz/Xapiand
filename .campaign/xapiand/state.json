@@ -2318,7 +2318,8 @@
         "docs/src/content/docs/tests.md",
         "docs/src/content/docs/benchmarks.md",
         "docs/src/content/docs/contributing.md",
-        "docs/src/lib/**"
+        "docs/src/lib/**",
+        "docs/src/content/docs/welcome.md"
       ],
       "landed": [],
       "lenses": [],
@@ -2329,7 +2330,7 @@
       "risk": "low",
       "status": "active",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T08:15:25",
+      "updated": "2026-11-10T15:24:03",
       "worktree": "../Xapiand-wt/xapiand/docs-site-refresh-reference"
     },
     "docs-upgrade-page": {
@@ -13635,6 +13636,10 @@
       "consumes": [],
       "files": [
         "src/server/**",
+        "src/metrics.h",
+        "src/metrics.cc",
+        "src/database/schemas_lru.cc",
+        "src/database/schemas_lru.h",
         "tests/test_node.cc",
         "docs/mechanisms/requests-on-the-reactor.md",
         "docs/mechanisms/cancellation.md"
@@ -13650,7 +13655,7 @@
       "risk": "normal",
       "status": "active",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T14:23:28",
+      "updated": "2026-11-10T15:12:13",
       "worktree": "../Xapiand-wt/xapiand/x7-cancel-rows"
     },
     "x7-catalog-timer": {
@@ -13672,7 +13677,15 @@
       "files": [
         "src/database/pool.cc",
         "src/database/pool.h",
-        "docs/mechanisms/index-registry-on-catalog.md"
+        "src/manager.cc",
+        "src/manager.h",
+        "tests/test_pool.cc",
+        "tests/pool_support.h",
+        "tests/test_reactor_requests.cc",
+        "tests/test_blocking_guard.cc",
+        "tests/test_wide_search.cc",
+        "docs/mechanisms/index-registry-on-catalog.md",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
       "lenses": [
@@ -13685,7 +13698,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T14:23:20",
+      "updated": "2026-11-10T15:17:05",
       "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
     },
     "x7-coverage": {
