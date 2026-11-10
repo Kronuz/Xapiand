@@ -54,7 +54,17 @@ the damage check, rewritten).
 
 ## Result
 
-Not ready for review. Steps 3a and 3b done, 3c begun.
+Not ready for review: step 3c's jobs at strata:9d4630c are pending, and A9's prospect half waits
+for manifest-log-prospect's port.
+
+Step 3c (strata:1b9e46b to strata:9d4630c): T4 cases 1 and 4 to 9; A5's writer half with a fix
+(R27: any failure past the durable boundary fences; 152 commit allocation points, 12 fenced with
+the edit durable, 139 retried, 2 failing before the fix); T6 equal to `main` on 80 streams
+(verdicts, per-commit digests, reopen, pins; `test/digest_streams.cc`, `test/digest_vs_ref.py`);
+T4 case 1 over 2,000 crash points of rollovers and lazy cleanups; A3's open read on the 20M-doc,
+10M-deleted shape locally 41.8 ms for the snapshot alone and 39.8 ms with the 128 delete edits
+(replay within noise; 8.9 s on ordinal vectors), the edits' apply 0.07 ms. Docs:
+`docs/mechanisms/index-on-the-log.md` (the fence rule, the new proofs).
 
 Step 3b, the index on the log (strata:f2089f9 to strata:074129c): commit appends the edit or rolls
 over by D7, recover replays and syncs only the log, retention reads kept generations from the log
