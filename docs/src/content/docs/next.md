@@ -2,15 +2,16 @@
 title: "Next Steps"
 ---
 
----
+You have installed Xapiand, indexed documents, changed them, searched them and
+aggregated them. The rest of the documentation goes deeper:
 
-## Where to go from here?
-
-Xapiand is both a simple and complex product. We've so far learned the basics
-of what it is, how to look inside of it, and how to work with it using some of
-the REST APIs. Hopefully this guide has given you a better understanding of
-what Xapiand is and more importantly, inspired you to further experiment with
-the rest of its great features!
-
-Tutorials can be found in the [Tutorials](/Xapiand/tutorials/home/)
-section.
+* **[Reference Guide](/Xapiand/reference-guide/api)**: every request the node
+  answers, with the document, index, schema, search and aggregation APIs.
+* **[Tutorials](/Xapiand/tutorials/home)**: complete scenarios, such as
+  [spatial search](/Xapiand/tutorials/spatial-search).
+* **[Options](/Xapiand/options)**: every setting of the node, how to serve
+  HTTPS, and how to stop it.
+* **[Architecture](/Xapiand/architecture)**: how a request flows from the
+  socket to the index.
+* **[Upgrading](/Xapiand/upgrade)**: moving data from an earlier release.
+* **[FAQ](/Xapiand/faq)**: short answers to common questions.

@@ -71,6 +71,13 @@
       "closed": "agreed: one shared runner; hunt row filed to evaluate replacing docs_to_postman.py + newman once Detent's exists",
       "id": "msg-10",
       "text": "From the owner via the Detent lead: Xapiand's surface is also (at least) a Python library, so when it makes sense Xapiand could use the same kind of small Python docs runner Detent is building (D46: runs every documented command, HTTP request and code sample, Python included, with hidden e2e assertion blocks, walked in sidebar order, no Postman/newman). Detent writes it in docs-wave-1 (after N1 + Dense pages land) at tests/docs/; once it exists I'll tell you so you can reuse or share one runner rather than keep two."
+    },
+    {
+      "at": "2026-11-10T12:20:32",
+      "by": "detent-lead",
+      "closed": "answered: picks and X1-X3 in Detent .scratch/skill/proposal.md; Detent writes P1+P5, Xapiand P3/P4/P6/X1-X3 on agent-campaign speed-xapiand",
+      "id": "msg-20",
+      "text": "Owner asks both leads to agree on campaign speed fixes and land them in the skill. My numbers and 6 proposals (input-scoped job identity, exclusive drain, supersede on rerun, slot safety, skill text rules, superseded-evidence flag) are in /Users/kronuz/code/Kronuz/Detent/.scratch/skill/proposal.md. Please add Xapiand's, say which you take, and whether I should write P1 or P5 on a branch in agent-campaign for you to review and land."
     }
   ],
   "quests": {
@@ -1027,11 +1034,37 @@
         "README.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/cjk-segmenter",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T05:46:10",
+          "commit": "fbf5b7d4150406b2f61140e9960da8d07124c91e",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8ce3f0cac31d444a92d30af0737e48fccda3cb7c",
+              "docs": [
+                "docs/cjk-segmenter.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-021459-cefd67",
+              "level": "light",
+              "seconds": 37.8,
+              "state": "done",
+              "what": "cjk-segmenter check build-test at 8ce3f0cac31d"
+            }
+          ],
+          "final": true,
+          "from": "0d441669e5684d83638c3b495eeb6da038481f31",
+          "reason": "",
+          "tested": "fbf5b7d4150406b2f61140e9960da8d07124c91e"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [],
       "provides": [
@@ -1039,10 +1072,10 @@
       ],
       "repo": "../analysis",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "A CJK word segmenter in Kronuz/analysis",
-      "updated": "2026-11-10T03:41:21",
-      "worktree": "../analysis-wt/xapiand/cjk-segmenter"
+      "updated": "2026-11-10T05:46:12",
+      "worktree": ""
     },
     "cjk-words": {
       "accepted": {},
@@ -2193,8 +2226,31 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T07:26:11",
+          "commit": "1e56dd22b0c623e76a150fa2d41da96e9037265c",
+          "evidence": [
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "2be5c57d71b14dd08a99ba04c6004bd4392970c9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-043753-be98ef",
+              "level": "light",
+              "seconds": 243.7,
+              "state": "done",
+              "what": "docs-site-refresh check e2e at 2be5c57d71b1"
+            }
+          ],
+          "final": true,
+          "from": "2cc086a7884ab268eb5077870ee3539cdbf5a981",
+          "reason": "",
+          "tested": "c1df4fbe2b253c0fa03d5265296d6fc98dfd8325"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [
         "docs-site-audit"
@@ -2202,7 +2258,7 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "tasks": {
         "architecture": {
           "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
@@ -2211,7 +2267,7 @@
             "docs/src/content/docs/architecture.md",
             "docs/src/content/docs/architecture/**"
           ],
-          "worktree": "../Xapiand-wt/xapiand/docs-site-refresh--architecture"
+          "worktree": ""
         },
         "getting-started": {
           "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
@@ -2231,12 +2287,50 @@
             "docs/src/content/docs/help.md",
             "docs/src/content/docs/options.md"
           ],
-          "worktree": "../Xapiand-wt/xapiand/docs-site-refresh--getting-started"
+          "worktree": ""
         }
       },
       "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
-      "updated": "2026-11-10T04:37:27",
-      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh"
+      "updated": "2026-11-10T07:26:23",
+      "worktree": ""
+    },
+    "docs-site-refresh-reference": {
+      "accepted": {},
+      "after": [
+        "write-path-fixes"
+      ],
+      "base": "9a847a7c7824ebbf75f8bd55a5b3c8b91a0fb78f",
+      "branch": "quest/xapiand/docs-site-refresh-reference",
+      "checks": [
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 90,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/tutorials/**",
+        "docs/src/content/docs/tests/**",
+        "docs/src/content/docs/next.md",
+        "docs/src/content/docs/tests.md",
+        "docs/src/content/docs/benchmarks.md",
+        "docs/src/content/docs/contributing.md",
+        "docs/src/lib/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "The document profile gate",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
+      "updated": "2026-11-10T08:15:25",
+      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh-reference"
     },
     "docs-upgrade-page": {
       "accepted": {},
@@ -4974,20 +5068,47 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/perf-watch-peek",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T05:01:59",
+          "commit": "51d153aa1bc33a433b0c1b4dad56671d01f89d27",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "13933f0a12710320a267dbfcadffb0135aca78a1",
+              "docs": [
+                "CHANGELOG.md",
+                "docs/perf/watch-peek.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-145852-514f5a",
+              "level": "light",
+              "seconds": 115.7,
+              "state": "done",
+              "what": "perf-watch-peek check build-test at 13933f0a1271"
+            }
+          ],
+          "final": true,
+          "from": "66050ec19adbc38f35c2a45b36a5c0ad05c65557",
+          "reason": "",
+          "tested": "51d153aa1bc33a433b0c1b4dad56671d01f89d27"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-10T02:46:21",
-      "worktree": "../http-wt/xapiand/perf-watch-peek"
+      "updated": "2026-11-10T05:02:02",
+      "worktree": ""
     },
     "phase0": {
       "accepted": {},
@@ -10069,9 +10190,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-10T02:32:41",
+      "updated": "2026-11-10T05:13:56",
       "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
@@ -10734,9 +10855,104 @@
       "title": "Chunked lock-free reader registry",
       "updated": "2026-11-08T15:39:49"
     },
+    "x7-cancel-rows": {
+      "accepted": {},
+      "after": [
+        "write-path-fixes"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/**",
+        "tests/test_node.cc",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
+      "updated": "2026-11-10T05:35:28"
+    },
+    "x7-catalog-timer": {
+      "accepted": {},
+      "after": [
+        "write-path-fixes"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/pool.cc",
+        "src/database/pool.h",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
+      "updated": "2026-11-10T08:14:22"
+    },
+    "x7-coverage": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/coverage*.sh",
+        "harness/restore_corpora*",
+        "tests/corpora/**",
+        "TESTING.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Coverage harness and restore corpora for T13 (x7-gate A13)",
+      "updated": "2026-11-10T05:35:32"
+    },
     "x7-gate": {
       "accepted": {},
       "after": [],
+      "base": "ddaca9d01e0a66d3ca54ec98b2ed730ef848aef4",
+      "branch": "quest/xapiand/x7-gate",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -11138,9 +11354,107 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-09T04:14:37"
+      "updated": "2026-11-10T05:22:10",
+      "worktree": "../Xapiand-wt/xapiand/x7-gate"
+    },
+    "x7-http-repin": {
+      "accepted": {},
+      "after": [],
+      "base": "737c369e5d41ff70c9b6b84b1507f6f26ad3948d",
+      "branch": "quest/xapiand/x7-http-repin",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-10T10:31:51",
+          "commit": "f2315af5401eaf1ff40fa56f4046b47459c77a7f",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "3805a53bbe3fc54c735363d8ba0749b3d58a4a1e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-092615-73908c",
+              "level": "light",
+              "seconds": 938.5,
+              "state": "done",
+              "what": "x7-http-repin check build-test at 3805a53bbe3f"
+            },
+            {
+              "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+              "commit": "3805a53bbe3fc54c735363d8ba0749b3d58a4a1e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-092615-d6934d",
+              "level": "light",
+              "seconds": 506.5,
+              "state": "done",
+              "what": "x7-http-repin check e2e at 3805a53bbe3f"
+            }
+          ],
+          "final": true,
+          "from": "7fc96a50200c75a4612f41c18e5bf1ea1329f5ea",
+          "reason": "",
+          "tested": "8f27fc8df9033625cdca4bb5936a4b1f9cec6480"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "Repin http to main with perf-watch-peek (x7-gate A24)",
+      "updated": "2026-11-10T10:31:57",
+      "worktree": ""
+    },
+    "x7-view-bench": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/bench_shard_view.cc",
+        "CMakeLists.txt",
+        "docs/perf/shard-view.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
+      "updated": "2026-11-10T05:35:56"
     },
     "xapiand-final-release": {
       "accepted": {},

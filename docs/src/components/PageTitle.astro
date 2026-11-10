@@ -35,6 +35,7 @@ const title = route.entry.data.title;
 const isSplash = route.entry.data.template === 'splash';
 ---
 
+{isSplash && <span id="_top" />}
 {
 	!isSplash && (
 		<div class="kz-page-head">
