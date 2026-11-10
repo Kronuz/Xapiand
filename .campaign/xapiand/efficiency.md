@@ -125,3 +125,4 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | x7-gate rows triage | — | — | resumed to 242k (opus) | — | 2 master gaps (DB-TIMER thread, T8 peaks) → D56; 2 harness bugs fixed | — |
 | manifest-log round 2 | — | — | resumed to 152k (opus) | — | new A5 test found a real unfenced-after-log-moved defect; fixed R39 | — |
 | 11-10 08:2x hourly | — | — | — | weekly 31%, 0.88%/h (exhaustion 79 h vs reset 133 h) | — | nothing launchable; 60 jobs queued behind another campaign's exclusive hold; disk 80 GiB |
+| 11-10 09:2x hourly | — | — | — | weekly 31%, 0.85%/h (exhaustion 81 h vs reset 132 h) | — | nothing launchable; a worker stop during the campaign-tool change interrupted 9 jobs (manifest-log 6, docs-reference 2), resubmitted; write-path-fixes 5 of 11 done green; 40 queued, load 4; disk 80 GiB |
