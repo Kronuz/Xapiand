@@ -9644,6 +9644,45 @@
       "title": "Shared reads of write buffers",
       "updated": "2026-11-08T15:39:30"
     },
+    "write-path-fixes": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/server/search_views.h",
+        "src/database/handler.cc",
+        "src/database/handler.h",
+        "src/database/shard.cc",
+        "src/database/shard.h",
+        "src/database/schema.cc",
+        "src/engine/**",
+        "tests/test_engine_document.cc",
+        "tests/test_engine_strata.cc"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "The document profile gate",
+      "needs": [
+        "cli-restore-records"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Document id 0 and the ?version check on writes",
+      "updated": "2026-11-09T18:57:16"
+    },
     "x-pool": {
       "accepted": {
         "correctness": {
