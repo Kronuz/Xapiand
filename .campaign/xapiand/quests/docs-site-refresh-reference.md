@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-The rest of docs-site-refresh (D45, D47, D55): the HTTP API reference guide, the usage tutorials and the remaining pages describe Xapiand as it runs on strata, each true of the code at the landed commit, with their request examples run as the docs E2E, and `docs/dev/docs-coverage.md` maps every served feature to its page and tests. Split from docs-site-refresh, whose getting-started and architecture areas landed first.
+The rest of docs-site-refresh (D45, D47, D55): the HTTP API reference guide, the usage tutorials and the remaining pages describe Xapiand as it runs on strata, each true of the code at the landed commit, with their request examples run as the docs E2E, and the site page `tests/coverage.md` maps every served feature to its page and tests. Split from docs-site-refresh, whose getting-started and architecture areas landed first.
 
 ## Acceptance criteria
 
@@ -19,7 +19,7 @@ cannot show it.
 - A3 No page says Xapiand stores or searches through Xapian, except the upgrade page, the changelog and history pages: a `git grep -niw xapian docs/src/content/docs` job
 - A4 The whole site builds without broken internal links: a light job running the site build and its link check (the 5 reference-guide pages listed on 11-10 included)
 - A5 Every feature the audit lists as undocumented that docs-site-refresh did not cover (FLUSH, QUIT, WAL; search parameters; limits; the queryparser grammar) has a page section with `rest` requests and `pm.test` assertions (D47), and the request count never falls: the `e2e` check and `docs_to_postman.py` as a job before and after
-- A6 [artifact] `docs/dev/docs-coverage.md` maps each served feature to its page and its tests, and lists what is still uncovered with the reason: `docs/dev/docs-coverage.md`: "## Coverage"
+- A6 [artifact] `docs/src/content/docs/tests/coverage.md` (a site page) maps each served feature to its page and its tests, and lists what is still uncovered with the reason: `docs/src/content/docs/tests/coverage.md`: "## Coverage"
 - A7 The sidebar drops `next` with its page: the `e2e` check's site build, and a quote in the journal
 
 ## Contracts
