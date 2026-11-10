@@ -1,6 +1,6 @@
 # automata-evaluation: journal
 
-State: waiting on jobs 261109-174628-59e91d 261109-174630-31d66c
+State: ready for review
 Quest: .campaign/xapiand/quests/automata-evaluation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,28 +9,25 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Evaluation drafted in prospect `docs/design/automata.md` (prospect:39d142a, citations corrected at
-prospect:429d0f0; the harness blocks are identical at both), harness embedded in its appendix and
-extracted by each job. The cross-check passed; the strict smoke and screen are queued (host load
-37 on 16 threads at 17:56, so strict has not started).
+Evaluation complete in prospect `docs/design/automata.md` revision 2 (prospect:b38d147): D46
+folded in (Verdict, D1, D2, D4 to D6, D9, "Owner rulings (D46)" table, steps), "Numbers" filled
+from the strict screen. Harness blocks byte-identical at prospect:39d142a (where the jobs ran),
+429d0f0 and b38d147 (sha1 d6450cf over the appendix blocks).
 
 ## Next
 
-1. Fill "Numbers" (and the D1 and Verdict figures) from 261109-174630-31d66c; decide D4 (cursor
-   vs restarted scan) and D5 (lookup per match) from its s/a and l/a columns.
-2. Commit, set State to ready for review; propose A2's PLAN row text under Blocked on (the lead
-   writes PLAN.md).
+1. Review (lead's call), then land.
 
 ## Blocked on
 
-Nothing yet.
+Nothing.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
+| A1 | `docs/design/automata.md` (prospect:b38d147); jobs 261109-173038-76ce62 (branch tests, Release), 261109-173049-b37276 (ASan+UBSan), 261109-174627-134722 (brute-force cross-check, 3 mutants caught), 261109-174630-31d66c (strict screen, 70 queries x 5 runs; smoke 261109-174628-59e91d) |
+| A2 | D46 |
 
 Jobs examined:
 - 261109-173038-76ce62 (branch tests, Release, at strata:219ded0d via --ref): `automata` passed
@@ -44,12 +41,21 @@ Jobs examined:
   187,911 matches: the branch's automata over termdict with seeks, over restarted scans, and
   `intersect_sorted` all equal Xapiand's `pattern.cc` predicates over every term. Mutants caught:
   1 (k + 1), 2 (Xapiand's flag bits unmapped), 3 (seek one byte past the target).
+- 261109-174628-59e91d (strict smoke, 14 queries, 1 run) and 261109-174630-31d66c (strict screen,
+  70 queries, 5 runs, prospect:39d142a): four arms equal on every query; x/a class sums prefix
+  1.18, glob ? 83.6, glob *x 1.97, fuzzy k1 p0 2,075, k1 p2 42.9, k2 p0 96.5, k2 p2 4.93; s/a 1.00
+  to 1.06 non-fuzzy, 1.21 to 1.49 fuzzy; l/a 12.89 prefix, 0.90 to 1.04 elsewhere.
 - Probes (unversioned, never evidence): 261109-173409-6a6ee2, 261109-173959-233147,
   261109-173439-fc8922, 261109-174331-9100a8.
 
 ## Result
 
-<When ready for review.>
+prospect `docs/design/automata.md` revision 2: port per D46 (Kronuz/automata library, prospect
+`expand.hh` with a per-field seekable cursor and infos decoded in the walk, termdict gains
+`cursor::seek(from, visit)`, Xapiand keeps the query mapping and serves key-field edit distance,
+dead terms skipped, fst's automaton concept and string-similarity's OSA plan dropped). Fuzzy
+without a fixed prefix: 67 to 2,650 times faster than Xapiand's scan (1.0 to 1.5 s to 0.5 to 20
+ms per query, x86_64 macOS, one segment of 3.96 M terms).
 
 ## Rulings I made
 
@@ -59,3 +65,9 @@ Jobs examined:
   (outside the checkout; the job verifies its SHA-256 090511d2...e8a before running).
 - The bench runs at `strict` (smoke, then screen) and is labelled as a branch screen, not a
   milestone number.
+- D4 settled on the screen: a seekable per-field cursor in prospect (restarted scans 1.21 to 1.49
+  times on fuzzy); the key field restarts `keys_plugin`'s scan (no strata API change) until a
+  profile shows it.
+- D5 settled on the screen: infos decoded in the walk via an additive termdict visitor seek (a
+  lookup per match costs 12.9 times the walk on prefixes, past the doc's one-tenth bar).
+- The liveness probe (D46 Q2) is unmeasured here; the doc assigns it to the `automata` quest's A3.
