@@ -1,6 +1,6 @@
 # x7-cancel-rows: journal
 
-State: waiting on jobs 261110-151402-093b4e 261110-151422-751ade 261110-151425-061294
+State: waiting on jobs 261110-153616-0b6979 261110-153617-fa27e0 261110-153619-aee819
 Quest: .campaign/xapiand/quests/x7-cancel-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,11 +15,18 @@ src/database/schemas_lru.{h,cc}). Xapiand:ac7e91d22: `SchemasLRU::get`/`set` pas
 a helper run twice: cached schema (A1) and cold, first schema load (A5,
 `test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled`).
 
+Suite 261110-151402-093b4e failed on the async check (`src/metrics.cc:358 [mutex] unclassified`, the
+lock in `Metrics::raise_peak`); its mutants 261110-151422-751ade and 261110-151425-061294 were
+skipped. Xapiand:f0c9c32f7 makes the peaks lock-free: `std::atomic<std::size_t>` members of
+`Metrics` raised by a compare-exchange loop, published to their gauges by `Metrics::serialise` at
+each scrape. Local `harness/async_check.sh --strict --owed` (quiet light, strata from the slot's
+.deps): 250 hits, unclassified 0, owed 0.
+
 Jobs:
-- 261110-151402-093b4e: `campaign verify` build-test at ac7e91d22, the suite for A1-A5.
-- 261110-151422-751ade: mutant A1/A4 at 719349afbd65 (refs/mutants/x7-cancel-rows: increment and
+- 261110-153616-0b6979: `campaign verify` build-test at f0c9c32f7, the suite for A1-A5.
+- 261110-153617-fa27e0: mutant A1/A4 at 6ac5626fa54d (refs/mutants/x7-cancel-rows: increment and
   both peak raises removed); succeeds only when frees_its_reactor and admission_peaks both fail.
-- 261110-151425-061294: mutant A5 at cb43adbb9985 (refs/mutants/x7-cancel-rows-a5: `get` passes
+- 261110-153619-aee819: mutant A5 at ae607ffacb2a (refs/mutants/x7-cancel-rows-a5: `get` passes
   nullptr for the budget); succeeds only when the cached variant passes and the cold one fails.
 
 Earlier: 261110-143945-c98b2e failed (cold schema, the cause of A5; probe: the cached schema
