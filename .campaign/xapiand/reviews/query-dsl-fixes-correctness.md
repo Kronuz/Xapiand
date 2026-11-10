@@ -51,3 +51,30 @@ Probe job 261109-195413-671cc0 at f176d8896f40 with `--ref BASE=38f22b685701`. S
 - No ASan or TSan run: no allocation or threading change.
 - No Linux or other platforms: CI covers those.
 - No distributed `merge_results` path: unchanged code.
+
+## Re-review
+
+Commit: c73e3c7f1a048adfda487f7879cf2ef672480724
+Verdict: APPROVE
+Date: 2026-11-10
+
+Scope is F2 (option b, D50 and A6) and F3: `git diff f176d8896f40..c73e3c7f1 -- src/aggregations/bucket.h tests/test_engine_query.cc` (bucket.cc is unchanged).
+
+Evidence I accepted:
+- 261110-022726-fafa29 (RelWithDebInfo, ASSERTS=ON) and 261110-022726-f81866 (UBSan with float-cast-overflow) pass at c73e3c7f1.
+- 261110-022727-1dd71e runs the new test file over the bucket.h I approved earlier: `git diff f176d8896f40 163305050350 -- src` is empty and the test file is identical to c73e3c7f1's. It fails only at :1270 and :1280, the two collision cases, so the F2 test fails without the fix.
+- 261110-022803-ef3749 is exactly the F3 mutant (`slot()` returns 0 for an open lower bound). It fails only at :1309 and :1310.
+- 261110-021740-4105e9 failed at 9ea2fc771c6b, a commit before c73e3c7f1. The test it ran is not the one at the head, and I did not review that test.
+
+What I checked by reading:
+- **Bounds as written.** `bound_text` prints an integer tag as its exact integer and a float as fmt's shortest round-trip text (`2.5`, `-1e+09`, `1e+30`). A missing bound is an empty side, so an open end gives `X..` or `..Y`, and no bounds gives `..`. Dates take only numeric bounds, as before.
+- **Effective bounds still drive behaviour.** `Bounds` (`contains`, `slot`) still uses the effective bounds, so matching and ordering are unchanged. The test confirms it: `2.5..` counts 3 and 5.
+- **Named `_key`.** The `key.empty() ? default_key(range) : key` path is the same as before.
+- **Collisions.** Two requests with different effective ranges can no longer share a default key. Equal key text means equal bound values (round-trip float text and exact integers), and `..` cannot occur inside a bound's text.
+- **F3 test.** `_sort` sits inside `_range`, where `_conf_sort` reads it. Every bucket in it is non-empty, so the asc and desc orders test the slot and nothing else.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | nit | Two writings of the same value still share a default key and merge counts: `{_from: 3}` and `{_from: 3.0}` both give `3..`. They are the same range, as were the duplicate requests that already merged before this quest. A msgpack float32 bound prints its widened double (`0.10000000149011612`). | `bound_text` in src/aggregations/bucket.h | None needed; keying buckets by range index would remove the merge entirely (outside this quest). |
+
+F2 and F3 are resolved. F1 (evidence citation) is the lead's to confirm in the journal.
