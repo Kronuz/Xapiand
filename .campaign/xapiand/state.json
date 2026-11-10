@@ -10793,6 +10793,35 @@
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
       "updated": "2026-11-10T05:35:28"
     },
+    "x7-coverage": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/coverage*.sh",
+        "harness/restore_corpora*",
+        "tests/corpora/**",
+        "TESTING.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Coverage harness and restore corpora for T13 (x7-gate A13)",
+      "updated": "2026-11-10T05:35:32"
+    },
     "x7-gate": {
       "accepted": {},
       "after": [],
