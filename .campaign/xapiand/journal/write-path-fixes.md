@@ -90,8 +90,8 @@ became an out-of-range double-to-uint32 conversion, and a new id whose docid hel
 
 | Criterion | Evidence |
 |---|---|
-| A1 | at c1a23d4e2: head tests 261110-122259-dd4047 and build-test 261110-122258-68dacc exit 0 (test_document_ids_are_themselves, test_engine_strata placement); fails without the fix: mutants n4 261110-103007-ce2626, f1b 261110-103009-55d7f2 KILLED |
-| A2 | at c1a23d4e2: 261110-122259-dd4047 and 261110-122258-68dacc exit 0 (the three version cases, test_engine_strata conflicts); review probes 261110-122259-8ee938 exit 0; PATCH status at the head 261110-122259-72f6ef (204 without ?echo, ruling 10); fails without the fix: mutant f1a 261110-103008-973d5e KILLED |
+| A1 | at c1a23d4e2: head tests 261110-122259-dd4047 and build-test 261110-122258-68dacc exit 0 (test_document_ids_are_themselves, test_engine_strata placement); fails without the fix: see "Fails without the fix" (round 2 mutants n4, f1b) |
+| A2 | at c1a23d4e2: 261110-122259-dd4047 and 261110-122258-68dacc exit 0 (the three version cases, test_engine_strata conflicts); review probes 261110-122259-8ee938 exit 0; PATCH status at the head 261110-122259-72f6ef (204 without ?echo, ruling 10); fails without the fix: see "Fails without the fix" (round 2 mutant f1a) |
 | A3 | at c1a23d4e2: build-test 261110-122258-68dacc exit 0; docs E2E 261110-122258-1e6c55 exit 0 (smoke, e2e, tls) |
 | A4 | at c1a23d4e2: TSan 261110-122258-053f93 exit 0 (the five node cases x3, 1 and 2 shards) |
 | A5 | at c1a23d4e2: build-test 261110-122258-68dacc exit 0; CI green on quest/xapiand/write-path-fixes-r2 at c1a23d4e2 |
