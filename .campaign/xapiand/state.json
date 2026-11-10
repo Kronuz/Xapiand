@@ -10096,9 +10096,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-10T02:32:41",
+      "updated": "2026-11-10T05:13:56",
       "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
