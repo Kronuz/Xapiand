@@ -453,19 +453,19 @@ endif ()
 
 include(FetchContent)
 
-# compressors: the commit strata pins, for its stored blocks' one-shot LZ4 and zstd block codecs
-# (declared first, so it wins over the older pins of the libraries that also use compressors).
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5c5412871af96294ea617aebee2d1f99820d74c8)
-# Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use, declared
-# before them: FetchContent keeps the first declaration of a name, so these are the pins that count.
+# Every pin below is the newest commit any fetched library pins (harness/pins_check.py compares the
+# resolved trees); a library that pins an older one is bumped in its own repository.
+# compressors: the LZ4 and zstd block codecs of the stored blocks, and the deflate codec.
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5566260a30bbd2d77d5cfa890bfe33f503a2add6)
+# Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use.
 FetchContent_Declare(allocators  GIT_REPOSITORY https://github.com/Kronuz/allocators.git  GIT_TAG 07de45d180f23e2552b9504a6b4d506651594d1e)
 FetchContent_Declare(atomic_shared_ptr GIT_REPOSITORY https://github.com/Kronuz/atomic-shared-ptr.git GIT_TAG 9af0aa765fea19b4c7d05d6663ad3a7bff7c5530)
-FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 57613ed349bb4fa273806b78341a53f676089505)
-FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG a24942eabaad0b1c8e0b3404b4ae5a10b624b4c3)
+FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 25decb57ef5869e4677c42bf9a00ea25b58d35c0)
+FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG 6b223e2ed87fc398b4320c85d78a08a8fcb66a32)
 FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG a7202ada8d27e7eb2d4713fbfd3b43eaa347fc91)
-FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG e040c2b383a1a19147cfcb0d14947d38d098e534)
+FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG f8b93484f0a7cdc6e411f5e3907fb9dbe5def900)
 FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG d2eb8955d92be7229b371d493d4bab7b148c4d9b)
-FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 46561fad9f26f9b2b613568fe1a3dbcb016d4aba)
+FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 7eaa8f9d3cfc373ff25d620672a6f6f83b94ce3f)
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 1f9190ca19bbb5291456c54f3ff34982e0083113)
 FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 05f91deaf86cddf33839d5a4de60ffb3ce73bed0)
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 6799a6e8a1741367bda269546d3f3999d0f1d80f)
@@ -473,9 +473,9 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
-# rapidjson; logger / http_log pull cppcodec). FetchContent is first-declaration-wins
-# (the same reason as for any library declared before the one that fetches it), so these details --
-# crucially SOURCE_SUBDIR=do-not-configure -- govern the one shared copy and guarantee
+# rapidjson; logger / http_log pull cppcodec). FetchContent keeps whichever declaration of a
+# name comes first, so these details -- crucially SOURCE_SUBDIR=do-not-configure -- govern
+# the one shared copy and guarantee
 # their ancient CMakeLists never run. CMake 4.x rejects their pre-3.5
 # cmake_minimum_required outright (and rapidjson's would also build a bundled gtest),
 # so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
@@ -484,8 +484,8 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 1d82461008c897ab004652d5c43e60ccfa7012cb)
-FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 40af1a2089df42a3a622e6c3cd539b1e0f0da73f)
+FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 4b669b6c065e209f503e5f3ec839a0634dd13edf)
+FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG d48a28e50a915f772f254a6641cda100029bb31f)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG df0ebc885c3e72e139a35dd4e34f5c731f02b4bd)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
@@ -533,7 +533,7 @@ include_directories("${traceback_SOURCE_DIR}")
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG eb4751a33ed492961cb125df68e526264ba1f18b)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 63e03a5deca9c91f08755d900c61885dd5e75822)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
 FetchContent_MakeAvailable(threadpool)
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
@@ -653,9 +653,8 @@ add_compile_definitions(
 # keep working; msgpack_patcher.cc is compiled into XAPIAND_OBJ below so its
 # exceptions bind to Xapiand's real hierarchy. The vendored msgpack/exception.hpp
 # still includes "exception.h" directly; src/ is first on the include path, so
-# Xapiand's wrapper wins here.
-# hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
-# the commit with wordwise::hash32.
+# Xapiand's wrapper is the one found.
+# hashes: the commit with wordwise::hash32, which strata needs.
 FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 03ab2d69f7e1b0af6039733e0e06cc1e0118a45e)
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
 FetchContent_MakeAvailable(msgpack)
@@ -733,7 +732,7 @@ FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.
 FetchContent_MakeAvailable(unicode snowball analysis)
 
 # queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the
-# host, whatever engine runs the query. It pins analysis itself; the pin above is declared first and wins.
+# host, whatever engine runs the query.
 FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG f554cd3ac53aec755c9f6fc5190060a15466a37e)
 FetchContent_MakeAvailable(queryparser)
 
@@ -767,8 +766,8 @@ FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
-# strata and the libraries strata links (the pins above win where the same library is declared).
-# strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
+# strata and the libraries strata links.
+# strata: the commit with defer_io and work_pool_executor.
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 5d742b2407f5048713cb39a625c017c455cb814e)  # strata main: the catalog host interface, destroy-safe pins with cancel tokens
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
 FetchContent_MakeAvailable(prospect)
@@ -823,7 +822,6 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
-# reactor is declared before http so this pin wins over its (first declaration wins).
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG c813531cf893ce079e2737dff6274b2025f9b151)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
 FetchContent_MakeAvailable(http_lib)
