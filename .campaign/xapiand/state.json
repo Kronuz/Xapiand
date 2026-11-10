@@ -13683,7 +13683,8 @@
         "tests/test_reactor_requests.cc",
         "tests/test_blocking_guard.cc",
         "tests/test_wide_search.cc",
-        "docs/mechanisms/index-registry-on-catalog.md"
+        "docs/mechanisms/index-registry-on-catalog.md",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
       "lenses": [
@@ -13696,7 +13697,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T14:40:33",
+      "updated": "2026-11-10T15:17:05",
       "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
     },
     "x7-coverage": {
