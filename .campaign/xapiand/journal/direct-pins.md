@@ -1,6 +1,6 @@
 # direct-pins: journal
 
-State: waiting on jobs 261110-021214-0b13b3 261110-021215-ec2183 (concurrency test, fixed/old script) and 261110-021225-4cdcaa (build-test at xapiand:e13a10a35); e2e 261110-021226-edb1ac failed, to rerun
+State: waiting on jobs 261110-030028-b6051d (e2e rerun) 261110-030044-61a1f7 (pins check) at xapiand:16b72ecc3; build-test 261110-021225-4cdcaa passed; concurrency jobs 0b13b3 (pass) ec2183 (old script fails, bind in use) done
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
