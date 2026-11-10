@@ -445,7 +445,7 @@ clients. Light is open loop at a fixed rate: GET by id and single-term searches 
 | **T5** light-query p99 | Under heavy load ≤ 2x its unloaded p99 + 1 ms (PLAN `:645-647`), and below the pre-7c baseline; a same-index run (RESTORE into `accounts`) reported as Q6's cost | `stall_load.py`, `unloaded` then `loaded`, then `--restore-into accounts` |
 | **T6** reactor faults | Major faults on reactor threads per 1,000 queries ≤ 1 at 2x RAM: reported at 7c, gated at Phase 6 (owner) | Linux gate VM, `getrusage(RUSAGE_THREAD)` per loop, `stall_load.py --index-size 2xram` |
 | **T7** concurrency and shutdown | 0 TSan and 0 ASan reports; the final dump equals the model; a SIGTERM at 300 s exits 0 with every acknowledged write durable | `engine_mixed_load.py BIN OUT --engine strata --secs 600 --term-at 300` on TSan and on ASan builds |
-| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record index registry gives 503s, not errors | `stall_load.py --overload light 4` and `--overload heavy 4` (4x the saturating rate, K3); `test_readers_cap` |
+| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record index registry gives 503s, not errors | `stall_load.py --overload light 1.25` and `--overload heavy 1.25`: 1.25x the in-flight cap in requests held at headers-complete, bodies withheld until the excess is refused (K3); `test_readers_cap` |
 | **T9** cancellation | A read whose client disconnects frees its reactor within one slice, and the cancel counter rises; a write whose client half-closes completes and is durable | Functional tests: a heavy search disconnected after 50 ms; a PUT then `shutdown(SHUT_WR)` |
 | **T10** Lua bounds | Two calls interleaved on one script keep their own `_doc`; an infinite loop ends at the instruction cap; one inside a `table.sort` comparator ends at the non-yieldable bound; an exponential pattern, a quadratic plain `find`, a pattern with a long literal run or class, a vararg chain, a loop of library calls over a large string, a swallowed bound (a to-be-closed handler), an allocation past the cap and a single library call or pattern past `max_call_work` each end; a result past its byte or value budget answers 413; a foreign script and a local one of the same name never swap; all 4xx; T4 holds with four looping scripts, and with four looping library calls; with 16 clients each re-sending a request whose script makes one worst-case call, a light GET's p99 stays near the cap's 20 ms plus the host's own | Unit tests (the review's `lua_yield_probe` cases among them) plus `stall_load.py --lua-loop 4` |
 | **T11** replaced layer wins by a lot | Dispatch cost per light request is at most half the offload hop's, in CPU and in wall; parity fails (owner, 2026-10-27) | `harness/profile_light.sh` on both binaries at concurrency 1: CPU from frames, wall from K6's timestamps |
@@ -494,7 +494,10 @@ Kronuz/reactor. Done criteria:
   - light latency is measured from each request's scheduled send time, and the achieved and
     target rates are printed and asserted within 5%;
   - `--saturate` finds the saturating light rate by doubling the rate until p99 exceeds 10x the
-    unloaded p99, then bisecting, and `--overload light|heavy N` uses it;
+    unloaded p99, then bisecting;
+  - `--overload light|heavy F` holds F x the in-flight cap in light or heavy searches, each head sent
+    and its body withheld until the round's 503s show the cap refused the excess (an open-loop rate
+    puts rate x latency in flight, which a fast host keeps far under the cap);
   - every phase writes light p50, p99 and p99.9, lag deltas per loop, 503 and error counts,
     in-flight and demoted peaks, segment count, merge backlog and phase times as JSON;
   - `--lua-loop` and `--index-size` are present (later steps fill them);

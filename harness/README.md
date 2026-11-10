@@ -73,8 +73,10 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
   load: exhaustive aggregations, wildcard and phrase searches, and a RESTORE stream into
   `restore-target`. Latency runs from each request's scheduled send time; the achieved rate is
   asserted within 5% of the target. `--phase unloaded|loaded`, `--restore-into accounts` (Q6's
-  cost), `--saturate`, `--overload light|heavy N`, `--dry-run`. JSON out: light p50/p99/p99.9,
-  per-loop lag deltas from `:metrics`, 503 and error counts, segments and merge backlog, RSS.
+  cost), `--saturate`, `--overload light|heavy F`, `--dry-run`. JSON out: light p50/p99/p99.9,
+  per-loop lag deltas from `:metrics`, 503 and error counts (503s by reason), segments and merge
+  backlog, RSS. `--overload` holds F x the in-flight cap in requests (heads sent, bodies withheld), so
+  the excess is refused on any host; each round records how many were in flight and refused.
 - **`thread_census.sh PID`** -- threads by name prefix (T1); `--allow` fails on any other prefix.
 - **`async_check.sh`** -- every blocking primitive on a reactor-reachable path in one of four
   classes (D14, T1). `--strict` fails on an unclassified hit; `harness/async_allowlist.tsv` holds

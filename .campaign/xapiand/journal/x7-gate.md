@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261110-103010-fc5f2d
+State: waiting on jobs 261110-123313-fe03a9 261110-123314-96a9e6
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,9 +32,28 @@ t10_lua_asan rc 1: the ten concurrent swallowers hit the harness's fixed 120 s c
 28-38 s under ASan; fresh GETs 20/20). Lead fixed the timeout at Xapiand:47015d7ff (four bounds each, times printed);
 rerun 261110-103010-fc5f2d. Still timing out at 720 s would be a master finding.
 
+Rerun 261110-103010-fc5f2d (Xapiand:47015d7ff): t10_lua_asan rc 0 (ten swallowers 400 in 144-148 s), t8_overload_heavy
+rc 0 (5,807 heavy + 931 light 503s), t8_overload_light rc 1: 0 503s. Cause, from `stall_load.py`: the light overload
+was open loop at 4x `--saturate`'s rate through a pool, so the server held rate x latency in flight. This run's
+saturate step read 144/s (one p99 spike at 200/s: 48 ms over a 37 ms limit), so 576/s at p50 1.8 ms put about 1
+request in flight against 1,000 x 2 reactors; ccc9e3 read 1,900/s, offered 7,600/s past the server's throughput and
+queued (p50 3.2 s, 37,666 503s). The 503s depended on the measurement and host load. Heavy had the same shape (open
+loop at 4x a measured closed rate). Fixed at Xapiand:94eaf3dd5 (R7): held rounds. Jobs 261110-123313-fe03a9 (T8
+both + gate_tools, pass 1), 261110-123314-96a9e6 (T8 both, pass 2, after pass 1).
+
+### T8 held overloads (harness count per round: in flight at the barrier / refused with 503 before it; held 2,500, cap 2,000)
+
+| Job | Row | Rounds | In flight at barrier | Refused at barrier | 503s by reason | rc |
+|---|---|---|---|---|---|---|
+| 261110-123313-fe03a9 | light | - | - | - | - | pending |
+| 261110-123313-fe03a9 | heavy | - | - | - | - | pending |
+| 261110-123314-96a9e6 | light | - | - | - | - | pending |
+| 261110-123314-96a9e6 | heavy | - | - | - | - | pending |
+
 ## Next
 
-1. Read rerun 261110-081308-b8ca87 (`rows/rows.tsv`); a T8 still without 503s at two reactors is a master finding.
+1. Read jobs 261110-123313-fe03a9 and 261110-123314-96a9e6 (`rows/rows.tsv`, `t8_*.log` "rounds of" lines), fill the
+   T8 table and A8's row; a round not enforced (fewer refused than held - cap) is a master finding.
 2. Per-open-index RSS at 10,000 indexes in `wide_search_check.py gate` (A13's X3-5). Coverage, T9 and the view
    benchmark are quests x7-coverage, x7-cancel-rows, x7-view-bench (D53).
 3. The lead's timing rows (commands below) after write-path-fixes and docs-site-refresh land.
@@ -125,7 +144,7 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 | A2 | rows 261110-052957-f5e762 (`t2_e2e_asan`, `t2_stored_asan` passed); e2e 261110-032054-4e0406; CI run 42820866169 |
 | A3 | recovery 261110-052925-5d7e5b passed; rows 261110-052957-f5e762 (`t3_crash`, `t3_crash_asan` passed) |
 | A7 | t7-tsan 261110-052925-7da5aa passed; rows 261110-052957-f5e762 (`t7_asan` passed, 365 s) |
-| A8 | rows 261110-052957-f5e762 `t8_*` FAILED (harness, fixed Xapiand:e57e6ef0d); rerun 261110-081308-b8ca87 queued; peaks unexported (Blocked on 2); build-test 261110-032054-0d5177 (`test_readers_cap`) |
+| A8 | held overloads (R7, Xapiand:94eaf3dd5): 261110-123313-fe03a9, 261110-123314-96a9e6 pending; peaks unexported (Blocked on 2); build-test 261110-032054-0d5177 (`test_readers_cap`) |
 | A10 | rows 261110-052957-f5e762 (`t10_lua` passed; `t10_lua_asan` timed out at 30 s); rerun 261110-081308-b8ca87 queued |
 | A13 | rows 261110-052957-f5e762 (ASan+UBSan ctest rc 0); t7-tsan 261110-052925-7da5aa; CI run 42820866169 |
 | A14 | `docs/gates/phase7c.md` (skeleton) |
@@ -155,5 +174,14 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   --max-flood-p99-ms 5000`), so the row gates; the times are the Release row's and the lead's.
 - R6. A grep for 503 paths printed one line of `src/sortable_serialise.cc` (a match, not a read); no other GPL
   path was opened. Later greps exclude it.
+- R7. T8's overloads hold the cap's excess by construction, not by rate: `--overload light|heavy 1.25` sends rounds of
+  2,500 request heads (single-term searches; K3's heavy searches beside light at `--rate`) with bodies withheld.
+  The reactor gate admits at headers-complete and holds until the response (`http_asio.h` serve_connection_body),
+  so at most 2,000 are admitted and at least 500 refused; the barrier opens once they are, and a round short of
+  them fails the phase (`enforced`). The design's T8 target is unchanged; its procedure cell and K3 bullet now say
+  so (`docs/design/phase7c.md`). Open-loop 4x stays out: rate x latency in flight is host-dependent. 503s are
+  counted by body, so the in-flight cap ("Service Unavailable") and the demoted cap ("The server is busy") show
+  apart. "503s within one slice of the cap" is not measured: the client's refusal latency is Python's, not the
+  server's (recorded as info, `refused_at_barrier`).
 - R3. T8 runs at dry-run size (20,000 documents): the row's functional claims are 503s and no other errors; RSS
   within 10% of T4's run needs the lead's 1,000,000-document run.
