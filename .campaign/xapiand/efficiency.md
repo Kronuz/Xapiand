@@ -90,3 +90,4 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | barrier-warning-completion | 11-09 | 11-09 17:2x (completion:e49f288, Xapiand:3b9c774b8) | review 160k | ~1 | 1 durability APPROVE, 0 blocking | 0 |
 | x-pool-followups | 11-09 14:2x | 11-09 18:xx (Xapiand:05eccd0fb, merge Xapiand:f332e5989) | ~150k contributor + lead | ~1 | waived (normal; mutants + 20/20 restore + CI) | 2 (ready() refactor; mutant retarget) |
 | sortable-followups | 11-09 17:2x | 11-09 18:xx (sortable:2e85e15) | 103k | ~0.5 | none (low; lead read the diff) | 1 (artifact rows reformatted) |
+| 11-09 18:2x hourly | — | — | — | weekly 18%, 0.84%/h | — | landed docs-site-audit (Xapiand:9cfe372af, merge e57d2d089); agents: docs-site-audit 318k, phase3-ratchets 291k, automata-evaluation 247k, docs-upgrade-page fix 142k, direct-pins 135k; queue 50 (34 Detent dense-pages light); disk 133 GiB; load 39 |
