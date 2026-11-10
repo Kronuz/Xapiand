@@ -412,9 +412,9 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "PosixIO warns when a barrier only orders",
-      "updated": "2026-11-09T16:22:55",
+      "updated": "2026-11-09T17:09:18",
       "worktree": "../completion-wt/xapiand/barrier-warning-completion"
     },
     "barrier-warning-strata": {
