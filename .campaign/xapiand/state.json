@@ -2292,6 +2292,8 @@
       "after": [
         "docs-site-refresh"
       ],
+      "base": "9a847a7c7824ebbf75f8bd55a5b3c8b91a0fb78f",
+      "branch": "quest/xapiand/docs-site-refresh-reference",
       "checks": [
         {
           "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
@@ -2318,9 +2320,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T07:27:13"
+      "updated": "2026-11-10T07:27:25",
+      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh-reference"
     },
     "docs-upgrade-page": {
       "accepted": {},
