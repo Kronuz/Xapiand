@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+T13 can run: a coverage harness reports line coverage against TESTING.md's targets, and the restore corpora T13 names exist (dumps written by the previous release and by current master, replayed by RESTORE and compared document by document).
 
 ## Acceptance criteria
 
@@ -14,18 +14,18 @@ needs a job that passed at the landed code; tag one `[artifact]` (a committed `p
 `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
 cannot show it.
 
-- A1 <criterion>: <evidence>
+- A1 `harness/coverage.sh` builds with coverage and prints line coverage per area beside TESTING.md's targets: a job
+- A2 Restore corpora are committed under tests/corpora/ with the build that wrote each, and a harness replays each through RESTORE and compares every document: a job
+- A3 TESTING.md names both harnesses: [artifact] TESTING.md
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-10: found by x7-gate's inventory (A13): no restore corpora and no coverage harness exist. Corpora stay small (under 5 MB each).
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Everything (harnesses and test data).

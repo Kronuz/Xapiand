@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Xapiand pins Kronuz/http at its main head, which includes perf-watch-peek (http:51d153a), so x7-gate's T12 and A24 measure the keep-alive watch without its extra read. Nothing else changes.
 
 ## Acceptance criteria
 
@@ -14,18 +14,17 @@ needs a job that passed at the landed code; tag one `[artifact]` (a committed `p
 `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
 cannot show it.
 
-- A1 <criterion>: <evidence>
+- A1 The `http_lib` GIT_TAG in CMakeLists.txt is http main's head and includes http:51d153a: `harness/pins_check.py` in the `build-test` job, and the diff
+- A2 The build, unit tests and docs E2E pass: the `build-test` and `e2e` checks, and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes http main (perf-watch-peek's readiness wait). Provides nothing new.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-10: found by x7-gate's inventory (A24).
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+None.

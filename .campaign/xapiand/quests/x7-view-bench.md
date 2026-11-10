@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`Shard::view()` has a benchmark at 1 and 8 threads on one index, and its numbers are in docs/perf/shard-view.md, so x7-gate's A22 (X3-4) can cite them.
 
 ## Acceptance criteria
 
@@ -14,18 +14,17 @@ needs a job that passed at the landed code; tag one `[artifact]` (a committed `p
 `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
 cannot show it.
 
-- A1 <criterion>: <evidence>
+- A1 A benchmark target measures `Shard::view()` per call at 1 and 8 threads on one index: a `strict` job, the numbers and commit in docs/perf/shard-view.md
+- A2 The build and unit tests pass: the `build-test` check
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-10: found by x7-gate's inventory (A22).
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Everything (a benchmark and a note).
