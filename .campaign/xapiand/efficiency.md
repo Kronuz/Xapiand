@@ -112,3 +112,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | Detent async-drivers re-review | — | APPROVE at Detent:1ece2ff | 108k (sonnet) | — | 14 of 15 closed, X10 partial | — |
 | write-path-fixes resume | — | review | 117k (opus) | — | paired correctness reviews launched (Opus high, Fable max: D49 trial 2) | — |
 | 11-10 05:2x hourly | — | — | — | weekly 28%, 0.87%/h (exhaustion 83 h vs reset 136 h) | — | started x7-gate (Phase 7c gate, opus, step 1: inventory + functional rows); manifest-log resume (opus) on one surviving mutant; phase6 held; 46 jobs queued, load 4.5; disk 94 GiB |
+| cjk-segmenter | 11-09 | 11-10 06:1x (analysis:fbf5b7d) | ~650k over 4 contributor runs + reviews 199k + 58k | ~4 | correctness APPROVE (2 rounds + docs addendum) | 2 (analysis CI needed a manual dispatch) |
+| x7-gate step 1 | 11-10 05:2x | — | 205k (opus) | — | inventory: 3 met, 7 gaps → D53 + 4 quests | — |
+| manifest-log survivor round | — | — | 134k (opus) | — | R37 survivor killed by a new test; all jobs resubmitted at 8b532c8 | — |
+| 11-10 06:2x hourly | — | — | — | weekly 29%, 0.87%/h (exhaustion 82 h vs reset 135 h) | — | nothing launchable; 105 jobs queued, load 16; disk 99 GiB; cross-repo CI-trigger fix denied by the permission system, awaiting owner |
