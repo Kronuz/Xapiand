@@ -2,7 +2,9 @@
 title: "UUID Datatype"
 ---
 
-A UUID field can store version 1, 3, 4, and 5 UUIDs as specified in [RFC 4122].
+A UUID field stores a UUID as specified in [RFC 4122]. A value is accepted when it has the UUID
+format (the version is not checked, so versions 1, 3, 4 and 5 are accepted, and the
+version 6 ones the node mints).
 
 ```rest
 UPDATE /bank/1
@@ -14,8 +16,12 @@ UPDATE /bank/1
 
 ## Condensed UUIDs
 
-Xapiand supports a subset of UUID 1 which can be represented as strings in
-condensed form. Document IDs are of this type by default.
+Xapiand supports a subset of UUID 1 (and the version 6 codec the node mints by default)
+which can be represented as strings in condensed form, `~` followed by the encoded
+bytes. The ID the node generates for a document with no ID of its own is such a
+condensed UUID, version 6 by default and version 1 with `--legacy-ids`; so an index whose
+first document has no ID has a `uuid` `_id` (an index whose first ID is a number or a
+string takes that type instead, see [Index Document API](/Xapiand/reference-guide/documents/index-api#automatic-id-generation)).
 
 For example, the UUID `00000000-0000-1000-8000-010000000000` can be represented
 as the string "~notmet".
