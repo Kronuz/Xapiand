@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: waiting on jobs 261109-154838-ab0dbc 261109-154840-db382b 261109-154841-35d7ea 261109-154842-e89e93 261109-154844-624428 261109-154845-6a1734 261109-154903-20023c
+State: waiting on jobs 261109-212058-c999f8 261109-212222-4d4b55 261109-212117-5b1128 261109-212247-2389ea
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,28 +9,40 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Fourth contributor. Step 3c at strata:9d4630c: T4 case 1 (lifecycle), T6 against `main`, A5's
-writer half (a fix: any failure past the durable boundary fences), the A3 open-read row, the
-tools/mutants port (lead's ruling 1). Jobs at strata:9d4630c: build-test 261109-154838-ab0dbc,
-mutants 261109-154840-db382b (29 log and index mutants, then `tools/mutants/fields.py`), keys
-mutants 261109-154841-35d7ea, A3's T7 row (strict) 261109-154842-e89e93, T6 vs main
-261109-154844-624428, both fuzz targets 5 minutes each 261109-154845-6a1734, A9's Xapiand half
-261109-154903-20023c (Xapiand master Xapiand:c8276fae3 with `FETCHCONTENT_SOURCE_DIR_STRATA`).
-Mutants 261109-143552-5afa2f at strata:4d2a541: 23 of 23 killed.
+Fifth contributor. GitHub CI at strata:9d4630c (run 42725685700) was red on every platform; strata
+`main`'s last run (42678605136 at strata:3df7af4) is green but for macos-arm64, which no runner
+acquired, so every failure is this quest's. Causes and fixes in strata:e0508e9 (R29 to R32):
 
-Locally at strata:9d4630c (macOS, Release): manifest_log, apply_atomic (152 commit allocation
-points: 139 retried, 12 fenced after the edit was durable, 1 absorbed), lifecycle's rollover part
-(2,000 points over 159 workloads, 159 rollovers at generation 130, 88 cleanups, 38 inside
-recoveries, 22.8 s), index, digest_vs_ref (80 streams equal to `main`).
+1. cold_segment aborted everywhere: CI builds RelWithDebInfo `-O2 -g` with assertions; our jobs
+   were Release. A lazy install's records have no body, and the install's own commit read the
+   live length from the body (`mapped()` asserts). Reproduced locally (exit 134), fixed (R29).
+2. apply_atomic terminated on Linux (libstdc++ only): `detail::stable_bytes`'s noexcept
+   constructor holds a `std::deque`, which libstdc++ allocates on construction; the commit sweep's
+   injected bad_alloc there terminated. Reproduced with g++-16 on macOS, backtrace
+   `flush_documents` > `_Deque_base::_M_initialize_map` (R30). Pre-existing on `main`, exposed by
+   this quest's sweep; writer.hh is in the file set.
+3. linux-tsan: manifest_log_test's operator new collides with TSan's at link (R31).
+4. Timing: `deleted sets` "below < 0.5" under ASan (552 ms) and `replay cost` fields_ratio 43.1x on
+   macos-x86_64 (R31).
+5. Found while fixing 2: a fence whose message allocation fails let bad_alloc escape unfenced
+   (R32).
+
+Jobs at strata:e0508e9: build-test 261109-212058-c999f8; CI's config 261109-212222-4d4b55
+(assertions, full ctest with clang, three tests under libstdc++, then stable_bytes' noexcept put
+back must terminate apply_atomic); mutants 261109-212117-5b1128 (31 log and index, assertions on,
+then fields.py); A9 261109-212247-2389ea (prospect ff99494 suite and identity vs strata main,
+then Xapiand master Xapiand:3ed4270d3).
+
+Locally at strata:e0508e9 (macOS, RelWithDebInfo with assertions): cold_segment ok; apply_atomic
+ok under clang (152 commit points, burst 0 and 1 each 12 fenced durable) and g++-16 (157 points);
+without R32 the burst sweep fails (N=140 unfenced, retry refused "segment identity twice", 0
+fenced); manifest_log ok in 3.7 s (ratios 13.6x and 1.2x).
 
 ## Next
 
-1. Read the jobs at strata:9d4630c; fix what is red with a rerun of that probe only.
-2. A9's prospect half: when manifest-log-prospect's branch has its port committed (its journal:
-   pinned at strata:4d2a541, port uncommitted), run `test/prospect_integration.sh` at this head with
-   `--ref prospect=/Users/kronuz/code/Kronuz/prospect@<its branch commit> --ref main=main`.
-3. Fill the Evidence rows for A2 to A5 and A9 from the jobs; set State "ready for review" once
-   every criterion but A8 has a row; ask the lead to push for CI (`linux-asan-ubsan`).
+1. Read the four jobs at strata:e0508e9; fix what is red with a rerun of that probe only.
+2. Then State "ready for review"; the lead pushes strata:e0508e9 for CI (the asan, tsan and
+   Linux matrix are CI's).
 
 ## Blocked on
 
@@ -38,24 +50,28 @@ Nothing. The last Blocked on is answered by the lead's rulings L4 and L5 below.
 
 ## Evidence
 
+Jobs at strata:9d4630c stand where strata:e0508e9 does not change what they run: its diff is
+`index.hh` (install's live figures, two fence lines), `writer.hh` (one constructor) and tests;
+`manifest_log.hh`, the fuzz targets and `digest_streams.cc` are unchanged, and digest_streams never
+installs or fails an allocation.
+
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261109-143551-b9d053 at strata:4d2a541 (72 of 72): manifest_log ("appender": one write per append, the truncate-back, one record in flight), index (commit, recover, `check()`), retention (D8 across a rollover), lifecycle; the retired files' codecs are gone (strata:074129c) |
+| A2 | T4: build-test 261109-212058-c999f8 at strata:e0508e9 (lifecycle case 1 rollovers and cleanups, cases 4 to 9 in manifest_log, retention, lifecycle, apply_atomic; media_test every byte of the log), and CI's config 261109-212222-4d4b55 with assertions; T6: 261109-154844-624428 at strata:9d4630c, digests equal to strata main 3df7af4f on 80 streams |
+| A3 | manifest_log_test "replay cost" and "deleted sets" in 261109-212058-c999f8 and 261109-212222-4d4b55 at strata:e0508e9 (time bounds 50 ms and 0.5 s, x10 under a sanitizer); T7 row 261109-154842-e89e93 (strict) at strata:9d4630c: 128 one-ordinal delete edits on 20M docs, 10M deleted, 0.04 ms (8.9 s on ordinal vectors), open's read 23.97 ms snapshot alone and 24.80 ms with the edits; clumped dense 15.09 ms, sparse below the threshold 53.61 ms; 10x declarations 14.1x the time, 100x segments 1.3x; mutants "declaration names scanned per declaration", "identities scanned per edit", "a delete edit walks the whole set (A3)", "no bounds on read" killed (29 of 29 in 261109-154840-db382b at strata:9d4630c; 261109-212117-5b1128 at strata:e0508e9) |
+| A4 | manifest_log_test "deleted sets": a bitset of 125,000 bytes decodes to 125,304 allocated, deltas 2,007 to 8,336, dense deltas 1,000 to 8,304 (within 8x plus 4 KiB) in 261109-154842-e89e93; fuzz 261109-154845-6a1734 (ASan+UBSan): fuzz_manifest_log 3,163,120 runs and fuzz_manifest_log_file 681,274 runs, 301 s each, no crash; mutants "a bitset decodes to ordinals (D42)" and "a deltas body decodes to ordinals past the threshold (D42)" killed (db382b, 5b1128) |
+| A5 | open's half: manifest_log_test "allocation failure", 58 points, 58 throw bad_alloc, 0 misreported (261109-154842-e89e93; c999f8 at strata:e0508e9); writer's half: apply_atomic's commit sweep, alone and with the next allocation failing too, in 261109-212058-c999f8 and under clang and libstdc++ in 261109-212222-4d4b55; mutants "the head's replay fences only on damage", "the log's barrier fences only on a system error", "a durability fence set only once its message is allocated" (261109-212117-5b1128) |
 | A6 | build-test 261109-143551-b9d053 at strata:4d2a541: manifest_log_test stage "caller rules" |
 | A7 | build-test 261109-143551-b9d053 at strata:4d2a541: manifest_log_test stages "crash images" and "bit flips", media_test (every byte of the log) |
+| A8 | lead's ruling L5 (2026-11-09): T1 to T3, T5, T7 to T9 are the lead's `strict`/`exclusive` jobs on `main` after landing; this quest's T7 row is A3's |
+| A9 | at strata:9d4630c: Xapiand master Xapiand:c8276fae3 261109-154903-20023c (ctest 37 of 37, async_check, removed options); prospect ff99494 pinned at strata:9d4630c, manifest-log-prospect's 261109-162807-511d50 (51 of 51) and identity 261109-162821-d27e0d (churn and dump equal to strata main); at strata:e0508e9 both again in 261109-212247-2389ea (Xapiand master Xapiand:3ed4270d3) |
 | A10 | D41 (PLAN.md, 2026-11-09): Q1 the manifest log first, Q2 a count of generations with `fallback()` reporting the damaged generation, Q3 accepted; folded into `docs/design/manifest-log.md` at strata:49ab291 |
-
-Step 3a's checks, which A3, A5, A6 and A7 build on (rows when the index runs on them, step 3c):
-`manifest_log_test` stages "caller rules" (A6), "crash images" and "bit flips" (A7), "bounds on
-read" and "replay cost" (A3 without the delete cost), "allocation failure" (A5, the open's half),
-"appender" (A1's log writer), in the build-test check 261109-112947-1006c3; 19 mutants in
-261109-112951-b8f62d (a local run killed 18 of 19; the survivor was a mutant that did not remove
-the damage check, rewritten).
 
 ## Result
 
-Not ready for review: step 3c's jobs at strata:9d4630c are pending, and A9's prospect half waits
-for manifest-log-prospect's port.
+Not ready for review: the jobs at strata:e0508e9 (the CI fixes) are pending. Step 3c's jobs at
+strata:9d4630c all passed; CI at that commit failed on the four causes under Doing.
 
 Step 3c (strata:1b9e46b to strata:9d4630c): T4 cases 1 and 4 to 9; A5's writer half with a fix
 (R27: any failure past the durable boundary fences; 152 commit allocation points, 12 fenced with
@@ -225,3 +241,19 @@ Step 3a, the log layer, at strata:6a8bb32 (index.hh untouched):
   checkpoints newest first, since `main`'s `open(..., to)` drops the manifests above `to` (D6.8)
   and the head's keeps the logs. `test/digest_vs_ref.py` compiles it against `git archive REF
   include` with the build's own flags and dependencies.
+- R29 (CI: install's figures): a segment born since the head takes its live length from its body
+  only when its deletes are dirty; with deletes and none dirty (a lazy install's records, no
+  body, D9) it is the record's `live_length`. cold_segment's install case asserts without it in a
+  build with assertions; a check of the install's live figures and the mutant "an installed
+  record's live length read from its body" hold it.
+- R30 (CI: libstdc++): `stable_bytes(std::size_t)` is no longer noexcept. Proof: CI's config job
+  puts the noexcept back and apply_atomic must terminate under g++-16; with it removed the sweep
+  passes under libstdc++ (157 points).
+- R31 (CI: TSan and timing): manifest_log_test replaces operator new only without TSan (as
+  apply_atomic does) and then skips its two counting checks; its time bounds scale by 10 under ASan
+  or TSan (CI's ASan run took 552 ms where the macOS release run took 168 ms; 5 s stays far under the 8.9 s it guards),
+  and its two ratios take the fastest of five runs each.
+- R32 (A5, found while fixing R30): `durable()` and the head's replay set `fenced_` before building
+  the fence's message, so an allocation failing there too still fences. apply_atomic's sweep runs
+  a second pass with the next allocation failing as well; without the fix it fails (N=140
+  unfenced, the retry refused). The first index mutant's text follows the new line.
