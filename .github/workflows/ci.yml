@@ -148,15 +148,17 @@ jobs:
         if: always()
         run: ccache -s
       - name: Unit tests (ctest) under ${{ matrix.name }}
-        run: ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
+        # test_pool runs alone: its sweep case waits for a merge's output to be seen unsynced, a window
+        # the autocommit closes first under parallel sanitizer load (passes alone).
+        run: |
+          ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800 -E '^test_pool$'
+          ctest --test-dir build --output-on-failure --timeout 1800 -R '^test_pool$'
       - name: DIAG (temporary)
         if: failure() && matrix.key == 'test-tsan'
         run: |
           sudo apt-get install -y --no-install-recommends gdb
-          gdb -q -batch -ex run -ex 'bt 40' -ex 'p $_siginfo._sifields._sigfault.si_addr' -ex 'x/6i $pc-12' -ex 'info proc mappings' build/bin/xapiand_test_lua > gdb.txt 2>&1 || true
-          grep -v '^ \{4,\}0x' gdb.txt | tail -80 || true
-          grep -E '^ +0x7' gdb.txt | grep -v '\.so' | head -60 || true
-          for i in 1 2 3 4 5; do build/bin/xapiand_test_pool test_the_sweeps_close_syncs_a_merges_output 2>&1 | tail -3; done || true
+          gdb -q -batch -ex run -ex 'bt 40' -ex 'info threads' -ex 'p $_siginfo._sifields._sigfault.si_addr' -ex 'x/6i $pc-12' -ex 'info proc mappings' build/bin/xapiand_test_lua > gdb.txt 2>&1 || true
+          grep -v '^0x0000\|^0xffff' gdb.txt | head -100 || true
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
