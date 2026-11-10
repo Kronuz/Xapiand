@@ -7885,9 +7885,9 @@
       ],
       "repo": "../sortable",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The sortable codec's remaining proof",
-      "updated": "2026-11-09T14:57:55",
+      "updated": "2026-11-09T16:27:57",
       "worktree": "../sortable-wt/xapiand/sortable-proof"
     },
     "sortable-step1": {
