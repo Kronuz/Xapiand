@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261109-202752-ca0659 261109-202740-e5400a
+State: waiting on jobs 261110-022018-630bfa 261110-022019-13681d 261110-022021-d4da86 261110-022022-9e2089 261110-022023-91414c 261110-022025-8d9d38 261110-022026-0969a8 261110-022028-c214c0 261110-022029-baabc5 261110-022045-f81f3a
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -51,8 +51,8 @@ became an out-of-range double-to-uint32 conversion, and a new id whose docid hel
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
+| A1 | Fixed: 261109-202752-ca0659 (1a72d3a7e, test_node all ok incl. test_document_ids_are_themselves; test_engine_strata 9768 ok). Fails at the base: 261109-202740-e5400a (555ceb738 = base b4acd8419 + only test_node.cc, same blob as head): the id test aborts on its first write, `PUT /ids_int/-1`, at `assert(did != 0)` in wal.cc:1101 (write_replace_document): id -1 converted to docid 0, the "ids double as docids" defect in Cause; setup is fine (the other three cases run on the same node). Asserts-off base run for the id checks: 261110-022045-f81f3a (pending). Mutants a, e, f, g: pending |
+| A2 | Fixed: 261109-202752-ca0659 (precondition, apply-once and model cases ok; model "48 won, 48 refused"). Fails at the base: 261109-202740-e5400a: precondition 33/111 checks fail (409 expected, `_version` 2/0 in the body, document kept at v2: test_node.cc:1300-1318), apply-once 16/38 (:1363 conflict `_version`, :1367 conflicts == writers-1), model 37/68 ("48 writes won, 0 refused"). Mutants b, c, d, h, i: pending |
 | A3 | pending |
 | A4 | pending |
 | A5 | pending |
