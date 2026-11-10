@@ -534,14 +534,14 @@ static int connect_to(int port) {
 }
 
 // One request on a connection of its own; the whole response (the server closes after it).
-static std::string http_call(int port, const std::string& method, const std::string& path, const std::string& body = "") {
+static std::string http_call(int port, const std::string& method, const std::string& path, const std::string& body = "", const std::string& content_type = "application/json") {
 	const int fd = connect_to(port);
 	if (fd < 0) {
 		return "";
 	}
 	timeval timeout{10, 0};
 	::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-	const auto request = method + " " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+	const auto request = method + " " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: " + content_type + "\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
 	::send(fd, request.data(), request.size(), 0);
 	std::string response;
 	char buf[4096];
@@ -1136,8 +1136,8 @@ struct Reply {
 	MsgPack body;
 };
 
-static Reply call(const std::string& method, const std::string& path, const std::string& body = "") {
-	const auto response = http_call(node_port, method, path, body);
+static Reply call(const std::string& method, const std::string& path, const std::string& body = "", const std::string& content_type = "application/json") {
+	const auto response = http_call(node_port, method, path, body, content_type);
 	Reply reply;
 	if (response.size() < 12 || response.rfind("HTTP/1.1 ", 0) != 0) {
 		return reply;
@@ -1260,6 +1260,22 @@ static void test_document_ids_are_themselves() {
 	CHECK(success(call("PUT", "/ids_pos/", R"({"_schema":{"_type":"object","_id":{"_type":"positive"}}})")));
 	ids_round_trip("/ids_pos/", {"0", "1", "18446744073709551615"}, number, true);
 	ids_round_trip("/ids_kw/", {"a", "0", "00", "-1"}, quoted, false);   // a first: the ids are keywords
+
+	// An id names the document id it would take when that is free: a new id the shard numbers after it is not it.
+	CHECK_EQ(call("PUT", "/ids_seq/2?commit", R"({"n":"2"})").status, 204);
+	const auto posted = call("POST", "/ids_seq/?commit&echo", R"({"n":"new"})");
+	CHECK(success(posted));
+	CHECK_EQ(text_of(posted, "_id"), "3");
+	CHECK_EQ(text_of(call("GET", "/ids_seq/2"), "n"), "2");
+	CHECK_EQ(version_of(call("GET", "/ids_seq/2")), 1);
+
+	// A body's id 0 is an id too (a RESTORE line), not a new one.
+	CHECK(success(call("RESTORE", "/ids_restore/?commit", "{\"_id\":1,\"n\":\"1\"}\n{\"_id\":0,\"n\":\"0\"}\n", "application/x-ndjson")));
+	for (const std::string id : {"0", "1"}) {
+		const auto got = call("GET", "/ids_restore/" + id);
+		CHECK_EQ(text_of(got, "n"), id);
+		CHECK_EQ(version_of(got), 1);
+	}
 }
 
 // The body of a write of `v` by each method: a JSON patch for PATCH, the document for the others.
@@ -1360,8 +1376,9 @@ static void test_writers_expecting_one_version_apply_once() {
 }
 
 // Writers on few documents, each writing the version it read (PUT and PATCH, with ?version), against the sequential
-// model: per document, every version from 2 to its last is won by exactly one write, a refused write saw an older
-// version than the one it is told, and the document holds the write that won its last version.
+// model: a write that is applied lands at the version after the one it expected, per document every version from 2
+// to its last is won by exactly one write, a refused write saw an older version than the one it is told, and the
+// document holds the write that won its last version.
 static void test_versioned_writers_match_a_sequential_model() {
 	Watchdog watchdog("versioned writers match a sequential model", 300s);
 	constexpr int keys = 2;
@@ -1372,6 +1389,7 @@ static void test_versioned_writers_match_a_sequential_model() {
 	}
 	struct Win {
 		int key;
+		long long seen;   // the version the write expected
 		long long version;
 		int value;
 	};
@@ -1389,7 +1407,7 @@ static void test_versioned_writers_match_a_sequential_model() {
 				const std::string method = attempt % 2 == 0 ? "PUT" : "PATCH";
 				const auto reply = call(method, path + "?echo&version=" + std::to_string(seen), write_body(method, value));
 				if (success(reply)) {
-					wins[t].push_back({k, version_of(reply), value});
+					wins[t].push_back({k, seen, version_of(reply), value});
 				} else if (reply.status == 409 && version_of(reply) > seen) {
 					++refused[t];
 				} else {
@@ -1413,6 +1431,7 @@ static void test_versioned_writers_match_a_sequential_model() {
 				if (win.key == k) {
 					++won;
 					by_version.emplace(win.version, win.value);
+					CHECK_EQ(win.version, win.seen + 1);   // applied at the version after the one it expected
 				}
 			}
 		}
