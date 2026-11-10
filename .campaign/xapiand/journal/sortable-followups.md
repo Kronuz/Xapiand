@@ -1,6 +1,6 @@
 # sortable-followups: journal
 
-State: waiting on jobs 261109-172719-1f0b22 261109-172720-e7310a
+State: ready for review
 Quest: .campaign/xapiand/quests/sortable-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,11 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Code and docs committed in the sortable worktree (sortable:2e85e15). Waiting on A2's two jobs (12-minute fuzz, D5.9 mutant times); build-test and the CLI probe passed.
+Code and docs committed in the sortable worktree (sortable:2e85e15). Nothing; all jobs passed.
 
 ## Next
 
-1. Read the jobs; record the before/after D5.9 times and the 12-minute run.
-2. Fill Evidence and Result; state "ready for review". The lead pushes the branch for the asan CI check.
+1. The lead pushes the branch for the asan CI check (A4).
 
 ## Blocked on
 
@@ -25,13 +24,13 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | docs/mechanisms/sortable.md, "Every conversion is defined for every `number`, with no undefined behavior: every shift count is bounded and `-1022 - exponent` cannot overflow an `int`." |
-| A2 | pending: 261109-172719-1f0b22 (12 min, ASan+UBSan, committed corpus), 261109-172720-e7310a (D5.9 mutant, before/after) |
+| A2 | 261109-172719-1f0b22 (done at sortable:2e85e15): cmake -DSORTABLE_FUZZ=ON with Homebrew clang 23 (fuzzer,address,undefined), 722 s, 73,198,582 runs, exit 0, no crash or timeout, from make_corpus.py seeds plus fuzz/corpus. 261109-172720-e7310a (done): D5.9 2^1024 mutant, time to the kill, 4 seeds each: old fuzzer and corpus median 10.0 s (4.2-21.4); new fuzzer, old corpus 1.1 s (0.9-1.5); old fuzzer, new corpus 3.7 s (2.0-4.4); new fuzzer and corpus 1.1 s (0.8-1.3). Every kill was `accepted, not canonical: 01fc3f`. Reviewer's single sample at 937c7c6 was 60.5 s. |
 | A3 | docs/mechanisms/sortable.md, "The readers are lenient in three ways, all accepted: an `i` number may have leading zeros (`i 007`) or be `-0` (the integer 0), and hex digits, in `f HEX16` and in `decode` lines, may be upper or lower case."; probe 261109-172802-a74c02 (done, exit 0: `i 007` and `i 7` give c0c0, `i -0` and `i 0` give 80, upper and lower case `f` HEX16 give be; upper and lower case decode lines parse the same) |
 | A4 | build-test 261109-172754-1f56b7 done, exit 0 at sortable:2e85e15; asan is CI after the lead pushes |
 
 ## Result
 
-pending
+Changed in Kronuz/sortable (2e85e15), no encoded byte or CLI reply changed: `fuzz/decode_fuzz.cc` runs the canonicality and conversion oracle on the whole input and on both halves; `fuzz/corpus` adds 190 raw encodings; `docs/mechanisms/sortable.md` states that every `number` converts without undefined behavior, lists the CLI's lenient forms, and describes the new fuzz checks and seeds. Effect: D5.9's 2^1024 mutant dies in a median 1.1 s (4 seeds) against 10.0 s before, and 3.7 s from the new seeds alone; a 722 s ASan+UBSan run (73.2M runs) is clean. Leaves open: Linux and arm64 fuzzing (not run).
 
 ## Rulings I made
 
