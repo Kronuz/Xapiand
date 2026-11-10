@@ -1,33 +1,51 @@
 # phase3-ratchets: journal
 
-State: waiting on jobs 261109-174807-1b0f95 261109-174809-eb0263 261109-174917-a48a55 261109-174919-b26fd0 261109-174921-0cc8d3
+State: waiting on jobs (wave 2, below)
 Quest: .campaign/xapiand/quests/phase3-ratchets.md (the lead's; never edit it)
 
 ## Doing
 
-Wave 1 on the gate VM (strata's Linux VM, port 18772), engine at prospect main `9b8826349cfe`
-(`--ref main=`), harness at the quest branch (prospect `6bec208`). Prepare passed
-(261109-173556-26604e: prospect_engine x86-64 from main, baselines built; query baselines
-lucene-10.4.0, -bp, tantivy-0.26 one segment each). Queued: smoke at 20k (strict,
-261109-174807-1b0f95), parity incl. deletes (light, 261109-174809-eb0263), then after the smoke
-three 5M keyed units (strict): prospect at 2,056 MB (screen, 261109-174917-a48a55, kept as the
-before-merging index), Tantivy-st (261109-174919-b26fd0) and Lucene-st (261109-174921-0cc8d3)
-with NO_MERGE=1 (calibration, kept).
+Rebased onto main `e8e5bd9` (main changed docs/design/automata.md only; `git diff 9b88263 e8e5bd9`
+is that file, so the measured engine stays `--ref main=9b8826349cfe`, R7). Harness at prospect
+`ba6a400` (adds `gate3.sh wamp`, forwards PROSPECT_AUTO_MERGE). build-test 261110-021707-040070.
+
+Wave 2 (gate VM, engine main `9b88263`):
+- merge 261110-022415-2c93a9 (strict) -> sections 261110-022417-832326, verify
+  261110-022419-0d97c8, allocs 261110-022420-407111 (light) -> servemem 261110-022422-c56975
+  (strict: prospect-merged, Tantivy, Lucene, Lucene -bp).
+- A4 probe 261110-022424-057569: 5M at 2,056 MB with PROSPECT_AUTO_MERGE=0 (strict).
+- A3: wamp smoke 20k 261110-022426-648c03 -> append 1M 261110-022427-e83b7c -> replace 1M
+  261110-022429-f5a5aa (strict, chained so no other VM job writes the device meanwhile).
+- A1 after merging QA1-5: 261110-022431-02bb66 022436-743e61 022442-e18d7a 022448-7e7c9b
+  022453-b2d8f9; before merging QB1-5: 022433-017540 022438-9a0901 022444-671c80
+  022450-fc6501 022456-0b4e2c (exclusive; queries-sample 181 + terms-sample 40, WARMUP 20).
+- A2 1M trials I1-5 (exclusive, prospect at 1,039 MB vs Tantivy-st, order alternating):
+  022435-14ea61 022440-084be4 022446-d9749a 022452-3e9f96 022457-9bd18c (ids prefixed 261110-).
+- A7 coverage on the host 261110-022513-292125 (light).
+
+## Wave 1 read (jobs passed; engine main `9b88263`, gate VM, Linux x86_64, 8 vCPUs)
+
+- Smoke 261109-174807-1b0f95 passed every step at 20k. Parity 261109-174809-eb0263: 419/419
+  counts and top-10 at 1, 4, 16 segments; with deletes (5 and 17 segments) counts 419/419, top-10
+  157/419 (weights drift, R5), exact again after the merge drops them (419/419, 3.87e-16).
+- A2 5M keyed one thread, single runs (screen strict, not the confirm stage):
+  prospect 423.3 s at 2,056 MB, 3 segments, peak RSS 3,221 MiB, anon 3,204 MiB;
+  Tantivy-st 870.0 s, 1 segment, RSS 11,357 MiB (anon 8,573); Lucene-st 1,162.2 s, 3 segments,
+  RSS 4,588 MiB. prospect 2.06x faster than Tantivy-st at 28% of its peak RSS, 2.75x faster
+  than Lucene-st at 70% of its peak. CPU: prospect 376 s user+sys, Tantivy 1,002 s, Lucene 1,344 s.
+- Calibration drift: 2,056 MB peaked at 4,608 MB on 2026-10-17 (Lucene-st 4,593); now 3,221 MiB
+  against Lucene-st's 4,588 MiB, 30% under. Not recalibrated (R6).
+- A4 indexing: peak RSS 1.57x the 2,056 MiB node budget, past budget + 10% (2,262 MiB): a miss
+  (D17 notes merge buffers are not charged yet; the probe tests that).
 
 ## Next
 
-0. If smoke or parity fail, read `campaign job log`, fix in bench/gate3.sh or tools/parity.cc,
-   resubmit (downstream jobs are skipped on a failed smoke).
-1. Read wave 1: prospect's 5M wall time and peak against Tantivy-st/Lucene-st NO_MERGE; is
-   2,056 MB still within 3% of the reference's peak (recalibrate only on drift)?
-2. Wave 2: merge (light, 8 reorder threads) -> sections (A5) + verify before/after (A6) ->
-   five after-merging query trials, split per set (exclusive, prospect-merged, lucene-bp,
-   tantivy, lucene; WARMUP 60) -> five before-merging trials (prospect, tantivy-st, lucene-st
-   unmerged).
-3. A2 trials: prospect vs the faster one-thread baseline, alternating units, exclusive.
-4. A3 (write_amp.sh), A4 serving memory (serve_mem.py / cgmem.sh) and allocations per query
-   (an allocation-counting build, A9), A6 parity with deletes (tools/parity.cc), A7/A10/A11 docs.
-5. A8 FreeBSD and arm64 as deferred checks.
+1. Read wave 2; score A1 with `bench/phase2/gate.py --md --target 1.0 --prospect prospect-merged`
+   (after) and `--as lucene-10.4.0-st=lucene-10.4.0 --as tantivy-0.26-st=tantivy-0.26` (before).
+2. Write A11's report rows; A9 tool list; A7 parity.md rows with the coverage numbers.
+3. Owed and not yet submitted: the 8-thread row (A2: the keyed NO_MERGE builders are one-thread;
+   tantivy-0.26-st needs a thread count, Lucene-st a threaded BuildIndex), the many-index rows
+   (A3: no harness), A8 FreeBSD/arm64 (deferred checks).
 
 ## Blocked on
 
@@ -72,6 +90,16 @@ within a document"; fixed `3d215c6`).
   versions of every 7th document, and documents added then deleted) precedes the oracle's
   10,000; counts must be exact before the merge (weights drift: deleted docs stay in the
   statistics), everything exact after a merge drops them. No oracle change needed.
+- R6 No recalibration of the 5M budget: prospect at 2,056 MB peaks under both baselines (70% of
+  Lucene-st's, 28% of Tantivy-st's), so the time rows compare it with less memory than the
+  reference, which can only understate it; the report states every peak.
+- R7 Engine ref stays main `9b88263` after the rebase: main's only change since is
+  docs/design/automata.md, so the VM's build and kept indexes stay valid.
+- R8 Targeted trials (the quest's "Targeted runs" decision): A2's five interleaved trials run at
+  1M (prospect at the 1M calibration, 1,039 MB, vs Tantivy-st, the faster baseline at 5M), the 5M
+  runs being the one scale-up confirmation; A1's trials use the quick tier's sample
+  (queries-sample 181, terms-sample 40) with WARMUP_TIME=20 (5 s flattered strata against the
+  JVM by up to 10%, format13-gate-vm.md).
 - R3 Memory rows from `bench/cgmem.sh` (cgroup v2 memory.peak, anon, file, file_mapped) beside
   GNU time's peak RSS; the corpus is piped from outside the cgroup so its page cache is not
   charged to the engine.
