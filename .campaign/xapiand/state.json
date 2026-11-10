@@ -4786,7 +4786,32 @@
       "updated": "2026-11-08T13:25:10"
     },
     "perf-watch-peek": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T02:46:21",
+          "base": "66050ec19adbc38f35c2a45b36a5c0ad05c65557",
+          "blobs": {
+            "CHANGELOG.md": "100644:7cbe17144c1997d607803dc942aeb8b7bb2f1bcb",
+            "bench/run.sh": "100644:20278dae4808df8dfb3280498a82bf58f6cb2c2c",
+            "bench/server_compare.cc": "100644:2152eec8622eeab16a2d47c6b9edd9443375ed89",
+            "bench/watch_ab.sh": "100755:a0ca1ecad75e62bd6acd9902b7c9d67b4c770610",
+            "docs/mechanisms/coroutine-handlers.md": "100644:cfc4dad07121e5af8e4b7d6db59fb2eab1c08ee0",
+            "docs/perf/watch-peek.md": "100644:0af0b6606596f2337c7ea6451ef80ab7eb66f2ca",
+            "http_asio.h": "100644:01b8773cdc6ce209ec0b73604267000574551f13",
+            "test/handler_count_test.cc": "100644:b5c8b69b45bb95ef1544a366e4ccdcd77fcd56c5",
+            "test/readahead_test.cc": "100644:7d6453ca14ff7d6ab2a951d3967bfbb55bc9acc9",
+            "test/watch_mutants.sh": "100755:c40e98021f68edbb339c10800d2c316fbee0db2a"
+          },
+          "brief": "f36698fd3e6fff16",
+          "by": "review",
+          "commit": "51d153aa1bc33a433b0c1b4dad56671d01f89d27",
+          "findings": {},
+          "note": "",
+          "review": "095eb7cbd0d79b9dba4788360124d00adabec96e",
+          "reviewed": "51d153aa1bc33a433b0c1b4dad56671d01f89d27",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "66050ec19adbc38f35c2a45b36a5c0ad05c65557",
       "branch": "quest/xapiand/perf-watch-peek",
@@ -4847,7 +4872,7 @@
       "risk": "normal",
       "status": "review",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-10T02:13:38",
+      "updated": "2026-11-10T02:46:21",
       "worktree": "../http-wt/xapiand/perf-watch-peek"
     },
     "phase0": {
