@@ -1,6 +1,6 @@
 # phase3-ratchets: journal
 
-State: waiting on jobs: wave 2 and the 8-thread row (ids under Doing), build-test 261110-023342-f01305 at prospect `7206c0f`; all queued behind 97 others at 02:34
+State: waiting on jobs: wave 2 and the 8-thread row (ids under Doing), build-test 261110-023715-edf507 at prospect `3e92ea9`, FreeBSD smoke 261110-023726-f5b60e; all queued behind 97 others at 02:34
 Quest: .campaign/xapiand/quests/phase3-ratchets.md (the lead's; never edit it)
 
 ## Doing
@@ -52,22 +52,21 @@ Wave 2 (gate VM, engine main `9b88263`):
 
 ## Blocked on
 
-Lead, at landing (proposals; not decided here). Measuring continues meanwhile.
-1. A10, C15 "allocations per query at `63a5339`": Phase 3's query changes landed first, so the
-   proposal is current-code counts in its place (`gate3.sh allocs`, job 261110-022420-407111).
-2. A10, C7 (WAND or an amended cost model): open; proposal: carried with the query rows (Track P).
-3. A10, C9's fuzz hour at `-rss_limit_mb=2048` and text items, and C15's rest (frequent-term
-   stratum, Phase 2 per-trial indexing times, corpus checksum): proposal: a follow-up quest.
-4. A4 indexing memory misses its first clause: peak RSS 1.57x the node budget (limit 1.1x); it
-   passes the 1.0x clause (0.70x Lucene, 0.28x Tantivy). The fix is a budget change (charge merge
-   buffers, D17), outside this quest's file set. Proposal: carry with its gap to a fix quest; the
-   probe 261110-022424-057569 (no background merges) says whether merges are the excess.
-5. A3's many-index rows (one thread per index, aggregate throughput, per-open-index cost): no
-   harness exists (strata PLAN names `small-indexes.md`). Proposal: a follow-up quest; A3 here
-   records write amplification only.
-6. A8: `gate3.sh` is Linux-only (cgroup v2, /proc/diskstats, drop_caches) and no arm64 host
-   exists (D36). Proposal: deferred checks after landing: a FreeBSD port of the time and size
-   rows (no cgroup rows) on the FreeBSD VM, arm64 waiting for a host.
+Nothing. The lead ruled on all six proposals (D51, Xapiand `.campaign/xapiand/PLAN.md`, 2026-11-10):
+1. C15 takes allocation counts at current code. 2. C7 carries to the next phase. 3. C9 and
+C15's rest go to a follow-up quest. 4. A4's indexing budget miss (1.57x, limit 1.1x) stays a
+miss in the gate doc; the fix (charge merge buffers) is a follow-up quest; state probe
+261110-022424-057569's result when it lands. 5. A3's many-index rows go to a harness quest
+(high priority). 6. A8: FreeBSD as a deferred check set by the lead; arm64 waits for a local host.
+Folded into `docs/gates/phase-3-ratchets.md` at prospect `3e92ea9`.
+
+A8 deferred check, the command for the lead once smoke 261110-023726-f5b60e passes (light:
+the first run builds on the VM's 4 vCPUs; its times are informational, prospect only, since
+the VM has no rust or JDK and 4.5 GB free disk bounds DOCS):
+
+    campaign job submit --quest phase3-ratchets --later --ref main=<landed main> \
+      --level light --minutes 120 --env DOCS=500000 --env PROSPECT_BUDGET_MB=1039 \
+      --what "A8 FreeBSD rows: prospect keyed 500k, merge, verify, parity" -- tools/vm/bsd_rows.sh
 
 ## Evidence
 
@@ -75,8 +74,9 @@ Lead, at landing (proposals; not decided here). Measuring continues meanwhile.
 |---|---|
 | A2 | partial: 5M confirmation jobs 261109-174917-a48a55, 261109-174919-b26fd0, 261109-174921-0cc8d3 (2.06x faster than Tantivy-st); trials I1-5 and the 8-thread row queued |
 | A6 | partial: parity 261109-174809-eb0263 (1/4/16 segments, deletes at 5 and 17, merged); verify 261110-022419-0d97c8 queued |
+| A8 | decision D51 (FreeBSD deferred, arm64 waits for a host); driver `tools/vm/bsd_rows.sh` (prospect `3e92ea9`), smoke 261110-023726-f5b60e queued |
 | A9 | `docs/gates/phase-3-ratchets.md` "Tools" (prospect `7206c0f`) |
-| A10 | `docs/gates/phase-3-ratchets.md` "Phase 2 gate conditions" (prospect `7206c0f`): C1, C3, C5, C13, C14 closed; C2, C9, C16 partly; C7, C15 open (Blocked on 1-3) |
+| A10 | decision D51; `docs/gates/phase-3-ratchets.md` "Phase 2 gate conditions" (prospect `3e92ea9`): C1, C3, C5, C13, C14 closed; C15's allocations at current code (allocs job 261110-022420-407111); C2, C16 partly; C7 carried; C9 and C15's rest to a follow-up quest |
 
 Jobs examined: 261109-173556-26604e prepare, passed. 261109-173630-d3b142 smoke, failed: the
 20k index at a 256 MB budget had one segment, so the merge had nothing to reorder (fixed: smoke
