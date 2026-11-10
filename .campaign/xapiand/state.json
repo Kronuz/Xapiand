@@ -1913,6 +1913,25 @@
       "updated": "2026-11-09T17:44:07",
       "worktree": "../Xapiand-wt/xapiand/direct-pins"
     },
+    "docs-site-audit": {
+      "accepted": {},
+      "after": [],
+      "checks": [],
+      "consumes": [],
+      "files": [
+        "docs/dev/docs-site-audit.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "The document profile gate",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Audit the public docs site against the engine as it is",
+      "updated": "2026-11-09T17:45:18"
+    },
     "docs-upgrade-page": {
       "accepted": {},
       "after": [
