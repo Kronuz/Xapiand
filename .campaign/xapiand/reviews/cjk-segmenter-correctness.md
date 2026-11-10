@@ -1,6 +1,6 @@
 # cjk-segmenter review: correctness
 
-Commit: analysis:8ce3f0cac31d444a92d30af0737e48fccda3cb7c
+Commit: analysis:fbf5b7d41504
 Verdict: APPROVE
 Date: 2026-11-10 (first review at analysis:229b68ce9aca5755d714541b17430536da9a5b22, 2026-11-09)
 
@@ -162,3 +162,16 @@ Both jobs ran at 229b68c with `--env PROBE=c8ff7e714edf`.
   cover lengths beyond libFuzzer's 8,192.
 - A5 throughput was not re-measured (performance is not this lens). `tools/fetch_corpora.py`
   was not rerun (network).
+
+## Re-review 2
+
+Scope: `git diff 8ce3f0cac31d fbf5b7d41504` changes only `docs/cjk-segmenter.md` (5 lines in the
+Speed section). Checked against job 261110-021524-d131bd (exclusive, run at 8ce3f0c, exit 0):
+
+- All nine best/median MB/s figures for zh, ja and ko match the job's bench lines.
+- Ratios recomputed from best figures: 23.48/8.38 = 2.80, 19.38/9.25 = 2.10, 111.05/26.66 = 4.17.
+- The job reference and commit (8ce3f0c) match the job's spec.
+- Object size 2,146,096 bytes and the 2,127,876-byte dictionary match the job's `size -m` output
+  (segment total and `__TEXT,__const`).
+
+No code changed, so the earlier verdict and findings stand. Verdict stays APPROVE.
