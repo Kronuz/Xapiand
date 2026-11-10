@@ -37,3 +37,5 @@ Changed in Kronuz/sortable (2e85e15), no encoded byte or CLI reply changed: `fuz
 1. The mechanism note did not contain the "can overflow" sentence (it was only in sortable-proof's journal Rulings 5), so A1 adds the correct statement rather than rewording one.
 2. `tools/make_corpus.py` is outside the file set. The unprefixed seeds are committed raw encodings in `fuzz/corpus` (190 files named by their hex: every 1009th vector, the first and last two of each kind and length, the extremes of the order); the fuzzer runs from make_corpus.py's directory plus `fuzz/corpus`. The ".scratch" probe `fuzz_run.py` (not committed) drives the jobs.
 3. The oracle on halves also runs the conversion checks (`accept()` is the same function for the whole and each half).
+
+Lead, 11-09: diff read (docs note, fuzz halves via accept(), 190 raw seeds); low risk, no review needed. CI dispatched: sortable run 42737478382.
