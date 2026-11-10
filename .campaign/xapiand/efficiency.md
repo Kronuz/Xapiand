@@ -87,3 +87,4 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | ci-quest-branches (Xapiand, strata, prospect) | 11-08 23:16 | 11-09 04:2x (Xapiand:975ca0e3a, merge Xapiand:f77111164; strata:446410f; prospect:b0c8665) | 0 (lead) | ~0 | none (low) | 1 (yaml check quoting); ~5 h waiting on the token's `workflow` scope |
 | wbuf-inline-prospect | 11-09 10:5x | 11-09 (prospect:9b88263, Xapiand:2a647a916) | 77k | ~0.5 | none (low; lead read the diff) | 1 (rebase; evidence re-cited from prospect-repo jobs) |
 | 11-09 17:2x hourly | — | — | — | weekly 16% used, 0.79%/h | — | launched automata-evaluation (opus, design), phase3-ratchets (opus, performance), sortable-followups (sonnet); disk 134 GiB free; load 17/36/39 |
+| barrier-warning-completion | 11-09 | 11-09 17:2x (completion:e49f288, Xapiand:3b9c774b8) | review 160k | ~1 | 1 durability APPROVE, 0 blocking | 0 |
