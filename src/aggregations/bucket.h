@@ -25,14 +25,17 @@
 
 #include <algorithm>                              // for std::sort, std::sort_heap
 #include <cassert>                                // for assert
+#include <cmath>                                  // for std::ceil, std::isnan
 #include <cstdint>                                // for int64_t, uint64_t
 #include <limits>                                 // for std::numeric_limits
 #include <map>                                    // for std::map
 #include <math.h>                                 // for fmodl
 #include <memory>                                 // for std::shared_ptr
+#include <optional>                               // for std::optional
 #include <string>                                 // for std::string
 #include <sys/types.h>                            // for int64_t, uint64_t
 #include <tuple>                                  // for std::forward_as_tuple
+#include <type_traits>                            // for std::is_floating_point_v, std::is_unsigned_v
 #include <utility>                                // for std::pair, std::make_pair
 #include <vector>                                 // for std::vector
 
@@ -989,206 +992,144 @@ public:
 
 
 class RangeAggregation : public BucketAggregation<ValuesHandler> {
-	std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> ranges_u64;
-	std::vector<std::pair<std::string, std::pair<int64_t, int64_t>>> ranges_i64;
-	std::vector<std::pair<std::string, std::pair<long double, long double>>> ranges_f64;
+	// The [from, to) of a range in the field's own type; an end that is not set is open.
+	template <typename T>
+	struct Bounds {
+		std::optional<T> from;
+		std::optional<T> to;
+		bool empty = false;  // an end beyond every value of T leaves nothing inside
+
+		bool contains(T value) const {
+			return !empty && (!from || value >= *from) && (!to || value < *to);
+		}
+
+		long double slot() const {
+			return from ? static_cast<long double>(*from) : -std::numeric_limits<long double>::infinity();
+		}
+
+		std::string key() const {
+			if (!from && !to) {
+				return "..";
+			}
+			return strings::format("{}..{}", from ? strings::format("{}", *from) : std::string(), to ? strings::format("{}", *to) : std::string());
+		}
+	};
 
 	template <typename T>
-	std::string _as_bucket(T start, T end) const {
-		if (end == std::numeric_limits<T>::max()) {
-			if (start == std::numeric_limits<T>::min()) {
-				return "..";
-			}
-			return strings::format("{}..", start);
-		}
-		if (start == std::numeric_limits<T>::min()) {
-			if (end == std::numeric_limits<T>::max()) {
-				return "..";
-			}
-			return strings::format("..{}", end);
-		}
-		return strings::format("{}..{}", start, end);
-	}
+	using Ranges = std::vector<std::pair<std::string, Bounds<T>>>;
 
-	void configure_u64() {
-		const auto it = _conf.find(RESERVED_AGGS_RANGES);
-		if (it != _conf.end()) {
-			const auto& ranges = it.value();
-			if (!ranges.is_array()) {
-				THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
-			}
+	Ranges<uint64_t> ranges_u64;
+	Ranges<int64_t> ranges_i64;
+	Ranges<long double> ranges_f64;
 
-			for (const auto& range : ranges) {
-				std::string default_key;
-				std::string_view key;
-				auto key_it = range.find(RESERVED_AGGS_KEY);
-				if (key_it != range.end()) {
-					const auto& key_value = key_it.value();
-					if (!key_value.is_string()) {
-						THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
-					}
-					key = key_value.str_view();
-				}
+	// Where a bound lies relative to the values of T, and its value when inside them.
+	enum class Reach { below, inside, above };
 
-				long double from_u64 = std::numeric_limits<long double>::min();
-				auto from_it = range.find(RESERVED_AGGS_FROM);
-				if (from_it != range.end()) {
-					const auto& from_value = from_it.value();
-					switch (from_value.get_type()) {
-						case MsgPack::Type::POSITIVE_INTEGER:
-						case MsgPack::Type::NEGATIVE_INTEGER:
-						case MsgPack::Type::FLOAT:
-							from_u64 = from_value.as_u64();
-							break;
-						default:
-							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_FROM);
-					}
-				}
-
-				long double to_u64 = std::numeric_limits<long double>::max();
-				auto to_it = range.find(RESERVED_AGGS_TO);
-				if (to_it != range.end()) {
-					const auto& to_value = to_it.value();
-					switch (to_value.get_type()) {
-						case MsgPack::Type::POSITIVE_INTEGER:
-						case MsgPack::Type::NEGATIVE_INTEGER:
-						case MsgPack::Type::FLOAT:
-							to_u64 = to_value.as_u64();
-							break;
-						default:
-							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_TO);
-					}
-				}
-
-				if (key.empty()) {
-					default_key = _as_bucket(from_u64, to_u64);
-					key = default_key;
-				}
-				ranges_u64.emplace_back(key, std::make_pair(from_u64, to_u64));
-			}
+	template <typename T>
+	static std::pair<Reach, T> reach_of(const MsgPack& value) {
+		if constexpr (std::is_floating_point_v<T>) {
+			return { Reach::inside, static_cast<T>(value.as_f64()) };
 		} else {
-			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_RANGES);
+			// Over integers, "value >= bound" and "value < bound" hold exactly when they hold for the bound rounded up.
+			constexpr auto lowest = static_cast<double>(std::numeric_limits<T>::lowest());
+			constexpr auto beyond = static_cast<double>(std::numeric_limits<T>::max());  // the first double above T's range
+			switch (value.get_type()) {
+				case MsgPack::Type::POSITIVE_INTEGER: {
+					const auto u = value.as_u64();
+					if (u > static_cast<uint64_t>(std::numeric_limits<T>::max())) {
+						return { Reach::above, T() };
+					}
+					return { Reach::inside, static_cast<T>(u) };
+				}
+				case MsgPack::Type::NEGATIVE_INTEGER: {
+					if constexpr (std::is_unsigned_v<T>) {
+						return { Reach::below, T() };
+					} else {
+						return { Reach::inside, static_cast<T>(value.as_i64()) };
+					}
+				}
+				default: {
+					const auto d = std::ceil(value.as_f64());
+					if (std::isnan(d)) {
+						THROW(AggregationError, "bounds must be numbers");
+					}
+					if (d < lowest) {
+						return { Reach::below, T() };
+					}
+					if (d >= beyond) {
+						return { Reach::above, T() };
+					}
+					return { Reach::inside, static_cast<T>(d) };
+				}
+			}
 		}
 	}
 
-	void configure_i64() {
+	template <typename T>
+	void configure(Ranges<T>& ranges) {
 		const auto it = _conf.find(RESERVED_AGGS_RANGES);
-		if (it != _conf.end()) {
-			const auto& ranges = it.value();
-			if (!ranges.is_array()) {
-				THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
-			}
-
-			for (const auto& range : ranges) {
-				std::string default_key;
-				std::string_view key;
-				auto key_it = range.find(RESERVED_AGGS_KEY);
-				if (key_it != range.end()) {
-					const auto& key_value = key_it.value();
-					if (!key_value.is_string()) {
-						THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
-					}
-					key = key_value.str_view();
-				}
-
-				long double from_i64 = std::numeric_limits<long double>::min();
-				auto from_it = range.find(RESERVED_AGGS_FROM);
-				if (from_it != range.end()) {
-					const auto& from_value = from_it.value();
-					switch (from_value.get_type()) {
-						case MsgPack::Type::POSITIVE_INTEGER:
-						case MsgPack::Type::NEGATIVE_INTEGER:
-						case MsgPack::Type::FLOAT:
-							from_i64 = from_value.as_i64();
-							break;
-						default:
-							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_FROM);
-					}
-				}
-
-				long double to_i64 = std::numeric_limits<long double>::max();
-				auto to_it = range.find(RESERVED_AGGS_TO);
-				if (to_it != range.end()) {
-					const auto& to_value = to_it.value();
-					switch (to_value.get_type()) {
-						case MsgPack::Type::POSITIVE_INTEGER:
-						case MsgPack::Type::NEGATIVE_INTEGER:
-						case MsgPack::Type::FLOAT:
-							to_i64 = to_value.as_i64();
-							break;
-						default:
-							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_TO);
-					}
-				}
-
-				if (key.empty()) {
-					default_key = _as_bucket(from_i64, to_i64);
-					key = default_key;
-				}
-				ranges_i64.emplace_back(key, std::make_pair(from_i64, to_i64));
-			}
-		} else {
+		if (it == _conf.end()) {
 			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_RANGES);
+		}
+		const auto& list = it.value();
+		if (!list.is_array()) {
+			THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
+		}
+
+		for (const auto& range : list) {
+			std::string_view key;
+			auto key_it = range.find(RESERVED_AGGS_KEY);
+			if (key_it != range.end()) {
+				const auto& key_value = key_it.value();
+				if (!key_value.is_string()) {
+					THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
+				}
+				key = key_value.str_view();
+			}
+
+			auto bound = [&](const char* name) -> std::optional<std::pair<Reach, T>> {
+				auto bound_it = range.find(name);
+				if (bound_it == range.end()) {
+					return std::nullopt;
+				}
+				const auto& bound_value = bound_it.value();
+				switch (bound_value.get_type()) {
+					case MsgPack::Type::POSITIVE_INTEGER:
+					case MsgPack::Type::NEGATIVE_INTEGER:
+					case MsgPack::Type::FLOAT:
+						return reach_of<T>(bound_value);
+					default:
+						THROW(AggregationError, "'{}' must be a number", name);
+				}
+			};
+
+			Bounds<T> bounds;
+			if (const auto from = bound(RESERVED_AGGS_FROM)) {
+				switch (from->first) {
+					case Reach::below: break;  // open
+					case Reach::inside: bounds.from = from->second; break;
+					case Reach::above: bounds.empty = true; break;
+				}
+			}
+			if (const auto to = bound(RESERVED_AGGS_TO)) {
+				switch (to->first) {
+					case Reach::below: bounds.empty = true; break;
+					case Reach::inside: bounds.to = to->second; break;
+					case Reach::above: break;  // open
+				}
+			}
+			ranges.emplace_back(key.empty() ? bounds.key() : std::string(key), bounds);
 		}
 	}
 
-	void configure_f64() {
-		const auto it = _conf.find(RESERVED_AGGS_RANGES);
-		if (it != _conf.end()) {
-			const auto& ranges = it.value();
-			if (!ranges.is_array()) {
-				THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
+	template <typename T>
+	void aggregate_ranges(const Ranges<T>& ranges, T value, const engine::DocView& doc) {
+		size_t idx = 0;
+		for (const auto& [key, bounds] : ranges) {
+			if (bounds.contains(value)) {
+				aggregate(bounds.slot(), key, doc, idx);
 			}
-			for (const auto& range : ranges) {
-				std::string default_key;
-				std::string_view key;
-				auto key_it = range.find(RESERVED_AGGS_KEY);
-				if (key_it != range.end()) {
-					const auto& key_value = key_it.value();
-					if (!key_value.is_string()) {
-						THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
-					}
-					key = key_value.str_view();
-				}
-
-				long double from_f64 = std::numeric_limits<long double>::min();
-				auto from_it = range.find(RESERVED_AGGS_FROM);
-				if (from_it != range.end()) {
-					const auto& from_value = from_it.value();
-					switch (from_value.get_type()) {
-						case MsgPack::Type::POSITIVE_INTEGER:
-						case MsgPack::Type::NEGATIVE_INTEGER:
-						case MsgPack::Type::FLOAT:
-							from_f64 = from_value.as_f64();
-							break;
-						default:
-							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_FROM);
-					}
-				}
-
-				long double to_f64 = std::numeric_limits<long double>::max();
-				auto to_it = range.find(RESERVED_AGGS_TO);
-				if (to_it != range.end()) {
-					const auto& to_value = to_it.value();
-					switch (to_value.get_type()) {
-						case MsgPack::Type::POSITIVE_INTEGER:
-						case MsgPack::Type::NEGATIVE_INTEGER:
-						case MsgPack::Type::FLOAT:
-							to_f64 = to_value.as_f64();
-							break;
-						default:
-							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_TO);
-					}
-				}
-
-				if (key.empty()) {
-					default_key = _as_bucket(from_f64, to_f64);
-					key = default_key;
-				}
-				ranges_f64.emplace_back(key, std::make_pair(from_f64, to_f64));
-			}
-		} else {
-			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_RANGES);
+			++idx;
 		}
 	}
 
@@ -1198,17 +1139,17 @@ public:
 	{
 		switch (_handler.get_type()) {
 			case FieldType::positive:
-				configure_u64();
+				configure(ranges_u64);
 				break;
 			case FieldType::integer:
-				configure_i64();
+				configure(ranges_i64);
 				break;
 			case FieldType::floating:
 			case FieldType::date:
 			case FieldType::datetime:
 			case FieldType::time:
 			case FieldType::timedelta:
-				configure_f64();
+				configure(ranges_f64);
 				break;
 			default:
 				THROW(AggregationError, "Range aggregation can work only on numeric fields");
@@ -1216,63 +1157,27 @@ public:
 	}
 
 	void aggregate_float(long double value, const engine::DocView& doc) override {
-		size_t idx = 0;
-		for (const auto& range : ranges_f64) {
-			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.second.first, range.first, doc, idx);
-			}
-			++idx;
-		}
+		aggregate_ranges(ranges_f64, value, doc);
 	}
 
 	void aggregate_integer(int64_t value, const engine::DocView& doc) override {
-		size_t idx = 0;
-		for (const auto& range : ranges_i64) {
-			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.second.first, range.first, doc, idx);
-			}
-			++idx;
-		}
+		aggregate_ranges(ranges_i64, value, doc);
 	}
 
 	void aggregate_positive(uint64_t value, const engine::DocView& doc) override {
-		size_t idx = 0;
-		for (const auto& range : ranges_u64) {
-			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.second.first, range.first, doc, idx);
-			}
-			++idx;
-		}
+		aggregate_ranges(ranges_u64, value, doc);
 	}
 
 	void aggregate_date(double value, const engine::DocView& doc) override {
-		size_t idx = 0;
-		for (const auto& range : ranges_f64) {
-			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.second.first, range.first, doc, idx);
-			}
-			++idx;
-		}
+		aggregate_ranges<long double>(ranges_f64, value, doc);
 	}
 
 	void aggregate_time(double value, const engine::DocView& doc) override {
-		size_t idx = 0;
-		for (const auto& range : ranges_f64) {
-			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.second.first, range.first, doc, idx);
-			}
-			++idx;
-		}
+		aggregate_ranges<long double>(ranges_f64, value, doc);
 	}
 
 	void aggregate_timedelta(double value, const engine::DocView& doc) override {
-		size_t idx = 0;
-		for (const auto& range : ranges_f64) {
-			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.second.first, range.first, doc, idx);
-			}
-			++idx;
-		}
+		aggregate_ranges<long double>(ranges_f64, value, doc);
 	}
 };
 
