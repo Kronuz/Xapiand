@@ -7751,7 +7751,31 @@
       "updated": "2026-11-09T15:34:35"
     },
     "sortable-proof": {
-      "accepted": {},
+      "accepted": {
+        "security": {
+          "at": "2026-11-09T17:04:25",
+          "base": "67b2a907e2411e2e59dc249b96bfc1d229016ede",
+          "blobs": {
+            "AGENTS.md": "100644:523339fd0b676d37d9e439bf15d4ad071e28ce72",
+            "CMakeLists.txt": "100644:5454955ab29cac80994e5a01b333e73c4e5e64fc",
+            "README.md": "100644:00fd95110bfa4763e62cff24b51d98c80468d87b",
+            "docs/mechanisms/sortable.md": "100644:59808f8cc47e060ffa0f161f83e96526bd2f7d02",
+            "docs/status/sortable.md": "100644:483b84ae903f907c4489075a1aec5a65d32d7467",
+            "fuzz/decode_fuzz.cc": "100644:2a8c9d5191d1a8182c2f4873f9e8245b03296937",
+            "test/exhaustive_float.cc": "100644:f6f95535570eb3db378f1b7329f5c339a6ac2330",
+            "tools/check_cli.py": "100644:692240def3bfd99a1e5bcbfd61f5f2788ddef228",
+            "tools/cli.cc": "100644:70ed0ce2052fba413449bde1cc88b5d057d6d11c"
+          },
+          "brief": "569841d1ece13582",
+          "by": "review",
+          "commit": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+          "findings": {},
+          "note": "",
+          "review": "b8e538c007ac5fb92ec9e922ccec4214079bc3a4",
+          "reviewed": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "67b2a907e2411e2e59dc249b96bfc1d229016ede",
       "branch": "quest/xapiand/sortable-proof",
@@ -7887,7 +7911,7 @@
       "risk": "high",
       "status": "review",
       "title": "The sortable codec's remaining proof",
-      "updated": "2026-11-09T16:27:57",
+      "updated": "2026-11-09T17:04:25",
       "worktree": "../sortable-wt/xapiand/sortable-proof"
     },
     "sortable-step1": {
