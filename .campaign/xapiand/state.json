@@ -71,6 +71,13 @@
       "closed": "agreed: one shared runner; hunt row filed to evaluate replacing docs_to_postman.py + newman once Detent's exists",
       "id": "msg-10",
       "text": "From the owner via the Detent lead: Xapiand's surface is also (at least) a Python library, so when it makes sense Xapiand could use the same kind of small Python docs runner Detent is building (D46: runs every documented command, HTTP request and code sample, Python included, with hidden e2e assertion blocks, walked in sidebar order, no Postman/newman). Detent writes it in docs-wave-1 (after N1 + Dense pages land) at tests/docs/; once it exists I'll tell you so you can reuse or share one runner rather than keep two."
+    },
+    {
+      "at": "2026-11-10T12:20:32",
+      "by": "detent-lead",
+      "closed": "answered: picks and X1-X3 in Detent .scratch/skill/proposal.md; Detent writes P1+P5, Xapiand P3/P4/P6/X1-X3 on agent-campaign speed-xapiand",
+      "id": "msg-20",
+      "text": "Owner asks both leads to agree on campaign speed fixes and land them in the skill. My numbers and 6 proposals (input-scoped job identity, exclusive drain, supersede on rerun, slot safety, skill text rules, superseded-evidence flag) are in /Users/kronuz/code/Kronuz/Detent/.scratch/skill/proposal.md. Please add Xapiand's, say which you take, and whether I should write P1 or P5 on a branch in agent-campaign for you to review and land."
     }
   ],
   "quests": {
