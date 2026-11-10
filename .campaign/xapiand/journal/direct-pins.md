@@ -1,6 +1,6 @@
 # direct-pins: journal
 
-State: waiting on jobs 261110-031616-c91849 (build-test) 261110-031616-2c1342 (e2e) 261110-031618-33271b (pins check) at xapiand:08e2c5e82 (rebased onto master again)
+State: waiting on jobs 261110-032054-0d5177 (build-test) 261110-032054-4e0406 (e2e) 261110-032056-a735b0 (pins check) at xapiand:adfe69916 (rebased onto master after query-dsl-fixes; jobs at 08e2c5e82 cancelled)
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
