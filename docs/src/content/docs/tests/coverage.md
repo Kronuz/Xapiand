@@ -49,7 +49,7 @@ check it, and lists what no request covers, with the reason.
 | `GET /`, `GET /:metrics` | [API](/Xapiand/reference-guide/api), [Options](/Xapiand/options) | Docs E2E; `tests/test_root_routes.cc` |
 | HTTPS | [Options](/Xapiand/options) | the `tls` layer (the whole E2E over HTTPS); `harness/tls_check.sh` |
 | Graceful stop, signals | [Options](/Xapiand/options) | `tests/test_node.cc`; `harness/graceful_shutdown_check.sh`, `harness/signal_check.sh` |
-| Refused options of earlier releases, Xapian data | [Upgrading](/Xapiand/upgrade) | `harness/removed_options_check.sh`, `harness/xapian_data_guard_check.sh`; `tests/test_xapian_data_guard.cc` |
+| Refused options and data directories of earlier releases | [Upgrading](/Xapiand/upgrade) | `harness/removed_options_check.sh`, `harness/xapian_data_guard_check.sh`; `tests/test_xapian_data_guard.cc` |
 
 ### Schemas
 
