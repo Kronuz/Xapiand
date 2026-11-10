@@ -57,6 +57,10 @@ struct WriteArgs {
 	// Empty accepts any.
 	std::optional<rev> expected_version;
 
+	// For replace_by_key: the id a new document takes when no document holds it; 0 numbers it after
+	// the last.
+	docid new_did = 0;
+
 	// Called once the target document and its new version are known and before the document is
 	// written: it may complete the document (embed the id or the version in its data) and may set
 	// the result's term. The engine adds its own version bookkeeping after it returns.

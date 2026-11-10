@@ -608,7 +608,7 @@ void
 check_version(const std::optional<rev>& expected, const std::optional<rev>& stored)
 {
 	if (expected && *expected != stored.value_or(0)) {
-		throw Error(errc::version_conflict, "Version mismatch!");
+		throw version_conflict(stored.value_or(0));
 	}
 }
 
@@ -626,7 +626,7 @@ reject(const ::strata::verdict& verdict)
 {
 	switch (verdict.result) {
 		case ::strata::verdict::version_conflict:
-			throw Error(errc::version_conflict, "Version mismatch!");
+			throw version_conflict(verdict.current_version);
 		case ::strata::verdict::invalid:
 			throw Error(errc::invalid, "The index rejected the operation");
 		case ::strata::verdict::no_space:
@@ -867,6 +867,10 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 					stored = static_cast<rev>(found->second);
 				} else {
 					stored = version_of(core, did);
+					if (stored && !replayed) {
+						// The id holds another document: the keyed one does not exist, and the other is not overwritten.
+						throw version_conflict(0);
+					}
 				}
 			} else {
 				stored = version_of(core, did);
@@ -915,9 +919,13 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			const auto ekey = key;
 			info.term = key;
 			std::optional<rev> stored;
+			bool placed = false;  // a new document at the id the caller gave
 			if (const auto found = core.index->find_key(ekey)) {
 				info.did = static_cast<docid>(found->first);
 				stored = static_cast<rev>(found->second);
+			} else if (args.new_did != 0 && !version_of(core, args.new_did)) {
+				info.did = args.new_did;
+				placed = true;
 			} else {
 				info.did = static_cast<docid>(core.index->last_docid() + 1);
 			}
@@ -937,8 +945,13 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			}
 			stamp_version(native, info.version);
 			auto& op = t.ops.emplace_back();
-			op.type = prospect::operation::replace_key;
-			op.key = ekey;
+			if (placed) {
+				op.type = prospect::operation::replace_docid;
+				op.docid = info.did;
+			} else {
+				op.type = prospect::operation::replace_key;
+				op.key = ekey;
+			}
 			fill(t, op.doc, native, core.index->fields());
 		}
 		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
@@ -959,11 +972,11 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		{
 			core.check(*handle_);
 			const auto stored = version_of(core, did);
+			if (local) {
+				check_version(expected_version, stored);  // first: an expected version on a missing document conflicts
+			}
 			if (!stored) {
 				throw Error(errc::doc_not_found, "Document not found");
-			}
-			if (local && expected_version) {
-				check_version(expected_version, stored);
 			}
 			t.ops.emplace_back();
 			t.ops[0].type = prospect::operation::delete_docid;
@@ -990,11 +1003,9 @@ Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expec
 			core.check(*handle_);
 			const auto ekey = key;
 			const auto found = core.index->find_key(ekey);
+			check_version(expected_version, found ? std::optional<rev>(found->second) : std::nullopt);  // first, as in erase
 			if (!found) {
 				throw Error(errc::doc_not_found, "Document not found");
-			}
-			if (expected_version) {
-				check_version(expected_version, static_cast<rev>(found->second));
 			}
 			t.ops.emplace_back();
 			t.ops[0].type = prospect::operation::delete_key;

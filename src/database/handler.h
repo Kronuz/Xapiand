@@ -64,6 +64,16 @@ struct query_field_t;
 
 engine::docid to_docid(std::string_view document_id);
 
+// Whether a document id is given: a missing or null id, or an empty string, is none; a number is one, 0 included.
+bool has_document_id(const MsgPack& document_id);
+
+// The key of a new document whose numeric id the shard numbers: a numeric key always has a value after its 'N'.
+inline constexpr std::string_view NEW_NUMERIC_KEY = "N";
+
+// The document id a numeric key names: the id when it is a whole number from 1 to the largest docid, else 0 (an
+// id such as 0, -1, 1.5 or 2^63 is placed by its key alone).
+engine::docid numeric_docid(std::string_view key);
+
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
 
@@ -225,9 +235,11 @@ public:
 	task::task<engine::docid> get_docid(std::string_view document_id);
 	task::task<engine::docid> get_docid_term(const std::string& term);
 
-	task::task<void> delete_document(engine::docid did, bool commit = false, bool wal = true, bool version = true);
-	task::task<void> delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
-	task::task<void> delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
+	// A delete with a version (not UNKNOWN_REVISION) removes the document only while it has that version, 0 for one
+	// that does not exist; else it raises errc::version_conflict with the current version.
+	task::task<void> delete_document(engine::docid did, engine::rev document_ver, bool commit = false, bool wal = true);
+	task::task<void> delete_document(std::string_view document_id, engine::rev document_ver, bool commit = false, bool wal = true);
+	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false, bool wal = true);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
