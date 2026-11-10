@@ -11236,6 +11236,8 @@
     "x7-http-repin": {
       "accepted": {},
       "after": [],
+      "base": "737c369e5d41ff70c9b6b84b1507f6f26ad3948d",
+      "branch": "quest/xapiand/x7-http-repin",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -11261,9 +11263,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Repin http to main with perf-watch-peek (x7-gate A24)",
-      "updated": "2026-11-10T05:35:25"
+      "updated": "2026-11-10T05:36:13",
+      "worktree": "../Xapiand-wt/xapiand/x7-http-repin"
     },
     "x7-view-bench": {
       "accepted": {},
