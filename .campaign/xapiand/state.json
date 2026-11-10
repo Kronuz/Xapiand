@@ -1131,7 +1131,6 @@
         "src/database/handler.cc",
         "src/database/handler.h",
         "tests/**",
-        "harness/restore_cli_check.sh",
         "CHANGELOG.md"
       ],
       "landed": [],
@@ -1145,7 +1144,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "CLI --restore into an empty data directory writes the index's shard records",
-      "updated": "2026-11-09T18:09:28"
+      "updated": "2026-11-09T18:09:48"
     },
     "closing-benchmark": {
       "accepted": {},
