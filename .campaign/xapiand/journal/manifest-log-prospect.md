@@ -1,6 +1,6 @@
 # manifest-log-prospect: journal
 
-State: working
+State: waiting on jobs 261109-162807-511d50 261109-162821-d27e0d
 Quest: .campaign/xapiand/quests/manifest-log-prospect.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,22 +9,18 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Pinned strata at the manifest-log head strata:4d2a541 (CMakeLists.txt). Ported the tests in the
-prospect worktree (uncommitted until the first local build is read): reclaim_test, media_test,
-directory_test, fixtures_test (a manifest-log.bin golden replaces the retired manifest/live/meta .bin),
-format13_test (rewrite via read_state/recount/frame_snapshot), index_test, lifecycle_test,
-churn_test, background_merge_test (API shape). Local build against a strata archive of 4d2a541.
+Tests ported and committed in the prospect worktree (head after "Pin strata at the manifest-log
+head 9d4630cd"). Locally at strata:4d2a541 the whole suite passed (51 tests); strata moved to
+strata:9d4630c (index.hh only), so both jobs run at that pin: build-test 261109-162807-511d50,
+A3 identity 261109-162821-d27e0d.
 
 ## Next
 
-1. Read the local build's errors, fix, run the suite; commit.
-2. Submit build-test and the A3 identity job at the head; fill Evidence.
+1. Read both jobs; fix what is red; fill the Evidence rows; write Result.
 
 ## Blocked on
 
-Strata:4d2a541 is not on origin (origin's branch is at strata:79beaf4), so the `build-test`
-check, which fetches the pinned commit from GitHub, cannot run until the lead pushes it or the
-check passes `--ref`. Local builds use FETCHCONTENT_SOURCE_DIR_STRATA.
+Nothing.
 
 ## Evidence
 
@@ -34,7 +30,7 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+
 
 ## Result
 
@@ -44,4 +40,26 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- R1 (retired-file cases): the live-docs, metadata and `fields-*` files no longer exist, so the
+  index_test cases that crafted them have no file left to craft: "live docs of another
+  generation / another index's / another segment, resealed", "bitset size wraps near 2^64",
+  "delta wraps back onto an ordinal", "metadata of another generation (resealed)", and the two
+  install damages that wrapped a delta or a bitset size. Their decoder halves are strata's
+  manifest_log_test ("bounds on read", "bit flips") and fuzz targets. Kept as log cases: deleted
+  ordinals past the document count and a live count unlike the deleted set (install), the
+  resealed document and live counts, the snapshot under another generation's name, a flipped
+  snapshot byte, and the segment file cases. "A resealed live length" is now out of step with the
+  index total (the segment's alone), since the log holds the length once.
+- R2 (format13 F20): `rewrite` reads the generation's state, applies the edit, `recount`s and
+  writes `frame_snapshot` as the generation's own log; the `fields = {1, 10, 0}` file reference
+  becomes a later field declaration under an unknown mask bit; "a cache attribute leaves at the
+  next commit" checks the replayed head state (the log keeps the old snapshot's bytes, so the
+  raw `find("tier")` has no meaning).
+- R3 (fixtures): the files family's `.bin` goldens (manifest, live, meta) leave with their codecs;
+  `manifest-log.bin`, a keyed index's log with `identity_seed = 1` (bytes fixed), replaces them in
+  C17's files row; `pre_freeze.txt` re-pinned at `files::pre_freeze` 0x8000'0008.
+- R4 (D6.6): the open runs no retention, so reorder_test, background_merge_test and index_test
+  call `reclaim()` where they expected the open's orphan removal, as strata's tests do; the
+  open's first-read arm of the pinned-log EIO case is gone with it.
+- R5 (applied): `ix.manifest().applied` is the head's; the live position the tests compared is
+  `ix.applied()`.
