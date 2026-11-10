@@ -30,6 +30,7 @@
 #include <cctype>                           // for tolower
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
+#include <optional>                         // for std::optional
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
@@ -980,15 +981,15 @@ DatabaseHandler::dump_documents(int fd)
 
 
 task::task<std::string>
-DatabaseHandler::restore_documents(int fd)
+DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 {
-	L_CALL("DatabaseHandler::restore_documents()");
+	L_CALL("DatabaseHandler::restore_documents({}, <fd>)", repr(endpoint.to_string()));
 
 	SHA256 sha256;
 	msgpack::unpacker unpacker = make_msgpack_unpacker();   // refuses a body nested deeper than MAX_JSON_DEPTH
 	query_field_t query_field;
 	query_field.commit = true;
-	DocIndexer indexer(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
+	std::optional<DocIndexer> indexer;
 	std::exception_ptr error;
 	try {
 		while (true) {
@@ -1009,7 +1010,19 @@ DatabaseHandler::restore_documents(int fd)
 			while (unpacker.next(result)) {
 				batch.emplace_back(result.get());
 			}
-			co_await indexer.index(batch);
+			if (!indexer && !batch.empty()) {
+				// Resolved as RESTORE resolves it: writable, the first object as its settings, which saves the
+				// index's settings and shard records in .xapiand/indexes before its documents are written.
+				auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint, true, &batch.front());
+				if (endpoints.empty()) {
+					throw engine::Error(engine::errc::network, "Endpoint node not available");
+				}
+				L_INFO("Restoring into: {}", repr(endpoints.to_string()));
+				indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
+			}
+			if (indexer) {
+				co_await indexer->index(batch);
+			}
 
 			if (!bytes) {
 				break;
@@ -1018,7 +1031,9 @@ DatabaseHandler::restore_documents(int fd)
 	} catch (...) {
 		error = std::current_exception();
 	}
-	co_await indexer.commit();   // what was indexed stays, whatever ended the stream
+	if (indexer) {
+		co_await indexer->commit();   // what was indexed stays, whatever ended the stream
+	}
 	if (error) {
 		std::rethrow_exception(error);
 	}

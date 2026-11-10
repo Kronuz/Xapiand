@@ -22,7 +22,7 @@
 
 #pragma once
 
-// Detects the files a Xapian-based release (1.0.0-alpha.9 and earlier) left in a data directory, by file
+// Detects the files a Xapian-based release (1.0.0-alpha.10 and earlier) left in a data directory, by file
 // name only, so that a node does not start fresh beside indexes it cannot read.
 
 #include <dirent.h>

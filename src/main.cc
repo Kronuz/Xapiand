@@ -662,7 +662,7 @@ void usedir(std::string_view path, bool force) {
 
 	if (auto xapian_file = xapian_guard::find(directory); !xapian_file.empty()) {
 		L_CRIT("Data directory holds a Xapian index: {}\n"
-			"This data is from a Xapian-based release (1.0.0-alpha.9 or earlier), which this release does not read. "
+			"This data is from a Xapian-based release (1.0.0-alpha.10 or earlier), which this release does not read. "
 			"Export it with that release (DUMP, or --dump) and restore it into a new, empty data directory here (RESTORE, or --restore). "
 			"See {}", repr(xapian_file), xapian_guard::UPGRADE_DOC);
 		throw SystemExit(EX_DATAERR);
@@ -880,12 +880,8 @@ void restore_documents() {
 		try {
 			setup();
 			manager = XapiandManager::make();
-			DatabaseHandler db_handler;
 			auto endpoint = cli_endpoint(opts.restore_documents);
-			auto endpoints = resolve_index_endpoints(endpoint);
-			L_INFO("Restoring into: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT);
-			auto sha256 = engine::sync_wait(db_handler.restore_documents(fd));
+			auto sha256 = engine::sync_wait(DatabaseHandler::restore_documents(endpoint, fd));
 			L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 = {}", sha256);
 			manager->join();
 			manager.reset();

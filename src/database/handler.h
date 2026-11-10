@@ -204,8 +204,9 @@ public:
 	task::task<MsgPack> dump_document(std::string_view document_id);
 	task::task<MsgPack> dump_documents();
 	task::task<std::string> dump_documents(int fd);
-	// Reads a dump from the descriptor, blocking: the CLI's main thread runs it.
-	task::task<std::string> restore_documents(int fd);
+	// Restores a dump read from the descriptor into the index `endpoint`, blocking: the CLI's main thread runs it.
+	// The index resolves as RESTORE resolves it, from the dump's first object.
+	static task::task<std::string> restore_documents(const Endpoint& endpoint, int fd);
 
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare_document(MsgPack& obj, size_t idx);
 
