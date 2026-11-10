@@ -1969,9 +1969,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "Audit the public docs site against the engine as it is",
-      "updated": "2026-11-09T17:50:39",
+      "updated": "2026-11-09T18:15:59",
       "worktree": "../Xapiand-wt/xapiand/docs-site-audit"
     },
     "docs-site-refresh": {
