@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: ready for acceptance; waiting on jobs 261110-073918-41b1cd 261110-073919-5715ab 261110-073919-be3d07 261110-073919-39ecdc 261110-073919-d5b7af 261110-073919-042f92 261110-073919-3c6722 261110-073919-e779e6 261110-073919-a0029a 261110-073919-cf69ef 261110-073919-b09fa0
+State: waiting on jobs 261110-114551-711f81 261110-114552-f6a3b2 261110-114555-188cd2 261110-114557-207ddc 261110-114559-823541 261110-114602-96a9cd 261110-114604-0667d8 261110-114607-d6584b 261110-114609-102757
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,21 @@ status` reads State, the first step under Next, and the Evidence table. State is
 waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Fix round 2: durability re-check F3 (blocking; the lead ruled it in scope since R39 routes it
+through `durable()`) at strata:f39abc3, and N2 at strata:1ebeff8 (R40, R41). Jobs at the head
+strata:1ebeff8, by finding:
+
+| Finding | Job | Expect |
+|---|---|---|
+| F3 | 261110-114551-711f81: apply_atomic_test (held-view sweeps) and hazard_test, ASan+UBSan, assertions on | exit 0 |
+| F3 | 261110-114555-188cd2: the reviewer's `run.sh rel` (alloc_crash_probe, sync_probe) | 0 BAD |
+| F3 | 261110-114557-207ddc: the reviewer's `run.sh asan` (both probes, apply_atomic) | 0 BAD, no report |
+| F3 mutant | 261110-114602-96a9cd (ASan), 261110-114604-0667d8 (Release): the fix reverted on the head, strata:3b672c4 (`refs/scratch/manifest-log/f3-reverted`) | fail: "the held view reads wrong" or heap-use-after-free |
+| N2 | 261110-114559-823541: the reviewer's `mutants.py` at the head | 4 of 4 killed (M2, M3 survived at strata:6ab3983) |
+| N2 mutant M2 | 261110-114607-d6584b: install's post-log steps outside `durable()`, strata:810fd13 (`refs/scratch/manifest-log/n2-install-tail`) | fail |
+| N2 mutant M3 | 261110-114609-102757: `reclaim_files` alone outside `durable()`, strata:4bb2e08 (`refs/scratch/manifest-log/n2-reclaim-outside`) | fail |
+| all | build-test 261110-114552-f6a3b2 (`campaign verify`) | ctest green |
 
 Fix round 1 is in (strata:c78f870 to strata:08a11ab, one commit per finding; table below). Its
 jobs at strata:08a11ab all passed but the mutants job, 36 of 37 killed: "a durability fence set
@@ -322,6 +337,20 @@ Step 3a, the log layer, at strata:6a8bb32 (index.hh untouched):
   after the sync fences", index-on-the-log); swallowing would hide an allocation failure. Cost: a
   writer that runs out of memory in retention reopens instead of continuing. `reclaim_files`
   still keeps its own system errors (the file stays queued), so only what escaped before fences.
+
+- R40 (durability F3, fix round 2): `publish_view` published the new view's pointer, then retired
+  the old one with a `push_back` that could throw: the old view was freed under its reader and the
+  new one freed while the registry named it. `basic_retired::reserve()` makes room for the next
+  retire (geometric, kept across reclaims) and `retire()` is noexcept on that room, asserting it;
+  `publish_view` and `retire_current` reserve before publishing. Cost on the commit path: one
+  capacity compare, an allocation only when the list's capacity is reached (not measured; no
+  timing claim). A retire without room terminates instead of freeing a held pointer.
+  hazard_test's owners reserve too. apply_atomic's sweep reads through a view held across the step
+  and through a fresh acquire after each failure.
+- R41 (N2, optional, taken): the sweep is over steps that move the log, not only commit: a commit,
+  a commit reclaiming a `force_merge(1)`'s sources (a non-empty reclaim queue), and an install,
+  with a held view for commit and install. Mutant refs M2 and M3 carry the re-check's texts.
+  Scripts: `.scratch/f3/asan_tests.sh`, `rel_tests.sh`, `mkmutant.py` in the strata worktree.
 
 ## Follow-ups
 
