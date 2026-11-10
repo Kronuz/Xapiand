@@ -1,6 +1,6 @@
 # github-triage: journal
 
-State: waiting on jobs 261109-184439-2432a6 261109-184442-cdf29d 261109-184445-d9cf89
+State: waiting on jobs 261109-184442-cdf29d
 Quest: .campaign/xapiand/quests/github-triage.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Done: the five dependency ranges are bumped (one commit, Xapiand:71acc13ea) and `docs/dev/github-triage.md` is written (Xapiand:0aff10e6d). Waiting on the three jobs at the head (worker check, site build, npm audit); on green, set State to "ready for review".
+Done: the five dependency ranges are bumped (one commit, Xapiand:71acc13ea) and `docs/dev/github-triage.md` is written (Xapiand:0aff10e6d). Worker check 261109-184439-2432a6 and npm audit 261109-184445-d9cf89 passed at the head; waiting on the site build 261109-184442-cdf29d; on green, set State to "ready for review".
 
 ## Next
 
