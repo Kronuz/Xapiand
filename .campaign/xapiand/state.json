@@ -143,11 +143,14 @@
     "automata-evaluation": {
       "accepted": {},
       "after": [],
+      "base": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
+      "branch": "quest/xapiand/automata-evaluation",
       "checks": [],
       "consumes": [],
       "files": [
         "docs/design/automata.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/automata-evaluation",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 5",
@@ -155,9 +158,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Evaluate strata's automata and decide where it belongs",
-      "updated": "2026-11-08T19:31:56"
+      "updated": "2026-11-09T17:21:32",
+      "worktree": "../prospect-wt/xapiand/automata-evaluation"
     },
     "barrier-warning": {
       "accepted": {},
