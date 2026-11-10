@@ -116,3 +116,7 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | x7-gate step 1 | 11-10 05:2x | — | 205k (opus) | — | inventory: 3 met, 7 gaps → D53 + 4 quests | — |
 | manifest-log survivor round | — | — | 134k (opus) | — | R37 survivor killed by a new test; all jobs resubmitted at 8b532c8 | — |
 | 11-10 06:2x hourly | — | — | — | weekly 29%, 0.87%/h (exhaustion 82 h vs reset 135 h) | — | nothing launchable; 105 jobs queued, load 16; disk 99 GiB; cross-repo CI-trigger fix denied by the permission system, awaiting owner |
+| write-path-fixes paired reviews (D49 trial 2) | — | — | Opus high 187k, Fable max 227k | — | both CHANGES; same two defects, opposite severities; no unique finding | — |
+| write-path-fixes fix round 1 | — | — | resumed contributor to 233k (opus) | — | D1 + F1 + N4 + F7 fixed; 1a failed on a wrong test and a fixed-port clash, fixed; jobs resubmitted | — |
+| CI quest trigger | — | 82 libraries on main | 69k (sonnet) | — | owner authorized | — |
+| 11-10 07:2x hourly | — | — | — | weekly 30%, 0.87%/h (exhaustion 80 h vs reset 134 h) | — | nothing launchable; docs split (D55) and landing on CI; durability concerns into strata design (strata:77adb056); 44 jobs queued, load 11; disk 82 GiB (ccache evicted nothing; slots 60 GiB in open quests) |
