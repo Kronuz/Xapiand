@@ -10764,6 +10764,8 @@
     "x7-gate": {
       "accepted": {},
       "after": [],
+      "base": "ddaca9d01e0a66d3ca54ec98b2ed730ef848aef4",
+      "branch": "quest/xapiand/x7-gate",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -11165,9 +11167,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-09T04:14:37"
+      "updated": "2026-11-10T05:22:10",
+      "worktree": "../Xapiand-wt/xapiand/x7-gate"
     },
     "xapiand-final-release": {
       "accepted": {},
