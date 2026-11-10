@@ -27,8 +27,8 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261110-053638-4a23d0 at Xapiand:4d46befd5; the diff sets `http_lib` GIT_TAG to http:51d153a (http main's head, perf-watch-peek) |
-| A2 | build-test 261110-053638-4a23d0 and e2e 261110-053638-536412 at Xapiand:4d46befd5 |
+| A1 | build-test 261110-092615-73908c at Xapiand:3805a53bb; the diff sets `http_lib` GIT_TAG to http:51d153a (http main's head, perf-watch-peek) |
+| A2 | build-test 261110-092615-73908c and e2e 261110-092615-d6934d at Xapiand:3805a53bb |
 
 ## Result
 
