@@ -49,6 +49,8 @@ using the [generator.py](/Xapiand/assets/generator.py)
 script, so please ignore the actual values and semantics of the data as these
 are all randomly generated.
 
+<a id="sample-dataset"></a>
+
 ## Loading the Sample Dataset
 
 After downloading the [sample dataset](/Xapiand/assets/accounts.ndjson),
