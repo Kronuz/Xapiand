@@ -3027,6 +3027,36 @@
       "title": "Gate verification and safety fixes",
       "updated": "2026-11-08T13:25:33"
     },
+    "github-triage": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cd docs && npm ci && npm run build",
+          "level": "light",
+          "minutes": 20,
+          "name": "site"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/dev/github-triage.md",
+        "docs/package.json",
+        "docs/package-lock.json",
+        "docs/discussions/worker/package.json",
+        "docs/discussions/worker/package-lock.json"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "The document profile gate",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Address and close the GitHub issues and PRs",
+      "updated": "2026-11-09T18:32:37"
+    },
     "hashes-cl-1": {
       "accepted": {},
       "after": [],
