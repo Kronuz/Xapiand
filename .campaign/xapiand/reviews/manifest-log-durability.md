@@ -84,3 +84,86 @@ points inside recovery.
   under ENOSPC beyond the contributor's T4 case 7.
 
 Tokens: ~135k
+
+## Re-check
+
+Commit: strata:6ab3983bc3deef58a1f26206b48e62d3d036f87f
+Verdict: CHANGES
+Date: 2026-11-10
+
+Scope: `git log e0508e9..6ab3983b` for F1 (strata:c78f8702), F2 (strata:f9fdcca3) and the post-commit
+fence R39 (strata:8b532c81, strata:6ab3983b). F1 and F2 are closed. R39 closes the unfenced-but-durable
+window, and exercising it with a live reader found a use-after-free in the publication step it now
+fences (F3 below, blocking).
+
+### Evidence relied on
+
+- 261110-092610-3fe121 and 261110-092610-707186 (build-test family at 6ab3983b: the v1 rename probe, the
+  ENOSPC probe), 261110-092610-0da306 (build-test, Release, ctest), 261110-092610-9b9471 (mutants,
+  including "the open syncs the log only" and "a failed barrier not truncated back"). Not rebuilt.
+- No sanitizer job existed at 6ab3983b (CI's `linux-asan-ubsan` is not at this head; build-test is
+  Release). My ASan+UBSan job below is the first.
+
+### What I checked myself
+
+Scripts in `/Users/kronuz/code/Kronuz/Xapiand/.scratch/review-manifest-log-durability-r2/`. Rerun:
+`campaign job submit --quest manifest-log --commit <sha> --level light --minutes 90 -- sh
+.../run.sh rel` (and `asan`), and `... -- python3 .../mutants.py`.
+
+- `alloc_crash_probe.cc` (jobs 261110-103338-1f8973 Release, 261110-103339-84a301 ASan+UBSan). An
+  allocation fails at every point of a commit (alone, and with the next one failing too) in three
+  scenarios (rollover owed, an edit that writes a segment, a metadata-only edit), each without and with
+  a live reader holding the current view across the commit. Whatever the outcome the host reopens (no
+  power loss), commits a metadata-only edit (acknowledged), then six power-loss seeds. Per point it
+  checks: the reopen and post-crash open succeed; the acknowledged edit survives; a commit that threw
+  and is visible at the reopen is still there after the power loss (D6.6); a commit that threw and is
+  durable left the writer fenced; a fenced writer refuses commits. Release result: 12 scenario-burst
+  combinations, 12 to 145 allocation points each, 0 violations of any of those checks, including 12 to
+  23 fenced-and-durable points per scenario. The only failure is the held-view read (F3).
+- `sync_probe.cc` (same jobs). The log's `sync_data` fails before or after its effect, pages dropped or
+  kept clean (Linux), edits of 10, 3,000 and 9,000 bytes at three offsets in the log, 16 power-loss
+  seeds each: 36 of 36 single-fault cases fence, leave the log byte-identical to before the edit
+  (206 to 206, 628 to 628, 4,365 to 4,365 bytes, 4,364 for "after, kept"), reopen at the head before the
+  edit, and lose no acknowledged commit. Also with the undo's own sync failing: the same, all 36.
+- `mutants.py` (job 261110-104118-99fd52, exit 1 by design: 2 of 4 killed). Details under R39.
+- apply_atomic under ASan+UBSan at 6ab3983b (same ASan job): ok, 153 allocation points, 20 fenced
+  (17 after the edit was durable), no report. No reader reads after the failure in that test (F3).
+
+### Per finding
+
+| ID | Blocking | Kind | Finding | Evidence | Status / fix |
+|---|---|---|---|---|---|
+| F1 | no | defect | Closed. The open runs `sync_dir()` before opening and syncing the log (`index.hh:5246`); the `to` fallback goes through `commit_files`, whose rollover syncs the directory (`index.hh:4943-4950`). Every stop point the review named ends in one state (new name visible, directory entry unsynced, writer fenced or dead) and the reopen now makes it durable before it reports a generation: a process kill, EIO from `replace` after its effect, EIO from the directory sync, and an allocation failing at `files_[name]` (inside the rollover's `durable()` block, `index.hh:4947`). | T4 case 10 (`index_test.cc:138-179`) plus my sweep: "rollover owed" with every allocation failing in turn (32 and 42 points, burst 0 and 1), reopen, metadata-only commit, power loss at 6 seeds: 0 lost, 0 failed opens; v1 probe 261110-092610-3fe121 (exit 0). Mutant "the open syncs the log only" killed in 261110-092610-9b9471. | none |
+| F2 | no | defect | Closed for what the review named. A failed `sync_data` undoes (truncate to E, `sync_data`) before the appender breaks and the index fences (`manifest_log.hh:1267-1277`, `undo` at `:1289-1296`, which swallows its own failure and sets `broken_`, so the original error propagates and the fence follows). The log is byte-identical to before the edit on all 36 single-fault cases and when the undo's sync fails too. See N1 for the double fault. | `sync_probe` in 261110-103338-1f8973 and 261110-103339-84a301; T4 case 11, faultfs_test's `keep` model; mutant "a failed barrier not truncated back" killed. | none |
+| F3 | yes | defect | Use-after-free of a view a reader holds, when an allocation fails in `publish_view`'s `retire` (`index.hh:3036`). `publish_view` stores the new view's pointer into the registry (`reader_registry::publish(rs.current, next.get())`) and then calls `retired.retire(std::move(pub_->current))`, whose `list_.push_back` can throw; the by-value `unique_ptr` parameter then frees the old view while a reader holds it, and `next`, a local, is freed while `rs.current` names it, so the next `acquire()` reads freed memory. `pub_->current` is left null. The code is unchanged since before e0508e9 (`git diff e0508e9..6ab3983b` touches neither `publish_view` nor `hazard.hh`), so it is not introduced by R39; R39 routes this failure through `durable()`, which fences the writer, and fencing neither stops readers nor repairs the pointers. It is reachable from `commit()` (`index.hh:961-962`) and install (`:1693-1696`) with any live reader, and the commit's own durability is intact (the edit is in the log). | Release probe 261110-103338-1f8973: for each scenario with a reader, exactly one allocation point (n=34 rollover, n=139 segment edit, n=17 metadata-only; 6 of 6 seeds) leaves the held view reading wrong ("the held view reads wrong"). ASan job 261110-103339-84a301: `heap-use-after-free`, read at `review_alloc_crash_probe.cc:102` (the held view's `get`), freed by `publish_view` at `index.hh:3036` via `publish_point` (`:2944`) inside `commit()`'s `durable` block (`:961`), allocated by `build_view` at an earlier `reader()` (`:2949`). `apply_atomic`'s sweep never reads through a reader after the failure, so it cannot see this. | Make `publish_view` unable to throw after the pointer is published and before ownership settles: reserve the retired list's room before `reader_registry::publish` (or retire first, then publish), so `retire` cannot fail. Add a read through a view held across the commit, and through a fresh `acquire()`, to the commit sweep with a reader (my probe's shape), and keep `alloc_crash_probe` as the rerun: it must report 0 BAD under ASan at the fixed commit. If the lead rules this outside A5's scope (pre-existing, memory safety rather than durability), it is a hunt row and the verdict on the three fixes stands; I would not land with a known reader UAF under allocation failure. |
+| N1 | no | gap | The undo's own truncate failing after a failed sync leaves the edit in the log. When the pages were kept clean (Linux) and the edit spans pages, a same-boot reopen reports the failed edit's generation (head 2, reopened at 3), the next acknowledged edit follows it, and a power loss leaves "manifest log: damaged at offset 206, generation 3" at 16 of 16 seeds (open at 9,000-byte edits; 3,000-byte at some offsets; small edits within the last page survive). The fix as the review proposed it ("a failed undo breaks the appender as today") accepts this; it is a double fault (failed fsync, then failed ftruncate), the writer is fenced, and no writer-side fix exists. | `sync_probe` "+ undo truncate fails" rows, 261110-103338-1f8973. | Name it in D4 beside the process-kill case in the journal's follow-ups. Optional: a fenced writer that cannot truncate could refuse to `close()` quietly and say the log needs `open(..., to)`. |
+| N2 | no | gap | R39's claim is held for `commit()` only through its first three steps. Mutant M1 (commit's `publish_point`, `free_views`, `retain`, `reclaim_files` outside `durable()`) is killed by `apply_atomic_test`; M2 (install's three steps outside `durable()`) and M3 (`reclaim_files` alone outside it) survive, since no test fails an allocation inside install's tail or with a non-empty reclaim queue. The code is correct by reading (`index.hh:961-966`, `:1693-1697`). | 261110-104118-99fd52: `killed: M1`, `SURVIVED: M2`, `SURVIVED: M3`, `killed: M4` (undo without its sync: `manifest_log_test`). | An allocation sweep over install, and a commit sweep with queued deletes, each with the mutant that fails it. |
+| N3 | no | gap | The open's new directory sync is unmeasured. D6.6 still quotes "0.3 to 2 us" for the log's sync alone; one more `fsync(dir)` per writer open on a many-indexes host is a different cost (journal R35 leaves it to the lead's open-cost row). | `index.hh:5246`; journal R35. | Measure in the open-cost row and amend D6.6's sentence. |
+| N4 | no | note | 261110-092610-08117d (A9 at 6ab3983b) exited 8 and 261110-102344-5abe4a is queued; the criterion is outside this lens. | `campaign job list --quest manifest-log`. | none |
+
+### Risk by risk
+
+1. F1 holds for kill, EIO from `replace`, EIO from the directory sync and an allocation failing at
+   `files_[name]`: all leave the same on-disk state, and the open now orders the directory before the log.
+2. F2: byte-identical to before the edit on every single-fault sync failure (before or after its effect,
+   pages dropped or kept, undo's sync failing too). When the truncate itself fails the appender breaks, the
+   original error stands, the writer fences, and the log keeps the edit (N1).
+3. R39: after the log moves, `commit()` and install now run everything under `durable()`; in `commit_files`
+   the head's replay is fenced, `roll_over`'s post-block statements are non-throwing, and `append_edit`'s
+   post-barrier section is inside its own fence, so no step is left outside. Fencing there cannot double-free
+   or leak: the sweep (153 points, ASan+UBSan) and my probe (all counts of fenced-and-durable points) found
+   no leak report and no double free. The one memory error is F3, in the step being fenced, and predates it.
+4. An acknowledged commit means the same to a reader: `commit()` returns only after the edit is durable and
+   the view published. A commit that throws and is durable now always leaves the writer fenced (0 violations
+   at every allocation point), where before a retention or view failure could throw from an unfenced writer on
+   a durable edit; a reopen shows the new generation. Retention running out of memory now costs a reopen
+   (journal R39 states this).
+
+### Not run
+
+- No real-filesystem or dm-flakey crash test; Linux page-cache behavior in F2 is modeled by faultfs's `keep`.
+- No macOS or Linux CI matrix result at 6ab3983b (CI's sanitizer job is not at this head); my ASan run is
+  macOS x86_64, the probes' Release run the same.
+- The security review's findings and the A9 rerun are outside this re-check.
+
+Tokens: ~160k
