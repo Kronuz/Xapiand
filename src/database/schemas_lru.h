@@ -59,7 +59,8 @@ class SchemasLRU {
 		const char* prefix,
 		bool writable,
 		const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj,
-		const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context);
+		const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context,
+		task::budget* budget);   // the caller's: its token ends the schema reads' turn waits
 
 public:
 	SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age);

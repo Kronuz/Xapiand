@@ -1715,24 +1715,26 @@ static double metric(const std::string& name) {
 	return -1;
 }
 
-// A search whose client leaves while it waits for its index's turn frees its reactor at once (T9): the client's EOF
-// requests its token, its turn wait ends, and its admission is let go while the turn is still held. The cancel is
-// counted in /:metrics.
-static void test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted() {
-	Watchdog watchdog("a search whose client leaves", 60s);
-	create_index("left_search", 1);
-	CHECK(success(call("SEARCH", "/left_search/?volatile", "{}")));   // caches the schema: a schema load waits for the turn without the token
+// A search on `index` whose client leaves while it waits for the index's turn frees its reactor at once (T9): the
+// client's EOF requests its token, its turn wait ends, and its admission is let go while the turn is still held. The
+// cancel is counted in /:metrics. With `cached`, a search first loads the schema, so the wait is the search's own;
+// without, it is the schema's first load.
+static void client_leaves_a_search(const std::string& index, bool cached) {
+	create_index(index, 1);
+	if (cached) {
+		CHECK(success(call("SEARCH", "/" + index + "/?volatile", "{}")));
+	}
 	auto& pool = *manager()->database_pool;
-	const auto endpoints = endpoints_of("left_search");
+	const auto endpoints = endpoints_of(index);
 	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
 	Shard shard = use_index(entry, WRITE_QUIET);
-	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: the search's read takes the turn
+	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: a read takes the turn
 	const auto before = metric("xapiand_http_requests_cancelled");
 	CHECK_GE(before, 0.0);
 	HoldTurn hold(entry.entry(), WRITE_QUIET);
 	const int fd = connect_to(node_port);
 	CHECK_GE(fd, 0);
-	const std::string request = "SEARCH /left_search/?volatile HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
+	const std::string request = "SEARCH /" + index + "/?volatile HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
 	::send(fd, request.data(), request.size(), 0);
 	CHECK(eventually([] { return requests_inflight() == 1; }));
 	std::this_thread::sleep_for(200ms);
@@ -1744,6 +1746,17 @@ static void test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted()
 	std::fprintf(stderr, "  the reactor let the search go %lld us after its client left\n", static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(freed).count()));
 	CHECK_EQ(metric("xapiand_http_requests_cancelled"), before + 1);
 	hold.release();
+}
+
+static void test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted() {
+	Watchdog watchdog("a search whose client leaves", 60s);
+	client_leaves_a_search("left_search", true);
+}
+
+// The schema's first load reads the metadata with the search's budget, so its turn wait ends with the token too.
+static void test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled() {
+	Watchdog watchdog("a search whose client leaves in its first schema load", 60s);
+	client_leaves_a_search("left_cold_search", false);
 }
 
 // Both admission peaks rise under load and /:metrics shows them (T8): writers that wait for a held turn fill the
@@ -1843,6 +1856,7 @@ int main(int argc, char** argv) {
 		{"test_a_versioned_delete_checks_the_document_its_key_names", test_a_versioned_delete_checks_the_document_its_key_names},
 		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
+		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
 	};
 	for (const auto& c : cases) {
