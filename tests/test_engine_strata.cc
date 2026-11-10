@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -1194,6 +1195,8 @@ void conflicts() {
 	CHECK_EQ(engine::sync_wait(shard.find_key("Kmissing")), 0u);
 
 	CHECK(conflict_version([&] { engine::sync_wait(shard.erase(1, true, 1)); }) == std::optional<engine::rev>(2));
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase(1, false, 1)); }) == std::optional<engine::rev>(2));   // as erase_by_key
+	CHECK(conflict_version([&] { engine::sync_wait(shard.erase_by_key("Ka", false, 1)); }) == std::optional<engine::rev>(2));
 	CHECK(conflict_version([&] { engine::sync_wait(shard.erase_by_key("Ka", true, 3)); }) == std::optional<engine::rev>(2));
 	CHECK(conflict_version([&] { engine::sync_wait(shard.erase_by_key("Ka", true, 0)); }) == std::optional<engine::rev>(2));
 	CHECK_EQ(engine::sync_wait(shard.get(1))->data(), "a2");   // nothing changed
@@ -1247,6 +1250,31 @@ void placement() {
 	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 4u);
 }
 
+// The numbering ends at the largest docid: after a key placed there, a write the shard numbers is an error, never
+// a document at the unreadable docid 0, and the shard keeps what it had.
+void numbering_ends() {
+	const auto path = scratch("numbering_ends");
+	auto opened = open_shard(path);
+	auto& shard = *opened.shard;
+	constexpr auto top = std::numeric_limits<engine::docid>::max();
+	engine::WriteArgs plain;
+	engine::WriteArgs at_top;
+	at_top.new_did = top;
+	auto far = make("Kfar", "far");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kfar", far, at_top)).did, top);
+	auto added = make("Kadded", "added");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(added, plain)); }) == engine::errc::database);
+	auto keyed = make("Kkeyed", "keyed");
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.replace_by_key("Kkeyed", keyed, plain)); }) == engine::errc::database);
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kkeyed")), 0u);
+	const auto stats = engine::sync_wait(shard.stats());
+	CHECK_EQ(stats.lastdocid, top);
+	CHECK_EQ(stats.doc_count, 1u);
+	CHECK_EQ(engine::sync_wait(shard.get(top))->data(), "far");
+	auto far2 = make("Kfar", "far2");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kfar", far2, plain)).version, 2u);   // a key that exists still writes
+}
+
 }  // namespace
 
 // An engine error that escapes a test is a failure with its text, not an abort.
@@ -1279,7 +1307,8 @@ static void test_check() { guarded("check", [] { check_shard(); }); }
 static void test_version_slot() { guarded("version slot", [] { version_slot(); }); }
 static void test_conflicts() { guarded("conflicts", [] { conflicts(); }); }
 static void test_placement() { guarded("placement", [] { placement(); }); }
+static void test_numbering_ends() { guarded("numbering ends", [] { numbering_ends(); }); }
 static void test_length_bounds() { guarded("length bounds", [] { length_bounds(); }); }
 static void test_codec() { guarded("codec", [] { codec(); }); }
 
-TEST_MAIN(test_shared, test_replay, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format, test_check, test_version_slot, test_conflicts, test_placement, test_length_bounds)
+TEST_MAIN(test_shared, test_replay, test_declared, test_strata_only, test_values_stored, test_codec, test_fresh_reads, test_commit_on_drop, test_concurrent_cas, test_drop_mid_transaction, test_cancel_reopen_fails, test_fenced_new_handle, test_fenced_reopen, test_fenced_writer_notified, test_replay_idempotent, test_old_format, test_check, test_version_slot, test_conflicts, test_placement, test_numbering_ends, test_length_bounds)

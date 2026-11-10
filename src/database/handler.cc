@@ -132,8 +132,9 @@ numeric_docid(std::string_view key)
 		return 0;
 	}
 	const auto id = sortable_unserialise(std::string(key.substr(1)));
-	constexpr auto last = static_cast<double>(std::numeric_limits<engine::docid>::max());
-	if (!(id >= 1 && id <= last) || id != std::floor(id)) {  // NaN fails the first test
+	// Below the largest docid: an id there would leave the shard nothing to number after it.
+	constexpr auto top = static_cast<double>(std::numeric_limits<engine::docid>::max());
+	if (!(id >= 1 && id < top) || id != std::floor(id)) {  // NaN fails the first test
 		return 0;
 	}
 	return static_cast<engine::docid>(id);

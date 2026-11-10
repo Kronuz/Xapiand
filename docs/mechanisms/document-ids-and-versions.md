@@ -11,7 +11,7 @@ document's version, checked by the engine in the index's turn, where the write a
 
 ```
 POST (no id), numeric ids    key NEW_NUMERIC_KEY ("N")   eng.add: docid = last + 1, id from the docid (finalise_write)
-PUT /i/k, numeric k          key N<k>                    replace_by_key, new_did = k when 1 <= k <= 2^32-1 whole
+PUT /i/k, numeric k          key N<k>                    replace_by_key, new_did = k when 1 <= k < 2^32-1 whole
 PUT /i/k, any other id       key K<k>, U<k>, N<0>...     replace_by_key, numbered after the last docid
 DELETE /i/k                  key                         erase_by_key(key, expected)
 ```
@@ -47,7 +47,9 @@ check before it lets two writers that read one version both apply.
    conflict reporting 0 (the keyed document does not exist), and an unversioned write retries by key.
 3. A write applied with `?version=N` lands at version N + 1; a refused one changes nothing.
 4. A delete is by key in the turn, on one shard or many: the docid found before the turn picks the shard only.
-5. Ids past 2^53 that round to one double share a key (the numeric serialisation's limit).
+5. A shard never numbers past the largest docid: the write is an error instead of a wrap to docid 0, and no
+   explicit id is placed at that docid.
+6. Ids past 2^53 that round to one double share a key (the numeric serialisation's limit).
 
 ## Code
 

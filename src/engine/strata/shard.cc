@@ -34,6 +34,7 @@
 #endif
 #include <cstdio>                  // for std::snprintf
 #include <filesystem>              // for std::filesystem
+#include <limits>                  // for std::numeric_limits
 #include <map>                     // for std::map
 #include <mutex>                   // for std::mutex, std::lock_guard
 #include <optional>                // for std::optional
@@ -593,6 +594,17 @@ version_of(Core& core, docid did)
 	return std::nullopt;
 }
 
+// The id after the shard's last: numbering past the largest docid is an error, never a wrap to the unreadable 0.
+docid
+next_docid(Core& core)
+{
+	const auto last = core.index->last_docid();
+	if (last >= std::numeric_limits<docid>::max()) {
+		throw Error(errc::database, "No document id left in the shard");
+	}
+	return static_cast<docid>(last + 1);
+}
+
 // The live documents of the flushed segments (the manifest's count waits for a commit).
 doccount
 live_count(const Viewed& viewed)
@@ -817,7 +829,7 @@ Shard::add(Document& doc, WriteArgs args)
 		{
 			core.check(*handle_);
 			check_version(args.expected_version, std::nullopt);
-			info.did = static_cast<docid>(core.index->last_docid() + 1);
+			info.did = next_docid(core);
 			info.version = 1;
 			if (args.finalise) {
 				args.finalise(doc, info);
@@ -927,7 +939,7 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 				info.did = args.new_did;
 				placed = true;
 			} else {
-				info.did = static_cast<docid>(core.index->last_docid() + 1);
+				info.did = next_docid(core);
 			}
 			auto& native = native_of(doc);
 			if (native.replayed() && !replay_applies(native, stored)) {
@@ -972,9 +984,7 @@ Shard::erase(docid did, bool local, std::optional<rev> expected_version)
 		{
 			core.check(*handle_);
 			const auto stored = version_of(core, did);
-			if (local) {
-				check_version(expected_version, stored);  // first: an expected version on a missing document conflicts
-			}
+			check_version(expected_version, stored);  // first: an expected version on a missing document conflicts
 			if (!stored) {
 				throw Error(errc::doc_not_found, "Document not found");
 			}

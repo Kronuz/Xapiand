@@ -1286,13 +1286,14 @@ static std::string quoted(const std::string& id) { return "\"" + id + "\""; }
 
 // A document id 0 is the document 0: it was the id a new numeric id is numbered from, so a PUT of id 0 landed on
 // the next free document id, the id of another document. Negative, the largest, and those beside them are stored
-// as themselves too, and a keyword id "0" or "00" is its own.
+// as themselves too, and a keyword id "0" or "00" is its own. The largest docid as an id leaves the shard ids to
+// number after it.
 static void test_document_ids_are_themselves() {
 	Watchdog watchdog("document ids are themselves", 240s);
 	for (const int shards : shard_counts) {
 		const auto at = "_s" + std::to_string(shards);
 		create_index("ids_int" + at, shards);
-		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
+		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967295", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
 		create_index("ids_pos" + at, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
 		ids_round_trip("/ids_pos" + at + "/", {"0", "1", "18446744073709551615"}, number, true);
 		create_index("ids_kw" + at, shards);

@@ -70,8 +70,8 @@ bool has_document_id(const MsgPack& document_id);
 // The key of a new document whose numeric id the shard numbers: a numeric key always has a value after its 'N'.
 inline constexpr std::string_view NEW_NUMERIC_KEY = "N";
 
-// The document id a numeric key names: the id when it is a whole number from 1 to the largest docid, else 0 (an
-// id such as 0, -1, 1.5 or 2^63 is placed by its key alone).
+// The document id a numeric key names: the id when it is a whole number from 1 to below the largest docid, else 0
+// (an id such as 0, -1, 1.5, 2^32-1 or 2^63 is placed by its key alone).
 engine::docid numeric_docid(std::string_view key);
 
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
