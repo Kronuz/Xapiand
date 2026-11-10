@@ -7838,16 +7838,45 @@
         "test/**"
       ],
       "journal": "../Xapiand-wt/xapiand/sortable-followups",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T17:43:39",
+          "commit": "2e85e15b692c9a0c04e2ea88fdde54554f448ac0",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2e85e15b692c9a0c04e2ea88fdde54554f448ac0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-172754-1f56b7",
+              "level": "light",
+              "seconds": 36.2,
+              "state": "done",
+              "what": "sortable-followups check build-test at 2e85e15b692c"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "2e85e15b692c9a0c04e2ea88fdde54554f448ac0",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+          "reason": "",
+          "tested": "2e85e15b692c9a0c04e2ea88fdde54554f448ac0"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": "../sortable",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "sortable-proof review nits S1, S3, S4",
-      "updated": "2026-11-09T17:41:02",
+      "updated": "2026-11-09T17:43:39",
       "worktree": "../sortable-wt/xapiand/sortable-followups"
     },
     "sortable-proof": {
