@@ -17,13 +17,13 @@ D58 (option a) implemented at Xapiand:c0d0208ee and Xapiand:e0b3cd67e (callback 
 
 ## Blocked on
 
-1. **File set** (lead): the constructor now takes the control loop (`DatabasePool(engine::AsioHost& timers, ...)`),
-   so every test that builds a pool passes one. That touches, outside the set: `tests/pool_support.h` (the shared
-   `control_loop()` test host), `tests/test_reactor_requests.cc` (10 pools), `tests/test_blocking_guard.cc` (4),
-   `tests/test_wide_search.cc` (1); each pool line gains `control_loop(), ` and an include. Ask: add them to the
-   set. The alternative, a constructor without a timer host, is a second timer mechanism.
+Nothing (the lead widened the file set to the four test files).
 
 Answered: the lead's D58 message (no msg id): merged master (Xapiand:5b57ca685), implemented (a) as below.
+Answered: the lead's file-set and Stop 1 message: the set now holds the four test files. test_node's
+`test_the_stop_runs_in_its_stated_order` runs in build-test 261110-143950-d97a09. options.md "Stopping the node", step
+2.2 ("The autocommits that were waiting are dropped") still reads true: the autocommits still waiting when Stop 2
+begins are dropped. Those that come due during step 2.1 now run during it, which the docs neither claim nor deny.
 
 ## Evidence
 
