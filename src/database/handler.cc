@@ -129,7 +129,7 @@ numeric_docid(std::string_view key)
 	if (key.size() < 2 || key[0] != 'N') {
 		return 0;
 	}
-	const auto id = sortable_unserialise(key.substr(1));
+	const auto id = sortable_unserialise(std::string(key.substr(1)));
 	constexpr auto last = static_cast<double>(std::numeric_limits<engine::docid>::max());
 	if (!(id >= 1 && id <= last) || id != std::floor(id)) {  // NaN fails the first test
 		return 0;

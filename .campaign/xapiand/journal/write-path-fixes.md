@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261109-202051-8dcc0d
+State: waiting on jobs 261109-202752-ca0659 261109-202740-e5400a
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,18 +9,33 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Fixes and tests committed (29e1fa6a4 code, 2802550be pool.h, 82bd9059e engine tests, ec1b230c3 node
-tests). Job 261109-202051-8dcc0d (slot wpf-build) builds xapiand, test_engine_strata and test_node
-and runs both; fix what it shows.
+Code, tests and the note committed: 29e1fa6a4 (fix), 2802550be (pool.h), 82bd9059e (engine tests),
+ec1b230c3 + the CAS/placement/RESTORE extension (node tests), 124c39913 (docs/mechanisms note), and a
+string conversion for numeric_docid's sortable_unserialise call. Nothing has compiled yet: the queue
+was 14 deep.
+
+- 261109-202752-ca0659 (slot wpf-build, at the commit before the note): builds xapiand,
+  test_engine_strata and test_node, runs both. Fix what it shows.
+- 261109-202740-e5400a (slot wpf-base, commit 555ceb738 = quest base b4acd8419 plus only the new
+  test_node.cc, ref refs/scratch/wpf-baseline): the four new node cases at the base; must FAIL (A1, A2).
+  If test_node.cc changes again, rebuild that commit (commit-tree recipe: read-tree b4acd8419,
+  update-index the new blob) and resubmit.
 
 ## Next
 
 1. When the build passes: run tests/test_node.cc's new cases at the quest base (b4acd8419 plus only the
    test commit, a commit-tree) to show they fail there (A1, A2).
-2. Mutants, each a commit-tree off the head, running the test that must kill it: (a) schema writes a new
-   numeric id under id 0's key again; (b) do_delete* drop the expected version; (c) do_replace* drop
-   args.expected_version (only the held-turn and model tests can see it); (d) strata erase checks the
-   version after the not-found; (e) replace_by_key ignores new_did.
+2. Mutants with `.scratch/mutant.py NAME FILE OLD NEW ...` (a commit-tree off HEAD, ref
+   refs/scratch/wpf-mutant-NAME), one job each in slot wpf-mut, each must fail its named test:
+   a. shard.cc do_replace_term also numbers `N\x80` (id 0 as new): test_document_ids_are_themselves.
+   b. do_delete_term passes std::nullopt: test_a_version_is_a_precondition_of_every_write (DELETE).
+   c. do_replace and do_replace_term set expected_version = nullopt (no check in the turn): the
+      precondition test (PUT), test_writers_expecting_one_version_apply_once, the model.
+   d. strata erase_by_key checks the version after the not-found: precondition test, engine conflicts.
+   e. strata replace_by_key ignores new_did: engine placement, node ids_seq (POST after PUT 2).
+   f. strata replace drops the "id holds another document" throw: engine placement.
+   g. schema.cc `!has_document_id(document_id)` back to `!document_id`: the RESTORE id 0 case.
+   h. on_error passes no current version: the 409 `_version` checks.
 3. TSan build (docs/dev/testing.md recipe, own build dir and .deps) running xapiand_test_node's four
    cases and test_engine_strata: A4.
 4. `campaign verify write-path-fixes` (build-test) and the docs E2E (`harness/run_all.sh smoke e2e tls`)
