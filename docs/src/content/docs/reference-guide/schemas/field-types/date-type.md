@@ -53,7 +53,7 @@ seaching by terms. To improve the performance of the search, Xapiand uses the
 `_accuracy` keyword, which indexes terms for value thresholds which later are
 used during the querying to improve the filtering and searching.
 
-In the above example terms for the day, month and year are generated.
+In the above example terms for the hour, day, month, year, decade and century are generated.
 
 Default accuracy in datetime fields is:
 

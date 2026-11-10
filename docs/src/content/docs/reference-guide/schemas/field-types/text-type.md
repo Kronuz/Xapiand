@@ -84,7 +84,7 @@ Other available stop strategies are:
 The following parameters are accepted by _Text_ fields:
 
 |---------------------------------------|-----------------------------------------------------------------------------------------|
-| `_language`                           | The language to use for stemming and stop words. (The default is `"none"`)              |
+| `_language`                           | The language to use for stemming and stop words. (No default: with none, the field has no stop words and no stemming) |
 | `_stop_strategy`                      | The [stopper strategy] that the stopper is going to use (defaults to `"stop_stemmed"`) |
 | `_stem_language`                      | The [stemming language] that stemming algorithm is going to use (defaults to `_language` value) |
 | `_stem_strategy`                      | The [stemming strategy] that stemming algorithm is going to use (defaults to `"stem_some"`) |
@@ -93,6 +93,11 @@ The following parameters are accepted by _Text_ fields:
 | `_slot`                               | The slot number. (It's calculated by default).                                          |
 | `_prefix`                             | The prefix the term is going to be indexed with. (It's calculated by default)           |
 | `_weight`                             | The weight the term is going to be indexed with.                                        |
+| `_positions`                          | Store the word positions, which phrases and `_near` need. (The default is `true`).      |
+| `_spelling`                           | Feed the spelling dictionary. (The default is `false`).                                 |
+| `_ngram`                              | Index character n-grams of the words. (The default is `false`).                         |
+| `_cjk_ngram`                          | Index CJK text as unigrams and bigrams. (The default is `false`).                       |
+| `_position`                           | The position number the first word of the value starts at.                              |
 
 [Snowball]: http://snowballstem.org
 [stopper strategy]: #stop-strategy

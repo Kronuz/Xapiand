@@ -25,6 +25,10 @@ UPDATE /bank/1
 Notice we are using the same "bank" index as before. If you already indexed into it with previous examples, changing an existing field's type (for example from `text` to `keyword`) will return an error.
 :::
 
+A keyword whose term (the field name and the value) is longer than 245 bytes answers `400`
+("Keyword too long"); a long value in a field of another type is not indexed, without an error
+(`src/database/schema.cc:5301-5306`).
+
 ## Parameters
 
 The following parameters are accepted by _Keyword_ fields:
