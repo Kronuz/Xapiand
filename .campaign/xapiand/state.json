@@ -3090,9 +3090,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "Address and close the GitHub issues and PRs",
-      "updated": "2026-11-09T18:33:09",
+      "updated": "2026-11-09T18:58:40",
       "worktree": "../Xapiand-wt/xapiand/github-triage"
     },
     "hashes-cl-1": {
