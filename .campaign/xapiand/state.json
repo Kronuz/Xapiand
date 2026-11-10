@@ -2224,17 +2224,40 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T02:53:08",
+          "commit": "2d378acfe622484065c08888e688854637df6aef",
+          "evidence": [
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "5e8f9a629358a7ef7037c06a7759935ac6b30210",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-195616-e08052",
+              "level": "light",
+              "seconds": 816.0,
+              "state": "done",
+              "what": "docs-upgrade-page check e2e at 5e8f9a629358"
+            }
+          ],
+          "final": true,
+          "from": "8796a3d0cef7d595e1fa373929bdce2416049fce",
+          "reason": "",
+          "tested": "ce62b045e858dab319254de9f21d350229d47034"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Upgrading from alpha.9 and alpha.10 data",
-      "updated": "2026-11-09T18:10:45",
-      "worktree": "../Xapiand-wt/xapiand/docs-upgrade-page"
+      "updated": "2026-11-10T02:53:19",
+      "worktree": ""
     },
     "document-gate": {
       "accepted": {},
