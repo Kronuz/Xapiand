@@ -17,6 +17,14 @@ still drive matching and order. Sent to the reviewer's acceptance by confirm job
 
 ## Next
 
+0. Lead msg on 261110-021740-4105e9 (key-order test failed at the fix head): cause found by reading, not yet
+   by a job: `range_order` put `_sort` beside `_range` in the request, where the aggregation does not read
+   it (it reads its conf, the `_range` object), so the order stayed by index and both asc and desc
+   differed. The test was wrong, not ruling 5. Fixed at c73e3c7f1 (`_sort` inside `_range`). Proof is
+   261110-022726-fafa29 passing and the mutant 261110-022803-ef3749 failing on those checks; if
+   fafa29 still fails them, the code is what is off: then fix it against D50 keys or put the order under
+   Blocked on.
+
 1. When the jobs finish: confirm the two with-fix jobs pass, the A6 and F3 mutant jobs FAIL on their new
    checks (not elsewhere); set State "ready for review".
 2. If a job fails on something other than these tests, show it also fails at main and report.
