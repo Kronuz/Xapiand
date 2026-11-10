@@ -1,6 +1,6 @@
 # x7-catalog-timer: journal
 
-State: waiting on jobs 261110-143638-823338 261110-143640-b9f269 261110-143641-8f8cf6 261110-143654-d857c1
+State: waiting on jobs 261110-143950-d97a09 261110-143952-aef5a1 261110-143641-8f8cf6 261110-143953-02e8cb
 Quest: .campaign/xapiand/quests/x7-catalog-timer.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-D58 (option a) implemented at Xapiand:c0d0208ee; jobs running.
+D58 (option a) implemented at Xapiand:c0d0208ee and Xapiand:e0b3cd67e (callback failures logged); jobs running. Jobs cancelled as stale (at c0d0208ee): 261110-143638-823338, 261110-143640-b9f269, 261110-143654-d857c1; 261110-143643-197d5c (wrong target name).
 
 ## Next
 
@@ -29,8 +29,8 @@ Answered: the lead's D58 message (no msg id): merged master (Xapiand:5b57ca685),
 
 | Criterion | Evidence |
 |---|---|
-| A1 | t1_census at the head 261110-143640-b9f269 (pending); at master 66b310e60 261110-143641-8f8cf6 (pending, must fail). Both copy `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master |
-| A2 | build-test 261110-143638-823338 (pending; test_pool's sweep, TTL and erase cases); mutant `refs/mutants/x7-catalog-timer/no-arm` (21839dcc6, `after()` returns before arming) 261110-143654-d857c1 (pending, passes only when `xapiand_test_pool sweep` fails) |
+| A1 | t1_census at the head 261110-143952-aef5a1 (pending); at master 66b310e60 261110-143641-8f8cf6 (pending, must fail). Both copy `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master |
+| A2 | build-test 261110-143950-d97a09 (pending; test_pool's sweep, TTL and erase cases); mutant `refs/mutants/x7-catalog-timer/no-arm` (e430dfe8e, `after()` returns before arming) 261110-143953-02e8cb (pending, passes only when `xapiand_test_pool sweep` fails) |
 | A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" |
 
 ## Result
