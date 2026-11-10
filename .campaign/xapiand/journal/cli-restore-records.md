@@ -1,19 +1,15 @@
 # cli-restore-records: journal
 
-State: waiting on jobs 261109-182111-0de07e 261109-182112-b44d3b
+State: waiting on jobs 261109-185817-5e61a4
 Quest: .campaign/xapiand/quests/cli-restore-records.md (the lead's; never edit it)
 
 ## Doing
 
-Proof job 261109-182111-0de07e (slot xapiand-cli-restore-records; script kept at `.scratch/proof.sh` in the
-worktree, the job's command is its text): build head, run `tests/restore_cli_check.sh` (must pass), then the
-mutant (restore resolves read-only) and main's src (`git merge-base HEAD master`), each must fail.
-build-test check 261109-182112-b44d3b at 152fbdd70.
+build-test 261109-185817-5e61a4 at the rebased head (onto master; master moved by docs and campaign files).
 
 ## Next
 
-1. When 0de07e and b44d3b end: record the proof job in Evidence; rerun only build-test at the new head
-   (lead, 11-09), since b44d3b ran before the xapian_data_guard.h comment change.
+1. When 5e61a4 passes: A5's row gets it; State "ready for review" (CI runs when the lead pushes).
 
 ## Blocked on
 
@@ -55,17 +51,25 @@ resolves nothing and creates nothing, as an empty RESTORE.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
-| A4 | `src/main.cc`: "This data is from a Xapian-based release (1.0.0-alpha.10 or earlier), which this release does not read. "; `src/xapian_data_guard.h`: "// Detects the files a Xapian-based release (1.0.0-alpha.10 and earlier) left in a data directory, by file"; build-test pending at the new head |
-| A5 | pending |
+| A1 | 261109-182111-0de07e: `tests/restore_cli_check.sh` at head 152fbdd70 passes (COUNT 50 and DUMP equal to the HTTP RESTORE's and to the source documents, default shards, `--shards 1`, `--shards 3`); with main's src (a5b8ccf49) the same check fails: COUNT and DUMP 500 "Inconsistency in number of replicas" for all three |
+| A2 | Cause and fix under "Cause": `save_settings`/`save_shards` (src/index_resolver_lru.cc) write the records; RESTORE and now the CLI reach them through `resolve_index_endpoints(endpoint, true, &first)` in `DatabaseHandler::restore_documents`. Mutant (that call read-only) killed by A1's check in 261109-182111-0de07e (500 for all three shard counts) |
+| A3 | 261109-182111-0de07e: "CLI --restore into an index created by PUT": COUNT 50, DUMP equal to the HTTP RESTORE's (green at head, mutant and main alike) |
+| A4 | `src/main.cc`: "This data is from a Xapian-based release (1.0.0-alpha.10 or earlier), which this release does not read. "; `src/xapian_data_guard.h`: "// Detects the files a Xapian-based release (1.0.0-alpha.10 and earlier) left in a data directory, by file"; build-test 261109-185817-5e61a4 (pending). Changelog: docs-upgrade-page (lead, 11-09), text below |
+| A5 | build-test 261109-182112-b44d3b passed at 152fbdd70 (before the guard comment and rebase); 261109-185817-5e61a4 at the rebased head pending; CI after the lead pushes |
 
-Examined: reproduction 261109-174137-c5db06 (docs-upgrade-page), its directory A on disk.
+Examined: reproduction 261109-174137-c5db06 (docs-upgrade-page), its directory A on disk. The proof job ran at
+152fbdd70; the rebase onto master changed no file under src/ or tests/ (master moved by docs and campaign files).
 
 ## Result
 
-<pending>
+`xapiand --restore INDEX --in FILE` into an empty data directory now leaves the index's settings and
+`INDEX/.__N` shard records in `.xapiand/indexes`, as RESTORE over HTTP does, so a node serving the directory
+answers COUNT and DUMP with the restored documents (50 of 50, equal to the HTTP RESTORE's DUMP) for 5, 1 and 3
+shards (0de07e). Changes: `DatabaseHandler::restore_documents(endpoint, fd)` (src/database/handler.cc/.h)
+resolves the index from the first object, writable; `restore_documents()` in src/main.cc calls it; the refusal
+names alpha.10; new check `tests/restore_cli_check.sh BIN`. Leaves open: a directory served with a different
+`--shards` than it was written with reads another `.xapiand/indexes` layout on either path (Rulings, code
+reading; not measured).
 
 ## Rulings I made
 
