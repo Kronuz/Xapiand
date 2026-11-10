@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261110-052957-f5e762 261110-052925-7da5aa 261110-052925-5d7e5b 261110-052925-b5f523
+State: waiting on jobs 261110-081308-b8ca87
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,29 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Launch 1 (inventory, functional jobs, report skeleton) done; four jobs queued (light queue ~46 deep).
+Launch 1 jobs read (below). t7-tsan, recovery, removed passed; rows 261110-052957-f5e762 exit 1 (t1_census,
+t8_overload_light, t8_overload_heavy; info t10_lua_asan); ctest under ASan+UBSan rc 0. T8 harness fixed at
+Xapiand:e57e6ef0d; rerun 261110-081308-b8ca87 runs only t8_overload_light, t8_overload_heavy, t10_lua_asan.
+
+### Rows job 261110-052957-f5e762 (Xapiand:e7e8e03c5, master's code + driver), each failure read
+
+| Row | rc | Cause | Kind |
+|---|---|---|---|
+| t1_census | 1 | `Xapiand:DB-TIMER` 1 beside section 2's list (unnamed 16 = reactors, W 16, FS 9, WL 8, LOG 1, main 1; total 52). It is the catalog's timer, a second scheduler wheel: `src/database/pool.cc:423` (`Wheel wheel{"DB-TIMER"}`), added by x-pool at Xapiand:d43d00046 | master: a thread section 2 does not list (Blocked on 1) |
+| t8_overload_light | 1 | 0 503s, light p50 10.2 s at 4x of 3,200/s: `run_light` sends through a pool of `--light-conns` 64 (`stall_load.py` `pool.get()`), so the server never held more than 64 requests against an in-flight cap of 1,000 per reactor (`src/manager.cc:950`) x 16 | harness: fixed at Xapiand:e57e6ef0d |
+| t8_overload_heavy | 1 | 0 503s; 64 heavy clients, same bound (demoted cap 256 per reactor, `src/server/search_views.cc:3071`) | harness: same fix |
+| t8 (both) | - | peaks `inflight` and `demoted` null: `stall_load.py` reads `xapiand_admission_inflight_peak` and `xapiand_scheduler_demoted_peak`; `src/metrics.h` exports neither (only `xapiand_search_pinned_indexes*`, `:106-107`) | master: T8's "peaks reported" cannot be met (Blocked on 2) |
+| t10_lua_asan | 1 (info) | client timeout at 30 s on "closing variable swallows the cap (pcall)": 8.32 s on Release, ASan is slower; `--max-bound-secs` default 30 | threshold under ASan: driver now checks answers with 180 s / 2 s / 5 s limits and gates the row (R5) |
+
+Info from passing rows (not gate values; light hold, shared host): T1's dry-run loaded phase worst loop p99 lag
+24,576 us (http9), light p99 160.8 ms; T10 Release flood light-GET p99 48.33 ms against the row's "near 20 ms"
+(lua_bounds limit 100 ms). Both are T4/T10 timing for the lead's exclusive runs.
 
 ## Next
 
-1. When the jobs end: read `rows/rows.tsv`, `ctest-asan.log` (job 261110-052957-f5e762) and the three checks; fill the
-   rows in `docs/gates/phase7c.md` with results; a failing row gets a rerun at master's commit before it is called
-   the branch's or pre-existing.
-2. Harnesses under ~100 lines, then their jobs: `harness/coverage.sh` (A13), the T9 half-close PUT check (A9's durable
-   half), per-open-index RSS at 10,000 indexes in `wide_search_check.py gate` (A13's X3-5).
+1. Read rerun 261110-081308-b8ca87 (`rows/rows.tsv`); a T8 still without 503s at two reactors is a master finding.
+2. Per-open-index RSS at 10,000 indexes in `wide_search_check.py gate` (A13's X3-5). Coverage, T9 and the view
+   benchmark are quests x7-coverage, x7-cancel-rows, x7-view-bench (D53).
 3. The lead's timing rows (commands below) after write-path-fixes and docs-site-refresh land.
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
@@ -82,48 +96,40 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Blocked on
 
-1. **A23, the lead's decision: T4 and the control loop's 100 ms idle probe** (kqueue coalescing makes the idle tick
-   about 1.5 ms late, p99 2,560 us idle: `docs/perf/phase7c-baseline.md`).
-   - a. Probe the control loop at 1 ms always: one line; one more loop waking 1,000 times a second on every idle node
-     (on kqueue each tick writes the wake pipe and runs one extra iteration); idle CPU unmeasured on master.
-   - b. T4 reads the control loop only while busy: `Tasks::spawn` calls `note_activity()` (today it does not:
-     `docs/mechanisms/control-plane.md` Limits), and the lag probe keeps idle-interval ticks out of the gated
-     histogram (a reactor library change); no idle cost.
-   - c. Gate the control loop on lateness past its own interval (lag minus the platform's coalescing slack): no
-     code, but the bound differs per platform and hides a real 1.5 ms block.
-   Recommendation: b. T4 asks whether work blocks a loop; an idle timer's lateness measures the OS, and (a) puts a
-   1 kHz wake on every idle node of the many-indexes host. If the lead wants no library change before the gate, (a)
-   with its idle CPU measured in T4's jobs.
-2. **A24: Xapiand's http pin (http:c813531) lacks perf-watch-peek (http:51d153a; E2 at http:6ec7324).** A repin in
-   `CMakeLists.txt` (outside this file set) must land before T12's jobs.
-3. **A9/T9: no harness and no counter.** No test disconnects a heavy search after 50 ms or half-closes a PUT, and
-   `:metrics` exports no cancel counter (`grep cancel` in `src/` metrics: none). The counter is `src/` work for
-   another quest; the half-close durability check fits a short harness here (Next 2).
-4. **A22: `Shard::view()` at 1 and 8 threads needs a benchmark in `tests/`** (outside this file set): one index, N
-   threads calling `view()` and dropping it, ns per call and its spread.
-5. **A6 and A15: a Linux VM** (no AWS; Detent's VMs on 18762/18763 are not usable) for T6, the `/proc` census and the
-   functional rows; and `stall_load.py --index-size 2xram` builds no index today (a harness change plus the VM).
-   FreeBSD: `freebsd.yml` builds release tags only, so the functional rows need a FreeBSD job or VM.
-6. **A21: the owner's threshold** (PLAN open question 7) before its jobs mean anything.
-7. **A13 pieces:** "restore corpora replayed" names no corpus I can find in `harness/` or `docs/dev/testing.md`;
-   the lead names it. Coverage and per-open-index cost are Next 2.
+1. **T1 (A1), a quest candidate or a ruling: the catalog timer thread `Xapiand:DB-TIMER`.** x-pool runs strata's
+   `host::timer` on its own `Scheduler` wheel (`src/database/pool.cc:414-432`), a second wheel beside the
+   debouncer's. Options: (a) run the catalog's timer on the existing debouncer wheel (one timer mechanism, one
+   thread fewer; `src/`, a quest); (b) amend section 2's thread list to name it. Recommendation: (a), one
+   implementation per mechanism; T1 stays failing until then.
+2. **T8 (A8), a quest candidate: no admission peaks in `:metrics`.** Export `xapiand_admission_inflight_peak` (the
+   reactor gate's `inflight`, `src/manager.cc:1209` reads it) and `xapiand_scheduler_demoted_peak` (the scheduler's
+   `demoted()`), the names `stall_load.py` reads. `src/` work.
+3. **T8 procedure, for the lead's ruling (R4):** the functional overload runs at `--processors 2`. At the default
+   16 reactors the light overload needs about 20,000 connections to reach 1,000 in flight per reactor, past one
+   loopback address's 16,384 ephemeral ports (49152-65535). The lead's 16-reactor suite would need several
+   client addresses or a lower cap; the 503-within-a-slice claim does not depend on the reactor count.
+4. **A24**: Xapiand's http pin c813531 lacks http:51d153a (quest x7-http-repin, D53).
+5. **A6, A15**: the local Linux VM (D53); FreeBSD: `freebsd.yml` builds release tags only.
+6. **A13**: "restore corpora replayed" names no corpus I can find; the lead names it.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | rows 261110-052957-f5e762 (`t1_census`, `t1_strict_owed`) queued; build-test 261110-032054-0d5177 |
-| A2 | rows 261110-052957-f5e762 (`t2_e2e_asan`, `t2_stored_asan`) queued; e2e 261110-032054-4e0406; CI run 42820866169 |
-| A3 | recovery 261110-052925-5d7e5b and rows 261110-052957-f5e762 (`t3_crash*`) queued |
-| A7 | t7-tsan 261110-052925-7da5aa and rows 261110-052957-f5e762 (`t7_asan`) queued |
-| A8 | rows 261110-052957-f5e762 (`t8_overload_*`) queued; build-test 261110-032054-0d5177 (`test_readers_cap`) |
-| A10 | rows 261110-052957-f5e762 (`t10_lua`) queued |
-| A13 | rows 261110-052957-f5e762 (ASan+UBSan ctest) and t7-tsan queued; CI run 42820866169 |
+| A1 | rows 261110-052957-f5e762: `t1_strict_owed` passed, `t1_census` FAILED (DB-TIMER, Blocked on 1); build-test 261110-032054-0d5177 |
+| A2 | rows 261110-052957-f5e762 (`t2_e2e_asan`, `t2_stored_asan` passed); e2e 261110-032054-4e0406; CI run 42820866169 |
+| A3 | recovery 261110-052925-5d7e5b passed; rows 261110-052957-f5e762 (`t3_crash`, `t3_crash_asan` passed) |
+| A7 | t7-tsan 261110-052925-7da5aa passed; rows 261110-052957-f5e762 (`t7_asan` passed, 365 s) |
+| A8 | rows 261110-052957-f5e762 `t8_*` FAILED (harness, fixed Xapiand:e57e6ef0d); rerun 261110-081308-b8ca87 queued; peaks unexported (Blocked on 2); build-test 261110-032054-0d5177 (`test_readers_cap`) |
+| A10 | rows 261110-052957-f5e762 (`t10_lua` passed; `t10_lua_asan` timed out at 30 s); rerun 261110-081308-b8ca87 queued |
+| A13 | rows 261110-052957-f5e762 (ASan+UBSan ctest rc 0); t7-tsan 261110-052925-7da5aa; CI run 42820866169 |
 | A14 | `docs/gates/phase7c.md` (skeleton) |
 | A17 | build-test 261110-032054-0d5177 (`async_check.sh --strict --owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
-| A19 | removed 261110-052925-b5f523 and rows 261110-052957-f5e762 (`x6_shutdown`) queued |
+| A19 | removed 261110-052925-b5f523 passed; rows 261110-052957-f5e762 (`x6_shutdown` passed) |
 | A20 | build-test 261110-032054-0d5177; `src/database/pool.cc` |
+| A21 | D53 sets the rule (head inside the new run's 95% interval or above); jobs owed |
+| A23 | D53 (T4 reads the control loop only while busy) |
 
 ## Result
 
@@ -138,5 +144,11 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   ASan+UBSan, runs `ctest` under ASan, then `gate7c_rows.sh`; rows run to their end so one failure hides no other.
   `t2_restore_stream_asan` and `t10_lua_asan` are info rows: the first has the known kill-before-commit timing
   (x-pool R6), the second's 50 ms light-GET limit is a timing claim under ASan (Linux 2026-11-03).
+- R4. T8's functional overload runs at `--processors 2` with 1.25x the in-flight cap in connections (Blocked on
+  3 for the lead's 16-reactor runs).
+- R5. Under ASan, T10 checks each bound's answer, not its time (`--max-bound-secs 180 --max-light-ms 2000
+  --max-flood-p99-ms 5000`), so the row gates; the times are the Release row's and the lead's.
+- R6. A grep for 503 paths printed one line of `src/sortable_serialise.cc` (a match, not a read); no other GPL
+  path was opened. Later greps exclude it.
 - R3. T8 runs at dry-run size (20,000 documents): the row's functional claims are 503s and no other errors; RSS
   within 10% of T4's run needs the lead's 1,000,000-document run.
