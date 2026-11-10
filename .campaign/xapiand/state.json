@@ -1798,6 +1798,8 @@
     "direct-pins": {
       "accepted": {},
       "after": [],
+      "base": "625963a893534bca3d0d56cd96333073634f2aab",
+      "branch": "quest/xapiand/direct-pins",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -1906,9 +1908,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand declares only the libraries it includes",
-      "updated": "2026-11-08T22:56:35"
+      "updated": "2026-11-09T17:44:07",
+      "worktree": "../Xapiand-wt/xapiand/direct-pins"
     },
     "docs-upgrade-page": {
       "accepted": {},
