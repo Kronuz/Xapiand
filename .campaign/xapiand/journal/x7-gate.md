@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261110-081308-b8ca87
+State: waiting on jobs 261110-103010-fc5f2d
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -26,6 +26,11 @@ Xapiand:e57e6ef0d; rerun 261110-081308-b8ca87 runs only t8_overload_light, t8_ov
 Info from passing rows (not gate values; light hold, shared host): T1's dry-run loaded phase worst loop p99 lag
 24,576 us (http9), light p99 160.8 ms; T10 Release flood light-GET p99 48.33 ms against the row's "near 20 ms"
 (lua_bounds limit 100 ms). Both are T4/T10 timing for the lead's exclusive runs.
+
+Rerun 261110-092614-ccc9e3 (3805-era runner fix resubmit of b8ca87): t8_overload_light rc 0, t8_overload_heavy rc 0,
+t10_lua_asan rc 1: the ten concurrent swallowers hit the harness's fixed 120 s client timeout (TimeoutError; one alone
+28-38 s under ASan; fresh GETs 20/20). Lead fixed the timeout at Xapiand:47015d7ff (four bounds each, times printed);
+rerun 261110-103010-fc5f2d. Still timing out at 720 s would be a master finding.
 
 ## Next
 
