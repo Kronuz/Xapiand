@@ -1209,6 +1209,39 @@ static std::vector<std::string> hits_of(const Reply& reply) {
 	return ns;
 }
 
+// The shard counts the id and version cases run at: one shard, and more than one, where a key's shard is chosen
+// before its turn.
+constexpr int shard_counts[] = {1, 2};
+
+// Creates the index `name` with `shards` shards and no replicas, and `schema` (a JSON object) when given.
+static void create_index(const std::string& name, int shards, const std::string& schema = "") {
+	const auto settings = R"({"_settings":{"number_of_shards":)" + std::to_string(shards) + R"(,"number_of_replicas":0})";
+	CHECK(success(call("PUT", "/" + name + "/", settings + (schema.empty() ? "" : R"(,"_schema":)" + schema) + "}")));
+	CHECK_EQ(static_cast<int>(endpoints_of(name).size()), shards);
+}
+
+// Holds the turn of every shard of an index from threads of their own until released.
+class HoldEveryShard {
+public:
+	explicit HoldEveryShard(const std::string& name) {
+		for (const auto& endpoint : endpoints_of(name)) {
+			pins_.push_back(pin_index(*manager()->database_pool, endpoint.path, WRITE));
+		}
+		for (auto& pin : pins_) {
+			holds_.push_back(std::make_unique<HoldTurn>(pin.entry(), WRITE));
+		}
+	}
+	void release() { holds_.clear(); }
+
+private:
+	std::vector<IndexPin> pins_;
+	std::vector<std::unique_ptr<HoldTurn>> holds_;
+};
+
+static std::size_t requests_inflight() {
+	return manager()->http_service->reactor(0).gate().inflight.load();
+}
+
 // Ids round trip through PUT, GET, SEARCH and DELETE, each touching only its own document: `ids` in the index at
 // `path`, whose first id sets the type of its ids, each written once with its `n` the id's text; `literal` is an id
 // as a JSON value. With `numbered`, a POST then adds a document whose id the shard numbers, which takes none of them.
@@ -1255,26 +1288,55 @@ static std::string quoted(const std::string& id) { return "\"" + id + "\""; }
 // the next free document id, the id of another document. Negative, the largest, and those beside them are stored
 // as themselves too, and a keyword id "0" or "00" is its own.
 static void test_document_ids_are_themselves() {
-	Watchdog watchdog("document ids are themselves", 120s);
-	ids_round_trip("/ids_int/", {"-1", "0", "1", "2", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
-	CHECK(success(call("PUT", "/ids_pos/", R"({"_schema":{"_type":"object","_id":{"_type":"positive"}}})")));
-	ids_round_trip("/ids_pos/", {"0", "1", "18446744073709551615"}, number, true);
-	ids_round_trip("/ids_kw/", {"a", "0", "00", "-1"}, quoted, false);   // a first: the ids are keywords
+	Watchdog watchdog("document ids are themselves", 240s);
+	for (const int shards : shard_counts) {
+		const auto at = "_s" + std::to_string(shards);
+		create_index("ids_int" + at, shards);
+		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
+		create_index("ids_pos" + at, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		ids_round_trip("/ids_pos" + at + "/", {"0", "1", "18446744073709551615"}, number, true);
+		create_index("ids_kw" + at, shards);
+		ids_round_trip("/ids_kw" + at + "/", {"a", "0", "00", "-1"}, quoted, false);   // a first: the ids are keywords
 
-	// An id names the document id it would take when that is free: a new id the shard numbers after it is not it.
-	CHECK_EQ(call("PUT", "/ids_seq/2?commit", R"({"n":"2"})").status, 204);
-	const auto posted = call("POST", "/ids_seq/?commit&echo", R"({"n":"new"})");
-	CHECK(success(posted));
-	CHECK_EQ(text_of(posted, "_id"), "3");
-	CHECK_EQ(text_of(call("GET", "/ids_seq/2"), "n"), "2");
-	CHECK_EQ(version_of(call("GET", "/ids_seq/2")), 1);
+		// An id names the document id it would take when that is free: a new id the shard numbers is not it. One
+		// shard numbers it after the id; more shards put it in the least used one, which numbers it there.
+		const auto seq = "/ids_seq" + at + "/";
+		create_index("ids_seq" + at, shards);
+		CHECK_EQ(call("PUT", seq + "2?commit", R"({"n":"2"})").status, 204);
+		const auto posted = call("POST", seq + "?commit&echo", R"({"n":"new"})");
+		CHECK(success(posted));
+		if (shards == 1) {
+			CHECK_EQ(text_of(posted, "_id"), "3");
+		} else {
+			CHECK(field_of(posted, "_id").is_integer());
+			CHECK_NE(text_of(posted, "_id"), "2");
+		}
+		CHECK_EQ(text_of(call("GET", seq + "2"), "n"), "2");
+		CHECK_EQ(version_of(call("GET", seq + "2")), 1);
 
-	// A body's id 0 is an id too (a RESTORE line), not a new one.
-	CHECK(success(call("RESTORE", "/ids_restore/?commit", "{\"_id\":1,\"n\":\"1\"}\n{\"_id\":0,\"n\":\"0\"}\n", "application/x-ndjson")));
-	for (const std::string id : {"0", "1"}) {
-		const auto got = call("GET", "/ids_restore/" + id);
-		CHECK_EQ(text_of(got, "n"), id);
-		CHECK_EQ(version_of(got), 1);
+		// A body's id 0 is an id too (a RESTORE line), not a new one; an id false is none, so the shard numbers it.
+		const auto restore = "/ids_restore" + at + "/";
+		create_index("ids_restore" + at, shards);
+		CHECK(success(call("RESTORE", restore + "?commit", "{\"_id\":1,\"n\":\"1\"}\n{\"_id\":0,\"n\":\"0\"}\n", "application/x-ndjson")));
+		for (const std::string id : {"0", "1"}) {
+			const auto got = call("GET", restore + id);
+			CHECK_EQ(text_of(got, "n"), id);
+			CHECK_EQ(version_of(got), 1);
+		}
+		const auto unnamed = "/ids_false" + at + "/";
+		create_index("ids_false" + at, shards);
+		CHECK(success(call("RESTORE", unnamed + "?commit", "{\"_id\":false,\"n\":\"f\"}\n", "application/x-ndjson")));
+		const auto found = call("SEARCH", unnamed + "?volatile", R"({"_limit":5})");
+		CHECK_EQ(field_of(found, "total").as_u64(), 1u);
+		std::size_t numbered = 0;
+		const auto hits = field_of(found, "hits");
+		if (hits.is_array()) {
+			for (const auto& hit : hits) {
+				const auto it = hit.find("_id");
+				numbered += it != hit.end() && it.value().is_integer() ? 1 : 0;
+			}
+		}
+		CHECK_EQ(numbered, 1u);
 	}
 }
 
@@ -1289,10 +1351,11 @@ static std::string write_body(const std::string& method, int v) {
 // `?version=N` is a precondition of every write: applied only while the document's version is N (0: no document),
 // else a 409 that says the current version in `_version` and changes nothing. A missing document has version 0 for
 // every method (Elasticsearch's if_seq_no); with the precondition held the method does what it does without one.
-static void test_a_version_is_a_precondition_of_every_write() {
-	Watchdog watchdog("a version is a precondition of every write", 120s);
+static void a_version_is_a_precondition_of_every_write_at(int shards) {
+	const auto index = "versions_s" + std::to_string(shards);
+	create_index(index, shards);
 	for (const std::string method : {"PUT", "PATCH", "UPDATE", "UPSERT", "DELETE"}) {
-		const auto path = "/versions/" + method;
+		const auto path = "/" + index + "/" + method;
 		CHECK_EQ(call("PUT", path + "?commit", R"({"v":1})").status, 204);
 		CHECK_EQ(call("PUT", path + "?commit", R"({"v":2})").status, 204);
 		for (const auto stale : {1, 0, 3}) {
@@ -1312,7 +1375,7 @@ static void test_a_version_is_a_precondition_of_every_write() {
 			CHECK_EQ(version_of(applied), 3);
 		}
 
-		const auto missing = "/versions/missing_" + method;
+		const auto missing = "/" + index + "/missing_" + method;
 		const auto refused = call(method, missing + "?commit&version=1", write_body(method, 4));
 		CHECK_EQ(refused.status, 409);
 		CHECK_EQ(version_of(refused), 0);
@@ -1330,25 +1393,33 @@ static void test_a_version_is_a_precondition_of_every_write() {
 	}
 }
 
+static void test_a_version_is_a_precondition_of_every_write() {
+	Watchdog watchdog("a version is a precondition of every write", 240s);
+	for (const int shards : shard_counts) {
+		a_version_is_a_precondition_of_every_write_at(shards);
+	}
+}
+
 // Writers that expect one version: exactly one is applied and the others are 409 with the version that one left.
-// The index's turn is held until every writer waits for it, so each has passed what it checks before the turn
-// before any applies (the interleaving the check in the turn is for).
-static void test_writers_expecting_one_version_apply_once() {
-	Watchdog watchdog("writers expecting one version apply once", 120s);
+// The turn of every shard of the index is held until every writer waits for it, so each has passed what it checks
+// before the turn before any applies (the interleaving the check in the turn is for).
+static void writers_expecting_one_version_apply_once_at(int shards) {
 	constexpr int writers = 6;
-	auto entry = pin_index(*manager()->database_pool, endpoints_of("race")[0].path, WRITE);
-	for (const std::string method : {"PUT", "PATCH", "UPDATE", "DELETE"}) {
-		const auto path = "/race/" + method;
+	const auto index = "race_s" + std::to_string(shards);
+	create_index(index, shards);
+	for (const std::string method : {"PUT", "PATCH", "UPDATE", "UPSERT", "DELETE"}) {
+		const auto path = "/" + index + "/" + method;
 		CHECK_EQ(call("PUT", path + "?commit", R"({"v":-1})").status, 204);
 		std::vector<Reply> replies(writers);
 		std::vector<std::thread> threads;
 		{
-			HoldTurn hold(entry.entry(), WRITE);
+			HoldEveryShard hold(index);
 			for (int i = 0; i < writers; ++i) {
-				threads.emplace_back([&, i] { replies[i] = call(method, path + "?commit&version=1", write_body(method, i)); });
+				threads.emplace_back([&, i] { replies[i] = call(method, path + "?commit&version=1", write_body(method == "UPSERT" ? "UPDATE" : method, i)); });
 			}
-			CHECK(eventually([] { return manager()->http_service->reactor(0).gate().inflight.load() == writers; }));
+			CHECK(eventually([] { return requests_inflight() == writers; }));
 			std::this_thread::sleep_for(200ms);   // each is past its reads, waiting for the turn
+			hold.release();
 		}
 		for (auto& thread : threads) {
 			thread.join();
@@ -1375,17 +1446,70 @@ static void test_writers_expecting_one_version_apply_once() {
 	}
 }
 
+static void test_writers_expecting_one_version_apply_once() {
+	Watchdog watchdog("writers expecting one version apply once", 240s);
+	for (const int shards : shard_counts) {
+		writers_expecting_one_version_apply_once_at(shards);
+	}
+}
+
+// A versioned DELETE checks the document its key names, in the turn: between its lookup and its turn the document is
+// deleted and its docid taken by a new id, and the DELETE is refused (the keyed document is gone) and leaves that one.
+static void test_a_versioned_delete_checks_the_document_its_key_names() {
+	Watchdog watchdog("a versioned delete checks the document its key names", 120s);
+	for (const int shards : shard_counts) {
+		const auto index = "reuse_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards);
+		CHECK_EQ(call("PUT", path + "-1?commit", R"({"v":"minus"})").status, 204);
+		const auto docid = field_of(call("INFO", path + "-1"), "docid");
+		CHECK(docid.is_number());
+		if (!docid.is_number()) {
+			continue;
+		}
+		const auto other = std::to_string(docid.as_i64());   // a new id that names the docid -1 frees
+		CHECK_EQ(call("GET", path + other).status, 404);
+		Reply deleted, put, versioned;
+		std::thread t1, t2, t3;
+		{
+			HoldEveryShard hold(index);
+			t1 = std::thread([&] { deleted = call("DELETE", path + "-1?commit"); });
+			CHECK(eventually([] { return requests_inflight() == 1; }));
+			std::this_thread::sleep_for(200ms);
+			t2 = std::thread([&] { put = call("PUT", path + other + "?commit", R"({"v":"other"})"); });
+			CHECK(eventually([] { return requests_inflight() == 2; }));
+			std::this_thread::sleep_for(200ms);
+			t3 = std::thread([&] { versioned = call("DELETE", path + "-1?commit&version=1"); });
+			CHECK(eventually([] { return requests_inflight() == 3; }));
+			std::this_thread::sleep_for(200ms);   // the versioned DELETE is past its lookup, waiting for the turn
+			hold.release();
+		}
+		t1.join();
+		t2.join();
+		t3.join();
+		CHECK_EQ(deleted.status, 204);
+		CHECK_EQ(put.status, 204);
+		CHECK_EQ(versioned.status, 409);
+		CHECK_EQ(version_of(versioned), 0);
+		const auto kept = call("GET", path + other);
+		CHECK_EQ(kept.status, 200);
+		CHECK_EQ(text_of(kept, "v"), "other");
+		CHECK_EQ(version_of(kept), 1);
+	}
+}
+
 // Writers on few documents, each writing the version it read (PUT and PATCH, with ?version), against the sequential
 // model: a write that is applied lands at the version after the one it expected, per document every version from 2
 // to its last is won by exactly one write, a refused write saw an older version than the one it is told, and the
 // document holds the write that won its last version.
-static void test_versioned_writers_match_a_sequential_model() {
-	Watchdog watchdog("versioned writers match a sequential model", 300s);
+static void versioned_writers_match_a_sequential_model_at(int shards) {
+	const auto index = "model_s" + std::to_string(shards);
+	create_index(index, shards);
 	constexpr int keys = 2;
 	constexpr int threads_n = 4;
 	constexpr int wins_wanted = 12;   // per thread
 	for (int k = 0; k < keys; ++k) {
-		CHECK_EQ(call("PUT", "/model/" + std::to_string(k) + "?commit", R"({"v":-1})").status, 204);
+		CHECK_EQ(call("PUT", "/" + index + "/" + std::to_string(k) + "?commit", R"({"v":-1})").status, 204);
 	}
 	struct Win {
 		int key;
@@ -1401,7 +1525,7 @@ static void test_versioned_writers_match_a_sequential_model() {
 			std::mt19937 random(static_cast<unsigned>(t) * 7919u + 1u);
 			for (int attempt = 0; static_cast<int>(wins[t].size()) < wins_wanted && attempt < 50 * wins_wanted; ++attempt) {
 				const int k = static_cast<int>(random() % keys);
-				const auto path = "/model/" + std::to_string(k);
+				const auto path = "/" + index + "/" + std::to_string(k);
 				const auto seen = version_of(call("GET", path + "?volatile"));
 				const int value = t * 1000 + attempt;
 				const std::string method = attempt % 2 == 0 ? "PUT" : "PATCH";
@@ -1436,7 +1560,7 @@ static void test_versioned_writers_match_a_sequential_model() {
 			}
 		}
 		CHECK_EQ(by_version.size(), won);
-		const auto got = call("GET", "/model/" + std::to_string(k) + "?volatile");
+		const auto got = call("GET", "/" + index + "/" + std::to_string(k) + "?volatile");
 		CHECK_EQ(version_of(got), static_cast<long long>(won) + 1);
 		if (!by_version.empty()) {
 			CHECK_EQ(by_version.begin()->first, 2);
@@ -1448,7 +1572,14 @@ static void test_versioned_writers_match_a_sequential_model() {
 	for (const auto r : refused) {
 		total_refused += r;
 	}
-	std::fprintf(stderr, "  model: %d writes won, %d refused\n", threads_n * wins_wanted, total_refused);   // what the contention reached
+	std::fprintf(stderr, "  model at %d shards: %d writes won, %d refused\n", shards, threads_n * wins_wanted, total_refused);   // what the contention reached
+}
+
+static void test_versioned_writers_match_a_sequential_model() {
+	Watchdog watchdog("versioned writers match a sequential model", 600s);
+	for (const int shards : shard_counts) {
+		versioned_writers_match_a_sequential_model_at(shards);
+	}
 }
 
 
@@ -1508,6 +1639,7 @@ int main(int argc, char** argv) {
 		{"test_document_ids_are_themselves", test_document_ids_are_themselves},
 		{"test_a_version_is_a_precondition_of_every_write", test_a_version_is_a_precondition_of_every_write},
 		{"test_writers_expecting_one_version_apply_once", test_writers_expecting_one_version_apply_once},
+		{"test_a_versioned_delete_checks_the_document_its_key_names", test_a_versioned_delete_checks_the_document_its_key_names},
 		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
 	};
 	for (const auto& c : cases) {
