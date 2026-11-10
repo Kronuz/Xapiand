@@ -1118,7 +1118,27 @@
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-09T19:17:41",
+          "base": "382f30e571c54ad543b605c740d00c81d47b31b8",
+          "blobs": {
+            "src/database/handler.cc": "100644:66f01e738248ea003436eef720c57fbee7649afe",
+            "src/database/handler.h": "100644:a2df467baf6cdfbc252acb701b5192b8303a0dc5",
+            "src/main.cc": "100644:868056cfc71d96192e265ce191d1927d901da0e0",
+            "src/xapian_data_guard.h": "100644:3b81ba71b64f6c2dc6a10d4922e7bdfd690d8ad1",
+            "tests/restore_cli_check.sh": "100755:e3e6a3686b2747192a6c9025f32090c18baadbaf"
+          },
+          "brief": "5a37c0eef82e303e",
+          "by": "waived",
+          "commit": "240c615f6f2a22d4f371b3d48b828a78cbf4cd30",
+          "findings": {},
+          "note": "40-line fix routing the CLI through RESTORE's own resolve; proof passes at head and fails at main's src and on the read-only mutant (261109-185930-51e070); build-test green; lead read the diff",
+          "review": "",
+          "reviewed": "",
+          "verdict": ""
+        }
+      },
       "after": [],
       "base": "a5b8ccf49b83fb1a1e63b5ff946cdfa101cea3b0",
       "branch": "quest/xapiand/cli-restore-records",
@@ -1153,7 +1173,7 @@
       "risk": "normal",
       "status": "review",
       "title": "CLI --restore into an empty data directory writes the index's shard records",
-      "updated": "2026-11-09T19:17:40",
+      "updated": "2026-11-09T19:17:41",
       "worktree": "../Xapiand-wt/xapiand/cli-restore-records"
     },
     "closing-benchmark": {
