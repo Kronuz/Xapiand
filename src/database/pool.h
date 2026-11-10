@@ -303,8 +303,8 @@ private:
 	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Chores& chores, int flags, engine::Document&& doc, bool wal_, bool version_);
 	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::Chores& chores, int flags, engine::docid shard_did, engine::Document&& doc, bool wal_, bool version_);
 	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, engine::Chores& chores, int flags, const std::string& term, engine::Document&& doc, bool wal_, bool version_);
-	task::task<void> do_delete(engine::Shard& eng, int flags, engine::docid shard_did, bool wal_);
-	task::task<void> do_delete_term(engine::Shard& eng, int flags, const std::string& term, bool wal_);
+	task::task<void> do_delete(engine::Shard& eng, int flags, engine::docid shard_did, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> do_delete_term(engine::Shard& eng, int flags, const std::string& term, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
 	task::task<void> do_set_metadata(engine::Shard& eng, int flags, const std::string& key, const std::string& value, bool wal_);
 	task::task<void> do_add_spelling(engine::Shard& eng, int flags, const std::string& word, engine::termcount freqinc, bool wal_);
 	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, int flags, const std::string& word, engine::termcount freqdec, bool wal_);
