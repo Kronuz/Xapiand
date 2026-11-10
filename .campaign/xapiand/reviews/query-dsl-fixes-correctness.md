@@ -1,8 +1,10 @@
 # query-dsl-fixes review: correctness
 
-Commit: f176d8896f40 (Xapiand:f176d8896f4089a5b6dbc7680f390a83b56386f0; code at Xapiand:ffc7e9517)
+Commit: ace371929756 (rebased; quest files identical to the re-reviewed Xapiand:c73e3c7f1a048adfda487f7879cf2ef672480724)
 Verdict: APPROVE
-Date: 2026-11-09
+Date: 2026-11-10
+
+Two rounds, both kept below. The first round reviewed Xapiand:f176d8896f4089a5b6dbc7680f390a83b56386f0 (code at Xapiand:ffc7e9517) on 2026-11-09. The re-review covers F2 and F3 at c73e3c7f1. `git diff c73e3c7f1 ace371929756 -- src/query_dsl.* src/aggregations tests/test_engine_query.cc` is empty (checked 2026-11-10).
 
 APPROVE: lands as is, at this commit's code. CHANGES: lands after each blocking finding is fixed
 and confirmed by a job at the fixed commit. REJECT: the approach is wrong; the quest is re-planned.

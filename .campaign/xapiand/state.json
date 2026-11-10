@@ -7228,20 +7228,20 @@
     "query-dsl-fixes": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-10T02:13:40",
-          "base": "2fdc48388f1182ede64aff6fae4960b4ab842114",
+          "at": "2026-11-10T03:13:24",
+          "base": "2357baa8b552f6705bb74d908a844de767843a55",
           "blobs": {
-            "src/aggregations/bucket.h": "100644:3067def15494db4ed45aa9664f6651748c753ed9",
+            "src/aggregations/bucket.h": "100644:2d8cf632da0f38997da70f64d31b37616e59e2f1",
             "src/query_dsl.cc": "100644:9261a2220674fb1acc7b7dfcce8c737582eba854",
-            "tests/test_engine_query.cc": "100644:67118d0bf5d3d1aec8a691bca4ea54d2876ace66"
+            "tests/test_engine_query.cc": "100644:8857b3f328f68550800b818c43e4e254cc309b5c"
           },
-          "brief": "d57be8a379b9e54c",
+          "brief": "54d961736e7fe90a",
           "by": "review",
-          "commit": "f15ad28c9fa4f8a6857f88dc131e309c4430b687",
+          "commit": "a76433b4e475fd0145c43ecbc148b83b09b01336",
           "findings": {},
           "note": "",
-          "review": "75df119e301ae2e1e34423905c9da92b58a7cc2f",
-          "reviewed": "f176d8896f4089a5b6dbc7680f390a83b56386f0",
+          "review": "192a558bcc09f96862b7eae2377372a0cf001979",
+          "reviewed": "ace3719297564f486a9de113551e32e12bc35c18",
           "verdict": "APPROVE"
         }
       },
@@ -7275,7 +7275,7 @@
       "risk": "normal",
       "status": "review",
       "title": "_not over several subqueries and open-ended integer ranges",
-      "updated": "2026-11-10T02:13:40",
+      "updated": "2026-11-10T03:13:24",
       "worktree": "../Xapiand-wt/xapiand/query-dsl-fixes"
     },
     "reclaim-backlog": {
