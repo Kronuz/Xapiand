@@ -3,7 +3,7 @@ title: "Architecture Overview"
 ---
 
 Xapiand is one process that serves a REST API over HTTP and keeps its indexes on
-local disk. Requests run as tasks on a few event loops; each shard of an index is
+local disk. Requests run as tasks on one event loop per processor; each shard of an index is
 a [strata](https://github.com/Kronuz/strata) segment store searched through
 [prospect](https://github.com/Kronuz/prospect), both linked in as libraries; and a
 write-ahead log per shard covers what the last commit does not hold. This page
@@ -108,8 +108,8 @@ path: a request *pins* an index to use it, and the first pin opens it in a chore
 Writes to an index take its **turn**, an asynchronous mutex with a 30 s deadline
 (`503` when the turn does not come). Reads take no turn: each holds a **view**,
 the index as its last refresh published it, so a read never makes a write wait.
-The catalog demotes an index after 30 s idle and closes it after 10 minutes idle;
-when more are open than `--database-pool-size` (200, lowered to fit the
+An index idle for 30 s gives back its memory maps, and one idle for 10 minutes
+closes; when more are open than `--database-pool-size` (200, lowered to fit the
 process's file-descriptor limit) it closes the least used first.
 
 ## The write path
@@ -124,7 +124,7 @@ blobs -> docdata (chore)      log line queued                commit: segments, m
 ```
 
 1. **Prepare.** The view resolves the index's settings and schema (both cached,
-   and read once however many requests ask at the same time). The schema turns the
+   and read once however many requests ask for them at once). The schema turns the
    document into the engine's form: terms with positions, values by slot, the
    stored record (the document as MessagePack) and its key, the document id.
 2. **Apply.** Under the index's turn strata checks the expected version, assigns
