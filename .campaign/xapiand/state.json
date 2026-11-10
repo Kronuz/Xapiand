@@ -11375,17 +11375,51 @@
       "files": [
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T10:31:51",
+          "commit": "f2315af5401eaf1ff40fa56f4046b47459c77a7f",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "3805a53bbe3fc54c735363d8ba0749b3d58a4a1e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-092615-73908c",
+              "level": "light",
+              "seconds": 938.5,
+              "state": "done",
+              "what": "x7-http-repin check build-test at 3805a53bbe3f"
+            },
+            {
+              "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+              "commit": "3805a53bbe3fc54c735363d8ba0749b3d58a4a1e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-092615-d6934d",
+              "level": "light",
+              "seconds": 506.5,
+              "state": "done",
+              "what": "x7-http-repin check e2e at 3805a53bbe3f"
+            }
+          ],
+          "final": true,
+          "from": "7fc96a50200c75a4612f41c18e5bf1ea1329f5ea",
+          "reason": "",
+          "tested": "8f27fc8df9033625cdca4bb5936a4b1f9cec6480"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Repin http to main with perf-watch-peek (x7-gate A24)",
-      "updated": "2026-11-10T05:36:13",
-      "worktree": "../Xapiand-wt/xapiand/x7-http-repin"
+      "updated": "2026-11-10T10:31:57",
+      "worktree": ""
     },
     "x7-view-bench": {
       "accepted": {},
