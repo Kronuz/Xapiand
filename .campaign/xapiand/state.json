@@ -6950,6 +6950,40 @@
       "title": "Xapian-compatible operators (P3)",
       "updated": "2026-11-08T15:41:01"
     },
+    "query-dsl-fixes": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "src/aggregations/bucket.h",
+        "src/aggregations/bucket.cc",
+        "tests/test_engine_query.cc",
+        "tests/test_aggregations.cc",
+        "tests/CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "The document profile gate",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "_not over several subqueries and open-ended integer ranges",
+      "updated": "2026-11-09T18:41:06"
+    },
     "reclaim-backlog": {
       "accepted": {},
       "after": [],
