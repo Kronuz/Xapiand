@@ -2147,9 +2147,7 @@
     },
     "docs-site-refresh": {
       "accepted": {},
-      "after": [
-        "sortable-encoding"
-      ],
+      "after": [],
       "base": "0183e70b2952d102bb2dc8c7c4103bcb775b0bb9",
       "branch": "quest/xapiand/docs-site-refresh",
       "checks": [
@@ -2164,7 +2162,8 @@
       "files": [
         "docs/src/content/docs/**",
         "docs/public/assets/**",
-        "README.md"
+        "README.md",
+        "docs/src/components/**"
       ],
       "history": [
         {
@@ -2236,7 +2235,7 @@
         }
       },
       "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
-      "updated": "2026-11-10T03:22:19",
+      "updated": "2026-11-10T04:37:27",
       "worktree": "../Xapiand-wt/xapiand/docs-site-refresh"
     },
     "docs-upgrade-page": {
