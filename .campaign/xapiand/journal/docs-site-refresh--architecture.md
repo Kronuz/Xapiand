@@ -1,6 +1,6 @@
 # docs-site-refresh--architecture: journal
 
-State: working
+State: waiting on jobs 261110-034547-0a4dbb
 Quest: .campaign/xapiand/quests/docs-site-refresh.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,7 +15,7 @@ pages, before or after, so the docs E2E is untouched (D47). Jobs: site build + l
 
 ## Next
 
-1. Read the site-build and A3 job results; fix any broken link from or to the architecture pages.
+1. Read job 261110-034547-0a4dbb (site build + link check); fix any broken link from or to the architecture pages, rerun, then set State to ready for review.
 
 ## Blocked on
 
@@ -27,8 +27,8 @@ Nothing.
 |---|---|
 | A1 | the "Audit rows" table below: every row of `docs/dev/docs-site-audit.md` for `architecture.md`, `architecture/dependencies.md`, `architecture/internals.md` fixed, with the source of each fixed claim |
 | A2 | not touched: these pages carry no request blocks before or after (`git grep -c "e2e:begin" -- 'docs/src/content/docs/architecture*'` is empty) |
-| A3 | pending job |
-| A4 | pending job |
+| A3 | 261110-034548-e17d04 at 14207d0be: `git grep -niw xapian -- 'docs/src/content/docs/architecture*'`, 0 matches, exit 0 (also 261110-034448-665693 at 07bb9134e, 0 matches) |
+| A4 | 261110-034547-0a4dbb at 14207d0be (queued): `npm ci`, `npm run build`, then a link check over `dist/` that fails on any broken link from or to the architecture pages and lists the rest; 261110-034448-ae5c89 at 07bb9134e cancelled (superseded) |
 | A7 | [manual] the owner reads `architecture.md` before landing (lead) |
 
 ## Audit rows (A1)
