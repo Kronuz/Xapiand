@@ -1,6 +1,6 @@
 # x7-cancel-rows: journal
 
-State: working
+State: waiting on jobs 261110-143158-21ff95 261110-143812-1994f1
 Quest: .campaign/xapiand/quests/x7-cancel-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,10 +13,14 @@ Code and tests committed (src/server/search_views.cc, tests/test_node.cc); docs 
 docs/mechanisms/cancellation.md. Job 261110-143158-21ff95 builds test_node and runs the three new
 cases (filters half_closes, client_leaves, admission_peaks).
 
+Mutant 261110-143812-1994f1 (after it) runs at refs/mutants/x7-cancel-rows (30755328952c, the
+counter increment and both peak samples removed); it succeeds only when both
+client_leaves and admission_peaks fail.
+
 ## Next
 
-1. Fix what 261110-143158-21ff95 shows; then the mutant job (counter increment and peak sampling
-   removed) at its own commit, then `campaign verify x7-cancel-rows`.
+1. Read 261110-143158-21ff95 and 261110-143812-1994f1; fix what they show (a test change means a
+   new mutant commit), then `campaign verify x7-cancel-rows` and fill the Evidence table.
 
 ## Blocked on
 
