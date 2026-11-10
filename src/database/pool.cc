@@ -426,6 +426,15 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 
 	explicit Timer(engine::AsioHost& host_) : host(host_) { }
 
+	// A callback that throws (its post failed with no handler) is logged: it must not end the loop.
+	static void run(std::function<void()>& fn) noexcept {
+		try {
+			fn();
+		} catch (...) {
+			L_EXC("The index catalog's timer callback failed");
+		}
+	}
+
 	void after(std::uint64_t delay_ns, std::function<void()> fn) {
 		const auto at = std::chrono::steady_clock::now() + std::chrono::nanoseconds(delay_ns);
 		std::uint64_t id = 0;
@@ -437,7 +446,7 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 			}
 		}
 		if (id == 0) {
-			fn();
+			run(fn);
 			return;
 		}
 		// Armed on the loop's thread: the raw executor still runs once the loop's task scheduler has closed.
@@ -466,7 +475,7 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 			done = std::move(it->second);
 			armed.erase(it);
 		}
-		done.fn();
+		run(done.fn);
 	}
 
 	// Runs every callback still armed now; their Asio timers are destroyed on the loop's thread.
@@ -479,7 +488,7 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 		}
 		auto timers = std::make_shared<std::vector<std::unique_ptr<engine::Host::Timer>>>();
 		for (auto& [id, entry] : left) {
-			entry.fn();
+			run(entry.fn);
 			timers->push_back(std::move(entry.timer));
 		}
 		asio::post(host.scheduler().executor(), [timers] { timers->clear(); });
