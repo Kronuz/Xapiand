@@ -29,6 +29,13 @@ Lead's two problems, answered:
    Probe 6270fa: after CLI `--restore`, `.xapiand/indexes` lacks the `rt/.__N` shard records an
    HTTP-created index has (the restore wrote shard dirs `rt/.__1..5` and `.xapiand/indexes/.__1..5`).
 
+Docs-site audit (lead): `src/xapian_data_guard.h:104` links `/upgrade/#upgrading-from-100-alpha9`. The page
+carries it as an explicit `<a id="upgrading-from-100-alpha9"></a>` above the heading (whose own slug is
+`upgrading-from-100-alpha9-and-100-alpha10`, used by the page's link at line 167); no heading change.
+Site build job 261109-181744-d76928 (npm ci, astro build) finds both ids in `dist/upgrade/index.html` and the
+changelog's link to the first. A4's e2e: `campaign verify` reuses 261109-152541-04dbf7 at c14d6eaac (the
+backups.md change is docs-only), no rerun needed.
+
 ## Next
 
 1. When acc42a ends: record path 2 (HTTP) result as A2's evidence for the HTTP route; path 1 stays failed
@@ -59,7 +66,7 @@ text is on the lead's hunt list.)
 |---|---|
 | A1 | `docs/src/content/docs/upgrade.md` |
 | A3 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c); the page covers audit rows and the D44 encoding; the reviewer reads the rest |
-| A4 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c) |
+| A4 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c; reused by `campaign verify` at c14d6eaac); refusal anchor in the built site: job 261109-181744-d76928 |
 
 History: A2 job 261109-153551-16cd29 exited 65 after "new restore exit 0" (dump and restore sha256 matched): my script's
 `rc=$?` line ran under `set -e`, so the new binary's expected exit 65 on the old directory ended the script. Fixed with
