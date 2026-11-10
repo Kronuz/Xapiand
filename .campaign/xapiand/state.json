@@ -11236,6 +11236,34 @@
       "title": "Repin http to main with perf-watch-peek (x7-gate A24)",
       "updated": "2026-11-10T05:35:25"
     },
+    "x7-view-bench": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/bench_shard_view.cc",
+        "tests/CMakeLists.txt",
+        "docs/perf/shard-view.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
+      "updated": "2026-11-10T05:35:30"
+    },
     "xapiand-final-release": {
       "accepted": {},
       "after": [],
