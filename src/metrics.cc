@@ -23,6 +23,8 @@
 
 #include "metrics.h"
 
+#include <mutex>                              // for std::mutex, std::lock_guard
+
 #include "prometheus/text_serializer.h"       // for text_serializer
 
 #include "package.h"                          // for Package::REVISION_STRING Package::HASH
@@ -198,6 +200,27 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	),
+	xapiand_http_requests_cancelled(
+		AddCounter(registry,
+			"xapiand_http_requests_cancelled",
+			"Requests a cancel stopped: the client left, or the node is stopping",
+			constant_labels)
+		.Add({})
+	),
+	xapiand_admission_inflight_peak(
+		AddGauge(registry,
+			"xapiand_admission_inflight_peak",
+			"Most requests one reactor held in flight at once",
+			constant_labels)
+		.Add({})
+	),
+	xapiand_scheduler_demoted_peak(
+		AddGauge(registry,
+			"xapiand_scheduler_demoted_peak",
+			"Most demoted handles a request found on its reactor at its admission",
+			constant_labels)
+		.Add({})
+	),
 	xapiand_http_sent_bytes(
 		AddCounter(registry,
 			"xapiand_http_sent_bytes",
@@ -322,6 +345,20 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 {
 	xapiand_running.Set(1);
 	xapiand_info.Set(1);
+}
+
+
+void
+Metrics::raise_peak(prometheus::Gauge& peak, double now)
+{
+	if (peak.Value() >= now) {
+		return;
+	}
+	static std::mutex mutex;
+	std::lock_guard lock(mutex);
+	if (peak.Value() < now) {
+		peak.Set(now);
+	}
 }
 
 

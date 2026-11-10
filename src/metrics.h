@@ -47,6 +47,9 @@ public:
 
 	static const prometheus::Summary::Quantiles& summary_quantiles();
 
+	// Sets a peak gauge to `now` when that is more than it holds; a new peak takes a lock, a lower value only a load.
+	static void raise_peak(prometheus::Gauge& peak, double now);
+
 	std::string serialise();
 
 	prometheus::Family<prometheus::Summary>& xapiand_operations_summary;
@@ -77,6 +80,11 @@ public:
 	// connections:
 	prometheus::Gauge& xapiand_http_current_connections;
 	prometheus::Counter& xapiand_http_connections;
+	prometheus::Counter& xapiand_http_requests_cancelled;
+
+	// admission (raised at each admission, docs/mechanisms/cancellation.md):
+	prometheus::Gauge& xapiand_admission_inflight_peak;
+	prometheus::Gauge& xapiand_scheduler_demoted_peak;
 
 	prometheus::Counter& xapiand_http_sent_bytes;
 	prometheus::Counter& xapiand_http_received_bytes;

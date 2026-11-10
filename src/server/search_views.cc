@@ -25,7 +25,6 @@
 
 #include "config.h"                         // for XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
-#include <atomic>                           // for std::atomic
 #include <cassert>                          // for assert
 #include <charconv>                         // for std::from_chars (indent param)
 #include <errno.h>                          // for errno
@@ -114,40 +113,6 @@
 
 
 static const std::string eol("\r\n");
-
-
-// The request path's own series in /:metrics (docs/mechanisms/cancellation.md).
-static std::atomic<std::uint64_t> requests_cancelled{0};   // requests a cancel stopped at a checkpoint
-static std::atomic<std::size_t> admission_inflight_peak{0};   // most requests one reactor's gate held at an admission
-static std::atomic<std::size_t> scheduler_demoted_peak{0};    // most demoted handles an admission found on its reactor
-
-static void
-raise_peak(std::atomic<std::size_t>& peak, std::size_t now)
-{
-	auto most = peak.load(std::memory_order_relaxed);
-	while (most < now && !peak.compare_exchange_weak(most, now, std::memory_order_relaxed)) { }
-}
-
-// The text of the request path's series, labelled like the registry's.
-static std::string
-request_path_metrics()
-{
-	const auto node = Node::get_local_node();
-	const auto labels = strings::format("cluster=\"{}\",node=\"{}\"", opts.cluster_name, node ? node->name() : std::string());
-	return strings::format(
-		"# HELP xapiand_http_requests_cancelled Requests a cancel stopped: the client left, or the node is stopping\n"
-		"# TYPE xapiand_http_requests_cancelled counter\n"
-		"xapiand_http_requests_cancelled{{{}}} {}\n"
-		"# HELP xapiand_admission_inflight_peak Most requests one reactor held in flight at once\n"
-		"# TYPE xapiand_admission_inflight_peak gauge\n"
-		"xapiand_admission_inflight_peak{{{}}} {}\n"
-		"# HELP xapiand_scheduler_demoted_peak Most demoted handles a request found on its reactor at its admission\n"
-		"# TYPE xapiand_scheduler_demoted_peak gauge\n"
-		"xapiand_scheduler_demoted_peak{{{}}} {}\n",
-		labels, requests_cancelled.load(std::memory_order_relaxed),
-		labels, admission_inflight_peak.load(std::memory_order_relaxed),
-		labels, scheduler_demoted_peak.load(std::memory_order_relaxed));
-}
 
 
 // Content negotiation helpers, lifted off HttpClient `this` so the forthcoming
@@ -841,7 +806,7 @@ metrics_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	const auto server_info = XapiandManager::server_metrics() + request_path_metrics();
+	auto server_info =  XapiandManager::server_metrics();
 	emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size());
 	co_return;
 }
@@ -3121,12 +3086,13 @@ SearchService::create_extension(const http::Request& /*hreq*/)
 	// before its body is read.
 	if (auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current())) {
 		const auto demoted = host->scheduler().demoted();
-		raise_peak(scheduler_demoted_peak, demoted);
+		auto& metrics = Metrics::metrics();
+		Metrics::raise_peak(metrics.xapiand_scheduler_demoted_peak, static_cast<double>(demoted));
 		// The reactor's gate admitted this request just before: its count includes it.
 		const auto& manager = XapiandManager::manager();
 		for (std::size_t i = 0; manager && manager->http_service && i < manager->http_hosts.size(); ++i) {
 			if (manager->http_hosts[i].get() == host) {
-				raise_peak(admission_inflight_peak, static_cast<std::size_t>(manager->http_service->reactor(i).gate().inflight.load(std::memory_order_relaxed)));
+				Metrics::raise_peak(metrics.xapiand_admission_inflight_peak, static_cast<double>(manager->http_service->reactor(i).gate().inflight.load(std::memory_order_relaxed)));
 				break;
 			}
 		}
@@ -3249,7 +3215,7 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 				write_status_response(request, static_cast<http_status>(refused.status), refused.reason);
 			}
 		} catch (const task::cancelled&) {
-			requests_cancelled.fetch_add(1, std::memory_order_relaxed);
+			Metrics::metrics().xapiand_http_requests_cancelled.Increment();
 			// The reads stopped at a checkpoint; say so to a client that is still there.
 			if (request.response_status == static_cast<http_status>(0)) {
 				write_status_response(request, HTTP_STATUS_SERVICE_UNAVAILABLE, "The request was cancelled");

@@ -5,8 +5,8 @@
 ## What
 
 A request's cancel is http's token (`http::Request::cancel_token()`): a client that leaves (its EOF) or a node that stops
-requests it. Reads stop at their next checkpoint; a write that was admitted completes. Three series of the request path
-show it in `GET /:metrics`, after the registry's and the reactor lag's:
+requests it. Reads stop at their next checkpoint; a write that was admitted completes. Three series of `Metrics`
+(`src/metrics.{h,cc}`, with the other `xapiand_*` series) show it in `GET /:metrics`:
 
 | Series | Type | What |
 |---|---|---|
@@ -25,7 +25,8 @@ show it in `GET /:metrics`, after the registry's and the reactor lag's:
 3. **The peaks.** `SearchService::create_extension` runs right after the reactor's `AdmissionGate` admits a request, so
    the gate's count then includes it: the most of those counts is the in-flight peak, which the gate's cap (1,000 per
    reactor) bounds. The same call reads the loop's demoted count, which the demoted cap (256) compares, and keeps the most
-   of it. Both are relaxed atomics raised by compare-and-swap; the gauge is the largest over all reactors.
+   of it. `Metrics::raise_peak` sets a gauge only above what it holds: a lower value costs one load, a new peak takes a
+   lock, so concurrent admissions never lower it. The gauge is the largest over all reactors.
 
 ## Limits
 
@@ -36,7 +37,7 @@ show it in `GET /:metrics`, after the registry's and the reactor lag's:
 
 ## Code
 
-`src/server/search_views.cc` (`requests_cancelled`, `admission_inflight_peak`, `scheduler_demoted_peak`,
-`request_path_metrics`, `metrics_view`, `SearchService::create_extension`, `SearchService::handle`).
+`src/metrics.{h,cc}` (the three series, `Metrics::raise_peak`), `src/server/search_views.cc`
+(`SearchService::create_extension`, `SearchService::handle`).
 Tests: `tests/test_node.cc` (`test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted`,
 `test_a_put_whose_client_half_closes_completes_durably`, `test_the_admission_peaks_rise_under_load`).
