@@ -24,7 +24,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | exclusive confirm 261109-150350-f39012 (http:13933f0 vs base http:8262172 and E1 http:f43dee4, A/A copy; 6 rounds x 4 s); strict screen 261109-144804-ff5f5b agrees |
+| A1 | exclusive confirm 261109-150350-f39012 (http:13933f0 vs base http:8262172 and E1 http:f43dee4, A/A copy; 6 rounds x 4 s) |
 | A2 | 261109-145852-514f5a (build-test at 13933f0); mutants 261109-150416-197873; fails-without 261109-145905-5a00d5 |
 | A3 | `docs/perf/watch-peek.md` (http:51d153a) |
 | A4 | `docs/mechanisms/coroutine-handlers.md` (http:6ec7324) |
