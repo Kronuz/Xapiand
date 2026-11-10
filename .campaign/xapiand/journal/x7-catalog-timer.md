@@ -37,7 +37,8 @@ Stopped before code: D56's mechanism does not exist as written (Blocked on 1).
    c. Keep DB-TIMER and amend section 2's list (D56 rejected this).
    Recommendation: (a), with the quest's file set widened to src/manager.cc and the pool's tests: the catalog timer
    becomes a control-loop timer like the autocommit, one timer mechanism on a thread that exists for good; the pool
-   takes its timer host at construction (the manager's reactor exists before the pool) and tests pass a test host.
+   takes its timer host at construction (manager.cc:284 builds the pool before `_rx`, so the members reorder)
+   and tests pass a test host. The pool is reset at manager.cc:1188, after the loop; that order needs checking.
 
 ## Evidence
 
