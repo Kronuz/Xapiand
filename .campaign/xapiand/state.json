@@ -1962,17 +1962,28 @@
       "files": [
         "docs/dev/docs-site-audit.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T18:22:50",
+          "commit": "e57d2d089feb98fae926f7ff8cb8d92c02956eb1",
+          "evidence": [],
+          "final": true,
+          "from": "0fffad7fc8463c80c11ac63f4d76f720679aedf1",
+          "reason": "",
+          "tested": "9cfe372afb3995db86e632650f37c999944863d5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Audit the public docs site against the engine as it is",
-      "updated": "2026-11-09T18:15:59",
-      "worktree": "../Xapiand-wt/xapiand/docs-site-audit"
+      "updated": "2026-11-09T18:22:53",
+      "worktree": ""
     },
     "docs-site-refresh": {
       "accepted": {},
