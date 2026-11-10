@@ -1,6 +1,6 @@
 # direct-pins: journal
 
-State: waiting on jobs 261110-030028-b6051d (e2e rerun) 261110-030044-61a1f7 (pins check) at xapiand:16b72ecc3; build-test 261110-021225-4cdcaa passed; concurrency jobs 0b13b3 (pass) ec2183 (old script fails, bind in use) done
+State: ready for review
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
@@ -16,15 +16,7 @@ layer overwrote /tmp/xe2e_node.log. Two jobs decide it: e2e at the base 625963a8
 
 ## Next
 
-0. e2e 261110-021226-edb1ac at e13a10a35: smoke and e2e layers GREEN (no SIGKILL, no RESTORE stall, ran concurrently
-   with two other jobs); the tls layer failed one case of tls_check.sh, "TLS 1.2 connection without renegotiation not
-   served" (s_client with fixed 1s/2s sleeps, port 50130, three jobs on the host). Suspected load flake: rerun
-   (`campaign job rerun`/verify); if it recurs, compare with tls_check.sh on the base commit under the same load.
-
-1. Read 4ceb58 (base) and 118818 (head). Base red: the failure is master's (the lead's), the bumps are cleared; report
-   it with the job. Base green and head red: bisect the eight bumps (none change compiled code, so expect flake: rerun).
-   Both green: flake, A4 rests on 118818.
-2. Fill the Evidence table, set State to ready for review.
+None: ready for review.
 
 ## Blocked on
 
@@ -54,10 +46,10 @@ in one library changes its tree, so the script is rerun after each (heads can mo
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261109-180022-38e01d (pins_check.py A1 table: 57 declarations, each with an include site) |
-| A2 | job 261109-180022-38e01d (pins_check.py A2: no comment justifying a pin by winning) |
-| A3 | job 261109-180022-38e01d (Xapiand's pin is the head for all 57 declarations; library-side stale pins listed above, to be bumped in their repositories) |
-| A4 | build-test 261109-180009-09ece8 passed; e2e 261109-180009-9ee666 FAILED (see Doing); decided by 261109-192429-4ceb58 (base) and 261109-192429-118818 (head rerun) |
+| A1 | job 261110-030044-61a1f7 at xapiand:16b72ecc3 (pins_check.py A1 table: 57 declarations, each with an include site) |
+| A2 | job 261110-030044-61a1f7 (pins_check.py A2: no comment justifying a pin by winning) |
+| A3 | job 261110-030044-61a1f7 (Xapiand's pin is the head for all 57 declarations; 23 library-side stale pins listed in Blocked on, to be bumped in their repositories) |
+| A4 | build-test 261110-021225-4cdcaa passed (xapiand:e13a10a35; 16b72ecc3 differs by the journal only); e2e 261110-030028-b6051d passed at 16b72ecc3 (smoke, e2e, tls GREEN, VERDICT GREEN). Earlier red e2e runs were the fixed-port collision (see Rulings): concurrency test 261110-021214-0b13b3 passes with the fix, 261110-021215-ec2183 fails (bind in use) with the old script. The tls_check flake in 261110-021226-edb1ac did not recur. |
 
 ## Result
 
