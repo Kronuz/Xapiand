@@ -11520,7 +11520,66 @@
       "updated": "2026-11-08T15:39:30"
     },
     "write-path-fixes": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T14:21:42",
+          "base": "12df95e8873d6c0836fd8cb1093d5c771ceb5dc3",
+          "blobs": {
+            "docs/mechanisms/document-ids-and-versions.md": "100644:53176986b88cfc539e935f6897c8ef2b8aef647f",
+            "src/database/handler.cc": "100644:76c9f9967d7b0f7449e1bb5c290a7403731fab38",
+            "src/database/handler.h": "100644:8d0d6f92c36e658a94ad38ff96ce9dc043113723",
+            "src/database/pool.h": "100644:c81de8bf1545e38fc2b43d3b32c525618a81b0ec",
+            "src/database/schema.cc": "100644:df1082e360192d0fb451b833ed6c12b2eb22bfc3",
+            "src/database/shard.cc": "100644:bc650989ed97ad6016d4e8253a27b15620d97793",
+            "src/database/shard.h": "100644:94aaa9d67584e2c6f2143fef75dbfa37e8362342",
+            "src/engine/error.h": "100644:8ff3a24d841b4ab8b9e81db1c51da4d3525ed80a",
+            "src/engine/shard.h": "100644:503c974f5379fca0a2931f691c54c8f2fcff90fb",
+            "src/engine/strata/shard.cc": "100644:6ec64d14d340df03571bb4a6cb207293d6ff850b",
+            "src/exception_engine.h": "100644:8e56b48e1c21a652f25bfa4855721ddb761435dc",
+            "src/server/search_views.cc": "100644:fd4e95ff46ac3a69e021307891fc0a87add5db75",
+            "tests/test_engine_error.cc": "100644:9faca3a87fea5a45e89cb515af57052e78520d8b",
+            "tests/test_engine_strata.cc": "100644:7416735d521f91e4931a9f2c1460ce5721737ffc",
+            "tests/test_node.cc": "100644:9b830d6fff518c0fb3f32f671b2174cd5bb2ac47"
+          },
+          "brief": "972bf00b66c1711d",
+          "by": "review",
+          "commit": "a0d248648a16a9747cc8b2d1f1e7f421d1045440",
+          "findings": {
+            "D1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-write-path-fixes-correctness-r2/run.sh",
+                  "commit": "c1a23d4e2d4d4fb8196c97b3fb7d15bedada16ab",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261110-122259-8ee938",
+                  "level": "light",
+                  "seconds": 559.5,
+                  "state": "done",
+                  "what": "correctness review probes (D1, P1-P3) at the fix-round-2 head; P3's PATCH expects 204 (ruling 10) at c1a23d4e2d4d"
+                },
+                {
+                  "cmd": "bash -c 'set -o pipefail; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF > cmake.log 2>&1 || { tail -30 cmake.log; exit 1; }; cmake --build build -j4 --target xapiand xapiand_test_engine_strata xapiand_test_node > build.log 2>&1 || { grep -E \"error|Error\" build.log | head -60; exit 1; }; rc=0; (cd build && bin/xapiand_test_engine_strata 2>&1 | tail -15) || rc=1; (cd build && SKIP_FORKED=1 timeout 900 bin/xapiand_test_node 2>&1 | tail -60) || rc=1; exit $rc'",
+                  "commit": "c1a23d4e2d4d4fb8196c97b3fb7d15bedada16ab",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261110-122259-dd4047",
+                  "level": "light",
+                  "seconds": 315.3,
+                  "state": "done",
+                  "what": "write-path-fixes fix round 2: build + engine strata and node tests at the head at c1a23d4e2d4d"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "e51442855266390e74b4edb09627e6dca46f3bf7",
+          "reviewed": "60a5e373643b8253c7a91e608d7252eda46d180a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "b4acd84197eabc5db636b1bc4edc96b8f4db2884",
       "branch": "quest/xapiand/write-path-fixes",
@@ -11563,7 +11622,7 @@
       "risk": "high",
       "status": "review",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-10T05:13:56",
+      "updated": "2026-11-10T14:21:42",
       "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
