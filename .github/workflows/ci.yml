@@ -75,6 +75,89 @@ jobs:
       - name: Smoke + load
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
 
+  sanitizer-tests:
+    name: Unit tests under ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # ctest under each sanitizer, asserts on (D57: sanitizers are CI's job). Debug plus -O1, as in
+    # strata's CI: CMakeLists.txt sets the RelWithDebInfo flags to -O2, and Debug adds no -O level.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ASan + UBSan
+            key: test-asan-ubsan
+            flags: -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -D_GLIBCXX_ASSERTIONS
+          - name: TSan
+            key: test-tsan
+            flags: -fsanitize=thread -fno-omit-frame-pointer
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 1G
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      # die_after_fork=0: test_node's children start threads after fork.
+      TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:die_after_fork=0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk
+        # Debug info for every sanitized test binary needs more than the runner's default free space.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h .
+      - name: Sanitizer-compatible ASLR
+        # Ubuntu 24.04's 32 random mmap bits break the sanitizer runtimes' shadow memory.
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+      - name: Install build deps
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-13 cmake ninja-build pkg-config ccache \
+            libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.key }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.key }}-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-${{ matrix.key }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-${{ matrix.key }}-
+      - name: Build (Debug -O1, ${{ matrix.name }}, tests + asserts on)
+        run: |
+          set -eux
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            "-DCMAKE_C_FLAGS=-O1 ${{ matrix.flags }}" \
+            "-DCMAKE_CXX_FLAGS=-O1 ${{ matrix.flags }}" \
+            "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.flags }}" \
+            "-DCMAKE_SHARED_LINKER_FLAGS=${{ matrix.flags }}" \
+            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
+          ccache -z
+          # -j3: sanitizer instrumentation raises peak compile memory.
+          ninja -C build -j3
+          df -h .
+      - name: ccache stats
+        if: always()
+        run: ccache -s
+      - name: Unit tests (ctest) under ${{ matrix.name }}
+        run: ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.key }}
+          path: build/Testing/Temporary/LastTest*.log
+          retention-days: 14
+          if-no-files-found: ignore
+
   e2e:
     name: Functional E2E (docs)
     runs-on: ubuntu-latest
