@@ -2225,6 +2225,42 @@
       "title": "The document profile gate, strata's core against RocksDB",
       "updated": "2026-11-08T22:35:42"
     },
+    "drop-replicas": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/index_resolver_lru.cc",
+        "src/index_resolver_lru.h",
+        "src/opts.h",
+        "src/server/search_views.cc",
+        "harness/terms_cap_check.py",
+        "harness/replicas_check.sh",
+        "ARCHITECTURE.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "The document profile gate",
+      "needs": [
+        "cli-restore-records"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Remove the replica settings left from the cluster",
+      "updated": "2026-11-09T19:34:41"
+    },
     "drop-threadpool": {
       "accepted": {},
       "after": [],
