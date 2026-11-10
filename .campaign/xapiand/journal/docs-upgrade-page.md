@@ -1,6 +1,6 @@
 # docs-upgrade-page: journal
 
-State: waiting on jobs 261109-152541-04dbf7 261109-153551-16cd29
+State: waiting on jobs 261109-162803-b8445a
 Quest: .campaign/xapiand/quests/docs-upgrade-page.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,6 +29,12 @@ Nothing. (Lead rulings: A2 built in-job; numbers bullet confirmed against PLAN D
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/src/content/docs/upgrade.md` |
+| A3 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c); the page covers audit rows and the D44 encoding; the reviewer reads the rest |
+| A4 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c) |
+
+History: A2 job 261109-153551-16cd29 exited 65 after "new restore exit 0" (dump and restore sha256 matched): my script's
+`rc=$?` line ran under `set -e`, so the new binary's expected exit 65 on the old directory ended the script. Fixed with
+`|| rc=$?`; resubmitted as 261109-162803-b8445a (slot a2-roundtrip, 90 min).
 
 ## Result
 
