@@ -1,6 +1,6 @@
 # query-dsl-fixes: journal
 
-State: waiting on jobs 261109-192344-c4ac9a 261109-192345-1c7534 (261109-185357-8fe848 still queued)
+State: waiting on jobs 261109-193622-6d23b4 261109-193623-40183f (261109-185357-8fe848 may still be queued)
 Quest: .campaign/xapiand/quests/query-dsl-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,18 +9,18 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-First results (head b56c33db7): tests alone 261109-185346-2edf6c fail as intended (8 FAIL); with the fix
-261109-185347-50ec8a and UBSan 261109-185356-68cd98 failed 4 checks: (1) test setup: the DSL returns
-an append node, not a term, so `term_of` found no term and indexed an empty field name ("index rejected
-the operation") - fixed in a8ca32c7f by unwrapping append; (2) the positive-field manual case
-(`_from:-5`, `_to:4`, `_to:-1` on a positive field) differed from {below 5, within 2}; cause unknown,
-a8ca32c7f prints the buckets. Reruns at a8ca32c7f: 261109-192344-c4ac9a (test), 261109-192345-1c7534 (UBSan).
+Reruns at a8ca32c7f (261109-192344-c4ac9a, UBSan 261109-192345-1c7534): `_not` test passes; one
+check failed: positive field, `{_from:-5,_to:4}` gave no bucket (printed: only "below"=5). Cause: the
+fix, not the expectation. reach_of took the NEGATIVE_INTEGER tag as "below every value" on unsigned
+fields; the int literal 4 evidently carries that tag, so the range was marked empty. Fixed in
+ffc7e9517 by reading the value (i < 0) instead of the tag. Reruns: 261109-193622-6d23b4 (test),
+261109-193623-40183f (UBSan).
 
 ## Next
 
-1. Read the reruns; if the positive case still fails, decide from the printed buckets whether the
-   expectation or reach_of/`bound` is wrong, fix, rerun.
-2. Then `campaign verify query-dsl-fixes` (A5), fill the Evidence table.
+1. Read the reruns; both must pass. Then `campaign verify query-dsl-fixes` (A5), and fill the Evidence
+   table (tests alone fail: 261109-185346-2edf6c; UBSan tests alone: 261109-185357-8fe848).
+2. The `positive bucket` debug print in the test can stay or go; remove it once green.
 
 ## Blocked on
 
