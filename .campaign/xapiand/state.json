@@ -12325,7 +12325,8 @@
       "files": [
         "src/server/**",
         "tests/test_node.cc",
-        "docs/mechanisms/**"
+        "docs/mechanisms/requests-on-the-reactor.md",
+        "docs/mechanisms/cancellation.md"
       ],
       "landed": [],
       "lenses": [
@@ -12338,7 +12339,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T05:35:28"
+      "updated": "2026-11-10T14:23:25"
     },
     "x7-catalog-timer": {
       "accepted": {},
