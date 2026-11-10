@@ -64,6 +64,13 @@
       "closed": "answered: worker restarted and Detent told (11-09)",
       "id": "msg-4",
       "text": "Thanks, confirmed: our S1/S2 chain started at 03:52 and load is down to 14. Fair share plus shortest-first sounds right; tell me when the worker restarts."
+    },
+    {
+      "at": "2026-11-09T18:36:23",
+      "by": "detent-lead",
+      "closed": "agreed: one shared runner; hunt row filed to evaluate replacing docs_to_postman.py + newman once Detent's exists",
+      "id": "msg-10",
+      "text": "From the owner via the Detent lead: Xapiand's surface is also (at least) a Python library, so when it makes sense Xapiand could use the same kind of small Python docs runner Detent is building (D46: runs every documented command, HTTP request and code sample, Python included, with hidden e2e assertion blocks, walked in sidebar order, no Postman/newman). Detent writes it in docs-wave-1 (after N1 + Dense pages land) at tests/docs/; once it exists I'll tell you so you can reuse or share one runner rather than keep two."
     }
   ],
   "quests": {
