@@ -1,6 +1,6 @@
 # sortable-followups: journal
 
-State: waiting on jobs 261109-172719-1f0b22 261109-172720-e7310a 261109-172754-1f56b7 261109-172802-a74c02
+State: waiting on jobs 261109-172719-1f0b22 261109-172720-e7310a
 Quest: .campaign/xapiand/quests/sortable-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Code and docs committed in the sortable worktree (sortable:2e85e15). Waiting on A2's two jobs, A4's build-test and a CLI leniency probe.
+Code and docs committed in the sortable worktree (sortable:2e85e15). Waiting on A2's two jobs (12-minute fuzz, D5.9 mutant times); build-test and the CLI probe passed.
 
 ## Next
 
@@ -26,8 +26,8 @@ Nothing.
 |---|---|
 | A1 | docs/mechanisms/sortable.md, "Every conversion is defined for every `number`, with no undefined behavior: every shift count is bounded and `-1022 - exponent` cannot overflow an `int`." |
 | A2 | pending: 261109-172719-1f0b22 (12 min, ASan+UBSan, committed corpus), 261109-172720-e7310a (D5.9 mutant, before/after) |
-| A3 | docs/mechanisms/sortable.md, "The readers are lenient in three ways, all accepted: an `i` number may have leading zeros (`i 007`) or be `-0` (the integer 0), and hex digits, in `f HEX16` and in `decode` lines, may be upper or lower case."; probe 261109-172802-a74c02 |
-| A4 | pending: build-test 261109-172754-1f56b7; asan is CI after the lead pushes |
+| A3 | docs/mechanisms/sortable.md, "The readers are lenient in three ways, all accepted: an `i` number may have leading zeros (`i 007`) or be `-0` (the integer 0), and hex digits, in `f HEX16` and in `decode` lines, may be upper or lower case."; probe 261109-172802-a74c02 (done, exit 0: `i 007` and `i 7` give c0c0, `i -0` and `i 0` give 80, upper and lower case `f` HEX16 give be; upper and lower case decode lines parse the same) |
+| A4 | build-test 261109-172754-1f56b7 done, exit 0 at sortable:2e85e15; asan is CI after the lead pushes |
 
 ## Result
 
