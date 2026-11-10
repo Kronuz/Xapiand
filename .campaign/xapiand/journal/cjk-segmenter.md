@@ -1,6 +1,6 @@
 # cjk-segmenter: journal
 
-State: ready for review
+State: waiting on jobs 261110-021459-cefd67 261110-021459-874e3e 261110-021459-065294 261110-021459-377cab 261110-021524-d131bd
 Quest: .campaign/xapiand/quests/cjk-segmenter.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,16 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Done. Jobs at analysis:3e55476 all passed and were read; analysis:229b68c only adds the Speed
-section to docs/cjk-segmenter.md.
+Rebased onto analysis main (unicode 297413c, snowball 3efcd0f, README rewrite) as
+analysis:8ce3f0c; review F1 (Thai test, doc sentence) and F2 (header comment) folded in.
+Reruns at 8ce3f0c: build-test 261110-021459-cefd67, A2 261110-021459-874e3e, fuzz
+261110-021459-065294, mutants 261110-021459-377cab, bench 261110-021524-d131bd (rerun: the
+unicode pin changed `next_utf8`, which the segmenter calls per character).
 
 ## Next
 
-1. Correctness review.
+1. Read the 8ce3f0c jobs; replace the Evidence rows' job ids and numbers (A2 must stay at 0
+   differences, else stop and report); set State to ready for review.
 
 ## Blocked on
 
