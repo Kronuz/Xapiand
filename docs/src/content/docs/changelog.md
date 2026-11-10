@@ -111,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   goes away. `RESTORE` parses its stream on the pool beside the indexing of the previous chunk, and a document body over 64 KiB
   is decoded on the pool; `FLUSH` waits for the closes without holding a thread.
 - **A data directory with Xapian indexes is refused at startup.** A node started on files from
-  1.0.0-alpha.9 or earlier (`iamglass`, `flintlock`, `postlist.*`, `*.glass`) exits with status 65 and names the
+  1.0.0-alpha.10 or earlier (`iamglass`, `flintlock`, `postlist.*`, `*.glass`) exits with status 65 and names the
   first one, instead of starting with empty strata indexes beside them. Dump the indexes with that release and restore
   them here (see [Upgrading](/Xapiand/upgrade#upgrading-from-100-alpha9)).
 - **A request that cannot get its index's turn in time answers `503`.** Every operation on an index (a write,
@@ -176,6 +176,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
+- **`--restore` into a new, empty data directory writes the index's settings.** The CLI restore resolved
+  the index read-only, so `.xapiand/indexes` lacked its shard records and a node serving the directory answered
+  `500` ("Inconsistency in number of replicas") or counted 0 documents. It now resolves the index as `RESTORE`
+  does, from the dump's first object.
 - **A shutdown no longer leaves requests waiting on a stopped loop.** A request still waiting for an index's
   turn, a chore or its body when the loops stop is now destroyed before the indexes close, which gives its turn
   and its hold on the index back first.
