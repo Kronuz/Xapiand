@@ -285,6 +285,8 @@
     "barrier-warning-completion": {
       "accepted": {},
       "after": [],
+      "base": "560c288b40ba55a8d42ff048bcb1c7eaa3624645",
+      "branch": "quest/xapiand/barrier-warning-completion",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -398,6 +400,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/barrier-warning-completion",
       "landed": [],
       "lenses": [
         "durability"
@@ -409,9 +412,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "PosixIO warns when a barrier only orders",
-      "updated": "2026-11-09T04:14:23"
+      "updated": "2026-11-09T16:22:55",
+      "worktree": "../completion-wt/xapiand/barrier-warning-completion"
     },
     "barrier-warning-strata": {
       "accepted": {},
