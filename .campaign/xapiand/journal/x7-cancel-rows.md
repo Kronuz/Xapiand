@@ -9,15 +9,18 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Code and tests committed (src/server/search_views.cc, tests/test_node.cc); docs in
+docs/mechanisms/cancellation.md. Job 261110-143158-21ff95 builds test_node and runs the three new
+cases (filters half_closes, client_leaves, admission_peaks).
 
 ## Next
 
-1. <step>
+1. Fix what 261110-143158-21ff95 shows; then the mutant job (counter increment and peak sampling
+   removed) at its own commit, then `campaign verify x7-cancel-rows`.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -27,7 +30,10 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+| A1 | pending |
+| A2 | pending |
+| A3 | pending |
+| A4 | pending |
 
 ## Result
 
@@ -37,4 +43,18 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The three series live in src/server (the file set) and `metrics_view` appends their text after
+  `server_metrics()`, labelled cluster/node like the reactor lag block, not in src/metrics.h
+  (outside the file set). Names: `xapiand_http_requests_cancelled` (counter),
+  `xapiand_admission_inflight_peak`, `xapiand_scheduler_demoted_peak` (gauges, the exact names
+  x7-gate's stall_load.py reads).
+- Both peaks are sampled in `SearchService::create_extension`, which http calls right after the
+  reactor's gate admits the request: the gate's count there includes it, so the in-flight peak is
+  exact; the demoted peak is what the demoted cap saw (sampled at admissions only). The gauge is
+  the max over reactors.
+- The counter counts every `task::cancelled` that reaches `handle` (search, restore, flush), not
+  only searches.
+- A1's "within one slice": the test holds the index's turn, so the search is suspended in its
+  turn wait; the check is that the client's close lets the request's admission go while the turn
+  is still held (the cancel took effect at its checkpoint, not at the release), with the measured
+  latency printed. A wall-clock 200 us bound across a socket close is not deterministic.
