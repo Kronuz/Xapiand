@@ -5,22 +5,23 @@ Quest: .campaign/xapiand/quests/docs-site-refresh-reference.md (the lead's; neve
 
 ## Doing
 
-Launch 1 (the reference guide, `docs/src/content/docs/reference-guide/**`) is written and committed (head
-12d1a7085 plus this journal). Every request block of it also ran green against the Nov 3 probe binary
-(`~/.scratch/ref-probe/run.sh`: 477 requests, 747 of 747 assertions); that binary is older than the base, so the
-jobs below are the proof. The 5 broken-link pages of the 11-10 check are fixed.
+Launch 2. Master merged at 8ba303b81 (write-path-fixes, Xapiand:0aa12bd8d). Pages changed since: delete-api, versioning,
+index-api, update-api (`?version` on every write, 409 `_version`, ids 0 and "0", PATCH 204, routing by key); next.md
+dropped (A7); tests/coverage.md (A6); tutorials/home and the sidebar's Tutorials group; tests.md, the new
+tests/schema/reserved-subfield.md, ignore-comments, wildcard, namespace; create-api (strict needs both settings);
+assertions on every request of the 12 reference pages with none (document and index exists, index delete, close-api,
+boolean, keyword, text, uuid, date, geospatial, foreign-schemas, index-api) and welcome.
 
 ## Next
 
-1. `campaign wait` the jobs; fix what the e2e or the link check reports (a failing assertion names its request).
-2. Launch 2: tutorials, the coverage page (A6), `next` (A7), the tests/ pages' audit rows; see "For the next launch".
+1. Probe the new assertions (`~/.scratch/ref-probe/run.sh`, Nov 3 binary: version cases fail there by design); fix.
+2. Submit the site build + link check and `campaign verify` once, at the final head.
 
 ## Blocked on
 
 Code questions (documented as the code behaves today; the lead rules whether the code or the page changes):
 
-1. `DELETE` ignores `?version` (`src/server/search_views.cc:833-851`, `src/database/shard.cc:1448-1462`, `version_` unused):
-   delete-api.md says so; every other write checks it.
+1. Resolved by write-path-fixes: `DELETE` checks `?version`; delete-api.md and versioning.md say so, with 409 requests.
 2. `_not` over a list of two or more subqueries is `match_all AND_NOT (A AND_NOT B)` (`src/query_dsl.cc:287-294`): probed
    on the bank corpus, `[female, brown eyes]` gives 698 (males plus brown-eyed females), not the 366 of "none of them".
    logical-operators.md says what it does.
@@ -33,6 +34,9 @@ Code questions (documented as the code behaves today; the lead rules whether the
    "read and ignored". `_missing` in a bucket aggregation is ignored the same way.
 7. The variance of one value divides by zero (`src/aggregations/metrics.h`, `n - 1`) and range-aggregation open ends of an `integer` field
    are narrowed into 64-bit pairs (`bucket.h`); both pages hedge. No probe was run (audit "Unverified").
+9. A strict new index must name `number_of_replicas` as well as `number_of_shards` (`src/index_resolver_lru.cc:568-588`), though
+   replicas do nothing on one node (audit, namespace.md row: a decision for the owner). create-api.md states the requirement;
+   namespace.md keeps its six `number_of_replicas: 1`. Options: keep it, or stop requiring replicas in strict mode (code).
 8. Outside my file set: `copyright.md:19` says `src/sortable_serialise` derives from Xapian (A3 is clean for every page but this, the
    changelog and the upgrade page; sortable-encoding removes it). `src/xapian_data_guard.h:104` links an upgrade anchor that
    `upgrade.md` no longer has (`#upgrading-from-100-alpha9` against `#upgrading-from-100-alpha9-and-100-alpha10`).
