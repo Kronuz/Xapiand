@@ -1105,6 +1105,22 @@ std::map<std::string, std::int64_t> range_counts(const char* field, const MsgPac
 	return counts;
 }
 
+// The keys of the buckets a range aggregation makes, in the order the aggregation returns them under `sort`.
+std::vector<std::string> range_order(const char* field, const MsgPack& ranges, engine::valueno slot, const std::vector<std::string>& serialised, const MsgPack& sort) {
+	const auto config = MsgPack({ { "_aggs", { { "r", { { "_range", { { "_field", field }, { "_ranges", ranges } } }, { "_sort", sort } } } } } });
+	AggregationMatchSpy spy(config, range_schema());
+	for (const auto& value : serialised) {
+		const std::vector<std::string> one = { value };
+		const testsupport::MapView view({ { slot, StringList::serialise(one.begin(), one.end()) } });
+		spy.see(view, 1.0);
+	}
+	std::vector<std::string> keys;
+	for (const auto& bucket : spy.get_aggregation().at("_aggregations").at("r")) {
+		keys.emplace_back(bucket.at("_key").str_view());
+	}
+	return keys;
+}
+
 template <typename T, typename Serialiser>
 void check_ranges(const char* field, engine::valueno slot, const std::vector<T>& values, const std::vector<std::vector<Rng<T>>>& requests, Serialiser serialise) {
 	std::vector<std::string> serialised;
@@ -1226,10 +1242,37 @@ static void test_range_aggregation_open_bounds() {
 		list.push_back(within);
 		list.push_back(empty);
 		const auto got = range_counts("p", list, POS_SLOT, serialised);
-		for (const auto& [key, n] : got) {
-			std::fprintf(stderr, "  positive bucket %s = %lld\n", key.c_str(), static_cast<long long>(n));
-		}
 		CHECK_EQ(got, (std::map<std::string, std::int64_t>{ { "below", 5 }, { "within", 2 } }));
+	}
+
+	// Sorted by key, an open lower bound comes first (below every bound), last when descending.
+	{
+		const std::vector<std::int64_t> values = { -100, -20, 0, 7 };
+		std::vector<std::string> serialised;
+		for (auto v : values) {
+			serialised.push_back(Serialise::integer(v));
+		}
+		const auto range = [](const char* key, std::optional<int> from, std::optional<int> to) {
+			MsgPack r = MsgPack::MAP();
+			r["_key"] = MsgPack(key);
+			if (from) {
+				r["_from"] = *from;
+			}
+			if (to) {
+				r["_to"] = *to;
+			}
+			return r;
+		};
+		MsgPack list = MsgPack::ARRAY();
+		list.push_back(range("mid", -5, 5));
+		list.push_back(range("high", 5, none));
+		list.push_back(range("open", none, -50));
+		list.push_back(range("neg", -50, -10));
+		const auto order = [&](const char* direction) {
+			return range_order("i", list, INT_SLOT, serialised, MsgPack({ { "_key", direction } }));
+		};
+		CHECK_EQ(order("asc"), (std::vector<std::string>{ "open", "neg", "mid", "high" }));
+		CHECK_EQ(order("desc"), (std::vector<std::string>{ "high", "mid", "neg", "open" }));
 	}
 
 	// Float and date fields: open sides cover the negative values too.
