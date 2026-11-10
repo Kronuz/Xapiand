@@ -9893,7 +9893,8 @@
         "src/database/pool.h",
         "tests/test_node.cc",
         "docs/mechanisms/document-ids-and-versions.md",
-        "src/exception_engine.h"
+        "src/exception_engine.h",
+        "tests/test_engine_error.cc"
       ],
       "landed": [],
       "lenses": [
@@ -9908,7 +9909,7 @@
       "risk": "high",
       "status": "active",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-09T20:33:12",
+      "updated": "2026-11-10T02:32:41",
       "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
