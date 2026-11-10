@@ -35,9 +35,9 @@
 set -uo pipefail
 
 BIN="${1:?usage: tls_check.sh BINARY [PORT]}"
-PORT="${2:-18890}"
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$HARNESS_DIR/env.sh"
+PORT="${2:-$(free_port)}"
 WORK="${WORK:-$(dirname "$HARNESS_DIR")/.scratch/tls_check}"
 OPENSSL="${OPENSSL:-openssl}"
 rm -rf "$WORK"; mkdir -p "$WORK"

@@ -43,7 +43,8 @@ set -u
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
-PORT="${PORT:-8906}"
+. "$REPO/harness/env.sh"
+PORT="${PORT:-$(free_port)}"
 NDOCS="${NDOCS:-50}"
 IDX="walrec"
 RUNDIR="${RUNDIR:-$REPO/.scratch/xwalrec_$$}"

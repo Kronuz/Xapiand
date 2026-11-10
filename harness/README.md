@@ -42,7 +42,7 @@ python3 docs_to_postman.py | newman run /dev/stdin --reporters json --reporter-j
 python3 harness/e2e_diff.py  base.json ours.json
 python3 harness/bodydiff.py  base.json ours.json
 
-# performance (one node up at a time on :8880)
+# performance (one node up at a time; harness/loadtest.py takes --target)
 python3 harness/loadtest.py --datadir <dir> --label baseline --out harness/results/baseline.json
 python3 harness/loadtest.py --datadir <dir> --label ours     --out harness/results/ours.json
 python3 harness/perfdiff.py harness/results/baseline.json harness/results/ours.json

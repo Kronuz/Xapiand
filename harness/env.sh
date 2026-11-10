@@ -38,3 +38,8 @@ raise_nofile() {
 	return 0
 }
 raise_nofile
+
+# free_port prints a TCP port the OS has just handed out, so concurrent harness runs never share one.
+free_port() {
+	"$PY" -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1])'
+}
