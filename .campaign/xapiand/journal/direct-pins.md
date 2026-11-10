@@ -1,6 +1,6 @@
 # direct-pins: journal
 
-State: waiting on jobs 261110-021226-edb1ac (e2e) 261110-021225-4cdcaa (build-test) at xapiand:e13a10a35, and the concurrency test 261110-021214-0b13b3 (fixed script, expect pass) 261110-021215-ec2183 (old script, expect fail)
+State: waiting on jobs 261110-021214-0b13b3 261110-021215-ec2183 (concurrency test, fixed/old script) and 261110-021225-4cdcaa (build-test at xapiand:e13a10a35); e2e 261110-021226-edb1ac failed, to rerun
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
@@ -15,6 +15,11 @@ commits that this branch's base 625963a89 has (ad641a000, 72203782d, 711a9b6c6).
 layer overwrote /tmp/xe2e_node.log. Two jobs decide it: e2e at the base 625963a89 (4ceb58) and a rerun at the head (118818).
 
 ## Next
+
+0. e2e 261110-021226-edb1ac at e13a10a35: smoke and e2e layers GREEN (no SIGKILL, no RESTORE stall, ran concurrently
+   with two other jobs); the tls layer failed one case of tls_check.sh, "TLS 1.2 connection without renegotiation not
+   served" (s_client with fixed 1s/2s sleeps, port 50130, three jobs on the host). Suspected load flake: rerun
+   (`campaign job rerun`/verify); if it recurs, compare with tls_check.sh on the base commit under the same load.
 
 1. Read 4ceb58 (base) and 118818 (head). Base red: the failure is master's (the lead's), the bumps are cleared; report
    it with the job. Base green and head red: bisect the eight bumps (none change compiled code, so expect flake: rerun).
