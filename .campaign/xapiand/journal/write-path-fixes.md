@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261110-102948-c09ca1 261110-102949-d27275 261110-103007-ce2626 261110-103008-973d5e 261110-103009-55d7f2 261110-103010-7bd7e0 261110-103011-293ea2
+State: ready for review (fix round 2 evidence at c1a23d4e2)
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -90,11 +90,11 @@ became an out-of-range double-to-uint32 conversion, and a new id whose docid hel
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending at e30d1c9fc (261110-070643-84a084); was 60a5e3736: 261110-045430-4ed4e9 exit 0 (id round trip: test_document_ids_are_themselves, test_engine_strata placement). That the tests fail without the fix: "Fails without the fix" below |
-| A2 | pending at e30d1c9fc (261110-070643-84a084); was 60a5e3736: 261110-045430-4ed4e9 exit 0 (version precondition: the three version cases, test_engine_strata conflicts). That the tests fail without the fix: "Fails without the fix" below |
-| A3 | pending at e30d1c9fc; was: At 60a5e3736: build-test 261110-045411-83e91d exit 0 (ctest 37 of 37, async_check, removed_options); docs E2E 261110-045423-57a7f5 exit 0 (smoke, e2e, tls passed; VERDICT GREEN) |
-| A4 | pending at e30d1c9fc; was: TSan 261110-045424-bc00ed at 60a5e3736 exit 0: test_engine_strata and the four node cases x3 (apply-once, sequential model included), every rc=0, 0 ThreadSanitizer reports |
-| A5 | pending at e30d1c9fc; was: build-test 261110-045411-83e91d exit 0 at 60a5e3736; CI: not run yet, the branch is not pushed (contributors do not push; the lead pushes) |
+| A1 | at c1a23d4e2: head tests 261110-122259-dd4047 and build-test 261110-122258-68dacc exit 0 (test_document_ids_are_themselves, test_engine_strata placement); fails without the fix: mutants n4 261110-103007-ce2626, f1b 261110-103009-55d7f2 KILLED |
+| A2 | at c1a23d4e2: 261110-122259-dd4047 and 261110-122258-68dacc exit 0 (the three version cases, test_engine_strata conflicts); review probes 261110-122259-8ee938 exit 0; PATCH status at the head 261110-122259-72f6ef (204 without ?echo, ruling 10); fails without the fix: mutant f1a 261110-103008-973d5e KILLED |
+| A3 | at c1a23d4e2: build-test 261110-122258-68dacc exit 0; docs E2E 261110-122258-1e6c55 exit 0 (smoke, e2e, tls) |
+| A4 | at c1a23d4e2: TSan 261110-122258-053f93 exit 0 (the five node cases x3, 1 and 2 shards) |
+| A5 | at c1a23d4e2: build-test 261110-122258-68dacc exit 0; CI green on quest/xapiand/write-path-fixes-r2 at c1a23d4e2 |
 
 ## Fails without the fix
 
