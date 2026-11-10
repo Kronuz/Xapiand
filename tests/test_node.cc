@@ -714,6 +714,23 @@ static long long stop_ms(const std::string& log) {
 	return exiting_ms - std::stoll(log.substr(at + 12));
 }
 
+// A line of the report that names the abandoned index's key and its one pin held ("'<path>/abandon' (state, 1 pin, pinned)").
+static bool names_the_abandoned_index(const std::string& log) {
+	std::size_t at = 0;
+	while (at < log.size()) {
+		auto end = log.find('\n', at);
+		if (end == std::string::npos) {
+			end = log.size();
+		}
+		const auto line = log.substr(at, end - at);
+		if (line.find("abandon' (") != std::string::npos && line.find(", 1 pin, pinned)") != std::string::npos) {
+			return true;
+		}
+		at = end + 1;
+	}
+	return false;
+}
+
 // The shutdown abandons what it cannot finish in its bound and exits 75 (EX_TEMPFAIL). Every write acknowledged
 // before it is there after a restart of the data directory. The stop is one bound long, not one for the service and
 // another for the registry. The bound is under the reserve, so the HTTP stop gets the shortest grace and ends the
@@ -733,7 +750,7 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}   // one bound (and the log flush), where two bounds took more than twice the bound
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("pinned") != std::string::npos);   // the turn is held under a pin, which the catalog names
+	CHECK(names_the_abandoned_index(log));   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the HTTP stop ended in its grace: the write was destroyed, not abandoned
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 
@@ -804,7 +821,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("pinned") != std::string::npos);   // the turn is held under a pin, which the catalog names
+	CHECK(names_the_abandoned_index(log));   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the service itself stopped
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 }

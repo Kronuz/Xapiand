@@ -81,10 +81,16 @@ s = socket.create_connection(('127.0.0.1', int(sys.argv[1])), timeout=30)
 s.sendall(b'RESTORE /left/ HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-ndjson\r\nContent-Length: %d\r\n\r\n' % (len(data) * 4) + data)
 s.close()
 PY
-# The node finishes the documents it had received, then the stream fails and what was indexed is committed.
-have=-1
-for _ in $(seq 60); do sleep 1; now=$(count left); [ "$now" = "$have" ] && break; have=$now; done
-sleep 5   # the closing commit of the documents indexed so far
+# The node finishes the documents it had received, then the stream fails and what was indexed is committed. The restore
+# has ended once the count holds still for STILL consecutive seconds (a loaded host pauses the node for a second or two,
+# and the closing commit follows the last document); only then does the kill -9 below test what was committed.
+STILL=${STILL:-10}; have=-1; still=0
+for _ in $(seq 300); do
+  sleep 1; now=$(count left)
+  if [ "$now" = "$have" ] && [ "$now" -gt 0 ] 2>/dev/null; then still=$((still + 1)); else still=0; have=$now; fi
+  [ $still -ge $STILL ] && break
+done
+[ $still -ge $STILL ] || fail "the restore of a client that left did not end: the count was still moving after 300 s"
 have=$(count left)
 code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "localhost:$PORT/nd/1")
 # The restore stops soon after the client leaves (it does not index the rest of what it had read): fewer than N stay.

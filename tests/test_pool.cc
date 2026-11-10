@@ -1680,6 +1680,30 @@ void test_a_failed_use_hands_its_pin_back() {
 	CHECK_EQ(pool.catalog().stats().replaces, 1u);
 }
 
+// A pin handed back by a reopen is taken again within the request, and the re-pin is not a use for the closing
+// policy (CT-R31): the slot's frequency counts the request once.
+void test_a_repin_after_a_reopen_is_not_a_use() {
+	Watchdog watchdog("a re-pin is not a use");
+	DatabasePool pool(8);
+	const auto path = fresh("repin_use");
+	Shard shard(pin(pool, path), WRITE);
+	engine::sync_wait(shard.add_document(make("Ka", "a")));
+	engine::sync_wait(shard.commit());
+	const auto freq = [&] { return IndexCatalog::freq_of(pool.catalog().word_of(0)); };
+	const unsigned used = freq();
+	try {
+		throw engine::Error(engine::errc::database, "an injected failure of the index");
+	} catch (const engine::Error& error) {
+		try {
+			shard.retry_read(error, 1);
+		} catch (const engine::Error&) { }
+	}
+	CHECK_TRUE(engine::sync_wait(shard.reopen()));
+	CHECK_EQ(freq(), used);   // the re-pin adds no use
+	Shard next(pin(pool, path), WRITE);
+	CHECK_EQ(freq(), used + 1);   // a request's own pin does
+}
+
 // Indexes whose files are on `fs` (strata's faultfs), their logs and blobs on the disk at their path, and the log's
 // writer for them: a test can then fail the index's syncs, and see what the log replays.
 struct FaultyIndexes {
@@ -2253,7 +2277,7 @@ void test_the_sweep_erases_a_missing_index_negative_entries() {
 	Watchdog watchdog("negative entries");
 	IndexSweep sweep;
 	sweep.period = 1ms;
-	sweep.negative_ttl = 2s;
+	sweep.negative_ttl = 3s;
 	DatabasePool pool(8, 0, engine::default_readers_per_index, sweep);
 	constexpr int names = 100;
 	const auto failed = [&] {
@@ -2267,8 +2291,11 @@ void test_the_sweep_erases_a_missing_index_negative_entries() {
 		const auto path = fresh(("missing_" + std::to_string(i)).c_str());
 		CHECK_TRUE(error_kind([&] { (void)pin(pool, path, DB_OPEN); }) == engine::errc::not_found);
 	}
-	CHECK_GE(failed(), 1);
-	CHECK_TRUE(until([&] { return failed() == 0; }, 10s));
+	const int before = failed();
+	CHECK_GE(before, 1);
+	std::this_thread::sleep_for(1500ms);   // half the TTL: an erase that ignores it has already run
+	CHECK_EQ(failed(), before);
+	CHECK_TRUE(until([&] { return failed() == 0; }, 7s));   // under strata's 10 s default, which a TTL not applied would give
 	CHECK_GE(pool.catalog().stats().erased, static_cast<std::uint64_t>(names));
 }
 
@@ -2352,6 +2379,7 @@ int main(int argc, char** argv) {
 		{"test_a_resident_commit_on_an_owed_index_lets_it_close", test_a_resident_commit_on_an_owed_index_lets_it_close},
 		{"test_join_waits_for_every_pin", test_join_waits_for_every_pin},
 		{"test_a_failed_use_hands_its_pin_back", test_a_failed_use_hands_its_pin_back},
+		{"test_a_repin_after_a_reopen_is_not_a_use", test_a_repin_after_a_reopen_is_not_a_use},
 		{"test_a_cold_pin_reads_what_the_log_replays", test_a_cold_pin_reads_what_the_log_replays},
 		{"test_a_fenced_index_is_replaced_and_replays_its_log", test_a_fenced_index_is_replaced_and_replays_its_log},
 		{"test_the_turns_end_publishes_a_finished_merge", test_the_turns_end_publishes_a_finished_merge},

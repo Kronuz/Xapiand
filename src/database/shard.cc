@@ -1311,10 +1311,10 @@ Shard::release() noexcept
 
 
 task::task<void>
-Shard::ready()
+Shard::ready(bool use)
 {
 	if (!pin_) {
-		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel);
+		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel, use);
 		missing_ = false;
 	}
 }
@@ -1341,11 +1341,12 @@ Shard::reopen()
 {
 	// A reopen may wait for the index's replacement, which waits for its views: a held view could be one.
 	engine::check_no_view_held("an open");
+	const bool held = static_cast<bool>(pin_);
 	const bool replaced = stale_ || !pin_ || pin_->stale_.load(std::memory_order_acquire);
 	if (std::exchange(stale_, false) || (pin_ && pin_->stale_.load(std::memory_order_acquire))) {
 		pin_.reopen();   // the catalog replaces the index once its other holders let go (x-pool D2)
 	}
-	co_await ready();
+	co_await ready(!held);   // the re-pin of a pin handed back is not a use (CT-R31)
 	co_return replaced;
 }
 

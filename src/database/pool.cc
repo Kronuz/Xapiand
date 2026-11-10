@@ -666,7 +666,7 @@ DatabasePool::run_detached(task::task<void> t)
 
 
 task::task<IndexPin>
-DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel)
+DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel, bool use)
 {
 	L_CALL("DatabasePool::pin({}, ({}))", repr(endpoint.to_string()), readable_flags(flags));
 
@@ -687,7 +687,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel
 		}
 	}
 	try {
-		co_return IndexPin(co_await catalog_->pin_request(key, true, intent, std::move(cancel)), *this);
+		co_return IndexPin(co_await catalog_->pin_request(key, use, intent, std::move(cancel)), *this);
 	} catch (...) {
 		rethrow_pin_failure(key);
 	}
