@@ -1,6 +1,6 @@
 # x7-catalog-timer: journal
 
-State: blocked on lead: no debouncer wheel can carry the catalog's timer (D56's mechanism)
+State: waiting on jobs 261110-143638-823338 261110-143640-b9f269 261110-143641-8f8cf6 261110-143654-d857c1
 Quest: .campaign/xapiand/quests/x7-catalog-timer.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,53 +9,48 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Stopped before code: D56's mechanism does not exist as written (Blocked on 1).
+D58 (option a) implemented at Xapiand:c0d0208ee; jobs running.
 
 ## Next
 
-1. On the lead's ruling for Blocked on 1, implement the chosen option in src/database/pool.{cc,h}, then A1-A3 jobs.
+1. Read the four jobs; fix what fails; then State "ready for review".
 
 ## Blocked on
 
-1. **D56 names a wheel that cannot take the catalog's timer** (lead decides). Findings, at master:
-   - The autocommit debouncer that had the `AC--` wheel is now `control::Debounce` (src/control_plane.h:184), tasks
-     on the control loop; no thread. Section 2's "the debouncer wheel" has no thread behind it today.
-   - The only debouncer wheel left is the FS fsyncher's `FS--` (src/xapiand_fsyncher.h:73), which section 2 retires
-     in 7b (D8), and it is outside this quest's file set.
-   - A scheduler wheel is typed by its one task type: `ThreadedScheduler<DebouncerTask<int, F, Tuple>>`, and
-     `ScheduledTask::operator()` static_casts to that type (scheduler d57e8fc scheduler.h:170-179). A catalog `Fire`
-     task cannot be added to it; the debouncer's API only calls `fsyncher_fsync(int, bool)`.
-   - The x7-gate census at master: unnamed 16, W 16, FS 9 (8 workers + FS--), WL 8, LOG 1, main 1, DB-TIMER 1.
-   Options:
-   a. The control loop: the catalog's timer arms `engine::Host::start_timer` on the control loop's AsioHost (section 2's
-      diagram already puts idle-close there; D1 too). Costs: the host is set after the pool is built and cleared
-      before Stop 3, and test_pool runs without one, while the catalog's destructor waits for its armed timers; needs
-      the control loop to own the timer for the pool's whole life (manager.cc, outside the file set) or a fallback,
-      which is two mechanisms.
-   b. One shared, type-erased wheel: Kronuz/scheduler gains a task type that runs a callable, the FS debouncer and
-      the catalog share it (scheduler repo, xapiand_fsyncher.h). FS goes in 7b, so the catalog would move again.
-   c. Keep DB-TIMER and amend section 2's list (D56 rejected this).
-   Recommendation: (a), with the quest's file set widened to src/manager.cc and the pool's tests: the catalog timer
-   becomes a control-loop timer like the autocommit, one timer mechanism on a thread that exists for good; the pool
-   takes its timer host at construction (manager.cc:284 builds the pool before `_rx`, so the members reorder)
-   and tests pass a test host. The pool is reset at manager.cc:1188, after the loop; that order needs checking.
+1. **File set** (lead): the constructor now takes the control loop (`DatabasePool(engine::AsioHost& timers, ...)`),
+   so every test that builds a pool passes one. That touches, outside the set: `tests/pool_support.h` (the shared
+   `control_loop()` test host), `tests/test_reactor_requests.cc` (10 pools), `tests/test_blocking_guard.cc` (4),
+   `tests/test_wide_search.cc` (1); each pool line gains `control_loop(), ` and an include. Ask: add them to the
+   set. The alternative, a constructor without a timer host, is a second timer mechanism.
+
+Answered: the lead's D58 message (no msg id): merged master (Xapiand:5b57ca685), implemented (a) as below.
 
 ## Evidence
 
-One row per criterion, with what its kind needs: a job id (it, or the same job rerun, passed at
-the current code), a `path`, a decision id, or for a [manual] one who checked what. Name every job
-you examined, failures included, and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <job id at the current code> |
+| A1 | t1_census at the head 261110-143640-b9f269 (pending); at master 66b310e60 261110-143641-8f8cf6 (pending, must fail). Both copy `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master |
+| A2 | build-test 261110-143638-823338 (pending; test_pool's sweep, TTL and erase cases); mutant `refs/mutants/x7-catalog-timer/no-arm` (21839dcc6, `after()` returns before arming) 261110-143654-d857c1 (pending, passes only when `xapiand_test_pool sweep` fails) |
+| A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`DatabasePool::Timer` (src/database/pool.cc) arms each catalog callback as an Asio timer on the control loop via
+`Host::start_timer`, posted to the loop's raw executor (which runs after the task scheduler closes); it keeps each
+callback until it fires, and `close()` (in `~DatabasePool`, after the shutdown, before the catalog) runs the rest at
+once. The DB-TIMER thread and the scheduler include are gone. Manager: `_rx` is made before the pool and outlives it;
+`run_control()` runs the stopped loop on the main thread, used by `drain_control`, the 50 ms poll of Stop 1's wait and
+each 10 ms slice of Stop 3's wait. Note: docs/mechanisms/index-registry-on-catalog.md item 10.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+1. One Asio timer per catalog callback, not a queue under one timer: the catalog arms few (1 Hz sweep, busy-lease
+   reposts), and the pool keeps the callbacks so close() can run them.
+2. Arming hops to the loop's thread (AsioHost arms and cancels there only), with `asio::post` to the raw executor
+   rather than `post_call`, which drops calls once the loop's scheduler closes before Stop 3.
+3. After close(), a timer runs its callback at once (the catalog's destructor may arm while it waits; a callback only
+   posts).
+4. Stop 1 runs the control loop at its 50 ms poll, so the autocommits that come due then run, where before they waited
+   for Stop 2. Stop 3's slice drops from 500 ms to 10 ms (timer latency there).
+5. Pool reset order: the pool is reset at manager.cc's end of join(), long after the loop stopped running (break_loop,
+   before join) but before `_rx` is destroyed; the loop "running" through the stop is the main thread's pumping above.
