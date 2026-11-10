@@ -13672,6 +13672,9 @@
       "files": [
         "src/database/pool.cc",
         "src/database/pool.h",
+        "src/manager.cc",
+        "src/manager.h",
+        "tests/test_pool.cc",
         "docs/mechanisms/index-registry-on-catalog.md"
       ],
       "landed": [],
@@ -13685,7 +13688,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T14:23:20",
+      "updated": "2026-11-10T14:28:42",
       "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
     },
     "x7-coverage": {
