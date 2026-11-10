@@ -2274,14 +2274,16 @@
       ],
       "milestone": "The document profile gate",
       "needs": [
-        "cli-restore-records"
+        "cli-restore-records",
+        "write-path-fixes",
+        "direct-pins"
       ],
       "provides": [],
       "repo": ".",
       "risk": "normal",
       "status": "planned",
       "title": "Remove the replica settings left from the cluster",
-      "updated": "2026-11-09T19:34:41"
+      "updated": "2026-11-09T19:54:48"
     },
     "drop-threadpool": {
       "accepted": {},
