@@ -22,15 +22,17 @@
 # gate7c_rows.sh REL ASAN OUT: Phase 7c's functional gate rows (docs/design/phase7c.md section 4) on a Release and an
 # ASan+UBSan binary. Each row runs to its end; OUT/rows.tsv gets "row gating rc seconds" and OUT/<row>.log its output.
 # Rows marked info are reported, not gated. Exit 0 when every gating row passes. No timing row runs here.
-# GATE7C_ALLOW overrides T1's thread prefixes (macOS names: HTTP loops are `unnamed`, the main thread `main`).
+# GATE7C_ROWS="NAME ..." runs only those rows. GATE7C_ALLOW overrides T1's thread prefixes (macOS names: HTTP
+# loops are `unnamed`, the main thread `main`).
 . "$(dirname "$0")/env.sh"
 REL=$1; ASAN=$2; OUT=$3
 H="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$H")"
 ALLOW=${GATE7C_ALLOW:-main,unnamed,Xapiand:W,Xapiand:LOG,Xapiand:WL,Xapiand:FS}
 mkdir -p "$OUT"; printf 'row\tgating\trc\tseconds\n' >"$OUT/rows.tsv"; failed=0
 
-row() {  # row NAME gate|info CMD...
+row() {  # row NAME gate|info CMD...; GATE7C_ROWS="a b" runs only the rows it names
 	local n=$1 g=$2 s rc; shift 2; s=$(date +%s)
+	case " ${GATE7C_ROWS:-$n} " in *" $n "*) ;; *) return 0 ;; esac
 	"$@" >"$OUT/$n.log" 2>&1; rc=$?
 	printf '%s\t%s\t%s\t%s\n' "$n" "$g" "$rc" "$(( $(date +%s) - s ))" | tee -a "$OUT/rows.tsv"
 	[ "$rc" = 0 ] || [ "$g" = info ] || failed=1
@@ -76,10 +78,13 @@ row t2_restore_stream_asan info env PORT="$(free_port)" "$H/restore_stream_check
 row t3_crash gate env BIN="$REL" PORT="$(free_port)" "$H/engine_crash_check.sh" --reactors 2
 row t3_crash_asan gate env BIN="$ASAN" PORT="$(free_port)" "$H/engine_crash_check.sh" --reactors 2
 row t7_asan gate "$PY" "$H/engine_mixed_load.py" "$ASAN" "$OUT/t7-asan" --engine strata --secs 600 --term-at 300 --port "$(free_port)"
-row t8_overload_light gate stall t8_overload_light --overload light 4
-row t8_overload_heavy gate stall t8_overload_heavy --overload heavy 4
+# Two reactors: reaching 1,000 in flight on each takes reactors x 1,250 connections, inside one address's ephemeral ports.
+row t8_overload_light gate stall t8_overload_light --processors 2 --overload light 4
+row t8_overload_heavy gate stall t8_overload_heavy --processors 2 --overload heavy 4
 row t10_lua gate "$PY" "$H/lua_bounds.py" "$REL" --port "$(free_port)" --loops 4 --out "$OUT/t10.json"
-row t10_lua_asan info "$PY" "$H/lua_bounds.py" "$ASAN" --port "$(free_port)" --loops 4 --out "$OUT/t10-asan.json"
+# Under ASan the bounds' answers are checked, not their times.
+row t10_lua_asan gate "$PY" "$H/lua_bounds.py" "$ASAN" --port "$(free_port)" --loops 4 --max-bound-secs 180 \
+	--max-light-ms 2000 --max-flood-p99-ms 5000 --out "$OUT/t10-asan.json"
 row x6_shutdown gate env BIN="$REL" PORT="$(free_port)" "$H/graceful_shutdown_check.sh"
 row gate_tools gate "$PY" "$H/test_gate_tools.py"
 echo "gate7c_rows: $( [ "$failed" = 0 ] && echo PASS || echo FAIL ) ($OUT/rows.tsv)"

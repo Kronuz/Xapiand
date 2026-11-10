@@ -71,6 +71,7 @@ DATASET = os.path.join(REPO, "docs", "public", "assets", "accounts.ndjson")
 CHUNK_DOCS = 20_000
 JSON_CT = "application/json"
 NDJSON_CT = "application/x-ndjson"
+INFLIGHT_CAP = 1_000  # requests in flight per reactor before a 503 (src/manager.cc, D2)
 
 # Heavy bodies: exhaustive aggregations, wildcard and phrase searches, a text scan.
 HEAVY_QUERIES: list[tuple[str, dict[str, Any]]] = [
@@ -217,6 +218,8 @@ class Node:
                 "-D",
                 os.path.join(self.workdir, "data"),
             ]
+            if args.processors > 0:
+                cmd += ["--processors", str(args.processors)]
             self.proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, env=env, start_new_session=True)
             atexit.register(self.stop)
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -797,6 +800,15 @@ async def phase(
     before = await scrape(ctx.ctl)
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
+    light_conns = a.light_conns
+    if name.startswith("overload"):
+        # The backlog must reach the server's admission caps, not wait in this client's connection pool.
+        conns = a.overload_conns or int(1.25 * INFLIGHT_CAP * ctx.reactors)
+        if name.startswith("overload-heavy"):
+            heavy_clients = conns
+        else:
+            light_conns = conns
+        log(f"{name}: {conns} connections against an in-flight cap of {INFLIGHT_CAP} x {ctx.reactors} reactors")
     jobs: list[asyncio.Future[Any]] = []
     light_task = None
     if light_rate > 0:
@@ -808,7 +820,7 @@ async def phase(
                 ctx.accounts,
                 light_rate,
                 duration,
-                a.light_conns,
+                light_conns,
                 a.seed,
             )
         )
@@ -1176,6 +1188,13 @@ def main() -> int:
         help="use this light rate instead of finding it",
     )
     ap.add_argument("--overload", nargs=2, metavar=("light|heavy", "N"))
+    ap.add_argument(
+        "--overload-conns",
+        type=int,
+        default=0,
+        help="connections in an overload phase (default: 1.25x the in-flight cap times the reactors)",
+    )
+    ap.add_argument("--processors", type=int, default=0, help="the node's reactor count (--processors; 0: its default)")
     ap.add_argument("--lua-loop", type=int, default=0, help="looping scripts (run by harness/lua_bounds.py)")
     ap.add_argument("--index-size", default="", help="e.g. 2xram (gated at Phase 6)")
     ap.add_argument(
