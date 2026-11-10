@@ -1,6 +1,6 @@
 # manifest-log: journal
 
-State: waiting on jobs 261110-114551-711f81 261110-114552-f6a3b2 261110-114555-188cd2 261110-114557-207ddc 261110-114559-823541 261110-114602-96a9cd 261110-114604-0667d8 261110-114607-d6584b 261110-114609-102757
+State: waiting on jobs 261110-114552-f6a3b2 261110-114555-188cd2 261110-114557-207ddc 261110-114559-823541 261110-114602-96a9cd 261110-114604-0667d8 261110-114607-d6584b 261110-114609-102757
 Quest: .campaign/xapiand/quests/manifest-log.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,13 +15,14 @@ strata:1ebeff8, by finding:
 
 | Finding | Job | Expect |
 |---|---|---|
-| F3 | 261110-114551-711f81: apply_atomic_test (held-view sweeps) and hazard_test, ASan+UBSan, assertions on | exit 0 |
+| F3 | 261110-114551-711f81: apply_atomic_test (held-view sweeps) and hazard_test, ASan+UBSan, assertions on | done, exit 0: commit 153 points (20 fenced, 17 durable), with a held view 161 (28, 25), reclaiming a merge 150 (20, 17), install 98 (17, 16), install with a held view 109 (28, 27), each alone and with the next failing; hazard ok; no report |
 | F3 | 261110-114555-188cd2: the reviewer's `run.sh rel` (alloc_crash_probe, sync_probe) | 0 BAD |
 | F3 | 261110-114557-207ddc: the reviewer's `run.sh asan` (both probes, apply_atomic) | 0 BAD, no report |
 | F3 mutant | 261110-114602-96a9cd (ASan), 261110-114604-0667d8 (Release): the fix reverted on the head, strata:3b672c4 (`refs/scratch/manifest-log/f3-reverted`) | fail: "the held view reads wrong" or heap-use-after-free |
 | N2 | 261110-114559-823541: the reviewer's `mutants.py` at the head | 4 of 4 killed (M2, M3 survived at strata:6ab3983) |
 | N2 mutant M2 | 261110-114607-d6584b: install's post-log steps outside `durable()`, strata:810fd13 (`refs/scratch/manifest-log/n2-install-tail`) | fail |
 | N2 mutant M3 | 261110-114609-102757: `reclaim_files` alone outside `durable()`, strata:4bb2e08 (`refs/scratch/manifest-log/n2-reclaim-outside`) | fail |
+| F3, first cut | at strata:f39abc3 (commit sweep with a held view only): 261110-114306-bd857c exit 0; mutant strata:ca87722 (fix reverted) 261110-114307-f4e492 exit 134, heap-use-after-free at apply_atomic_test.cc:201 (the held view's read), freed by `publish_view` (index.hh:3036) in `commit()`'s `durable` block | as expected |
 | all | build-test 261110-114552-f6a3b2 (`campaign verify`) | ctest green |
 
 Fix round 1 is in (strata:c78f870 to strata:08a11ab, one commit per finding; table below). Its
@@ -50,7 +51,11 @@ stale reruns at strata:e0508e9 (9e3973, a9800f, 23571b) ran superseded code.
 
 ## Next
 
-1. Read the jobs in State; for any red one, fix and rerun only that probe or check.
+1. Read the jobs in State: build-test, both probe runs and mutants.py green, the four mutant jobs
+   failing (in their tests, not their builds: the scripts exit 2 on a build failure, 1 on a test).
+   Then fill F3's row in Confirmations and A5's evidence; for any red one, fix and rerun only it.
+   The interrupted head jobs at strata:6ab3983 (A2 to A9's reruns) need `campaign job rerun` at
+   strata:1ebeff8; the lead's call (they are outside this round's assignment).
 2. The lead accepts each review with the Confirmations table's jobs (`campaign accept manifest-log
    durability --confirm F1=261110-073919-e779e6 F2=261110-073918-41b1cd`, `... security --confirm
    F1=261110-073919-a0029a F2=261110-073919-cf69ef`, fable's F1 with bb7303) and pushes the branch
