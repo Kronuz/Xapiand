@@ -2116,6 +2116,8 @@
       "after": [
         "sortable-encoding"
       ],
+      "base": "0183e70b2952d102bb2dc8c7c4103bcb775b0bb9",
+      "branch": "quest/xapiand/docs-site-refresh",
       "checks": [
         {
           "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
@@ -2167,9 +2169,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
-      "updated": "2026-11-09T17:51:03"
+      "updated": "2026-11-10T03:22:13",
+      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh"
     },
     "docs-upgrade-page": {
       "accepted": {},
