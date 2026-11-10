@@ -276,5 +276,92 @@ class StallLoad(unittest.TestCase):
         self.assertIsNone(stall_load.pct([], 50))
 
 
+class CappedServer:
+    """An HTTP/1.1 server with the reactor gate's admission: a request is admitted at headers-complete and held
+    until its response; over `cap` (None: no cap) it is refused with a 503 and `Connection: close`."""
+
+    def __init__(self, cap: int | None, service_s: float = 0.0) -> None:
+        self.cap, self.service_s = cap, service_s
+        self.inflight = self.peak = 0
+        self.server: asyncio.AbstractServer | None = None
+        self.port = 0
+
+    async def start(self) -> None:
+        self.server = await asyncio.start_server(self.handle, "127.0.0.1", 0, backlog=512)
+        self.port = self.server.sockets[0].getsockname()[1]
+
+    async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        try:
+            while True:
+                head = await reader.readuntil(b"\r\n\r\n")
+                if self.cap is not None and self.inflight >= self.cap:
+                    writer.write(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 20\r\nRetry-After: 1\r\n")
+                    writer.write(b"Connection: close\r\n\r\nService Unavailable\n")
+                    await writer.drain()
+                    return
+                self.inflight += 1
+                self.peak = max(self.peak, self.inflight)
+                try:
+                    length = 0
+                    for line in head.split(b"\r\n"):
+                        if line.lower().startswith(b"content-length:"):
+                            length = int(line.split(b":")[1])
+                    if length:
+                        await reader.readexactly(length)
+                    await asyncio.sleep(self.service_s)
+                    writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
+                    await writer.drain()
+                finally:
+                    self.inflight -= 1
+        except (asyncio.IncompleteReadError, ConnectionError):
+            pass
+        finally:
+            writer.close()
+
+    async def stop(self) -> None:
+        assert self.server is not None
+        self.server.close()
+        await self.server.wait_closed()
+
+
+HELD_REQUESTS = [("search", "SEARCH", "/accounts/", b'{"_query":{"contact.state":"X"}}')]
+
+
+class HeldOverload(unittest.TestCase):
+    def held(self, cap: int | None, held: int, service_s: float = 0.0) -> tuple[stall_load.HeldResult, int]:
+        async def go() -> tuple[stall_load.HeldResult, int]:
+            fake = CappedServer(cap, service_s)
+            await fake.start()
+            try:
+                res = await stall_load.run_held(
+                    "127.0.0.1", fake.port, HELD_REQUESTS, held, cap or 40, 0.5, barrier_timeout=1.0
+                )
+                return res, fake.peak
+            finally:
+                await fake.stop()
+
+        return asyncio.run(go())
+
+    def test_a_server_that_answers_at_once_still_has_its_cap_exceeded(self) -> None:
+        # An open-loop stream at any rate this server keeps up with leaves about one request in flight; held heads
+        # put `held` in flight whatever the speed, so the cap admits 40 and refuses 20 in every round.
+        res, peak = self.held(40, 60)
+        d = res.as_dict()
+        self.assertTrue(res.enforced)
+        self.assertEqual(peak, 40)
+        for r in res.rounds:
+            self.assertEqual(r["refused_at_barrier"], 20)
+            self.assertEqual(r["in_flight_at_barrier"], 40)
+        self.assertEqual(d["errors"]["http_503_by_reason"], {"Service Unavailable": 20 * len(res.rounds)})
+        self.assertEqual(d["answered"]["n"], 40 * len(res.rounds))
+        self.assertEqual(d["errors"]["exceptions"], 0)
+
+    def test_a_server_without_a_cap_is_not_enforced(self) -> None:
+        res, peak = self.held(None, 60)
+        self.assertFalse(res.enforced)
+        self.assertEqual(peak, 60)
+        self.assertEqual(res.as_dict()["errors"]["http_503"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

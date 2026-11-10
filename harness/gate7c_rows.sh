@@ -39,7 +39,8 @@ row() {  # row NAME gate|info CMD...; GATE7C_ROWS="a b" runs only the rows it na
 }
 
 # check_json KIND FILE: T1's census holds only ALLOW's prefixes (and as many `unnamed` as reactors on macOS); an
-# overload phase answered at least one 503 and no other error.
+# overload phase held more requests than the in-flight cap, answered 503s and no other error (stall_load.py itself
+# asserts each round admitted at most the cap and refused the rest).
 check_json() {
 	"$PY" -I - "$1" "$2" "$ALLOW" <<'PY'
 import json, sys
@@ -55,8 +56,12 @@ for p in out["phases"]:
         if sys.platform == "darwin" and threads.get("unnamed", 0) != out["meta"]["reactors"]:
             bad.append(f"unnamed {threads.get('unnamed', 0)} != reactors {out['meta']['reactors']}")
     elif p["name"].startswith("overload"):
-        es = [(p.get(k) or {}).get("errors", {}) for k in ("light", "heavy")]
-        print(p["name"], "errors", json.dumps(es), "peaks", json.dumps(p["peaks"]), "rss_kb", p["rss_kb"])
+        es = [(p.get(k) or {}).get("errors", {}) for k in ("held", "light", "heavy")]
+        h = p.get("held") or {}
+        rounds = [(r["in_flight_at_barrier"], r["refused_at_barrier"]) for r in h.get("rounds", [])]
+        print(p["name"], "held", h.get("held"), "cap", h.get("cap"), "in flight/refused at each barrier", rounds,
+              "errors", json.dumps(es), "peaks", json.dumps(p["peaks"]), "rss_kb", p["rss_kb"])
+        if not h.get("enforced"): bad.append(f"{p['name']}: the held requests did not exceed the cap")
         if not sum(e.get("http_503", 0) for e in es): bad.append(f"{p['name']}: no 503")
         if any(e.get("http_other") or e.get("exceptions") for e in es): bad.append(f"{p['name']}: other errors")
 print("FAIL" if bad else "PASS", bad)
@@ -78,9 +83,9 @@ row t2_restore_stream_asan info env PORT="$(free_port)" "$H/restore_stream_check
 row t3_crash gate env BIN="$REL" PORT="$(free_port)" "$H/engine_crash_check.sh" --reactors 2
 row t3_crash_asan gate env BIN="$ASAN" PORT="$(free_port)" "$H/engine_crash_check.sh" --reactors 2
 row t7_asan gate "$PY" "$H/engine_mixed_load.py" "$ASAN" "$OUT/t7-asan" --engine strata --secs 600 --term-at 300 --port "$(free_port)"
-# Two reactors: reaching 1,000 in flight on each takes reactors x 1,250 connections, inside one address's ephemeral ports.
-row t8_overload_light gate stall t8_overload_light --processors 2 --overload light 4
-row t8_overload_heavy gate stall t8_overload_heavy --processors 2 --overload heavy 4
+# Two reactors: 1.25x the cap of 1,000 in flight on each is 2,500 held connections, inside one address's ephemeral ports.
+row t8_overload_light gate stall t8_overload_light --processors 2 --overload light 1.25
+row t8_overload_heavy gate stall t8_overload_heavy --processors 2 --overload heavy 1.25
 row t10_lua gate "$PY" "$H/lua_bounds.py" "$REL" --port "$(free_port)" --loops 4 --out "$OUT/t10.json"
 # Under ASan the bounds' answers are checked, not their times.
 row t10_lua_asan gate "$PY" "$H/lua_bounds.py" "$ASAN" --port "$(free_port)" --loops 4 --max-bound-secs 180 \

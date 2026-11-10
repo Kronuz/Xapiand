@@ -30,6 +30,9 @@ One node, two kinds of load, measured together:
   heavy  4x the reactor count in closed-loop clients: exhaustive searches with aggregations, wildcard
          and phrase searches, and a RESTORE stream into its own index `restore-target`
          (--restore-into accounts writes `accounts` itself, which is Q6's cost).
+  held   T8's overload: rounds of F x the in-flight cap in requests (single-term searches, or heavy ones),
+         each head sent with its body withheld until the round's 503s show the cap refused the excess; the
+         heavy overload runs beside light at --rate, which meets the demoted cap's 503.
 
 `accounts` holds --accounts-docs documents (default 1,000,000), loaded in 20,000-document RESTOREs.
 Every phase writes light p50/p99/p99.9, per-loop lag deltas from :metrics, 503 and error counts,
@@ -38,7 +41,7 @@ in-flight and demoted peaks, segment count and merge backlog, RSS and phase time
   stall_load.py --bin build/bin/xapiand --out run.json                  unloaded then loaded
   stall_load.py --bin BIN --phase loaded --restore-into accounts        T5's same-index run
   stall_load.py --bin BIN --saturate                                    find the saturating light rate
-  stall_load.py --bin BIN --overload light 4  |  --overload heavy 4     T8
+  stall_load.py --bin BIN --overload light 1.25  |  --overload heavy 1.25   T8: hold 1.25x the in-flight cap
   stall_load.py --bin BIN --dry-run                                     20,000 documents, short phases
 
 --bin starts a node in --workdir and removes it (process and files) on exit;
@@ -57,6 +60,7 @@ import math
 import os
 import random
 import re
+import resource
 import shutil
 import signal
 import socket
@@ -136,13 +140,28 @@ class Conn:
             raise
 
     async def _request(self, method: str, path: str, body: bytes, content_type: str) -> tuple[int, bytes]:
+        await self.connect()
+        await self.send(self.head(method, path, len(body), content_type) + body)
+        return await self.response()
+
+    async def connect(self) -> None:
         if self.writer is None or self.reader is None:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
-        head = f"{method} {path} HTTP/1.1\r\nHost: {self.host}:{self.port}\r\nContent-Length: {len(body)}\r\n"
-        if body:
+
+    def head(self, method: str, path: str, length: int, content_type: str = JSON_CT) -> bytes:
+        head = f"{method} {path} HTTP/1.1\r\nHost: {self.host}:{self.port}\r\nContent-Length: {length}\r\n"
+        if length:
             head += f"Content-Type: {content_type}\r\n"
-        self.writer.write(head.encode() + b"\r\n" + body)
+        return head.encode() + b"\r\n"
+
+    async def send(self, data: bytes) -> None:
+        assert self.writer is not None
+        self.writer.write(data)
         await self.writer.drain()
+
+    async def response(self) -> tuple[int, bytes]:
+        """Read one response; a `Connection: close` or an unframed body closes the connection after it."""
+        assert self.reader is not None
         status_line = await self.reader.readline()
         if not status_line:
             raise HttpError("connection closed")
@@ -474,12 +493,15 @@ class Counts:
     other: int = 0
     exceptions: int = 0
     first_errors: list[str] = field(default_factory=list)
+    reasons: dict[str, int] = field(default_factory=dict)  # 503s by body: which admission cap refused them
 
-    def add(self, status: int, what: str = "") -> None:
+    def add(self, status: int, what: str = "", body: bytes = b"") -> None:
         if status < 300 or status == 404 and what == "get":
             self.ok += 1
         elif status == 503:
             self.s503 += 1
+            reason = body.decode("utf-8", "replace").strip()[:40]
+            self.reasons[reason] = self.reasons.get(reason, 0) + 1
         else:
             self.other += 1
             if len(self.first_errors) < 5:
@@ -494,6 +516,7 @@ class Counts:
         return {
             "ok": self.ok,
             "http_503": self.s503,
+            "http_503_by_reason": self.reasons,
             "http_other": self.other,
             "exceptions": self.exceptions,
             "first": self.first_errors,
@@ -567,10 +590,10 @@ async def run_light(
         try:
             if kind == 0:
                 what = "get"
-                status, _ = await conn.request("GET", f"/accounts/{doc_id}")
+                status, body = await conn.request("GET", f"/accounts/{doc_id}")
             elif kind == 1:
                 what = "search"
-                status, _ = await conn.request(
+                status, body = await conn.request(
                     "SEARCH",
                     "/accounts/",
                     json.dumps({"_query": {"contact.state": state}, "_limit": 10}).encode(),
@@ -578,11 +601,11 @@ async def run_light(
             else:
                 what = "pair"
                 pid = pair_base + i
-                status, _ = await conn.request("PUT", f"/accounts/{pid}", body_row)
+                status, body = await conn.request("PUT", f"/accounts/{pid}", body_row)
                 if status < 300:
-                    status, _ = await conn.request("GET", f"/accounts/{pid}")
+                    status, body = await conn.request("GET", f"/accounts/{pid}")
             end = loop.time()
-            counts.add(status, what)
+            counts.add(status, what, body)
             if sched - t0 >= warmup:
                 classes[what].append(int((end - sched) * 1e6))
             completed[0] += 1
@@ -659,9 +682,8 @@ async def run_heavy(
     duration: float,
     restore_index: str,
     restore_first_id: int,
-    open_rate: float = 0.0,
 ) -> HeavyResult:
-    """Closed-loop heavy clients (one is the RESTORE stream); open_rate > 0 sends the searches open loop instead."""
+    """Closed-loop heavy clients; one is the RESTORE stream."""
     loop = asyncio.get_running_loop()
     end_at = loop.time() + duration
     counts = Counts()
@@ -677,8 +699,8 @@ async def run_heavy(
             i += 1
             t = loop.time()
             try:
-                status, _ = await conn.request("SEARCH", "/accounts/", json.dumps(q).encode())
-                counts.add(status, kind)
+                status, body = await conn.request("SEARCH", "/accounts/", json.dumps(q).encode())
+                counts.add(status, kind, body)
                 by_kind[kind] = by_kind.get(kind, 0) + 1
                 lat.setdefault(kind, []).append(int((loop.time() - t) * 1e6))
             except Exception as e:
@@ -691,13 +713,13 @@ async def run_heavy(
         next_id = restore_first_id
         while loop.time() < end_at:
             try:
-                status, _ = await conn.request(
+                status, body = await conn.request(
                     "RESTORE",
                     f"/{restore_index}/",
                     restore_body(rows, next_id, CHUNK_DOCS),
                     NDJSON_CT,
                 )
-                counts.add(status, "restore")
+                counts.add(status, "restore", body)
                 if status < 300:
                     restored[0] += CHUNK_DOCS
                     restored[1] += 1
@@ -707,47 +729,154 @@ async def run_heavy(
                 conn = Conn(host, port)
         await conn.close()
 
-    async def open_search(rate: float) -> None:
-        pool: asyncio.Queue[Conn] = asyncio.Queue()
-        for _ in range(max(clients, 64)):
-            pool.put_nowait(Conn(host, port))
-        tasks: list[asyncio.Task[None]] = []
-
-        async def one(i: int, sched: float) -> None:
-            conn = await pool.get()
-            kind, q = HEAVY_QUERIES[i % len(HEAVY_QUERIES)]
-            try:
-                status, _ = await conn.request("SEARCH", "/accounts/", json.dumps(q).encode())
-                counts.add(status, kind)
-                by_kind[kind] = by_kind.get(kind, 0) + 1
-                lat.setdefault(kind, []).append(int((loop.time() - sched) * 1e6))
-            except Exception as e:
-                counts.exc(e, kind)
-                conn = Conn(host, port)
-            finally:
-                pool.put_nowait(conn)
-
-        t0 = loop.time()
-        for i in range(int(rate * duration)):
-            sched = t0 + i / rate
-            delay = sched - loop.time()
-            if delay > 0.0005:
-                await asyncio.sleep(delay)
-            elif i % 64 == 0:
-                await asyncio.sleep(0)
-            tasks.append(loop.create_task(one(i, sched)))
-        _done, pending = await asyncio.wait(tasks, timeout=10.0)
-        for task in pending:
-            task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
-
-    if open_rate > 0:
-        await open_search(open_rate)
-    else:
-        jobs = [search_client(n) for n in range(max(1, clients - 1))]
-        jobs.append(restore_client())
-        await asyncio.gather(*jobs)
+    jobs = [search_client(n) for n in range(max(1, clients - 1))]
+    jobs.append(restore_client())
+    await asyncio.gather(*jobs)
     return HeavyResult(sum(by_kind.values()), restored[0], restored[1], counts, by_kind, lat)
+
+
+# ---------------------------------------------------------------------------------------------
+# Overload: more requests in flight than the admission cap
+
+
+@dataclass
+class HeldResult:
+    held: int
+    cap: int
+    rounds: list[dict[str, Any]]
+    counts: Counts
+    answered_us: list[int]
+    refused_us: list[int]
+    outstanding_peak: int
+
+    @property
+    def enforced(self) -> bool:
+        return bool(self.rounds) and all(r["enforced"] for r in self.rounds)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "held": self.held,
+            "cap": self.cap,
+            "enforced": self.enforced,
+            "outstanding_peak": self.outstanding_peak,
+            "in_flight_at_barrier_peak": max((r["in_flight_at_barrier"] for r in self.rounds), default=0),
+            "rounds": self.rounds,
+            "answered": summarize(self.answered_us),
+            "refused_at_barrier": summarize(self.refused_us),
+            "errors": self.counts.as_dict(),
+        }
+
+
+async def run_held(
+    host: str,
+    port: int,
+    requests: list[tuple[str, str, str, bytes]],
+    held: int,
+    cap: int,
+    duration: float,
+    settle: float = 0.25,
+    barrier_timeout: float = 30.0,
+) -> HeldResult:
+    """Rounds of `held` requests, each one's head sent and its body withheld until the round's barrier opens.
+
+    The server admits a request at headers-complete and holds it until its response is settled, so while the
+    bodies wait at most `cap` requests are admitted and the other `held - cap` must be refused with a 503: the cap
+    is exceeded by construction, on any host, whatever the server's or this client's speed. The barrier opens once
+    that many 503s came and no more for `settle` s, or after `barrier_timeout` s (the round is then not enforced).
+    `requests` are (what, method, path, body) cycled over the connections; rounds repeat for `duration` s.
+    """
+    loop = asyncio.get_running_loop()
+    conns = [Conn(host, port) for _ in range(held)]
+    opener = asyncio.Semaphore(64)  # a listen backlog is commonly 128
+    counts = Counts()
+    rounds: list[dict[str, Any]] = []
+    answered: list[int] = []
+    refused_us: list[int] = []
+    outstanding = [0, 0]  # heads sent and not answered: now, peak
+    end_at = loop.time() + duration
+
+    async def one(i: int, n: int, release: asyncio.Event, tally: dict[str, Any]) -> None:
+        conn = conns[i]
+        what, method, path, body = requests[(n * held + i) % len(requests)]
+        try:
+            async with opener:
+                await conn.connect()
+            await conn.send(conn.head(method, path, len(body)))
+        except Exception as e:
+            counts.exc(e, what)
+            await conn.close()
+            tally["sent"] += 1
+            return
+        t_sent = loop.time()
+        outstanding[0] += 1
+        outstanding[1] = max(outstanding[1], outstanding[0])
+        tally["sent"] += 1
+        reply = asyncio.ensure_future(conn.response())
+        gate = asyncio.ensure_future(release.wait())
+        try:
+            await asyncio.wait({reply, gate}, return_when=asyncio.FIRST_COMPLETED)
+            early = reply.done()
+            if not early:
+                await conn.send(body)
+            status, data = await asyncio.wait_for(reply, 300.0)
+            counts.add(status, what, data)
+            if early:
+                tally["early"] += 1
+                if status == 503:
+                    tally["refused"] += 1
+                    tally["last"] = loop.time()
+                    refused_us.append(int((loop.time() - t_sent) * 1e6))
+            else:
+                answered.append(int((loop.time() - tally["released"]) * 1e6))
+        except Exception as e:
+            counts.exc(e, what)
+            await conn.close()
+        finally:
+            gate.cancel()
+            reply.cancel()
+            outstanding[0] -= 1
+
+    n = 0
+    while not rounds or loop.time() < end_at:
+        t0 = loop.time()
+        release = asyncio.Event()
+        tally: dict[str, Any] = {"sent": 0, "early": 0, "refused": 0, "last": t0, "released": 0.0}
+        tasks = [loop.create_task(one(i, n, release, tally)) for i in range(held)]
+        deadline = t0 + barrier_timeout
+        while loop.time() < deadline and (
+            tally["sent"] < held or tally["refused"] < held - cap or loop.time() - tally["last"] < settle
+        ):
+            await asyncio.sleep(0.02)
+        at_barrier = outstanding[0]
+        tally["released"] = loop.time()
+        release.set()
+        await asyncio.gather(*tasks)
+        rounds.append(
+            {
+                "round": n,
+                "barrier_s": round(tally["released"] - t0, 3),
+                "seconds": round(loop.time() - t0, 3),
+                "in_flight_at_barrier": at_barrier,
+                "refused_at_barrier": tally["refused"],
+                "other_early_answers": tally["early"] - tally["refused"],
+                # At most `cap` held in flight and the rest refused, so the 503s come from exceeding the cap.
+                "enforced": tally["refused"] >= held - cap and at_barrier <= cap,
+            }
+        )
+        n += 1
+    for conn in conns:
+        await conn.close()
+    return HeldResult(held, cap, rounds, counts, answered, refused_us, outstanding[1])
+
+
+def held_requests(kind: str, rows: Rows) -> list[tuple[str, str, str, bytes]]:
+    """T8's held requests: single-term searches for the light overload, K3's heavy searches for the heavy one."""
+    if kind == "light":
+        return [
+            ("search", "SEARCH", "/accounts/", json.dumps({"_query": {"contact.state": st}, "_limit": 10}).encode())
+            for st in rows.states
+        ]
+    return [(k, "SEARCH", "/accounts/", json.dumps(q).encode()) for k, q in HEAVY_QUERIES]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -794,22 +923,25 @@ async def phase(
     duration: float,
     assert_rate: bool = True,
     settle: bool = True,
-    heavy_rate: float = 0.0,
+    held: str = "",
 ) -> dict[str, Any]:
+    """One phase: light at `light_rate` (0: none), heavy clients if `heavy`, a held overload of kind `held`."""
     a = ctx.args
     before = await scrape(ctx.ctl)
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
-    light_conns = a.light_conns
-    if name.startswith("overload"):
-        # The backlog must reach the server's admission caps, not wait in this client's connection pool.
-        conns = a.overload_conns or int(1.25 * INFLIGHT_CAP * ctx.reactors)
-        if name.startswith("overload-heavy"):
-            heavy_clients = conns
-        else:
-            light_conns = conns
-        log(f"{name}: {conns} connections against an in-flight cap of {INFLIGHT_CAP} x {ctx.reactors} reactors")
     jobs: list[asyncio.Future[Any]] = []
+    held_task = None
+    if held:
+        cap = INFLIGHT_CAP * ctx.reactors
+        count = math.ceil(a.overload_factor * cap)
+        log(
+            f"{name}: {count} {held} requests held against an in-flight cap of {INFLIGHT_CAP} x {ctx.reactors} reactors"
+        )
+        held_task = asyncio.ensure_future(
+            run_held(ctx.node.host, ctx.node.port, held_requests(held, ctx.rows), count, cap, duration)
+        )
+        jobs.append(held_task)
     light_task = None
     if light_rate > 0:
         light_task = asyncio.ensure_future(
@@ -820,7 +952,7 @@ async def phase(
                 ctx.accounts,
                 light_rate,
                 duration,
-                light_conns,
+                a.light_conns,
                 a.seed,
             )
         )
@@ -836,7 +968,6 @@ async def phase(
                 duration + 0.3,
                 ctx.restore_index,
                 ctx.restore_first_id,
-                heavy_rate,
             )
         )
         jobs.append(heavy_task)
@@ -890,6 +1021,27 @@ async def phase(
         q = entry["light"]["query"]
         log(
             f"{name}: light query p50 {q['p50_us']} us, p99 {q['p99_us']} us, p99.9 {q['p999_us']} us over {q['n']}; errors {entry['light']['errors']['http_503']} 503, {entry['light']['errors']['http_other']} other, {entry['light']['errors']['exceptions']} exceptions"
+        )
+    if held_task is not None:
+        res_h = held_task.result()
+        entry["held"] = res_h.as_dict()
+        ctx.assertions.append(
+            {
+                "phase": name,
+                "what": "every round held at most the in-flight cap and the rest were refused with 503",
+                "ok": res_h.enforced,
+                "held": res_h.held,
+                "cap": res_h.cap,
+            }
+        )
+        rs = res_h.rounds
+        e = entry["held"]["errors"]
+        log(
+            f"{name}: {len(rs)} rounds of {res_h.held} held, cap {res_h.cap}: in flight at the barrier "
+            f"{[r['in_flight_at_barrier'] for r in rs]}, refused {[r['refused_at_barrier'] for r in rs]} "
+            f"(peak outstanding {res_h.outstanding_peak}; {'enforced' if res_h.enforced else 'NOT ENFORCED'}); "
+            f"answered p50 {entry['held']['answered']['p50_us']} us; 503s {e['http_503_by_reason']}, "
+            f"{e['http_other']} other, {e['exceptions']} exceptions"
         )
     if heavy_task is not None:
         entry["heavy"] = heavy_task.result().as_dict()
@@ -956,21 +1108,6 @@ async def saturate(ctx: Ctx) -> dict[str, Any]:
     return result
 
 
-async def heavy_closed_rate(ctx: Ctx) -> float:
-    """The heavy searches' closed-loop throughput at 4x the reactor count in clients (their saturating rate)."""
-    clients = 4 * ctx.reactors if ctx.args.heavy_clients <= 0 else ctx.args.heavy_clients
-    res = await run_heavy(
-        ctx.node.host,
-        ctx.node.port,
-        ctx.rows,
-        clients + 1,
-        ctx.args.step_secs,
-        ctx.restore_index,
-        ctx.restore_first_id,
-    )
-    return res.searches / ctx.args.step_secs
-
-
 async def amain(args: argparse.Namespace) -> int:
     node = Node(args)
     rows = load_rows()
@@ -1007,37 +1144,14 @@ async def amain(args: argparse.Namespace) -> int:
         args.restore_into = "accounts"
         await phase(ctx, "loaded-same-index", args.rate, True, args.duration)
         args.restore_into = "restore-target"
-        await phase(ctx, "overload-light-4x", sat["saturating_rate"] * 4, False, args.duration, assert_rate=False)
-        closed = await heavy_closed_rate(ctx)
-        extra["heavy_closed_rate"] = closed
-        log(f"heavy closed-loop throughput {closed:.1f} searches/s; overload at 4x")
-        await phase(ctx, "overload-heavy-4x", args.rate, True, args.duration, heavy_rate=closed * 4)
+        await phase(ctx, "overload-light", 0.0, False, args.duration, held="light")
+        await phase(ctx, "overload-heavy", args.rate, False, args.duration, held="heavy")
     elif args.saturate:
         extra["saturate"] = await saturate(ctx)
     elif args.overload:
-        kind, factor = args.overload[0], float(args.overload[1])
-        if kind == "light":
-            sat = args.saturating_rate or (await saturate(ctx))["saturating_rate"]
-            await phase(
-                ctx,
-                f"overload-light-{factor:g}x",
-                sat * factor,
-                False,
-                args.duration,
-                assert_rate=False,
-            )
-        else:
-            closed = await heavy_closed_rate(ctx)
-            log(f"heavy closed-loop throughput {closed:.1f} searches/s; overload at {factor:g}x")
-            await phase(
-                ctx,
-                f"overload-heavy-{factor:g}x",
-                args.rate,
-                True,
-                args.duration,
-                assert_rate=True,
-                heavy_rate=closed * factor,
-            )
+        # Heavy runs beside a light stream at --rate, whose requests meet the demoted cap's 503.
+        kind = args.overload[0]
+        await phase(ctx, f"overload-{kind}", args.rate if kind == "heavy" else 0.0, False, args.duration, held=kind)
     else:
         if args.phase in ("unloaded", "both"):
             await phase(ctx, "unloaded", args.rate, False, args.duration)
@@ -1117,6 +1231,15 @@ def dry_checks(out: dict[str, Any]) -> list[dict[str, Any]]:
                     "ok": light["errors"]["http_other"] == 0 and light["errors"]["exceptions"] == 0,
                 }
             )
+        held = p.get("held")
+        if held:
+            checks.append({"what": f"{p['name']}: held requests answered", "ok": held["answered"]["n"] > 0})
+            checks.append(
+                {
+                    "what": f"{p['name']}: no held errors",
+                    "ok": held["errors"]["http_other"] == 0 and held["errors"]["exceptions"] == 0,
+                }
+            )
         heavy = p.get("heavy")
         if heavy:
             checks.append(
@@ -1125,13 +1248,12 @@ def dry_checks(out: dict[str, Any]) -> list[dict[str, Any]]:
                     "ok": heavy["searches"] > 0,
                 }
             )
-            if not p["name"].startswith("overload-heavy"):
-                checks.append(
-                    {
-                        "what": f"{p['name']}: the RESTORE stream wrote documents",
-                        "ok": heavy["restored_docs"] > 0,
-                    }
-                )
+            checks.append(
+                {
+                    "what": f"{p['name']}: the RESTORE stream wrote documents",
+                    "ok": heavy["restored_docs"] > 0,
+                }
+            )
             checks.append(
                 {
                     "what": f"{p['name']}: no heavy errors",
@@ -1182,17 +1304,10 @@ def main() -> int:
     ap.add_argument("--bisect-steps", type=int, default=4)
     ap.add_argument("--step-secs", type=float, default=10.0)
     ap.add_argument(
-        "--saturating-rate",
-        type=float,
-        default=0.0,
-        help="use this light rate instead of finding it",
-    )
-    ap.add_argument("--overload", nargs=2, metavar=("light|heavy", "N"))
-    ap.add_argument(
-        "--overload-conns",
-        type=int,
-        default=0,
-        help="connections in an overload phase (default: 1.25x the in-flight cap times the reactors)",
+        "--overload",
+        nargs=2,
+        metavar=("light|heavy", "F"),
+        help="hold F x the in-flight cap in requests (F > 1; the suite holds 1.25x)",
     )
     ap.add_argument("--processors", type=int, default=0, help="the node's reactor count (--processors; 0: its default)")
     ap.add_argument("--lua-loop", type=int, default=0, help="looping scripts (run by harness/lua_bounds.py)")
@@ -1210,10 +1325,23 @@ def main() -> int:
         help="20,000 documents and short phases; fails if a result is empty",
     )
     args = ap.parse_args()
-    if args.overload and args.overload[0] not in ("light", "heavy"):
-        ap.error("--overload takes light or heavy")
+    args.overload_factor = 1.25
+    if args.overload:
+        if args.overload[0] not in ("light", "heavy"):
+            ap.error("--overload takes light or heavy")
+        args.overload_factor = float(args.overload[1])
+        if args.overload_factor <= 1.0:
+            ap.error("--overload F must exceed 1: the held requests must outnumber the cap")
     if not args.bin and not args.target:
         ap.error("give --bin or --target")
+    # Held requests take a socket each, here and in the node this starts (it inherits the limit).
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    want = math.ceil(args.overload_factor * INFLIGHT_CAP * (args.processors or os.cpu_count() or 1)) + 1024
+    if soft != resource.RLIM_INFINITY and soft < want:  # a refusal shows later as connection errors
+        with contextlib.suppress(ValueError, OSError):
+            resource.setrlimit(
+                resource.RLIMIT_NOFILE, (want if hard == resource.RLIM_INFINITY else min(want, hard), hard)
+            )
     return asyncio.run(amain(args))
 
 
