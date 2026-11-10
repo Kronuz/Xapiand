@@ -1027,11 +1027,37 @@
         "README.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/cjk-segmenter",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T05:46:10",
+          "commit": "fbf5b7d4150406b2f61140e9960da8d07124c91e",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8ce3f0cac31d444a92d30af0737e48fccda3cb7c",
+              "docs": [
+                "docs/cjk-segmenter.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-021459-cefd67",
+              "level": "light",
+              "seconds": 37.8,
+              "state": "done",
+              "what": "cjk-segmenter check build-test at 8ce3f0cac31d"
+            }
+          ],
+          "final": true,
+          "from": "0d441669e5684d83638c3b495eeb6da038481f31",
+          "reason": "",
+          "tested": "fbf5b7d4150406b2f61140e9960da8d07124c91e"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [],
       "provides": [
@@ -1039,10 +1065,10 @@
       ],
       "repo": "../analysis",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "A CJK word segmenter in Kronuz/analysis",
-      "updated": "2026-11-10T03:41:21",
-      "worktree": "../analysis-wt/xapiand/cjk-segmenter"
+      "updated": "2026-11-10T05:46:12",
+      "worktree": ""
     },
     "cjk-words": {
       "accepted": {},
