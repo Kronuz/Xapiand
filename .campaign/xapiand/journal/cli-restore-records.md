@@ -1,12 +1,14 @@
 # cli-restore-records: journal
 
-State: working
+State: waiting on jobs 261109-182111-0de07e 261109-182112-b44d3b
 Quest: .campaign/xapiand/quests/cli-restore-records.md (the lead's; never edit it)
 
 ## Doing
 
-Proof job: build head, run `tests/restore_cli_check.sh` (must pass), then the mutant (restore resolves
-read-only) and main's src (`git merge-base HEAD master`), each must fail. Plus `campaign verify`.
+Proof job 261109-182111-0de07e (slot xapiand-cli-restore-records; script kept at `.scratch/proof.sh` in the
+worktree, the job's command is its text): build head, run `tests/restore_cli_check.sh` (must pass), then the
+mutant (restore resolves read-only) and main's src (`git merge-base HEAD master`), each must fail.
+build-test check 261109-182112-b44d3b at 152fbdd70.
 
 ## Next
 
