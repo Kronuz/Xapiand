@@ -1042,11 +1042,14 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 					return { Reach::inside, static_cast<T>(u) };
 				}
 				case MsgPack::Type::NEGATIVE_INTEGER: {
+					// Reads the value, not the tag: a signed integer of either sign may carry this tag.
+					const auto i = value.as_i64();
 					if constexpr (std::is_unsigned_v<T>) {
-						return { Reach::below, T() };
-					} else {
-						return { Reach::inside, static_cast<T>(value.as_i64()) };
+						if (i < 0) {
+							return { Reach::below, T() };
+						}
 					}
+					return { Reach::inside, static_cast<T>(i) };
 				}
 				default: {
 					const auto d = std::ceil(value.as_f64());
