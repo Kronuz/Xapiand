@@ -158,16 +158,28 @@
         "docs/design/automata.md"
       ],
       "journal": "../Xapiand-wt/xapiand/automata-evaluation",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-09T21:02:45",
+          "ci_skipped": "docs-only change (docs/design/automata.md); prospect CI paths-ignore skips docs/**, so no run exists",
+          "commit": "e8e5bd972ddce170743c0bcb935ba0cf7cd3d5f2",
+          "evidence": [],
+          "final": true,
+          "from": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
+          "reason": "",
+          "tested": "e8e5bd972ddce170743c0bcb935ba0cf7cd3d5f2"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Evaluate strata's automata and decide where it belongs",
-      "updated": "2026-11-09T17:21:32",
+      "updated": "2026-11-09T21:02:46",
       "worktree": "../prospect-wt/xapiand/automata-evaluation"
     },
     "barrier-warning": {
