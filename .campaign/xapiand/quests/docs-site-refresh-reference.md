@@ -20,7 +20,7 @@ cannot show it.
 - A4 The whole site builds without broken internal links: a light job running the site build and its link check (the 5 reference-guide pages listed on 11-10 included)
 - A5 Every feature the audit lists as undocumented that docs-site-refresh did not cover (FLUSH, QUIT, WAL; search parameters; limits; the queryparser grammar) has a page section with `rest` requests and `pm.test` assertions (D47), and the request count never falls: the `e2e` check and `docs_to_postman.py` as a job before and after
 - A6 [artifact] `docs/dev/docs-coverage.md` maps each served feature to its page and its tests, and lists what is still uncovered with the reason: `docs/dev/docs-coverage.md`: "## Coverage"
-- A7 changelog.md:40 no longer promises that a 2xx write survives a crash (it survives a stop; D13, D54), and the sidebar drops `next` with its page: the `e2e` check's site build, and quotes in the journal
+- A7 The sidebar drops `next` with its page: the `e2e` check's site build, and a quote in the journal
 
 ## Contracts
 
@@ -28,7 +28,7 @@ None.
 
 ## Decisions
 
-- Lead, 11-10 (D55): split from docs-site-refresh. The value-encoding pages and the About page's licence sentence stay sortable-encoding's (D52).
+- Lead, 11-10 (D55): split from docs-site-refresh. The value-encoding pages and the About page's licence sentence stay sortable-encoding's (D52), and so does changelog.md (its line 40's crash promise is fixed by sortable-encoding, which edits the changelog; D55).
 
 ## May land early
 
