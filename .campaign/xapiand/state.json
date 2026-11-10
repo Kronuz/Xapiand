@@ -3045,6 +3045,12 @@
           "level": "light",
           "minutes": 15,
           "name": "worker"
+        },
+        {
+          "cmd": "cd docs && npm ci && npm run build",
+          "level": "light",
+          "minutes": 20,
+          "name": "site"
         }
       ],
       "consumes": [],
@@ -3081,6 +3087,36 @@
           "weakened": [
             "gate check site removed"
           ]
+        },
+        {
+          "at": "2026-11-09T19:07:20",
+          "checks": [
+            [
+              {
+                "cmd": "cd docs/discussions/worker && npm ci && npm test",
+                "level": "light",
+                "minutes": 15,
+                "name": "worker"
+              }
+            ],
+            [
+              {
+                "cmd": "cd docs/discussions/worker && npm ci && npm test",
+                "level": "light",
+                "minutes": 15,
+                "name": "worker"
+              },
+              {
+                "cmd": "cd docs && npm ci && npm run build",
+                "level": "light",
+                "minutes": 20,
+                "name": "site"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
         }
       ],
       "landed": [],
@@ -3092,7 +3128,7 @@
       "risk": "low",
       "status": "review",
       "title": "Address and close the GitHub issues and PRs",
-      "updated": "2026-11-09T18:58:40",
+      "updated": "2026-11-09T19:07:20",
       "worktree": "../Xapiand-wt/xapiand/github-triage"
     },
     "hashes-cl-1": {
