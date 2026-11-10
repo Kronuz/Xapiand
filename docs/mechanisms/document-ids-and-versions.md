@@ -18,7 +18,10 @@ DELETE /i/k                  key                         erase_by_key(key, expec
 
 A new key with a `new_did` takes that docid when no document holds it, else the next after the last. Multi-shard,
 a new numeric id that names a docid goes to shard `(k - 1) % n` with `new_did = (k - 1) / n + 1`; other ids go
-to the shard their key hashes to; a new numbered id to the least used shard.
+to the shard their key hashes to; a new numbered id to the least used shard. A write or delete of an existing id
+looks its docid up across the shards before the turn, but only to pick the shard: the delete erases by key in that
+shard's turn, so its `?version` is compared with the document the key names then, never with whatever holds the
+docid.
 
 `?version=N` reaches the engine as `WriteArgs::expected_version` (the document's version slot, `prepare`) or
 `erase(..., expected)`. The engine compares it with the stored version (0: none) before anything else, and refuses
@@ -43,7 +46,8 @@ check before it lets two writers that read one version both apply.
 2. A replace by docid whose key is not found never overwrites the document at that docid: it is a version
    conflict reporting 0 (the keyed document does not exist), and an unversioned write retries by key.
 3. A write applied with `?version=N` lands at version N + 1; a refused one changes nothing.
-4. Ids past 2^53 that round to one double share a key (the numeric serialisation's limit).
+4. A delete is by key in the turn, on one shard or many: the docid found before the turn picks the shard only.
+5. Ids past 2^53 that round to one double share a key (the numeric serialisation's limit).
 
 ## Code
 
