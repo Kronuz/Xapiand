@@ -12313,6 +12313,8 @@
       "after": [
         "write-path-fixes"
       ],
+      "base": "6313bdf4e3ccbd60e4a94a828a3931a8008acbad",
+      "branch": "quest/xapiand/x7-cancel-rows",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -12337,9 +12339,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T14:23:25"
+      "updated": "2026-11-10T14:23:28",
+      "worktree": "../Xapiand-wt/xapiand/x7-cancel-rows"
     },
     "x7-catalog-timer": {
       "accepted": {},
