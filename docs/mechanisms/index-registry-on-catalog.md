@@ -65,8 +65,13 @@ when it closes. A request names an index only through an `IndexPin`, a catalog p
    destroyed root keeps an index. `~DatabasePool` waits for the shutdown before it destroys the catalog; past
    `patience_` (30 s) debug builds abort naming what still holds an index.
 9. **Tests** give the indexes' files another IO with `set_index_io` (strata's faultfs), so a sync can fail and fence.
-10. **The timer** the catalog needs is one `Scheduler` thread (the scheduler library's wheel); its callbacks only
-   post. The catalog is destroyed before it, while its timers can still fire.
+10. **The timer** the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the
+   loop's thread with `engine::Host::start_timer` (`DatabasePool::Timer`), so no thread of its own; a callback only
+   posts a chore. The pool is given the loop at construction (the manager's `_rx` is made before the pool and
+   destroyed after it; tests use `control_loop()` in `tests/pool_support.h`). Once the loop has stopped, the
+   manager's stop runs it on its own thread while it waits (stops 1 to 3, a poll every 50 ms and 10 ms), and
+   `~DatabasePool` runs what is still armed (the sweep's next pass) at once before it destroys the catalog, whose
+   destructor waits for every armed timer.
 11. **The sweep** closes idle indexes, the only idle close: it demotes an unpinned hot index idle for `demote_idle`,
     closes it idle for `close_idle`, and never touches a pinned one. `IndexSweep` (a `DatabasePool` argument) sets its
     period, those times and the negative entries' TTL; zero keeps strata's (1 s, 30 s, 10 min, 10 s), which a node

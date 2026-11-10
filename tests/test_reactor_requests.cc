@@ -149,7 +149,7 @@ public:
 // A search with a budget yields at window boundaries: a task queued behind it finishes before it does. With no
 // budget the search runs to its end first.
 static void test_a_search_with_a_budget_shares_its_loop() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin_index(pool, fresh("share"), WRITE);
 	Shard shard = use_index(entry, WRITE);
 	fill(shard, 12000);
@@ -189,7 +189,7 @@ static void test_a_search_with_a_budget_shares_its_loop() {
 // A request cancelled while its search is queued stops at the next checkpoint, and the search's views and its
 // admissions are returned (the next search is served).
 static void test_a_cancelled_search_stops_and_lets_go() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_readers_per_index(2);
 	auto entry = pin_index(pool, fresh("cancel"), WRITE);
 	Shard shard = use_index(entry, WRITE);
@@ -226,7 +226,7 @@ static void test_a_cancelled_search_stops_and_lets_go() {
 
 // The index's cap is an admission: a view past it is refused and counted, before it takes a record.
 static void test_the_cap_is_an_admission_that_counts() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_readers_per_index(3);
 	auto entry = pin_index(pool, fresh("admission"), WRITE);
 	Shard shard = use_index(entry, WRITE);
@@ -262,7 +262,7 @@ static double thread_cpu_ms() {
 }
 
 static void test_a_bulk_body_is_parsed_off_the_loop() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const std::string line = R"({"_id": 1, "user": "kronuz", "message": "a line of the bulk body that is a little long to parse"})" "\n";
 	std::string body;
 	std::size_t lines = 0;
@@ -350,7 +350,7 @@ static void test_a_loop_past_its_demoted_cap_refuses_new_requests() {
 // cancellation D8): the loop stops, the chores are cancelled and drained, the host closes and destroys its tasks, and
 // no task frame is left; both turns are free for the next one.
 static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin_index(pool, fresh("teardown"), WRITE);
 	{
 		Shard shard = use_index(entry, WRITE);
@@ -440,7 +440,7 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 // A request's token ends its wait for a turn (F2): the turn's deadline is linked to it, so a cancelled request leaves
 // the queue at once with task::cancelled, not `busy` at the turn timeout. A Shard passes its token to the wait.
 static void test_a_cancelled_request_leaves_the_turn_queue() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_turn_timeout(60);
 	auto entry = pin_index(pool, fresh("turn_cancel"), WRITE);
 	{
@@ -483,7 +483,7 @@ static void test_a_cancelled_request_leaves_the_turn_queue() {
 // A request's token ends its wait for its index's pin too (CR2): a use's pin passes the request's token, so a request
 // waiting on a cold open leaves at once with task::cancelled, and the open it started goes on.
 static void test_a_cancelled_request_leaves_the_pin_queue() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	std::promise<void> gate;
 	std::shared_future<void> opens = gate.get_future().share();
 	std::atomic<bool> opening{false};
@@ -561,7 +561,7 @@ static void test_a_cancelled_request_ends_its_body_read() {
 // turn with its token ends at stop(); one waiting without a token (an admitted write) is left suspended by the bounded
 // stop() and destroyed by destroy_roots(). No task frame is left and the turn is free.
 static void test_service_phases_end_or_destroy_requests_waiting_for_a_turn() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_turn_timeout(60);
 	auto entry = pin_index(pool, fresh("phases"), WRITE);
 	{
@@ -669,7 +669,7 @@ std::string broken_by(Loop& loop, const std::function<task::task<void>()>& body)
 // The N2 rule: a task that holds a view waits for no turn, no open and no drain, for the view could be what
 // the wait waits for. The check stops the task that breaks it (debug builds).
 static void test_a_task_that_holds_a_view_waits_for_nothing() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin_index(pool, fresh("rules"), WRITE);
 	Shard shard = use_index(entry, WRITE);
 	fill(shard, 5);
@@ -726,7 +726,7 @@ static void test_a_task_that_holds_a_view_waits_for_nothing() {
 
 // The same waits are fine once the view is let go, and a search that yields while it holds views is fine.
 static void test_the_rule_allows_a_yield_and_a_wait_after_the_view() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin_index(pool, fresh("rules_ok"), WRITE);
 	Shard shard = use_index(entry, WRITE);
 	fill(shard, 5);

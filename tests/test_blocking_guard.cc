@@ -41,6 +41,7 @@
 
 #include "database/flags.h"
 #include "database/pool.h"
+#include "pool_support.h"
 #include "database/shard.h"
 #include "engine/host_asio.h"
 #include "engine/sync.h"
@@ -83,7 +84,7 @@ void on_loop(const std::function<void()>& fn) {
 
 // Opens an index through the registry: a wait for the open.
 void open_through_the_registry() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	{
 		Shard shard(engine::sync_wait(pool.pin(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN)), DB_WRITABLE | DB_CREATE_OR_OPEN);
 		engine::sync_wait(shard.ready());
@@ -102,12 +103,12 @@ void destroy_on_loop() {
 }
 
 void cleanup() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	engine::sync_wait(pool.flush());
 }
 
 void join() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.finish();
 	pool.join();
 }
@@ -135,7 +136,7 @@ static void test_fires_on_loop() {
 // The chores of an index end with a WorkGroup, and joining one is a wait: on a loop it is left to a worker.
 static void test_quiet_when_a_loop_drops_a_group_of_chores() {
 	CHECK_FALSE(guard_fires([] {
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		on_loop([&] {
 			IndexChores chores(pool.work_pool());
 		});

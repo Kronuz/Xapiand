@@ -31,6 +31,7 @@
 #include <optional>               // for std::optional
 #include <system_error>           // for std::system_error
 #include <thread>                 // for std::this_thread
+#include <unordered_map>          // for std::unordered_map
 #include <utility>                // for std::exchange
 
 #include "at_end.h"               // for at_end::assert_none
@@ -38,11 +39,11 @@
 #include "database/shard.h"       // for Shard
 #include "completion/posix.h"     // for kronuz::journal::PosixIO
 #include "engine/error.h"         // for engine::Error, engine::errc
+#include "engine/host_asio.h"     // for engine::AsioHost
 #include "engine/strata/shard.h"  // for engine::strata::index_options, engine::strata::new_uuid
 #include "engine/sync.h"          // for engine::check_may_block, engine::sync_wait
 #include "log.h"                  // for L_CALL
 #include "reactor.h"              // for reactor::inside_run
-#include "scheduler.h"            // for Scheduler, ScheduledTask
 #include "strata/core/counted_io.hh"          // for strata::counted_io
 #include "strata/core/work_pool_executor.hh"  // for strata::work_pool_executor
 #include "work_pool.hh"           // for WorkPool, WorkGroup, WorkItem
@@ -409,24 +410,79 @@ ShardEndpoint::__repr__() const
  *
  */
 
-// The catalog's timer (strata's host::timer): one thread running the scheduler's wheel; a due callback only posts
-// a chore. A timer that cannot arm throws, which the catalog takes as "not armed".
-struct DatabasePool::Timer {
-	struct Fire;
-	using Wheel = Scheduler<Fire>;
-	struct Fire : ScheduledTask<Wheel, Fire> {
+// The catalog's timer (strata's host::timer) on the control loop: each callback is an Asio timer armed there with
+// Host::start_timer, and only posts a chore. close() runs at once what is still armed; later ones run when armed.
+struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
+	struct Armed {
 		std::function<void()> fn;
-		explicit Fire(std::function<void()> fn_) : fn(std::move(fn_)) { }
-		void operator()() { fn(); }
+		std::unique_ptr<engine::Host::Timer> timer;  // set and destroyed on the loop's thread only
 	};
 
-	Wheel wheel{"DB-TIMER"};
+	engine::AsioHost& host;
+	std::mutex mtx;
+	bool closed = false;
+	std::uint64_t last = 0;
+	std::unordered_map<std::uint64_t, Armed> armed;
+
+	explicit Timer(engine::AsioHost& host_) : host(host_) { }
 
 	void after(std::uint64_t delay_ns, std::function<void()> fn) {
 		const auto at = std::chrono::steady_clock::now() + std::chrono::nanoseconds(delay_ns);
-		if (wheel.add(std::make_shared<Fire>(std::move(fn)), at) != schedule_result::scheduled) {
-			throw std::system_error(std::make_error_code(std::errc::operation_canceled), "The index catalog's timer did not arm");
+		std::uint64_t id = 0;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			if (!closed) {
+				id = ++last;
+				armed.emplace(id, Armed{std::move(fn), nullptr});
+			}
 		}
+		if (id == 0) {
+			fn();
+			return;
+		}
+		// Armed on the loop's thread: the raw executor still runs once the loop's task scheduler has closed.
+		asio::post(host.scheduler().executor(), [self = shared_from_this(), id, at] {
+			auto timer = self->host.start_timer(at, [weak = std::weak_ptr<Timer>(self), id] {
+				if (auto self = weak.lock()) {
+					self->fire(id);
+				}
+			});
+			std::lock_guard<std::mutex> lk(self->mtx);
+			if (auto it = self->armed.find(id); it != self->armed.end()) {
+				it->second.timer = std::exchange(timer, nullptr);
+			}
+		});
+	}
+
+	// The loop's thread, at the deadline.
+	void fire(std::uint64_t id) {
+		Armed done;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			auto it = armed.find(id);
+			if (it == armed.end()) {
+				return;
+			}
+			done = std::move(it->second);
+			armed.erase(it);
+		}
+		done.fn();
+	}
+
+	// Runs every callback still armed now; their Asio timers are destroyed on the loop's thread.
+	void close() {
+		std::unordered_map<std::uint64_t, Armed> left;
+		{
+			std::lock_guard<std::mutex> lk(mtx);
+			closed = true;
+			left.swap(armed);
+		}
+		auto timers = std::make_shared<std::vector<std::unique_ptr<engine::Host::Timer>>>();
+		for (auto& [id, entry] : left) {
+			entry.fn();
+			timers->push_back(std::move(entry.timer));
+		}
+		asio::post(host.scheduler().executor(), [timers] { timers->clear(); });
 	}
 };
 
@@ -553,7 +609,7 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 }
 
 
-DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, size_t readers_per_index, IndexSweep sweep) :
+DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, unsigned work_threads, size_t readers_per_index, IndexSweep sweep) :
 	finished_(false),
 	control_(nullptr),
 	turn_timeout_(DB_TIMEOUT),
@@ -567,7 +623,7 @@ DatabasePool::DatabasePool(size_t database_pool_size, unsigned work_threads, siz
 	options.block_guard = &engine::check_may_block;
 	work_pool_ = std::make_unique<WorkPool>(options);
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
-	timer_ = std::make_unique<Timer>();
+	timer_ = std::make_shared<Timer>(timers);
 	budget_ = std::make_unique<strata::resource_budget>();
 	catalog_ = std::make_unique<IndexCatalog>(make_host(database_pool_size, sweep));
 	catalog_->start();
@@ -593,6 +649,7 @@ DatabasePool::~DatabasePool()
 		state.cv.wait(lk, [&] { return state.done; });
 	}
 	lk.unlock();
+	timer_->close();
 	catalog_.reset();
 }
 
