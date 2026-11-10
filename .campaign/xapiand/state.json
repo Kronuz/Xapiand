@@ -13635,6 +13635,8 @@
       "consumes": [],
       "files": [
         "src/server/**",
+        "src/metrics.h",
+        "src/metrics.cc",
         "tests/test_node.cc",
         "docs/mechanisms/requests-on-the-reactor.md",
         "docs/mechanisms/cancellation.md"
@@ -13650,7 +13652,7 @@
       "risk": "normal",
       "status": "active",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T14:23:28",
+      "updated": "2026-11-10T14:38:39",
       "worktree": "../Xapiand-wt/xapiand/x7-cancel-rows"
     },
     "x7-catalog-timer": {
