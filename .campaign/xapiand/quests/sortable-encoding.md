@@ -47,3 +47,5 @@ owner's (PLAN open question 8).
 
 Step 2: the seam (every direct call behind `Serialise::`/`Unserialise::`) and the D8 marker at
 generation 0, which change no stored byte.
+
+- Lead, 11-10 (D52): the switch also updates the docs pages that describe value encoding and the About page's licence sentence (written by docs-site-refresh against the old encoding); they join the file set once docs-site-refresh lands.
