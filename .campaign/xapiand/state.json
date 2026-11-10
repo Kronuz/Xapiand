@@ -3032,10 +3032,10 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cd docs && npm ci && npm run build",
+          "cmd": "cd docs/discussions/worker && npm ci && npm test",
           "level": "light",
-          "minutes": 20,
-          "name": "site"
+          "minutes": 15,
+          "name": "worker"
         }
       ],
       "consumes": [],
@@ -3046,6 +3046,34 @@
         "docs/discussions/worker/package.json",
         "docs/discussions/worker/package-lock.json"
       ],
+      "history": [
+        {
+          "at": "2026-11-09T18:33:00",
+          "checks": [
+            [
+              {
+                "cmd": "cd docs && npm ci && npm run build",
+                "level": "light",
+                "minutes": 20,
+                "name": "site"
+              }
+            ],
+            [
+              {
+                "cmd": "cd docs/discussions/worker && npm ci && npm test",
+                "level": "light",
+                "minutes": 15,
+                "name": "worker"
+              }
+            ]
+          ],
+          "reason": "add the discussions worker's tests beside the site build, before any job ran",
+          "voided": [],
+          "weakened": [
+            "gate check site removed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "The document profile gate",
@@ -3055,7 +3083,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Address and close the GitHub issues and PRs",
-      "updated": "2026-11-09T18:32:37"
+      "updated": "2026-11-09T18:33:00"
     },
     "hashes-cl-1": {
       "accepted": {},
