@@ -1,6 +1,6 @@
 # automata-evaluation: journal
 
-State: waiting on jobs 261109-174627-134722 261109-174628-59e91d 261109-174630-31d66c
+State: waiting on jobs 261109-174628-59e91d 261109-174630-31d66c
 Quest: .campaign/xapiand/quests/automata-evaluation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,10 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Evaluation drafted in prospect `docs/design/automata.md` (prospect:39d142a), harness embedded in
-its appendix and extracted by each job. Waiting for the cross-check and the strict bench.
+Evaluation drafted in prospect `docs/design/automata.md` (prospect:39d142a, citations corrected at
+prospect:429d0f0; the harness blocks are identical at both), harness embedded in its appendix and
+extracted by each job. The cross-check passed; the strict smoke and screen are queued (host load
+37 on 16 threads at 17:56, so strict has not started).
 
 ## Next
 
@@ -37,6 +39,11 @@ Jobs examined:
   of the job (it reports the failure).
 - 261109-173049-b37276 (same, ASan+UBSan): same result, no sanitizer report (automata 40.6 s,
   expand 88.6 s).
+- 261109-174627-134722 (light, prospect:39d142a, `automata_eval check 2000`): 2,000 random term
+  sets of valid 1- to 4-byte UTF-8, 16,000 queries (prefix 5,298, glob 5,325, edit distance 5,377),
+  187,911 matches: the branch's automata over termdict with seeks, over restarted scans, and
+  `intersect_sorted` all equal Xapiand's `pattern.cc` predicates over every term. Mutants caught:
+  1 (k + 1), 2 (Xapiand's flag bits unmapped), 3 (seek one byte past the target).
 - Probes (unversioned, never evidence): 261109-173409-6a6ee2, 261109-173959-233147,
   261109-173439-fc8922, 261109-174331-9100a8.
 
