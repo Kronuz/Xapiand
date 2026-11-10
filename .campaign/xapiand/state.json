@@ -11279,7 +11279,7 @@
       "consumes": [],
       "files": [
         "tests/bench_shard_view.cc",
-        "tests/CMakeLists.txt",
+        "CMakeLists.txt",
         "docs/perf/shard-view.md"
       ],
       "landed": [],
@@ -11291,7 +11291,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
-      "updated": "2026-11-10T05:35:30"
+      "updated": "2026-11-10T05:35:56"
     },
     "xapiand-final-release": {
       "accepted": {},
