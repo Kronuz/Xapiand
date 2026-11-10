@@ -7758,6 +7758,41 @@
       "title": "A clean-room number encoding replaces sortable_serialise",
       "updated": "2026-11-09T15:34:35"
     },
+    "sortable-followups": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "none",
+          "minutes": 1,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "fuzz/**",
+        "docs/**",
+        "README.md",
+        "test/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "The document profile gate",
+      "needs": [],
+      "provides": [],
+      "repo": "../sortable",
+      "risk": "low",
+      "status": "planned",
+      "title": "sortable-proof review nits S1, S3, S4",
+      "updated": "2026-11-09T17:23:49"
+    },
     "sortable-proof": {
       "accepted": {
         "security": {
