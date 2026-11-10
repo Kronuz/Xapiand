@@ -2171,6 +2171,15 @@
       "risk": "low",
       "status": "active",
       "tasks": {
+        "architecture": {
+          "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
+          "branch": "quest/xapiand/docs-site-refresh--architecture",
+          "files": [
+            "docs/src/content/docs/architecture.md",
+            "docs/src/content/docs/architecture/**"
+          ],
+          "worktree": "../Xapiand-wt/xapiand/docs-site-refresh--architecture"
+        },
         "getting-started": {
           "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
           "branch": "quest/xapiand/docs-site-refresh--getting-started",
@@ -2193,7 +2202,7 @@
         }
       },
       "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
-      "updated": "2026-11-10T03:22:16",
+      "updated": "2026-11-10T03:22:19",
       "worktree": "../Xapiand-wt/xapiand/docs-site-refresh"
     },
     "docs-upgrade-page": {
