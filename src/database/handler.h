@@ -64,7 +64,7 @@ struct query_field_t;
 
 engine::docid to_docid(std::string_view document_id);
 
-// Whether a document id is given: a missing or null id, or an empty string, is none; a number is one, 0 included.
+// Whether a document id is given: a missing or null id, an empty string or false is none; a number is one, 0 included.
 bool has_document_id(const MsgPack& document_id);
 
 // The key of a new document whose numeric id the shard numbers: a numeric key always has a value after its 'N'.

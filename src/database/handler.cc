@@ -117,6 +117,8 @@ has_document_id(const MsgPack& document_id)
 			return false;
 		case MsgPack::Type::STR:
 			return !document_id.empty();
+		case MsgPack::Type::BOOLEAN:
+			return document_id.boolean();
 		default:
 			return true;
 	}
@@ -1812,19 +1814,22 @@ DatabaseHandler::delete_document_term(const std::string& term, engine::rev docum
 
 	size_t n_shards = endpoints.size();
 
+	// The found docid only picks the shard: the erase is by key in that shard's turn, which checks
+	// the version of the document the key names then, not of whatever holds the docid.
+	size_t shard_num = 0;
 	if (n_shards > 1) {
+		engine::docid did = 0;
 		try {
-			auto did = co_await get_docid_term(term);
-			if (did != 0u) {
-				co_await delete_document(did, document_ver, commit, wal);
-				co_return;
-			}
+			did = co_await get_docid_term(term);
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
+		if (did == 0u) {
+			did = numeric_docid(term);
+		}
+		shard_num = did != 0u ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
 	}
 
-	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
