@@ -1271,6 +1271,12 @@ void numbering_ends() {
 	CHECK_EQ(stats.lastdocid, top);
 	CHECK_EQ(stats.doc_count, 1u);
 	CHECK_EQ(engine::sync_wait(shard.get(top))->data(), "far");
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.get(0)); }) == engine::errc::doc_not_found);
+	std::vector<std::pair<engine::docid, std::string>> scanned;   // every document the shard holds: only "far"
+	engine::sync_wait(shard.scan(0, [&](const engine::DocView& view) { scanned.emplace_back(view.did(), view.data()); }));
+	CHECK_EQ(scanned.size(), 1u);
+	CHECK_TRUE(!scanned.empty() && scanned[0].first == top && scanned[0].second == "far");
 	auto far2 = make("Kfar", "far2");
 	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kfar", far2, plain)).version, 2u);   // a key that exists still writes
 }

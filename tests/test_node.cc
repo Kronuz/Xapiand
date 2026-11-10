@@ -1333,8 +1333,8 @@ static void test_document_ids_are_themselves() {
 		CHECK_EQ(text_of(call("GET", seq + "2"), "n"), "2");
 		CHECK_EQ(version_of(call("GET", seq + "2")), 1);
 
-		// A body's id 0 is an id too (a RESTORE line), not a new one; an id false is none, so the document gets the
-		// id an index without an id type gives (a UUID), not false.
+		// A body's id 0 is an id too (a RESTORE line), not a new one; an id false is none, so each such document gets
+		// its own new id, the one an index without an id type gives (a UUID), not false.
 		const auto restore = "/ids_restore" + at + "/";
 		create_index("ids_restore" + at, shards);
 		CHECK(success(call("RESTORE", restore + "?commit", "{\"_id\":1,\"n\":\"1\"}\n{\"_id\":0,\"n\":\"0\"}\n", "application/x-ndjson")));
@@ -1345,18 +1345,27 @@ static void test_document_ids_are_themselves() {
 		}
 		const auto unnamed = "/ids_false" + at + "/";
 		create_index("ids_false" + at, shards);
-		CHECK(success(call("RESTORE", unnamed + "?commit", "{\"_id\":false,\"n\":\"f\"}\n", "application/x-ndjson")));
+		CHECK(success(call("RESTORE", unnamed + "?commit", "{\"_id\":false,\"n\":\"f\"}\n{\"_id\":false,\"n\":\"g\"}\n", "application/x-ndjson")));
 		const auto found = call("SEARCH", unnamed + "?volatile", R"({"_limit":5})");
-		CHECK_EQ(field_of(found, "total").as_u64(), 1u);
-		std::size_t generated = 0;
+		CHECK_EQ(field_of(found, "total").as_u64(), 2u);   // two new ids: false names no document for the second to replace
+		std::map<std::string, std::string> generated;   // id -> n
 		const auto hits = field_of(found, "hits");
 		if (hits.is_array()) {
 			for (const auto& hit : hits) {
-				const auto it = hit.find("_id");
-				generated += it != hit.end() && it.value().is_string() && !it.value().str().empty() ? 1 : 0;
+				const auto id = hit.find("_id");
+				const auto n = hit.find("n");
+				if (id != hit.end() && id.value().is_string() && n != hit.end() && n.value().is_string()) {
+					generated[id.value().str()] = n.value().str();
+				}
 			}
 		}
-		CHECK_EQ(generated, 1u);
+		CHECK_EQ(generated.size(), 2u);
+		for (const auto& [id, n] : generated) {
+			CHECK_TRUE(id.size() > 5);   // a UUID, not false's text ("false", "f", "0") or empty
+			CHECK_TRUE(n == "f" || n == "g");
+			CHECK_EQ(text_of(call("GET", unnamed + id), "n"), n);
+		}
+		CHECK_FALSE(success(call("GET", unnamed + "false")));
 	}
 }
 
