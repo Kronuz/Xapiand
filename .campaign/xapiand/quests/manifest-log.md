@@ -21,7 +21,7 @@ Repository: Kronuz/strata.
 - A5 SR4: the open and the writer drop the state on any exception from `apply()`, not only `corrupt_index` (steps12 ledger): an allocation-failure test
 - A6 D6.3's caller rules: a scan that stops inside the first record is damage whatever the tail verdict, and the snapshot's generation equals the log's g (steps12 ledger): tests
 - A7 Crash images: every honest crash image of the log reads as torn or whole, 0 misread; the single-bit-flip property holds (steps12 ledger, step 1's criteria carried to the log): tests
-- A8 The lead measures T1 to T3, T5, T7 to T9 on main after step 3 lands (design first step 4): `strict` and `exclusive` jobs
+- A8 [decision] The lead measures T1 to T3, T5, T7 to T9 on main after landing (design first step 4) as milestone checks, per D57
 - A9 Xapiand's and prospect's suites pass on this strata (AGENTS.md "Verify a change"): integration jobs
 - A10 [decision] The owner's Q1 (the manifest log alone, or with the standalone turn log), Q2 (`retained_predecessors` protects less), Q3 (a lost write of the last edit reads as torn) (design "Questions for the owner"): a Decisions row
 
