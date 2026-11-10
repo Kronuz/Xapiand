@@ -1,6 +1,6 @@
 # x7-catalog-timer: journal
 
-State: waiting on jobs 261110-143950-d97a09 261110-143952-aef5a1 261110-143641-8f8cf6 261110-143953-02e8cb
+State: waiting on jobs 261110-151925-5e77bc 261110-151928-4ed547 261110-151943-132d5b 261110-143952-aef5a1 261110-143641-8f8cf6
 Quest: .campaign/xapiand/quests/x7-catalog-timer.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,11 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-D58 (option a) implemented at Xapiand:c0d0208ee and Xapiand:e0b3cd67e (callback failures logged); jobs running. Jobs cancelled as stale (at c0d0208ee): 261110-143638-823338, 261110-143640-b9f269, 261110-143654-d857c1; 261110-143643-197d5c (wrong target name).
+The async-check fix is at Xapiand:df71eb5fe. build-test 261110-143950-d97a09 at e0b3cd67e FAILED on the async check
+(pool.cc's `.` mutex row covered 10 hits, allowed 5); its tests were not the cause. The Asio timers are now in a map
+only the loop's thread touches. The callbacks stay under `pending_mtx`, which any thread arms and close() empties
+from the destructor's thread, so that mutex cannot go: it has its own row (3 hits). `weak.lock()` is a false positive
+with a row of its own. A local `async_check.py --strict --owed` run exits 0.
 
 ## Next
 
@@ -20,6 +24,7 @@ D58 (option a) implemented at Xapiand:c0d0208ee and Xapiand:e0b3cd67e (callback 
 Nothing (the lead widened the file set to the four test files).
 
 Answered: the lead's D58 message (no msg id): merged master (Xapiand:5b57ca685), implemented (a) as below.
+Answered: the lead's async-check message: two of the five sections went, the rest have their own rows (above).
 Answered: the lead's file-set and Stop 1 message: the set now holds the four test files. test_node's
 `test_the_stop_runs_in_its_stated_order` runs in build-test 261110-143950-d97a09. options.md "Stopping the node", step
 2.2 ("The autocommits that were waiting are dropped") still reads true: the autocommits still waiting when Stop 2
@@ -29,8 +34,8 @@ begins are dropped. Those that come due during step 2.1 now run during it, which
 
 | Criterion | Evidence |
 |---|---|
-| A1 | t1_census at the head 261110-143952-aef5a1 (pending); at master 66b310e60 261110-143641-8f8cf6 (pending, must fail). Both copy `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master |
-| A2 | build-test 261110-143950-d97a09 (pending; test_pool's sweep, TTL and erase cases); mutant `refs/mutants/x7-catalog-timer/no-arm` (e430dfe8e, `after()` returns before arming) 261110-143953-02e8cb (pending, passes only when `xapiand_test_pool sweep` fails) |
+| A1 | t1_census at df71eb5fe 261110-151943-132d5b (pending, after 261110-143952-aef5a1 at e0b3cd67e, running); at master 66b310e60 261110-143641-8f8cf6 (running, must fail). Both copy `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master |
+| A2 | build-test 261110-151925-5e77bc at df71eb5fe (pending). Mutant at e0b3cd67e (e430dfe8e) 261110-143953-02e8cb killed: 8 of 117 checks fail. Mutant at the head, `refs/mutants/x7-catalog-timer/no-arm` (6688a8ada), 261110-151928-4ed547 (pending). The mutant job passes only when `xapiand_test_pool sweep` fails. build-test 261110-143950-d97a09 at e0b3cd67e failed on the async check |
 | A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" |
 
 ## Result
@@ -44,6 +49,7 @@ each 10 ms slice of Stop 3's wait. Note: docs/mechanisms/index-registry-on-catal
 
 ## Rulings I made
 
+0. The Asio timer handles are touched only on the loop's thread; `pending_mtx` guards only the callback map.
 1. One Asio timer per catalog callback, not a queue under one timer: the catalog arms few (1 Hz sweep, busy-lease
    reposts), and the pool keeps the callbacks so close() can run them.
 2. Arming hops to the loop's thread (AsioHost arms and cancels there only), with `asio::post` to the raw executor
