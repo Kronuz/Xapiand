@@ -1132,8 +1132,8 @@
         "src/manager.h",
         "src/database/handler.cc",
         "src/database/handler.h",
-        "tests/**",
-        "CHANGELOG.md"
+        "src/xapian_data_guard.h",
+        "tests/**"
       ],
       "landed": [],
       "lenses": [
@@ -1146,7 +1146,7 @@
       "risk": "normal",
       "status": "active",
       "title": "CLI --restore into an empty data directory writes the index's shard records",
-      "updated": "2026-11-09T18:10:15",
+      "updated": "2026-11-09T18:32:17",
       "worktree": "../Xapiand-wt/xapiand/cli-restore-records"
     },
     "closing-benchmark": {
