@@ -1,6 +1,6 @@
 # direct-pins: journal
 
-State: waiting on jobs 261109-192429-4ceb58 261109-192429-118818
+State: waiting on jobs 261109-205508-e1f1e0 261109-205508-a1b8ee (rebased on master, head 1cde08b39)
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
