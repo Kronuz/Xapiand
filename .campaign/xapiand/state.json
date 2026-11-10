@@ -12359,7 +12359,7 @@
       "files": [
         "src/database/pool.cc",
         "src/database/pool.h",
-        "docs/mechanisms/**"
+        "docs/mechanisms/index-registry-on-catalog.md"
       ],
       "landed": [],
       "lenses": [
@@ -12372,7 +12372,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T14:23:06",
+      "updated": "2026-11-10T14:23:20",
       "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
     },
     "x7-coverage": {
