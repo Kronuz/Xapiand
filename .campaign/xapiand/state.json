@@ -2170,8 +2170,30 @@
       "repo": ".",
       "risk": "low",
       "status": "active",
+      "tasks": {
+        "getting-started": {
+          "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
+          "branch": "quest/xapiand/docs-site-refresh--getting-started",
+          "files": [
+            "docs/src/content/docs/index.mdx",
+            "docs/src/content/docs/welcome.md",
+            "docs/src/content/docs/quickstart.md",
+            "docs/src/content/docs/installation.md",
+            "docs/src/content/docs/building.md",
+            "docs/src/content/docs/basics.md",
+            "docs/src/content/docs/manipulation.md",
+            "docs/src/content/docs/exploration.md",
+            "docs/src/content/docs/next.md",
+            "docs/src/content/docs/faq.md",
+            "docs/src/content/docs/about.md",
+            "docs/src/content/docs/help.md",
+            "docs/src/content/docs/options.md"
+          ],
+          "worktree": "../Xapiand-wt/xapiand/docs-site-refresh--getting-started"
+        }
+      },
       "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
-      "updated": "2026-11-10T03:22:13",
+      "updated": "2026-11-10T03:22:16",
       "worktree": "../Xapiand-wt/xapiand/docs-site-refresh"
     },
     "docs-upgrade-page": {
