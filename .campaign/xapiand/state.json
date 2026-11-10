@@ -2219,8 +2219,31 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T07:26:11",
+          "commit": "1e56dd22b0c623e76a150fa2d41da96e9037265c",
+          "evidence": [
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "2be5c57d71b14dd08a99ba04c6004bd4392970c9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-043753-be98ef",
+              "level": "light",
+              "seconds": 243.7,
+              "state": "done",
+              "what": "docs-site-refresh check e2e at 2be5c57d71b1"
+            }
+          ],
+          "final": true,
+          "from": "2cc086a7884ab268eb5077870ee3539cdbf5a981",
+          "reason": "",
+          "tested": "c1df4fbe2b253c0fa03d5265296d6fc98dfd8325"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [
         "docs-site-audit"
@@ -2228,7 +2251,7 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "tasks": {
         "architecture": {
           "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
@@ -2237,7 +2260,7 @@
             "docs/src/content/docs/architecture.md",
             "docs/src/content/docs/architecture/**"
           ],
-          "worktree": "../Xapiand-wt/xapiand/docs-site-refresh--architecture"
+          "worktree": ""
         },
         "getting-started": {
           "base": "d02dd743dc752158ae47bd75d0fe8b094e1260d2",
@@ -2257,12 +2280,12 @@
             "docs/src/content/docs/help.md",
             "docs/src/content/docs/options.md"
           ],
-          "worktree": "../Xapiand-wt/xapiand/docs-site-refresh--getting-started"
+          "worktree": ""
         }
       },
       "title": "Rewrite the public docs site: architecture, features, quick-start, usage, configuration, reference",
-      "updated": "2026-11-10T04:37:27",
-      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh"
+      "updated": "2026-11-10T07:26:23",
+      "worktree": ""
     },
     "docs-site-refresh-reference": {
       "accepted": {},
