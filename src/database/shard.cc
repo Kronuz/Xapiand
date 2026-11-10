@@ -817,22 +817,20 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	info.term = term;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
 	try {
-		if (term[0] == 'N') {
-			assert(term.size() > 1);
-			const char *p = n_shards_ser.data();
-			const char *p_end = p + n_shards_ser.size();
-			size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-			size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-			auto did = sortable_unserialise(term.substr(1));
-			if (did == 0u) {
-				// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
-				args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
-				info = co_await eng.add(doc, args);
-			} else {
-				info = co_await eng.replace((did - 1) / n_shards + 1, doc, args);  // docid in the multi-db to the docid in the shard
-				info.term = term;
-			}
+		const char *p = n_shards_ser.data();
+		const char *p_end = p + n_shards_ser.size();
+		size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+		size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
+		if (term == NEW_NUMERIC_KEY) {
+			// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
+			args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
+			info = co_await eng.add(doc, args);
 		} else {
+			// Found by its key; a new numeric id takes the document id it names when that is free, so the ids the
+			// shard numbers (above its last document id) are never taken.
+			if (const auto did = numeric_docid(term); did != 0 && (did - 1) % n_shards == shard_num) {
+				args.new_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+			}
 			info = co_await eng.replace_by_key(term, doc, args);
 		}
 	} catch (const engine::Error& error) {
@@ -864,15 +862,14 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 
 
 task::task<void>
-ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine::docid shard_did, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine::docid shard_did, [[maybe_unused]] bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("ShardEndpoint::do_delete({}, {})", shard_did, wal_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 	try {
-		co_await eng.erase(shard_did, true, expected);
+		co_await eng.erase(shard_did, true, expected_);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -893,16 +890,15 @@ ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine:
 
 
 task::task<void>
-ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& term, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& term, [[maybe_unused]] bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("ShardEndpoint::do_delete_term({}, {})", repr(term), wal_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 	[[maybe_unused]] engine::docid shard_did = 0;
 	try {
-		shard_did = co_await eng.erase_by_key(term, true, expected);
+		shard_did = co_await eng.erase_by_key(term, true, expected_);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -1445,7 +1441,7 @@ Shard::finish_write(bool commit_, bool wal_)
 
 
 task::task<void>
-Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
 
@@ -1456,14 +1452,14 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_delete(*eng, flags, shard_did, wal_);
+		co_await endpoint().do_delete(*eng, flags, shard_did, wal_, expected_);
 	}
 	co_await finish_write(commit_, wal_);
 }
 
 
 task::task<void>
-Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
@@ -1474,7 +1470,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		co_await endpoint().do_delete_term(*eng, flags, term, wal_);
+		co_await endpoint().do_delete_term(*eng, flags, term, wal_, expected_);
 	}
 	co_await finish_write(commit_, wal_);
 }

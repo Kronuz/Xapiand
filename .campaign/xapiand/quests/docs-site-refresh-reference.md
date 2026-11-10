@@ -28,6 +28,8 @@ None.
 
 ## Decisions
 
+- Lead, 11-10: lands after write-path-fixes, so the pages describe `?version` as enforced on DELETE and PUT (rebase and update the reference pages before landing). Ignored parameters (`?spelling`, `?synonyms`, `?icase`, bucket `_missing`) are documented as ignored until their removal quest lands; the defects in hunt.md (`_not` lists, `_method`, `Allow`) are documented as they behave.
+
 - Lead, 11-10 (D55): split from docs-site-refresh. The value-encoding pages and the About page's licence sentence stay sortable-encoding's (D52), and so does changelog.md (its line 40's crash promise is fixed by sortable-encoding, which edits the changelog; D55).
 
 ## May land early
