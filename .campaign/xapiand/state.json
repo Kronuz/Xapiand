@@ -1937,7 +1937,31 @@
       "updated": "2026-11-08T13:25:17"
     },
     "direct-pins": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T03:08:45",
+          "base": "634b8c90b6f52e77771de1532712e4f65f4b7d9d",
+          "blobs": {
+            "CMakeLists.txt": "100644:14015c8bdce98891c56fd2c8c9d102c55487a811",
+            "harness/README.md": "100644:29372325a91ffa4161c57e1039c62f212c2ad44b",
+            "harness/e2e_capture.sh": "100755:2919aa89dbd00629762ed236d3cfcf8f3cb59d4e",
+            "harness/e2e_concurrent_check.sh": "100755:6eeeada62977b7dd07a5e3808c685d02a399ff9a",
+            "harness/env.sh": "100644:5ed8aceb14e8641b13ce4a5502bfc5ff764913ee",
+            "harness/pins_check.py": "100755:93e44a6055abe86272ac35bd9cd806d6e8d7ed91",
+            "harness/run_all.sh": "100755:6ffa9cae45b7667a36b745034b969e34d80d65dd",
+            "harness/tls_check.sh": "100755:c2bd99836be80aa5dcdbe9b4bdc337ace9e3527d",
+            "harness/wal_recovery_check.sh": "100755:3d0c1a901cd84b42041af8684d2d83257c36262a"
+          },
+          "brief": "c298df336619098b",
+          "by": "waived",
+          "commit": "8770ab78788f184f11e93bfbbe81c251c9f75a91",
+          "findings": {},
+          "note": "mechanical pin bumps to the newest commit each library pins plus the harness port fix; proven by the pins check at the exact head (261110-030044-61a1f7), build-test, docs e2e GREEN (261110-030028-b6051d), and the concurrency test with a failing control (0b13b3 vs ec2183)",
+          "review": "",
+          "reviewed": "",
+          "verdict": ""
+        }
+      },
       "after": [],
       "base": "625963a893534bca3d0d56cd96333073634f2aab",
       "branch": "quest/xapiand/direct-pins",
@@ -2051,7 +2075,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Xapiand declares only the libraries it includes",
-      "updated": "2026-11-09T17:44:07",
+      "updated": "2026-11-10T03:08:45",
       "worktree": "../Xapiand-wt/xapiand/direct-pins"
     },
     "docs-site-audit": {
