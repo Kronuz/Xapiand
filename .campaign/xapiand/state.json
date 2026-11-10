@@ -2064,19 +2064,53 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T04:36:05",
+          "commit": "a37c6ea5883ca2a2f6fc1c5b2700e185264806ef",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "adfe69916d39a4d5ec36ec3c912695eb369a46fd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-032054-0d5177",
+              "level": "light",
+              "seconds": 367.4,
+              "state": "done",
+              "what": "direct-pins check build-test at adfe69916d39"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "adfe69916d39a4d5ec36ec3c912695eb369a46fd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-032054-4e0406",
+              "level": "light",
+              "seconds": 275.9,
+              "state": "done",
+              "what": "direct-pins check e2e at adfe69916d39"
+            }
+          ],
+          "final": true,
+          "from": "fa181943f7945c09102fb6678111c3af46da1969",
+          "reason": "",
+          "tested": "19b489f250f82086746bb4fa41e85174a081b0a4"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand declares only the libraries it includes",
-      "updated": "2026-11-10T03:08:45",
-      "worktree": "../Xapiand-wt/xapiand/direct-pins"
+      "updated": "2026-11-10T04:36:25",
+      "worktree": ""
     },
     "docs-site-audit": {
       "accepted": {},
