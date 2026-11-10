@@ -7761,6 +7761,8 @@
     "sortable-followups": {
       "accepted": {},
       "after": [],
+      "base": "937c7c6782e99937be0eb6b74dea29c2cc23293d",
+      "branch": "quest/xapiand/sortable-followups",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -7782,6 +7784,7 @@
         "README.md",
         "test/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/sortable-followups",
       "landed": [],
       "lenses": [],
       "milestone": "The document profile gate",
@@ -7789,9 +7792,10 @@
       "provides": [],
       "repo": "../sortable",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "sortable-proof review nits S1, S3, S4",
-      "updated": "2026-11-09T17:23:49"
+      "updated": "2026-11-09T17:24:08",
+      "worktree": "../sortable-wt/xapiand/sortable-followups"
     },
     "sortable-proof": {
       "accepted": {
