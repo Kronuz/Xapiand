@@ -11609,10 +11609,33 @@
         "src/exception_engine.h",
         "tests/test_engine_error.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T14:22:21",
+          "commit": "24a61b2952ce2331d18205ba1eb447d40b4782b2",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "c1a23d4e2d4d4fb8196c97b3fb7d15bedada16ab",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-122258-68dacc",
+              "level": "light",
+              "seconds": 464.6,
+              "state": "done",
+              "what": "write-path-fixes check build-test at c1a23d4e2d4d"
+            }
+          ],
+          "final": true,
+          "from": "9aeca8656ad8ea41ffc66d5b88e79318779b5938",
+          "reason": "",
+          "tested": "0aa12bd8de53de5c8d4095cc75166c9abe4c1d4a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [
         "cli-restore-records"
@@ -11620,9 +11643,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-10T14:21:42",
+      "updated": "2026-11-10T14:22:28",
       "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
