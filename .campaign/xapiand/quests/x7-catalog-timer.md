@@ -5,7 +5,7 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The catalog's timer (`src/database/pool.cc:423`, the `Xapiand:DB-TIMER` thread x-pool added) runs on the existing debouncer wheel, so the process has only the threads `docs/design/phase7c.md` section 2 lists and x7-gate's T1 census passes. One timer mechanism, no new thread (reuse before new timers).
 
 ## Acceptance criteria
 
@@ -14,18 +14,18 @@ needs a job that passed at the landed code; tag one `[artifact]` (a committed `p
 `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
 cannot show it.
 
-- A1 <criterion>: <evidence>
+- A1 The `Xapiand:DB-TIMER` thread is gone and the catalog's timed work (its expiries and negative-TTL sweeps) runs on the debouncer wheel: x7-gate's `harness/thread_census.sh` row as a job, failing at master
+- A2 The catalog's timed behaviour is unchanged: the pool tests (test_pool's TTL and erase cases) in the `build-test` check, plus a mutant job that drops the wheel registration and must fail them
+- A3 [artifact] The how-it-works note for the catalog names the wheel: a quote in `docs/mechanisms/`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None; internal.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-10 (D56): reuse the debouncer wheel rather than amend section 2's thread list.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+None.
