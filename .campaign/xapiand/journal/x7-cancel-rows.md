@@ -1,6 +1,6 @@
 # x7-cancel-rows: journal
 
-State: waiting on jobs 261110-151113-1d6719 261110-151116-28e4a2
+State: waiting on jobs 261110-151402-093b4e 261110-151422-751ade 261110-151425-061294
 Quest: .campaign/xapiand/quests/x7-cancel-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,36 +9,34 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Job 261110-151113-1d6719 builds test_node at Xapiand:dd181754c and runs half_closes,
-client_leaves, admission_peaks. Mutant 261110-151116-28e4a2 (after it) runs at
-refs/mutants/x7-cancel-rows (d6856a04756e: the increment and both peak raises removed); it
-succeeds only when both client_leaves and admission_peaks fail.
+Lead chose option 1 (A5 added, Xapiand:7a43a1a13, merged at 445c7bd45; file set now has
+src/database/schemas_lru.{h,cc}). Xapiand:ac7e91d22: `SchemasLRU::get`/`set` pass the
+`DatabaseHandler`'s budget through `_update` to `read_metadata` and `load_shared`; the A1 test is
+a helper run twice: cached schema (A1) and cold, first schema load (A5,
+`test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled`).
 
-Failed 261110-143945-c98b2e (at cfd72a900): client_leaves, the search was not let go 2.0 s after
-its client left and the counter did not move; the other 6 checks passed; its mutant was skipped.
-Cause: the test's search was the index's first, so it waited in the schema load, which
-reads the metadata through `SchemasLRU::read_metadata` with a `DatabaseHandler` of its own and no
-budget: that turn wait has no token. Probe (local, quiet light, slot build with the test caching
-the schema first by one SEARCH): passes, the reactor let the search go 2842 us after the close,
-counter +1. So the search's own turn wait and the counter work; the test now caches the schema
-first (dd181754c), and the cold-schema gap is under Blocked on.
-Earlier cancelled: 261110-142943-7ee855, 261110-143158-21ff95, 261110-143812-1994f1,
-261110-143947-503447 (skipped).
+Jobs:
+- 261110-151402-093b4e: `campaign verify` build-test at ac7e91d22, the suite for A1-A5.
+- 261110-151422-751ade: mutant A1/A4 at 719349afbd65 (refs/mutants/x7-cancel-rows: increment and
+  both peak raises removed); succeeds only when frees_its_reactor and admission_peaks both fail.
+- 261110-151425-061294: mutant A5 at cb43adbb9985 (refs/mutants/x7-cancel-rows-a5: `get` passes
+  nullptr for the budget); succeeds only when the cached variant passes and the cold one fails.
+
+Earlier: 261110-143945-c98b2e failed (cold schema, the cause of A5; probe: the cached schema
+variant freed the reactor 2842 us after the close). Cancelled or superseded: 261110-142943-7ee855,
+261110-143158-21ff95, 261110-143812-1994f1, 261110-143947-503447, 261110-151113-1d6719,
+261110-151116-28e4a2.
 
 ## Next
 
-1. Read 261110-151113-1d6719 and 261110-151116-28e4a2; then `campaign verify x7-cancel-rows` and
-   fill the Evidence table.
+1. Read the three jobs; fill the Evidence table (A3: quote docs/mechanisms/cancellation.md); State
+   "ready for review".
 
 ## Blocked on
 
-Lead: a search whose schema is not cached, held in the schema load's turn wait, is not cancelled
-by its client leaving (src/database/schemas_lru.cc `read_metadata`, outside the file set). Options:
-(a) widen the file set to src/database/schemas_lru.cc and pass the caller's token (the
-`DatabaseHandler`'s budget) into `read_metadata`'s handler, with a cold-schema variant of the A1
-test; (b) a follow-up quest. Recommendation: (a), small and the same mechanism the search's own
-turn wait uses. Named in docs/mechanisms/cancellation.md Limits. The rest of the quest does not
-wait on it.
+Nothing. (The cold-schema gap is closed by A5; a request that joins another's schema load waits
+for that load without its own token, named in cancellation.md Limits: SingleFlight is in
+src/single_flight.h, outside the file set.)
 
 ## Evidence
 
@@ -52,6 +50,7 @@ you examined, failures included, and answer each message by its id (msg-N).
 | A2 | pending |
 | A3 | pending |
 | A4 | pending |
+| A5 | pending |
 
 ## Result
 
