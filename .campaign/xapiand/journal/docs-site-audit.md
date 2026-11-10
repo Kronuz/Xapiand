@@ -27,7 +27,7 @@ Docs and code disagree where the code may be the thing to change (details and fi
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/dev/docs-site-audit.md`: "| `welcome.md` | wrong | release (name, `/Xapiand/` base) |" |
+| A1 | `docs/dev/docs-site-audit.md`: "## Page table" |
 | A2 | `docs/dev/docs-site-audit.md`: "## Rewrite scope" |
 | A3 | `docs/dev/docs-site-audit.md`: "## Unverified" |
 | A4 | `docs/dev/docs-site-audit.md`: "## Owned by other quests" |
