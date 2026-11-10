@@ -9795,6 +9795,8 @@
     "write-path-fixes": {
       "accepted": {},
       "after": [],
+      "base": "b4acd84197eabc5db636b1bc4edc96b8f4db2884",
+      "branch": "quest/xapiand/write-path-fixes",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -9827,9 +9829,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-09T18:57:16"
+      "updated": "2026-11-09T19:54:33",
+      "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
     },
     "x-pool": {
       "accepted": {
