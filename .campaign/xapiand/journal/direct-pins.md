@@ -43,9 +43,9 @@ in one library changes its tree, so the script is rerun after each (heads can mo
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261109-180022-38e01d (pins_check.py A1 table: 55 declarations, each with an include site) |
+| A1 | job 261109-180022-38e01d (pins_check.py A1 table: 57 declarations, each with an include site) |
 | A2 | job 261109-180022-38e01d (pins_check.py A2: no comment justifying a pin by winning) |
-| A3 | job 261109-180022-38e01d (Xapiand's pin is the head for all 22 names; library-side stale pins listed above, to be bumped in their repositories) |
+| A3 | job 261109-180022-38e01d (Xapiand's pin is the head for all 57 declarations; library-side stale pins listed above, to be bumped in their repositories) |
 | A4 | jobs 261109-180009-09ece8 (build-test) and 261109-180009-9ee666 (e2e) |
 
 ## Result
