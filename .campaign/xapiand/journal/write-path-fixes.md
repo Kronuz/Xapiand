@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261110-063937-1a67cb 261110-064046-b27cdd 261110-064048-48482d 261110-064049-0a1a95 261110-064051-f085d2 261110-064104-aec86b 261110-064022-07d634 261110-064024-a20dee 261110-064025-8f706c 261110-064027-a2b362 261110-064028-975029
+State: waiting on jobs 261110-070643-84a084 261110-070651-fc53d2 261110-070652-14568c 261110-070653-a8b427 261110-070654-52cc01 261110-070706-76fe8d 261110-070644-8a0005 261110-070646-7bc0a6 261110-070647-fb8378 261110-070648-92a14b 261110-070650-744839
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,7 +10,7 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 ## Doing
 
 Fix round 1 (reviews write-path-fixes-correctness.md and -correctness-fable.md, CHANGES at 60a5e3736).
-Code head d3a2b3d11:
+Code head e30d1c9fc:
 
 - D1 / WPF-F2 (97fae064e): multi-shard `delete_document_term` uses the found docid only to pick the
   shard, then erases by key in that shard's turn (`erase_by_key`, the version checked there); a key
@@ -22,24 +22,30 @@ Code head d3a2b3d11:
   patch needs), hold every shard's turn, UPSERT joins the apply-once race, and a new case
   `test_a_versioned_delete_checks_the_document_its_key_names` is P1. The POST after id 2 is id 3 on
   one shard, only "not 2" on two.
-- WPF-F1 (d3a2b3d11): `next_docid` (strata/shard.cc) throws errc::database "No document id left in
+- WPF-F1 (e30d1c9fc): `next_docid` (strata/shard.cc) throws errc::database "No document id left in
   the shard" at docid::max instead of wrapping to 0, for add and a new key after the last;
   `numeric_docid` stops below docid::max, so id 4294967295 is placed by its key. Tests:
   test_engine_strata `numbering_ends`; node ids test adds id 4294967295 before the POST.
-- WPF-F7 (d3a2b3d11): `erase` checks the expected version whatever `local` is, as erase_by_key.
-- Note updated (b802138db, d3a2b3d11): invariants 4 and 5.
+- WPF-F7 (e30d1c9fc): `erase` checks the expected version whatever `local` is, as erase_by_key.
+- Note updated (b802138db, e30d1c9fc): invariants 4 and 5.
 - Not done, as told: N2, N3 (now WPF-F1, done), F3-F6 (the lead files them).
 
-Jobs (all at d3a2b3d11 unless a mutant):
+Round 1a at d3a2b3d11 failed: build-test 261110-064046-b27cdd (test_node.cc:1340 at 1 and 2 shards: the
+`_id` false document gets a UUID, the id an index without an id type gives, not a number; the check was
+wrong, not the fix) and 261110-063937-1a67cb ("the node did not become ready": it ran while build-test's
+test_node held the fixed port 18781). e30d1c9fc: test_node's nodes take free ports, and the check reads a
+string id. Its dependants were skipped; resubmitted:
 
-- 261110-063937-1a67cb: build + engine strata and node tests (A1, A2).
-- 261110-064046-b27cdd: build-test (A3, A5). 261110-064051-f085d2: docs E2E (A3).
-- 261110-064104-aec86b: TSan, the five node cases x3 (1 and 2 shards) and test_engine_strata (A4).
-- 261110-064048-48482d: correctness review probe rerun (D1: P1 must pass at 2 and 5 shards).
-- 261110-064049-0a1a95: fable review probe rerun (WPF-F1: no write at docid 0).
+Jobs (all at e30d1c9fc unless a mutant):
+
+- 261110-070643-84a084: build + engine strata and node tests (A1, A2).
+- 261110-070651-fc53d2: build-test (A3, A5). 261110-070654-52cc01: docs E2E (A3).
+- 261110-070706-76fe8d: TSan, the five node cases x3 (1 and 2 shards) and test_engine_strata (A4).
+- 261110-070652-14568c: correctness review probe rerun (D1: P1 must pass at 2 and 5 shards).
+- 261110-070653-a8b427: fable review probe rerun (WPF-F1: no write at docid 0).
 - Mutants (refs/scratch/wpf-r1-*, each the fix reverted; exit 0 = a named test failed):
-  d1 261110-064022-07d634, n4 261110-064024-a20dee, f1a (no throw) 261110-064025-8f706c,
-  f1b (numeric_docid up to the top) 261110-064027-a2b362, f7 261110-064028-975029.
+  d1 261110-070644-8a0005, n4 261110-070646-7bc0a6, f1a (no throw) 261110-070647-fb8378,
+  f1b (numeric_docid up to the top) 261110-070648-92a14b, f7 261110-070650-744839.
 
 ## Next
 
@@ -66,11 +72,11 @@ became an out-of-range double-to-uint32 conversion, and a new id whose docid hel
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending at d3a2b3d11 (261110-063937-1a67cb); was 60a5e3736: 261110-045430-4ed4e9 exit 0 (id round trip: test_document_ids_are_themselves, test_engine_strata placement). That the tests fail without the fix: "Fails without the fix" below |
-| A2 | pending at d3a2b3d11 (261110-063937-1a67cb); was 60a5e3736: 261110-045430-4ed4e9 exit 0 (version precondition: the three version cases, test_engine_strata conflicts). That the tests fail without the fix: "Fails without the fix" below |
-| A3 | pending at d3a2b3d11; was: At 60a5e3736: build-test 261110-045411-83e91d exit 0 (ctest 37 of 37, async_check, removed_options); docs E2E 261110-045423-57a7f5 exit 0 (smoke, e2e, tls passed; VERDICT GREEN) |
-| A4 | pending at d3a2b3d11; was: TSan 261110-045424-bc00ed at 60a5e3736 exit 0: test_engine_strata and the four node cases x3 (apply-once, sequential model included), every rc=0, 0 ThreadSanitizer reports |
-| A5 | pending at d3a2b3d11; was: build-test 261110-045411-83e91d exit 0 at 60a5e3736; CI: not run yet, the branch is not pushed (contributors do not push; the lead pushes) |
+| A1 | pending at e30d1c9fc (261110-070643-84a084); was 60a5e3736: 261110-045430-4ed4e9 exit 0 (id round trip: test_document_ids_are_themselves, test_engine_strata placement). That the tests fail without the fix: "Fails without the fix" below |
+| A2 | pending at e30d1c9fc (261110-070643-84a084); was 60a5e3736: 261110-045430-4ed4e9 exit 0 (version precondition: the three version cases, test_engine_strata conflicts). That the tests fail without the fix: "Fails without the fix" below |
+| A3 | pending at e30d1c9fc; was: At 60a5e3736: build-test 261110-045411-83e91d exit 0 (ctest 37 of 37, async_check, removed_options); docs E2E 261110-045423-57a7f5 exit 0 (smoke, e2e, tls passed; VERDICT GREEN) |
+| A4 | pending at e30d1c9fc; was: TSan 261110-045424-bc00ed at 60a5e3736 exit 0: test_engine_strata and the four node cases x3 (apply-once, sequential model included), every rc=0, 0 ThreadSanitizer reports |
+| A5 | pending at e30d1c9fc; was: build-test 261110-045411-83e91d exit 0 at 60a5e3736; CI: not run yet, the branch is not pushed (contributors do not push; the lead pushes) |
 
 ## Fails without the fix
 
@@ -89,11 +95,11 @@ and 261109-202042-42e7bb cancelled before running (superseded).
 
 | Finding | Fixed at | Passes at the head | Fails before the fix |
 |---|---|---|---|
-| D1 | 97fae064e | probe 261110-064048-48482d (pending); test_a_versioned_delete_checks_the_document_its_key_names in 261110-063937-1a67cb (pending) | probe 261110-055943-9ecd3c at 60a5e3736 (P1: 204, other document deleted at 2 and 5 shards); mutant d1 261110-064022-07d634 (pending) |
-| WPF-F1 | d3a2b3d11 | fable probe 261110-064049-0a1a95 (pending); numbering_ends in 261110-063937-1a67cb (pending) | fable probe 261110-063240-7f25ee at 60a5e3736 (add -> did 0); mutants f1a 261110-064025-8f706c, f1b 261110-064027-a2b362 (pending) |
-| G1, N1 | 86c703bba | 261110-063937-1a67cb (pending) | the 2-shard cases are new; N1's check failed at 2 and 5 shards in 261110-055943-9ecd3c |
-| N4 | 97fae064e | 261110-063937-1a67cb (pending) | mutant n4 261110-064024-a20dee (pending) |
-| WPF-F7 | d3a2b3d11 | 261110-063937-1a67cb (pending) | mutant f7 261110-064028-975029 (pending) |
+| D1 | 97fae064e | probe 261110-070652-14568c (pending); test_a_versioned_delete_checks_the_document_its_key_names in 261110-070643-84a084 (pending) | probe 261110-055943-9ecd3c at 60a5e3736 (P1: 204, other document deleted at 2 and 5 shards); mutant d1 261110-070644-8a0005 (pending) |
+| WPF-F1 | e30d1c9fc | fable probe 261110-070653-a8b427 (pending); numbering_ends in 261110-070643-84a084 (pending) | fable probe 261110-063240-7f25ee at 60a5e3736 (add -> did 0); mutants f1a 261110-070647-fb8378, f1b 261110-070648-92a14b (pending) |
+| G1, N1 | 86c703bba | 261110-070643-84a084 (pending) | the 2-shard cases are new; N1's check failed at 2 and 5 shards in 261110-055943-9ecd3c |
+| N4 | 97fae064e | 261110-070643-84a084 (pending) | mutant n4 261110-070646-7bc0a6 (pending) |
+| WPF-F7 | e30d1c9fc | 261110-070643-84a084 (pending) | mutant f7 261110-070650-744839 (pending) |
 
 ## Result
 
@@ -136,3 +142,6 @@ tests/test_node.cc (four cases), tests/test_engine_strata.cc. Evidence is in the
    existing keys still apply.
 8. A multi-shard delete whose key is found nowhere goes to the shard a new write of that key would
    (numeric_docid, else the key's hash), so its 404 or 409 comes from the turn of that shard.
+9. test_node's nodes take ports the OS hands out (`free_port`), not 18781-18783: concurrent runs on
+   one host clashed (261110-063937-1a67cb). Inside the file set; the review probe's patch anchors
+   are unchanged.
