@@ -1,6 +1,6 @@
 # manifest-log-prospect: journal
 
-State: waiting on jobs 261109-162807-511d50 261109-162821-d27e0d
+State: ready for review
 Quest: .campaign/xapiand/quests/manifest-log-prospect.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,11 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Tests ported and committed in the prospect worktree (head after "Pin strata at the manifest-log
-head 9d4630cd"). Locally at strata:4d2a541 the whole suite passed (51 tests); strata moved to
-strata:9d4630c (index.hh only), so both jobs run at that pin: build-test 261109-162807-511d50,
-A3 identity 261109-162821-d27e0d.
+Done. Jobs at prospect ff99494 (strata pinned at strata:9d4630c).
 
 ## Next
 
-1. Read both jobs; fix what is red; fill the Evidence rows; write Result.
+1. Lead: review; repin strata to manifest-log's landed main commit at landing.
 
 ## Blocked on
 
@@ -24,19 +21,35 @@ Nothing.
 
 ## Evidence
 
-One row per criterion, with what its kind needs: a job id (it, or the same job rerun, passed at
-the current code), a `path`, a decision id, or for a [manual] one who checked what. Name every job
-you examined, failures included, and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
+| A1 | build-test 261109-162807-511d50 (51 of 51) at ff99494: reclaim, media (every byte of the log), directory, fixtures, format13 and index/lifecycle run on the log; the dropped crafted-file cases and the strata test covering each decoder half are under "Dropped cases" below |
+| A2 | build-test 261109-162807-511d50 at ff99494: CMakeLists.txt pins strata 9d4630cd7eed22974676f67d2cff08a8e8014eef (manifest-log head; repinned by the lead at landing) |
+| A3 | build-test 261109-162807-511d50 (51 of 51) and identity job 261109-162821-d27e0d at ff99494 (ctest 51/51; churn and dump identical to strata main 3df7af4 at flush threads 1 and 2) |
 
+Dropped cases (R1), each with the strata test at strata:9d4630c covering its decoder half
+(`test/manifest_log_test.cc` stage names; chosen by reading the stages, not by a mutant run):
+
+- bitset size wraps near 2^64: stage "decoder", the blocks "One encoding per deleted set"
+  (`short_bitset` is corrupt: 64 documents take 8 bytes) and "A count no input can hold" (`lie`:
+  a 2-byte bitset for 2^62 documents is corrupt); stage "bounds on read".
+- delta wraps back onto an ordinal: stage "replay checks", `rejects("a new ordinal below the
+  document count")` and `rejects("a new ordinal not yet deleted")`; stage "decoder", the "lie" case
+  (deltas claiming 2^62 deletes in 2 bytes); stage "bit flips" (every flip refused or equal).
+  A wrapped delta is not constructible through `log_deleted::of`, so prospect cannot re-craft it.
+- live docs / metadata of another generation, another index, another segment (resealed): no file
+  to swap. The log's binding is the blocks naming their log's generation: kept in prospect as
+  index_test "a log under a newer name" ("no whole snapshot") and the install damage "a snapshot
+  under another generation's name"; strata: stages "crash images" and "bit flips".
+- the two install damages that wrapped a delta or bitset size: same as the first two rows.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+prospect's tests read and damage strata's manifest log; behavior unchanged: 51 of 51 tests pass
+and churn and dump output equal prospect on strata main at flush threads 1 and 2 (jobs above).
+Changed: test/*_test.cc (reclaim, media, directory, fixtures, format13, index, lifecycle, reorder,
+background_merge, churn), fixtures (manifest-log.bin replaces manifest/live/meta .bin;
+pre_freeze.txt files row 0x8000'0008), CMakeLists.txt pin. Open: the pin moves at landing.
 
 ## Rulings I made
 
