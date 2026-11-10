@@ -2302,9 +2302,13 @@
       ],
       "consumes": [],
       "files": [
-        "docs/src/content/docs/**",
-        "docs/public/assets/**",
-        "docs/src/components/**",
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/tutorials/**",
+        "docs/src/content/docs/tests/**",
+        "docs/src/content/docs/next.md",
+        "docs/src/content/docs/tests.md",
+        "docs/src/content/docs/benchmarks.md",
+        "docs/src/content/docs/contributing.md",
         "docs/src/lib/**",
         "docs/dev/docs-coverage.md"
       ],
@@ -2317,7 +2321,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T07:18:32"
+      "updated": "2026-11-10T07:27:01"
     },
     "docs-upgrade-page": {
       "accepted": {},
