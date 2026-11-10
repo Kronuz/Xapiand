@@ -12,15 +12,17 @@ build-test check 261109-182112-b44d3b at 152fbdd70.
 
 ## Next
 
-1. Record the proof job and the build-test check in Evidence.
-2. CHANGELOG entry once the file set allows it (Blocked on).
+1. When 0de07e and b44d3b end: record the proof job in Evidence; rerun only build-test at the new head
+   (lead, 11-09), since b44d3b ran before the xapian_data_guard.h comment change.
 
 ## Blocked on
 
-lead: the changelog. The file set names `CHANGELOG.md`, which does not exist; the changelog is
-`docs/src/content/docs/changelog.md` (`CHANGELOG` at the root is a symlink to it), outside the file set.
-Options: (a) add `docs/src/content/docs/changelog.md` to the file set and I add the entry (recommended; one
-bullet under Unreleased "Fixed"); (b) the lead or docs-upgrade-page writes it. Text ready:
+Nothing.
+
+## For docs-upgrade-page: the changelog entry
+
+Lead, 11-09: docs-upgrade-page writes it in `docs/src/content/docs/changelog.md` (Unreleased, "Fixed"):
+
 "- **`--restore` into a new, empty data directory writes the index's settings.** The CLI restore resolved
 the index read-only, so `.xapiand/indexes` lacked its shard records and a node serving the directory answered
 `500` ("Inconsistency in number of replicas") or counted 0 documents. It now resolves the index as `RESTORE`
@@ -56,7 +58,7 @@ resolves nothing and creates nothing, as an empty RESTORE.
 | A1 | pending |
 | A2 | pending |
 | A3 | pending |
-| A4 | pending; changelog blocked |
+| A4 | `src/main.cc`: "This data is from a Xapian-based release (1.0.0-alpha.10 or earlier), which this release does not read. "; `src/xapian_data_guard.h`: "// Detects the files a Xapian-based release (1.0.0-alpha.10 and earlier) left in a data directory, by file"; build-test pending at the new head |
 | A5 | pending |
 
 Examined: reproduction 261109-174137-c5db06 (docs-upgrade-page), its directory A on disk.
@@ -74,6 +76,6 @@ Examined: reproduction 261109-174137-c5db06 (docs-upgrade-page), its directory A
   default count, hence COUNT 0.
 - The restore resolves the index from the first object, as RESTORE does, not by a writable resolve before
   reading: RESTORE takes the first object's `_settings`, and the CLI now does too.
-- The refusal names "1.0.0-alpha.10 or earlier". `src/xapian_data_guard.h` (comment "alpha.9 and earlier",
-  and `UPGRADE_DOC`'s `#upgrading-from-100-alpha9` anchor) is outside the file set: left for the lead and
-  docs-upgrade-page (the anchor must match the page's heading).
+- The refusal names "1.0.0-alpha.10 or earlier", and so does `src/xapian_data_guard.h`'s comment (lead,
+  11-09, added to the file set). `UPGRADE_DOC`'s `#upgrading-from-100-alpha9` anchor stays: the upgrade
+  page keeps that id (lead, docs-upgrade-page site build 261109-181744-d76928).
