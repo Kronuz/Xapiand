@@ -4845,9 +4845,9 @@
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "The keep-alive watch byte's extra read",
-      "updated": "2026-11-09T15:25:38",
+      "updated": "2026-11-10T02:13:38",
       "worktree": "../http-wt/xapiand/perf-watch-peek"
     },
     "phase0": {
