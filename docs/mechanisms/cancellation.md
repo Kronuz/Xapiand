@@ -27,8 +27,9 @@ requests it. Reads stop at their next checkpoint; a write that was admitted comp
 3. **The peaks.** `SearchService::create_extension` runs right after the reactor's `AdmissionGate` admits a request, so
    the gate's count then includes it: the most of those counts is the in-flight peak, which the gate's cap (1,000 per
    reactor) bounds. The same call reads the loop's demoted count, which the demoted cap (256) compares, and keeps the most
-   of it. `Metrics::raise_peak` sets a gauge only above what it holds: a lower value costs one load, a new peak takes a
-   lock, so concurrent admissions never lower it. The gauge is the largest over all reactors.
+   of it. Each peak is a `std::atomic` in `Metrics` that `Metrics::raise_peak` raises with a compare-exchange loop (a lower
+   value costs one load), and `Metrics::serialise` publishes it to its gauge at each scrape. The gauge is the largest
+   over all reactors.
 
 ## Limits
 

@@ -3087,12 +3087,12 @@ SearchService::create_extension(const http::Request& /*hreq*/)
 	if (auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current())) {
 		const auto demoted = host->scheduler().demoted();
 		auto& metrics = Metrics::metrics();
-		Metrics::raise_peak(metrics.xapiand_scheduler_demoted_peak, static_cast<double>(demoted));
+		Metrics::raise_peak(metrics.scheduler_demoted_peak, demoted);
 		// The reactor's gate admitted this request just before: its count includes it.
 		const auto& manager = XapiandManager::manager();
 		for (std::size_t i = 0; manager && manager->http_service && i < manager->http_hosts.size(); ++i) {
 			if (manager->http_hosts[i].get() == host) {
-				Metrics::raise_peak(metrics.xapiand_admission_inflight_peak, static_cast<double>(manager->http_service->reactor(i).gate().inflight.load(std::memory_order_relaxed)));
+				Metrics::raise_peak(metrics.admission_inflight_peak, static_cast<std::size_t>(manager->http_service->reactor(i).gate().inflight.load(std::memory_order_relaxed)));
 				break;
 			}
 		}

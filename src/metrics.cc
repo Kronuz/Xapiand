@@ -23,7 +23,6 @@
 
 #include "metrics.h"
 
-#include <mutex>                              // for std::mutex, std::lock_guard
 
 #include "prometheus/text_serializer.h"       // for text_serializer
 
@@ -349,16 +348,10 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 
 
 void
-Metrics::raise_peak(prometheus::Gauge& peak, double now)
+Metrics::raise_peak(std::atomic<std::size_t>& peak, std::size_t now) noexcept
 {
-	if (peak.Value() >= now) {
-		return;
-	}
-	static std::mutex mutex;
-	std::lock_guard lock(mutex);
-	if (peak.Value() < now) {
-		peak.Set(now);
-	}
+	auto most = peak.load(std::memory_order_relaxed);
+	while (most < now && !peak.compare_exchange_weak(most, now, std::memory_order_relaxed)) { }
 }
 
 
@@ -378,6 +371,8 @@ Metrics::metrics(const std::map<std::string, std::string>& constant_labels_)
 std::string
 Metrics::serialise()
 {
+	xapiand_admission_inflight_peak.Set(static_cast<double>(admission_inflight_peak.load(std::memory_order_relaxed)));
+	xapiand_scheduler_demoted_peak.Set(static_cast<double>(scheduler_demoted_peak.load(std::memory_order_relaxed)));
 	auto collected = registry.Collect();
 	prometheus::TextSerializer serializer;
 	return serializer.Serialize(collected);

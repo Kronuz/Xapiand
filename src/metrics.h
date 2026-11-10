@@ -25,8 +25,10 @@
 
 #include "config.h"                // for XAPIAND_TRACKED_MEM
 
-#include <string>
+#include <atomic>
+#include <cstddef>
 #include <memory>
+#include <string>
 
 #include "prometheus/counter.h"
 #include "prometheus/family.h"
@@ -47,8 +49,8 @@ public:
 
 	static const prometheus::Summary::Quantiles& summary_quantiles();
 
-	// Sets a peak gauge to `now` when that is more than it holds; a new peak takes a lock, a lower value only a load.
-	static void raise_peak(prometheus::Gauge& peak, double now);
+	// Raises `peak` to `now` when that is more (a compare-exchange loop); serialise() publishes it to its gauge.
+	static void raise_peak(std::atomic<std::size_t>& peak, std::size_t now) noexcept;
 
 	std::string serialise();
 
@@ -83,6 +85,8 @@ public:
 	prometheus::Counter& xapiand_http_requests_cancelled;
 
 	// admission (raised at each admission, docs/mechanisms/cancellation.md):
+	std::atomic<std::size_t> admission_inflight_peak{0};
+	std::atomic<std::size_t> scheduler_demoted_peak{0};
 	prometheus::Gauge& xapiand_admission_inflight_peak;
 	prometheus::Gauge& xapiand_scheduler_demoted_peak;
 
