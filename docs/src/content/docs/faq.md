@@ -46,8 +46,8 @@ commits and closes its indexes and exits; see
 
 ---
 ### Why does the node refuse to start on my old data directory?
-A directory of indexes from `1.0.0-alpha.10` or earlier holds Xapian files, which
-this release does not read, and the node exits with status 65. Dump them with that
+A directory of indexes from `1.0.0-alpha.10` or earlier is in a storage format this
+release does not read, and the node exits with status 65. Dump the indexes with that
 release and restore them here; see [Upgrading](/Xapiand/upgrade#upgrading-from-100-alpha9).
 
 ---

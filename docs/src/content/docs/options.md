@@ -209,8 +209,8 @@ e2e:end -->
 
 - `-D`, `--database` sets the path to the root of the node, where all index data
   lives (`<prefix>/var/db/xapiand` by default, where `<prefix>` is the install
-  prefix). The node refuses a directory that holds data from a Xapian-based
-  release and exits with status 65; see [Upgrading](/Xapiand/upgrade).
+  prefix). The node refuses a directory that holds data from `1.0.0-alpha.10`
+  or earlier, which it does not read, and exits with status 65; see [Upgrading](/Xapiand/upgrade).
 - `--force` uses the path as the root of the node without checking that its
   `.xapiand` directory is empty or holds only the node's own files; the node exits
   with status 65 when that check fails.
@@ -405,8 +405,8 @@ These options do not exist any more, and the node rejects them as unknown
 arguments. The cluster went away with its options, until it returns, and the
 thread counts went away with the pools they sized.
 
-- Cluster: `--solo`, `--cluster`, `--discovery-port`, `--discovery-group`,
-  `--discovery-interface`, `--xapian-port`, `--replica-port`, `--primary-node`,
+- Cluster (among others): `--solo`, `--cluster`, `--discovery-port`, `--discovery-group`,
+  `--discovery-interface`, `--replica-port`, `--primary-node`,
   `--matchers`, `--flush-threshold`, `--replicas`, `--replicators`,
   `--remote-clients`, `--remote-servers`, `--replication-clients`,
   `--replication-servers`, `--discoverers` and `--database-stall-time`.
