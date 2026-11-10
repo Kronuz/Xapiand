@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -217,11 +218,29 @@ engine::Document make(const std::string& key) {
 	return doc;
 }
 
+// A TCP port the OS has just handed out, so test runs at the same time on one host never share one.
+int free_port() {
+	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	socklen_t len = sizeof(addr);
+	if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
+		std::fprintf(stderr, "FAIL: no free port\n");
+		std::exit(1);
+	}
+	::close(fd);
+	return ntohs(addr.sin_port);
+}
+
+// The port of the test process's node.
+const int node_port = free_port();
+
 // The node of the test process: a manager whose control loop runs on its own thread, serving on a port of its own,
 // in a data directory of its own.
 class RunningNode {
 public:
-	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = "18781", bool keep = false) {
+	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = std::to_string(node_port), bool keep = false) {
 		// What main() installs: a node takes SIGUSR2 to collect the threads' call stacks.
 		::signal(SIGPIPE, SIG_IGN);
 		struct sigaction sa;
@@ -553,7 +572,7 @@ static std::string http_call(int port, const std::string& method, const std::str
 	return response;
 }
 
-static constexpr int abandon_port = 18782;
+static const int abandon_port = free_port();
 static constexpr int acked_writes = 5;
 
 struct AbandonSpec {
@@ -893,15 +912,16 @@ static void test_a_second_signal_ends_the_shutdowns_wait() {
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	const int port = free_port();
 	const int taken = ::socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(18783);
+	addr.sin_port = htons(static_cast<std::uint16_t>(port));
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	if (::bind(taken, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::listen(taken, 8) != 0) {
 		std::_Exit(2);
 	}
-	RunningNode node("node_taken_data", "18783");
+	RunningNode node("node_taken_data", std::to_string(port));
 	if (!eventually([&] { return node.exited(); }, 20s)) {
 		std::_Exit(5);   // still up, serving nothing
 	}
@@ -1128,8 +1148,6 @@ static void test_a_busy_autocommit_comes_back_for_its_write() {
 
 // ---- writes over HTTP: document ids and expected versions ----
 
-static constexpr int node_port = 18781;
-
 // A response of the test's node: its status and its JSON body (undefined when it has none).
 struct Reply {
 	int status = 0;
@@ -1315,7 +1333,8 @@ static void test_document_ids_are_themselves() {
 		CHECK_EQ(text_of(call("GET", seq + "2"), "n"), "2");
 		CHECK_EQ(version_of(call("GET", seq + "2")), 1);
 
-		// A body's id 0 is an id too (a RESTORE line), not a new one; an id false is none, so the shard numbers it.
+		// A body's id 0 is an id too (a RESTORE line), not a new one; an id false is none, so the document gets the
+		// id an index without an id type gives (a UUID), not false.
 		const auto restore = "/ids_restore" + at + "/";
 		create_index("ids_restore" + at, shards);
 		CHECK(success(call("RESTORE", restore + "?commit", "{\"_id\":1,\"n\":\"1\"}\n{\"_id\":0,\"n\":\"0\"}\n", "application/x-ndjson")));
@@ -1329,15 +1348,15 @@ static void test_document_ids_are_themselves() {
 		CHECK(success(call("RESTORE", unnamed + "?commit", "{\"_id\":false,\"n\":\"f\"}\n", "application/x-ndjson")));
 		const auto found = call("SEARCH", unnamed + "?volatile", R"({"_limit":5})");
 		CHECK_EQ(field_of(found, "total").as_u64(), 1u);
-		std::size_t numbered = 0;
+		std::size_t generated = 0;
 		const auto hits = field_of(found, "hits");
 		if (hits.is_array()) {
 			for (const auto& hit : hits) {
 				const auto it = hit.find("_id");
-				numbered += it != hit.end() && it.value().is_integer() ? 1 : 0;
+				generated += it != hit.end() && it.value().is_string() && !it.value().str().empty() ? 1 : 0;
 			}
 		}
-		CHECK_EQ(numbered, 1u);
+		CHECK_EQ(generated, 1u);
 	}
 }
 
