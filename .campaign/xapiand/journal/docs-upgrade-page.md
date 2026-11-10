@@ -24,7 +24,8 @@ Lead's two problems, answered:
    used `--name new`, no `--solo`). Reproduction 261109-174137-c5db06 (head binary only, 20 documents, same
    `--name n` everywhere): HTTP RESTORE then restart: COUNT 20; CLI `--restore` into an empty dir then serve:
    COUNT 500 "Inconsistency in number of replicas configured for 'xapiand://n/.xapiand/indexes'";
-   with `--shards 1`: COUNT 0 (20 restored documents invisible); index created first (`PUT /rt/`, stop),
+   with `--shards 1`: COUNT 0 (a reproduction artifact: served with the default shard count, so it read another
+   `.xapiand/indexes` layout; cli-restore-records' journal); index created first (`PUT /rt/`, stop),
    then CLI `--restore`: COUNT 20; HTTP RESTORE of the CLI's msgpack dump: COUNT 20, also after restart.
    Probe 6270fa: after CLI `--restore`, `.xapiand/indexes` lacks the `rt/.__N` shard records an
    HTTP-created index has (the restore wrote shard dirs `rt/.__1..5` and `.xapiand/indexes/.__1..5`).
@@ -35,6 +36,10 @@ carries it as an explicit `<a id="upgrading-from-100-alpha9"></a>` above the hea
 Site build job 261109-181744-d76928 (npm ci, astro build) finds both ids in `dist/upgrade/index.html` and the
 changelog's link to the first. A4's e2e: `campaign verify` reuses 261109-152541-04dbf7 at c14d6eaac (the
 backups.md change is docs-only), no rerun needed.
+
+Changelog (lead ruling): under [Unreleased] "Fixed", cli-restore-records' entry (text from its journal:
+`--restore` into a new, empty data directory writes the index's settings); the refusal bullet now says
+"1.0.0-alpha.10 or earlier", as that quest's message does.
 
 ## Next
 
