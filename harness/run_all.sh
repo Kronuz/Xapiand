@@ -49,7 +49,7 @@ HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$HARNESS_DIR/env.sh"
 REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
-PORT="${PORT:-8899}"
+PORT="${PORT:-$(free_port)}"
 
 DEFAULT_LAYERS="smoke e2e tls recovery load stress bench"
 LAYERS="${*:-$DEFAULT_LAYERS}"
@@ -176,7 +176,7 @@ run_tls() {
 	local dir; dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_tls.XXXXXX")"
 	"$HARNESS_DIR/tls_certs.sh" "$dir/certs" > /dev/null
 	local out="$dir/e2e.json" rep
-	PORT=18880 COLL="$dir/coll.json" SCHEME=https CA="$dir/certs/ca.pem" \
+	COLL="$dir/coll.json" SCHEME=https CA="$dir/certs/ca.pem" \
 		XAPIAND_FLAGS="--tls-cert $dir/certs/server.pem --tls-key $dir/certs/server.key" \
 		"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" "$dir/data" > "$dir/capture.log" 2>&1
 	rep="$("$PY" "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"

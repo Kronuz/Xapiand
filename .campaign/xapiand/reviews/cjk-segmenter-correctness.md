@@ -1,12 +1,56 @@
 # cjk-segmenter review: correctness
 
-Commit: analysis:229b68ce9aca5755d714541b17430536da9a5b22
+Commit: analysis:fbf5b7d41504
 Verdict: APPROVE
-Date: 2026-11-09
+Date: 2026-11-10 (first review at analysis:229b68ce9aca5755d714541b17430536da9a5b22, 2026-11-09)
 
 APPROVE: lands as is, at this commit's code. CHANGES: lands after each blocking finding is fixed
 and confirmed by a job at the fixed commit. REJECT: the approach is wrong; the quest is re-planned.
 An APPROVE lists no blocking finding; a CHANGES lists at least one.
+
+## Re-review
+
+Scope: `git diff 229b68ce9aca 8ce3f0cac31d`, limited to the quest's own changes in
+`CMakeLists.txt`, `README.md`, `cjk/segmenter.hh`, `docs/cjk-segmenter.md`, `test/cjk_test.cc`
+and `test/test.cc`. Main's commits brought in by the rebase are not under review.
+
+- **CMake merge.** Against main, the quest only adds the fst pin (7338f564, unchanged), the
+  `analysis_cjk` target with its dictionary generation, the cjk test, the fuzz target and
+  the ICU tools. Main's unicode 297413c and snowball 3efcd0f pins and its
+  `ANALYSIS_BENCH_XAPIAN` comparator are kept as main has them
+  (`git diff main 8ce3f0c -- CMakeLists.txt`).
+- **README.** Against main, it adds only the CJK section, the build and oracle-tool notes and
+  the ICU licence paragraph. Main's rewrite is intact.
+- **test/test.cc.** Against main, it only replaces its inline JSON reader with the shared
+  `test/json.hh`.
+- **F1 resolved.** `test/cjk_test.cc` now pins Thai whole-run behaviour and the cut where Han
+  and Thai meet:
+  - `ends_of("สวัสดีครับ") == "30"` (10 characters × 3 bytes).
+  - `ends_of("ภาษาไทยเป็นภาษาราชการ") == "63"` (21 × 3).
+  - `ends_of("日本ไทย語") == "6,15,18"`.
+
+  The offsets are right. The first and third match the ICU outputs from my probe 261109-200756-110fb5 (ICU `สวัสดี|ครับ` against ours whole; `日本|ไทย|語` the same in both). The doc now says the 868 count is not a measure of the divergence. ctest passed at 8ce3f0c (261110-021459-cefd67: `cjk` Passed, 100% of 2).
+- **F2 resolved, and the wording is true at the new pin.** In `unicode.hh`@297413c,
+  `detail::decode_utf8` still accepts any 3-byte form with `c >= 0x800`, so encoded
+  surrogates read as their code points. Every other ill-formed byte returns `{b0, p + 1}`
+  (one byte, ISO-8859-1). The header and doc now say exactly that.
+- **The new unicode pin changes no boundary.**
+  - Valid text: the ICU parity rerun 261110-021459-874e3e at 8ce3f0c gives the same totals as
+    before. zh 76,814, ja 74,329 and ko 60,909 boundaries, each with 0 differences; dict
+    identical, ours disagree on 0; sweep 31,137,792 texts, 0 differences, and 868 in
+    Complex_Context scripts.
+  - Invalid bytes: unicode@297413c's `test/diff_test.cc` checks the new `next_utf8` against
+    the previous decoder (`test/unicode_old.hh`) on every short sequence, cut at every
+    length, and on random buffers. It requires the same code point and the same advance.
+    The decoder rewrite I read (eight-byte ASCII windows, then the same range tests) keeps
+    those cases.
+- **Other reruns at 8ce3f0c.** Mutants 261110-021459-377cab: 12 killed. Fuzz
+  261110-021459-065294: 120,774 runs in 301 s, exit 0. Bench 261110-021524-d131bd: exit 0;
+  speed is not this lens.
+- **N1 (no, nit).** The new comment line at `cjk/segmenter.hh:55` runs to about 140 columns,
+  where the rest of the file wraps near 90.
+
+No new blocking finding. F1 and F2 are closed, and F3 and F4 stand as non-blocking notes.
 
 ## Evidence I relied on
 
@@ -118,3 +162,16 @@ Both jobs ran at 229b68c with `--env PROBE=c8ff7e714edf`.
   cover lengths beyond libFuzzer's 8,192.
 - A5 throughput was not re-measured (performance is not this lens). `tools/fetch_corpora.py`
   was not rerun (network).
+
+## Re-review 2
+
+Scope: `git diff 8ce3f0cac31d fbf5b7d41504` changes only `docs/cjk-segmenter.md` (5 lines in the
+Speed section). Checked against job 261110-021524-d131bd (exclusive, run at 8ce3f0c, exit 0):
+
+- All nine best/median MB/s figures for zh, ja and ko match the job's bench lines.
+- Ratios recomputed from best figures: 23.48/8.38 = 2.80, 19.38/9.25 = 2.10, 111.05/26.66 = 4.17.
+- The job reference and commit (8ce3f0c) match the job's spec.
+- Object size 2,146,096 bytes and the 2,127,876-byte dictionary match the job's `size -m` output
+  (segment total and `__TEXT,__const`).
+
+No code changed, so the earlier verdict and findings stand. Verdict stays APPROVE.
