@@ -102,3 +102,8 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | docs-upgrade-page | 11-08 | 11-10 03:0x (Xapiand:2d378acfe) | ~470k over 4 runs | ~3 | none (low; lead read the page) | 3 (CLI restore defect behind it; rebase; e2e evidence voided by tested_docs) |
 | query-dsl-fixes | 11-09 18:xx | 11-10 03:1x (Xapiand:a76433b4e, merge b2a428be0) | ~510k (4 contributor runs) + review 170k | ~3.5 | 1 correctness APPROVE + scoped re-review for D50 | 3 (setup bug; reach_of; D50 + F3 test) |
 | 11-10 03:2x hourly | — | — | — | weekly 26%, 0.86%/h (ahead of the week: exhaustion 86 h vs reset 138 h) | — | launched docs-site-refresh tasks getting-started (sonnet) and architecture (opus), sortable-encoding design review (opus max); held reference-guide and tutorials tasks for quota; direct-pins waived (mechanical, strong evidence); load 15; disk 95 GiB |
+| cjk-segmenter reviews | — | accepted at analysis:fbf5b7d | re-review 199k (opus, resumed) + docs addendum 58k (sonnet) | — | correctness APPROVE; docs-only addendum needed because acceptance binds the head | 1 (F1/F2 fixed) |
+| manifest-log fix round 1 | — | — | 270k (opus) | — | 4 blocking fixed, jobs queued | — |
+| docs tasks | — | — | getting-started 288k (sonnet), architecture 304k (opus) | — | found HEAD-404-body bug and the WAL crash window (docs only, D13) | — |
+| sortable-encoding design review | — | — | 299k (opus max) | — | CHANGES: 2 blocking (marker crash window via executable model, 13,416 misreads to 0; T3 CI home), lead fixed text at Xapiand:8918fb756 | — |
+| 11-10 04:2x hourly | — | — | — | weekly 27%, 0.86%/h (exhaustion 85 h vs reset 137 h) | — | nothing launchable (file sets held); no new agents for quota; 49 jobs queued, load 18; disk 94 GiB |
