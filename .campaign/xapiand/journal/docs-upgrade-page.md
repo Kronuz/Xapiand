@@ -1,6 +1,6 @@
 # docs-upgrade-page: journal
 
-State: waiting on jobs 261109-195610-7eb701 261109-195616-e08052
+State: waiting on jobs 261110-021909-a12074
 Quest: .campaign/xapiand/quests/docs-upgrade-page.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,9 +17,7 @@ old directory). Resubmitted the same command at the rebased head as A2 v5, 26110
 
 ## Next
 
-1. When 7eb701 ends: path 1 (CLI) and path 2 (HTTP) both OK is A2's evidence; if path 1 still fails, diagnose
-   with the job log (`.a2/logs/`), report to the lead (the fix is outside this quest's file set).
-2. When e08052 ends: A3 and A4 evidence. Then State "ready for review".
+1. When a12074 passes: State "ready for review". (Earlier rerun 261110-021545-eb3d7e was cancelled: it resolved HEAD in the home checkout, wrong commit.)
 
 ## Blocked on
 
@@ -33,9 +31,10 @@ the refusal anchor `#upgrading-from-100-alpha9` is carried by an explicit `<a id
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/src/content/docs/upgrade.md` |
-| A3 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c); the page covers audit rows and the D44 encoding; the reviewer reads the rest |
-| A4 | job 261109-152541-04dbf7 (e2e, exit 0 at 4f289be1c; reused by `campaign verify` at c14d6eaac); refusal anchor in the built site: job 261109-181744-d76928 |
+| A1 | `docs/src/content/docs/upgrade.md`: "## Upgrading from 1.0.0-alpha.9 and 1.0.0-alpha.10" |
+| A2 | job 261109-195610-7eb701 (exit 0 at 5e8f9a629): alpha.10 (Xapiand:e692a64b1) dump of 3000 documents; head `--restore` (the page's command, dump sha256 = restore sha256) gives new-cli 3000 docs, 0 differing; HTTP `RESTORE` of the same dump gives new-http 3000 docs, 0 differing; the new binary on the old data dir exits 65 with the refusal pointing at `/upgrade/#upgrading-from-100-alpha9` |
+| A3 | job 261109-195616-e08052 (e2e, exit 0 at 5e8f9a629); the page covers the audit rows and the D44 encoding; the reviewer reads the rest |
+| A4 | job 261109-195616-e08052 (e2e, exit 0 at 5e8f9a629, after master's `tested_docs` change); refusal anchor in the built site: job 261110-021909-a12074 (rerun at 6d565818e) |
 
 History: A2 job 261109-153551-16cd29 exited 65 after "new restore exit 0" (dump and restore sha256 matched): my script's
 `rc=$?` line ran under `set -e`, so the new binary's expected exit 65 on the old directory ended the script. Fixed with
