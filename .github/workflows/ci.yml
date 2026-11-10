@@ -149,6 +149,12 @@ jobs:
         run: ccache -s
       - name: Unit tests (ctest) under ${{ matrix.name }}
         run: ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
+      - name: DIAG (temporary)
+        if: failure() && matrix.key == 'test-tsan'
+        run: |
+          sudo apt-get install -y --no-install-recommends gdb
+          gdb -q -batch -ex run -ex 'bt 40' -ex 'info registers rip' -ex 'x/6i $pc-12' -ex 'info proc mappings' build/bin/xapiand_test_lua 2>&1 | grep -v '^ *0x.*\.so\|^ *0x.*\[' | tail -120 || true
+          for i in 1 2 3 4 5; do build/bin/xapiand_test_pool test_the_sweeps_close_syncs_a_merges_output 2>&1 | tail -3; done || true
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
