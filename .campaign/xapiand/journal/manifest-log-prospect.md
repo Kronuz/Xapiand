@@ -78,3 +78,4 @@ pre_freeze.txt files row 0x8000'0008), CMakeLists.txt pin. Open: the pin moves a
   `ix.applied()`.
 
 Lead, 11-09: R1 confirmed against strata:9d4630c test/manifest_log_test.cc: short_bitset (:622), the 2^62-document segment (:631), "a new ordinal below the document count" (:493) and "a new ordinal not yet deleted" (:494) cover the dropped crafted-file cases.
+Lead, 11-09: diff read (16 files, +276/-322). The four dropped crafted live-docs cases map to strata:9d4630c manifest_log_test.cc: past the document count :493, live count unlike its entry :496, delta wrapping onto an ordinal :494, wrapping bitset :622/:631. Lands after manifest-log, repinned to its main commit.
