@@ -5,27 +5,25 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`docs/dev/docs-site-audit.md` lists, page by page, what the public docs site (`docs/src/content/docs/**`,
+128 pages) says that is no longer true of Xapiand on strata, what it lacks, and what the rewrite should
+be, so docs-site-refresh can start with a fixed scope. It changes no page (D45).
 
 ## Acceptance criteria
 
-One line each: `- A1 <criterion>: <the job, test or check that shows it>`. An untagged criterion
-needs a job that passed at the landed code; tag one `[artifact]` (a committed `path`),
-`[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
-cannot show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] Every page under `docs/src/content/docs/` has a row: its path, a verdict (current, stale, wrong, missing content, delete), and each stale or wrong claim with the code or doc it contradicts (`file:line` in Xapiand, strata or prospect): `docs/dev/docs-site-audit.md`
+- A2 [artifact] A section per area the rewrite must cover (architecture, features, quick-start, installation and building, usage tutorials, configuration and options, the HTTP API reference, operations: dump, restore, upgrade, backup), each naming the pages it touches, what exists now in the code that no page documents, and the source of truth to write from: `docs/dev/docs-site-audit.md`: "## Rewrite scope"
+- A3 [artifact] A list of every user-visible claim the audit could not verify from code, each with the probe that would settle it (a request against a running node, a test name): `docs/dev/docs-site-audit.md`: "## Unverified"
+- A4 [artifact] The audit marks which pages the open quests already change (docs-upgrade-page, sortable-encoding, more-like-this, barrier-warning, release) so the rewrite does not race them: `docs/dev/docs-site-audit.md`: "## Owned by other quests"
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None. Read-only over the site; the file it writes is its own.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, D45: the site is refreshed as a whole: this audit, then docs-site-refresh after sortable-encoding, then a refresh at each milestone close.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Nothing; one landing.

@@ -5,27 +5,28 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The public docs site describes Xapiand as it runs on strata: architecture, features, quick-start,
+installation and building, usage tutorials, configuration and options, the HTTP API reference and
+operations, each true of the code at the landed commit, with no page still describing Xapian
+internals as Xapiand's (D45). The scope is `docs/dev/docs-site-audit.md`'s "Rewrite scope", minus
+pages another open quest owns. The lead may split it into one task per area.
 
 ## Acceptance criteria
 
-One line each: `- A1 <criterion>: <the job, test or check that shows it>`. An untagged criterion
-needs a job that passed at the landed code; tag one `[artifact]` (a committed `path`),
-`[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
-cannot show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] Every row of the audit marked stale, wrong or missing content is fixed or deleted, and each fixed claim cites its source in the journal: `docs/dev/docs-site-audit.md` rows checked off in the journal's table
+- A2 The docs E2E (every request example the site runs) passes at the landed code: the `e2e` check
+- A3 No page says Xapiand stores or searches through Xapian, except the upgrade page, the changelog and history pages: a `git grep -niw xapian docs/src/content/docs` job whose output lists only those
+- A4 The site builds without broken internal links: a light job running the site build and its link check
+- A5 [manual] The owner reads the architecture, quick-start and configuration pages before landing
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, D45. After sortable-encoding, so the value-encoding pages are written once.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+Whole areas (one task each) once their pages pass A2 and A4.
