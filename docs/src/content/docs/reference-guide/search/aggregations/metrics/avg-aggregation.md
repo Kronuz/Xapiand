@@ -5,7 +5,7 @@ title: "Average Aggregation"
 A _single-value_ metrics aggregation that computes the average of numeric values
 that are extracted from the aggregated documents.
 
-arithmetic mean, also called the mathematical expectation or average, is the
+The arithmetic mean, also called the mathematical expectation or average, is the
 central value of a discrete set of numbers: specifically, the sum of the values
 divided by the number of values. <sup>[1](#footnote-1)</sup>
 
@@ -75,7 +75,7 @@ pm.test("Response is aggregation", function() {
 ```
 e2e:end -->
 
-The above aggregation computes the average grade over all documents. The above
+The above aggregation computes the average age over all documents. The above
 will return the following:
 
 ```json
@@ -89,7 +89,7 @@ will return the following:
 }
 ```
 
-The name of the aggregation (`avg_grade` above) also serves as the key by which
+The name of the aggregation (`avg_age` above) also serves as the key by which
 the aggregation result can be retrieved from the returned response.
 
 ---
