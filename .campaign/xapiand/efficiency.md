@@ -73,6 +73,11 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-09 | x-pool-followups | contributor, sonnet, medium (2 turns) | 119k | 12% | 19m | C3, C5, C6, restore wait fixed; jobs queued |
 | 11-09 | sortable-proof | contributor, opus, high (2 turns) | 176k | 13% | 31m | A1 2^32 floats 0 failures; CLI 213,491 + 741,467 lines 0 mismatches; docs edit voided all evidence (hunt row) |
 | 11-09 | (tool) | general-purpose, opus, high: parallelism changes | 162k | 12% | 21m | agent-campaign:c43dc00, dotfiles:6e0d8af; suite 181 OK |
+| 11-09 | manifest-log | contributor, opus, high (3c) | 275k | 14% weekly | 1h02m | R27 fence past the durable boundary (sweep failed 2 points before); T4 case 1, T6 80/80 streams; 7 jobs at strata:9d4630c |
+| 11-09 | cjk-segmenter | contributor, opus, high | 87k | 14% | 1h44m | 0 differences vs ICU on zh/ja/ko and a 31.1M-text sweep; 2.18x/1.90x/3.86x faster than ICU locally; 5 jobs at the head |
+| 11-09 | perf-watch-peek | contributor, opus, high (2 turns) | 256k | 13% | 1h09m | asking routes 3 to 1 Asio handler per request; timing jobs queued for a drain |
+| 11-09 | docs-upgrade-page | contributor, sonnet, medium (2 turns) | 130k | 13% | 14m | upgrade page; A2 round-trip job builds the old binary in the job |
+| 11-09 | (tool) | general-purpose, opus, high: slot lock, disk housekeeping, docs-only evidence | 260k | 14% | 1h01m | agent-campaign:9ece90c, 1b2e947, 6579ca6; dotfiles:51ddfe0; sweep removed 35 worktrees |
 
 ## Landings
 
