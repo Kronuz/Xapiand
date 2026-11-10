@@ -1,6 +1,6 @@
 # docs-site-refresh-reference: journal
 
-State: waiting on jobs 261110-081109-6b28b2 261110-081100-c65ac6 261110-081101-d566fc 261110-081103-557fe4
+State: waiting on jobs 261110-081109-6b28b2 261110-081100-c65ac6
 Quest: .campaign/xapiand/quests/docs-site-refresh-reference.md (the lead's; never edit it)
 
 ## Doing
@@ -43,9 +43,9 @@ Code questions (documented as the code behaves today; the lead rules whether the
 |---|---|
 | A1 | the table below: the audit rows of the reference guide, each with its fix and source. Rows owned by other quests or by sortable-encoding are under "Left alone" |
 | A2 | job 261110-081109-6b28b2 (`campaign verify`, the quest's `e2e` check at the head; pending) |
-| A3 | job 261110-081103-557fe4 (`git grep -niw xapian` over the site content, minus changelog and upgrade; pending). Known hit: `copyright.md:19` (Blocked on 8) |
+| A3 | job 261110-081103-557fe4 (`git grep -niw xapian` over the site content, minus changelog and upgrade): one hit, `copyright.md:19` (sortable-encoding's, Blocked on 8); nothing in the reference guide |
 | A4 | job 261110-081100-c65ac6 (`npm ci`, `npm run build`, `linkcheck.py` over every page of the site, exit 1 on any broken link; pending). The 11-10 job 261110-043755-c5fb2d listed the 5 pages |
-| A5 | request count 425 before (job 261110-043757-b6665c) and 477 after (job 261110-081101-d566fc, pending); the new sections are under Result |
+| A5 | request count 425 before (job 261110-043757-b6665c) and 477 after (job 261110-081101-d566fc: `requests 477`); the new sections are under Result |
 | A6 | not in this launch |
 | A7 | not in this launch |
 
