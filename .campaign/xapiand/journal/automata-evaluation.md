@@ -9,10 +9,10 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Evaluation complete in prospect `docs/design/automata.md` revision 2 (prospect:b38d147): D46
+Evaluation complete in prospect `docs/design/automata.md` revision 2 (prospect:e8e5bd9): D46
 folded in (Verdict, D1, D2, D4 to D6, D9, "Owner rulings (D46)" table, steps), "Numbers" filled
 from the strict screen. Harness blocks byte-identical at prospect:39d142a (where the jobs ran),
-429d0f0 and b38d147 (sha1 d6450cf over the appendix blocks).
+429d0f0 and e8e5bd9 (sha1 d6450cf over the appendix blocks).
 
 ## Next
 
@@ -26,7 +26,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/automata.md` (prospect:b38d147); jobs 261109-173038-76ce62 (branch tests, Release), 261109-173049-b37276 (ASan+UBSan), 261109-174627-134722 (brute-force cross-check, 3 mutants caught), 261109-174630-31d66c (strict screen, 70 queries x 5 runs; smoke 261109-174628-59e91d) |
+| A1 | `docs/design/automata.md`: "Port it; the owner ruled so in D46." (prospect:e8e5bd9; its Checks name the jobs, listed below) |
 | A2 | D46 |
 
 Jobs examined:
@@ -71,3 +71,7 @@ ms per query, x86_64 macOS, one segment of 3.96 M terms).
 - D5 settled on the screen: infos decoded in the walk via an additive termdict visitor seek (a
   lookup per match costs 12.9 times the walk on prefixes, past the doc's one-tenth bar).
 - The liveness probe (D46 Q2) is unmeasured here; the doc assigns it to the `automata` quest's A3.
+- A1's row names the doc, not the jobs: it is an [artifact] criterion, the jobs ran at
+  prospect:39d142a (cross-check, bench) and strata:219ded0d (branch tests), and the lead said not to
+  rerun them. The doc's Checks cite each job; `campaign job rerun 261109-174627-134722
+  261109-174628-59e91d 261109-174630-31d66c` makes head twins if the lead wants them.
