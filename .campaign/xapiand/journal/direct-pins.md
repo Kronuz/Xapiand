@@ -1,18 +1,24 @@
 # direct-pins: journal
 
-State: waiting on jobs 261109-180009-09ece8 261109-180009-9ee666 261109-180022-38e01d
+State: waiting on jobs 261109-192429-4ceb58 261109-192429-118818
 Quest: .campaign/xapiand/quests/direct-pins.md (the lead's; never edit it)
 
 ## Doing
 
-Commit Xapiand:c09b43121 on the branch: eight Xapiand pins moved to the newest commit any resolved
-library pins, override comments reworded, harness/pins_check.py added. Jobs run build-test, e2e and the
-pins check at that commit.
+e2e 261109-180009-9ee666 FAILED at Xapiand:c09b43121 (42 assertions, from "Load sample data" RESTORE /bank/ with no
+HTTP response; INFO then shows doc_count 895 of 1000). build-test 261109-180009-09ece8 and pins check
+261109-180022-38e01d passed. Finding: all eight bumps are doc/CI-only in their libraries (`git diff --stat old new` per
+library: compressors LICENSE+ci.yml; threadpool docs/status+ci.yml; char-classify, endian, constexpr-phf, random, split,
+static-string: ci.yml only), and `git diff 625963a89 HEAD` outside .campaign is CMakeLists.txt + harness/pins_check.py. So
+no bump changes compiled code. The passing master e2e (261109-152541-04dbf7) ran at 4f289be1c, which lacks three src/harness
+commits that this branch's base 625963a89 has (ad641a000, 72203782d, 711a9b6c6). The harness server log was lost: the tls
+layer overwrote /tmp/xe2e_node.log. Two jobs decide it: e2e at the base 625963a89 (4ceb58) and a rerun at the head (118818).
 
 ## Next
 
-1. Read the three jobs; if build-test or e2e fail, bisect the eight bumps (a bump that breaks is a stale
-   consumer: record it under Blocked on, keep the old pin only with the lead's ruling).
+1. Read 4ceb58 (base) and 118818 (head). Base red: the failure is master's (the lead's), the bumps are cleared; report
+   it with the job. Base green and head red: bisect the eight bumps (none change compiled code, so expect flake: rerun).
+   Both green: flake, A4 rests on 118818.
 2. Fill the Evidence table, set State to ready for review.
 
 ## Blocked on
@@ -46,7 +52,7 @@ in one library changes its tree, so the script is rerun after each (heads can mo
 | A1 | job 261109-180022-38e01d (pins_check.py A1 table: 57 declarations, each with an include site) |
 | A2 | job 261109-180022-38e01d (pins_check.py A2: no comment justifying a pin by winning) |
 | A3 | job 261109-180022-38e01d (Xapiand's pin is the head for all 57 declarations; library-side stale pins listed above, to be bumped in their repositories) |
-| A4 | jobs 261109-180009-09ece8 (build-test) and 261109-180009-9ee666 (e2e) |
+| A4 | build-test 261109-180009-09ece8 passed; e2e 261109-180009-9ee666 FAILED (see Doing); decided by 261109-192429-4ceb58 (base) and 261109-192429-118818 (head rerun) |
 
 ## Result
 
