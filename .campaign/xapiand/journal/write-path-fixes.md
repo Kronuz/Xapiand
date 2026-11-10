@@ -1,6 +1,6 @@
 # write-path-fixes: journal
 
-State: waiting on jobs 261110-022018-630bfa 261110-022019-13681d 261110-022021-d4da86 261110-022022-9e2089 261110-022023-91414c 261110-022025-8d9d38 261110-022026-0969a8 261110-022028-c214c0 261110-022029-baabc5 261110-022045-f81f3a
+State: waiting on jobs 261110-045411-83e91d 261110-045423-57a7f5 261110-045424-bc00ed 261110-045430-4ed4e9
 Quest: .campaign/xapiand/quests/write-path-fixes.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,26 +9,22 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Code, tests and note committed; head 32fe790e8 (code as built by 261109-202752-ca0659 plus a one-line
-std::string conversion in numeric_docid). Running (msg-11..13 closed: the file set has test_node.cc,
-pool.h, the note and exception_engine.h):
+Rebased onto master (clean); head 60a5e3736: DocVersionConflictError deleted with its line in
+test_engine_error.cc (msg-17: the lead added the two files to the set; nothing throws the class, and
+the 409 of errc::version_conflict stays covered by that test's answer table). Note:
+docs/mechanisms/document-ids-and-versions.md (9fec11038). Jobs at the head:
 
-- Mutants a-i (slot wpf-mut, refs/scratch/wpf-mutant-X off 32fe790e8; a job exits 0 when a named test
-  fails, i.e. killed): 261110-022018-630bfa (a), 022019-13681d (b), 022021-d4da86 (c),
-  022022-9e2089 (d), 022023-91414c (e), 022025-8d9d38 (f), 022026-0969a8 (g), 022028-c214c0 (h),
-  022029-baabc5 (i).
-- 261110-022045-f81f3a: the id test at the base with asserts off, to show the id checks it fails
-  (the asserts build aborts on its first write, see Evidence).
+- 261110-045411-83e91d: `campaign verify` build-test (ctest, async_check, removed_options; A3, A5).
+- 261110-045430-4ed4e9: rerun of 261109-202752-ca0659 (engine strata + node cases; A1, A2).
+- 261110-045423-57a7f5: docs E2E, `harness/run_all.sh smoke e2e tls` (A3).
+- 261110-045424-bc00ed: TSan (llvm@22, slot wpf-tsan): test_engine_strata once, the four node cases
+  three times each, halts nothing, counts "WARNING: ThreadSanitizer" per log (A4).
 
 ## Next
 
-1. Read the mutant jobs; a survivor means a missing test.
-2. DocVersionConflictError: deleting it needs tests/test_engine_error.cc:151 (its other use), outside
-   the set; asked the lead (msg-17). Settle the head on the answer.
-3. At the head marked ready, once each: TSan job (llvm@22 recipe, build-tsan, the four node cases and
-   test_engine_strata; A4), `campaign verify write-path-fixes` (build-test; A3, A5) and the docs E2E
-   job (`harness/run_all.sh smoke e2e tls`; A3). E2E exit 137 / "Killed: 9" is the port-8880 clash:
-   rerun.
+1. Read the four jobs; fill A3-A5 rows with them and A1/A2 with 261110-045430-4ed4e9; set State to
+   "ready for review". E2E exit 137 / "Killed: 9" is the port-8880 clash: rerun.
+2. CI (A5's second half) runs when the lead pushes; nothing to push from here.
 
 ## Cause (A1)
 
@@ -51,11 +47,11 @@ became an out-of-range double-to-uint32 conversion, and a new id whose docid hel
 
 | Criterion | Evidence |
 |---|---|
-| A1 | Fixed: 261109-202752-ca0659 (1a72d3a7e, test_node all ok incl. test_document_ids_are_themselves; test_engine_strata 9768 ok). Fails at the base: 261109-202740-e5400a (555ceb738 = base b4acd8419 + only test_node.cc, same blob as head): the id test aborts on its first write, `PUT /ids_int/-1`, at `assert(did != 0)` in wal.cc:1101 (write_replace_document): id -1 converted to docid 0, the "ids double as docids" defect in Cause; setup is fine (the other three cases run on the same node). Asserts-off base run for the id checks: 261110-022045-f81f3a (pending). Mutants a, e, f, g: pending |
-| A2 | Fixed: 261109-202752-ca0659 (precondition, apply-once and model cases ok; model "48 won, 48 refused"). Fails at the base: 261109-202740-e5400a: precondition 33/111 checks fail (409 expected, `_version` 2/0 in the body, document kept at v2: test_node.cc:1300-1318), apply-once 16/38 (:1363 conflict `_version`, :1367 conflicts == writers-1), model 37/68 ("48 writes won, 0 refused"). Mutants b, c, d, h, i: pending |
-| A3 | pending |
-| A4 | pending |
-| A5 | pending |
+| A1 | Fixed: 261109-202752-ca0659 (1a72d3a7e, test_node all ok incl. test_document_ids_are_themselves; test_engine_strata 9768 ok). Fails at the base: 261109-202740-e5400a (555ceb738 = base b4acd8419 + only test_node.cc, same blob as head): the id test aborts on its first write, `PUT /ids_int/-1`, at `assert(did != 0)` in wal.cc:1101 (write_replace_document): id -1 converted to docid 0, the "ids double as docids" defect in Cause; setup is fine (the other three cases run on the same node). Asserts-off base run (no abort, every id checked): 261110-022045-f81f3a, 48 of 176 checks fail (GET/SEARCH/DELETE of the ids, test_node.cc:1217-1277). Mutants killed (each job exits 0 only when a named test fails): a 261110-022018-630bfa (19 of 176), e 261110-022023-91414c (engine placement :1224-1230 and node :1267), f 261110-022025-8d9d38 (engine :1243-1246), g 261110-022026-0969a8 (:1276-1277). At the head: 261110-045430-4ed4e9 (pending) |
+| A2 | Fixed: 261109-202752-ca0659 (precondition, apply-once and model cases ok; model "48 won, 48 refused"). Fails at the base: 261109-202740-e5400a: precondition 33/111 checks fail (409 expected, `_version` 2/0 in the body, document kept at v2: test_node.cc:1300-1318), apply-once 16/38 (:1363 conflict `_version`, :1367 conflicts == writers-1), model 37/68 ("48 writes won, 0 refused"). Mutants killed: b 261110-022019-13681d (15 of 111), c 261110-022021-d4da86 (apply-once wins == 1, model version == seen + 1), d 261110-022022-9e2089 (missing doc 409, engine :1259), h 261110-022028-c214c0 (`_version` in the 409 body), i 261110-022029-baabc5 (missing doc with a version: 409). At the head: 261110-045430-4ed4e9 (pending) |
+| A3 | build-test 261110-045411-83e91d and docs E2E 261110-045423-57a7f5 at 60a5e3736 (pending) |
+| A4 | TSan 261110-045424-bc00ed at 60a5e3736 (pending) |
+| A5 | build-test 261110-045411-83e91d (pending); CI when the lead pushes |
 
 Jobs examined: 261109-183815-526fac (the explorer's probe at master 61ddc922d: Q3 and the id-0 side
 check; its "control PUT ?version=1" ran after a DELETE and a PUT recreated the document at version 1,
