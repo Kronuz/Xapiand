@@ -285,12 +285,8 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 								query = process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_NOT):
-								query = process(engine::Op::AND_NOT, path, {
-									{
-										{ RESERVED_QUERYDSL_MATCH_ALL, {} },
-									},
-									o,
-								}, default_op, wqf, flags, is_leaf);
+								// None of the subqueries: everything but their union.
+								query = engine::Query::combine(engine::Op::AND_NOT, engine::Query::match_all(), process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf));
 								break;
 							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
 								query = process(engine::Op::AND_NOT, path, o, default_op, wqf, flags, is_leaf);
@@ -337,6 +333,10 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 								break;
 							case _.fhh(RESERVED_QUERYDSL_MAX):
 								query = process(engine::Op::MAX, path, o, engine::Op::MAX, wqf, flags, true);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_NOT):
+								// A single subquery: the same as a list of one.
+								query = engine::Query::combine(engine::Op::AND_NOT, engine::Query::match_all(), process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf));
 								break;
 							// Special queries.
 							case _.fhh(RESERVED_QUERYDSL_MATCH_ALL):
