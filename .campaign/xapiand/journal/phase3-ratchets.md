@@ -1,6 +1,6 @@
 # phase3-ratchets: journal
 
-State: waiting on jobs (wave 2, below)
+State: waiting on jobs: wave 2 and the 8-thread row (ids under Doing), build-test 261110-023342-f01305 at prospect `7206c0f`; all queued behind 97 others at 02:34
 Quest: .campaign/xapiand/quests/phase3-ratchets.md (the lead's; never edit it)
 
 ## Doing
