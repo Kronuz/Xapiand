@@ -2037,7 +2037,7 @@
     "docs-upgrade-page": {
       "accepted": {},
       "after": [
-        "sortable-encoding"
+        "cli-restore-records"
       ],
       "base": "19a67bd67a436bd3d4d3ec4519070469585c3134",
       "branch": "quest/xapiand/docs-upgrade-page",
@@ -2120,7 +2120,7 @@
       "risk": "low",
       "status": "active",
       "title": "Upgrading from alpha.9 and alpha.10 data",
-      "updated": "2026-11-09T15:21:48",
+      "updated": "2026-11-09T18:10:45",
       "worktree": "../Xapiand-wt/xapiand/docs-upgrade-page"
     },
     "document-gate": {
