@@ -76,3 +76,5 @@ pre_freeze.txt files row 0x8000'0008), CMakeLists.txt pin. Open: the pin moves a
   open's first-read arm of the pinned-log EIO case is gone with it.
 - R5 (applied): `ix.manifest().applied` is the head's; the live position the tests compared is
   `ix.applied()`.
+
+Lead, 11-09: R1 confirmed against strata:9d4630c test/manifest_log_test.cc: short_bitset (:622), the 2^62-document segment (:631), "a new ordinal below the document count" (:493) and "a new ordinal not yet deleted" (:494) cover the dropped crafted-file cases.
