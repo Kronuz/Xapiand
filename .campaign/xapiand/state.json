@@ -9774,7 +9774,29 @@
       "worktree": ""
     },
     "x-pool-followups": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-09T17:33:20",
+          "base": "a188911363d1ab8d6f80c9a0b9aa26ed00c57211",
+          "blobs": {
+            "harness/restore_stream_check.sh": "100755:264757c187c7c97a345bb1b7d52c9e33b02e9689",
+            "src/database/pool.cc": "100644:d54487aa968f3add58561753ea33c7fbb67633af",
+            "src/database/pool.h": "100644:7bff5dcbd0af012c7bbad8d88d8f93efc55f9706",
+            "src/database/shard.cc": "100644:dab9502cbb008503d02e9e7f43603cd47d00eaa0",
+            "src/database/shard.h": "100644:53a01d9dd0ec8287a4a550a29a560a32e8c30969",
+            "tests/test_node.cc": "100644:f866022fd12ea094f570565d207ffe99815f7e2d",
+            "tests/test_pool.cc": "100644:27069bca3f80cc193a0f44d9b27a3099d923c1a3"
+          },
+          "brief": "49e676628c865161",
+          "by": "waived",
+          "commit": "05eccd0fbe08e061102f350165c1497a079f601b",
+          "findings": {},
+          "note": "small normal-risk follow-ups to an accepted review: each fix has a killed mutant or a test, restore check 20/20, CI green on the same code",
+          "review": "",
+          "reviewed": "",
+          "verdict": ""
+        }
+      },
       "after": [],
       "base": "a188911363d1ab8d6f80c9a0b9aa26ed00c57211",
       "branch": "quest/xapiand/x-pool-followups",
@@ -9835,7 +9857,7 @@
       "risk": "normal",
       "status": "review",
       "title": "x-pool review follow-ups and the restore check's race",
-      "updated": "2026-11-09T15:47:46",
+      "updated": "2026-11-09T17:33:20",
       "worktree": "../Xapiand-wt/xapiand/x-pool-followups"
     },
     "x-pool-step1": {
