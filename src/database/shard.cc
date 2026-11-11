@@ -1332,6 +1332,24 @@ Shard::engine_for_read()
 }
 
 
+task::task<engine::docid>
+Shard::written_key(const std::string& term)
+{
+	co_await ready();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	co_return co_await endpoint().engine().written_key(term);
+}
+
+
+task::task<engine::doccount>
+Shard::written_count()
+{
+	co_await ready();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	co_return co_await endpoint().engine().written_count();
+}
+
+
 task::task<bool>
 Shard::reopen()
 {

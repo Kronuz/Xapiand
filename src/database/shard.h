@@ -119,6 +119,11 @@ public:
 	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
 	task::task<engine::Shard*> engine_for_read();
 
+	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
+	// live documents) as the writes left them, in the index's turn, refreshing nothing (docs/mechanisms/placement.md).
+	task::task<engine::docid> written_key(const std::string& term);
+	task::task<engine::doccount> written_count();
+
 	// The engine's integrity check of the index, in its turn (a missing index is opened, or created by the flags).
 	task::task<engine::CheckResult> check();
 

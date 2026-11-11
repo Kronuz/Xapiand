@@ -130,6 +130,12 @@ private:
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
+	// The docid holding the term in any shard, read from the published views or (written) as the writes left them.
+	task::task<engine::docid> find_docid_term(const std::string& term, bool written);
+
+	// The active shard with the fewest documents as the writes left them, where a new numeric id goes.
+	task::task<size_t> least_used_shard();
+
 	// Pins the indexes [begin, end) of the endpoints and searches them: one batch of a wide search.
 	task::task<engine::BatchResult> search_batch(size_t begin, size_t end, const engine::SearchRequest& request);
 
@@ -234,6 +240,8 @@ public:
 	task::task<Document> get_document_term(const std::string& term);
 	task::task<engine::docid> get_docid(std::string_view document_id);
 	task::task<engine::docid> get_docid_term(const std::string& term);
+	// get_docid_term() as a write places a document: each shard as its writes left it, in its turn, flushing none.
+	task::task<engine::docid> written_docid_term(const std::string& term);
 
 	// A delete with a version (not UNKNOWN_REVISION) removes the document only while it has that version, 0 for one
 	// that does not exist; else it raises errc::version_conflict with the current version.
