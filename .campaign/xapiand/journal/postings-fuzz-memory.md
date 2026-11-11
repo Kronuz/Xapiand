@@ -1,45 +1,31 @@
 # postings-fuzz-memory: journal
 
-State: blocked on lead: the fix lives in strata (stored_plugin::check), outside this quest's repository and file set
+State: blocked on stored-check-cache: lands first; then the lead moves prospect's strata pin and A3 and A4 rerun
 Quest: .campaign/xapiand/quests/postings-fuzz-memory.md (the lead's; never edit it)
 
 ## Doing
 
 Waiting on A1's job (261110-180348-714558) and the build-test check (261110-180354-e4b1ac) at
-prospect:10870d9, and on the lead's ruling under "Blocked on".
+prospect:10870d9. The lead's ruling (option 2): the strata fix is its own quest, stored-check-cache
+(strata:71750940, fix and `test/reader_check_test.cc`), which lands first.
 
 ## Next
 
-1. On the lead's ruling: the strata change (below) with a strata test that fails without it, then prospect's strata pin moved to it (CMakeLists.txt).
-2. A3: one CPU-hour of fuzz_postings (ASan+UBSan) at the new pin with `fuzz/rss.sh` logging RSS; A4: build-test at that head.
+1. After stored-check-cache lands, the lead moves prospect's strata pin to it (CMakeLists.txt).
+2. At that head: A3, one CPU-hour of fuzz_postings (ASan+UBSan) with `fuzz/rss.sh` logging RSS; A4, the build-test check.
 
 ## Blocked on
 
-Lead: where the fix lands. The growth is strata's, not prospect's postings decoder:
-`strata::stored_plugin::check` (strata `include/strata/core/reader.hh:569-571` at 9d4630c, the
-same on strata main 15d39c30) calls the cacheless `stored(o)` once per document, so every document
-decodes its whole stored frame into a fresh buffer: O(docs x frame) work and allocation. One
-frame of 5,636 empty records is 28 KB with its offset table, so `check_segment` allocates 151.5 MB
-of 28,192-byte buffers plus 30.4 MB of 5,648-byte ones for one fuzz input
-(`fuzz/corpus/postings/572830ad...`). The fix is one line: a `reader::stored_frame cache;` and
-`stored(o, cache)`, as `records()` beside it already does.
-
-Options:
-1. Recommended: extend this quest's file set to strata `include/strata/core/reader.hh` plus one
-   strata test (check over a segment with one many-record frame decodes it once, e.g. counting
-   allocations), and prospect `CMakeLists.txt` for the pin. I can do both.
-2. A sibling strata quest for the fix and its test; this quest then only bumps the pin and runs A3.
-3. Work around in the target (skip `check_segment`'s stored check): not recommended, it hides a
-   real quadratic in the `check` path users run on their segments.
+stored-check-cache landing, then the lead's pin bump. Lead ruled option 2 (msg from coordinator, 2026-11-10).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | job 261110-180348-714558 (queued) at prospect:10870d9, strata 9d4630c: 10 min ASan+UBSan with RSS every 30 s, as is and with the stored check's frame cache. Local probes below |
-| A2 | Not met yet. The postings decoder allocates from no untrusted length (audit under Rulings); what grows is strata's check. Its test belongs with the strata fix (Blocked on) |
-| A3 | Not run: needs the fix |
-| A4 | build-test 261110-180354-e4b1ac (queued) at prospect:10870d9; rerun at the pin bump |
+| A2 | Ruled: the postings decoder allocates from no untrusted length (audit under Rulings), so it has no bound to add; what grew is strata's stored check, whose test fails without its fix in stored-check-cache (`test/reader_check_test.cc`, strata:71750940; revert job 261110-182037-74c93c) |
+| A3 | Runs once prospect's strata pin moves to the landed stored-check-cache fix |
+| A4 | build-test 261110-180354-e4b1ac (queued) at prospect:10870d9; reruns once the strata pin moves to the landed fix |
 
 Local probes (quiet light, macOS x86_64, Homebrew clang 23, seed 1, corpus copy, 5 min unless
 noted; logs in the code worktree's `.scratch/p*/`):
@@ -63,6 +49,8 @@ Pending the fix.
 
 ## Rulings I made
 
+- A2: the conditional does not apply to prospect's postings decoder (audit below); the test that
+  fails without the fix lives in strata with the fix (stored-check-cache).
 - Attribution: neither the postings decoder nor libFuzzer's corpus (170 KB) grows. The target's
   `check_segment` call churns up to 189 MB per input through strata's stored check; ASan's
   256 MB quarantine of that churn keeps its allocator's regions growing (RSS flat with quarantine 0,
