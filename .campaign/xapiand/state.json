@@ -16433,13 +16433,11 @@
         "ARCHITECTURE.md",
         "docs/dev/**",
         "harness/README.md",
-        "harness/gate*",
+        "harness/gate7c_rows.sh",
         "harness/lua_bounds.py",
         "harness/stall_load.py",
         "harness/test_gate_tools.py",
-        "harness/wide_search_check.py",
-        "harness/*stall*",
-        "harness/*overload*"
+        "harness/wide_search_check.py"
       ],
       "history": [
         {
@@ -16775,7 +16773,7 @@
       "risk": "high",
       "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-11T14:35:29",
+      "updated": "2026-11-11T14:35:51",
       "worktree": "../Xapiand-wt/xapiand/x7-gate"
     },
     "x7-http-repin": {
