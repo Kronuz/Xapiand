@@ -3686,6 +3686,33 @@
       "title": "wordwise hash32: the high half, not the xor-fold",
       "updated": "2026-11-08T15:41:18"
     },
+    "head-allow": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "HEAD carries no body; Allow lists the routed verbs",
+      "updated": "2026-11-11T00:03:53"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
