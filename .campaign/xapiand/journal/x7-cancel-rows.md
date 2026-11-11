@@ -1,6 +1,6 @@
 # x7-cancel-rows: journal
 
-State: waiting on jobs 261110-153616-0b6979 261110-153617-fa27e0 261110-153619-aee819
+State: waiting on jobs 261110-164633-1246a9 261110-164634-b7eb0b 261110-164637-c92fef
 Quest: .campaign/xapiand/quests/x7-cancel-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -22,11 +22,29 @@ skipped. Xapiand:f0c9c32f7 makes the peaks lock-free: `std::atomic<std::size_t>`
 each scrape. Local `harness/async_check.sh --strict --owed` (quiet light, strata from the slot's
 .deps): 250 hits, unclassified 0, owed 0.
 
-Jobs:
-- 261110-153616-0b6979: `campaign verify` build-test at f0c9c32f7, the suite for A1-A5.
-- 261110-153617-fa27e0: mutant A1/A4 at 6ac5626fa54d (refs/mutants/x7-cancel-rows: increment and
+Suite 261110-153616-0b6979 (at f0c9c32f7) failed only test_the_admission_peaks_rise_under_load: the
+20,000-line RESTORE was not answered within the test client's 10 s receive timeout, and the demoted
+peak stayed 0; A1 (2078 us) and A5 (3082 us) passed; async check clean; mutants skipped.
+Probes (quiet light, slot build, load 15-21):
+- test binary, NODE_LOG: the RESTORE took past 10 s ("Request took too long ~10075 ms"): the
+  client's timeout, not an error answer. Its loop scraped /:metrics with no pause, competing with
+  the restore on the one reactor.
+- standalone node, same 20,000 lines, scrapes every 50 ms: 200 in 2.88 s (about 6,900 docs/s), and
+  the demoted peak still 0. A restore takes a turn per object, and each resume starts a fresh
+  slice, so its objects never spend one: a restore does not demote. The test's premise was wrong.
+  Not the hunt.md row (1,000 docs at 26 docs/s): not reproduced here.
+- standalone node, a PUT whose Lua script loops 20M times, scrapes every 5 ms: 204 in 0.76 s,
+  demoted peak 1 (a script yields at its hook and its checkpoint demotes it).
+Fix (test only): the demoted half runs a script PUT (10M iterations; up to 5 PUTs until the peak
+is 1) while a scraper thread polls every 2 ms; no RESTORE, no 20,000-line body. Its id is 100 (the
+index's ids are integers; a first probe with id "script" got a 400). Local probe, 3 runs at load
+about 10: ok, 2.1 s, 1.5 s, 1.5 s.
+
+Jobs (at Xapiand:a8a441930; 0b6979's mutants fa27e0 and aee819 were skipped):
+- 261110-164633-1246a9: `campaign verify` build-test, the suite for A1-A5.
+- 261110-164634-b7eb0b: mutant A1/A4 at 2ce02f1f6151 (refs/mutants/x7-cancel-rows: increment and
   both peak raises removed); succeeds only when frees_its_reactor and admission_peaks both fail.
-- 261110-153619-aee819: mutant A5 at ae607ffacb2a (refs/mutants/x7-cancel-rows-a5: `get` passes
+- 261110-164637-c92fef: mutant A5 at f4ad9bd6da40 (refs/mutants/x7-cancel-rows-a5: `get` passes
   nullptr for the budget); succeeds only when the cached variant passes and the cold one fails.
 
 Earlier: 261110-143945-c98b2e failed (cold schema, the cause of A5; probe: the cached schema
