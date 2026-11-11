@@ -13445,20 +13445,47 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/stored-frame-bound",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T23:26:07",
+          "commit": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5",
+          "criteria": {
+            "A1": "build-test 261110-222851-fda023 (runs reader_check_test)",
+            "A2": "build-test 261110-222851-fda023"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-222851-fda023",
+              "level": "light",
+              "seconds": 697.9,
+              "state": "done",
+              "what": "stored-frame-bound check build-test at 94480d5251b3"
+            }
+          ],
+          "final": true,
+          "from": "71750940c36d238966ad41f941a638227896eef1",
+          "reason": "",
+          "tested": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5"
+        }
+      ],
       "lenses": [
         "security"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "A stored frame's records end where the next frame starts",
-      "updated": "2026-11-10T22:42:04",
-      "worktree": "../strata-wt/xapiand/stored-frame-bound"
+      "updated": "2026-11-10T23:26:11",
+      "worktree": ""
     },
     "stored-short-section": {
       "accepted": {},
