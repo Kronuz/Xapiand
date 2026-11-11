@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: waiting on jobs 261111-065032-2e5b27 261111-065033-c4aeb6 261111-064316-6b767a 261111-064318-2b7018 261111-062817-1fabdf
+State: waiting on jobs 261111-065349-3912eb 261111-065351-d0c5c6 261111-065354-020159 261111-065355-a0477c 261111-065359-06bdf8 261111-065400-8620b9 261111-062817-1fabdf
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,10 +9,10 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A5's test is now the suite's `catalog_relief` (test/catalog_relief_test.cc, CMakeLists.txt, strata
-fb15069a, per the lead). Queued: suite at fb15069a (A4, A5), the A5 mutant (catalog.hh from cf76b825),
-and A1's strict burst runs at bafafa9e (fb15069a changes no include/; catalog.hh is the same). Branch: 2ea3092b fixes, b7bd5251 driver,
-bafafa9e relief fix + docs/perf/flakes/relief_test.cc, docs 5e53b1a5 cf76b825 48e44b1f.
+Head strata fb15069a (catalog_relief in the suite). Suite 75/75 and A5 proven there. The CMakeLists
+change made A2's earlier jobs "other code", so A2 and A1 rerun at the head (ids in State): A2
+deterministic + mutant (light), TSan 2 x 10x16 strict (build 261111-065353-a3a24b, slot
+races-tsan-head); A1 burst 2 x 10x16 strict (build 261111-065357-424afb). A1's main run stands.
 
 ## Next
 
@@ -33,11 +33,11 @@ b7bd5251. A2's mutant: `--fails-without` job at the head with main's resource_bu
 
 | Criterion | Evidence |
 |---|---|
-| A1 | strict 10-min runs, 2 x 10 waves x 16 at head bafafa9e: 261111-064316-6b767a, 261111-064318-2b7018 (build 261111-064314-1e69d4, slot races-burst-head); main 10x16 --fails-without 261111-062817-1fabdf (build 261111-062806-177d38) |
-| A2 | 261111-061317-5cd220 (deterministic, passed at b7bd52511884); fails without: 261111-062645-154f0d (fails at resource_budget_test.cc:482); 261111-061320-6fa85e (TSan 20x16 at head: 0 of 320; main 3 of 320, 261111-053734-7d63a2) |
+| A1 | head fb15069a, strict 2 x 10x16: 261111-065359-06bdf8, 261111-065400-8620b9; main 10x16 --fails-without 261111-062817-1fabdf (build 261111-062806-177d38) |
+| A2 | head fb15069a: 261111-065349-3912eb (deterministic); fails without 261111-065351-d0c5c6; TSan strict 2 x 10x16 261111-065354-020159, 261111-065355-a0477c. At b7bd5251: 261111-061317-5cd220 passed, 261111-062645-154f0d failed at :482, TSan 20x16 0 of 320 261111-061320-6fa85e (main 3 of 320, 261111-053734-7d63a2) |
 | A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick()): one-line ordering comment at each changed atomic |
-| A5 | suite `catalog_relief` at fb15069a: 261111-065032-2e5b27; fails without: 261111-065033-c4aeb6 (catalog.hh from cf76b825). Earlier, before the move: 261111-064311-e887e9 passed, 261111-064312-7bf55a failed at close.end (2 descriptors, 2 vnodes booked, 0 held) |
-| A4 | 261111-065032-2e5b27 (suite at fb15069a); 261111-064319-b5b323 (74/74 at bafafa9e); earlier 261111-061322-03cbd0 (suite, passed at b7bd52511884); TSan suite and CI: CI's sanitizer matrix, on push (lead) |
+| A5 | suite `catalog_relief` at fb15069a: 261111-065032-2e5b27 (75/75); fails without: 261111-065033-c4aeb6 (catalog.hh from cf76b825: at close.end 2 descriptors, 2 vnodes booked, 0 held) |
+| A4 | 261111-065032-2e5b27 (suite 75/75 at fb15069a); TSan suite and CI: CI on push (lead) |
 
 ## Result
 
