@@ -2464,6 +2464,35 @@
       "updated": "2026-11-09T18:22:53",
       "worktree": ""
     },
+    "docs-site-icons": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cd docs && npm ci && npm run build",
+          "level": "light",
+          "minutes": 20,
+          "name": "site"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/astro.config.mjs",
+        "docs/public/**",
+        "docs/src/assets/**",
+        "brand/README.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "The docs site serves the brand's light and dark variants",
+      "updated": "2026-11-11T15:26:06"
+    },
     "docs-site-refresh": {
       "accepted": {},
       "after": [],
