@@ -1,6 +1,6 @@
 # cross-shard-followups: journal
 
-State: waiting on jobs 261111-141746-cf5a35 261111-141748-7c992a 261111-141751-586195 and the suite (see Doing)
+State: waiting on jobs 261111-141746-cf5a35 261111-141748-7c992a 261111-141751-586195 261111-141805-3e0ed7
 Quest: .campaign/xapiand/quests/cross-shard-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,7 +17,7 @@ passing and fails-without jobs (261111-133750-2603c2, -133753-938445, -133756-65
 the PATCH fails-without meant nothing; all are replaced by these at 24c5bacc6:
 - 261111-141746-cf5a35: both tests 50 times each in a loop (A1/A3 pass)
 - 261111-141748-7c992a, 261111-141751-586195: fails-without (must_exist disabled by sed), replace_by_term and PATCH
-- the suite for A4: see `campaign status` (submitted by `campaign verify ... --for A4` at 24c5bacc6)
+- the suite for A4: 261111-141805-3e0ed7 at 24c5bacc6
 
 ## Next
 
