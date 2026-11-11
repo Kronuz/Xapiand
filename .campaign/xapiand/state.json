@@ -8864,19 +8864,47 @@
       "files": [
         "test/manifest_log_test.cc"
       ],
-      "journal": "../Xapiand-wt/xapiand/manifest-replay-flake",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T11:21:29",
+          "commit": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "criteria": {
+            "A1": "261111-094709-7661b7",
+            "A2": "261111-110933-b9d191; fails without: 261111-095641-3865d7, 261111-095643-8cc48e",
+            "A3": "261111-094719-36c7e1"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-094709-7661b7",
+              "level": "light",
+              "seconds": 341.4,
+              "state": "done",
+              "what": "manifest-replay-flake check suite at 089cd74ad47b"
+            }
+          ],
+          "final": true,
+          "from": "3177e491a963d516f91efcb663f19afa4231ebe7",
+          "reason": "",
+          "tested": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "reason": "started by force: cold-tier-step2 holds test/** but its branch never changes test/manifest_log_test.cc (empty diff vs main)",
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "manifest_log's replay-cost check holds on shared CI runners",
-      "updated": "2026-11-11T09:25:01",
-      "worktree": "../strata-wt/xapiand/manifest-replay-flake"
+      "updated": "2026-11-11T11:21:34",
+      "worktree": ""
     },
     "merge-stream": {
       "accepted": {},
