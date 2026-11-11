@@ -62,6 +62,15 @@ Lead, 11-11, on the correctness review's F1 and F2 (verdicts at strata:ea54432b)
 - T1 cold 292 B against 16 B: a recorded residual, the hunt row "cold memory", its own quest.
 - `post_pass()` leaving `pass_queued_` set when its post throws stops every later pass: fixed in
   this quest, with a test that fails without it (lead, 11-11).
+Lead, 11-11 12:4x, on the investigation (strata:5d3c948a, 7b126bc1):
+- The soft-cap trigger stays only if it costs no throughput: passes rose 11,584 to 41,969 and Zipf
+  fell 375 to 311 req/s in single runs. One strict A/B, interleaved, trigger on against off; a
+  loss beyond the A/A spread means coalescing the trigger until it is within it.
+- T2 hot d1s1 MISS (+71% p50, 1.5 against 0.9 us, ranges apart; p99 +69%): a recorded residual;
+  follow-up quest profiles the catalog's hot request path.
+- T1 warm MISS (5,022 B against the design's 3,907 B): the design's piece list gains the measured
+  pieces (manifest and file maps, views, host IO, merge machinery); the miss joins T1 cold's
+  follow-up on memory per tier.
 
 ## May land early
 
