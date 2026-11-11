@@ -1760,7 +1760,7 @@ static void test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancel
 }
 
 // Both admission peaks rise under load and /:metrics shows them (T8): writers that wait for a held turn fill the
-// reactor's gate, and a restore's slices wait demoted while other requests arrive.
+// reactor's gate, and a script's slices wait demoted while other requests arrive.
 static void test_the_admission_peaks_rise_under_load() {
 	Watchdog watchdog("the admission peaks rise under load", 120s);
 	create_index("peaks", 1);
@@ -1779,20 +1779,22 @@ static void test_the_admission_peaks_rise_under_load() {
 	}
 	CHECK_GE(metric("xapiand_admission_inflight_peak"), static_cast<double>(writers));
 
-	std::string body;
-	for (int i = 0; i < 20000; ++i) {
-		body += R"({"_id":)" + std::to_string(i) + R"(,"v":"value )" + std::to_string(i) + "\"}\n";
-	}
-	std::atomic<bool> restored{false};
-	std::thread restore([&] {
-		CHECK(success(call("RESTORE", "/peaks_restore/?commit", body, "application/x-ndjson")));
-		restored = true;
+	// A script's slices wait demoted between its yields; scrapes admitted meanwhile find them.
+	std::atomic<bool> scripted{false};
+	std::thread scraper([&] {
+		while (!scripted.load() && metric("xapiand_scheduler_demoted_peak") < 1) {
+			std::this_thread::sleep_for(2ms);
+		}
 	});
-	double demoted = 0;
-	while (!restored.load() && demoted < 1) {
-		demoted = metric("xapiand_scheduler_demoted_peak");   // each scrape is an admission that samples the count
+	for (int i = 0; i < 5 && metric("xapiand_scheduler_demoted_peak") < 1; ++i) {
+		const auto put = call("PUT", "/peaks/100", R"({"_script":"local n = 0; for i = 1, 10000000 do n = n + i end; _doc.n = n"})");
+		CHECK(success(put));
+		if (!success(put)) {
+			std::fprintf(stderr, "  the script's PUT answered %d: %s\n", put.status, put.body.to_string().c_str());
+		}
 	}
-	restore.join();
+	scripted = true;
+	scraper.join();
 	CHECK_GE(metric("xapiand_scheduler_demoted_peak"), 1.0);
 }
 
