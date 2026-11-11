@@ -1,6 +1,6 @@
 # cross-shard-followups: journal
 
-State: fixing the PATCH test's order in the full binary (lead's msg: suite 261111-133814-8d444b and CI failed at tests/test_node.cc:2075); diag job 261111-135611-2a5bec
+State: waiting on jobs 261111-141746-cf5a35 261111-141748-7c992a 261111-141751-586195 and the suite (see Doing)
 Quest: .campaign/xapiand/quests/cross-shard-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-N1-N3 are committed (Xapiand:d291dbe03) and pushed. Jobs (the lead's inline resubmission; my first three, which ran a
-script outside the repo, were cancelled): 261111-133750-2603c2 (A1/A3 pass), 261111-133753-938445 and
-261111-133756-65f3d0 (A1 fails-without, must_exist disabled by sed). Suite for A4: 261111-133814-8d444b.
-Every job's command goes inline or in a committed file from now on.
+The lead's report: the PATCH test failed in the full binary and CI (tests/test_node.cc:2075). Cause (found with a
+diag job printing the PATCH's lookups, 261111-140319-4e82d8): not a race. `const MsgPack id{x.id}` with braces
+builds a one-element array, so the PATCH looked up the key of `["repatch"]`, found nothing and ended with
+doc_not_found at once. Fixed in Xapiand:24c5bacc6 (`MsgPack id(x.id)`); the diagnostics are reverted. The earlier
+passing and fails-without jobs (261111-133750-2603c2, -133753-938445, -133756-65f3d0) ran the broken PATCH test, so
+the PATCH fails-without meant nothing; all are replaced by these at 24c5bacc6:
+- 261111-141746-cf5a35: both tests 50 times each in a loop (A1/A3 pass)
+- 261111-141748-7c992a, 261111-141751-586195: fails-without (must_exist disabled by sed), replace_by_term and PATCH
+- the suite for A4: see `campaign status` (submitted by `campaign verify ... --for A4` at 24c5bacc6)
 
 ## Next
 
-1. When the four jobs finish, read results and CI.
+1. When the jobs finish, read results and CI (the old CI run failed at that PATCH test only); paste the Evidence table; State ready for review.
 2. Paste `campaign brief`'s Evidence table below, fill Result, set State "ready for review".
 
 ## Blocked on
