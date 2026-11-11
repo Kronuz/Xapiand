@@ -48,4 +48,5 @@ own `find_key` reads it in the turn the same way.
 `src/database/handler.{h,cc}` (`find_docid_term`, `written_docid_term`, `least_used_shard`),
 `src/database/shard.{h,cc}` (`Shard::written_key`, `Shard::written_count`), `src/engine/shard.h`,
 `src/engine/strata/shard.cc` (`written_key`, `written_count`). Tests: `tests/test_node.cc`
-(`test_a_restore_into_shards_writes_a_few_segments`, `test_an_existing_id_written_again_lands_on_its_shard`).
+(`test_a_restore_into_shards_writes_a_few_segments`, `test_an_existing_id_written_again_lands_on_its_shard`,
+`test_new_numeric_ids_spread_over_the_shards_while_buffered`).
