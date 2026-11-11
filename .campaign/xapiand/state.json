@@ -13364,24 +13364,7 @@
       "worktree": ""
     },
     "stored-frame-bound": {
-      "accepted": {
-        "security": {
-          "at": "2026-11-10T22:41:45",
-          "base": "71750940c36d238966ad41f941a638227896eef1",
-          "blobs": {
-            "include/strata/core/reader.hh": "100644:0938838077cb1ff41466536615782ffd3b77abc2",
-            "test/reader_check_test.cc": "100644:cba80001c7b5527316c593b641366f101077d757"
-          },
-          "by": "review",
-          "commit": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5",
-          "criteria": "7a70dffb8e4e7cc9",
-          "findings": {},
-          "note": "",
-          "review": "53ae4ea68a9d1c965253ed082c79c47326a07c48",
-          "reviewed": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5",
-          "verdict": "APPROVE"
-        }
-      },
+      "accepted": {},
       "after": [],
       "base": "71750940c36d238966ad41f941a638227896eef1",
       "branch": "quest/xapiand/stored-frame-bound",
@@ -13424,23 +13407,40 @@
           "weakened": [
             "gate check suite removed"
           ]
+        },
+        {
+          "at": "2026-11-10T22:42:03",
+          "lenses": [
+            [
+              "correctness",
+              "security"
+            ],
+            [
+              "security"
+            ]
+          ],
+          "reason": "a decoder fix: security is the dominant lens and its review approved",
+          "voided": [
+            "security"
+          ],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/stored-frame-bound",
       "landed": [],
       "lenses": [
-        "correctness",
         "security"
       ],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: cold-tier-step2's include/** glob; its branch changes neither reader.hh nor reader_check_test.cc (git diff main...quest/xapiand/cold-tier-step2 is empty for both)",
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
       "status": "active",
       "title": "A stored frame's records end where the next frame starts",
-      "updated": "2026-11-10T22:41:45",
+      "updated": "2026-11-10T22:42:03",
       "worktree": "../strata-wt/xapiand/stored-frame-bound"
     },
     "stored-short-section": {
