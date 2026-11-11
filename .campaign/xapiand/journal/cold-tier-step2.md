@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-034628-2701ae 261111-034629-8f5208 261111-034631-5cd30b
+State: waiting on jobs 261111-034629-8f5208
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -34,8 +34,9 @@ written (`docs/perf/catalog-tiers.md`).
 
 ## Next
 
-1. Read 8f5208 (T3 with the bracketed sampler: PASS and a gap near 3) into `docs/perf/catalog-tiers.md`,
-   and 5cd30b (build-test at the head). Then State: ready for review (correctness lens).
+1. Read 8f5208 (T3 with the bracketed sampler: PASS and a gap near 3) into `docs/perf/catalog-tiers.md`.
+   Then State: ready for review (correctness lens). Build-test at the head, 261111-034631-5cd30b,
+   passed; the binaries' build 261111-034628-2701ae passed.
 2. Delete `.scratch/tiers`, `.scratch/k6` and `.scratch/tiers-try` once the rows are final.
 
 ## Blocked on
