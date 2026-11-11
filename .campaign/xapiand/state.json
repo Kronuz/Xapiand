@@ -14388,20 +14388,50 @@
         "docs/perf/flakes.md",
         "docs/perf/flakes/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/strata-races",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T15:02:56",
+          "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
+          "criteria": {
+            "A1": "261111-140006-4ab0c7, 261111-140006-b16aad; fails without: 261111-062817-1fabdf",
+            "A2": "261111-140006-fa9275, 261111-140006-c99aec, 261111-140006-156822; fails without: 261111-062645-154f0d, 261111-065351-d0c5c6",
+            "A3": "[artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick(), resource_counts::book()/lower()/fall()/unbook(), release()): one-line ordering comment at each changed atomic",
+            "A4": "261111-134105-850ff0",
+            "A5": "261111-134105-850ff0, 261111-140006-8f9967, 261111-140006-fa9275; fails without: 261111-064312-7bf55a, 261111-065033-c4aeb6, 261111-110831-f89967, 261111-121453-bb533f"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-134105-850ff0",
+              "level": "light",
+              "seconds": 186.8,
+              "state": "done",
+              "what": "strata-races check suite at 7177fcc5c887"
+            }
+          ],
+          "final": true,
+          "from": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "reason": "",
+          "tested": "7177fcc5c8874e74eddd9cd280970e4a497e56f3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Two strata races found as test flakes are fixed",
-      "updated": "2026-11-11T15:02:48",
-      "worktree": "../strata-wt/xapiand/strata-races"
+      "updated": "2026-11-11T15:03:25",
+      "worktree": ""
     },
     "t11-barriers": {
       "accepted": {},
