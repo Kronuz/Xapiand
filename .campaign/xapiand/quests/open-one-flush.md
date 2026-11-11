@@ -5,7 +5,9 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`basic_index::open` makes the manifest log and its directory durable with one device flush
+(`sync_files_and_directory`, one F_FULLFSYNC on macOS) instead of two, keeping both syncs'
+guarantees (`docs/perf/open-sync.md`). Prototype: explore/open-sync, strata:54f9e0af.
 
 ## Acceptance criteria
 
@@ -14,18 +16,21 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 Both crash properties hold: T4 case 9 and the rollover-stop cases in `test/index_test.cc`
+  pass, and the mutant that syncs only on `rollover_owed_` fails case 9 (a job per side).
+- A2 The open's tail improves on macOS: one strict job of at most 10 minutes (D59), interleaved
+  pairs of `bench/open_sync/run.sh` at main and the quest head; p99 lower on most pairs.
+- A3 The strata suite passes at the head (build-test), with CI green on Linux.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changed: the open's durability contract (manifest-log D6.6, C4) stays as is.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Owner, open: whether a read-only open may skip the syncs (needs a contract change; this quest
+does not).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
