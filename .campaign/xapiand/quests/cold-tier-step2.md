@@ -49,6 +49,18 @@ quest changes no interface unless a T row forces it, and then names it here firs
   re-checks, the X-POOL host rulings); its documents land in strata's own `docs/`.
 - Linux runs on the local VM (D24); T3 at 1M indexes needs 12 to 16 GB (design D1).
 
+Lead, 11-11, on the correctness review's F1 and F2 (verdicts at strata:ea54432b):
+- T3 soft caps MISS (open above soft+16 in 212 of 248 samples after the touch, max 2,355 against
+  2,000; hot max 811 against 500; within only ~282 s later, once requests end, against a 1 s sweep):
+  the soft caps are this tier's purpose, so the quest finds the cause before landing (performance,
+  at most three experiments) and either fixes it or brings the owner a measured residual.
+- T2 hot d1s1 MISS (+56%, +40%, -7% per pair): one exclusive A/B against main with an A/A spread
+  decides whether it is real.
+- T2 cold d1000s1 and d1000s10: judge only pairs whose opens ran in the same device sync mode; a
+  pair split across modes measures the device, not the tier.
+- T1 warm heap: measure its pieces (one strict job) and judge the sum plus 7%.
+- T1 cold 292 B against 16 B: a recorded residual, the hunt row "cold memory", its own quest.
+
 ## May land early
 
 The design documents (task `design`), and tests that change no code.

@@ -290,7 +290,7 @@
       "files": [
         "docs/design/automata.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/automata-evaluation",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-09T21:02:45",
@@ -312,8 +312,8 @@
       "risk": "low",
       "status": "landed",
       "title": "Evaluate strata's automata and decide where it belongs",
-      "updated": "2026-11-09T21:02:46",
-      "worktree": "../prospect-wt/xapiand/automata-evaluation"
+      "updated": "2026-11-11T09:28:32",
+      "worktree": ""
     },
     "barrier-warning": {
       "accepted": {},
@@ -1703,9 +1703,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-10T16:27:29",
+      "updated": "2026-11-11T10:52:37",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
@@ -2110,6 +2110,8 @@
     "cross-shard-id": {
       "accepted": {},
       "after": [],
+      "base": "17fa91165f00c47a3ad2c6c6ef48a179074cd401",
+      "branch": "quest/xapiand/cross-shard-id",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2138,9 +2140,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A concurrent PUT never leaves an id on two shards",
-      "updated": "2026-11-11T08:57:01"
+      "updated": "2026-11-11T08:57:18",
+      "worktree": "../Xapiand-wt/xapiand/cross-shard-id"
     },
     "direct-pins": {
       "accepted": {
@@ -8699,7 +8702,7 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/manifest-log",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-10T16:25:34",
@@ -8747,8 +8750,8 @@
       "risk": "high",
       "status": "landed",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T19:23:46",
-      "worktree": "../strata-wt/xapiand/manifest-log"
+      "updated": "2026-11-11T09:28:41",
+      "worktree": ""
     },
     "manifest-log-prospect": {
       "accepted": {},
@@ -8843,6 +8846,65 @@
       "status": "landed",
       "title": "Manifest framing and codec",
       "updated": "2026-11-08T15:39:34"
+    },
+    "manifest-replay-flake": {
+      "accepted": {},
+      "after": [],
+      "base": "3177e491a963d516f91efcb663f19afa4231ebe7",
+      "branch": "quest/xapiand/manifest-replay-flake",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/manifest_log_test.cc"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T11:21:29",
+          "commit": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "criteria": {
+            "A1": "261111-094709-7661b7",
+            "A2": "261111-110933-b9d191; fails without: 261111-095641-3865d7, 261111-095643-8cc48e",
+            "A3": "261111-094719-36c7e1"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-094709-7661b7",
+              "level": "light",
+              "seconds": 341.4,
+              "state": "done",
+              "what": "manifest-replay-flake check suite at 089cd74ad47b"
+            }
+          ],
+          "final": true,
+          "from": "3177e491a963d516f91efcb663f19afa4231ebe7",
+          "reason": "",
+          "tested": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: cold-tier-step2 holds test/** but its branch never changes test/manifest_log_test.cc (empty diff vs main)",
+      "repo": "/Users/kronuz/code/Kronuz/strata",
+      "risk": "low",
+      "status": "landed",
+      "title": "manifest_log's replay-cost check holds on shared CI runners",
+      "updated": "2026-11-11T11:21:34",
+      "worktree": ""
     },
     "merge-stream": {
       "accepted": {},
@@ -13254,7 +13316,7 @@
         "README.md",
         "test/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/sortable-followups",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-09T17:43:39",
@@ -13293,8 +13355,8 @@
       "risk": "low",
       "status": "landed",
       "title": "sortable-proof review nits S1, S3, S4",
-      "updated": "2026-11-09T17:43:39",
-      "worktree": "../sortable-wt/xapiand/sortable-followups"
+      "updated": "2026-11-11T09:28:43",
+      "worktree": ""
     },
     "sortable-proof": {
       "accepted": {
@@ -15216,8 +15278,8 @@
       "risk": "high",
       "status": "landed",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-10T14:22:28",
-      "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
+      "updated": "2026-11-11T09:28:46",
+      "worktree": ""
     },
     "x-pool": {
       "accepted": {
@@ -16593,6 +16655,38 @@
       "status": "planned",
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
       "updated": "2026-11-10T05:35:56"
+    },
+    "xapiand-brand": {
+      "accepted": {},
+      "after": [],
+      "base": "163743a315c55a2b0bddc5e9eeef13e61b6c6e7a",
+      "branch": "quest/xapiand/xapiand-brand",
+      "checks": [
+        {
+          "cmd": "cd docs && npm ci && npm run icons && git diff --exit-code -- ../brand",
+          "level": "light",
+          "minutes": 20,
+          "name": "icons"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "brand/**",
+        "docs/scripts/build-icons.mjs",
+        "docs/package.json",
+        "docs/package-lock.json"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Xapiand has a brand/ directory with a vector master logo and its icon variants",
+      "updated": "2026-11-11T11:10:15",
+      "worktree": "../Xapiand-wt/xapiand/xapiand-brand"
     },
     "xapiand-final-release": {
       "accepted": {},
