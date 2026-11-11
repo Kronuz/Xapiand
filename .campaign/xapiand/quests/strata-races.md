@@ -23,8 +23,11 @@ job can show it.
   `--fails-without` for the main run.
 - A2 A deterministic test (the clock hook) fails without the `tick()` fix and passes with it; the
   TSan load run fails 0 of 320 at the head (main: 3 of 320, 261111-053734-7d63a2).
-- A3 The memory orderings are argued in a comment at each changed load and store (one line each):
-  [artifact] `include/strata/core/catalog.hh`.
+- A3 [artifact] The memory orderings are argued in a comment at each changed load and store (one
+  line each): `include/strata/core/catalog.hh`.
+- A5 `closing_over()`'s descriptor and vnode relief reads no stale order: `retire` unbooks the index
+  (`finish_close`) before it drops it, or the relief reads in the order that keeps a pass from
+  stopping short (docs/perf/flakes.md "Open"); a test or load run that fails without the change.
 - A4 The strata suite and its TSan build pass at the head, with CI green.
 
 ## Contracts
