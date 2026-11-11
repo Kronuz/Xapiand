@@ -16628,6 +16628,35 @@
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
       "updated": "2026-11-10T05:35:56"
     },
+    "xapiand-brand": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cd docs && npm ci && npm run icons && git diff --exit-code -- ../brand",
+          "level": "light",
+          "minutes": 20,
+          "name": "icons"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "brand/**",
+        "docs/scripts/build-icons.mjs",
+        "docs/package.json",
+        "docs/package-lock.json"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand has a brand/ directory with a vector master logo and its icon variants",
+      "updated": "2026-11-11T11:09:54"
+    },
     "xapiand-final-release": {
       "accepted": {},
       "after": [],
