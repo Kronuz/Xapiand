@@ -865,11 +865,14 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 			std::optional<rev> stored;
 			if (!native.key().empty()) {
 				// A document with a key is found by it; the id must be the one that holds the key.
-				if (const auto found = core.index->find_key(native.key())) {
+				const auto found = core.index->find_key(native.key());
+				if (args.must_exist && (!found || found->first != did)) {
+					// Gone from the id: checked as a write to no document, and answered instead of created.
+					check_version(args.expected_version, std::nullopt);
+					throw Error(errc::doc_not_found, "Document not found");
+				}
+				if (found) {
 					if (found->first != did) {
-						if (args.must_exist) {
-							throw Error(errc::doc_not_found, "Document not found");
-						}
 						if (replayed) {
 							// The key was erased and added again after this line: the index is past it.
 							WriteResult skipped;
@@ -881,9 +884,6 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 					}
 					stored = static_cast<rev>(found->second);
 				} else {
-					if (args.must_exist) {
-						throw Error(errc::doc_not_found, "Document not found");
-					}
 					stored = version_of(core, did);
 					if (stored && !replayed) {
 						// The id holds another document: the keyed one does not exist, and the other is not overwritten.
