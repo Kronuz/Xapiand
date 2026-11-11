@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261110-165548-809d01 261110-164238-c8f75e 261110-164726-ca2d5c
+State: waiting on jobs 261110-165622-0ff5b1 261110-164238-c8f75e 261110-164726-ca2d5c
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,8 +10,8 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 ## Doing
 
 Code criteria done (A6, A8, A12) and passing in build-test 261110-164227-8f0e42 (73 of 73, lazy
-default) at strata:5e06300b; the same check at the head strata:2a404927 (adds the K6 harness) is
-261110-165548-809d01. A7's recheck c8f75e and A9's strict ca2d5c are queued; A9's fixtures are
+default) at strata:5e06300b; the same check at the head strata:85dd1df6 (adds the K6 harness and docs) is
+261110-165622-0ff5b1. A7's recheck c8f75e and A9's strict ca2d5c are queued; A9's fixtures are
 built (95e365). A10's listing is written; prospect's suite under lazy segments fails 3 of 51
 (below), which blocks the lazy default's pin bump in prospect, not this branch.
 
@@ -29,7 +29,7 @@ built (95e365). A10's listing is written; prospect's suite under lazy segments f
 4. A4, A5: T1 to T4 and T2d need harnesses that do not exist (tier through the catalog, 1M
    indexes, Zipf, wake cost on `work_pool_executor`), and the Linux VM. A3's baselines first (the
    lead's).
-5. A11: CI on `quest/xapiand/cold-tier-step2`, run 42933999804 at strata:2a404927 (in progress;
+5. A11: CI on `quest/xapiand/cold-tier-step2`, runs at the head strata:85dd1df6 (42933999804 at strata:2a404927;
    42933456525 at strata:5e06300b was cancelled by the next push).
 
 ## Blocked on
@@ -55,12 +55,12 @@ built (95e365). A10's listing is written; prospect's suite under lazy segments f
 
 | Criterion | Evidence |
 |---|---|
-| A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test 261110-164227-8f0e42 passed (catalog_wake) at strata:5e06300b; 261110-165548-809d01 at the head |
+| A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test 261110-164227-8f0e42 passed (catalog_wake) at strata:5e06300b; 261110-165622-0ff5b1 at the head |
 | A7 | 261110-164238-c8f75e (queued): `tools/mutants/rollback.py` over `apply_atomic_test` and `tools/mutants/apply_throw_probe.cc`, three reverts of the rollback |
-| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261110-164227-8f0e42 passed (cold_segment) at strata:5e06300b; 261110-165548-809d01 at the head |
+| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261110-164227-8f0e42 passed (cold_segment) at strata:5e06300b; 261110-165622-0ff5b1 at the head |
 | A9 | 261110-164726-ca2d5c (strict, queued; fixtures and both harnesses built by 261110-164724-95e365) |
-| A10 | `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b); prospect lazy suite 261110-164333-5b4cd8 failed 3 of 51 (Blocked on) |
-| A12 | lazy is the default (strata:6d4e1164); build-test 261110-164227-8f0e42 passed 73 of 73 at strata:5e06300b with it; 261110-165548-809d01 at the head; eager whole run in 261110-164238-c8f75e (queued) |
+| A10 | `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b, strata:85dd1df6); prospect lazy suite 261110-164333-5b4cd8 failed 3 of 51 (Blocked on) |
+| A12 | lazy is the default (strata:6d4e1164); build-test 261110-164227-8f0e42 passed 73 of 73 at strata:5e06300b with it; 261110-165622-0ff5b1 at the head; eager whole run in 261110-164238-c8f75e (queued) |
 
 Examined: 261110-164701-5446c4 and 261110-164703-b52661, cancelled (the `$JOB_REF_MAIN` argument
 was not expanded without a shell; resubmitted through `bash -c`).
