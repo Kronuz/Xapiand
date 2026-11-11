@@ -1,6 +1,6 @@
 # e2e-report-cap: journal
 
-State: working
+State: waiting on jobs 261111-013408-376057
 Quest: .campaign/xapiand/quests/e2e-report-cap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Exploration. Cause (from job 261110-152519-7a2db9 log + newman 6.2.3 source): the json reporter does JSON.stringify(summary, 0, 2); each response body is a Buffer serialised as {type:Buffer,data:[one number per line]} (~19 bytes per body byte; 3.3M lines = 62.9 MB). e2e_assert.py reads status codes, assertions and the body only of failing requests. Exp 1 (job 261111-013408-376057, ~/.scratch/e2e-report-cap/exp1.sh): reproduce the full report and see why it does not parse.
 
 ## Next
 
-1. <step>
+1. Read exp1 output; pick the fix (slim newman reporter written by e2e_capture.sh vs filter); run the e2e; break an expectation for A2.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
