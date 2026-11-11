@@ -5,7 +5,11 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Two races found as flakes are fixed (prototype: strata explore/flakes, `docs/perf/flakes.md`):
+1. A close's end lowers the catalog's `closing_` before `live_`, and `closing_over()` reads `live_`
+   with acquire, so a close pass never stops one close short (`catalog.hh` `note()`, `closing_over()`).
+2. `resource_budget`'s `tick()` never leaves the external cap raised past a concurrent failure at
+   its count (`resource_budget.hh` `note_failure`, `tick`).
 
 ## Acceptance criteria
 
@@ -14,18 +18,23 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 `burst_closes` under load (20 waves x 16 processes, `docs/perf/flakes/repeat_load.sh`) fails
+  0 of 320 at the head; the same run at main failed 11 of 320 (261111-052507-6df290), tagged
+  `--fails-without` for the main run.
+- A2 A deterministic test (the clock hook) fails without the `tick()` fix and passes with it; the
+  TSan load run fails 0 of 320 at the head (main: 3 of 320, 261111-053734-7d63a2).
+- A3 The memory orderings are argued in a comment at each changed load and store (one line each):
+  [artifact] `include/strata/core/catalog.hh`.
+- A4 The strata suite and its TSan build pass at the head, with CI green.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changed.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: both fixes in one quest and one review (one reviewer, concurrency questions).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The deterministic tests.
