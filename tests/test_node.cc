@@ -1928,6 +1928,33 @@ static void test_the_admission_peaks_rise_under_load() {
 	CHECK_GE(metric("xapiand_scheduler_demoted_peak"), 1.0);
 }
 
+// HEAD answers with the status and headers a GET would, and no body (RFC 9110 9.3.2), a miss included; OPTIONS lists
+// the verbs the node routes, and none it does not (STORE).
+static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
+	Watchdog watchdog("head has no body and options lists the routed verbs");
+	CHECK(http_call(node_port, "PUT", "/head_idx/1", "{\"a\":\"b\"}").rfind("HTTP/1.1 2", 0) == 0);
+	const auto body_of = [](const std::string& response) {
+		const auto end = response.find("\r\n\r\n");
+		return end == std::string::npos ? std::string("<no head>") : response.substr(end + 4);
+	};
+	const auto miss = http_call(node_port, "HEAD", "/head_idx/2");
+	CHECK(miss.rfind("HTTP/1.1 404", 0) == 0);
+	CHECK_EQ(body_of(miss), std::string());
+	const auto hit = http_call(node_port, "HEAD", "/head_idx/1");
+	CHECK(hit.rfind("HTTP/1.1 200", 0) == 0);
+	CHECK_EQ(body_of(hit), std::string());
+
+	const auto options = http_call(node_port, "OPTIONS", "/");
+	const auto at = options.find("Allow: ");
+	CHECK(at != std::string::npos);
+	const auto allow = options.substr(at, options.find("\r\n", at) - at);
+	CHECK(allow.find(" STORE") == std::string::npos);   // RESTORE is a verb of its own
+	for (const char* verb : {"GET", "POST", "PUT", "PATCH", "UPDATE", "UPSERT", "DELETE", "HEAD", "OPTIONS", "SEARCH", "COUNT", "INFO", "COMMIT", "DUMP", "RESTORE", "CHECK", "FLUSH", "QUIT"}) {
+		CHECK(allow.find(std::string(" ") + verb) != std::string::npos);
+	}
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -1993,6 +2020,7 @@ int main(int argc, char** argv) {
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
+		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

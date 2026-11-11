@@ -285,6 +285,15 @@ bool can_preview(const ct_type_t& ct_type) {
 
 
 
+// The verbs the route table answers, for OPTIONS' Allow header.
+#if XAPIAND_DATABASE_WAL
+#define ALLOWED_WAL ", WAL"
+#else
+#define ALLOWED_WAL ""
+#endif
+static constexpr const char* ALLOWED_METHODS = "GET, POST, PUT, PATCH, UPDATE, UPSERT, DELETE, HEAD, OPTIONS, SEARCH, COUNT, INFO, COMMIT, DUMP, RESTORE, CHECK, FLUSH, QUIT" ALLOWED_WAL;
+
+
 // Emit a response through the generic HTTP library's ResponseWriter (Leg 2 stage
 // 3c). Mirrors the header set http_response() produces on the legacy path, minus
 // Content-Length + Connection, which the library's Writer frames itself (and the
@@ -329,7 +338,7 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 	}
 
 	if (options) {
-		writer.set_header("Allow", "GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS");
+		writer.set_header("Allow", ALLOWED_METHODS);
 	}
 	if (request.retry_after != 0) {
 		writer.set_header("Retry-After", std::to_string(request.retry_after));
@@ -342,6 +351,13 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 	}
 	if (!ct_encoding.empty()) {
 		writer.set_header("Content-Encoding", ct_encoding);
+	}
+
+	if (request.method == HTTP_HEAD) {
+		// A HEAD response has no body (RFC 9110 9.3.2): it names the length the GET would send.
+		writer.set_header("Content-Length", std::to_string(body.size()));
+		writer.end();
+		return;
 	}
 
 	writer.write(body);
