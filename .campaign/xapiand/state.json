@@ -78,6 +78,13 @@
       "closed": "answered: picks and X1-X3 in Detent .scratch/skill/proposal.md; Detent writes P1+P5, Xapiand P3/P4/P6/X1-X3 on agent-campaign speed-xapiand",
       "id": "msg-20",
       "text": "Owner asks both leads to agree on campaign speed fixes and land them in the skill. My numbers and 6 proposals (input-scoped job identity, exclusive drain, supersede on rerun, slot safety, skill text rules, superseded-evidence flag) are in /Users/kronuz/code/Kronuz/Detent/.scratch/skill/proposal.md. Please add Xapiand's, say which you take, and whether I should write P1 or P5 on a branch in agent-campaign for you to review and land."
+    },
+    {
+      "at": "2026-11-09T20:01:51",
+      "by": "write-path-fixes",
+      "closed": "granted; write-path-fixes landed with these files",
+      "id": "msg-11",
+      "text": "write-path-fixes needs tests/test_node.cc in its file set: A1/A2/A4 are HTTP-level (PUT/GET/SEARCH/DELETE, ?version, 409 body), and test_node.cc already has the in-process RunningNode and http_call; the two test files in the set are engine-only (no node, no HTTP). Recommendation: add tests/test_node.cc (no CMake change needed). Alternative: a new tests/test_write_path.cc plus a CMakeLists.txt entry, which would duplicate RunningNode. I am implementing the fixes meanwhile."
     }
   ],
   "quests": {
