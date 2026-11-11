@@ -19,10 +19,12 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test passes at head: build-test 261110-222851-fda023 (runs reader_check); revert job 261110-222857-88df36; review probe overlap.sh at head 261110-222853-29eb1c (an earlier run at strata:e5979526, 261110-222606-747771, exited 0 too) |
+| A1 | build-test 261110-222851-fda023 (runs reader_check_test); the review probe overlap.sh at the head 261110-222853-29eb1c, 0 of 40 reads differing |
 | A2 | build-test 261110-222851-fda023 |
 
 ## Fails without the fix
+
+- Revert job 261110-222857-88df36 on refs/scratch/sfb-revert: CHECK(threw) fails at reader_check_test.cc:180 ("ACCEPTS the overlap") in both cases.
 
 - 261110-222857-88df36: scratch commit (refs/scratch/sfb-revert in the strata repo: head with reader.hh as before the fix) builds reader_check_test and requires it to fail; the job exits 0 when it fails.
 - 261110-222619-9b3428: earlier revert job, failed to compile (test bug, fixed in strata:94480d52); not evidence. 261110-222541-cd9abe: build-test at the uncompilable test, cancelled.
