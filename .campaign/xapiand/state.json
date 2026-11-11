@@ -2789,18 +2789,45 @@
         "harness/e2e_capture.sh",
         "harness/e2e_assert.py"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T02:37:38",
+          "commit": "febcbf6197663f95cdd4588ef85d43e9973dc627",
+          "criteria": {
+            "A1": "261111-021403-d5aac8",
+            "A2": "261111-021403-d5aac8"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "83b55a681e9476d63aff3e09e449f6cfeb9aeb96",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-021405-15e831",
+              "level": "light",
+              "seconds": 293.4,
+              "state": "done",
+              "what": "e2e-report-cap check suite at 83b55a681e94"
+            }
+          ],
+          "final": true,
+          "from": "5801827eb53357de483e15999eaa867ebd078b6a",
+          "reason": "",
+          "tested": "83b55a681e9476d63aff3e09e449f6cfeb9aeb96"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "reason": "started by force: x7-gate's harness/** glob is broad; its branch touches neither e2e_capture.sh nor e2e_assert.py",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "The docs E2E's newman report stays parseable",
-      "updated": "2026-11-11T01:30:13",
-      "worktree": "../Xapiand-wt/xapiand/e2e-report-cap"
+      "updated": "2026-11-11T02:37:44",
+      "worktree": ""
     },
     "engine-core": {
       "accepted": {},
