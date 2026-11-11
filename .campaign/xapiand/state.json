@@ -8847,6 +8847,32 @@
       "title": "Manifest framing and codec",
       "updated": "2026-11-08T15:39:34"
     },
+    "manifest-replay-flake": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/manifest_log_test.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "manifest_log's replay-cost check holds on shared CI runners",
+      "updated": "2026-11-11T09:24:43"
+    },
     "merge-stream": {
       "accepted": {},
       "after": [],
