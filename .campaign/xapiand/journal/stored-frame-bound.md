@@ -19,8 +19,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261110-222851-fda023 (runs reader_check_test); the review probe overlap.sh at the head 261110-222853-29eb1c, 0 of 40 reads differing |
+| A1 | build-test 261110-222851-fda023 (runs reader_check_test) |
 | A2 | build-test 261110-222851-fda023 |
+
+The review probe overlap.sh against prospect with strata at the head, job 261110-222853-29eb1c, exits 0 with 0 of 40 reads differing.
 
 ## Fails without the fix
 
