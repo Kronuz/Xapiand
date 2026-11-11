@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: fixes ready: F1, F2, F5
+State: waiting on jobs 261111-113113-f9464c 261111-113116-5b7a23 261111-113118-6d8a9c 261111-113121-6aaa2d
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,26 +9,27 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Head strata:ea54432b (docs only over 9621595f; not pushed: contributors never push). Correctness
-review CHANGES at 58812244 (`.campaign/xapiand/reviews/cold-tier-step2-correctness.md`); the
-lead's rulings applied, docs only, in `docs/perf/catalog-tiers.md` "Verdicts against the design's
-targets":
+Lead's rulings of 11-11 (quest Decisions) on F1/F2, performance assignment. Head strata:472ec032
+(main merged at ce47db02).
 
-- F1: T3 judged at every sample after the touch (8f5208's 248 samples): MISS. Open over 2,016 in
-  212, hot over 516 in 167, up to 2,355 and 811; within only from the first sample after the Zipf
-  requests end, about 282 s after the touch, against a 1 s sweep period (passes repost at once).
-  Likely cause, unmeasured: posted transitions queued on the eight chores behind opens' syncs.
-- F2: verdict lines: T1 hot MET (K6); T1 warm 0 maps MET, heap not judgeable (no job measures
-  the pieces at this commit; N1's pieces indicate 5,851 B against 5,084 B); T1 cold MISS (292 B);
-  T2 hot d1s1 MISS (+56%, +40%, -7% p50 per pair); T2 cold d1s1 MET, d1000s1 and d1000s10 MISS
-  in pairs on different sync modes (+1,538% and +765% p50); T2d MET; T3 hard caps MET; T4 MET.
-- F5: the 11 descriptors are the sampler's window (budget, kernel with the region walk, budget):
-  short-lived descriptors, at most one per concurrent chore, over stdio's steady 3 (193 of 309).
-- F4: a line beside A5's margin ties it to the open's two syncs.
+- T3 soft caps (F1): flow line per sample (strata:d6e65ea8: transitions in flight, booked
+  relief, counts net of it, passes/reposts/demotes/closes per second). Reading of 8f5208 before
+  measuring: hot and open climb by about the inflow (119 opens/s, ~70 wakes/s plus first maps)
+  within a second and fall back at the next pass; the catalog's own soft caps have no crossing
+  trigger (the budget's do: `resource_budget::reserve` posts on its soft cap's edge), so in T3,
+  far below the budget's caps, only the 1 s timer posts passes. Hypothesis to test: overshoot ~
+  inflow x period, not queued transitions. Job 261111-113116-5b7a23 (strict, after build f9464c).
+- T2 hot d1s1: `tiers.sh t2hot` (strata:f3f7d9c2), 8 pairs alternating order, exclusive:
+  261111-113118-6d8a9c.
+- T2 cold: rejudged on same-mode pairs from fdea98, 609714, f9dbcf (strata:472ec032): d1s1 and
+  d1000s1 MET; d1000s10 p50 MET, p99 +13.9% MISS as read, inside main's own 13% p99 spread.
+- T1 warm: `tiers.sh t1pieces` (live allocation sites after warm, atos-named; the site recorder
+  made thread-safe): 261111-113121-6aaa2d.
 
 ## Next
 
-1. The lead rules on F1's miss and F2's residuals.
+1. Read 5b7a23's flow lines; confirm or reject the period hypothesis; at most three experiments.
+2. Read 6d8a9c (T2 hot) and 6aaa2d (T1 warm pieces); write the verdict lines.
 
 ## Follow-up (review findings, not fixed here)
 
