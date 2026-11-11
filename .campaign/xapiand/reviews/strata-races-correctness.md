@@ -86,3 +86,88 @@ strata 2a4d2aa0 and patches its own checkout. Superseded: 261111-090047-ed7ff8 (
   short) is argued from `closing_over()`, not measured; the instrumented states are what it reads.
 - Linux, FreeBSD and x86_64: CI's. My probes ran on this macOS arm64 host only.
 - Xapiand-side callers of the catalog: not in this quest.
+
+## Re-check
+
+Commit: strata:7b579648ac1b
+Verdict: CHANGES
+Date: 2026-11-11
+
+Scope: 2a4d2aa0..7b579648 only (the booking moved into `resource_counts::booked`, lowered in
+`resource_reservation::release()`; `unbook_for_close()` removed; `catalog_relief` gains a replace
+case; `resource_budget_test` gains `booking_falls`).
+
+### Evidence I relied on
+
+- C2 fails-without, 261111-110831-f89967 (exit 0, built and ran): with 2a4d2aa0's two headers the
+  sweep case passes and the replace case fails at `catalog_relief_test.cc:101`, "booked 2
+  descriptors 4 vnodes, slot holds 2 and 3" from `holder.reclaim` through `chore.replace`. The
+  right reason: the drain's drops outlive the booking until the replace chore.
+- C1 probe, 261111-110833-b55465 (exit 1): stale 0 at every site in eight of nine tests; the warm
+  close's `after-demote-reclaim0` was reached in catalog_wake (2) and catalog_sweep (1),
+  `after-bound-commit-demote` (3, 1), `after-reclaim` (3), `replace-chore-start` (533 in stress,
+  555 in teardown). It exits 1 because catalog_test did not build (C7), so catalog_test, where the
+  first review saw the warm close go stale, is not covered by it.
+- Suite, 261111-110829-ecdfb8: failed (C7). A2, 261111-110836-43a905: failed, `booking_falls` at
+  `resource_budget_test.cc:551` in 8 of 200 rounds (C6).
+- The A1 and TSan load jobs (c0e9c3, d29e6d, 5573ed, 0bff87) were still running or queued; not read.
+
+### What I checked myself
+
+1. Risk 1, `book()` against one `release()` (by reading): a store-buffering pair, all four accesses
+   seq_cst (`resource_budget.hh:89`, `:104-105`, `:418`): either the release's load of the booking
+   follows `book()`'s store (it lowers) or `book()`'s load of the count follows the drop (it lowers);
+   a stale relaxed `c` is corrected by that lowering. Every change to a slot's booking is a CAS,
+   exchange or store-from-0, each matched by one RMW on the holder's sum, so no update is lost and
+   the sum ends equal to the slots' bookings. The sum dipping during `book()` is an over-count.
+   This part holds.
+2. Risk 1, two lowerings of one slot (probe `probe_two_droppers.sh` + `patch_two_droppers.py`, job
+   261111-111453-ea2d6a, strict): it fails. `lower()` CASes the slot's booking and only then
+   subtracts from the holder's sum (`resource_budget.hh:107-108`), and `release()` fences only when
+   its own `lower()` lowered (`:422`). A drop whose booking another thread already lowered (a second
+   release on the slot, or `book()`'s own `lower()`) finds nothing to lower, skips the fence and
+   drops the catalog count (`:424`) while that other thread's holder subtraction is pending or not
+   ordered before it. A reader then sees the count fall with the sum still above it: the state A5
+   rules out. In sequential terms: R1 drops the slot 64 to 63, R2 drops it to 62 and CASes the
+   booking 64 to 62, R1 sees 62 <= 62 and drops the catalog to 63, the reader reads 63 against a
+   sum of 64. Two threads dropping 128 reservations of one booked slot, a reader as `closing_over()`
+   reads: head 25 to 78 bad reads per run (of 42-46 M, 5 of 5 runs); a yield between the CAS and the
+   subtraction, 0.6 to 1.1 M per run; holder-first lowering (subtract, then a release CAS, add back
+   on failure) with `release()`'s fence unconditional, 0 of 106-126 M per run even with the yield.
+   The contributor's own `booking_falls` hitting it with one dropper fits the `book()` case.
+3. Risk 2, every drop path: the slot and catalog counts are written only by `reserve()`
+   (`resource_budget.hh:263-264`) and `release()` (`:414-427`), plus the leak-on-destroy zeroing,
+   which zeroes `booked` too (`catalog.hh:2450-2451`, `:2460-2461`); every reservation the catalog
+   makes carries both counts (`catalog.hh:1563`). Drain, merge commit, warm demote + `reclaim(0)`,
+   bound commit, `reclaim()`, `close()` and `retire` (the IO's directory descriptor included) all
+   drop through `release()`. No bypass. The bookings end at `end_at` (`catalog.hh:1720`),
+   `after_close` (`:2154`) and `:2237`.
+4. Risk 3: C2's case fails at 2a4d2aa0 for the right reason (above). The C1 probe reaches the warm
+   close's preparation only in catalog_wake and catalog_sweep (3 visits, stale 0); catalog_test, the
+   test that showed it, did not run.
+5. Risk 4: the demotion's maps relief (`pend_maps`, `pending_maps_`, read by `pass()`'s `over_maps`
+   at `catalog.hh:624-625`) is outside A5, which names `closing_over()`'s descriptor and vnode terms.
+   But flakes.md does not name it: "maps" appears there only in the list of the close chore's drops;
+   the residual is in the journal (item 10) only.
+
+### Findings (re-check)
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| C1 | no | defect | Closed for the state window: the booking now falls at the one drop point, on every path (check 3); the long-lived stale booking the first review saw is gone (stale 0 across eight tests). The residual race in the new mechanism is C6. | jobs 261111-110833-b55465; `resource_budget.hh:414-427` | Closed once C6 and C7 are fixed and the probe's catalog_test row runs stale 0. |
+| C2 | no | gap | Closed: `replace_with_draining_holders` (`catalog_relief_test.cc:77-105`) fails with the fix reverted, at the drain's drops. | job 261111-110831-f89967 | None. |
+| C6 | yes | defect | A drop whose booking another thread lowered publishes the catalog's lower count without ordering against that lowering's holder subtraction: `lower()` subtracts from the sum after its CAS (`resource_budget.hh:107-108`) and `release()` fences only when it lowered (`:422`). `closing_over()` then subtracts relief for counts already gone, for a moment: the A5 class, reached with two concurrent drops on a closing slot or a drop racing `book()`. The contributor's `booking_falls` fails at the head. | job 261111-110836-43a905 (`resource_budget_test.cc:551`, 8 of 200 rounds); job 261111-111453-ea2d6a (head 25-78 per run, 5 of 5; fixed variant 0) | Options: (a) lower the holder's sum first, then the slot's booking with a release CAS (add back on failure), and fence in `release()` whenever a booking was seen (the probe's `fixed` variant); (b) fence unconditionally and have a lowering that finds the booking already lowered wait out or redo the other's subtraction. Test: `booking_falls` passing, plus a two-dropper round (as in `patch_two_droppers.py`), in the suite and the TSan load run. |
+| C7 | yes | defect | The suite does not build: `catalog_test.cc:1057` `static_assert(cat_t::slot_bytes() <= 192)` fails at 200 B. `booked[3]` (12 B, `resource_budget.hh:69`) replaces `pend_desc`/`pend_vnodes` (4 B), so every slot grows 8 B. | job 261111-110829-ecdfb8; job 261111-110833-b55465 (`catalog_test: build failed`) | Options: (a) book only descriptors and vnodes on the slot, in 16 bits (saturating, as before), with the holder's 64-bit sum kept outside the slot's struct; (b) find the 8 B elsewhere in the slot; (c) raise the 192 B bound, which is D4's slot-cost target and the lead's or owner's call with numbers. Test: the suite builds and passes. |
+| C8 | no | gap | The demotion's maps relief keeps the stale-booking shape; outside A5's claim, but flakes.md does not name it, only the journal. | `catalog.hh:624-625`; flakes.md "Descriptor and vnode relief" | Add a line to flakes.md's "Not covered". |
+| C9 | no | nit | `replace_with_draining_holders` prints "ok" after a failed CHECK (seen in f89967's log). | `catalog_relief_test.cc:104` | Print only when `sm.over == 0`. |
+
+C4 is addressed by flakes.md (retire's drops lower like any other, through `release()`'s fence) and
+C5 by the relaxed fall at `catalog.hh:1059`; C3 stays an optional note.
+
+### Not run (re-check)
+
+- No TSan build; the contributor's TSan load runs were still queued.
+- The fixed variant ran only the two-dropper case, not `booking_falls`; it shows the shape, not the
+  fix.
+- catalog_test under the C1 probe (it does not build at this commit).
+- Linux, FreeBSD and x86_64: CI's.
