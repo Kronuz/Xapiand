@@ -122,10 +122,8 @@ for _ in $(seq 1 120); do
 done
 
 echo "node up (pid $pid); newman -> $OUT"
-# The stock json reporter writes every response body as a Buffer, one number per line (~19 bytes per
-# body byte: 63 MB, which the assert cannot parse). The `slim` reporter writes the same report but keeps
-# a body (its first 2800 bytes, the 700 characters e2e_assert.py shows) only for a request with a failed assertion, the one place e2e_assert.py prints it;
-# E2E_BODIES=1 keeps every body for e2e_diff.py and bodydiff.py.
+# The stock reporter writes each body byte as a line (a 64 MB report); `slim` keeps a body's first 2800
+# bytes only for a request with a failed assertion. E2E_BODIES=1 keeps every body (e2e_diff.py, bodydiff.py).
 reporter=slim
 if [ -n "${E2E_BODIES:-}" ]; then
 	reporter=json
