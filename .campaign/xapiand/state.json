@@ -2140,9 +2140,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A concurrent PUT never leaves an id on two shards",
-      "updated": "2026-11-11T08:57:18",
+      "updated": "2026-11-11T11:25:40",
       "worktree": "../Xapiand-wt/xapiand/cross-shard-id"
     },
     "direct-pins": {
