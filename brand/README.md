@@ -16,8 +16,8 @@ The raster drew its layers 0.73 px right of the hexagon's axis and its middle la
 the master centers the stack and spaces the layers evenly. `logo-vs-png.png` shows the raster,
 the master at the same size and larger, and their difference.
 
-`npm run icons` in `docs/` (`docs/scripts/build-icons.mjs`) renders every variant from the
-master into `variants/<name>/`, rasterizing each PNG once at its exact size:
+`node brand/build-icons.mjs`, run from the repository root after `npm ci` in `docs/`, renders
+every variant from the master into `variants/<name>/`, rasterizing each PNG once at its exact size:
 
 - `logo.svg` is the master in the variant's colors.
 - `favicon.svg` serves tabs at any DPR, and `favicon.ico` (16, 32 and 48 px frames) is the

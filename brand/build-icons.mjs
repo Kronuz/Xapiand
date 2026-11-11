@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Renders every icon variant from the vector master, brand/logo.svg (`npm run icons`), into
-// brand/variants/<name>/. Each PNG is rasterized once, at its exact pixel size.
+// Renders every icon variant from the vector master, brand/logo.svg, into brand/variants/<name>/.
+// Each PNG is rasterized once, at its exact pixel size.
+// Run from the repository root after `npm ci` in docs/: `node brand/build-icons.mjs`.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import sharp from 'sharp';
 
 // Fills of the master's three paths, and the opaque tile behind the touch icons. iOS and
 // Android flatten a transparent icon onto white, so the tile is the page color of the
@@ -18,7 +19,8 @@ const INNER = 5 / 6; // the hexagon is the rim scaled by 5/6 about the center (b
 // on alpha firms it up.
 const GAMMA = { 16: 0.7, 32: 0.7, 48: 0.85 };
 
-const root = fileURLToPath(new URL('../../', import.meta.url));
+const root = fileURLToPath(new URL('../', import.meta.url));
+const sharp = createRequire(`${root}docs/package.json`)('sharp'); // the docs site's own dependency
 const master = readFileSync(`${root}brand/logo.svg`, 'utf8');
 const [, viewBox, body] = master.match(/viewBox="([^"]+)"[^>]*>([\s\S]*)<\/svg>/);
 const [x, y, w, h] = viewBox.trim().split(/\s+/).map(Number);
