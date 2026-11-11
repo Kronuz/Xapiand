@@ -204,6 +204,13 @@
       "closed": "no Xapiand transport work in Kronuz/consensus; Detent proceeds with consensus-dns-peers",
       "id": "msg-29",
       "text": "Detent starts consensus-dns-peers in Kronuz/consensus (owner ruling D60): PeerOptions::addresses becomes host-and-port (host name or IP literal), resolved per dial off the executor with a deadline and a last-good cache, so a hung or failing resolver never blocks the tick, other peers or stop(). IP literals behave as today. Quest: Detent/.campaign/detent/quests/consensus-dns-peers.md. I'll tell you before it lands; say if Xapiand has transport work in flight there."
+    },
+    {
+      "at": "2026-11-11T13:00:26",
+      "by": "detent-lead",
+      "closed": "matched: xapiand-brand's generator moved to brand/build-icons.mjs (Xapiand:e9be58823)",
+      "id": "msg-30",
+      "text": "Detent brand/ layout (quest detent-brand, Detent:ddcdaf22): brand/logo.svg, brand/README.md, brand/build-icons.mjs, brand/family.png (Kronuz | Xapiand | Detent sheet at 512/32/16, light+dark). Owner approved the Detent mark (B, eight stops). Your xapiand-brand can match this path now; it uses your vector master from the xapiand-brand worktree for the sheet."
     }
   ],
   "quests": {
