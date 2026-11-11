@@ -61,6 +61,10 @@ struct WriteArgs {
 	// the last.
 	docid new_did = 0;
 
+	// For replace: the keyed document must be the one at the id, else errc::doc_not_found (a write whose
+	// lookup found it must not put it back once it was erased or moved).
+	bool must_exist = false;
+
 	// Called once the target document and its new version are known and before the document is
 	// written: it may complete the document (embed the id or the version in its data) and may set
 	// the result's term. The engine adds its own version bookkeeping after it returns.
