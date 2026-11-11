@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: fixes ready: C6, C7 with jobs 261111-121449-2bc470 261111-121450-3218fe 261111-121453-bb533f 261111-121510-fbd377 261111-121513-28aadf 261111-121515-de9f0a 261111-121519-849eaa 261111-121521-62916a
+State: waiting on jobs 261111-132148-b13922 (suite at 289bdfd3) and CI run 43102376209
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,12 +20,20 @@ with no failed CHECK. New suite case `two_droppers`; `BOOKING_ONLY=1 ROUNDS=N` r
 cases alone (`docs/perf/flakes/booking_load.sh`, the reviewer's two-droppers probe adapted: it adds
 a case the suite now has).
 
+Slot layout fix at strata 289bdfd3 (CI 43094670390 failed linux-tsan, linux-asan-ubsan:
+`slot_bytes() <= 192` was 200). Record dump (clang -fdump-record-layouts, libc++): the slot at
+22a9a750 was dsize 185 (pend_desc/pend_vnodes -4 B, `counts` 32 -> 40 B), so 193 with libstdc++'s
+32 B string, rounded to 200. `streak` and `fences` (uint8 each, offsets 174/175) become
+`std::uint8_t streak : 4, fences : 4` saturating at `max_exponent` 15: both are backoff exponents and
+`backoff_ns()` is flat from 11; every access is under the shard mutex already. Now dsize 184:
+184 B libc++, 192 B libstdc++. Booking mechanism untouched.
+
 ## Next
 
 1. Lead: when the jobs in State pass, `campaign accept strata-races correctness --confirm
    C6=261111-121510-fbd377 C7=261111-121449-2bc470` (suite 261111-121449-2bc470; C6 failed at
    7b579648: 261111-111453-ea2d6a, 261111-110836-43a905).
-2. A4: CI at 22a9a750.
+2. A4: CI run 43102376209 at 289bdfd3 (linux-tsan, linux-asan-ubsan build the slot at 192 B).
 
 ## Blocked on
 
@@ -109,3 +117,5 @@ the fb15069a A2/A5 jobs for the code at 7b579648; the 7b579648 jobs (C6, C7) for
 12. C6 covers `unbook()` too: its exchange-to-0-then-subtract had the reviewer's window against a
     drop (a drop seeing booking 0 skips lowering while the sum still holds it), so `lower()` and
     `unbook()` share `fall()`.
+13. Slot bytes (lead's ruling: keep the booking, recover bytes elsewhere): `streak`/`fences` to 4-bit
+    fields (bound: `backoff_ns()` is flat from exponent 11), one byte back; slot 192 B on libstdc++.
