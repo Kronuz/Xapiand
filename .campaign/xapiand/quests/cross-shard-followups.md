@@ -5,27 +5,30 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The non-blocking findings of `reviews/cross-shard-id-correctness.md` (N1-N3) are closed; N4
+(unreferenced blobs after a failed must_exist) stays in the journal as known.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 N1: the replace_by_term and PATCH tests in `tests/test_node.cc` (around 1868, 1882-1895)
+  order their race with held turns or another deterministic hook, not sleeps, and assert the
+  order was reached; each still fails with its fix removed (`--fails-without`, a command that
+  exits 0 only when that named test prints FAIL at a commit that builds, stderr captured).
+- A2 N2: `index(did)` (src/database/handler.cc:474-479) catches doc_not_found only, so a
+  commit's not_found after an applied write is never placed twice; a test that fails without it
+  if one can be built, else the reasoning in the journal.
+- A3 N3: must_exist without a key asserts (src/engine/strata/shard.cc:866-869).
+- A4 The suite passes at the head, with CI green.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: normal risk; review waived if A1-A3 carry their proofs (small, test-heavy, no new
+mechanism).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
