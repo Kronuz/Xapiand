@@ -10659,6 +10659,37 @@
       "title": "Update library pins and verify behavior",
       "updated": "2026-11-08T15:39:52"
     },
+    "placement-without-flush": {
+      "accepted": {},
+      "after": [],
+      "base": "966edb73a5a25dbcd2c4788e496371c05f06b280",
+      "branch": "quest/xapiand/placement-without-flush",
+      "checks": [],
+      "consumes": [],
+      "files": [
+        "src/database/handler.cc",
+        "src/database/handler.h",
+        "src/database/shard.cc",
+        "src/database/shard.h",
+        "src/engine/**",
+        "tests/test_node.cc",
+        "tests/test_shard*.cc",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "active",
+      "title": "New documents are placed without flushing every shard",
+      "updated": "2026-11-10T18:54:37",
+      "worktree": "../Xapiand-wt/xapiand/placement-without-flush"
+    },
     "pool-concurrency": {
       "accepted": {},
       "after": [],
@@ -12997,7 +13028,25 @@
       "updated": "2026-11-08T15:40:25"
     },
     "stored-check-cache": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T18:47:37",
+          "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+          "blobs": {
+            "CMakeLists.txt": "100644:53a2bea1ea4b6b1c216014b81d6e2028b5c1e456",
+            "include/strata/core/reader.hh": "100644:d51cde8beb9659ca9e839afad225981abb2bd95d",
+            "test/reader_check_test.cc": "100644:37e5cc45b794a488724d65ef65382b79c6bdedbb"
+          },
+          "brief": "aaa19487a6fdcd34",
+          "by": "waived",
+          "commit": "71750940c36d238966ad41f941a638227896eef1",
+          "findings": {},
+          "note": "D57: normal risk, a one-line cache reuse in stored_plugin::check; the lead read the diff; revert job 74c93c fails reader_check_test without the fix",
+          "review": "",
+          "reviewed": "",
+          "verdict": ""
+        }
+      },
       "after": [],
       "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
       "branch": "quest/xapiand/stored-check-cache",
@@ -13057,7 +13106,7 @@
       "risk": "normal",
       "status": "active",
       "title": "strata's stored check decodes with one frame cache",
-      "updated": "2026-11-10T18:16:06",
+      "updated": "2026-11-10T18:47:37",
       "worktree": "../strata-wt/xapiand/stored-check-cache"
     },
     "stored-short-section": {
