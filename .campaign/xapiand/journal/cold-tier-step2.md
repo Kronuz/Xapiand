@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-113113-f9464c 261111-113116-5b7a23 261111-113118-6d8a9c 261111-113121-6aaa2d 261111-113837-7882c4 261111-113839-ade11c 261111-113854-c2c774 261111-113856-358d4c
+State: waiting on jobs 261111-123742-b13378 261111-123743-7732e9 261111-123757-b065fc 261111-123758-7ea903 261111-123800-7a33ff
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,42 +9,33 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Lead's rulings of 11-11 (quest Decisions) on F1/F2, performance assignment. Head strata:472ec032
-(main merged at ce47db02).
+Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (code at 7b126bc1).
 
-- T3 soft caps (F1): flow line per sample (strata:d6e65ea8: transitions in flight, booked
-  relief, counts net of it, passes/reposts/demotes/closes per second). Reading of 8f5208 before
-  measuring: hot and open climb by about the inflow (119 opens/s, ~70 wakes/s plus first maps)
-  within a second and fall back at the next pass; the catalog's own soft caps have no crossing
-  trigger (the budget's do: `resource_budget::reserve` posts on its soft cap's edge), so in T3,
-  far below the budget's caps, only the 1 s timer posts passes. Hypothesis to test: overshoot ~
-  inflow x period, not queued transitions. Job 261111-113116-5b7a23 (strict, after build f9464c).
-  Experiment 1 (queued before the measurement read, on the strength of 8f5208's sawtooth):
-  strata:5d3c948a, a miss and a last unpin post a pass when soft_open or soft_hot is over net of
-  relief in flight (`over_soft()`), test `soft_caps_post` (timer never fires). Jobs: build-test
-  261111-113837-7882c4, mutant (calls removed, must fail) 261111-113839-ade11c, tiers build
-  261111-113854-c2c774 then T3 rerun 261111-113856-358d4c. If 5b7a23 rejects the hypothesis,
-  revert 5d3c948a.
-- T2 hot d1s1: `tiers.sh t2hot` (strata:f3f7d9c2), 8 pairs alternating order, exclusive:
-  261111-113118-6d8a9c.
-- T2 cold: rejudged on same-mode pairs from fdea98, 609714, f9dbcf (strata:472ec032): d1s1 and
-  d1000s1 MET; d1000s10 p50 MET, p99 +13.9% MISS as read, inside main's own 13% p99 spread.
-- T1 warm: `tiers.sh t1pieces` (live allocation sites after warm, atos-named; the site recorder
-  made thread-safe): 261111-113121-6aaa2d.
+- T3 (F1): cause measured (5b7a23, strata:f3f7d9c2, Zipf medians): 0 slots demoting/closing, net
+  open 2,043 and hot 572 (= the counts); passes 19/s of which 1 started (the timer), 18 reposts.
+  The catalog's own soft caps had no trigger; a timed pass's repost chain ends once relief covers
+  the excess, then a second of misses (112/s) and maps (74 wakes/s) piles up. Fix kept,
+  strata:5d3c948a (`over_soft()` on a miss and a last unpin): 358d4c, 0 of 278 samples over
+  soft+16 after the touch, max open 2,012 hot 512, within from the first sample; passes 41,969
+  vs 11,584 per run. Suite 7882c4 green at 5d3c948a (74/74); mutant ade11c killed (2 CHECKs in
+  `soft_caps_post`). Zipf 311 vs 375 req/s, p50 391 vs 175 µs in single runs, unattributed.
+- Stuck `pass_queued_` on a throwing post: fixed at strata:7b126bc1, test `pass_post_throws`
+  (flaky executor). Suite 261111-123742-b13378, mutant 261111-123743-7732e9 (catalog.hh from
+  5d3c948a; exit 0 only on line 611's CHECK failing).
+- T4 reruns at 7b126bc1 (the trigger changes eviction timing): build 261111-123757-b065fc, then
+  261111-123758-7ea903 (0.99) and 261111-123800-7a33ff (1.2).
+- Verdicts written (strata:fa7f9339): T3 soft caps MET at 5d3c948a; T2 hot d1s1 MISS beyond A/A
+  (6d8a9c: p50 1.5 vs 0.9 µs, +71% median, ranges 1.4-2.2 vs 0.7-1.2 µs; p99 +69%); T1 warm heap
+  MISS (6aaa2d: listed pieces 3,651 B +7% = 3,907 B vs 5,022 B; unlisted 1,360 B: manifest and file
+  maps 544, view's own allocations 256, host IO 256, merge machinery 224, ctor 80); T2 cold
+  rejudged (472ec032). `docs/mechanisms/catalog.md` names who posts a pass (a5399d7a).
 
 ## Next
 
-1. Read 5b7a23's `flow` lines (Zipf part): if passes run ~1/s with reposts ~0 and the net counts
-   sit at the caps right after each pass, the period hypothesis holds; if net open/hot stay over
-   with passes reposting, it is the window or the queue (experiments 2-3), and 5d3c948a reverts.
-2. With 7882c4 (suite) and ade11c (mutant) green and 358d4c's samples within soft+16 after the
-   touch, write T3's verdict at 5d3c948a; then rerun T4's two jobs at it (the trigger changes
-   when the sweep evicts).
-3. Read 6d8a9c (T2 hot A/B: per-pair p50/p99 ratios against the main-main and hot-hot spread)
-   and 6aaa2d (T1 warm sites: sum the design's listed pieces, +7%, against the measured heap);
-   write both verdict lines in `docs/perf/catalog-tiers.md`.
-4. Pre-existing, not fixed: `post_pass()` leaves `pass_queued_` set if `post()` throws, so no
-   pass ever runs again (strata `catalog.hh` post_pass). For the lead.
+1. When b13378 and 7732e9 pass and the T4 reruns are read, write T4's verdict at 7b126bc1 and
+   `campaign accept cold-tier-step2 correctness --confirm F1=<suite job>` is the lead's.
+2. The lead rules on T2 hot (re-target, or accept the pin's 0.6 µs) and T1 warm (grow the list,
+   or cut the unlisted pieces).
 
 ## Follow-up (review findings, not fixed here)
 
@@ -146,6 +137,14 @@ default, `docs/design/cold-tier.md` revision 8, `docs/status/cold-tier.md` (K7) 
 `docs/status/cold-tier-step2.md`. Linux, full-scale and dropped-cache rows are Milestone checks.
 
 ## Rulings I made
+
+- F1: the soft-cap trigger is a defect fix inside the sweep (the budget's caps already post at
+  their crossing); kept on 358d4c's result. Its check is net of relief in flight, so a pass is
+  not posted for an excess already covered.
+- T1 warm: sites mapped to the design's pieces by their frames; demote()'s 32 B and 16 B counted
+  as the record's bits and control block, the key table's 14 B with the slot's share.
+- T2 hot A/B ran at strata:f3f7d9c2, before the trigger; the trigger adds two loads to a last
+  unpin only while the sweep runs (T2 does not start it), so it is not rerun.
 
 - A12: `STRATA_EAGER_SEGMENTS=1` now forces eager for a whole run (it was `=0` forcing lazy), so
   the eager path keeps a whole-suite run. CI's workflow is outside the file set: no CI job runs
