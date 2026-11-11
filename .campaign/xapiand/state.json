@@ -10659,6 +10659,35 @@
       "title": "Update library pins and verify behavior",
       "updated": "2026-11-08T15:39:52"
     },
+    "placement-without-flush": {
+      "accepted": {},
+      "after": [],
+      "checks": [],
+      "consumes": [],
+      "files": [
+        "src/database/handler.cc",
+        "src/database/handler.h",
+        "src/database/shard.cc",
+        "src/database/shard.h",
+        "src/engine/**",
+        "tests/test_node.cc",
+        "tests/test_shard*.cc",
+        "harness/probes/**",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "New documents are placed without flushing every shard",
+      "updated": "2026-11-10T18:53:54"
+    },
     "pool-concurrency": {
       "accepted": {},
       "after": [],
