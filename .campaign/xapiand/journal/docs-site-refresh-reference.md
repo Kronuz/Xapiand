@@ -46,12 +46,12 @@ Code questions (documented as the code behaves today; the lead rules whether the
 | Criterion | Evidence |
 |---|---|
 | A1 | `.campaign/xapiand/journal/docs-site-refresh-reference.md` "A1: audit row, fix, source" (every row of `docs/dev/docs-site-audit.md` for these pages, with its fix and source; rows owned elsewhere under "Left alone") |
-| A2 | job 261110-163845-61683d (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-163845-61683d |
+| A2 | job 261110-182205-b410dc (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-182205-b410dc |
 | A3 | job 261110-152514-d0f0db (rerun of 557fe4 at b5de25700, done): the only hit is `copyright.md:19` (sortable-encoding's) |
 | A4 | job 261110-144359-49fcfb (site build + link check over every page, passed at 07d7f71db); rerun 261110-152514-a87e19 at b5de25700 |
 | A5 | request count 425 before (job 261110-043757-b6665c, the base) and after: job 261110-152514-91fbb0 at b5de25700: `requests 487` |
 | A6 | `docs/src/content/docs/tests/coverage.md`: "## Coverage" (feature, page, tests) and "## Not covered by a request" |
-| A7 | job 261110-163845-61683d (its site build, at d148eac88). Quote, `docs/src/lib/sidebar.mjs` Quick-start items end `{ "slug": "exploration" } ]`; `next.md` deleted |
+| A7 | job 261110-182205-b410dc (its site build, at d148eac88). Quote, `docs/src/lib/sidebar.mjs` Quick-start items end `{ "slug": "exploration" } ]`; `next.md` deleted |
 
 ### A1: audit row, fix, source
 
