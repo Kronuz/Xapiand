@@ -75,7 +75,7 @@ int docs_in(std::size_t i) {
 
 // 3K+2 shards, built once; a case searches the first n.
 struct Corpus {
-	DatabasePool pool{64};
+	DatabasePool pool{control_loop(), 64};
 	std::vector<std::unique_ptr<Shard>> shards;
 	std::vector<engine::Shard*> engines;
 

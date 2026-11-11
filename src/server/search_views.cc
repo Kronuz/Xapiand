@@ -55,6 +55,7 @@
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
 #include "http_accept.h"                    // for http::AcceptCache (content negotiation)
+#include "http_asio.h"                      // for http::HttpAsioService (the reactors' admission gates)
 #include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
 #include "http_router.h"                    // for http::MethodRouter (Leg 2 stage 3c-6)
 #include "search_service.h"             // for SearchService (Leg 2 stage 3c)
@@ -3084,7 +3085,18 @@ SearchService::create_extension(const http::Request& /*hreq*/)
 	// their slice and wait demoted. Over its cap the loop is saturated, so the request is refused
 	// before its body is read.
 	if (auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current())) {
-		if (host->scheduler().demoted() >= DEMOTED_ADMISSION_CAP) {
+		const auto demoted = host->scheduler().demoted();
+		auto& metrics = Metrics::metrics();
+		Metrics::raise_peak(metrics.scheduler_demoted_peak, demoted);
+		// The reactor's gate admitted this request just before: its count includes it.
+		const auto& manager = XapiandManager::manager();
+		for (std::size_t i = 0; manager && manager->http_service && i < manager->http_hosts.size(); ++i) {
+			if (manager->http_hosts[i].get() == host) {
+				Metrics::raise_peak(metrics.admission_inflight_peak, static_cast<std::size_t>(manager->http_service->reactor(i).gate().inflight.load(std::memory_order_relaxed)));
+				break;
+			}
+		}
+		if (demoted >= DEMOTED_ADMISSION_CAP) {
 			throw http::RequestRejected(503, "The server is busy", http::RejectionContent::Text, 1);
 		}
 	}
@@ -3203,6 +3215,7 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 				write_status_response(request, static_cast<http_status>(refused.status), refused.reason);
 			}
 		} catch (const task::cancelled&) {
+			Metrics::metrics().xapiand_http_requests_cancelled.Increment();
 			// The reads stopped at a checkpoint; say so to a client that is still there.
 			if (request.response_status == static_cast<http_status>(0)) {
 				write_status_response(request, HTTP_STATUS_SERVICE_UNAVAILABLE, "The request was cancelled");

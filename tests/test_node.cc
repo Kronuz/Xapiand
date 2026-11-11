@@ -829,6 +829,89 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 	}
 }
 
+// ---- a write whose client half-closes after its body ----
+
+static const int half_close_port = free_port();
+
+// The child: a PUT that waits for a held turn while its client half-closes (the server reads its EOF, which requests
+// the request's token), then the turn is let go. The write is admitted, so it completes and is answered.
+[[noreturn]] static void half_closed_put_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	int code = 0;
+	{
+		RunningNode node("node_half_close_data", std::to_string(half_close_port));
+		if (!node.ready()) {
+			std::_Exit(2);
+		}
+		std::optional<IndexPin> entry(pin_index(*manager()->database_pool, endpoints_of("half_closed")[0].path, WRITE));
+		std::optional<HoldTurn> hold(std::in_place, entry->entry(), WRITE);
+		const int fd = connect_to(half_close_port);
+		if (fd < 0) {
+			std::_Exit(3);
+		}
+		const char* request = "PUT /half_closed/1?commit HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 21\r\n\r\n{\"marker\":\"half-way\"}";
+		::send(fd, request, std::strlen(request), 0);
+		::shutdown(fd, SHUT_WR);   // the body is whole; the client sends nothing more
+		if (!eventually([] { return manager()->http_service->reactor(0).gate().inflight.load() == 1; })) {
+			std::_Exit(4);
+		}
+		std::this_thread::sleep_for(300ms);   // the server has read the EOF while the write waits for its turn
+		hold.reset();
+		entry.reset();
+		timeval timeout{10, 0};
+		::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+		std::string response;
+		char buf[4096];
+		ssize_t n;
+		while ((n = ::recv(fd, buf, sizeof(buf), 0)) > 0) {
+			response.append(buf, static_cast<std::size_t>(n));
+		}
+		::close(fd);
+		if (response.rfind("HTTP/1.1 204", 0) != 0) {
+			std::fprintf(stderr, "HALF-CLOSED PUT answered: %s\n", response.substr(0, 80).c_str());
+			code = 5;
+		}
+	}   // the node stops
+	Logging::finish();
+	Logging::join();
+	std::_Exit(code);
+}
+
+// The restart: the half-closed write is there.
+[[noreturn]] static void half_closed_restart_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_half_close_data", std::to_string(half_close_port), true);
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	const auto response = http_call(half_close_port, "GET", "/half_closed/1");
+	if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("half-way") == std::string::npos) {
+		std::fprintf(stderr, "MISSING the half-closed write: %s\n", response.substr(0, 80).c_str());
+		std::_Exit(10);
+	}
+	std::_Exit(0);
+}
+
+// A PUT whose client half-closes after its body completes durably (T9): the EOF cancels reads, not an admitted write.
+static void test_a_put_whose_client_half_closes_completes_durably() {
+	const auto result = run_child([&] { half_closed_put_child("node_half_close.log"); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 0);
+	if (result.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_half_close.log").c_str());
+	}
+	const auto restart = run_child([&] { half_closed_restart_child("node_half_close_restart.log"); }, 90s);
+	CHECK(restart.exited);
+	CHECK_EQ(restart.code, 0);
+	if (restart.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_half_close_restart.log").c_str());
+	}
+}
+
 // The service stops at once; the registry cannot close an index whose turn a thread holds, and its close ends at the
 // bound like the rest of the stop (it used to wait without a limit).
 static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
@@ -1612,6 +1695,109 @@ static void test_versioned_writers_match_a_sequential_model() {
 }
 
 
+// ---- cancellation and overload in /:metrics ----
+
+// A series of the node's /:metrics; -1 when it is not there.
+static double metric(const std::string& name) {
+	const auto text = http_call(node_port, "GET", "/:metrics");
+	std::size_t at = 0;
+	while (at < text.size()) {
+		auto end = text.find('\n', at);
+		if (end == std::string::npos) {
+			end = text.size();
+		}
+		const auto line = text.substr(at, end - at);
+		if (line.rfind(name, 0) == 0 && line.size() > name.size() && (line[name.size()] == '{' || line[name.size()] == ' ')) {
+			return std::strtod(line.c_str() + line.rfind(' ') + 1, nullptr);
+		}
+		at = end + 1;
+	}
+	return -1;
+}
+
+// A search on `index` whose client leaves while it waits for the index's turn frees its reactor at once (T9): the
+// client's EOF requests its token, its turn wait ends, and its admission is let go while the turn is still held. The
+// cancel is counted in /:metrics. With `cached`, a search first loads the schema, so the wait is the search's own;
+// without, it is the schema's first load.
+static void client_leaves_a_search(const std::string& index, bool cached) {
+	create_index(index, 1);
+	if (cached) {
+		CHECK(success(call("SEARCH", "/" + index + "/?volatile", "{}")));
+	}
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of(index);
+	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: a read takes the turn
+	const auto before = metric("xapiand_http_requests_cancelled");
+	CHECK_GE(before, 0.0);
+	HoldTurn hold(entry.entry(), WRITE_QUIET);
+	const int fd = connect_to(node_port);
+	CHECK_GE(fd, 0);
+	const std::string request = "SEARCH /" + index + "/?volatile HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
+	::send(fd, request.data(), request.size(), 0);
+	CHECK(eventually([] { return requests_inflight() == 1; }));
+	std::this_thread::sleep_for(200ms);
+	CHECK_EQ(requests_inflight(), 1u);   // the search waits for the held turn
+	const auto left = std::chrono::steady_clock::now();
+	::close(fd);
+	CHECK(eventually([] { return requests_inflight() == 0; }, 2s));
+	const auto freed = std::chrono::steady_clock::now() - left;
+	std::fprintf(stderr, "  the reactor let the search go %lld us after its client left\n", static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(freed).count()));
+	CHECK_EQ(metric("xapiand_http_requests_cancelled"), before + 1);
+	hold.release();
+}
+
+static void test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted() {
+	Watchdog watchdog("a search whose client leaves", 60s);
+	client_leaves_a_search("left_search", true);
+}
+
+// The schema's first load reads the metadata with the search's budget, so its turn wait ends with the token too.
+static void test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled() {
+	Watchdog watchdog("a search whose client leaves in its first schema load", 60s);
+	client_leaves_a_search("left_cold_search", false);
+}
+
+// Both admission peaks rise under load and /:metrics shows them (T8): writers that wait for a held turn fill the
+// reactor's gate, and a script's slices wait demoted while other requests arrive.
+static void test_the_admission_peaks_rise_under_load() {
+	Watchdog watchdog("the admission peaks rise under load", 120s);
+	create_index("peaks", 1);
+	constexpr std::size_t writers = 8;
+	std::vector<std::thread> threads;
+	{
+		HoldEveryShard hold("peaks");
+		for (std::size_t i = 0; i < writers; ++i) {
+			threads.emplace_back([i] { call("PUT", "/peaks/" + std::to_string(i), R"({"v":1})"); });
+		}
+		CHECK(eventually([] { return requests_inflight() == writers; }));
+		hold.release();
+	}
+	for (auto& t : threads) {
+		t.join();
+	}
+	CHECK_GE(metric("xapiand_admission_inflight_peak"), static_cast<double>(writers));
+
+	// A script's slices wait demoted between its yields; scrapes admitted meanwhile find them.
+	std::atomic<bool> scripted{false};
+	std::thread scraper([&] {
+		while (!scripted.load() && metric("xapiand_scheduler_demoted_peak") < 1) {
+			std::this_thread::sleep_for(2ms);
+		}
+	});
+	for (int i = 0; i < 5 && metric("xapiand_scheduler_demoted_peak") < 1; ++i) {
+		const auto put = call("PUT", "/peaks/100", R"({"_script":"local n = 0; for i = 1, 10000000 do n = n + i end; _doc.n = n"})");
+		CHECK(success(put));
+		if (!success(put)) {
+			std::fprintf(stderr, "  the script's PUT answered %d: %s\n", put.status, put.body.to_string().c_str());
+		}
+	}
+	scripted = true;
+	scraper.join();
+	CHECK_GE(metric("xapiand_scheduler_demoted_peak"), 1.0);
+}
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -1629,6 +1815,7 @@ int main(int argc, char** argv) {
 		{"test_the_http_grace_follows_the_time_left_in_the_budget", test_the_http_grace_follows_the_time_left_in_the_budget},
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
+		{"test_a_put_whose_client_half_closes_completes_durably", test_a_put_whose_client_half_closes_completes_durably},
 	};
 	for (const auto& f : forked) {
 		if (std::getenv("SKIP_FORKED") != nullptr || !wanted(f.name)) {
@@ -1670,6 +1857,9 @@ int main(int argc, char** argv) {
 		{"test_writers_expecting_one_version_apply_once", test_writers_expecting_one_version_apply_once},
 		{"test_a_versioned_delete_checks_the_document_its_key_names", test_a_versioned_delete_checks_the_document_its_key_names},
 		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
+		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
+		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
+		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

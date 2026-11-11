@@ -26,11 +26,35 @@
 // Pins for the registry's tests: a request's pin by path, and a use with a pin of its own (as lock_shard makes one).
 
 #include <string>
+#include <thread>
 
 #include "database/pool.h"
 #include "database/shard.h"
+#include "engine/host_asio.h"
 #include "engine/sync.h"
+#include "reactor.h"
 #include "task.hh"
+
+// The control loop a test's pools run their catalog's timers on, as a node's: one reactor on a thread of its own,
+// for the whole test run.
+inline engine::AsioHost& control_loop() {
+	struct Loop {
+		reactor::Reactor reactor;
+		engine::AsioHost host{reactor.scheduler()};
+		asio::executor_work_guard<asio::io_context::executor_type> guard{reactor.io().get_executor()};
+		std::thread thread{[this] {
+			host.bind_loop_thread();
+			reactor.run();
+		}};
+		~Loop() {
+			guard.reset();
+			reactor.io().stop();
+			thread.join();
+		}
+	};
+	static Loop loop;
+	return loop.host;
+}
 
 inline IndexPin pin_index(DatabasePool& pool, const std::string& path, int flags) {
 	return engine::sync_wait(pool.pin(Endpoint(path), flags));

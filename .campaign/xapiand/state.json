@@ -10692,7 +10692,9 @@
     },
     "postings-fuzz-memory": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "stored-check-cache"
+      ],
       "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
       "branch": "quest/xapiand/postings-fuzz-memory",
       "checks": [
@@ -10820,7 +10822,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-10T17:22:07",
+      "updated": "2026-11-10T18:15:32",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
@@ -12994,6 +12996,70 @@
       "title": "Streamed record write (L6)",
       "updated": "2026-11-08T15:40:25"
     },
+    "stored-check-cache": {
+      "accepted": {},
+      "after": [],
+      "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+      "branch": "quest/xapiand/stored-check-cache",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/reader.hh",
+        "test/reader_check_test.cc",
+        "test/CMakeLists.txt",
+        "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-10T18:15:31",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "same suite command as the other strata quests",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/stored-check-cache",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: cold-tier-step2's globs cover include/strata/** and test/**, but its branch changes none of reader.hh, test/CMakeLists.txt, CMakeLists.txt or a reader_check test; this is a one-line fix plus one test",
+      "repo": "../strata",
+      "risk": "normal",
+      "status": "active",
+      "title": "strata's stored check decodes with one frame cache",
+      "updated": "2026-11-10T18:16:06",
+      "worktree": "../strata-wt/xapiand/stored-check-cache"
+    },
     "stored-short-section": {
       "accepted": {},
       "after": [],
@@ -15008,22 +15074,71 @@
         "docs/mechanisms/requests-on-the-reactor.md",
         "docs/mechanisms/cancellation.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T17:59:25",
+          "commit": "ac965d49c5c3fcf03db26f3a384cec0e0584f7eb",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "30f705f6f093735d0c4bc32d4a7ef1121d9e50be",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-173050-487b1b",
+              "level": "light",
+              "seconds": 702.6,
+              "state": "done",
+              "what": "x7-cancel-rows check build-test at 30f705f6f093"
+            }
+          ],
+          "final": true,
+          "from": "c8b48e71849bd1c1d2a54ed2ebff5084bd7cbc6a",
+          "reason": "",
+          "tested": "ac965d49c5c3fcf03db26f3a384cec0e0584f7eb"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T17:06:30",
-      "worktree": "../Xapiand-wt/xapiand/x7-cancel-rows"
+      "updated": "2026-11-10T17:59:32",
+      "worktree": ""
     },
     "x7-catalog-timer": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T18:20:09",
+          "base": "97f6a531f5c6658026fc129c64707bef10748053",
+          "blobs": {
+            "docs/mechanisms/index-registry-on-catalog.md": "100644:e1511d5db942c87ccf2a65f6e1a063e8868c11a0",
+            "harness/async_allowlist.tsv": "100644:6966bd1c3f1b44e36b3a67ca539ae213e39052df",
+            "src/database/pool.cc": "100644:6823e7164987cbf295bab1a7c2843e531e83a498",
+            "src/database/pool.h": "100644:1174c3917a4641220d3664b7a31c42f7ca87a92d",
+            "src/manager.cc": "100644:b9f7e7f2a0d01c840f6322f21ac6ca2c4cb12961",
+            "src/manager.h": "100644:21d7c657226242c5bc7255cc97a3b0092a09a2ea",
+            "tests/pool_support.h": "100644:83e9225b010aaf2c6c3de73305c6324446fc75b5",
+            "tests/test_blocking_guard.cc": "100644:0c53f61a2d07c7b09681abd2ce8c730a08dbc3b3",
+            "tests/test_pool.cc": "100644:ac18067da45434af1c4c31090a2b8e50787eaea8",
+            "tests/test_reactor_requests.cc": "100644:b7eb5d3dd4777f621b01e6d0b06edf2f26a199dd",
+            "tests/test_wide_search.cc": "100644:96578b13b4bd21e9f87df1bb2048ea4d826a0973"
+          },
+          "brief": "52893125d839b372",
+          "by": "waived",
+          "commit": "4a7b1e29e2f8437e999f4902b94106fddd524284",
+          "findings": {},
+          "note": "D57: normal risk; the lead read the diff (DatabasePool::Timer on the control loop, 3 O(1) pending_mtx sections); the no-arm mutant fails test_pool's sweep cases and the census at master fails on DB-TIMER",
+          "review": "",
+          "reviewed": "",
+          "verdict": ""
+        }
+      },
       "after": [
         "write-path-fixes"
       ],
@@ -15051,19 +15166,42 @@
         "docs/mechanisms/index-registry-on-catalog.md",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T18:35:07",
+          "commit": "a101e0a547f4493520496797b85da4b6cb23ae1c",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "721f7c16bd5ec04e48f53bdb6c4f0aca8553559a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-180452-f454c0",
+              "level": "light",
+              "seconds": 350.0,
+              "state": "done",
+              "what": "x7-catalog-timer check build-test at 721f7c16bd5e"
+            }
+          ],
+          "final": true,
+          "from": "4f36b6edc6f1f18460ad684cbee63d447f16224a",
+          "reason": "",
+          "tested": "4a7b1e29e2f8437e999f4902b94106fddd524284"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T15:17:05",
-      "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
+      "updated": "2026-11-10T18:35:13",
+      "worktree": ""
     },
     "x7-coverage": {
       "accepted": {},

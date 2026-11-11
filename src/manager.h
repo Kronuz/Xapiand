@@ -102,6 +102,13 @@ class XapiandManager {
 
 	void make_servers();
 
+	// All the Asio/reactor control-plane state (the loop, the timers/signals, the
+	// async-signal-safe self-pipe) lives in this pimpl so this header stays free of
+	// Asio -- mirroring how the *AsioService members are forward-declared + unique_ptr'd.
+	// Made before the database pool, whose catalog's timers run on its loop, and destroyed after it.
+	struct Reactors;
+	std::unique_ptr<Reactors> _rx;
+
 public:
 	using State = XapiandManagerState;
 
@@ -154,17 +161,14 @@ private:
 	std::atomic_llong _asap;      // snapshot for the async shutdown hand-off
 	std::atomic_llong _now;
 
-	// All the Asio/reactor control-plane state (the loop, the timers/signals, the
-	// async-signal-safe self-pipe) lives in this pimpl so this header stays free of
-	// Asio -- mirroring how the *AsioService members are forward-declared + unique_ptr'd.
-	struct Reactors;
-	std::unique_ptr<Reactors> _rx;
-
 	void run_loop();
 	void break_loop();
 	// Runs the control loop's thread until the tasks of `tasks` (and the registry's detached ones) have ended; the
 	// loop has stopped, so this thread drives it.
 	void drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit);
+	// Runs the stopped control loop on this thread for up to `slice` (zero: what is ready, the timers due
+	// included); the stop drives it this way while the catalog's timers still need it.
+	void run_control(std::chrono::milliseconds slice);
 	std::vector<std::string> unfinished_work();
 	task::task<void> signal_loop();
 	void housekeeping_tick();

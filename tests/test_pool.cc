@@ -56,6 +56,7 @@
 #include "database/handler.h"
 #include "database/lock.h"
 #include "database/pool.h"
+#include "pool_support.h"
 #include "database/shard.h"
 #include "database/wal.h"
 #include "engine/callbacks.h"
@@ -521,7 +522,7 @@ engine::rev revision_of(Shard& shard) {
 
 // A write, a read, and a commit through a Shard.
 void test_smoke() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	Endpoint endpoint(fresh("smoke"));
 	auto entry = pin(pool, endpoint.path);
 	Shard shard = use(entry, WRITE);
@@ -538,7 +539,7 @@ void test_smoke() {
 // completion that the first is waiting for.
 void test_opening_never_waits_on_a_thread() {
 	Watchdog watchdog("opening never waits on a thread");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("nowait"));
 	Shard a = use(entry, WRITE);
 	Shard b = use(entry, WRITE);
@@ -552,7 +553,7 @@ void test_opening_never_waits_on_a_thread() {
 // Many users of a new index at once: one open (the single flight), and every user gets the engine.
 void test_concurrent_opens_are_one_flight() {
 	Watchdog watchdog("concurrent opens are one flight");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("flight"));
 	std::vector<std::thread> threads;
 	std::atomic<int> opened{0};
@@ -577,7 +578,7 @@ void test_concurrent_opens_are_one_flight() {
 template <typename Op>
 void waits_for_the_turn(const char* name, Op op) {
 	Watchdog watchdog(name);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh(name));
 	Shard shard = use(entry, WRITE);
 	engine::sync_wait(shard.add_document(make("Kseed", "seed")));  // something to replace, delete and commit
@@ -608,7 +609,7 @@ void test_every_operation_takes_the_turn() {
 // A read that has nothing to refresh takes no turn: it does not wait behind a writer.
 void test_a_read_with_nothing_to_refresh_takes_no_turn() {
 	Watchdog watchdog("a read takes no turn");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("readsnoturn"));
 	Shard shard = use(entry, WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -626,7 +627,7 @@ void test_a_read_with_nothing_to_refresh_takes_no_turn() {
 // The debounced autocommit is a task that takes the turn like any request, and commits what is pending.
 void test_the_autocommit_task_takes_the_turn() {
 	Watchdog watchdog("the autocommit task");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	Endpoint endpoint(fresh("autocommit"));
 	auto entry = pin(pool, endpoint.path);
 	Shard shard = use(entry, WRITE);
@@ -649,7 +650,7 @@ void test_the_autocommit_task_takes_the_turn() {
 // A turn that does not come in time answers `busy` (a 503), and the queue it left is whole.
 void test_a_turn_wait_times_out_with_busy() {
 	Watchdog watchdog("a turn wait times out");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_turn_timeout(0.3);
 	auto entry = pin(pool, fresh("busy"));
 	Shard shard = use(entry, WRITE);
@@ -678,7 +679,7 @@ task::task<void> two_turns(ShardEndpoint& first, ShardEndpoint& second) {
 void test_a_task_holds_one_turn_at_most() {
 #ifndef NDEBUG
 	Watchdog watchdog("one turn per task");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto first = pin(pool, fresh("one_a"));
 	auto second = pin(pool, fresh("one_b"));
 	Shard a = use(first, WRITE);
@@ -702,7 +703,7 @@ void test_a_task_holds_one_turn_at_most() {
 // commit.
 void test_a_commit_joins_the_one_in_flight() {
 	Watchdog watchdog("a commit joins the one in flight");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("coalesce"));
 	auto& gate = gate_chores(entry.entry());
 	Shard s1 = use(entry, WRITE), s2 = use(entry, WRITE), s3 = use(entry, WRITE);
@@ -733,7 +734,7 @@ void test_a_commit_joins_the_one_in_flight() {
 // that lands after the commit began is not covered, so it does not share the commit's outcome, failure included.
 void test_a_commit_not_covered_does_not_share_the_outcome() {
 	Watchdog watchdog("a commit not covered");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("covered"));
 	auto& gate = gate_chores(entry.entry());
 	Shard s1 = use(entry, WRITE), s2 = use(entry, WRITE);
@@ -756,7 +757,7 @@ void test_a_commit_not_covered_does_not_share_the_outcome() {
 // that waited for the turn is served on the replacement engine.
 void test_a_failed_commit_reaches_only_the_joined_waiters() {
 	Watchdog watchdog("a failed commit");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("failed"));
 	auto& gate = gate_chores(entry.entry());
 	Shard s1 = use(entry, WRITE), s2 = use(entry, WRITE), s3 = use(entry, WRITE);
@@ -784,7 +785,7 @@ void test_a_failed_commit_reaches_only_the_joined_waiters() {
 // later write: ids are contiguous, none repeats, and each thread's ids rise.
 void test_owed_flushes_do_not_reorder_writers() {
 	Watchdog watchdog("owed flushes", 120s);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_buffered_docs_cap(5);
 	auto entry = pin(pool, fresh("owed"));
 	constexpr int threads_n = 4;
@@ -818,7 +819,7 @@ void test_owed_flushes_do_not_reorder_writers() {
 // the apply), its commit another, and its read a query chore.
 void test_blob_io_runs_in_chores() {
 	Watchdog watchdog("blob I/O");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("blobs"));
 	auto& counting = count_chores(entry.entry());
 	Shard shard = use(entry, WRITE);
@@ -853,7 +854,7 @@ void test_blob_io_runs_in_chores() {
 // enqueue, so lines reach the log in the order the documents were assigned their ids.
 void test_the_wal_order_is_the_apply_order() {
 	Watchdog watchdog("the WAL order", 120s);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	DatabaseWALWriter writer("WL{:02}", 1);
 	pool.set_wal_writer(&writer);
 	Endpoint endpoint(fresh("walorder"));
@@ -908,7 +909,7 @@ void test_the_wal_order_is_the_apply_order() {
 // not wait for it either.
 void test_a_held_search_delays_no_refresh_or_commit() {
 	Watchdog watchdog("a held search");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("held"));
 	Shard shard = use(entry, WRITE);
 	for (int i = 1; i <= 3; ++i) {
@@ -953,7 +954,7 @@ void test_a_held_search_delays_no_refresh_or_commit() {
 // writes go on, and a record freed serves the next search (C9, T8).
 void test_readers_cap() {
 	Watchdog watchdog("the readers cap");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_readers_per_index(16);
 	auto entry = pin(pool, fresh("readers"));
 	Shard shard = use(entry, WRITE);
@@ -982,7 +983,7 @@ void test_readers_cap() {
 // neighbour is not affected (C9).
 void test_readers_cap_is_per_index() {
 	Watchdog watchdog("the readers cap per index");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_readers_per_index(4);
 	auto first = pin(pool, fresh("readers_first"));
 	auto second = pin(pool, fresh("readers_second"));
@@ -1010,7 +1011,7 @@ void test_readers_cap_is_per_index() {
 void test_a_search_over_more_indexes_than_records_is_served() {
 	Watchdog watchdog("a wide search");
 	constexpr std::size_t indexes = 40;
-	DatabasePool pool(indexes + 8);
+	DatabasePool pool(control_loop(), indexes + 8);
 	pool.set_readers_per_index(2);
 	std::vector<std::unique_ptr<Shard>> shards;
 	for (std::size_t i = 0; i < indexes; ++i) {
@@ -1050,7 +1051,7 @@ void test_search_fanout_limit() {
 // create a second document. The write stands, and a later commit makes it durable (N2).
 void test_a_commit_that_times_out_leaves_the_write_standing() {
 	Watchdog watchdog("a late commit");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_turn_timeout(0.3);
 	auto entry = pin(pool, fresh("late_commit"));
 	Shard shard = use(entry, WRITE);
@@ -1068,7 +1069,7 @@ void test_a_commit_that_times_out_leaves_the_write_standing() {
 // A node that is finishing serves the indexes it has open (an autocommit, a request in flight) and opens no more (N3).
 void test_a_finishing_pool_serves_an_open_index() {
 	Watchdog watchdog("a finishing pool");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto open_path = fresh("finishing_open"), closed_path = fresh("finishing_closed");
 	auto open = pin(pool, open_path);
 	Shard shard = use(open, WRITE);
@@ -1097,7 +1098,7 @@ void test_a_finishing_pool_serves_an_open_index() {
 // like any other operation on the index.
 void test_the_integrity_check_takes_the_turn() {
 	Watchdog watchdog("the check takes the turn");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("check"));
 	Shard shard = use(entry, WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -1123,7 +1124,7 @@ void test_the_integrity_check_takes_the_turn() {
 void test_a_chore_needs_a_scheduler() {
 #ifndef NDEBUG
 	Watchdog watchdog("a chore needs a scheduler");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("scheduler"));
 	Shard shard = use(entry, WRITE);
 	std::fflush(nullptr);
@@ -1188,7 +1189,7 @@ private:
 // the task had used up its slice.
 void test_a_chore_resumes_its_awaiter_with_post() {
 	Watchdog watchdog("a chore resumes with post");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("chorepost"));
 	auto chores = A::take_chores(entry.entry());
 	SpyScheduler spy;
@@ -1256,7 +1257,7 @@ task::task<void> take_and_drop(ShardEndpoint& entry) {
 
 // The lease: the index's turn is held, and a task waits for it, under a pin that outlives the pool.
 void at_end_turn(bool outstanding) {
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	A::patience(*pool, 1s);
 	auto entry = pin(*pool, fresh("at_end_turn"));
 	ShardEndpoint* raw = &entry.entry();
@@ -1273,7 +1274,7 @@ void at_end_turn(bool outstanding) {
 
 // The registry: a view a reader holds when the index ends.
 void at_end_views(bool outstanding) {
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	A::patience(*pool, 1s);
 	std::unique_ptr<HeldSearch> held;
 	{
@@ -1294,7 +1295,7 @@ void at_end_views(bool outstanding) {
 
 // The chores: a chore of the index is still running.
 void at_end_chores(bool outstanding) {
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	A::patience(*pool, 1s);
 	std::atomic<bool> go{false};
 	std::atomic<bool> started{false};
@@ -1324,7 +1325,7 @@ void at_end_chores(bool outstanding) {
 
 // The registry: a task posted to the control loop has not ended.
 void at_end_detached(bool outstanding) {
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	A::count_detached(*pool, 1);
 	if (!outstanding) {
 		A::count_detached(*pool, -1);
@@ -1334,7 +1335,7 @@ void at_end_detached(bool outstanding) {
 
 // The registry: a reference to an entry outlives the pool.
 void at_end_references(bool outstanding) {
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	A::patience(*pool, 1s);
 	std::optional<IndexPin> entry;
 	entry.emplace(pin(*pool, fresh("at_end_refs")));
@@ -1417,7 +1418,7 @@ task::task<void> detach_from_a_task(DatabasePool& pool) {
 // The shutdown clears the control and drains the loop on its own thread; a debounced commit that fires there starts
 // its task with no control left, from a scheduler's thread.
 void detached_after_the_control_is_gone() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	InlineHost host;
 	host.spawn(detach_from_a_task(pool));
 }
@@ -1430,7 +1431,7 @@ task::task<void> run_chore_and_drop(std::unique_ptr<IndexChores>& chores, std::a
 }
 
 void chore_dropped_by_its_resume() {
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	auto chores = std::make_unique<IndexChores>(pool->work_pool());
 	LingeringHost host;
 	std::atomic<bool> done{false};
@@ -1471,7 +1472,7 @@ void test_a_chore_is_over_when_its_task_resumes() {
 // one, and a create pin passes the entry and makes the index; the reads after it see it.
 void test_a_create_pin_passes_a_missing_index() {
 	Watchdog watchdog("a create pin passes a missing index");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("missing");
 	std::atomic<int> not_found{0};
 	std::vector<std::thread> threads;
@@ -1506,7 +1507,7 @@ void test_a_create_pin_passes_a_missing_index() {
 // demotion and the close take, and the next pin opens it again with the writes in it.
 void test_a_pin_keeps_its_index_open() {
 	Watchdog watchdog("a pin keeps its index open");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("pinned");
 	auto held = pin(pool, path);
 	const auto slot = slot_of(held);
@@ -1533,7 +1534,7 @@ void test_a_pin_keeps_its_index_open() {
 // slot; an open index gives its entry; a closed one gives an empty pin and is not reopened.
 void test_a_chore_pin_is_resident() {
 	Watchdog watchdog("a chore pin is resident");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("chorepin");
 	CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(Endpoint(path)))));
 	CHECK_EQ(pool.catalog().table_size(), 0u);
@@ -1561,7 +1562,7 @@ void test_a_chore_pin_is_resident() {
 // FLUSH commits every index the catalog has (D8): each is pinned resident and committed, and stays open.
 void test_flush_commits_every_index() {
 	Watchdog watchdog("flush commits every index");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto a_path = fresh("flush_a"), b_path = fresh("flush_b");
 	engine::rev a_before, b_before;
 	{
@@ -1588,12 +1589,12 @@ void test_the_shutdown_commits_through_the_entry() {
 	const auto path = fresh("shutdown_commit");
 	engine::rev before;
 	{
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		Shard shard(pin(pool, path), WRITE);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		before = shard.engine().revision();
 	}
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(shard.engine().revision(), before + 1);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
@@ -1603,7 +1604,7 @@ void test_the_shutdown_commits_through_the_entry() {
 // index applies nothing, so the index still closes when idle (the item 5b review's map_asked_ note).
 void test_a_resident_commit_on_an_owed_index_lets_it_close() {
 	Watchdog watchdog("a resident commit on an owed index");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("owed");
 	std::uint32_t slot;
 	engine::rev revision;
@@ -1633,7 +1634,7 @@ void test_a_resident_commit_on_an_owed_index_lets_it_close() {
 // that holds a pin is therefore destroyed before join() is awaited, and the pool after it ended.
 void test_join_waits_for_every_pin() {
 	Watchdog watchdog("join waits for every pin");
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	const auto path = fresh("join_pin");
 	auto held = pin(*pool, path);
 	{
@@ -1649,7 +1650,7 @@ void test_join_waits_for_every_pin() {
 	held.release();
 	CHECK_TRUE(pool->join(5s));
 	pool.reset();
-	DatabasePool after(8);
+	DatabasePool after(control_loop(), 8);
 	Shard shard(pin(after, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
 }
@@ -1658,7 +1659,7 @@ void test_join_waits_for_every_pin() {
 // and the use pins again by key and reads what was committed.
 void test_a_failed_use_hands_its_pin_back() {
 	Watchdog watchdog("a failed use hands its pin back");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("reopen");
 	Shard shard(pin(pool, path), WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -1684,7 +1685,7 @@ void test_a_failed_use_hands_its_pin_back() {
 // policy (CT-R31): the slot's frequency counts the request once.
 void test_a_repin_after_a_reopen_is_not_a_use() {
 	Watchdog watchdog("a re-pin is not a use");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("repin_use");
 	Shard shard(pin(pool, path), WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -1708,7 +1709,7 @@ void test_a_repin_after_a_reopen_is_not_a_use() {
 // writer for them: a test can then fail the index's syncs, and see what the log replays.
 struct FaultyIndexes {
 	strata::faultfs::filesystem& fs;
-	DatabasePool pool{8};
+	DatabasePool pool{control_loop(), 8};
 	DatabaseWALWriter writer{"WF{:02}", 1};
 
 	explicit FaultyIndexes(strata::faultfs::filesystem& fs_) : fs(fs_) {
@@ -1778,7 +1779,7 @@ void test_a_fenced_index_is_replaced_and_replays_its_log() {
 // let go, with no write and no commit after it.
 void test_the_turns_end_publishes_a_finished_merge() {
 	Watchdog watchdog("the turn's end publishes a merge", 60s);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("checkin"));
 	Shard shard = use(entry, WRITE);
 	auto& index = A::index(entry.entry());
@@ -1799,7 +1800,7 @@ void test_the_turns_end_publishes_a_finished_merge() {
 // write and nothing for the chore's commits, the shutdown's included.
 void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
 	Watchdog watchdog("the commit chore logs nothing", 60s);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	DatabaseWALWriter writer("WC{:02}", 1);
 	pool.set_wal_writer(&writer);
 	const auto path = fresh("chore_wal");
@@ -1838,7 +1839,7 @@ void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
 // released into a live catalog (ASan sees no use after free), and the destructor ends after it.
 void test_the_pool_waits_for_a_pin_released_during_its_end() {
 	Watchdog watchdog("the pool waits for a late pin");
-	auto pool = std::make_unique<DatabasePool>(8);
+	auto pool = std::make_unique<DatabasePool>(control_loop(), 8);
 	std::optional<IndexPin> held;
 	held.emplace(pin(*pool, fresh("late_pin")));
 	std::atomic<bool> released{false};
@@ -1875,7 +1876,7 @@ void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
 	Watchdog watchdog("a destroyed waiter releases its pin", 240s);
 	const auto base = fresh("destroyed_waiter");
 	std::filesystem::create_directories(base);
-	DatabasePool pool(4);
+	DatabasePool pool(control_loop(), 4);
 	for (int k = 0; k < 160; ++k) {
 		Loop loop;
 		auto work = asio::make_work_guard(loop.reactor.io());
@@ -1912,7 +1913,7 @@ void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
 // its control roots before it awaits the catalog's shutdown, and a destroyed root's pin is released with its frame.
 void test_a_destroyed_root_that_held_a_pin_lets_the_pool_join() {
 	Watchdog watchdog("a destroyed root's pin is released");
-	DatabasePool pool(4);
+	DatabasePool pool(control_loop(), 4);
 	const auto path = fresh("destroyed_holder");
 	std::atomic<bool> holding{false};
 	{
@@ -1944,7 +1945,7 @@ void test_a_cancelled_pin_stops_waiting() {
 	Watchdog watchdog("a cancelled pin stops waiting");
 	std::mutex fs_mutex;
 	std::map<std::string, std::unique_ptr<strata::faultfs::filesystem>> fs;   // one per index: each locks its own
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	std::promise<void> gate;
 	std::shared_future<void> opens = gate.get_future().share();
 	std::atomic<bool> opening{false};
@@ -2007,7 +2008,7 @@ void test_a_cancelled_pin_stops_waiting() {
 // request's token, so the FLUSH throws task::cancelled at once rather than after the turn's timeout.
 void test_a_cancelled_flush_stops_waiting_for_a_held_turn() {
 	Watchdog watchdog("a cancelled flush stops waiting for a held turn");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	auto entry = pin(pool, fresh("flush_cancel"));
 	Shard shard = use(entry, WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));   // uncommitted: the FLUSH must commit it
@@ -2036,7 +2037,7 @@ void test_a_cancelled_flush_stops_waiting_for_a_held_turn() {
 // merges finish it publishes them and syncs their output with no revision of its own.
 void test_the_autocommit_comes_back_while_a_merge_is_pending() {
 	Watchdog watchdog("the autocommit comes back", 60s);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	DatabaseWALWriter writer("WR{:02}", 1);   // the autocommit logs its commit
 	pool.set_wal_writer(&writer);
 	auto& gate = A::wrap_executor<GatedExecutor>(pool);
@@ -2073,7 +2074,7 @@ void test_the_autocommit_comes_back_while_a_merge_is_pending() {
 // An autocommit whose turn does not come asks to come back (D8), so a busy index's write is not left uncommitted.
 void test_a_busy_autocommit_comes_back() {
 	Watchdog watchdog("a busy autocommit comes back");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	DatabaseWALWriter writer("WB{:02}", 1);   // the autocommit logs its commit
 	pool.set_wal_writer(&writer);
 	pool.set_turn_timeout(0.1);
@@ -2100,7 +2101,7 @@ void test_the_sweep_closes_only_an_unpinned_index() {
 	Watchdog watchdog("the sweep closes only an unpinned index");
 	const auto held_path = fresh("sweep_held"), idle_path = fresh("sweep_idle");
 	{
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		{
 			Shard shard(pin(pool, idle_path), WRITE);
 			engine::sync_wait(shard.add_document(make("Kb", "b")));
@@ -2109,7 +2110,7 @@ void test_the_sweep_closes_only_an_unpinned_index() {
 		std::this_thread::sleep_for(1500ms);   // a pass of the default sweep, or more
 		CHECK_TRUE(state_of(pool, idle_path) == strata::slot_state::open);
 	}
-	DatabasePool pool(8, 0, engine::default_readers_per_index, fast_sweep());
+	DatabasePool pool(control_loop(), 8, 0, engine::default_readers_per_index, fast_sweep());
 	{
 		Shard shard(pin(pool, held_path), WRITE);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -2139,7 +2140,7 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 	constexpr int flags = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_AUTOCOMMIT;
 	engine::rev before;
 	{
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		DatabaseWALWriter writer("WS{:02}", 1);
 		pool.set_wal_writer(&writer);
 		{
@@ -2169,7 +2170,7 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 	}
 	CHECK_EQ(replaces, 1u);
 	CHECK_EQ(commits, 1u);
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(shard.engine().revision(), before + 1);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
@@ -2179,7 +2180,7 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 // and closes with no revision of its own, and opens again with every document.
 void test_the_sweeps_close_syncs_a_merges_output() {
 	Watchdog watchdog("the sweep's close syncs a merge", 60s);
-	DatabasePool pool(8, 0, engine::default_readers_per_index, fast_sweep());
+	DatabasePool pool(control_loop(), 8, 0, engine::default_readers_per_index, fast_sweep());
 	const auto path = fresh("sweep_merge");
 	engine::rev revision;
 	std::size_t written = 0;
@@ -2213,7 +2214,7 @@ void test_the_sweeps_close_syncs_a_merges_output() {
 // same transaction is applied again. No map is made outside the lease (D12).
 void test_a_write_to_a_demoted_index_applies_after_one_promote() {
 	Watchdog watchdog("a write to a demoted index");
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("map_owed");
 	std::uint32_t slot;
 	{
@@ -2278,7 +2279,7 @@ void test_the_sweep_erases_a_missing_index_negative_entries() {
 	IndexSweep sweep;
 	sweep.period = 1ms;
 	sweep.negative_ttl = 3s;
-	DatabasePool pool(8, 0, engine::default_readers_per_index, sweep);
+	DatabasePool pool(control_loop(), 8, 0, engine::default_readers_per_index, sweep);
 	constexpr int names = 100;
 	const auto failed = [&] {
 		int n = 0;
@@ -2313,7 +2314,7 @@ void test_the_hostless_path_and_the_catalog_never_share_an_index() {
 		return false;
 	};
 	{
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		auto held = pin(pool, path);
 		Shard shard = use(held, WRITE);
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
@@ -2323,19 +2324,19 @@ void test_the_hostless_path_and_the_catalog_never_share_an_index() {
 	{
 		auto opened = engine::sync_wait(engine::open_local(path, true, false));
 		CHECK_EQ(static_cast<std::size_t>(opened.shard->doc_count()), 1u);
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		CHECK_TRUE(refused([&] { (void)pin(pool, path, DB_OPEN); }));
 	}
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), 1u);
 }
 
 // The pool keeps open at most what the descriptors' soft cap holds, whatever size it is given (D11).
 void test_soft_open_is_at_most_the_descriptor_cap() {
-	DatabasePool small(8);
+	DatabasePool small(control_loop(), 8);
 	CHECK_EQ(small.soft_open(), 8u);
-	DatabasePool huge(std::size_t(1) << 40);
+	DatabasePool huge(control_loop(), std::size_t(1) << 40);
 	CHECK_GE(huge.soft_open(), 64u);   // strata's floor: room for 64 indexes
 	CHECK_TRUE(huge.soft_open() < (std::size_t(1) << 40));
 }

@@ -278,10 +278,11 @@ readers_per_index()
 
 
 XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_start_)
-	: total_clients(0),
+	: _rx(std::make_unique<Reactors>()),
+	  total_clients(0),
 	  http_clients(0),
 	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
-	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, 0, readers_per_index())),
+	  database_pool(std::make_unique<DatabasePool>(_rx->host, opts.database_pool_size, 0, readers_per_index())),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  state(State::RESET),
@@ -294,7 +295,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 	  _deinited(false),
 	  _asap(0),
 	  _now(0),
-	  _rx(std::make_unique<Reactors>()),
 	  atom_sig(0)
 {
 	database_pool->set_control(&_rx->host);
@@ -1006,14 +1006,25 @@ XapiandManager::set_ready_impl()
 void
 XapiandManager::drain_control(control::Tasks& tasks, const char* what, std::chrono::steady_clock::time_point limit)
 {
-	engine::HostBinding binding(&_rx->host);   // the tasks the drain resumes find their host, as they did on the loop
-	auto& io = _rx->reactor.io();
 	while ((database_pool->detached() != 0 || tasks.running() != 0) && std::chrono::steady_clock::now() < limit) {
-		io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
-		io.run_for(10ms);
+		run_control(10ms);
 	}
 	if (database_pool->detached() != 0 || tasks.running() != 0) {
 		L_WARNING("{} {} tasks and {} tasks of the index registry did not end", tasks.running(), what, database_pool->detached());
+	}
+}
+
+
+void
+XapiandManager::run_control(std::chrono::milliseconds slice)
+{
+	engine::HostBinding binding(&_rx->host);   // the tasks it resumes find their host, as they did on the loop
+	auto& io = _rx->reactor.io();
+	io.restart();   // a loop that ran out of work is stopped: a chore that finishes later posts to a stopped one
+	if (slice.count() == 0) {
+		io.poll();
+	} else {
+		io.run_for(slice);
 	}
 }
 
@@ -1063,7 +1074,11 @@ XapiandManager::join()
 		// A SIGINT or SIGTERM that arrives from here on is an insistence: it ends the wait and the registry's.
 		const auto left = std::max(std::chrono::milliseconds(1), std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()));
 		http_service->set_shutdown_grace(http_shutdown_grace(left));   // before stop() starts, which reads it
-		auto report = shutdown_wait::wait(left, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, insisted);
+		// The poll every 50 ms runs the control loop: the catalog's timers (a wake a busy index retries) fire there.
+		auto report = shutdown_wait::wait(left, [service = http_service.get()] { service->stop(); }, [this] { return unfinished_work(); }, [this, &insisted] {
+			run_control(0ms);
+			return insisted();
+		});
 		if (!report.finished) {
 			L_WARNING("Shutdown abandoned {} unfinished item{} after waiting {} ms for the writes in flight{}:", report.abandoned.size(), report.abandoned.size() == 1 ? "" : "s", report.waited.count(), report.interrupted ? " (stopped by a second signal)" : "");
 			for (const auto& line : report.abandoned) {
@@ -1113,8 +1128,9 @@ XapiandManager::join()
 		L_MANAGER("Clearing and waiting for database pool!");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the database pool...", "Database pool finished!");
 		for (;;) {
+			run_control(0ms);   // the catalog's timers, which its shutdown may arm, fire on the control loop
 			const auto remaining = deadline - std::chrono::steady_clock::now();
-			if (database_pool->join(std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(remaining), std::chrono::milliseconds(1), std::chrono::milliseconds(500)))) {
+			if (database_pool->join(std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(remaining), std::chrono::milliseconds(1), std::chrono::milliseconds(10)))) {
 				break;
 			}
 			int sig = atom_sig;
