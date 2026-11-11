@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: waiting on jobs 261111-064311-e887e9 261111-064312-7bf55a 261111-064316-6b767a 261111-064318-2b7018 261111-062817-1fabdf 261111-064319-b5b323
+State: waiting on jobs 261111-064316-6b767a 261111-064318-2b7018 261111-062817-1fabdf
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A5 (relief order, folded in by the lead) fixed at strata bafafa9e; its test, mutant, the suite and
-A1's head burst reruns are queued (ids in State). Branch: 2ea3092b fixes, b7bd5251 driver,
+A5 fixed at strata bafafa9e and proven (test, mutant); suite green at bafafa9e. Only A1's strict
+burst runs remain (ids in State). Branch: 2ea3092b fixes, b7bd5251 driver,
 bafafa9e relief fix + docs/perf/flakes/relief_test.cc, docs 5e53b1a5 cf76b825 48e44b1f.
 
 ## Next
@@ -38,8 +38,8 @@ b7bd5251. A2's mutant: `--fails-without` job at the head with main's resource_bu
 | A1 | strict 10-min runs, 2 x 10 waves x 16 at head bafafa9e: 261111-064316-6b767a, 261111-064318-2b7018 (build 261111-064314-1e69d4, slot races-burst-head); main 10x16 --fails-without 261111-062817-1fabdf (build 261111-062806-177d38) |
 | A2 | 261111-061317-5cd220 (deterministic, passed at b7bd52511884); fails without: 261111-062645-154f0d (fails at resource_budget_test.cc:482); 261111-061320-6fa85e (TSan 20x16 at head: 0 of 320; main 3 of 320, 261111-053734-7d63a2) |
 | A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick()): one-line ordering comment at each changed atomic |
-| A5 | 261111-064311-e887e9 (relief_test at head); 261111-064312-7bf55a (catalog.hh at cf76b825, --fails-without) |
-| A4 | 261111-064319-b5b323 (suite at bafafa9e); earlier 261111-061322-03cbd0 (suite, passed at b7bd52511884); TSan suite and CI: CI's sanitizer matrix, on push (lead) |
+| A5 | 261111-064311-e887e9 (relief_test passes at bafafa9e); fails without: 261111-064312-7bf55a (at close.end: 2 descriptors, 2 vnodes booked, 0 held) |
+| A4 | 261111-064319-b5b323 (suite 74/74 at bafafa9e); earlier 261111-061322-03cbd0 (suite, passed at b7bd52511884); TSan suite and CI: CI's sanitizer matrix, on push (lead) |
 
 ## Result
 
