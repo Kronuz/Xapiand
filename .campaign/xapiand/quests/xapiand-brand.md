@@ -5,27 +5,38 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Owner ask (relayed by Detent's lead, 2026-11-11): Xapiand gets a `brand/` directory laid out like
+Kronuz's (`~/code/KronuzBlog/Kronuz.github.io/brand/`: README.md, the vector master, and
+`variants/<name>/` with favicon.svg, favicon.ico (16/32/48), apple-touch-icon.png (180),
+apple-touch-icon-152.png, apple-touch-icon-167.png, icon-192.png, icon-512.png and logo.svg in that
+variant's colors). Today Xapiand has only a 180x230 raster, `docs/src/assets/logo.png`: a green
+rounded hexagon with three stacked white layers.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] `brand/logo.svg`: the current logo redrawn as exact geometry (hexagon, layers,
+  their gaps and corner radii measured from `docs/src/assets/logo.png`), not an autotrace; no
+  raster inside, no fonts. Rendered at 180x230 it matches the PNG to the eye beside it (the
+  journal shows both renders side by side).
+- A2 [artifact] `brand/variants/<name>/` for at least two variants: the current green on light
+  pages, and one that reads on a dark page; each with the full Kronuz set of files.
+- A3 `docs/scripts/build-icons.mjs` (`npm run icons` in docs/) generates every variant file from
+  the master, following Kronuz's `scripts/build-icons.mjs` (reuse its approach: exact-size
+  rasterization, tab-size alpha gamma, maskable safe area); the `icons` check regenerates and
+  finds no diff.
+- A4 [artifact] `brand/README.md`: what the master is, how the icons derive, which variant is meant
+  to be live.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: the site keeps its current assets; switching docs/public and the page logo to the live variant
+is a separate step the owner decides. Detent's `detent-brand` follows the same layout; match it
+when it lands.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
