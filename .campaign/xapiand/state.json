@@ -13369,9 +13369,7 @@
       "consumes": [],
       "files": [
         "include/strata/core/reader.hh",
-        "test/reader_check_test.cc",
-        "test/CMakeLists.txt",
-        "CMakeLists.txt"
+        "test/reader_check_test.cc"
       ],
       "history": [
         {
@@ -13412,7 +13410,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A stored frame's records end where the next frame starts",
-      "updated": "2026-11-10T22:24:12"
+      "updated": "2026-11-10T22:24:37"
     },
     "stored-short-section": {
       "accepted": {},
