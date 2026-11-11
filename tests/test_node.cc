@@ -139,10 +139,14 @@ private:
 // Holds an index's turn from a thread of its own until released.
 class HoldTurn {
 public:
-	HoldTurn(ShardEndpoint& entry, int flags) {
+	// With wait false it only queues for the turn; held() says when it has it.
+	HoldTurn(ShardEndpoint& entry, int flags, bool wait = true) {
 		thread_ = std::thread([this, &entry, flags] { engine::sync_wait(hold(entry, flags)); });
-		eventually([this] { return held_.load(); });
+		if (wait) {
+			eventually([this] { return held_.load(); });
+		}
 	}
+	bool held() const { return held_.load(); }
 	~HoldTurn() { release(); }
 	void release() {
 		release_.set();
@@ -1712,6 +1716,77 @@ static void test_an_existing_id_written_again_lands_on_its_shard() {
 	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 9u);
 }
 
+// An id that sits off its hash shard (where an earlier rule placed it), written by a PUT whose lookup found it while
+// a DELETE and a PUT of another request come between its lookup and its write, must not end on two shards. The
+// shard's turn is a FIFO queue, so held turns order the three: DELETE's lookup, a hold, the PUT's lookup, and a
+// second hold queued while the first is held; releasing the first runs the PUT's lookup (it finds the id) and then
+// the DELETE's erase, and the second hold stops the PUT's write behind them. The new PUT (its lookup missed, so it
+// is placed on the hash shard) is the write the test makes there, and the stale write is let go last.
+static void test_a_stale_write_does_not_put_an_id_on_two_shards() {
+	Watchdog watchdog("a stale write does not put an id on two shards", 120s);
+	constexpr std::size_t shards = 5;
+	const std::string index = "twice_s5";
+	const auto path = "/" + index + "/";
+	create_index(index, shards);
+	CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);
+	const auto endpoints = endpoints_of(index);
+	DatabaseHandler db(endpoints, WRITE);
+	const auto holds = [&](std::size_t shard, const std::string& term) {
+		try {
+			return engine::sync_wait(DatabaseHandler(Endpoints(endpoints[shard]), DB_OPEN).get_docid_term(term)) != 0;
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+			return false;
+		}
+	};
+	const std::string id = "twice";
+	auto obj = MsgPack{{"_id", id}, {"n", "first"}};
+	auto prepared = engine::sync_wait(db.prepare_document(obj, 0));
+	const auto term = std::get<0>(prepared);
+	const std::size_t hashed = key_placement_hash(term) % shards;
+	const std::size_t off = hashed == 1 ? 2 : 1;   // not the hash's, and not shard 0, which a request's schema reads
+	const auto seat = [&](std::size_t shard) {
+		auto again = engine::sync_wait(db.prepare_document(obj, 0));
+		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
+		auto held = use_index(pin, WRITE_QUIET);
+		engine::sync_wait(held.replace_document_term(term, std::move(std::get<1>(again)), true, false));
+	};
+	seat(off);
+	CHECK(holds(off, term));
+	CHECK_FALSE(holds(hashed, term));
+
+	auto entry = pin_index(*manager()->database_pool, endpoints[off].path, WRITE);
+	Reply deleted, put;
+	std::thread t_delete, t_put;
+	auto first = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	t_delete = std::thread([&] { deleted = call("DELETE", path + id + "?commit"); });
+	CHECK(eventually([] { return requests_inflight() == 1; }));
+	std::this_thread::sleep_for(200ms);   // the DELETE's lookup waits on the turn
+	auto second = std::make_unique<HoldTurn>(entry.entry(), WRITE, false);
+	std::this_thread::sleep_for(100ms);
+	t_put = std::thread([&] { put = call("PUT", path + id, R"({"n":"stale"})"); });
+	CHECK(eventually([] { return requests_inflight() == 2; }));
+	std::this_thread::sleep_for(200ms);   // the PUT's lookup waits behind the second hold
+	first->release();   // the DELETE's lookup runs and queues its erase; the second hold has the turn
+	CHECK(eventually([&] { return second->held(); }));
+	std::unique_ptr<HoldTurn> third = std::make_unique<HoldTurn>(entry.entry(), WRITE, false);
+	std::this_thread::sleep_for(100ms);   // queued behind the PUT's lookup and the DELETE's erase
+	second->release();   // the PUT's lookup finds the id; the DELETE's erase runs; the third hold has the turn
+	CHECK(eventually([&] { return third->held(); }));
+	t_delete.join();
+	CHECK_EQ(deleted.status, 204);
+	CHECK_FALSE(holds(off, term));   // erased while the PUT's write waits
+	seat(hashed);   // the new PUT's write: its lookup missed, so it goes to the hash shard
+	third->release();   // the stale write runs
+	t_put.join();
+	CHECK_EQ(put.status, 204);
+	std::fprintf(stderr, "  id %s: hash shard %zu holds %d, shard %zu holds %d\n", id.c_str(), hashed, holds(hashed, term) ? 1 : 0, off, holds(off, term) ? 1 : 0);
+	CHECK(holds(hashed, term));
+	CHECK_FALSE(holds(off, term));
+	CHECK_EQ(text_of(call("GET", path + id), "n"), "stale");
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":5})"), "total").as_u64(), 2u);
+}
+
 // New numeric ids in a burst, none committed, spread over the 5 shards: the least used shard counts the documents
 // each shard holds buffered, not only those it flushed (with the flushed ones alone, every one went to shard 0).
 static void test_new_numeric_ids_spread_over_the_shards_while_buffered() {
@@ -2016,6 +2091,7 @@ int main(int argc, char** argv) {
 		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
 		{"test_a_restore_into_shards_writes_a_few_segments", test_a_restore_into_shards_writes_a_few_segments},
 		{"test_an_existing_id_written_again_lands_on_its_shard", test_an_existing_id_written_again_lands_on_its_shard},
+		{"test_a_stale_write_does_not_put_an_id_on_two_shards", test_a_stale_write_does_not_put_an_id_on_two_shards},
 		{"test_new_numeric_ids_spread_over_the_shards_while_buffered", test_new_numeric_ids_spread_over_the_shards_while_buffered},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
