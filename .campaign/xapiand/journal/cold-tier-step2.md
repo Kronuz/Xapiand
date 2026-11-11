@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261110-211214-179f5f 261110-211216-248ffb 261110-211218-6a6200 261110-211233-3c01fa 261110-211220-b3b9af 261110-211221-3a7f09 261110-211223-969922 261110-211225-45bedb 261110-211226-81fd7c 261110-211228-c5746c 261110-211229-6ec5bb 261110-211231-026a08
+State: waiting on jobs 261111-010253-46fd89 261111-010255-f16b39 261111-010257-bace72 261111-011615-c7bbb1 261111-011618-0d4ed0 261111-011622-bbbac4 261111-011626-b1b43d
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,67 +9,45 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Head strata:dbfc1898 (pushed). Since c71d904f: A7's probe folded into `apply_atomic_test`
-(strata:f2caed00); the A2 survivors' tests tightened (strata:88d18147, dbfc1898); T5's two
-catalogs on one budget in `catalog_stress_test` (strata:955343df, 9ef55ee5); the tier rows scaled
-to 10-minute jobs under D59 (strata:338e72c2).
+Head strata:948c0869 (not pushed: the lead pushes). Since dbfc1898: main merged (strata:5e7a7b47,
+the stored check); the TSan-only mutants marked (strata:8875d17d); `catalog_s8` scaled under TSan
+(strata:9bf6b833); the tier fixtures rebuilt by this tree's `idle_index` (strata:2a2ec768, 948c0869);
+the macOS rows written (strata:60b7d781); design/cold-tier merged and `cold-tier.md` revision 8
+(strata:6f8884bc, 19ea55d9); the ledger's last questions (strata:7a5ca76a). After 9bf6b833 only
+`docs/` and `bench/` change, so the jobs at 9bf6b833 (46fd89, f16b39, bace72) test this head's
+code.
 
-- D59 (Xapiand:d558d0f73): the 15 strict jobs (430 minutes declared) are cancelled. Each row is
-  now one strict job of at most 10 minutes holding its interleaved pairs, behind one light build
-  (b3b9af: both harnesses' binaries, fixtures kept): T1 1-segment 3a7f09 (d1s1, d1000s1) and
-  10-segment 969922 (d100s10, d1000s10), 1,000 indexes, 2 pairs; A9 45bedb (k6, d1s1 d100s1
-  d100s10, 1,000, 2 pairs); T2/T2d 81fd7c (d1s1 d1000s1 d1000s10, 500, 3 pairs); T3 c5746c
-  (50,000 indexes, soft_open 2,000, soft_hot 500, 100,000 Zipf requests); T4 6ec5bb (0.99, scan
-  and not) and 026a08 (1.2): 20,000 indexes, soft_open 1,000, soft_hot 250, 20,000 + 40,000
-  requests. 68 strict minutes declared. Sizing (a light hold, not a measurement): 5,000 main
-  opens 26 s, tier hot 8 s, cold defer 28 s; first-query cold defer on d1000s10 80 s; T3 on
-  20,000 66 s; T4 on 20,000 149 s.
-- build-test failed at 9ef55ee5 (261110-184531-4c1fc1, also 443289): `catalog_wake_test.cc:525`.
-  My S5-B9 check read `auto edges = w.cat->stats().edges`, a pointer into a dead temporary
-  (an array member decays); -O1 passed by luck, -O2 reproduced. Fixed at strata:dbfc1898.
-- S7-T3 survived four TSan runs (261110-184529-a16dbb; S4-S3, S4-X2, S7-T1 were killed there).
-  `shutdown_joiners` (strata:dbfc1898) races four joins on a catalog with no slot open, so one
-  join completes the shutdown while the others push; it kills S7-T3 on a plain build (local).
-  Local asserts-on: S4-S2, S5-B9, S7-Z8 and S7-T3 all killed.
-- A7, root cause: the rollback is sound; the probe's oracle was wrong under the lazy default.
-  Reproduced on an asserts-on build: `[keys]`, `[keys, lazy]` throw in stage 1 and leave nothing;
-  eager opens refuse `key_index` and `versions` damage; lazy opens accept it (D11), the first
-  keyed apply throws and the segment stays failed, so the probe's unguarded follow-up
-  `apply({add Q3})` threw `corrupt_segment` and aborted. `[stored]` applied whole (no throw) and
-  the probe still called Q2=b2 "HALF VISIBLE". Fix: `section_attempt` in `apply_atomic_test.cc`
-  (build-test) over the four sections, eager and lazy: refused, or thrown with nothing visible, or
-  whole; a follow-up may throw `corrupt_segment` only after a throw; an absent key's read must
-  throw, not answer absent; exactly four cases reach stage 1. `apply_throw_probe.cc` deleted;
-  `rollback.py` builds the test only. Local (asserts on): passes; the three reverts are killed.
-- A2 survivors, judged:
-  - S4-S2: the anchor (bound close, `close_ready() && maps == 0`) is equivalent: the bound
-    close runs at pins 0, and a demote leaves no map. Re-anchored to the sweep chore's maps test
-    (`ready = ready && maps == 0`), kind `sweep`, run by `catalog_sweep_test`.
-  - S5-B9: `bound_and_backoff` now pins a closing slot after `begin_bound_close`; the reopen
-    must go closing to opening once with no closing-to-free edge, then fail with the bound's
-    backoff, which a reopen in place without the reuse reset breaks.
-  - S7-Z8: `reclaim_zero_under_demoting` drops the held view inside the demote chore, so only
-    `reclaim(0)` frees its maps.
-  - S4-S3, S4-X2, S7-T1: data races, killed only by TSan (their ledger rows say so); the asserts
-    build of bc3fdd cannot see them. Killed by TSan in a16dbb; rerun at the head in 6a6200.
-  - S7-T3: survived TSan; `shutdown_joiners` now kills it (above).
-  - S4-SZ1: dropped, uncompilable: its edit fails `catalog_test.cc:1057`'s
-    `static_assert(slot_bytes() <= 192)`.
-- A1: `stress_two` (plain and defer_io), local asserts-on: maps at 16 of 16, descriptors at most
-  33 of 64, 0 kernel refusals, 0 over a cap, 50 to 87 merges; five whole runs (`400 4` twice,
-  `3000 4` twice, default) pass.
+- Results at dbfc1898: build-test 261110-211233-3c01fa passed; A7 261110-211214-179f5f passed
+  (the section cases, the three reverts killed, the whole suite eager 73 of 73); A2 TSan
+  261110-211218-6a6200 killed S4-S3, S4-X2, S7-T1 and S7-T3. A2 at 1,000 seeds
+  261110-211216-248ffb: 162 of 167 killed; survivors S4-S3, S4-X2, S7-T1 (TSan-only, killed in
+  6a6200) and S7-T2 (shutdown's failed commits named without the mutex: killed in bc3fdd's run,
+  survived here, a race with no wrong value); S4-SZ1 not run (it does not compile). Fixed in
+  strata:8875d17d: the four races are marked `tsan` and run only on a TSan build (bace72 runs them
+  with S7-T3); S4-SZ1 leaves the table (the static_assert refuses it, as the ledger says).
+- CI at dbfc1898: `linux-tsan` was not superseded. It hit the job's 60-minute limit inside
+  `catalog_s8_smoke`, which ran 43 minutes before the cancel. Main's last three CI runs (42979496571,
+  42951960800, 42931264451) end the same way, so it is pre-existing. Fixed in my file set
+  (strata:9bf6b833): under TSan the smoke divides by 10 more; locally the TSan build runs it in
+  22 s and passes. Every other job at dbfc1898 passed. At 9ef55ee5, `linux-tsan` also failed
+  `resource_budget_test.cc:494` (`b.external(D) <= 70`) once; that test and `resource_budget.hh`
+  are main's, unchanged here, and passed at dbfc1898 and in main's runs: a flake for the lead.
+- The rows (written in strata `docs/perf/catalog-tiers.md` "Results"): T1 hot through the catalog
+  +650 B heap over main (the slot and payload), cold 292 B (T1's "cold ≤ 16 B" is not met at step
+  2); K6 hot equals main's heap, RSS -2.0% to +1.4%; T2d warm below cold at p50 and p99 by about
+  300 times; T3 PASS at 50,000; T4 PASS in all four cells, each above s8_variants. The 10-segment
+  rows were void: main's `idle_index` ignores SEGMENTS, so the s10 fixtures held one segment;
+  rerun on rebuilt fixtures as 0d4ed0 (T1) and bbbac4 (T2/T2d), behind c7bbb1.
+- Findings for the lead: an open is 21 ms at p50 on this Mac in most pairs, about 1 ms in a few
+  (the two syncs); T3 saw the kernel hold up to 1,050 descriptors beyond the budget's count.
 
 ## Next
 
-1. Read the jobs. 3c01fa: build-test at strata:dbfc1898. CI on the pushed head: A1 (`linux-tsan`,
-   `linux-asan-ubsan`). 179f5f (A7, K3, A12 eager run). 248ffb (A2, every mutant, 1,000 seeds;
-   the three TSan-only ones survive there) and 6a6200 (those three and S7-T3 on TSan).
-2. The rows: 3a7f09 and 969922 (T1), 45bedb (A9), 81fd7c (T2/T2d), c5746c (T3), 6ec5bb and
-   026a08 (T4). Each into strata `docs/perf/catalog-tiers.md` "Results" (A9's into
-   `docs/perf/idle-index.md`) with main's interleaved pairs and their spread as the interval; A5's
-   sentence for macOS warm. A second run only when the interval straddles a target (D59). A job
-   ending 124: halve its count, never split into reps.
-3. Delete `.scratch/tiers` (about 20 GB of fixtures) and `.scratch/k6` once the rows are in.
+1. Read b1b43d (build-test at the head), 46fd89 (A7, A12), f16b39 (A2 asserts, the four races
+   skipped), bace72 (A2 TSan, five). CI once the lead pushes (A11).
+2. Read 0d4ed0 and bbbac4 (the 10-segment T1 and T2/T2d rows) into `docs/perf/catalog-tiers.md`,
+   replacing the void row's note.
+3. Delete `.scratch/tiers` and `.scratch/k6` once the rows are in.
 
 ## Blocked on
 
@@ -124,17 +102,20 @@ minutes when it runs.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261110-211233-3c01fa and CI at strata:dbfc1898: `linux-tsan`, `linux-asan-ubsan` |
-| A2 | 261110-211216-248ffb: `tools/mutants/cold_tier.py build-mut 1000` over `tools/mutants/cold_tier_table.py` at strata:dbfc1898 (S4-S2, S5-B9, S7-Z8, S7-T3 tightened); 261110-211218-6a6200: S4-S3, S4-X2, S7-T1, S7-T3 on TSan; S4-SZ1 dropped (uncompilable, see Doing); earlier 261110-170249-bc3fdd (7 survivors), 261110-184529-a16dbb (TSan: S7-T3 survived) |
-| A3 | main strata:15d39c30's `idle_index` interleaved in each row's job: 3a7f09, 969922 (T1), 81fd7c (T2/T2d), 45bedb (K6); built by 261110-211220-b3b9af. T3 and T4 have no main baseline (main has no catalog) |
-| A4 | macOS warm, one strict job per row (D59), at strata:dbfc1898: T1 261110-211221-3a7f09, 261110-211223-969922; T2 261110-211226-81fd7c; T3 261110-211228-c5746c (50,000, 25x the open cap); T4 261110-211229-6ec5bb, 261110-211231-026a08 (20,000). Linux and full scale: Milestone checks |
-| A5 | macOS warm: T2d rows of 261110-211226-81fd7c (defer_io warm/cold/hot, promote() per segment, d1s1 d1000s1 d1000s10). Dropped and Linux: Milestone checks |
+| A1 | `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-011626-b1b43d; CI `linux-asan-ubsan` passed at strata:dbfc1898 (run 42964131146), `linux-tsan` on the next push |
+| A2 | 261111-010255-f16b39: `tools/mutants/cold_tier.py build-mut 1000` over `tools/mutants/cold_tier_table.py` at strata:9bf6b833 (the TSan-only races skipped); 261111-010257-bace72: S4-S3, S4-X2, S7-T1, S7-T2, S7-T3 on TSan; S4-SZ1 refused at compile time. At dbfc1898: 261110-211216-248ffb (162 of 167), 261110-211218-6a6200 (TSan, 4 of 4) |
+| A3 | main strata:15d39c30's `idle_index` interleaved in each row's job: 261110-211221-3a7f09 (T1), 261110-211226-81fd7c (T2/T2d), 261110-211225-45bedb (K6); 10 segments 261111-011618-0d4ed0, 261111-011622-bbbac4. T3 and T4 have no main baseline (main has no catalog). Results: `docs/perf/catalog-tiers.md` |
+| A4 | macOS warm, one strict job per row (D59): T1 261110-211221-3a7f09 and 261111-011618-0d4ed0 (10 segments); T2 261110-211226-81fd7c and 261111-011622-bbbac4; T3 261110-211228-c5746c PASS (50,000, 25x the open cap); T4 261110-211229-6ec5bb, 261110-211231-026a08 PASS. Results: `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
+| A5 | macOS warm: T2d in 261110-211226-81fd7c, warm defer below cold at p50 and p99 on d1s1 and d1000s1 (54-90 vs 20,963-21,069 µs p50); 10 segments 261111-011622-bbbac4. Dropped and Linux: Milestone checks |
 | A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
-| A7 | 261110-211214-179f5f: `apply_atomic_test` with each damaged section eager and lazy (strata:f2caed00) and `tools/mutants/rollback.py`'s three reverts of the rollback; in build-test (261110-211233-3c01fa). Earlier 261110-164238-c8f75e failed on the probe's oracle (see Doing) |
-| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test as A6 |
-| A9 | 261110-211225-45bedb: `bench/idle_index/k6.sh measure` 1,000 indexes, 2 pairs, main interleaved with hot/warm/lazy on d1s1 d100s1 d100s10 |
-| A10 | `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b, 85dd1df6, 8f372200), with what prospect's tests expect under lazy segments; 261110-164333-5b4cd8 (prospect at its pin, lazy: 48 of 51, the 3 listed) |
-| A12 | lazy is the default (strata:6d4e1164); build-test 261110-211233-3c01fa; the whole suite eager (`STRATA_EAGER_SEGMENTS=1`) in 261110-211214-179f5f |
+| A7 | 261110-211214-179f5f (passed at strata:dbfc1898) and 261111-010253-46fd89 (at 9bf6b833): `apply_atomic_test` with each damaged section eager and lazy and `tools/mutants/rollback.py`'s three reverts; in build-test 261111-011626-b1b43d |
+| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261110-211233-3c01fa passed at dbfc1898; head 261111-011626-b1b43d |
+| A9 | 261110-211225-45bedb: `bench/idle_index/k6.sh measure` 1,000 indexes, 2 pairs: hot's heap equals main's, RSS -2.0% to +1.4%; warm and lazy rows in `docs/perf/catalog-tiers.md` |
+| A10 | [artifact] `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b, 85dd1df6, 8f372200): prospect's and Xapiand's sites with the pin bumps (prospect:e49453d, Xapiand:74d8236e5); 261110-164333-5b4cd8 ran prospect lazy at its pin (48 of 51, the 3 listed there) |
+| A11 | CI after the lead's push. At strata:dbfc1898 (run 42964131146) every job passed but `linux-tsan`, cancelled at 60 minutes in `catalog_s8_smoke` (as on main); scaled in strata:9bf6b833 |
+| A12 | lazy is the default (strata:6d4e1164); build-test 261111-011626-b1b43d; the whole suite eager (`STRATA_EAGER_SEGMENTS=1`) passed in 261110-211214-179f5f, again in 261111-010253-46fd89 |
+| A13 | [artifact] `docs/design/cold-tier.md` revision 8 (strata:19ea55d9, over design/cold-tier's revision 7 merged at 6f8884bc): item 5b's host and word rows in D4, the ledger's "Design vs code" in D4, fence replacement, commit chore and create intent in D5, the limits |
+| A14 | [artifact] `docs/status/cold-tier-step2.md`: Q6 ruled (`cold-tier.md` Q6), item 6's seam ruling applied ("Item 6's seam ruling"), the last questions answered or left to the lead ("Questions for the lead and the architect", strata:7a5ca76a: question 3's by-key A/B is the lead's measurement) |
 
 Examined: 261110-164701-5446c4, 261110-164703-b52661 (cancelled: `$JOB_REF_MAIN` unexpanded
 without a shell), 261110-164726-ca2d5c (cancelled: replaced by the interleaved f0141f),
@@ -182,6 +163,11 @@ the jobs at 955343df, 9ef55ee5 and 338e72c2 (superseded: see Doing).
 - A2: the four TSan survivors are judged on a TSan build (a16dbb), not by tightening the asserts
   build's tests: a race without a wrong value is visible to TSan only.
 - A7: the probe's cases live in `apply_atomic_test` (build-test), not as a separate probe.
+- A2: a race with no wrong value is a `tsan` mutant, judged on a TSan build only; S4-SZ1 is not a
+  mutant (its edit does not compile).
+- A11: `catalog_s8_smoke` divides by 10 more under TSan (my file set; the hang is on main too).
+- A13: design/cold-tier is merged into this branch (docs only) and revision 8 written over it;
+  `docs/status/cold-tier.md` keeps this branch's HISTORY header and K3.
 - D59 scaling: T3 keeps "far above the caps" by scaling the caps with the count (50,000 indexes,
   25x soft_open, 100x soft_hot); T4 keeps the model's ratio of cache to population (5%, as 50,000
   of 1,000,000) on 20,000. T1 drops d100s1 from its jobs (K6's A9 job covers it). soft_hot is
