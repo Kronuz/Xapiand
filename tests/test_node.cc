@@ -2074,7 +2074,7 @@ static void test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document
 	CHECK(eventually([&] { return host.idle(); }));
 	if (patch.done()) {
 		std::fprintf(stderr, "DIAG off=%zu hashed=%zu erase_done=%d holds_off=%d holds_hashed=%d\n", x.off, x.hashed, int(erase.done()), int(x.holds(x.off)), int(x.holds(x.hashed)));
-		try { patch.get(); std::fprintf(stderr, "DIAG patch ok\n"); } catch (const std::exception& e) { std::fprintf(stderr, "DIAG patch threw %s\n", e.what()); }
+		try { patch.get(); std::fprintf(stderr, "DIAG patch ok\n"); } catch (const engine::Error& e) { std::fprintf(stderr, "DIAG patch threw %d\n", int(e.kind)); }
 	}
 	CHECK_FALSE(patch.done());   // the PATCH read the old document; its write waits behind the erase
 	x.seat(x.hashed, "new");   // version 1, as the old one

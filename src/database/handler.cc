@@ -671,6 +671,7 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 				did = current_document.get_docid();
 				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
+				if (getenv("XDIAG")) { std::fprintf(stderr, "DIAG patch read threw %d %s\n", int(error.kind), error.what()); }
 				if (!engine::is_missing(error.kind)) { throw; }
 				if (document_ver != UNKNOWN_REVISION && document_ver != 0) {
 					throw engine::version_conflict(0);  // the version is checked before the document is missing
@@ -1772,6 +1773,7 @@ DatabaseHandler::find_docid_term(const std::string& term, bool written)
 				} else {
 					shard_did = co_await (co_await lk_shard->engine_for_read())->find_key(term);
 				}
+				if (getenv("XDIAG")) { std::fprintf(stderr, "DIAG find %s shard %zu written=%d did=%u\n", repr(term).c_str(), shard_num, int(written), unsigned(shard_did)); }
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					co_return did;
