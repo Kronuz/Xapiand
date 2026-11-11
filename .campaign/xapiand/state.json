@@ -10835,7 +10835,8 @@
       "files": [
         "fuzz/**",
         "include/**",
-        "test/**"
+        "test/**",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -10935,7 +10936,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-10T18:15:32",
+      "updated": "2026-11-10T19:24:26",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
