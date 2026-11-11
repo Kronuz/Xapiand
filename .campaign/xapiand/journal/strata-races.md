@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: waiting on jobs 261111-061303-afa5e8 261111-061305-f25392 261111-061317-5cd220 261111-061319-5f0ba7 261111-061320-6fa85e 261111-061322-03cbd0
+State: waiting on jobs 261111-062745-9a0936 261111-062757-f52802 261111-062817-1fabdf 261111-062645-154f0d 261111-061320-6fa85e 261111-061322-03cbd0
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,14 +32,20 @@ b7bd5251. A2's mutant: `--fails-without` job at the head with main's resource_bu
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261111-061303-afa5e8 (head), 261111-061305-f25392 (main, --fails-without) |
-| A2 | 261111-061317-5cd220 (deterministic, head), 261111-061319-5f0ba7 (main's tick(), --fails-without), 261111-061320-6fa85e (TSan 20x16, head) |
+| A1 | strict 10-min runs, 2 x 10 waves x 16 at head: 261111-062745-9a0936, 261111-062757-f52802 (build 261111-062732-e9fd06, slot races-burst-head); main 10x16 --fails-without 261111-062817-1fabdf (build 261111-062806-177d38) |
+| A2 | 261111-061317-5cd220 (deterministic, head, passed); 261111-062645-154f0d (main's tick(), --fails-without); 261111-061320-6fa85e (TSan 20x16, head) |
 | A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick()): one-line ordering comment at each changed atomic |
 | A4 | 261111-061322-03cbd0 (suite); TSan suite and CI: on push (lead) |
 
 ## Result
 
 <pending jobs>. How it works: strata `docs/perf/flakes.md`.
+
+Superseded: 261111-061303-afa5e8 and 261111-061305-f25392 (zsh `$X:t` modifier mangled the sha),
+261111-061319-5f0ba7 (mutant failed as intended but --fails-without wants the command inverted; it
+failed at resource_budget_test.cc:482, the new hook check), 261111-062621-428fdf / 261111-062635-95c190
+(cancelled: load runs must be strict, per the coordinator). Load runs are now `--level strict
+--minutes 10`, built first by a light job in the same slot.
 
 ## Rulings I made
 
