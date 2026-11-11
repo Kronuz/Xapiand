@@ -1,11 +1,11 @@
 # stored-frame-bound: journal
 
-State: waiting on jobs 261110-222541-cd9abe 261110-222606-747771 261110-222619-9b3428
+State: waiting on jobs 261110-222851-fda023 261110-222853-29eb1c 261110-222857-88df36
 Quest: .campaign/xapiand/quests/stored-frame-bound.md (the lead's; never edit it)
 
 ## Doing
 
-Fix and test are committed (strata:e5979526). Only jobs remain.
+Fix committed (strata:e5979526); test compile fix on top (strata:94480d52, a segment viewing a temporary). Only jobs remain.
 
 ## Next
 
@@ -19,12 +19,13 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test passes at head: build-test 261110-222541-cd9abe (runs reader_check); revert job 261110-222619-9b3428 (see below); review probe overlap.sh at head 261110-222606-747771 |
-| A2 | build-test 261110-222541-cd9abe |
+| A1 | test passes at head: build-test 261110-222851-fda023 (runs reader_check); revert job 261110-222857-88df36; review probe overlap.sh at head 261110-222853-29eb1c (an earlier run at strata:e5979526, 261110-222606-747771, exited 0 too) |
+| A2 | build-test 261110-222851-fda023 |
 
 ## Fails without the fix
 
-- 261110-222619-9b3428: scratch commit (refs/scratch/sfb-revert in the strata worktree: head with reader.hh as before the fix) builds reader_check_test and requires it to fail; the job exits 0 when it fails.
+- 261110-222857-88df36: scratch commit (refs/scratch/sfb-revert in the strata repo: head with reader.hh as before the fix) builds reader_check_test and requires it to fail; the job exits 0 when it fails.
+- 261110-222619-9b3428: earlier revert job, failed to compile (test bug, fixed in strata:94480d52); not evidence. 261110-222541-cd9abe: build-test at the uncompilable test, cancelled.
 - 261110-222609-76bc4e: first revert job, cancelled (`! (build && run)` would also pass on a build failure); replaced by the job above.
 
 ## Result
