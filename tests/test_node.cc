@@ -1610,6 +1610,107 @@ static void test_a_versioned_delete_checks_the_document_its_key_names() {
 	}
 }
 
+// ---- placement: where a write puts a document, read without flushing the shards ----
+
+// The segments a shard's index holds now (its seg-<id>.sx files) and the highest id among them, which counts the
+// segments it wrote: a merge's output takes a new id too.
+struct SegmentFiles {
+	int count = 0;
+	std::uint64_t highest = 0;
+};
+
+static SegmentFiles segment_files(const Endpoint& endpoint) {
+	auto dir = std::filesystem::path(endpoint.path) / "strata";
+	if (dir.is_relative()) {
+		dir = std::filesystem::path(Endpoint::cwd) / dir;
+	}
+	CHECK(std::filesystem::is_directory(dir));
+	SegmentFiles files;
+	std::error_code ec;
+	for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+		const auto name = entry.path().filename().string();
+		if (name.rfind("seg-", 0) != 0 || !name.ends_with(".sx")) {
+			continue;
+		}
+		++files.count;
+		files.highest = std::max<std::uint64_t>(files.highest, std::stoull(name.substr(4)));
+	}
+	return files;
+}
+
+// A RESTORE of 1,000 documents into 5 shards writes a few segments per shard: placing each document reads the
+// shards as their writes left them, so it flushes none of them (one segment per document when it did). With ids,
+// and without (each document gets a new id, placed by its hash).
+static void test_a_restore_into_shards_writes_a_few_segments() {
+	Watchdog watchdog("a restore into shards writes a few segments", 240s);
+	for (const bool ids : {true, false}) {
+		const std::string index = ids ? "restore_ids_s5" : "restore_new_s5";
+		create_index(index, 5);
+		std::string body;
+		for (int i = 1; i <= 1000; ++i) {
+			body += (ids ? R"({"_id":)" + std::to_string(i) + "," : std::string("{")) + R"("n":")" + std::to_string(i) + "\"}\n";
+		}
+		CHECK(success(call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson")));
+		for (const auto& endpoint : endpoints_of(index)) {
+			const auto files = segment_files(endpoint);
+			std::fprintf(stderr, "  %s %s: %d segments, highest id %llu\n", index.c_str(), endpoint.path.c_str(), files.count, static_cast<unsigned long long>(files.highest));
+			CHECK_GE(files.count, 1);
+			CHECK_LE(files.highest, 3u);
+		}
+		CHECK_EQ(field_of(call("SEARCH", "/" + index + "/?volatile", R"({"_limit":1})"), "total").as_u64(), 1000u);
+	}
+}
+
+// A document on another shard than its id's hash names (where an earlier rule placed it) is written again on the
+// shard that holds it, while its write there is still buffered and after a commit, by a PUT and by a RESTORE line:
+// placement's look in every shard sees what each shard's writes left, flushed or not.
+static void test_an_existing_id_written_again_lands_on_its_shard() {
+	Watchdog watchdog("an existing id written again lands on its shard", 120s);
+	constexpr std::size_t shards = 5;
+	const std::string index = "placed_s5";
+	const auto path = "/" + index + "/";
+	create_index(index, shards);
+	CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
+	const auto endpoints = endpoints_of(index);
+	DatabaseHandler db(endpoints, WRITE);
+	const auto holds = [&](std::size_t shard, const std::string& term) {
+		try {
+			return engine::sync_wait(DatabaseHandler(Endpoints(endpoints[shard]), DB_OPEN).get_docid_term(term)) != 0;
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+			return false;
+		}
+	};
+	for (int i = 0; i < 8; ++i) {
+		const bool flushed = i % 2 == 1;
+		const bool restored = i / 2 % 2 == 1;
+		const auto id = "k" + std::to_string(i);
+		auto obj = MsgPack{{"_id", id}, {"n", "first"}};
+		auto prepared = engine::sync_wait(db.prepare_document(obj, 0));
+		const auto term = std::get<0>(prepared);
+		const std::size_t hashed = key_placement_hash(term) % shards;
+		const std::size_t held = (hashed + 1 + static_cast<std::size_t>(i) % (shards - 1)) % shards;   // any shard but the hash's
+		{
+			auto pin = pin_index(*manager()->database_pool, endpoints[held].path, WRITE_QUIET);
+			auto shard = use_index(pin, WRITE_QUIET);
+			engine::sync_wait(shard.replace_document_term(term, std::move(std::get<1>(prepared)), flushed, false));
+			CHECK_EQ(pin.entry().engine().dirty(), !flushed);   // buffered until a commit or a read refreshes it
+		}
+		if (restored) {
+			CHECK(success(call("RESTORE", path, R"({"_id":")" + id + R"(","n":"again"})" "\n", "application/x-ndjson")));
+		} else {
+			CHECK_EQ(call("PUT", path + id, R"({"n":"again"})").status, 204);
+		}
+		for (std::size_t s = 0; s < shards; ++s) {
+			CHECK_EQ(holds(s, term), s == held);
+		}
+		const auto got = call("GET", path + id);
+		CHECK_EQ(text_of(got, "n"), "again");
+		CHECK_EQ(version_of(got), 2);
+	}
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 9u);
+}
+
 // Writers on few documents, each writing the version it read (PUT and PATCH, with ?version), against the sequential
 // model: a write that is applied lands at the version after the one it expected, per document every version from 2
 // to its last is won by exactly one write, a refused write saw an older version than the one it is told, and the
@@ -1857,6 +1958,8 @@ int main(int argc, char** argv) {
 		{"test_writers_expecting_one_version_apply_once", test_writers_expecting_one_version_apply_once},
 		{"test_a_versioned_delete_checks_the_document_its_key_names", test_a_versioned_delete_checks_the_document_its_key_names},
 		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
+		{"test_a_restore_into_shards_writes_a_few_segments", test_a_restore_into_shards_writes_a_few_segments},
+		{"test_an_existing_id_written_again_lands_on_its_shard", test_an_existing_id_written_again_lands_on_its_shard},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
