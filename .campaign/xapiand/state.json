@@ -2110,6 +2110,8 @@
     "cross-shard-id": {
       "accepted": {},
       "after": [],
+      "base": "17fa91165f00c47a3ad2c6c6ef48a179074cd401",
+      "branch": "quest/xapiand/cross-shard-id",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2138,9 +2140,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A concurrent PUT never leaves an id on two shards",
-      "updated": "2026-11-11T08:57:01"
+      "updated": "2026-11-11T08:57:18",
+      "worktree": "../Xapiand-wt/xapiand/cross-shard-id"
     },
     "direct-pins": {
       "accepted": {
