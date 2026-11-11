@@ -41,11 +41,13 @@ into one; async_check reports 24 of 25 hits and still passes).
 | Criterion | Evidence |
 |---|---|
 | A1 | at a09e16664: 261110-195119-1ec61f exit 0 (the three placement tests: 1 segment per shard in both RESTOREs, the existing-id cases, 4 4 4 4 4 new ids per shard) and build-test 261110-195120-40e989 (pending); fails without the fix: see below |
-| A2 | after 261110-195147-a43df6 at a09e16664 (pending, exit 0 only when all six RESTOREs are under 10 s); before 261110-191610-d043da at master (pending) |
+| A2 | 261110-195147-a43df6 at a09e16664: six RESTOREs beside the fsync storm, /bank/ 4.9-5.2 s, /cities/ 3.2-3.5 s, none at 10 s or more |
 | A3 | build-test 261110-195120-40e989 and e2e 261110-195120-5a8344 at a09e16664, pending |
 | A4 | `docs/mechanisms/placement.md` |
 
 ## Fails without the fix
+
+- A2 at master 1fd9a8451 (job 261110-191610-d043da): the same six RESTOREs took /bank/ 62.9-65.4 s and /cities/ 56.0-58.4 s, all over 10 s; the fix is 12-17x faster.
 
 - Segment test at master's code: 261110-191050-6a255b exit 0 (69e797c65 = master + the first two tests: every
   shard's highest segment id 224, 8-15 segment files left, 10 of 38 checks fail; the existing-id test passes there,
