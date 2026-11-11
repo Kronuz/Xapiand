@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261110-175050-5f4b70 261110-175103-e894df 261110-175117-cf8c26 261110-175119-5ed6d2 261110-175121-79ed08 261110-175124-924979 261110-175126-a4c90d 261110-175128-0c2a26 261110-175131-d1e3f9 261110-175133-51d13b 261110-175136-37ec7d 261110-175139-fed9f8 261110-175141-fe6964 261110-175143-04d6bb 261110-175145-97cb94 261110-175147-213dd5 261110-170249-bc3fdd 261110-165809-f0141f
+State: waiting on jobs 261110-175712-ef91f2 261110-175713-703b54 261110-175715-be5cb9 261110-175717-8e45cb 261110-175719-fe7b86 261110-175721-f04b30 261110-175723-09df75 261110-175725-8bb814 261110-175727-1c253e 261110-175729-0a6c55 261110-175731-98ea60 261110-175732-60f7ec 261110-175734-ed1997 261110-175736-633a0a 261110-175738-5ad3fc 261110-175741-ef0105 261110-170249-bc3fdd 261110-165809-f0141f
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,10 +9,11 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Head strata:0c054df1 (pushed; CI run 42941832467). Since c58a962d: A1's counters required in
+Head strata:393d415c (pushed; CI run 42942532141). Since c58a962d: A1's counters required in
 `catalog_stress_test` (strata:d5b9fe05), and `bench/catalog_tiers` with `tiers.sh` for T1 to T4 and
-T2d (strata:0c054df1; how it runs: strata `docs/perf/catalog-tiers.md`). The macOS rows are queued
-as strict jobs behind the build (e894df, light) and a smoke (cf8c26, strict, every mode on 2,000).
+T2d (strata:0c054df1, built as its own CMake project at strata:393d415c; how it runs: strata
+`docs/perf/catalog-tiers.md`). The macOS rows are queued
+as strict jobs behind the build (703b54, light) and a smoke (be5cb9, strict, every mode on 2,000).
 
 - 3af67b (build-test at c58a962d) passed. c8f75e (A7) FAILED: the unmutated `apply_throw_probe`
   aborts, `[keys, lazy] apply of {replace Q2, replace Q1}: corrupt_segment: keys checksum`, so the
@@ -23,11 +24,11 @@ as strict jobs behind the build (e894df, light) and a smoke (cf8c26, strict, eve
 
 ## Next
 
-1. Read the jobs. 5f4b70: build-test at the head. CI 42941832467: A1 (TSan, ASan+UBSan logs show
+1. Read the jobs. ef91f2: build-test at the head. CI 42942532141: A1 (TSan, ASan+UBSan logs show
    `catalog_stress` passed; a pass now requires every T5 counter) and A11.
-   cf8c26 (smoke) then T1 5ed6d2 (d1s1), 79ed08 (d100s1), 924979 (d1000s1), a4c90d (d100s10),
-   0c2a26 (d1000s10); T2/T2d d1e3f9 (d1s1), 51d13b (d1000s1), 37ec7d (d1000s10); T3 fed9f8; T4
-   fe6964 (0.99), 04d6bb (0.99 scan), 97cb94 (1.2), 213dd5 (1.2 scan). Write each row, with main's
+   be5cb9 (smoke) then T1 8e45cb (d1s1), fe7b86 (d100s1), f04b30 (d1000s1), 09df75 (d100s10),
+   8bb814 (d1000s10); T2/T2d 1c253e (d1s1), 0a6c55 (d1000s1), 98ea60 (d1000s10); T3 60f7ec; T4
+   ed1997 (0.99), 633a0a (0.99 scan), 5ad3fc (1.2), ef0105 (1.2 scan). Write each row, with main's
    interleaved baseline, into strata `docs/perf/catalog-tiers.md` "Results" and decide A5's
    sentence per platform. A job that ends 124 (the 30-minute bound): split it (t1 by reps, t4 with
    `WARM REQUESTS` halved twice) and resubmit.
@@ -38,7 +39,7 @@ as strict jobs behind the build (e894df, light) and a smoke (cf8c26, strict, eve
 ## Blocked on
 
 - **Lead, Linux host** (D24; the qemu VMs on 18762/18763 are Detent's, so not touched here). On
-  the gate VM, root, a checkout of strata at 0c054df1 (`SRC`) and of main at 15d39c30 (`MAIN`),
+  the gate VM, root, a checkout of strata at 393d415c (`SRC`) and of main at 15d39c30 (`MAIN`),
   12 to 16 GB free for T3, `ulimit -Hn` at least 150,000 for T4 (CT-R12), stock sysctls:
   ```
   OUT=/var/tmp/tiers T=$SRC/bench/catalog_tiers/tiers.sh
@@ -52,7 +53,7 @@ as strict jobs behind the build (e894df, light) and a smoke (cf8c26, strict, eve
   Each line under a host hold of at most 30 minutes (`QUIET_VM=<qemu pid> quiet strict ...`); the
   script picks Linux's caps (soft_hot 10,000; soft_open 50,000 for T3, 110,000 for T4).
 - **Lead, macOS cache dropped** (A5's "cache dropped" on macOS): `purge` needs root, so the macOS
-  jobs run warm only. In a checkout at 0c054df1, after e894df built the fixtures, under
+  jobs run warm only. In a checkout at 393d415c, after 703b54 built the fixtures, under
   `quiet strict`: `for f in d1s1 d1000s1 d1000s10; do sudo bench/catalog_tiers/tiers.sh t2
   /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers $f 100000 1 drop; done`.
 - **Finding for the lead** (not blocking): every `basic_index::open` syncs the directory, then the
@@ -64,17 +65,17 @@ as strict jobs behind the build (e894df, light) and a smoke (cf8c26, strict, eve
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `test/catalog_stress_test.cc` requires T5's counters over the run (strata:d5b9fe05; untallied reposts fail it after eight repeats, local); CI 42941832467 at strata:0c054df1 (running): `linux-tsan`, `linux-asan-ubsan` |
+| A1 | `test/catalog_stress_test.cc` requires T5's counters over the run (strata:d5b9fe05; untallied reposts fail it after eight repeats, local); CI 42942532141 at strata:393d415c (running): `linux-tsan`, `linux-asan-ubsan` |
 | A2 | 261110-170249-bc3fdd (running): `tools/mutants/cold_tier.py build-mut 1000` over `tools/mutants/cold_tier_table.py` (S3 21, S4 34, S5/S6 31, S7 81) |
 | A3 | 261110-165809-f0141f (strict, queued): main strata:15d39c30's `idle_index`, interleaved with this tree's, built by 261110-164724-95e365 |
-| A4 | macOS (running, strict, behind e894df and cf8c26): T1 5ed6d2 79ed08 924979 a4c90d 0c2a26; T2 d1e3f9 51d13b 37ec7d; T3 fed9f8; T4 fe6964 04d6bb 97cb94 213dd5. Linux: Blocked on |
-| A5 | macOS cache warm: T2d rows of d1e3f9 51d13b 37ec7d (defer_io warm/cold/hot, promote() per segment). Dropped and Linux: Blocked on |
-| A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175050-5f4b70 |
+| A4 | macOS (running, strict, behind 703b54 and be5cb9): T1 8e45cb fe7b86 f04b30 09df75 8bb814; T2 1c253e 0a6c55 98ea60; T3 60f7ec; T4 ed1997 633a0a 5ad3fc ef0105. Linux: Blocked on |
+| A5 | macOS cache warm: T2d rows of 1c253e 0a6c55 98ea60 (defer_io warm/cold/hot, promote() per segment). Dropped and Linux: Blocked on |
+| A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175712-ef91f2 |
 | A7 | 261110-164238-c8f75e (FAILED: the unmutated probe aborts, see Doing): `tools/mutants/rollback.py` over `apply_atomic_test` and `tools/mutants/apply_throw_probe.cc`, three reverts of the rollback |
 | A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test as A6 |
 | A9 | 261110-165809-f0141f (as A3) |
 | A10 | `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b, 85dd1df6, 8f372200), with what prospect's tests expect under lazy segments; 261110-164333-5b4cd8 (prospect at its pin, lazy: 48 of 51, the 3 listed) |
-| A12 | lazy is the default (strata:6d4e1164); build-test as A6 (head: 261110-175050-5f4b70); the eager whole run is in c8f75e, which failed on its probe step before it (see Doing) |
+| A12 | lazy is the default (strata:6d4e1164); build-test as A6 (head: 261110-175712-ef91f2); the eager whole run is in c8f75e, which failed on its probe step before it (see Doing) |
 
 Examined: 261110-164701-5446c4, 261110-164703-b52661 (cancelled: `$JOB_REF_MAIN` unexpanded
 without a shell), 261110-164726-ca2d5c (cancelled: replaced by the interleaved f0141f),
@@ -122,5 +123,9 @@ without a shell), 261110-164726-ca2d5c (cancelled: replaced by the interleaved f
   here even at idle, so the row compares this process's vnodes (distinct files behind its
   descriptors and mapped regions, `proc_pidinfo`) with the budget's hard cap, and reports the
   system's. The T3 job is strict, as the lead asked, not exclusive.
+- A4: the top-level `CMakeLists.txt` is outside the file set, so `bench/catalog_tiers` is its own
+  CMake project over strata's (`bench/catalog_tiers/CMakeLists.txt`) and CI does not compile it;
+  main's `idle_index` builds the fixtures. The jobs first queued at strata:0c054df1 (which touched
+  `CMakeLists.txt`) were cancelled before they ran and resubmitted at strata:393d415c.
 - A4: `idle_index`'s meters and heap counter move to `bench/idle_index/meters.hh` and
   `heap_count.hh` (no change in what it prints), so both harnesses meter alike.
