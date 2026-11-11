@@ -151,7 +151,7 @@ public:
 	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);

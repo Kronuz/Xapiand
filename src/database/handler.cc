@@ -468,10 +468,18 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 	auto& data_obj = std::get<2>(prepared);
 
 	engine::WriteResult info;
+	bool placed = false;
 	if (did) {
 		assert(term_id != NEW_NUMERIC_KEY);
-		info = co_await replace_document(did, std::move(doc), commit);
-	} else {
+		try {
+			info = co_await replace_document(did, std::move(doc), commit, true, true, true);
+			placed = true;
+		} catch (const engine::Error& error) {
+			// Erased or moved since the lookup: placed afresh, not put back where it was found.
+			if (!engine::is_missing(error.kind)) { throw; }
+		}
+	}
+	if (!placed) {
 		info = co_await replace_document_term(term_id, std::move(doc), commit);
 	}
 
@@ -1902,7 +1910,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version)
+DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version, bool must_exist)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
 
@@ -1913,7 +1921,7 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version, must_exist);
 	info.did = did;
 	co_return info;
 }
@@ -1938,7 +1946,8 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 				// A document that exists (in any shard) is replaced where it is.
 				auto did = co_await written_docid_term(term);
 				if (did != 0u) {
-					co_return co_await replace_document(did, std::move(doc), commit, wal, version);
+					// Written in the shard's turn only while it is still there: else it is placed afresh.
+					co_return co_await replace_document(did, std::move(doc), commit, wal, version, true);
 				}
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }

@@ -732,7 +732,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, bool must_exist)
 {
 	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, wal_);
 
@@ -751,6 +751,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 	info.did = shard_did;
 
 	engine::WriteArgs args;
+	args.must_exist = must_exist;
 	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
@@ -762,6 +763,11 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 		info = co_await eng.replace(shard_did, doc, args);
 	} catch (const engine::Error& error) {
 		note_failure(error);
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // a retry elsewhere pushes the blobs again
+		}
+#endif  // XAPIAND_DATA_STORAGE
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
@@ -1515,7 +1521,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 
 task::task<engine::WriteResult>
-Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_, bool must_exist)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
@@ -1527,7 +1533,7 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 		auto turn = co_await endpoint().take_turn(flags, cancel);
 		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
 		auto* eng = &endpoint().engine();
-		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_);
+		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_, must_exist);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;

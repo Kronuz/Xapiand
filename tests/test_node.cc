@@ -66,6 +66,7 @@
 #include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
+#include "sortable_serialise.h"
 #include "engine/chores.h"
 #include "engine/document.h"
 #include "engine/error.h"
@@ -139,10 +140,14 @@ private:
 // Holds an index's turn from a thread of its own until released.
 class HoldTurn {
 public:
-	HoldTurn(ShardEndpoint& entry, int flags) {
+	// With wait false it only queues for the turn; held() says when it has it.
+	HoldTurn(ShardEndpoint& entry, int flags, bool wait = true) {
 		thread_ = std::thread([this, &entry, flags] { engine::sync_wait(hold(entry, flags)); });
-		eventually([this] { return held_.load(); });
+		if (wait) {
+			eventually([this] { return held_.load(); });
+		}
 	}
+	bool held() const { return held_.load(); }
 	~HoldTurn() { release(); }
 	void release() {
 		release_.set();
@@ -1712,6 +1717,193 @@ static void test_an_existing_id_written_again_lands_on_its_shard() {
 	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 9u);
 }
 
+// An id seated off its hash shard (where an earlier placement rule put it) in a new index of 5 shards, and direct
+// writes of it on one shard, for the races of a write whose lookup found it there.
+struct OffHashId {
+	static constexpr std::size_t shards = 5;
+	std::string path;
+	Endpoints endpoints;
+	std::string id;
+	std::string term;
+	std::size_t hashed = 0;
+	std::size_t off = 0;
+
+	OffHashId(const std::string& index, std::string id_) : path("/" + index + "/"), id(std::move(id_)) {
+		create_index(index, shards);
+		CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
+		endpoints = endpoints_of(index);
+		term = std::get<0>(prepare("first"));
+		hashed = key_placement_hash(term) % shards;
+		off = hashed == 1 ? 2 : 1;   // not the hash's, and not shard 0, which a request's schema reads
+		seat(off, "first");
+		CHECK(holds(off));
+		CHECK_FALSE(holds(hashed));
+	}
+
+	// The id's document with `n`, prepared for a write.
+	std::tuple<std::string, engine::Document, MsgPack> prepare(const std::string& n) const {
+		auto obj = MsgPack{{"_id", id}, {"n", n}};
+		return engine::sync_wait(DatabaseHandler(endpoints, WRITE).prepare_document(obj, 0));
+	}
+
+	// Writes the id's document with `n` on `shard` by its key, committed: its shard docid.
+	engine::docid seat(std::size_t shard, const std::string& n) const {
+		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
+		auto use = use_index(pin, WRITE_QUIET);
+		return engine::sync_wait(use.replace_document_term(term, std::move(std::get<1>(prepare(n))), true, false)).did;
+	}
+
+	// Erases the id on `shard` by its key, in one turn of that shard.
+	void erase(std::size_t shard) const {
+		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
+		auto use = use_index(pin, WRITE_QUIET);
+		engine::sync_wait(use.delete_document_term(term, false, false));
+	}
+
+	bool holds(std::size_t shard) const {
+		try {
+			return engine::sync_wait(DatabaseHandler(Endpoints(endpoints[shard]), DB_OPEN).get_docid_term(term)) != 0;
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+			return false;
+		}
+	}
+};
+
+// A replace with must_exist writes the keyed document only while it is at the docid: a docid that holds another
+// document, or none since the key was erased, answers doc_not_found and creates nothing; with an expected version
+// the write is checked as one to no document first (version_conflict); at its docid it is replaced.
+static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
+	Watchdog watchdog("a replace that must exist writes only where the key is");
+	const OffHashId x("must_exist_s5", "x");
+	auto pin = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE_QUIET);
+	auto use = use_index(pin, WRITE_QUIET);
+	// The write's failure, or none.
+	const auto replace = [&](engine::docid did, bool must_exist, std::optional<engine::rev> expected = std::nullopt) -> std::optional<engine::errc> {
+		auto doc = std::get<1>(x.prepare("again"));
+		if (expected) {
+			doc.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(*expected)));
+		}
+		try {
+			engine::sync_wait(use.replace_document(did, std::move(doc), false, false, true, must_exist));
+		} catch (const engine::Error& error) {
+			return error.kind;
+		}
+		return std::nullopt;
+	};
+	const auto did = engine::sync_wait(use.written_key(x.term));
+	CHECK(did != 0);
+	CHECK(replace(did + 1, true) == engine::errc::doc_not_found);
+	CHECK(replace(did + 1, false) == engine::errc::invalid);   // without it: the key belongs to another document
+	CHECK(replace(did, true) == std::nullopt);
+	CHECK_EQ(engine::sync_wait(use.written_key(x.term)), did);
+	x.erase(x.off);
+	CHECK(replace(did, true, 2) == engine::errc::version_conflict);
+	CHECK(replace(did, true) == engine::errc::doc_not_found);
+	CHECK_EQ(engine::sync_wait(use.written_key(x.term)), engine::docid(0));
+	CHECK(replace(did, false) == std::nullopt);   // without it: created at the docid
+}
+
+// An off-hash id written by a PUT whose lookup found it while a DELETE and a PUT of another request come between its
+// lookup and its write must not end on two shards. The shard's turn is a FIFO queue, so held turns order the three:
+// DELETE's lookup, a hold, the PUT's lookup, and a second hold queued while the first is held; releasing the first
+// runs the PUT's lookup (it finds the id) and then the DELETE's erase, and the second hold stops the PUT's write
+// behind them. The new PUT (its lookup missed, so it is placed on the hash shard) is the write the test makes there,
+// and the stale write is let go last.
+static void test_a_stale_write_does_not_put_an_id_on_two_shards() {
+	Watchdog watchdog("a stale write does not put an id on two shards", 120s);
+	const OffHashId x("twice_s5", "twice");
+	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	Reply deleted, put;
+	std::atomic<bool> delete_replied{false};
+	auto first = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	std::thread t_delete([&] {
+		deleted = call("DELETE", x.path + x.id + "?commit");
+		delete_replied = true;
+	});
+	CHECK(eventually([] { return requests_inflight() == 1; }));
+	std::this_thread::sleep_for(200ms);   // the DELETE's lookup waits on the turn
+	auto second = std::make_unique<HoldTurn>(entry.entry(), WRITE, false);
+	std::this_thread::sleep_for(100ms);
+	std::thread t_put([&] { put = call("PUT", x.path + x.id, R"({"n":"stale"})"); });
+	CHECK(eventually([] { return requests_inflight() == 2; }));
+	std::this_thread::sleep_for(200ms);   // the PUT's lookup waits behind the second hold
+	first->release();   // the DELETE's lookup runs and queues its erase; the second hold has the turn
+	CHECK(eventually([&] { return second->held(); }));
+	auto third = std::make_unique<HoldTurn>(entry.entry(), WRITE, false);
+	std::this_thread::sleep_for(100ms);   // queued behind the PUT's lookup and the DELETE's erase
+	second->release();   // the PUT's lookup finds the id; the DELETE's erase runs; the third hold has the turn
+	CHECK(eventually([&] { return third->held(); }));
+	// The DELETE's ?commit waits for a turn of its own behind the third hold, so it replies only once that is
+	// released: joined before, the client's 10 s read timeout ended it with no reply (status 0).
+	std::this_thread::sleep_for(200ms);
+	CHECK_FALSE(delete_replied.load());
+	x.seat(x.hashed, "new");   // the new PUT's write: its lookup missed, so it goes to the hash shard
+	third->release();   // the stale write and the DELETE's commit run
+	t_delete.join();
+	t_put.join();
+	CHECK_EQ(deleted.status, 204);
+	CHECK_EQ(put.status, 204);
+	CHECK(x.holds(x.hashed));
+	CHECK_FALSE(x.holds(x.off));
+	CHECK_EQ(text_of(call("GET", x.path + x.id), "n"), "stale");
+	CHECK_EQ(field_of(call("SEARCH", x.path + "?volatile", R"({"_limit":5})"), "total").as_u64(), 2u);
+}
+
+// A replace by term on an index of shards finds an off-hash id and writes it by docid in a later turn: erased between
+// the two, the write places the document afresh on its hash shard instead of putting it back where it was found.
+// The lookup queues behind a held turn and the erase behind the lookup, so the erase runs between them.
+static void test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh() {
+	Watchdog watchdog("a replace by term of an id erased since its lookup places it afresh", 120s);
+	const OffHashId x("afresh_s5", "afresh");
+	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	engine::WriteResult info;
+	std::thread t_replace([&] {
+		DatabaseHandler db(x.endpoints, WRITE_QUIET);
+		info = engine::sync_wait(db.replace_document_term(x.term, std::move(std::get<1>(x.prepare("stale"))), true));
+	});
+	std::this_thread::sleep_for(200ms);   // the lookup waits on the turn
+	std::thread t_erase([&] { x.erase(x.off); });
+	std::this_thread::sleep_for(200ms);   // the erase waits behind the lookup
+	hold->release();
+	t_erase.join();
+	t_replace.join();
+	CHECK_EQ((info.did - 1) % OffHashId::shards, x.hashed);
+	CHECK(x.holds(x.hashed));
+	CHECK_FALSE(x.holds(x.off));
+	CHECK_EQ(text_of(call("GET", x.path + x.id), "n"), "stale");
+}
+
+// A PATCH reads an off-hash id and writes it by docid expecting the version it read: erased since, and another
+// document of the id written on its hash shard at that same version, the write is a version conflict, so the PATCH
+// reads again and patches the new document, never the old content over it. The off shard is refreshed, so the
+// PATCH's read takes no turn; the erase queues on the held turn first and the PATCH's write behind it.
+static void test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document() {
+	Watchdog watchdog("a patch of an id erased since its read patches the new document", 120s);
+	const OffHashId x("repatch_s5", "repatch");
+	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	CHECK_FALSE(entry.entry().engine().dirty());
+	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	std::thread t_erase([&] { x.erase(x.off); });
+	std::this_thread::sleep_for(200ms);   // the erase waits on the turn
+	Reply patched;
+	std::thread t_patch([&] { patched = call("PATCH", x.path + x.id + "?commit", R"([{"op":"add","path":"/p","value":"patched"}])"); });
+	CHECK(eventually([] { return requests_inflight() == 1; }));
+	std::this_thread::sleep_for(300ms);   // the PATCH read the old document; its write waits behind the erase
+	x.seat(x.hashed, "new");   // version 1, as the old one
+	hold->release();
+	t_erase.join();
+	t_patch.join();
+	CHECK_EQ(patched.status, 204);
+	CHECK(x.holds(x.hashed));
+	CHECK_FALSE(x.holds(x.off));
+	const auto got = call("GET", x.path + x.id);
+	CHECK_EQ(text_of(got, "n"), "new");
+	CHECK_EQ(text_of(got, "p"), "patched");
+	CHECK_EQ(version_of(got), 2);
+}
+
 // New numeric ids in a burst, none committed, spread over the 5 shards: the least used shard counts the documents
 // each shard holds buffered, not only those it flushed (with the flushed ones alone, every one went to shard 0).
 static void test_new_numeric_ids_spread_over_the_shards_while_buffered() {
@@ -2016,6 +2208,10 @@ int main(int argc, char** argv) {
 		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
 		{"test_a_restore_into_shards_writes_a_few_segments", test_a_restore_into_shards_writes_a_few_segments},
 		{"test_an_existing_id_written_again_lands_on_its_shard", test_an_existing_id_written_again_lands_on_its_shard},
+		{"test_a_replace_that_must_exist_writes_only_where_the_key_is", test_a_replace_that_must_exist_writes_only_where_the_key_is},
+		{"test_a_stale_write_does_not_put_an_id_on_two_shards", test_a_stale_write_does_not_put_an_id_on_two_shards},
+		{"test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh", test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh},
+		{"test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document", test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document},
 		{"test_new_numeric_ids_spread_over_the_shards_while_buffered", test_new_numeric_ids_spread_over_the_shards_while_buffered},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
