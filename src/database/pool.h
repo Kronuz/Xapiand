@@ -80,6 +80,9 @@ class IndexPin;
 
 class WorkPool;
 class WorkGroup;
+namespace engine {
+class AsioHost;
+}
 namespace strata {
 class executor;
 }
@@ -416,10 +419,10 @@ class DatabasePool {
 	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
 
-	// The catalog's timer, its budget, its shutdown, and the catalog, in the order they are made: the catalog goes
-	// first, while its timers can still fire (its destructor waits for them).
+	// The catalog's timer (on the control loop), its budget, its shutdown, and the catalog, in the order they are
+	// made: the catalog goes first, once the timer has run what is still armed (its destructor waits for them).
 	struct Timer;
-	std::unique_ptr<Timer> timer_;
+	std::shared_ptr<Timer> timer_;
 	std::unique_ptr<strata::resource_budget> budget_;
 	struct Shutdown;
 	std::mutex shutdown_mtx_;
@@ -434,8 +437,8 @@ class DatabasePool {
 public:
 	// `database_pool_size` is the open indexes the catalog's sweep keeps (soft_open). `readers_per_index` is the
 	// views of one index the host's threads hold at once (a search holds one per index it reads); a read past it
-	// answers busy (503).
-	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index, IndexSweep sweep = {});
+	// answers busy (503). The catalog's timers run on `timers`, the control loop, which outlives the pool.
+	DatabasePool(engine::AsioHost& timers, size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index, IndexSweep sweep = {});
 	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;

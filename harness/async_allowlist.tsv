@@ -4,6 +4,8 @@ src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and res
 src/database/handler.cc	pool	lock_shard	allow	25	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
 src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
 src/database/pool.cc	mutex	chores_mtx	allow	4	the list of live IndexChores: O(1) link and unlink; cancel_all walks it at shutdown on the main thread, after the loops stopped (task D8)
+src/database/pool.cc	mutex	pending_mtx	allow	3	the catalog timer's pending callbacks: O(1) sections that add, take or swap out an entry, none with I/O; the callbacks run outside it and only post (D58)
+src/database/pool.cc	mutex	weak\.lock\(\)	allow	1	std::weak_ptr::lock in the catalog timer's callback, not a mutex: it takes no lock (D58)
 src/database/pool.cc	mutex	.	allow	5	the shutdown's state: O(1) sections that set or read its flag and the keys whose commit failed, none with I/O (x-pool D10)
 src/database/pool.cc	wait	state\.cv\.wait	allow	3	join() and ~DatabasePool await the catalog's shutdown on the main thread after the loops stopped; join is guarded by check_may_block (x-pool D10, C24)
 src/database/pool.cc	file	fs	allow	4	the catalog's resolve runs in its open chore on a WorkPool worker: it checks and makes the index directory there (x-pool D6)
