@@ -1,6 +1,6 @@
 # placement-without-flush: journal
 
-State: waiting on jobs 261110-195117-8fdb0e 261110-195119-1ec61f 261110-195120-40e989 261110-195120-5a8344 261110-195146-fe5e97 261110-195147-a43df6 261110-191610-d043da
+State: waiting on jobs 261110-195120-40e989 261110-195120-5a8344 261110-195146-fe5e97 261110-195147-a43df6 261110-191610-d043da
 Quest: .campaign/xapiand/quests/placement-without-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,8 +27,8 @@ into one; async_check reports 24 of 25 hits and still passes).
 
 - F1 (blocking, gap: no test of `written_count`'s `buffered_count()` half): `test_new_numeric_ids_spread_over_the_shards_while_buffered`
   in tests/test_node.cc (20 POSTs, no commit, 5 shards: at most 1 apart per shard), a09e16664. Kills M3
-  (refs/scratch/pwf-m3: `written_count` without `buffered_count()`): 261110-195117-8fdb0e pending; passes at the
-  head: 261110-195119-1ec61f pending, build-test 261110-195120-40e989 pending.
+  (refs/scratch/pwf-m3: `written_count` without `buffered_count()`): 261110-195117-8fdb0e exit 0 (20 0 0 0 0, the test
+  fails); passes at the head: 261110-195119-1ec61f exit 0 (4 4 4 4 4), build-test 261110-195120-40e989 pending.
 - N1: outside my file set (Blocked on).
 - N2: the two forced-interleaving tests' comments now say the held writers wait on a turn in placement's look or
   in the write (a09e16664).
@@ -40,7 +40,7 @@ into one; async_check reports 24 of 25 hits and still passes).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | at a09e16664: 261110-195119-1ec61f (the three placement tests) and build-test 261110-195120-40e989, pending; fails without the fix: see below |
+| A1 | at a09e16664: 261110-195119-1ec61f exit 0 (the three placement tests: 1 segment per shard in both RESTOREs, the existing-id cases, 4 4 4 4 4 new ids per shard) and build-test 261110-195120-40e989 (pending); fails without the fix: see below |
 | A2 | after 261110-195147-a43df6 at a09e16664 (pending, exit 0 only when all six RESTOREs are under 10 s); before 261110-191610-d043da at master (pending) |
 | A3 | build-test 261110-195120-40e989 and e2e 261110-195120-5a8344 at a09e16664, pending |
 | A4 | `docs/mechanisms/placement.md` |
@@ -52,7 +52,7 @@ into one; async_check reports 24 of 25 hits and still passes).
   ruling 4). The same tests at the fix (88f65db3f): 261110-191052-e8dc37, 1 segment per shard, 1158 checks ok.
 - m1 (published view, no refresh, in `written_key`): 261110-191418-21153b exit 0, the existing-id test fails.
 - m2 (no cross-shard look, the explorer's experiment): 261110-191419-e7ea4e exit 0, the existing-id test fails.
-- M3 (`written_count` without `buffered_count()`): 261110-195117-8fdb0e pending; the reviewer's probe
+- M3 (`written_count` without `buffered_count()`): 261110-195117-8fdb0e exit 0, the spread test fails at 20 0 0 0 0; the reviewer's probe
   261110-193852-f1d945 showed 20 0 0 0 0 under it, 4 4 4 4 4 with the code.
 
 Earlier runs at e7e93fbfa (same src as the head; tests and docs since): build-test 261110-191640-dd5838 and e2e
