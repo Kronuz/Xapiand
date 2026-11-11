@@ -1,6 +1,6 @@
 # e2e-report-cap: journal
 
-State: waiting on jobs 261111-013408-376057
+State: waiting on jobs 261111-013408-376057 (repro, informational), 261111-015200-ea9eea (A1, A2 at fac7e9dd0)
 Quest: .campaign/xapiand/quests/e2e-report-cap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,18 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Exploration. Cause (from job 261110-152519-7a2db9 log + newman 6.2.3 source): the json reporter does JSON.stringify(summary, 0, 2); each response body is a Buffer serialised as {type:Buffer,data:[one number per line]} (~19 bytes per body byte; 3.3M lines = 62.9 MB). e2e_assert.py reads status codes, assertions and the body only of failing requests. Exp 1 (job 261111-013408-376057, ~/.scratch/e2e-report-cap/exp1.sh): reproduce the full report and see why it does not parse.
+Fix committed (fac7e9dd0): e2e_capture.sh writes a `slim` newman reporter beside the run (NODE_PATH) that
+keeps the report's shape but a response body only (first 2800 bytes) for a request with a failed
+assertion; e2e_assert.py is unchanged. Local check against a fake server: one newman run with both
+reporters gave a 53 MB full and a 9.2 MB slim report (600 failing requests, bodies kept) and
+e2e_assert.py printed byte-identical output on both. Job 261111-015200-ea9eea (exp2.sh) runs the real
+E2E at the head: A1 (GREEN, size under 5 MB) and A2 (a newman shim breaks every default expectation;
+assert must be NOT GREEN, rc 1). Job 261111-013408-376057 (exp1) reproduces the full report from main
+to see why it did not parse (informational).
 
 ## Next
 
-1. Read exp1 output; pick the fix (slim newman reporter written by e2e_capture.sh vs filter); run the e2e; break an expectation for A2.
+1. Read both jobs; fill Evidence from `campaign brief`; set State ready for review (low risk).
 
 ## Blocked on
 
@@ -36,5 +43,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+
+- Cap by dropping passing bodies in a slim reporter, not by editing e2e_assert.py: the assert's inputs (status, assertion errors, request, failing body) are unchanged. E2E_BODIES=1 keeps the stock reporter for e2e_diff.py/bodydiff.py, which compare bodies.
+- Reporter is written by e2e_capture.sh into its work dir (file set is the two harness files).
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
