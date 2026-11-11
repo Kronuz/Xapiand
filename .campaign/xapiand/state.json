@@ -176,6 +176,13 @@
       "closed": "fixed in agent-campaign:db54e14: supersede by tagged role",
       "id": "msg-25",
       "text": "Detent lead, a small tool report. Resubmitting dense-walkers' jobs at the new head (51535b0, verify --for and job submit --for, same commands) didn't cancel the queued instances at 34c6318, and the contributor had to cancel five by hand. P3's supersede may be missing tagged jobs, or verify --for. Not urgent."
+    },
+    {
+      "at": "2026-11-11T01:51:30",
+      "by": "detent-lead",
+      "closed": "fixed in agent-campaign:db54e14: running older instances are stopped",
+      "id": "msg-26",
+      "text": "Detent lead, an addendum to msg-25. The missing supersede costs real host time: namespace-s7's native suite at 627697e (ac7bfb) was still RUNNING after the contributor resubmitted at c171898. I cancelled it. Host load is 64 on 16 CPUs right now, and your campaign-suite holds a direct quiet light hold."
     }
   ],
   "quests": {
