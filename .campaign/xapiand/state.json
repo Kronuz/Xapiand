@@ -14956,7 +14956,30 @@
       "updated": "2026-11-08T15:39:49"
     },
     "x7-cancel-rows": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T17:06:30",
+          "base": "7a43a1a13cd1db6788c0a166184b84532fadc2cb",
+          "blobs": {
+            "docs/mechanisms/cancellation.md": "100644:20309ed6ccdc5de41614415afeddcf29f86e78ba",
+            "docs/mechanisms/requests-on-the-reactor.md": "100644:20e53a907ff455d643cecd8d3d3012f26d106dd4",
+            "src/database/schemas_lru.cc": "100644:1c11b1326ded12bd248258ce7e41a3adfeeaa26d",
+            "src/database/schemas_lru.h": "100644:7f6dba53e2c72babb5cf03b8f375f3905c483203",
+            "src/metrics.cc": "100644:c030695a10fff73e25fd57a75ef8441a8c0cca3d",
+            "src/metrics.h": "100644:675645bd4d15d36f071f539350873e758024b23b",
+            "src/server/search_views.cc": "100644:672beb1aa4a199a77808be9d040203c9b0faa263",
+            "tests/test_node.cc": "100644:869648dc0ec8ca2391a8f51ff2c18c9e65c6243d"
+          },
+          "brief": "40d62e3307631821",
+          "by": "waived",
+          "commit": "15cd238d956bc6a9b3c092cc701bdc0f9def6ade",
+          "findings": {},
+          "note": "D57: normal risk, the lead read the diff; mutants b7eb0b and c92fef show A1, A4 and A5 fail without the fix",
+          "review": "",
+          "reviewed": "",
+          "verdict": ""
+        }
+      },
       "after": [
         "write-path-fixes"
       ],
@@ -14992,7 +15015,7 @@
       "risk": "normal",
       "status": "active",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T15:12:13",
+      "updated": "2026-11-10T17:06:30",
       "worktree": "../Xapiand-wt/xapiand/x7-cancel-rows"
     },
     "x7-catalog-timer": {
