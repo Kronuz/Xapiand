@@ -5512,8 +5512,8 @@
           "verdict": "APPROVE"
         },
         "durability": {
-          "at": "2026-11-10T16:23:56",
-          "base": "3df7af4ff4ac1534cbebd69d1b54c046ea65f155",
+          "at": "2026-11-10T16:25:21",
+          "base": "77adb0569e4c43445629a4e39f25c37d9ad22c90",
           "blobs": {
             "CMakeLists.txt": "100644:f624e692202e5923ad3fdf93d4677fb7b8ddad8a",
             "bench/field_table/field_table.cc": "100644:4ada5ce138a11e1dbea8d300825988c7cb7ecdf8",
@@ -6801,7 +6801,7 @@
             "test/index_test.cc": "100644:ce99083d5b711b0fb54c8a0e9ac0a584335d4f03",
             "test/lifecycle_test.cc": "100644:8ea76baf5a39eff6eec5aaf72b35d99e9dc7a4cc",
             "test/manifest_log_mutants.py": "100755:5f607742a51b507f1fe0e0f3c1292021209c4870",
-            "test/manifest_log_test.cc": "100644:64381b5854d1fb484a663b789b306cb5fe8eda1b",
+            "test/manifest_log_test.cc": "100644:7f1bbae05065d51e94f3fc8d5dca19b6033223e7",
             "test/media_test.cc": "100644:1180d82861d2eab4240e4f217c4fd839e280e9b3",
             "test/reclaim_backlog_test.cc": "100644:a1b0a462ef94983de54afa1ee0437f588af34ddb",
             "test/reclaim_bg_test.cc": "100644:53247d8e615ba3ff1fdf0c18f8cae53fdd2da206",
@@ -6813,11 +6813,11 @@
           },
           "brief": "514fa4a5139e4728",
           "by": "review",
-          "commit": "1ebeff876de93af2442045d89757f91076117520",
+          "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
           "findings": {},
           "note": "",
-          "review": "0363413b1f4a5f1729e380ad006b8b1272edf20c",
-          "reviewed": "1ebeff876de93af2442045d89757f91076117520",
+          "review": "7b757b029462180d6e241d1a69b1e9cd5bf69a07",
+          "reviewed": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
           "verdict": "APPROVE"
         },
         "security": {
@@ -8324,7 +8324,7 @@
       "risk": "high",
       "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T16:23:56",
+      "updated": "2026-11-10T16:25:21",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
