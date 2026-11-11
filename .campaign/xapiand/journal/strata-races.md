@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: fixes ready: C1, C2 with jobs 261111-110829-ecdfb8 261111-110831-f89967 261111-110833-b55465 261111-110836-43a905 261111-110853-c0e9c3 261111-110855-d29e6d 261111-110859-5573ed 261111-110900-0bff87
+State: fixes ready: C6, C7 with jobs 261111-121449-2bc470 261111-121450-3218fe 261111-121453-bb533f 261111-121510-fbd377 261111-121513-28aadf 261111-121515-de9f0a 261111-121519-849eaa 261111-121521-62916a
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,21 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Review fix round (correctness review at 2a4d2aa0: CHANGES, C1 and C2 blocking). Head strata
-7b579648, pushed for CI. C1 (lead: option 1): the close booking moved into
-`resource_counts::booked` (slot booking, catalog sum); `resource_reservation::release()` lowers it to
-the slot's count before the catalog count and budget drop, so every drop path (drain, merge commit,
-warm demote + reclaim(0), bound commit, reclaim, close(), retire) lowers it; `unbook_for_close()` is
-gone. C2: `catalog_relief` gains a healthy reopen whose draining holder merges, commits, reclaims
-before the replace chore; at 2a4d2aa0 it fails (4 vnodes booked, 3 held from the holder's reclaim
-to `chore.replace`; local run). C5 folded (closing_ fall relaxed, comment reworded). flakes.md
-rewritten for the mechanism; results table filled from the finished fb15069a runs.
+Second review fix round (re-check at 7b579648: CHANGES, C6 and C7 blocking). Head strata 22a9a750
+(main merged), pushed for CI. C6: every booking fall (`lower()`, `unbook()`, one helper `fall()`)
+subtracts from the holder's sum first, then moves the slot's booking by a release CAS (seq_cst on
+failure), adding the sum back when it loses; `release()` fences after `lower()` whether or not it
+lowered. `unbook()` had the same window (exchange to 0, then subtract), fixed the same way. C7:
+`booked[2]` (descriptors, vnodes; maps relief stays the catalog's), slot back to 192 B (catalog_test's
+static_assert builds). C8: flakes.md names the maps relief gap. C9: both relief cases print ok only
+with no failed CHECK. New suite case `two_droppers`; `BOOKING_ONLY=1 ROUNDS=N` runs the two racing
+cases alone (`docs/perf/flakes/booking_load.sh`, the reviewer's two-droppers probe adapted: it adds
+a case the suite now has).
 
 ## Next
 
 1. Lead: when the jobs in State pass, `campaign accept strata-races correctness --confirm
-   C1=261111-110833-b55465 C2=261111-110831-f89967` (suite 261111-110829-ecdfb8).
-2. A4: CI at 7b579648.
+   C6=261111-121510-fbd377 C7=261111-121449-2bc470` (suite 261111-121449-2bc470; C6 failed at
+   7b579648: 261111-111453-ea2d6a, 261111-110836-43a905).
+2. A4: CI at 22a9a750.
 
 ## Blocked on
 
@@ -38,11 +40,11 @@ mutant; 261111-065351-d0c5c6 stands for the tick() fix, whose code is unchanged.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | head 7b579648, strict 2 x 10x16: 261111-110853-c0e9c3, 261111-110855-d29e6d (build 261111-110851-1264ab); at fb15069a 0 of 160 twice (261111-065359-06bdf8, 261111-065400-8620b9); main 7 of 160, --fails-without 261111-062817-1fabdf |
-| A2 | head 7b579648: 261111-110836-43a905 (clock hook, booking_falls); TSan strict 2 x 10x16 261111-110859-5573ed, 261111-110900-0bff87 (build 261111-110857-6f907c). Fails without: 261111-062645-154f0d, 261111-065351-d0c5c6. At fb15069a TSan 0 of 160 twice |
-| A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick(), resource_counts::book()/lower(), release()): one-line ordering comment at each changed atomic |
-| A5 | suite at 7b579648: 261111-110829-ecdfb8; fails without (2a4d2aa0's two headers): 261111-110831-f89967; C1 probe (review's RELIEF-STALE on all nine catalog tests, exits 1 on any stale site): 261111-110833-b55465 |
-| A4 | suite 261111-110829-ecdfb8; CI at 7b579648 (pushed) |
+| A1 | head 22a9a750, strict 2 x 10x16: 261111-121513-28aadf, 261111-121515-de9f0a (build 261111-121512-bac43b); main 7 of 160, --fails-without 261111-062817-1fabdf |
+| A2 | head 22a9a750: TSan strict 2 x 10x16 261111-121519-849eaa, 261111-121521-62916a (build 261111-121517-cbfb41); booking cases 2000 rounds x 5, strict, 261111-121510-fbd377. Fails without: 261111-062645-154f0d, 261111-065351-d0c5c6 |
+| A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick(), resource_counts::book()/lower()/fall()/unbook(), release()): one-line ordering comment at each changed atomic |
+| A5 | suite 261111-121449-2bc470; booking_falls + two_droppers 261111-121510-fbd377 (at 7b579648 they fail: 261111-110836-43a905, probe 261111-111453-ea2d6a); C2 fails without (2a4d2aa0's headers) 261111-121453-bb533f; C1 probe on all nine catalog tests 261111-121450-3218fe |
+| A4 | suite 261111-121449-2bc470; CI at 22a9a750 (pushed) |
 
 Review findings: C1 fixed (one mechanism at release(); confirm with 261111-110833-b55465 and the
 replace case). C2 fixed (261111-110831-f89967). C3 not done (non-blocking: a second tick() hook
@@ -58,7 +60,7 @@ falls with the counts at release(). TSan load and burst_closes 0 of 160 twice at
 Superseded: 261111-061303-afa5e8 and 261111-061305-f25392 (zsh `$X:t` modifier mangled the sha),
 261111-061319-5f0ba7 (mutant not inverted), 261111-062621-428fdf / 261111-062635-95c190 (load runs
 must be strict), 261111-062745-9a0936 / 261111-062757-f52802 (catalog.hh changed under them);
-the fb15069a A2/A5 jobs for the code at 7b579648.
+the fb15069a A2/A5 jobs for the code at 7b579648; the 7b579648 jobs (C6, C7) for 22a9a750's.
 
 ## Rulings I made
 
@@ -97,3 +99,13 @@ the fb15069a A2/A5 jobs for the code at 7b579648.
    the chore's preparation points in catalog_test, where the review saw it stale.
 10. pend_maps/pending_maps_ (a demotion's maps relief) keep their own booking: moving maps onto
     `booked` would change demotion pacing, a separate change. Same staleness shape; worth a quest.
+11. C7 shape (lead ruled 16-bit slot fields with the sum outside the slot's struct): I kept one
+    `booked[2]` of int32 on `resource_counts`, the slot's booking on a slot and the sum on the
+    catalog's counts (as `n` is). The literal shape needs the sum reachable from `release()`, which
+    has only `resource_counts* catalog_` (counted_io.hh, outside the file set, passes that type):
+    a separate sum means a downcast or new plumbing. Dropping the maps booking takes the struct from
+    48 to 40 B and the slot from 200 to 192 B, D4's bound; 16-bit fields would buy 8 B more only with
+    the sum moved out (no saturation bound needed at 32 bits). Lead: say if 184 B is worth the cast.
+12. C6 covers `unbook()` too: its exchange-to-0-then-subtract had the reviewer's window against a
+    drop (a drop seeing booking 0 skips lowering while the sum still holds it), so `lower()` and
+    `unbook()` share `fall()`.
