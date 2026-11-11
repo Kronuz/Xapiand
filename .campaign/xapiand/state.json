@@ -2107,6 +2107,41 @@
       "title": "Commit WAL-replayed operations",
       "updated": "2026-11-08T13:25:17"
     },
+    "cross-shard-id": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/handler.cc",
+        "src/database/handler.h",
+        "src/database/pool.h",
+        "src/database/shard.cc",
+        "src/database/shard.h",
+        "src/engine/shard.h",
+        "src/engine/strata/shard.cc",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "A concurrent PUT never leaves an id on two shards",
+      "updated": "2026-11-11T08:57:01"
+    },
     "direct-pins": {
       "accepted": {
         "correctness": {
