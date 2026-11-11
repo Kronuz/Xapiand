@@ -13360,10 +13360,10 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 30,
-          "name": "suite"
+          "name": "build-test"
         }
       ],
       "consumes": [],
@@ -13372,6 +13372,34 @@
         "test/reader_check_test.cc",
         "test/CMakeLists.txt",
         "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-10T22:24:12",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "the campaign suite is Xapiand's build; a strata quest runs strata's own build and tests",
+          "voided": [],
+          "weakened": [
+            "gate check suite removed"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [
@@ -13384,7 +13412,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A stored frame's records end where the next frame starts",
-      "updated": "2026-11-10T22:23:49"
+      "updated": "2026-11-10T22:24:12"
     },
     "stored-short-section": {
       "accepted": {},
