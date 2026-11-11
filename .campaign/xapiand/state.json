@@ -8702,7 +8702,7 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/manifest-log",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-10T16:25:34",
@@ -8750,8 +8750,8 @@
       "risk": "high",
       "status": "landed",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T19:23:46",
-      "worktree": "../strata-wt/xapiand/manifest-log"
+      "updated": "2026-11-11T09:28:41",
+      "worktree": ""
     },
     "manifest-log-prospect": {
       "accepted": {},
