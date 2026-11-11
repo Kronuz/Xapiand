@@ -30,7 +30,9 @@ check: creates 3K+2 one-shard indexes (of different sizes and vocabularies) and 
   one over it answers 400 naming the option.
 gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches (default 30) across all of them and
   prints p50 and p99 latency in ms and the peak number of indexes searches held open (the metric
-  xapiand_search_pinned_indexes_peak). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
+  xapiand_search_pinned_indexes_peak). With --pool P (the server's --database-pool-size; default its own), it also
+  prints the cost of one open index: the resident memory the first search added over the indexes it left open
+  (xapiand_resident_memory_bytes and xapiand_databases before and after). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
   their data under OUTDIR; both are killed on exit.
 """
 
@@ -55,6 +57,7 @@ ap.add_argument("port", type=int)
 ap.add_argument("--indexes", type=int, default=10000)
 ap.add_argument("--k", type=int, default=4)
 ap.add_argument("--runs", type=int, default=30)
+ap.add_argument("--pool", type=int, default=0)
 args = ap.parse_args()
 BIN, OUT, PORT = os.path.abspath(args.bin), os.path.abspath(args.out), args.port
 DATA = os.path.join(OUT, "data")
@@ -114,7 +117,12 @@ def create(i: int) -> int:
     status = 0
     for j in range(5 + (i % 3 if args.mode == "check" else 0)):
         n = i * 8 + j
-        doc = {"n": n, "g": f"g{(n // 2 + i) % 4}", "tag": "x", "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4)}
+        doc = {
+            "n": n,
+            "g": f"g{(n // 2 + i) % 4}",
+            "tag": "x",
+            "text": "alpha beta" if (i + j) % 3 == 0 else "beta " + "gamma " * (1 + i % 4),
+        }
         status = max(status, call("PUT", f"/{short(i)}/d{j}", doc)[0])
     return status
 
@@ -221,7 +229,13 @@ def check() -> None:
             failures.append(f"cap {width}")
     # A pattern reads every entry of the data directory (14 indexes and the node's own), so at a cap of 7 each is over it,
     # whatever it matches: the cap bounds the walk's work, not only the names.
-    for pattern in ("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", "/_all/", "/w00*/", "/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", "/*,-*/"):
+    for pattern in (
+        "/w000*,w001*,w002*,w003*,w004*,w005*,w006*/",
+        "/_all/",
+        "/w00*/",
+        "/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/",
+        "/*,-*/",
+    ):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
         ok = status == 400 and b"--max-search-indexes" in raw and b"directory entries" in raw
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
@@ -231,7 +245,13 @@ def check() -> None:
     # With room for the walk the same patterns are served; the names are still counted (an index costs its own entry and its directory's).
     cap = 100
     node = start("cap-walk", "--max-search-indexes", str(cap), "--concurrent-search-indexes", "3")
-    for pattern, want in (("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200), ("/_all/", 200), ("/w00*/", 200), ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200), ("/*,-*/", 200)):
+    for pattern, want in (
+        ("/w000*,w001*,w002*,w003*,w004*,w005*,w006*/", 200),
+        ("/_all/", 200),
+        ("/w00*/", 200),
+        ("/_all,-w007,-w008,-w009,-w00a,-w00b,-w00c,-w00d/", 200),
+        ("/*,-*/", 200),
+    ):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
         ok = status == want
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
@@ -242,7 +262,16 @@ def check() -> None:
         status, raw = call("PUT", path, {"n": 1})
         if status >= 300:
             failures.append(f"nesting: PUT {path} -> {status}")
-    for pattern, want in (("/tenant*/", 1), ("/tenant/*/", 1), ("/tenant/*/*/", 1), ("/tenant/**/", 3), ("/**/x/", 1), ("/ten%3Fnt/", 1), ("/tenant/[a]/", 1), ("/tenant/[!a]/", 0)):
+    for pattern, want in (
+        ("/tenant*/", 1),
+        ("/tenant/*/", 1),
+        ("/tenant/*/*/", 1),
+        ("/tenant/**/", 3),
+        ("/**/x/", 1),
+        ("/ten%3Fnt/", 1),
+        ("/tenant/[a]/", 1),
+        ("/tenant/[!a]/", 0),
+    ):
         status, raw = call("COUNT", pattern + "?q=n:1")
         total = json.loads(raw).get("total") if status == 200 else None
         ok = total == want
@@ -266,7 +295,8 @@ def gate() -> None:
     node = start("create")
     create_all(count)
     stop(node)
-    node = start("search")
+    node = start("search", *(["--database-pool-size", str(args.pool)] if args.pool else []))
+    rss0, open0 = metric("xapiand_resident_memory_bytes"), metric("xapiand_databases")
     body = {"_query": {"tag": "x"}, "_sort": "n", "_limit": 10, "_aggs": {"all": {"_sum": {"_field": "n"}}}}
     path = "/w*/"  # a pattern: a list of 10,000 names is most of a URL, 100,000 would not fit
     times = []
@@ -279,6 +309,14 @@ def gate() -> None:
         total = json.loads(raw).get("total")
         if run:  # the first run opens every index
             times.append(dt)
+        else:
+            rss1, open1 = metric("xapiand_resident_memory_bytes"), metric("xapiand_databases")
+            per = (rss1 - rss0) / (open1 - open0) if open1 > open0 else float("nan")
+            print(
+                f"open indexes {open0:.0f} -> {open1:.0f}, resident {rss0 / 2**20:.1f} -> {rss1 / 2**20:.1f} MiB: "
+                f"{per / 1024:.1f} KiB per open index (first search {dt:.0f} ms)",
+                flush=True,
+            )
     times.sort()
     p50 = statistics.median(times)
     p99 = times[min(len(times) - 1, int(len(times) * 0.99))]
