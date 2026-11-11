@@ -1,6 +1,6 @@
 # e2e-report-cap: journal
 
-State: waiting on jobs 261111-015200-ea9eea (A1, A2 at fac7e9dd0)
+State: ready for review (A1, A2 at fac7e9dd0)
 Quest: .campaign/xapiand/quests/e2e-report-cap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -36,17 +36,20 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261111-015200-ea9eea at fac7e9dd0: passing report 1,773,356 bytes (was 64.0 MB), e2e_assert.py GREEN rc=0 |
+| A2 | 261111-015200-ea9eea at fac7e9dd0: a shim breaking every default expectation gives NOT GREEN, rc=1 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+The docs E2E report went from 64.0 MB (exp1 job 261111-013408-376057, stock reporter on main) to 1,773,356 bytes
+(job 261111-015200-ea9eea at fac7e9dd0) with the assert GREEN. Cause: newman's json reporter writes each response body as a Buffer,
+one number per line (~19 bytes per body byte). Fix: harness/e2e_capture.sh writes a `slim` reporter that keeps a body (first 2800
+bytes) only for a request with a failed assertion; e2e_assert.py is unchanged; E2E_BODIES=1 keeps the stock reporter for
+e2e_diff.py and bodydiff.py. The earlier JSONDecodeError (char 62889311 of 63.95 MB) did not reproduce: the 64.0 MB report
+parsed with the same Python 3.15.2, so its cause stays unexplained; the size is the exposure the slim reporter removes.
+Open: nothing.
 
 ## Rulings I made
 
 - Cap by dropping passing bodies in a slim reporter, not by editing e2e_assert.py: the assert's inputs (status, assertion errors, request, failing body) are unchanged. E2E_BODIES=1 keeps the stock reporter for e2e_diff.py/bodydiff.py, which compare bodies.
 - Reporter is written by e2e_capture.sh into its work dir (file set is the two harness files).
-
-<Decisions inside the quest's scope, so the reviewer can check them.>
