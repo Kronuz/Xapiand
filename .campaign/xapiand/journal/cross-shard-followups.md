@@ -33,8 +33,7 @@ Nothing.
 ## Evidence
 
 At 24c5bacc6 (the lead: suite 3e0ed7 and the replace_by_term fails-without passed; the PATCH one, 586195, passed the
-test with must_exist disabled: the PATCH test does not depend on must_exist, since with it off the write is refused
-as another document's key and the PATCH reads again). The part it guards is the version check before doc_not_found
+test with must_exist disabled: the PATCH test does not depend on must_exist; why is not established). The part it guards is the version check before doc_not_found
 (src/engine/strata/shard.cc:873): without it the stale write is placed afresh over the new document. Its mutant:
 261111-154234-d4410a (deletes that line; exit 0 only when the test prints FAIL). A2: 261111-154237-c1fcd8.
 
