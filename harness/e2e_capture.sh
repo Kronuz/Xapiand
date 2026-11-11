@@ -122,7 +122,32 @@ for _ in $(seq 1 120); do
 done
 
 echo "node up (pid $pid); newman -> $OUT"
-newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >"$TMPD/xe2e_newman.log" 2>&1
+# The stock reporter writes each body byte as a line (a 64 MB report); `slim` keeps a body's first 2800
+# bytes only for a request with a failed assertion. E2E_BODIES=1 keeps every body (e2e_diff.py, bodydiff.py).
+reporter=slim
+if [ -n "${E2E_BODIES:-}" ]; then
+	reporter=json
+else
+	mkdir -p "$TMPD/node_modules/newman-reporter-slim"
+	cat > "$TMPD/node_modules/newman-reporter-slim/index.js" <<'JS'
+module.exports = function (newman, options) {
+	newman.on('beforeDone', (err, o) => {
+		if (err) return;
+		for (const e of o.summary.run.executions) {
+			const r = e.response;
+			if (!r || !Buffer.isBuffer(r.stream)) continue;
+			r.stream = r.stream.subarray(0, (e.assertions || []).some((a) => a.error) ? 2800 : 0);
+		}
+		newman.exports.push({
+			name: 'slim-reporter', default: 'newman-run-report.json', path: options.export,
+			content: JSON.stringify({ ...o.summary, exports: undefined }),
+		});
+	});
+};
+JS
+fi
+NODE_PATH="$TMPD/node_modules${NODE_PATH:+:$NODE_PATH}" newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} \
+	--reporters "$reporter" --reporter-"$reporter"-export "$OUT" --timeout-request 30000 >"$TMPD/xe2e_newman.log" 2>&1
 rc=$?
 echo "newman exit $rc (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
 [ "$rc" -eq 0 ] || { echo "node log tail:"; tail -20 "$TMPD/xe2e_node.log"; }
