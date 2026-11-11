@@ -1,31 +1,31 @@
 # postings-fuzz-memory: journal
 
-State: blocked on stored-check-cache: lands first; then the lead moves prospect's strata pin and A3 and A4 rerun
+State: waiting on jobs 261110-192311-518a9b 261110-192324-fe3397
 Quest: .campaign/xapiand/quests/postings-fuzz-memory.md (the lead's; never edit it)
 
 ## Doing
 
-Waiting on A1's job (261110-180348-714558) and the build-test check (261110-180354-e4b1ac) at
-prospect:10870d9. The lead's ruling (option 2): the strata fix is its own quest, stored-check-cache
-(strata:71750940, fix and `test/reader_check_test.cc`), which lands first.
+stored-check-cache landed (strata:71750940 on main); prospect's strata pin moved to it at
+prospect:35a9886. A3 (261110-192311-518a9b) and A4's build-test (261110-192324-fe3397) queued at
+that head. The branch is not pushed: contributors never push, so the lead pushes
+`quest/xapiand/postings-fuzz-memory` for the `linux-asan-ubsan` CI check.
 
 ## Next
 
-1. After stored-check-cache lands, the lead moves prospect's strata pin to it (CMakeLists.txt).
-2. At that head: A3, one CPU-hour of fuzz_postings (ASan+UBSan) with `fuzz/rss.sh` logging RSS; A4, the build-test check.
+1. When both jobs pass and CI is green: State to ready for review (security lens).
 
 ## Blocked on
 
-stored-check-cache landing, then the lead's pin bump. Lead ruled option 2 (msg from coordinator, 2026-11-10).
+Nothing; the push for CI is the lead's.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261110-180348-714558 (queued) at prospect:10870d9, strata 9d4630c: 10 min ASan+UBSan with RSS every 30 s, as is and with the stored check's frame cache. Local probes below |
+| A1 | job 261110-180348-714558 passed at prospect:10870d9, strata 9d4630c, 10 min ASan+UBSan each, seed 1: as is, RSS 1,185 MiB at 30 s rising to 1,776 at 300 s and peak 2,204 (past libFuzzer's 2,048 default), 6,729 runs (11/s); with the stored check's frame cache, 331 at 30 s then 365-399, peak 411, 27,328 runs (45/s). Local probes below |
 | A2 | Ruled: the postings decoder allocates from no untrusted length (audit under Rulings), so it has no bound to add; what grew is strata's stored check, whose test fails without its fix in stored-check-cache (`test/reader_check_test.cc`, strata:71750940; revert job 261110-182037-74c93c) |
-| A3 | Runs once prospect's strata pin moves to the landed stored-check-cache fix |
-| A4 | build-test 261110-180354-e4b1ac (queued) at prospect:10870d9; reruns once the strata pin moves to the landed fix |
+| A3 | job 261110-192311-518a9b (queued) at prospect:35a9886, strata 71750940: one CPU-hour, default `-rss_limit_mb`, RSS every 60 s |
+| A4 | build-test 261110-192324-fe3397 (queued) at prospect:35a9886; earlier 261110-180354-e4b1ac passed at 10870d9 (old pin) |
 
 Local probes (quiet light, macOS x86_64, Homebrew clang 23, seed 1, corpus copy, 5 min unless
 noted; logs in the code worktree's `.scratch/p*/`):
@@ -49,6 +49,9 @@ Pending the fix.
 
 ## Rulings I made
 
+- Pin bump in prospect `CMakeLists.txt` (outside the recorded file set fuzz/**, include/**,
+  test/**) on the lead's instruction of 2026-11-10; it also brings strata's manifest-log commits
+  between 9d4630c and 71750940.
 - A2: the conditional does not apply to prospect's postings decoder (audit below); the test that
   fails without the fix lives in strata with the fix (stored-check-cache).
 - Attribution: neither the postings decoder nor libFuzzer's corpus (170 KB) grows. The target's
