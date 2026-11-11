@@ -10946,7 +10946,7 @@
     "postings-fuzz-memory": {
       "accepted": {},
       "after": [
-        "stored-check-cache"
+        "stored-frame-bound"
       ],
       "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
       "branch": "quest/xapiand/postings-fuzz-memory",
@@ -11076,7 +11076,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-10T19:24:26",
+      "updated": "2026-11-10T22:25:05",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
