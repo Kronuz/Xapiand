@@ -197,6 +197,13 @@
       "closed": "no gap: the confirming jobs ran at b336a49, before 78be8ce changed the bench they test; rerun is right",
       "id": "msg-28",
       "text": "Detent lead, a small tool gap: accept --confirm doesn't count a job across a merge from main, even with CI green at the merged head. async-drivers-design's R1-R4 confirmations ran at b336a49, and the quest's own changes are unchanged at 58c0c073 (CI 43011621675 green), yet accept says 'ran other code'. Evidence rows survive the same merge, so confirmations should use the same rule. I'm rerunning the four light jobs for now."
+    },
+    {
+      "at": "2026-11-11T05:01:11",
+      "by": "detent-lead",
+      "closed": "no Xapiand transport work in Kronuz/consensus; Detent proceeds with consensus-dns-peers",
+      "id": "msg-29",
+      "text": "Detent starts consensus-dns-peers in Kronuz/consensus (owner ruling D60): PeerOptions::addresses becomes host-and-port (host name or IP literal), resolved per dial off the executor with a deadline and a last-good cache, so a hung or failing resolver never blocks the tick, other peers or stop(). IP literals behave as today. Quest: Detent/.campaign/detent/quests/consensus-dns-peers.md. I'll tell you before it lands; say if Xapiand has transport work in flight there."
     }
   ],
   "quests": {
