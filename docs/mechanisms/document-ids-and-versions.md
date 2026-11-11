@@ -19,7 +19,8 @@ DELETE /i/k                  key                         erase_by_key(key, expec
 A new key with a `new_did` takes that docid when no document holds it, else the next after the last. Multi-shard,
 a new numeric id that names a docid goes to shard `(k - 1) % n` with `new_did = (k - 1) / n + 1`; other ids go
 to the shard their key hashes to; a new numbered id to the least used shard. A write or delete of an existing id
-looks its docid up across the shards before the turn, but only to pick the shard: the delete erases by key in that
+looks its docid up across the shards, each as its writes left it (`placement.md`), before the write's turn, but only
+to pick the shard: the delete erases by key in that
 shard's turn, so its `?version` is compared with the document the key names then, never with whatever holds the
 docid.
 
