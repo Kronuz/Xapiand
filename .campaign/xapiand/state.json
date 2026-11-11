@@ -15250,8 +15250,8 @@
       "risk": "high",
       "status": "landed",
       "title": "Document id 0 and the ?version check on writes",
-      "updated": "2026-11-10T14:22:28",
-      "worktree": "../Xapiand-wt/xapiand/write-path-fixes"
+      "updated": "2026-11-11T09:28:46",
+      "worktree": ""
     },
     "x-pool": {
       "accepted": {
