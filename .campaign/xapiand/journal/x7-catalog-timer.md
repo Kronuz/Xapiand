@@ -1,6 +1,6 @@
 # x7-catalog-timer: journal
 
-State: waiting on jobs 261110-151925-5e77bc 261110-151928-4ed547 261110-151943-132d5b 261110-143952-aef5a1 261110-143641-8f8cf6
+State: waiting on jobs 261110-172208-8645ec
 Quest: .campaign/xapiand/quests/x7-catalog-timer.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,11 +32,11 @@ begins are dropped. Those that come due during step 2.1 now run during it, which
 
 ## Evidence
 
-| Criterion | Evidence |
-|---|---|
-| A1 | t1_census at df71eb5fe 261110-151943-132d5b (pending, after 261110-143952-aef5a1 at e0b3cd67e, running); at master 66b310e60 261110-143641-8f8cf6 (running, must fail). Both copy `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master |
-| A2 | build-test 261110-151925-5e77bc at df71eb5fe (pending). Mutant at e0b3cd67e (e430dfe8e) 261110-143953-02e8cb killed: 8 of 117 checks fail. Mutant at the head, `refs/mutants/x7-catalog-timer/no-arm` (6688a8ada), 261110-151928-4ed547 (pending). The mutant job passes only when `xapiand_test_pool sweep` fails. build-test 261110-143950-d97a09 at e0b3cd67e failed on the async check |
-| A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" |
+| Criterion | Evidence | Fails without the fix |
+|---|---|---|
+| A1 | 261110-172208-8645ec, t1_census at the head (pending). Copies `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's e7e8e03c5 (`--ref GATE`), since gate7c_rows.sh is not on master. Skipped, never ran: 261110-151943-132d5b and its rerun ef3fd5 (`--after` 261110-143952-aef5a1, which failed at the old code e0b3cd67e) | 261110-143641-8f8cf6 at master 66b310e60 failed: census {unnamed 16, W 16, FS 9, WL 8, main 1, DB-TIMER 1, LOG 1}, total 52, "FAIL ['offender Xapiand:DB-TIMER']" |
+| A2 | 261110-151925-5e77bc, build-test at df71eb5fe, passed (test_pool's sweep, TTL and erase cases) | 261110-151928-4ed547, mutant `refs/mutants/x7-catalog-timer/no-arm` (6688a8ada: `after()` returns before arming), passed: `xapiand_test_pool sweep` fails. Earlier: mutant 261110-143953-02e8cb at e0b3cd67e killed (8 of 117 checks fail); build-test 261110-143950-d97a09 at e0b3cd67e failed on the async check |
+| A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" | (artifact) |
 
 ## Result
 
