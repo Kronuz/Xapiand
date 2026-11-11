@@ -12994,6 +12994,37 @@
       "title": "Streamed record write (L6)",
       "updated": "2026-11-08T15:40:25"
     },
+    "stored-check-cache": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/reader.hh",
+        "test/reader_check_test.cc",
+        "test/CMakeLists.txt",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "normal",
+      "status": "planned",
+      "title": "strata's stored check decodes with one frame cache",
+      "updated": "2026-11-10T18:15:17"
+    },
     "stored-short-section": {
       "accepted": {},
       "after": [],
