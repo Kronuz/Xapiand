@@ -7,7 +7,7 @@ built - one per unique **value**.
 
 ## Structuring
 
-The following snippet captures the structure of range aggregations:
+The following snippet captures the structure of values aggregations:
 
 ```json
 "<aggregation_name>": {
@@ -75,21 +75,24 @@ Response:
     "_doc_count": 1000,
     "favorite_fruits": [
       {
+        "_doc_count": 89,
+        "_key": "apple"
+      },
+      {
         "_doc_count": 76,
         "_key": "strawberry"
       },
       {
         "_doc_count": 64,
         "_key": "banana"
-      },
-      {
-        "_doc_count": 89,
-        "_key": "apple"
       }
     ]
   }, ...
 }
 ```
+
+`_values` takes a field of any type except `geospatial` (`400`) and counts the values the field
+stores: a `keyword` keeps its case (`"Red"` and `"red"` are two buckets).
 
 ### Ordering
 

@@ -13,7 +13,7 @@ query/filters of the search request).
 
 There are many different types of aggregations, each with its own purpose and
 output. To better understand these types, it is often easier to break them into
-four main families:
+two families:
 
 * [**_Metric_**](metrics)
 
@@ -37,15 +37,17 @@ context of that bucket. This is where the real power of aggregations kicks in:
 :::hint[Sub-aggregations]{.info}
 Bucketing aggregations can have _sub-aggregations_ (bucketing or metric). The
 sub-aggregations will be computed for the buckets which their parent aggregation
-generates. There is no hard limit on the level/depth of nested aggregations (one
+generates. Aggregations nest at most 16 levels deep (one
 can nest an aggregation under a "parent" aggregation, which is itself a
-sub-aggregation of another higher-level aggregation).
+sub-aggregation of another higher-level aggregation), and a search holds at most
+65,535 live buckets in all its levels; past either limit the search answers `400`
+(see [Limits](/Xapiand/reference-guide/api#limits)).
 :::
 
 :::hint[Limits]{.info}
-Aggregations operate on the `double` representation of the data. As a
-consequence, the result may be approximate when running on longs whose absolute
-value is greater than 2^53.
+Aggregations accumulate in `long double` (metrics) or in 64-bit integers (integer histogram
+buckets) and answer `double`s, so a result over integers whose absolute value is greater than
+2^53 may be approximate.
 :::
 
 ## Structuring
@@ -67,10 +69,12 @@ The following snippet captures the basic structure of aggregations:
 ( "_limit": <limit>, )
 ```
 
-Aggregations always cover every matching document, on every node; `_check_at_least` does
-not make them a sample.
+Aggregations always cover every matching document of every index the search names;
+`_check_at_least` does not make them a sample.
 
 ### Aggregation Name
+
+A name that is empty or starts with `_` or `#` answers `400` ("Aggregation name ... is not valid").
 
 The `_aggregations` object (the key `_aggs` can also be used) in the JSON
 holds the aggregations to be computed.

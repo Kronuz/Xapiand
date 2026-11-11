@@ -5,7 +5,10 @@ title: "Stop Words"
 Xapiand supports a stop word list, which allows you to specify what words
 should be removed from a query before processing. This list can be overridden
 or stop words can still be searched for if desired, but by default any words
-in the active stop words list will not be searched for.
+in the active stop words list will not be searched for. A field has a stop word list
+only when it has a `_language` (see [text fields](/Xapiand/reference-guide/schemas/field-types/text-type)):
+with no language there is no list and no word is dropped. A language with no list
+drops nothing and is not an error.
 
 ### Example
 
@@ -36,16 +39,16 @@ pm.test("Stop words are filtered from the query", function() {
 ```
 e2e:end -->
 
-The stop words in the phrase (`these`, `are`, `and`) are removed before the
-query runs, and only the remaining content words (`days`, `few`, `far`,
-`between`) are searched. That is why documents match even though none of them
-contain the whole phrase.
+The stop words in the phrase (`these`, `are`, `few`, `and`, `far`, `between`: all
+are in the English list) are removed before the query runs, and only the remaining
+content word, `days`, is searched. That is why documents match even though none of them
+contain the whole phrase. The words of a group that are stop words are dropped
+unless the group holds only stop words.
 
 ## Searching of Stop Words
 
-Stop words can be searched by using [Love and Hate Modifiers](love-and-hate-modifiers)
-(by adding `+` to the desired stop word) or by using an empty set of stopwords
-in the `_stopwords` keyword:
+Stop words can be searched by using [Love and Hate Modifiers](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries/love-and-hate)
+(by adding `+` to the desired stop word):
 
 ```rest
 SEARCH /bank/
@@ -74,7 +77,9 @@ pm.test("Searching of Stop Words results", function() {
 ```
 e2e:end -->
 
-The above example is equivalent to:
+An empty set of stop words under a `_stopwords` key, which would do the same, is not
+implemented: `_stopwords` is not a keyword and the request answers `400`
+("Invalid operator").
 
 :::hint[Unimplemented Feature!]{.unimplemented}
 This feature hasn't yet been implemented...

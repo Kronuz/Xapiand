@@ -47,6 +47,22 @@ takes JSON, NDJSON or MessagePack.
 DUMP /twitter/tweet/
 ```
 
+<!-- e2e:begin
+---
+description: Dump: an index
+---
+
+```js
+pm.test("A dump is an array of documents", function () {
+  pm.response.to.be.success;
+  var docs = pm.response.json();
+  pm.expect(docs).to.be.an("array");
+  pm.expect(docs.length).to.be.above(0);
+  pm.expect(docs[0]).to.have.property("_id");
+});
+```
+e2e:end -->
+
 ### Restore
 
 ```rest
@@ -68,6 +84,89 @@ RESTORE /twitter/tweet/
 ]
 ```
 
+A restore answers how many documents it read and indexed, and the `_id` of each:
+
+```rest
+RESTORE /backups/tweet/
+
+[
+  { "user": "Kronuz", "message": "Restored one", "_id": 1 },
+  { "user": "Kronuz", "message": "Restored two", "_id": 2 }
+]
+```
+
+<!-- e2e:begin
+---
+description: Restore: the answer
+---
+
+```js
+pm.test("A restore answers its counts", function () {
+  pm.response.to.be.success;
+  var result = pm.response.json();
+  pm.expect(result.prepared).to.equal(2);
+  pm.expect(result.indexed).to.equal(2);
+  pm.expect(result.total).to.equal(2);
+  pm.expect(result.items.length).to.equal(2);
+});
+```
+e2e:end -->
+
+```rest
+GET /backups/tweet/2
+```
+
+<!-- e2e:begin
+---
+description: Restore: the document is there
+---
+
+```js
+pm.test("The restored document is there", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().message).to.equal("Restored two");
+});
+```
+e2e:end -->
+
+
+
+`DUMP` with a document ID dumps that one document (here, one of the restored ones):
+
+```rest
+DUMP /backups/tweet/1
+```
+
+<!-- e2e:begin
+---
+description: Dump: a document
+---
+
+```js
+pm.test("A document dump is the document", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._id).to.equal(1);
+});
+```
+e2e:end -->
+
+### What a restore does
+
+- The body is a JSON array, or NDJSON or MessagePack objects. A JSON array is buffered,
+  so it is limited to 16 MiB (`413`). NDJSON and MessagePack are streamed when the request
+  carries a `Content-Length`, whatever their size; a chunked body of those types is
+  refused with `413`.
+- It runs without the write-ahead log and without autocommit, and commits once when
+  the body ends (what was indexed before an error stays). Documents are
+  searchable when it answers.
+- A restore takes a single index; a list answers `400`.
+- To restore into a different schema, create the index with that schema first (see
+  below). A dump written by the alpha releases restores into this release: see
+  [Upgrading](/Xapiand/upgrade#data-compatibility).
+
+Sources: `src/server/search_views.cc:1643-1750` (`restore_database_view`), `:673-682` and
+`:3094-3125` (what streams), `src/database/data.h:99-102` and `:1620-1625` (the dump formats).
+
 ---
 
 ## MessagePack
@@ -82,7 +181,8 @@ DUMP /twitter/tweet/
 Accept: application/x-msgpack
 ```
 
-To restore those, you should specify the `Content-Type` header accordingly:
+To restore those (here into a new index, `twitter/tweets`), you should specify the
+`Content-Type` header accordingly:
 
 ```rest
 RESTORE /twitter/tweets/

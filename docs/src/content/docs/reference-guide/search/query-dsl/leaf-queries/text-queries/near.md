@@ -2,11 +2,14 @@
 title: "Near Query"
 ---
 
-Another commonly used operator is `_near`, which finds terms within 10 words
-of each other in the current document, behaving like `_and` with regard to
-weights, so that:
+Another commonly used operator is `_near`, which finds terms near each other in the
+current document, behaving like `_and` with regard to weights, so that:
 
-* Documents which match A within 10 words of B are matched, with weight of A+B
+* Documents which match A near B are matched, with weight of A+B
+
+The window is 10 + the number of words - 1 positions (11 for two words); `NEAR/n` in a
+text under `_and` or `_or` sets `n`. The operands must be plain words: a wildcard, a
+fuzzy word or a group inside `_near` answers `400`.
 
 #### Example
 

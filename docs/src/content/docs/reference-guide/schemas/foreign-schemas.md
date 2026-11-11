@@ -26,13 +26,26 @@ PUT /headlines/
 }
 ```
 
+<!-- e2e:begin
+---
+description: Foreign Schemas: an index that writes the shared schema
+---
+
+```js
+pm.test("The index answers its settings and schema", function() {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json()._schema).to.be.an("object");
+});
+```
+e2e:end -->
+
 In the example above, an index `.schemas` is created (if missing) containing
 documents which can be used as shared Schemas. To exemplify differences about
 IDs, note how the ID of the documents for such Schema objects is of type `"uuid"`
 whilst the type of the ID for the documents in the `headlines` index itself is
-of type `"string"`.
+`"keyword"`.
 
-The Schema used for the index `hedlines`, can be shared with other indexes that
+The Schema used for the index `headlines`, can be shared with other indexes that
 use the same properties; for example, to create a new index `banners`, which
 will have the exact same properties as `headlines`, use:
 
@@ -46,5 +59,18 @@ PUT /banners/
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Foreign Schemas: an index that uses it
+---
+
+```js
+pm.test("The index answers its settings and schema", function() {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json()._schema).to.be.an("object");
+});
+```
+e2e:end -->
 
 A single shared Schema will be used by both indexes.

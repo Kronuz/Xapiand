@@ -95,8 +95,8 @@ status: 404
 e2e:end -->
 
 :::hint{.caution}
-The Method Override won't work with any other method other than `POST`, you'll
-receive an error.
+The override header is read on a `POST` (or `GET`) request. Any other method
+carrying it, such as `PUT`, answers `400`.
 :::
 
 #### HTTP Method Mapping
@@ -106,7 +106,8 @@ Custom methods can use the following generic HTTP mapping:
 
 To use method mappings pass the mapping in the URL and use HTTP `POST` verb
 since it has the most flexible semantics, except for methods serving as an
-alternative get or list which may use `GET`.
+alternative get or list which may use `GET`. Any other method answers `400`
+("HTTP Mappings must use GET or POST method").
 
 Example:
 
@@ -153,8 +154,9 @@ status: 404
 ---
 e2e:end -->
 
-Whilst the next example will delete the whole index `/some/resource/path/` with
-_all its documents_ in it as well:
+Whilst the next one addresses the _index_ `/some/resource/path/`. Xapiand does not
+delete indexes over HTTP: `DELETE` on an index path answers `501 Not Implemented`
+(see [Delete Index](/Xapiand/reference-guide/indexes/delete-api)):
 
 ```rest
 DELETE /some/resource/path/
@@ -171,6 +173,165 @@ Trailing slashes in resource paths are important, always make sure you are
 requesting a method for the proper resource path.
 **Trailing slashes _do mean something_**.
 :::
+
+---
+
+## The Verbs
+
+A request is a verb and a path. The path names a _document_ (it ends with an ID), an
+_index_ (it ends with a `/`), a command (`/index/:command`) or the node (`/`). A verb
+the path does not accept answers `405 Method Not Allowed`.
+
+| Verb | On | What it does |
+|---|---|---|
+| `GET` | node, index, document | The node, the index's settings and schema, a [document](/Xapiand/reference-guide/documents/get-api); `GET /:metrics` answers the metrics |
+| `HEAD` | index, document | `200` if it exists, `404` if not |
+| `SEARCH`, `COUNT` | one or many indexes | [Search](/Xapiand/reference-guide/search/search-api), or count the hits |
+| `INFO` | one index, document | Statistics of an [index](/Xapiand/reference-guide/indexes/info-api) or [document](/Xapiand/reference-guide/documents/info-api) |
+| `PUT` | index, document | Create an [index](/Xapiand/reference-guide/indexes/create-api) or [index a document](/Xapiand/reference-guide/documents/index-api) |
+| `POST` | index | Index a document with a generated ID (`201` and `Location`) |
+| `UPDATE`, `PATCH`, `UPSERT` | index, document | [Update](/Xapiand/reference-guide/documents/update-api) a document; `UPSERT` creates it when missing |
+| `DELETE` | document | [Delete](/Xapiand/reference-guide/documents/delete-api) a document. On an index it answers `501`, on `/` it answers `405` |
+| `COMMIT` | one index | Commit the index now (`200`) |
+| `CHECK` | one index | Check the index's files; answers `{"errors": {<index>: <count>}}` |
+| `DUMP`, `RESTORE` | one index, document | [Dump or restore](/Xapiand/reference-guide/indexes/backups) its documents |
+| `WAL` | one single-shard index | The [write-ahead log](/Xapiand/reference-guide/wal) |
+| `FLUSH`, `QUIT` | `/` | [Administrative commands](#administrative-commands), only with `--admin-commands` |
+| `OPTIONS` | any | `200` with an `Allow` header |
+| `OPEN`, `CLOSE` | any | `429 Too Many Requests` | Too many searches wait to look up the index names of their patterns (`--search-walk-queue`); `Retry-After` says when to try again. |
+| `501 Not Implemented` |
+| `LOCK`, `UNLOCK`, `COPY`, `MOVE`, `PURGE`, `LINK`, `UNLINK`, `TRACE`, `CONNECT` | any | `405` |
+
+Sources: the verb list and the route table, `src/server/search_views.cc:187-218` and
+`548-602`; the inline answers, `:652-672`.
+
+```rest
+OPTIONS /twitter/user/
+```
+
+<!-- e2e:begin
+---
+description: OPTIONS answers with the allowed methods
+---
+
+```js
+pm.test("OPTIONS lists the methods", function() {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.headers.get("Allow")).to.include("GET");
+});
+```
+e2e:end -->
+
+A verb that is not served at that path answers `405`:
+
+```rest
+LOCK /twitter/user/
+```
+
+<!-- e2e:begin
+---
+status: 405
+---
+e2e:end -->
+
+```rest
+COMMIT /twitter/user/John
+```
+
+<!-- e2e:begin
+---
+description: COMMIT takes an index, not a document
+status: 405
+---
+e2e:end -->
+
+`COMMIT` commits an index now instead of waiting for the autocommit (see
+[Visibility and Durability](/Xapiand/basics#visibility-and-durability)):
+
+```rest
+COMMIT /twitter/user/
+```
+
+<!-- e2e:begin
+---
+description: COMMIT an index
+---
+
+```js
+pm.test("COMMIT answers 200", function() {
+  pm.response.to.have.status(200);
+});
+```
+e2e:end -->
+
+`CHECK` checks an index and answers how many errors it found in each shard:
+
+```rest
+CHECK /twitter/user/
+```
+
+<!-- e2e:begin
+---
+description: CHECK an index
+---
+
+```js
+pm.test("CHECK finds no errors", function() {
+  pm.response.to.have.status(200);
+  var errors = pm.response.json().errors;
+  Object.keys(errors).forEach(function(shard) {
+    pm.expect(errors[shard]).to.equal(0);
+  });
+});
+```
+e2e:end -->
+
+## Administrative Commands
+
+`FLUSH` and `QUIT` are answered only at the root URL, and only when the node runs
+with `--admin-commands`; otherwise (and on any other path) they answer `405`.
+
+- `FLUSH` commits and closes every open index and closes the client connections, and
+  answers `200` when they are closed. `FLUSH /?databases` flushes only the indexes,
+  `FLUSH /?clients` only the connections.
+- `QUIT` asks the node to shut down, answers `200` and closes the connection (see
+  [Stopping the node](/Xapiand/options#stopping-the-node)).
+
+The API has no authentication: enable the option only on a node that untrusted clients
+cannot reach (see [Options](/Xapiand/options#administrative-commands)). Sources:
+`src/server/search_views.cc:1497-1535` (`flush_view`, `quit_view`).
+
+```rest
+QUIT /
+```
+
+<!-- e2e:begin
+---
+description: QUIT needs --admin-commands
+---
+
+```js
+pm.test("QUIT is not allowed without --admin-commands", function() {
+  pm.response.to.have.status(405);
+});
+```
+e2e:end -->
+
+```rest
+FLUSH /twitter/
+```
+
+<!-- e2e:begin
+---
+description: FLUSH answers only at the root
+---
+
+```js
+pm.test("FLUSH on an index path is not allowed", function() {
+  pm.response.to.have.status(405);
+});
+```
+e2e:end -->
 
 ---
 
@@ -201,7 +362,7 @@ e2e:end -->
 A [field selector](#field-expansion) reduces the answer, `GET /.state` answers just the node's
 state, and `GET /:info` answers the same as `GET /`. `GET /:metrics` answers the
 node's metrics in the Prometheus text format. A request that needs an index (`PUT /`,
-`POST /`, `DELETE /`, a search) and names none answers `400`.
+`POST /`, a search or a count) and names none answers `400`; `DELETE /` answers `405`.
 
 ```rest
 GET /.server.name
@@ -311,8 +472,9 @@ Is equivalent to:
 
 ## Multiple Indexes
 
-Most APIs that refer to an index parameter support execution across multiple
-indexes, using simple `test1,test2,test3` notation.
+`SEARCH` and `COUNT` run across multiple indexes, using simple
+`test1,test2,test3` notation. Every other verb takes a single index (a list
+answers `400`, "Method can only be used with single indexes").
 
 Searches and counts also take `_all` for all the indexes of the node, and globs
 over the segments of an index path (the parts between `/`), for example
@@ -347,8 +509,7 @@ to exclude, for example `test*,-test3`:
   its indexes in batches; see
   [Searching many indexes](/Xapiand/options#searching-many-indexes).
 
-A `*` used to match a `/` as well (`test*` matched `test1/old`); to reach the
-indexes below a name, give the segments: `test*/*`, or `test*/**`.
+To reach the indexes below a name, give the segments: `test*/*`, or `test*/**`.
 
 Globs match the indexes that are on the node's disk. They are the way to reach
 a great many indexes: a URL holds 64 KiB, which is a few thousand index names.
@@ -735,6 +896,130 @@ pm.test("Two names, two indexes", function() {
 e2e:end -->
 
 :::hint{.info}
-Single index APIs such as the Document APIs and the single-index alias APIs
-do not support multiple indexes.
+Single index APIs such as the Document APIs, `INFO`, `COMMIT`, `CHECK`, `DUMP`,
+`RESTORE` and `WAL` do not support multiple indexes.
 :::
+
+---
+
+## Statuses
+
+A failed request answers a JSON body with the `status`, its `type` and a `message`
+(`{"status": 400, "type": "Bad Request", "message": "Bad Request: ..."}`).
+
+| Status | Meaning |
+|---|---|
+| `200 OK` | The request succeeded and has a body. |
+| `201 Created` | `POST` without an ID: the new document's URL is in `Location`. |
+| `204 No Content` | A write succeeded and echoes nothing (the default; see [Quick-start](/Xapiand/quickstart#what-a-write-answers)). |
+| `400 Bad Request` | The request is malformed or past a limit; the `message` says which. |
+| `404 Not Found` | The document or index is not there. |
+| `405 Method Not Allowed` | The verb is not served at that path. |
+| `406 Not Acceptable` | No format in `Accept` can be served. |
+| `409 Conflict` | A write's `?version` does not match the document's version; the body's `_version` is the current one (`0`: no document). |
+| `412 Precondition Failed` | A strict index refuses a field or setting that has no type. |
+| `413 Payload Too Large` | The body is past the limit of the request. |
+| `501 Not Implemented` | The verb is known and not implemented here (`OPEN`, `CLOSE`, `DELETE` on an index). |
+| `503 Service Unavailable` | The index is busy or the node holds too many requests; `Retry-After` says when to try again. |
+
+Sources: `src/server/http_utils.h:48-135` (the mapping), `src/server/search_views.cc:3182`
+(`413`), `src/manager.cc:950,961` and the http library's `http_asio.h:1062-1066` (`503`).
+
+## Limits
+
+Each limit answers `400` unless it says otherwise, and each is a constant of the
+code. The table repeats the
+[architecture page's](/Xapiand/architecture#limits) with the verbs they apply to.
+
+| What | Limit | Source |
+|---|---|---|
+| A buffered body | 16 MiB (`413`) | `src/server/search_service.h:50` |
+| Nesting in a JSON, YAML or MessagePack body | 200 levels | `src/database/utils.h:143` |
+| A query | 100 levels, 4,096 clauses, 256 phrase or near groups joined by one AND | `src/engine/query.h:94-98` |
+| Nesting of aggregations | 16 levels | `src/aggregations/aggregations.h:40` |
+| Live buckets in one search | 65,535 | `src/aggregations/aggregations.h:39` |
+| Index patterns in one search | 32 | `src/index_pattern.h:126` |
+| Indexes one search reads | `--max-search-indexes` (100,000) | `src/opts.cc` |
+| A Lua script call | 10^8 instructions, 64 MiB of memory | `src/lua/processor.h:50-62` |
+
+Past 32 index patterns a search answers `400`:
+
+```rest
+SEARCH /p0*,p1*,p2*,p3*,p4*,p5*,p6*,p7*,p8*,p9*,p10*,p11*,p12*,p13*,p14*,p15*,p16*,p17*,p18*,p19*,p20*,p21*,p22*,p23*,p24*,p25*,p26*,p27*,p28*,p29*,p30*,p31*,p32*/?q=x
+```
+
+<!-- e2e:begin
+---
+description: Limits: 33 index patterns
+---
+
+```js
+pm.test("A search names at most 32 patterns", function() {
+  pm.response.to.have.status(400);
+  pm.expect(pm.response.json().message).to.include("32 index patterns");
+});
+```
+e2e:end -->
+
+An aggregation nested 17 levels deep (the body is on one line) is refused:
+
+```rest
+SEARCH /bank/?limit=0
+
+{"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+```
+
+<!-- e2e:begin
+---
+description: Limits: aggregations nested 17 levels
+---
+
+```js
+pm.test("Aggregations nest at most 16 levels", function() {
+  pm.response.to.have.status(400);
+  pm.expect(pm.response.json().message).to.include("16 levels");
+});
+```
+e2e:end -->
+
+The same aggregation at 16 levels runs:
+
+```rest
+SEARCH /bank/?limit=0
+
+{"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"},"_aggs":{"a":{"_values":{"_field":"gender"}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+```
+
+<!-- e2e:begin
+---
+description: Limits: aggregations nested 16 levels
+---
+
+```js
+pm.test("Sixteen levels run", function() {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().aggregations).to.have.property("a");
+});
+```
+e2e:end -->
+
+A body that nests arrays or objects 201 levels deep is refused before it is read:
+
+```rest
+PUT /limits/deep
+
+[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+```
+
+<!-- e2e:begin
+---
+description: Limits: a body nested 201 levels
+---
+
+```js
+pm.test("A body nests at most 200 levels", function() {
+  pm.response.to.have.status(400);
+  pm.expect(pm.response.json().message).to.include("200 levels");
+});
+```
+e2e:end -->

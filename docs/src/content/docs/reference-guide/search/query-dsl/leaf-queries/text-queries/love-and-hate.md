@@ -9,6 +9,10 @@ specified terms.
 When using these operators, _stop words_ do not apply.
 :::
 
+A lone exclusion, such as `-ambitious` with nothing required, is not a query: under `_and`
+or `_or` on a field with no stop word list it answers `400` ("Syntax: <expression> NOT
+<expression>").
+
 #### Example
 
 The following matches all documents with the phrase _"adventurous nature"_ but
