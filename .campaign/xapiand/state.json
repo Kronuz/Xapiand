@@ -1703,9 +1703,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-10T16:27:29",
+      "updated": "2026-11-11T10:52:37",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
