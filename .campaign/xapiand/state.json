@@ -15008,19 +15008,42 @@
         "docs/mechanisms/requests-on-the-reactor.md",
         "docs/mechanisms/cancellation.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T17:59:25",
+          "commit": "ac965d49c5c3fcf03db26f3a384cec0e0584f7eb",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "30f705f6f093735d0c4bc32d4a7ef1121d9e50be",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-173050-487b1b",
+              "level": "light",
+              "seconds": 702.6,
+              "state": "done",
+              "what": "x7-cancel-rows check build-test at 30f705f6f093"
+            }
+          ],
+          "final": true,
+          "from": "c8b48e71849bd1c1d2a54ed2ebff5084bd7cbc6a",
+          "reason": "",
+          "tested": "ac965d49c5c3fcf03db26f3a384cec0e0584f7eb"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "T9 cancellation tests and a cancel counter (x7-gate A9)",
-      "updated": "2026-11-10T17:06:30",
-      "worktree": "../Xapiand-wt/xapiand/x7-cancel-rows"
+      "updated": "2026-11-10T17:59:32",
+      "worktree": ""
     },
     "x7-catalog-timer": {
       "accepted": {},
