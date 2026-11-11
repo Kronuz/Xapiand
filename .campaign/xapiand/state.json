@@ -6821,7 +6821,7 @@
           "verdict": "APPROVE"
         },
         "security": {
-          "at": "2026-11-10T13:23:06",
+          "at": "2026-11-10T16:23:55",
           "base": "77adb0569e4c43445629a4e39f25c37d9ad22c90",
           "blobs": {
             "CMakeLists.txt": "100644:f624e692202e5923ad3fdf93d4677fb7b8ddad8a",
@@ -8110,7 +8110,7 @@
             "test/index_test.cc": "100644:ce99083d5b711b0fb54c8a0e9ac0a584335d4f03",
             "test/lifecycle_test.cc": "100644:8ea76baf5a39eff6eec5aaf72b35d99e9dc7a4cc",
             "test/manifest_log_mutants.py": "100755:5f607742a51b507f1fe0e0f3c1292021209c4870",
-            "test/manifest_log_test.cc": "100644:64381b5854d1fb484a663b789b306cb5fe8eda1b",
+            "test/manifest_log_test.cc": "100644:7f1bbae05065d51e94f3fc8d5dca19b6033223e7",
             "test/media_test.cc": "100644:1180d82861d2eab4240e4f217c4fd839e280e9b3",
             "test/reclaim_backlog_test.cc": "100644:a1b0a462ef94983de54afa1ee0437f588af34ddb",
             "test/reclaim_bg_test.cc": "100644:53247d8e615ba3ff1fdf0c18f8cae53fdd2da206",
@@ -8120,25 +8120,22 @@
             "tools/mutants/fields.py": "100755:7bc6b115e49f42d97d489d8680f263607070d27f",
             "tools/mutants/keys.py": "100755:c01c120b8a1060921d19ac757aee4dabcb5a7aec"
           },
-          "brief": "29036e07e72592c9",
+          "brief": "514fa4a5139e4728",
           "by": "review",
-          "commit": "85a51e0ade3623ef3e354a0207dc93afe79365cc",
+          "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
           "findings": {
             "F1": {
               "jobs": [
                 {
                   "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-manifest-log-security/run.sh",
-                  "commit": "1ebeff876de93af2442045d89757f91076117520",
-                  "docs": [
-                    "docs/design/durability-modes.md"
-                  ],
+                  "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261110-114923-42379b",
+                  "job": "261110-142526-c935bf",
                   "level": "light",
-                  "seconds": 214.1,
+                  "seconds": 91.2,
                   "state": "done",
-                  "what": "security review probes: replay cost at D7's bound, ENOSPC soft bounds vs reader at 1ebeff876de9"
+                  "what": "security review probes: replay cost at D7's bound, ENOSPC soft bounds vs reader at 15d39c309496"
                 }
               ],
               "kind": "gap",
@@ -8148,31 +8145,25 @@
               "jobs": [
                 {
                   "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-manifest-log-security/run.sh",
-                  "commit": "1ebeff876de93af2442045d89757f91076117520",
-                  "docs": [
-                    "docs/design/durability-modes.md"
-                  ],
+                  "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261110-114923-42379b",
+                  "job": "261110-142526-c935bf",
                   "level": "light",
-                  "seconds": 214.1,
+                  "seconds": 91.2,
                   "state": "done",
-                  "what": "security review probes: replay cost at D7's bound, ENOSPC soft bounds vs reader at 1ebeff876de9"
+                  "what": "security review probes: replay cost at D7's bound, ENOSPC soft bounds vs reader at 15d39c309496"
                 },
                 {
                   "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-manifest-log-durability-fable/enospc.sh",
-                  "commit": "1ebeff876de93af2442045d89757f91076117520",
-                  "docs": [
-                    "docs/design/durability-modes.md"
-                  ],
+                  "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261110-114923-89e42f",
+                  "job": "261110-142526-7051c5",
                   "level": "light",
-                  "seconds": 123.8,
+                  "seconds": 45.5,
                   "state": "done",
-                  "what": "durability review probe v2: commits acknowledged under sustained ENOSPC (room under one snapshot) past the reader's 2x bound, then a plain open, at e0508e9 at 1ebeff876de9"
+                  "what": "durability review probe v2: commits acknowledged under sustained ENOSPC (room under one snapshot) past the reader's 2x bound, then a plain open, at e0508e9 at 15d39c309496"
                 }
               ],
               "kind": "defect",
@@ -8184,7 +8175,7 @@
               "include/strata/core/hazard.hh",
               "test/hazard_test.cc"
             ],
-            "reason": "hazard.hh/hazard_test.cc are durability F3's fix (reserve before publish), rechecked under the durability lens; they touch no path of security F1 (replay cost) or F2 (ENOSPC bounds)"
+            "reason": "hazard.hh reserve() is durability F3's fix (Sonnet recheck APPROVE); test_manifest_log's timing bound loosened 0.05 to 0.5 of time_scale after CI macOS x86_64 measured 51.9 ms; neither touches a decoder"
           },
           "note": "",
           "review": "ab2d18b35427c40238c6e08cf0d9c108d190da1c",
@@ -8333,7 +8324,7 @@
       "risk": "high",
       "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T16:22:50",
+      "updated": "2026-11-10T16:23:55",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
