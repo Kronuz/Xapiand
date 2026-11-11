@@ -1,9 +1,35 @@
 # phase3-ratchets: journal
 
-State: waiting on jobs 261111-023449-dbd2bc 261111-023513-9cf689 261111-023527-01525e 261111-023529-0480c9 261111-023531-861bbf 261111-023533-e5b827 261111-023549-08d8e1 261111-023550-47b686 261111-023552-604cea 261111-023611-df2aff 261111-023613-74ba91 261111-023615-46b75c 261111-023617-714ad0 261111-023627-a73c21, build-test 261111-023959-816690 (queued 2026-11-11 02:40)
+State: waiting on jobs 261111-072641-24e513 261111-072642-12c9fe 261111-072644-00aa3e 261111-072646-cbabd8 261111-072649-debd0a 261111-072651-cf4452 261111-072654-b92e66 261111-072709-569667 261111-072711-f9506e 261111-072713-3b714c 261111-072715-8d41f8 261111-072722-2332c9 261111-073924-e0cd69 (reruns at prospect fba0e0d; queued behind host light holds at 2026-11-11 07:40)
 Quest: .campaign/xapiand/quests/phase3-ratchets.md (the lead's; never edit it)
 
 ## Doing
+
+Wave 3 (main f0d7871, harness fe20f43) all passed; read and reported in prospect
+`docs/gates/phase-3-ratchets.md` "Gate report at main f0d7871" (04de049, 9de065a):
+- A1 after merging: 20 pass, 2 within caveat, 14 miss (to 1.23x, mostly vs Tantivy), 4
+  straddle; global 0.78-0.94x. Before: 9/2/27/2, global 1.01-1.21x. Miss, carried.
+- Warm-up caveat measured: vs the 9b88263 20 s trials (same query code) prospect and Tantivy
+  ran 2-25% faster, Lucene -bp 0.99-1.05x, so JVM ratios may flatter prospect up to ~18%;
+  five more -bp-bound passes (0.82-0.89x) named as not established.
+- A2 1t 1M: 0.355x [0.336-0.374] Tantivy-st's time (2.68x, 2.97x faster). 5M 235.3 s, not
+  divided by 2026-11-09 baselines: the VM ran ~1.55x faster today (Tantivy-st 1M 105 s vs
+  160-169 s on 11-10).
+- A4: peak 1.56x budget at 5M (cause docs/perf/index-memory.md, fix flush-within-budget);
+  serving 0.94x Tantivy (pass); allocations grow for the term class (miss). A5 whole 0.993x,
+  postings 1.012x, terms 1.123x (carried D29). A6 verify 0 mismatches, parity exact (deletes:
+  counts exact, top-10 157/419 until merged). A7 coverage 51/51 tests; 5 headers owe.
+- Two harness faults found, fixed in fba0e0d: (1) the VM's Tantivy builder was stale (make's
+  pattern rule has no prerequisites; empty compile log), so the 8-thread row's Tantivy ran
+  one thread (CPU 116 s on 99 s wall, 1 segment): invalid. (2) write_amp.sh ran baselines
+  without NO_MERGE (force merge at the end, which T3 excludes) and counted device sectors,
+  missing files deleted before writeback (Lucene replace 1.007 with a force merge in it):
+  invalid. Now ru_oublock bytes dirtied, NO_MERGE=1, device count beside it.
+- Every row reruns at fba0e0d (tree identity); A1 reruns double as D59's second run (4
+  classes straddle). A8: FreeBSD smoke at main f0d7871, e0cd69 (light).
+- CI at ca5e913 failed on macos-x86_64 only: the runner could not reach github.com
+  (FetchContent of bitpack); a network flake, rerun on the next push.
+
 
 Merged prospect main `f0d7871` into the branch (3ed265a): main moved strata's pin to the
 manifest log (strata 94480d5; 074129c retires the manifest, live-docs, metadata and field-table
@@ -91,17 +117,17 @@ the VM has no rust or JDK and 4.5 GB free disk bounds DOCS):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | queued: 261111-023611-df2aff (before merging), 261111-023613-74ba91 (after merging) |
-| A2 | queued: 261111-023615-46b75c (one thread), 261111-023617-714ad0 (eight threads), 261111-023527-01525e (5M) |
-| A3 | queued: 261111-023550-47b686 (append), 261111-023552-604cea (replace) |
-| A4 | queued: 261111-023527-01525e (indexing peaks), 261111-023531-861bbf (allocations), 261111-023533-e5b827 (serving) |
-| A5 | queued: 261111-023531-861bbf (sections) |
-| A6 | queued: 261111-023531-861bbf (verify), 261111-023549-08d8e1 (parity) |
-| A7 | pending coverage at f0d7871: `docs/testing/parity.md` "Coverage" holds the 9b88263 numbers |
-| A8 | deferred by decision D51 (FreeBSD as a deferred check, arm64 waits for a host); driver `tools/vm/bsd_rows.sh` |
+| A1 | 261111-023613-74ba91, 261111-023611-df2aff at fe20f43 (reruns 261111-072711-f9506e, 261111-072709-569667 queued) |
+| A2 | 261111-023615-46b75c, 261111-023527-01525e at fe20f43; eight threads queued 261111-072715-8d41f8 |
+| A3 | queued: 261111-072642-12c9fe, 261111-072644-00aa3e |
+| A4 | 261111-023527-01525e, 261111-023531-861bbf, 261111-023533-e5b827 at fe20f43 |
+| A5 | 261111-023531-861bbf at fe20f43 |
+| A6 | 261111-023531-861bbf, 261111-023549-08d8e1 at fe20f43 |
+| A7 | `docs/testing/parity.md` "Coverage" (coverage job rerun 261111-072722-2332c9 queued) |
+| A8 | decision D51 (FreeBSD deferred check, arm64 waits for a host); driver `tools/vm/bsd_rows.sh`; smoke queued 261111-073924-e0cd69 |
 | A9 | `docs/gates/phase-3-ratchets.md` "Tools" |
 | A10 | decision D51; `docs/gates/phase-3-ratchets.md` "Phase 2 gate conditions" |
-| A11 | pending the f0d7871 rows: `docs/gates/phase-3-ratchets.md` holds every 9b88263 row with ratio, interval, jobs and the gate status table |
+| A11 | `docs/gates/phase-3-ratchets.md` "Gate report at main f0d7871" (pending the A2 eight-thread and A3 rows) |
 
 Jobs examined: 261109-173556-26604e prepare, passed. 261109-173630-d3b142 smoke, failed: the
 20k index at a 256 MB budget had one segment, so the merge had nothing to reorder (fixed: smoke
@@ -153,3 +179,10 @@ within a document"; fixed `3d215c6`).
 - R12 Write amplification at equal segment budgets (PLAN, Phase 3 gate): every engine at a
   64 MB buffer (PROSPECT_BUDGET_MB, LUCENE_RAM_MB, TANTIVY_HEAP_MB), 500k documents.
 - R13 Merge (16.4 min at 5M) and verify (8.4 min) run as light jobs: neither is a timed row.
+- R14 Harness faults that invalidated rows are fixed, not footnoted: fba0e0d (write
+  amplification by bytes dirtied, no force merge; builders rebuilt with make -B). The tool
+  keys evidence by the whole tree, so every row reruns at fba0e0d; the fe20f43 numbers stay
+  the report's (same engine, main f0d7871) unless a rerun disagrees.
+- R15 The warm-up rule stays as fixed before data (a class beating a JVM engine by <10% is
+  "within the caveat"), and the report adds the measured drift (up to ~18%) and names the
+  passes it leaves unestablished.
