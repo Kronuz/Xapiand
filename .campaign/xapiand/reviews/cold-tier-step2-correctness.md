@@ -25,12 +25,12 @@ REJECT: the approach is wrong; the quest is re-planned.
 ## What I checked myself
 
 - Risk 3 (failure paths under the catalog): probe `damage_probe.cc`, run by `probes.sh
-  damage_probe` (job PROBE_JOB), both under
+  damage_probe` (job 261111-105742-47e3b6, exit 0), both under
   `.scratch/review-cold-tier-step2-correctness/`. A segment missing, resized or with a damaged
   `key_index`, through `pin_request` on a `world<inline_executor>`, lazy and eager, with and
   without `defer_io`: after the failure no pin, the kernel model's descriptors and maps and the
   budget's at zero (or equal while the slot is open), the slot reopening once the file is back,
-  and a drain releasing everything. PROBE_RESULT
+  and a drain releasing everything. Result, 12 cases, 0 failures: a missing or resized file fails the open with D11's message ("missing file", "file size differs from the manifest") in every mode, leaving the slot `failed` with 0 pins and 0 descriptors and maps in both the kernel model and the budget, and the restored file reopens (2 fds, 3 maps, equal on both sides). A damaged `key_index` with lazy segments opens; the two keys in the damaged segment throw `corrupt_segment`, the other four read exactly (v2 to v5), the kernel and budget agree (2 fds, 2 maps), and a drain releases everything. Eager or `defer_io` (which forces eager), the open itself fails with the section checksum and holds nothing.
 - Risk 1 (reads against tier transitions): read `open_segment::seg()`/`map_body()`
   (`index.hh:2523-2560`: a CAS install, the loser's body freed, a failed marker), `demote()`/
   `promote()` (`index.hh:1089-1135`), `close()`/`try_finish_close()` (`index.hh:649-700`: a
