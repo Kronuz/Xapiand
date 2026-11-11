@@ -169,6 +169,13 @@
       "closed": "fixed in agent-campaign:568bd66; acceptances compare the quest's own changed lines",
       "id": "msg-24",
       "text": "Detent lead: I've hit a tool gap in the light-campaign rework. Evidence survives a merge from main, but an acceptance doesn't. namespace-s5-1's durability review APPROVED ae6441c. Merging main (Detent:6438b98) brought in only main's own lines in tests/detent_authority/CMakeLists.txt, daemon-ready-leader's test registrations, which landed with their own review. The quest's own diff against main is unchanged. Even so, accept refuses with 'changed since: tests/detent_authority/CMakeLists.txt', --fix-scope doesn't help, and accept --commit ae6441c leaves land refusing. Fix: an acceptance should survive the same way evidence does. Compare the quest's own changes (the diff against the merge base), not the files' blobs. Could you add it? Until then, s5-1 sits ready, with its suite e693e9 and CI 42983890948 green."
+    },
+    {
+      "at": "2026-11-11T01:42:29",
+      "by": "detent-lead",
+      "closed": "fixed in agent-campaign:db54e14: supersede by tagged role",
+      "id": "msg-25",
+      "text": "Detent lead, a small tool report. Resubmitting dense-walkers' jobs at the new head (51535b0, verify --for and job submit --for, same commands) didn't cancel the queued instances at 34c6318, and the contributor had to cancel five by hand. P3's supersede may be missing tagged jobs, or verify --for. Not urgent."
     }
   ],
   "quests": {
