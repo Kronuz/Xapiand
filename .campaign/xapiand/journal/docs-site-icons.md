@@ -1,6 +1,6 @@
 # docs-site-icons: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/docs-site-icons.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,8 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261111-152727-b4e819 (site build, 130 pages, logo.png removed) |
+| A2 | `brand/README.md`: "The docs site serves its logo, favicons and touch icons" |
 
 ## Result
 
