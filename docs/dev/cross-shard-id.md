@@ -28,31 +28,26 @@ queue FIFO, order the three requests (DELETE's lookup, a hold, PUT's lookup, a s
 while the first is held; the DELETE's erase and the PUT's write queue behind the lookups), so the
 PUT's write runs after the DELETE and after the new PUT's write (made directly on H).
 
-## Jobs and results
-
-- 261111-072838-d5c6c0 (probe, first version): the choreography reached its end but the replies were not
-  printed; DELETE and PUT were not 204 and a read under a held turn threw. No duplicate seen yet; not
-  evidence either way.
-- 261111-073927-6d9b0b: probe with replies printed, at the code before the fix (commit 33972b6f3, on the
-  local branch scratch-before).
-- 261111-073929-a46f52: the same probe at the fix (commit 508d1192a).
-
-Fix (prototype): `WriteArgs::must_exist` (src/engine/shard.h), honoured by `Shard::replace`
-(src/engine/strata/shard.cc); `DatabaseHandler::replace_document(did, ..., must_exist)` is used by
-`replace_document_term` (handler.cc ~1949) and `index(did, ...)` (~473), which place the document
-afresh when the shard answers doc_not_found.
-
 ## Results
 
-- Before the fix (261111-073927-6d9b0b, Xapiand:33972b6f3): reproduced. After the DELETE and the new PUT,
-  the stale PUT's write left the id on the hash shard 0 and on shard 1 (`id twice: hash shard 0 holds 1,
-  shard 1 holds 1`); GET did not read the stale write and SEARCH did not total 2. One run, and the
-  choreography is deterministic (held turns), not a rate.
-- At the fix (261111-073929-a46f52, Xapiand:508d1192a): the id is on the hash shard only (`holds 1`, `holds 0`);
-  the only failing check was the DELETE's status, 0 (an empty reply in this choreography, cause not
-  chased; the erase did happen). That check is dropped in the next commit and one job reruns it.
+- Before the fix (261111-073927-6d9b0b, Xapiand:33972b6f3): reproduced. The stale PUT's write leaves
+  the id on hash shard 0 and on shard 1 (`id twice: hash shard 0 holds 1, shard 1 holds 1`); GET and
+  the SEARCH total disagree. The held turns make the order deterministic, so one run decides.
+- At the prototype fix (261111-073929-a46f52, Xapiand:508d1192a): the id is on the hash shard only.
 
-Proposed fix: `WriteArgs::must_exist` (src/engine/shard.h), refused by `Shard::replace` with doc_not_found
-(src/engine/strata/shard.cc:866-885) and used by `DatabaseHandler::replace_document_term`
-(src/database/handler.cc:1949) and `index(did, ...)` (handler.cc:473), which then place afresh.
-- 261111-085628-7b4231: corrected rerun at the fix (Xapiand:f8a2d3ac0), DELETE status unchecked; expected to pass.
+The DELETE's empty reply (status 0) in both runs is the probe's, not the server's: its `?commit`
+waits for a turn behind the probe's third hold, and the probe joined the DELETE before releasing
+that hold, so the client's 10 s read timeout ended the call. The test checks that the DELETE has
+not replied while the hold is held, joins it after the release, and asserts 204.
+
+## Fix
+
+`WriteArgs::must_exist` (src/engine/shard.h): `Shard::replace` (src/engine/strata/shard.cc) answers
+doc_not_found when the key is no longer at the docid, and `replace_document_term` and
+`index(did, ...)` (src/database/handler.cc) then place the document afresh.
+
+Placing afresh must not carry a version read from the erased document: a PATCH whose document was
+erased would overwrite a new document of the same id at the same version (new documents start at 1,
+so versions often match). So the engine first checks the write as one against no document, and a
+versioned write gets version_conflict and retries. Quest cross-shard-id carries the tests, each
+with a job that fails without its part of the fix.
