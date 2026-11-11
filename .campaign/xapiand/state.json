@@ -13364,7 +13364,24 @@
       "worktree": ""
     },
     "stored-frame-bound": {
-      "accepted": {},
+      "accepted": {
+        "security": {
+          "at": "2026-11-10T22:42:04",
+          "base": "71750940c36d238966ad41f941a638227896eef1",
+          "blobs": {
+            "include/strata/core/reader.hh": "100644:0938838077cb1ff41466536615782ffd3b77abc2",
+            "test/reader_check_test.cc": "100644:cba80001c7b5527316c593b641366f101077d757"
+          },
+          "by": "review",
+          "commit": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5",
+          "criteria": "7a70dffb8e4e7cc9",
+          "findings": {},
+          "note": "",
+          "review": "53ae4ea68a9d1c965253ed082c79c47326a07c48",
+          "reviewed": "94480d5251b3c992a2e9ed6f5b7114ddb4d582e5",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "71750940c36d238966ad41f941a638227896eef1",
       "branch": "quest/xapiand/stored-frame-bound",
@@ -13440,7 +13457,7 @@
       "risk": "high",
       "status": "active",
       "title": "A stored frame's records end where the next frame starts",
-      "updated": "2026-11-10T22:42:03",
+      "updated": "2026-11-10T22:42:04",
       "worktree": "../strata-wt/xapiand/stored-frame-bound"
     },
     "stored-short-section": {
