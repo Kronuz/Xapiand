@@ -35,6 +35,21 @@ PUT /twitter/user/Kronuz
 }
 ```
 
+<!-- e2e:begin
+---
+description: Welcome: a first write
+---
+
+```js
+pm.test("The write answers the stored document", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal("Kronuz");
+  pm.expect(doc.name).to.equal("Germán Méndez Bravo");
+});
+```
+e2e:end -->
+
 For those, you can always copy the equivalent _curl_ code for it by hovering the
 snippet and clicking on the copy to the clipboard button:
 &nbsp;&nbsp;<i class="fa fa-clipboard" style="color: "></i>

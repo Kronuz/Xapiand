@@ -10,8 +10,11 @@ keypress, or whenever the user pauses for a short period of time (or some other
 similar strategy).
 
 This allows for prefix matches, matching any number of trailing characters, so,
-for instance, `"_partial": "wildc"` or `"wildc*"` would match _**wildc**ard_,
-_**wildc**arded_, _**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc.
+for instance, `"_partial": "wildc"` or `"wildc**"` would match _**wildc**ard_,
+_**wildc**arded_, _**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc. A partial applies to
+the last word of the text, when it has two or more characters, and expands to at most
+the 50 most frequent terms that start with it (in this text the matches are also kept as
+the word itself). `"wildc*"` is a [Wildcard Query](../wildcard) instead: it is not capped.
 
 :::hint{.tip}
 This is a bit different from [Wildcard Query](../wildcard).
@@ -68,7 +71,7 @@ pm.test("partial query values are valid", function() {
 ```
 e2e:end -->
 
-Using the suffix `**` is equivalent to using `_partial`
+Using the suffix `**` on the last word is equivalent to using `_partial`
 
 ```rest
 SEARCH /bank/

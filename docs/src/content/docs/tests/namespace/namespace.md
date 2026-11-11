@@ -400,6 +400,7 @@ e2e:end -->
 GET /test/namespace/strict_namespace/._schema.tags
 ```
 
+<!-- e2e:begin
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -413,6 +414,7 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('keyword');
 });
 ```
+e2e:end -->
 
 #### Info Strict Namespace
 
@@ -494,7 +496,15 @@ PUT /test/namespace/strict_namespace_array/doc
 }
 ```
 
-####  Get Strict Namespace Array
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+#### Get Strict Namespace Array
 
 ```rest
 GET /test/namespace/strict_namespace_array/._schema.tags
@@ -672,7 +682,7 @@ pm.test("Value is valid", function() {
 ```
 e2e:end -->
 
-#### Info Strict Namespace Array
+#### Info Namespace Text
 
 ```rest
 INFO /test/namespace/namespace_text/doc
@@ -995,14 +1005,6 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  tobytes = (a) => {
-    let buff = [];
-    for (let i = 0; i < a.length; i++) {
-        buff.push(a[i].charCodeAt(0));
-    }
-    return buff;
-  }
-
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '328441664', '1844154444', '2306662042', '2533366391', '3009507063']);
 });
 ```

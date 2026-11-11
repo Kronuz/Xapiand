@@ -12,19 +12,23 @@ these match documents in the following way:
 
 * `_or`           - Finds documents which match any of the subqueries.
 * `_and`          - Finds documents which match all of the subqueries.
-* `_not`          - Finds documents which don't match any of the subqueries.
+* `_not`          - Finds documents which don't match the subquery. Given a list of
+                    subqueries it is written as `match_all AND_NOT (A AND_NOT B ...)`:
+                    it finds the documents that are not "A but not B", which is not
+                    the same as matching none of them.
 * `_and_not`      - Finds documents which match the first subquery A but
                     not subquery B.
-* `_xor`          - Finds documents which are matched by subquery A or other or
-                    subquery B, but not both.
+* `_xor`          - Finds documents which are matched by subquery A or subquery B,
+                    but not both.
 
 Each operator produces a weight for each document it matches, which depends on
 the weight of one or both subqueries in the following way:
 
 * `_or`           - Matches documents with the sum of all weights of the subqueries.
 * `_and`          - Matches documents with the sum of all weights of the subqueries.
-* `_not`          - Finds documents which don't match any of the subqueries.
+* `_not`          - Matches documents with no weight (a match-all weighs nothing).
 * `_and_not`      - Matches documents with the weight from subquery A only.
+* `_xor`          - Matches documents with the sum of the weights of the subqueries that match.
 
 #### Example
 

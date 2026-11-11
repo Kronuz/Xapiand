@@ -78,6 +78,27 @@
       "closed": "answered: picks and X1-X3 in Detent .scratch/skill/proposal.md; Detent writes P1+P5, Xapiand P3/P4/P6/X1-X3 on agent-campaign speed-xapiand",
       "id": "msg-20",
       "text": "Owner asks both leads to agree on campaign speed fixes and land them in the skill. My numbers and 6 proposals (input-scoped job identity, exclusive drain, supersede on rerun, slot safety, skill text rules, superseded-evidence flag) are in /Users/kronuz/code/Kronuz/Detent/.scratch/skill/proposal.md. Please add Xapiand's, say which you take, and whether I should write P1 or P5 on a branch in agent-campaign for you to review and land."
+    },
+    {
+      "at": "2026-11-09T20:01:51",
+      "by": "write-path-fixes",
+      "closed": "granted; write-path-fixes landed with these files",
+      "id": "msg-11",
+      "text": "write-path-fixes needs tests/test_node.cc in its file set: A1/A2/A4 are HTTP-level (PUT/GET/SEARCH/DELETE, ?version, 409 body), and test_node.cc already has the in-process RunningNode and http_call; the two test files in the set are engine-only (no node, no HTTP). Recommendation: add tests/test_node.cc (no CMake change needed). Alternative: a new tests/test_write_path.cc plus a CMakeLists.txt entry, which would duplicate RunningNode. I am implementing the fixes meanwhile."
+    },
+    {
+      "at": "2026-11-09T20:09:26",
+      "by": "write-path-fixes",
+      "closed": "granted; write-path-fixes landed with these files",
+      "id": "msg-12",
+      "text": "write-path-fixes also needs src/database/pool.h in its file set: ShardEndpoint::do_delete/do_delete_term are declared there (pool.h:306-307) and must take the expected version so DELETE ?version is checked by the engine's erase inside the index's turn (the race-free place; a read-then-delete in Shard would rely on the published view). Two declaration lines change, nothing else in pool.h."
+    },
+    {
+      "at": "2026-11-09T20:21:15",
+      "by": "write-path-fixes",
+      "closed": "granted; write-path-fixes landed with these files",
+      "id": "msg-13",
+      "text": "write-path-fixes: the how-it-works note goes in docs/mechanisms/document-ids-and-versions.md (new; outside the file set too). Of msg-11/12/13 the branch already has commits touching tests/test_node.cc and src/database/pool.h, kept as their own commits (2802550be pool.h, ec1b230c3 test_node.cc) so they can be dropped if you rule otherwise. Also: src/exception_engine.h's DocVersionConflictError has no user after this quest (left in place, outside the set)."
     }
   ],
   "quests": {
@@ -2325,17 +2346,40 @@
         "docs/src/lib/**",
         "docs/src/content/docs/welcome.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T19:22:17",
+          "commit": "d952478e080c5810d9fa3345fc2ee34273001756",
+          "evidence": [
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "6b83f72d5ce1f3dd6388ff3e0067eb280fcb256a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-190632-5c8257",
+              "level": "light",
+              "seconds": 172.3,
+              "state": "done",
+              "what": "docs-site-refresh-reference check e2e at 6b83f72d5ce1"
+            }
+          ],
+          "final": true,
+          "from": "cb1c0361ba565edd15a85c162abaab7dfb07c20e",
+          "reason": "",
+          "tested": "381ead88b82c3c83b6c6836103d4dd07c16c6db5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T15:24:03",
-      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh-reference"
+      "updated": "2026-11-10T19:22:26",
+      "worktree": ""
     },
     "docs-upgrade-page": {
       "accepted": {},
@@ -8339,7 +8383,7 @@
           "final": true,
           "from": "77adb0569e4c43445629a4e39f25c37d9ad22c90",
           "later": [
-            "261110-162534-50495f"
+            "261110-192346-4978ee"
           ],
           "reason": "",
           "tested": "15d39c3094966b262ac643327f6c68fa5bfa4dee"
@@ -8360,7 +8404,7 @@
       "risk": "high",
       "status": "landed",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T16:25:35",
+      "updated": "2026-11-10T19:23:46",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
@@ -10664,7 +10708,20 @@
       "after": [],
       "base": "966edb73a5a25dbcd2c4788e496371c05f06b280",
       "branch": "quest/xapiand/placement-without-flush",
-      "checks": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
       "consumes": [],
       "files": [
         "src/database/handler.cc",
@@ -10675,6 +10732,31 @@
         "tests/test_node.cc",
         "tests/test_shard*.cc",
         "docs/mechanisms/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-10T19:19:16",
+          "checks": [
+            [],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
       ],
       "landed": [],
       "lenses": [
@@ -10687,7 +10769,7 @@
       "risk": "high",
       "status": "active",
       "title": "New documents are placed without flushing every shard",
-      "updated": "2026-11-10T18:54:37",
+      "updated": "2026-11-10T19:19:16",
       "worktree": "../Xapiand-wt/xapiand/placement-without-flush"
     },
     "pool-concurrency": {
@@ -10753,7 +10835,8 @@
       "files": [
         "fuzz/**",
         "include/**",
-        "test/**"
+        "test/**",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -10853,7 +10936,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-10T18:15:32",
+      "updated": "2026-11-10T19:24:26",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
@@ -13093,21 +13176,44 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/stored-check-cache",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T19:19:01",
+          "commit": "71750940c36d238966ad41f941a638227896eef1",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "71750940c36d238966ad41f941a638227896eef1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-182036-44d0ae",
+              "level": "light",
+              "seconds": 554.6,
+              "state": "done",
+              "what": "stored-check-cache check build-test at 71750940c36d"
+            }
+          ],
+          "final": true,
+          "from": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+          "reason": "",
+          "tested": "71750940c36d238966ad41f941a638227896eef1"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "reason": "started by force: cold-tier-step2's globs cover include/strata/** and test/**, but its branch changes none of reader.hh, test/CMakeLists.txt, CMakeLists.txt or a reader_check test; this is a one-line fix plus one test",
       "repo": "../strata",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "strata's stored check decodes with one frame cache",
-      "updated": "2026-11-10T18:47:37",
-      "worktree": "../strata-wt/xapiand/stored-check-cache"
+      "updated": "2026-11-10T19:19:07",
+      "worktree": ""
     },
     "stored-short-section": {
       "accepted": {},

@@ -5,6 +5,10 @@ title: "Filter Aggregation"
 Defines a _single-bucket_ of all the documents in the current document set
 context that match a specified filter.
 
+Several keys under `_term` are ORed: a document falls in the bucket when it matches any one of
+them, and an array value matches any of its values. The match is on the field's stored value,
+not on its index terms (a `keyword` field is compared with its case).
+
 ## Structuring
 
 The following snippet captures the structure of filter aggregations:
