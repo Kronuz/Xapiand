@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261110-123313-fe03a9 261110-123314-96a9e6
+State: waiting on jobs 261111-142834-9c25fd 261111-142834-e6b01e 261111-142834-da0a9e 261111-142835-bb67a2 261111-142835-15e20c 261111-142844-048b3b 261111-142846-66c8ef
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,7 +12,10 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 Merged master (Xapiand:78716404c) into the branch: it resolves Blocked on 1 (catalog timer on the control loop,
 Xapiand:c0d0208ee), 2 (`xapiand_admission_inflight_peak`, `xapiand_scheduler_demoted_peak` in `src/metrics.cc`) and
 4 (http repinned, Xapiand:1596eeed7). The T8 rows now gate on both peaks and name each 503's cause (R8). Every row and
-check reruns at this head: `campaign verify x7-gate` and one full rows job (ids in Next).
+check reruns at Xapiand:0cec18474: checks build-test 261111-142834-9c25fd, e2e 261111-142834-e6b01e, t7-tsan
+261111-142834-da0a9e, recovery 261111-142835-bb67a2, removed 261111-142835-15e20c; rows 261111-142844-048b3b (every
+row, ASan ctest); X3-5 per-open-index cost 261111-142846-66c8ef (after the rows job). The same jobs queued at
+Xapiand:2abe48746 were cancelled before they ran: the X3-5 commit changed the code they would prove.
 
 ### Rows job 261110-052957-f5e762 (Xapiand:e7e8e03c5, master's code + driver), each failure read
 
@@ -59,11 +62,14 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read jobs 261110-123313-fe03a9 and 261110-123314-96a9e6 (`rows/rows.tsv`, `t8_*.log` "rounds of" lines), fill the
-   T8 table and A8's row; a round not enforced (fewer refused than held - cap) is a master finding.
-2. Per-open-index RSS at 10,000 indexes in `wide_search_check.py gate` (A13's X3-5). Coverage, T9 and the view
-   benchmark are quests x7-coverage, x7-cancel-rows, x7-view-bench (D53).
-3. The lead's timing rows (commands below) after write-path-fixes and docs-site-refresh land.
+1. Read rows 261111-142844-048b3b: `rows/rows.tsv`, `t1_census.log` (DB-TIMER gone?), `t8_*.log` (503 causes by
+   name, both peaks), `ctest-asan.log`; read the five checks; fill Evidence for A1 A2 A3 A7 A8 A10 A13 A17 A19 A20.
+2. Read 261111-142846-66c8ef's "KiB per open index" line into A13 (X3-5); state the reader registry's bytes
+   (strata's reader records x `default_readers_per_index` 128, `src/engine/open.h:50`) from code.
+3. A9: master now exports `xapiand_http_requests_cancelled`; find the test that proves a disconnected read frees its
+   reactor and the counter rises, and a half-closed write completes durably (build-test), or record it owed.
+4. Write each row's result into `docs/gates/phase7c.md` at the head's commit.
+5. The lead's timing rows (commands below); A24's T12 jobs can run now (http pin 51d153a, prospect 850d4e8).
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
 
@@ -127,19 +133,22 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Blocked on
 
-1. **T1 (A1), a quest candidate or a ruling: the catalog timer thread `Xapiand:DB-TIMER`.** x-pool runs strata's
+1. **Resolved on master** (Xapiand:c0d0208ee runs the catalog's timer on the control loop; census reruns in
+   261111-142844-048b3b). Was: **T1 (A1): the catalog timer thread `Xapiand:DB-TIMER`.** x-pool runs strata's
    `host::timer` on its own `Scheduler` wheel (`src/database/pool.cc:414-432`), a second wheel beside the
    debouncer's. Options: (a) run the catalog's timer on the existing debouncer wheel (one timer mechanism, one
    thread fewer; `src/`, a quest); (b) amend section 2's thread list to name it. Recommendation: (a), one
    implementation per mechanism; T1 stays failing until then.
-2. **T8 (A8), a quest candidate: no admission peaks in `:metrics`.** Export `xapiand_admission_inflight_peak` (the
+2. **Resolved on master** (`src/metrics.cc:208-217`, raised in `SearchService::create_extension`); the T8 rows
+   gate on both now. Was: **T8 (A8): no admission peaks in `:metrics`.** Export `xapiand_admission_inflight_peak` (the
    reactor gate's `inflight`, `src/manager.cc:1209` reads it) and `xapiand_scheduler_demoted_peak` (the scheduler's
    `demoted()`), the names `stall_load.py` reads. `src/` work.
 3. **T8 procedure, for the lead's ruling (R4):** the functional overload runs at `--processors 2`. At the default
    16 reactors the light overload needs about 20,000 connections to reach 1,000 in flight per reactor, past one
    loopback address's 16,384 ephemeral ports (49152-65535). The lead's 16-reactor suite would need several
    client addresses or a lower cap; the 503-within-a-slice claim does not depend on the reactor count.
-4. **A24**: Xapiand's http pin c813531 lacks http:51d153a (quest x7-http-repin, D53).
+4. **Resolved**: Xapiand pins http:51d153a (Xapiand:1596eeed7) and prospect 850d4e8 (contains prospect:5c98f81);
+   A24's T12 jobs are the lead's timing runs.
 5. **A6, A15**: the local Linux VM (D53); FreeBSD: `freebsd.yml` builds release tags only.
 6. **A13**: "restore corpora replayed" names no corpus I can find; the lead names it.
 
@@ -151,7 +160,7 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 | A2 | rows 261110-052957-f5e762 (`t2_e2e_asan`, `t2_stored_asan` passed); e2e 261110-032054-4e0406; CI run 42820866169 |
 | A3 | recovery 261110-052925-5d7e5b passed; rows 261110-052957-f5e762 (`t3_crash`, `t3_crash_asan` passed) |
 | A7 | t7-tsan 261110-052925-7da5aa passed; rows 261110-052957-f5e762 (`t7_asan` passed, 365 s) |
-| A8 | held overloads (R7, Xapiand:94eaf3dd5): 261110-123313-fe03a9, 261110-123314-96a9e6 pending; peaks unexported (Blocked on 2); build-test 261110-032054-0d5177 (`test_readers_cap`) |
+| A8 | held overloads (R7, Xapiand:94eaf3dd5): 261110-123313-fe03a9, 261110-123314-96a9e6 passed (every round enforced, 0 other errors); at the head: 261111-142844-048b3b; peaks unexported (Blocked on 2); build-test 261110-032054-0d5177 (`test_readers_cap`) |
 | A10 | rows 261110-052957-f5e762 (`t10_lua` passed; `t10_lua_asan` timed out at 30 s); rerun 261110-081308-b8ca87 queued |
 | A13 | rows 261110-052957-f5e762 (ASan+UBSan ctest rc 0); t7-tsan 261110-052925-7da5aa; CI run 42820866169 |
 | A14 | `docs/gates/phase7c.md` (skeleton) |
@@ -190,5 +199,10 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   counted by body, so the in-flight cap ("Service Unavailable") and the demoted cap ("The server is busy") show
   apart. "503s within one slice of the cap" is not measured: the client's refusal latency is Python's, not the
   server's (recorded as info, `refused_at_barrier`).
+- R8. T8 names each 503 by its cause: `stall_load.py` reads a JSON error's `message` (the engine's reason) instead of
+  the body's first 40 characters, and the T8 rows fail when either admission peak is missing (test
+  `test_a_refusal_reads_its_cause` in `gate_tools`).
+- R9. X3-5's per-open-index cost is resident memory, measured under a light hold (memory does not depend on CPU
+  share): `wide_search_check.py gate --pool 10000` divides the first search's RSS growth by the indexes it left open.
 - R3. T8 runs at dry-run size (20,000 documents): the row's functional claims are 503s and no other errors; RSS
   within 10% of T4's run needs the lead's 1,000,000-document run.
