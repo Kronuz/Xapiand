@@ -22,7 +22,7 @@ Nothing; the push for CI is the lead's.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `.campaign/xapiand/journal/postings-fuzz-memory.md`: "ASan, strata check with frame cache" (job 261110-180348-714558 at prospect:10870d9, the before-the-fix record) |
+| A1 | `fuzz/MEMORY.md` |
 | A2 | Ruled: the postings decoder allocates from no untrusted length (audit under Rulings), so it has no bound to add; what grew is strata's stored check, whose test fails without its fix in stored-check-cache (`test/reader_check_test.cc`, strata:71750940; revert job 261110-182037-74c93c) |
 | A3 | 261111-001821-97b359 at prospect:7cb5226 (strata 94480d52): 7 min ASan+UBSan, 0 crashes, RSS 368-388 MiB after 120 s, peak 405 |
 | A4 | build-test 261110-232704-7f9c0e at prospect:7cb5226 |
