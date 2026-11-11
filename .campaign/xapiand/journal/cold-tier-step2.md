@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: ready for review
+State: fixes ready: F1, F2, F5
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,37 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Head strata:58812244 (docs only over 9621595f; not pushed). Every criterion has evidence at the
-head. T2/T2d's split jobs passed: d1s1 261111-085642-fdea98, d1000s1 261111-085644-609714; no
-warm-defer interval overlaps cold's at p50 or p99 on any fixture (smallest p50 margin 2.8x to
-5.3x, in pairs whose cold opens ran fast), so no second run (D59). `.scratch/tiers`, `.scratch/k6`
-and `.scratch/tiers-try` deleted.
+Head strata:ea54432b (docs only over 9621595f; not pushed: contributors never push). Correctness
+review CHANGES at 58812244 (`.campaign/xapiand/reviews/cold-tier-step2-correctness.md`); the
+lead's rulings applied, docs only, in `docs/perf/catalog-tiers.md` "Verdicts against the design's
+targets":
+
+- F1: T3 judged at every sample after the touch (8f5208's 248 samples): MISS. Open over 2,016 in
+  212, hot over 516 in 167, up to 2,355 and 811; within only from the first sample after the Zipf
+  requests end, about 282 s after the touch, against a 1 s sweep period (passes repost at once).
+  Likely cause, unmeasured: posted transitions queued on the eight chores behind opens' syncs.
+- F2: verdict lines: T1 hot MET (K6); T1 warm 0 maps MET, heap not judgeable (no job measures
+  the pieces at this commit; N1's pieces indicate 5,851 B against 5,084 B); T1 cold MISS (292 B);
+  T2 hot d1s1 MISS (+56%, +40%, -7% p50 per pair); T2 cold d1s1 MET, d1000s1 and d1000s10 MISS
+  in pairs on different sync modes (+1,538% and +765% p50); T2d MET; T3 hard caps MET; T4 MET.
+- F5: the 11 descriptors are the sampler's window (budget, kernel with the region walk, budget):
+  short-lived descriptors, at most one per concurrent chore, over stdio's steady 3 (193 of 309).
+- F4: a line beside A5's margin ties it to the open's two syncs.
 
 ## Next
 
-1. Correctness review (the lead launches it); fold in findings by id.
+1. The lead rules on F1's miss and F2's residuals.
+
+## Follow-up (review findings, not fixed here)
+
+- F3: `promote_probe`'s 90-116 µs exceeds the whole warm-defer request (47-85 µs) that contains
+  `promote()`; the doc still quotes the probe against D3's estimate. Say the end-to-end wake
+  bounds it, or find what the probe adds.
+- F4: D3's "macOS's map is unmeasured" and "T2d decides the latency" (`docs/design/cold-tier.md`
+  :198-201) want T2d's macOS result; T2d reruns if the sync deferral lands.
+- F6: `test/catalog_stress_test.cc` fails the run when a timing-dependent counter misses in eight
+  repeats; CI flake risk. Keep, or report and require the counters from the deterministic tests.
+- F7: T2d at 500 indexes keeps every file cached; the full-scale milestone row settles it.
 
 ## Blocked on
 
@@ -75,7 +97,7 @@ minutes when it runs.
 | A1 | `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
 | A2 | 261111-035757-eb666b: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-035757-1edccb: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`test/catalog_test.cc` static_assert) |
 | A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf (T2/T2d), 261111-035757-a253be (K6). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
-| A4 | macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98 (d1s1), 261111-085644-609714 (d1000s1), 261111-035757-f9dbcf (d1000s10); T3 261111-034629-8f5208 PASS (50,000, 25x the open cap); T4 261111-035757-a2d41c, 261111-035757-bbb067, 4 of 4 PASS. `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
+| A4 | met except: T1 cold (292 B against 16 B), T2 hot d1s1 (p50 +56% and +40% in 2 of 3 pairs), T2 cold d1000s1 and d1000s10 (+1,538% and +765% p50 in pairs on different sync modes), T3 soft caps after the touch (hot up to 811 of 500, open 2,355 of 2,000, until the requests end); T1 warm heap not judgeable. macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf; T3 261111-034629-8f5208; T4 261111-035757-a2d41c, 261111-035757-bbb067. Verdicts in `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
 | A5 | macOS warm: T2d warm defer below cold at p50 and p99 on every fixture, no interval overlapping: 261111-085642-fdea98 (d1s1: 47-85 against 264-20,946 µs at p50), 261111-085644-609714 (d1000s1: 54-71 against 379-41,137), 261111-035757-f9dbcf (d1000s10: 351-394 against 1,097-21,908); p99 108-799 against 42,224-72,264. Dropped and Linux: Milestone checks |
 | A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
 | A7 | 261111-035757-bf4776: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
