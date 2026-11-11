@@ -11058,7 +11058,42 @@
       "updated": "2026-11-08T13:25:08"
     },
     "postings-fuzz-memory": {
-      "accepted": {},
+      "accepted": {
+        "security": {
+          "at": "2026-11-11T00:26:21",
+          "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
+          "blobs": {
+            "CMakeLists.txt": "100644:6219ae70e669f381d1388ae85a47164ced5b6918",
+            "fuzz/rss.sh": "100755:4df89aa01b3dc0516673436f19be6c4214abc0cf"
+          },
+          "by": "review",
+          "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
+          "criteria": "ca588310c4756920",
+          "findings": {
+            "S1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/prospect/.scratch/review-pfm/overlap.sh",
+                  "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261110-232705-0b3de6",
+                  "level": "light",
+                  "seconds": 322.8,
+                  "state": "done",
+                  "what": "bash /Users/kronuz/code/Kronuz/prospect/.scratch/review-pfm/ at 7cb5226ab5db"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            }
+          },
+          "note": "",
+          "review": "53b0d4f2bc3b14adbcd969766da101ff7d7c40a2",
+          "reviewed": "35a98864d80fbea8b1f0d9279a6cb114fbfa5150",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "stored-frame-bound"
       ],
@@ -11190,7 +11225,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-10T22:25:05",
+      "updated": "2026-11-11T00:26:21",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
