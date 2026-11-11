@@ -10693,6 +10693,8 @@
     "postings-fuzz-memory": {
       "accepted": {},
       "after": [],
+      "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
+      "branch": "quest/xapiand/postings-fuzz-memory",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -10806,6 +10808,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/postings-fuzz-memory",
       "landed": [],
       "lenses": [
         "security"
@@ -10815,9 +10818,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-09T04:14:31"
+      "updated": "2026-11-10T17:22:07",
+      "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
       "accepted": {},
