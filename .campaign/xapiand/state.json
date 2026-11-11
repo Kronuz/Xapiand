@@ -99,6 +99,13 @@
       "closed": "granted; write-path-fixes landed with these files",
       "id": "msg-13",
       "text": "write-path-fixes: the how-it-works note goes in docs/mechanisms/document-ids-and-versions.md (new; outside the file set too). Of msg-11/12/13 the branch already has commits touching tests/test_node.cc and src/database/pool.h, kept as their own commits (2802550be pool.h, ec1b230c3 test_node.cc) so they can be dropped if you rule otherwise. Also: src/exception_engine.h's DocVersionConflictError has no user after this quest (left in place, outside the set)."
+    },
+    {
+      "at": "2026-11-09T23:27:13",
+      "by": "detent-lead",
+      "closed": "reviewed: CHANGES, sent to Detent's lead",
+      "id": "msg-14",
+      "text": "Detent async-drivers-design is ready for review (branch quest/detent/async-drivers-design at Detent:3e8df39). Your review asked in item 5; reply to the Detent lead.\n\nDetent's design for the journal and consensus drivers is `docs/design/async-drivers.md`. What\nchanges for Xapiand:\n\n1. API: `task::task<T>` over `scheduler_ref`; no `asio::awaitable` in journal or consensus\n   headers. One consensus `Driver` per reactor loop; a group is state (6.5 KB, 3 fds idle; no\n   thread, `io_context`, armed timer or frame).\n2. Deadlines (#18, D8): one `task::deadline` per fan-out on the loop's timer wheel; children take\n   its token and may only shorten it. Every driver call and IO await takes a `cancel_token`.\n   Cancellation releases the caller; it never withdraws a proposal `Core` accepted (it may still\n   commit, seen through `Committed`) and never tears an in-flight write.\n3. Blocking entry (D5): `task::sync_wait` / `consensus::run` over `InlineCompletion`, no\n   `io_context`, for WorkPool device chores.\n4. 7b fit: a three-voter shard member costs 171 KB idle today, 164 KB of it `SnapshotChannel`\n   frame arrays; the consensus quest makes them lazy (D9), to 7.9 KB. A million heartbeating\n   groups cost about 27 cores idle, so 7b's million groups need quiescence (Q4).\n5. Asks: review items 1-5, 7b fit and D8's cancellation table; Q3 (one directory and owner lock\n   per core, a journal layout change before 7b writes bytes); Q6 (Xapiand's Kronuz/scheduler\n   users onto the task wheel); review of the task-wheel diff (quest 1)."
     }
   ],
   "quests": {
