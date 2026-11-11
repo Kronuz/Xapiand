@@ -5,27 +5,30 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`replay_cost` in `test/manifest_log_test.cc` keeps catching the per-edit scans it guards against
+(each made the ratio about 100x) without failing on a loaded or shared host. It failed on macOS CI
+runners at main strata:71750940 (run 42951960800, macos-arm64) and at strata-races 2a4d2aa0 (run
+43043120858, macos-x86_64): `segments_ratio < 20`, wall-clock time of 2000 edits on 100k against
+1k segments.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The check measures what cannot vary with the host (work counted: comparisons, visits or
+  allocations), or a timing robust to it (median of interleaved trials) with a bound still far
+  below 100x: the reasoning in a one-line comment at the check.
+- A2 The check still fails with the per-edit identity scan reintroduced (a mutant), tagged
+  `--fails-without`.
+- A3 The check passes in 20 runs of `manifest_log` under the load of a parallel suite (a light job
+  running both), and CI is green.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: low risk, test only; lands on CI green and the lead's read of the diff.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
