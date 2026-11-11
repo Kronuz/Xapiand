@@ -13355,6 +13355,37 @@
       "updated": "2026-11-10T19:19:07",
       "worktree": ""
     },
+    "stored-frame-bound": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/reader.hh",
+        "test/reader_check_test.cc",
+        "test/CMakeLists.txt",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A stored frame's records end where the next frame starts",
+      "updated": "2026-11-10T22:23:49"
+    },
     "stored-short-section": {
       "accepted": {},
       "after": [],
