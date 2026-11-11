@@ -16631,6 +16631,8 @@
     "xapiand-brand": {
       "accepted": {},
       "after": [],
+      "base": "163743a315c55a2b0bddc5e9eeef13e61b6c6e7a",
+      "branch": "quest/xapiand/xapiand-brand",
       "checks": [
         {
           "cmd": "cd docs && npm ci && npm run icons && git diff --exit-code -- ../brand",
@@ -16653,9 +16655,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand has a brand/ directory with a vector master logo and its icon variants",
-      "updated": "2026-11-11T11:09:54"
+      "updated": "2026-11-11T11:10:15",
+      "worktree": "../Xapiand-wt/xapiand/xapiand-brand"
     },
     "xapiand-final-release": {
       "accepted": {},
