@@ -60,6 +60,8 @@ Lead, 11-11, on the correctness review's F1 and F2 (verdicts at strata:ea54432b)
   pair split across modes measures the device, not the tier.
 - T1 warm heap: measure its pieces (one strict job) and judge the sum plus 7%.
 - T1 cold 292 B against 16 B: a recorded residual, the hunt row "cold memory", its own quest.
+- `post_pass()` leaving `pass_queued_` set when its post throws stops every later pass: fixed in
+  this quest, with a test that fails without it (lead, 11-11).
 
 ## May land early
 
