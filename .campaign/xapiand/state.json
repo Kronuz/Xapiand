@@ -10664,7 +10664,20 @@
       "after": [],
       "base": "966edb73a5a25dbcd2c4788e496371c05f06b280",
       "branch": "quest/xapiand/placement-without-flush",
-      "checks": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
       "consumes": [],
       "files": [
         "src/database/handler.cc",
@@ -10675,6 +10688,31 @@
         "tests/test_node.cc",
         "tests/test_shard*.cc",
         "docs/mechanisms/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-10T19:19:16",
+          "checks": [
+            [],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
       ],
       "landed": [],
       "lenses": [
@@ -10687,7 +10725,7 @@
       "risk": "high",
       "status": "active",
       "title": "New documents are placed without flushing every shard",
-      "updated": "2026-11-10T18:54:37",
+      "updated": "2026-11-10T19:19:16",
       "worktree": "../Xapiand-wt/xapiand/placement-without-flush"
     },
     "pool-concurrency": {
