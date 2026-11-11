@@ -66,8 +66,8 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
    name, both peaks), `ctest-asan.log`; read the five checks; fill Evidence for A1 A2 A3 A7 A8 A10 A13 A17 A19 A20.
 2. Read 261111-142846-66c8ef's "KiB per open index" line into A13 (X3-5); state the reader registry's bytes
    (strata's reader records x `default_readers_per_index` 128, `src/engine/open.h:50`) from code.
-3. A9: master now exports `xapiand_http_requests_cancelled`; find the test that proves a disconnected read frees its
-   reactor and the counter rises, and a half-closed write completes durably (build-test), or record it owed.
+3. A9 is quest x7-cancel-rows's (D53): the half-close test exists (`tests/test_node.cc:906`); the counter
+   `xapiand_http_requests_cancelled` rises at `src/server/search_views.cc:3234`; no disconnected-search test yet.
 4. Write each row's result into `docs/gates/phase7c.md` at the head's commit.
 5. The lead's timing rows (commands below); A24's T12 jobs can run now (http pin 51d153a, prospect 850d4e8).
 
