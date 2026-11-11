@@ -2760,6 +2760,8 @@
     "e2e-report-cap": {
       "accepted": {},
       "after": [],
+      "base": "793fbbfdfcf8a9a1bc48debbeec1aa58f3c429d7",
+      "branch": "quest/xapiand/e2e-report-cap",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2778,11 +2780,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: x7-gate's harness/** glob is broad; its branch touches neither e2e_capture.sh nor e2e_assert.py",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "The docs E2E's newman report stays parseable",
-      "updated": "2026-11-11T01:29:53"
+      "updated": "2026-11-11T01:30:13",
+      "worktree": "../Xapiand-wt/xapiand/e2e-report-cap"
     },
     "engine-core": {
       "accepted": {},
