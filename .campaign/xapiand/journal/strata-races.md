@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: waiting on jobs 261111-065349-3912eb 261111-065351-d0c5c6 261111-065354-020159 261111-065355-a0477c 261111-065359-06bdf8 261111-065400-8620b9 261111-062817-1fabdf
+State: fixes ready: C1, C2 with jobs 261111-110829-ecdfb8 261111-110831-f89967 261111-110833-b55465 261111-110836-43a905 261111-110853-c0e9c3 261111-110855-d29e6d 261111-110859-5573ed 261111-110900-0bff87
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Head strata fb15069a (catalog_relief in the suite). Suite 75/75 and A5 proven there. The CMakeLists
-change made A2's earlier jobs "other code", so A2 and A1 rerun at the head (ids in State): A2
-deterministic + mutant (light), TSan 2 x 10x16 strict (build 261111-065353-a3a24b, slot
-races-tsan-head); A1 burst 2 x 10x16 strict (build 261111-065357-424afb). A1's main run stands.
+Review fix round (correctness review at 2a4d2aa0: CHANGES, C1 and C2 blocking). Head strata
+7b579648, pushed for CI. C1 (lead: option 1): the close booking moved into
+`resource_counts::booked` (slot booking, catalog sum); `resource_reservation::release()` lowers it to
+the slot's count before the catalog count and budget drop, so every drop path (drain, merge commit,
+warm demote + reclaim(0), bound commit, reclaim, close(), retire) lowers it; `unbook_for_close()` is
+gone. C2: `catalog_relief` gains a healthy reopen whose draining holder merges, commits, reclaims
+before the replace chore; at 2a4d2aa0 it fails (4 vnodes booked, 3 held from the holder's reclaim
+to `chore.replace`; local run). C5 folded (closing_ fall relaxed, comment reworded). flakes.md
+rewritten for the mechanism; results table filled from the finished fb15069a runs.
 
 ## Next
 
-1. When jobs finish: fill docs/perf/flakes.md Results, paste `campaign brief`'s table below.
-2. A4: CI at the new head (the lead pushes; cf76b825 was pushed).
-3. Set State to ready for review (correctness lens, concurrency).
+1. Lead: when the jobs in State pass, `campaign accept strata-races correctness --confirm
+   C1=261111-110833-b55465 C2=261111-110831-f89967` (suite 261111-110829-ecdfb8).
+2. A4: CI at 7b579648.
 
 ## Blocked on
 
@@ -26,29 +31,34 @@ Nothing.
 
 ## Evidence
 
-A1 and the burst runs: the job overwrites test/catalog_stress_test.cc in its own fresh checkout with
-the exploration's (`git show 26dc030e:test/catalog_stress_test.cc`, burst mode + diagnostics); that
-file is outside the file set (cold-tier-step2 owns it). The main-side run also takes the driver from
-b7bd5251. A2's mutant: `--fails-without` job at the head with main's resource_budget.hh copied over.
+A1 burst runs overwrite test/catalog_stress_test.cc in the job's checkout with the exploration's
+(`26dc030e`, burst mode); that file is outside the file set. A2's mutant (main's resource_budget.hh)
+is not rerun at 7b579648: `booking_falls` uses the new API, so it would fail to compile, a vacuous
+mutant; 261111-065351-d0c5c6 stands for the tick() fix, whose code is unchanged.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | head fb15069a, strict 2 x 10x16: 261111-065359-06bdf8, 261111-065400-8620b9; main 10x16 --fails-without 261111-062817-1fabdf (build 261111-062806-177d38) |
-| A2 | head fb15069a: 261111-065349-3912eb (deterministic); fails without 261111-065351-d0c5c6; TSan strict 2 x 10x16 261111-065354-020159, 261111-065355-a0477c. At b7bd5251: 261111-061317-5cd220 passed, 261111-062645-154f0d failed at :482, TSan 20x16 0 of 320 261111-061320-6fa85e (main 3 of 320, 261111-053734-7d63a2) |
-| A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick()): one-line ordering comment at each changed atomic |
-| A5 | suite `catalog_relief` at fb15069a: 261111-065032-2e5b27 (75/75); fails without: 261111-065033-c4aeb6 (catalog.hh from cf76b825: at close.end 2 descriptors, 2 vnodes booked, 0 held) |
-| A4 | 261111-065032-2e5b27 (suite 75/75 at fb15069a); TSan suite and CI: CI on push (lead) |
+| A1 | head 7b579648, strict 2 x 10x16: 261111-110853-c0e9c3, 261111-110855-d29e6d (build 261111-110851-1264ab); at fb15069a 0 of 160 twice (261111-065359-06bdf8, 261111-065400-8620b9); main 7 of 160, --fails-without 261111-062817-1fabdf |
+| A2 | head 7b579648: 261111-110836-43a905 (clock hook, booking_falls); TSan strict 2 x 10x16 261111-110859-5573ed, 261111-110900-0bff87 (build 261111-110857-6f907c). Fails without: 261111-062645-154f0d, 261111-065351-d0c5c6. At fb15069a TSan 0 of 160 twice |
+| A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick(), resource_counts::book()/lower(), release()): one-line ordering comment at each changed atomic |
+| A5 | suite at 7b579648: 261111-110829-ecdfb8; fails without (2a4d2aa0's two headers): 261111-110831-f89967; C1 probe (review's RELIEF-STALE on all nine catalog tests, exits 1 on any stale site): 261111-110833-b55465 |
+| A4 | suite 261111-110829-ecdfb8; CI at 7b579648 (pushed) |
+
+Review findings: C1 fixed (one mechanism at release(); confirm with 261111-110833-b55465 and the
+replace case). C2 fixed (261111-110831-f89967). C3 not done (non-blocking: a second tick() hook
+point; the concurrent rounds cover it). C4 resolved by C1: retire's drops, the IO's directory
+descriptor included, go through release() and lower the booking behind its own fence. C5 folded.
 
 ## Result
 
-Two races fixed (catalog counter-pair orders; tick() take-back after raise). TSan load 0 of 320 (main 3 of 320); hook test fails without the fix. Burst numbers pending. How it works: strata `docs/perf/flakes.md`.
+Two races fixed (catalog counter-pair orders; tick() take-back after raise), and the close relief
+falls with the counts at release(). TSan load and burst_closes 0 of 160 twice at fb15069a (main 7 of
+160, 3 of 320). How it works: strata `docs/perf/flakes.md`.
 
 Superseded: 261111-061303-afa5e8 and 261111-061305-f25392 (zsh `$X:t` modifier mangled the sha),
-261111-061319-5f0ba7 (mutant failed as intended but --fails-without wants the command inverted; it
-failed at resource_budget_test.cc:482, the new hook check), 261111-062621-428fdf / 261111-062635-95c190
-(cancelled: load runs must be strict, per the coordinator); 261111-062745-9a0936 / 261111-062757-f52802
-(cancelled: catalog.hh's close path changed under them at bafafa9e). Load runs are now `--level strict
---minutes 10`, built first by a light job in the same slot.
+261111-061319-5f0ba7 (mutant not inverted), 261111-062621-428fdf / 261111-062635-95c190 (load runs
+must be strict), 261111-062745-9a0936 / 261111-062757-f52802 (catalog.hh changed under them);
+the fb15069a A2/A5 jobs for the code at 7b579648.
 
 ## Rulings I made
 
@@ -75,3 +85,15 @@ failed at resource_budget_test.cc:482, the new hook check), 261111-062621-428fdf
    is neither booked nor dropped (over-count, safe); a refused replace retries unbooked (over-count).
    Not covered: a drop by another thread (a view released later on a stuck close) has no fence; the
    stuck path already unbooks in after_close.
+8. C1 fix shape (lead ruled option 1): the booking moved into `resource_counts` so `release()`, the
+   one place counts drop, lowers it; per-caller patches at each drop site were the alternative.
+   `booked` is int32 (both kinds are int-counted by the kernel) and signed: `book()` adds to the
+   sum after its own lowering, so the sum can dip below the bookings (over-count), never above.
+   book()/release() meet by seq_cst store-load on booking and count. Residual, in flakes.md: a
+   reservation and a close begin both landing between the pass's two reads.
+9. The warm-with-leftover-maps close has no deterministic case: at 2a4d2aa0 no hook site lies
+   between the close chore's drops and `close()`, and I found no short setup that leaves an owed
+   slot with a finished merge. Its drops go through the same `release()`; the C1 probe job checks
+   the chore's preparation points in catalog_test, where the review saw it stale.
+10. pend_maps/pending_maps_ (a demotion's maps relief) keep their own booking: moving maps onto
+    `booked` would change demotion pacing, a separate change. Same staleness shape; worth a quest.
