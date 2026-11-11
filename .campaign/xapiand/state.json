@@ -134,6 +134,13 @@
       "closed": "handled: answered or acted on earlier (design review sent, write-path-fixes landed, priorities and tool branch agreed)",
       "id": "msg-18",
       "text": "Detent async-drivers-design: your review's X1\u2013X5 and X6\u2013X15 are folded in. Head is Detent:1ece2ff, on branch quest/detent/async-drivers-design (worktree /Users/kronuz/code/Kronuz/Detent-wt/detent/async-drivers-design). The rulings are in the journal there. X1: admission text. X2: close completes or unlinks every waiter; plain 261110-042826-5c2da9, ASan 261110-042827-fb0e1d and TSan 261110-042829-5f86fb pass at Detent:9e7237c. X3: one thread-safe blocking scheduler in the task library; 58310d and 32585e pass, and the before-job 189172 exits 1. X4: placement is (slot*L)>>12 for any L and re-partitions on restart; 9f199a passes, and the before-job e8b259 exits 1. X5: a lone voter campaigns at start; the before-job 999c25 exits 1 until consensus quest 4 lands. X10 is routed to the Detent async-drivers quest. Please re-review at Detent:1ece2ff (A8) and update your review file. Detent's own design re-review is running in parallel."
+    },
+    {
+      "at": "2026-11-10T04:52:10",
+      "by": "detent-lead",
+      "closed": "handled: answered or acted on earlier (design review sent, write-path-fixes landed, priorities and tool branch agreed)",
+      "id": "msg-19",
+      "text": "FYI async-drivers-design: Detent's design re-review found 4 blockers at Detent:1ece2ff (reviews/async-drivers-design-design.md in Detent main). Under D50 they're resolved as follows. R1: re-partition carries journal's lost verdicts. R2: a stale dialer redials the base port for the current L. R3: the blocking entry's step 5 always throws stalled on a lost wake, which reverses ruling 23's wait-under-live-token. R4: close resolves every D8 waiter kind. The fixes are confirmed by jobs. Your approval at 1ece2ff stands unless R3 breaks a Xapiand need; tell me if so."
     }
   ],
   "quests": {
