@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-085642-fdea98 261111-085644-609714
+State: ready for review
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,28 +9,15 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Head strata:229165d3 (docs only over 9621595f; not pushed: the lead pushes). Every rerun at
-9621595f finished and is read into the Evidence below and `docs/perf/catalog-tiers.md`:
-T3 8f5208 PASS (peaks open 4,905, hot 3,241; at most 11 descriptors beyond the budget's count);
-T1 efe281 and 083bc8 (heaps as before; hot RSS +3% to +9% over main); K6 a253be (hot heap equals
-main's, RSS -0.0% to +3.3%); T4 a2d41c and bbb067 (4 of 4 PASS); T2/T2d 10 segments f9dbcf (warm
-defer below cold at p50 and p99; 2.8x at p50 in its worst pair); A2 eb666b and 1edccb, A7/A12
-bf4776, build-test 5cd30b passed.
-
-- 261111-035757-23475b (T2/T2d d1s1, d1000s1, d1000s10 in one job) hit its 10-minute bound
-  (invalid). Split under D59: d1000s10 is f9dbcf's; d1s1 is 261111-085642-fdea98 and d1000s1
-  261111-085644-609714, one strict job each (about 3.5 min each by 23475b's log). Until they
-  finish, the doc keeps those two rows from 81fd7c at dbfc1898, labelled.
-- `campaign job rerun 261110-211226-81fd7c` is answered by that split, not run: a rerun would
-  repeat 23475b's three fixtures in one 10-minute job.
+Head strata:58812244 (docs only over 9621595f; not pushed). Every criterion has evidence at the
+head. T2/T2d's split jobs passed: d1s1 261111-085642-fdea98, d1000s1 261111-085644-609714; no
+warm-defer interval overlaps cold's at p50 or p99 on any fixture (smallest p50 margin 2.8x to
+5.3x, in pairs whose cold opens ran fast), so no second run (D59). `.scratch/tiers`, `.scratch/k6`
+and `.scratch/tiers-try` deleted.
 
 ## Next
 
-1. When fdea98 and 609714 finish: put their rows in `docs/perf/catalog-tiers.md` (drop the
-   "(dbfc1898)" labels and the jobs note), cite them for A3 to A5 below. A second run only if a
-   row's interval straddles A5's "warm below cold" (D59).
-2. State: ready for review (correctness lens).
-3. Delete `.scratch/tiers`, `.scratch/k6` and `.scratch/tiers-try` once the rows are final.
+1. Correctness review (the lead launches it); fold in findings by id.
 
 ## Blocked on
 
@@ -87,9 +74,9 @@ minutes when it runs.
 |---|---|
 | A1 | `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
 | A2 | 261111-035757-eb666b: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-035757-1edccb: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`test/catalog_test.cc` static_assert) |
-| A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-035757-f9dbcf (T2/T2d d1000s10), 261111-035757-a253be (K6); d1s1 and d1000s1 T2/T2d pending (261111-085642-fdea98, 261111-085644-609714). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
-| A4 | macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-035757-f9dbcf (d1000s10), d1s1 and d1000s1 pending (261111-085642-fdea98, 261111-085644-609714); T3 261111-034629-8f5208 PASS (50,000, 25x the open cap); T4 261111-035757-a2d41c, 261111-035757-bbb067, 4 of 4 PASS. `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
-| A5 | macOS warm: T2d warm defer below cold at p50 and p99: 261111-035757-f9dbcf (10 segments: 351-394 against 1,097-21,908 µs at p50, 501-799 against 42,923-57,516 at p99); 1 segment pending (261111-085642-fdea98, 261111-085644-609714). Dropped and Linux: Milestone checks |
+| A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf (T2/T2d), 261111-035757-a253be (K6). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
+| A4 | macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98 (d1s1), 261111-085644-609714 (d1000s1), 261111-035757-f9dbcf (d1000s10); T3 261111-034629-8f5208 PASS (50,000, 25x the open cap); T4 261111-035757-a2d41c, 261111-035757-bbb067, 4 of 4 PASS. `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
+| A5 | macOS warm: T2d warm defer below cold at p50 and p99 on every fixture, no interval overlapping: 261111-085642-fdea98 (d1s1: 47-85 against 264-20,946 µs at p50), 261111-085644-609714 (d1000s1: 54-71 against 379-41,137), 261111-035757-f9dbcf (d1000s10: 351-394 against 1,097-21,908); p99 108-799 against 42,224-72,264. Dropped and Linux: Milestone checks |
 | A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
 | A7 | 261111-035757-bf4776: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
 | A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261111-034631-5cd30b at strata:9621595f |
@@ -114,7 +101,11 @@ the jobs at 955343df, 9ef55ee5 and 338e72c2 (superseded: see Doing).
 
 ## Result
 
-<When ready for review.>
+strata `quest/xapiand/cold-tier-step2` at 58812244: T5's counters and two catalogs on one budget
+(`test/catalog_stress_test.cc`), the S3-S7 mutants in `tools/mutants/cold_tier.py`, the tier
+harness `bench/catalog_tiers` with its rows in `docs/perf/catalog-tiers.md`, lazy segments the
+default, `docs/design/cold-tier.md` revision 8, `docs/status/cold-tier.md` (K7) and
+`docs/status/cold-tier-step2.md`. Linux, full-scale and dropped-cache rows are Milestone checks.
 
 ## Rulings I made
 
