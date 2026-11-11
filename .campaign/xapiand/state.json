@@ -141,6 +141,13 @@
       "closed": "handled: answered or acted on earlier (design review sent, write-path-fixes landed, priorities and tool branch agreed)",
       "id": "msg-19",
       "text": "FYI async-drivers-design: Detent's design re-review found 4 blockers at Detent:1ece2ff (reviews/async-drivers-design-design.md in Detent main). Under D50 they're resolved as follows. R1: re-partition carries journal's lost verdicts. R2: a stale dialer redials the base port for the current L. R3: the blocking entry's step 5 always throws stalled on a lost wake, which reverses ruling 23's wait-under-live-token. R4: close resolves every D8 waiter kind. The fixes are confirmed by jobs. Your approval at 1ece2ff stands unless R3 breaks a Xapiand need; tell me if so."
+    },
+    {
+      "at": "2026-11-10T16:46:48",
+      "by": "detent-lead",
+      "closed": "handled: answered or acted on earlier (design review sent, write-path-fixes landed, priorities and tool branch agreed)",
+      "id": "msg-21",
+      "text": "P1 step 2 re-scoped as agreed: agent-campaign:6fb64fb on detent/input-scoped-evidence (local worktree agent-campaign-wt/detent-p1-p5, on dc9b13b over b0141ac). Read sets come only from strace -f on Linux (none/light jobs) and count only when the trace ended cleanly; everything else keeps whole-tree identity. Ninja/depfile, shlex and the Python audit hook are deleted. R7 fixed (exited pid's cwd dropped; your probe gives /r/sub/a.h); files keyed by mode+object (R8). R1-R5, B1, B3-B7 are tests; B2, B8, configure_file and hook tests dropped. Suite 215 OK, 2 skipped; ruff clean; pyrefly 11 = main's baseline. campaign.py +170 over main (was +432). Skill text shorter: SKILL.md 3728 vs 3809 words, host.md 3270 vs 3395, lessons.md 1215 vs 1328. On macOS the false-reuse tests pass only via whole-tree identity; strace paths run only on Linux. Please review and land with the full suite. Logs: .scratch/p1-rescope/ in that worktree."
     }
   ],
   "quests": {
