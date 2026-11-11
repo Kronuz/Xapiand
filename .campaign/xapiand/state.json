@@ -10767,9 +10767,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "New documents are placed without flushing every shard",
-      "updated": "2026-11-10T19:19:16",
+      "updated": "2026-11-10T19:31:15",
       "worktree": "../Xapiand-wt/xapiand/placement-without-flush"
     },
     "pool-concurrency": {
