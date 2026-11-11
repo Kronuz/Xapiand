@@ -1,6 +1,6 @@
 # manifest-replay-flake: journal
 
-State: working
+State: waiting on jobs 261111-093034-13afb8 261111-093035-315dd2 261111-093037-f580c7 261111-093039-d608a0
 Quest: .campaign/xapiand/quests/manifest-replay-flake.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+replay_cost now takes the median of nine paired (small, then big) ratios (strata:51bbe66a, pushed). Jobs: suite (A1), mutants identity-scan and name-scan (A2, local branches mutant/replay-mut-identity, mutant/replay-mut-fields), 20 runs under a parallel ctest (A3). Counting work was not possible: apply() exposes no counter and non-test files are out of the file set.
 
 ## Next
 
-1. <step>
+1. Read results; if A3 fails, raise the pair count or the small run's edit count.
+2. Check CI green on the pushed branch; fill Evidence and Result; State ready for review.
 
 ## Blocked on
 
 <What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -37,4 +39,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+Timing, not counting: no natural counter in manifest_log.hh and it is outside the file set. Bounds unchanged (40 and 20, vs ~100x for a scan); pairing plus median replaces fastest-of-five.
