@@ -36,6 +36,8 @@ with Xapiand's four binding requirements (D21, Detent:a2d999a).
 
 ## Decisions
 
+- Owner, 11-10 (D54): the durability design answers the remote-leader hop before a 2xx and what replaces `?commit` (journal ack plus refresh, and a checkpoint level) before the WAL and the debounced fsync are removed.
+
 - Phase 7's gate splits (owner, 2026-10-29, D9): single-node 7a and 7c, then Phase 8 and the release;
   7b after the release. Blocked until then.
 - Xapiand's WAL stays until 7b (7c Q2, D13); X1 removed the cluster, so cluster mode has no replication

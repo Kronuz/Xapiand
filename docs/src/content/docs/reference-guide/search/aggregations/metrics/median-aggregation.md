@@ -14,6 +14,10 @@ data sample, it may be thought of as the "middle" value. <sup>[1](#footnote-1)</
 | Median            | Middle value separating the greater and lesser halves of a data set | 1, 2, 2, **3**, 4, 7, 9     | 3      |
 | Mode              | Most frequent value in a data set                                   | 1, **2**, **2**, 3, 4, 7, 9 | 2      |
 
+The aggregation takes `{"_median": {"_field": "<field_name>"}}`. With an even number of values the
+median is the mean of the two middle ones. Every value of every bucket is held in memory and shipped
+with the aggregation, so the cost grows with the number of documents (there is no cap).
+
 ```rest
 SEARCH /bank/
 

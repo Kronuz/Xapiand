@@ -198,6 +198,27 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	),
+	xapiand_http_requests_cancelled(
+		AddCounter(registry,
+			"xapiand_http_requests_cancelled",
+			"Requests a cancel stopped: the client left, or the node is stopping",
+			constant_labels)
+		.Add({})
+	),
+	xapiand_admission_inflight_peak(
+		AddGauge(registry,
+			"xapiand_admission_inflight_peak",
+			"Most requests one reactor held in flight at once",
+			constant_labels)
+		.Add({})
+	),
+	xapiand_scheduler_demoted_peak(
+		AddGauge(registry,
+			"xapiand_scheduler_demoted_peak",
+			"Most demoted handles a request found on its reactor at its admission",
+			constant_labels)
+		.Add({})
+	),
 	xapiand_http_sent_bytes(
 		AddCounter(registry,
 			"xapiand_http_sent_bytes",
@@ -325,6 +346,14 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 }
 
 
+void
+Metrics::raise_peak(std::atomic<std::size_t>& peak, std::size_t now) noexcept
+{
+	auto most = peak.load(std::memory_order_relaxed);
+	while (most < now && !peak.compare_exchange_weak(most, now, std::memory_order_relaxed)) { }
+}
+
+
 Metrics&
 Metrics::metrics(const std::map<std::string, std::string>& constant_labels_)
 {
@@ -341,6 +370,8 @@ Metrics::metrics(const std::map<std::string, std::string>& constant_labels_)
 std::string
 Metrics::serialise()
 {
+	xapiand_admission_inflight_peak.Set(static_cast<double>(admission_inflight_peak.load(std::memory_order_relaxed)));
+	xapiand_scheduler_demoted_peak.Set(static_cast<double>(scheduler_demoted_peak.load(std::memory_order_relaxed)));
 	auto collected = registry.Collect();
 	prometheus::TextSerializer serializer;
 	return serializer.Serialize(collected);

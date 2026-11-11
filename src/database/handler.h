@@ -64,6 +64,16 @@ struct query_field_t;
 
 engine::docid to_docid(std::string_view document_id);
 
+// Whether a document id is given: a missing or null id, an empty string or false is none; a number is one, 0 included.
+bool has_document_id(const MsgPack& document_id);
+
+// The key of a new document whose numeric id the shard numbers: a numeric key always has a value after its 'N'.
+inline constexpr std::string_view NEW_NUMERIC_KEY = "N";
+
+// The document id a numeric key names: the id when it is a whole number from 1 to below the largest docid, else 0
+// (an id such as 0, -1, 1.5, 2^32-1 or 2^63 is placed by its key alone).
+engine::docid numeric_docid(std::string_view key);
+
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
 
@@ -119,6 +129,12 @@ private:
 	task::task<std::tuple<std::string, engine::Document, MsgPack>> prepare(const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+
+	// The docid holding the term in any shard, read from the published views or (written) as the writes left them.
+	task::task<engine::docid> find_docid_term(const std::string& term, bool written);
+
+	// The active shard with the fewest documents as the writes left them, where a new numeric id goes.
+	task::task<size_t> least_used_shard();
 
 	// Pins the indexes [begin, end) of the endpoints and searches them: one batch of a wide search.
 	task::task<engine::BatchResult> search_batch(size_t begin, size_t end, const engine::SearchRequest& request);
@@ -224,13 +240,17 @@ public:
 	task::task<Document> get_document_term(const std::string& term);
 	task::task<engine::docid> get_docid(std::string_view document_id);
 	task::task<engine::docid> get_docid_term(const std::string& term);
+	// get_docid_term() as a write places a document: each shard as its writes left it, in its turn, flushing none.
+	task::task<engine::docid> written_docid_term(const std::string& term);
 
-	task::task<void> delete_document(engine::docid did, bool commit = false, bool wal = true, bool version = true);
-	task::task<void> delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
-	task::task<void> delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
+	// A delete with a version (not UNKNOWN_REVISION) removes the document only while it has that version, 0 for one
+	// that does not exist; else it raises errc::version_conflict with the current version.
+	task::task<void> delete_document(engine::docid did, engine::rev document_ver, bool commit = false, bool wal = true);
+	task::task<void> delete_document(std::string_view document_id, engine::rev document_ver, bool commit = false, bool wal = true);
+	task::task<void> delete_document_term(const std::string& term, engine::rev document_ver, bool commit = false, bool wal = true);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
-	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
+	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false);
 	task::task<engine::WriteResult> replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 

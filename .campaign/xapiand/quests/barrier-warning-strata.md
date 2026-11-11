@@ -1,18 +1,16 @@
-# barrier-warning-strata: strata wires full-flush ordering and the barrier warning
+# barrier-warning-strata: strata pins completion with full-flush ordering and the barrier warning
 
 Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status barrier-warning-strata`.
 
 ## Outcome
 
-strata passes completion's barrier warning to its host and exposes `full_flush_ordering` as an
-index option, so a host can choose a full flush per commit on storage whose barrier only orders
-(D10, D16). Repository: Kronuz/strata.
+strata pins the completion commit whose `PosixIOOptions` carries `full_flush_ordering` and
+`barrier_warning`, so a host that builds its own IO (Xapiand does, in shard.cc and pool.cc) can turn
+them on (D10, D16); no strata index option or callback. Repository: Kronuz/strata.
 
 ## Acceptance criteria
 
-- A1 An index option turns on full-flush ordering; with it on, a commit's ordering points are full flushes (faultfs ordering-point models from t11-barriers): a test in the `build-test` check
-- A2 The warning reaches the host's callback once per volume: a test
 - A3 strata pins the completion commit of `barrier-warning-completion` on completion's main: the `build-test` check
 - A4 prospect's suite passes against this strata (AGENTS.md "Verify a change"): an integration job
 - A5 faultfs keeps a staged file's post-mark writes unordered: `stage()` snapshots the staged bytes and `crash()` treats later writes as unsynced before any protocol write after a barrier (`docs/reviews/commit-barriers-durability.md` C3, CB-5; Xapiand `docs/status/t11-barriers.md` follow-up 3, "Not done"): a faultfs test in the `build-test` check, with a mutant that keeps the post-mark write ordered killed

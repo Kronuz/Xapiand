@@ -17,8 +17,8 @@ report since the repository split.
 ## Acceptance criteria
 
 From strata `docs/PLAN.md` "Phase 3" (gate) and "Ratchets" (the Phase 3 rows), with the state of each
-row in prospect `docs/gates/phase-3-ratchets.md` ("Gate status", 2026-10-16). Timed rows: median of at
-least five interleaved trials with the 95% bootstrap interval, on main commits under `exclusive` jobs.
+row in prospect `docs/gates/phase-3-ratchets.md` ("Gate status", 2026-10-16). Timed rows: one `exclusive` job
+per row on a main commit, by D59.
 
 - A1 Queries after merging and before merging (baselines unmerged at equal memory): every class at most 1.0x the fastest of Lucene, Lucene with reordering and Tantivy; carried at 1.33 to 1.34x global after merging (owner, 2026-10-15); format 13's run put strata at 54 wins and 17 losses against Lucene `-bp` (prospect `docs/status/f13-gate.md`): gate VM jobs
 - A2 Single-thread indexing per index, keyed, at equal memory (T4), at least 1.0x the faster of Lucene and Tantivy, with the 8-thread row; owed since 2026-10-16 (calibrated at 5M): gate VM jobs

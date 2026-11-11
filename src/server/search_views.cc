@@ -30,6 +30,7 @@
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
 #include <functional>                       // for std::function
+#include <optional>                         // for std::optional
 #include <signal.h>                         // for SIGTERM
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
@@ -42,6 +43,7 @@
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
 #include "engine/host_asio.h"               // for engine::AsioHost
 #include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
+#include "engine/error.h"                   // for engine::Error
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
 #include "database/schema.h"                // for Schema
@@ -53,6 +55,7 @@
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
 #include "http_accept.h"                    // for http::AcceptCache (content negotiation)
+#include "http_asio.h"                      // for http::HttpAsioService (the reactors' admission gates)
 #include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
 #include "http_router.h"                    // for http::MethodRouter (Leg 2 stage 3c-6)
 #include "search_service.h"             // for SearchService (Leg 2 stage 3c)
@@ -145,7 +148,7 @@ static task::task<size_t> resolve_index_endpoints(Request& request, const query_
 // response is formatted from `request` state (content negotiation, serialization) and
 // emitted through the library's ResponseWriter, which frames the bytes and applies the
 // negotiated Content-Encoding. Forward-declared here since prepare()/views call them above.
-static void write_status_response(Request& request, enum http_status status, const std::string& message = "");
+static void write_status_response(Request& request, enum http_status status, const std::string& message = "", std::optional<engine::rev> current_version = std::nullopt);
 static void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
 
 // The ~23 endpoint views lifted off HttpClient `this` (Leg 2 stage 3c-3). Their
@@ -282,6 +285,15 @@ bool can_preview(const ct_type_t& ct_type) {
 
 
 
+// The verbs the route table answers, for OPTIONS' Allow header.
+#if XAPIAND_DATABASE_WAL
+#define ALLOWED_WAL ", WAL"
+#else
+#define ALLOWED_WAL ""
+#endif
+static constexpr const char* ALLOWED_METHODS = "GET, POST, PUT, PATCH, UPDATE, UPSERT, DELETE, HEAD, OPTIONS, SEARCH, COUNT, INFO, COMMIT, DUMP, RESTORE, CHECK, FLUSH, QUIT" ALLOWED_WAL;
+
+
 // Emit a response through the generic HTTP library's ResponseWriter (Leg 2 stage
 // 3c). Mirrors the header set http_response() produces on the legacy path, minus
 // Content-Length + Connection, which the library's Writer frames itself (and the
@@ -326,7 +338,7 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 	}
 
 	if (options) {
-		writer.set_header("Allow", "GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS");
+		writer.set_header("Allow", ALLOWED_METHODS);
 	}
 	if (request.retry_after != 0) {
 		writer.set_header("Retry-After", std::to_string(request.retry_after));
@@ -339,6 +351,13 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 	}
 	if (!ct_encoding.empty()) {
 		writer.set_header("Content-Encoding", ct_encoding);
+	}
+
+	if (request.method == HTTP_HEAD) {
+		// A HEAD response has no body (RFC 9110 9.3.2): it names the length the GET would send.
+		writer.set_header("Content-Length", std::to_string(body.size()));
+		writer.end();
+		return;
 	}
 
 	writer.write(body);
@@ -845,7 +864,7 @@ delete_document_view(Request& request)
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
-	co_await db_handler.delete_document(document_id, query_field.commit);
+	co_await db_handler.delete_document(document_id, query_field.version, query_field.commit);
 	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
@@ -2143,7 +2162,7 @@ count_view(Request& request)
 
 
 static void
-write_status_response(Request& request, enum http_status status, const std::string& message)
+write_status_response(Request& request, enum http_status status, const std::string& message, std::optional<engine::rev> current_version)
 {
 	L_CALL("write_status_response()");
 
@@ -2153,6 +2172,9 @@ write_status_response(Request& request, enum http_status status, const std::stri
 	});
 	if (!message.empty()) {
 		response[RESPONSE_MESSAGE] = message;
+	}
+	if (current_version) {
+		response[VERSION_FIELD_NAME] = *current_version;  // a version conflict's: what to expect next, 0 for no document
 	}
 	write_http_response(request, status, response);
 }
@@ -3079,7 +3101,18 @@ SearchService::create_extension(const http::Request& /*hreq*/)
 	// their slice and wait demoted. Over its cap the loop is saturated, so the request is refused
 	// before its body is read.
 	if (auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current())) {
-		if (host->scheduler().demoted() >= DEMOTED_ADMISSION_CAP) {
+		const auto demoted = host->scheduler().demoted();
+		auto& metrics = Metrics::metrics();
+		Metrics::raise_peak(metrics.scheduler_demoted_peak, demoted);
+		// The reactor's gate admitted this request just before: its count includes it.
+		const auto& manager = XapiandManager::manager();
+		for (std::size_t i = 0; manager && manager->http_service && i < manager->http_hosts.size(); ++i) {
+			if (manager->http_hosts[i].get() == host) {
+				Metrics::raise_peak(metrics.admission_inflight_peak, static_cast<std::size_t>(manager->http_service->reactor(i).gate().inflight.load(std::memory_order_relaxed)));
+				break;
+			}
+		}
+		if (demoted >= DEMOTED_ADMISSION_CAP) {
 			throw http::RequestRejected(503, "The server is busy", http::RejectionContent::Text, 1);
 		}
 	}
@@ -3198,6 +3231,7 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 				write_status_response(request, static_cast<http_status>(refused.status), refused.reason);
 			}
 		} catch (const task::cancelled&) {
+			Metrics::metrics().xapiand_http_requests_cancelled.Increment();
 			// The reads stopped at a checkpoint; say so to a client that is still there.
 			if (request.response_status == static_cast<http_status>(0)) {
 				write_status_response(request, HTTP_STATUS_SERVICE_UNAVAILABLE, "The request was cancelled");
@@ -3224,8 +3258,14 @@ SearchService::on_error(std::exception_ptr error, const http::Request& hreq, htt
 	Request& request = hreq.ext<Request>();
 
 	auto http_errors = catch_http_errors([&]{ std::rethrow_exception(error); return 0; });
+	std::optional<engine::rev> current_version;
+	try {
+		std::rethrow_exception(error);
+	} catch (const engine::Error& exc) {
+		current_version = exc.current_version;
+	} catch (...) { }
 	if (request.response_status == static_cast<http_status>(0)) {
-		write_status_response(request, http_errors.error_code, http_errors.error);
+		write_status_response(request, http_errors.error_code, http_errors.error, current_version);
 	} else {
 		// A response was already emitted before the error; the writer is one-shot,
 		// so just close the connection (mirrors handled_errors' detach()).

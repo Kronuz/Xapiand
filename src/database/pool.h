@@ -80,6 +80,9 @@ class IndexPin;
 
 class WorkPool;
 class WorkGroup;
+namespace engine {
+class AsioHost;
+}
 namespace strata {
 class executor;
 }
@@ -301,10 +304,10 @@ private:
 	// The operations of a write, which run under the index's turn (or alone, while the index is opened and
 	// its log replayed) on the engine and the chores they are given. A write is applied, counted and logged here.
 	task::task<engine::WriteResult> do_add(engine::Shard& eng, engine::Chores& chores, int flags, engine::Document&& doc, bool wal_, bool version_);
-	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::Chores& chores, int flags, engine::docid shard_did, engine::Document&& doc, bool wal_, bool version_);
+	task::task<engine::WriteResult> do_replace(engine::Shard& eng, engine::Chores& chores, int flags, engine::docid shard_did, engine::Document&& doc, bool wal_, bool version_, bool must_exist = false);
 	task::task<engine::WriteResult> do_replace_term(engine::Shard& eng, engine::Chores& chores, int flags, const std::string& term, engine::Document&& doc, bool wal_, bool version_);
-	task::task<void> do_delete(engine::Shard& eng, int flags, engine::docid shard_did, bool wal_);
-	task::task<void> do_delete_term(engine::Shard& eng, int flags, const std::string& term, bool wal_);
+	task::task<void> do_delete(engine::Shard& eng, int flags, engine::docid shard_did, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> do_delete_term(engine::Shard& eng, int flags, const std::string& term, bool wal_, std::optional<engine::rev> expected_ = std::nullopt);
 	task::task<void> do_set_metadata(engine::Shard& eng, int flags, const std::string& key, const std::string& value, bool wal_);
 	task::task<void> do_add_spelling(engine::Shard& eng, int flags, const std::string& word, engine::termcount freqinc, bool wal_);
 	task::task<engine::termcount> do_remove_spelling(engine::Shard& eng, int flags, const std::string& word, engine::termcount freqdec, bool wal_);
@@ -416,10 +419,10 @@ class DatabasePool {
 	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
 
-	// The catalog's timer, its budget, its shutdown, and the catalog, in the order they are made: the catalog goes
-	// first, while its timers can still fire (its destructor waits for them).
+	// The catalog's timer (on the control loop), its budget, its shutdown, and the catalog, in the order they are
+	// made: the catalog goes first, once the timer has run what is still armed (its destructor waits for them).
 	struct Timer;
-	std::unique_ptr<Timer> timer_;
+	std::shared_ptr<Timer> timer_;
 	std::unique_ptr<strata::resource_budget> budget_;
 	struct Shutdown;
 	std::mutex shutdown_mtx_;
@@ -434,8 +437,8 @@ class DatabasePool {
 public:
 	// `database_pool_size` is the open indexes the catalog's sweep keeps (soft_open). `readers_per_index` is the
 	// views of one index the host's threads hold at once (a search holds one per index it reads); a read past it
-	// answers busy (503).
-	explicit DatabasePool(size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index, IndexSweep sweep = {});
+	// answers busy (503). The catalog's timers run on `timers`, the control loop, which outlives the pool.
+	DatabasePool(engine::AsioHost& timers, size_t database_pool_size, unsigned work_threads = 0, size_t readers_per_index = engine::default_readers_per_index, IndexSweep sweep = {});
 	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;

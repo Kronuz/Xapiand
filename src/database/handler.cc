@@ -28,6 +28,7 @@
 #include <array>                            // for std::array
 #include <cassert>                          // for assert
 #include <cctype>                           // for tolower
+#include <cmath>                            // for std::floor
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
 #include <optional>                         // for std::optional
@@ -37,7 +38,7 @@
 #include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
-#include "exception_engine.h"                     // for QueryParserError, DocVersionConflictError
+#include "exception_engine.h"                     // for QueryParserError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
@@ -104,6 +105,47 @@ to_docid(std::string_view document_id)
 		}
 	}
 	return static_cast<engine::docid>(0);
+}
+
+
+bool
+has_document_id(const MsgPack& document_id)
+{
+	switch (document_id.get_type()) {
+		case MsgPack::Type::UNDEFINED:
+		case MsgPack::Type::NIL:
+			return false;
+		case MsgPack::Type::STR:
+			return !document_id.empty();
+		case MsgPack::Type::BOOLEAN:
+			return document_id.boolean();
+		default:
+			return true;
+	}
+}
+
+
+engine::docid
+numeric_docid(std::string_view key)
+{
+	if (key.size() < 2 || key[0] != 'N') {
+		return 0;
+	}
+	const auto id = sortable_unserialise(std::string(key.substr(1)));
+	// Below the largest docid: an id there would leave the shard nothing to number after it.
+	constexpr auto top = static_cast<double>(std::numeric_limits<engine::docid>::max());
+	if (!(id >= 1 && id < top) || id != std::floor(id)) {  // NaN fails the first test
+		return 0;
+	}
+	return static_cast<engine::docid>(id);
+}
+
+
+// The version a write expects: none for UNKNOWN_REVISION.
+static std::optional<engine::rev>
+expected_of(engine::rev document_ver)
+{
+	return document_ver == UNKNOWN_REVISION ? std::nullopt : std::optional<engine::rev>(document_ver);
 }
 
 
@@ -338,8 +380,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 	std::tuple<std::string, engine::Document, MsgPack> prepared;
 
 	if (document_ver != UNKNOWN_REVISION && !data.version.empty()) {
-		if (document_ver != sortable_unserialise(data.version)) {
-			THROW(DocVersionConflictError, "Version mismatch!");
+		const auto current = static_cast<engine::rev>(sortable_unserialise(data.version));
+		if (document_ver != current) {
+			throw engine::version_conflict(current);  // early; the shard checks it again in the write's turn
 		}
 	}
 
@@ -425,15 +468,23 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 	auto& data_obj = std::get<2>(prepared);
 
 	engine::WriteResult info;
+	bool placed = false;
 	if (did) {
-		assert(term_id != "N\x80");
-		info = co_await replace_document(did, std::move(doc), commit);
-	} else {
+		assert(term_id != NEW_NUMERIC_KEY);
+		try {
+			info = co_await replace_document(did, std::move(doc), commit, true, true, true);
+			placed = true;
+		} catch (const engine::Error& error) {
+			// Erased or moved since the lookup: placed afresh, not put back where it was found.
+			if (!engine::is_missing(error.kind)) { throw; }
+		}
+	}
+	if (!placed) {
 		info = co_await replace_document_term(term_id, std::move(doc), commit);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
-	if (it != data_obj.end() && term_id == "N\x80") {
+	if (it != data_obj.end() && term_id == NEW_NUMERIC_KEY) {
 		data_obj.erase(it);
 	}
 
@@ -450,7 +501,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
-	const auto term_id = document_id ? co_await get_prefixed_term_id(document_id) : std::string();
+	const auto term_id = has_document_id(document_id) ? co_await get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -459,7 +510,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = co_await get_docid_term(term_id);
+					did = co_await written_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -502,29 +553,21 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 	if (!has_db_writable(flags)) {
 		THROW(Error, "Database is read-only");
 	}
-	if (!document_id) {
+	if (!has_document_id(document_id)) {
 		THROW(ClientError, "A blob too big to buffer needs a document id in the URL");
 	}
 	if (size == 0) {
 		THROW(ClientError, "A streamed blob has at least a byte");
 	}
 
-	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: a
-	// numeric id says it, and any other id is placed by its hash. A new numeric id is placed by the load of the shards
-	// when it is indexed, so it cannot stream.
+	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: an id
+	// that names a document id says it (numeric_docid), and any other id is placed by its hash.
 	const auto term_id = co_await get_prefixed_term_id(document_id);
 	const size_t n_shards = endpoints.size();
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		if (term_id[0] == 'N') {
-			const engine::docid did = sortable_unserialise(term_id.substr(1));
-			if (did == 0u) {
-				THROW(ClientError, "A blob too big to buffer needs a document id in the URL");
-			}
-			shard_num = (did - 1) % n_shards;
-		} else {
-			shard_num = key_placement_hash(term_id) % n_shards;
-		}
+		const auto did = numeric_docid(term_id);
+		shard_num = did != 0 ? (did - 1) % n_shards : key_placement_hash(term_id) % n_shards;
 	}
 
 	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
@@ -571,7 +614,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 		THROW(Error, "Database is read-only");
 	}
 
-	const auto term_id = document_id ? co_await get_prefixed_term_id(document_id) : std::string();
+	const auto term_id = has_document_id(document_id) ? co_await get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -580,7 +623,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = co_await get_docid_term(term_id);
+					did = co_await written_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -612,7 +655,7 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	if (!document_id) {
+	if (!has_document_id(document_id)) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -629,6 +672,9 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
+				if (document_ver != UNKNOWN_REVISION && document_ver != 0) {
+					throw engine::version_conflict(0);  // the version is checked before the document is missing
+				}
 				if (!create) {
 					throw;
 				}
@@ -661,7 +707,7 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 		THROW(Error, "Database is read-only");
 	}
 
-	if (!document_id) {
+	if (!has_document_id(document_id)) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -678,6 +724,9 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
+				if (document_ver != UNKNOWN_REVISION && document_ver != 0) {
+					throw engine::version_conflict(0);  // the version is checked before the document is missing
+				}
 				if (!create) {
 					throw;
 				}
@@ -1085,7 +1134,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 	}
 
 	if (op_type == "patch") {
-		if (!document_id) {
+		if (!has_document_id(document_id)) {
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
@@ -1105,7 +1154,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 	}
 
 	if (op_type == "update" || op_type == "merge") {
-		if (!document_id) {
+		if (!has_document_id(document_id)) {
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
@@ -1509,7 +1558,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
 	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
 
-	assert(!document_id.empty());
+	assert(has_document_id(document_id));
 
 	schema = co_await get_schema();
 
@@ -1685,6 +1734,22 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
+	co_return co_await find_docid_term(term, false);
+}
+
+
+task::task<engine::docid>
+DatabaseHandler::written_docid_term(const std::string& term)
+{
+	L_CALL("DatabaseHandler::written_docid_term({})", repr(term));
+
+	co_return co_await find_docid_term(term, true);
+}
+
+
+task::task<engine::docid>
+DatabaseHandler::find_docid_term(const std::string& term, bool written)
+{
 	assert(!term.empty());
 	assert(!endpoints.empty());
 
@@ -1701,8 +1766,12 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				auto* eng = co_await lk_shard->engine_for_read();
-				auto shard_did = co_await eng->find_key(term);
+				engine::docid shard_did = 0;
+				if (written) {
+					shard_did = co_await lk_shard->written_key(term);
+				} else {
+					shard_did = co_await (co_await lk_shard->engine_for_read())->find_key(term);
+				}
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					co_return did;
@@ -1734,9 +1803,9 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 
 task::task<void>
-DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool version)
+DatabaseHandler::delete_document(engine::docid did, engine::rev document_ver, bool commit, bool wal)
 {
-	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, commit, wal, version);
+	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, document_ver, commit, wal);
 
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
@@ -1745,28 +1814,28 @@ DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	co_await lk_shard->delete_document(shard_did, commit, wal, version);
+	co_await lk_shard->delete_document(shard_did, commit, wal, expected_of(document_ver));
 }
 
 
 task::task<void>
-DatabaseHandler::delete_document(std::string_view document_id, bool commit, bool wal, bool version)
+DatabaseHandler::delete_document(std::string_view document_id, engine::rev document_ver, bool commit, bool wal)
 {
-	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), commit, wal, version);
+	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), document_ver, commit, wal);
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		co_await delete_document(did, commit, wal, version);
+		co_await delete_document(did, document_ver, commit, wal);
 		co_return;
 	}
 
 	const auto term_id = co_await get_prefixed_term_id(document_id);
-	co_await delete_document_term(term_id, commit);
+	co_await delete_document_term(term_id, document_ver, commit, wal);
 }
 
 
 task::task<void>
-DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool wal, bool version)
+DatabaseHandler::delete_document_term(const std::string& term, engine::rev document_ver, bool commit, bool wal)
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
@@ -1774,23 +1843,49 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 
 	size_t n_shards = endpoints.size();
 
+	// The found docid only picks the shard: the erase is by key in that shard's turn, which checks
+	// the version of the document the key names then, not of whatever holds the docid.
+	size_t shard_num = 0;
 	if (n_shards > 1) {
+		engine::docid did = 0;
 		try {
-			auto did = co_await get_docid_term(term);
-			if (did != 0u) {
-				co_await delete_document(did, commit, wal, version);
-				co_return;
-			}
+			did = co_await written_docid_term(term);
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
+		if (did == 0u) {
+			did = numeric_docid(term);
+		}
+		shard_num = did != 0u ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
 	}
 
-	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	co_await lk_shard->delete_document_term(term, commit, wal, version);
+	co_await lk_shard->delete_document_term(term, commit, wal, expected_of(document_ver));
+}
+
+
+task::task<size_t>
+DatabaseHandler::least_used_shard()
+{
+	size_t shard_num = 0;
+	auto min_doccount = std::numeric_limits<engine::doccount>::max();
+	for (size_t n = 0; n < endpoints.size(); ++n) {
+		lock_shard lk_shard(endpoints[n], flags, turn_token());
+		co_await lk_shard.pin();
+		auto node = lk_shard->node();
+		if (node && node->is_active()) {
+			try {
+				auto doccount = co_await lk_shard->written_count();
+				if (min_doccount > doccount) {
+					min_doccount = doccount;
+					shard_num = n;
+				}
+			} catch (...) {}
+		}
+	}
+	co_return shard_num;
 }
 
 
@@ -1803,27 +1898,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 	size_t n_shards = endpoints.size();
 
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		// Try getting a new ID which can currently be indexed (active node)
-		// Get the least used shard:
-		auto min_doccount = std::numeric_limits<engine::doccount>::max();
-		for (size_t n = 0; n < n_shards; ++n) {
-			auto& endpoint = endpoints[n];
-			lock_shard lk_shard(endpoint, flags, turn_token());
-			co_await lk_shard.pin();
-			auto node = lk_shard->node();
-			if (node && node->is_active()) {
-				try {
-					auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
-					if (min_doccount > doccount) {
-						min_doccount = doccount;
-						shard_num = n;
-					}
-				} catch (...) {}
-			}
-		}
-	}
+	const size_t shard_num = n_shards > 1 ? co_await least_used_shard() : 0;
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
@@ -1835,7 +1910,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version)
+DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version, bool must_exist)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
 
@@ -1846,7 +1921,7 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version, must_exist);
 	info.did = did;
 	co_return info;
 }
@@ -1863,46 +1938,25 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		assert(term.size() > 1);
-		if (term[0] == 'N') {
-			auto did_serialised = term.substr(1);
-			engine::docid did = sortable_unserialise(did_serialised);
-			if (did == 0u) {
-				// Try getting a new ID which can currently be indexed (active node)
-				// Get the least used shard:
-				auto min_doccount = std::numeric_limits<engine::doccount>::max();
-				for (size_t n = 0; n < n_shards; ++n) {
-					auto& endpoint = endpoints[n];
-					lock_shard lk_shard(endpoint, flags, turn_token());
-					co_await lk_shard.pin();
-					auto node = lk_shard->node();
-					if (node && node->is_active()) {
-						try {
-							auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
-							if (min_doccount > doccount) {
-								min_doccount = doccount;
-								shard_num = n;
-							}
-						} catch (...) {}
-					}
-				}
-			} else {
-				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-			}
-			doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		if (term == NEW_NUMERIC_KEY) {
+			// A new numeric id goes to the least used of the active shards, which numbers it.
+			shard_num = co_await least_used_shard();
 		} else {
-			shard_num = key_placement_hash(term) % n_shards;
-		}
-
-		try {
-			// Figure out if the term alredy exists (across all shards)
-			auto did = co_await get_docid_term(term);
-			if (did != 0u) {
-				co_return co_await replace_document(did, std::move(doc), commit, wal, version);
+			try {
+				// A document that exists (in any shard) is replaced where it is.
+				auto did = co_await written_docid_term(term);
+				if (did != 0u) {
+					// Written in the shard's turn only while it is still there: else it is placed afresh.
+					co_return co_await replace_document(did, std::move(doc), commit, wal, version, true);
+				}
+			} catch (const engine::Error& error) {
+				if (!engine::is_missing(error.kind)) { throw; }
 			}
-		} catch (const engine::Error& error) {
-			if (!engine::is_missing(error.kind)) { throw; }
+			// A new one goes where its id says (numeric_docid), else where its key hashes.
+			const auto did = numeric_docid(term);
+			shard_num = did != 0 ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
 		}
+		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	}
 
 	auto& endpoint = endpoints[shard_num];
@@ -2266,7 +2320,7 @@ DocIndexer::index_one(MsgPack&& obj)
 		auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
 			auto info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
 
-			if (term_id == "N\x80") {
+			if (term_id == NEW_NUMERIC_KEY) {
 				result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
 			} else {
 				auto it_id = data_obj.find(ID_FIELD_NAME);

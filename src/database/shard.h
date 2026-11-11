@@ -27,6 +27,7 @@
 
 #include <exception>              // for std::exception_ptr
 #include <memory>                 // for std::shared_ptr
+#include <optional>               // for std::optional
 #include <string>                 // for std::string
 #include <vector>                 // for std::vector
 
@@ -118,6 +119,11 @@ public:
 	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
 	task::task<engine::Shard*> engine_for_read();
 
+	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
+	// live documents) as the writes left them, in the index's turn, refreshing nothing (docs/mechanisms/placement.md).
+	task::task<engine::docid> written_key(const std::string& term);
+	task::task<engine::doccount> written_count();
+
 	// The engine's integrity check of the index, in its turn (a missing index is opened, or created by the flags).
 	task::task<engine::CheckResult> check();
 
@@ -140,11 +146,12 @@ public:
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
 	task::task<bool> commit(bool wal_ = true);
 
-	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	// A delete with an expected version removes the document only while it has that version (0: it does not exist).
+	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);

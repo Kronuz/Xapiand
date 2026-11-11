@@ -823,7 +823,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG c813531cf893ce079e2737dff6274b2025f9b151)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 51d153aa1bc33a433b0c1b4dad56671d01f89d27)  # http main: the keep-alive watch engages with one read (perf-watch-peek)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 

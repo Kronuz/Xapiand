@@ -81,7 +81,7 @@ compare_schema(const MsgPack& a, const MsgPack& b)
 
 
 static inline task::task<std::pair<engine::rev, MsgPack>>
-load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
+load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget)
 {
 	L_CALL("load_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), read_flags, context ? std::to_string(context->size()) : "nullptr");
 
@@ -105,6 +105,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(endpoints, read_flags, context);
+		_db_handler.budget = budget;
 		engine::rev version;
 		auto document = co_await _db_handler.get_document(id);
 		auto obj = co_await document.get_obj();
@@ -180,10 +181,11 @@ save_shared(std::string_view id, const MsgPack& schema, engine::rev version, con
 
 // The schema document of an index as stored in its metadata; empty when the index or the metadata is missing.
 static task::task<std::string>
-read_metadata(Endpoints endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
+read_metadata(Endpoints endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget)
 {
 	try {
 		DatabaseHandler db_handler(endpoints, read_flags, std::move(context));
+		db_handler.budget = budget;   // the caller's token ends the read's turn wait
 		co_return co_await db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
 	} catch (const engine::Error& error) {
 		if (!engine::is_missing(error.kind)) { throw; }
@@ -200,7 +202,7 @@ SchemasLRU::SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age) :
 
 
 task::task<std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>>
-SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
+SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget)
 {
 	L_CALL("SchemasLRU::_update({}, {}, {}, {}, {}, {}, <context>)", repr(prefix), writable, new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr", repr(endpoints.to_string()), read_flags);
 
@@ -294,9 +296,9 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		}
 		std::string schema_ser;
 		if (first_use) {
-			schema_ser = co_await metadata_loads.run(strings::format("{}:{}", local_schema_path, read_flags), [&] { return read_metadata(endpoints, read_flags, context); });
+			schema_ser = co_await metadata_loads.run(strings::format("{}:{}", local_schema_path, read_flags), [&] { return read_metadata(endpoints, read_flags, context, budget); });
 		} else {
-			schema_ser = co_await read_metadata(endpoints, read_flags, context);
+			schema_ser = co_await read_metadata(endpoints, read_flags, context, budget);
 		}
 		if (schema_ser.empty()) {
 			if (!foreign_uri.empty()) {
@@ -504,7 +506,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				}
 				try {
 					const Endpoint foreign_endpoint(foreign_path);   // load_shared keeps a reference to it while it runs
-					auto load = [&] { return load_shared(foreign_id, foreign_endpoint, read_flags, context); };
+					auto load = [&] { return load_shared(foreign_id, foreign_endpoint, read_flags, context, budget); };
 					std::pair<engine::rev, MsgPack> shared;
 					if (outermost && !foreign_schema_ptr) {
 						shared = co_await foreign_loads.run(strings::format("{}:{}", foreign_uri, read_flags), load);
@@ -646,7 +648,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					// Foreign Schema needs to be read
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 					try {
-						auto shared = co_await load_shared(foreign_id, Endpoint(foreign_path), DB_CREATE_OR_OPEN | DB_WRITABLE, context);
+						auto shared = co_await load_shared(foreign_id, Endpoint(foreign_path), DB_CREATE_OR_OPEN | DB_WRITABLE, context, budget);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_version = shared.first;
@@ -747,7 +749,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	auto up = co_await _update("GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
+	auto up = co_await _update("GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context, db_handler->budget);
 	auto schema_ptr = std::get<1>(up);
 	auto foreign_uri = std::get<3>(up);
 
@@ -784,7 +786,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	assert(!db_handler->endpoints.empty());
 
 	bool writable = has_db_writable(db_handler->flags);
-	auto up = co_await _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context);
+	auto up = co_await _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context, db_handler->budget);
 	auto failure = std::get<0>(up);
 	auto schema_ptr = std::get<1>(up);
 

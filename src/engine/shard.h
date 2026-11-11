@@ -57,6 +57,14 @@ struct WriteArgs {
 	// Empty accepts any.
 	std::optional<rev> expected_version;
 
+	// For replace_by_key: the id a new document takes when no document holds it; 0 numbers it after
+	// the last.
+	docid new_did = 0;
+
+	// For replace: the keyed document must still be at the id. When it is not, the write is checked as one to no
+	// document (an expected version answers version_conflict) and answers errc::doc_not_found instead of creating it.
+	bool must_exist = false;
+
 	// Called once the target document and its new version are known and before the document is
 	// written: it may complete the document (embed the id or the version in its data) and may set
 	// the result's term. The engine adds its own version bookkeeping after it returns.
@@ -90,7 +98,8 @@ using ScanSink = std::function<void(const DocView&)>;
 // returns a task. The referenced arguments must outlive the task. Writes, refreshes, commits and the
 // other operations that change the index are made by one task at a time: the host serialises them (the
 // index's turn). Reads (find_key, get, scan, stats, metadata, doc_count and search) take no turn: each
-// reads one published view of the index, as of the last refresh, and never waits for a write.
+// reads one published view of the index, as of the last refresh, and never waits for a write. The written
+// reads (written_key, written_count) are made in the turn and read what the writes applied, flushed or not.
 class Shard {
 public:
 	virtual ~Shard() = default;
@@ -127,6 +136,11 @@ public:
 
 	// The id of the document holding the key term; 0 when none does.
 	virtual task::task<docid> find_key(const std::string& key) = 0;
+
+	// Where a write places a document, read in the index's turn with no refresh: the id of the document
+	// holding the key term (0 when none does) and the live documents, as the writes left them.
+	virtual task::task<docid> written_key(const std::string& key) = 0;
+	virtual task::task<doccount> written_count() = 0;
 
 	// One stored document; raises doc_not_found when there is none.
 	virtual task::task<std::unique_ptr<DocView>> get(docid did) = 0;

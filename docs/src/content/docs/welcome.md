@@ -4,15 +4,17 @@ title: "Welcome"
 
 This documentation aims to be a comprehensive guide to Xapiand. We'll cover
 topics such as getting your server up and running, indexing and searching
-documents, customizing data schemas, deploying to various environments, and
+documents, customizing data schemas, configuring and stopping the node, and
 give you some advice on participating in the future development of Xapiand
 itself.
 
 ## So what is Xapiand, exactly?
 
-Xapiand is **A Modern Highly Available Distributed RESTful Search and Storage
-Server built for the Cloud**. It takes JSON documents and indexes them
-efficiently for later retrieval.
+Xapiand is **a modern RESTful search and storage server built for the cloud**.
+It takes JSON documents and indexes them efficiently for later retrieval. It
+runs as a single node and searches with [strata](https://github.com/Kronuz/strata),
+its own search engine; see [Basic Concepts](/Xapiand/basics#node) for what a
+node holds, and the [Quick-start](/Xapiand/quickstart) to run one.
 
 ---
 
@@ -33,9 +35,29 @@ PUT /twitter/user/Kronuz
 }
 ```
 
+<!-- e2e:begin
+---
+description: Welcome: a first write
+---
+
+```js
+pm.test("The write answers the stored document", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal("Kronuz");
+  pm.expect(doc.name).to.equal("Germán Méndez Bravo");
+});
+```
+e2e:end -->
+
 For those, you can always copy the equivalent _curl_ code for it by hovering the
 snippet and clicking on the copy to the clipboard button:
 &nbsp;&nbsp;<i class="fa fa-clipboard" style="color: "></i>
+
+The responses shown are those of a node started with `-vvvv`, which echoes what
+it stores, prints formatted JSON and adds comments; a node started without it
+answers a write with `204 No Content` or `201 Created` and no body (see
+[What a write answers](/Xapiand/quickstart#what-a-write-answers)).
 
 ### Helpful Hints
 

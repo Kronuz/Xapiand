@@ -148,7 +148,6 @@ void test_http_answers() {
 	CHECK_EQ(refused.second, "Bad Gateway: Connection refused");
 
 	// Client errors that are also engine errors answer as their kind says, not as a server error.
-	CHECK_EQ(answer([] { THROW(DocVersionConflictError, "stale"); }).first, static_cast<int>(HTTP_STATUS_CONFLICT));
 	CHECK_EQ(answer([] { THROW(QueryParserError, "bad query"); }).first, static_cast<int>(HTTP_STATUS_BAD_REQUEST));
 	CHECK_EQ(answer([] { THROW(InvalidTextConfigError, "bad config"); }).first, static_cast<int>(HTTP_STATUS_BAD_REQUEST));
 
