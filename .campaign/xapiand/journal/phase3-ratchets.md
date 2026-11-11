@@ -1,54 +1,68 @@
 # phase3-ratchets: journal
 
-State: waiting on jobs: wave 2 and the 8-thread row (ids under Doing), build-test 261110-023715-edf507 at prospect `3e92ea9`, FreeBSD smoke 261110-023726-f5b60e; all queued behind 97 others at 02:34
+State: waiting on jobs 261111-023449-dbd2bc 261111-023513-9cf689 261111-023527-01525e 261111-023529-0480c9 261111-023531-861bbf 261111-023533-e5b827 261111-023549-08d8e1 261111-023550-47b686 261111-023552-604cea 261111-023611-df2aff 261111-023613-74ba91 261111-023615-46b75c 261111-023617-714ad0 261111-023627-a73c21 (queued 2026-11-11 02:36)
 Quest: .campaign/xapiand/quests/phase3-ratchets.md (the lead's; never edit it)
 
 ## Doing
 
-Rebased onto main `e8e5bd9` (main changed docs/design/automata.md only; `git diff 9b88263 e8e5bd9`
-is that file, so the measured engine stays `--ref main=9b8826349cfe`, R7). Harness at prospect
-`ba6a400` (adds `gate3.sh wamp`, forwards PROSPECT_AUTO_MERGE). build-test 261110-021707-040070.
+Merged prospect main `f0d7871` into the branch (3ed265a): main moved strata's pin to the
+manifest log (strata 94480d5; 074129c retires the manifest, live-docs, metadata and field-table
+codecs), so indexing and commits run new code and every row runs again at `--ref main=f0d7871`.
+Harness fe20f43: corpus line counts cached (the 5M unit spent 2.8 min reading the corpus cold
+to count it; the job was 10.4 min for 7 min of indexing), smoke keeps the baselines' 5M
+unmerged indexes (A1-before reads them), gate_job forwards LUCENE_RAM_MB/TANTIVY_HEAP_MB.
+Docs ca5e913: the 9b88263 rows of wave 2 in the gate doc, the f0d7871 plan, coverage by tier.
 
-Wave 2 (gate VM, engine main `9b88263`):
-- merge 261110-022415-2c93a9 (strict) -> sections 261110-022417-832326, verify
-  261110-022419-0d97c8, allocs 261110-022420-407111 (light) -> servemem 261110-022422-c56975
-  (strict: prospect-merged, Tantivy, Lucene, Lucene -bp).
-- A4 probe 261110-022424-057569: 5M at 2,056 MB with PROSPECT_AUTO_MERGE=0 (strict).
-- A3: wamp smoke 20k 261110-022426-648c03 -> append 1M 261110-022427-e83b7c -> replace 1M
-  261110-022429-f5a5aa (strict, chained so no other VM job writes the device meanwhile).
-- A1 after merging QA1-5: 261110-022431-02bb66 022436-743e61 022442-e18d7a 022448-7e7c9b
-  022453-b2d8f9; before merging QB1-5: 022433-017540 022438-9a0901 022444-671c80
-  022450-fc6501 022456-0b4e2c (exclusive; queries-sample 181 + terms-sample 40, WARMUP 20).
-- A2 1M trials I1-5 (exclusive, prospect at 1,039 MB vs Tantivy-st, order alternating):
-  022435-14ea61 022440-084be4 022446-d9749a 022452-3e9f96 022457-9bd18c (ids prefixed 261110-).
-- A7 coverage on the host 261110-022513-292125 (light).
-- A2 8-thread row (harness `61be43a`: LUCENE_THREADS, TANTIVY_THREADS): prepare 261110-023211-4c1f94
-  (after the I and QB jobs) -> smoke 20k 261110-023212-dd083e -> trials M1-5 at 1M, exclusive,
-  order rotated: 261110-023213-439939 023215-c412cf 023216-903d9c 023218-de1101 023219-e92006;
-  5M confirmation 261110-023221-07f41b (strict).
+Wave 2 at main 9b88263 (read; finished results stand as a main-commit measurement): see the
+gate doc's "Gate run at main 9b88263". A1 after merging 14 pass / 7 miss / 19 straddle of 40
+(misses to 1.18x); before merging 5 / 29 / 6 (to 1.68x); A2 1M 2.19x and 3.60x faster than
+Tantivy-st; A4 serving 0.94x Tantivy (pass), allocations grow for the term class (miss),
+probe: same 3,221 MiB peak without background merges (finding for the lead below); A5 whole
+0.993x, postings 1.012x, terms 1.123x; A6 verify 0 mismatches.
 
-## Wave 1 read (jobs passed; engine main `9b88263`, gate VM, Linux x86_64, 8 vCPUs)
+D59 plan at main f0d7871 (one VM chain; exclusive rows wait for no hold):
+prepare dbd2bc (light) -> smoke 9cf689 (strict 5: every step at 20k, 8-thread units, wamp at
+16 MB) -> 5M unit 01525e (strict 10) -> merge 0480c9 (light 30) -> sections+verify+allocs
+861bbf (light 30) -> servemem e5b827 (strict 5) -> parity 08d8e1 (light) -> wamp append
+47b686 -> wamp replace 604cea (strict 10 each). Exclusive: A1-before df2aff (after the 5M
+unit), A1-after 74ba91 (after verify), A2-1t 46b75c and A2-8t 714ad0 (after smoke). Coverage
+a73c21 on the host (light 30). Ids are 261111-023xxx-<suffix>.
 
-- Smoke 261109-174807-1b0f95 passed every step at 20k. Parity 261109-174809-eb0263: 419/419
-  counts and top-10 at 1, 4, 16 segments; with deletes (5 and 17 segments) counts 419/419, top-10
-  157/419 (weights drift, R5), exact again after the merge drops them (419/419, 3.87e-16).
-- A2 5M keyed one thread, single runs (screen strict, not the confirm stage):
-  prospect 423.3 s at 2,056 MB, 3 segments, peak RSS 3,221 MiB, anon 3,204 MiB;
-  Tantivy-st 870.0 s, 1 segment, RSS 11,357 MiB (anon 8,573); Lucene-st 1,162.2 s, 3 segments,
-  RSS 4,588 MiB. prospect 2.06x faster than Tantivy-st at 28% of its peak RSS, 2.75x faster
-  than Lucene-st at 70% of its peak. CPU: prospect 376 s user+sys, Tantivy 1,002 s, Lucene 1,344 s.
-- Calibration drift: 2,056 MB peaked at 4,608 MB on 2026-10-17 (Lucene-st 4,593); now 3,221 MiB
-  against Lucene-st's 4,588 MiB, 30% under. Not recalibrated (R6).
-- A4 indexing: peak RSS 1.57x the 2,056 MiB node budget, past budget + 10% (2,262 MiB): a miss
-  (D17 notes merge buffers are not charged yet; the probe tests that).
+What each job decides and why its size suffices:
+- A1 before / after (exclusive 10 each): two trials, engine order rotated, both sets (181
+  queries + 40 terms), WARMUP_TIME=5 NUM_ITER=5 (f13 row 4b's settings). Decides each class
+  against 1.0x by gate.py's interval over the two trials. Size: at 9b88263 the deciding misses
+  clear 1.0x by their whole interval (before: 29 rows, lower bounds to 1.58x; after: 7, e.g.
+  COUNT phrase 1.09-1.11x vs Tantivy, native, no JIT), so the verdict (miss, carried) cannot
+  flip; 20 s warm-up x 5 commands x 3 engines x 2 sets is 600 s per trial alone, so the 5 s
+  warm-up is what fits, and a class beating Lucene -bp by under 10% is reported as within the
+  warm-up caveat (format13-gate-vm.md). After merging drops plain Lucene: rescoring the three
+  9b88263 trials without it changes no row by more than 0.01.
+- A2 one thread (exclusive 10): 1M at 1,039 MB, P T T P against Tantivy-st (faster baseline).
+  Margin at 9b88263 2.19x-3.60x faster, so two pairs decide >= 1.0x; ~7 min after the
+  line-count fix (pairs took 3.9-4.5 min with it).
+- A2 eight threads (exclusive 10): 1M, P T L L T P, all at 8 threads; first measurement, two
+  rotations give the interval; 1-thread 1M times bound it under 9 min even at 2x speedups.
+- A2/A4 5M unit (strict 10): the scale-up time beside 2026-11-09's Tantivy-st 870 s and
+  Lucene-st 1,162 s (R11) and the 5M peaks against the 2,056 MiB budget + 10%.
+- A3 (strict 10 each): 500k keyed, every engine at a 64 MB buffer (R12), append and replace.
+  Bytes, not time; 64 MB buffers make every engine flush and merge many times at 500k, which
+  the 1M equal-memory runs (1-2 GB buffers, one flush) would not.
+- A4/A5/A6 checks (light): verify both sets before (prospect's 5M segments) and after merging,
+  sections against keyed -bp, allocations by class; serving memory strict. Correctness and
+  bytes, deterministic.
+- A6 parity (light): 1/4/16 segments, deletes at 4/16, oracle ranks f70efd10.
 
 ## Next
 
-1. Read wave 2; score A1 with `bench/phase2/gate.py --md --target 1.0 --prospect prospect-merged`
-   (after) and `--as lucene-10.4.0-st=lucene-10.4.0 --as tantivy-0.26-st=tantivy-0.26` (before).
-2. Write A11's report rows; A9 tool list; A7 parity.md rows with the coverage numbers.
-3. Owed and not submitted: the many-index rows (A3: no harness), A8 FreeBSD/arm64 (deferred).
-4. A9 runner: `bench/gate3_report.py DIR...` (prospect `b97171d`) scores all four axes.
+1. When the jobs land: score A1 with `bench/phase2/gate.py --md --target 1.0 --prospect
+   prospect-merged` (after) and `--as lucene-10.4.0-st=lucene-10.4.0 --as
+   tantivy-0.26-st=tantivy-0.26` (before); A2-A5 with `bench/gate3_report.py --budget-mb N DIR`.
+   A second run only for a row whose interval straddles its target (D59).
+2. Replace the gate doc's pending table with the f0d7871 rows (A11), coverage numbers in
+   `docs/testing/parity.md` (A7), the Evidence table below.
+3. CI: no runs on the branch head (I never push); the lead pushes or lands with --no-ci.
+4. Correctness review: not launched (the lead's).
 
 ## Blocked on
 
@@ -59,6 +73,11 @@ miss in the gate doc; the fix (charge merge buffers) is a follow-up quest; state
 261110-022424-057569's result when it lands. 5. A3's many-index rows go to a harness quest
 (high priority). 6. A8: FreeBSD as a deferred check set by the lead; arm64 waits for a local host.
 Folded into `docs/gates/phase-3-ratchets.md` at prospect `3e92ea9`.
+
+Finding for the lead (not blocking): D51 item 4's follow-up (charge merge buffers to the
+budget) rests on a premise the probe refutes: prospect keyed 5M with PROSPECT_AUTO_MERGE=0
+peaked at 3,221 MiB, the same as with merges (job 261110-022424-057569). The excess over the
+2,056 MiB budget is elsewhere in the indexing path; the follow-up quest should measure where.
 
 A8 deferred check, the command for the lead once smoke 261110-023726-f5b60e passes (light:
 the first run builds on the VM's 4 vCPUs; its times are informational, prospect only, since
@@ -72,11 +91,17 @@ the VM has no rust or JDK and 4.5 GB free disk bounds DOCS):
 
 | Criterion | Evidence |
 |---|---|
-| A2 | partial: 5M confirmation jobs 261109-174917-a48a55, 261109-174919-b26fd0, 261109-174921-0cc8d3 (2.06x faster than Tantivy-st); trials I1-5 and the 8-thread row queued |
-| A6 | partial: parity 261109-174809-eb0263 (1/4/16 segments, deletes at 5 and 17, merged); verify 261110-022419-0d97c8 queued |
-| A8 | decision D51 (FreeBSD deferred, arm64 waits for a host); driver `tools/vm/bsd_rows.sh` (prospect `3e92ea9`), smoke 261110-023726-f5b60e queued |
-| A9 | `docs/gates/phase-3-ratchets.md` "Tools" (prospect `7206c0f`) |
-| A10 | decision D51; `docs/gates/phase-3-ratchets.md` "Phase 2 gate conditions" (prospect `3e92ea9`): C1, C3, C5, C13, C14 closed; C15's allocations at current code (allocs job 261110-022420-407111); C2, C16 partly; C7 carried; C9 and C15's rest to a follow-up quest |
+| A1 | queued: 261111-023611-df2aff (before merging), 261111-023613-74ba91 (after merging) |
+| A2 | queued: 261111-023615-46b75c (one thread), 261111-023617-714ad0 (eight threads), 261111-023527-01525e (5M) |
+| A3 | queued: 261111-023550-47b686 (append), 261111-023552-604cea (replace) |
+| A4 | queued: 261111-023527-01525e (indexing peaks), 261111-023531-861bbf (allocations), 261111-023533-e5b827 (serving) |
+| A5 | queued: 261111-023531-861bbf (sections) |
+| A6 | queued: 261111-023531-861bbf (verify), 261111-023549-08d8e1 (parity) |
+| A7 | pending coverage at f0d7871: `docs/testing/parity.md` "Coverage" holds the 9b88263 numbers |
+| A8 | deferred by decision D51 (FreeBSD as a deferred check, arm64 waits for a host); driver `tools/vm/bsd_rows.sh` |
+| A9 | `docs/gates/phase-3-ratchets.md` "Tools" |
+| A10 | decision D51; `docs/gates/phase-3-ratchets.md` "Phase 2 gate conditions" |
+| A11 | pending the f0d7871 rows: `docs/gates/phase-3-ratchets.md` holds every 9b88263 row with ratio, interval, jobs and the gate status table |
 
 Jobs examined: 261109-173556-26604e prepare, passed. 261109-173630-d3b142 smoke, failed: the
 20k index at a 256 MB budget had one segment, so the merge had nothing to reorder (fixed: smoke
@@ -116,3 +141,15 @@ within a document"; fixed `3d215c6`).
 - R3 Memory rows from `bench/cgmem.sh` (cgroup v2 memory.peak, anon, file, file_mapped) beside
   GNU time's peak RSS; the corpus is piped from outside the cgroup so its page cache is not
   charged to the engine.
+- R7 superseded: the engine ref is main `f0d7871` (strata's manifest log), every row rebuilt.
+- R9 Timed rows by D59: one job of at most 10 minutes per row, pairs inside it (plan under
+  Doing). Query rows at WARMUP_TIME=5 NUM_ITER=5 with the JVM caveat; R8's 20 s warm-up and
+  five-trial waves are retired.
+- R10 Harness fe20f43: line counts cached and warmed by prepare; smoke keeps only prospect's
+  indexes (it used to overwrite the 5M unmerged Lucene-st/Tantivy-st indexes with 20k ones).
+- R11 The 5M baselines are not rerun: Tantivy-st 870 s and Lucene-st 1,162 s exceed D59's
+  10 minutes, and their builders run the same code at one thread (61be43a only adds thread
+  counts); the 2026-11-09 times stand beside prospect's f0d7871 5M run.
+- R12 Write amplification at equal segment budgets (PLAN, Phase 3 gate): every engine at a
+  64 MB buffer (PROSPECT_BUDGET_MB, LUCENE_RAM_MB, TANTIVY_HEAP_MB), 500k documents.
+- R13 Merge (16.4 min at 5M) and verify (8.4 min) run as light jobs: neither is a timed row.
