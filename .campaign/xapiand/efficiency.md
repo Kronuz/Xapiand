@@ -164,3 +164,19 @@ rework (fix rounds, relaunches), jobs and their machine time.
 | 11-11 05:2x hourly | exploration | sonnet | index-memory explorer 142k (peak 1.52x/1.57x is the full-budget flush trigger plus an in-memory positions spill; 65-70% trigger gives 1.02-1.07x); quest flush-within-budget planned; flakes explorer launched | weekly 48%, 0.85%/h (exhaustion 61 h vs reset 112 h) | prospect:b23d139 (index-memory note) | light slots 33% used, drains 32 min, idle-beside-work 6 min; 16 queued (phase3 A1/A2 exclusives, cold-tier reruns); load 5; disk 110 GiB |
 | 11-11 06:2x hourly | exploration, implementation | sonnet, opus | flakes explorer 143k (two real strata races: catalog close pass 11/320 to 0/320, budget cap raise 3/320 to 0/320 under TSan); strata-races started (opus, 141k so far) | weekly 48%, 0.84%/h (exhaustion 62 h vs reset 111 h) | none | light slots 78% used, drains 15 min; load 240 at 06:23 from strata-races' light TSan load repro (16 processes x 20 waves; hunt row filed; strict from now); disk 107 GiB |
 | 11-11 07:2x hourly | implementation, performance, exploration | opus, sonnet | strata-races 203k (3 races: catalog close 11/320, budget cap 3/320, relief order; regression test in the suite, 75/75); phase3-ratchets resumed to score rows; cross-shard-id explorer launched | weekly 49%, 0.84%/h (exhaustion 61 h vs reset 110 h) | none | light slots 25% used, drains 35 min: 10 strict jobs (cold-tier reruns, strata-races load runs) serialize on macOS while light slots idle; load 2; disk 107 GiB |
+
+Pace check 11-11 08:00 (`~/.scratch/pace-metrics/pace.py`: job store and both campaigns' landings), before = 11-08 00:00 to 11-10 21:00 (69 h), after the light rework = 11-10 23:00 to 11-11 07:49 (8.8 h, overnight):
+
+| Measure | Before | After |
+|---|---|---|
+| Xapiand landings per day | 10.1 | 10.9 (none since 02:37: three quests wait on strict jobs) |
+| Detent landings per day | 2.4 | 16.3 |
+| Jobs per hour (both) | 26.8 | 39.5 |
+| Wasted jobs (cancelled, skipped, timeout, interrupted) | 31% | 13% |
+| Strict/exclusive declared minutes per job | 20.9 | 10.9 |
+| Light queue wait, median / p90 | 6 / 74 min | 3 / 19 min |
+| Strict/exclusive queue wait, median | 72 min | 85-141 min (24 of 51 still queued) |
+| Drain time | 16.1 min/h | 17.7 min/h |
+| Light work | 136 job-min/h | 195 job-min/h (40% of 8 slots) |
+
+Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9); CI carries across docs-only commits; skill text: light jobs at most 4 processes, load repros strict, fix tests in the suite, explore held files on explore/ branches. Recheck the strict wait and Xapiand landings at the next hourly checks.
