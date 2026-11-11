@@ -16334,6 +16334,8 @@
     "x7-coverage": {
       "accepted": {},
       "after": [],
+      "base": "9bfc9ca08e941fc02fcacb0b606a211ba7ff0b9b",
+      "branch": "quest/xapiand/x7-coverage",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -16356,9 +16358,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Coverage harness and restore corpora for T13 (x7-gate A13)",
-      "updated": "2026-11-10T05:35:32"
+      "updated": "2026-11-11T14:36:04",
+      "worktree": "../Xapiand-wt/xapiand/x7-coverage"
     },
     "x7-gate": {
       "accepted": {},
