@@ -486,6 +486,18 @@ def summarize(values: list[int]) -> dict[str, Any]:
     }
 
 
+def refusal_reason(body: bytes) -> str:
+    """A 503's cause: a JSON error's message (the engine's reason), else the plain-text body."""
+    text = body.decode("utf-8", "replace").strip()
+    try:
+        message = json.loads(text).get("message", text)
+    except (ValueError, AttributeError):
+        message = text
+    if isinstance(message, list):
+        message = "; ".join(str(m) for m in message)
+    return str(message)[:80]
+
+
 @dataclass
 class Counts:
     ok: int = 0
@@ -500,7 +512,7 @@ class Counts:
             self.ok += 1
         elif status == 503:
             self.s503 += 1
-            reason = body.decode("utf-8", "replace").strip()[:40]
+            reason = refusal_reason(body)
             self.reasons[reason] = self.reasons.get(reason, 0) + 1
         else:
             self.other += 1

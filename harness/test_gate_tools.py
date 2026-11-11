@@ -275,6 +275,13 @@ class StallLoad(unittest.TestCase):
         self.assertEqual(stall_load.pct(values, 99.9), 999.0)
         self.assertIsNone(stall_load.pct([], 50))
 
+    def test_a_refusal_reads_its_cause(self) -> None:
+        engine = b'{"status":503,"type":"Service Unavailable","message":"Service Unavailable: The index is busy"}'
+        self.assertEqual(stall_load.refusal_reason(engine), "Service Unavailable: The index is busy")
+        self.assertEqual(stall_load.refusal_reason(b'{"message":["a","b"]}'), "a; b")
+        self.assertEqual(stall_load.refusal_reason(b"The server is busy\n"), "The server is busy")
+        self.assertEqual(stall_load.refusal_reason(b"[1]"), "[1]")
+
 
 class CappedServer:
     """An HTTP/1.1 server with the reactor gate's admission: a request is admitted at headers-complete and held

@@ -39,7 +39,8 @@ row() {  # row NAME gate|info CMD...; GATE7C_ROWS="a b" runs only the rows it na
 }
 
 # check_json KIND FILE: T1's census holds only ALLOW's prefixes (and as many `unnamed` as reactors on macOS); an
-# overload phase held more requests than the in-flight cap, answered 503s and no other error (stall_load.py itself
+# overload phase held more requests than the in-flight cap, answered 503s and no other error, and reported both
+# admission peaks (stall_load.py itself
 # asserts each round admitted at most the cap and refused the rest).
 check_json() {
 	"$PY" -I - "$1" "$2" "$ALLOW" <<'PY'
@@ -63,6 +64,7 @@ for p in out["phases"]:
               "errors", json.dumps(es), "peaks", json.dumps(p["peaks"]), "rss_kb", p["rss_kb"])
         if not h.get("enforced"): bad.append(f"{p['name']}: the held requests did not exceed the cap")
         if not sum(e.get("http_503", 0) for e in es): bad.append(f"{p['name']}: no 503")
+        if None in p["peaks"].values(): bad.append(f"{p['name']}: peaks not reported")
         if any(e.get("http_other") or e.get("exceptions") for e in es): bad.append(f"{p['name']}: other errors")
 print("FAIL" if bad else "PASS", bad)
 sys.exit(1 if bad else 0)

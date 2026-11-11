@@ -9,9 +9,10 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Launch 1 jobs read (below). t7-tsan, recovery, removed passed; rows 261110-052957-f5e762 exit 1 (t1_census,
-t8_overload_light, t8_overload_heavy; info t10_lua_asan); ctest under ASan+UBSan rc 0. T8 harness fixed at
-Xapiand:e57e6ef0d; rerun 261110-081308-b8ca87 runs only t8_overload_light, t8_overload_heavy, t10_lua_asan.
+Merged master (Xapiand:78716404c) into the branch: it resolves Blocked on 1 (catalog timer on the control loop,
+Xapiand:c0d0208ee), 2 (`xapiand_admission_inflight_peak`, `xapiand_scheduler_demoted_peak` in `src/metrics.cc`) and
+4 (http repinned, Xapiand:1596eeed7). The T8 rows now gate on both peaks and name each 503's cause (R8). Every row and
+check reruns at this head: `campaign verify x7-gate` and one full rows job (ids in Next).
 
 ### Rows job 261110-052957-f5e762 (Xapiand:e7e8e03c5, master's code + driver), each failure read
 
@@ -45,10 +46,16 @@ both + gate_tools, pass 1), 261110-123314-96a9e6 (T8 both, pass 2, after pass 1)
 
 | Job | Row | Rounds | In flight at barrier | Refused at barrier | 503s by reason | rc |
 |---|---|---|---|---|---|---|
-| 261110-123313-fe03a9 | light | - | - | - | - | pending |
-| 261110-123313-fe03a9 | heavy | - | - | - | - | pending |
-| 261110-123314-96a9e6 | light | - | - | - | - | pending |
-| 261110-123314-96a9e6 | heavy | - | - | - | - | pending |
+| 261110-123313-fe03a9 | light | 6 | 2,000 each | 500 each (p50 47 ms) | plain 3,000; JSON 11,465 (cause cut at 40 chars); 535 ok | 0 |
+| 261110-123313-fe03a9 | heavy | 6 | 2,000 each | 500 each (p50 55 ms) | plain 3,000; JSON 11,771; 229 ok; beside-light 814 503s of 1,200 | 0 |
+| 261110-123314-96a9e6 | light | 3 | 2,000 each | 500 each (p50 85 ms) | plain 1,500; JSON 5,856; 144 ok | 0 |
+| 261110-123314-96a9e6 | heavy | 3 | 2,000 each | 500 each (p50 106 ms) | plain 1,500; JSON 5,898; 102 ok; beside-light 809 503s | 0 |
+
+Read: every round enforced (2,000 admitted, 500 refused with the plain in-flight 503), 0 other errors, 0 exceptions;
+peaks null (master then exported none); RSS 299-367 MB at 20,000 docs. Of the admitted requests about 96% were
+answered by a JSON 503 (`http_utils.h:72`: engine `busy`/`not_available`/`reopen`, likely `pool.cc:351` "The index
+is busy: its turn did not come in time"); the demoted cap's "The server is busy" never showed. The harness cut the
+cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
