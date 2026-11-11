@@ -13358,6 +13358,8 @@
     "stored-frame-bound": {
       "accepted": {},
       "after": [],
+      "base": "71750940c36d238966ad41f941a638227896eef1",
+      "branch": "quest/xapiand/stored-frame-bound",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13399,6 +13401,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/stored-frame-bound",
       "landed": [],
       "lenses": [
         "correctness"
@@ -13406,11 +13409,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: cold-tier-step2's include/** glob; its branch changes neither reader.hh nor reader_check_test.cc (git diff main...quest/xapiand/cold-tier-step2 is empty for both)",
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A stored frame's records end where the next frame starts",
-      "updated": "2026-11-10T22:24:37"
+      "updated": "2026-11-10T22:24:46",
+      "worktree": "../strata-wt/xapiand/stored-frame-bound"
     },
     "stored-short-section": {
       "accepted": {},
