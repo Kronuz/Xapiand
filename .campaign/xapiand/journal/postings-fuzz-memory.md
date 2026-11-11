@@ -22,7 +22,7 @@ Nothing; the push for CI is the lead's.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261110-180348-714558 passed at prospect:10870d9, strata 9d4630c, 10 min ASan+UBSan each, seed 1: as is, RSS 1,185 MiB at 30 s rising to 1,776 at 300 s and peak 2,204 (past libFuzzer's 2,048 default), 6,729 runs (11/s); with the stored check's frame cache, 331 at 30 s then 365-399, peak 411, 27,328 runs (45/s). Local probes below |
+| A1 | `.campaign/xapiand/journal/postings-fuzz-memory.md`: "ASan, strata check with frame cache" (job 261110-180348-714558 at prospect:10870d9, the before-the-fix record) |
 | A2 | Ruled: the postings decoder allocates from no untrusted length (audit under Rulings), so it has no bound to add; what grew is strata's stored check, whose test fails without its fix in stored-check-cache (`test/reader_check_test.cc`, strata:71750940; revert job 261110-182037-74c93c) |
 | A3 | 261111-001821-97b359 at prospect:7cb5226 (strata 94480d52): 7 min ASan+UBSan, 0 crashes, RSS 368-388 MiB after 120 s, peak 405 |
 | A4 | build-test 261110-232704-7f9c0e at prospect:7cb5226 |
@@ -43,7 +43,7 @@ Per-input allocation by the target (counting `operator new`, no sanitizer, 841 c
 mean 19.9 MB, max 189 MB, while peak live is at most 4.5 MB; with the frame cache mean 4.1 MB,
 max 7.5 MB. Corpus replay 13.1 s to 3.0 s with the cache (4.4x faster).
 
-Not evidence: 261110-232721-039d5f timed out in its build under the old 10-minute cap; 261111-000852-ee3f52 ran a clean fuzz but its RSS parse read the summary line and exited 1.
+Not evidence: 261111-002636-18c28c, A1 rerun at the head, cannot apply its before-the-fix setup; 261110-232721-039d5f timed out in its build under the old 10-minute cap; 261111-000852-ee3f52 ran a clean fuzz but its RSS parse read the summary line and exited 1.
 
 ## Result
 
