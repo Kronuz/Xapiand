@@ -14071,7 +14071,6 @@
       "files": [
         "include/strata/core/catalog.hh",
         "include/strata/core/resource_budget.hh",
-        "test/catalog_stress_test.cc",
         "test/resource_budget_test.cc",
         "docs/perf/flakes.md",
         "docs/perf/flakes/**"
@@ -14087,7 +14086,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Two strata races found as test flakes are fixed",
-      "updated": "2026-11-11T06:06:15"
+      "updated": "2026-11-11T06:06:31"
     },
     "t11-barriers": {
       "accepted": {},
