@@ -5,27 +5,32 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A PUT that found an off-hash id on shard A writes there only if the id is still at that docid
+(`WriteArgs::must_exist`); otherwise it places the document afresh, so a concurrent DELETE and PUT
+never leave the id on two shards. Prototype and repro: branch `explore/cross-shard-id`,
+`docs/dev/cross-shard-id.md` (before: 261111-073927-6d9b0b, id on both shards).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The held-turn test in `tests/test_node.cc` (PUT finds X on A, DELETE erases it, PUT writes on
+  H, the first PUT resumes) leaves X on exactly one shard, with GET and the SEARCH total agreeing;
+  tagged `--fails-without` on the fix reverted.
+- A2 The DELETE in that test replies with its real status: the empty reply (status 0) seen at
+  508d1192a (261111-073929-a46f52) is explained and asserted, never dropped from the test.
+- A3 `Shard::replace` with `must_exist` answers doc_not_found when the key is not at the docid, and
+  every caller that passes it (`replace_document_term`, `index(did)`) handles that answer; a test
+  per caller.
+- A4 The suite passes at the head, with CI green.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+`WriteArgs::must_exist` in `src/engine/shard.h`: an internal engine-seam flag, no wire change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: one correctness review with the concurrency questions; the fix starts from the explore
+branch's prototype.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The held-turn test, disabled until the fix.
