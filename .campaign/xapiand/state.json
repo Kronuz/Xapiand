@@ -3094,6 +3094,37 @@
       "title": "Stabilize flush memory regression test",
       "updated": "2026-11-08T15:39:28"
     },
+    "flush-within-budget": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/section_io.hh",
+        "test/index_test.cc",
+        "docs/perf/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/strata",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Indexing stays within its memory budget through the flush",
+      "updated": "2026-11-11T05:09:59"
+    },
     "flushmem": {
       "accepted": {},
       "after": [],
