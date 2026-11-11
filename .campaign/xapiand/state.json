@@ -3742,17 +3742,55 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T00:23:00",
+          "commit": "c9679f71c69e2e09243a23149158b6a24edf843e",
+          "criteria": {
+            "A1": "261111-000426-5642fd, 261111-000427-9d2a9c; fails without: 261111-000429-0c0f3d",
+            "A2": "261111-000426-5642fd, 261111-000427-9d2a9c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "125de8f30e337c5ba1f4e93ab95cef3301ae7969",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-000426-5642fd",
+              "level": "light",
+              "seconds": 805.9,
+              "state": "done",
+              "what": "head-allow check suite at 125de8f30e33"
+            },
+            {
+              "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+              "commit": "125de8f30e337c5ba1f4e93ab95cef3301ae7969",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-000427-9d2a9c",
+              "level": "light",
+              "seconds": 245.0,
+              "state": "done",
+              "what": "head-allow check e2e at 125de8f30e33"
+            }
+          ],
+          "final": true,
+          "from": "0d5c0061ae47d8cd189c4ffd9ecc1afce11dde23",
+          "reason": "",
+          "tested": "125de8f30e337c5ba1f4e93ab95cef3301ae7969"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "HEAD carries no body; Allow lists the routed verbs",
-      "updated": "2026-11-11T00:04:14",
-      "worktree": "../Xapiand-wt/xapiand/head-allow"
+      "updated": "2026-11-11T00:23:06",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
