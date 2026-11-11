@@ -1037,6 +1037,16 @@ static void test_dsl_not_is_none_of() {
 	CHECK_TRUE(found(MsgPack({ { "_and", list_of({ MsgPack({ { "_not", list_of({ sub("e", "brown"), sub("e", "blue") }) } }), sub("g", "male") }) } })) == (Ids{ 6 }));
 }
 
+// A keyword value of one character is a term of itself: the check for a trailing "~N" fuzzy distance reads
+// the second-to-last character only when there is one.
+static void test_dsl_one_character_keyword_is_a_term() {
+	auto schema = keyword_schema();
+	QueryDSL dsl(schema);
+	for (const char* value : { "a", "0", "7" }) {
+		CHECK_EQ(term_of(dsl, "g", value).second, std::string(value));
+	}
+}
+
 namespace {
 
 // Slots of the range corpus: one field per type.
@@ -1359,6 +1369,7 @@ GUARDED(test_depth_cap)
 GUARDED(test_chain_cap)
 GUARDED(test_corrupt_stored_value)
 GUARDED(test_dsl_not_is_none_of)
+GUARDED(test_dsl_one_character_keyword_is_a_term)
 GUARDED(test_range_aggregation_open_bounds)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded, test_dsl_not_is_none_of_guarded, test_range_aggregation_open_bounds_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded, test_dsl_not_is_none_of_guarded, test_dsl_one_character_keyword_is_a_term_guarded, test_range_aggregation_open_bounds_guarded)
