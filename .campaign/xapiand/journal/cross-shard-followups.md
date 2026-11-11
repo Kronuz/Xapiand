@@ -1,6 +1,6 @@
 # cross-shard-followups: journal
 
-State: waiting on jobs 261111-133750-2603c2 261111-133753-938445 261111-133756-65f3d0 261111-133814-8d444b
+State: fixing the PATCH test's order in the full binary (lead's msg: suite 261111-133814-8d444b and CI failed at tests/test_node.cc:2075); diag job 261111-135611-2a5bec
 Quest: .campaign/xapiand/quests/cross-shard-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
