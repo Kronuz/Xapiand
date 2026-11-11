@@ -13288,7 +13288,7 @@
         "README.md",
         "test/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/sortable-followups",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-09T17:43:39",
@@ -13327,8 +13327,8 @@
       "risk": "low",
       "status": "landed",
       "title": "sortable-proof review nits S1, S3, S4",
-      "updated": "2026-11-09T17:43:39",
-      "worktree": "../sortable-wt/xapiand/sortable-followups"
+      "updated": "2026-11-11T09:28:43",
+      "worktree": ""
     },
     "sortable-proof": {
       "accepted": {
