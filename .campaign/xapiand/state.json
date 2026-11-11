@@ -16830,7 +16830,7 @@
       "branch": "quest/xapiand/xapiand-brand",
       "checks": [
         {
-          "cmd": "cd docs && npm ci && npm run icons && git diff --exit-code -- ../brand",
+          "cmd": "cd docs && npm ci && cd .. && node brand/build-icons.mjs && git diff --exit-code -- brand",
           "level": "light",
           "minutes": 20,
           "name": "icons"
@@ -16843,6 +16843,34 @@
         "docs/package.json",
         "docs/package-lock.json"
       ],
+      "history": [
+        {
+          "at": "2026-11-11T13:06:16",
+          "checks": [
+            [
+              {
+                "cmd": "cd docs && npm ci && npm run icons && git diff --exit-code -- ../brand",
+                "level": "light",
+                "minutes": 20,
+                "name": "icons"
+              }
+            ],
+            [
+              {
+                "cmd": "cd docs && npm ci && cd .. && node brand/build-icons.mjs && git diff --exit-code -- brand",
+                "level": "light",
+                "minutes": 20,
+                "name": "icons"
+              }
+            ]
+          ],
+          "reason": "same check at the generator's new path, brand/build-icons.mjs, matching Detent's brand layout (msg-30); the check still regenerates every icon and requires no diff",
+          "voided": [],
+          "weakened": [
+            "gate check icons changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -16852,7 +16880,7 @@
       "risk": "low",
       "status": "active",
       "title": "Xapiand has a brand/ directory with a vector master logo and its icon variants",
-      "updated": "2026-11-11T11:10:15",
+      "updated": "2026-11-11T13:06:16",
       "worktree": "../Xapiand-wt/xapiand/xapiand-brand"
     },
     "xapiand-final-release": {
