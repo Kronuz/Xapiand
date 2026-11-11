@@ -46,12 +46,12 @@ Code questions (documented as the code behaves today; the lead rules whether the
 | Criterion | Evidence |
 |---|---|
 | A1 | `.campaign/xapiand/journal/docs-site-refresh-reference.md` "A1: audit row, fix, source" (every row of `docs/dev/docs-site-audit.md` for these pages, with its fix and source; rows owned elsewhere under "Left alone") |
-| A2 | job 261110-182205-b410dc (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-182205-b410dc |
-| A3 | job 261110-152514-d0f0db (rerun of 557fe4 at b5de25700, done): the only hit is `copyright.md:19` (sortable-encoding's) |
-| A4 | job 261110-144359-49fcfb (site build + link check over every page, passed at 07d7f71db); rerun 261110-152514-a87e19 at b5de25700 |
-| A5 | request count 425 before (job 261110-043757-b6665c, the base) and after: job 261110-152514-91fbb0 at b5de25700: `requests 487` |
+| A2 | job 261110-184734-cbd2f8 (`campaign verify`, smoke, e2e and tls green at d148eac88); at the merged head 261110-184734-cbd2f8 |
+| A3 | job 261110-184756-b789af at the head: the only hit is `copyright.md:19` (sortable-encoding's) |
+| A4 | job 261110-184755-198651 at the head: site build + link check over every page |
+| A5 | job 261110-184756-a27f76 at the head: `requests 487` (425 on the base at 2be5c57d7) |
 | A6 | `docs/src/content/docs/tests/coverage.md`: "## Coverage" (feature, page, tests) and "## Not covered by a request" |
-| A7 | job 261110-182205-b410dc (its site build, at d148eac88). Quote, `docs/src/lib/sidebar.mjs` Quick-start items end `{ "slug": "exploration" } ]`; `next.md` deleted |
+| A7 | job 261110-184734-cbd2f8 (its site build, at d148eac88). Quote, `docs/src/lib/sidebar.mjs` Quick-start items end `{ "slug": "exploration" } ]`; `next.md` deleted |
 
 ### A1: audit row, fix, source
 
@@ -136,6 +136,8 @@ Code questions (documented as the code behaves today; the lead rules whether the
 - near.md and phrase.md say "words only": phrase-expansion extends that.
 - benchmarks.md: closing-benchmark's. conduct.md, astro.config.mjs, docs/README.md: outside the file set. contributing.md: audit "current".
 - Sidebar still lacks about, help, options, wal, htm (they run after the sidebar pages); adding them reorders the E2E, not done here.
+
+- e2e runs that failed outside the quest: 261110-173046-0fdb94 (a RESTORE timed out at 30 s under load) and 261110-175030-6fc614 (the TLS renegotiation check); both are hunt rows.
 
 ## Result
 
