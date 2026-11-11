@@ -151,8 +151,11 @@ else fail "raw TLS 1.1 hello: no version reason in the log"; fi
 
 # 5. Renegotiation: s_client renegotiates on a line holding just R.
 reneg() {  # reneg R|'': one TLS 1.2 connection, optionally renegotiating, then a request
+	# Command letters act on the first byte of each read, and the request can arrive in pieces:
+	# one starting "Connection:" would reconnect. Only the renegotiating case keeps them.
+	local letters=; [ -n "$1" ] || letters=-nocommands
 	{ sleep 1; [ -n "$1" ] && { echo R; sleep 1; }; printf 'GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'; sleep 2; } |
-		"$OPENSSL" s_client -connect "127.0.0.1:$PORT" -tls1_2 -CAfile "$WORK/ec/ca.pem" -servername localhost 2>&1
+		"$OPENSSL" s_client -connect "127.0.0.1:$PORT" -tls1_2 -CAfile "$WORK/ec/ca.pem" -servername localhost $letters 2>&1
 }
 out=$(reneg ""); grep -q "HTTP/1.1 200" <<< "$out" && pass "TLS 1.2 connection without renegotiation served" || fail "TLS 1.2 connection without renegotiation not served"
 out=$(reneg R)
