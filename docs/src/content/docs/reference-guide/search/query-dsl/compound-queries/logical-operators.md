@@ -12,10 +12,9 @@ these match documents in the following way:
 
 * `_or`           - Finds documents which match any of the subqueries.
 * `_and`          - Finds documents which match all of the subqueries.
-* `_not`          - Finds documents which don't match the subquery. Given a list of
-                    subqueries it is written as `match_all AND_NOT (A AND_NOT B ...)`:
-                    it finds the documents that are not "A but not B", which is not
-                    the same as matching none of them.
+* `_not`          - Finds documents which match none of the subqueries: a list is
+                    `match_all AND_NOT (A OR B ...)`, and a single subquery is a list
+                    of one.
 * `_and_not`      - Finds documents which match the first subquery A but
                     not subquery B.
 * `_xor`          - Finds documents which are matched by subquery A or subquery B,
