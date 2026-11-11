@@ -713,7 +713,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			} else if (strings::endswith(serialised_term, '~')) {
 				serialised_term.remove_suffix(1);
 				flags |= engine::text::FUZZY;
-			} else if (serialised_term[serialised_term.size() - 2] == '~') {
+			} else if (serialised_term.size() >= 2 && serialised_term[serialised_term.size() - 2] == '~') {
 				int errno_save = 0;
 				fuzzy_edit_distance = strict_stou(&errno_save, serialised_term.substr(serialised_term.size() - 1));
 				if (errno_save != 0) {

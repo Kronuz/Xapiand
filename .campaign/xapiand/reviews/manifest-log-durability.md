@@ -240,3 +240,33 @@ empty at that point or the allocation is absorbed. The code is correct by readin
 
 - No new probe; no `alloc_crash_probe` rerun at 1ebeff87 (the sweep and the mutant pair cover F3; my probe's
   scenario with a reader is the same shape). No TSan or Linux run at this head.
+
+## Re-check 3
+
+Commit: 15d39c3094966b262ac643327f6c68fa5bfa4dee
+Verdict: APPROVE
+
+Scope: strata `1ebeff87..15d39c30`, read with `git diff`; nothing built or rerun.
+
+1. The diff is not one file but two, and only one is the quest's. `test/manifest_log_test.cc` changes one
+   line (`:1185`, `even_read - even_snapshot < 0.05 * time_scale` to `< 0.5 * time_scale`). The other,
+   `docs/design/durability-modes.md` (+43 lines, design questions Q11 to Q14), arrives with the merge of main
+   (`85a51e0a`) from main's `77adb056`, an ancestor of main. Nothing else changed: `git diff 1ebeff87 15d39c30 --
+   . ':!docs'` is that one test line, and no `src` or `include` file is touched.
+2. No durability mechanism changes: no source, header or recovery path moves; a timing bound in a test and a
+   design doc do not alter what is written, synced or replayed.
+3. The loosened bound still catches the regression. The bounds are in seconds (`time_scale` is 1, or 10 in
+   sanitized builds, `:39-44`), so the new bound is 0.5 s against the 8.9 s regression: 17 times of margin in a
+   normal build, and 5 s in a sanitized one, still under 8.9 s unscaled (the sanitizer runs the regression slower
+   too). The sibling check on the edits themselves (`:1182`, `even < 0.05 * time_scale`, the same "8.9 s" case)
+   is unchanged and stays tight. The CI sample that tripped the old bound was 51.9 ms, one tenth of the new one.
+4. The T7 job 261110-142527-2d21c1 ran at commit 15d39c3094966b262ac643327f6c68fa5bfa4dee (`spec.json`), exit 0:
+   128 one-ordinal delete edits on 20M documents take 0.03 ms (10M deleted), and the open's read is 21.01 ms
+   with the snapshot alone against 17.59 ms with the 128 edits, so the replay costs nothing measurable (the
+   difference is negative). The regression is timed there in milliseconds, against 8.9 s.
+
+The commit hash in the request had 39 digits (`15d39c309496b262...`); the line above is the 40-digit
+`git rev-parse 15d39c30`, which matches the job's commit.
+
+| ID | Blocking | Kind |
+|---|---|---|
