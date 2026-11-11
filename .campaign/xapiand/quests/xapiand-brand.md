@@ -20,7 +20,8 @@ rounded hexagon with three stacked white layers.
   journal shows both renders side by side).
 - A2 [artifact] `brand/variants/<name>/` for at least two variants: the current green on light
   pages, and one that reads on a dark page; each with the full Kronuz set of files.
-- A3 `docs/scripts/build-icons.mjs` (`npm run icons` in docs/) generates every variant file from
+- A3 `brand/build-icons.mjs` (`node brand/build-icons.mjs` from the root, the layout of Detent's
+  brand/, Detent:ddcdaf22) generates every variant file from
   the master, following Kronuz's `scripts/build-icons.mjs` (reuse its approach: exact-size
   rasterization, tab-size alpha gamma, maskable safe area); the `icons` check regenerates and
   finds no diff.
