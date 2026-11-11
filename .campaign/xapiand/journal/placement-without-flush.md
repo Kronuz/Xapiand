@@ -1,6 +1,6 @@
 # placement-without-flush: journal
 
-State: waiting on jobs 261110-191050-6a255b 261110-191052-e8dc37 261110-191418-21153b 261110-191419-e7ea4e 261110-191610-d043da 261110-191613-460eb8 261110-191640-dd5838 261110-191642-50ce83
+State: waiting on jobs 261110-191418-21153b 261110-191419-e7ea4e 261110-191610-d043da 261110-191613-460eb8 261110-191640-dd5838 261110-191642-50ce83
 Quest: .campaign/xapiand/quests/placement-without-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -26,7 +26,7 @@ setting the checks is the lead's.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending: head 261110-191052-e8dc37 (node suite at 88f65db3f, same tests and code as e7e93fbfa) and build-test 261110-191640-dd5838; fails at master's code: 261110-191050-6a255b (69e797c65 = master + tests; exits 0 when the segment test fails and the existing-id test passes); mutants m1 261110-191418-21153b, m2 261110-191419-e7ea4e (exit 0 when the existing-id test fails) |
+| A1 | head 261110-191052-e8dc37 exit 0 (88f65db3f, same code and tests as e7e93fbfa: node suite 1158 checks ok; each shard of both 5-shard RESTOREs: 1 segment, highest id 1); fails at master's code: 261110-191050-6a255b exit 0 (69e797c65 = master + tests: every shard highest id 224, 8-15 segment files left; 10 of 38 checks fail; the existing-id test passes there, ruling 4); build-test 261110-191640-dd5838 pending; mutants m1 261110-191418-21153b, m2 261110-191419-e7ea4e pending (exit 0 when the existing-id test fails) |
 | A2 | pending: before 261110-191610-d043da (master), after 261110-191613-460eb8 (e7e93fbfa); builds 261110-191517-0eba87, 261110-191522-0281ed |
 | A3 | pending: build-test 261110-191640-dd5838, e2e 261110-191642-50ce83 |
 | A4 | `docs/mechanisms/placement.md` |
