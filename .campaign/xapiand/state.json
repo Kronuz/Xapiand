@@ -11060,7 +11060,7 @@
     "postings-fuzz-memory": {
       "accepted": {
         "security": {
-          "at": "2026-11-11T00:26:21",
+          "at": "2026-11-11T00:27:52",
           "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
           "blobs": {
             "CMakeLists.txt": "100644:6219ae70e669f381d1388ae85a47164ced5b6918",
@@ -11068,7 +11068,7 @@
           },
           "by": "review",
           "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
-          "criteria": "ca588310c4756920",
+          "criteria": "10089e29254ca99c",
           "findings": {
             "S1": {
               "jobs": [
@@ -11225,7 +11225,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-11T00:26:21",
+      "updated": "2026-11-11T00:27:52",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
