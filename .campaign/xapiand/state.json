@@ -2484,17 +2484,44 @@
         "docs/src/assets/**",
         "brand/README.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T15:37:29",
+          "commit": "c1526ab5118aff79101bf018c9cc99b0d63df9ae",
+          "criteria": {
+            "A1": "261111-152727-b4e819",
+            "A2": "`brand/README.md`: \"The docs site serves its logo, favicons and touch icons\""
+          },
+          "evidence": [
+            {
+              "cmd": "cd docs && npm ci && npm run build",
+              "commit": "81f82907fb18670c57632967d93c873d7ab8628a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-152727-b4e819",
+              "level": "light",
+              "seconds": 36.9,
+              "state": "done",
+              "what": "docs-site-icons check site at 81f82907fb18"
+            }
+          ],
+          "final": true,
+          "from": "16edab709995fb047b71aceaa2e8fb7e5e9332c3",
+          "reason": "",
+          "tested": "fde2eec60f91c1ca7af2e559c4584d56b5a759a4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "The docs site serves the brand's light and dark variants",
-      "updated": "2026-11-11T15:26:36",
-      "worktree": "../Xapiand-wt/xapiand/docs-site-icons"
+      "updated": "2026-11-11T15:37:44",
+      "worktree": ""
     },
     "docs-site-refresh": {
       "accepted": {},
