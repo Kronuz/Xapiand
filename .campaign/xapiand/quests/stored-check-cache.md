@@ -5,7 +5,10 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+strata's `stored_plugin::check` (include/strata/core/reader.hh:569-571) decodes each document's stored
+fields through one `stored_frame` cache, as `records()` beside it does, instead of decoding every
+document's whole frame into a fresh buffer. A segment check then allocates about one frame, not one
+per document (postings-fuzz-memory: up to 189 MB per input against 4.5 MB live). Repository: Kronuz/strata.
 
 ## Acceptance criteria
 
@@ -14,18 +17,17 @@ needs a job that passed at the landed code; tag one `[artifact]` (a committed `p
 `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only when a job
 cannot show it.
 
-- A1 <criterion>: <evidence>
+- A1 `check` on a segment of many documents per frame decodes each frame once: a test in the `build-test` check counts the decodes (or bytes allocated) and fails without the fix
+- A2 The rest of strata's suite passes: the `build-test` check
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No format or API change: `check` keeps its signature and results.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead: split from postings-fuzz-memory, which moves prospect's strata pin to this fix and runs its A3.
 
 ## May land early
 
-<Prefixes of the branch that are safe alone: refactors, tests, unused internal APIs, code behind
-a disabled switch. "None" when everything waits for the review; `land --upto` refuses then.>
+None.
