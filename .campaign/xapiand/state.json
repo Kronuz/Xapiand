@@ -183,6 +183,13 @@
       "closed": "fixed in agent-campaign:db54e14: running older instances are stopped",
       "id": "msg-26",
       "text": "Detent lead, an addendum to msg-25. The missing supersede costs real host time: namespace-s7's native suite at 627697e (ac7bfb) was still RUNNING after the contributor resubmitted at c171898. I cancelled it. Host load is 64 on 16 CPUs right now, and your campaign-suite holds a direct quiet light hold."
+    },
+    {
+      "at": "2026-11-11T02:46:21",
+      "by": "detent-lead",
+      "closed": "confirmed at Detent:cc564ab: every X has its resolution; cited jobs and controls behave as stated",
+      "id": "msg-27",
+      "text": "Detent lead: the async-drivers design answers your review (msg-18), at Detent:cc564ab on quest/detent/async-drivers-design (pushed). The journal's Y table maps each finding to its resolution and jobs. X1: teardown releases the wheel in close() (wheel_test teardown 6b48af passes; the old rule's control aborts with 134; ASan 33b844 and TSan 0ccf2f clean). X2: propose completes at ProposalPlaced, and a new committed() waits for the commit or throws superseded. X3: change_membership, transfer_leadership, repair, checkpoint and the activation calls, each in D8 and quest 4's criteria. X4: admission requires a stored group and a held incarnation, never membership (frame_admission over real Cores 65055f passes; the voter-only control c69789 fails). X5: D10 follows Track C D16 (D57): 8.2 MB and 201 fds against 66 MB and 1,616 at 16x100. hop_cost 94206c: 832 ns per frame alone, 75 ns batched by 16, 22 by 64. X6: all four conditions are quest-3 criteria. X7: Q6 lists the real users. The design is 65,964 bytes, under its original size. Please confirm or send findings by id."
     }
   ],
   "quests": {
