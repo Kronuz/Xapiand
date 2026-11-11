@@ -1,6 +1,6 @@
 # strata-races: journal
 
-State: waiting on jobs 261111-062745-9a0936 261111-062757-f52802 261111-062817-1fabdf 261111-062645-154f0d 261111-061320-6fa85e 261111-061322-03cbd0
+State: waiting on jobs 261111-062745-9a0936 261111-062757-f52802 261111-062817-1fabdf
 Quest: .campaign/xapiand/quests/strata-races.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs running for A1, A2, A4 (ids in State). Code and docs committed on strata
-quest/xapiand/strata-races (2ea3092b fixes, b7bd5251 driver exit status, 5e53b1a5 doc).
+A1's strict burst runs are queued (ids in State). A2 and A4's suite passed. Code and docs on strata
+quest/xapiand/strata-races (2ea3092b fixes, b7bd5251 driver exit status, 5e53b1a5 and cf76b825 doc).
 
 ## Next
 
@@ -21,7 +21,8 @@ quest/xapiand/strata-races (2ea3092b fixes, b7bd5251 driver exit status, 5e53b1a
 
 ## Blocked on
 
-Nothing.
+Nothing. For the lead: `campaign brief` does not see A3 as [artifact] (the tag sits after the colon
+in the quest line); the journal row above carries it.
 
 ## Evidence
 
@@ -33,13 +34,13 @@ b7bd5251. A2's mutant: `--fails-without` job at the head with main's resource_bu
 | Criterion | Evidence |
 |---|---|
 | A1 | strict 10-min runs, 2 x 10 waves x 16 at head: 261111-062745-9a0936, 261111-062757-f52802 (build 261111-062732-e9fd06, slot races-burst-head); main 10x16 --fails-without 261111-062817-1fabdf (build 261111-062806-177d38) |
-| A2 | 261111-061317-5cd220 (deterministic, head, passed); 261111-062645-154f0d (main's tick(), --fails-without); 261111-061320-6fa85e (TSan 20x16, head) |
+| A2 | 261111-061317-5cd220 (deterministic, passed at b7bd52511884); fails without: 261111-062645-154f0d (fails at resource_budget_test.cc:482); 261111-061320-6fa85e (TSan 20x16 at head: 0 of 320; main 3 of 320, 261111-053734-7d63a2) |
 | A3 | [artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick()): one-line ordering comment at each changed atomic |
-| A4 | 261111-061322-03cbd0 (suite); TSan suite and CI: on push (lead) |
+| A4 | 261111-061322-03cbd0 (suite, passed at b7bd52511884); TSan suite and CI: CI's sanitizer matrix, on push (lead) |
 
 ## Result
 
-<pending jobs>. How it works: strata `docs/perf/flakes.md`.
+Two races fixed (catalog counter-pair orders; tick() take-back after raise). TSan load 0 of 320 (main 3 of 320); hook test fails without the fix. Burst numbers pending. How it works: strata `docs/perf/flakes.md`.
 
 Superseded: 261111-061303-afa5e8 and 261111-061305-f25392 (zsh `$X:t` modifier mangled the sha),
 261111-061319-5f0ba7 (mutant failed as intended but --fails-without wants the command inverted; it
