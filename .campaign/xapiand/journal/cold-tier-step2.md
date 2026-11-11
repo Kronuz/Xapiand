@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-134919-80490f 261111-134927-7430a0
+State: waiting on jobs 261111-134927-7430a0
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -36,7 +36,11 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
    device flush mode? Harness strata:60ff029f prints per run the latency deciles, waited vs direct
    requests, the states waited on, and a device flush probe (4 KiB write + F_FULLFSYNC every 200 ms)
    per phase; `tiers.sh buildab` builds on and off from one tree (off = f3f7d9c2's catalog.hh).
-   Build 261111-134919-80490f, strict A/B 3 pairs 261111-134927-7430a0. Then the verdict in
+   Build 261111-134919-80490f passed (on and off differ only in catalog.hh); strict A/B 3 pairs
+   261111-134927-7430a0 queued. Read per run: if the slow-p50 runs' flush probe p50 is ~20 ms and
+   off's runs in the same mode keep p50 below it, the median crosses into the waited class because
+   holding hot at 500 sends more requests through a wake queued behind slow-mode opens (the cap's
+   cost in that mode, not the trigger's passes). Then the verdict in
    `docs/perf/catalog-tiers.md`; if the trigger causes it, one coalescing experiment.
 
 Lead's rulings 11-11 12:4x: (1) the trigger stays only if it costs no Zipf throughput beyond an
