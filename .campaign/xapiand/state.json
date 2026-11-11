@@ -290,7 +290,7 @@
       "files": [
         "docs/design/automata.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/automata-evaluation",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-09T21:02:45",
@@ -312,8 +312,8 @@
       "risk": "low",
       "status": "landed",
       "title": "Evaluate strata's automata and decide where it belongs",
-      "updated": "2026-11-09T21:02:46",
-      "worktree": "../prospect-wt/xapiand/automata-evaluation"
+      "updated": "2026-11-11T09:28:32",
+      "worktree": ""
     },
     "barrier-warning": {
       "accepted": {},
