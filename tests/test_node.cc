@@ -1948,9 +1948,9 @@ static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
 	const auto at = options.find("Allow: ");
 	CHECK(at != std::string::npos);
 	const auto allow = options.substr(at, options.find("\r\n", at) - at);
-	CHECK(allow.find("STORE") == std::string::npos);
+	CHECK(allow.find(" STORE") == std::string::npos);   // RESTORE is a verb of its own
 	for (const char* verb : {"GET", "POST", "PUT", "PATCH", "UPDATE", "UPSERT", "DELETE", "HEAD", "OPTIONS", "SEARCH", "COUNT", "INFO", "COMMIT", "DUMP", "RESTORE", "CHECK", "FLUSH", "QUIT"}) {
-		CHECK(allow.find(std::string(verb)) != std::string::npos);
+		CHECK(allow.find(std::string(" ") + verb) != std::string::npos);
 	}
 }
 
