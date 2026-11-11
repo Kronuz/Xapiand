@@ -16878,17 +16878,46 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T13:15:32",
+          "commit": "55437bef15b65ea36f47555aefe76145d79f66c5",
+          "criteria": {
+            "A1": "`brand/logo.svg` (3 paths, no raster or text); side by side: `brand/logo-vs-png.png` (PNG, master at 180x230, master at 3x, difference)",
+            "A2": "`brand/variants/light/` and `brand/variants/dark/`, each with logo.svg, favicon.svg, favicon.ico (16/32/48), apple-touch-icon.png, -152, -167, icon-192.png, icon-512.png",
+            "A3": "261111-130621-c1e6c1",
+            "A4": "`brand/README.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cd docs && npm ci && cd .. && node brand/build-icons.mjs && git diff --exit-code -- brand",
+              "commit": "e9be58823106422b287e1bd6bdb407c8734d6ee5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-130621-c1e6c1",
+              "level": "light",
+              "seconds": 6.6,
+              "state": "done",
+              "what": "xapiand-brand check icons at e9be58823106"
+            }
+          ],
+          "final": true,
+          "from": "2711b0c278167c82f9dc8e11e4221f635136e47e",
+          "reason": "",
+          "tested": "e9be58823106422b287e1bd6bdb407c8734d6ee5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand has a brand/ directory with a vector master logo and its icon variants",
-      "updated": "2026-11-11T13:06:16",
-      "worktree": "../Xapiand-wt/xapiand/xapiand-brand"
+      "updated": "2026-11-11T13:15:38",
+      "worktree": ""
     },
     "xapiand-final-release": {
       "accepted": {},
