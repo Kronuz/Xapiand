@@ -2346,17 +2346,40 @@
         "docs/src/lib/**",
         "docs/src/content/docs/welcome.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T19:22:17",
+          "commit": "d952478e080c5810d9fa3345fc2ee34273001756",
+          "evidence": [
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "6b83f72d5ce1f3dd6388ff3e0067eb280fcb256a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-190632-5c8257",
+              "level": "light",
+              "seconds": 172.3,
+              "state": "done",
+              "what": "docs-site-refresh-reference check e2e at 6b83f72d5ce1"
+            }
+          ],
+          "final": true,
+          "from": "cb1c0361ba565edd15a85c162abaab7dfb07c20e",
+          "reason": "",
+          "tested": "381ead88b82c3c83b6c6836103d4dd07c16c6db5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Rewrite the docs site's reference guide and tutorials, and map docs coverage",
-      "updated": "2026-11-10T15:24:03",
-      "worktree": "../Xapiand-wt/xapiand/docs-site-refresh-reference"
+      "updated": "2026-11-10T19:22:26",
+      "worktree": ""
     },
     "docs-upgrade-page": {
       "accepted": {},
