@@ -42,11 +42,11 @@ you examined, failures included, and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261110-170115-ba1167 (build-test; `test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted`; at a8a441930 the reactor let the search go 2078 us after the close) |
-| A2 | 261110-170115-ba1167 (build-test; `test_a_put_whose_client_half_closes_completes_durably`) |
-| A3 | 261110-170115-ba1167 (build-test; the tests read `xapiand_http_requests_cancelled` from `GET /:metrics`) and `docs/mechanisms/cancellation.md`, quoted below |
-| A4 | 261110-170115-ba1167 (build-test; `test_the_admission_peaks_rise_under_load` reads both peaks from `GET /:metrics`) |
-| A5 | 261110-170115-ba1167 (build-test; `test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled`; at a8a441930, 3082 us) |
+| A1 | 261110-173050-487b1b (build-test; `test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted`; at a8a441930 the reactor let the search go 2078 us after the close) |
+| A2 | 261110-173050-487b1b (build-test; `test_a_put_whose_client_half_closes_completes_durably`) |
+| A3 | 261110-173050-487b1b (build-test; the tests read `xapiand_http_requests_cancelled` from `GET /:metrics`) and `docs/mechanisms/cancellation.md`, quoted below |
+| A4 | 261110-173050-487b1b (build-test; `test_the_admission_peaks_rise_under_load` reads both peaks from `GET /:metrics`) |
+| A5 | 261110-173050-487b1b (build-test; `test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled`; at a8a441930, 3082 us) |
 
 ### Fails without the fix
 
