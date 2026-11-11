@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-113113-f9464c 261111-113116-5b7a23 261111-113118-6d8a9c 261111-113121-6aaa2d
+State: waiting on jobs 261111-113113-f9464c 261111-113116-5b7a23 261111-113118-6d8a9c 261111-113121-6aaa2d 261111-113837-7882c4 261111-113839-ade11c 261111-113854-c2c774 261111-113856-358d4c
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -19,6 +19,12 @@ Lead's rulings of 11-11 (quest Decisions) on F1/F2, performance assignment. Head
   trigger (the budget's do: `resource_budget::reserve` posts on its soft cap's edge), so in T3,
   far below the budget's caps, only the 1 s timer posts passes. Hypothesis to test: overshoot ~
   inflow x period, not queued transitions. Job 261111-113116-5b7a23 (strict, after build f9464c).
+  Experiment 1 (queued before the measurement read, on the strength of 8f5208's sawtooth):
+  strata:5d3c948a, a miss and a last unpin post a pass when soft_open or soft_hot is over net of
+  relief in flight (`over_soft()`), test `soft_caps_post` (timer never fires). Jobs: build-test
+  261111-113837-7882c4, mutant (calls removed, must fail) 261111-113839-ade11c, tiers build
+  261111-113854-c2c774 then T3 rerun 261111-113856-358d4c. If 5b7a23 rejects the hypothesis,
+  revert 5d3c948a.
 - T2 hot d1s1: `tiers.sh t2hot` (strata:f3f7d9c2), 8 pairs alternating order, exclusive:
   261111-113118-6d8a9c.
 - T2 cold: rejudged on same-mode pairs from fdea98, 609714, f9dbcf (strata:472ec032): d1s1 and
