@@ -8309,12 +8309,44 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/manifest-log",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T16:25:34",
+          "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-142524-056dee",
+              "level": "light",
+              "seconds": 229.8,
+              "state": "done",
+              "what": "manifest-log check build-test at 15d39c309496"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "77adb0569e4c43445629a4e39f25c37d9ad22c90",
+          "later": [
+            "261110-162534-50495f"
+          ],
+          "reason": "",
+          "tested": "15d39c3094966b262ac643327f6c68fa5bfa4dee"
+        }
+      ],
       "lenses": [
         "design",
         "durability",
         "security"
       ],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [
@@ -8322,9 +8354,9 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T16:25:21",
+      "updated": "2026-11-10T16:25:35",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
