@@ -5512,8 +5512,8 @@
           "verdict": "APPROVE"
         },
         "durability": {
-          "at": "2026-11-10T14:24:19",
-          "base": "77adb0569e4c43445629a4e39f25c37d9ad22c90",
+          "at": "2026-11-10T16:23:56",
+          "base": "3df7af4ff4ac1534cbebd69d1b54c046ea65f155",
           "blobs": {
             "CMakeLists.txt": "100644:f624e692202e5923ad3fdf93d4677fb7b8ddad8a",
             "bench/field_table/field_table.cc": "100644:4ada5ce138a11e1dbea8d300825988c7cb7ecdf8",
@@ -6811,9 +6811,9 @@
             "tools/mutants/fields.py": "100755:7bc6b115e49f42d97d489d8680f263607070d27f",
             "tools/mutants/keys.py": "100755:c01c120b8a1060921d19ac757aee4dabcb5a7aec"
           },
-          "brief": "29036e07e72592c9",
+          "brief": "514fa4a5139e4728",
           "by": "review",
-          "commit": "85a51e0ade3623ef3e354a0207dc93afe79365cc",
+          "commit": "1ebeff876de93af2442045d89757f91076117520",
           "findings": {},
           "note": "",
           "review": "0363413b1f4a5f1729e380ad006b8b1272edf20c",
@@ -8324,7 +8324,7 @@
       "risk": "high",
       "status": "active",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T16:23:55",
+      "updated": "2026-11-10T16:23:56",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
