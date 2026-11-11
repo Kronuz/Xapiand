@@ -2467,6 +2467,8 @@
     "docs-site-icons": {
       "accepted": {},
       "after": [],
+      "base": "fdb897d7f3011bd163c5ba6e64fd63c1f91667ba",
+      "branch": "quest/xapiand/docs-site-icons",
       "checks": [
         {
           "cmd": "cd docs && npm ci && npm run build",
@@ -2489,9 +2491,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "The docs site serves the brand's light and dark variants",
-      "updated": "2026-11-11T15:26:06"
+      "updated": "2026-11-11T15:26:36",
+      "worktree": "../Xapiand-wt/xapiand/docs-site-icons"
     },
     "docs-site-refresh": {
       "accepted": {},
