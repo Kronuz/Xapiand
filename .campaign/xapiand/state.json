@@ -2757,6 +2757,33 @@
       "updated": "2026-11-08T23:34:43",
       "worktree": ""
     },
+    "e2e-report-cap": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/e2e_capture.sh",
+        "harness/e2e_assert.py"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "The docs E2E's newman report stays parseable",
+      "updated": "2026-11-11T01:29:53"
+    },
     "engine-core": {
       "accepted": {},
       "after": [],
