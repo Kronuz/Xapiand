@@ -8387,18 +8387,44 @@
         "include/**",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/manifest-log-prospect",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-10T16:53:43",
+          "commit": "bf4ed913f093ea0644520c58465c3b18270bc975",
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ff99494078adc9a8aebc6d7a19b66d0151b63e91",
+              "docs": [
+                "docs/design/automata.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261109-162807-511d50",
+              "level": "light",
+              "seconds": 1177.6,
+              "state": "done",
+              "what": "manifest-log-prospect check build-test at ff99494078ad"
+            }
+          ],
+          "final": true,
+          "from": "e8e5bd972ddce170743c0bcb935ba0cf7cd3d5f2",
+          "reason": "",
+          "tested": "bf4ed913f093ea0644520c58465c3b18270bc975"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "prospect moves to strata's manifest log",
-      "updated": "2026-11-09T17:18:47",
-      "worktree": "../prospect-wt/xapiand/manifest-log-prospect"
+      "updated": "2026-11-10T16:53:51",
+      "worktree": ""
     },
     "manifest-log-steps12": {
       "accepted": {},
