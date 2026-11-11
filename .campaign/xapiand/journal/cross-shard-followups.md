@@ -1,6 +1,6 @@
 # cross-shard-followups: journal
 
-State: waiting on jobs 261111-141746-cf5a35 261111-141748-7c992a 261111-141751-586195 261111-141805-3e0ed7
+State: waiting on jobs 261111-154234-d4410a 261111-154237-c1fcd8
 Quest: .campaign/xapiand/quests/cross-shard-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,6 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
+Waiting on d4410a and c1fcd8; then State ready for review (paste `campaign brief`'s table if it changes).
+(Earlier:) 
 The lead's report: the PATCH test failed in the full binary and CI (tests/test_node.cc:2075). Cause (found with a
 diag job printing the PATCH's lookups, 261111-140319-4e82d8): not a race. `const MsgPack id{x.id}` with braces
 builds a one-element array, so the PATCH looked up the key of `["repatch"]`, found nothing and ended with
@@ -30,12 +32,18 @@ Nothing.
 
 ## Evidence
 
+At 24c5bacc6 (the lead: suite 3e0ed7 and the replace_by_term fails-without passed; the PATCH one, 586195, passed the
+test with must_exist disabled: the PATCH test does not depend on must_exist, since with it off the write is refused
+as another document's key and the PATCH reads again). The part it guards is the version check before doc_not_found
+(src/engine/strata/shard.cc:873): without it the stale write is placed afresh over the new document. Its mutant:
+261111-154234-d4410a (deletes that line; exit 0 only when the test prints FAIL). A2: 261111-154237-c1fcd8.
+
 | Criterion | Evidence |
 |---|---|
-| A1 | 261111-133750-2603c2 (pass), 261111-133753-938445, 261111-133756-65f3d0 (fails-without); pending |
-| A2 | reasoning below (no test can reach it) |
-| A3 | src/engine/strata/shard.cc: `assert(!args.must_exist || !native.key().empty())` |
-| A4 | 261111-133814-8d444b; pending |
+| A1 | 261111-141746-cf5a35 (both tests 50 times each); fails without: 261111-141748-7c992a (replace_by_term, must_exist disabled), 261111-154234-d4410a (PATCH, version check removed) |
+| A2 | 261111-154237-c1fcd8 (the catch is doc_not_found only); no test can reach a not_found after an applied write (Result) |
+| A3 | 261111-141746-cf5a35 (builds with the assert); src/engine/strata/shard.cc `assert(!args.must_exist || !native.key().empty())` |
+| A4 | 261111-141805-3e0ed7 |
 
 ## Result
 
