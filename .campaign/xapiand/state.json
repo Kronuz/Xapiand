@@ -11223,20 +11223,61 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/postings-fuzz-memory",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T00:46:28",
+          "commit": "f0d78713625bb97e346d1ec12ba6a747a59d3140",
+          "criteria": {
+            "A1": "`fuzz/MEMORY.md`",
+            "A2": "261110-232704-7f9c0e (passed at 7cb5226ab5db; ignores docs-only fuzz/MEMORY.md)",
+            "A3": "261111-001821-97b359 (passed at 7cb5226ab5db; ignores docs-only fuzz/MEMORY.md)",
+            "A4": "261110-232704-7f9c0e (passed at 7cb5226ab5db; ignores docs-only fuzz/MEMORY.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
+              "docs": [
+                "fuzz/MEMORY.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-232704-7f9c0e",
+              "level": "light",
+              "seconds": 877.5,
+              "state": "done",
+              "what": "postings-fuzz-memory check build-test at 7cb5226ab5db"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "f0d78713625bb97e346d1ec12ba6a747a59d3140",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "bf4ed913f093ea0644520c58465c3b18270bc975",
+          "later": [
+            "261111-004629-4998c0"
+          ],
+          "reason": "",
+          "tested": "f0d78713625bb97e346d1ec12ba6a747a59d3140"
+        }
+      ],
       "lenses": [
         "security"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-11T00:28:41",
-      "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
+      "updated": "2026-11-11T00:46:33",
+      "worktree": ""
     },
     "pressure-flush": {
       "accepted": {},
