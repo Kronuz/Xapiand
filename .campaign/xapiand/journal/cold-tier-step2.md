@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-123742-b13378 261111-123743-7732e9 261111-123757-b065fc 261111-123758-7ea903 261111-123800-7a33ff 261111-124103-7e9274 261111-124104-418363
+State: waiting on jobs 261111-134919-80490f 261111-134927-7430a0
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,6 +31,13 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
   rejudged (472ec032). `docs/mechanisms/catalog.md` names who posts a pass (a5399d7a).
 
 ## Next
+
+0. Lead's question 11-11 (after 418363): the 19.4/19.7 ms Zipf p50 in 2 of 4 "on" runs, trigger or
+   device flush mode? Harness strata:60ff029f prints per run the latency deciles, waited vs direct
+   requests, the states waited on, and a device flush probe (4 KiB write + F_FULLFSYNC every 200 ms)
+   per phase; `tiers.sh buildab` builds on and off from one tree (off = f3f7d9c2's catalog.hh).
+   Build 261111-134919-80490f, strict A/B 3 pairs 261111-134927-7430a0. Then the verdict in
+   `docs/perf/catalog-tiers.md`; if the trigger causes it, one coalescing experiment.
 
 Lead's rulings 11-11 12:4x: (1) the trigger stays only if it costs no Zipf throughput beyond an
 A/A spread; (2) T2 hot d1s1 a recorded residual (done); (3) T1 warm's measured
