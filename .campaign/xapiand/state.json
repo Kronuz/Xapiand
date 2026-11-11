@@ -302,6 +302,8 @@
         "src/opts.h",
         "src/engine/strata/**",
         "src/manager.cc",
+        "src/database/pool.cc",
+        "src/database/pool.h",
         "tests/**",
         "docs/src/content/docs/**",
         "CMakeLists.txt"
@@ -396,7 +398,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-10T22:25:14",
+      "updated": "2026-11-10T22:28:43",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
