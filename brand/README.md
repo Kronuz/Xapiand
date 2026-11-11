@@ -32,6 +32,6 @@ every variant from the master into `variants/<name>/`, rasterizing each PNG once
 | `light` | The master: green `#8fc44a`, white layers and rim; tiles `#fdfdfc` | Light pages; the live variant |
 | `dark` | No rim, so no white halo on a dark page; tiles `#1a1a1a` | Dark pages |
 
-`light` is the current logo and the one meant to be live. The site still serves
-`docs/src/assets/logo.png` and `docs/public/favicon.ico`; moving it to `light` (and to `dark` for
-the dark theme's page logo) is a separate step.
+`light` is the live logo. The docs site serves its logo, favicons and touch icons
+(`docs/src/assets/logo-light.svg`, `docs/public/`), and `dark`'s logo on dark pages
+(`docs/src/assets/logo-dark.svg`); copy them again after `build-icons.mjs` changes a variant.

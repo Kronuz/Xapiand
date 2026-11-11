@@ -65,6 +65,12 @@ Phase 8's quests cite.
   5.7x unless a later commit changed it. The local closing baseline of 2026-11-04 adds a T11 idle
   memory REGRESSION against the Xapian-only release, 1.28x (`docs/perf/closing-baseline-2026-11-04/`).
 
+- Lead, 11-11 (R4): T8's functional overloads run at `--processors 2`. The 503-within-a-slice claim
+  does not depend on the reactor count, and 16 reactors would need about 20,000 loopback connections
+  (past one address's 16,384 ephemeral ports). The 16-reactor timing suite keeps its own rows.
+- Lead, 11-11 (A13): the restore corpora are quest x7-coverage's A2 (`tests/corpora/`); A13 cites its
+  replay job once x7-coverage lands, and waits on it until then.
+
 ## May land early
 
 None: the report is one landing.
