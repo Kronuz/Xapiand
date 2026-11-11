@@ -11060,21 +11060,25 @@
     "postings-fuzz-memory": {
       "accepted": {
         "security": {
-          "at": "2026-11-11T00:27:52",
+          "at": "2026-11-11T00:28:41",
           "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
           "blobs": {
             "CMakeLists.txt": "100644:6219ae70e669f381d1388ae85a47164ced5b6918",
+            "fuzz/MEMORY.md": "100644:c93a5c128354aa533ef12743a5ca0e8aeb1352c5",
             "fuzz/rss.sh": "100755:4df89aa01b3dc0516673436f19be6c4214abc0cf"
           },
           "by": "review",
-          "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
-          "criteria": "10089e29254ca99c",
+          "commit": "f0d78713625bb97e346d1ec12ba6a747a59d3140",
+          "criteria": "364efe5c4d4453c3",
           "findings": {
             "S1": {
               "jobs": [
                 {
                   "cmd": "bash /Users/kronuz/code/Kronuz/prospect/.scratch/review-pfm/overlap.sh",
                   "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
+                  "docs": [
+                    "fuzz/MEMORY.md"
+                  ],
                   "exit": 0,
                   "host": "kronuz",
                   "job": "261110-232705-0b3de6",
@@ -11087,6 +11091,12 @@
               "kind": "defect",
               "reproduced": true
             }
+          },
+          "fix_scope": {
+            "paths": [
+              "fuzz/MEMORY.md"
+            ],
+            "reason": "fuzz/MEMORY.md is a note recording the measurements; it adds no code"
           },
           "note": "",
           "review": "53b0d4f2bc3b14adbcd969766da101ff7d7c40a2",
@@ -11225,7 +11235,7 @@
       "risk": "high",
       "status": "active",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-11T00:27:52",
+      "updated": "2026-11-11T00:28:41",
       "worktree": "../prospect-wt/xapiand/postings-fuzz-memory"
     },
     "pressure-flush": {
