@@ -12999,6 +12999,8 @@
     "stored-check-cache": {
       "accepted": {},
       "after": [],
+      "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+      "branch": "quest/xapiand/stored-check-cache",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13042,6 +13044,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/stored-check-cache",
       "landed": [],
       "lenses": [
         "correctness"
@@ -13049,11 +13052,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: cold-tier-step2's globs cover include/strata/** and test/**, but its branch changes none of reader.hh, test/CMakeLists.txt, CMakeLists.txt or a reader_check test; this is a one-line fix plus one test",
       "repo": "../strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "strata's stored check decodes with one frame cache",
-      "updated": "2026-11-10T18:15:31"
+      "updated": "2026-11-10T18:16:06",
+      "worktree": "../strata-wt/xapiand/stored-check-cache"
     },
     "stored-short-section": {
       "accepted": {},
