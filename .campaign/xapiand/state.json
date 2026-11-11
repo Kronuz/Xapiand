@@ -12336,6 +12336,39 @@
       "updated": "2026-11-10T03:20:14",
       "worktree": ""
     },
+    "read-only-open": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "test/index_test.cc",
+        "docs/design/read-only-open.md",
+        "docs/perf/open-sync.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [
+        "open-one-flush"
+      ],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A search opens an index with no lock and no flush; the first write upgrades",
+      "updated": "2026-11-11T15:26:01"
+    },
     "reclaim-backlog": {
       "accepted": {},
       "after": [],
