@@ -81,14 +81,12 @@ What each job decides and why its size suffices:
 
 ## Next
 
-1. When the jobs land: score A1 with `bench/phase2/gate.py --md --target 1.0 --prospect
-   prospect-merged` (after) and `--as lucene-10.4.0-st=lucene-10.4.0 --as
-   tantivy-0.26-st=tantivy-0.26` (before); A2-A5 with `bench/gate3_report.py --budget-mb N DIR`.
-   A second run only for a row whose interval straddles its target (D59).
-2. Replace the gate doc's pending table with the f0d7871 rows (A11), coverage numbers in
-   `docs/testing/parity.md` (A7), the Evidence table below.
-3. CI: no runs on the branch head (I never push); the lead pushes or lands with --no-ci.
-4. Correctness review: not launched (the lead's).
+1. When the fba0e0d reruns land: score A3 (bytes written and device columns) and the eight-
+   thread row (gate3_report.py; reference = the faster of Tantivy-st and Lucene-st per tag),
+   pool A1's four trials per row in gate.py, check the reruns agree with fe20f43.
+2. Fill those rows in the gate report and status table (A11); cite the fba0e0d jobs in the
+   Evidence table; A7 cites coverage 2332c9, A8 the FreeBSD smoke e0cd69.
+3. Then State: ready for review (correctness lens). No push.
 
 ## Blocked on
 
@@ -100,10 +98,8 @@ miss in the gate doc; the fix (charge merge buffers) is a follow-up quest; state
 (high priority). 6. A8: FreeBSD as a deferred check set by the lead; arm64 waits for a local host.
 Folded into `docs/gates/phase-3-ratchets.md` at prospect `3e92ea9`.
 
-Finding for the lead (not blocking): D51 item 4's follow-up (charge merge buffers to the
-budget) rests on a premise the probe refutes: prospect keyed 5M with PROSPECT_AUTO_MERGE=0
-peaked at 3,221 MiB, the same as with merges (job 261110-022424-057569). The excess over the
-2,056 MiB budget is elsewhere in the indexing path; the follow-up quest should measure where.
+Finding for the lead, answered: the probe's same-peak result is explained by prospect
+docs/perf/index-memory.md (b23d139); the fix is quest flush-within-budget. A4 cites it.
 
 A8 deferred check, the command for the lead once smoke 261110-023726-f5b60e passes (light:
 the first run builds on the VM's 4 vCPUs; its times are informational, prospect only, since
