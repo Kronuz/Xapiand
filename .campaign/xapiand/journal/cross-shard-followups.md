@@ -1,6 +1,6 @@
 # cross-shard-followups: journal
 
-State: waiting on jobs 261111-133423-00a96f 261111-133433-7e8cac 261111-133436-b23def
+State: waiting on jobs 261111-133750-2603c2 261111-133753-938445 261111-133756-65f3d0 261111-133814-8d444b
 Quest: .campaign/xapiand/quests/cross-shard-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,14 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-N1-N3 are committed (Xapiand:d291dbe03) and pushed. Jobs run the new tests and the two mutants; then the suite
-(`campaign verify cross-shard-followups`) for A4, after the mutants (they share the build slot).
+N1-N3 are committed (Xapiand:d291dbe03) and pushed. Jobs (the lead's inline resubmission; my first three, which ran a
+script outside the repo, were cancelled): 261111-133750-2603c2 (A1/A3 pass), 261111-133753-938445 and
+261111-133756-65f3d0 (A1 fails-without, must_exist disabled by sed). Suite for A4: 261111-133814-8d444b.
+Every job's command goes inline or in a committed file from now on.
 
 ## Next
 
-1. When the three jobs finish, run `campaign verify cross-shard-followups` (A4); read its result and CI.
+1. When the four jobs finish, read results and CI.
 2. Paste `campaign brief`'s Evidence table below, fill Result, set State "ready for review".
 
 ## Blocked on
@@ -25,10 +27,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending jobs |
+| A1 | 261111-133750-2603c2 (pass), 261111-133753-938445, 261111-133756-65f3d0 (fails-without); pending |
 | A2 | reasoning below (no test can reach it) |
 | A3 | src/engine/strata/shard.cc: `assert(!args.must_exist || !native.key().empty())` |
-| A4 | pending |
+| A4 | 261111-133814-8d444b; pending |
 
 ## Result
 
@@ -55,5 +57,4 @@ shard's storage; the storage's sweep is where it belongs.
   (that needs pool.h and the task library, outside the file set). Idle after a task starts means parked only
   while nothing it awaits resumes from another thread; the tests' later checks (the tasks complete after the
   release, and the end state) would hang or fail if that were wrong.
-- Mutants edit the build checkout by sed inside the job (reverted by `git checkout`), run after the passing job
-  (`--after`), since they share the build slot.
+- Mutants are applied by sed inside the job's own command (the lead's resubmission).
