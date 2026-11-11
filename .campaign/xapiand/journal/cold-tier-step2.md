@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-034629-8f5208
+State: waiting on jobs 261111-085642-fdea98 261111-085644-609714
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,35 +9,28 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Head strata:9621595f (not pushed: the lead pushes). Since 948c0869: strata main merged
-(strata:1c4bb39b: 5fd65508, the TSan smoke fix cherry-picked, and the fd-budget and open-sync
-notes); the T3 sampler brackets the kernel's descriptor count with two budget reads
-(strata:9621595f; a 3,000-index run shows a gap of 3, the stdio descriptors); the 10-segment rows
-written (`docs/perf/catalog-tiers.md`).
+Head strata:229165d3 (docs only over 9621595f; not pushed: the lead pushes). Every rerun at
+9621595f finished and is read into the Evidence below and `docs/perf/catalog-tiers.md`:
+T3 8f5208 PASS (peaks open 4,905, hot 3,241; at most 11 descriptors beyond the budget's count);
+T1 efe281 and 083bc8 (heaps as before; hot RSS +3% to +9% over main); K6 a253be (hot heap equals
+main's, RSS -0.0% to +3.3%); T4 a2d41c and bbb067 (4 of 4 PASS); T2/T2d 10 segments f9dbcf (warm
+defer below cold at p50 and p99; 2.8x at p50 in its worst pair); A2 eb666b and 1edccb, A7/A12
+bf4776, build-test 5cd30b passed.
 
-- Every job I waited on passed: build-test 261111-011626-b1b43d (948c0869); A7
-  261111-010253-46fd89 (the section cases, three reverts killed, the whole suite eager 74 of 74);
-  A2 261111-010255-f16b39 (162 of 162 at 1,000 seeds) and 261111-010257-bace72 (TSan: S4-S3,
-  S4-X2, S7-T1, S7-T2, S7-T3, 5 of 5); fixtures 261111-011615-c7bbb1 (10 segments each); T1
-  10-segment 261111-011618-0d4ed0; T2/T2d 10-segment 261111-011622-bbbac4.
-- CI at strata:948c0869 (run 42993976189): every job green, `linux-tsan` included.
-- Resubmitted under D59 for what the sampler fix touches: the binaries (2701ae), T3 (8f5208), and
-  build-test at the head (5cd30b). T4's gate is its hit ratio, which the sampler does not touch;
-  T1, T2 and K6 do not run the sampler. The merge changes no code of this branch (5fd65508 is the
-  same change as 9bf6b833).
-- `campaign brief` counts a job at an older commit whose diff to the head touches `bench/` as
-  "ran other code". After 9621595f that covers the jobs above but 2701ae, 8f5208, 5cd30b: its
-  rerun list is `campaign job rerun 261111-010253-46fd89 261111-010255-f16b39
-  261111-010257-bace72 261110-211221-3a7f09 261111-011618-0d4ed0 261110-211225-45bedb
-  261110-211226-81fd7c 261111-011622-bbbac4 261110-211229-6ec5bb 261110-211231-026a08`; the
-  lead's call under D59 (only `bench/catalog_tiers/catalog_tiers.cc`'s sampler and docs changed).
+- 261111-035757-23475b (T2/T2d d1s1, d1000s1, d1000s10 in one job) hit its 10-minute bound
+  (invalid). Split under D59: d1000s10 is f9dbcf's; d1s1 is 261111-085642-fdea98 and d1000s1
+  261111-085644-609714, one strict job each (about 3.5 min each by 23475b's log). Until they
+  finish, the doc keeps those two rows from 81fd7c at dbfc1898, labelled.
+- `campaign job rerun 261110-211226-81fd7c` is answered by that split, not run: a rerun would
+  repeat 23475b's three fixtures in one 10-minute job.
 
 ## Next
 
-1. Read 8f5208 (T3 with the bracketed sampler: PASS and a gap near 3) into `docs/perf/catalog-tiers.md`.
-   Then State: ready for review (correctness lens). Build-test at the head, 261111-034631-5cd30b,
-   passed; the binaries' build 261111-034628-2701ae passed.
-2. Delete `.scratch/tiers`, `.scratch/k6` and `.scratch/tiers-try` once the rows are final.
+1. When fdea98 and 609714 finish: put their rows in `docs/perf/catalog-tiers.md` (drop the
+   "(dbfc1898)" labels and the jobs note), cite them for A3 to A5 below. A second run only if a
+   row's interval straddles A5's "warm below cold" (D59).
+2. State: ready for review (correctness lens).
+3. Delete `.scratch/tiers`, `.scratch/k6` and `.scratch/tiers-try` once the rows are final.
 
 ## Blocked on
 
@@ -92,22 +85,28 @@ minutes when it runs.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-011626-b1b43d, head 261111-034631-5cd30b; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
-| A2 | 261111-010255-f16b39: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-010257-bace72: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`catalog_test.cc` static_assert) |
-| A3 | main strata:15d39c30's `idle_index` interleaved in each row's job: 261110-211221-3a7f09, 261111-011618-0d4ed0 (T1), 261110-211226-81fd7c, 261111-011622-bbbac4 (T2/T2d), 261110-211225-45bedb (K6). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
-| A4 | macOS warm, one strict job per row (D59): T1 261110-211221-3a7f09, 261111-011618-0d4ed0; T2 261110-211226-81fd7c, 261111-011622-bbbac4; T3 261111-034629-8f5208 (50,000, 25x the open cap; earlier 261110-211228-c5746c PASS); T4 261110-211229-6ec5bb, 261110-211231-026a08 PASS. `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
-| A5 | macOS warm: T2d warm defer below cold at p50 and p99 on every fixture: 261110-211226-81fd7c (1 segment, at least 230x at p50), 261111-011622-bbbac4 (10 segments, 45x). Dropped and Linux: Milestone checks |
+| A1 | `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
+| A2 | 261111-035757-eb666b: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-035757-1edccb: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`test/catalog_test.cc` static_assert) |
+| A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-035757-f9dbcf (T2/T2d d1000s10), 261111-035757-a253be (K6); d1s1 and d1000s1 T2/T2d pending (261111-085642-fdea98, 261111-085644-609714). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
+| A4 | macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-035757-f9dbcf (d1000s10), d1s1 and d1000s1 pending (261111-085642-fdea98, 261111-085644-609714); T3 261111-034629-8f5208 PASS (50,000, 25x the open cap); T4 261111-035757-a2d41c, 261111-035757-bbb067, 4 of 4 PASS. `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
+| A5 | macOS warm: T2d warm defer below cold at p50 and p99: 261111-035757-f9dbcf (10 segments: 351-394 against 1,097-21,908 µs at p50, 501-799 against 42,923-57,516 at p99); 1 segment pending (261111-085642-fdea98, 261111-085644-609714). Dropped and Linux: Milestone checks |
 | A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
-| A7 | 261111-010253-46fd89: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
-| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261111-011626-b1b43d, head 261111-034631-5cd30b |
-| A9 | 261110-211225-45bedb: `bench/idle_index/k6.sh measure` 1,000 indexes, 2 pairs: hot's heap equals main's, RSS -2.0% to +1.4%; warm and lazy rows in `docs/perf/catalog-tiers.md` |
-| A10 | [artifact] `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b, 85dd1df6, 8f372200): prospect's and Xapiand's sites with the pin bumps (prospect:e49453d, Xapiand:74d8236e5); 261110-164333-5b4cd8 ran prospect lazy at its pin (48 of 51, the 3 listed there) |
+| A7 | 261111-035757-bf4776: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
+| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261111-034631-5cd30b at strata:9621595f |
+| A9 | 261111-035757-a253be: `bench/idle_index/k6.sh measure` 1,000 indexes, 2 pairs: hot's heap equals main's, RSS -0.0% to +3.3%; warm and lazy rows in `docs/perf/catalog-tiers.md` |
+| A10 | [artifact] `docs/status/cold-tier.md` "K7: who builds snapshots from `seg()`" (strata:5e06300b, 85dd1df6, 8f372200): prospect's and Xapiand's sites with the pin bumps that adopt `seg()` (prospect:e49453d, Xapiand:74d8236e5), and the six prospect cases a lazy open leaves to the first map |
 | A11 | CI run 42993976189 at strata:948c0869: every job green (`ci:linux-tsan`, `ci:linux-asan-ubsan`, `ci:freebsd-x86_64`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`) |
-| A12 | lazy is the default (strata:6d4e1164); build-test 261111-034631-5cd30b; the whole suite eager (`STRATA_EAGER_SEGMENTS=1`) in 261111-010253-46fd89, 74 of 74 |
+| A12 | lazy is the default (strata:6d4e1164); build-test 261111-034631-5cd30b; the whole suite eager (`STRATA_EAGER_SEGMENTS=1`) in 261111-035757-bf4776 |
 | A13 | [artifact] `docs/design/cold-tier.md` revision 8 (strata:19ea55d9, over design/cold-tier's revision 7 merged at 6f8884bc): item 5b's host and word rows in D4, the ledger's "Design vs code" in D4, fence replacement, commit chore and create intent in D5, the limits |
-| A14 | [artifact] `docs/status/cold-tier-step2.md`: Q6 ruled (`cold-tier.md` Q6), item 6's seam ruling applied ("Item 6's seam ruling"), the last questions answered or left to the lead ("Questions for the lead and the architect", strata:7a5ca76a: question 3's by-key A/B is the lead's measurement) |
+| A14 | [artifact] `docs/status/cold-tier-step2.md`: Q6 ruled (`docs/design/cold-tier.md` Q6), item 6's seam ruling applied ("Item 6's seam ruling"), the last questions answered or left to the lead ("Questions for the lead and the architect", strata:7a5ca76a: question 3's by-key A/B is the lead's measurement) |
 
-Examined: 261110-164701-5446c4, 261110-164703-b52661 (cancelled: `$JOB_REF_MAIN` unexpanded
+Examined: 261110-164333-5b4cd8 (prospect's suite at its pin, lazy for the whole run: 48 of 51,
+exit 8; the three failures are the six cases K7 lists for prospect's pin bump, so it informs A10
+and proves nothing by passing). 261111-035757-23475b (timeout: split, see Doing).
+261110-211226-81fd7c, 261110-211221-3a7f09, 261111-011618-0d4ed0, 261111-011622-bbbac4,
+261110-211225-45bedb, 261110-211229-6ec5bb, 261110-211231-026a08, 261111-010253-46fd89,
+261111-010255-f16b39, 261111-010257-bace72, 261111-011626-b1b43d (superseded by the reruns at
+9621595f). 261110-164701-5446c4, 261110-164703-b52661 (cancelled: `$JOB_REF_MAIN` unexpanded
 without a shell), 261110-164726-ca2d5c (cancelled: replaced by the interleaved f0141f),
 261110-165548-809d01 and 261110-165819-a33792 (cancelled: build-test superseded by a newer head).
 261110-165809-f0141f and the 14 catalog_tiers strict jobs 8e474b to 151048 (cancelled under D59);
@@ -177,3 +176,9 @@ the jobs at 955343df, 9ef55ee5 and 338e72c2 (superseded: see Doing).
   `CMakeLists.txt`) were cancelled before they ran and resubmitted at strata:c71d904f (tiers.sh now builds in fresh directories: a build directory from another job's checkout fails CMake).
 - A4: `idle_index`'s meters and heap counter move to `bench/idle_index/meters.hh` and
   `heap_count.hh` (no change in what it prints), so both harnesses meter alike.
+- A9: K6's job a253be at strata:9621595f measured `.scratch/k6`'s binaries built at strata:dbfc1898
+  (k6.sh prints that commit). Their only code diff to 9621595f is `reader.hh`'s stored frame
+  decode and check (main's e5979526, 71750940), which K6's open-then-meter never reaches, so the
+  row stands at the head; not rerun (the lead: finished results stand).
+- A3 to A5: the brief's `campaign job rerun 261110-211226-81fd7c` is met by splitting it (23475b,
+  its rerun, timed out at 10 minutes): one strict job per fixture, d1000s10 already f9dbcf's.
