@@ -1,31 +1,24 @@
-# stored-frame-bound: A stored frame's records end where the next frame starts
-
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status stored-frame-bound`.
+# stored-frame-bound
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A stored frame whose record count runs into the next frame's ordinals is corrupt. `decode_stored_frame`
+rejects it, so the stored check, `records()` and merge agree with point reads again
+(postings-fuzz-memory's security review, S1).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job that passed at the landed code, normally the suite; tag one `[artifact]` (a committed
-`path`), `[decision]` (an id in PLAN.md's Decisions table) or `[manual]` (checked by hand) only
-when a job cannot show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 `decode_stored_frame` (include/strata/core/reader.hh) rejects a frame with `n > next_first - first`
+  when a frame follows; a test in test/reader_check_test.cc crafts the overlapping segment of the review's
+  `overlap.cc` probe (prospect `.scratch/review-pfm/`), and `check_segment` throws on it: the test passes at
+  the head and a revert job shows it failing without the line: jobs
+- A2 The suite: the `build-test` check
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+The bound is strict `>`: a frame may hold fewer records than its ordinal span only if the format allows
+gaps; if the writer never leaves one, say so in the journal and use `!=`.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
