@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-123742-b13378 261111-123743-7732e9 261111-123757-b065fc 261111-123758-7ea903 261111-123800-7a33ff
+State: waiting on jobs 261111-123742-b13378 261111-123743-7732e9 261111-123757-b065fc 261111-123758-7ea903 261111-123800-7a33ff 261111-124103-7e9274 261111-124104-418363
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,10 +32,17 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
 
 ## Next
 
-1. When b13378 and 7732e9 pass and the T4 reruns are read, write T4's verdict at 7b126bc1 and
-   `campaign accept cold-tier-step2 correctness --confirm F1=<suite job>` is the lead's.
-2. The lead rules on T2 hot (re-target, or accept the pin's 0.6 µs) and T1 warm (grow the list,
-   or cut the unlisted pieces).
+Lead's rulings 11-11 12:4x: (1) the trigger stays only if it costs no Zipf throughput beyond an
+A/A spread; (2) T2 hot d1s1 a recorded residual (done); (3) T1 warm's measured
+pieces joined the design's list (strata:eab1c1e6), verdict MISS against the old sum.
+
+1. Read 261111-124104-418363 (`tiers.sh t3ab`, strata:63dc1c18: on = 7b126bc1's binary from
+   b065fc, off = f3f7d9c2's from 261111-124103-7e9274; 50,000 indexes, 12,000 Zipf, 4 pairs
+   alternating). Zipf req/s per run: if on's mean is below off's beyond the larger of the two
+   sides' own spreads, coalesce the trigger (post only on the net-over crossing edge, or at most one
+   queued pass per tick), rerun T3 (358d4c's command) and this A/B.
+2. Read b13378 (suite) and 7732e9 (mutant) for `pass_post_throws`; read the T4 reruns 7ea903 and
+   7a33ff and write T4's verdict at 7b126bc1.
 
 ## Follow-up (review findings, not fixed here)
 
