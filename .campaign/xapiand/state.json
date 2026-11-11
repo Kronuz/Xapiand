@@ -15166,19 +15166,42 @@
         "docs/mechanisms/index-registry-on-catalog.md",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T18:35:07",
+          "commit": "a101e0a547f4493520496797b85da4b6cb23ae1c",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "721f7c16bd5ec04e48f53bdb6c4f0aca8553559a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-180452-f454c0",
+              "level": "light",
+              "seconds": 350.0,
+              "state": "done",
+              "what": "x7-catalog-timer check build-test at 721f7c16bd5e"
+            }
+          ],
+          "final": true,
+          "from": "4f36b6edc6f1f18460ad684cbee63d447f16224a",
+          "reason": "",
+          "tested": "4a7b1e29e2f8437e999f4902b94106fddd524284"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Run the catalog's timer on the existing debouncer wheel (x7-gate T1 census)",
-      "updated": "2026-11-10T18:20:09",
-      "worktree": "../Xapiand-wt/xapiand/x7-catalog-timer"
+      "updated": "2026-11-10T18:35:13",
+      "worktree": ""
     },
     "x7-coverage": {
       "accepted": {},
