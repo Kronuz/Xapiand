@@ -10718,7 +10718,50 @@
       "updated": "2026-11-08T15:39:52"
     },
     "placement-without-flush": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-10T20:02:37",
+          "base": "4bcf321c57bcd02cb46ee30f19d05c26fe04df43",
+          "blobs": {
+            "docs/mechanisms/document-ids-and-versions.md": "100644:3346b03e939cf9c713a0d54e7ae60638991861f9",
+            "docs/mechanisms/placement.md": "100644:8adcc177cd1a4537a734279974a007146b4a326e",
+            "src/database/handler.cc": "100644:8cb1f262b14d405d4db71c93db8d9607a014a14e",
+            "src/database/handler.h": "100644:98ea28edf1fcbd0f2b7fd1a3fc89ff6a08e58ac1",
+            "src/database/shard.cc": "100644:05415e20510c7d3d4475a34ade3fc6aa22b71476",
+            "src/database/shard.h": "100644:80485ea5fdb3660db41a8e1cdccff792cf301bd8",
+            "src/engine/shard.h": "100644:67aa52576f71312b15afe96c6ee4ca8f529a2199",
+            "src/engine/strata/shard.cc": "100644:4691b5b8bcdcc51cec287b434dca10e09c356454",
+            "src/engine/strata/shard.h": "100644:90b21bb1aec672d2bda030a7c70ae3136a54b0e3",
+            "tests/test_node.cc": "100644:b4ac2099942474e697b95db474230fc25cf2bef8"
+          },
+          "brief": "3c2f912fe5648509",
+          "by": "review",
+          "commit": "8e74a4c761961178eb388bc8d8e28a3b8a86dcca",
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'set -o pipefail; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF > cmake.log 2>&1 || { tail -30 cmake.log; exit 1; }; cmake --build build -j4 --target xapiand_test_node > build.log 2>&1 || { grep -E \"error|Error\" build.log | head -60; exit 1; }; cd build;  rc=0; for t in test_a_restore_into_shards_writes_a_few_segments test_an_existing_id_written_again_lands_on_its_shard test_new_numeric_ids_spread_over_the_shards_while_buffered; do SKIP_FORKED=1 timeout 600 bin/xapiand_test_node $t 2>&1 | tail -12 || rc=1; done; exit $rc'",
+                  "commit": "a09e1666470f7a9f40df924718e1a5ae8e0c83b1",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261110-195119-1ec61f",
+                  "level": "light",
+                  "seconds": 186.3,
+                  "state": "done",
+                  "what": "A1 at the head a09e16664: the three placement tests"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "2e9fbc2ef842f7e185da0fc2ffe1c1c9fef04dbb",
+          "reviewed": "f3c7d37cb52953a2e09a3319daa6668a41e45d31",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "966edb73a5a25dbcd2c4788e496371c05f06b280",
       "branch": "quest/xapiand/placement-without-flush",
@@ -10783,7 +10826,7 @@
       "risk": "high",
       "status": "review",
       "title": "New documents are placed without flushing every shard",
-      "updated": "2026-11-10T19:31:15",
+      "updated": "2026-11-10T20:02:37",
       "worktree": "../Xapiand-wt/xapiand/placement-without-flush"
     },
     "pool-concurrency": {
