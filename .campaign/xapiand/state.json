@@ -2164,19 +2164,51 @@
         "src/engine/strata/shard.cc",
         "tests/test_node.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T12:09:34",
+          "commit": "c4ec19edccfd8f8eff8ac1cf2e821aefa3570866",
+          "criteria": {
+            "A1": "261111-090543-e64abf (passed at 048b3dfaac54; ignores docs-only docs/dev/cross-shard-id.md); fails without: 261111-112504-02634b",
+            "A2": "261111-090543-e64abf (passed at 048b3dfaac54; ignores docs-only docs/dev/cross-shard-id.md); fails without: 261111-112521-bb17c1",
+            "A3": "261111-090543-e64abf (passed at 048b3dfaac54; ignores docs-only docs/dev/cross-shard-id.md); fails without: 261111-112508-23ceb1, 261111-112513-f0ef79, 261111-112517-58c509",
+            "A4": "261111-090603-c42e4e (passed at 048b3dfaac54; ignores docs-only docs/dev/cross-shard-id.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "100856fca06abe64a7151cdd74ef836dbb710806",
+              "docs": [
+                "docs/dev/cross-shard-id.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-090603-c42e4e",
+              "level": "light",
+              "seconds": 965.6,
+              "state": "done",
+              "what": "cross-shard-id check suite at 100856fca06a"
+            }
+          ],
+          "final": true,
+          "from": "70af2d2121a17f3ae059886538cdcb591b14a8a3",
+          "reason": "",
+          "tested": "3ee633ad17ac6a7655101d8c7c21ad6239eca4dd"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A concurrent PUT never leaves an id on two shards",
-      "updated": "2026-11-11T12:09:14",
-      "worktree": "../Xapiand-wt/xapiand/cross-shard-id"
+      "updated": "2026-11-11T12:09:39",
+      "worktree": ""
     },
     "direct-pins": {
       "accepted": {
