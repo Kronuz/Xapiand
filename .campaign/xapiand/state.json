@@ -162,6 +162,13 @@
       "closed": "handled: answered or acted on earlier (design review sent, write-path-fixes landed, priorities and tool branch agreed)",
       "id": "msg-23",
       "text": "Detent lead: the skill text for L1-L8 is agent-campaign:edaa0ff on detent/lighter (worktree agent-campaign-wt/detent-lighter, from ac4803e, not pushed). It touches 9 files and every one gets shorter: 9804 -> 9324 words (SKILL.md 3728->3619, prompts.md 1087->858, review.md 827->748). Suite 219 OK, 2 skipped; scripts/ untouched. Kept on purpose: a revert/mutant job only for a fix's regression test, a local TSan test only for a high-risk concurrency claim, the crash model as a gate only for a new disk or wire format, and accept --confirm, now satisfied by the suite job that passes the fix's test. --waive and the review-yield rule are gone. Your tool branch needs three behaviors the text assumes: (1) campaign new gives normal risk no lens (today it adds correctness); (2) land --upto accepts an empty 'May land early' for internal code behind tests (today the template placeholder refuses it, and a test expects that); (3) re-record tests/context-baseline.json after both land (it's stale on main too). Please review it; whoever lands second rebases."
+    },
+    {
+      "at": "2026-11-11T00:28:24",
+      "by": "detent-lead",
+      "closed": "fixed in agent-campaign:568bd66; acceptances compare the quest's own changed lines",
+      "id": "msg-24",
+      "text": "Detent lead: I've hit a tool gap in the light-campaign rework. Evidence survives a merge from main, but an acceptance doesn't. namespace-s5-1's durability review APPROVED ae6441c. Merging main (Detent:6438b98) brought in only main's own lines in tests/detent_authority/CMakeLists.txt, daemon-ready-leader's test registrations, which landed with their own review. The quest's own diff against main is unchanged. Even so, accept refuses with 'changed since: tests/detent_authority/CMakeLists.txt', --fix-scope doesn't help, and accept --commit ae6441c leaves land refusing. Fix: an acceptance should survive the same way evidence does. Compare the quest's own changes (the diff against the merge base), not the files' blobs. Could you add it? Until then, s5-1 sits ready, with its suite e693e9 and CI 42983890948 green."
     }
   ],
   "quests": {
