@@ -34,11 +34,13 @@ begins are dropped. Those that come due during step 2.1 now run during it, which
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261110-180454-396cf6, t1_census alone at the head. It copies `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's da0196657 (`--ref GATE`): gate7c_rows.sh is not on master, and at e7e8e03c5 it has no `GATE7C_ROWS` selector. The job exits on rows.tsv: one row, t1_census, rc 0. 261110-172208-8645ec (harness at e7e8e03c5) passed the t1_census row (total 51 threads, no DB-TIMER) but exited 1: every row ran, and x7-gate's open rows failed. Skipped, never ran: 261110-151943-132d5b and its rerun ef3fd5 |
+| A1 | 261110-180454-396cf6, t1_census alone at the head (harness from x7-gate's da0196657 via `--ref GATE`; the job exits on rows.tsv: one row, t1_census, rc 0) |
 | A2 | 261110-180452-f454c0, build-test at the head, passed (test_pool's sweep, TTL and erase cases) |
 | A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" |
 
 ## Fails without the fix
+
+- Earlier A1 runs: 261110-172208-8645ec (harness at e7e8e03c5, no row selector) passed the t1_census row (51 threads, no DB-TIMER) but exited 1 as every row ran; 261110-151943-132d5b and its rerun ef3fd5 were skipped, never ran.
 
 - A1: 261110-143641-8f8cf6 at master 66b310e60 failed: census {unnamed 16, W 16, FS 9, WL 8, main 1, DB-TIMER 1, LOG 1}, total 52, "FAIL ['offender Xapiand:DB-TIMER']"
 - A2: 261110-151928-4ed547, mutant `refs/mutants/x7-catalog-timer/no-arm` (6688a8ada: `after()` returns before arming), passed: `xapiand_test_pool sweep` fails. Earlier: mutant 261110-143953-02e8cb at e0b3cd67e killed (8 of 117 checks fail); build-test 261110-143950-d97a09 at e0b3cd67e failed on the async check
