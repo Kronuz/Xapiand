@@ -1392,6 +1392,8 @@
     "cold-tier-step2": {
       "accepted": {},
       "after": [],
+      "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
+      "branch": "quest/xapiand/cold-tier-step2",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -1557,6 +1559,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/cold-tier-step2",
       "landed": [],
       "lenses": [
         "correctness"
@@ -1566,9 +1569,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-09T04:14:25"
+      "updated": "2026-11-10T16:27:29",
+      "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
       "accepted": {},
