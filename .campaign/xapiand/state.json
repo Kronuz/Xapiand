@@ -12999,9 +12999,9 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
-          "minutes": 60,
+          "minutes": 120,
           "name": "build-test"
         }
       ],
@@ -13011,6 +13011,34 @@
         "test/reader_check_test.cc",
         "test/CMakeLists.txt",
         "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-10T18:15:31",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRATA_BUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "same suite command as the other strata quests",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [
@@ -13023,7 +13051,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "strata's stored check decodes with one frame cache",
-      "updated": "2026-11-10T18:15:17"
+      "updated": "2026-11-10T18:15:31"
     },
     "stored-short-section": {
       "accepted": {},
