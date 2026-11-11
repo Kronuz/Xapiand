@@ -34,8 +34,17 @@ Lead's rulings of 11-11 (quest Decisions) on F1/F2, performance assignment. Head
 
 ## Next
 
-1. Read 5b7a23's flow lines; confirm or reject the period hypothesis; at most three experiments.
-2. Read 6d8a9c (T2 hot) and 6aaa2d (T1 warm pieces); write the verdict lines.
+1. Read 5b7a23's `flow` lines (Zipf part): if passes run ~1/s with reposts ~0 and the net counts
+   sit at the caps right after each pass, the period hypothesis holds; if net open/hot stay over
+   with passes reposting, it is the window or the queue (experiments 2-3), and 5d3c948a reverts.
+2. With 7882c4 (suite) and ade11c (mutant) green and 358d4c's samples within soft+16 after the
+   touch, write T3's verdict at 5d3c948a; then rerun T4's two jobs at it (the trigger changes
+   when the sweep evicts).
+3. Read 6d8a9c (T2 hot A/B: per-pair p50/p99 ratios against the main-main and hot-hot spread)
+   and 6aaa2d (T1 warm sites: sum the design's listed pieces, +7%, against the measured heap);
+   write both verdict lines in `docs/perf/catalog-tiers.md`.
+4. Pre-existing, not fixed: `post_pass()` leaves `pass_queued_` set if `post()` throws, so no
+   pass ever runs again (strata `catalog.hh` post_pass). For the lead.
 
 ## Follow-up (review findings, not fixed here)
 
