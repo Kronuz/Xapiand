@@ -278,6 +278,8 @@
       "after": [
         "barrier-warning-strata"
       ],
+      "base": "b5de313aca349860accc0024cd7cec8772344a10",
+      "branch": "quest/xapiand/barrier-warning",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -392,9 +394,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-08T22:56:34"
+      "updated": "2026-11-10T22:25:14",
+      "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
       "accepted": {
