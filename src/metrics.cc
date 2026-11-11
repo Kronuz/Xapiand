@@ -23,7 +23,6 @@
 
 #include "metrics.h"
 
-
 #include "prometheus/text_serializer.h"       // for text_serializer
 
 #include "package.h"                          // for Package::REVISION_STRING Package::HASH
