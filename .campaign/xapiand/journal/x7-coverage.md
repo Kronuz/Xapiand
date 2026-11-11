@@ -20,7 +20,7 @@ Jobs: alpha9 build+corpus (730675, slot x7-old), master build+corpus+replay smok
 
 ## Blocked on
 
-<What, and who decides. "
+Nothing.
 
 ## Evidence
 
