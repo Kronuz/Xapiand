@@ -1,6 +1,6 @@
 # e2e-report-cap: journal
 
-State: waiting on jobs 261111-013408-376057 (repro, informational), 261111-015200-ea9eea (A1, A2 at fac7e9dd0)
+State: waiting on jobs 261111-015200-ea9eea (A1, A2 at fac7e9dd0)
 Quest: .campaign/xapiand/quests/e2e-report-cap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,8 +15,10 @@ assertion; e2e_assert.py is unchanged. Local check against a fake server: one ne
 reporters gave a 53 MB full and a 9.2 MB slim report (600 failing requests, bodies kept) and
 e2e_assert.py printed byte-identical output on both. Job 261111-015200-ea9eea (exp2.sh) runs the real
 E2E at the head: A1 (GREEN, size under 5 MB) and A2 (a newman shim breaks every default expectation;
-assert must be NOT GREEN, rc 1). Job 261111-013408-376057 (exp1) reproduces the full report from main
-to see why it did not parse (informational).
+assert must be NOT GREEN, rc 1). Job 261111-013408-376057 (exp1, done): the full report from main is 64.0 MB and parses
+OK with the same Python 3.15.2, so the earlier JSONDecodeError (char 62889311 of 63.95 MB) did not
+repeat; its cause stays unexplained (a truncated or still-written file, or a parser limit at this size).
+The size is the exposure the slim reporter removes.
 
 ## Next
 
