@@ -10864,19 +10864,53 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-10T21:41:26",
+          "commit": "b68c07931e58881b0201bf9a33d7dac73e8ecc41",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "a09e1666470f7a9f40df924718e1a5ae8e0c83b1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-195120-40e989",
+              "level": "light",
+              "seconds": 209.0,
+              "state": "done",
+              "what": "placement-without-flush check build-test at a09e1666470f"
+            },
+            {
+              "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls'",
+              "commit": "a09e1666470f7a9f40df924718e1a5ae8e0c83b1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261110-195120-5a8344",
+              "level": "light",
+              "seconds": 427.3,
+              "state": "done",
+              "what": "placement-without-flush check e2e at a09e1666470f"
+            }
+          ],
+          "final": true,
+          "from": "82309c3e34c68798058ebb3c0d062bec628f31e8",
+          "reason": "",
+          "tested": "4a95016595eff9ea06bcc2330bb7a0f4563a8238"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "New documents are placed without flushing every shard",
-      "updated": "2026-11-10T20:02:37",
-      "worktree": "../Xapiand-wt/xapiand/placement-without-flush"
+      "updated": "2026-11-10T21:41:42",
+      "worktree": ""
     },
     "pool-concurrency": {
       "accepted": {},
