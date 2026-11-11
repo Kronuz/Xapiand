@@ -14059,6 +14059,8 @@
     "strata-races": {
       "accepted": {},
       "after": [],
+      "base": "3177e491a963d516f91efcb663f19afa4231ebe7",
+      "branch": "quest/xapiand/strata-races",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -14075,6 +14077,7 @@
         "docs/perf/flakes.md",
         "docs/perf/flakes/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/strata-races",
       "landed": [],
       "lenses": [
         "correctness"
@@ -14082,11 +14085,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: cold-tier-step2's include/strata/** and test/** globs are broad; its branch changes none of catalog.hh, resource_budget.hh or resource_budget_test.cc",
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Two strata races found as test flakes are fixed",
-      "updated": "2026-11-11T06:06:31"
+      "updated": "2026-11-11T06:06:57",
+      "worktree": "../strata-wt/xapiand/strata-races"
     },
     "t11-barriers": {
       "accepted": {},
