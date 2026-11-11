@@ -20,7 +20,7 @@ job can show it.
   pass, and the mutant that syncs only on `rollover_owed_` fails case 9 (a job per side).
 - A2 The open's tail improves on macOS: one strict job of at most 10 minutes (D59), interleaved
   pairs of `bench/open_sync/run.sh` at main and the quest head; p99 lower on most pairs.
-- A3 The strata suite passes at the head (build-test), with CI green on Linux.
+- A3 The strata suite passes at the head (its suite check), with CI green on Linux.
 
 ## Contracts
 
