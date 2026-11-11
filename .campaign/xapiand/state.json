@@ -394,11 +394,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
+      "reason": "waits on barrier-warning-strata (the completion pin with full_flush_ordering and barrier_warning), which waits on cold-tier-step2's strata file set",
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-10T22:28:43",
+      "updated": "2026-11-10T22:28:45",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
