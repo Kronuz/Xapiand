@@ -1226,6 +1226,39 @@ Shard::find_key(const std::string& key)
 }
 
 
+// The index's own lookup, as a write makes it: the buffers first, then the segments.
+task::task<docid>
+Shard::written_key(const std::string& key)
+{
+	try {
+		auto& core = *handle_->core;
+		core.check(*handle_);
+		const auto found = core.index->find_key(key);
+		co_return found ? static_cast<docid>(found->first) : docid{0};
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
+// The segments' live documents, with the buffers' pending deletes applied, and the buffered ones.
+task::task<doccount>
+Shard::written_count()
+{
+	try {
+		auto& core = *handle_->core;
+		core.check(*handle_);
+		std::uint64_t live = core.index->buffered_count();
+		for (const auto& segment : core.index->segments()) {
+			live += segment.seg()->core().doc_count() - segment.dead;
+		}
+		co_return static_cast<doccount>(live);
+	} catch (...) {
+		rethrow_translated(handle_->core);
+	}
+}
+
+
 task::task<std::unique_ptr<DocView>>
 Shard::get(docid did)
 {

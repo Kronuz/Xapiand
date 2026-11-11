@@ -98,6 +98,8 @@ public:
 	task::task<bool> reopen() override;
 	task::task<Stats> stats() override;
 	task::task<docid> find_key(const std::string& key) override;
+	task::task<docid> written_key(const std::string& key) override;
+	task::task<doccount> written_count() override;
 	task::task<std::unique_ptr<DocView>> get(docid did) override;
 	task::task<void> scan(docid from, const ScanSink& sink) override;
 	task::task<std::string> metadata(const std::string& key) override;

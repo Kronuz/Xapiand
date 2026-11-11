@@ -502,7 +502,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = co_await get_docid_term(term_id);
+					did = co_await written_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -615,7 +615,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = co_await get_docid_term(term_id);
+					did = co_await written_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -1726,6 +1726,22 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
+	co_return co_await find_docid_term(term, false);
+}
+
+
+task::task<engine::docid>
+DatabaseHandler::written_docid_term(const std::string& term)
+{
+	L_CALL("DatabaseHandler::written_docid_term({})", repr(term));
+
+	co_return co_await find_docid_term(term, true);
+}
+
+
+task::task<engine::docid>
+DatabaseHandler::find_docid_term(const std::string& term, bool written)
+{
 	assert(!term.empty());
 	assert(!endpoints.empty());
 
@@ -1742,8 +1758,12 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				auto* eng = co_await lk_shard->engine_for_read();
-				auto shard_did = co_await eng->find_key(term);
+				engine::docid shard_did = 0;
+				if (written) {
+					shard_did = co_await lk_shard->written_key(term);
+				} else {
+					shard_did = co_await (co_await lk_shard->engine_for_read())->find_key(term);
+				}
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					co_return did;
@@ -1821,7 +1841,7 @@ DatabaseHandler::delete_document_term(const std::string& term, engine::rev docum
 	if (n_shards > 1) {
 		engine::docid did = 0;
 		try {
-			did = co_await get_docid_term(term);
+			did = co_await written_docid_term(term);
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
@@ -1838,6 +1858,29 @@ DatabaseHandler::delete_document_term(const std::string& term, engine::rev docum
 }
 
 
+task::task<size_t>
+DatabaseHandler::least_used_shard()
+{
+	size_t shard_num = 0;
+	auto min_doccount = std::numeric_limits<engine::doccount>::max();
+	for (size_t n = 0; n < endpoints.size(); ++n) {
+		lock_shard lk_shard(endpoints[n], flags, turn_token());
+		co_await lk_shard.pin();
+		auto node = lk_shard->node();
+		if (node && node->is_active()) {
+			try {
+				auto doccount = co_await lk_shard->written_count();
+				if (min_doccount > doccount) {
+					min_doccount = doccount;
+					shard_num = n;
+				}
+			} catch (...) {}
+		}
+	}
+	co_return shard_num;
+}
+
+
 task::task<engine::WriteResult>
 DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, bool version)
 {
@@ -1847,27 +1890,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 	size_t n_shards = endpoints.size();
 
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		// Try getting a new ID which can currently be indexed (active node)
-		// Get the least used shard:
-		auto min_doccount = std::numeric_limits<engine::doccount>::max();
-		for (size_t n = 0; n < n_shards; ++n) {
-			auto& endpoint = endpoints[n];
-			lock_shard lk_shard(endpoint, flags, turn_token());
-			co_await lk_shard.pin();
-			auto node = lk_shard->node();
-			if (node && node->is_active()) {
-				try {
-					auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
-					if (min_doccount > doccount) {
-						min_doccount = doccount;
-						shard_num = n;
-					}
-				} catch (...) {}
-			}
-		}
-	}
+	const size_t shard_num = n_shards > 1 ? co_await least_used_shard() : 0;
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
@@ -1909,26 +1932,11 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	if (n_shards > 1) {
 		if (term == NEW_NUMERIC_KEY) {
 			// A new numeric id goes to the least used of the active shards, which numbers it.
-			auto min_doccount = std::numeric_limits<engine::doccount>::max();
-			for (size_t n = 0; n < n_shards; ++n) {
-				auto& endpoint = endpoints[n];
-				lock_shard lk_shard(endpoint, flags, turn_token());
-				co_await lk_shard.pin();
-				auto node = lk_shard->node();
-				if (node && node->is_active()) {
-					try {
-						auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
-						if (min_doccount > doccount) {
-							min_doccount = doccount;
-							shard_num = n;
-						}
-					} catch (...) {}
-				}
-			}
+			shard_num = co_await least_used_shard();
 		} else {
 			try {
 				// A document that exists (in any shard) is replaced where it is.
-				auto did = co_await get_docid_term(term);
+				auto did = co_await written_docid_term(term);
 				if (did != 0u) {
 					co_return co_await replace_document(did, std::move(doc), commit, wal, version);
 				}
