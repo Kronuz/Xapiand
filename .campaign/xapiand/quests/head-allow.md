@@ -1,31 +1,17 @@
-# head-allow: HEAD carries no body; Allow lists the routed verbs
-
-Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status head-allow`.
+# head-allow
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+HEAD answers with the headers and Content-Length a GET would carry and no body, a missing document's
+404 included (RFC 9110 9.3.2); the `Allow` header lists the verbs Xapiand routes, and STORE, which has
+no route, is gone (hunt list; docs-site-refresh-reference's Blocked on 5).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- A1 `test_head_has_no_body_and_options_lists_the_routed_verbs` in tests/test_node.cc passes at the
+  head and fails without the fix: the `suite` check and a `--fails-without` job
+- A2 The suite and the docs E2E pass: the `suite` and `e2e` checks
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
