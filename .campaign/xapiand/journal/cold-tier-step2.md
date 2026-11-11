@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-134927-7430a0
+State: waiting on jobs 261111-143023-ac195f 261111-143025-7e33e6 261111-143034-071676 261111-143035-141fc0
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,21 +32,15 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
 
 ## Next
 
-0. Lead's question 11-11 (after 418363): the 19.4/19.7 ms Zipf p50 in 2 of 4 "on" runs, trigger or
-   device flush mode? Harness strata:60ff029f prints per run the latency deciles, waited vs direct
-   requests, the states waited on, and a device flush probe (4 KiB write + F_FULLFSYNC every 200 ms)
-   per phase; `tiers.sh buildab` builds on and off from one tree (off = f3f7d9c2's catalog.hh).
-   Build 261111-134919-80490f passed (on and off differ only in catalog.hh); strict A/B 3 pairs
-   261111-134927-7430a0 queued. Read per run: if the slow-p50 runs' flush probe p50 is ~20 ms and
-   off's runs in the same mode keep p50 below it, the median crosses into the waited class because
-   holding hot at 500 sends more requests through a wake queued behind slow-mode opens (the cap's
-   cost in that mode, not the trigger's passes). Then the verdict in
-   `docs/perf/catalog-tiers.md`; if the trigger causes it, one coalescing experiment.
-
-Lead's rulings 11-11 12:4x: (1) the trigger stays only if it costs no Zipf throughput beyond an
-A/A spread; (2) T2 hot d1s1 a recorded residual (done); (3) T1 warm's measured
-pieces joined the design's list (strata:eab1c1e6), verdict MISS against the old sum.
-
+0. Lead's question 11-11 (after 418363), the 19.4/19.7 ms on p50s: the median's step, not the
+   trigger's cost (strata:6a237a64, `docs/perf/catalog-tiers.md` "The trigger's cost, an A/B").
+   7430a0 (strict, hit its 10-minute bound after 2 pairs; direction only): flush probe slow in
+   every run on both sides (p50 46-65 ms); deciles 5/6 0.3-0.7 / 20-21 ms on both; waited share
+   on 57.2/58.0% vs off 52.8/53.2% (+~500 wakes of owed slots from holding hot at 500); on's req/s
+   397/348 vs off's 260/293, waited p50 21/37 vs 63/60 ms. No coalescing experiment (the trigger
+   costs no throughput). Confirm with four one-pair exclusive jobs (strata:978a8872, binaries from
+   build 80490f at 60ff029f; tiers.sh only adds FIRST): 261111-143023-ac195f 261111-143025-7e33e6 261111-143034-071676 261111-143035-141fc0.
+   On their results: update the table's rows with their per-run numbers and cite them for A4.
 1. Read 261111-124104-418363 (`tiers.sh t3ab`, strata:63dc1c18: on = 7b126bc1's binary from
    b065fc, off = f3f7d9c2's from 261111-124103-7e9274; 50,000 indexes, 12,000 Zipf, 4 pairs
    alternating). Zipf req/s per run: if on's mean is below off's beyond the larger of the two
@@ -155,6 +149,11 @@ default, `docs/design/cold-tier.md` revision 8, `docs/status/cold-tier.md` (K7) 
 `docs/status/cold-tier-step2.md`. Linux, full-scale and dropped-cache rows are Milestone checks.
 
 ## Rulings I made
+
+- A4 trigger A/B: one pair per exclusive job (7430a0's three pairs passed 10 minutes in the slow
+  flush mode); jobs 3 and 4 carry `--env T3AB_PAIR=N` so they are not deduplicated against 1 and 2.
+- A4 trigger A/B: no coalescing experiment: the A/B shows no throughput loss and the p50 jump is
+  the median crossing the wake-or-flush step, which the cap's extra wakes move (catalog-tiers.md).
 
 - F1: the soft-cap trigger is a defect fix inside the sweep (the budget's caps already post at
   their crossing); kept on 358d4c's result. Its check is net of relief in flight, so a pass is
