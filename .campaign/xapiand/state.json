@@ -8383,7 +8383,7 @@
           "final": true,
           "from": "77adb0569e4c43445629a4e39f25c37d9ad22c90",
           "later": [
-            "261110-162534-50495f"
+            "261110-192346-4978ee"
           ],
           "reason": "",
           "tested": "15d39c3094966b262ac643327f6c68fa5bfa4dee"
@@ -8404,7 +8404,7 @@
       "risk": "high",
       "status": "landed",
       "title": "Commit metadata as an append-only manifest log",
-      "updated": "2026-11-10T16:25:35",
+      "updated": "2026-11-10T19:23:46",
       "worktree": "../strata-wt/xapiand/manifest-log"
     },
     "manifest-log-prospect": {
