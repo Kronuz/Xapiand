@@ -92,6 +92,13 @@
       "closed": "granted; write-path-fixes landed with these files",
       "id": "msg-12",
       "text": "write-path-fixes also needs src/database/pool.h in its file set: ShardEndpoint::do_delete/do_delete_term are declared there (pool.h:306-307) and must take the expected version so DELETE ?version is checked by the engine's erase inside the index's turn (the race-free place; a read-then-delete in Shard would rely on the published view). Two declaration lines change, nothing else in pool.h."
+    },
+    {
+      "at": "2026-11-09T20:21:15",
+      "by": "write-path-fixes",
+      "closed": "granted; write-path-fixes landed with these files",
+      "id": "msg-13",
+      "text": "write-path-fixes: the how-it-works note goes in docs/mechanisms/document-ids-and-versions.md (new; outside the file set too). Of msg-11/12/13 the branch already has commits touching tests/test_node.cc and src/database/pool.h, kept as their own commits (2802550be pool.h, ec1b230c3 test_node.cc) so they can be dropped if you rule otherwise. Also: src/exception_engine.h's DocVersionConflictError has no user after this quest (left in place, outside the set)."
     }
   ],
   "quests": {
