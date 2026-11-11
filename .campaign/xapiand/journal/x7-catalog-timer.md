@@ -34,8 +34,8 @@ begins are dropped. Those that come due during step 2.1 now run during it, which
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261110-175141-9b38b5, t1_census alone at the head. It copies `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's da0196657 (`--ref GATE`): gate7c_rows.sh is not on master, and at e7e8e03c5 it has no `GATE7C_ROWS` selector. The job exits on rows.tsv: one row, t1_census, rc 0. 261110-172208-8645ec (harness at e7e8e03c5) passed the t1_census row (total 51 threads, no DB-TIMER) but exited 1: every row ran, and x7-gate's open rows failed. Skipped, never ran: 261110-151943-132d5b and its rerun ef3fd5 |
-| A2 | 261110-175143-2bdf9e, build-test at the head, passed (test_pool's sweep, TTL and erase cases) |
+| A1 | 261110-180454-396cf6, t1_census alone at the head. It copies `harness/gate7c_rows.sh` and `harness/stall_load.py` from x7-gate's da0196657 (`--ref GATE`): gate7c_rows.sh is not on master, and at e7e8e03c5 it has no `GATE7C_ROWS` selector. The job exits on rows.tsv: one row, t1_census, rc 0. 261110-172208-8645ec (harness at e7e8e03c5) passed the t1_census row (total 51 threads, no DB-TIMER) but exited 1: every row ran, and x7-gate's open rows failed. Skipped, never ran: 261110-151943-132d5b and its rerun ef3fd5 |
+| A2 | 261110-180452-f454c0, build-test at the head, passed (test_pool's sweep, TTL and erase cases) |
 | A3 | `docs/mechanisms/index-registry-on-catalog.md` item 10: "The timer the catalog needs runs on the control loop's timers: each callback is an Asio timer armed on the loop's thread with `engine::Host::start_timer`" |
 
 ## Fails without the fix
