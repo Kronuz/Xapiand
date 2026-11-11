@@ -30,6 +30,8 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <deque>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -45,6 +47,8 @@
 #include <random>
 #include <string>
 #include <thread>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 #include <signal.h>
@@ -68,6 +72,7 @@
 #include "logger.h"
 #include "sortable_serialise.h"
 #include "engine/chores.h"
+#include "engine/host.h"
 #include "engine/document.h"
 #include "engine/error.h"
 #include "engine/sync.h"
@@ -165,6 +170,170 @@ private:
 
 	std::atomic<bool> held_{false};
 	task::event release_;
+	std::thread thread_;
+};
+
+// A host of one thread that tells when it has run out of work. A task started on it that stops with the host idle
+// is waiting on a held turn, whose lock it queued in that same step; tasks started one after another, each once the
+// host is idle, queue on a turn in that order.
+class ParkHost final : public engine::Host {
+public:
+	template <typename T>
+	class Job {
+	public:
+		bool done() const { return state_->done.load(); }
+		// Waits for the task to end; returns its value or rethrows its exception.
+		T get() {
+			CHECK(eventually([this] { return done(); }, 30s));
+			if (state_->error) {
+				std::rethrow_exception(state_->error);
+			}
+			if constexpr (!std::is_void_v<T>) {
+				return std::move(*state_->value);
+			}
+		}
+
+	private:
+		friend class ParkHost;
+		struct State {
+			std::atomic<bool> done{false};
+			std::exception_ptr error;
+			std::optional<std::conditional_t<std::is_void_v<T>, std::monostate, T>> value;
+		};
+		std::shared_ptr<State> state_ = std::make_shared<State>();
+	};
+
+	ParkHost() : thread_([this] { loop(); }) { }
+	~ParkHost() override {
+		{
+			std::lock_guard<std::mutex> lk(m_);
+			stop_ = true;
+		}
+		cv_.notify_one();
+		thread_.join();
+	}
+
+	void post(std::coroutine_handle<> h) override { push({h, nullptr, nullptr}); }
+	void post_call(void (*fn)(void*), void* arg) override { push({{}, fn, arg}); }
+
+	// True when nothing is left to run here (timers apart).
+	bool idle() const {
+		std::lock_guard<std::mutex> lk(m_);
+		return idle_;
+	}
+
+	template <typename T>
+	Job<T> start(task::task<T> t) {
+		Job<T> job;
+		auto state = job.state_;
+		if constexpr (std::is_void_v<T>) {
+			task::spawn(task::scheduler_ref::of(*this), std::move(t), [state](std::exception_ptr e) {
+				state->error = e;
+				state->done = true;
+			});
+		} else {
+			task::spawn(task::scheduler_ref::of(*this), std::move(t), [state](std::exception_ptr e, std::optional<T> v) {
+				state->error = e;
+				state->value = std::move(v);
+				state->done = true;
+			});
+		}
+		return job;
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point at, std::unique_ptr<TimerNode> node) override {
+		std::lock_guard<std::mutex> lk(m_);
+		const auto id = ++last_id_;
+		timers_.push_back({at, id, std::move(node)});
+		cv_.notify_one();
+		return std::make_unique<Armed>(*this, id);
+	}
+
+private:
+	struct Ready {
+		std::coroutine_handle<> h;
+		void (*fn)(void*);
+		void* arg;
+	};
+	struct Entry {
+		std::chrono::steady_clock::time_point at;
+		std::uint64_t id;
+		std::unique_ptr<TimerNode> node;
+	};
+	class Armed final : public Timer {
+	public:
+		Armed(ParkHost& owner, std::uint64_t id) : owner_(owner), id_(id) { }
+		~Armed() override {
+			std::unique_ptr<TimerNode> dropped;
+			std::lock_guard<std::mutex> lk(owner_.m_);
+			const auto it = std::find_if(owner_.timers_.begin(), owner_.timers_.end(), [this](const Entry& e) { return e.id == id_; });
+			if (it != owner_.timers_.end()) {
+				dropped = std::move(it->node);
+				owner_.timers_.erase(it);
+			}
+		}
+
+	private:
+		ParkHost& owner_;
+		std::uint64_t id_;
+	};
+
+	void push(Ready ready) {
+		std::lock_guard<std::mutex> lk(m_);
+		ready_.push_back(ready);
+		idle_ = false;
+		cv_.notify_one();
+	}
+
+	void loop() {
+		Host::bind_thread(this);
+		std::unique_lock<std::mutex> lk(m_);
+		for (;;) {
+			if (!ready_.empty()) {
+				const auto next = ready_.front();
+				ready_.pop_front();
+				lk.unlock();
+				{
+					task::running_on scope(task::scheduler_ref::of(*this));
+					if (next.fn != nullptr) {
+						next.fn(next.arg);
+					} else {
+						next.h.resume();
+					}
+				}
+				lk.lock();
+				continue;
+			}
+			if (stop_) {
+				return;
+			}
+			idle_ = true;
+			if (!timers_.empty()) {
+				const auto next = std::min_element(timers_.begin(), timers_.end(), [](const Entry& a, const Entry& b) { return a.at < b.at; });
+				if (next->at <= std::chrono::steady_clock::now()) {
+					auto node = std::move(next->node);
+					timers_.erase(next);
+					lk.unlock();
+					node->fire();
+					node.reset();
+					lk.lock();
+					continue;
+				}
+				cv_.wait_until(lk, next->at);
+				continue;
+			}
+			cv_.wait(lk);
+		}
+	}
+
+	mutable std::mutex m_;
+	std::condition_variable cv_;
+	std::deque<Ready> ready_;
+	std::vector<Entry> timers_;
+	std::uint64_t last_id_ = 0;
+	bool idle_ = false;
+	bool stop_ = false;
 	std::thread thread_;
 };
 
@@ -1852,23 +2021,27 @@ static void test_a_stale_write_does_not_put_an_id_on_two_shards() {
 
 // A replace by term on an index of shards finds an off-hash id and writes it by docid in a later turn: erased between
 // the two, the write places the document afresh on its hash shard instead of putting it back where it was found.
-// The lookup queues behind a held turn and the erase behind the lookup, so the erase runs between them.
+// Both run on a host that says when it is idle: the lookup parks on a held turn, the erase queues behind it, and
+// releasing the turn runs the lookup (it finds the id), then the erase, and the write queues behind that.
 static void test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh() {
 	Watchdog watchdog("a replace by term of an id erased since its lookup places it afresh", 120s);
 	const OffHashId x("afresh_s5", "afresh");
 	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	auto erasing = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE_QUIET);
+	auto use = use_index(erasing, WRITE_QUIET);
 	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
-	engine::WriteResult info;
-	std::thread t_replace([&] {
-		DatabaseHandler db(x.endpoints, WRITE_QUIET);
-		info = engine::sync_wait(db.replace_document_term(x.term, std::move(std::get<1>(x.prepare("stale"))), true));
-	});
-	std::this_thread::sleep_for(200ms);   // the lookup waits on the turn
-	std::thread t_erase([&] { x.erase(x.off); });
-	std::this_thread::sleep_for(200ms);   // the erase waits behind the lookup
+	ParkHost host;
+	DatabaseHandler db(x.endpoints, WRITE_QUIET);
+	auto prepared = x.prepare("stale");
+	auto replace = host.start(db.replace_document_term(x.term, std::move(std::get<1>(prepared)), true));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(replace.done());   // the lookup waits on the turn
+	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(erase.done());   // the erase waits behind the lookup
 	hold->release();
-	t_erase.join();
-	t_replace.join();
+	erase.get();
+	const auto info = replace.get();
 	CHECK_EQ((info.did - 1) % OffHashId::shards, x.hashed);
 	CHECK(x.holds(x.hashed));
 	CHECK_FALSE(x.holds(x.off));
@@ -1878,24 +2051,32 @@ static void test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_af
 // A PATCH reads an off-hash id and writes it by docid expecting the version it read: erased since, and another
 // document of the id written on its hash shard at that same version, the write is a version conflict, so the PATCH
 // reads again and patches the new document, never the old content over it. The off shard is refreshed, so the
-// PATCH's read takes no turn; the erase queues on the held turn first and the PATCH's write behind it.
+// PATCH's read takes no turn; on a host that says when it is idle, the erase parks on the held turn and the PATCH,
+// which reads and then parks on its write's turn, queues behind it.
 static void test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document() {
 	Watchdog watchdog("a patch of an id erased since its read patches the new document", 120s);
 	const OffHashId x("repatch_s5", "repatch");
 	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
 	CHECK_FALSE(entry.entry().engine().dirty());
+	auto erasing = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE_QUIET);
+	auto use = use_index(erasing, WRITE_QUIET);
 	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
-	std::thread t_erase([&] { x.erase(x.off); });
-	std::this_thread::sleep_for(200ms);   // the erase waits on the turn
-	Reply patched;
-	std::thread t_patch([&] { patched = call("PATCH", x.path + x.id + "?commit", R"([{"op":"add","path":"/p","value":"patched"}])"); });
-	CHECK(eventually([] { return requests_inflight() == 1; }));
-	std::this_thread::sleep_for(300ms);   // the PATCH read the old document; its write waits behind the erase
+	ParkHost host;
+	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(erase.done());   // the erase waits on the turn
+	DatabaseHandler db(x.endpoints, WRITE);
+	const MsgPack id{x.id};
+	rapidjson::Document rdoc;
+	json_load(rdoc, R"([{"op":"add","path":"/p","value":"patched"}])");
+	const MsgPack patches(rdoc);
+	auto patch = host.start(db.patch(id, UNKNOWN_REVISION, false, patches, true));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(patch.done());   // the PATCH read the old document; its write waits behind the erase
 	x.seat(x.hashed, "new");   // version 1, as the old one
 	hold->release();
-	t_erase.join();
-	t_patch.join();
-	CHECK_EQ(patched.status, 204);
+	erase.get();
+	patch.get();
 	CHECK(x.holds(x.hashed));
 	CHECK_FALSE(x.holds(x.off));
 	const auto got = call("GET", x.path + x.id);

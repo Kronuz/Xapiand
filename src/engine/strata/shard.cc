@@ -25,6 +25,7 @@
 #include <algorithm>               // for std::sort
 #include <array>                   // for std::array
 #include <atomic>                  // for std::atomic
+#include <cassert>                 // for assert
 #include <chrono>                  // for std::chrono
 #include <coroutine>               // for std::coroutine_handle
 #ifdef XAPIAND_CRASH_POINTS
@@ -863,6 +864,7 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 		{
 			core.check(*handle_);
 			std::optional<rev> stored;
+			assert(!args.must_exist || !native.key().empty());   // must_exist is checked by key
 			if (!native.key().empty()) {
 				// A document with a key is found by it; the id must be the one that holds the key.
 				const auto found = core.index->find_key(native.key());
