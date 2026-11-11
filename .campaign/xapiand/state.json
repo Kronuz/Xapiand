@@ -14219,7 +14219,109 @@
       "updated": "2026-11-08T15:39:49"
     },
     "strata-races": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-11T13:01:42",
+          "base": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "blobs": {
+            "CMakeLists.txt": "100644:bf5dba04ed99abf53723a51efc534cb6d7823c77",
+            "docs/perf/flakes.md": "100644:03d3d1b7dc98e5fbd8fbe47f29bd8d4280b4338b",
+            "docs/perf/flakes/booking_load.sh": "100755:a679733c3268366924b9886fed437ce32c81991e",
+            "docs/perf/flakes/repeat_load.sh": "100755:3716fb4546d541f16baea63592545ad4b9e86b8e",
+            "include/strata/core/catalog.hh": "100644:ced6db4cdeca22bca30cfd2095760c8080301fdd",
+            "include/strata/core/resource_budget.hh": "100644:b83d2df93c4a0bb6d0aab89f8ac64f149ef05803",
+            "test/catalog_relief_test.cc": "100644:389acde9ef0fb83ec43acc525818458d44c8bc63",
+            "test/resource_budget_test.cc": "100644:39eb3de141d47e18102c9210be794fc8f5a5cbf2"
+          },
+          "by": "review",
+          "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+          "criteria": "f88a166b4f416d90",
+          "diffs": {
+            "CMakeLists.txt": "526543509ea60330",
+            "docs/perf/flakes.md": "9361e79a47f5f0db",
+            "docs/perf/flakes/booking_load.sh": "146043e20b8be772",
+            "docs/perf/flakes/repeat_load.sh": "f26cd766f3dbf8bd",
+            "include/strata/core/catalog.hh": "c666d31276edd20f",
+            "include/strata/core/resource_budget.hh": "12ace006e576e459",
+            "test/catalog_relief_test.cc": "535f3a6461d3666e",
+            "test/resource_budget_test.cc": "c4c14697f99fedd1"
+          },
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "/Users/kronuz/code/Kronuz/Xapiand/.scratch/strata-races-fix/probe_relief_fixed.sh",
+                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-121450-3218fe",
+                  "level": "light",
+                  "seconds": 405.6,
+                  "state": "done",
+                  "what": "C1 probe: RELIEF-STALE on all nine catalog tests"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            },
+            "C2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'git show 2a4d2aa0ccde:include/strata/core/catalog.hh > include/strata/core/catalog.hh && git show 2a4d2aa0ccde:include/strata/core/resource_budget.hh > include/strata/core/resource_budget.hh && cmake -B build -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build -j4 --target catalog_relief_test 2>&1 | tail -3 && cd build && ! ./catalog_relief_test'",
+                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-121453-bb533f",
+                  "level": "light",
+                  "seconds": 112.2,
+                  "state": "done",
+                  "what": "C2: catalog_relief fails with 2a4d2aa0's headers"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "C6": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build -j4 --target resource_budget_test 2>&1 | tail -2 && docs/perf/flakes/booking_load.sh $PWD/build 5 2000'",
+                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-121510-fbd377",
+                  "level": "strict",
+                  "seconds": 47.4,
+                  "state": "done",
+                  "what": "C6: booking_falls + two_droppers, 2000 rounds x 5 runs"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "C7": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-121449-2bc470",
+                  "level": "light",
+                  "seconds": 270.0,
+                  "state": "done",
+                  "what": "strata-races check suite at 22a9a7502b8b"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            }
+          },
+          "note": "",
+          "review": "40029b439bcb11c7e4cc0eb8fcd4cf7691cd0c16",
+          "reviewed": "7b579648ac1b4695b1e0602efbf00098afd86445",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "3177e491a963d516f91efcb663f19afa4231ebe7",
       "branch": "quest/xapiand/strata-races",
@@ -14253,7 +14355,7 @@
       "risk": "high",
       "status": "review",
       "title": "Two strata races found as test flakes are fixed",
-      "updated": "2026-11-11T08:53:49",
+      "updated": "2026-11-11T13:01:42",
       "worktree": "../strata-wt/xapiand/strata-races"
     },
     "t11-barriers": {
