@@ -9239,6 +9239,37 @@
       "title": "Bound control-worker command draining",
       "updated": "2026-11-08T13:25:10"
     },
+    "open-one-flush": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "test/index_test.cc",
+        "docs/design/manifest-log.md",
+        "docs/perf/open-sync.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "The index open shares one device flush between its log and directory syncs",
+      "updated": "2026-11-11T00:56:57"
+    },
     "perf-watch-peek": {
       "accepted": {
         "correctness": {
