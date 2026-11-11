@@ -77,12 +77,17 @@ export default defineConfig({
     starlight({
       title: SITE_TITLE,
       description: SITE_DESCRIPTION,
-      logo: { src: './src/assets/logo.png', alt: 'Xapiand' },
-      favicon: '/favicon.ico',
+      logo: { light: './src/assets/logo-light.svg', dark: './src/assets/logo-dark.svg', alt: 'Xapiand' },
+      favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       // The landing page uses the Jekyll site's typefaces (Lato body, Montserrat
       // display) so it reads like the old home; load them the same way Jekyll did.
       head: [
+        // brand/variants/light: .ico for older browsers, touch and app icons.
+        { tag: 'link', attrs: { rel: 'icon', href: '/Xapiand/favicon.ico', sizes: '48x48' } },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/Xapiand/apple-touch-icon.png' } },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '152x152', href: '/Xapiand/apple-touch-icon-152.png' } },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '167x167', href: '/Xapiand/apple-touch-icon-167.png' } },
         { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: true } },
         {
           tag: 'link',
