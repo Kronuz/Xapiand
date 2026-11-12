@@ -16185,7 +16185,7 @@
       "consumes": [],
       "files": [
         "include/strata/core/catalog.hh",
-        "test/catalog_test.cc"
+        "test/catalog_teardown_test.cc"
       ],
       "landed": [],
       "lenses": [
@@ -16198,7 +16198,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A catalog unpin reads nothing after it kicks the slot's close",
-      "updated": "2026-11-12T04:55:42"
+      "updated": "2026-11-12T04:55:59"
     },
     "wbuf-inline": {
       "accepted": {
