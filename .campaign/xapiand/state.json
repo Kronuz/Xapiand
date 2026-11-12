@@ -17967,7 +17967,46 @@
       "worktree": ""
     },
     "x7-loop-stalls": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T03:24:22",
+          "base": "88a7c4312088d75a76a2fc0fd1b33143da821651",
+          "blobs": {
+            "CMakeLists.txt": "100644:19f094236c89998828537dc521e0147facc4928c",
+            "docs/design/phase7c.md": "100644:7ae388cd980408bd90ebb878e0e85f12ec79fa04",
+            "docs/perf/x7-loop-stalls.md": "100644:3229e9f1375f2b749281ec91481221232b52e74e",
+            "harness/async_allowlist.tsv": "100644:7dedb89085ab64bce6c61d70b70d97325932567e",
+            "src/database/data.cc": "100644:b9859640731207a99e4ab94753d5687dba1f8ad7",
+            "src/database/data.h": "100644:cf2f4585233429437bf4155a7e12dae1d31cd743",
+            "src/database/handler.cc": "100644:253b9cb390cbf549577184b303653c45773e2ef0",
+            "src/database/handler.h": "100644:b2027fe40bd05ace723fbaf2f683c9494bb18a7b",
+            "src/database/shard.cc": "100644:4cd743370e46bb2fee025a7a16782df84e841fcb",
+            "src/server/search_views.cc": "100644:05b4f0d9bbfb6e7ef2d44c5aca17657fd0354c61",
+            "tests/test_loop_yield.cc": "100644:dcbecaad3f4921b841a2cec3cac7c1378140bb41"
+          },
+          "by": "review",
+          "commit": "d272f0b6881b4857e4ecca45d506029c54c1ad04",
+          "criteria": "911ae9de8816cf00",
+          "diffs": {
+            "CMakeLists.txt": "2231df83de455318",
+            "docs/design/phase7c.md": "7c0ebeff54e60945",
+            "docs/perf/x7-loop-stalls.md": "a1bd607e30e88537",
+            "harness/async_allowlist.tsv": "1b5e87ef7674d88b",
+            "src/database/data.cc": "130429e4a10fa6fe",
+            "src/database/data.h": "b37c0c5b59ee6d93",
+            "src/database/handler.cc": "88bc82f082ae30fd",
+            "src/database/handler.h": "33708809714d93f5",
+            "src/database/shard.cc": "84aef7c878349882",
+            "src/server/search_views.cc": "c7dade8100967037",
+            "tests/test_loop_yield.cc": "c0b609a91dc54746"
+          },
+          "findings": {},
+          "note": "",
+          "review": "1e1532007b8b42eded4f1c228564703dc9176b24",
+          "reviewed": "d272f0b6881b4857e4ecca45d506029c54c1ad04",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "x7-scan-slices"
       ],
@@ -18035,7 +18074,7 @@
       "risk": "high",
       "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-12T01:50:31",
+      "updated": "2026-11-12T03:24:22",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-scan-slices": {

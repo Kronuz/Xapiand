@@ -1,6 +1,6 @@
 # x7-loop-stalls review: correctness
 
-Commit: Xapiand:20fc9e13302fb6e0628e10afed4b6dbdc61f89e5
+Commit: Xapiand:d272f0b6881b4857e4ecca45d506029c54c1ad04 (first review at Xapiand:20fc9e13302fb6e0628e10afed4b6dbdc61f89e5)
 Verdict: APPROVE
 Date: 2026-11-12
 
@@ -126,6 +126,35 @@ D8 is closed: the `prepare_plain` comment is accurate. D6 is the owner's and is 
 Blocking: yes or no. Kind: defect (wrong behavior), gap (unproven claim or missing test), nit. A
 finding that would remove or narrow user-visible behavior offers options, including keeping it,
 and is never blocking.
+
+## Re-check
+
+Read `git diff 20fc9e133..d272f0b68 -- src/database/handler.cc CMakeLists.txt`. Xapiand:4c1f38179 is the fix. The
+master merge Xapiand:ebf6698c1 changes none of this quest's files except the CMakeLists test list, which gains
+`aggregation_shards`, and the journal. No build was needed.
+
+- F1 is closed. `prepare_inline` clears `one.error` before it prepares (`handler.cc:2381`).
+- F2 is closed, and the old per-object semantics are back.
+  - When `get_schema` throws, `fetch` returns false, so the rest of the run takes the inline path. That path is
+    sequential and safe under D1, and each object's own `prepare_document` reads the schema; a failure becomes that
+    object's result.
+  - When `offer_schema` throws, the failure becomes the changed object's error and `stop = first_change + 1`. The
+    object is reported and not applied. The change was not committed, so the next `fetch` re-prepares every later
+    object on the schema as it stands.
+  - Both run on the loop, outside `when_all`, with no chore in flight. They add no ordering or lifetime hazard.
+  - The `catch (...)` also takes `task::cancelled`. A cancel during `fetch` or the offer becomes at most one object's
+    error before the next `checkpoint` throws. The response then goes nowhere (non-blocking).
+- F5 is closed. The comment at `CMakeLists.txt:456-458` now names the strata exception.
+- Evidence at the fixed code:
+  - Suite 261112-023812-2706e5 (Xapiand:4c1f38179): 38/38 and `async_check` unclassified 0.
+  - Suite 261112-025950-117b80 (Xapiand:ebf6698c1): 39/39 including `test_aggregation_shards`, unclassified 0.
+  - Six mutant reruns at Xapiand:4c1f38179, each requiring exit 1 and its named line. dee27d fails :320, c46ec7 :341,
+    ef8bd1 :415, 67a8c1 :414 (plus unrelated checks, as F4 notes), 4e7e65 :447 and :451, and 8e5dff :383.
+- F1 and F2 still have no test that fails without them. This does not block: both were non-blocking findings. Each fix
+  is a one-line reset or catch on the loop. A test needs a fault point in `schemas_lru.cc` that does not exist yet, and
+  hunt.md:100 tracks it.
+
+Verdict at Xapiand:d272f0b68: APPROVE.
 
 ## Not run
 
