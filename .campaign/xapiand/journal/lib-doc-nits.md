@@ -1,6 +1,6 @@
 # lib-doc-nits: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/lib-doc-nits.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Done; awaiting review.
 
 ## Next
 
-1. <step>
+1. Review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
@@ -27,14 +27,13 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | job 261112-032541-0728ed build-test passed at completion:a46b399 |
+| A2 | [artifact] `docs/mechanisms/barriers.md` (N1, N2, N4, N5 in posix.h comment, N6) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+completion:a46b399 on quest/xapiand/lib-doc-nits: barriers.md (N1, N2, N4, N6), posix.h comment (N5) and barrier_volumes() leaked (N3). N7 untouched (lead's call). Cost numbers (4-5 ms, 44-304 images) are the review's probe, not re-measured.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+None.
