@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+completion's `IO::acquire_directory_reader()` (completion:504f409) is gone with its PosixIO path, tests, mutant m15 and docs: D60c removed its only planned user (strata) and Detent does not use it. The directory owner lock behaves as before 504f409; the one `lock(fd, ...)` helper stays only if it is still the simplest shape for the exclusive file and directory locks, otherwise it folds back.
 
 ## Acceptance criteria
 
@@ -14,18 +14,17 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 No `acquire_directory_reader` or shared directory lock remains in code, tests, tools/mutants.py (count back to 24), the workflow or docs, and the suite passes (completion_mutants_anchors included): the build-test check
+- A2 CI green on every platform: the build-test job and CI
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Removes completion:directory-lock's shared half. No user anywhere (Xapiand, strata, prospect, Detent checked).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, 11-12 (D60c); Detent lead 11-12: remove it.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
