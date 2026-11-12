@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261111-230628-74a222 261111-231551-11dc15 261111-231553-7f715c
+State: waiting on jobs 261111-232734-59ff14 261111-232735-af5357 261111-232738-c4c72b
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,8 +23,11 @@ Compress-once built (Xapiand:2f8145379): `Data::set_obj(obj, bool compress = tru
 raw, `finalise_write` rewrites it once compressed when modified or raw. `Locator::compressions()` counts zstd record
 compressions. Test `test_a_restored_record_is_compressed_once_and_reads_back`: 200 restored records, 200
 compressions; three records read back with `n`, `text`, `_id`, `_version` 1.
-Jobs: build-test 261111-231551-11dc15 at 2f8145379 (`--for A4`; replaces 642de6, cancelled), mutant 261111-231553-7f715c
-(prepare compresses again; the test must fail), fix-1 mutant 261111-230628-74a222 (at 00cd38f39).
+Fix-1 mutant 261111-230628-74a222 is not evidence: the test process died of SIGUSR2 (the node's stall watchdog
+collects stacks with it; the test had no handler), not of a failed check. Fixed (Xapiand:102d6609e: the handler, as
+main() installs it); the mutants now require exit 1 (checks failed).
+Jobs at 102d6609e: build-test 261111-232734-59ff14 (`--for A4`), fix-1 mutant 261111-232735-af5357, compress-once
+mutant 261111-232738-c4c72b (both `--for A4 --fails-without`). Cancelled as superseded: 642de6, 11dc15, 7f715c.
 
 E2 (no `--for`): 100-hit kinds p99 lag 12.3-14.3 ms, phrase 7.2-8.2, `_terms age` 6.1-7.2, `_values state` 3.1,
 RESTORE + one text client 0.38 ms median loop, 10.2 ms worst.
