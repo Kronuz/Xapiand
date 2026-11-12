@@ -24,6 +24,8 @@
 #include "serialise.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
+#include <cstdint>                                    // for int64_t, uint64_t
+#include <limits>                                     // for std::numeric_limits
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
 #include <string_view>                                // for std::string_view
 
@@ -802,7 +804,8 @@ Serialise::guess_type(const class MsgPack& field_value)
 			return FieldType::integer;
 
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return FieldType::positive;
+			// The value picks the type, not its encoding: msgpack sends 5 unsigned and JSON signed.
+			return field_value.u64() > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ? FieldType::positive : FieldType::integer;
 
 		case MsgPack::Type::FLOAT:
 			return FieldType::floating;
@@ -930,11 +933,13 @@ std::pair<FieldType, std::string>
 Serialise::guess_serialise(const class MsgPack& field_value)
 {
 	switch (field_value.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			if (guess_type(field_value) == FieldType::positive) {
+				return std::make_pair(FieldType::positive, positive(field_value.u64()));
+			}
+			[[fallthrough]];
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return std::make_pair(FieldType::integer, integer(field_value.i64()));
-
-		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::make_pair(FieldType::positive, positive(field_value.u64()));
 
 		case MsgPack::Type::FLOAT:
 			return std::make_pair(FieldType::floating, floating(field_value.f64()));

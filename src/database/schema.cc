@@ -5084,6 +5084,21 @@ Schema::validate_required_data(MsgPack& mut_properties)
 }
 
 
+// Whether the integer `value` is in the range of the integer type `type`, whatever its encoding.
+static bool
+fits_integer_type(FieldType type, const MsgPack& value)
+{
+	switch (value.get_type()) {
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return type == FieldType::integer || (type == FieldType::positive && value.i64() >= 0);
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return type == FieldType::positive || (type == FieldType::integer && value.u64() <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
+		default:
+			return false;
+	}
+}
+
+
 FieldType
 Schema::guess_concrete_type(const MsgPack& item_doc)
 {
@@ -5095,24 +5110,14 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 
 	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			if (specification.flags.numeric_detection) {
-				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					return FieldType::positive;
-				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::positive) {
-					THROW(ClientError, "Type mismatch '{}' -> 'positive'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
-				}
-				return FieldType::positive;
-			}
-			break;
-
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					return FieldType::integer;
-				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::integer) {
-					THROW(ClientError, "Type mismatch '{}' -> 'integer'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+					return Serialise::guess_type(item_doc);
+				} else if (!fits_integer_type(specification.sep_types[SPC_CONCRETE_TYPE], item_doc)) {
+					THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(Serialise::guess_type(item_doc)));
 				}
-				return FieldType::integer;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			break;
 
@@ -5381,7 +5386,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		}
 
 		case FieldType::integer: {
-			if (value.is_number()) {
+			if (fits_integer_type(FieldType::integer, value)) {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (global_terms && field_terms) {
@@ -5413,7 +5418,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		}
 
 		case FieldType::positive: {
-			if (value.is_number()) {
+			if (fits_integer_type(FieldType::positive, value)) {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (global_terms && field_terms) {
