@@ -3,6 +3,7 @@
 src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and restore_documents(fd) serve the CLI --dump and --restore on the main thread (check_may_block guards it)
 src/database/handler.cc	pool	lock_shard	allow	24	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
 src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
+src/database/handler.cc	sync_wait	schema\.index	allow	1	a RESTORE's prepare chore runs Schema::index on a WorkPool worker (inline on the CLI's main thread); CPU only there: scripts are barriers and seq is never 0, so no call_script or lock_shard (x7-loop-stalls)
 src/database/pool.cc	mutex	chores_mtx	allow	4	the list of live IndexChores: O(1) link and unlink; cancel_all walks it at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	mutex	pending_mtx	allow	3	the catalog timer's pending callbacks: O(1) sections that add, take or swap out an entry, none with I/O; the callbacks run outside it and only post (D58)
 src/database/pool.cc	mutex	weak\.lock\(\)	allow	1	std::weak_ptr::lock in the catalog timer's callback, not a mutex: it takes no lock (D58)

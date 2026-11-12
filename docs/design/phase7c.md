@@ -195,7 +195,7 @@ one lane per class (`work_pool.hh:1110-1128`), so classes do not queue behind ea
 | Class | Chores | Why |
 |---|---|---|
 | `query` | read-your-writes refresh, open, blob read | A request waits on it; the reserve worker (`reserve = 1`, `:673`) keeps one free for them (C8.1, C8.3) |
-| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead | Throughput work; parse-ahead in its own group, so DRR splits service with the index's group (C8.1) |
+| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead, RESTORE prepare | Throughput work; parse-ahead and RESTORE prepare in the RESTORE's own group, so DRR splits service with the index's group (C8.1); a prepare chore runs about 1 ms |
 | `merge` | merges, reclaim deletes (strata's executor binds here) | Background; at most `merge_cap` workers |
 
 Aging (C8.2, threadpool L2): a merge lane that has waited longer than 100 ms (an estimate) takes the
@@ -357,7 +357,11 @@ boundary and every 4,096 ordinals of the exhaustive loop (`shards.hh:237`, L4); 
 inside those slices. Dump scans check every 64 documents. A buffered body has a cap (16 MiB, an
 estimate), which http enforces at headers complete from `Content-Length`, or as bytes arrive.
 Above it, a `stored` upload streams (D9), RESTORE streams as today, and anything else gets 413.
-Documents above 64 KiB (an estimate) and RESTORE batches are prepared in parse-ahead chores.
+Documents above 64 KiB (an estimate) are decoded in chores. A RESTORE batch is parsed in parse-ahead chores and
+its plain `index` objects are prepared (fields, terms, raw record) in `flush` chores of the RESTORE's group, each about
+1 ms, in input order with schema changes committed in input order; an object that reads the stored document (patch,
+update, merge, a script, `_schema`) is prepared on the reactor after every earlier object applied, and every apply
+stays in the shard's turn (`docs/perf/x7-loop-stalls.md`, the RESTORE chore design).
 
 **D13. The control plane is coroutines on its loop.** `control_offload` and the control reactor's
 worker are deleted (`manager.cc:156`, `:467-488`). Node setup, `load_nodes`, `new_leader` and the

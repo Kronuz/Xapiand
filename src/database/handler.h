@@ -268,12 +268,13 @@ public:
 };
 
 
-// The bulk indexer of a RESTORE: prepares each object of a stream and applies it to its shard, in order, as
-// tasks on the reactor that serves the request (docs/design/phase7c.md D12). It owns no thread and waits for
-// none: it yields when its slice is spent, and the parse of the next batch runs beside it in a chore.
+// The bulk indexer of a RESTORE: prepares the objects of a stream in chores of the RESTORE's group and applies
+// each to its shard, in order, on the reactor that serves the request (docs/design/phase7c.md D12). It owns no
+// thread and waits for none: it yields when its slice is spent, and the parse of the next batch runs beside it.
 class DocIndexer {
 	Endpoints endpoints;
 	int flags;
+	engine::Chores& chores;
 
 	bool echo;
 	bool comments;
@@ -289,11 +290,10 @@ class DocIndexer {
 	size_t _idx = 0;
 	std::vector<MsgPack> _results;
 
-	task::task<void> index_one(MsgPack&& obj);
-
 public:
-	// `budget` is the request's time slice (null: the work runs without yielding).
-	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, task::budget* budget = nullptr);
+	// `chores` runs the prepares (the RESTORE's group); `budget` is the request's time slice (null: the work runs
+	// without yielding).
+	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget = nullptr);
 
 	DocIndexer(const DocIndexer&) = delete;
 	DocIndexer& operator=(const DocIndexer&) = delete;

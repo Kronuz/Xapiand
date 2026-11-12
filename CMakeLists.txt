@@ -454,7 +454,8 @@ endif ()
 include(FetchContent)
 
 # Every pin below is the newest commit any fetched library pins (harness/pins_check.py compares the
-# resolved trees); a library that pins an older one is bumped in its own repository.
+# resolved trees), but strata: prospect b20e7c5 pins strata 94480d5 (the manifest log), newer than
+# strata's pin here, until strata's own bump. A library that pins an older one is bumped in its own repository.
 # compressors: the LZ4 and zstd block codecs of the stored blocks, and the deflate codec.
 FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5566260a30bbd2d77d5cfa890bfe33f503a2add6)
 # Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use.
@@ -769,7 +770,7 @@ FetchContent_MakeAvailable(task)
 # strata and the libraries strata links.
 # strata: the commit with defer_io and work_pool_executor.
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 5d742b2407f5048713cb39a625c017c455cb814e)  # strata main: the catalog host interface, destroy-safe pins with cancel tokens
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG b20e7c555f37daad415cf658b32f99cc9a955464)  # prospect main: the exhaustive scan checks its slice every 256 ordinals with host work
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -1892,7 +1893,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node lua metric_serialise quarantine root_routes aggregation_shards)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
