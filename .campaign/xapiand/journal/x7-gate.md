@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-162221-c4aa56 261111-165347-d979c7
+State: waiting on jobs 261111-165347-d979c7
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -64,7 +64,7 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read 261111-165347-d979c7's "KiB per open index" into T13 and A13; read 261111-162221-c4aa56 into A17, A20.
+1. Read 261111-165347-d979c7's "KiB per open index" into T13 and A13; (build-test 261111-162221-c4aa56 passed: A17, A20).
 2. Then only the lead's timing rows (A4 A5 A10's timing A11 A12 A16 A21 A24), the Linux and FreeBSD runs (A6 A15),
    x7-coverage (A13's coverage and corpora), x7-cancel-rows (A9), x7-view-bench (A22) and the reviews remain.
 
@@ -169,10 +169,10 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 | A14 | `docs/gates/phase7c.md` (draft, functional rows filled) |
 | A15 | <no evidence yet> (Linux VM, FreeBSD) |
 | A16 | <no evidence yet> (lead, strict) |
-| A17 | build-test 261111-162221-c4aa56 pending; 261111-142844-048b3b (`t1_strict_owed`) |
+| A17 | build-test 261111-162221-c4aa56 passed; 261111-142844-048b3b (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
 | A19 | removed 261111-142835-15e20c; 261111-142844-048b3b (`x6_shutdown`) |
-| A20 | build-test 261111-162221-c4aa56 pending |
+| A20 | build-test 261111-162221-c4aa56 passed |
 | A21 | <no evidence yet> (D62: over 5% CPU or 10% p99 after optimizing fails) |
 | A22 | <no evidence yet> (quest x7-view-bench) |
 | A23 | D53 (T4 reads the control loop only while busy) |

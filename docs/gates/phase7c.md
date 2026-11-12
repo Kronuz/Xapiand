@@ -13,7 +13,7 @@ Jobs (all at Xapiand:0cec18474):
 - **rows** 261111-142844-048b3b: a Release and an ASan+UBSan build, `ctest` under ASan+UBSan (37 of 37 pass), then
   every row of `gate7c_rows.sh` (`rows/rows.tsv` in the job's output): 14 of 14 rows pass.
 - **build-test** 261111-162221-c4aa56 (rerun of 261111-142834-9c25fd, which failed 1 of 406 on a master timing
-  flake in `test_pool`, `tests/test_pool.cc:2203`, under load about 50).
+  flake in `test_pool`, `tests/test_pool.cc:2203`, under load about 50): passes.
 - **e2e** 261111-142834-e6b01e, **t7-tsan** 261111-142834-da0a9e, **recovery** 261111-142835-bb67a2,
   **removed** 261111-142835-15e20c: all pass.
 - **x3-5** 261111-165347-d979c7: per-open-index resident cost at 10,000 open indexes.
