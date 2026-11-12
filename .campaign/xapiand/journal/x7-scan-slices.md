@@ -1,6 +1,6 @@
 # x7-scan-slices: journal
 
-State: waiting on jobs 261111-230601-107439 261111-230602-46c1c9 261111-230624-4bea51 261111-230634-53c6e2 261111-231025-b3ef28
+State: waiting on jobs 261112-003707-96568a 261112-003708-c3d2d6 261112-003718-87dd09 261112-003720-34c4cb 261112-003722-18be3b
 Quest: .campaign/xapiand/quests/x7-scan-slices.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,18 +9,22 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs at prospect:bcd57e0: build-test 261111-230601-107439 (A1), mutant 261111-230602-46c1c9 (A1
---fails-without: span reverted to window_ordinals, expects `CHECK(got.most() <= 256)` to fail),
-A/B build 261111-230624-4bea51 (slot x7ss-ab: `build` = head, `build-base` = head's sliced_test
-with base prospect:0aa68f4's shards.hh via `-iquote .scratch/base`), strict smoke
-261111-230634-53c6e2 (one round of `sliced_test bench 150000 3`, sides A B A2).
+Lead's message (row 261111-231025-b3ef28 segfaulted): the crash was the bench harness, not the
+scan. `bench()` passed a temporary `query` to `builder_for`, which keeps a reference to it, so
+every scan read a dead query; both binaries crashed (the first smoke 261111-230634-53c6e2 printed
+no bench line from A, B or A2: its pipeline had no pipefail). The test proper (`host_windows()`)
+binds its queries for the loop and was unaffected. Fixed at prospect:ca65df9; the smoke and row
+now also require six bench lines per invocation.
+
+Jobs at prospect:ca65df9: build-test 261112-003707-96568a (A1), mutant rerun
+261112-003708-c3d2d6 (A1 --fails-without), A/B build 261112-003718-87dd09 (slot x7ss-ab), smoke
+261112-003720-34c4cb, row 261112-003722-18be3b (A2: 8 rounds of `bench 150000 21`, A B A2).
 
 ## Next
 
-1. Read the row 261111-231025-b3ef28 (strict, `--for A2`, after the smoke: 8 rounds of
-   `sliced_test bench 150000 21`, sides A B A2): per arm (plain, count, agg; unsliced, sliced)
-   B/A and A2/A over rounds' medians. Cancel and resize it if the smoke shows a problem.
-2. Write docs/perf/scan-slices.md (A3) from it; commit; push; paste `campaign brief`'s table.
+1. From the row: per arm B/A and A2/A over rounds; write docs/perf/scan-slices.md (A3), the
+   README row, and fix the mechanism note's rationale sentence with the measured ratio.
+2. Commit, push, paste `campaign brief`'s table, State "ready for review".
 
 ## Blocked on
 
