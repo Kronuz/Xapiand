@@ -357,30 +357,40 @@ static void test_a_restored_record_is_compressed_once_and_reads_back() {
 
 
 // A RESTORE's plain objects are prepared in chores while its HTTP loop applies them: the loop's CPU for a text-heavy
-// restore is well under half the process's; with every object prepared on the loop it is more.
+// restore is well below its CPU when every object is prepared on the loop, as an update's is (D1: it reads the stored
+// document, so its prepare waits for every earlier object). Both are measured here, so the check holds on any core count.
 static void test_a_restore_prepares_its_objects_off_its_loop() {
-	constexpr int documents = 3000;
-	auto lines = [](int first, int count) {
+	constexpr int documents = 2000;
+	// An update of a new record indexes it, prepared on the loop.
+	auto lines = [](int first, int count, bool on_loop) {
 		std::string body;
 		for (int i = first; i < first + count; ++i) {
 			std::string text;
-			for (int w = 0; w < 300; ++w) {
+			for (int w = 0; w < 1000; ++w) {
 				text += "word" + std::to_string((i * 131 + w * 7) % 20011) + " ";
 			}
-			body += R"({"_id":)" + std::to_string(i) + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
+			body += R"({"_id":)" + std::to_string(i) + (on_loop ? R"(,"_op_type":"update")" : "") + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
 		}
 		return body;
 	};
-	CHECK_EQ(http_call("RESTORE", "/offloop/?commit", lines(1, 10), "application/x-ndjson") / 100, 2);   // the schema exists after it
-	const auto body = lines(11, documents);
-	const auto loop_before = loop_cpu_ms();
-	const auto process_before = process_cpu_ms();
-	CHECK_EQ(http_call("RESTORE", "/offloop/?commit", body, "application/x-ndjson") / 100, 2);
-	const auto loop_ms = loop_cpu_ms() - loop_before;
-	const auto process_ms = process_cpu_ms() - process_before;
-	std::fprintf(stderr, "  restore of %d documents: loop %.1f ms of the process's %.1f ms CPU\n", documents, loop_ms, process_ms);
-	CHECK_GT(process_ms, 200.0);              // long enough to tell
-	CHECK_LT(loop_ms, process_ms * 0.45);     // the prepares ran on the workers: about 34%, against 60% on the loop
+	// The loop's CPU of restoring the same documents into an index.
+	auto loop_cpu = [&](const std::string& index, bool on_loop) {
+		CHECK_EQ(http_call("RESTORE", index + "?commit", lines(1, 10, on_loop), "application/x-ndjson") / 100, 2);   // the schema exists after it
+		const auto body = lines(11, documents, on_loop);
+		const auto loop_before = loop_cpu_ms();
+		const auto process_before = process_cpu_ms();
+		CHECK_EQ(http_call("RESTORE", index + "?commit", body, "application/x-ndjson") / 100, 2);
+		const auto loop_ms = loop_cpu_ms() - loop_before;
+		const auto process_ms = process_cpu_ms() - process_before;
+		std::fprintf(stderr, "  restore of %d documents %s: loop %.1f ms of the process's %.1f ms CPU\n", documents,
+			on_loop ? "prepared on the loop" : "prepared in chores", loop_ms, process_ms);
+		CHECK_GT(process_ms, 200.0);   // long enough to tell
+		return loop_ms;
+	};
+	const auto on_loop_ms = loop_cpu("/onloop/", true);
+	const auto chores_ms = loop_cpu("/offloop/", false);
+	std::fprintf(stderr, "  loop CPU: %.1f ms with the prepares in chores, %.1f ms on the loop\n", chores_ms, on_loop_ms);
+	CHECK_LT(chores_ms, on_loop_ms * 0.7);   // chores: 0.4-0.55 of the on-loop run; the prepares forced onto the loop: 0.6-0.9
 }
 
 
