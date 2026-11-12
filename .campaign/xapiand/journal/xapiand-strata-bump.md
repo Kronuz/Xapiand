@@ -1,6 +1,6 @@
 # xapiand-strata-bump: journal
 
-State: waiting on jobs 261112-042224-6d8e89 261112-042225-aad4d1 261112-042228-ee73ed 261112-042232-481834
+State: waiting on jobs 261112-042224-6d8e89 261112-043246-c284b3
 Quest: .campaign/xapiand/quests/xapiand-strata-bump.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -11,10 +11,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 Jobs queued at quest/xapiand/xapiand-strata-bump 3cdf295b2 (branch pushed for CI, A4):
 - 261112-042224-6d8e89 build-test check (A2)
-- 261112-042225-aad4d1 configure + harness/pins_check.py (A1); local run: `pins_check: ok`, strata head ab0e26a6,
+- 261112-042225-aad4d1 configure + harness/pins_check.py (A1): done, `pins_check: ok`, strata head ab0e26a6,
   prospect's own pin d8ae10b8 listed as a stale pin inside prospect (ancestor; 24 stale library pins, none Xapiand's)
-- 261112-042228-ee73ed tests/test_engine_error.cc alone (A3); local run: OK 144 checks
-- 261112-042232-481834 mutant tests/test_engine_error_mutant.sh, --fails-without (A3)
+- 261112-042228-ee73ed tests/test_engine_error.cc alone (A3): failed in configure, lua.org TLS fetch error while the
+  verify job configured the same slot; rerun as 261112-043246-c284b3 after the verify job. Local run: OK 144 checks
+- 261112-042232-481834 mutant tests/test_engine_error_mutant.sh, --fails-without (A3): done, exit 0, the test failed
+  test_engine_error.cc:240 and :244 `CHECK(kind == errc::corrupt)`, 2 of 144 checks
+- CI run 43217395714 on 05cba6694 (A4), in progress
 
 ## Next
 
@@ -40,10 +43,10 @@ The test proves that form. Options:
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261112-042225-aad4d1 (pending) |
-| A2 | job 261112-042224-6d8e89 (pending) |
-| A3 | jobs 261112-042228-ee73ed, mutant 261112-042232-481834 (pending) |
-| A4 | CI on quest/xapiand/xapiand-strata-bump 3cdf295b2 (pending) |
+| A1 | job 261112-042225-aad4d1 (pins_check: ok) |
+| A2 | job 261112-042224-6d8e89 (running) |
+| A3 | job 261112-043246-c284b3 (queued), mutant 261112-042232-481834 (killed: exit 0) |
+| A4 | CI run 43217395714 on 05cba6694 (in progress) |
 
 ## Result
 
