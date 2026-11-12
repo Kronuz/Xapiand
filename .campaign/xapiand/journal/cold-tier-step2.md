@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-151520-66533e 261111-151526-29ff8a 261111-151532-1f0913 261111-151536-71d322 261111-151540-9ba721 261111-151543-9397aa 261111-151547-259305 261111-151551-cd5253
+State: ready for review
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,18 +32,17 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
 
 ## Next
 
-0. Lead's question 11-11 (after 418363): the 19.4/19.7 ms p50s are the one-slot trigger's, via the
-   median's step; the trigger costs throughput (strata:ed9102bd, `docs/perf/catalog-tiers.md` "The
-   trigger's cost, an A/B"). Four one-pair exclusive jobs ac195f, 7e33e6, 071676, 141fc0: on
-   253/216/256/303 vs off 303/276/320/416 req/s (0.73-0.83 of off, 4 of 4); device slow in every run
-   (probe p50 52-63 ms); waited share on 58-60% vs off 47-59%; passes ~26-29k vs ~7k; opens,
-   demotes and closes equal. 7430a0's earlier "on faster" read came from a job that timed out, so it
-   is not evidence and was withdrawn.
-   Experiment (strata:062182b2): post at a full pass's excess (`pass_posts`). Suite 66533e, mutant
-   29ff8a (7b126bc1's catalog.hh fails `soft_caps_post` line 550), build 1f0913, pairs 71d322
-   9ba721 9397aa 259305, T3 cd5253 (358d4c's command). If within off's spread and T3 0 samples over
-   soft+16: keep, update `docs/mechanisms/catalog.md` (who posts a pass) and cite for A1/A4. Else:
-   revert to 7b126bc1's trigger and bring the lead the measured residual (T3 met vs ~20% Zipf).
+0. Done: the trigger's p50 and throughput question (strata:bb7c3f7e, bbef1d4a,
+   `docs/perf/catalog-tiers.md` "The trigger's cost, an A/B" and "The band trigger"). The
+   one-slot trigger cost 17-27% (0.73-0.83 of off in 4 of 4 pairs, -18% scaled by each run's
+   flush p50), through about 16,000 extra passes a run; its 19.4 and 19.7 ms p50s are the median
+   crossing the wake-or-flush step at a 58-60% waited share. The band trigger (strata:062182b2:
+   post at a full pass's excess) is within off's spread: means 296 against 293 req/s, pair median
+   0.89, +0.7% scaled. The cap's own work is equal (opens, demotes, closes, owed waits), so the
+   remaining spread is the device's per-run flush time, not the passes or the cap; 4 pairs resolve
+   about 10%. T3 at the band (cd5253): PASS at the end; net of relief 4 and 5 of 259 samples at
+   most 3 past soft+16 (opens in flight while the pass waits for a chore), against 0 of 278 at one
+   slot. That reading of T3 is the lead's call.
 1. Read 261111-124104-418363 (`tiers.sh t3ab`, strata:63dc1c18: on = 7b126bc1's binary from
    b065fc, off = f3f7d9c2's from 261111-124103-7e9274; 50,000 indexes, 12,000 Zipf, 4 pairs
    alternating). Zipf req/s per run: if on's mean is below off's beyond the larger of the two
@@ -116,10 +115,10 @@ minutes when it runs.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `soft_caps_post` (strata:5d3c948a: build-test 261111-113837-7882c4, mutant killed 261111-113839-ade11c), `pass_post_throws` (strata:7b126bc1: 261111-123742-b13378, mutant 261111-123743-7732e9); the band check in `soft_caps_post` (strata:062182b2: suite 261111-151520-66533e, mutant 261111-151526-29ff8a, pending); `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
+| A1 | `soft_caps_post` (strata:5d3c948a: build-test 261111-113837-7882c4, mutant killed 261111-113839-ade11c), `pass_post_throws` (strata:7b126bc1: 261111-123742-b13378, mutant 261111-123743-7732e9); the band check in `soft_caps_post` (strata:062182b2: suite 261111-151520-66533e, 74 of 74; mutant 261111-151526-29ff8a killed); `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
 | A2 | 261111-035757-eb666b: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-035757-1edccb: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`test/catalog_test.cc` static_assert) |
 | A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf (T2/T2d), 261111-035757-a253be (K6). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
-| A4 | met except: T1 cold (292 B against 16 B), T2 hot d1s1 (p50 +56% and +40% in 2 of 3 pairs), T2 hot d1s1 beyond its A/A spread (261111-113118-6d8a9c, +71% p50), T2 cold d1000s10 p99 (+13.9%, inside main's own spread; same-mode pairs only), T1 warm heap (261111-113121-6aaa2d: 5,022 B against the listed pieces plus 7%, 3,907 B). T3 soft caps MET at strata:5d3c948a (261111-113856-358d4c; cause 261111-113116-5b7a23). The one-slot trigger's Zipf throughput is a MISS: 0.73-0.83 of off in 261111-143023-ac195f, 261111-143025-7e33e6, 261111-143034-071676, 261111-143035-141fc0 (agrees with 261111-124104-418363, 3 of 4). The band trigger (strata:062182b2) is pending: 261111-151536-71d322, 261111-151540-9ba721, 261111-151543-9397aa, 261111-151547-259305, T3 261111-151551-cd5253. macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf; T3 261111-034629-8f5208; T4 261111-035757-a2d41c, 261111-035757-bbb067. Verdicts in `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
+| A4 | met except: T1 cold (292 B against 16 B), T2 hot d1s1 (p50 +56% and +40% in 2 of 3 pairs), T2 hot d1s1 beyond its A/A spread (261111-113118-6d8a9c, +71% p50), T2 cold d1000s10 p99 (+13.9%, inside main's own spread; same-mode pairs only), T1 warm heap (261111-113121-6aaa2d: 5,022 B against the listed pieces plus 7%, 3,907 B). T3 soft caps MET at strata:5d3c948a (261111-113856-358d4c; cause 261111-113116-5b7a23). The one-slot trigger's Zipf throughput is a MISS: 0.73-0.83 of off in 261111-143023-ac195f, 261111-143025-7e33e6, 261111-143034-071676, 261111-143035-141fc0 (agrees with 261111-124104-418363, 3 of 4). At the band trigger (strata:062182b2), build 261111-151532-1f0913: Zipf throughput MET within off's spread (261111-151536-71d322, 261111-151540-9ba721, 261111-151543-9397aa, 261111-151547-259305: means 296 against 293 req/s), T3 PASS (261111-151551-cd5253; net at most soft+19 in 4 and 5 of 259 samples). macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf; T3 261111-034629-8f5208; T4 261111-035757-a2d41c, 261111-035757-bbb067. Verdicts in `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
 | A5 | macOS warm: T2d warm defer below cold at p50 and p99 on every fixture, no interval overlapping: 261111-085642-fdea98 (d1s1: 47-85 against 264-20,946 µs at p50), 261111-085644-609714 (d1000s1: 54-71 against 379-41,137), 261111-035757-f9dbcf (d1000s10: 351-394 against 1,097-21,908); p99 108-799 against 42,224-72,264. Dropped and Linux: Milestone checks |
 | A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
 | A7 | 261111-035757-bf4776: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
