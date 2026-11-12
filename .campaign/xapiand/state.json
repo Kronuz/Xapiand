@@ -10483,8 +10483,8 @@
       "risk": "low",
       "status": "dropped",
       "title": "Measure the share of index opens that never write while open",
-      "updated": "2026-11-12T07:41:53",
-      "worktree": "../Xapiand-wt/xapiand/open-mix"
+      "updated": "2026-11-12T08:26:23",
+      "worktree": ""
     },
     "open-one-flush": {
       "accepted": {
