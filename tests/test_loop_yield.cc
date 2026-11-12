@@ -46,6 +46,8 @@
 #include <unistd.h>
 
 #include "database/data.h"
+#include "database/handler.h"
+#include "database/pool.h"
 #include "database/utils.h"
 #include "endpoint.h"
 #include "http_asio.h"
@@ -289,6 +291,62 @@ std::uint64_t worst_us_between(const reactor::LagSnapshot& before, const reactor
 	return worst;
 }
 
+// Creates the index `name` with `shards` shards and no replicas.
+void create_index(const std::string& name, int shards) {
+	const auto settings = R"({"_settings":{"number_of_shards":)" + std::to_string(shards) + R"(,"number_of_replicas":0}})";
+	CHECK_EQ(http_call("PUT", "/" + name + "/", settings) / 100, 2);
+}
+
+// A RESTORE's items, one per object, as strings.
+std::vector<std::string> items_of(const std::string& reply) {
+	std::vector<std::string> items;
+	const auto all = field_of(json_of(reply), "items");
+	for (std::size_t i = 0; i < all.size(); ++i) {
+		items.push_back(all.at(i).to_string());
+	}
+	return items;
+}
+
+// The items of `objects` restored one object per request: the serial model of a RESTORE.
+std::vector<std::string> restored_one_by_one(const std::string& index, const std::vector<std::string>& objects) {
+	std::vector<std::string> items;
+	for (std::size_t i = 0; i < objects.size(); ++i) {
+		std::string reply;
+		const auto commit = i + 1 == objects.size() ? "?commit" : "";
+		CHECK_EQ(http_call("RESTORE", "/" + index + "/" + commit, "[" + objects[i] + "]", "application/json", &reply) / 100, 2);
+		const auto one = items_of(reply);
+		items.push_back(one.size() == 1 ? one[0] : std::string("none"));
+	}
+	return items;
+}
+
+// The first difference of two runs' items, or none.
+bool same_items(const std::vector<std::string>& parallel, const std::vector<std::string>& serial) {
+	CHECK_EQ(parallel.size(), serial.size());
+	for (std::size_t i = 0; i < parallel.size() && i < serial.size(); ++i) {
+		if (parallel[i] != serial[i]) {
+			std::fprintf(stderr, "  object %zu: %s / %s\n", i, parallel[i].c_str(), serial[i].c_str());
+			return false;
+		}
+	}
+	return parallel.size() == serial.size();
+}
+
+// Fixes the objects each prepare chore takes, so a range holds that many objects on any build; clears the seams
+// and the run's report.
+class FixedRanges {
+public:
+	explicit FixedRanges(std::size_t objects) {
+		DocIndexer::stats.reset();
+		DocIndexer::seams.objects_per_prepare = objects;
+	}
+	~FixedRanges() {
+		DocIndexer::seams.objects_per_prepare = 0;
+		DocIndexer::seams.after_placement = nullptr;
+		DocIndexer::seams.throw_in_slice = false;
+	}
+};
+
 }  // namespace
 
 
@@ -356,9 +414,9 @@ static void test_a_restored_record_is_compressed_once_and_reads_back() {
 }
 
 
-// A RESTORE's plain objects are prepared in chores while its HTTP loop applies them: the loop's CPU for a text-heavy
-// restore is well under half the process's; with every object prepared on the loop it is more.
-static void test_a_restore_prepares_its_objects_off_its_loop() {
+// A RESTORE's plain objects are prepared and written in chores, the writes one child per shard: the HTTP loop's CPU
+// for a text-heavy restore into 5 shards is a small share of the process's, and the shards apply at once.
+static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 	constexpr int documents = 3000;
 	auto lines = [](int first, int count) {
 		std::string body;
@@ -371,16 +429,159 @@ static void test_a_restore_prepares_its_objects_off_its_loop() {
 		}
 		return body;
 	};
+	create_index("offloop", 5);
 	CHECK_EQ(http_call("RESTORE", "/offloop/?commit", lines(1, 10), "application/x-ndjson") / 100, 2);   // the schema exists after it
 	const auto body = lines(11, documents);
+	DocIndexer::stats.reset();
 	const auto loop_before = loop_cpu_ms();
 	const auto process_before = process_cpu_ms();
 	CHECK_EQ(http_call("RESTORE", "/offloop/?commit", body, "application/x-ndjson") / 100, 2);
 	const auto loop_ms = loop_cpu_ms() - loop_before;
 	const auto process_ms = process_cpu_ms() - process_before;
-	std::fprintf(stderr, "  restore of %d documents: loop %.1f ms of the process's %.1f ms CPU\n", documents, loop_ms, process_ms);
+	const auto children = DocIndexer::stats.children.load();
+	const auto peak = DocIndexer::stats.peak_children.load();
+	std::fprintf(stderr, "  restore of %d documents: loop %.1f ms of the process's %.1f ms CPU (%.0f%%); %zu children at most, %zu at once\n", documents, loop_ms, process_ms, 100 * loop_ms / process_ms, children, peak);
 	CHECK_GT(process_ms, 200.0);              // long enough to tell
-	CHECK_LT(loop_ms, process_ms * 0.45);     // the prepares ran on the workers: about 34%, against 60% on the loop
+	CHECK_LT(loop_ms, process_ms * 0.25);     // the writes ran on the workers too: 34% with only the prepares there
+	if (children > 1) {                       // a pool of 5 threads or more
+		CHECK_GT(peak, std::size_t{1});
+	}
+}
+
+
+// One RESTORE of a stream into 5 shards ends as the stream restored one object per request: ids repeated across it
+// (a later object replacing an earlier one, within one shard's sub-run too), on every shard, and already there.
+static void test_a_sharded_restore_matches_its_serial_model() {
+	create_index("model_par", 5);
+	create_index("model_seq", 5);
+	std::string seed;
+	for (int k = 0; k < 20; ++k) {
+		seed += R"({"_id":"k)" + std::to_string(k) + R"(","v":-1})" "\n";
+	}
+	for (const auto* index : {"/model_par/?commit", "/model_seq/?commit"}) {
+		CHECK_EQ(http_call("RESTORE", index, seed, "application/x-ndjson") / 100, 2);
+	}
+	std::vector<std::string> objects;
+	std::string body;
+	for (int i = 0; i < 300; ++i) {
+		objects.push_back(R"({"_id":"k)" + std::to_string(i * 7 % 60) + R"(","v":)" + std::to_string(i) + "}");
+		body += objects.back() + "\n";
+	}
+	std::string reply;
+	{
+		FixedRanges ranges(32);
+		CHECK_EQ(http_call("RESTORE", "/model_par/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		std::fprintf(stderr, "  largest range %zu, %zu ids repeated within a sub-run\n", DocIndexer::stats.largest_range.load(), DocIndexer::stats.repeated_in_subrun.load());
+		CHECK_GE(DocIndexer::stats.largest_range.load(), std::size_t{16});
+		CHECK_GE(DocIndexer::stats.repeated_in_subrun.load(), std::size_t{1});
+	}
+	CHECK_TRUE(same_items(items_of(reply), restored_one_by_one("model_seq", objects)));
+	for (int k = 0; k < 60; ++k) {
+		std::string par, seq;
+		const auto path = "/k" + std::to_string(k);
+		CHECK_EQ(http_call("GET", "/model_par" + path, "", "application/json", &par), 200);
+		CHECK_EQ(http_call("GET", "/model_seq" + path, "", "application/json", &seq), 200);
+		CHECK_EQ(field_of(json_of(par), "v").to_string(), field_of(json_of(seq), "v").to_string());
+		CHECK_EQ(field_of(json_of(par), "_version").to_string(), field_of(json_of(seq), "_version").to_string());
+	}
+}
+
+
+// Objects with no id in a numeric-id index of 5 shards each take the least used shard, which the writes before them
+// change: they take the serial path after the writes before them, and get the ids the serial model gives.
+static void test_new_numeric_ids_match_their_serial_model() {
+	create_index("num_par", 5);
+	create_index("num_seq", 5);
+	for (const auto* index : {"/num_par/?commit", "/num_seq/?commit"}) {
+		CHECK_EQ(http_call("RESTORE", index, R"({"_id":1,"n":0})" "\n", "application/x-ndjson") / 100, 2);   // integer ids
+	}
+	std::vector<std::string> objects;
+	std::string body;
+	for (int i = 1; i <= 40; ++i) {
+		objects.push_back(i % 4 == 0 ? R"({"n":)" + std::to_string(i) + "}" : R"({"_id":)" + std::to_string(100 + i) + R"(,"n":)" + std::to_string(i) + "}");
+		body += objects.back() + "\n";
+	}
+	std::string reply;
+	{
+		FixedRanges ranges(32);
+		CHECK_EQ(http_call("RESTORE", "/num_par/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		std::fprintf(stderr, "  largest range %zu, %zu new numeric ids after a join\n", DocIndexer::stats.largest_range.load(), DocIndexer::stats.serial_after_join.load());
+		CHECK_GE(DocIndexer::stats.largest_range.load(), std::size_t{16});
+		CHECK_GE(DocIndexer::stats.serial_after_join.load(), std::size_t{2});
+	}
+	CHECK_TRUE(same_items(items_of(reply), restored_one_by_one("num_seq", objects)));
+}
+
+
+// A write whose document left between placement and apply (another request erased it and wrote it again) is
+// placed afresh, and so is every later write of its id in the range, in input order: the document ends as the
+// stream's last object of that id.
+static void test_a_write_missed_since_placement_is_placed_afresh() {
+	create_index("miss", 5);
+	std::string seed;
+	for (int k = 1; k <= 12; ++k) {
+		seed += R"({"_id":"k)" + std::to_string(k) + R"(","v":"seed"})" "\n";
+	}
+	CHECK_EQ(http_call("RESTORE", "/miss/?commit", seed, "application/x-ndjson") / 100, 2);
+	std::string body;
+	for (int k = 1; k <= 12; ++k) {
+		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":"new"})" "\n";
+		if (k == 3 || k == 9) {
+			body += R"({"_id":"k7","v":")" + std::string(k == 3 ? "first" : "last") + "\"}\n";
+		}
+	}
+	std::string reply;
+	std::atomic<int> erased{0};
+	{
+		FixedRanges ranges(32);
+		DocIndexer::seams.after_placement = [&erased](DatabaseHandler& handler) -> task::task<void> {
+			if (erased.fetch_add(1) == 0) {
+				co_await handler.delete_document("k7", 0);
+				auto obj = MsgPack::MAP();
+				obj["v"] = "erased and written again";
+				co_await handler.index(MsgPack("k7"), 0, true, obj, false, json_type);
+			}
+		};
+		CHECK_EQ(http_call("RESTORE", "/miss/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		std::fprintf(stderr, "  %zu writes deferred\n", DocIndexer::stats.deferred.load());
+		CHECK_GE(erased.load(), 1);
+		CHECK_EQ(DocIndexer::stats.deferred.load(), std::size_t{3});   // k7 three times, each missed
+	}
+	for (const auto& item : items_of(reply)) {
+		CHECK_TRUE(item.find("status") == std::string::npos);
+	}
+	std::string got;
+	CHECK_EQ(http_call("GET", "/miss/k7", "", "application/json", &got), 200);
+	CHECK_EQ(field_of(json_of(got), "v").to_string(), std::string("\"last\""));
+}
+
+
+// An apply slice that throws fails its shard's remaining writes, each its own result, and leaves the engine's chores
+// restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
+static void test_a_throwing_apply_slice_restores_the_engines_chores() {
+	create_index("throws", 5);
+	std::string body;
+	for (int k = 1; k <= 20; ++k) {
+		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":1})" "\n";
+	}
+	std::string reply;
+	{
+		FixedRanges ranges(32);
+		DocIndexer::seams.throw_in_slice = true;
+		CHECK_EQ(http_call("RESTORE", "/throws/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		CHECK_FALSE(DocIndexer::seams.throw_in_slice.load());   // it threw
+	}
+	std::size_t failed = 0;
+	for (const auto& item : items_of(reply)) {
+		failed += item.find("status") != std::string::npos;
+	}
+	std::fprintf(stderr, "  %zu of 20 writes failed with the slice\n", failed);
+	CHECK_GE(failed, std::size_t{1});
+	CHECK_TRUE(eventually([] { return ShardEndpoint::engines_inline() == 0; }, 2s));
+	CHECK_EQ(http_call("RESTORE", "/throws/?commit", R"({"_id":"k1","v":2})" "\n", "application/x-ndjson") / 100, 2);
+	std::string got;
+	CHECK_EQ(http_call("GET", "/throws/k1", "", "application/json", &got), 200);
+	CHECK_EQ(field_of(json_of(got), "v").to_string(), std::string("2"));
 }
 
 
@@ -469,7 +670,11 @@ int main() {
 	}
 	test_a_search_of_many_hits_yields_its_loop_between_hits();
 	test_a_restored_record_is_compressed_once_and_reads_back();
-	test_a_restore_prepares_its_objects_off_its_loop();
+	test_a_restore_prepares_and_writes_its_objects_off_its_loop();
+	test_a_sharded_restore_matches_its_serial_model();
+	test_new_numeric_ids_match_their_serial_model();
+	test_a_write_missed_since_placement_is_placed_afresh();
+	test_a_throwing_apply_slice_restores_the_engines_chores();
 	test_an_update_sees_the_earlier_objects_of_its_stream();
 	test_schema_changes_commit_in_input_order();
 	if (testh::failures != 0) {

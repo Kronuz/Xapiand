@@ -320,8 +320,8 @@ otherwise each object's failure stays its own and a turn failure fails the sub-r
   same-index run (RESTORE into `accounts`, reported) holds an `accounts` shard's turn for one chore, about 1 ms, so a
   light write or refresh on that shard can wait that long.
 
-**Tests** (`tests/test_loop_yield.cc`; the RESTORE tests start their node with 8 processors and an index of 5
-shards; each new handoff has a mutant that fails it, run as a job). A wall-time range can hold one object on a
+**Tests** (`tests/test_loop_yield.cc`; the RESTORE tests write indexes of 5 shards on a node of one HTTP loop, whose
+WorkPool has a thread per CPU; each new handoff has a mutant that fails it, run as a job). A wall-time range can hold one object on a
 Debug or TSan build, so a mutant could pass vacuously (the review's B2): a test seam sets the objects each prepare
 chore takes (a count instead of `PREPARE_SLICE`), and `DocIndexer` reports what the run met (the largest range, ids
 repeated within one sub-run, the peak number of children applying, the objects applied serially after a join, the
@@ -333,16 +333,19 @@ deferred objects). Each test asserts its case occurred before it checks the outc
   and a repeated id within one sub-run. Mutant: each shard's sub-run applied in reverse order.
 - Writes off the loop: the HTTP loop's CPU for a 3,000-document RESTORE is under a threshold set halfway between the
   build's share and the mutant's (34% at the fix, the prepare test's measure). Mutant: the writes run on the loop.
-- Shards in parallel: `DocIndexer` reports the peak number of shards applying at once (beside `prepared()`); with 5
-  shards and 8 processors it exceeds 1. Mutant: the children are awaited one at a time.
+- Shards in parallel: `DocIndexer` reports the children cap and the peak number of shards applying at once; with 5
+  shards and a cap above 1 (a pool of 5 threads or more) the peak exceeds 1. Mutant: the children are awaited one at
+  a time.
 - New numeric ids: an id-less RESTORE into a numeric-id index of 5 shards gives the same ids, shard by shard, as the
   one-object-per-request run; the run met a range holding more than one such object. Mutant: no join before a
   `NEW_NUMERIC_KEY` object.
 - A miss between placement and apply (B1): a test seam runs on the loop after placement and before the children, and
-  erases id 7 and writes it again; the stream holds two objects of id 7 in one range. The final document is the
-  stream's last object of id 7, and the run reports both deferred. Mutant: only the missing object is deferred.
-- The chores swap (N5): a test seam makes one write of an apply chore throw; afterwards the endpoint reports its
-  engine's chores restored (a debug accessor beside the guard), and a later RESTORE's write runs. Mutant: the guard
+  erases id 7 and writes it again through the RESTORE's handler; the stream holds three objects of id 7 in one range.
+  The final document is the stream's last object of id 7, and the run reports all three deferred. Mutant: a missed
+  write fails as today's `must_exist` miss does. (A later write of the same id carries the same placement, so it
+  misses too; a mutant deferring only the first miss is not observable.)
+- The chores swap (N5): a test seam makes one apply slice throw; afterwards no engine runs its chores inline
+  (`ShardEndpoint::engines_inline()`, the guard's count), and a later RESTORE's write runs. Mutant: the guard
   does not restore on the throw path.
 - D1 and D2 as today (the update after a run, the schema order test), unchanged and passing.
 - Races: the reviewer's `restore_model.py` and the RESTORE tests on a TSan build, a light job (D61).
