@@ -1574,8 +1574,8 @@
     "cold-tier-step2": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-11T18:08:52",
-          "base": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "at": "2026-11-11T23:54:41",
+          "base": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
           "blobs": {
             "bench/catalog_tiers/CMakeLists.txt": "100644:65fabd2319e11276b2460283df7a5ed973c0c2f0",
             "bench/catalog_tiers/catalog_tiers.cc": "100644:4c9b8310db95c9a9e6795f0e892cde70513e4248",
@@ -1594,19 +1594,19 @@
             "docs/reviews/cold-tier-xpool-host.md": "100644:1cf23ea23d65d4b12c513bc971c4eeeb60ed98dd",
             "docs/status/cold-tier-step2.md": "100644:61319a575178c4aa71839527f2211dae23193cc2",
             "docs/status/cold-tier.md": "100644:98129cc5260a9b6f8aa89248342a949cc6e7fe78",
-            "include/strata/core/catalog.hh": "100644:f31ddfbec570a852719a274e15557191474743d6",
+            "include/strata/core/catalog.hh": "100644:033cf5b523d7077546a94f84204c2ec1cf315b15",
             "include/strata/core/index.hh": "100644:6d30fff1c03e392a3b9d211f78ca1553d7e01405",
             "test/apply_atomic_test.cc": "100644:616959e29dd22ff442277ec4ada92adbe74f1298",
             "test/catalog_stress_test.cc": "100644:00210ba4d153f01a3505bbe4c0e6f356f0a2fe7c",
             "test/catalog_sweep_test.cc": "100644:4937640b964a77a676d60ff2dabf858a3a52e91f",
             "test/catalog_wake_test.cc": "100644:870ca00994b72aae2ea9a80e4cc62626acbd7010",
             "test/cold_segment_test.cc": "100644:415436b677ba6be3306b11b8268ca749d62d1deb",
-            "tools/mutants/cold_tier.py": "100755:e08e5505e676d5b962104ca100935a554d65bb65",
-            "tools/mutants/cold_tier_table.py": "100644:c8f95b489ad8560dd513e6ff7d9b6566cc423f1b",
+            "tools/mutants/cold_tier.py": "100755:14e7c88369e391916c2addb03879faff361feabb",
+            "tools/mutants/cold_tier_table.py": "100644:18c4b0c0d3b7d9a2fc78cf4aaabb46db1a3c3c8f",
             "tools/mutants/rollback.py": "100755:2f87e0a879f97313545cbfc417293e40e1ad7a98"
           },
           "by": "review",
-          "commit": "32f197aa6935b03638fd1b1ee449634e1f32591a",
+          "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
           "criteria": "255e6ed03da895df",
           "diffs": {
             "bench/catalog_tiers/CMakeLists.txt": "075b9173818a677f",
@@ -1633,27 +1633,34 @@
             "test/catalog_sweep_test.cc": "5e41f64ee4a906d6",
             "test/catalog_wake_test.cc": "d72a2e8a85d282b0",
             "test/cold_segment_test.cc": "655f64925f56c162",
-            "tools/mutants/cold_tier.py": "b6ae23bc84a232b5",
-            "tools/mutants/cold_tier_table.py": "c14234a887f6167e",
+            "tools/mutants/cold_tier.py": "37c9727d064bd162",
+            "tools/mutants/cold_tier_table.py": "10d1cc76c80be382",
             "tools/mutants/rollback.py": "6c18bba1a02582dd"
           },
           "findings": {
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bench/catalog_tiers/tiers.sh t3 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers 50000 100000 2000 500",
-                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
-                  "docs": [
-                    "docs/mechanisms/catalog.md",
-                    "docs/perf/catalog-tiers.md"
-                  ],
+                  "cmd": "bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4'",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-151551-cd5253",
-                  "level": "strict",
-                  "seconds": 345.9,
+                  "job": "261111-231036-f7f5b1",
+                  "level": "light",
+                  "seconds": 138.7,
                   "state": "done",
-                  "what": "T3 at the band trigger (358d4c's command)"
+                  "what": "suite at the band trigger (062182b2) at 4c45e3dd20ba"
+                },
+                {
+                  "cmd": "bash -c 'git checkout 7b126bc1 -- include/strata/core/catalog.hh; cmake -B build-mut -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-mut -j4 --target catalog_sweep_test >build-mut.log 2>&1 || { tail -30 build-mut.log; exit 1; }; build-mut/catalog_sweep_test >out.txt 2>&1; rc=$?; cat out.txt; [ $rc -ne 0 ] && grep -q '\"'\"'catalog_sweep_test.cc:550: CHECK'\"'\"' out.txt'",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-231037-0b117d",
+                  "level": "light",
+                  "seconds": 171.3,
+                  "state": "done",
+                  "what": "mutant: one-slot trigger (7b126bc1's catalog.hh) fails soft_caps_post's band check at 4c45e3dd20ba"
                 }
               ],
               "kind": "gap",
@@ -1662,19 +1669,26 @@
             "F2": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4'",
-                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
-                  "docs": [
-                    "docs/mechanisms/catalog.md",
-                    "docs/perf/catalog-tiers.md"
-                  ],
+                  "cmd": "bench/catalog_tiers/tiers.sh t2 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers-4c45e3dd d1s1 500 3",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-151520-66533e",
-                  "level": "light",
-                  "seconds": 475.8,
+                  "job": "261111-231055-97795a",
+                  "level": "strict",
+                  "seconds": 201.3,
                   "state": "done",
-                  "what": "suite at the band trigger (062182b2)"
+                  "what": "T2/T2d d1s1, 500 indexes, 3 reps at 4c45e3dd, binaries from 261111-231046-759dd0"
+                },
+                {
+                  "cmd": "bench/catalog_tiers/tiers.sh t2 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers-4c45e3dd d1000s10 500 3",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-231057-540206",
+                  "level": "strict",
+                  "seconds": 200.8,
+                  "state": "done",
+                  "what": "T2/T2d d1000s10, 500 indexes, 3 reps at 4c45e3dd, binaries from 261111-231046-759dd0"
                 }
               ],
               "kind": "gap",
@@ -1867,7 +1881,7 @@
       "risk": "high",
       "status": "review",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-11T18:08:52",
+      "updated": "2026-11-11T23:54:41",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
