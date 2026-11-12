@@ -13354,8 +13354,9 @@
       "files": [
         "include/strata/core/index.hh",
         "include/strata/core/faultfs.hh",
+        "include/strata/core/counted_io.hh",
         "CMakeLists.txt",
-        "test/index_test.cc",
+        "test/**",
         "docs/design/read-only-open.md",
         "docs/perf/open-sync.md",
         "bench/idle_index/idle_index.cc",
@@ -13375,7 +13376,7 @@
       "risk": "high",
       "status": "active",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T04:29:30",
+      "updated": "2026-11-12T04:50:10",
       "worktree": "../strata-wt/xapiand/read-only-open"
     },
     "reclaim-backlog": {
