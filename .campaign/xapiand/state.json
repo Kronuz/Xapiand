@@ -12984,6 +12984,35 @@
       "title": "Indexing throughput research and prototypes",
       "updated": "2026-11-08T15:39:15"
     },
+    "restore-mixed-sign-integers": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/**",
+        "tests/restore_cli_check.sh",
+        "tests/test_restore_integers.cc",
+        "docs/dev/restore-integers.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A msgpack RESTORE keeps every document of a field holding both signs",
+      "updated": "2026-11-11T16:51:19"
+    },
     "retention": {
       "accepted": {},
       "after": [],
