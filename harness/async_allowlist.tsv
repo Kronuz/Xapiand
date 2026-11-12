@@ -1,6 +1,7 @@
 # async_check.py allowlist. Columns (tab separated): file, rule, anchor regex, class, count, note.
 # allow: cheap or off-reactor, with the reason. owed: the decision or step that removes it. compiled_out: the switch.
 src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and restore_documents(fd) serve the CLI --dump and --restore on the main thread (check_may_block guards it)
+src/database/handler.cc	pool	endpoints\[shard\]	allow	2	a RESTORE's placement and apply children take one shard's turn each under engine::counted; the lock_shard itself takes no turn (x7-loop-fix-c)
 src/database/handler.cc	pool	lock_shard	allow	24	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
 src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
 src/database/handler.cc	sync_wait	schema\.index	allow	1	a RESTORE's prepare chore runs Schema::index on a WorkPool worker (inline on the CLI's main thread); CPU only there: scripts are barriers and seq is never 0, so no call_script or lock_shard (x7-loop-stalls)
@@ -20,6 +21,7 @@ src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	6	the entry: O(1) stat
 src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs in a flush chore, first in the commit chore (D7)
 src/database/shard.cc	pool	ShardEndpoint::storage_commit	allow	1	the definition: the commit is chores_.run(flush, ...) (D7)
 src/database/shard.cc	pool	writable_storage->	allow	11	the blob writes, reads and rollovers run in flush chores of the entry or the upload (D9)
+src/database/shard.cc	sync_wait	entry\.do_replace	allow	2	a RESTORE's apply slice writes in a flush chore on a WorkPool worker, in the index's turn with the engine's chores inline: chore code, never a request thread (x7-loop-fix-c)
 src/database/shard.cc	sync_wait	.	allow	7	the open chore replays the WAL and opens the engine on a WorkPool worker, with chores inline (D4, D8): chore code, never a request thread
 src/database/shard.cc	wal	DatabaseWAL wal\(&target\)	allow	1	the open chore replays the log on a WorkPool worker (D4, D8)
 src/engine/census.cc	file	.	compiled_out	4	ENGINE_CENSUS is OFF in gate builds (D1)
