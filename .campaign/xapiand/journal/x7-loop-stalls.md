@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261112-012852-295929 261112-012855-b34e3c 261112-012857-a77bf8
+State: waiting on jobs 261112-012855-b34e3c 261112-012857-a77bf8
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -44,7 +44,7 @@ now `engine::sync_wait` (the one guarded bridge, as shard.cc's open chore does) 
 with an allowlist row naming why. Prospect pin moved to b20e7c5 (Xapiand:232b81cba); strata pin unchanged (5d742b2).
 
 Jobs at 232b81cba: build-test 261112-011615-3ea00b; timing build (light, quest slot) 261112-012852-295929 (75a8df lost: submitted from .scratch; bb7a01 failed: lua.org download in a fresh checkout) copies the fix's
-binary to `~/.scratch/x7-loop-stalls/<commit>/xapiand`; A2 (T4+T5, exclusive) 261112-012855-b34e3c; A3 (T10 + T12
+binary to `~/.scratch/x7-loop-stalls/0072ba93e/xapiand` (done: prospect b20e7c5, strata 5d742b24, shasum 5e9c9693); A2 (T4+T5, exclusive) 261112-012855-b34e3c; A3 (T10 + T12
 loadtest and profile_bulk, exclusive) 261112-012857-a77bf8. Pre-7c binary: `~/.scratch/x7-loop-stalls/142b2ca77/xapiand`,
 the same bytes as x7-gate's build-pre (shasum 787b7174). Targets: T4 every HTTP loop's p99 < 1,024 us; T5 loaded light
 p99 near pre's 8.93 ms; T10 flood light-GET p99 about 20 ms; T12 RESTORE docs/s and QPS >= 1.0x pre-7c.
