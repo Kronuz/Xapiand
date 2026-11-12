@@ -721,7 +721,9 @@
         "include/strata/core/index.hh",
         "test/**",
         "docs/mechanisms/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "include/strata/core/faultfs.hh",
+        "include/strata/core/counted_io.hh"
       ],
       "history": [
         {
@@ -821,7 +823,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-11T23:55:38",
+      "updated": "2026-11-12T00:05:31",
       "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
