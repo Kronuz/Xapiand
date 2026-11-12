@@ -13557,7 +13557,7 @@
         "bench/idle_index/idle_index.cc",
         "bench/open_sync/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/read-only-open",
+      "journal": "",
       "landed": [],
       "lenses": [
         "durability"
@@ -13572,8 +13572,8 @@
       "risk": "high",
       "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T07:57:28",
-      "worktree": "../strata-wt/xapiand/read-only-open"
+      "updated": "2026-11-12T08:26:54",
+      "worktree": ""
     },
     "reclaim-backlog": {
       "accepted": {},
