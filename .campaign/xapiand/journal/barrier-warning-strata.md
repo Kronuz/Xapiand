@@ -1,6 +1,6 @@
 # barrier-warning-strata: journal
 
-State: waiting on jobs 261112-011236-77c6e9 261112-011239-8f21e5
+State: waiting on jobs 261112-011236-77c6e9
 Quest: .campaign/xapiand/quests/barrier-warning-strata.md (the lead's; never edit it)
 
 ## Doing
@@ -50,7 +50,7 @@ read-only opens (completion:c315c03) at its next repin.
 |---|---|
 | A3 | build-test 261112-003214-3ac1cf (passed); CI green at d8ae10b8 |
 | A4 | 261112-003345-52611a: churn/dump identical, ctest 48/51; attribution 261112-011236-77c6e9 (pending) |
-| A5 | build-test 261112-003214-3ac1cf passed (`faultfs_test` CB-5 block); mutant 261112-011239-8f21e5 (pending; b8dfe3 killed it but did not invert its exit) |
+| A5 | build-test 261112-003214-3ac1cf passed (`faultfs_test` CB-5 block); mutant 261112-011239-8f21e5 killed (`faultfs_test.cc:326` in all three modes); b8dfe3 killed it too but did not invert its exit |
 | A6 | `docs/reviews/calibration.md` row 2026-10-29 (strata, already on main): "Linux CI TSan is the authority for races on struct-copy writes; a local macOS TSan pass is not evidence for that class" |
 
 ## Result
