@@ -1,6 +1,6 @@
 # open-one-flush: journal
 
-State: ready for review
+State: waiting on jobs 261112-030638-90e5bc 261112-030638-ee5b2a 261112-030638-fcc49d
 Quest: .campaign/xapiand/quests/open-one-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,7 +17,9 @@ Nothing. Durability review APPROVE; notes folded:
 
 ## Next
 
-1. Land (lead). macos-arm64's CI rerun is not needed for A3.
+1. Reruns at strata:69b76e9c (bench/ commits are not docs-only): index_test 261112-030638-90e5bc,
+   suite 261112-030638-ee5b2a, A2 loaded 261112-030638-fcc49d. When green: ready for review.
+2. Land (lead). macos-arm64's CI rerun is not needed for A3.
 
 ## Blocked on
 
