@@ -1,6 +1,6 @@
 # open-one-flush: journal
 
-State: waiting on jobs 261112-030638-90e5bc 261112-030638-ee5b2a 261112-030638-fcc49d
+State: waiting on jobs 261112-030638-fcc49d
 Quest: .campaign/xapiand/quests/open-one-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,9 +30,9 @@ regression.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261112-022003-37891b (index_test passes at strata:c35ce7e0, T4 cases 9 and 10); mutants `--fails-without`: rollover_owed_-only 261112-022005-2de6e1 fails case 9 (`:137`); M1 log only 261112-025813-0362d3 fails case 10 (`:182`); M2 directory only 261112-025815-cc2c50 fails case 9 (`:137`) |
+| A1 | 261112-030638-90e5bc (index_test passes at strata:69b76e9c, T4 cases 9 and 10); mutants `--fails-without`: rollover_owed_-only 261112-022005-2de6e1 fails case 9 (`:137`); M1 log only 261112-025813-0362d3 fails case 10 (`:182`); M2 directory only 261112-025815-cc2c50 fails case 9 (`:137`) |
 | A2 | 261112-025328-896ded (strict, `bench/open_sync/loaded.sh` from the checkout at strata:f8747be0, after build 261112-025326-d8e7e1): p99 lower after in 6 of 6 pairs (28-39 vs 60-76 ms), p50 45.3-45.8 vs 23.0-23.1 ms (about 2.0x faster), totals 277.9 vs 138.4 s. No regression: quiet run 261112-022029-add889, both sides ~0.1 ms per open, p99 lower in 3 of 6 pairs (cited only as no regression). Earlier probe 261112-023556-0291d4 agrees. |
-| A3 | suite 261112-022007-45e212 passes at strata:c35ce7e0; CI 43199523054 at strata:c35ce7e0: linux-x86_64 gcc and clang, linux-arm64-gcc, linux-asan-ubsan, linux-tsan, freebsd-x86_64, macos-x86_64 pass; macos-arm64 cancelled with no runner assigned (15 min queued), rerun requested |
+| A3 | suite 261112-030638-ee5b2a passes at strata:69b76e9c; CI 43205021852 green at strata:8499e781, every job (Linux, FreeBSD, macOS x86_64 and arm64); 69b76e9c is docs-only |
 
 ## Result
 
