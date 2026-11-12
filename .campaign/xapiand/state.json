@@ -12341,7 +12341,8 @@
         "test/directory_test.cc",
         "test/index_test.cc",
         "test/format13_test.cc",
-        "test/index_mapped_test.cc"
+        "test/index_mapped_test.cc",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/prospect-completion-opens",
       "landed": [],
@@ -12353,7 +12354,7 @@
       "risk": "low",
       "status": "active",
       "title": "prospect's test IOs implement completion's four read-only opens",
-      "updated": "2026-11-12T01:27:39",
+      "updated": "2026-11-12T01:53:09",
       "worktree": "../prospect-wt/xapiand/prospect-completion-opens"
     },
     "prospect-drop-threadpool": {
