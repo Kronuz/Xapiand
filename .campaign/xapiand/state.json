@@ -3459,6 +3459,8 @@
     "drop-dir-reader": {
       "accepted": {},
       "after": [],
+      "base": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+      "branch": "quest/xapiand/drop-dir-reader",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3476,6 +3478,7 @@
         "tools/mutants.py",
         ".github/workflows/mutants.yml"
       ],
+      "journal": "../Xapiand-wt/xapiand/drop-dir-reader",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 8",
@@ -3483,9 +3486,10 @@
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "completion drops the unused shared directory lock",
-      "updated": "2026-11-12T07:58:28"
+      "updated": "2026-11-12T07:58:32",
+      "worktree": "../completion-wt/xapiand/drop-dir-reader"
     },
     "drop-replicas": {
       "accepted": {},
