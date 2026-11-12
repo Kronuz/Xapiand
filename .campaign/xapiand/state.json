@@ -12399,18 +12399,46 @@
         "test/index_mapped_test.cc",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/prospect-completion-opens",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T02:16:34",
+          "commit": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+          "criteria": {
+            "A1": "261112-015344-bac35a",
+            "A2": "[artifact] `test/index_test.cc`: gate_io/wrapper_io/flaky_io forward all four read-only opens (prospect:ea89758; flaky_io at lines 112-115); not changed here",
+            "A3": "261112-015356-09e3c0; fails without: 261112-013153-51da31, 261112-015401-c49945"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-015344-bac35a",
+              "level": "light",
+              "seconds": 453.1,
+              "state": "done",
+              "what": "prospect-completion-opens check build-test at fcd9f3e1f803"
+            }
+          ],
+          "final": true,
+          "from": "b20e7c555f37daad415cf658b32f99cc9a955464",
+          "reason": "",
+          "tested": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's test IOs implement completion's four read-only opens",
-      "updated": "2026-11-12T01:53:09",
-      "worktree": "../prospect-wt/xapiand/prospect-completion-opens"
+      "updated": "2026-11-12T02:16:39",
+      "worktree": ""
     },
     "prospect-drop-threadpool": {
       "accepted": {},
