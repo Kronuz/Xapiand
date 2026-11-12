@@ -1,13 +1,18 @@
 # agg-shard-parity: journal
 
-State: waiting on jobs 261112-002820-f46d26 261112-002821-1d7a01 261112-002824-edede9; diagnosis 261112-002548-2c8cb9
+State: ready for review (A2 mutant 2 re-run pending: job 261112-013031-0c0f1d)
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
 
-Test, CMake line and journal committed. A1 is the quest's build-test check (verify --for A1), A2 the mutant job after it.
+Nothing but the pending job 261112-013031-0c0f1d (A2 mutant 2 in the right shape).
 
 ## Next
+
+1. Read 0c0f1d: it must pass (the test fails with a DIFF/FAIL line when shard 1 is dropped); then A2 is complete.
+2. Review.
+
+## Next (old, done)
 
 1. Read the A1 job; fix compile errors or real mismatches (a mismatch is a finding: kind and values below, src/ is not mine).
 2. A2 mutant submitted (done).
@@ -62,13 +67,18 @@ If 2c8cb9 (diagnosis at the pre-fix commit) shows a difference beyond order, fix
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pre-fix: failed on F1 (261112-000934-6482ef); at the fixed head: 261112-002820-f46d26 (pending) |
-| A2 | 261112-002821-1d7a01 (fix reverted), 261112-002824-edede9 (drop shard) (pending) |
+| A1 | build-test f46d26 at cdb757fc2 (38/38 ctest incl. test_aggregation_shards, async_check 0 unclassified); pre-fix failure 261112-000934-6482ef (F1) |
+| A2 | mutant 1, fix reverted: 261112-002821-1d7a01 passed (test reports DIFF); mutant 2, shard 1 dropped: 261112-002824-edede9 made the test fail but its command shape was wrong, re-run as 261112-013031-0c0f1d (pending) |
 | A3 | docs/dev/agg-shard-parity.md |
+| F1 | diagnosis 261112-002548-2c8cb9 at the pre-fix commit: 0 DIFF when buckets compare by key, so order only |
 
 ## Result
 
-(pending)
+tests/test_aggregation_shards.cc (in CMakeLists.txt's engine-test list) compares 43 aggregation requests over 1, 2 and 5 shards, three
+delete scenarios, through one spy and through per-shard merges (bytes, objects); `_terms` past `_shard_size` is approximate by ruling.
+It found F1 (merged partials lost slot/idx, so numeric buckets reordered); fixed in src/aggregations/bucket.h. The bug was latent: no
+production caller merges partials (the server uses one spy over every shard). Writeup: docs/dev/agg-shard-parity.md. Leaves open: the
+merge API has no production caller; whether to keep it is the lead's call (one mechanism).
 
 ## Rulings I made
 
