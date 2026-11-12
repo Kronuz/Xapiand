@@ -15797,6 +15797,41 @@
       "updated": "2026-11-11T15:03:25",
       "worktree": ""
     },
+    "sync-at-first-commit": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/faultfs.hh",
+        "test/index_test.cc",
+        "docs/design/sync-at-first-commit.md",
+        "docs/perf/open-sync.md",
+        "bench/open_sync/**",
+        "bench/idle_index/idle_index.cc"
+      ],
+      "landed": [],
+      "lenses": [
+        "design",
+        "durability"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "An open runs no sync; the first commit syncs what it inherited",
+      "updated": "2026-11-12T07:57:30"
+    },
     "t11-barriers": {
       "accepted": {},
       "after": [],
