@@ -1,6 +1,6 @@
 # unpin-after-kick: journal
 
-State: ready for review
+State: waiting on jobs 261112-082829-50b165 261112-082833-a65a89 261112-082836-a10320 261112-082839-973970 261112-082842-4c0531 261112-082844-da8069
 Quest: .campaign/xapiand/quests/unpin-after-kick.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,25 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fixed at strata:503df8f0 (pushed, CI running):
+- Cause: end_at (catalog.hh, main ab0e26a6:1751) unbooked a closing slot after the exchange that left `closing`.
+  A refused close ends `{0, open}`; a pass on another thread can begin_close it and book before that unbook runs
+  (book asserts), and in NDEBUG the late unbook erases the new close's booking. Pre-existing since strata:7d031203.
+  Not this quest's change: da983792/b04ca9e0 do not touch end_at, book or unbook.
+- Fix: unbook before the exchange in end_at, and in finish_close the same way (there it was safe, free_slot and the
+  open's post follow, but one rule). New hook site `transition.ended` after end_at's exchange.
+- Test: catalog_teardown_test `refused-end` (close refused via a throw at `close.call`; at `transition.ended` the hook
+  begins the next close; at `refuse.end` the booking must equal the slot's descriptors).
+- Jobs: TSan+asserts suite 261112-082829-50b165, ASan+UBSan+asserts 261112-082833-a65a89, mutant (main's order)
+  261112-082836-a10320, attribution probe at main (1 ms sleep after the exchange, stress must assert)
+  261112-082839-973970, same sleep at the fix (stress clean) 261112-082842-4c0531, build-test 261112-082844-da8069.
+  Scripts: strata worktree .scratch/tsan-book/{suite,mutant,delay}.sh.
+- Earlier attribution: the failure hit linux-tsan (runs 43214565766, 43218222486, 43231465982 attempt 1) and
+  linux-asan-ubsan (43225658870), always in catalog_stress; macOS TSan at main did not reproduce in 25 runs
+  (261112-080635-a9cefb), consistent with a narrow window.
+
+Earlier (review CHANGES folded in):
 
 Review CHANGES (reviews/unpin-after-kick-correctness.md) folded in at strata:b04ca9e0 (pushed, CI running):
 - F1: miss tail runs over_soft() before post(run_open); test miss_under_shutdown (the reviewer's probe as a
@@ -31,7 +50,7 @@ Earlier jobs at da983792, all exit 0: TSan 261112-051834-5fd5e6, ASan+UBSan 2611
 
 ## Next
 
-1. Re-review of F1, F2 and the N3 record; CI on a0bc0430 (docs only after b04ca9e0, whose build-test passed).
+1. Read the six jobs above and linux-tsan CI at 503df8f0; then re-review of F1, F2, the N3 record and this fix.
 
 ## Blocked on
 
@@ -123,5 +142,8 @@ recorded in docs/mechanisms/catalog.md "Shutdown".
   `shutting_`): pre-existing, left as they were; kick() swallowed the same failure before.
 - R5 New hook site `shutdown.mark` in shutdown_slot's pinned branch, before the mark's exchange (F2(b)); the
   schedule sim's site list is explicit, so it does not require injections there.
+- R7 The catalog_stress abort is end_at's late unbook (Doing), in catalog.hh, inside this quest's file set; fixed here
+  rather than in a quest of its own because A3 needs it. Its test went in catalog_teardown_test (the file set's test),
+  though it is a sweep race, not a teardown one.
 - R4 The word layout in docs/mechanisms/catalog.md and docs/design/cold-tier.md: updated by the lead at
   strata:3adfdc27 (file set widened).
