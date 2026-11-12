@@ -217,9 +217,9 @@ in GET, search and dump.
   applied first; a batch's last run is not applied before `index` returns.
 - Schema order: a new index restored with `x` an integer in an object slow to prepare, then `x` a string in a fast
   one, then an integer again; each object's result and the final schema equal a sequential restore's (one object per
-  request), and the string fails. Mutant: the round accepts the objects past its first change, prepared on the old
+  request), the string fails, and `x` is an integer in both schemas. Mutant: the round accepts the objects past its first change, prepared on the old
   snapshot.
-- Prepare off the loop: the HTTP loop's CPU for a text-heavy RESTORE of 3,000 documents is under 60% of the
+- Prepare off the loop: the HTTP loop's CPU for a text-heavy RESTORE of 3,000 documents is under 45% of the
   process's. Mutant: every object is a barrier.
 
 **Files.** `src/database/handler.{h,cc}` (`DocIndexer`, and the helpers it shares with `DatabaseHandler::prepare`:
