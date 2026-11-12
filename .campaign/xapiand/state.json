@@ -18654,8 +18654,7 @@
     "xapiand-strata-bump": {
       "accepted": {},
       "after": [
-        "barrier-warning-strata",
-        "prospect-completion-opens"
+        "unpin-after-kick"
       ],
       "base": "80a3326f77068dd0df6cdfc98569a1f5a62f8c25",
       "branch": "quest/xapiand/xapiand-strata-bump",
@@ -18686,7 +18685,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
-      "updated": "2026-11-12T03:50:07",
+      "updated": "2026-11-12T04:55:45",
       "worktree": "../Xapiand-wt/xapiand/xapiand-strata-bump"
     }
   },
