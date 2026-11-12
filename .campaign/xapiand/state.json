@@ -13271,7 +13271,9 @@
     },
     "read-only-open": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "dir-shared-lock"
+      ],
       "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
       "branch": "quest/xapiand/read-only-open",
       "checks": [
@@ -13307,7 +13309,7 @@
       "risk": "high",
       "status": "active",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T04:29:28",
+      "updated": "2026-11-12T04:29:30",
       "worktree": "../strata-wt/xapiand/read-only-open"
     },
     "reclaim-backlog": {
