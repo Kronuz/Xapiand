@@ -14241,6 +14241,35 @@
       "title": "stash window handshake and fail-fast add",
       "updated": "2026-11-08T15:41:25"
     },
+    "stemmer-names": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schema.cc",
+        "src/stemmer*",
+        "tests/test_stem*",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
+      "updated": "2026-11-11T23:32:47"
+    },
     "storage-phase7c-l6": {
       "accepted": {},
       "after": [],
