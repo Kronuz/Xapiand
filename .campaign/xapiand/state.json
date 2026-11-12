@@ -13138,6 +13138,8 @@
     "read-only-open": {
       "accepted": {},
       "after": [],
+      "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+      "branch": "quest/xapiand/read-only-open",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13153,6 +13155,7 @@
         "docs/design/read-only-open.md",
         "docs/perf/open-sync.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/read-only-open",
       "landed": [],
       "lenses": [
         "durability"
@@ -13164,9 +13167,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-11T15:26:01"
+      "updated": "2026-11-12T03:21:40",
+      "worktree": "../strata-wt/xapiand/read-only-open"
     },
     "reclaim-backlog": {
       "accepted": {},
