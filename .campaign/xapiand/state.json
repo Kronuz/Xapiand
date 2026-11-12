@@ -1538,7 +1538,121 @@
       "updated": "2026-11-08T15:40:06"
     },
     "cold-tier-step2": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-11T18:08:52",
+          "base": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "blobs": {
+            "bench/catalog_tiers/CMakeLists.txt": "100644:65fabd2319e11276b2460283df7a5ed973c0c2f0",
+            "bench/catalog_tiers/catalog_tiers.cc": "100644:4c9b8310db95c9a9e6795f0e892cde70513e4248",
+            "bench/catalog_tiers/tiers.sh": "100755:a74e18589f96632a497dd2350b16ce17f769ddb6",
+            "bench/idle_index/heap_count.hh": "100644:45fb860c687635151e0717a7e05818fa753c720b",
+            "bench/idle_index/idle_index.cc": "100644:69fd054efe81e5d0fdc23a32d2e39e6f25baa879",
+            "bench/idle_index/k6.sh": "100755:e05b91dd847cd46d5d1b3b00c9668f1043bcdefa",
+            "bench/idle_index/meters.hh": "100644:7c1a1079ba5af2e87400ba7d4b12a9dc988b0956",
+            "docs/design/cold-tier-models/slot_model.py": "100644:6bcd5a68546ccacb9fc6dde2a1a94c20f2fa2ef2",
+            "docs/design/cold-tier-models/wake_model.py": "100644:11e45e9da8d61e15e116f1e24b710eb1b36dbe3a",
+            "docs/design/cold-tier.md": "100644:831e2b02af67be20a41f24c56d65c40bdbab0607",
+            "docs/mechanisms/catalog.md": "100644:a8aa9d2d8de5b9d9631fdad69836065016cea85b",
+            "docs/mechanisms/segment-records.md": "100644:ce570384405535b277bbb0f6833005d80366601b",
+            "docs/perf/catalog-tiers.md": "100644:78480804d5fd122ed1fa69f5d1991b5580f32f80",
+            "docs/reviews/cold-tier-design.md": "100644:419b2bd6aa44ce6c435083abb6b54c8560999a82",
+            "docs/reviews/cold-tier-xpool-host.md": "100644:1cf23ea23d65d4b12c513bc971c4eeeb60ed98dd",
+            "docs/status/cold-tier-step2.md": "100644:61319a575178c4aa71839527f2211dae23193cc2",
+            "docs/status/cold-tier.md": "100644:98129cc5260a9b6f8aa89248342a949cc6e7fe78",
+            "include/strata/core/catalog.hh": "100644:f31ddfbec570a852719a274e15557191474743d6",
+            "include/strata/core/index.hh": "100644:6d30fff1c03e392a3b9d211f78ca1553d7e01405",
+            "test/apply_atomic_test.cc": "100644:616959e29dd22ff442277ec4ada92adbe74f1298",
+            "test/catalog_stress_test.cc": "100644:00210ba4d153f01a3505bbe4c0e6f356f0a2fe7c",
+            "test/catalog_sweep_test.cc": "100644:4937640b964a77a676d60ff2dabf858a3a52e91f",
+            "test/catalog_wake_test.cc": "100644:870ca00994b72aae2ea9a80e4cc62626acbd7010",
+            "test/cold_segment_test.cc": "100644:415436b677ba6be3306b11b8268ca749d62d1deb",
+            "tools/mutants/cold_tier.py": "100755:e08e5505e676d5b962104ca100935a554d65bb65",
+            "tools/mutants/cold_tier_table.py": "100644:c8f95b489ad8560dd513e6ff7d9b6566cc423f1b",
+            "tools/mutants/rollback.py": "100755:2f87e0a879f97313545cbfc417293e40e1ad7a98"
+          },
+          "by": "review",
+          "commit": "32f197aa6935b03638fd1b1ee449634e1f32591a",
+          "criteria": "255e6ed03da895df",
+          "diffs": {
+            "bench/catalog_tiers/CMakeLists.txt": "075b9173818a677f",
+            "bench/catalog_tiers/catalog_tiers.cc": "abd2e16184a8da2d",
+            "bench/catalog_tiers/tiers.sh": "25a1f7a43b65e9a8",
+            "bench/idle_index/heap_count.hh": "71c7f86a9edaf4b5",
+            "bench/idle_index/idle_index.cc": "63aa21eb948b1321",
+            "bench/idle_index/k6.sh": "c1e6d1ce8560a640",
+            "bench/idle_index/meters.hh": "facdb69608da3359",
+            "docs/design/cold-tier-models/slot_model.py": "91565c46a24355e3",
+            "docs/design/cold-tier-models/wake_model.py": "860d955cf6515312",
+            "docs/design/cold-tier.md": "3797a53348b2b040",
+            "docs/mechanisms/catalog.md": "e0ebab085c66b8a0",
+            "docs/mechanisms/segment-records.md": "a7ff521a92b56735",
+            "docs/perf/catalog-tiers.md": "514fb268f90dbceb",
+            "docs/reviews/cold-tier-design.md": "a13b71c65894c519",
+            "docs/reviews/cold-tier-xpool-host.md": "4886740a0daf3c86",
+            "docs/status/cold-tier-step2.md": "9ab85ed8123eeaaf",
+            "docs/status/cold-tier.md": "29464f13e843617e",
+            "include/strata/core/catalog.hh": "a613351de6bc44da",
+            "include/strata/core/index.hh": "a551c4764fc3c1cb",
+            "test/apply_atomic_test.cc": "3cb36ee14c881848",
+            "test/catalog_stress_test.cc": "f18facf75717febf",
+            "test/catalog_sweep_test.cc": "5e41f64ee4a906d6",
+            "test/catalog_wake_test.cc": "d72a2e8a85d282b0",
+            "test/cold_segment_test.cc": "655f64925f56c162",
+            "tools/mutants/cold_tier.py": "b6ae23bc84a232b5",
+            "tools/mutants/cold_tier_table.py": "c14234a887f6167e",
+            "tools/mutants/rollback.py": "6c18bba1a02582dd"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bench/catalog_tiers/tiers.sh t3 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers 50000 100000 2000 500",
+                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
+                  "docs": [
+                    "docs/mechanisms/catalog.md",
+                    "docs/perf/catalog-tiers.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-151551-cd5253",
+                  "level": "strict",
+                  "seconds": 345.9,
+                  "state": "done",
+                  "what": "T3 at the band trigger (358d4c's command)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4'",
+                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
+                  "docs": [
+                    "docs/mechanisms/catalog.md",
+                    "docs/perf/catalog-tiers.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-151520-66533e",
+                  "level": "light",
+                  "seconds": 475.8,
+                  "state": "done",
+                  "what": "suite at the band trigger (062182b2)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "2396da2b1b51fb561eb24c313c9a254911d85862",
+          "reviewed": "bbef1d4a4115bf9323a0481ac7bcf7fa3cc41b0a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
       "branch": "quest/xapiand/cold-tier-step2",
@@ -1719,7 +1833,7 @@
       "risk": "high",
       "status": "review",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-11T10:52:37",
+      "updated": "2026-11-11T18:08:52",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
