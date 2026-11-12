@@ -9,24 +9,27 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 1, A3 estimate triples: `check_at_least` and a `{lower, estimate, upper}` triple in the
-search result (prospect `include/prospect/searcher.hh`, `shards.hh`), no format change. Rule:
-segments are counted exactly, whole, while fewer than `check_at_least` matches are counted (tier 1:
-exact whenever matches <= check_at_least); later segments prune, adding lower = hits that entered
-the collector from them, upper = their live documents. Tests: tier 1 exact, tier 2
-lower <= true <= upper under random k, check_at_least, segmentations and deletes.
+Step 1, A3 estimate triples: built at prospect `794a554` (`include/prospect/searcher.hh`
+`match_count`, `shards.hh` `search_options::check_at_least` and `search_result::matches`; how it
+works: `docs/mechanisms/multi-index-search.md`, "Match counts"). Rule: segments are counted
+exactly, whole, while at most `check_at_least` matches are counted (tier 1); later segments prune,
+lower += hits that entered the collector, upper += live documents, estimate += cost held between
+(tier 2). Tests: `test/shards_test.cc` `tiers_hold` at Xapian's own check_at_least against its
+recorded triples (oracle) and around the true count over random segmentations, deletes and shard
+splits (identity); mutants in `test/shards_mutants.py` ("check_at_least", "pruned merge").
+Jobs: build-test 261111-183804-ba31c7, mutants 261111-183854-4b1080 (fresh checkout, after it).
 
 ## Next
 
-1. A3 estimate triples (Doing).
-2. A3 `_percent` at the coordinator, asserted against the percents already in
-   `test/fixtures/xapian-ops/ops.jsonl` (unasserted today, `test/operators_test.cc:418`).
-3. A5 evidence: point at existing tests; add a get-while-frozen case for the search layout.
-4. A4 wiring for `bytes` slots: terms/values buckets fed from values columns through the
+1. Read jobs 261111-183804-ba31c7 and 261111-183854-4b1080; fold failures.
+2. A5 evidence: point at existing tests; add a get-while-frozen case for the search layout.
+3. A4 wiring for `bytes` slots: terms/values buckets fed from values columns through the
    exhaustive visitor; A9 job, one shard against many (indexed, not in-memory partials).
-5. Design notes for the format steps (Blocked on: design review), then build after review:
-   typed values section (A1), points section on `bkd` (A2), wire forms of filters and
-   aggregation partials (A4, A10).
+4. A3 `_percent` as Xapian's (weight times the top hit's matched-term fraction): needs scorers
+   to report matched query terms per hit; Xapiand computes a weight-only percent host-side
+   (`src/engine/search.cc:72`), shown only with `?comments`. Fork for the lead (below).
+5. After design review: typed values (proposal in prospect `docs/design/phase-4.md`, "Proposed
+   for review: typed values", `b51e0fb`), then points on `bkd`, wire forms (A4, A10).
 
 ## Inventory at prospect main `0aa68f4` (strata pin `94480d5`)
 
@@ -64,9 +67,21 @@ Too big to land as one. Each part lands alone with its tests:
 
 ## Blocked on
 
-Lead: the split above, and three strata-core items outside this file set (`include/**` here is
-prospect's): the slot table and `declare_slot`, delete by query's operation, get by docid. Options:
-a strata quest per item (recommended), or widen this quest to the strata repository.
+Lead:
+
+1. The split above.
+2. Three strata-core items outside this file set: the slot table and `declare_slot`, delete by
+   query's operation, get by docid. Options: a strata quest per item, or widen this quest to
+   strata. For the slot table, the proposal offers metadata entries (no strata change),
+   recommended.
+3. Design review: typed values in the values section (prospect `docs/design/phase-4.md`,
+   "Proposed for review", `b51e0fb`). Not built until reviewed.
+4. `_percent`: Xapian's (matched-term fraction, engine work) or Xapiand's weight ratio as is.
+   Recommendation: Xapian's, since the oracle vectors carry it; low priority (only `?comments`).
+5. Xapiand's adapter must migrate when its prospect pin passes `794a554`: `options.count = true`
+   becomes `options.check_at_least = p::match_count::every` (or Xapiand's own `_check_at_least`,
+   which lets it prune), and `found.count.value_or(0)` becomes `found.matches->estimate`
+   (`src/engine/strata/search.cc:705,770`). Not this file set.
 
 ## Evidence
 
@@ -91,3 +106,11 @@ a strata quest per item (recommended), or widen this quest to the strata reposit
 ## Rulings I made
 
 - Strata-core items are not built here: the quest's file set is prospect's.
+- D10 tier 1 uses "at most check_at_least counted" (not "fewer than"), so a search whose matches
+  equal check_at_least is exact even when later segments are empty.
+- The segment that crosses check_at_least is counted whole (simple, exact); a finer in-segment
+  switch to pruning is listed as not built in the mechanism note.
+- `triple` moved from `collapse.hh` to `search.hh`: one type for collapse merges and search counts;
+  `test/collapse_test.cc` migrated.
+- The mutants job runs in a fresh checkout after build-test: shards_mutants rewrites headers in
+  place, so it must not share a build slot.
