@@ -211,6 +211,13 @@
       "closed": "matched: xapiand-brand's generator moved to brand/build-icons.mjs (Xapiand:e9be58823)",
       "id": "msg-30",
       "text": "Detent brand/ layout (quest detent-brand, Detent:ddcdaf22): brand/logo.svg, brand/README.md, brand/build-icons.mjs, brand/family.png (Kronuz | Xapiand | Detent sheet at 512/32/16, light+dark). Owner approved the Detent mark (B, eight stops). Your xapiand-brand can match this path now; it uses your vector master from the xapiand-brand worktree for the sheet."
+    },
+    {
+      "at": "2026-11-11T14:28:11",
+      "by": "detent-lead",
+      "closed": "answered: no Xapiand run uses the VM; only a host exclusive A/B until 14:30",
+      "id": "msg-31",
+      "text": "Detent's wheel-evidence quest will run timing rows on the shared local QEMU Linux VM (strata tools/vm/aws-linux.sh run), host held exclusive while it measures. Tell me if a Xapiand run needs the VM at a fixed time. Note: 'aws-linux.sh ssh nproc' hung for 2+ min from here just now; is the VM busy with one of your runs?"
     }
   ],
   "quests": {
@@ -2133,17 +2140,58 @@
         "src/engine/strata/shard.cc",
         "tests/test_node.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T16:04:11",
+          "commit": "0ad80490621e2747d8d87c44876a2073509c4595",
+          "criteria": {
+            "A1": "261111-141746-cf5a35 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png); fails without: 261111-133753-938445, 261111-133756-65f3d0, 261111-141748-7c992a, 261111-154234-d4410a",
+            "A2": "261111-154237-c1fcd8 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png)",
+            "A3": "261111-141746-cf5a35 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png)",
+            "A4": "261111-141805-3e0ed7 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "24c5bacc64b8a951524da90f457f2a7ba4976715",
+              "docs": [
+                "brand/README.md",
+                "docs/astro.config.mjs",
+                "docs/public/apple-touch-icon-152.png",
+                "docs/public/apple-touch-icon-167.png",
+                "docs/public/apple-touch-icon.png",
+                "docs/public/favicon.ico",
+                "docs/public/favicon.svg",
+                "docs/src/assets/logo-dark.svg",
+                "docs/src/assets/logo-light.svg",
+                "docs/src/assets/logo.png"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-141805-3e0ed7",
+              "level": "light",
+              "seconds": 571.1,
+              "state": "done",
+              "what": "cross-shard-followups check suite at 24c5bacc64b8"
+            }
+          ],
+          "final": true,
+          "from": "0f63424dadb7ce7dd60e0933973fc6836d03f371",
+          "reason": "",
+          "tested": "0ad80490621e2747d8d87c44876a2073509c4595"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "cross-shard-id's review follow-ups: ordered tests, one catch, an assert",
-      "updated": "2026-11-11T13:22:20",
-      "worktree": "../Xapiand-wt/xapiand/cross-shard-followups"
+      "updated": "2026-11-11T16:04:25",
+      "worktree": ""
     },
     "cross-shard-id": {
       "accepted": {
@@ -2455,6 +2503,65 @@
       "status": "landed",
       "title": "Audit the public docs site against the engine as it is",
       "updated": "2026-11-09T18:22:53",
+      "worktree": ""
+    },
+    "docs-site-icons": {
+      "accepted": {},
+      "after": [],
+      "base": "fdb897d7f3011bd163c5ba6e64fd63c1f91667ba",
+      "branch": "quest/xapiand/docs-site-icons",
+      "checks": [
+        {
+          "cmd": "cd docs && npm ci && npm run build",
+          "level": "light",
+          "minutes": 20,
+          "name": "site"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/astro.config.mjs",
+        "docs/public/**",
+        "docs/src/assets/**",
+        "brand/README.md"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-11T15:37:29",
+          "commit": "c1526ab5118aff79101bf018c9cc99b0d63df9ae",
+          "criteria": {
+            "A1": "261111-152727-b4e819",
+            "A2": "`brand/README.md`: \"The docs site serves its logo, favicons and touch icons\""
+          },
+          "evidence": [
+            {
+              "cmd": "cd docs && npm ci && npm run build",
+              "commit": "81f82907fb18670c57632967d93c873d7ab8628a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-152727-b4e819",
+              "level": "light",
+              "seconds": 36.9,
+              "state": "done",
+              "what": "docs-site-icons check site at 81f82907fb18"
+            }
+          ],
+          "final": true,
+          "from": "16edab709995fb047b71aceaa2e8fb7e5e9332c3",
+          "reason": "",
+          "tested": "fde2eec60f91c1ca7af2e559c4584d56b5a759a4"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "The docs site serves the brand's light and dark variants",
+      "updated": "2026-11-11T15:37:44",
       "worktree": ""
     },
     "docs-site-refresh": {
@@ -12329,6 +12436,39 @@
       "updated": "2026-11-10T03:20:14",
       "worktree": ""
     },
+    "read-only-open": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "test/index_test.cc",
+        "docs/design/read-only-open.md",
+        "docs/perf/open-sync.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [
+        "open-one-flush"
+      ],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A search opens an index with no lock and no flush; the first write upgrades",
+      "updated": "2026-11-11T15:26:01"
+    },
     "reclaim-backlog": {
       "accepted": {},
       "after": [],
@@ -12843,6 +12983,39 @@
       "status": "landed",
       "title": "Indexing throughput research and prototypes",
       "updated": "2026-11-08T15:39:15"
+    },
+    "restore-mixed-sign-integers": {
+      "accepted": {},
+      "after": [],
+      "base": "739cbfaaad6143922ea205d0ff5b329982803080",
+      "branch": "quest/xapiand/restore-mixed-sign-integers",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/**",
+        "tests/restore_cli_check.sh",
+        "tests/test_restore_integers.cc",
+        "docs/dev/restore-integers.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: docs/dev/restore-integers.md is this quest's own file; x7-gate writes no file of that name",
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "A msgpack RESTORE keeps every document of a field holding both signs",
+      "updated": "2026-11-11T16:52:23",
+      "worktree": "../Xapiand-wt/xapiand/restore-mixed-sign-integers"
     },
     "retention": {
       "accepted": {},
@@ -14259,29 +14432,29 @@
     "strata-races": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-11T13:01:42",
+          "at": "2026-11-11T15:02:48",
           "base": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
           "blobs": {
             "CMakeLists.txt": "100644:bf5dba04ed99abf53723a51efc534cb6d7823c77",
             "docs/perf/flakes.md": "100644:03d3d1b7dc98e5fbd8fbe47f29bd8d4280b4338b",
             "docs/perf/flakes/booking_load.sh": "100755:a679733c3268366924b9886fed437ce32c81991e",
             "docs/perf/flakes/repeat_load.sh": "100755:3716fb4546d541f16baea63592545ad4b9e86b8e",
-            "include/strata/core/catalog.hh": "100644:ced6db4cdeca22bca30cfd2095760c8080301fdd",
+            "include/strata/core/catalog.hh": "100644:dd98fc5a761dddf8d079ebf88a9a78a45b7fde01",
             "include/strata/core/resource_budget.hh": "100644:b83d2df93c4a0bb6d0aab89f8ac64f149ef05803",
-            "test/catalog_relief_test.cc": "100644:389acde9ef0fb83ec43acc525818458d44c8bc63",
+            "test/catalog_relief_test.cc": "100644:4fb24acb55f20253b7fbfa8b9fb0890990ce52a0",
             "test/resource_budget_test.cc": "100644:39eb3de141d47e18102c9210be794fc8f5a5cbf2"
           },
           "by": "review",
-          "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+          "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
           "criteria": "f88a166b4f416d90",
           "diffs": {
             "CMakeLists.txt": "526543509ea60330",
             "docs/perf/flakes.md": "9361e79a47f5f0db",
             "docs/perf/flakes/booking_load.sh": "146043e20b8be772",
             "docs/perf/flakes/repeat_load.sh": "f26cd766f3dbf8bd",
-            "include/strata/core/catalog.hh": "c666d31276edd20f",
+            "include/strata/core/catalog.hh": "776b7dc9258adccb",
             "include/strata/core/resource_budget.hh": "12ace006e576e459",
-            "test/catalog_relief_test.cc": "535f3a6461d3666e",
+            "test/catalog_relief_test.cc": "9957dfe3ccd3040d",
             "test/resource_budget_test.cc": "c4c14697f99fedd1"
           },
           "findings": {
@@ -14289,14 +14462,14 @@
               "jobs": [
                 {
                   "cmd": "/Users/kronuz/code/Kronuz/Xapiand/.scratch/strata-races-fix/probe_relief_fixed.sh",
-                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-121450-3218fe",
+                  "job": "261111-140006-8f9967",
                   "level": "light",
-                  "seconds": 405.6,
+                  "seconds": 539.9,
                   "state": "done",
-                  "what": "C1 probe: RELIEF-STALE on all nine catalog tests"
+                  "what": "C1 probe: RELIEF-STALE on all nine catalog tests at 7177fcc5c887"
                 }
               ],
               "kind": "defect",
@@ -14306,14 +14479,14 @@
               "jobs": [
                 {
                   "cmd": "sh -c 'git show 2a4d2aa0ccde:include/strata/core/catalog.hh > include/strata/core/catalog.hh && git show 2a4d2aa0ccde:include/strata/core/resource_budget.hh > include/strata/core/resource_budget.hh && cmake -B build -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build -j4 --target catalog_relief_test 2>&1 | tail -3 && cd build && ! ./catalog_relief_test'",
-                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-121453-bb533f",
+                  "job": "261111-140006-a63952",
                   "level": "light",
-                  "seconds": 112.2,
+                  "seconds": 86.8,
                   "state": "done",
-                  "what": "C2: catalog_relief fails with 2a4d2aa0's headers"
+                  "what": "C2: catalog_relief fails with 2a4d2aa0's headers at 7177fcc5c887"
                 }
               ],
               "kind": "gap",
@@ -14323,14 +14496,14 @@
               "jobs": [
                 {
                   "cmd": "sh -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build -j4 --target resource_budget_test 2>&1 | tail -2 && docs/perf/flakes/booking_load.sh $PWD/build 5 2000'",
-                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-121510-fbd377",
+                  "job": "261111-140006-fa9275",
                   "level": "strict",
-                  "seconds": 47.4,
+                  "seconds": 49.3,
                   "state": "done",
-                  "what": "C6: booking_falls + two_droppers, 2000 rounds x 5 runs"
+                  "what": "C6: booking_falls + two_droppers, 2000 rounds x 5 runs at 7177fcc5c887"
                 }
               ],
               "kind": "defect",
@@ -14340,14 +14513,14 @@
               "jobs": [
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "22a9a7502b8be2a5c23c4c0fcf393822cb863fd4",
+                  "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-121449-2bc470",
+                  "job": "261111-134105-850ff0",
                   "level": "light",
-                  "seconds": 270.0,
+                  "seconds": 186.8,
                   "state": "done",
-                  "what": "strata-races check suite at 22a9a7502b8b"
+                  "what": "strata-races check suite at 7177fcc5c887"
                 }
               ],
               "kind": "defect",
@@ -14381,20 +14554,50 @@
         "docs/perf/flakes.md",
         "docs/perf/flakes/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/strata-races",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T15:02:56",
+          "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
+          "criteria": {
+            "A1": "261111-140006-4ab0c7, 261111-140006-b16aad; fails without: 261111-062817-1fabdf",
+            "A2": "261111-140006-fa9275, 261111-140006-c99aec, 261111-140006-156822; fails without: 261111-062645-154f0d, 261111-065351-d0c5c6",
+            "A3": "[artifact] `include/strata/core/catalog.hh` (note(), closing_over(), each close begin) and `include/strata/core/resource_budget.hh` (note_failure(), tick(), resource_counts::book()/lower()/fall()/unbook(), release()): one-line ordering comment at each changed atomic",
+            "A4": "261111-134105-850ff0",
+            "A5": "261111-134105-850ff0, 261111-140006-8f9967, 261111-140006-fa9275; fails without: 261111-064312-7bf55a, 261111-065033-c4aeb6, 261111-110831-f89967, 261111-121453-bb533f"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-134105-850ff0",
+              "level": "light",
+              "seconds": 186.8,
+              "state": "done",
+              "what": "strata-races check suite at 7177fcc5c887"
+            }
+          ],
+          "final": true,
+          "from": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "reason": "",
+          "tested": "7177fcc5c8874e74eddd9cd280970e4a497e56f3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Two strata races found as test flakes are fixed",
-      "updated": "2026-11-11T13:01:42",
-      "worktree": "../strata-wt/xapiand/strata-races"
+      "updated": "2026-11-11T15:03:25",
+      "worktree": ""
     },
     "t11-barriers": {
       "accepted": {},
@@ -16327,6 +16530,8 @@
     "x7-coverage": {
       "accepted": {},
       "after": [],
+      "base": "9bfc9ca08e941fc02fcacb0b606a211ba7ff0b9b",
+      "branch": "quest/xapiand/x7-coverage",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -16349,9 +16554,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Coverage harness and restore corpora for T13 (x7-gate A13)",
-      "updated": "2026-11-10T05:35:32"
+      "updated": "2026-11-11T14:36:04",
+      "worktree": "../Xapiand-wt/xapiand/x7-coverage"
     },
     "x7-gate": {
       "accepted": {},
@@ -16423,9 +16629,14 @@
         "docs/gates/**",
         "docs/design/phase7c.md",
         "docs/perf/**",
-        "harness/**",
         "ARCHITECTURE.md",
-        "docs/dev/**"
+        "docs/dev/**",
+        "harness/README.md",
+        "harness/gate7c_rows.sh",
+        "harness/lua_bounds.py",
+        "harness/stall_load.py",
+        "harness/test_gate_tools.py",
+        "harness/wide_search_check.py"
       ],
       "history": [
         {
@@ -16761,7 +16972,7 @@
       "risk": "high",
       "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-10T05:22:10",
+      "updated": "2026-11-11T14:35:51",
       "worktree": "../Xapiand-wt/xapiand/x7-gate"
     },
     "x7-http-repin": {
@@ -16836,6 +17047,8 @@
     "x7-view-bench": {
       "accepted": {},
       "after": [],
+      "base": "fc4cc8e9489e126a3919477a166ea4e4412c611d",
+      "branch": "quest/xapiand/x7-view-bench",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -16855,11 +17068,13 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
+      "reason": "started by force: docs/perf/shard-view.md is this quest's file; x7-gate cites the job (A22) and writes no file of that name",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
-      "updated": "2026-11-10T05:35:56"
+      "updated": "2026-11-11T16:07:20",
+      "worktree": "../Xapiand-wt/xapiand/x7-view-bench"
     },
     "xapiand-brand": {
       "accepted": {},

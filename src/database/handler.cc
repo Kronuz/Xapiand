@@ -476,7 +476,7 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 			placed = true;
 		} catch (const engine::Error& error) {
 			// Erased or moved since the lookup: placed afresh, not put back where it was found.
-			if (!engine::is_missing(error.kind)) { throw; }
+			if (error.kind != engine::errc::doc_not_found) { throw; }
 		}
 	}
 	if (!placed) {
