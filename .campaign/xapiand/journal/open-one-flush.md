@@ -1,6 +1,6 @@
 # open-one-flush: journal
 
-State: blocked on lead: A2 workload ruling
+State: ready for review
 Quest: .campaign/xapiand/quests/open-one-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,30 +9,24 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Nothing running. CI 43199523054 green on Linux; macos-arm64's rerun queued (it never got a runner).
+Nothing. Durability review is the lead's (launched in parallel).
 
 ## Next
 
-1. Lead rules on A2 (below); if the loaded run counts, it is retagged or rerun with `--for A2`.
+1. Fold in the durability review's findings by id.
 2. Check macos-arm64's rerun of CI 43199523054 (not needed for A3).
 
 ## Blocked on
 
-Lead: A2 workload. The quiet-device strict run (261112-022029-add889) does not meet A2 as written
-(p99 lower in 3 of 6 pairs; both sides ~0.1 ms, a full flush of a clean cache costs nothing). The
-strict probe with a concurrent fsync writer (261112-023556-0291d4, `run.sh` unchanged under
-`~/.scratch/open-one-flush/loaded.sh`) meets it: p99 lower in 5 of 6 pairs, p50 45.5 to 23.0 ms,
-totals 277.3 s to 148.7 s. Options: (1) accept the loaded run as A2's job (recommended: a host with
-many indexes opens while others commit, the state the prototype's slow mode saw); (2) rerun the quiet
-run (likely the same tie); (3) restate A2 as "no regression on a quiet device, median halves
-under a dirty cache", which both jobs show.
+Nothing. The lead ruled A2 (option 3): the loaded run is A2; the quiet run is reported as no
+regression.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | 261112-022003-37891b (index_test passes at strata:c35ce7e0, T4 cases 9 and 10 included); mutant 261112-022005-2de6e1 at strata:65fd2afd fails case 9 (`index_test.cc:137`, the reopened generation lost after the power loss, 31 failures then exit) |
-| A2 | loaded probe 261112-023556-0291d4: p99 lower after in 5 of 6 pairs, p50 45.1-46.0 ms before vs 23.0-25.9 ms after (not tagged --for A2; ruling above). Quiet run 261112-022029-add889 (strict, after build 261112-022027-c52fb1): quiet device, both sides 0.13-0.18 s per 1,000 opens, p50 102-117 us; p99 lower after in 3 of 6 pairs (pairs before/after: 250/251, 300/247, 187/231, 239/254, 215/213, 245/204 us); max ~21 ms on both. Not met as written. |
+| A2 | 261112-023556-0291d4 (strict, concurrent fsync writer, `--for A2`; the resubmit reused it: same command at code-identical strata:c35ce7e0, dd3c3a4a and later are docs-only): p99 lower after in 5 of 6 pairs, p50 45.1-46.0 ms before vs 23.0-25.9 ms after, totals 277.3 s vs 148.7 s. No regression: quiet run 261112-022029-add889, both sides ~0.1 ms per open, p99 lower in 3 of 6 pairs (still tagged A2 by its submission; cited only as the no-regression row) |
 | A3 | suite 261112-022007-45e212 passes at strata:c35ce7e0; CI 43199523054 at strata:c35ce7e0: linux-x86_64 gcc and clang, linux-arm64-gcc, linux-asan-ubsan, linux-tsan, freebsd-x86_64, macos-x86_64 pass; macos-arm64 cancelled with no runner assigned (15 min queued), rerun requested |
 
 ## Result
