@@ -5675,17 +5675,44 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T12:17:02",
+          "commit": "c36e36069e520e6b6385c9e2c84571f1a06aaa9a",
+          "criteria": {
+            "A1": "261112-114436-2b0a05",
+            "A2": "261112-120316-53ad25; fails without: 261112-120322-64f547"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "f25ea81fd3a7345bbda7d69a59a6113517432ae8",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-114436-2b0a05",
+              "level": "light",
+              "seconds": 423.3,
+              "state": "done",
+              "what": "loop-share-flake check build-test at f25ea81fd3a7"
+            }
+          ],
+          "final": true,
+          "from": "5d30f9b06d32696f1e858ede72627d6de9284424",
+          "reason": "",
+          "tested": "b10d7c23bb6659c008df7e06351cea60b07d1249"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "test_loop_yield's RESTORE loop share holds on any core count",
-      "updated": "2026-11-12T10:53:22",
-      "worktree": "../Xapiand-wt/xapiand/loop-share-flake"
+      "updated": "2026-11-12T12:17:10",
+      "worktree": ""
     },
     "manifest-log": {
       "accepted": {
