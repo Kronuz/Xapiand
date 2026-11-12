@@ -5635,6 +5635,8 @@
       "after": [
         "x7-loop-fix-c"
       ],
+      "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
+      "branch": "quest/xapiand/loop-scheduling",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
@@ -5656,9 +5658,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-12T13:46:26"
+      "updated": "2026-11-12T13:46:44",
+      "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
       "accepted": {},
