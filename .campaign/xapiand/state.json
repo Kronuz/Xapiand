@@ -18001,8 +18001,26 @@
         "docs/perf/x7-loop-stalls.md",
         "docs/design/phase7c.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-12T03:29:59",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "design",
+              "correctness"
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
+      ],
       "landed": [],
       "lenses": [
+        "design",
         "correctness"
       ],
       "milestone": "Phase 7c",
@@ -18012,7 +18030,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-12T03:29:46"
+      "updated": "2026-11-12T03:29:59"
     },
     "x7-loop-stalls": {
       "accepted": {
