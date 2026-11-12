@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-142834-9c25fd 261111-142834-e6b01e 261111-142834-da0a9e 261111-142835-bb67a2 261111-142835-15e20c 261111-142844-048b3b 261111-142846-66c8ef
+State: waiting on jobs 261111-162221-c4aa56 261111-165347-d979c7
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,15 @@ waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <w
 
 ## Doing
 
-Merged master (Xapiand:78716404c) into the branch: it resolves Blocked on 1 (catalog timer on the control loop,
-Xapiand:c0d0208ee), 2 (`xapiand_admission_inflight_peak`, `xapiand_scheduler_demoted_peak` in `src/metrics.cc`) and
-4 (http repinned, Xapiand:1596eeed7). The T8 rows now gate on both peaks and name each 503's cause (R8). Every row and
-check reruns at Xapiand:0cec18474: checks build-test 261111-142834-9c25fd, e2e 261111-142834-e6b01e, t7-tsan
-261111-142834-da0a9e, recovery 261111-142835-bb67a2, removed 261111-142835-15e20c; rows 261111-142844-048b3b (every
-row, ASan ctest); X3-5 per-open-index cost 261111-142846-66c8ef (after the rows job). The same jobs queued at
-Xapiand:2abe48746 were cancelled before they ran: the X3-5 commit changed the code they would prove.
+Read at Xapiand:0cec18474 (master merged again since: Xapiand:03ba6478a, no engine change the brief counts):
+rows 261111-142844-048b3b 14 of 14 rows pass, ASan ctest 37 of 37; t1_census 51 threads, none outside section 2;
+T8 6 enforced rounds each, peaks in-flight 1,000, demoted 0 light / 23 heavy, admitted 503s are the reader
+registry's "Too many searches are reading at once" (light 9,919, heavy 11,690), 0 other errors; T10 Release flood
+light GET p99 57.10 ms (timing: lead). e2e, t7-tsan, recovery, removed pass. build-test 9c25fd failed 1 of 406 (test_pool
+`tests/test_pool.cc:2203`, master timing flake under load; lead's hunt row), rerun 261111-162221-c4aa56 by the lead.
+X3-5 66c8ef exit 2: the slot's `.deps` held the rows job's ASan dependency builds (FetchContent keeps them in its
+base dir), so the Release link missed `___asan_*`; resubmitted as 261111-165347-d979c7 in its own slot `x7-x35`.
+`docs/gates/phase7c.md` carries these results.
 
 ### Rows job 261110-052957-f5e762 (Xapiand:e7e8e03c5, master's code + driver), each failure read
 
@@ -62,14 +64,9 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read rows 261111-142844-048b3b: `rows/rows.tsv`, `t1_census.log` (DB-TIMER gone?), `t8_*.log` (503 causes by
-   name, both peaks), `ctest-asan.log`; read the five checks; fill Evidence for A1 A2 A3 A7 A8 A10 A13 A17 A19 A20.
-2. Read 261111-142846-66c8ef's "KiB per open index" line into A13 (X3-5); state the reader registry's bytes
-   (strata's reader records x `default_readers_per_index` 128, `src/engine/open.h:50`) from code.
-3. A9 is quest x7-cancel-rows's (D53): the half-close test exists (`tests/test_node.cc:906`); the counter
-   `xapiand_http_requests_cancelled` rises at `src/server/search_views.cc:3234`; no disconnected-search test yet.
-4. Write each row's result into `docs/gates/phase7c.md` at the head's commit.
-5. The lead's timing rows (commands below); A24's T12 jobs can run now (http pin 51d153a, prospect 850d4e8).
+1. Read 261111-165347-d979c7's "KiB per open index" into T13 and A13; read 261111-162221-c4aa56 into A17, A20.
+2. Then only the lead's timing rows (A4 A5 A10's timing A11 A12 A16 A21 A24), the Linux and FreeBSD runs (A6 A15),
+   x7-coverage (A13's coverage and corpora), x7-cancel-rows (A9), x7-view-bench (A22) and the reviews remain.
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
 
@@ -156,20 +153,30 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 | Criterion | Evidence |
 |---|---|
-| A1 | rows 261110-052957-f5e762: `t1_strict_owed` passed, `t1_census` FAILED (DB-TIMER, Blocked on 1); build-test 261110-032054-0d5177 |
-| A2 | rows 261110-052957-f5e762 (`t2_e2e_asan`, `t2_stored_asan` passed); e2e 261110-032054-4e0406; CI run 42820866169 |
-| A3 | recovery 261110-052925-5d7e5b passed; rows 261110-052957-f5e762 (`t3_crash`, `t3_crash_asan` passed) |
-| A7 | t7-tsan 261110-052925-7da5aa passed; rows 261110-052957-f5e762 (`t7_asan` passed, 365 s) |
-| A8 | held overloads (R7, Xapiand:94eaf3dd5): 261110-123313-fe03a9, 261110-123314-96a9e6 passed (every round enforced, 0 other errors); at the head: 261111-142844-048b3b; peaks unexported (Blocked on 2); build-test 261110-032054-0d5177 (`test_readers_cap`) |
-| A10 | rows 261110-052957-f5e762 (`t10_lua` passed; `t10_lua_asan` timed out at 30 s); rerun 261110-081308-b8ca87 queued |
-| A13 | rows 261110-052957-f5e762 (ASan+UBSan ctest rc 0); t7-tsan 261110-052925-7da5aa; CI run 42820866169 |
-| A14 | `docs/gates/phase7c.md` (skeleton) |
-| A17 | build-test 261110-032054-0d5177 (`async_check.sh --strict --owed`) |
+| A1 | 261111-142844-048b3b (`t1_strict_owed`, `t1_census`: 51 threads, all section 2's) |
+| A2 | 261111-142844-048b3b (`t2_e2e_asan`, `t2_stored_asan`); e2e 261111-142834-e6b01e |
+| A3 | recovery 261111-142835-bb67a2; 261111-142844-048b3b (`t3_crash`, `t3_crash_asan`) |
+| A4 | <no evidence yet> (lead, exclusive) |
+| A5 | <no evidence yet> (lead, exclusive) |
+| A6 | <no evidence yet> (Linux VM) |
+| A7 | t7-tsan 261111-142834-da0a9e; 261111-142844-048b3b (`t7_asan`: dump equals the model, 0 reports) |
+| A8 | 261111-142844-048b3b (`t8_overload_*`: every round enforced, peaks 1,000 / 23, 0 other errors); RSS against T4 owed (lead) |
+| A9 | <no evidence yet> (quest x7-cancel-rows) |
+| A10 | 261111-142844-048b3b (`t10_lua`, `t10_lua_asan` every case); flood p99 57.10 ms and T4 with loops: lead |
+| A11 | <no evidence yet> (lead, exclusive) |
+| A12 | <no evidence yet> (lead, exclusive) |
+| A13 | 261111-142844-048b3b (ASan+UBSan ctest 37/37); t7-tsan 261111-142834-da0a9e; X3-5 261111-165347-d979c7 pending; coverage and corpora: x7-coverage |
+| A14 | `docs/gates/phase7c.md` (draft, functional rows filled) |
+| A15 | <no evidence yet> (Linux VM, FreeBSD) |
+| A16 | <no evidence yet> (lead, strict) |
+| A17 | build-test 261111-162221-c4aa56 pending; 261111-142844-048b3b (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
-| A19 | removed 261110-052925-b5f523 passed; rows 261110-052957-f5e762 (`x6_shutdown` passed) |
-| A20 | build-test 261110-032054-0d5177; `src/database/pool.cc` |
-| A21 | D53 sets the rule (head inside the new run's 95% interval or above); jobs owed |
+| A19 | removed 261111-142835-15e20c; 261111-142844-048b3b (`x6_shutdown`) |
+| A20 | build-test 261111-162221-c4aa56 pending |
+| A21 | <no evidence yet> (D62: over 5% CPU or 10% p99 after optimizing fails) |
+| A22 | <no evidence yet> (quest x7-view-bench) |
 | A23 | D53 (T4 reads the control loop only while busy) |
+| A24 | <no evidence yet> (pins met: http:51d153a, prospect 850d4e8; T12's jobs: lead) |
 
 ## Result
 
@@ -204,5 +211,9 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   `test_a_refusal_reads_its_cause` in `gate_tools`).
 - R9. X3-5's per-open-index cost is resident memory, measured under a light hold (memory does not depend on CPU
   share): `wide_search_check.py gate --pool 10000` divides the first search's RSS growth by the indexes it left open.
+- R10. X3-5 builds in its own slot: FetchContent keeps dependency build directories in its base dir, so a Release
+  build sharing `.deps` with an ASan build links ASan objects.
+- Lead rulings (2026-11-11): A13's corpora wait on x7-coverage (restore bug, quest restore-mixed-sign-integers); A21
+  uses D62 (over 5% CPU or 10% p99 after optimizing).
 - R3. T8 runs at dry-run size (20,000 documents): the row's functional claims are 503s and no other errors; RSS
   within 10% of T4's run needs the lead's 1,000,000-document run.
