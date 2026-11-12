@@ -21,10 +21,13 @@
  */
 
 // Unit tests for the error kinds: the retry fates, the translation of what strata throws into
-// engine errors, the HTTP answer for each kind, and the plain form of the doubles on the wire.
+// engine errors, the HTTP answer for each kind (a damaged segment's too), and the plain form of the
+// doubles on the wire.
 
 #include "test_harness.h"
 
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <stdexcept>
 #include <string>
@@ -32,12 +35,16 @@
 #include <vector>
 
 #include "cartesian.h"
+#include "database/flags.h"
+#include "database/pool.h"
+#include "database/shard.h"
 #include "datetime.h"
 #include "engine/codec.h"
 #include "engine/error.h"
 #include "engine/strata/shard.h"
 #include "exception_engine.h"
 #include "http_parser.h"
+#include "pool_support.h"
 #include "server/http_utils.h"
 #include "xapiand_exception.h"
 
@@ -159,6 +166,84 @@ void test_http_answers() {
 	CHECK_EQ(answer([] { throw 3; }).first, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
 }
 
+// A segment damaged on disk under strata's lazy segments (strata:6d4e1164): the index opens, since the open maps
+// nothing, and the first read answers the client 500 with the corrupt description. The failed read hands the index
+// back, so a request after the file is whole again reads from a fresh open, which is Xapiand's heal (x-pool D2).
+void test_a_damaged_segment_answers_at_first_read() {
+	namespace fs = std::filesystem;
+	constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
+	constexpr int READ = DB_OPEN | DB_DISABLE_WAL;
+	const std::string path = "engine_error_damaged.db";
+	fs::remove_all(path);
+	const auto finish = [](DatabasePool& pool) {
+		pool.finish();
+		CHECK_TRUE(pool.join());
+	};
+	{
+		DatabasePool pool(control_loop(), 8);
+		{
+			Shard shard(pin_index(pool, path, WRITE), WRITE);
+			engine::Document doc;
+			doc.set_key("Ka");
+			doc.add_term(doc.field("f"), "body", 2);
+			doc.set_data("a");
+			engine::sync_wait(shard.add_document(doc));
+			CHECK_TRUE(engine::sync_wait(shard.commit()));
+		}
+		finish(pool);
+	}
+
+	// One byte of the footer the manifest's checksum covers, in the one segment; the file keeps its size, so the
+	// open's check of names and sizes passes.
+	fs::path segment;
+	for (const auto& entry : fs::directory_iterator(fs::path(path) / "strata")) {
+		const auto name = entry.path().filename().string();
+		if (name.starts_with("seg-") && name.ends_with(".sx")) {
+			CHECK_TRUE(segment.empty());
+			segment = entry.path();
+		}
+	}
+	REQUIRE(!segment.empty());
+	const auto at = static_cast<std::streamoff>(fs::file_size(segment) - 30);
+	const auto flip = [&] {
+		std::fstream f(segment, std::ios::in | std::ios::out | std::ios::binary);
+		f.seekg(at);
+		char c = 0;
+		f.get(c);
+		f.seekp(at);
+		f.put(static_cast<char>(c ^ 1));
+	};
+	flip();
+
+	DatabasePool pool(control_loop(), 8);
+	const auto read = [&] {
+		errc kind = errc::internal;
+		std::string data;
+		const auto got = answer([&] {
+			Shard shard(pin_index(pool, path, READ), READ);   // the open succeeds
+			try {
+				data = engine::sync_wait(shard.get_view(1))->data();
+			} catch (const engine::Error& error) {
+				kind = error.kind;
+				throw;
+			}
+		});
+		return std::tuple{got.first, kind, data};
+	};
+	auto [status, kind, data] = read();
+	CHECK_EQ(status, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
+	CHECK_TRUE(kind == errc::corrupt);
+	std::tie(status, kind, data) = read();   // still damaged: the fresh open's first read fails as well
+	CHECK_TRUE(kind == errc::corrupt);
+
+	flip();   // the file is whole again, as a repair from a replica leaves it
+	std::tie(status, kind, data) = read();
+	CHECK_EQ(status, static_cast<int>(HTTP_STATUS_OK));
+	CHECK_EQ(data, "a");
+	finish(pool);
+	fs::remove_all(path);
+}
+
 // The doubles that metric_serialise.h and the callbacks put on the wire: eight bytes, the IEEE bits
 // least significant byte first.
 void test_double_bytes() {
@@ -189,4 +274,4 @@ void test_double_bytes() {
 
 }  // namespace
 
-TEST_MAIN(test_fates, test_translation, test_http_answers, test_double_bytes)
+TEST_MAIN(test_fates, test_translation, test_http_answers, test_a_damaged_segment_answers_at_first_read, test_double_bytes)

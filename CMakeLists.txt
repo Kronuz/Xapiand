@@ -454,8 +454,7 @@ endif ()
 include(FetchContent)
 
 # Every pin below is the newest commit any fetched library pins (harness/pins_check.py compares the
-# resolved trees), but strata: prospect b20e7c5 pins strata 94480d5 (the manifest log), newer than
-# strata's pin here, until strata's own bump. A library that pins an older one is bumped in its own repository.
+# resolved trees). A library that pins an older one is bumped in its own repository.
 # compressors: the LZ4 and zstd block codecs of the stored blocks, and the deflate codec.
 FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5566260a30bbd2d77d5cfa890bfe33f503a2add6)
 # Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use.
@@ -768,9 +767,8 @@ FetchContent_MakeAvailable(task)
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-# strata: the commit with defer_io and work_pool_executor.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 5d742b2407f5048713cb39a625c017c455cb814e)  # strata main: the catalog host interface, destroy-safe pins with cancel tokens
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG b20e7c555f37daad415cf658b32f99cc9a955464)  # prospect main: the exhaustive scan checks its slice every 256 ordinals with host work
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad)  # strata main: lazy segments by default, one device flush per open
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG fcd9f3e1f803e9b8e9a1d275a0555a282df8c893)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
