@@ -31,6 +31,8 @@ Builds on x7-loop-stalls' chores, D1 barriers and D2 schema order (docs/design/p
 - Lead, 11-12: B1 is closed by code, not argument: a seam before each write in `apply_slice`, a test of the docid-reuse interleaving, and the reviewer's defer-only-the-missing mutant.
 - Lead, 11-12: split from x7-loop-stalls when its fix landed; E3's profile is its starting evidence.
 
+- Lead, 11-12: merging master conflicts in tests/test_loop_yield.cc. loop-share-flake (Xapiand:b10d7c23b) replaced the loop-share-of-process check with loop CPU against an on-loop `update` baseline in the same test, bound 0.7. This branch's restore test checks `loop_ms < process_ms * 0.2`, the share form that flaked on CI's core counts. Resolve it with master's relative form, keeping this fix's claim that writes run off the loop too, at a tighter bound if the numbers allow.
+
 ## May land early
 
 The design note (A1); any fix step that is a strict improvement on every row, after its correctness review.
