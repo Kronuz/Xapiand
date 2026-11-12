@@ -1,6 +1,6 @@
 # phase4-gate: journal
 
-State: working
+State: waiting on jobs 261111-184347-9e6f43 261111-184357-8030c6
 Quest: .campaign/xapiand/quests/phase4-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,18 +17,23 @@ lower += hits that entered the collector, upper += live documents, estimate += c
 (tier 2). Tests: `test/shards_test.cc` `tiers_hold` at Xapian's own check_at_least against its
 recorded triples (oracle) and around the true count over random segmentations, deletes and shard
 splits (identity); mutants in `test/shards_mutants.py` ("check_at_least", "pruned merge").
-Jobs: build-test 261111-183804-ba31c7, mutants 261111-183854-4b1080 (fresh checkout, after it).
+Step 2, A5: real-time get over a frozen buffer a failed flush kept, at one and two flush threads,
+under a newer active buffer (`test/index_test.cc`, the ENOSPC cases; prospect `bd21e9f`).
+Jobs at `bd21e9f`: build-test 261111-184347-9e6f43 (A3, A5), mutants 261111-184357-8030c6 (A3,
+fresh checkout, after it). The earlier 261111-183804-ba31c7 and 261111-183854-4b1080 were cancelled
+as superseded.
 
 ## Next
 
-1. Read jobs 261111-183804-ba31c7 and 261111-183854-4b1080; fold failures.
-2. A5 evidence: point at existing tests; add a get-while-frozen case for the search layout.
-3. A4 wiring for `bytes` slots: terms/values buckets fed from values columns through the
+1. Read jobs 261111-184347-9e6f43 and 261111-184357-8030c6; fold failures. A5's evidence also
+   cites the existing keys (F8 `format13_test.cc:969`), optional sections (F4 `:786`) and get
+   (`index_test.cc:159-172`, `:2160-2190`) tests, which the same build-test runs.
+2. A4 wiring for `bytes` slots: terms/values buckets fed from values columns through the
    exhaustive visitor; A9 job, one shard against many (indexed, not in-memory partials).
-4. A3 `_percent` as Xapian's (weight times the top hit's matched-term fraction): needs scorers
+3. A3 `_percent` as Xapian's (weight times the top hit's matched-term fraction): needs scorers
    to report matched query terms per hit; Xapiand computes a weight-only percent host-side
    (`src/engine/search.cc:72`), shown only with `?comments`. Fork for the lead (below).
-5. After design review: typed values (proposal in prospect `docs/design/phase-4.md`, "Proposed
+4. After design review: typed values (proposal in prospect `docs/design/phase-4.md`, "Proposed
    for review: typed values", `b51e0fb`), then points on `bkd`, wire forms (A4, A10).
 
 ## Inventory at prospect main `0aa68f4` (strata pin `94480d5`)
