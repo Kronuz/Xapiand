@@ -69,7 +69,7 @@ If 2c8cb9 (diagnosis at the pre-fix commit) shows a difference beyond order, fix
 |---|---|
 | A1 | build-test f46d26 at cdb757fc2 (38/38 ctest incl. test_aggregation_shards, async_check 0 unclassified); pre-fix failure 261112-000934-6482ef (F1) |
 | A2 | mutant 1, fix reverted: 261112-013131-08b954; mutant 2, shard 1 dropped: 261112-013135-842794 (both: killed = exit 0 only on the test's FAIL lines, setup failure = exit 1). Earlier 1d7a01 is void (exited 0 on a failed cmake); the lead's duplicate d818c0 is cancelled. |
-| A3 | docs/dev/agg-shard-parity.md |
+| A3 | [artifact] `docs/dev/agg-shard-parity.md` |
 | F1 | diagnosis 261112-002548-2c8cb9 at the pre-fix commit: 0 DIFF when buckets compare by key, so order only |
 
 ## Result
