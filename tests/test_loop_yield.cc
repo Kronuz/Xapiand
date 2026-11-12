@@ -323,13 +323,14 @@ std::vector<std::string> restored_one_by_one(const std::string& index, const std
 // The first difference of two runs' items, or none.
 bool same_items(const std::vector<std::string>& parallel, const std::vector<std::string>& serial) {
 	CHECK_EQ(parallel.size(), serial.size());
+	bool same = parallel.size() == serial.size();
 	for (std::size_t i = 0; i < parallel.size() && i < serial.size(); ++i) {
 		if (parallel[i] != serial[i]) {
 			std::fprintf(stderr, "  object %zu: %s / %s\n", i, parallel[i].c_str(), serial[i].c_str());
-			return false;
+			same = false;
 		}
 	}
-	return parallel.size() == serial.size();
+	return same;
 }
 
 // Fixes the objects each prepare chore takes, so a range holds that many objects on any build; clears the seams
@@ -509,7 +510,19 @@ static void test_new_numeric_ids_match_their_serial_model() {
 		CHECK_GE(DocIndexer::stats.largest_range.load(), std::size_t{16});
 		CHECK_GE(DocIndexer::stats.serial_after_join.load(), std::size_t{2});
 	}
-	CHECK_TRUE(same_items(items_of(reply), restored_one_by_one("num_seq", objects)));
+	const auto serial = restored_one_by_one("num_seq", objects);
+	CHECK_TRUE(same_items(items_of(reply), serial));
+	create_index("num_par2", 5);
+	CHECK_EQ(http_call("RESTORE", "/num_par2/?commit", R"({"_id":1,"n":0})" "\n", "application/x-ndjson") / 100, 2);
+	std::string again;
+	CHECK_EQ(http_call("RESTORE", "/num_par2/?commit", body, "application/x-ndjson", &again) / 100, 2);
+	std::fprintf(stderr, "  a second run against the first:\n");
+	same_items(items_of(again), items_of(reply));
+	std::fprintf(stderr, "  ids:");
+	for (const auto& item : serial) {
+		std::fprintf(stderr, " %s", item.c_str());
+	}
+	std::fprintf(stderr, "\n");
 }
 
 
@@ -536,13 +549,17 @@ static void test_a_write_missed_since_placement_is_placed_afresh() {
 		FixedRanges ranges(32);
 		DocIndexer::seams.after_placement = [&erased](DatabaseHandler& handler) -> task::task<void> {
 			if (erased.fetch_add(1) == 0) {
-				co_await handler.delete_document("k7", 0);
+				co_await handler.delete_document("k7", UNKNOWN_REVISION);
 				auto obj = MsgPack::MAP();
 				obj["v"] = "erased and written again";
-				co_await handler.index(MsgPack("k7"), 0, true, obj, false, json_type);
+				co_await handler.index(MsgPack("k7"), UNKNOWN_REVISION, true, obj, false, json_type);
 			}
 		};
-		CHECK_EQ(http_call("RESTORE", "/miss/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		const auto status = http_call("RESTORE", "/miss/?commit", body, "application/x-ndjson", &reply);
+		CHECK_EQ(status / 100, 2);
+		if (status / 100 != 2) {
+			std::fprintf(stderr, "  RESTORE: %d %s\n", status, reply.c_str());
+		}
 		std::fprintf(stderr, "  %zu writes deferred\n", DocIndexer::stats.deferred.load());
 		CHECK_GE(erased.load(), 1);
 		CHECK_EQ(DocIndexer::stats.deferred.load(), std::size_t{3});   // k7 three times, each missed
