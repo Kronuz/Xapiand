@@ -18,7 +18,6 @@ not at open: Xapiand's error paths and tests follow.
 - A1 Xapiand's strata and prospect pins agree with prospect's own strata pin: pins_check in the build-test check
 - A2 The suite passes at the new pins, with Xapiand's IO wrappers forwarding the read-only opens: the build-test check
 - A3 A damaged segment is reported to the client as corrupt, and repairing it clears the error on a later request; nodes open eagerly (`defer_io` forces eager segments, strata index.hh:603; `verify_fields()` maps every segment), so the error surfaces at open: a test, with a `--fails-without` job
-- A5 After sync-at-first-commit, a reopened shard's `committed_revision` (shard.cc:255) and the WAL header and replay keyed on it (wal.cc:83,161) stay correct when the open no longer syncs: a test reopening after an unsynced tail edit (design review F7)
 - A4 Linux CI (ASan+UBSan, TSan) green at the landed commit: CI
 
 ## Contracts
@@ -27,6 +26,7 @@ Consumes strata's and completion's public APIs.
 
 ## Decisions
 
+- Lead, 11-12: A5 (committed_revision after an unsynced reopen, sync-at-first-commit review F7) moves to the pin bump that follows sync-at-first-commit (hunt row), so this bump lands with unpin-after-kick (strata:86fe7c47) now. The strata pin moves to 86fe7c47 and prospect re-pins the same strata first (A1).
 - Lead, 11-12: from x7-loop-stalls' pin bump (prospect b20e7c5 pins a newer strata) and the hunt rows
   on the strata pin past 71750940 and the IO wrappers.
 
