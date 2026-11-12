@@ -2645,7 +2645,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 						if (active > stats.peak_children.load(std::memory_order_relaxed)) {
 							stats.peak_children.store(active, std::memory_order_relaxed);
 						}
-						at = co_await lk_shard->apply_slice(chores, writes, at, PREPARE_SLICE, missed);
+						co_await lk_shard->apply_slice(chores, writes, at, PREPARE_SLICE, missed);
 						if (seams.after_slice) {
 							co_await seams.after_slice(db_handler, writes[at - 1].term, writes[at - 1].missed);
 						}
@@ -2655,9 +2655,15 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 						if (counted_in) {
 							--active;
 						}
-						// A shard that cannot be written fails its sub-run's remaining writes, each its own result.
+						// A pin, turn or slice that fails before its next write fails that write alone; the rest retry.
 						const auto error = std::current_exception();
-						for (; at < writes.size(); ++at) {
+						const std::size_t failed_writes = 1;
+						if (at >= writes.size()) {
+							if (!writes.back().error) {
+								writes.back().error = error;   // the slice's completion failed after its last write
+							}
+						}
+						for (const auto stop = std::min(writes.size(), at + failed_writes); at < stop; ++at) {
 							writes[at].error = error;
 						}
 					}

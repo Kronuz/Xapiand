@@ -1386,8 +1386,8 @@ Shard::written_keys(const std::vector<std::string>& terms)
 }
 
 
-task::task<std::size_t>
-Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
+task::task<void>
+Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
 {
 	L_CALL("Shard::apply_slice(<{} writes>, {})", writes.size(), at);
 
@@ -1412,6 +1412,10 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 				auto& write = writes[at++];
 				if (missed_terms.count(write.term) != 0) {
 					write.missed = true;   // a later write of a term whose document left: in input order, after it
+				} else if (const auto& stale_term = DocIndexer::seams.stale_on_term; !stale_term.empty() && write.term.ends_with(stale_term)) {
+					const engine::Error error(engine::errc::reopen, "Test seam: a write marks the index stale");
+					entry.note_failure(error);
+					write.error = std::make_exception_ptr(error);
 				} else if (write.shard_did != 0) {
 					try {
 						write.info = engine::sync_wait(entry.do_replace(eng, engine::inline_chores(), write_flags, write.shard_did, std::move(write.doc), true, false, true));
@@ -1432,6 +1436,9 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 						write.error = std::current_exception();
 					}
 				}
+				if (write.error && entry.stale_.load(std::memory_order_acquire)) {
+					break;   // the index must be replaced: the later writes reopen it, as one request each would
+				}
 				if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
 					break;
 				}
@@ -1439,7 +1446,6 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 		});
 	}
 	co_await finish_write(false, true);
-	co_return at;
 }
 
 

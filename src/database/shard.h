@@ -172,10 +172,11 @@ public:
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	// A RESTORE's writes to this shard (docs/perf/x7-loop-stalls.md, fix (c)): in one turn, a chore of `chores`
-	// applies writes[at, ...) in input order for about `slice`, with the engine's chores inline, and returns where it
-	// stopped. A write whose document left since placement is missed, and so is every later write of its term
-	// (`missed_terms`, kept across slices): the caller places them afresh, in input order.
-	task::task<std::size_t> apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
+	// applies writes[at, ...) in input order for about `slice`, with the engine's chores inline, and leaves `at` where
+	// it stopped (after a write that failed and marked the index stale: it is replaced before the next). A write
+	// whose document left since placement is missed, and so is every later write of its term (`missed_terms`, kept
+	// across slices): the caller places them afresh, in input order.
+	task::task<void> apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
 
 	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);

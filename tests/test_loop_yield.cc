@@ -347,6 +347,7 @@ public:
 		DocIndexer::seams.after_placement = nullptr;
 		DocIndexer::seams.after_slice = nullptr;
 		DocIndexer::seams.throw_in_slice = false;
+		DocIndexer::seams.stale_on_term.clear();
 		DocIndexer::seams.serial = false;
 	}
 };
@@ -578,14 +579,14 @@ static void test_a_miss_defers_every_later_write_of_its_id() {
 	create_index("reuse", 5);
 	std::string seed;
 	for (int k = 1; k <= 12; ++k) {
-		seed += R"({"_id":"k)" + std::to_string(k) + R"(","v":"seed"})" "\n";
+		seed += R"({"_id":)" + std::to_string(k) + R"(,"v":"seed"})" "\n";
 	}
 	CHECK_EQ(http_call("RESTORE", "/reuse/?commit", seed, "application/x-ndjson") / 100, 2);
 	std::string body;
 	for (int k = 1; k <= 12; ++k) {
-		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":"new"})" "\n";
+		body += R"({"_id":)" + std::to_string(k) + R"(,"v":"new"})" "\n";
 		if (k == 3 || k == 9) {
-			body += R"({"_id":"k7","v":")" + std::string(k == 3 ? "first" : "last") + "\"}\n";
+			body += R"({"_id":7,"v":")" + std::string(k == 3 ? "first" : "last") + "\"}\n";
 		}
 	}
 	std::string reply;
@@ -596,14 +597,14 @@ static void test_a_miss_defers_every_later_write_of_its_id() {
 		DocIndexer::seams.writes_per_slice = 1;
 		DocIndexer::seams.after_placement = [&erased](DatabaseHandler& handler) -> task::task<void> {
 			if (erased.fetch_add(1) == 0) {
-				co_await handler.delete_document("k7", UNKNOWN_REVISION);
+				co_await handler.delete_document("7", UNKNOWN_REVISION);
 			}
 		};
 		DocIndexer::seams.after_slice = [&reborn](DatabaseHandler& handler, const std::string&, bool missed) -> task::task<void> {
 			if (missed && reborn.fetch_add(1) == 0) {
 				auto obj = MsgPack::MAP();
 				obj["v"] = "written again";
-				co_await handler.index(MsgPack("k7"), UNKNOWN_REVISION, true, obj, false, json_type);
+				co_await handler.index(MsgPack(7), UNKNOWN_REVISION, true, obj, false, json_type);
 			}
 		};
 		const auto status = http_call("RESTORE", "/reuse/?commit", body, "application/x-ndjson", &reply);
@@ -611,20 +612,21 @@ static void test_a_miss_defers_every_later_write_of_its_id() {
 		std::fprintf(stderr, "  %zu writes deferred\n", DocIndexer::stats.deferred.load());
 		CHECK_GE(erased.load(), 1);
 		CHECK_GE(reborn.load(), 1);
-		CHECK_EQ(DocIndexer::stats.deferred.load(), std::size_t{3});   // k7 three times, the later two without a try
+		CHECK_EQ(DocIndexer::stats.deferred.load(), std::size_t{3});   // id 7 three times, the later two without a try
 	}
 	for (const auto& item : items_of(reply)) {
 		CHECK_TRUE(item.find("status") == std::string::npos);
 	}
 	std::string reused;
-	CHECK_EQ(http_call("GET", "/reuse/k7", "", "application/json", &reused), 200);
+	CHECK_EQ(http_call("GET", "/reuse/7", "", "application/json", &reused), 200);
 	CHECK_EQ(field_of(json_of(reused), "v").to_string(), std::string("\"last\""));
 }
 
 
-// An apply slice that throws fails its shard's remaining writes, each its own result, and leaves the engine's chores
-// restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
-static void test_a_throwing_apply_slice_restores_the_engines_chores() {
+// An apply slice that fails before its writes (a pin or a turn that cannot be had, here a thrown slice) fails its
+// shard's next write alone, and the rest retry, each its own result as one request each would have; the engine's chores
+// are restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
+static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores() {
 	create_index("throws", 5);
 	std::string body;
 	for (int k = 1; k <= 20; ++k) {
@@ -642,12 +644,61 @@ static void test_a_throwing_apply_slice_restores_the_engines_chores() {
 		failed += item.find("status") != std::string::npos;
 	}
 	std::fprintf(stderr, "  %zu of 20 writes failed with the slice\n", failed);
-	CHECK_GE(failed, std::size_t{1});
+	CHECK_EQ(failed, std::size_t{1});
+	std::string found;
+	CHECK_EQ(http_call("SEARCH", "/throws/?volatile", R"({"_limit":100})", "application/json", &found), 200);
+	CHECK_EQ(field_of(json_of(found), "total").to_string(), std::string("19"));
 	CHECK_TRUE(eventually([] { return ShardEndpoint::engines_inline() == 0; }, 2s));
 	CHECK_EQ(http_call("RESTORE", "/throws/?commit", R"({"_id":"k1","v":2})" "\n", "application/x-ndjson") / 100, 2);
 	std::string got;
 	CHECK_EQ(http_call("GET", "/throws/k1", "", "application/json", &got), 200);
 	CHECK_EQ(field_of(json_of(got), "v").to_string(), std::string("2"));
+}
+
+
+// A write that fails and marks the index stale ends its slice, so the later writes of the shard run after the index is
+// replaced, in a slice of their own, as one request each would: with the failing write, the run has one more slice
+// than the same run with no failure (a slice takes a shard's whole sub-run unless it ends), the failing write alone
+// fails, and every other object is stored.
+static void test_a_stale_marking_failure_ends_its_slice() {
+	create_index("stale_a", 5);
+	create_index("stale_b", 5);
+	std::string body;
+	for (int k = 1; k <= 60; ++k) {
+		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":1})" "\n";
+	}
+	auto run = [&](const std::string& index, const std::string& failing, std::size_t& slices, std::size_t& failed, std::string& total) {
+		std::atomic<std::size_t> counted{0};
+		std::string reply;
+		{
+			FixedRanges ranges(1000);
+			DocIndexer::seams.writes_per_slice = 1000;
+			DocIndexer::seams.stale_on_term = failing;
+			DocIndexer::seams.after_slice = [&counted](DatabaseHandler&, const std::string&, bool) -> task::task<void> {
+				counted.fetch_add(1);
+				co_return;
+			};
+			CHECK_EQ(http_call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson", &reply) / 100, 2);
+		}
+		slices = counted.load();
+		failed = 0;
+		for (const auto& item : items_of(reply)) {
+			failed += item.find("status") != std::string::npos;
+		}
+		std::string found;
+		CHECK_EQ(http_call("SEARCH", "/" + index + "/?volatile", R"({"_limit":100})", "application/json", &found), 200);
+		total = field_of(json_of(found), "total").to_string();
+	};
+	std::size_t without_slices = 0, without_failed = 0, with_slices = 0, with_failed = 0;
+	std::string without_total, with_total;
+	run("stale_a", "", without_slices, without_failed, without_total);
+	run("stale_b", "k1", with_slices, with_failed, with_total);
+	std::fprintf(stderr, "  slices %zu without a failure, %zu with one; failed %zu; stored %s\n", without_slices, with_slices, with_failed, with_total.c_str());
+	CHECK_EQ(without_failed, std::size_t{0});
+	CHECK_EQ(with_failed, std::size_t{1});
+	CHECK_EQ(with_total, std::string("59"));
+	CHECK_EQ(with_slices, without_slices + 1);
+	CHECK_TRUE(eventually([] { return ShardEndpoint::engines_inline() == 0; }, 2s));
 }
 
 
@@ -741,7 +792,8 @@ int main() {
 	test_new_numeric_ids_match_their_serial_model();
 	test_a_write_missed_since_placement_is_placed_afresh();
 	test_a_miss_defers_every_later_write_of_its_id();
-	test_a_throwing_apply_slice_restores_the_engines_chores();
+	test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores();
+	test_a_stale_marking_failure_ends_its_slice();
 	test_an_update_sees_the_earlier_objects_of_its_stream();
 	test_schema_changes_commit_in_input_order();
 	if (testh::failures != 0) {

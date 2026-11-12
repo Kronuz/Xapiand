@@ -302,6 +302,7 @@ struct DocIndexerSeams {
 	std::function<task::task<void>(DatabaseHandler&)> after_placement;
 	std::function<task::task<void>(DatabaseHandler&, const std::string& term, bool missed)> after_slice;
 	std::atomic<bool> throw_in_slice{false};
+	std::string stale_on_term;   // a write of a term ending so fails as a stale-marking error
 	std::atomic<bool> serial{false};
 };
 
