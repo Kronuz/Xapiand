@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-084823-54c2d4 261112-084825-447568 261112-084828-d30d45 261112-084832-080c00
+State: waiting on jobs 261112-090456-c67417 261112-090511-afb297 261112-090524-b3bce6 (B1 mutant 261112-084825-447568 already passed at Xapiand:7b2c8d4f1's code; rerun it if the suite asks)
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,14 +16,16 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-1. Read the suite 261112-084823-54c2d4 (Xapiand:HEAD of the branch) and the three mutants (each exits 0 only when its
-   named check's FAIL line appears): B1 missing-only 261112-084825-447568 (`reused` value check), N4 stale break
-   261112-084828-d30d45 (`with_slices == without_slices + 1`), N4 failed slice fails the rest 261112-084832-080c00
-   (`failed == 1`). A mutant that exits 1 survived: fix the test; 2 or 3: fix the sed.
+1. Read the suite 261112-090456-c67417 (Xapiand:b4e872ed6) and the two N4 mutants 261112-090511-afb297 (stale break) and
+   261112-090524-b3bce6 (failed slice fails the rest). B1's mutant 261112-084825-447568 passed (its test is unchanged).
 2. Then `campaign accept x7-loop-fix-c design --confirm B1=<suite> B2=<suite> ...`, write the Result, State "ready for
-   review" (D67: landing waits for the loop-scheduling quest), launch the correctness reviewer.
+   review", launch the correctness reviewer.
 
 Done this session:
+- Suite 261112-084823-54c2d4 failed `with_slices == without_slices + 1` (6 and 6) and mutant 080c00 survived: the tests were
+  wrong, not the code. The first object of a new index changes its schema and ends its range alone (`pull`'s
+  `changed`), so the failing write was a range of one and its slice had no later write. Both failure tests now restore a
+  seed first (Xapiand:b4e872ed6); the note's failure section states the behaviour as built.
 - First B1 mutant 261112-083119-7312ec survived (suite 261112-083057-772ce1 passed): `must_exist` is checked by key at the
   docid, and only a numeric id's new document takes an erased docid (`args.new_did`; a string id takes `last + 1`). The
   test now uses numeric ids. D68 / N4 option 2 built in the same commit: `apply_slice` takes `at` by reference and
@@ -97,11 +99,11 @@ text in Xapiand:9c38ae630, the code and tests in Xapiand:3c3cf24c4; suite 261112
 - B1 (a miss defers every later object of its term): fix `Shard::apply_slice`'s `missed_terms`, Xapiand:3c3cf24c4.
   Tests: `test_a_write_missed_since_placement_is_placed_afresh` (mutant 261112-060256-a08cb1) and
   `test_a_miss_defers_every_later_write_of_its_id` (numeric id 7, seams `writes_per_slice` and `after_slice`).
-  Suite 261112-084823-54c2d4; mutant, a miss defers only the missing write, 261112-084825-447568. Results pending.
+  Suite 261112-090456-c67417; mutant, a miss defers only the missing write, 261112-084825-447568 (passed).
 - N4 (option 2, D68): a slice ends at a stale-marking failure; a failed pin, turn or slice fails one write and the rest
-  retry. Tests `test_a_stale_marking_failure_ends_its_slice` (mutant 261112-084828-d30d45) and
-  `test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores` (mutant 261112-084832-080c00).
-  Suite 261112-084823-54c2d4. Results pending.
+  retry. Tests `test_a_stale_marking_failure_ends_its_slice` (mutant 261112-090511-afb297) and
+  `test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores` (mutant 261112-090524-b3bce6).
+  Suite 261112-090456-c67417. Results pending.
 - B2 (each test asserts its case happened): COVERED. Fix: `DocIndexer::stats`, `DocIndexer::seams` and `FixedRanges`
   (objects per prepare, not wall time), Xapiand:3c3cf24c4, namespace-scope declarations Xapiand:7e19c4475. Each case
   asserts it happened: model test `largest_range >= 16` and `repeated_in_subrun >= 1`; numeric ids `largest_range >=
