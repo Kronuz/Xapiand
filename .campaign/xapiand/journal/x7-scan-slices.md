@@ -1,6 +1,6 @@
 # x7-scan-slices: journal
 
-State: waiting on jobs 261112-003707-96568a 261112-003708-c3d2d6 261112-003718-87dd09 261112-003720-34c4cb 261112-003722-18be3b
+State: waiting on jobs 261112-003707-96568a 261112-003718-87dd09 261112-003720-34c4cb 261112-003722-18be3b
 Quest: .campaign/xapiand/quests/x7-scan-slices.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,11 +17,12 @@ binds its queries for the loop and was unaffected. Fixed at prospect:ca65df9; th
 now also require six bench lines per invocation.
 
 Jobs at prospect:ca65df9: build-test 261112-003707-96568a (A1), mutant rerun
-261112-003708-c3d2d6 (A1 --fails-without), A/B build 261112-003718-87dd09 (slot x7ss-ab), smoke
+261112-003708-c3d2d6 (A1 --fails-without: passed, the test fails at sliced_test.cc:634-635 `most() <= 256` and `yields() * 256 >= matches`), A/B build 261112-003718-87dd09 (slot x7ss-ab), smoke
 261112-003720-34c4cb, row 261112-003722-18be3b (A2: 8 rounds of `bench 150000 21`, A B A2).
 
 ## Next
 
+0. docs/mechanisms/sliced-search.md updated at prospect:<head> (256 window, invariant row).
 1. From the row: per arm B/A and A2/A over rounds; write docs/perf/scan-slices.md (A3), the
    README row, and fix the mechanism note's rationale sentence with the measured ratio.
 2. Commit, push, paste `campaign brief`'s table, State "ready for review".
