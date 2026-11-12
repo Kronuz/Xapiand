@@ -1,6 +1,6 @@
 # pool-sweep-wait: journal
 
-State: working
+State: waiting on jobs 261112-012420-23a451 261112-012422-bf1ed3
 Quest: .campaign/xapiand/quests/pool-sweep-wait.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Fix committed (610b4133c) and pushed; jobs: A1 x50 load run 261112-012420-23a451, build-test 261112-012422-bf1ed3.
 
 ## Next
 
-1. <step>
+1. When both pass, record the evidence rows and set ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -27,7 +27,8 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | jobs 261112-012420-23a451 (x50 beside 2x-CPU load), 261112-012422-bf1ed3 (build-test) |
+| A2 | `tests/test_pool.cc`: the wait is `index.wait_merges()`, the index's own merge completion (strata index.hh), under the entry's turn |
 
 ## Result
 
@@ -37,4 +38,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- No src/ change needed: strata's `wait_merges()` (public, at the pinned commit) is the completion signal; assertions kept (merges_pending()==0, merge_output_unsynced()).
+- The later `until(... free, 10s)` poll on the sweep's close stays: the sweep has no completion signal and the quest names the merge loop only.
