@@ -2697,6 +2697,8 @@
     "dir-shared-lock": {
       "accepted": {},
       "after": [],
+      "base": "dfdac5d196b7253609175260d23c71841b0840df",
+      "branch": "quest/xapiand/dir-shared-lock",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -2712,6 +2714,7 @@
         "test/**",
         "docs/mechanisms/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/dir-shared-lock",
       "landed": [],
       "lenses": [
         "correctness"
@@ -2723,9 +2726,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
-      "updated": "2026-11-12T04:29:25"
+      "updated": "2026-11-12T04:30:23",
+      "worktree": "../completion-wt/xapiand/dir-shared-lock"
     },
     "direct-pins": {
       "accepted": {
