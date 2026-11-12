@@ -1,6 +1,6 @@
 # sync-at-first-commit: journal
 
-State: design ready
+State: waiting on jobs 261112-090343-e602b5 261112-090346-f32817 261112-090352-1ecddc 261112-090358-93f7af 261112-090406-e575c5 261112-090414-89aaae 261112-090438-33df17 261112-090447-4e4f75 261112-090455-1f97df
 Quest: .campaign/xapiand/quests/sync-at-first-commit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,18 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Design ready: strata docs/design/sync-at-first-commit.md (A1). Waiting for the lead's durability design review before building A2-A4.
+Design review (CHANGES, F1-F6) folded in at strata:34aa3691; implementation of A2-A4 built and
+passing locally (index_test, faultfs_test). Jobs queued:
+- suite (A2,A3): 261112-090343-e602b5
+- mutants (--fails-without, bench/open_sync/first_commit_mutant.sh): open A2 261112-090346-f32817;
+  drop 261112-090352-1ecddc, after 261112-090358-93f7af, gate 261112-090406-e575c5, dir 261112-090414-89aaae (A3)
+- A4: build 261112-090438-33df17; opens+garbage (exclusive) 261112-090447-4e4f75; first commit (exclusive) 261112-090455-1f97df
 
 ## Next
 
-1. After the review: index.hh (open drops its sync; inherited-owed flag and segment mark; append path orders segments + log always while owed; rollover clears; retain() gates inherited manifest/segment removals on sync_files_and_directory({log}), fencing on failure).
-2. faultfs.hh: staged-node crash model (no post-barrier bytes without staged ones) and a syncs() counter.
-3. index_test: A2 sync count across opens; A3 crash enumeration (cases 9/10 x append-no-file/append-segment/rollover; reclaim gate case); mutants as --fails-without jobs via a committed script.
-4. A4: idle_index `commit` option; loaded.sh open and first-commit A/B, exclusive <=10 min each.
+1. Read the jobs; put A4 numbers in strata docs/perf/open-sync.md ("Sync at first commit" section) and the note's Cost.
+2. `campaign accept sync-at-first-commit design --confirm F1=<suite job> ...` is the lead's; report ready for review.
 
 ## Blocked on
 
-The design review (lead launches it).
+Nothing.
 
 ## Evidence
 
@@ -47,4 +50,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - Removals of inherited `manifest-*`/old segments before the first commit pay the inherited sync first (D4 of the note) rather than waiting for a commit; EIO there fences. Read-only handles still reclaim garbage.
 - The first commit always orders the log (not only the directory): two records in flight would let a whole new edit follow a torn inherited one, which replay reads as damage.
 - faultfs's staged-node crash model is corrected (post-barrier writes never survive without the staged bytes); no existing path writes a staged file, so no existing outcome changes.
-- Out of file set, for the lead: manifest-log.md D6.6 text, and a direct model test in test/faultfs_test.cc (fallback: index_test.cc).
+- manifest-log.md D6.6 and T4 case 9/10 text updated (now in the file set); faultfs model tests in test/faultfs_test.cc.
+- F1: while owed, sync_dir() itself is the inherited sync (log + directory, fences, clears owed), so every caller (drain, ENOSPC cleanups, rollover) is covered by one rule rather than skipping.
+- F3: faultfs models chained ordering epochs (not a stated limitation); with one ordering point it draws the same outcomes from the same seeds as before.
+- faultfs: a failed sync keeps ordered (staged) bytes; a power-off sync has no effect (the crash decides). The second was needed for the `after` mutant to be caught: the old model dropped the cache at the power-off sync, hiding the write-before-sync crash point.
+- The dropped-segment state is built by replaying a twin index's durable edit bytes unsynced (identity_seed 7), since faultfs cannot kill a process between write and sync.
+- bench/open_sync/mutant.sh deleted (its line is gone); open-sync.md points at 8499e781 for it.
+- build.sh builds both A4 sides from this checkout's idle_index.cc (main's lacks `commit`).
