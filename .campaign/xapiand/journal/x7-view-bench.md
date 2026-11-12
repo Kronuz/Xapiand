@@ -1,6 +1,6 @@
 # x7-view-bench: journal
 
-State: working
+State: waiting on jobs 261111-160905-d74ef9 (build), 261111-160901-23e3eb (A2)
 Quest: .campaign/xapiand/quests/x7-view-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Benchmark committed (34b610bf5, tests/bench_shard_view.cc, target xapiand_bench_shard_view, EXCLUDE_FROM_ALL). Build job in build-bench running.
 
 ## Next
 
-1. <step>
+1. Submit one strict job (<=10 min) running build-bench/bin/xapiand_bench_shard_view --rounds 20 (interleaved rows).
+2. Write docs/perf/shard-view.md, paste Evidence, State ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
