@@ -44,7 +44,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261111-171323-80d18b; fails without: 261111-171345-4024c7 |
+| A2 | 261111-171323-80d18b (3000 of 3000 round-trip, compared one by one) |
+| A3 | `docs/dev/restore-integers.md` |
 
 ## Result
 

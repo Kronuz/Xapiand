@@ -49,6 +49,6 @@ the field `positive`. Fields already typed in an index's schema keep their type.
   negative after it (`w` beyond 2^31). It restores them over ndjson, dumps them with `--dump`, restores the dump
   over HTTP msgpack and with CLI `--restore` (default shards, `--shards 1`, `--shards 3`, and into an index made
   by PUT), and requires every RESTORE to index all N documents and every DUMP to equal the source documents.
-  It passes at the fix (job JOB_HEAD) and fails with master's `src` (job JOB_MUTANT).
+  It passes at the fix (job 261111-171323-80d18b) and fails with master's `src` (job 261111-171345-4024c7).
 - With `CORPUS=tests/corpora/source.ndjson` (x7-coverage's corpus), the same check round-trips all 3,000
-  documents, comparing them one by one (job JOB_HEAD).
+  documents, comparing them one by one (job 261111-171323-80d18b).
