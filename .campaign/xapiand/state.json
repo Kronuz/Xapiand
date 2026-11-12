@@ -10409,12 +10409,12 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
-      "reason": "started by force: overlaps x7-gate only on docs/perf/**; open-mix writes only docs/perf/open-mix.md, a new file x7-gate never touches",
+      "reason": "owner 11-12: the open mix depends on the use case; decide read-only-open's shape architecturally, not by measuring",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "Measure the share of index opens that never write while open",
-      "updated": "2026-11-12T07:37:28",
+      "updated": "2026-11-12T07:41:53",
       "worktree": "../Xapiand-wt/xapiand/open-mix"
     },
     "open-one-flush": {
