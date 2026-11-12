@@ -10034,20 +10034,60 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/phase3-ratchets",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T18:03:18",
+          "commit": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "criteria": {
+            "A1": "261111-072709-569667 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072711-f9506e (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A10": "decision D51; `docs/gates/phase-3-ratchets.md` \"Phase 2 gate conditions\"",
+            "A11": "`docs/gates/phase-3-ratchets.md` \"Gate report at main\" and \"Gate status (2026-11-11)\"",
+            "A2": "261111-072646-cbabd8 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072713-3b714c (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072715-8d41f8 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A3": "261111-072642-12c9fe (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072644-00aa3e (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A4": "261111-072646-cbabd8 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072649-debd0a (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072651-cf4452 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A5": "261111-072649-debd0a (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A6": "261111-072649-debd0a (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072654-b92e66 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A7": "`docs/testing/parity.md` \"Coverage\" (job 261111-072722-2332c9)",
+            "A8": "261111-073924-e0cd69 (passed at 9de065a306d6; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A9": "`docs/gates/phase-3-ratchets.md` \"Tools\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fba0e0dc148e240965cedef85292da3bc4ceb63a",
+              "docs": [
+                "docs/gates/phase-3-ratchets.md",
+                "docs/testing/parity.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-072724-f42070",
+              "level": "light",
+              "seconds": 187.1,
+              "state": "done",
+              "what": "phase3-ratchets check build-test at fba0e0dc148e"
+            }
+          ],
+          "final": true,
+          "from": "b23d1397bd4ff2f56965eba301efb5b702fd540a",
+          "reason": "",
+          "tested": "0aa68f435bd2579e8f43eaec28f34e46669001fc"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 3",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Phase 3's ratchet rows",
-      "updated": "2026-11-11T18:02:56",
-      "worktree": "../prospect-wt/xapiand/phase3-ratchets"
+      "updated": "2026-11-11T18:03:57",
+      "worktree": ""
     },
     "phase3r": {
       "accepted": {},
