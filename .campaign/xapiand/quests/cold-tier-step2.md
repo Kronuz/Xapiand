@@ -73,6 +73,7 @@ Lead, 11-11 12:4x, on the investigation (strata:5d3c948a, 7b126bc1):
   follow-up on memory per tier.
 
 - Lead, 11-11 (band trigger, strata:062182b2): it costs no throughput (on 296 vs off 293 req/s, means of 4 exclusive pairs; flush-scaled +0.7%; the one-slot trigger was -18%) and posts about 2,300 trigger passes per run (was about 16,000). T3's soft-cap bound is soft + one pass (16) + the opens in flight when the sample is taken (at most one per worker thread): the band trigger's 4 and 5 of 259 samples sit up to 3 past soft+16, opens in flight while a pass waits for a chore (job cd5253). The hard caps hold in every run.
+- Lead, 11-11 (re-check F2): T2 hot d1000s1 (p50 -8%, +16%, +22%) and d1000s10 (+33%, +20%, +2%; jobs 261111-085644-609714, 261111-035757-f9dbcf) are MISS residuals, recorded with their numbers; they are not claimed to be the d1s1 request-pin cost unless a measurement shows it.
 ## May land early
 
 The design documents (task `design`), and tests that change no code.
