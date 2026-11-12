@@ -15800,6 +15800,8 @@
     "sync-at-first-commit": {
       "accepted": {},
       "after": [],
+      "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+      "branch": "quest/xapiand/sync-at-first-commit",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -15818,6 +15820,7 @@
         "bench/open_sync/**",
         "bench/idle_index/idle_index.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/sync-at-first-commit",
       "landed": [],
       "lenses": [
         "design",
@@ -15828,9 +15831,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "An open runs no sync; the first commit syncs what it inherited",
-      "updated": "2026-11-12T07:57:30"
+      "updated": "2026-11-12T07:57:49",
+      "worktree": "../strata-wt/xapiand/sync-at-first-commit"
     },
     "t11-barriers": {
       "accepted": {},
