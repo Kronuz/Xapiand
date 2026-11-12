@@ -18521,7 +18521,75 @@
       "worktree": ""
     },
     "x7-loop-fix-c": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-12T10:16:12",
+          "base": "76b71b6e72fd8d58fce358ec8c99181775b75091",
+          "blobs": {
+            "docs/perf/x7-loop-stalls.md": "100644:7459ef3df2223377662b6516a5dc9afd10361dcc",
+            "harness/async_allowlist.tsv": "100644:c4d91afa8df90ca081798aa8ed84ea380b130aca",
+            "src/database/handler.cc": "100644:8f1d7a3655c75ec25e13f7e966633f2f48f4d0d5",
+            "src/database/handler.h": "100644:bdace1368b7321209c0ce797b2c6883ced032a8c",
+            "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
+            "src/database/shard.cc": "100644:a3b860cb9e91b25723471eae8569e69716abd0d2",
+            "src/database/shard.h": "100644:3aa33fe7123cd5637c3a76ae601f2ca4f40d2749",
+            "tests/test_loop_yield.cc": "100644:8ba71a5762515e8afbc23fa9d5e2c678857e0659"
+          },
+          "by": "review",
+          "commit": "a69cd9462c5e4889ad6bee5913cbfc9051404db5",
+          "criteria": "602a9cccdeab10f8",
+          "diffs": {
+            "docs/perf/x7-loop-stalls.md": "fc3145b81beb4ab4",
+            "harness/async_allowlist.tsv": "4c913c72a946a94d",
+            "src/database/handler.cc": "d3bd67373faa0aef",
+            "src/database/handler.h": "6fd6fd4ea580a5d2",
+            "src/database/pool.h": "88a10ee0d67eb6d3",
+            "src/database/shard.cc": "d3ca28e329931422",
+            "src/database/shard.h": "be35c25d42302bf9",
+            "tests/test_loop_yield.cc": "913a67c78c4c8fce"
+          },
+          "findings": {
+            "B1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "b4e872ed6bf32bbe91ff2f70da625e2f329184ed",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-090456-c67417",
+                  "level": "light",
+                  "seconds": 322.1,
+                  "state": "done",
+                  "what": "x7-loop-fix-c check build-test at b4e872ed6bf3"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "B2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "b4e872ed6bf32bbe91ff2f70da625e2f329184ed",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-090456-c67417",
+                  "level": "light",
+                  "seconds": 322.1,
+                  "state": "done",
+                  "what": "x7-loop-fix-c check build-test at b4e872ed6bf3"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "3679e38261475aced1427c82711eeff8870fb457",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "x7-loop-stalls"
       ],
@@ -18579,7 +18647,7 @@
       "risk": "high",
       "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-12T05:22:19",
+      "updated": "2026-11-12T10:16:12",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
