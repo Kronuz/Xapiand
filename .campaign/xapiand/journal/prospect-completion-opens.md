@@ -1,16 +1,19 @@
 # prospect-completion-opens: journal
 
-State: ready for review
+State: waiting on jobs 261112-015344-bac35a 261112-015356-09e3c0 261112-015401-c49945
 Quest: .campaign/xapiand/quests/prospect-completion-opens.md (the lead's; never edit it)
 
 ## Doing
 
-Six damaged-segment cases moved to the lazy default at prospect:27ca2d9 (pushed). A3's pass and
-mutant jobs are done. A1 is barrier-warning-strata's A4 integration job rerun at 27ca2d9.
+Cases at prospect:27ca2d9; lead's msg: merged prospect main (x7-scan-slices) and pinned strata d8ae10b8
+(prospect:fcd9f3e, pushed; task pin bdafa5f already agrees, completion comes through strata's pin).
+Running at fcd9f3e: build-test 261112-015344-bac35a (A1), A3 pass 261112-015356-09e3c0, A3 mutant
+261112-015401-c49945.
 
 ## Next
 
-1. Nothing; A1 passed (ctest 51 of 51, churn and dump identical at t1 and t2).
+1. Read the three jobs; check CI at fcd9f3e. Before the merge A1 passed via 261112-013520-bd7c93
+   (ctest 51/51, churn and dump identical).
 
 ## Blocked on
 
@@ -20,7 +23,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261112-013520-bd7c93 (barrier-warning-strata A4 command at prospect:27ca2d9, strata:d8ae10b8, main 4c45e3dd): ctest 51/51, churn and dump identical |
+| A1 | build-test 261112-015344-bac35a at fcd9f3e (pending); earlier job 261112-013520-bd7c93 (barrier-warning-strata A4 command at prospect:27ca2d9, strata:d8ae10b8, main 4c45e3dd): ctest 51/51, churn and dump identical |
 | A2 | [artifact] `test/index_test.cc`: gate_io/wrapper_io/flaky_io forward all four read-only opens (prospect:ea89758; flaky_io at lines 112-115); not changed here |
 | A3 | pass job 261112-013148-b915bd (format13, index, index_mapped pass; strata d8ae10b8); mutant job 261112-013153-51da31 (`--fails-without`: strata's first-map failure throws corrupt_index; all three abort) |
 
