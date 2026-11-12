@@ -1113,7 +1113,8 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 					throw engine::Error(engine::errc::network, "Endpoint node not available");
 				}
 				L_INFO("Restoring into: {}", repr(endpoints.to_string()));
-				indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
+				// The command line's restore has no reactor to free: its prepares run where they are awaited.
+				indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field, engine::inline_chores());
 			}
 			if (indexer) {
 				co_await indexer->index(batch);
@@ -2252,9 +2253,10 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
  *
  */
 
-DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, task::budget* budget) :
+DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget) :
 	endpoints(endpoints),
 	flags(flags),
+	chores(chores),
 	echo(echo),
 	comments(comments),
 	first(query_field.offset),
@@ -2340,11 +2342,14 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 {
 	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
 
-	// The batch's prepare chores, and the handler they place new ids with (read only while they run).
-	auto& pool = XapiandManager::manager(true)->database_pool->work_pool();
-	IndexChores chores(pool);
+	// The handler the prepare chores place new ids with (read only while they run), and how many run at once: the
+	// pool's workers but its reserve, which flushes never take.
 	DatabaseHandler placement(endpoints, flags);
-	const std::size_t width = pool.threads() > 1 ? pool.threads() - 1 : 1;   // flushes never take the reserve
+	std::size_t width = 1;
+	if (auto manager = XapiandManager::manager(); manager && manager->database_pool) {
+		const auto threads = manager->database_pool->work_pool().threads();
+		width = threads > 1 ? threads - 1 : 1;
+	}
 
 	std::vector<Admitted> run;   // the plain objects since the last barrier, in input order
 

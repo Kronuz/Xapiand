@@ -1663,8 +1663,8 @@ restore_database_view(Request& request)
 {
 	L_CALL("restore_database_view()");
 
-	// The restore's own group of chores: the parse of each chunk runs there, beside the indexing of the
-	// previous one, and splits the pool's service with the index's own group.
+	// The restore's own group of chores: the parse of each chunk and the prepare of each batch run there, beside
+	// the apply of the previous objects, and split the pool's service with the index's own group.
 	IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
 	request.parse_chores = &chores;
 
@@ -1679,7 +1679,7 @@ restore_database_view(Request& request)
 
 			request.processing = std::chrono::steady_clock::now();
 
-			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field, &*request.budget);
+			indexer.emplace(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field, chores, &*request.budget);
 		};
 
 		if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {

@@ -195,9 +195,9 @@ and frames end by completing (D3 R6.3). A chore touches no loop-bound state: `Sc
 flags of a `DatabaseHandler` of the batch's own, never written while chores run. Prepared documents cross threads once,
 written by a chore and read by the loop after the chore's completion resumes it (the pool's handoff orders them).
 
-**Group.** `DocIndexer`'s constructor (`src/database/handler.h`, outside this quest's files) has no handle on the
-RESTORE's own `IndexChores`, so each `DocIndexer::index` call makes a group of its own on the host pool, beside the
-RESTORE's parse group. Taking the RESTORE's group is a one-line header change for the lead.
+**Group.** `DocIndexer` takes the RESTORE's own `IndexChores` (`restore_database_view`'s, which its parse-ahead
+chores already use), so parse and prepare share one group and one DRR share beside the index's group. The command
+line's `--restore` has no reactor to free and passes `engine::inline_chores()`.
 
 **Expected effect (D6).** From the RESTORE table's shares: with `Schema::index` off the loop and compress-once as
 ruled, the loop keeps the shard's turn (`finalise_write` less its decompress, 34.3 - 4.2%, plus the rest of
@@ -222,9 +222,9 @@ in GET, search and dump.
 - Prepare off the loop: the HTTP loop's CPU for a text-heavy RESTORE of 3,000 documents is under 60% of the
   process's. Mutant: every object is a barrier.
 
-**Files.** `src/database/handler.cc` (`DocIndexer::index`, and the helpers it shares with `DatabaseHandler::prepare`:
-`document_id_of`, `take_op_type`, `finish_prepared`, `offer_schema`), `tests/test_loop_yield.cc`. The phase7c.md
-amendment and the header changes (the RESTORE's group, `index_one`'s stale declaration) are the lead's.
+**Files.** `src/database/handler.{h,cc}` (`DocIndexer`, and the helpers it shares with `DatabaseHandler::prepare`:
+`document_id_of`, `take_op_type`, `finish_prepared`, `offer_schema`), `src/server/search_views.cc` (the group),
+`docs/design/phase7c.md` (D4's `flush` row, D12), `tests/test_loop_yield.cc`.
 
 ## Reproduce
 
