@@ -16489,7 +16489,8 @@
         "include/strata/core/catalog.hh",
         "test/catalog_teardown_test.cc",
         "docs/mechanisms/catalog.md",
-        "docs/design/cold-tier.md"
+        "docs/design/cold-tier.md",
+        "test/catalog_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/unpin-after-kick",
       "landed": [],
@@ -16503,7 +16504,7 @@
       "risk": "high",
       "status": "active",
       "title": "A catalog unpin reads nothing after it kicks the slot's close",
-      "updated": "2026-11-12T05:29:56",
+      "updated": "2026-11-12T09:08:45",
       "worktree": "../strata-wt/xapiand/unpin-after-kick"
     },
     "wbuf-inline": {
