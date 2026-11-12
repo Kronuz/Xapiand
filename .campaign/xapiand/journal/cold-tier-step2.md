@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: waiting on jobs 261111-220736-cea164 261111-220738-86ec82 261111-220740-637543 261111-220743-7768e8 261111-220744-401ca4
+State: waiting on jobs 261111-231035-213f01 261111-231036-f7f5b1 261111-231037-42c8ed 261111-231037-0b117d 261111-231037-d956c0 261111-231037-103e0d 261111-231046-759dd0 261111-231055-97795a 261111-231057-540206 (all at strata:4c45e3dd); A11 needs the branch pushed (CI at the head)
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,6 +31,36 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
   rejudged (472ec032). `docs/mechanisms/catalog.md` names who posts a pass (a5399d7a).
 
 ## Next
+
+-2. Final-head reruns (maintenance, no code change; head strata:4c45e3dd, D59: one strict job per row):
+   - Passed at the head: A2 cea164; A3/A4 7768e8 (build) + 401ca4 (T2/T2d d1000s1); A9 86ec82 (build)
+     + 637543 (K6 measure). Numbers below.
+   - Queued: build-test 213f01 (A1, A6, A8, A12); suite 394be0's rerun f7f5b1 (A1); K3/A7 fcb5dc's rerun
+     42c8ed (A7, A12); mutants rerun at the head: 29ff8a -> 0b117d (band check, A1), ade11c -> d956c0,
+     7732e9 -> 103e0d (these two re-apply an older catalog.hh or delete `over_soft();` on the band
+     trigger's code; if either fails at the head it is stale, superseded by 0b117d, not a defect);
+     T2d fixtures build 759dd0 (d1s1, d1000s10 into `.scratch/tiers-4c45e3dd`), then T2d d1s1 97795a
+     and d1000s10 540206 (A5; d1000s1 is 401ca4).
+   - Not runnable from here: A11 (CI on every platform) has no job at 4c45e3dd until the branch is
+     pushed (the brief: no CI runs for this commit); the asan/tsan checks are CI's too. The lead pushes.
+   - When 213f01..540206 finish: read each, update the Evidence table's A1, A5-A8, A12 (rows already
+     name the ids), then ready for review.
+   - K6 at the head (637543, 1,000 indexes, 2 pairs, macOS x86_64, main 15d39c30): heap live per
+     index, main = hot: d1s1 6,484 B (43.01 allocations), d100s1 6,518 B, d100s10 27,798 B (205.01);
+     warm 4,798 / 4,806 / 11,110 B (30.01 / 30.01 / 84.01 allocations); lazy 4,826 / 4,834 / 11,138 B.
+     RSS after open (KB, per index at 1,000), hot vs main by pair: d1s1 12,071 vs 11,981 (+0.8%) and
+     11,911 vs 11,276 (+5.6%; main's own pairs differ by 6.2%); d100s1 15,782 vs 15,704 (+0.5%) and
+     15,790 vs 15,430 (+2.3%); d100s10 70,795 vs 70,713 (+0.1%) and 70,799 vs 70,570 (+0.3%). Warm
+     RSS 5,845-6,033 / 5,988-6,009 / 12,411-12,607; lazy 5,624-5,669 / 5,382-5,485 / 12,075-12,141.
+     Hot's heap is main's exactly; one RSS pair (d1s1 pair 2, +5.6%) is outside 5%, inside main's own
+     pair-to-pair spread.
+   - T2/T2d at the head (401ca4, d1000s1, 500 indexes, 3 reps, macOS x86_64, cache warm; p50 / p99 in
+     us, per rep): main first query 5.7, 6.6, 6.3 / 7.2, 9.0, 7.3 (main open p50 267-20,822). Plain:
+     hot 9.2, 5.8, 8.0 / 18.8, 6.9, 12.6; warm 60.6, 56.6, 54.4 / 133.1, 80.5, 78.0; cold 20,959,
+     20,901, 20,969 / 42,791, 44,234, 43,133. defer_io: hot 6.1, 6.3, 6.1 / 8.9, 8.3, 7.9; warm
+     62.7, 66.2, 54.5 / 112.7, 172.7, 158.9 (500 wakes, `promote()` p50 93.2, 74.7, 90.5, p99 368.6,
+     234.6, 222.0 against D3's 33 to 50 estimate); cold 41,044, 21,008, 20,931 / 58,244, 44,258,
+     42,238. Warm is below cold at p50 and p99 in every rep, no overlap.
 
 -1. After the lead's merge of main (strata:8d25c9c9) and reruns:
    - 298337 (K6) and 9e03b5 (T2 d1000s1) died at start: `.scratch/k6` and `.scratch/tiers/d1000s1`
@@ -133,22 +163,22 @@ minutes when it runs.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `soft_caps_post` (strata:5d3c948a: build-test 261111-113837-7882c4, mutant killed 261111-113839-ade11c), `pass_post_throws` (strata:7b126bc1: 261111-123742-b13378, mutant 261111-123743-7732e9); the band check in `soft_caps_post` (strata:062182b2: suite 261111-151520-66533e, 74 of 74; mutant 261111-151526-29ff8a killed); `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
-| A2 | 261111-035757-eb666b: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-035757-1edccb: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`test/catalog_test.cc` static_assert) |
-| A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf (T2/T2d), 261111-035757-a253be (K6). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
-| A4 | met except: T1 cold (292 B against 16 B), T2 hot d1s1 (p50 +56% and +40% in 2 of 3 pairs), T2 hot d1s1 beyond its A/A spread (261111-113118-6d8a9c, +71% p50), T2 hot d1000s1 (261111-085644-609714: p50 -8%, +16%, +22%) and d1000s10 (261111-035757-f9dbcf: +33%, +20%, +2%), MISS residuals not attributed to the d1s1 pin (re-check F2), T2 cold d1000s10 p99 (+13.9%, inside main's own spread; same-mode pairs only), T1 warm heap (261111-113121-6aaa2d: 5,022 B against the listed pieces plus 7%, 3,907 B). T3 soft caps MET at strata:5d3c948a (261111-113856-358d4c; cause 261111-113116-5b7a23). The one-slot trigger's Zipf throughput is a MISS: 0.73-0.83 of off in 261111-143023-ac195f, 261111-143025-7e33e6, 261111-143034-071676, 261111-143035-141fc0 . At the band trigger (strata:062182b2), build 261111-151532-1f0913: Zipf throughput MET within off's spread (261111-151536-71d322, 261111-151540-9ba721, 261111-151543-9397aa, 261111-151547-259305: means 296 against 293 req/s), T3 MET against the ruled bound (soft + 16 + opens in flight) in 259 of 259 samples (261111-151551-cd5253; reviewer's `t3_bound.py`). macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf; T3 261111-034629-8f5208; T4 261111-035757-a2d41c, 261111-035757-bbb067. Verdicts in `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
-| A5 | macOS warm: T2d warm defer below cold at p50 and p99 on every fixture, no interval overlapping: 261111-085642-fdea98 (d1s1: 47-85 against 264-20,946 µs at p50), 261111-085644-609714 (d1000s1: 54-71 against 379-41,137), 261111-035757-f9dbcf (d1000s10: 351-394 against 1,097-21,908); p99 108-799 against 42,224-72,264. Dropped and Linux: Milestone checks |
-| A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
-| A7 | 261111-035757-bf4776: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
-| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy); build-test 261111-034631-5cd30b at strata:9621595f |
-| A9 | 261111-035757-a253be: `bench/idle_index/k6.sh measure` 1,000 indexes, 2 pairs: hot's heap equals main's, RSS -0.0% to +3.3%; warm and lazy rows in `docs/perf/catalog-tiers.md` |
+| A1 | At strata:4c45e3dd (queued): build-test 261111-231035-213f01 and suite 261111-231036-f7f5b1 (`soft_caps_post`, `pass_post_throws`, `catalog_stress_test` with T5 counters and `stress_two`); mutant reruns 261111-231037-0b117d (one-slot trigger fails the band check; `--fails-without`), 261111-231037-d956c0 and 261111-231037-103e0d (earlier trigger mutants, may be stale on the band code); CI at the head: `ci:linux-tsan`, `ci:linux-asan-ubsan` after the push (last green run 42993976189 at strata:948c0869) |
+| A2 | 261111-220736-cea164 (strata:4c45e3dd): `tools/mutants/cold_tier.py` anchors rewritten after main's merge and the trigger; catalog_test 1000 seeds, 155 of 162 killed, 6 not applied, S7-Z41 equivalent and reworked; the TSan-only S4-S3, S4-X2, S7-T1, S7-T2, S7-T3 and S4-SZ1 at 261111-181009-e04586 (strata:8d25c9c9; `tools/mutants` changed since, so the table, not those mutants\' build, is what 4c45e3dd touched) |
+| A3 | At strata:4c45e3dd: 261111-220743-7768e8 (build, main strata:15d39c30's `idle_index` and this tree's) and 261111-220744-401ca4 (T2/T2d d1000s1, main's first query interleaved per rep). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
+| A4 | At strata:4c45e3dd: 261111-220743-7768e8 (build) and 261111-220744-401ca4 (T2 d1000s1: hot 5.8-9.2 us p50 against main's 5.7-6.6, warm 54-61, cold 20,901-20,969; defer_io hot 6.1-6.3, warm 54.5-66.2, cold 20,931-41,044), numbers in Next. The rest of A4 (T1 heap and the one-slot and band trigger A/Bs, T3 soft caps, T4 hit ratios, T2 hot d1s1 and the d1s1/d1000s10 fixtures) are recorded in `docs/perf/catalog-tiers.md` from runs at earlier heads, listed under Examined, and are not evidence at the head; the T2 d1s1/d1000s10 reruns are A5's. Linux and full scale: Milestone checks |
+| A5 | At strata:4c45e3dd: T2d warm defer below cold at p50 and p99 on d1000s1 (261111-220744-401ca4: warm defer p50 54.5-66.2 us, p99 112.7-172.7; cold defer p50 20,931-41,044, p99 42,238-58,244; no overlap); d1s1 261111-231055-97795a and d1000s10 261111-231057-540206 (queued, build 261111-231046-759dd0). Dropped cache and Linux: Milestone checks |
+| A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`: build-test at the head 261111-231035-213f01 (queued) |
+| A7 | 261111-231037-42c8ed (queued, strata:4c45e3dd): `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed, then the whole suite eager; build-test 261111-231035-213f01 |
+| A8 | `test/cold_segment_test.cc` `damage_cases` (16 cases, strata:b5e29ba0) and `open_checks` (missing, resized; eager and lazy): build-test at the head 261111-231035-213f01 (queued) |
+| A9 | At strata:4c45e3dd: 261111-220738-86ec82 (build) and 261111-220740-637543 (`bench/idle_index/k6.sh measure`, 1,000 indexes, 2 pairs): hot's heap equals main's (6,484 / 6,518 / 27,798 B per index), RSS +0.1% to +5.6% (the +5.6% pair is inside main's own 6.2% pair spread); warm and lazy rows in `docs/perf/catalog-tiers.md`; numbers in Next |
 | A10 | [artifact] `docs/status/cold-tier.md` section "K7: who builds snapshots from seg()" (strata:5e06300b, 85dd1df6, 8f372200): prospect's and Xapiand's construction sites with the pin bumps that adopt seg() (prospect:e49453d, Xapiand:74d8236e5), and the six prospect cases a lazy open leaves to the first map |
-| A11 | CI run 42993976189 at strata:948c0869: every job green (`ci:linux-tsan`, `ci:linux-asan-ubsan`, `ci:freebsd-x86_64`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`) |
-| A12 | lazy is the default (strata:6d4e1164); build-test 261111-034631-5cd30b; the whole suite eager (`STRATA_EAGER_SEGMENTS=1`) in 261111-035757-bf4776 |
+| A11 | CI at strata:4c45e3dd: none until the branch is pushed (last green run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan`, `ci:freebsd-x86_64`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`) |
+| A12 | lazy is the default (strata:6d4e1164); build-test at the head 261111-231035-213f01 (queued); the whole suite eager (`STRATA_EAGER_SEGMENTS=1`) in 261111-231037-42c8ed (queued) |
 | A13 | [artifact] `docs/design/cold-tier.md` revision 8 (strata:19ea55d9, over design/cold-tier's revision 7 merged at 6f8884bc): item 5b's host and word rows in D4, the ledger's "Design vs code" in D4, fence replacement, commit chore and create intent in D5, the limits |
 | A14 | [artifact] `docs/status/cold-tier-step2.md`: Q6 ruled (`docs/design/cold-tier.md` Q6), item 6's seam ruling applied ("Item 6's seam ruling"), the last questions answered or left to the lead ("Questions for the lead and the architect", strata:7a5ca76a: question 3's by-key A/B is the lead's measurement) |
 
-Examined: 261110-164333-5b4cd8 (prospect's suite at its pin, lazy for the whole run: 48 of 51,
+Examined: the evidence rows' earlier-head jobs (strata:9621595f and 8d25c9c9: A3-A5 and A9 rows' ids, T1/T3/T4 and the trigger A/Bs) stay in this journal's git history before the 4c45e3dd reruns; 261110-164333-5b4cd8 (prospect's suite at its pin, lazy for the whole run: 48 of 51,
 exit 8; the three failures are the six cases K7 lists for prospect's pin bump, so it informs A10
 and proves nothing by passing). 261111-035757-23475b (timeout: split, see Doing).
 261110-211226-81fd7c, 261110-211221-3a7f09, 261111-011618-0d4ed0, 261111-011622-bbbac4,
