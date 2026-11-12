@@ -360,13 +360,13 @@ static void test_a_restored_record_is_compressed_once_and_reads_back() {
 // restore is well below its CPU when every object is prepared on the loop, as an update's is (D1: it reads the stored
 // document, so its prepare waits for every earlier object). Both are measured here, so the check holds on any core count.
 static void test_a_restore_prepares_its_objects_off_its_loop() {
-	constexpr int documents = 3000;
+	constexpr int documents = 2000;
 	// An update of a new record indexes it, prepared on the loop.
 	auto lines = [](int first, int count, bool on_loop) {
 		std::string body;
 		for (int i = first; i < first + count; ++i) {
 			std::string text;
-			for (int w = 0; w < 300; ++w) {
+			for (int w = 0; w < 1000; ++w) {
 				text += "word" + std::to_string((i * 131 + w * 7) % 20011) + " ";
 			}
 			body += R"({"_id":)" + std::to_string(i) + (on_loop ? R"(,"_op_type":"update")" : "") + R"(,"n":)" + std::to_string(i) + R"(,"text":")" + text + "\"}\n";
