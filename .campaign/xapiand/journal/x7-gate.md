@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-165347-d979c7
+State: waiting on jobs 261111-165347-d979c7 261111-171014-19268b 261111-171016-01a84c 261111-171041-c9ab68 261111-171043-7a746f 261111-171045-06e893 261111-171048-c39d8d 261111-171050-a82ab4 261111-171052-af8ee2 261111-171055-51a31b
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,25 @@ status` reads State, the first step under Next, and the Evidence table. State is
 waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Timing rows, mine by the lead's 11-11 message (D59: one job of at most 10 minutes each, holding ABBA pairs), at
+Xapiand:49ebb4481 (adds node CPU per phase to `stall_load.py`):
+
+| Job | Level | Criteria | What |
+|---|---|---|---|
+| 261111-171014-19268b | light | builds | build-cur (head), build-pre (142b2ca77), build-pre-hop (+ http 10c5074), slot `x7-timing` |
+| 261111-171016-01a84c | light | builds | build-s0 (b6b8f7534), build-s1 (927acf570), slot `x7-shape` |
+| 261111-171041-c9ab68 | exclusive | A4 A5 | stall_load pre cur cur pre, both phases; same-index run on cur |
+| 261111-171043-7a746f | exclusive | A11 | profile_light pre-hop/cur ABBA x3, `--compare` per pair |
+| 261111-171045-06e893 | exclusive | A12 A24 | loadtest RESTORE docs/s, QPS, ABBA x3 |
+| 261111-171048-c39d8d | exclusive | A12 A24 | profile_bulk RESTORE, ABBA x3 |
+| 261111-171050-a82ab4 | strict | A10 | lua_bounds --loops 4 (flood p99), T4 beside 4 looping scripts |
+| 261111-171052-af8ee2 | strict | A16 | wide_search_check gate, 10,000 indexes, 10 searches |
+| 261111-171055-51a31b | exclusive | A21 | before/after the one-shape wave, ABBA x3: CPU per light request, p99 |
+
+Each job prints its pairs' cur/pre ratios (`pairs.py`, written into `$JOB_OUT` by the command). Read them into
+`docs/gates/phase7c.md`; a pair interval straddling a target earns one second run (D59).
+
 
 Read at Xapiand:0cec18474 (master merged again since: Xapiand:03ba6478a, no engine change the brief counts):
 rows 261111-142844-048b3b 14 of 14 rows pass, ASan ctest 37 of 37; t1_census 51 threads, none outside section 2;
@@ -130,6 +149,10 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Blocked on
 
+0. A6, A15 and A21's Linux half wait on the Linux VM (Detent is timing on it, lead 11-11). FreeBSD: no functional
+   CI job. A9: x7-cancel-rows. A13 coverage, corpora: x7-coverage. A22: x7-view-bench. R4 is ruled (lead, quest
+   Decisions). A21 allocations and handlers per request: owed (R13).
+
 1. **Resolved on master** (Xapiand:c0d0208ee runs the catalog's timer on the control loop; census reruns in
    261111-142844-048b3b). Was: **T1 (A1): the catalog timer thread `Xapiand:DB-TIMER`.** x-pool runs strata's
    `host::timer` on its own `Scheduler` wheel (`src/database/pool.cc:414-432`), a second wheel beside the
@@ -215,5 +238,14 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   build sharing `.deps` with an ASan build links ASan objects.
 - Lead rulings (2026-11-11): A13's corpora wait on x7-coverage (restore bug, quest restore-mixed-sign-integers); A21
   uses D62 (over 5% CPU or 10% p99 after optimizing).
+- R11. Timing rows at 20,000 accounts, not the design's 1,000,000: loading 1,000,000 takes about 5 minutes an arm
+  (`phase7c-baseline.md`), past D59's 10-minute job; both arms run the same size in one job, so the ratio holds and
+  the absolute values are stated at that size. The light rate is fixed at 200/s for both arms (the baseline used
+  half its saturating rate, 210/s at 1,000,000).
+- R12. The pre-7c binary (142b2ca77) runs through a wrapper adding `--solo` and `XAPIAND_ENGINE=strata`, which X1
+  removed (Xapiand:4ef308995); the harness is the head's for both arms, so measurement code is one.
+- R13. A21's macOS half compares the commits around the one-shape wave, Xapiand:b6b8f7534 (before reactor step R)
+  and Xapiand:927acf570 (http H1 + H2 + the affinity fix); the merge inside it (Xapiand:4ff5eb99d) changes two `src`
+  files. Allocations and handlers per request are not measured (no macOS allocation counter in the harness): owed.
 - R3. T8 runs at dry-run size (20,000 documents): the row's functional claims are 503s and no other errors; RSS
   within 10% of T4's run needs the lead's 1,000,000-document run.
