@@ -1,22 +1,32 @@
 # release-rows: journal
 
-State: working
+State: waiting on jobs 261111-190759-a5108f 261111-190824-90d3cd 261111-190918-66d76a 261111-191022-797ef1 (and their dependents)
 Quest: .campaign/xapiand/quests/release-rows.md (the lead's; never edit it)
 
 ## Doing
 
-Writing the release-pin harness (prospect `tools/release_rows/`), then submitting every row's jobs
-at one head.
+Jobs at prospect `c984384` (harness: `tools/release_rows/rows.sh`, `tools/release_rows/stem_parity.cc`;
+row tests in `test/segment_test.cc`, `test/aggregate_test.cc`; probe checks in `tools/parity.cc`).
+Branch pushed for CI `asan` (A6).
+
+| Job | Step | For |
+|---|---|---|
+| 261111-190759-a5108f | build: row tests at the release pins, binaries | A2 A3 A5 |
+| 261111-190824-90d3cd | suite: prospect 850d4e8's whole suite at strata 5d742b2 | A2 A5 |
+| 261111-190827-e27ab0 | parity (after build) | A1 A2 |
+| 261111-190829-7e8426 | verify (after build) | A1 |
+| 261111-190832-6ac297 | stems (after build) | A4 |
+| 261111-190918-66d76a | fuzz-build | A5 |
+| 261111-190921-89267f .. 261111-191012-6d4149 | fuzz segment, postings, values, fielddict, seeds 1-6 (after fuzz-build) | A5 |
+| 261111-191022-797ef1 | build-test at main's pins (campaign verify) | |
 
 ## Next
 
-1. `tools/release_rows/CMakeLists.txt`: the row targets against prospect's library with the
-   release's pins as `FETCHCONTENT_SOURCE_DIR_*` (job refs); `tools/release_rows/rows.sh STEP`.
-2. parity.cc: fold in the phase-3 review probe's checks (pruned = counted, live docids, no
-   repeats) on every pass.
-3. New: `test/versions_test.cc` (A5), `test/shards_aggregate_test.cc` (A3),
-   `tools/stem_parity.cc` (A4).
-4. Submit: build, suite subset, parity, verify, ops, shards, stems, 24 fuzz jobs, at one head.
+1. Read each job; fold failures (a difference from the oracle: fix if small and in the file set,
+   else list it with the query and both answers).
+2. If fuzz_postings OOMs at strata 5d742b2 (fuzz/MEMORY.md), one 10-min run at main's pins for the
+   A/B, and Blocked on: the release's strata pin.
+3. `docs/gates/release-rows.md` with every row, its commit and jobs.
 
 ## Inventory (prospect base `0aa68f4`)
 
