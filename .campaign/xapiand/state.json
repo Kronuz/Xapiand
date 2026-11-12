@@ -5630,6 +5630,36 @@
       "title": "logger never loses a refused line",
       "updated": "2026-11-08T15:41:29"
     },
+    "loop-scheduling": {
+      "accepted": {},
+      "after": [
+        "x7-loop-fix-c"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/loop-scheduling.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "HTTP loop threads keep running under the T4/T5 mix",
+      "updated": "2026-11-12T13:46:26"
+    },
     "loop-share-flake": {
       "accepted": {},
       "after": [],
