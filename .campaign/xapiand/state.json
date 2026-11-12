@@ -10109,7 +10109,8 @@
         "include/strata/core/index.hh",
         "test/index_test.cc",
         "docs/design/manifest-log.md",
-        "docs/perf/open-sync.md"
+        "docs/perf/open-sync.md",
+        "bench/open_sync/**"
       ],
       "journal": "../Xapiand-wt/xapiand/open-one-flush",
       "landed": [],
@@ -10123,7 +10124,7 @@
       "risk": "high",
       "status": "review",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-12T02:53:00",
+      "updated": "2026-11-12T02:53:02",
       "worktree": "../strata-wt/xapiand/open-one-flush"
     },
     "perf-watch-peek": {
