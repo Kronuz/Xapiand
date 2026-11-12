@@ -2719,7 +2719,9 @@
         "include/completion/io.h",
         "include/completion/posix.h",
         "test/**",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "tools/mutants.py",
+        ".github/workflows/mutants.yml"
       ],
       "journal": "../Xapiand-wt/xapiand/dir-shared-lock",
       "landed": [],
@@ -2735,7 +2737,7 @@
       "risk": "high",
       "status": "review",
       "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
-      "updated": "2026-11-12T04:44:00",
+      "updated": "2026-11-12T04:49:58",
       "worktree": "../completion-wt/xapiand/dir-shared-lock"
     },
     "direct-pins": {
