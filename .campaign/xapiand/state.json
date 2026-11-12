@@ -12190,6 +12190,8 @@
       "after": [
         "barrier-warning-strata"
       ],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/prospect-completion-opens",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -12204,16 +12206,19 @@
         "test/directory_test.cc",
         "test/index_test.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/prospect-completion-opens",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
+      "reason": "started by force: release-rows' and x7-scan-slices' test/** globs; neither touches these three files",
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect's test IOs implement completion's four read-only opens",
-      "updated": "2026-11-12T00:33:14"
+      "updated": "2026-11-12T00:33:19",
+      "worktree": "../prospect-wt/xapiand/prospect-completion-opens"
     },
     "prospect-drop-threadpool": {
       "accepted": {},
