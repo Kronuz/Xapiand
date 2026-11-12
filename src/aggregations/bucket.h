@@ -46,6 +46,7 @@
 #include "exception_engine.h"                     // for AggregationError, MSG_Agg...
 #include "xapiand_strings.hh"                             // for strings::format
 #include "hashes.hh"                              // for xxh64
+#include "engine/codec.h"                        // for serialise_double, unserialise_double
 #include "engine/doc_view.h"                     // for DocView
 #include "engine/types.h"                        // for valueno
 
@@ -544,18 +545,41 @@ public:
 		}
 	}
 
+	// A bucket's order keys (`slot`, `idx`), which the merge cannot recompute: the long double as two doubles that
+	// add up to it (exact on x86, the second one is 0 where long double is double), then the index.
+	static std::string serialise_order(const Aggregation& agg) {
+		const double hi = static_cast<double>(agg.slot);
+		const double lo = std::isfinite(hi) ? static_cast<double>(agg.slot - hi) : 0.0;
+		return engine::serialise_double(hi) + engine::serialise_double(lo) + serialise_length(agg.idx);
+	}
+
+	static void unserialise_order(std::string_view order, Aggregation& agg) {
+		const char* p = order.data();
+		const char* p_end = p + order.size();
+		const long double hi = engine::unserialise_double(&p, p_end);
+		const long double lo = engine::unserialise_double(&p, p_end);
+		agg.slot = hi + lo;
+		agg.idx = unserialise_length(&p, p_end);
+		if (p != p_end) {
+			THROW(SerialisationError, "Junk found at end of serialised bucket order");
+		}
+	}
+
 	std::string serialise_results() const override {
 		std::string results;
+		auto put = [&](const std::string& bucket, const Aggregation& agg) {
+			results += serialise_string(bucket);
+			results += serialise_string(serialise_order(agg));
+			results += serialise_string(agg.serialise_results());
+		};
 		if (_capped && _aggs.size() > _shard_size) {
 			for (auto& it : _best(_shard_size)) {
-				results += serialise_string(it->first);
-				results += serialise_string(it->second.serialise_results());
+				put(it->first, it->second);
 			}
 			return results;
 		}
 		for (auto& agg : _aggs) {
-			results += serialise_string(agg.first);
-			results += serialise_string(agg.second.serialise_results());
+			put(agg.first, agg.second);
 		}
 		return results;
 	}
@@ -565,12 +589,14 @@ public:
 
 		while (*p != p_end) {
 			auto bucket = unserialise_string(p, p_end);
+			auto order = unserialise_string(p, p_end);
 			auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 			if (it == _aggs.end()) {
 				auto emplaced = _aggs.emplace(std::piecewise_construct,
 					std::forward_as_tuple(bucket),
 					std::forward_as_tuple(_context, _schema));
 				it = emplaced.first;
+				unserialise_order(order, it->second);
 
 				// Find and store the Aggregation the value should be recovered from:
 				if (!_sort_field.empty()) {
@@ -617,6 +643,8 @@ public:
 					std::forward_as_tuple(bucket),
 					std::forward_as_tuple(_context, _schema));
 				it = emplaced.first;
+				it->second.slot = _agg.second.slot;
+				it->second.idx = _agg.second.idx;
 
 				// Find and store the Aggregation the value should be recovered from:
 				if (!_sort_field.empty()) {

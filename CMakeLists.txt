@@ -1893,7 +1893,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
