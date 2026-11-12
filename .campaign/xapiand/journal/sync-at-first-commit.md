@@ -1,6 +1,6 @@
 # sync-at-first-commit: journal
 
-State: waiting on jobs 261112-110230-d89b3f 261112-110231-eee06e 261112-110234-122749 261112-110237-c67ad9 261112-110241-adb8c7 261112-110244-c9702e
+State: waiting on jobs 261112-115005-1dba03 261112-115011-237ee0 261112-115015-c66d2c
 Quest: .campaign/xapiand/quests/sync-at-first-commit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,25 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Suite 261112-090343-e602b5 at 34aa3691 failed 7 of 75 (reclaim, reclaim_bg_crash, lifecycle(+mapped),
-reclaim_mapped, reclaim_bg_crash_mapped, directory). Cause, by local bisection on reclaim_test:
-- new index.hh + main faultfs: ok; main index.hh + new faultfs: FAILS (16 failed opens) -> the model, not the code;
-- new faultfs without only the power-off change: ok -> that change exposed a model gap: a write after an
-  ordering point to a file the point did not stage (a commit's log edit after its segments' ordering) could
-  survive without the staged epoch. The IO contract forbids that state.
-Fix at strata:9e120989: faultfs snapshots a file's bytes at the first write after each ordering point; a crash
-that loses that epoch keeps those bytes, not later ones (new faultfs_test case). Locally all of reclaim,
-reclaim bg, lifecycle, directory, faultfs, index pass.
-
-Jobs at 9e120989: suite 261112-110230-d89b3f; mutants open 261112-110231-eee06e (A2), drop 261112-110234-122749,
-after 261112-110237-c67ad9, gate 261112-110241-adb8c7, dir 261112-110244-c9702e (A3).
-Earlier at 34aa3691: mutants open f32817, drop 1ecddc, after 93f7af, gate e575c5, dir 89aaae all killed.
-A4 done (34aa3691; code since changed only faultfs/tests): opens 261112-090447-4e4f75, first commit
-261112-090455-1f97df, build 261112-090438-33df17; numbers in strata docs/perf/open-sync.md.
+Durability review CHANGES, B1 fixed at strata:cb5294b8: a failed merge's cleanup no longer syncs the
+directory on the merge thread; the job reports the removed bytes (`merge_job::removed`), publish_merges
+adds them to `unlinked_`, the writer's next sync_dir() (the inherited sync while owed) returns them.
+Test: index_test "A3, durability review B1" (eager executor, four segments, merge output under ENOSPC,
+one sync_directory EIO: first commit fences). Locally: passes with the fix; mutant `merge` (restores the
+merge-thread sync) fails it at index_test.cc:495. Note D4, Evidence and review table updated.
+Jobs at cb5294b8: reviewer's probe rerun 261112-115005-1dba03 (must exit 0); suite 261112-115011-237ee0;
+mutant merge 261112-115015-c66d2c (A3, fails-without). A4 not rerun: the commit path is unchanged
+(lead's reruns at a297ba00: 261112-111415-c3939c, 261112-111415-99e66d).
+N1-N3 (hunt.md) left out: none falls out of this change.
 
 ## Next
 
-1. Read the suite and mutant jobs; if green, State: ready for review.
+1. Read the three jobs; if green, `campaign accept sync-at-first-commit durability --confirm B1=<suite job>` is the lead's; State: ready for review.
 
 ## Blocked on
 
@@ -44,7 +39,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | [artifact] strata `docs/design/sync-at-first-commit.md` |
 | A2 | <no evidence yet> |
 | A3 | <no evidence yet> |
-| A4 | 261112-090447-4e4f75 (open p50 22.93-23.05 ms -> 0.13-0.18 ms, garbage 0/1000), 261112-090455-1f97df (first commit p50 23.08-23.67 -> 24.99-25.76 ms, +2.0 ms) |
+| A4 | 261112-111415-c3939c, 261112-111415-99e66d (at a297ba00; earlier 261112-090447-4e4f75 open p50 22.93-23.05 ms -> 0.13-0.18 ms, garbage 0/1000; 261112-090455-1f97df first commit 23.08-23.67 -> 24.99-25.76 ms) |
 
 ## Result
 
@@ -65,3 +60,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - The dropped-segment state is built by replaying a twin index's durable edit bytes unsynced (identity_seed 7), since faultfs cannot kill a process between write and sync.
 - bench/open_sync/mutant.sh deleted (its line is gone); open-sync.md points at 8499e781 for it.
 - build.sh builds both A4 sides from this checkout's idle_index.cc (main's lacks `commit`).
+- B1: option (a), the lead's: the merge thread never syncs the directory; its removed bytes wait in `unlinked_` for the writer's sync. A failed merge's space now returns at the writer's next directory sync (the ENOSPC paths run one), not at once.
