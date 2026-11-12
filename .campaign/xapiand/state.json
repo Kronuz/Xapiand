@@ -4595,6 +4595,8 @@
     "http-cancel-race": {
       "accepted": {},
       "after": [],
+      "base": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
+      "branch": "quest/xapiand/http-cancel-race",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4610,6 +4612,7 @@
         "docs/perf/watch-peek.md",
         "bench/watch_ab.sh"
       ],
+      "journal": "../Xapiand-wt/xapiand/http-cancel-race",
       "landed": [],
       "lenses": [
         "correctness"
@@ -4619,9 +4622,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A cancel that lands between a readiness wake and its handler stops the read",
-      "updated": "2026-11-12T03:24:17"
+      "updated": "2026-11-12T03:24:51",
+      "worktree": "../http-wt/xapiand/http-cancel-race"
     },
     "http-phase7c-l3": {
       "accepted": {},
