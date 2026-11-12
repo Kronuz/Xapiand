@@ -5616,7 +5616,7 @@
       "branch": "quest/xapiand/loop-share-flake",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
           "level": "light",
           "minutes": 60,
           "name": "build-test"
@@ -5626,17 +5626,44 @@
       "files": [
         "tests/test_loop_yield.cc"
       ],
+      "history": [
+        {
+          "at": "2026-11-12T10:53:22",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "the default check lacks BUILD_TESTS and async_check; this is Xapiand's standard build-test (strengthens)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: test file shared with held x7-loop-fix-c; master is red",
       "repo": ".",
       "risk": "low",
       "status": "active",
       "title": "test_loop_yield's RESTORE loop share holds on any core count",
-      "updated": "2026-11-12T10:53:10",
+      "updated": "2026-11-12T10:53:22",
       "worktree": "../Xapiand-wt/xapiand/loop-share-flake"
     },
     "manifest-log": {
