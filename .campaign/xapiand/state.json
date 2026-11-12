@@ -18007,6 +18007,8 @@
       "after": [
         "x7-loop-stalls"
       ],
+      "base": "76b71b6e72fd8d58fce358ec8c99181775b75091",
+      "branch": "quest/xapiand/x7-loop-fix-c",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
@@ -18052,11 +18054,13 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
+      "reason": "started by force: overlaps x7-gate only on docs/perf/**; x7-gate never edits docs/perf/x7-loop-stalls.md, this quest's only docs path (same as x7-loop-stalls)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-12T03:49:33"
+      "updated": "2026-11-12T03:50:24",
+      "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
       "accepted": {
