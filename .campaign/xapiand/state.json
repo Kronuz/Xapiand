@@ -17606,7 +17606,9 @@
         "src/database/data.cc",
         "tests/test_reactor_requests.cc",
         "tests/test_loop_yield.cc",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "src/database/handler.h",
+        "docs/design/phase7c.md"
       ],
       "history": [
         {
@@ -17647,7 +17649,7 @@
       "risk": "high",
       "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-12T00:08:41",
+      "updated": "2026-11-12T00:23:11",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-scan-slices": {
