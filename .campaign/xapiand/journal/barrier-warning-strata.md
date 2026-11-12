@@ -1,12 +1,24 @@
 # barrier-warning-strata: journal
 
-State: waiting on jobs 261112-003214-3ac1cf 261112-003216-b8dfe3 261112-003345-52611a
+State: waiting on jobs 261112-011236-77c6e9 261112-011239-8f21e5
 Quest: .campaign/xapiand/quests/barrier-warning-strata.md (the lead's; never edit it)
 
 ## Doing
 
-Head strata:d8ae10b8, pushed. Jobs: build-test 261112-003214-3ac1cf (A3, A5); A5 mutant
-261112-003216-b8dfe3 (`--fails-without`); A4 261112-003345-52611a (prospect:ea897588); probe 261112-003219-5c8c55 cancelled.
+Round 2 at strata:d8ae10b8: build-test 261112-003214-3ac1cf passed (A3, A5's test); CI green
+(lead). Two red, being resolved:
+- A5 mutant 261112-003216-b8dfe3 killed the mutant (`faultfs_test.cc:326` in all three modes)
+  but my command did not invert: `--fails-without` only tags, the command itself must exit 0 when
+  the test fails. Resubmitted as 261112-011239-8f21e5: exits 0 only if faultfs_test fails with the
+  CB-5 outcomes check; a build failure or a surviving mutant exits nonzero.
+- A4 261112-003345-52611a (prospect:ea897588 vs strata:d8ae10b8): churn/dump identical; ctest 48
+  of 51, failing format13 (`format13_test.cc:603, 676, 783`, expected `verdict::corrupt`), index
+  and index_mapped (`index_test.cc:1399` open should throw, `:1795` error text). Attribution job
+  261112-011236-77c6e9: prospect:0aa68f4 against strata main 4c45e3dd (cold-tier-step2, never run
+  by prospect). prospect:ea897588 cannot build at main's old completion pin (its `override`s name
+  opens main's completion lacks); its patch only adds forwarding, so 0aa68f4 runs the same tests.
+  Main failing the same three: pre-existing, the lead files it. Only this branch failing: this
+  quest's defect.
 
 Round 1 at strata:defbdd52, all failed:
 - build-test 261112-000616-c46b7e: `faultfs_test.cc:325` in one settle mode. Cause: the test, not
@@ -36,9 +48,9 @@ read-only opens (completion:c315c03) at its next repin.
 
 | Criterion | Evidence |
 |---|---|
-| A3 | build-test 261112-003214-3ac1cf (pending) |
-| A4 | 261112-003345-52611a: prospect:ea897588 against strata:d8ae10b8 (pending) |
-| A5 | build-test 261112-003214-3ac1cf (`faultfs_test` CB-5 block); mutant 261112-003216-b8dfe3 (pending) |
+| A3 | build-test 261112-003214-3ac1cf (passed); CI green at d8ae10b8 |
+| A4 | 261112-003345-52611a: churn/dump identical, ctest 48/51; attribution 261112-011236-77c6e9 (pending) |
+| A5 | build-test 261112-003214-3ac1cf passed (`faultfs_test` CB-5 block); mutant 261112-011239-8f21e5 (pending; b8dfe3 killed it but did not invert its exit) |
 | A6 | `docs/reviews/calibration.md` row 2026-10-29 (strata, already on main): "Linux CI TSan is the authority for races on struct-copy writes; a local macOS TSan pass is not evidence for that class" |
 
 ## Result
