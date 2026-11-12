@@ -26,12 +26,16 @@
 
 #include "test_harness.h"
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <thread>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "cartesian.h"
@@ -166,10 +170,11 @@ void test_http_answers() {
 	CHECK_EQ(answer([] { throw 3; }).first, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
 }
 
-// A segment damaged on disk under strata's lazy segments (strata:6d4e1164): the index opens, since the open maps
-// nothing, and the first read answers the client 500 with the corrupt description. The failed read hands the index
-// back, so a request after the file is whole again reads from a fresh open, which is Xapiand's heal (x-pool D2).
-void test_a_damaged_segment_answers_at_first_read() {
+// A segment damaged on disk: a node's index opens under defer_io, which maps every segment at open (strata keeps
+// eager segments there, whatever the lazy default), so the request whose pin opens the index answers the client 500
+// with the corrupt description. The catalog keeps no damaged index: once the file is whole again, a request after the
+// failed open's backoff opens it afresh and reads it, which is Xapiand's heal (x-pool D2).
+void test_a_damaged_segment_answers_corrupt_until_healed() {
 	namespace fs = std::filesystem;
 	constexpr int WRITE = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT;
 	constexpr int READ = DB_OPEN | DB_DISABLE_WAL;
@@ -187,14 +192,13 @@ void test_a_damaged_segment_answers_at_first_read() {
 			doc.set_key("Ka");
 			doc.add_term(doc.field("f"), "body", 2);
 			doc.set_data("a");
-			engine::sync_wait(shard.add_document(doc));
+			engine::sync_wait(shard.add_document(std::move(doc)));
 			CHECK_TRUE(engine::sync_wait(shard.commit()));
 		}
 		finish(pool);
 	}
 
-	// One byte of the footer the manifest's checksum covers, in the one segment; the file keeps its size, so the
-	// open's check of names and sizes passes.
+	// One byte of the footer the manifest's checksum covers, in the one segment; the file keeps its size.
 	fs::path segment;
 	for (const auto& entry : fs::directory_iterator(fs::path(path) / "strata")) {
 		const auto name = entry.path().filename().string();
@@ -215,13 +219,14 @@ void test_a_damaged_segment_answers_at_first_read() {
 	};
 	flip();
 
+	// A request: its pin, then a read of the document; the HTTP status, the engine error's kind, and the data read.
 	DatabasePool pool(control_loop(), 8);
-	const auto read = [&] {
+	const auto request = [&] {
 		errc kind = errc::internal;
 		std::string data;
 		const auto got = answer([&] {
-			Shard shard(pin_index(pool, path, READ), READ);   // the open succeeds
 			try {
+				Shard shard(pin_index(pool, path, READ), READ);
 				data = engine::sync_wait(shard.get_view(1))->data();
 			} catch (const engine::Error& error) {
 				kind = error.kind;
@@ -230,14 +235,20 @@ void test_a_damaged_segment_answers_at_first_read() {
 		});
 		return std::tuple{got.first, kind, data};
 	};
-	auto [status, kind, data] = read();
+	auto [status, kind, data] = request();
 	CHECK_EQ(status, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
 	CHECK_TRUE(kind == errc::corrupt);
-	std::tie(status, kind, data) = read();   // still damaged: the fresh open's first read fails as well
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));   // past the first failure's backoff (10 ms)
+	std::tie(status, kind, data) = request();   // still damaged: the next open fails as well
+	CHECK_EQ(status, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
 	CHECK_TRUE(kind == errc::corrupt);
 
 	flip();   // the file is whole again, as a repair from a replica leaves it
-	std::tie(status, kind, data) = read();
+	const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+	do {   // the second failure's backoff is 20 ms; a request within it answers the failed open's error
+		std::this_thread::sleep_for(std::chrono::milliseconds(25));
+		std::tie(status, kind, data) = request();
+	} while (status != static_cast<int>(HTTP_STATUS_OK) && std::chrono::steady_clock::now() < until);
 	CHECK_EQ(status, static_cast<int>(HTTP_STATUS_OK));
 	CHECK_EQ(data, "a");
 	finish(pool);
@@ -274,4 +285,4 @@ void test_double_bytes() {
 
 }  // namespace
 
-TEST_MAIN(test_fates, test_translation, test_http_answers, test_a_damaged_segment_answers_at_first_read, test_double_bytes)
+TEST_MAIN(test_fates, test_translation, test_http_answers, test_a_damaged_segment_answers_corrupt_until_healed, test_double_bytes)
