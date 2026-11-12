@@ -18162,17 +18162,45 @@
         "tests/corpora/**",
         "TESTING.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T11:15:22",
+          "commit": "da6b7855ee44711f349a57414b8360e7f8f00c1c",
+          "criteria": {
+            "A1": "261112-090138-07a64c",
+            "A2": "261112-090138-d78bde",
+            "A3": "`TESTING.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "82edb3ecc11658e3e4b58db9ec83d1bdd891394f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-090141-b1a59c",
+              "level": "light",
+              "seconds": 1412.0,
+              "state": "done",
+              "what": "x7-coverage check build-test at 82edb3ecc116"
+            }
+          ],
+          "final": true,
+          "from": "406e4adde231bbfca2e488345d241d73de376e48",
+          "reason": "",
+          "tested": "41930b2e1b43e01a3d6fd0fa047a1a228d74602b"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Coverage harness and restore corpora for T13 (x7-gate A13)",
-      "updated": "2026-11-11T14:36:04",
-      "worktree": "../Xapiand-wt/xapiand/x7-coverage"
+      "updated": "2026-11-12T11:15:33",
+      "worktree": ""
     },
     "x7-gate": {
       "accepted": {},
