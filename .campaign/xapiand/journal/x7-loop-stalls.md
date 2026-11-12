@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261112-012855-b34e3c 261112-012857-a77bf8
+State: ready for review
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -56,16 +56,10 @@ a barrier b2314b (:383). 261112-000846-ac7a9e (build-test at a29bb36e6, a journa
 
 ## Next
 
-1. Suite 3ea00b green at 232b81cba (38 tests, async_check strict). Read b34e3c (A2) and a77bf8 (A3): fill the Evidence table and Result with the numbers. A
-   row that misses: say so, with its cause from a profile (`harness/profile_light.sh`, `profile_bulk.sh`); T12 short
-   is fix (c), parallel apply. Then "ready for review".
-2. (done) Read the 6ff9db94a jobs. Red suite: fix it, rerun `campaign verify`. A mutant that fails at another line: read
-   its log (`~/.scratch/campaign/jobs/<id>/a1/log`) and fix the test or the line number; resubmit with the same
-   `--what` (it supersedes). Command template: the specs of these jobs (`campaign job show <id>`).
-2. Then paste `campaign brief`'s evidence table below and set State to "ready for review" for A1/A4; the
-   correctness review (TSan over the chore handoff) is the lead's to launch.
-3. After x7-scan-slices lands: bump the prospect pin in `CMakeLists.txt`, then A2 (T4/T5) and A3 (T10, T12),
-   x7-gate's procedure, exclusive, at most 10 min each. T12 estimate 0.55-0.7x pre-7c; if short, fix (c).
+1. Review (the lead's to launch; TSan over the chore handoff). Profile E3 (261112-020117-4c8576, no criterion) names
+   the turns that still hold the loops 2.5-5 ms; read it into the note's "What still misses".
+2. T12 short (0.57-0.59x): fix (c), the apply per shard in parallel, is the lead's call (a new step or quest).
+3. (done) Suite, pin, A2/A3.
 
 ## Plan (the fix)
 
@@ -97,13 +91,20 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | [artifact] `docs/perf/x7-loop-stalls.md` (profiles E1a 18ce81, E2 793974; causes, ranked fixes, the chore design) |
+| A2 | 261112-012855-b34e3c: T4 MISS (every HTTP loop p99 2.56-5.12 ms vs 1,024 us; pre 640-768 us); T5 MISS on its bound (light p99 27.1/22.7 ms vs 10.2/8.9 ms), below pre-7c (0.065x) |
+| A3 | 261112-012857-a77bf8: T10 MISS (flood light-GET p99 45.4 ms vs about 20); T12 RESTORE MISS 0.571x (loadtest) / 0.594x (profile_bulk); QPS PASS 2.69x |
+| A4 | 261112-011615-3ea00b; fails without: 261111-230628-74a222, 261111-232735-af5357, 261111-232738-c4c72b, 261111-235701-0ecdb6, 261111-235704-037ffb, 261111-235708-0e58e3, 261112-000958-55273a, 261112-002521-478825, 261112-002525-05438d, 261112-002529-0c957d, 261112-002533-5c5bae, 261112-002537-86670c, 261112-002541-b2314b |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Changed: the hit loop yields (fix 1), the record is compressed once, RESTORE's prepare runs as flush chores on the
+WorkPool with the apply in the shard's turn (phase7c D4/D12 amended), prospect pinned at b20e7c5 (256-ordinal scan
+window with host work). Measured at Xapiand:0072ba93e against pre-7c 142b2ca77 (table and causes:
+`docs/perf/x7-loop-stalls.md`, "At the fix"): the loops' long turns are gone (median loop p99.9 57 to 6-7 ms, max 69 to
+20-22 ms) at 5.6-6.0x pre-7c's heavy throughput, light p99 under load 0.065x pre-7c, RESTORE 0.29x to 0.57-0.59x, QPS
+2.69x. Open: T4/T5 still 2.5-5x over the edge (E3 names the turns; fix 3 next), T10 is the Lua per-call cap
+(outside this file set), T12 needs fix (c), the parallel apply (cores 2.6 vs pre's 5.9 at 0.76x the CPU per document).
 
 ## Rulings I made
 

@@ -1,7 +1,7 @@
 # x7-loop-stalls: what holds an HTTP loop past 1 ms, and where RESTORE's time goes
 
-> Status: CURRENT (2026-11-11) profiles of master's code (Xapiand:49ebb4481's `src/`), the cause of each miss, and the
-> design of RESTORE's prepare as a chore. Quest x7-loop-stalls A1.
+> Status: CURRENT (2026-11-12) profiles of master's code (Xapiand:49ebb4481's `src/`), the cause of each miss, the
+> design of RESTORE's prepare as a chore, and x7-gate's rows at the fix. Quest x7-loop-stalls A1-A3.
 
 Question: x7-gate (`docs/gates/phase7c.md` at Xapiand:df5eb9e06) misses T4 (every HTTP loop's p99 lag 24.6-28.7 ms
 against the 1,024 us edge), T5 (loaded light p99 76.8 ms), T10's flood (p99 50.9 ms) and T12's RESTORE (0.288x pre-7c).
@@ -225,6 +225,51 @@ in GET, search and dump.
 **Files.** `src/database/handler.{h,cc}` (`DocIndexer`, and the helpers it shares with `DatabaseHandler::prepare`:
 `document_id_of`, `take_op_type`, `finish_prepared`, `offer_schema`), `src/server/search_views.cc` (the group),
 `docs/design/phase7c.md` (D4's `flush` row, D12), `tests/test_loop_yield.cc`.
+
+## At the fix: x7-gate's rows (A2, A3)
+
+Binaries: the fix, Xapiand:0072ba93e (fix 1, compress-once, RESTORE prepare as chores, prospect b20e7c5's 256-ordinal
+scan window; strata 5d742b24), job 261112-012852-295929, shasum 5e9c9693; pre-7c, Xapiand:142b2ca77, the same bytes
+as x7-gate's build-pre (shasum 787b7174). RelWithDebInfo, frame pointers, LTO off. Host as above (16 logical CPUs).
+x7-gate's procedure (D59), exclusive: A2 is job 261112-012855-b34e3c (ABBA pre, cur, cur, pre; then the same-index
+run on cur), A3 is job 261112-012857-a77bf8 (T10 on cur; T12 ABBA pre, cur, cur, pre, pre, cur for `loadtest.py` and
+for `profile_bulk.sh`). Ratios are cur/pre per adjacent pair. "Gate" is x7-gate's number at Xapiand:df5eb9e06.
+
+| Row | Target | Pre-7c | Fix | Gate | Verdict |
+|---|---|---:|---:|---:|---|
+| T4 every HTTP loop's p99 lag, loaded | <= 1,024 us | 640, 768 us (all 10 loops) | 2.56-5.12 ms (all 16 loops over; median loop 3.58, 2.56 ms) | 24.6-28.7 ms | MISS, 2.5-5x the edge (worst loop about 5x lower than the gate) |
+| T5 loaded light p99 | <= 2x unloaded p99 + 1 ms, and below pre-7c | 414.6, 355.0 ms | 27.1 ms (bound 10.2), 22.7 ms (bound 8.9) | 76.8 ms (bound 8.93) | MISS on the bound by 2.5-2.7x; below pre-7c (0.065x) |
+| T5 same-index run (RESTORE into `accounts`), reported | | | light p99 39.0 ms, worst loop p99 8.19 ms | 98.2 ms | reported |
+| T4 beside 4 looping scripts | <= 1,024 us | | worst loop p99 5.12 ms (http2), light p99 19.7 ms | | MISS, as T4 |
+| T10 16-client flood, light-GET p99 | about 20 ms (the per-call cap plus the host's own) | | 45.4 ms (max 50.2; p50 0.37) | 50.9 ms | MISS, 2.3x |
+| T12 RESTORE docs/s, `loadtest.py` | >= 1.0x pre-7c | 7,629, 7,375, 7,468 | 3,989, 4,209, 4,461 | 0.288x | MISS, 0.571x (0.523-0.597) |
+| T12 RESTORE docs/s, `profile_bulk.sh` | >= 1.0x pre-7c | 7,382, 7,824, 7,490 | 4,449, 4,649, 4,356 | 0.284x | MISS, 0.594x (0.582-0.603) |
+| T12 saturated QPS, 16 clients | >= 1.0x pre-7c | 1,651, 1,463, 1,447 | 4,435, 3,937, 4,064 | 2.6x | PASS, 2.69x (2.69-2.81); query p99 0.33x |
+
+Every other number in the rows held: no errors in any arm; unloaded light p99 4.6 and 4.0 ms against pre-7c's 31.9 and
+30.6 ms; T10's other light-GET cases stay under 1 ms at p99 (0.70 ms beside 4 long scripts and beside 4 library-call
+loops). `profile_bulk.sh` exits 3 in arm 2: its sampled profile is invalid (839 samples), its smoke number stands.
+
+**What moved.** The loops' worst turns are gone: under the T4/T5 mix the median loop's lag p99.9 fell from 57 ms to
+6-7 ms and its maximum from 69 ms to 20-22 ms, while the fix answers 5.6-6.0x pre-7c's heavy searches (1,332-1,364/s
+against 221-245/s; the gate's head did 1,199/s). Light queries under load are 15x faster than pre-7c at p99. RESTORE
+doubled (0.29x to 0.57-0.59x pre-7c), at the D6 estimate's low end (0.55-0.7x).
+
+**What still misses, and why (from these jobs).**
+
+- T12: RESTORE is short of cores, not of CPU. The fix spends 0.76x pre-7c's CPU per document (0.583-0.610 against
+  0.767-0.796 ms, user plus system), but keeps 2.6-2.7 cores busy (11.7-12.2 CPU-seconds in 4.3-4.6 s) where pre-7c
+  keeps 5.8-6.1 (15.4-15.9 in 2.6-2.7 s). The prepare runs on the pool; the apply stays serial in one shard's turn and
+  the rounds wait for it. At pre-7c's occupancy the fix's CPU per document would give about 1.3x pre-7c. Next: fix (c),
+  the apply per shard in parallel (the lead's ruling).
+- T4 and T5: no single turn of tens of milliseconds remains, but every HTTP loop still sees 2.5-5 ms at p99. Which turns
+  last that long is not in these jobs' data; profile E3 (job 261112-020117-4c8576, E1a's procedure on the fix's binary)
+  answers it. Fix 3 (a reused frame buffer per request, `_terms` keys formatted at render) is the ranked next step for
+  turn cost. T5's bound follows T4: a light query waits behind the loop's turns.
+- T10: unchanged by this quest (50.9 to 45.4 ms). A worst-case script call is one non-yieldable library call up to the
+  per-call cap (about 20 ms), and with 16 flood clients on 16 loops a light GET can land behind one running call and
+  one queued (p99 45 ms, max 50 ms, about two caps). That bound is the Lua quest's (`src/lua/**`), outside this quest's
+  file set.
 
 ## Reproduce
 
