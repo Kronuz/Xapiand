@@ -17261,7 +17261,9 @@
     },
     "x7-loop-stalls": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "x7-scan-slices"
+      ],
       "base": "de4d0ed26aa9256dcb289e7671d7c4e198b2635c",
       "branch": "quest/xapiand/x7-loop-stalls",
       "checks": [
@@ -17293,7 +17295,7 @@
       "risk": "high",
       "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-11T23:00:37",
+      "updated": "2026-11-11T23:00:59",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-scan-slices": {
