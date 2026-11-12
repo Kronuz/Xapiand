@@ -32,6 +32,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 from typing import override
@@ -281,6 +282,15 @@ class StallLoad(unittest.TestCase):
         self.assertEqual(stall_load.refusal_reason(b'{"message":["a","b"]}'), "a; b")
         self.assertEqual(stall_load.refusal_reason(b"The server is busy\n"), "The server is busy")
         self.assertEqual(stall_load.refusal_reason(b"[1]"), "[1]")
+
+    def test_a_process_cpu_time_reads_in_seconds(self) -> None:
+        spent = time.process_time()
+        while time.process_time() - spent < 0.3:
+            pass
+        cpu = stall_load.process_cpu_s(os.getpid())
+        assert cpu is not None
+        self.assertGreaterEqual(cpu, 0.25)
+        self.assertLess(cpu, time.process_time() + 1.0)
 
 
 class CappedServer:

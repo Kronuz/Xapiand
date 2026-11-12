@@ -292,6 +292,29 @@ class Node:
         ).stdout.strip()
         return int(out) if out else None
 
+    def cpu_s(self) -> float | None:
+        """The node's user + system CPU seconds so far."""
+        if self.proc is None:
+            return None
+        return process_cpu_s(self.proc.pid)
+
+
+def process_cpu_s(pid: int) -> float | None:
+    """User + system CPU seconds of `pid`: /proc's clock ticks on Linux, `ps -o time` (centiseconds) elsewhere."""
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            fields = f.read().rsplit(")", 1)[1].split()
+        return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+    except OSError:
+        pass
+    out = subprocess.run(["ps", "-o", "time=", "-p", str(pid)], capture_output=True, text=True, check=False).stdout
+    if not out.strip():
+        return None
+    secs = 0.0
+    for part in out.strip().split(":"):
+        secs = secs * 60 + float(part)
+    return secs
+
 
 # ---------------------------------------------------------------------------------------------
 # The dataset
@@ -940,6 +963,7 @@ async def phase(
     """One phase: light at `light_rate` (0: none), heavy clients if `heavy`, a held overload of kind `held`."""
     a = ctx.args
     before = await scrape(ctx.ctl)
+    cpu_before = ctx.node.cpu_s()
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
     jobs: list[asyncio.Future[Any]] = []
@@ -988,6 +1012,7 @@ async def phase(
         await asyncio.sleep(duration / 2)
         census_result = await asyncio.get_running_loop().run_in_executor(None, census, ctx.node)
     await asyncio.gather(*jobs)
+    cpu_after = ctx.node.cpu_s()
     after = await scrape(ctx.ctl)
     entry: dict[str, Any] = {
         "name": name,
@@ -1002,6 +1027,7 @@ async def phase(
             "demoted": after["gauges"].get("xapiand_scheduler_demoted_peak"),
         },
         "rss_kb": ctx.node.rss_kb(),
+        "cpu_s": round(cpu_after - cpu_before, 3) if cpu_before is not None and cpu_after is not None else None,
         "index": {
             "accounts": await index_stats(ctx.node, "accounts", settle),
             **(
@@ -1034,6 +1060,9 @@ async def phase(
         log(
             f"{name}: light query p50 {q['p50_us']} us, p99 {q['p99_us']} us, p99.9 {q['p999_us']} us over {q['n']}; errors {entry['light']['errors']['http_503']} 503, {entry['light']['errors']['http_other']} other, {entry['light']['errors']['exceptions']} exceptions"
         )
+        if entry["cpu_s"] is not None and res.issued and not heavy and not held:
+            entry["cpu_us_per_light"] = round(entry["cpu_s"] * 1e6 / res.issued, 1)
+            log(f"{name}: node CPU {entry['cpu_s']} s, {entry['cpu_us_per_light']} us per light request")
     if held_task is not None:
         res_h = held_task.result()
         entry["held"] = res_h.as_dict()
