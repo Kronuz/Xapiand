@@ -1,6 +1,6 @@
 # unpin-after-kick: journal
 
-State: waiting on jobs 261112-083911-63e3ed 261112-083917-866b8a 261112-083923-f54687 261112-083928-dbd7e3
+State: waiting on jobs 261112-090807-6824f4 261112-090816-e82be7 (and CI at strata:86fe7c47)
 Quest: .campaign/xapiand/quests/unpin-after-kick.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,20 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Lead's message (CI 43260965516 at 441abc39): all green but linux-x86_64-gcc `catalog`, catalog_test.cc:965, the schedules'
+coverage CHECK: `wake: reposts 0` over 300 seeds. The jobs at 441abc39 passed: TSan 261112-083911-63e3ed, ASan+UBSan
+261112-083917-866b8a, mutant 261112-083923-f54687, build-test 261112-083928-dbd7e3.
+- Cause: the sim's repost step (r == 89) acted only if an earlier random step had left a chore lease held on an `owed`
+  slot; whether that happened in any of 300 seeds rested on draw order. The new `transition.ended` site draws on
+  every visit (on_site's `rng() % 3`), which shifted gcc's schedules (gcc also evaluates `pinner(...)`'s rng
+  arguments in another order than clang) to none.
+- Fix strata:86fe7c47: the step makes its precondition when none is held (`hold_warm`: chore pin on an idle warm slot,
+  demoting an idle hot one first, lease held), then sends the request. Draw order no longer decides it.
+- Jobs: catalog_test probe 261112-090807-6824f4 (prints the repost count), build-test 261112-090816-e82be7, CI pushed.
+  The sanitizer suites at 441abc39 build only catalog_teardown, catalog_sweep and catalog_stress, which do not use
+  catalog_test.cc.
+
 
 A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fixed at strata:503df8f0, test reworked at 441abc39 (pushed; CI 43260965516 queued, 43231465982 cancelled by the push):
 - Cause: end_at (catalog.hh, main ab0e26a6:1751) unbooked a closing slot after the exchange that left `closing`.
@@ -150,5 +164,7 @@ recorded in docs/mechanisms/catalog.md "Shutdown".
 - R7 The catalog_stress abort is end_at's late unbook (Doing), in catalog.hh, inside this quest's file set; fixed here
   rather than in a quest of its own because A3 needs it. Its test went in catalog_teardown_test (the file set's test),
   though it is a sweep race, not a teardown one.
+- R8 test/catalog_test.cc is outside the quest's file set; I changed it at strata:86fe7c47 because the lead asked
+  (msg on CI 43260965516). The lead must widen the file set to include it before landing.
 - R4 The word layout in docs/mechanisms/catalog.md and docs/design/cold-tier.md: updated by the lead at
   strata:3adfdc27 (file set widened).
