@@ -4592,6 +4592,36 @@
       "updated": "2026-11-11T00:23:06",
       "worktree": ""
     },
+    "http-cancel-race": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/**/http_asio.h",
+        "test/**",
+        "docs/perf/watch-peek.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../http",
+      "risk": "high",
+      "status": "planned",
+      "title": "A cancel that lands between a readiness wake and its handler stops the read",
+      "updated": "2026-11-12T03:24:05"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
