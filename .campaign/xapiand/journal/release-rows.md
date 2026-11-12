@@ -1,33 +1,38 @@
 # release-rows: journal
 
-State: waiting on jobs 261111-191950-45f111 261111-191957-551959 261111-192004-29c1c9 261111-192011-19892f 261111-192016-2a010a 261111-190824-90d3cd 261111-190918-66d76a
+State: waiting on jobs 261111-201050-c7d247 261111-201053-f77c3a 261111-201056-33db85 261111-201059-749f46 261111-201102-4af80d 261111-201230-8ef3e1 261111-201233-507d9b and the 24 fuzz jobs below
 Quest: .campaign/xapiand/quests/release-rows.md (the lead's; never edit it)
 
 ## Doing
 
-Head prospect `fca9ef6` (pushed: CI `asan` runs on it). `c984384` failed to build: xxhash's global
-`U64` (lz4, through prospect's writer) collided with aggregate_test's slot enum; renamed to `S_*`.
-The fuzz jobs submitted at `c984384` were cancelled so A5's fuzzing runs once, at the head the row
-tests pass at.
+Head prospect `2cc69d4` (pushed: CI `asan` runs on it). Build job 261111-191950-45f111 at
+`fca9ef6` passed all 8 row tests but asserted: `rows.sh build` grepped for ctest's
+"100% tests passed, 0 tests failed out of 8" and the host's ctest prints "100% tests passed out
+of 8". `2cc69d4` matches either form, whole line, 8 tests (checked against that log and a failing
+summary). Everything resubmitted at `2cc69d4`.
 
-| Job | Commit | Step | For |
-|---|---|---|---|
-| 261111-191950-45f111 | fca9ef6 | build: row tests at the release pins, binaries | A2 A3 A5 |
-| 261111-191957-551959 | fca9ef6 | parity (after build) | A1 A2 |
-| 261111-192004-29c1c9 | fca9ef6 | verify (after build) | A1 |
-| 261111-192011-19892f | fca9ef6 | stems (after build) | A4 |
-| 261111-192016-2a010a | fca9ef6 | build-test at main's pins (campaign verify) | |
-| 261111-190824-90d3cd | c984384 | suite: prospect 850d4e8's whole suite at strata 5d742b2 (builds only the pin ref, so the result stands for any head) | A2 A5 |
-| 261111-190918-66d76a | c984384 | fuzz-build (does it build at the release pins) | |
-| 261111-190759-a5108f | c984384 | failed: the U64 collision above | |
+| Job | Step | For |
+|---|---|---|
+| 261111-201050-c7d247 | build: row tests at the release pins, binaries | A2 A3 A5 |
+| 261111-201053-f77c3a | parity (after build) | A1 A2 |
+| 261111-201056-33db85 | verify (after build) | A1 |
+| 261111-201059-749f46 | stems (after build) | A4 |
+| 261111-201102-4af80d | fuzz-build (ASan+UBSan) | A5 |
+| 261111-201230-8ef3e1 | suite: prospect 850d4e8 at strata 5d742b2 (rerun of 90d3cd at the head) | A2 A5 |
+| 261111-201233-507d9b | build-test at main's pins (campaign verify) | |
+| 261111-201105-74a86d 63232e fb8de3 9f665c 334338 b8edb5 | fuzz segment seeds 1-6 (ids 261111-2011xx-*) | A5 |
+| 261111-201123-48fad1 e1d239 9bc82b 4a9573 50a022 698b31 | fuzz postings seeds 1-6 | A5 |
+| 261111-201141-365038 b67b2c 634ad4 c36d62 bd3f1c 5abf6c | fuzz values seeds 1-6 | A5 |
+| 261111-201159-483e21 261111-201202-8c50a4 261111-201206-73d52f 261111-201209-32089f 261111-201213-5cf20a 261111-201216-328810 | fuzz fielddict seeds 1-6 | A5 |
+
+Earlier: 261111-190824-90d3cd (suite) passed at c984384; 261111-192016-2a010a (build-test) passed
+at fca9ef6; 261111-190759-a5108f failed on the U64 collision fixed in fca9ef6.
 
 ## Next
 
 1. Read the jobs above; fold failures (an oracle difference: fix if small and in the file set,
    else list it with the query and both answers).
-2. When build passes and no code change is owed: `rows.sh fuzz-build` (--minutes 30, the five
-   --ref pins as in build) and 24 x `rows.sh fuzz TARGET SEED` (segment, postings, values,
-   fielddict; seeds 1-6; --minutes 15; --after fuzz-build; --for A5).
+2. Fuzz: submitted (table above); read each for findings and peak RSS.
 3. If fuzz_postings OOMs at strata 5d742b2 (fuzz/MEMORY.md: fixed at strata 71750940/94480d52,
    past the release pin), one 10-min run at main's pins for the A/B; Blocked on: the release's
    strata pin.
@@ -79,6 +84,9 @@ Nothing yet.
 Not yet.
 
 ## Rulings I made
+
+- The row-test step accepts both spellings of ctest's all-passed summary (with and without
+  ", 0 tests failed"), anchored to the line and the eight tests.
 
 - Rows run at the release's composition: prospect's library from this branch (its `include/`
   asserted equal to `850d4e8` in every job) with strata, compressors, hashes and threadpool at
