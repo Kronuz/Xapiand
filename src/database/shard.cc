@@ -102,7 +102,7 @@ expected_version(const engine::Document& doc)
 
 
 // Completes a document the engine is about to write: embeds its numeric id (when it is new)
-// and its new version in the stored data, and clears the shards slot.
+// and its new version in the stored data, compressing the record once, and clears the shards slot.
 static void
 finalise_write(engine::Document& doc, engine::WriteResult& info, const std::optional<NumericId>& numeric)
 {
@@ -142,7 +142,8 @@ finalise_write(engine::Document& doc, engine::WriteResult& info, const std::opti
 		data_modified = true;
 	}
 	doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
-	if (data_modified) {
+	const auto* main_locator = data.get("");
+	if (data_modified || (main_locator != nullptr && main_locator->type == Locator::Type::inplace)) {   // prepare leaves it raw
 		data.set_obj(data_obj);
 		data.flush();
 		doc.set_data(data.serialise());
