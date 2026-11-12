@@ -4633,7 +4633,32 @@
       "worktree": ""
     },
     "http-cancel-race": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T04:29:39",
+          "base": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
+          "blobs": {
+            "docs/perf/watch-peek.md": "100644:97c17de2ec18b692641e07f9d85c09348958ae95",
+            "http_asio.h": "100644:7e526328d193304e6ba7505628867bf79336519a",
+            "test/readahead_test.cc": "100644:7fe9316b1846e28e740de0945d24ad59d7e24d6e",
+            "test/watch_mutants.sh": "100755:9d5f33e1457bef5ca311797b11180a0548f08f1a"
+          },
+          "by": "review",
+          "commit": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "criteria": "922f5d33a78f8838",
+          "diffs": {
+            "docs/perf/watch-peek.md": "40012329bcbedc6e",
+            "http_asio.h": "9681a6c248641e3d",
+            "test/readahead_test.cc": "489fca8f724ca3f5",
+            "test/watch_mutants.sh": "fc7eb59e4df7331b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "d69ed1c8c10cfa0dc6d9d84a92b7413f0985615a",
+          "reviewed": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
       "branch": "quest/xapiand/http-cancel-race",
@@ -4664,7 +4689,7 @@
       "risk": "high",
       "status": "review",
       "title": "A cancel that lands between a readiness wake and its handler stops the read",
-      "updated": "2026-11-12T04:23:43",
+      "updated": "2026-11-12T04:29:39",
       "worktree": "../http-wt/xapiand/http-cancel-race"
     },
     "http-phase7c-l3": {
