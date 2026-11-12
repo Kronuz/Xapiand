@@ -1,42 +1,23 @@
 # release-rows: journal
 
-State: waiting on jobs 261111-201053-f77c3a 261111-201056-33db85 261111-201059-749f46 261111-201102-4af80d 261111-201230-8ef3e1 261111-201233-507d9b and the 24 fuzz jobs below
+State: ready for review
 Quest: .campaign/xapiand/quests/release-rows.md (the lead's; never edit it)
 
 ## Doing
 
-Head prospect `2cc69d4` (pushed: CI `asan` runs on it). Build job 261111-191950-45f111 at
-`fca9ef6` passed all 8 row tests but asserted: `rows.sh build` grepped for ctest's
-"100% tests passed, 0 tests failed out of 8" and the host's ctest prints "100% tests passed out
-of 8". `2cc69d4` matches either form, whole line, 8 tests (checked against that log and a failing
-summary). Everything resubmitted at `2cc69d4`.
+Done. Head `prospect:7a3a54b` (the report, docs only, pushed; CI runs on it). Every row ran at
+`prospect:2cc69d4` at Xapiand's pins; the report is `docs/gates/release-rows.md`.
 
-| Job | Step | For |
-|---|---|---|
-| 261111-201050-c7d247 | build: row tests at the release pins, binaries: passed (8/8, 206 s) | A2 A3 A5 |
-| 261111-201053-f77c3a | parity (after build) | A1 A2 |
-| 261111-201056-33db85 | verify (after build) | A1 |
-| 261111-201059-749f46 | stems (after build) | A4 |
-| 261111-201102-4af80d | fuzz-build (ASan+UBSan) | A5 |
-| 261111-201230-8ef3e1 | suite: prospect 850d4e8 at strata 5d742b2 (rerun of 90d3cd at the head) | A2 A5 |
-| 261111-201233-507d9b | build-test at main's pins (campaign verify) | |
-| 261111-201105-74a86d 261111-201108-63232e 261111-201111-fb8de3 261111-201114-9f665c 261111-201117-334338 261111-201120-b8edb5 | fuzz segment seeds 1-6 | A5 |
-| 261111-201123-48fad1 261111-201126-e1d239 261111-201129-9bc82b 261111-201132-4a9573 261111-201135-50a022 261111-201138-698b31 | fuzz postings seeds 1-6 | A5 |
-| 261111-201141-365038 261111-201144-b67b2c 261111-201147-634ad4 261111-201150-c36d62 261111-201153-bd3f1c 261111-201156-5abf6c | fuzz values seeds 1-6 | A5 |
-| 261111-201159-483e21 261111-201202-8c50a4 261111-201206-73d52f 261111-201209-32089f 261111-201213-5cf20a 261111-201216-328810 | fuzz fielddict seeds 1-6 | A5 |
-
-Earlier: 261111-190824-90d3cd (suite) passed at c984384; 261111-192016-2a010a (build-test) passed
-at fca9ef6; 261111-190759-a5108f failed on the U64 collision fixed in fca9ef6.
+Answered: the lead's message of 11-11 (jobs ended; A4 a MISS with six names; fuzz; report; push;
+ready for review): all done as asked. A4 is recorded as a miss with each name, a sample, and
+Xapiand's mapping (`_get_stem_language`: earlyenglish, english_lovins, english_porter -> en;
+german2 -> de; nb, nn -> no; each `false`, not a language name; the stemmer is built from the
+name as given, so the six are refused at analysis with "Language code NAME unknown"). Not fixed
+here (hunt row "Six stemmer names").
 
 ## Next
 
-1. Read the jobs above; fold failures (an oracle difference: fix if small and in the file set,
-   else list it with the query and both answers).
-2. Fuzz: submitted (table above); read each for findings and peak RSS.
-3. If fuzz_postings OOMs at strata 5d742b2 (fuzz/MEMORY.md: fixed at strata 71750940/94480d52,
-   past the release pin), one 10-min run at main's pins for the A/B; Blocked on: the release's
-   strata pin.
-4. `docs/gates/release-rows.md` with every row, its commit and jobs.
+Nothing: the correctness review.
 
 ## Inventory (prospect base `0aa68f4`)
 
@@ -65,23 +46,30 @@ equal prospect's pins; docset, bitpack are prospect's.
 
 ## Blocked on
 
-Nothing yet.
+Nothing. For the lead (not blocking): `fuzz_postings` peaked 1,586-2,045 MB of its 2,048 MB limit
+at the release's `strata:5d742b2` (the ASan-quarantine growth `fuzz/MEMORY.md` records, fixed at
+`strata:71750940`); zero findings, but a longer run at this pin stops on memory. Moving the
+release's strata pin past `71750940` removes it.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <no evidence yet> |
-| A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
-| A5 | <no evidence yet> |
-| A6 | <no evidence yet> |
-| A7 | <no evidence yet> |
+| A1 | 261111-201053-f77c3a (parity 1/4/16 segments, deletes 4/16 then merged: 419/419 counts each, exact after merges), 261111-201056-33db85 (verify 1M, 8 segments, 90,910 deletes, then merged: 0 mismatches over 962 + 200 queries both passes); passed at 2cc69d4 |
+| A2 | 261111-201050-c7d247 (operators_test per operator, shards_test 3,696 oracle rows), 261111-201053-f77c3a (parity by operator: AND, OR, AND_NOT, AND_MAYBE, NEAR, PHRASE all equal), 261111-201230-8ef3e1 (pin's 51-test suite at strata 5d742b2); passed at 2cc69d4 |
+| A3 | 261111-201050-c7d247 (aggregate indexed: 240 comparisons, 12,006 matches, 1,721 deletes; shards visitor 145,089 matches); prospect's collectors only, Xapiand's src/aggregations is a hunt row |
+| A4 | MISS (lead's ruling): 261111-201059-749f46 failed: 39 of 45 names equal word for word; earlyenglish, german2, nb, nn stemmed by Xapian and refused by snowball; english_lovins, english_porter refused by both; fix is hunt row "Six stemmer names" |
+| A5 | 261111-201102-4af80d (fuzz-build ASan+UBSan), 24 fuzz runs 261111-201105-74a86d 261111-201108-63232e 261111-201111-fb8de3 261111-201114-9f665c 261111-201117-334338 261111-201120-b8edb5 261111-201123-48fad1 261111-201126-e1d239 261111-201129-9bc82b 261111-201132-4a9573 261111-201135-50a022 261111-201138-698b31 261111-201141-365038 261111-201144-b67b2c 261111-201147-634ad4 261111-201150-c36d62 261111-201153-bd3f1c 261111-201156-5abf6c 261111-201159-483e21 261111-201202-8c50a4 261111-201206-73d52f 261111-201209-32089f 261111-201213-5cf20a 261111-201216-328810 (0 findings), 261111-201050-c7d247 (segment_test versions: 19 fixtures, 118/118 refusals; corpus replays), 261111-201230-8ef3e1 |
+| A6 | CI run 43153036741 at 2cc69d4: linux-asan-ubsan, linux-tsan and all platforms green (CI re-runs at 7a3a54b, docs only) |
+| A7 | [artifact] `docs/gates/release-rows.md` at `prospect:7a3a54b` |
 
 ## Result
 
-Not yet.
+`docs/gates/release-rows.md` (prospect): the pins, each row with its commit and jobs, the
+oracle differences table. Harness `tools/release_rows/` (rows.sh, stem_parity.cc,
+CMakeLists.txt); new test sections in `test/segment_test.cc` (versions per fixture) and
+`test/aggregate_test.cc` (indexed one shard vs many); `tools/parity.cc` checks pruned = counted,
+live and unique hits, and tallies by operator.
 
 ## Rulings I made
 
