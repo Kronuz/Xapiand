@@ -229,7 +229,32 @@
   ],
   "quests": {
     "agg-shard-parity": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T01:45:49",
+          "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
+          "blobs": {
+            "CMakeLists.txt": "100644:0aeedd8176be43ef1c02d2e0cc790061d8340020",
+            "docs/dev/agg-shard-parity.md": "100644:214039a521f7b65ca853e96a1d4e0ae635bb9765",
+            "src/aggregations/bucket.h": "100644:ca186cd38e8f0cdb8786da475e4498990766333c",
+            "tests/test_aggregation_shards.cc": "100644:1cc19d724bc257f63f67c41b1893aa7e0b72dda5"
+          },
+          "by": "review",
+          "commit": "997e7db68999a773cb94f08916c3bdc56a9da002",
+          "criteria": "f21ce480a3278748",
+          "diffs": {
+            "CMakeLists.txt": "1880a606411a0776",
+            "docs/dev/agg-shard-parity.md": "b7ed670dec087dd2",
+            "src/aggregations/bucket.h": "0300a36526f6d78a",
+            "tests/test_aggregation_shards.cc": "d00c689df4f45cbd"
+          },
+          "findings": {},
+          "note": "",
+          "review": "0bc8123ea458378be1d084843d81941aaf0eddec",
+          "reviewed": "cdb757fc2a583e47b11b485234cfb3ba416d0de0",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
       "branch": "quest/xapiand/agg-shard-parity",
@@ -278,7 +303,9 @@
         }
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
@@ -286,7 +313,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
-      "updated": "2026-11-12T01:32:34",
+      "updated": "2026-11-12T01:45:49",
       "worktree": "../Xapiand-wt/xapiand/agg-shard-parity"
     },
     "alpha10-builds": {
