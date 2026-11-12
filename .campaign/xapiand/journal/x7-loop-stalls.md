@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261111-232734-59ff14 261111-232735-af5357 261111-232738-c4c72b
+State: waiting on jobs 261111-235649-63420f 261111-235701-0ecdb6 261111-235704-037ffb 261111-235708-0e58e3 261111-235712-2d5987 261111-235716-52e56d 261111-235721-882c06
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,36 +9,33 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A1 done: `docs/perf/x7-loop-stalls.md` CURRENT (RESTORE section, loop section from E1a 261111-221539-18ce81, E2
-261111-225130-793974's per-kind table, ranked fixes, RESTORE-prepare-as-chore design for the lead's review).
-Master merged (Xapiand:0f139cd54; master's `src/` equals the profiled build's).
+A1 done: `docs/perf/x7-loop-stalls.md` CURRENT.
 
-Fix 1 built (Xapiand:00cd38f39): `search_view` awaits `request.budget->checkpoint()` before each hit.
-Test `tests/test_loop_yield.cc` (registered in `CMakeLists.txt`): an in-process node with one HTTP loop, 5,000 docs,
-a `_limit: 5000` search; checks the HTTP loop's probe's worst wake in the window is under a third of the request.
-Jobs: build-test 261111-230627-642de6 (`--for A4`), mutant 261111-230628-74a222 (`--for A4 --fails-without`: deletes
-the checkpoint line, builds the test, exits 0 when it fails).
+Jobs at Xapiand:102d6609e all green: build-test 261111-232734-59ff14, fix-1 mutant 261111-232735-af5357 (fails at
+:237, the hits check), compress-once mutant 261111-232738-c4c72b (fails at :258, 400 compressions).
 
-Compress-once built (Xapiand:2f8145379): `Data::set_obj(obj, bool compress = true)`; `prepare` stores the record
-raw, `finalise_write` rewrites it once compressed when modified or raw. `Locator::compressions()` counts zstd record
-compressions. Test `test_a_restored_record_is_compressed_once_and_reads_back`: 200 restored records, 200
-compressions; three records read back with `n`, `text`, `_id`, `_version` 1.
-Fix-1 mutant 261111-230628-74a222 is not evidence: the test process died of SIGUSR2 (the node's stall watchdog
-collects stacks with it; the test had no handler), not of a failed check. Fixed (Xapiand:102d6609e: the handler, as
-main() installs it); the mutants now require exit 1 (checks failed).
-Jobs at 102d6609e: build-test 261111-232734-59ff14 (`--for A4`), fix-1 mutant 261111-232735-af5357, compress-once
-mutant 261111-232738-c4c72b (both `--for A4 --fails-without`). Cancelled as superseded: 642de6, 11dc15, 7f715c.
-
-E2 (no `--for`): 100-hit kinds p99 lag 12.3-14.3 ms, phrase 7.2-8.2, `_terms age` 6.1-7.2, `_values state` 3.1,
-RESTORE + one text client 0.38 ms median loop, 10.2 ms worst.
+Design review (CHANGES, D1-D8) folded into the note's design section (Xapiand:9f2e95cb0), then built
+(Xapiand:a2dffbd5e): `DocIndexer::index` prepares plain objects in rounds of flush chores (one per non-reserve
+worker, each pulling objects in input order against its own `Schema` over one snapshot, about 1 ms each or to the
+first schema change); the loop accepts up to the first change, offers it, re-prepares the rest on the new schema, and
+applies in input order while the next round prepares. Barriers (D1): non-`index` `_op_type`, root `_script` or
+`_schema`, or a schema with a script, prepared on the loop after the run before them applies; each batch's last run
+applies before `index` returns. Shared helpers with `DatabaseHandler::prepare`: `document_id_of`, `take_op_type`,
+`finish_prepared`, `offer_schema`.
+Tests in `tests/test_loop_yield.cc` (the node harness; `test_reactor_requests.cc` has no manager or schemas):
+off-loop CPU share (<60% of process), update after a run and at a batch boundary, schema order vs a sequential restore.
+Jobs at a2dffbd5e (`--for A4`): build-test 261111-235649-63420f; fails-without mutants (each requires exit 1 and the
+named check's line): hits checkpoint 261111-235701-0ecdb6 (:304), compress-once 261111-235704-037ffb (:325), D1 in a
+batch 261111-235708-0e58e3 (:401), D1 batch boundary 261111-235712-2d5987 (:401), D2 261111-235716-52e56d (:433),
+every object a barrier 261111-235721-882c06 (:369).
 
 ## Next
 
-1. Read the two jobs. If the test passes at the fix and fails in the mutant, A4's fix-1 half stands; if it flakes,
-   widen the margin (more hits) rather than loosen the ratio.
+1. Read the a2dffbd5e jobs; fix anything red (the off-loop threshold and the schema-order item equality are the
+   untested guesses).
 2. After x7-scan-slices lands: bump the prospect pin in `CMakeLists.txt`, then A2 (T4/T5) and A3 (T10, T12) jobs,
    x7-gate's procedure, exclusive, at most 10 min each.
-3. Compress-once (blocked, below) and the chore after its design review.
+3. Correctness review of the chore code (TSan over the handoff is the reviewer's).
 
 ## Plan (the fix)
 
@@ -54,7 +51,10 @@ amendment; (b) compress once at finalise (`src/database/shard.cc` `finalise_writ
 
 ## Blocked on
 
-- Lead: the design review of the note's "Design: RESTORE's prepare as an index chore" section (running); not built.
+- Lead (files outside the set, not blocking the build): `src/database/handler.h`, to give `DocIndexer` the
+  RESTORE's own `IndexChores` (today each `index()` call makes a group of its own) and drop `index_one`'s stale
+  declaration; `docs/design/phase7c.md`, the D4 `flush` row ("RESTORE prepare") and D12, per the note's design.
+- Owner (D6): leave `_version` and a new numeric `_id` out of the stored record; not built.
 - x7-scan-slices landing, then the prospect pin bump and A2/A3.
 
 ## Evidence
@@ -74,6 +74,17 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+
+- D2 rule built conservatively: every object after an accepted schema change is prepared again (not only the
+  changed ones), so a round equals the sequential semantics without arguing which prefixes stay valid.
+- Chores pull from one cursor (not fixed sub-batches): a change wastes about one object per worker, so a new index
+  costs one round per change; the 1 ms slice bounds a chore (D5).
+- The chore runs `Schema::index` through `task::sync_wait`: with barriers for scripts and `seq` never 0 it completes
+  without suspending.
+- Tests live in `tests/test_loop_yield.cc`, which has the in-process node and HTTP client; the reviewer named
+  `test_reactor_requests.cc`, which has neither a manager nor schemas.
+- The batch-boundary mutant drops the end-of-batch apply: no prepare runs ahead across batches, so that apply is the
+  rule at a boundary.
 
 - msg (lead, 11-11): E1 split; the mix sample first. RESTORE ruling recorded in the quest's Decisions (prepare as an
   index chore on the one WorkPool; compress once at finalise; parallel apply only if T12 stays short).
