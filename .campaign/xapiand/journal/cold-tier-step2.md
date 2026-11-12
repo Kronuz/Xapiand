@@ -1,6 +1,6 @@
 # cold-tier-step2: journal
 
-State: ready for review
+State: waiting on jobs 261111-220736-cea164 261111-220738-86ec82 261111-220740-637543 261111-220743-7768e8 261111-220744-401ca4
 Quest: .campaign/xapiand/quests/cold-tier-step2.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,6 +31,18 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
   rejudged (472ec032). `docs/mechanisms/catalog.md` names who posts a pass (a5399d7a).
 
 ## Next
+
+-1. After the lead's merge of main (strata:8d25c9c9) and reruns:
+   - 298337 (K6) and 9e03b5 (T2 d1000s1) died at start: `.scratch/k6` and `.scratch/tiers/d1000s1`
+     are gone. Rebuilt into commit-named dirs: K6 build 86ec82, measure 637543; T2 build 7768e8
+     (d1000s1, 1,000 indexes, main 15d39c30 as before), t2 401ca4.
+   - a81718 (A2): unmutated catalog_test 1000 seeds passed; 155 of 162 killed; 6 not applied; S7-Z41
+     survived. Anchors moved by main's merge (S3-M9, S5-A9, S5-C2, S7-Y16) and by the trigger
+     (S7-Z20, S7-Y15) are rewritten to today's text with the same rule broken. S7-Z41 is
+     equivalent after main's change: a close's descriptor and vnode booking now falls with the
+     counts (`resource_counts::lower`), so the close's end has nothing left to unbook. Z41 now also
+     stops that lowering (an edit may name its header). strata:4c45e3dd; rerun cea164.
+   - 08418e (one-slot T3 A/B, 418363's rerun) dropped from A4: superseded by the band pairs.
 
 0. Done: the trigger's p50 and throughput question (strata:bb7c3f7e, bbef1d4a,
    `docs/perf/catalog-tiers.md` "The trigger's cost, an A/B" and "The band trigger"). The
@@ -66,7 +78,11 @@ Lead's rulings of 11-11 on F1/F2, performance assignment. Head strata:a5399d7a (
 
 ## Blocked on
 
-Nothing.
+- Lead: strata:4c45e3dd changes `tools/mutants/` (code to `campaign`), so every rerun at 8d25c9c9
+  now "ran other code" (brief lists 26). Options: (1) after cea164, 637543 and 401ca4 pass,
+  `campaign job rerun` the brief's list once at the final head (several strict and exclusive jobs,
+  about 2-3 h of host time); (2) rule that a `tools/mutants`-only commit leaves the other jobs
+  standing (only A2 runs the table). Recommendation: (2) for the measurements, (1) for the suite.
 
 ## Milestone checks
 
@@ -120,7 +136,7 @@ minutes when it runs.
 | A1 | `soft_caps_post` (strata:5d3c948a: build-test 261111-113837-7882c4, mutant killed 261111-113839-ade11c), `pass_post_throws` (strata:7b126bc1: 261111-123742-b13378, mutant 261111-123743-7732e9); the band check in `soft_caps_post` (strata:062182b2: suite 261111-151520-66533e, 74 of 74; mutant 261111-151526-29ff8a killed); `test/catalog_stress_test.cc`: T5's counters required over the run (strata:d5b9fe05) and two catalogs on one budget, `stress_two` (strata:955343df, 9ef55ee5); build-test 261111-034631-5cd30b at strata:9621595f; CI run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan` green |
 | A2 | 261111-035757-eb666b: `tools/mutants/cold_tier.py build-mut 1000`, 162 of 162 killed; 261111-035757-1edccb: the TSan-only S4-S3, S4-X2, S7-T1, S7-T2 and S7-T3, 5 of 5 killed; S4-SZ1 refused at compile time (`test/catalog_test.cc` static_assert) |
 | A3 | main strata:15d39c30's `idle_index` interleaved in each row's strict job at strata:9621595f: 261111-035757-efe281, 261111-035757-083bc8 (T1), 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf (T2/T2d), 261111-035757-a253be (K6). T3 and T4 have no main baseline (main has no catalog). `docs/perf/catalog-tiers.md` |
-| A4 | met except: T1 cold (292 B against 16 B), T2 hot d1s1 (p50 +56% and +40% in 2 of 3 pairs), T2 hot d1s1 beyond its A/A spread (261111-113118-6d8a9c, +71% p50), T2 hot d1000s1 (261111-085644-609714: p50 -8%, +16%, +22%) and d1000s10 (261111-035757-f9dbcf: +33%, +20%, +2%), MISS residuals not attributed to the d1s1 pin (re-check F2), T2 cold d1000s10 p99 (+13.9%, inside main's own spread; same-mode pairs only), T1 warm heap (261111-113121-6aaa2d: 5,022 B against the listed pieces plus 7%, 3,907 B). T3 soft caps MET at strata:5d3c948a (261111-113856-358d4c; cause 261111-113116-5b7a23). The one-slot trigger's Zipf throughput is a MISS: 0.73-0.83 of off in 261111-143023-ac195f, 261111-143025-7e33e6, 261111-143034-071676, 261111-143035-141fc0 (agrees with 261111-124104-418363, 3 of 4). At the band trigger (strata:062182b2), build 261111-151532-1f0913: Zipf throughput MET within off's spread (261111-151536-71d322, 261111-151540-9ba721, 261111-151543-9397aa, 261111-151547-259305: means 296 against 293 req/s), T3 MET against the ruled bound (soft + 16 + opens in flight) in 259 of 259 samples (261111-151551-cd5253; reviewer's `t3_bound.py`). macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf; T3 261111-034629-8f5208; T4 261111-035757-a2d41c, 261111-035757-bbb067. Verdicts in `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
+| A4 | met except: T1 cold (292 B against 16 B), T2 hot d1s1 (p50 +56% and +40% in 2 of 3 pairs), T2 hot d1s1 beyond its A/A spread (261111-113118-6d8a9c, +71% p50), T2 hot d1000s1 (261111-085644-609714: p50 -8%, +16%, +22%) and d1000s10 (261111-035757-f9dbcf: +33%, +20%, +2%), MISS residuals not attributed to the d1s1 pin (re-check F2), T2 cold d1000s10 p99 (+13.9%, inside main's own spread; same-mode pairs only), T1 warm heap (261111-113121-6aaa2d: 5,022 B against the listed pieces plus 7%, 3,907 B). T3 soft caps MET at strata:5d3c948a (261111-113856-358d4c; cause 261111-113116-5b7a23). The one-slot trigger's Zipf throughput is a MISS: 0.73-0.83 of off in 261111-143023-ac195f, 261111-143025-7e33e6, 261111-143034-071676, 261111-143035-141fc0 . At the band trigger (strata:062182b2), build 261111-151532-1f0913: Zipf throughput MET within off's spread (261111-151536-71d322, 261111-151540-9ba721, 261111-151543-9397aa, 261111-151547-259305: means 296 against 293 req/s), T3 MET against the ruled bound (soft + 16 + opens in flight) in 259 of 259 samples (261111-151551-cd5253; reviewer's `t3_bound.py`). macOS warm, one strict job per row (D59) at strata:9621595f: T1 261111-035757-efe281, 261111-035757-083bc8; T2 261111-085642-fdea98, 261111-085644-609714, 261111-035757-f9dbcf; T3 261111-034629-8f5208; T4 261111-035757-a2d41c, 261111-035757-bbb067. Verdicts in `docs/perf/catalog-tiers.md`. Linux and full scale: Milestone checks |
 | A5 | macOS warm: T2d warm defer below cold at p50 and p99 on every fixture, no interval overlapping: 261111-085642-fdea98 (d1s1: 47-85 against 264-20,946 µs at p50), 261111-085644-609714 (d1000s1: 54-71 against 379-41,137), 261111-035757-f9dbcf (d1000s10: 351-394 against 1,097-21,908); p99 108-799 against 42,224-72,264. Dropped and Linux: Milestone checks |
 | A6 | `test/catalog_wake_test.cc` `reads_pin` (strata:f06a4489), with `pin_after_promote`; build-test passed at strata:5e06300b (261110-164227-8f0e42), strata:85dd1df6 (261110-165622-0ff5b1) and strata:c58a962d (261110-170310-3af67b); head: 261110-175933-b257b3 |
 | A7 | 261111-035757-bf4776: `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed; in build-test 261111-034631-5cd30b |
