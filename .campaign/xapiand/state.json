@@ -14085,20 +14085,61 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/release-rows",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T09:01:29",
+          "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
+          "criteria": {
+            "A1": "261111-201053-f77c3a (passed at 2cc69d4d1e91; only merges from main since), 261111-201056-33db85 (passed at 2cc69d4d1e91; only merges from main since)",
+            "A2": "261111-201050-c7d247 (passed at 2cc69d4d1e91; only merges from main since), 261111-201230-8ef3e1 (passed at 2cc69d4d1e91; only merges from main since), 261111-201053-f77c3a (passed at 2cc69d4d1e91; only merges from main since)",
+            "A3": "261111-201050-c7d247 (passed at 2cc69d4d1e91; only merges from main since)",
+            "A4": "[artifact] `docs/gates/release-rows.md`: \"**miss**: six names\" (equality is quest stemmer-names)",
+            "A5": "261111-201050-c7d247 (passed at 2cc69d4d1e91; only merges from main since), 261111-201230-8ef3e1 (passed at 2cc69d4d1e91; only merges from main since), 261111-201102-4af80d (passed at 2cc69d4d1e91; only merges from main since), 261111-201105-74a86d (passed at 2cc69d4d1e91; only merges from main since), 261111-201108-63232e (passed at 2cc69d4d1e91; only merges from main since), 261111-201111-fb8de3 (passed at 2cc69d4d1e91; only merges from main since), 261111-201114-9f665c (passed at 2cc69d4d1e91; only merges from main since), 261111-201117-334338 (passed at 2cc69d4d1e91; only merges from main since), 261111-201120-b8edb5 (passed at 2cc69d4d1e91; only merges from main since), 261111-201123-48fad1 (passed at 2cc69d4d1e91; only merges from main since), 261111-201126-e1d239 (passed at 2cc69d4d1e91; only merges from main since), 261111-201129-9bc82b (passed at 2cc69d4d1e91; only merges from main since), 261111-201132-4a9573 (passed at 2cc69d4d1e91; only merges from main since), 261111-201135-50a022 (passed at 2cc69d4d1e91; only merges from main since), 261111-201138-698b31 (passed at 2cc69d4d1e91; only merges from main since), 261111-201141-365038 (passed at 2cc69d4d1e91; only merges from main since), 261111-201144-b67b2c (passed at 2cc69d4d1e91; only merges from main since), 261111-201147-634ad4 (passed at 2cc69d4d1e91; only merges from main since), 261111-201150-c36d62 (passed at 2cc69d4d1e91; only merges from main since), 261111-201153-bd3f1c (passed at 2cc69d4d1e91; only merges from main since), 261111-201156-5abf6c (passed at 2cc69d4d1e91; only merges from main since), 261111-201159-483e21 (passed at 2cc69d4d1e91; only merges from main since), 261111-201202-8c50a4 (passed at 2cc69d4d1e91; only merges from main since), 261111-201206-73d52f (passed at 2cc69d4d1e91; only merges from main since), 261111-201209-32089f (passed at 2cc69d4d1e91; only merges from main since), 261111-201213-5cf20a (passed at 2cc69d4d1e91; only merges from main since), 261111-201216-328810 (passed at 2cc69d4d1e91; only merges from main since)",
+            "A6": "261111-223819-03f694 (reviewer's probe: ASan+UBSan rows and parity at Xapiand's pins, exit 0, 912 s); CI run 43153036741 at 2cc69d4: linux-asan-ubsan, linux-tsan and all platforms green (CI re-runs at 7a3a54b, docs only)",
+            "A7": "[artifact] `docs/gates/release-rows.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-201233-507d9b",
+              "level": "light",
+              "seconds": 112.7,
+              "state": "done",
+              "what": "release-rows check build-test at 2cc69d4d1e91"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+          "later": [
+            "261112-090131-00d21f"
+          ],
+          "reason": "",
+          "tested": "a938de6ce99e505da900d8eecdc355e0843d1af6"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-12T08:45:16",
-      "worktree": "../prospect-wt/xapiand/release-rows"
+      "updated": "2026-11-12T09:02:11",
+      "worktree": ""
     },
     "repo-split": {
       "accepted": {},
