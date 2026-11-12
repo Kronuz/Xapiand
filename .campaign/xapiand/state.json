@@ -17296,6 +17296,34 @@
       "updated": "2026-11-11T23:00:37",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
+    "x7-scan-slices": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/shards.hh",
+        "test/sliced_test.cc",
+        "docs/perf/scan-slices.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "planned",
+      "title": "prospect's scan yields every 256 ordinals when per-match work runs",
+      "updated": "2026-11-11T23:00:57"
+    },
     "x7-view-bench": {
       "accepted": {},
       "after": [],
