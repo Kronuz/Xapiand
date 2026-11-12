@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-060150-6f4cc5 261112-060244-26054a 261112-060247-915bc9 261112-060250-fff57b 261112-060253-438fbd 261112-060256-a08cb1 261112-060259-0555e1 261112-060347-eb02a3 261112-060350-41b974 261112-060352-3a68bf
+State: blocked on lead: B1's defer-only-the-missing mutant has no observable seam in the built tests (see Review findings and Blocked on); A2/A3 timed and recorded
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,19 +16,15 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-0. Read the jobs at Xapiand:a944a38d4 (State lists them). Suite (A4) 261112-060150-6f4cc5. Mutants (A4,
-   `--fails-without`, each exits 0 only when its named check's FAIL line appears): sub-run reversed 261112-060244-26054a
-   (GET `v` check); writes on the loop 261112-060247-915bc9 (`0.2` check); children one at a time 261112-060250-fff57b
-   (peak check); no join before a new numeric id 261112-060253-438fbd (same_items vs serial path); a missed write
-   fails 261112-060256-a08cb1 (no `status` item); guard skips restore on a throw 261112-060259-0555e1 (engines_inline
-   0). Submitter: `.scratch/mutants.py` (untracked). A mutant that exits 2 or 3 is a build or sed failure: fix the
-   sed, resubmit.
-1. Timing build 261112-060347-eb02a3 (after the suite), then A3 261112-060350-41b974 (T12, exclusive) and A2
-   261112-060352-3a68bf (T4/T5, exclusive), both after the build (`.scratch/timing.py`, x7-loop-stalls' commands with
-   the fix's binary). Record both rows in the note's "At the fix" table as fix (c)'s column, and the Evidence table.
-2. If every A4 job passes and A3 meets 1.0x: State "ready for review" (A2 is a recorded MISS, see Blocked on).
+1. Lead rules on B1 (Blocked on, first item). If option 2: a before-write seam in `Shard::apply_slice`, a test that
+   erases and rewrites the id at the same docid after the first miss, a defer-only-the-missing mutant, one suite job
+   and one `--fails-without` job; then `campaign accept x7-loop-fix-c design --confirm B1=<suite job> B2=<suite job>`.
+2. Then State "ready for review" and launch the correctness reviewer (the Result section is still to write).
 
 Done this session:
+- Jobs at Xapiand:a944a38d4 all exit 0: suite 261112-060150-6f4cc5, six mutants, timing build 261112-060347-eb02a3,
+  A3 261112-060350-41b974, A2 261112-060352-3a68bf. Fix (c)'s column and "At fix (c)" are in
+  `docs/perf/x7-loop-stalls.md` "At the fix".
 - The numeric-id failure is pre-existing, not fix (c)'s: diagnostic 261112-054313-bda701 (the serial path forced,
   `parallel = false`) gives the same object 31 = 133 and 39 documents as the parallel path. `least_used_shard` reads
   `written_count`, which counts a document replaced while still buffered twice (strata's `buffer::docs` counts every
@@ -41,6 +37,17 @@ Done this session:
 
 ## Blocked on
 
+- Lead (B1, blocks "ready for review"): the design review asked for a seam test and a mutant that defers only the
+  missing object. The seam test exists; that mutant does not, and the built seam cannot observe it (Review findings).
+  Option 1: accept the recorded argument, with the reviewer's agreement that the mutant is equivalent here, and confirm
+  B1 with the suite job and the a08cb1 mutant. Option 2: add a seam before each write in the apply slice (new code in
+  `src/database/shard.cc`, in the file set) so a test erases and rewrites the id at its docid between the first miss
+  and the next write of the term, and the missing-only mutant fails it. Recommendation: option 2, since the reviewer's
+  scenario (docid reuse between i and j) is the case the deferral exists for and today no test reaches it.
+- Lead (A2, recorded miss, unchanged from the E4 item below): at fix (c) T4 is 3.07-6.14 ms (all 16 loops over
+  1,024 us) and T5's loaded light p99 is 48.3 and 52.8 ms against bounds of 8.5 and 9.4 ms; T5 is 1.8-2.3x worse than
+  the previous fix, and the mix's heavy searches 0.75x of it (1,006 against 1,332-1,364/s). Move A2 to the loop
+  scheduling quest; consider whether the apply's worker occupancy (design risk, note line 318) is part of the T5 loss.
 - Lead: T4/T5 (A2) cannot pass from this file set. E4 (261112-042106-305a1a): loops 56% busy; turns of 1 ms or more
   (36/s per loop) run at 0.45 CPU per wall second; busy periods (2.1 ms mean) are queues of ~1 ms turns; probe lag
   p99 6-8 ms. Loops are descheduled mid-turn: 16 loops + a WorkPool thread per CPU + the generator on 16 CPUs.
@@ -76,9 +83,35 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | [artifact] `docs/perf/x7-loop-stalls.md`, "Design: fix (c), RESTORE's writes off the loop, one shard per child" (review pending) |
-| A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
+| A2 | 261112-060352-3a68bf: T4 MISS (3.07-6.14 ms, all 16 loops over 1,024 us), T5 MISS (48.3, 52.8 ms; bounds 8.5, 9.4); recorded miss, Blocked on |
+| A3 | 261112-060350-41b974: RESTORE 1.001x pre-7c in `loadtest.py` (pairs 0.981-1.047), 1.019x in `profile_bulk.sh` (0.999-1.094); met at the median, inside the spread |
+| A4 | suite 261112-060150-6f4cc5 (Xapiand:a944a38d4, exit 0); fails without: 261112-060244-26054a, 261112-060247-915bc9, 261112-060250-fff57b, 261112-060253-438fbd, 261112-060256-a08cb1, 261112-060259-0555e1 (each exit 0: its named check's FAIL line appeared) |
+
+## Review findings
+
+Design review `.campaign/xapiand/reviews/x7-loop-fix-c-design.md` (CHANGES at Xapiand:45815797d). Fixes: the design
+text in Xapiand:9c38ae630, the code and tests in Xapiand:3c3cf24c4; suite 261112-060150-6f4cc5 at Xapiand:a944a38d4.
+
+- B1 (a miss defers every later object of its term): NOT FULLY COVERED. Fix: `Shard::apply_slice`'s `missed_terms`
+  (`src/database/shard.cc`), Xapiand:3c3cf24c4. Test: `test_a_write_missed_since_placement_is_placed_afresh`
+  (`tests/test_loop_yield.cc`): after placement a seam erases `k7` and writes it again, the stream holds three `k7`
+  objects; expects 3 deferred, no failing item, the last object stored. Suite: 261112-060150-6f4cc5 (passes).
+  Mutant: 261112-060256-a08cb1, a miss fails as today's `must_exist` miss does (the "no `status` item" check fails);
+  it exits 0. Gap: the reviewer's mutant, deferring only the missing object, was not run, and the note's own
+  argument says it is not observable with this seam: every later write of `k7` carries the same placement, so it
+  misses too and the result is identical. The reviewer's interleaving (the docid reused by a PUT between the first
+  miss and the next write of the id) has no seam in the built code, so no test reaches it. Stopped here, no new
+  code; options under Blocked on.
+- B2 (each test asserts its case happened): COVERED. Fix: `DocIndexer::stats`, `DocIndexer::seams` and `FixedRanges`
+  (objects per prepare, not wall time), Xapiand:3c3cf24c4, namespace-scope declarations Xapiand:7e19c4475. Each case
+  asserts it happened: model test `largest_range >= 16` and `repeated_in_subrun >= 1`; numeric ids `largest_range >=
+  16` and `serial_after_join >= 2`; miss test `erased >= 1` and `deferred == 3`; throw test `failed >= 1`; off-loop
+  test `process_ms > 200`; parallel peak asserted when `children > 1` (a pool of 5 threads or more, as designed).
+  Suite: 261112-060150-6f4cc5. Mutants (each exits 0, so its case happened): reverse sub-run 261112-060244-26054a,
+  no join before a new numeric id 261112-060253-438fbd, children one at a time 261112-060250-fff57b, writes on the
+  loop 261112-060247-915bc9, guard skips restore 261112-060259-0555e1.
+- N1-N7 are nits and gaps not blocking; N5 is covered by the throw test and mutant 261112-060259-0555e1. The rest
+  are the lead's to triage; none was re-examined this session.
 
 ## Result
 

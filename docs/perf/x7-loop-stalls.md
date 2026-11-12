@@ -401,20 +401,43 @@ x7-gate's procedure (D59), exclusive: A2 is job 261112-012855-b34e3c (ABBA pre, 
 run on cur), A3 is job 261112-012857-a77bf8 (T10 on cur; T12 ABBA pre, cur, cur, pre, pre, cur for `loadtest.py` and
 for `profile_bulk.sh`). Ratios are cur/pre per adjacent pair. "Gate" is x7-gate's number at Xapiand:df5eb9e06.
 
-| Row | Target | Pre-7c | Fix | Gate | Verdict |
-|---|---|---:|---:|---:|---|
-| T4 every HTTP loop's p99 lag, loaded | <= 1,024 us | 640, 768 us (all 10 loops) | 2.56-5.12 ms (all 16 loops over; median loop 3.58, 2.56 ms) | 24.6-28.7 ms | MISS, 2.5-5x the edge (worst loop about 5x lower than the gate) |
-| T5 loaded light p99 | <= 2x unloaded p99 + 1 ms, and below pre-7c | 414.6, 355.0 ms | 27.1 ms (bound 10.2), 22.7 ms (bound 8.9) | 76.8 ms (bound 8.93) | MISS on the bound by 2.5-2.7x; below pre-7c (0.065x) |
-| T5 same-index run (RESTORE into `accounts`), reported | | | light p99 39.0 ms, worst loop p99 8.19 ms | 98.2 ms | reported |
-| T4 beside 4 looping scripts | <= 1,024 us | | worst loop p99 5.12 ms (http2), light p99 19.7 ms | | MISS, as T4 |
-| T10 16-client flood, light-GET p99 | about 20 ms (the per-call cap plus the host's own) | | 45.4 ms (max 50.2; p50 0.37) | 50.9 ms | MISS, 2.3x |
-| T12 RESTORE docs/s, `loadtest.py` | >= 1.0x pre-7c | 7,629, 7,375, 7,468 | 3,989, 4,209, 4,461 | 0.288x | MISS, 0.571x (0.523-0.597) |
-| T12 RESTORE docs/s, `profile_bulk.sh` | >= 1.0x pre-7c | 7,382, 7,824, 7,490 | 4,449, 4,649, 4,356 | 0.284x | MISS, 0.594x (0.582-0.603) |
-| T12 saturated QPS, 16 clients | >= 1.0x pre-7c | 1,651, 1,463, 1,447 | 4,435, 3,937, 4,064 | 2.6x | PASS, 2.69x (2.69-2.81); query p99 0.33x |
+| Row | Target | Pre-7c | Fix | Fix (c) | Gate | Verdict at the fix |
+|---|---|---:|---:|---:|---:|---|
+| T4 every HTTP loop's p99 lag, loaded | <= 1,024 us | 640, 768 us (all 10 loops) | 2.56-5.12 ms (all 16 loops over; median loop 3.58, 2.56 ms) | 3.07-6.14 ms (all 16 over; median loop 3.07, 3.58 ms; worst 6.14, http2): MISS | 24.6-28.7 ms | MISS, 2.5-5x the edge (worst loop about 5x lower than the gate) |
+| T5 loaded light p99 | <= 2x unloaded p99 + 1 ms, and below pre-7c | 414.6, 355.0 ms | 27.1 ms (bound 10.2), 22.7 ms (bound 8.9) | 48.3 ms (bound 8.5), 52.8 ms (bound 9.4): MISS, 5.7x; below pre-7c (0.13-0.15x) | 76.8 ms (bound 8.93) | MISS on the bound by 2.5-2.7x; below pre-7c (0.065x) |
+| T5 same-index run (RESTORE into `accounts`), reported | | | light p99 39.0 ms, worst loop p99 8.19 ms | light p99 81.3 ms, worst loop p99 8.19 ms | 98.2 ms | reported |
+| T4 beside 4 looping scripts | <= 1,024 us | | worst loop p99 5.12 ms (http2), light p99 19.7 ms | not run | | MISS, as T4 |
+| T10 16-client flood, light-GET p99 | about 20 ms (the per-call cap plus the host's own) | | 45.4 ms (max 50.2; p50 0.37) | not run (the Lua quest's) | 50.9 ms | MISS, 2.3x |
+| T12 RESTORE docs/s, `loadtest.py` | >= 1.0x pre-7c | 7,629, 7,375, 7,468 | 3,989, 4,209, 4,461 | 7,169, 7,236, 7,172: 1.001x (0.981-1.047), MET at the median | 0.288x | MISS, 0.571x (0.523-0.597) |
+| T12 RESTORE docs/s, `profile_bulk.sh` | >= 1.0x pre-7c | 7,382, 7,824, 7,490 | 4,449, 4,649, 4,356 | 7,150, 7,207, 7,154: 1.019x (0.999-1.094), MET | 0.284x | MISS, 0.594x (0.582-0.603) |
+| T12 saturated QPS, 16 clients | >= 1.0x pre-7c | 1,651, 1,463, 1,447 | 4,435, 3,937, 4,064 | 3,235, 3,926, 3,908: 3.11x (2.98-3.21); query p99 0.285x | 2.6x | PASS, 2.69x (2.69-2.81); query p99 0.33x |
 
 Every other number in the rows held: no errors in any arm; unloaded light p99 4.6 and 4.0 ms against pre-7c's 31.9 and
 30.6 ms; T10's other light-GET cases stay under 1 ms at p99 (0.70 ms beside 4 long scripts and beside 4 library-call
 loops). `profile_bulk.sh` exits 3 in arm 2: its sampled profile is invalid (839 samples), its smoke number stands.
+
+**At fix (c).** Xapiand:a944a38d4 (shasum 0c04b5a2; the fix's writes off the loop, one child per shard), the same pre-7c
+binary, 16 CPUs, exclusive, x7-gate's procedure (D59): A3 is job 261112-060350-41b974 (T12 ABBA pre, cur, cur, pre,
+pre, cur for `loadtest.py` and `profile_bulk.sh`), A2 is job 261112-060352-3a68bf (T4/T5 ABBA pre, cur, cur, pre, then
+the same-index run on cur). The Fix (c) column gives this job's own arms; ratios are cur/pre per adjacent pair, and the
+pre-7c arms of this job (loadtest 6,847, 7,226, 7,310 docs/s; light p99 loaded 363.0, 346.4 ms; every loop 640-768 us)
+agree with the Pre-7c column's.
+
+- T12, A3: MET at parity, not above it. `loadtest.py` RESTORE of 20,000 documents 1.001x pre-7c (pairs 1.047, 1.001,
+  0.981: one of three pairs under 1.0); `profile_bulk.sh` smoke 1.019x (1.094, 0.999, 1.019); CPU per document 0.518
+  against 0.817 ms (0.64x). RESTORE is 1.7x the previous fix (median 4,209 to 7,172 docs/s), short of the design's estimate of
+  about 1.3x pre-7c. Both binaries sit near 7.2k docs/s, so the margin over pre-7c is inside the spread; what bounds
+  both at that rate (the client's stream, or the parse) is not tested here. The saturated-QPS phase answers 3.1x
+  pre-7c's queries at 0.285x its p99. The on-disk size after the restore doubled (3.47 against 1.74 MB), not looked at.
+- T4, A2: MISS. Every one of the 16 loops' loaded p99 lag is 3.07-6.14 ms against 1,024 us; no gain over the previous
+  fix (2.56-5.12 ms). The idle loops' p99 is 512 us.
+- T5, A2: MISS. Loaded light p99 48.3 and 52.8 ms against bounds of 8.5 and 9.4 ms (2 x unloaded p99 3.7 and 4.2 ms,
+  plus 1 ms), 5.6-5.7x over; 0.13-0.15x pre-7c's 363 and 346 ms. It is 1.8-2.3x worse than the previous fix's 22.7-27.1 ms,
+  and the mix's heavy searches fell from 1,332-1,364/s to 1,006 and 1,009/s (pre-7c 212 and 205/s, so 4.8x). The design named this risk (the apply chores take workers the mix's searches use); no arm here separates it
+  from other causes. The same-index run: light p99 81.3 ms, worst loop p99 8.19 ms.
+- Not run in these jobs: T4 beside 4 looping scripts and T10 (the Lua quest's). A2's recorded miss stays with the loop
+  scheduling quest that E4 proposes; fix (c) does not move the loops' p99 (its writes were 1.3% of loop time at the
+  fix).
 
 **What moved.** The loops' worst turns are gone: under the T4/T5 mix the median loop's lag p99.9 fell from 57 ms to
 6-7 ms and its maximum from 69 ms to 20-22 ms, while the fix answers 5.6-6.0x pre-7c's heavy searches (1,332-1,364/s
