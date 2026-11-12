@@ -12054,17 +12054,44 @@
       "files": [
         "tests/test_pool.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T02:09:27",
+          "commit": "c963598f132133a79ae64a77fe1e0f23e17af663",
+          "criteria": {
+            "A1": "261112-013706-bce470 (passed at a0ecee4694b6; only merges from main since), 261112-013709-c8d2f4 (passed at a0ecee4694b6; only merges from main since)",
+            "A2": "[artifact] `tests/test_pool.cc`: \"index.wait_merges()\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "3cfbf2d36d1e173f051b815dad65676fa65949af",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-013709-c8d2f4",
+              "level": "light",
+              "seconds": 228.3,
+              "state": "done",
+              "what": "pool-sweep-wait check build-test at 3cfbf2d36d1e"
+            }
+          ],
+          "final": true,
+          "from": "2da421f599fb4d8ab967b04fd24c303641c1deea",
+          "reason": "",
+          "tested": "a3fc17a5352fc04d368aad29087bffa5734ed8b4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "The sweep-merge pool test waits on a signal, not a 10 s loop",
-      "updated": "2026-11-12T01:22:05",
-      "worktree": "../Xapiand-wt/xapiand/pool-sweep-wait"
+      "updated": "2026-11-12T02:09:34",
+      "worktree": ""
     },
     "postings-fuzz-memory": {
       "accepted": {
