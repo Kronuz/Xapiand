@@ -60,10 +60,10 @@ release's strata pin past `71750940` removes it.
 | A1 | 261111-201053-f77c3a (parity 1/4/16 segments, deletes 4/16 then merged: 419/419 counts each, exact after merges), 261111-201056-33db85 (verify 1M, 8 segments, 90,910 deletes, then merged: 0 mismatches over 962 + 200 queries both passes); passed at 2cc69d4 |
 | A2 | 261111-201050-c7d247 (operators_test per operator, shards_test 3,696 oracle rows), 261111-201053-f77c3a (parity by operator: AND, OR, AND_NOT, AND_MAYBE, NEAR, PHRASE all equal), 261111-201230-8ef3e1 (pin's 51-test suite at strata 5d742b2); passed at 2cc69d4 |
 | A3 | MISS at the release's level (lead's ruling on F1): 261111-201050-c7d247 proves prospect's collectors only (240 comparisons, 12,006 matches, 1,721 deletes); the release's row is hunt row 91 |
-| A4 | MISS (lead's ruling): 261111-201059-749f46 failed: 39 of 45 names equal word for word; earlyenglish, german2, nb, nn stemmed by Xapian and refused by snowball; english_lovins, english_porter refused by both; fix is hunt row "Six stemmer names" |
+| A4 | [artifact] `docs/gates/release-rows.md`: "**miss**: six names" (job 261111-201059-749f46; equality is quest stemmer-names) |
 | A5 | MISS as one CPU-hour (lead's ruling on F2; six independent 10-min wall-clock starts per decoder, coverage still rising; hunt row 92): 261111-201102-4af80d (fuzz-build ASan+UBSan), 24 fuzz runs 261111-201105-74a86d 261111-201108-63232e 261111-201111-fb8de3 261111-201114-9f665c 261111-201117-334338 261111-201120-b8edb5 261111-201123-48fad1 261111-201126-e1d239 261111-201129-9bc82b 261111-201132-4a9573 261111-201135-50a022 261111-201138-698b31 261111-201141-365038 261111-201144-b67b2c 261111-201147-634ad4 261111-201150-c36d62 261111-201153-bd3f1c 261111-201156-5abf6c 261111-201159-483e21 261111-201202-8c50a4 261111-201206-73d52f 261111-201209-32089f 261111-201213-5cf20a 261111-201216-328810 (0 findings), 261111-201050-c7d247 (segment_test versions: 19 fixtures, 118/118 refusals; corpus replays), 261111-201230-8ef3e1 |
 | A6 | 261111-223819-03f694 (reviewer's probe: ASan+UBSan rows and parity at Xapiand's pins, exit 0, 912 s); CI run 43153036741 at 2cc69d4: linux-asan-ubsan, linux-tsan and all platforms green (CI re-runs at 7a3a54b, docs only) |
-| A7 | [artifact] `docs/gates/release-rows.md` at `prospect:0ba797e` |
+| A7 | [artifact] `docs/gates/release-rows.md` |
 
 ## Result
 
