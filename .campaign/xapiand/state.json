@@ -4909,8 +4909,9 @@
       ],
       "consumes": [],
       "files": [
-        "docs/barriers.md",
-        "src/**"
+        "docs/mechanisms/barriers.md",
+        "docs/mechanisms/commit-barriers.md",
+        "include/completion/posix.h"
       ],
       "landed": [],
       "lenses": [],
@@ -4920,8 +4921,8 @@
       "repo": "../completion",
       "risk": "low",
       "status": "planned",
-      "title": "Review nits in completion's barrier docs and analysis's CJK licence and map",
-      "updated": "2026-11-12T03:24:06"
+      "title": "Review nits in completion's barrier docs and header",
+      "updated": "2026-11-12T03:24:46"
     },
     "library-issues": {
       "accepted": {},
