@@ -5609,6 +5609,32 @@
       "title": "logger never loses a refused line",
       "updated": "2026-11-08T15:41:29"
     },
+    "loop-share-flake": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_loop_yield.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "test_loop_yield's RESTORE loop share holds on any core count",
+      "updated": "2026-11-12T10:52:42"
+    },
     "manifest-log": {
       "accepted": {
         "design": {
