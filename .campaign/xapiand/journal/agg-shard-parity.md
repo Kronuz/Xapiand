@@ -1,11 +1,11 @@
 # agg-shard-parity: journal
 
-State: ready for review (A2 mutant 2 re-run pending: job 261112-013031-0c0f1d)
+State: ready for review (A2 mutants re-run pending: 261112-013131-08b954 261112-013135-842794)
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing but the pending job 261112-013031-0c0f1d (A2 mutant 2 in the right shape).
+Nothing but the pending job 261112-013135-842794 (A2 mutant 2 in the right shape).
 
 ## Next
 
@@ -68,7 +68,7 @@ If 2c8cb9 (diagnosis at the pre-fix commit) shows a difference beyond order, fix
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test f46d26 at cdb757fc2 (38/38 ctest incl. test_aggregation_shards, async_check 0 unclassified); pre-fix failure 261112-000934-6482ef (F1) |
-| A2 | mutant 1, fix reverted: 261112-002821-1d7a01 passed (test reports DIFF); mutant 2, shard 1 dropped: 261112-002824-edede9 made the test fail but its command shape was wrong, re-run as 261112-013031-0c0f1d (pending) |
+| A2 | mutants re-run with the right shape (exit 0 only when the test's own FAIL lines appear): fix reverted 261112-013131-08b954, shard 1 dropped 261112-013135-842794. Earlier 1d7a01 passed on a failed cmake (lua fetch), so it is void; edede9 was raw ctest exit 8. |
 | A3 | docs/dev/agg-shard-parity.md |
 | F1 | diagnosis 261112-002548-2c8cb9 at the pre-fix commit: 0 DIFF when buckets compare by key, so order only |
 
