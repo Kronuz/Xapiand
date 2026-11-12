@@ -13005,7 +13005,79 @@
       "updated": "2026-11-08T22:56:40"
     },
     "release-rows": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-11T23:31:43",
+          "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "blobs": {
+            "docs/gates/release-rows.md": "100644:7b7ed1d4cff7cb97efaff3fa84c025cf944143ea",
+            "test/aggregate_test.cc": "100644:f986fd1314270b75587f3d1bfbc2e64e9c05d661",
+            "test/segment_test.cc": "100644:6c0ce43f63930b7506865a0e8f99bb28c7c2dda7",
+            "tools/parity.cc": "100644:efc6043760035b46efa0751f4b7e17412560458f",
+            "tools/release_rows/CMakeLists.txt": "100644:67529fad6dfa716fce041f41045897635f595456",
+            "tools/release_rows/rows.sh": "100755:e3c7a243f53b4fdcab3938c707cbd31f348fcc0b",
+            "tools/release_rows/stem_parity.cc": "100644:0c5881b8199fd38f85fbe6f341eca6e4c299d878"
+          },
+          "by": "review",
+          "commit": "0ba797e9c1e492c32c4bb59c981c43ab43a00ef6",
+          "criteria": "1af593b7ec98d323",
+          "diffs": {
+            "docs/gates/release-rows.md": "9073dd4ba2dc6d54",
+            "test/aggregate_test.cc": "9f5b7f98150fde94",
+            "test/segment_test.cc": "1d840f83e181b7db",
+            "tools/parity.cc": "6246fb65ed1f2616",
+            "tools/release_rows/CMakeLists.txt": "6eb7566a42bb2677",
+            "tools/release_rows/rows.sh": "10d2d91a4b95fc54",
+            "tools/release_rows/stem_parity.cc": "6c0aed476afbd6a1"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
+                  "docs": [
+                    "docs/gates/release-rows.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-201233-507d9b",
+                  "level": "light",
+                  "seconds": 112.7,
+                  "state": "done",
+                  "what": "release-rows check build-test at 2cc69d4d1e91"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
+                  "docs": [
+                    "docs/gates/release-rows.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-201233-507d9b",
+                  "level": "light",
+                  "seconds": 112.7,
+                  "state": "done",
+                  "what": "release-rows check build-test at 2cc69d4d1e91"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "Rulings in the quest file: A3 and A5 are release-level misses with hunt follow-ups",
+          "review": "8671c164333afe021f595f815d7fb5e673e844f5",
+          "reviewed": "7a3a54bbb8f0933d34bdf187f1d53dbd47f7004a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
       "branch": "quest/xapiand/release-rows",
@@ -13136,7 +13208,7 @@
       "risk": "high",
       "status": "review",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-11T22:28:17",
+      "updated": "2026-11-11T23:31:43",
       "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
