@@ -2646,6 +2646,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 							stats.peak_children.store(active, std::memory_order_relaxed);
 						}
 						at = co_await lk_shard->apply_slice(chores, writes, at, PREPARE_SLICE, missed);
+						if (seams.after_slice) {
+							co_await seams.after_slice(db_handler, writes[at - 1].term, writes[at - 1].missed);
+						}
 						--active;
 						counted_in = false;
 					} catch (...) {

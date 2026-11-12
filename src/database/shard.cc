@@ -1406,6 +1406,8 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 			}
 			auto& eng = entry.engine();
 			const auto until = std::chrono::steady_clock::now() + slice;
+			const auto first = at;
+			const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
 			while (at < writes.size()) {
 				auto& write = writes[at++];
 				if (missed_terms.count(write.term) != 0) {
@@ -1430,7 +1432,7 @@ Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std:
 						write.error = std::current_exception();
 					}
 				}
-				if (std::chrono::steady_clock::now() >= until) {
+				if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
 					break;
 				}
 			}

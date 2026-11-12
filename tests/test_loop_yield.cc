@@ -343,7 +343,9 @@ public:
 	}
 	~FixedRanges() {
 		DocIndexer::seams.objects_per_prepare = 0;
+		DocIndexer::seams.writes_per_slice = 0;
 		DocIndexer::seams.after_placement = nullptr;
+		DocIndexer::seams.after_slice = nullptr;
 		DocIndexer::seams.throw_in_slice = false;
 		DocIndexer::seams.serial = false;
 	}
@@ -568,6 +570,58 @@ static void test_a_write_missed_since_placement_is_placed_afresh() {
 }
 
 
+// The review's interleaving (B1): an id is erased before its first write of the range applies (that write misses),
+// and written again, taking its docid, before its next write: that write must not replace the new document in
+// place, where the deferred first write would then land over it. Every later write of the id waits for the serial
+// pass, and the document ends as the stream's last object.
+static void test_a_miss_defers_every_later_write_of_its_id() {
+	create_index("reuse", 5);
+	std::string seed;
+	for (int k = 1; k <= 12; ++k) {
+		seed += R"({"_id":"k)" + std::to_string(k) + R"(","v":"seed"})" "\n";
+	}
+	CHECK_EQ(http_call("RESTORE", "/reuse/?commit", seed, "application/x-ndjson") / 100, 2);
+	std::string body;
+	for (int k = 1; k <= 12; ++k) {
+		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":"new"})" "\n";
+		if (k == 3 || k == 9) {
+			body += R"({"_id":"k7","v":")" + std::string(k == 3 ? "first" : "last") + "\"}\n";
+		}
+	}
+	std::string reply;
+	std::atomic<int> erased{0};
+	std::atomic<int> reborn{0};
+	{
+		FixedRanges ranges(32);
+		DocIndexer::seams.writes_per_slice = 1;
+		DocIndexer::seams.after_placement = [&erased](DatabaseHandler& handler) -> task::task<void> {
+			if (erased.fetch_add(1) == 0) {
+				co_await handler.delete_document("k7", UNKNOWN_REVISION);
+			}
+		};
+		DocIndexer::seams.after_slice = [&reborn](DatabaseHandler& handler, const std::string&, bool missed) -> task::task<void> {
+			if (missed && reborn.fetch_add(1) == 0) {
+				auto obj = MsgPack::MAP();
+				obj["v"] = "written again";
+				co_await handler.index(MsgPack("k7"), UNKNOWN_REVISION, true, obj, false, json_type);
+			}
+		};
+		const auto status = http_call("RESTORE", "/reuse/?commit", body, "application/x-ndjson", &reply);
+		CHECK_EQ(status / 100, 2);
+		std::fprintf(stderr, "  %zu writes deferred\n", DocIndexer::stats.deferred.load());
+		CHECK_GE(erased.load(), 1);
+		CHECK_GE(reborn.load(), 1);
+		CHECK_EQ(DocIndexer::stats.deferred.load(), std::size_t{3});   // k7 three times, the later two without a try
+	}
+	for (const auto& item : items_of(reply)) {
+		CHECK_TRUE(item.find("status") == std::string::npos);
+	}
+	std::string reused;
+	CHECK_EQ(http_call("GET", "/reuse/k7", "", "application/json", &reused), 200);
+	CHECK_EQ(field_of(json_of(reused), "v").to_string(), std::string("\"last\""));
+}
+
+
 // An apply slice that throws fails its shard's remaining writes, each its own result, and leaves the engine's chores
 // restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
 static void test_a_throwing_apply_slice_restores_the_engines_chores() {
@@ -686,6 +740,7 @@ int main() {
 	test_a_sharded_restore_matches_its_serial_model();
 	test_new_numeric_ids_match_their_serial_model();
 	test_a_write_missed_since_placement_is_placed_afresh();
+	test_a_miss_defers_every_later_write_of_its_id();
 	test_a_throwing_apply_slice_restores_the_engines_chores();
 	test_an_update_sees_the_earlier_objects_of_its_stream();
 	test_schema_changes_commit_in_input_order();

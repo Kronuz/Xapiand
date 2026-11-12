@@ -293,10 +293,14 @@ struct DocIndexerStats {
 
 // Test seams (tests/test_loop_yield.cc), inert unless set: the objects a prepare chore takes instead of its
 // time slice, a step awaited on the loop with the RESTORE's handler between a range's placement and its apply,
-// one apply slice that throws before its writes, and every write on the serial path (the model of a run).
+// one apply slice that throws before its writes, every write on the serial path (the model of a run), and the writes
+// an apply slice takes, with a step awaited on the loop between two slices (the turn released) given the term of the
+// slice's last write and whether it missed.
 struct DocIndexerSeams {
 	std::atomic<std::size_t> objects_per_prepare{0};
+	std::atomic<std::size_t> writes_per_slice{0};
 	std::function<task::task<void>(DatabaseHandler&)> after_placement;
+	std::function<task::task<void>(DatabaseHandler&, const std::string& term, bool missed)> after_slice;
 	std::atomic<bool> throw_in_slice{false};
 	std::atomic<bool> serial{false};
 };
