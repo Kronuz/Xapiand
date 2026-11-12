@@ -212,15 +212,19 @@ in GET, search and dump.
 
 **Tests** (`tests/test_loop_yield.cc`, a node in the test's process; RESTORE over HTTP):
 
-- The probe's stream (index `a`, then an update of `a`) with plain objects before it, so the update follows a run in
-  one batch, and split across two body pieces with a pause, so the update starts the second batch: GET shows both
-  fields. Mutants: the run before a barrier is not applied first; a batch's last run is not applied before `index`
-  returns.
-- Schema order: a new index restored from `x` as an integer, then many plain objects, then `x` as a string; the
-  chores pull them in parallel. The integer wins, the string object alone fails, as in a sequential run. Mutant: the
-  round goes on past its first change, offering later objects' changes made on the old snapshot.
-- Prepare off the loop: the HTTP loop's CPU during a text-heavy RESTORE is under half the process's. Mutant: every
-  object is a barrier.
+- An update after a run of plain objects in one batch (a JSON array), and an update that starts the second batch (an
+  NDJSON body sent in two pieces with a pause): GET shows both fields. Mutants: the run before a barrier is not
+  applied first; a batch's last run is not applied before `index` returns.
+- Schema order: a new index restored with `x` an integer in an object slow to prepare, then `x` a string in a fast
+  one, then an integer again; each object's result and the final schema equal a sequential restore's (one object per
+  request), and the string fails. Mutant: the round accepts the objects past its first change, prepared on the old
+  snapshot.
+- Prepare off the loop: the HTTP loop's CPU for a text-heavy RESTORE of 3,000 documents is under 60% of the
+  process's. Mutant: every object is a barrier.
+
+**Files.** `src/database/handler.cc` (`DocIndexer::index`, and the helpers it shares with `DatabaseHandler::prepare`:
+`document_id_of`, `take_op_type`, `finish_prepared`, `offer_schema`), `tests/test_loop_yield.cc`. The phase7c.md
+amendment and the header changes (the RESTORE's group, `index_one`'s stale declaration) are the lead's.
 
 ## Reproduce
 

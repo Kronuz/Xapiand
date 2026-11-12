@@ -28,6 +28,7 @@
 #include <array>                            // for std::array
 #include <cassert>                          // for assert
 #include <cctype>                           // for tolower
+#include <chrono>                           // for std::chrono::steady_clock
 #include <cmath>                            // for std::floor
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
@@ -67,6 +68,7 @@
 #include "xapiand_strings.hh"                       // for strings::from_bytes
 #include "serialise.h"                      // for cast, serialise, type
 #include "server/http_utils.h"              // for catch_http_errors
+#include "work_pool.hh"                     // for WorkPool::threads
 
 #ifdef XAPIAND_LUA
 #include "lua/processor.h"                  // for lua namespace
@@ -228,6 +230,69 @@ inject_data(Data& data, const MsgPack& obj)
 				THROW(ClientError, "Data inconsistency, '{}' must be an array or an object", RESERVED_DATA);
 		}
 	}
+}
+
+
+// The id an object names: its `_id`, or the `_value` of an `_id` map; undefined when it names none.
+static MsgPack
+document_id_of(const MsgPack& body)
+{
+	auto f_it = body.find(ID_FIELD_NAME);
+	if (f_it == body.end()) {
+		return MsgPack();
+	}
+	const auto& field = f_it.value();
+	if (!field.is_map()) {
+		return field;
+	}
+	auto fv_it = field.find(RESERVED_VALUE);
+	return fv_it == field.end() ? MsgPack() : fv_it.value();
+}
+
+
+// Takes the `_op_type` out of an object: its value, "index" when it has none.
+static std::string
+take_op_type(MsgPack& body)
+{
+	std::string op_type = "index";
+	auto f_it = body.find(RESERVED_OP_TYPE);
+	if (f_it != body.end()) {
+		op_type = f_it.value().as_str();
+		body.erase(f_it);
+	}
+	return op_type;
+}
+
+
+// Finishes a prepared document: its record, raw (finalise_write compresses it once, in the shard's turn), and the
+// version the write asks for. After Schema::index, which reads `data` for a script's old document.
+static void
+finish_prepared(std::tuple<std::string, engine::Document, MsgPack>& prepared, Data& data, engine::rev document_ver)
+{
+	auto& doc = std::get<1>(prepared);
+	data.set_obj(std::get<2>(prepared), false);
+	data.flush();
+	auto serialised = data.serialise();
+	if (!serialised.empty()) {
+		doc.set_data(serialised);
+	}
+	if (document_ver != UNKNOWN_REVISION) {
+		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
+	} else if (!data.version.empty()) {
+		doc.add_value(DB_SLOT_VERSION, data.version);
+	}
+}
+
+
+// Offers a schema change made over `old_schema`: false when another change came first (the prepare runs again).
+static task::task<bool>
+offer_schema(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack> old_schema, std::shared_ptr<const MsgPack> new_schema)
+{
+	if (!new_schema) {
+		co_return true;
+	}
+	auto manager = XapiandManager::manager();
+	co_return manager && co_await manager->schemas->set(db_handler, old_schema, new_schema);
 }
 
 
@@ -398,27 +463,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 		}
 	}
 
-	auto& doc = std::get<1>(prepared);
-	auto& data_obj = std::get<2>(prepared);
-
-	// Finish document: add data, ID term and ID value.
-	// The following flush() **must** be after passing data to Schema::index() as
-	// it uses it to get the old document during DatabaseHandler::call_script().
-	// The record stays raw: finalise_write compresses it once, in the shard's turn.
-	data.set_obj(data_obj, false);
-	data.flush();
-	auto serialised = data.serialise();
-	if (!serialised.empty()) {
-		doc.set_data(serialised);
-	}
-
-	// Request version
-	if (document_ver != UNKNOWN_REVISION) {
-		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
-	} else if (!data.version.empty()) {
-		doc.add_value(DB_SLOT_VERSION, data.version);
-	}
-
+	finish_prepared(prepared, data, document_ver);
 	co_return prepared;
 }
 
@@ -1104,28 +1149,8 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 		THROW(ClientError, "Object must be a JSON or MsgPack");
 	}
 
-	MsgPack document_id;
-
-	auto f_it = body.find(ID_FIELD_NAME);
-	if (f_it != body.end()) {
-		const auto& field = f_it.value();
-		if (field.is_map()) {
-			auto f_it_end = field.end();
-			auto fv_it = field.find(RESERVED_VALUE);
-			if (fv_it != f_it_end) {
-				document_id = fv_it.value();
-			}
-		} else {
-			document_id = field;
-		}
-	}
-
-	std::string op_type = "index";
-	f_it = body.find(RESERVED_OP_TYPE);
-	if (f_it != body.end()) {
-		op_type = f_it.value().as_str();
-		body.erase(f_it);
-	}
+	const auto document_id = document_id_of(body);
+	const auto op_type = take_op_type(body);
 
 	if (op_type == "index") {
 		Data data;
@@ -1545,12 +1570,7 @@ DatabaseHandler::update_schema()
 	L_CALL("DatabaseHandler::update_schema()");
 
 	auto mod_schema = schema->get_modified_schema();
-	if (mod_schema) {
-		auto old_schema = schema->get_const_schema();
-		auto manager = XapiandManager::manager();
-		co_return manager && co_await manager->schemas->set(this, old_schema, mod_schema);
-	}
-	co_return true;
+	co_return co_await offer_schema(this, schema->get_const_schema(), std::move(mod_schema));
 }
 
 
@@ -2266,97 +2286,53 @@ co_catch_http_errors(F work)
 	});
 }
 
-}  // namespace
+
+// How long a prepare chore runs before it gives its worker back (docs/perf/x7-loop-stalls.md, D5).
+constexpr auto PREPARE_SLICE = std::chrono::milliseconds(1);
 
 
-task::task<void>
-DocIndexer::index_one(MsgPack&& obj)
-{
-	L_CALL("DocIndexer::index_one(<obj>)");
-
-	if (!obj.is_map()) {
-		L_ERR("Indexing object has an unsupported type: {}", enum_name(obj.get_type()));
-		co_return;
-	}
-
-	if (first) {
-		--first;
-		co_return;
-	}
-
-	if (!maxitems) {
-		co_return;
-	}
-	--maxitems;
-
-	const auto idx = _idx++;
-	++_total;
-	if (_results.size() <= idx) {
-		_results.resize(idx + 1, MsgPack::MAP());
-	}
-
-	// Prepare: the document the engine will index, and where it goes.
+// One admitted object of a RESTORE stream and what its prepare left.
+struct Admitted {
+	std::size_t idx;
+	MsgPack obj;
 	std::tuple<std::string, engine::Document, MsgPack> prepared;
-	auto prepare_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
-		prepared = co_await db_handler.prepare_document(obj, idx + 1);
-	});
-	++_processed;
-	MsgPack result;
-	if (prepare_errors.error_code != HTTP_STATUS_OK) {
-		result = MsgPack{
-			{ RESPONSE_STATUS, static_cast<unsigned>(prepare_errors.error_code) },
-			{ RESPONSE_TYPE, http_status_str(prepare_errors.error_code) },
-			{ RESPONSE_MESSAGE, prepare_errors.error }
-		};
-		_results[idx] = std::move(result);
-		co_return;
+	std::exception_ptr error;                      // the prepare's failure: the object's result
+	std::shared_ptr<const MsgPack> changed;        // the schema its prepare left, when it changed the schema
+	int offers = 0;                                // its schema changes refused so far
+};
+
+
+// Whether an object's prepare reads the stored document or updates the schema as it fetches it (the design's D1):
+// it is prepared on the loop, after every earlier object of its stream has applied.
+bool
+reads_stored(const MsgPack& obj)
+{
+	if (!obj.is_map()) {
+		return false;
 	}
-	++_prepared;
-
-	// Apply: the document goes to its shard, in the shard's turn.
-	auto& term_id = std::get<0>(prepared);
-	auto& doc = std::get<1>(prepared);
-	auto& data_obj = std::get<2>(prepared);
-	if (!term_id.empty()) {
-		auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
-			auto info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
-
-			if (term_id == NEW_NUMERIC_KEY) {
-				result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
-			} else {
-				auto it_id = data_obj.find(ID_FIELD_NAME);
-				if (it_id == data_obj.end()) {
-					result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
-				} else {
-					result[ID_FIELD_NAME] = it_id.value();
-				}
-			}
-
-			if (echo) {
-				result[VERSION_FIELD_NAME] = info.version;
-
-				if (comments) {
-					result[RESPONSE_xDOCID] = info.did;
-
-					size_t n_shards = endpoints.size();
-					size_t shard_num = (info.did - 1) % n_shards;
-					result[RESPONSE_xSHARD] = shard_num + 1;
-					// result[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
-				}
-			}
-
-			++_indexed;
-		});
-		if (index_errors.error_code != HTTP_STATUS_OK) {
-			result[RESPONSE_STATUS] = static_cast<unsigned>(index_errors.error_code);
-			result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
-			result[RESPONSE_MESSAGE] = index_errors.error;
-		}
-	} else if (!data_obj.is_undefined()) {
-		result = std::move(data_obj);
+	auto it = obj.find(RESERVED_OP_TYPE);
+	if (it != obj.end() && !(it.value().is_string() && it.value().str_view() == "index")) {
+		return true;
 	}
-	_results[idx] = std::move(result);
+	return obj.find(RESERVED_SCRIPT) != obj.end() || obj.find(RESERVED_SCHEMA) != obj.end();
 }
+
+
+// The prepare of a plain `index` object against `schema`, in a chore: DatabaseHandler::prepare once its schema is
+// fetched. `Schema::index` completes without waiting: no script, and `seq` is never 0 (no shard count is read).
+std::tuple<std::string, engine::Document, MsgPack>
+prepare_plain(Schema& schema, DatabaseHandler& placement, MsgPack& body, std::size_t seq)
+{
+	const auto document_id = document_id_of(body);
+	take_op_type(body);
+	Data data;
+	inject_data(data, body);
+	auto prepared = task::sync_wait(schema.index(body, document_id, placement, data, seq));
+	finish_prepared(prepared, data, UNKNOWN_REVISION);
+	return prepared;
+}
+
+}  // namespace
 
 
 task::task<void>
@@ -2364,19 +2340,246 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 {
 	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
 
-	for (auto& obj : batch) {
-		if (obj.is_array()) {
-			for (auto& o : obj) {
-				co_await index_one(std::move(o));
-			}
-		} else {
-			co_await index_one(std::move(obj));
+	// The batch's prepare chores, and the handler they place new ids with (read only while they run).
+	auto& pool = XapiandManager::manager(true)->database_pool->work_pool();
+	IndexChores chores(pool);
+	DatabaseHandler placement(endpoints, flags);
+	const std::size_t width = pool.threads() > 1 ? pool.threads() - 1 : 1;   // flushes never take the reserve
+
+	std::vector<Admitted> run;   // the plain objects since the last barrier, in input order
+
+	// Admits the stream's next object (offset, limit): its result's index, or none.
+	const auto admit = [this](const MsgPack& obj) -> std::optional<std::size_t> {
+		if (!obj.is_map()) {
+			L_ERR("Indexing object has an unsupported type: {}", enum_name(obj.get_type()));
+			return std::nullopt;
 		}
-		// An object per slice at most: the request gives its reactor back when its slice is spent.
+		if (first) {
+			--first;
+			return std::nullopt;
+		}
+		if (!maxitems) {
+			return std::nullopt;
+		}
+		--maxitems;
+		const auto idx = _idx++;
+		++_total;
+		if (_results.size() <= idx) {
+			_results.resize(idx + 1, MsgPack::MAP());
+		}
+		return idx;
+	};
+
+	// Prepares an object on the loop, reading the stored document as its prepare needs.
+	const auto prepare_inline = [this](Admitted& one) -> task::task<void> {
+		try {
+			one.prepared = co_await db_handler.prepare_document(one.obj, one.idx + 1);
+		} catch (...) {
+			one.error = std::current_exception();
+		}
+	};
+
+	// Records an object's prepare and applies its document in the shard's turn: the object's result.
+	const auto apply = [this](Admitted& one) -> task::task<void> {
+		++_processed;
+		MsgPack result;
+		if (one.error) {
+			const auto errors = catch_http_errors([&] {
+				if (one.error) {
+					std::rethrow_exception(one.error);
+				}
+				return 0;
+			});
+			_results[one.idx] = MsgPack{
+				{ RESPONSE_STATUS, static_cast<unsigned>(errors.error_code) },
+				{ RESPONSE_TYPE, http_status_str(errors.error_code) },
+				{ RESPONSE_MESSAGE, errors.error }
+			};
+			co_return;
+		}
+		++_prepared;
+
+		auto& term_id = std::get<0>(one.prepared);
+		auto& doc = std::get<1>(one.prepared);
+		auto& data_obj = std::get<2>(one.prepared);
+		if (!term_id.empty()) {
+			auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
+				auto info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+
+				if (term_id == NEW_NUMERIC_KEY) {
+					result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+				} else {
+					auto it_id = data_obj.find(ID_FIELD_NAME);
+					if (it_id == data_obj.end()) {
+						result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+					} else {
+						result[ID_FIELD_NAME] = it_id.value();
+					}
+				}
+
+				if (echo) {
+					result[VERSION_FIELD_NAME] = info.version;
+
+					if (comments) {
+						result[RESPONSE_xDOCID] = info.did;
+
+						size_t n_shards = endpoints.size();
+						size_t shard_num = (info.did - 1) % n_shards;
+						result[RESPONSE_xSHARD] = shard_num + 1;
+					}
+				}
+
+				++_indexed;
+			});
+			if (index_errors.error_code != HTTP_STATUS_OK) {
+				result[RESPONSE_STATUS] = static_cast<unsigned>(index_errors.error_code);
+				result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
+				result[RESPONSE_MESSAGE] = index_errors.error;
+			}
+		} else if (!data_obj.is_undefined()) {
+			result = std::move(data_obj);
+		}
+		_results[one.idx] = std::move(result);
+	};
+
+	// An object per slice at most: the request gives its reactor back when its slice is spent.
+	const auto checkpoint = [this]() -> task::task<void> {
 		if (db_handler.budget != nullptr) {
 			co_await db_handler.budget->checkpoint();
 		}
+	};
+
+	const auto apply_range = [&](std::size_t from, std::size_t to) -> task::task<void> {
+		for (auto i = from; i < to; ++i) {
+			co_await apply(run[i]);
+			co_await checkpoint();
+		}
+	};
+
+	// One round of the run from `from` (the design's Rounds): chores pull its objects in input order, each against a
+	// Schema of its own over one snapshot, until a slice is spent or an object changes the schema. The objects up to
+	// the first change are accepted, and that change is offered: changes commit in input order, and every later
+	// object is prepared again in the next round, on the new schema. Returns the end of the accepted objects;
+	// `scripted` when the schema has a script, whose objects all read the stored document.
+	const auto prepare_round = [&](std::size_t from, bool& scripted) -> task::task<std::size_t> {
+		auto schema = co_await db_handler.get_schema();
+		if (!schema->get_data_script().is_undefined()) {
+			scripted = true;
+			co_return from;
+		}
+		const auto snapshot = schema->get_const_schema();
+		const std::string origin(schema->get_origin());
+		std::atomic<std::size_t> next{from};
+		std::atomic<std::size_t> changed{run.size()};   // the first object whose prepare changed the schema
+		const auto pull = [&] {
+			Schema own(snapshot, nullptr, origin);
+			const auto until = std::chrono::steady_clock::now() + PREPARE_SLICE;
+			for (;;) {
+				const auto j = next.fetch_add(1, std::memory_order_relaxed);
+				if (j >= run.size() || j > changed.load(std::memory_order_relaxed)) {
+					return;
+				}
+				auto& one = run[j];
+				one.error = nullptr;
+				try {
+					one.prepared = prepare_plain(own, placement, one.obj, one.idx + 1);
+				} catch (...) {
+					one.error = std::current_exception();
+				}
+				one.changed = own.get_modified_schema();
+				if (one.changed) {
+					auto seen = changed.load(std::memory_order_relaxed);
+					while (j < seen && !changed.compare_exchange_weak(seen, j, std::memory_order_relaxed)) { }
+					return;
+				}
+				if (std::chrono::steady_clock::now() >= until) {
+					return;
+				}
+			}
+		};
+		std::vector<task::task<void>> pulls;
+		pulls.reserve(width);
+		for (std::size_t w = 0; w < width; ++w) {
+			pulls.push_back(chores.run(engine::ChoreClass::flush, pull));
+		}
+		co_await task::when_all(std::move(pulls));
+
+		auto stop = std::min(next.load(), run.size());
+		const auto first_change = changed.load();
+		if (first_change < stop) {
+			stop = first_change + 1;
+			auto& one = run[first_change];
+			if (!co_await offer_schema(&db_handler, snapshot, one.changed)) {
+				if (++one.offers <= SCHEMA_RETRIES) {
+					stop = first_change;   // prepared again, on the schema that came first
+				} else {
+					try {
+						THROW(Error, "Cannot update schema while preparing: Too many retries");
+					} catch (...) {
+						one.error = std::current_exception();
+					}
+				}
+			}
+		}
+		co_return stop;
+	};
+
+	// Prepares the run and applies it in input order; each round's chores overlap the apply of the round before.
+	const auto apply_run = [&]() -> task::task<void> {
+		bool scripted = false;
+		std::size_t at = 0;
+		std::size_t stop = 0;
+		if (!run.empty()) {
+			stop = co_await prepare_round(0, scripted);
+		}
+		while (at < run.size() && !scripted) {
+			if (stop == run.size()) {
+				co_await apply_range(at, stop);
+				at = stop;
+				break;
+			}
+			std::size_t next_stop = stop;
+			co_await task::when_all(apply_range(at, stop), [&]() -> task::task<void> {
+				next_stop = co_await prepare_round(stop, scripted);
+			}());
+			at = stop;
+			stop = next_stop;
+		}
+		co_await apply_range(at, stop);
+		for (at = stop; at < run.size(); ++at) {   // the schema's script reads each object's stored document
+			co_await prepare_inline(run[at]);
+			co_await apply(run[at]);
+			co_await checkpoint();
+		}
+		run.clear();
+	};
+
+	const auto take = [&](MsgPack&& obj) -> task::task<void> {
+		if (!reads_stored(obj)) {
+			if (auto idx = admit(obj)) {
+				run.push_back(Admitted{*idx, std::move(obj), {}, {}, {}});
+			}
+			co_return;
+		}
+		co_await apply_run();   // D1: a barrier's read sees every earlier object applied
+		if (auto idx = admit(obj)) {
+			Admitted one{*idx, std::move(obj), {}, {}, {}};
+			co_await prepare_inline(one);
+			co_await apply(one);
+			co_await checkpoint();
+		}
+	};
+
+	for (auto& obj : batch) {
+		if (obj.is_array()) {
+			for (auto& o : obj) {
+				co_await take(std::move(o));
+			}
+		} else {
+			co_await take(std::move(obj));
+		}
 	}
+	co_await apply_run();   // the batch's last run applies before the next batch is read
 }
 
 
