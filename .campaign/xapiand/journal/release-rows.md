@@ -1,32 +1,37 @@
 # release-rows: journal
 
-State: waiting on jobs 261111-190759-a5108f 261111-190824-90d3cd 261111-190918-66d76a 261111-191022-797ef1 (and their dependents)
+State: waiting on jobs 261111-191950-45f111 261111-191957-551959 261111-192004-29c1c9 261111-192011-19892f 261111-192016-2a010a 261111-190824-90d3cd 261111-190918-66d76a
 Quest: .campaign/xapiand/quests/release-rows.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at prospect `c984384` (harness: `tools/release_rows/rows.sh`, `tools/release_rows/stem_parity.cc`;
-row tests in `test/segment_test.cc`, `test/aggregate_test.cc`; probe checks in `tools/parity.cc`).
-Branch pushed for CI `asan` (A6).
+Head prospect `fca9ef6` (pushed: CI `asan` runs on it). `c984384` failed to build: xxhash's global
+`U64` (lz4, through prospect's writer) collided with aggregate_test's slot enum; renamed to `S_*`.
+The fuzz jobs submitted at `c984384` were cancelled so A5's fuzzing runs once, at the head the row
+tests pass at.
 
-| Job | Step | For |
-|---|---|---|
-| 261111-190759-a5108f | build: row tests at the release pins, binaries | A2 A3 A5 |
-| 261111-190824-90d3cd | suite: prospect 850d4e8's whole suite at strata 5d742b2 | A2 A5 |
-| 261111-190827-e27ab0 | parity (after build) | A1 A2 |
-| 261111-190829-7e8426 | verify (after build) | A1 |
-| 261111-190832-6ac297 | stems (after build) | A4 |
-| 261111-190918-66d76a | fuzz-build | A5 |
-| 261111-190921-89267f .. 261111-191012-6d4149 | fuzz segment, postings, values, fielddict, seeds 1-6 (after fuzz-build) | A5 |
-| 261111-191022-797ef1 | build-test at main's pins (campaign verify) | |
+| Job | Commit | Step | For |
+|---|---|---|---|
+| 261111-191950-45f111 | fca9ef6 | build: row tests at the release pins, binaries | A2 A3 A5 |
+| 261111-191957-551959 | fca9ef6 | parity (after build) | A1 A2 |
+| 261111-192004-29c1c9 | fca9ef6 | verify (after build) | A1 |
+| 261111-192011-19892f | fca9ef6 | stems (after build) | A4 |
+| 261111-192016-2a010a | fca9ef6 | build-test at main's pins (campaign verify) | |
+| 261111-190824-90d3cd | c984384 | suite: prospect 850d4e8's whole suite at strata 5d742b2 (builds only the pin ref, so the result stands for any head) | A2 A5 |
+| 261111-190918-66d76a | c984384 | fuzz-build (does it build at the release pins) | |
+| 261111-190759-a5108f | c984384 | failed: the U64 collision above | |
 
 ## Next
 
-1. Read each job; fold failures (a difference from the oracle: fix if small and in the file set,
+1. Read the jobs above; fold failures (an oracle difference: fix if small and in the file set,
    else list it with the query and both answers).
-2. If fuzz_postings OOMs at strata 5d742b2 (fuzz/MEMORY.md), one 10-min run at main's pins for the
-   A/B, and Blocked on: the release's strata pin.
-3. `docs/gates/release-rows.md` with every row, its commit and jobs.
+2. When build passes and no code change is owed: `rows.sh fuzz-build` (--minutes 30, the five
+   --ref pins as in build) and 24 x `rows.sh fuzz TARGET SEED` (segment, postings, values,
+   fielddict; seeds 1-6; --minutes 15; --after fuzz-build; --for A5).
+3. If fuzz_postings OOMs at strata 5d742b2 (fuzz/MEMORY.md: fixed at strata 71750940/94480d52,
+   past the release pin), one 10-min run at main's pins for the A/B; Blocked on: the release's
+   strata pin.
+4. `docs/gates/release-rows.md` with every row, its commit and jobs.
 
 ## Inventory (prospect base `0aa68f4`)
 
