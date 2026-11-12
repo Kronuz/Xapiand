@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-165347-d979c7 261111-171014-19268b 261111-171016-01a84c 261111-171041-c9ab68 261111-171043-7a746f 261111-171045-06e893 261111-171048-c39d8d 261111-171050-a82ab4 261111-171052-af8ee2 261111-171055-51a31b 261111-171145-b4549d 261111-171146-002593
+State: waiting on jobs 261111-200215-2567dc 261111-200219-6bf1ed 261111-200223-9495ee
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,16 @@ status` reads State, the first step under Next, and the Evidence table. State is
 waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Timing read and scored into `docs/gates/phase7c.md` (head/pre-7c, median of 3 pairs, range): T4 MISS (all 16 HTTP
+loops over 1,024 us loaded, worst p99 24.6-28.7 ms, p99.9 49-57 ms; pre-7c's under it); T5 MISS on 2x unloaded + 1 ms
+(76.8 ms against 8.93 ms) but 0.194 of pre-7c; T10 flood p99 50.94 ms against about 20 ms (MISS); T11 PASS, CPU 0.073
+(0.073-0.098), hop wall gone; T12 RESTORE 0.288 (0.279-0.305; profile_bulk 0.284) MISS, QPS 2.599 (2.371-2.617)
+PASS; A21 macOS CPU 0.958 (0.930-1.019), p99 0.962, within D62; X3-5 35.1 KiB per open index at 10,001 open.
+A16 af8ee2 timed out (10,000 indexes take 1,233 s to create): resubmitted at 2,500 as 261111-200215-2567dc (strict).
+R13 rejected by the lead: allocations and handlers per request now measured by 261111-200223-9495ee (a DYLD
+malloc interposer, and asio handler tracking builds 261111-200219-6bf1ed), ABBA x3 each.
+
 
 Timing rows, mine by the lead's 11-11 message (D59: one job of at most 10 minutes each, holding ABBA pairs), at
 Xapiand:49ebb4481 (adds node CPU per phase to `stall_load.py`):
@@ -150,6 +160,13 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Blocked on
 
+7. **T4, T5, T10's flood, T12's RESTORE miss (the lead's: the gate's outcome).** With no offload pool every HTTP loop
+   stalls 25-29 ms at p99 under the mixed load (pre-7c: under 1 ms), and RESTORE runs at 0.29x pre-7c while using
+   0.81x its CPU per document (wall lost to serialization, not work). Options: (a) a profiling quest on the loaded
+   phase (which work runs unsliced on the reactors: the RESTORE stream, aggregations, or merges) and on RESTORE's
+   wall; (b) rule the targets for 7c and carry them to Phase 8. Recommendation: (a), the gate's claim is "never
+   blocks a reactor". The report states the misses as they are.
+
 0. A6, A15 and A21's Linux half wait on the Linux VM (Detent is timing on it, lead 11-11). FreeBSD: no functional
    CI job. A9: x7-cancel-rows. A13 coverage, corpora: x7-coverage. A22: x7-view-bench. R4 is ruled (lead, quest
    Decisions). A21 allocations and handlers per request: owed (R13).
@@ -177,30 +194,30 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261111-142844-048b3b (`t1_strict_owed`, `t1_census`: 51 threads, all section 2's) |
-| A2 | 261111-142844-048b3b (`t2_e2e_asan`, `t2_stored_asan`); e2e 261111-142834-e6b01e |
-| A3 | recovery 261111-142835-bb67a2; 261111-142844-048b3b (`t3_crash`, `t3_crash_asan`) |
-| A4 | <no evidence yet> (lead, exclusive) |
-| A5 | <no evidence yet> (lead, exclusive) |
+| A1 | rows 261111-171145-b4549d (`t1_strict_owed`, `t1_census`: only section 2's threads) |
+| A2 | rows 261111-171145-b4549d (`t2_e2e_asan`, `t2_stored_asan`); e2e 261111-142834-e6b01e |
+| A3 | recovery 261111-142835-bb67a2; rows 261111-171145-b4549d (`t3_crash`, `t3_crash_asan`) |
+| A4 | 261111-171041-c9ab68: MISS, every HTTP loop's p99 24.6-28.7 ms against 1,024 us (Blocked on 7) |
+| A5 | 261111-171041-c9ab68: MISS on 2x unloaded + 1 ms (76.8 against 8.93 ms); 0.194 of pre-7c; same index 98.2 ms |
 | A6 | <no evidence yet> (Linux VM) |
-| A7 | t7-tsan 261111-142834-da0a9e; 261111-142844-048b3b (`t7_asan`: dump equals the model, 0 reports) |
-| A8 | 261111-142844-048b3b (`t8_overload_*`: every round enforced, peaks 1,000 / 23, 0 other errors); RSS against T4 owed (lead) |
+| A7 | t7-tsan 261111-142834-da0a9e; rows 261111-171145-b4549d (`t7_asan`) |
+| A8 | rows 261111-171145-b4549d (`t8_overload_*`: enforced rounds, peaks 1,000 / 23, 0 other errors); RSS within 10% of T4's not comparable (2 against 16 reactors) |
 | A9 | <no evidence yet> (quest x7-cancel-rows) |
-| A10 | 261111-142844-048b3b (`t10_lua`, `t10_lua_asan` every case); flood p99 57.10 ms and T4 with loops: lead |
-| A11 | <no evidence yet> (lead, exclusive) |
-| A12 | <no evidence yet> (lead, exclusive) |
-| A13 | 261111-142844-048b3b (ASan+UBSan ctest 37/37); t7-tsan 261111-142834-da0a9e; X3-5 261111-165347-d979c7 pending; coverage and corpora: x7-coverage |
-| A14 | `docs/gates/phase7c.md` (draft, functional rows filled) |
+| A10 | rows 261111-171145-b4549d (every case); 261111-171050-a82ab4: flood p99 50.94 ms MISS, T4 with loops MISS |
+| A11 | 261111-171043-7a746f: PASS, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone |
+| A12 | 261111-171045-06e893, 261111-171048-c39d8d: RESTORE 0.288 / 0.284 MISS; QPS 2.599 PASS; 16 logical CPUs |
+| A13 | rows 261111-171145-b4549d (ASan+UBSan ctest); t7-tsan 261111-142834-da0a9e; 261111-165347-d979c7 (35.1 KiB per open index at 10,001); coverage, corpora: x7-coverage |
+| A14 | `docs/gates/phase7c.md` (draft, every row scored) |
 | A15 | <no evidence yet> (Linux VM, FreeBSD) |
-| A16 | <no evidence yet> (lead, strict) |
-| A17 | build-test 261111-162221-c4aa56 passed; 261111-142844-048b3b (`t1_strict_owed`) |
+| A16 | 261111-165347-d979c7 (10,000 indexes, light: p50 686 ms, peak pinned 5,000); strict 261111-200215-2567dc pending |
+| A17 | build-test 261111-171146-002593; rows 261111-171145-b4549d (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
-| A19 | removed 261111-142835-15e20c; 261111-142844-048b3b (`x6_shutdown`) |
-| A20 | build-test 261111-162221-c4aa56 passed |
-| A21 | <no evidence yet> (D62: over 5% CPU or 10% p99 after optimizing fails) |
+| A19 | removed 261111-142835-15e20c; rows 261111-171145-b4549d (`x6_shutdown`) |
+| A20 | build-test 261111-171146-002593 |
+| A21 | 261111-171055-51a31b (macOS CPU 0.958, p99 0.962: within D62); allocations, handlers 261111-200223-9495ee pending; Linux owed |
 | A22 | <no evidence yet> (quest x7-view-bench) |
 | A23 | D53 (T4 reads the control loop only while busy) |
-| A24 | <no evidence yet> (pins met: http:51d153a, prospect 850d4e8; T12's jobs: lead) |
+| A24 | pins http:51d153a, prospect 850d4e8; T12's jobs 261111-171045-06e893, 261111-171048-c39d8d (RESTORE miss stands with both) |
 
 ## Result
 
@@ -245,8 +262,8 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   half its saturating rate, 210/s at 1,000,000).
 - R12. The pre-7c binary (142b2ca77) runs through a wrapper adding `--solo` and `XAPIAND_ENGINE=strata`, which X1
   removed (Xapiand:4ef308995); the harness is the head's for both arms, so measurement code is one.
-- R13. A21's macOS half compares the commits around the one-shape wave, Xapiand:b6b8f7534 (before reactor step R)
+- R13 (allocations unmeasured: rejected by the lead; now measured by 261111-200223-9495ee). A21's macOS half compares the commits around the one-shape wave, Xapiand:b6b8f7534 (before reactor step R)
   and Xapiand:927acf570 (http H1 + H2 + the affinity fix); the merge inside it (Xapiand:4ff5eb99d) changes two `src`
-  files. Allocations and handlers per request are not measured (no macOS allocation counter in the harness): owed.
+  files.
 - R3. T8 runs at dry-run size (20,000 documents): the row's functional claims are 503s and no other errors; RSS
   within 10% of T4's run needs the lead's 1,000,000-document run.
