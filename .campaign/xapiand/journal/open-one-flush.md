@@ -1,6 +1,6 @@
 # open-one-flush: journal
 
-State: blocked on lead: A2 workload ruling (CI 43199523054 running)
+State: blocked on lead: A2 workload ruling
 Quest: .campaign/xapiand/quests/open-one-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Nothing running but CI run 43199523054 (strata:c35ce7e0; dd3c3a4a is docs-only).
+Nothing running. CI 43199523054 green on Linux; macos-arm64's rerun queued (it never got a runner).
 
 ## Next
 
 1. Lead rules on A2 (below); if the loaded run counts, it is retagged or rerun with `--for A2`.
-2. Record CI's outcome in Evidence.
+2. Check macos-arm64's rerun of CI 43199523054 (not needed for A3).
 
 ## Blocked on
 
@@ -33,7 +33,7 @@ under a dirty cache", which both jobs show.
 |---|---|
 | A1 | 261112-022003-37891b (index_test passes at strata:c35ce7e0, T4 cases 9 and 10 included); mutant 261112-022005-2de6e1 at strata:65fd2afd fails case 9 (`index_test.cc:137`, the reopened generation lost after the power loss, 31 failures then exit) |
 | A2 | loaded probe 261112-023556-0291d4: p99 lower after in 5 of 6 pairs, p50 45.1-46.0 ms before vs 23.0-25.9 ms after (not tagged --for A2; ruling above). Quiet run 261112-022029-add889 (strict, after build 261112-022027-c52fb1): quiet device, both sides 0.13-0.18 s per 1,000 opens, p50 102-117 us; p99 lower after in 3 of 6 pairs (pairs before/after: 250/251, 300/247, 187/231, 239/254, 215/213, 245/204 us); max ~21 ms on both. Not met as written. |
-| A3 | suite 261112-022007-45e212 passes at strata:c35ce7e0; CI 43199523054 pending |
+| A3 | suite 261112-022007-45e212 passes at strata:c35ce7e0; CI 43199523054 at strata:c35ce7e0: linux-x86_64 gcc and clang, linux-arm64-gcc, linux-asan-ubsan, linux-tsan, freebsd-x86_64, macos-x86_64 pass; macos-arm64 cancelled with no runner assigned (15 min queued), rerun requested |
 
 ## Result
 
