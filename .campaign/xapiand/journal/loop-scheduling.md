@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-141757-8568f0 261112-141759-e35a09 261112-141803-72c158 261112-141805-74aaf9
+State: waiting on jobs 261112-144638-49d13f 261112-144641-58278e
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -30,6 +30,21 @@ three targets' flags.make; thread.cc and pool.cc compile).
   (RLIMIT_NICE raised with `sudo prlimit`), 4 workers, 4 reactors (heavy 32). Whether nice -5 took
   effect is read back: the census prints each class's priorities (`/proc` field 18, 20 + nice) and the
   policy's applied/failed/errno counts; a failed arm is reported as not applied, not as a null result.
+
+- 261112-141757-8568f0 failed again at CheckAtomic, and not because of the flag: the reused slot's
+  `build-ls/CMakeCache.txt` held the first run's failed `HAVE_CXX_ATOMICS_WITHOUT_LIB` (empty, and no
+  "Performing Test" line in the log); my local configure with the same `-fno-omit-frame-pointer` passed.
+  Resubmitted with `rm -rf build-ls` first: 261112-144638-49d13f (build), 261112-144641-58278e (E1).
+
+E3 (261112-141805-74aaf9, Linux VM, 8 vCPUs, 32 heavy clients), loaded phase, base arm: loops are
+saturated, not descheduled from idle CPUs: 8 loops use 6.68 cores, runnable 99% of the window, in a handler
+98%; ready (runnable, off CPU) 12% of their runnable time; schedstat run-queue wait 0.161 s per on-CPU s
+(437 us per slice); workers wait 1.54 s per on-CPU s. Runnable threads mean 10.4 on 8 CPUs (more than 8 for
+92% of the window); host 97% busy. The VM's idle loops already show lag p99 2.05 ms (timer wake-up under
+HVF), so T4's 1,024 us edge cannot be judged there. Arms (loop lag p99 median, light p99):
+base 5.63 ms, 19.8 ms; nocensus 8.19 worst, 20.0 ms; workers nice 5 (applied: pri 25) 4.61, 20.9; loops
+nice -5 (applied: pri 15, RLIMIT_NICE raised) 5.12, 23.1 (the generator's ready share 34% to 57%); 4 workers
+4.10, 16.7; 4 reactors (heavy 32) 2.56 (loops ready 0.5%, run-queue wait 0.003 s/s), 24.7.
 
 ## Next
 
