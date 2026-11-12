@@ -1,15 +1,15 @@
 # http-cancel-race: journal
 
-State: waiting on jobs 261112-035947-754791 261112-035948-060f09 261112-035951-01fc5f
+State: ready for review
 Quest: .campaign/xapiand/quests/http-cancel-race.md (the lead's; never edit it)
 
 ## Doing
 
-Waiting on the three jobs below and on GitHub CI at http:473bbc3.
+Nothing: all three jobs passed at http:473bbc3; GitHub CI run 43213906039 was in progress at hand-off.
 
 ## Next
 
-1. When the jobs and CI are green, set State to "ready for review" with the brief's table.
+1. Correctness review; confirm CI run 43213906039 green on every platform.
 
 ## Blocked on
 
@@ -19,7 +19,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261112-035947-754791 (suite, incl. readahead_test's new window case); 261112-035948-060f09 `--fails-without`: `sh test/watch_mutants.sh build-mutants cancel-race`, exits 0 only when readahead_test fails on "[U] a cancel between the wake and its handler ends the read with operation_aborted"; 261112-035951-01fc5f every watch mutant killed |
+| A1 | 261112-035947-754791, 261112-035951-01fc5f; fails without: 261112-035948-060f09. Detail: build-test 261112-035947-754791 (suite, incl. readahead_test's new window case); 261112-035948-060f09 `--fails-without`: `sh test/watch_mutants.sh build-mutants cancel-race`, exits 0 only when readahead_test fails on "[U] a cancel between the wake and its handler ends the read with operation_aborted"; 261112-035951-01fc5f every watch mutant killed |
 | A2 | build-test 261112-035947-754791; GitHub CI at http:473bbc3 |
 | A3 | [artifact] `docs/perf/watch-peek.md` (Timing: A/A printed as after/control; rotation stated) |
 
