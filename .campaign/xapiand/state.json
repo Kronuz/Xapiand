@@ -17975,6 +17975,45 @@
       "updated": "2026-11-10T10:31:57",
       "worktree": ""
     },
+    "x7-loop-fix-c": {
+      "accepted": {},
+      "after": [
+        "x7-loop-stalls"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/database/shard.cc",
+        "src/database/handler.cc",
+        "src/database/handler.h",
+        "src/database/data.h",
+        "src/database/data.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_reactor_requests.cc",
+        "docs/perf/x7-loop-stalls.md",
+        "docs/design/phase7c.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
+      "updated": "2026-11-12T03:29:46"
+    },
     "x7-loop-stalls": {
       "accepted": {
         "correctness": {
