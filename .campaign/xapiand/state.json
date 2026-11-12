@@ -284,9 +284,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
-      "updated": "2026-11-12T00:26:29",
+      "updated": "2026-11-12T01:32:34",
       "worktree": "../Xapiand-wt/xapiand/agg-shard-parity"
     },
     "alpha10-builds": {
