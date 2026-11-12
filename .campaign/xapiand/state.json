@@ -10092,7 +10092,30 @@
       "updated": "2026-11-08T13:25:10"
     },
     "open-one-flush": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-12T03:19:11",
+          "base": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "blobs": {
+            "docs/design/manifest-log.md": "100644:70a4af6dbf8104dd386d35f401aed93f076cce6d",
+            "docs/perf/open-sync.md": "100644:6e1eb12388a8013a92a14af3ae0063fa83d879c3",
+            "include/strata/core/index.hh": "100644:d78eddbffd1b77eb61d148b6eff3372c916edcbe"
+          },
+          "by": "review",
+          "commit": "c35ce7e0de996348e57970339b3f20e7015a5e29",
+          "criteria": "06bc211c287f6aa6",
+          "diffs": {
+            "docs/design/manifest-log.md": "6d832e4600da5bcd",
+            "docs/perf/open-sync.md": "94646d6d712da3ed",
+            "include/strata/core/index.hh": "db630379c03b90f2"
+          },
+          "findings": {},
+          "note": "",
+          "review": "c91051f9c48ff75236e824719ed8c1abb37e8963",
+          "reviewed": "c35ce7e0de996348e57970339b3f20e7015a5e29",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
       "branch": "quest/xapiand/open-one-flush",
@@ -10124,7 +10147,7 @@
       "risk": "high",
       "status": "review",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-12T02:53:02",
+      "updated": "2026-11-12T03:19:11",
       "worktree": "../strata-wt/xapiand/open-one-flush"
     },
     "perf-watch-peek": {
