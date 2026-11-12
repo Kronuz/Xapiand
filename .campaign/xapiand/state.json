@@ -18156,19 +18156,48 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T03:48:37",
+          "commit": "7a8778b836b1936f2ba396f42410da1c38b2983b",
+          "criteria": {
+            "A1": "[artifact] `docs/perf/x7-loop-stalls.md` (profiles E1a 18ce81, E2 793974; causes, ranked fixes, the chore design)",
+            "A2": "261112-033046-5fb95c",
+            "A3": "261112-033046-99e1a0",
+            "A4": "261112-025950-117b80; fails without: 261111-230628-74a222, 261111-232735-af5357, 261111-232738-c4c72b, 261111-235701-0ecdb6, 261111-235704-037ffb, 261111-235708-0e58e3, 261112-000958-55273a, 261112-002521-478825, 261112-002525-05438d, 261112-002529-0c957d, 261112-002533-5c5bae, 261112-002537-86670c, 261112-002541-b2314b"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "ebf6698c1aee62d6eeea139225ebc4d698dda30c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-025950-117b80",
+              "level": "light",
+              "seconds": 290.4,
+              "state": "done",
+              "what": "x7-loop-stalls check build-test at ebf6698c1aee"
+            }
+          ],
+          "final": true,
+          "from": "987cda4edba80b15fdad45027b7f0f0919544d07",
+          "reason": "",
+          "tested": "cafd848d9c6ddd70cf03ea76e5d29de62f07dfe3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-12T03:30:31",
-      "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
+      "updated": "2026-11-12T03:48:47",
+      "worktree": ""
     },
     "x7-scan-slices": {
       "accepted": {},
