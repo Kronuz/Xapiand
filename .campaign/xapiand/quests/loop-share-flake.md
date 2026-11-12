@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+test_loop_yield's RESTORE check (tests/test_loop_yield.cc:383, `loop_ms < process_ms * 0.45`) passes on any runner, so master CI is green again. It fails on GitHub's runner (master run at 53ce159e1 and xapiand-strata-bump run 43278343734: loop 331.7 of 723.6 ms, 45.8%) because the loop's share depends on how many worker threads the machine gives the prepares. The check compares against the same RESTORE on the serial path in the same process (`DocIndexer::seams.serial`), so it measures that prepares moved off the loop, not the core count.
 
 ## Acceptance criteria
 
@@ -14,18 +14,17 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 The loop-share check is relative to the serial path's share measured in the same test, and passes in GitHub CI's Build + unit + smoke job: CI
+- A2 The check still fails when prepares run on the loop: a `--fails-without` job (prepares forced onto the loop)
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-12: master is red on this ratio; fix forward. Overlaps x7-loop-fix-c's tests/test_loop_yield.cc, which merges master after this lands.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
