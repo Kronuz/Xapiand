@@ -10143,20 +10143,51 @@
         "docs/perf/open-sync.md",
         "bench/open_sync/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/open-one-flush",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T03:19:54",
+          "commit": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "criteria": {
+            "A1": "261112-030638-90e5bc (passed at 69b76e9c05a0; ignores docs-only docs/perf/open-sync.md); fails without: 261112-022005-2de6e1, 261112-025813-0362d3, 261112-025815-cc2c50",
+            "A2": "261112-030638-fcc49d (passed at 69b76e9c05a0; ignores docs-only docs/perf/open-sync.md)",
+            "A3": "261112-030638-ee5b2a (passed at 69b76e9c05a0; ignores docs-only docs/perf/open-sync.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "69b76e9c05a07a7d2e64a473cf14dbe82916a36c",
+              "docs": [
+                "docs/perf/open-sync.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-030638-ee5b2a",
+              "level": "light",
+              "seconds": 145.9,
+              "state": "done",
+              "what": "open-one-flush check suite at 69b76e9c05a0"
+            }
+          ],
+          "final": true,
+          "from": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "reason": "",
+          "tested": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-12T03:19:49",
-      "worktree": "../strata-wt/xapiand/open-one-flush"
+      "updated": "2026-11-12T03:19:59",
+      "worktree": ""
     },
     "perf-watch-peek": {
       "accepted": {
