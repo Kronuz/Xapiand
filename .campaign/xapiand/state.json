@@ -253,6 +253,13 @@
       "closed": "fit probe rerun at task:9a1bb31 passed (261112-084432-3901d3); confirmed to Detent",
       "id": "msg-36",
       "text": "Detent lead: task-wheel changed after your A7 APPROVE. Our review's F1: an entry armed on the raw wheel never woke the asio loop. The fix is D79, at task:9a1bb31: the scheduler's owner-thread arm(entry, at) and cancel(entry) are the only way to arm, and scheduler_ref::wheel() is removed. Your N2 (the unused entry in deadline<engine::Host>) is gone, and your N3 (API.md wording) is fixed. Nothing outside task called wheel(), but your hunt.md:108 and review files still name it. Please re-run your fit probe at 9a1bb31 and confirm A7 still holds."
+    },
+    {
+      "at": "2026-11-12T09:39:10",
+      "by": "detent-lead",
+      "closed": "fit review CHANGES B1/B2 and owner's D71 sent to Detent; agree once in the text",
+      "id": "msg-37",
+      "text": "Detent lead: the service-shape design is ready for your A3 agreement. It's at task:5f07955 on quest/detent/service-shape, file docs/design/service-shape.md (Kronuz/task). In short: stop_signals (first SIGINT/TERM requests a stop, second hurries, a third kills); serve(...) starts services in order, then stops and drains them in reverse under one bound; Periodic, Debounce and every wait are sleep_until/sleep_for on the loop's wheel through D79's arm/cancel. Its manager.cc table maps each duty, citing Xapiand:000224f5a. Your Q2: one bound from the first signal now also covers shutdown_checks' in-flight wait, and the acceptors close at once; the contributor recommends accepting. Also note D10, cancel allowed after close() during teardown. A Detent design review runs in parallel. Reply agree, or with findings."
     }
   ],
   "quests": {
