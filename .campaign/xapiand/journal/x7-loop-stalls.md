@@ -20,7 +20,16 @@ A1 (profile note, `docs/perf/x7-loop-stalls.md`; file set is only that note). Bi
 
 ## Next
 
-1. Read E1's output; write the loop section of the note; rank fixes; commit; report to the lead.
+1. Read E1's output (`campaign job show 261111-201659-919f00`: `A-mixed.sample.txt`, `A-threads-*.txt`, the B
+   table at the log's end); fill the note's loop, fixes and reproduce sections; commit; report to the lead.
+
+RESTORE section drafted (Xapiand:f1e29b97e): the accepting reactor is busy for the whole restore (83-86% of the
+profile window, all three head arms); `finalise_write`'s decompress-and-recompress is 34-44% of that loop and
+`Schema::index` 23-29%. Pre-7c ran the same work on 10 DP and 5 DI threads. Candidate fixes to rank: prepare off the
+loop (in chores, or across loops) with only the apply in the turn; compress the record once (at finalise); apply per
+shard in parallel (5 shards by default). Loop candidates to check against E1: unsliced work after the search (the
+hit loop's `get_data` and JSON for `_limit: 100`, `search_views.cc` near line 2027), 4,096-ordinal windows with an
+aggregation spy, per-segment scorer `build`, RESTORE's 0.5 ms per object between checkpoints.
 
 ## Blocked on
 
