@@ -228,6 +228,33 @@
     }
   ],
   "quests": {
+    "agg-shard-parity": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_aggregation_shards*",
+        "harness/agg_parity*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
+      "updated": "2026-11-11T23:32:48"
+    },
     "alpha10-builds": {
       "accepted": {},
       "after": [],
