@@ -690,6 +690,8 @@
       "after": [
         "barrier-warning-completion"
       ],
+      "base": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+      "branch": "quest/xapiand/barrier-warning-strata",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -807,6 +809,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/barrier-warning-strata",
       "landed": [],
       "lenses": [
         "durability"
@@ -816,9 +819,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-09T04:14:24"
+      "updated": "2026-11-11T23:55:38",
+      "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
       "accepted": {},
