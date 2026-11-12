@@ -17315,7 +17315,9 @@
       "files": [
         "include/prospect/shards.hh",
         "test/sliced_test.cc",
-        "docs/perf/scan-slices.md"
+        "docs/perf/scan-slices.md",
+        "docs/perf/README.md",
+        "docs/mechanisms/sliced-search.md"
       ],
       "journal": "../Xapiand-wt/xapiand/x7-scan-slices",
       "landed": [],
@@ -17323,12 +17325,11 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
-      "reason": "started by force: release-rows' test/** glob; its diff (prospect:7a3a54b) never touches test/sliced_test.cc",
       "repo": "../prospect",
       "risk": "normal",
       "status": "active",
       "title": "prospect's scan yields every 256 ordinals when per-match work runs",
-      "updated": "2026-11-11T23:01:19",
+      "updated": "2026-11-11T23:10:58",
       "worktree": "../prospect-wt/xapiand/x7-scan-slices"
     },
     "x7-view-bench": {
