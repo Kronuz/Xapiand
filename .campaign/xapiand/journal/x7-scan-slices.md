@@ -1,6 +1,6 @@
 # x7-scan-slices: journal
 
-State: working
+State: waiting on jobs 261111-230601-107439 261111-230602-46c1c9 261111-230624-4bea51 261111-230634-53c6e2 261111-231025-b3ef28
 Quest: .campaign/xapiand/quests/x7-scan-slices.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,9 +17,10 @@ with base prospect:0aa68f4's shards.hh via `-iquote .scratch/base`), strict smok
 
 ## Next
 
-1. From the smoke's per-invocation time, size and submit the strict row (≤10 min, rounds of A B A2
-   alternating order, `set -o pipefail`), `--after` the smoke, slot x7ss-ab, `--for A2`.
-2. Write docs/perf/scan-slices.md (A3) from the row; commit; push.
+1. Read the row 261111-231025-b3ef28 (strict, `--for A2`, after the smoke: 8 rounds of
+   `sliced_test bench 150000 21`, sides A B A2): per arm (plain, count, agg; unsliced, sliced)
+   B/A and A2/A over rounds' medians. Cancel and resize it if the smoke shows a problem.
+2. Write docs/perf/scan-slices.md (A3) from it; commit; push; paste `campaign brief`'s table.
 
 ## Blocked on
 
