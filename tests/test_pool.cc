@@ -2181,6 +2181,8 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 void test_the_sweeps_close_syncs_a_merges_output() {
 	Watchdog watchdog("the sweep's close syncs a merge", 60s);
 	DatabasePool pool(control_loop(), 8, 0, engine::default_readers_per_index, fast_sweep());
+	auto& gate = A::wrap_executor<GatedExecutor>(pool);
+	gate.hold();   // the merge cannot finish before the commit, so its output is published after it
 	const auto path = fresh("sweep_merge");
 	engine::rev revision;
 	std::size_t written = 0;
@@ -2193,6 +2195,7 @@ void test_the_sweeps_close_syncs_a_merges_output() {
 		written = static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count());
 		engine::sync_wait(shard.commit());
 		revision = shard.engine().revision();
+		gate.let_go();
 		{
 			// wait_merges() is the index's own merge completion: it waits for the background merges and publishes them.
 			auto turn = engine::sync_wait(entry->take_turn(WRITE));

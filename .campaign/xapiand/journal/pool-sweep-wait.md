@@ -38,5 +38,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
+- Linux CI failed REQUIRE(merge_output_unsynced) at 2201: the merge can finish before shard.commit(), whose publish_merges + commit_files then publishes and syncs it, so wait_merges() has nothing left to publish. Fix: the test's GatedExecutor holds the merge until after the commit (as test_the_autocommit_comes_back does), then gate.let_go() and wait_merges(): the order is deterministic, no time involved.
+
 - No src/ change needed: strata's `wait_merges()` (public, at the pinned commit) is the completion signal; assertions kept (merges_pending()==0, merge_output_unsynced()).
 - The later `until(... free, 10s)` poll on the sweep's close stays: the sweep has no completion signal and the quest names the merge loop only.
