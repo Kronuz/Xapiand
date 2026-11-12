@@ -4903,6 +4903,8 @@
     "lib-doc-nits": {
       "accepted": {},
       "after": [],
+      "base": "3a3c2054b66fd0d483ed7de8e10e5171675d7766",
+      "branch": "quest/xapiand/lib-doc-nits",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4917,6 +4919,7 @@
         "docs/mechanisms/commit-barriers.md",
         "include/completion/posix.h"
       ],
+      "journal": "../Xapiand-wt/xapiand/lib-doc-nits",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 8",
@@ -4924,9 +4927,10 @@
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Review nits in completion's barrier docs and header",
-      "updated": "2026-11-12T03:24:46"
+      "updated": "2026-11-12T03:24:53",
+      "worktree": "../completion-wt/xapiand/lib-doc-nits"
     },
     "library-issues": {
       "accepted": {},
