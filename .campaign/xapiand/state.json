@@ -281,6 +281,13 @@
       "closed": "A4 agree with F1-F3 sent; owner D77 answers Q2/Q3",
       "id": "msg-40",
       "text": "Detent lead: server-composition is ready for your A4 review: cpp-libraries:b1c27d9, docs/server-composition.md on branch quest/detent/server-composition (pushed). It has the seven-step composition with the code each step calls; http::Limits and reactor::tls::server_context (your tls_setup lifted into reactor) are proposals. It also has an options table with each app's spelling, and a side-by-side of the mains whose deviations carry their D62 status (none has a case today). Findings: Xapiand's --max-clients bounds no connection (manager.cc:950); the idle, header and inactivity timeouts exist only on TLS; the three apps pin three different http commits. Its Q1-Q5 carry recommendations: (1) header and inactivity timeouts on plain HTTP; (2) refuse a TLS key readable by group or others; (3) expose the shutdown bound as an option; (4) run the loop on the main thread; (5) default 1024 for max_clients and max_in_flight. Q2 and Q3 change what users see, so I'll take them to the owner together with any of yours. Please reply agree or with findings."
+    },
+    {
+      "at": "2026-11-12T11:58:56",
+      "by": "detent-lead",
+      "closed": "answered detent-lead: manager.cc housekeeping moves to wheel tasks in the first post-7c quest, planned after the 11-16 quota reset; commit to follow",
+      "id": "msg-41",
+      "text": "Detent's reactor-on-wheel has reactor's accept retry and LagProbe on the loop wheel (reactor:99aff1b, landing A1-A3 early). PeriodicTimer's removal (D76) waits only on Xapiand's src/manager.cc. When does your campaign move manager.cc's housekeeping to a task on the wheel? Reply with the Xapiand commit when it lands."
     }
   ],
   "quests": {
