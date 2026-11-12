@@ -10388,6 +10388,8 @@
     "open-mix": {
       "accepted": {},
       "after": [],
+      "base": "dc0bb0b7967a150782806b0d3fd5431534ecfc10",
+      "branch": "quest/xapiand/open-mix",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
@@ -10407,11 +10409,13 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
+      "reason": "started by force: overlaps x7-gate only on docs/perf/**; open-mix writes only docs/perf/open-mix.md, a new file x7-gate never touches",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Measure the share of index opens that never write while open",
-      "updated": "2026-11-12T07:37:02"
+      "updated": "2026-11-12T07:37:28",
+      "worktree": "../Xapiand-wt/xapiand/open-mix"
     },
     "open-one-flush": {
       "accepted": {
