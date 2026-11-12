@@ -5,27 +5,24 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`test_the_sweeps_close_syncs_a_merges_output` (tests/test_pool.cc:2180-2210) failed `REQUIRE(unsynced)`
+once under host load ~50 on 16 CPUs (job 261111-142834-9c25fd): it polls for a merge to finish within
+a fixed 10 s. It waits on the merge's own completion instead, so load changes its duration, never
+its verdict; what it checks is unchanged.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The test passes 50 times in a row under a light job running beside a CPU-burning load of twice the CPUs, with the build-test check green: jobs
+- A2 [artifact] The wait names the event it waits on: `tests/test_pool.cc`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-12: from hunt row 85.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Everything.
