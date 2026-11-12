@@ -34,7 +34,7 @@ heal in that form; the lead restated A3 on 11-12). The prospect pin is a branch 
 | A1 | job 261112-042225-aad4d1 (pins_check: ok) |
 | A2 | job 261112-042224-6d8e89 (running) |
 | A3 | job 261112-043246-c284b3 (queued), mutant 261112-042232-481834 (killed: exit 0) |
-| A4 | ci:Unit tests under TSan failed on 05cba6694 (run 43217395714): strata catalog race, Blocked on; cite ci:<job name> rows once green |
+| A4 | ci:Unit tests under ASan + UBSan, ci:Unit tests under TSan, ci:AddressSanitizer + UBSan, ci:ThreadSanitizer (run 43298845480 at fa7eb4510, all green) |
 
 ## Result
 
