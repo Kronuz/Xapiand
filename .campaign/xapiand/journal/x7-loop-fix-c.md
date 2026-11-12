@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: working
+State: blocked on lead: design ready, waiting for its concurrency design review
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,29 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Design ready (A1): `docs/perf/x7-loop-stalls.md`, "Design: fix (c), RESTORE's writes off the loop, one shard per
+child". Grounded in the A3 job's RESTORE samples (261112-012857-a77bf8, arms 3/6: loop's write in the turn >= 54-55%,
+`finalise_write` 46%) and the A2 job's per-loop lag (261112-012855-b34e3c: idle p99 512 us, loaded p99 3.0-5.1 ms).
+Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-1. <step>
+1. Lead launches the design review; fold findings by id.
+2. Build step 2 of the design (apply chore + guard shared with `commit_blocking`, range placement, children under
+   `engine::counted`), its tests and mutants; suite as a job.
+3. A3 (T12) exclusive job; then A2 with fix (c) and E4 (handler-duration histogram) exclusive jobs.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+- Lead: the design review (A1).
+- Lead: phase7c.md D4 `flush` row ("RESTORE writes") and D12's RESTORE sentence need amending with the build;
+  `docs/design/phase7c.md` is outside the file set. Widen, or the lead amends it.
+- Lead: T4/T5 (A2) cannot be shown to pass from this file set on current evidence. Fix (c) moves RESTORE only (1.3%
+  of loop time in the mix). The loaded tail (p99 3-5 ms over a 0.5 ms idle floor) needs multi-ms events; E4 decides
+  between long turns (H1, likely the per-hit frame buffer's `madvise`) and descheduling (H3). If H1: fix 3's files
+  (`src/engine/strata/shard.cc`, `doc_view.{h,cc}`, `src/aggregations/bucket.h`) are outside the set. Options:
+  (a) widen this quest after E4; (b) a sibling quest for fix 3 and A2 moves there; (c) keep A2 here and accept a MISS
+  report. Recommendation: (b), with E4 run here first.
 
 ## Evidence
 
@@ -27,7 +41,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | [artifact] `docs/perf/x7-loop-stalls.md`, "Design: fix (c), RESTORE's writes off the loop, one shard per child" (review pending) |
+| A2 | <no evidence yet> |
+| A3 | <no evidence yet> |
+| A4 | <no evidence yet> |
 
 ## Result
 
@@ -37,4 +54,12 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Each shard's child runs under `engine::counted`, so "a task holds one index's turn at most" holds per child
+  rather than being relaxed; the parent holds no turn while it awaits them.
+- The write chore reuses `commit_blocking`'s shape (inline engine chores, `BlockingAllowed`, `sync_wait`) as one
+  guard for both, rather than splitting strata's write API (outside the set).
+- Placement asks each shard once per range; `NEW_NUMERIC_KEY` and a vanished `must_exist` document fall back to the
+  serial path after a join, so placement equals a serial restore's exactly.
+- Turns are held one chore (about 1 ms) at a time, not per object: fewer hops; the same-index row reports the cost.
+- The batch-end drain stays (D1's batch rule unchanged); carrying a run across batches is the next lever only if A3
+  falls short.
