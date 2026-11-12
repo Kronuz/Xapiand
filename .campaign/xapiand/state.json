@@ -17262,6 +17262,8 @@
     "x7-loop-stalls": {
       "accepted": {},
       "after": [],
+      "base": "de4d0ed26aa9256dcb289e7671d7c4e198b2635c",
+      "branch": "quest/xapiand/x7-loop-stalls",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -17281,11 +17283,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: docs/perf/x7-loop-stalls.md is this quest's own file; x7-gate writes no file of that name",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-11T20:05:18"
+      "updated": "2026-11-11T20:05:51",
+      "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-view-bench": {
       "accepted": {},
