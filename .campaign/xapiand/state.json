@@ -13064,7 +13064,7 @@
     "release-rows": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-11T23:31:43",
+          "at": "2026-11-11T23:33:41",
           "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
           "blobs": {
             "docs/gates/release-rows.md": "100644:7b7ed1d4cff7cb97efaff3fa84c025cf944143ea",
@@ -13077,7 +13077,7 @@
           },
           "by": "review",
           "commit": "0ba797e9c1e492c32c4bb59c981c43ab43a00ef6",
-          "criteria": "1af593b7ec98d323",
+          "criteria": "b5d229769326efa3",
           "diffs": {
             "docs/gates/release-rows.md": "9073dd4ba2dc6d54",
             "test/aggregate_test.cc": "9f5b7f98150fde94",
@@ -13129,7 +13129,7 @@
               "reproduced": false
             }
           },
-          "note": "Rulings in the quest file: A3 and A5 are release-level misses with hunt follow-ups",
+          "note": "A3/A4/A5 release-level misses moved to stemmer-names, agg-shard-parity, fuzz-cpu-hour",
           "review": "8671c164333afe021f595f815d7fb5e673e844f5",
           "reviewed": "7a3a54bbb8f0933d34bdf187f1d53dbd47f7004a",
           "verdict": "CHANGES"
@@ -13265,7 +13265,7 @@
       "risk": "high",
       "status": "review",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-11T23:31:43",
+      "updated": "2026-11-11T23:33:41",
       "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
