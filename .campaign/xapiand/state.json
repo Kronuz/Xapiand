@@ -16486,7 +16486,34 @@
       "updated": "2026-11-08T22:35:58"
     },
     "unpin-after-kick": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T10:08:31",
+          "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "blobs": {
+            "docs/design/cold-tier.md": "100644:fa8d49596c415c664ee476a254c7262cf7920245",
+            "docs/mechanisms/catalog.md": "100644:dbcd3f33dbde98fb9e14e25cc950a082aef62767",
+            "include/strata/core/catalog.hh": "100644:6407997fe4db532e32354754a4d54e224907f061",
+            "test/catalog_teardown_test.cc": "100644:10897b45cf0204eccd5e109b96ced42f6da9d078",
+            "test/catalog_test.cc": "100644:976348c1c0251ba58b70f46eb6c2536bc7250c74"
+          },
+          "by": "review",
+          "commit": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "criteria": "32cdb14bc54993ee",
+          "diffs": {
+            "docs/design/cold-tier.md": "dd51818e745e8aad",
+            "docs/mechanisms/catalog.md": "c391beb98dce18c9",
+            "include/strata/core/catalog.hh": "f1a13e46085381b9",
+            "test/catalog_teardown_test.cc": "8d14feb07d740a2a",
+            "test/catalog_test.cc": "4ecbc021b2aaa56f"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8d4c5173abd4dc9c1de0cb2cfc2fd6df39fb46a1",
+          "reviewed": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
       "branch": "quest/xapiand/unpin-after-kick",
@@ -16518,7 +16545,7 @@
       "risk": "high",
       "status": "active",
       "title": "A catalog unpin reads nothing after it kicks the slot's close",
-      "updated": "2026-11-12T09:08:45",
+      "updated": "2026-11-12T10:08:31",
       "worktree": "../strata-wt/xapiand/unpin-after-kick"
     },
     "wbuf-inline": {

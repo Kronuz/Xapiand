@@ -1,7 +1,7 @@
 # unpin-after-kick review: correctness
 
-Commit: strata:3adfdc274867ae6fa843bccd3cb0a83a3b55c2c3
-Verdict: CHANGES
+Commit: strata:86fe7c476c64b86219350a999ee88467bf86269c
+Verdict: APPROVE
 Date: 2026-11-12
 
 APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: lands once each
@@ -65,3 +65,55 @@ A1 to A3 stay unproven until they pass and CI is green.
 No TSan or ASan run of the quest's tests by me (their jobs were queued); no Linux; no stress of
 unpin against shutdown with several workers per slot; the pin_smoke A/B; Xapiand's test_node at a
 re-pinned strata.
+
+## Re-check
+
+Commit: strata:86fe7c476c64b86219350a999ee88467bf86269c
+Verdict: APPROVE
+
+Scope 3adfdc27..86fe7c47: b04ca9e0, a0bc0430, 503df8f0, 441abc39, 86fe7c47. No probe of my own: the jobs
+below answer each question.
+
+- F1 closed. The miss's tail is `over_soft(); post(run_open)` (catalog.hh:1379-1382). Mutant
+  261112-055258-a6bd1d (old tail, ASan) reports heap-use-after-free in over_soft(); the fixed code's
+  `miss_under_shutdown` passes in TSan 261112-083911-63e3ed and ASan+UBSan 261112-083917-866b8a with asserts.
+- F2 closed. (a) `mark_in_unpin_window` begins shutdown at unpin's hook between its load and its exchange;
+  mutant 261112-055301-475b83 (close decided from the first load) fails catalog_teardown_test.cc:900-906.
+  (b) the new `shutdown.mark` hook (catalog.hh:2384) and `unpin_in_mark_window`; mutant 261112-055304-392b68
+  (mark gives up when the word moved) fails :935-941. Both pass in the two sanitizer jobs.
+- 503df8f0's order is right. end_at's unbook (catalog.hh:1776) and finish_close's (:2294) run under the
+  shard mutex while the word still says `closing`; the only way to book again is begin_close / the bound
+  and due closes / reopen, each of which first needs its own compare-exchange from open/owed (:827, :757),
+  which reads from the leaving exchange (acq_rel), so book()'s `booked == 0` assertion
+  (resource_budget.hh:84) holds. Against release(): unbook and lower() both move `booked` only by fall()'s
+  compare-exchange (resource_budget.hh:107-115), so a drop racing the unbook either lowers first (the unbook
+  takes the rest) or fails, reloads 0 and stops; it can never raise a booking. Against `shut`: unbook reads
+  and writes no word bits; shutdown_slot returns on `{0, closing}` (:2394) and end_at's kick (:1800) after
+  the exchange closes it, unchanged. "Closing with nothing booked" already exists between begin_close's
+  exchange and its book() (:827-831) and for a stuck close (after_close, :2218), so no reader assumes
+  otherwise; the only reader is closing_over() (:1536), which in that window counts the slot's descriptors
+  without relief, the over-count it documents as safe (N4). Before the fix the window ran the other way:
+  `open` and still booked, an under-count.
+- refused-end (catalog_teardown_test.cc:947-977) drives the stress failure's shape: a hot slot's own
+  refusal, a close begun at `transition.ended` under the shard mutex (begin_close takes no shard mutex).
+  Mutant 261112-083923-f54687 (Release, end_at's unbook back after `note`) fails the final
+  `pending_descriptors() == 0` check (:974) with rc=1, the sum left booked by the double book; with asserts
+  the old order would trip book()'s assertion instead. CI 43266148532 at 86fe7c47: every job green,
+  linux-tsan and linux-asan-ubsan included.
+- hold_warm (catalog_test.cc:750-771, used at :908-922) builds the same state the old step waited for
+  (`owed`, a chore pin's lease held, a request), and the wake then runs under the sim's injections like any
+  other, so `reposts > 0` (:992) still proves the repost path runs in the schedules and keeps its
+  invariants; it now proves reachability by construction rather than by draw (N6). Its other effect is a
+  1-in-100 step that now acts where it was mostly a no-op (a demotion, a held chore pin released at the
+  next quiescent()); probe 261112-090807-6824f4 prints reposts 28 at 300 seeds and every other coverage
+  CHECK holds there and in build-test 261112-090816-e82be7.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| F1 | no | closed | Miss tail posts last. | catalog.hh:1379-1382; 261112-055258-a6bd1d, 261112-083917-866b8a | - |
+| F2 | no | closed | Both windows forced, each with a failing mutant. | catalog_teardown_test.cc:900-941; 261112-055301-475b83, 261112-055304-392b68 | - |
+| N4 | no | nit | Between end_at's unbook and its exchange a pass may count the refused slot's descriptors without relief and begin one extra close: the safe direction closing_over() names, and the same window begin_close already has. | catalog.hh:1536-1552, 1776-1781, 827-831 | Leave. |
+| N5 | no | gap | finish_close's moved unbook has no test that fails without it; by reading it is order-neutral (after its exchange the slot is `free` or `opening`, neither bookable until a later open), so the move is symmetry, not a fix. | catalog.hh:2294-2301 | Leave, or say so in the commit history only. |
+| N6 | no | nit | The schedules' other coverage counters (wake failures, overloads, gated, bound commits, each site's injection) still rest on draw order, the class of flake 86fe7c47 fixed for reposts; a new hook site or step can shift them the same way. | catalog_test.cc:990-997 | Leave; force one only when it flakes. |
+
+Not run: no probe of my own; the finish_close mutant; Xapiand's test_node at a re-pinned strata.
