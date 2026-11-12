@@ -72,6 +72,7 @@ Lead, 11-11 12:4x, on the investigation (strata:5d3c948a, 7b126bc1):
   pieces (manifest and file maps, views, host IO, merge machinery); the miss joins T1 cold's
   follow-up on memory per tier.
 
+- Lead, 11-11 (band trigger, strata:062182b2): it costs no throughput (on 296 vs off 293 req/s, means of 4 exclusive pairs; flush-scaled +0.7%; the one-slot trigger was -18%) and posts about 2,300 trigger passes per run (was about 16,000). T3's soft-cap bound is soft + one pass (16) + the opens in flight when the sample is taken (at most one per worker thread): the band trigger's 4 and 5 of 259 samples sit up to 3 past soft+16, opens in flight while a pass waits for a chore (job cd5253). The hard caps hold in every run.
 ## May land early
 
 The design documents (task `design`), and tests that change no code.
