@@ -20,14 +20,15 @@
  * THE SOFTWARE.
  */
 
-// A request's work after its search yields the HTTP loop between slices (docs/perf/x7-loop-stalls.md): a search
-// that returns thousands of hits keeps its loop's 1 ms probe answered while it reads them. The node runs in this
-// process with one HTTP loop.
+// What a request costs its HTTP loop (docs/perf/x7-loop-stalls.md): a search that returns thousands of hits keeps
+// its loop's 1 ms probe answered while it reads them, and a restored record is compressed once, in its write. The
+// node runs in this process with one HTTP loop.
 
 #include "test_harness.h"
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -41,10 +42,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "database/data.h"
+#include "database/utils.h"
 #include "endpoint.h"
 #include "http_asio.h"
 #include "manager.h"
+#include "msgpack.h"
 #include "opts.h"
+#include "rapidjson/document.h"
 #include "reactor_lag.h"
 #include "xapiand_exception.h"
 
@@ -122,8 +127,8 @@ private:
 	std::atomic<bool> exited_{false};
 };
 
-// One request on a connection of its own; the response's status (0 when there is none).
-int http_call(const std::string& method, const std::string& path, const std::string& body, const std::string& content_type = "application/json") {
+// One request on a connection of its own; the response's status (0 when there is none), its body into `reply`.
+int http_call(const std::string& method, const std::string& path, const std::string& body, const std::string& content_type = "application/json", std::string* reply = nullptr) {
 	int fd = -1;
 	for (int attempt = 0; attempt < 100 && fd < 0; ++attempt) {
 		fd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -157,6 +162,10 @@ int http_call(const std::string& method, const std::string& path, const std::str
 		response.append(buf, static_cast<std::size_t>(n));
 	}
 	::close(fd);
+	if (reply != nullptr) {
+		const auto end = response.find("\r\n\r\n");
+		*reply = end == std::string::npos ? std::string() : response.substr(end + 4);
+	}
 	return response.rfind("HTTP/1.1 ", 0) == 0 && response.size() > 12 ? std::atoi(response.c_str() + 9) : 0;
 }
 
@@ -223,6 +232,43 @@ static void test_a_search_of_many_hits_yields_its_loop_between_hits() {
 }
 
 
+// A RESTORE compresses each record once, in its write (finalise_write), not also in its prepare, and the record reads
+// back as it was restored, with its id and version.
+static void test_a_restored_record_is_compressed_once_and_reads_back() {
+	constexpr int documents = 200;
+	const std::string text = "a record long enough to be compressed, and repeated so that it compresses; ";
+	auto lines = [&](int first, int count) {
+		std::string body;
+		for (int i = first; i < first + count; ++i) {
+			body += R"({"_id":)" + std::to_string(i) + R"(,"n":")" + std::to_string(i) + R"(","text":")" + text + text + "\"}\n";
+		}
+		return body;
+	};
+	CHECK_EQ(http_call("RESTORE", "/once/?commit", lines(1, 10), "application/x-ndjson") / 100, 2);   // the schema exists after it
+	const auto before = Locator::compressions();
+	CHECK_EQ(http_call("RESTORE", "/once/?commit", lines(11, documents), "application/x-ndjson") / 100, 2);
+	const auto compressed = Locator::compressions() - before;
+	std::fprintf(stderr, "  %d restored records, %llu compressions\n", documents, static_cast<unsigned long long>(compressed));
+	CHECK_EQ(compressed, static_cast<std::uint64_t>(documents));
+
+	for (const int id : {11, 100, 10 + documents}) {
+		std::string reply;
+		CHECK_EQ(http_call("GET", "/once/" + std::to_string(id), "", "application/json", &reply), 200);
+		rapidjson::Document rdoc;
+		json_load(rdoc, reply);
+		const MsgPack obj(rdoc);
+		CHECK_TRUE(obj.is_map());
+		if (!obj.is_map()) {
+			continue;
+		}
+		CHECK_EQ(obj.at("n").str(), std::to_string(id));
+		CHECK_EQ(obj.at("text").str(), text + text);
+		CHECK_EQ(obj.at("_id").as_i64(), static_cast<std::int64_t>(id));
+		CHECK_EQ(obj.at("_version").as_i64(), static_cast<std::int64_t>(1));
+	}
+}
+
+
 int main() {
 	RunningNode node;
 	if (!node.ready()) {
@@ -230,6 +276,7 @@ int main() {
 		return 1;
 	}
 	test_a_search_of_many_hits_yields_its_loop_between_hits();
+	test_a_restored_record_is_compressed_once_and_reads_back();
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;

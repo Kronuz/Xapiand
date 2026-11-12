@@ -404,7 +404,8 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 	// Finish document: add data, ID term and ID value.
 	// The following flush() **must** be after passing data to Schema::index() as
 	// it uses it to get the old document during DatabaseHandler::call_script().
-	data.set_obj(data_obj);
+	// The record stays raw: finalise_write compresses it once, in the shard's turn.
+	data.set_obj(data_obj, false);
 	data.flush();
 	auto serialised = data.serialise();
 	if (!serialised.empty()) {
