@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-090456-c67417 261112-090511-afb297 261112-090524-b3bce6 (B1 mutant 261112-084825-447568 already passed at Xapiand:7b2c8d4f1's code; rerun it if the suite asks)
+State: waiting on jobs 261112-090456-c67417 261112-090511-afb297 261112-090524-b3bce6 (B1 mutant 261112-084825-447568 already passed at Xapiand:fcbde4661's code; rerun it if the suite asks)
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
