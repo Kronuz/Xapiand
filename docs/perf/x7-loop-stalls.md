@@ -346,11 +346,18 @@ deferred objects). Each test asserts its case occurred before it checks the outc
 - A miss between placement and apply (B1): a test seam runs on the loop after placement and before the children, and
   erases id 7; the stream holds three objects of id 7 in one range. The final document is the stream's last object of
   id 7, and the run reports all three deferred. Mutant: a missed write fails as today's `must_exist` miss does.
-- The reviewer's interleaving (B1): a second seam fixes the writes an apply slice takes (one) and is awaited on the
-  loop between two slices; after the first write of id 7 misses it writes id 7 again, which takes the erased docid.
+- The reviewer's interleaving (B1), with a numeric id (only a numeric id gives a new document an erased docid, by
+  `new_did`; a string id takes the shard's next one): a second seam fixes the writes an apply slice takes (one) and is
+  awaited on the loop between two slices; after the first write of id 7 misses it writes id 7 again, which takes the
+  erased docid.
   Every later write of id 7 in the range is deferred (not tried at that docid), so the document ends as the stream's
   last object, with all three deferred. Mutant: a miss defers only the missing write, so the second write replaces the
   new document in place and the deferred first write then lands over it.
+- Failures (N4, option 2): a write that fails and leaves the index stale ends its apply slice, so the later writes of
+  the shard run after the index is replaced (a seam makes one write fail so; the run has one more slice than the same
+  run with no failure, the failing write alone fails, every other object is stored). A pin, turn or slice that fails
+  before its next write fails that write alone and the rest retry (the thrown-slice seam: one write fails, 19 of 20
+  are stored). Mutants: the slice does not end at the stale failure; a failed slice fails the rest of the sub-run.
 - The chores swap (N5): a test seam makes one apply slice throw; afterwards no engine runs its chores inline
   (`ShardEndpoint::engines_inline()`, the guard's count), and a later RESTORE's write runs. Mutant: the guard
   does not restore on the throw path.

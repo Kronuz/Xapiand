@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-083057-772ce1 261112-083119-7312ec
+State: waiting on jobs 261112-084823-54c2d4 261112-084825-447568 261112-084828-d30d45 261112-084832-080c00
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,13 +16,20 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-1. Read the suite 261112-083057-772ce1 (Xapiand:c5fb7f62d) and the mutant 261112-083119-7312ec (exits 0 only when the
-   named `reused` value check fails). If the mutant exits 1 the docid is not reused after an erase: change the test's
-   seam so the write again takes the docid, resubmit both.
-2. Then `campaign accept x7-loop-fix-c design --confirm B1=261112-083057-772ce1 B2=261112-060150-6f4cc5` (suite jobs),
-   write the Result, State "ready for review", launch the correctness reviewer.
+1. Read the suite 261112-084823-54c2d4 (Xapiand:HEAD of the branch) and the three mutants (each exits 0 only when its
+   named check's FAIL line appears): B1 missing-only 261112-084825-447568 (`reused` value check), N4 stale break
+   261112-084828-d30d45 (`with_slices == without_slices + 1`), N4 failed slice fails the rest 261112-084832-080c00
+   (`failed == 1`). A mutant that exits 1 survived: fix the test; 2 or 3: fix the sed.
+2. Then `campaign accept x7-loop-fix-c design --confirm B1=<suite> B2=<suite> ...`, write the Result, State "ready for
+   review" (D67: landing waits for the loop-scheduling quest), launch the correctness reviewer.
 
 Done this session:
+- First B1 mutant 261112-083119-7312ec survived (suite 261112-083057-772ce1 passed): `must_exist` is checked by key at the
+  docid, and only a numeric id's new document takes an erased docid (`args.new_did`; a string id takes `last + 1`). The
+  test now uses numeric ids. D68 / N4 option 2 built in the same commit: `apply_slice` takes `at` by reference and
+  ends at a write that failed with the endpoint stale; the child's catch fails one write and retries the rest; seam
+  `stale_on_term`. Ruling: a busy pin is tested by the thrown-slice seam, which takes the same catch (pin, turn and
+  slice failures all land there); no seam makes `pin()` itself busy.
 - Jobs at Xapiand:a944a38d4 all exit 0: suite 261112-060150-6f4cc5, six mutants, timing build 261112-060347-eb02a3,
   A3 261112-060350-41b974, A2 261112-060352-3a68bf. Fix (c)'s column and "At fix (c)" are in
   `docs/perf/x7-loop-stalls.md` "At the fix".
@@ -87,13 +94,14 @@ checked what), and answer each message by its id (msg-N).
 Design review `.campaign/xapiand/reviews/x7-loop-fix-c-design.md` (CHANGES at Xapiand:45815797d). Fixes: the design
 text in Xapiand:9c38ae630, the code and tests in Xapiand:3c3cf24c4; suite 261112-060150-6f4cc5 at Xapiand:a944a38d4.
 
-- B1 (a miss defers every later object of its term): fixed. Fix: `Shard::apply_slice`'s `missed_terms`
-  (`src/database/shard.cc`), Xapiand:3c3cf24c4. Tests: `test_a_write_missed_since_placement_is_placed_afresh` (the
-  erase seam; mutant 261112-060256-a08cb1), and since the lead's call `test_a_miss_defers_every_later_write_of_its_id`
-  (Xapiand:c5fb7f62d): seams `writes_per_slice` (one write a slice) and `after_slice` (awaited on the loop between
-  slices, turn released) erase id 7 before the range applies and write it again after its first write misses; expects
-  3 deferred, no failing item and the last object stored. Suite 261112-083057-772ce1; mutant, a miss defers only the
-  missing write (the `missed_terms` check replaced by `false`), 261112-083119-7312ec. Results pending.
+- B1 (a miss defers every later object of its term): fix `Shard::apply_slice`'s `missed_terms`, Xapiand:3c3cf24c4.
+  Tests: `test_a_write_missed_since_placement_is_placed_afresh` (mutant 261112-060256-a08cb1) and
+  `test_a_miss_defers_every_later_write_of_its_id` (numeric id 7, seams `writes_per_slice` and `after_slice`).
+  Suite 261112-084823-54c2d4; mutant, a miss defers only the missing write, 261112-084825-447568. Results pending.
+- N4 (option 2, D68): a slice ends at a stale-marking failure; a failed pin, turn or slice fails one write and the rest
+  retry. Tests `test_a_stale_marking_failure_ends_its_slice` (mutant 261112-084828-d30d45) and
+  `test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores` (mutant 261112-084832-080c00).
+  Suite 261112-084823-54c2d4. Results pending.
 - B2 (each test asserts its case happened): COVERED. Fix: `DocIndexer::stats`, `DocIndexer::seams` and `FixedRanges`
   (objects per prepare, not wall time), Xapiand:3c3cf24c4, namespace-scope declarations Xapiand:7e19c4475. Each case
   asserts it happened: model test `largest_range >= 16` and `repeated_in_subrun >= 1`; numeric ids `largest_range >=
