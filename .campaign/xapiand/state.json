@@ -18510,6 +18510,8 @@
         "barrier-warning-strata",
         "prospect-completion-opens"
       ],
+      "base": "80a3326f77068dd0df6cdfc98569a1f5a62f8c25",
+      "branch": "quest/xapiand/xapiand-strata-bump",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -18535,9 +18537,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
-      "updated": "2026-11-12T01:50:43"
+      "updated": "2026-11-12T03:50:07",
+      "worktree": "../Xapiand-wt/xapiand/xapiand-strata-bump"
     }
   },
   "suite": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
