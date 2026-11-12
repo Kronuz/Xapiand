@@ -14209,17 +14209,45 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T09:00:26",
+          "commit": "5c0738825249ace67a0d937aba7988082b52fdbb",
+          "criteria": {
+            "A1": "261111-171323-80d18b (passed at 7d9afe612524; only merges from main since); fails without: 261111-171345-4024c7",
+            "A2": "261111-171323-80d18b (passed at 7d9afe612524; only merges from main since)",
+            "A3": "`docs/dev/restore-integers.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "8f39184c22ba504df57e8a6be7276297446ca66e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-000849-8b7aa4",
+              "level": "light",
+              "seconds": 713.8,
+              "state": "done",
+              "what": "restore-mixed-sign-integers check build-test at 8f39184c22ba"
+            }
+          ],
+          "final": true,
+          "from": "2f38408365be14459c431a36d3b0fb01603c0622",
+          "reason": "",
+          "tested": "5c0738825249ace67a0d937aba7988082b52fdbb"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A msgpack RESTORE keeps every document of a field holding both signs",
-      "updated": "2026-11-12T00:08:35",
-      "worktree": "../Xapiand-wt/xapiand/restore-mixed-sign-integers"
+      "updated": "2026-11-12T09:00:45",
+      "worktree": ""
     },
     "retention": {
       "accepted": {},
