@@ -12987,6 +12987,8 @@
     "restore-mixed-sign-integers": {
       "accepted": {},
       "after": [],
+      "base": "739cbfaaad6143922ea205d0ff5b329982803080",
+      "branch": "quest/xapiand/restore-mixed-sign-integers",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13007,11 +13009,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: docs/dev/restore-integers.md is this quest's own file; x7-gate writes no file of that name",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A msgpack RESTORE keeps every document of a field holding both signs",
-      "updated": "2026-11-11T16:51:19"
+      "updated": "2026-11-11T16:52:23",
+      "worktree": "../Xapiand-wt/xapiand/restore-mixed-sign-integers"
     },
     "retention": {
       "accepted": {},
