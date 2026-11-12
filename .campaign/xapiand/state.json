@@ -4605,9 +4605,10 @@
       ],
       "consumes": [],
       "files": [
-        "include/**/http_asio.h",
+        "http_asio.h",
         "test/**",
-        "docs/perf/watch-peek.md"
+        "docs/perf/watch-peek.md",
+        "bench/watch_ab.sh"
       ],
       "landed": [],
       "lenses": [
@@ -4620,7 +4621,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A cancel that lands between a readiness wake and its handler stops the read",
-      "updated": "2026-11-12T03:24:05"
+      "updated": "2026-11-12T03:24:17"
     },
     "http-phase7c-l3": {
       "accepted": {},
