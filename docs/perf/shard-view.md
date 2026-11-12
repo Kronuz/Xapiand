@@ -39,6 +39,5 @@ ns per call; "round median" is the spread of the 20 per-round medians; throughpu
 
 A call costs about 19 ns on one thread. At 8 threads the median call costs 9% (shared) to 15% (handles) more, and the p90 call 57% more
 (29.8 against 18.9 ns): contention on the reader count is visible in the tail, not in the middle. Aggregate throughput scales to 5.7x
-the one-thread rate on 8 threads (298 against 52.5 Mcalls/s), 71% of linear. On this host `view()` is not a limit: a read that holds one
-costs microseconds elsewhere, so 20 ns is under 1% of it. Limits of the number: x86_64 macOS only (no Linux or arm64 row), Release
+the one-thread rate on 8 threads (298 against 52.5 Mcalls/s), 71% of linear. Limits of the number: x86_64 macOS only (no Linux or arm64 row), Release
 without LTO, an idle index (no concurrent writer, refresh or merge).
