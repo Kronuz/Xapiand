@@ -12185,6 +12185,36 @@
       "title": "Instrument fetched libraries with sanitizers",
       "updated": "2026-11-08T13:25:11"
     },
+    "prospect-completion-opens": {
+      "accepted": {},
+      "after": [
+        "barrier-warning-strata"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/background_merge_test.cc",
+        "test/directory_test.cc",
+        "test/index_test.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "planned",
+      "title": "prospect's test IOs implement completion's four read-only opens",
+      "updated": "2026-11-12T00:33:14"
+    },
     "prospect-drop-threadpool": {
       "accepted": {},
       "after": [],
