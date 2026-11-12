@@ -4919,18 +4919,45 @@
         "docs/mechanisms/commit-barriers.md",
         "include/completion/posix.h"
       ],
-      "journal": "../Xapiand-wt/xapiand/lib-doc-nits",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T03:31:07",
+          "commit": "dfdac5d196b7253609175260d23c71841b0840df",
+          "criteria": {
+            "A1": "261112-032721-0dea07",
+            "A2": "[artifact] `docs/mechanisms/barriers.md` (N1, N2, N4, N5 in posix.h comment, N6)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dfdac5d196b7253609175260d23c71841b0840df",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-032721-0dea07",
+              "level": "light",
+              "seconds": 32.8,
+              "state": "done",
+              "what": "lib-doc-nits check build-test at dfdac5d196b7"
+            }
+          ],
+          "final": true,
+          "from": "3a3c2054b66fd0d483ed7de8e10e5171675d7766",
+          "reason": "",
+          "tested": "dfdac5d196b7253609175260d23c71841b0840df"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Review nits in completion's barrier docs and header",
-      "updated": "2026-11-12T03:24:53",
-      "worktree": "../completion-wt/xapiand/lib-doc-nits"
+      "updated": "2026-11-12T03:31:09",
+      "worktree": ""
     },
     "library-issues": {
       "accepted": {},
