@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+We know, with numbers, what share of Xapiand's index opens see no write while open (D60b), which decides read-only-open's shape. The index registry (src/database/pool.cc) counts, per open, whether any write (index, update, delete, commit, RESTORE object) reached that index before it closed, and exposes the totals (a log line at close or the metrics the pool already reports). The counts are taken under the loads we have: x7-gate's T4/T5 mix (harness/gate7c_rows.sh), a RESTORE, the docs E2E suite, and a many-indexes pass that opens far more indexes than the registry keeps open (so idle closes and reopens happen), each reported separately.
 
 ## Acceptance criteria
 
@@ -14,18 +14,18 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 The counters are exact: a test opens indexes with and without writes, closes them, and checks both totals: the build-test check, with a `--fails-without` job (the write mark removed)
+- A2 [artifact] Per load: opens, opens with no write, the share, and how many of those opened under a concurrent fsync writer (where the ~23 ms flush applies), with job ids and what each load stands for; and a one-line recommendation against D60b's rule: `docs/perf/open-mix.md`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None. The counters are diagnostics; no API or format change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, 11-12 (D60b): measure before choosing read-only-open's shape.
+- Lead: loads that exist today only; the many-indexes harness (hunt row, phase3-ratchets A3) is not built here, a pass over many small indexes with the existing tools is enough.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The counters.
