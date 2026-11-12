@@ -13134,9 +13134,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-11T18:45:11",
+      "updated": "2026-11-11T22:28:17",
       "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
