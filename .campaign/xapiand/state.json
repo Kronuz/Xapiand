@@ -13902,8 +13902,8 @@
     "release-rows": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-11T23:33:41",
-          "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "at": "2026-11-12T08:45:16",
+          "base": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
           "blobs": {
             "docs/gates/release-rows.md": "100644:7b7ed1d4cff7cb97efaff3fa84c025cf944143ea",
             "test/aggregate_test.cc": "100644:f986fd1314270b75587f3d1bfbc2e64e9c05d661",
@@ -13914,7 +13914,7 @@
             "tools/release_rows/stem_parity.cc": "100644:0c5881b8199fd38f85fbe6f341eca6e4c299d878"
           },
           "by": "review",
-          "commit": "0ba797e9c1e492c32c4bb59c981c43ab43a00ef6",
+          "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
           "criteria": "b5d229769326efa3",
           "diffs": {
             "docs/gates/release-rows.md": "9073dd4ba2dc6d54",
@@ -13931,9 +13931,6 @@
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
                   "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
-                  "docs": [
-                    "docs/gates/release-rows.md"
-                  ],
                   "exit": 0,
                   "host": "kronuz",
                   "job": "261111-201233-507d9b",
@@ -13951,9 +13948,6 @@
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
                   "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
-                  "docs": [
-                    "docs/gates/release-rows.md"
-                  ],
                   "exit": 0,
                   "host": "kronuz",
                   "job": "261111-201233-507d9b",
@@ -13967,7 +13961,7 @@
               "reproduced": false
             }
           },
-          "note": "A3/A4/A5 release-level misses moved to stemmer-names, agg-shard-parity, fuzz-cpu-hour",
+          "note": "lead read main's changes since review (0aa68f4..fcd9f3e): scan-slices 256-ordinal scan check, test IO wrapper forwards, damaged-segment cases to strata lazy segments, strata pin d8ae10b8; none touches the rows' harness or verdicts; rows rerun at the release's pins (D39)",
           "review": "8671c164333afe021f595f815d7fb5e673e844f5",
           "reviewed": "7a3a54bbb8f0933d34bdf187f1d53dbd47f7004a",
           "verdict": "CHANGES"
@@ -14103,7 +14097,7 @@
       "risk": "high",
       "status": "review",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-11T23:33:41",
+      "updated": "2026-11-12T08:45:16",
       "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
