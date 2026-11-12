@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261111-235649-63420f 261111-235701-0ecdb6 261111-235704-037ffb 261111-235708-0e58e3 261111-235712-2d5987 261111-235716-52e56d 261111-235721-882c06
+State: waiting on jobs 261112-000934-d70ff9 261112-000950-b71dc6 261112-000958-55273a 261112-001007-d81b98 261112-001015-862667 261112-001024-e9466d 261112-001033-56b28b 261112-001042-92529a
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,10 +24,15 @@ applies before `index` returns. Shared helpers with `DatabaseHandler::prepare`: 
 `finish_prepared`, `offer_schema`.
 Tests in `tests/test_loop_yield.cc` (the node harness; `test_reactor_requests.cc` has no manager or schemas):
 off-loop CPU share (<60% of process), update after a run and at a batch boundary, schema order vs a sequential restore.
-Jobs at a2dffbd5e (`--for A4`): build-test 261111-235649-63420f; fails-without mutants (each requires exit 1 and the
-named check's line): hits checkpoint 261111-235701-0ecdb6 (:304), compress-once 261111-235704-037ffb (:325), D1 in a
-batch 261111-235708-0e58e3 (:401), D1 batch boundary 261111-235712-2d5987 (:401), D2 261111-235716-52e56d (:433),
-every object a barrier 261111-235721-882c06 (:369).
+Jobs at a2dffbd5e: build-test 261111-235649-63420f green; mutants hits 0ecdb6, compress 037ffb, D1 in a batch
+0e58e3 passed (failed as required). D1 boundary 2d5987: the mutant aborted the run in the compress-once test (`at` on
+a missing doc), exit 134. D2 52e56d: the asserts build hit "a task holds one index's turn at most": the round's
+schema offer (a metadata write in a turn) ran beside the apply's turn. Fixed at Xapiand:0c99ca2bd: a round is fetch,
+chores (the only part overlapping the apply), then accept, which offers with no apply in flight; the tests read a
+field only when the reply has it. Off-loop share at the fix: loop 738 ms of the process's 2,148 ms CPU (34%).
+Jobs at 0c99ca2bd (`--for A4`): build-test 261112-000934-d70ff9; test_loop_yield with asserts b71dc6; mutants
+(exit 1 and the named check's line): hits 55273a (:304), compress-once d81b98 (:325), D1 in a batch 862667 (:399), D1
+boundary e9466d (:398), D2 56b28b (:431), every object a barrier 92529a (:367).
 
 ## Next
 
@@ -83,6 +88,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   without suspending.
 - Tests live in `tests/test_loop_yield.cc`, which has the in-process node and HTTP client; the reviewer named
   `test_reactor_requests.cc`, which has neither a manager nor schemas.
+- The quest's check builds without asserts; an asserts run of test_loop_yield is queued with the mutants, since the
+  turn rule only aborts there.
 - The batch-boundary mutant drops the end-of-batch apply: no prepare runs ahead across batches, so that apply is the
   rule at a boundary.
 
