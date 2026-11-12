@@ -1870,18 +1870,73 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/cold-tier-step2",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T23:54:49",
+          "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "criteria": {
+            "A1": "261111-231035-213f01, 261111-231036-f7f5b1; fails without: 261111-113839-ade11c, 261111-123743-7732e9, 261111-151526-29ff8a",
+            "A10": "[artifact] `docs/status/cold-tier.md` section \"K7: who builds snapshots from seg()\" (strata:5e06300b, 85dd1df6, 8f372200): prospect's and Xapiand's construction sites with the pin bumps that adopt seg() (prospect:e49453d, Xapiand:74d8236e5), and the six prospect cases a lazy open leaves to the first map",
+            "A11": "CI at strata:4c45e3dd: none until the branch is pushed (last green run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan`, `ci:freebsd-x86_64`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`)",
+            "A12": "261111-231035-213f01",
+            "A13": "[artifact] `docs/design/cold-tier.md` revision 8 (strata:19ea55d9, over design/cold-tier's revision 7 merged at 6f8884bc): item 5b's host and word rows in D4, the ledger's \"Design vs code\" in D4, fence replacement, commit chore and create intent in D5, the limits",
+            "A14": "[artifact] `docs/status/cold-tier-step2.md`: Q6 ruled (`docs/design/cold-tier.md` Q6), item 6's seam ruling applied (\"Item 6's seam ruling\"), the last questions answered or left to the lead (\"Questions for the lead and the architect\", strata:7a5ca76a: question 3's by-key A/B is the lead's measurement)",
+            "A2": "261111-220736-cea164",
+            "A3": "261111-220743-7768e8, 261111-220744-401ca4, 261111-231055-97795a, 261111-231057-540206",
+            "A4": "261111-220743-7768e8, 261111-220744-401ca4, 261111-231055-97795a, 261111-231057-540206",
+            "A5": "261111-231046-759dd0, 261111-231055-97795a, 261111-231057-540206",
+            "A6": "261111-231035-213f01",
+            "A7": "261111-231037-42c8ed (queued, strata:4c45e3dd): `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed, then the whole suite eager; build-test 261111-231035-213f01",
+            "A8": "261111-231035-213f01",
+            "A9": "261111-220738-86ec82, 261111-220740-637543"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-231035-213f01",
+              "level": "light",
+              "seconds": 131.2,
+              "state": "done",
+              "what": "cold-tier-step2 check build-test at 4c45e3dd20ba"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
+          "later": [
+            "261111-235450-b3fef2",
+            "261111-235450-556fb0"
+          ],
+          "reason": "",
+          "tested": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "the strata lane",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-11T23:54:41",
+      "updated": "2026-11-11T23:54:51",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
