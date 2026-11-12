@@ -3743,6 +3743,36 @@
       "title": "Format 13 landing and pre-freeze work",
       "updated": "2026-11-08T15:39:16"
     },
+    "fuzz-cpu-hour": {
+      "accepted": {},
+      "after": [
+        "release-rows"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "fuzz/**",
+        "tools/release_rows/**",
+        "docs/perf/fuzz-*.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "planned",
+      "title": "One real CPU-hour of fuzzing per prospect decoder the release reads",
+      "updated": "2026-11-11T23:32:50"
+    },
     "gate-prep-followups": {
       "accepted": {},
       "after": [],
