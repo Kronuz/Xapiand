@@ -454,7 +454,8 @@ endif ()
 include(FetchContent)
 
 # Every pin below is the newest commit any fetched library pins (harness/pins_check.py compares the
-# resolved trees); a library that pins an older one is bumped in its own repository.
+# resolved trees), but strata: prospect b20e7c5 pins strata 94480d5 (the manifest log), newer than
+# strata's pin here, until strata's own bump. A library that pins an older one is bumped in its own repository.
 # compressors: the LZ4 and zstd block codecs of the stored blocks, and the deflate codec.
 FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5566260a30bbd2d77d5cfa890bfe33f503a2add6)
 # Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use.
