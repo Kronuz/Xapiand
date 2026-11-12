@@ -11903,6 +11903,32 @@
       "title": "Pool cleanup and wakeup fixes",
       "updated": "2026-11-08T13:25:08"
     },
+    "pool-sweep-wait": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_pool.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "The sweep-merge pool test waits on a signal, not a 10 s loop",
+      "updated": "2026-11-12T01:21:56"
+    },
     "postings-fuzz-memory": {
       "accepted": {
         "security": {
