@@ -1,6 +1,6 @@
 # xapiand-strata-bump: journal
 
-State: waiting on jobs 261112-042224-6d8e89 261112-043246-c284b3
+State: blocked on lead: strata catalog race (msg TSan); waiting on jobs 261112-042224-6d8e89 261112-043246-c284b3 261112-045455-99a56c 261112-045500-98a0ef
 Quest: .campaign/xapiand/quests/xapiand-strata-bump.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -26,6 +26,19 @@ Jobs queued at quest/xapiand/xapiand-strata-bump 3cdf295b2 (branch pushed for CI
 
 ## Blocked on
 
+Lead (TSan, CI run 43217395714 "Unit tests under TSan", test_node
+test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time): introduced by the pin bump, root in strata.
+strata catalog `unpin` at ab0e26a6 ends `kick(idx); over_soft();` (catalog.hh:1416-1417); at 5d742b24 it ends with
+`kick(idx)`. Under shutdown, `kick` posts the slot's close (shutdown_slot), which lets the close and then
+`DatabasePool::~DatabasePool` (pool.cc:655) run on the manager thread; `over_soft()` then reads `started_` and
+`pass_queued_` of a catalog being deleted (the race TSan names at catalog.hh:1430). over_soft in unpin came with
+strata:5d3c948a "catalog: post a pass when its own soft caps are over" (in 5d742b24..ab0e26a6). Root fix (strata,
+include/strata/core/catalog.hh): call `over_soft()` before `kick(idx)`, so the event that may end the catalog is unpin's
+last touch of it; a strata test that destroys the catalog right after the last unpin's close under TSan. Xapiand cannot
+fix it in pool.* or test_node.cc: the joiner cannot see when another thread's `release()` has returned. Then re-pin
+strata here. Attribution jobs (same TSan command): 261112-045455-99a56c at master 793826408, 261112-045500-98a0ef at
+3cdf295b2 (macOS TSan; the race is timing-bound, so a clean run at either is not proof; the code diff is).
+
 Lead: A3 as written ("opened under the lazy default ... corrupt at first read") does not hold anywhere in Xapiand:
 - The node opens every index under `defer_io` (src/engine/strata/shard.cc:171), and strata forces eager segments under
   it (strata:ab0e26a6 include/strata/core/index.hh:603, "a first-read map would be I/O inside apply()").
@@ -46,7 +59,7 @@ The test proves that form. Options:
 | A1 | job 261112-042225-aad4d1 (pins_check: ok) |
 | A2 | job 261112-042224-6d8e89 (running) |
 | A3 | job 261112-043246-c284b3 (queued), mutant 261112-042232-481834 (killed: exit 0) |
-| A4 | CI run 43217395714 on 05cba6694 (in progress) |
+| A4 | ci:Unit tests under TSan failed on 05cba6694 (run 43217395714): strata catalog race, Blocked on; cite ci:<job name> rows once green |
 
 ## Result
 
