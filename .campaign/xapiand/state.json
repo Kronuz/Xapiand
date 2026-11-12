@@ -13285,6 +13285,8 @@
       "consumes": [],
       "files": [
         "include/strata/core/index.hh",
+        "include/strata/core/faultfs.hh",
+        "CMakeLists.txt",
         "test/index_test.cc",
         "docs/design/read-only-open.md",
         "docs/perf/open-sync.md",
@@ -13305,7 +13307,7 @@
       "risk": "high",
       "status": "active",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T04:05:00",
+      "updated": "2026-11-12T04:29:28",
       "worktree": "../strata-wt/xapiand/read-only-open"
     },
     "reclaim-backlog": {
