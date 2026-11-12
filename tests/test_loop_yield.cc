@@ -51,6 +51,7 @@
 #include "opts.h"
 #include "rapidjson/document.h"
 #include "reactor_lag.h"
+#include "traceback.h"
 #include "xapiand_exception.h"
 
 using namespace std::chrono_literals;
@@ -87,6 +88,11 @@ class RunningNode {
 public:
 	RunningNode() {
 		::signal(SIGPIPE, SIG_IGN);
+		struct sigaction sa;   // as main() does: a stalled loop's watchdog collects the threads' stacks with SIGUSR2
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = SA_RESTART | SA_SIGINFO;
+		sa.sa_sigaction = traceback::collect_callstack_sig_handler;
+		::sigaction(SIGUSR2, &sa, nullptr);
 		const auto root = std::filesystem::current_path() / "loop_yield_data";
 		std::filesystem::remove_all(root);
 		std::filesystem::create_directories(root / ".xapiand");
