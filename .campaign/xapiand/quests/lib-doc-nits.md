@@ -1,11 +1,11 @@
-# lib-doc-nits: Review nits in completion's barrier docs and analysis's CJK licence and map
+# lib-doc-nits: Review nits in completion's barrier docs and header
 
 Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status lib-doc-nits`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+completion's barrier docs and header say what the code does (barrier-warning-completion review N1-N5): `sync_directory`'s flush target while an owner file is held, "warns again after a throw" stated exactly, the stale `barrier_unsupported` ENOTTY comment fixed, the first classification's cost documented (IOKit/CF/objc, 44-304 images; fork-without-exec hosts), and `barrier_volumes()` leaked so it has no exit-time destructor. N6 (Apple Silicon IOKit keys) is recorded as unmeasured.
 
 ## Acceptance criteria
 
@@ -14,18 +14,17 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 The suite passes with `barrier_volumes()` leaked (no exit-time destructor): the build-test job
+- A2 [artifact] `docs/mechanisms/barriers.md` carries N1, N2, N4, N5 and N6's statements: `docs/mechanisms/barriers.md`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: N7 (a throwing callback failing a commit) stays as it is, the owner's call.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
