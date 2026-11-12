@@ -362,6 +362,27 @@ Asio custom handler tracking records each loop's handler durations in log2 bins 
 (`src/engine/strata/shard.cc`, `doc_view.{h,cc}`, `src/aggregations/bucket.h`, outside this quest's file set);
 otherwise H3 is next, measured with the generator's CPU held apart.
 
+**E4: long turns are mostly a descheduled loop (H3).** Job 261112-042106-305a1a, x7-gate's loaded mix on the
+handler-tracking build (Xapiand:4bcb4494c, 16 CPUs, a 23.7 s window; the tracking costs about 19% of heavy searches,
+21,211 against 26,066). Per HTTP loop, median of 16 (max):
+
+| Per loop | Median (max) |
+|---|---:|
+| Busy share of the window | 56% (71%) |
+| CPU per wall second while in a handler | 0.85 (0.86) |
+| Handlers of 1 ms or more per second, and their CPU per wall second | 35.8 (47.9), 0.45 (0.56) |
+| Share of the window a tick waits 2 ms or more: in one handler, in one busy period | 4.1% (5.5%), 8.4% (25%) |
+| Busy periods of 1 ms or more per second, their mean length, the mean longest handler in one | 145 (181), 2.1 ms (3.0), 1.02 ms (1.08) |
+| Probe lag p99, p99.9 (plain build: p99 4.1-6.1 ms) | 6-8 ms, 20-57 ms |
+
+Turns of 2 ms or more cover 4% of the window, so H1's threshold is met on wall time, but those turns run at 0.45 CPU
+per wall second: about 1 ms of work each, stretched by time off the CPU. 13,152 of the 13,857 handlers of 1 ms or more
+are `io_context/execute`, the coroutine resumptions (36 s of wall at 0.47 CPU per wall second). A busy period
+is a queue of such 1 ms turns. The host runs 16 loops, a WorkPool thread per CPU and the load generator on 16 logical
+CPUs, so the scheduler takes a loop off its CPU mid-turn. Fix 3 shortens the turns' CPU (the frame buffer alone is
+up to 37% of loop time, E3); T4 and T5 also need fewer runnable threads than CPUs or loops scheduled ahead of the
+workers (thread counts, or a higher QoS class for loop threads on macOS), outside this quest's file set.
+
 **Steps.** (1) This design and its review. (2) The apply chore, placement and children; the tests above; the suite
 and the mutants as jobs. (3) A3: T12 by x7-gate's procedure, one exclusive job. (4) A2 with fix (c), and E4, each one
 exclusive job. phase7c.md's D4 `flush` row gains "RESTORE writes" and D12's RESTORE sentence names the write chore;
