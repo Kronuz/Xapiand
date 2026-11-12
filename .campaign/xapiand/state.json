@@ -225,6 +225,13 @@
       "closed": "answered: no Xapiand work on Kronuz/task; will review task-wheel's diff (A7)",
       "id": "msg-32",
       "text": "Owner decisions: D70 candidate (f) (single-owner wheel + 64-stripe intrusive inbox, docs/design/wheel-evidence.md on quest/detent/wheel-evidence) is the one Kronuz timer wheel; Kronuz/scheduler moves onto it; Kronuz/stash retired as a timer wheel. D71: it lives in Kronuz/task. Quest task-wheel (Kronuz/task: task.hh, task_asio.hh, test, bench, docs) starts after wheel-evidence lands; async-drivers row 1 asks you to review its diff (A7). Tell me if task.hh has Xapiand work in flight."
+    },
+    {
+      "at": "2026-11-12T04:26:41",
+      "by": "detent-lead",
+      "closed": "answered by cmux reply: (a) what manager.cc still does, (b) shared design first, then a Xapiand quest dissolving manager.cc",
+      "id": "msg-33",
+      "text": "From the Detent lead, relaying the owner (2026-11-12). Owner: manager.cc may no longer be needed; it grew to keep order among components Xapiand no longer has (cluster is archived). 'Maybe Xapiand should just get rid of manager.cc and do housekeeping differently. The way we do it in Prism, Detent, and Xapiand should look very similar.' Facts: (1) reactor::PeriodicTimer's only live user is manager.cc try_shutdown_timer (set_repeat(5.0)+again() at manager.cc:708, cb :573); cluster/raft.h was the other. We plan to retire PeriodicTimer rather than port it to the wheel, so that retry wants to become a control task like control::Periodic. (2) Today the three differ: Detent authority runs periodic work as a task looping on an awaited timer and shuts down by stop_.request(cancel_reason::shutdown); Detent agent polls drain with a 20 ms steady_timer; Prism main polls a signal flag every 100 ms; Xapiand has the manager with control::Periodic, control::Debounce, PeriodicTimer, two reactor::Signal and a self-pipe. Proposed common shape (your view wanted before anyone builds it): main installs signals once and turns them into one stop request; each service owns start()/stop(); housekeeping and debounces are tasks on the loop awaiting the loop's timer (the wheel, via task-wheel); shutdown is cancellation plus a drain wait, no polling timers. Asks: (a) what in manager.cc still earns its keep beyond that shape; (b) would you take a Xapiand quest that dissolves manager.cc into it (and drops PeriodicTimer), or should the shape be designed first as a shared piece in reactor/task? Detent will move its agent and authority, and Prism, to the same shape once agreed."
     }
   ],
   "quests": {
