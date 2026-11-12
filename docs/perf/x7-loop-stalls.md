@@ -344,10 +344,13 @@ deferred objects). Each test asserts its case occurred before it checks the outc
   RESTORE paths agree (job 261112-054313-bda701, the serial path: object 31 gets 133, 39 documents); one object per
   request gives 132 and 40 documents when the buffer flushes in between.
 - A miss between placement and apply (B1): a test seam runs on the loop after placement and before the children, and
-  erases id 7 and writes it again through the RESTORE's handler; the stream holds three objects of id 7 in one range.
-  The final document is the stream's last object of id 7, and the run reports all three deferred. Mutant: a missed
-  write fails as today's `must_exist` miss does. (A later write of the same id carries the same placement, so it
-  misses too; a mutant deferring only the first miss is not observable.)
+  erases id 7; the stream holds three objects of id 7 in one range. The final document is the stream's last object of
+  id 7, and the run reports all three deferred. Mutant: a missed write fails as today's `must_exist` miss does.
+- The reviewer's interleaving (B1): a second seam fixes the writes an apply slice takes (one) and is awaited on the
+  loop between two slices; after the first write of id 7 misses it writes id 7 again, which takes the erased docid.
+  Every later write of id 7 in the range is deferred (not tried at that docid), so the document ends as the stream's
+  last object, with all three deferred. Mutant: a miss defers only the missing write, so the second write replaces the
+  new document in place and the deferred first write then lands over it.
 - The chores swap (N5): a test seam makes one apply slice throw; afterwards no engine runs its chores inline
   (`ShardEndpoint::engines_inline()`, the guard's count), and a later RESTORE's write runs. Mutant: the guard
   does not restore on the throw path.
