@@ -1,6 +1,6 @@
 # agg-shard-parity: journal
 
-State: waiting on jobs 261112-002717-6d94f0 (A1) 261112-002735-c8ec51 261112-002740-e497a2 (A2 mutants); diagnosis 261112-002548-2c8cb9
+State: waiting on jobs 261112-002820-f46d26 261112-002821-1d7a01 261112-002824-edede9; diagnosis 261112-002548-2c8cb9
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -54,16 +54,16 @@ Commit "Carry a bucket's order keys through serialised and merged results" (src/
 each bucket's slot (long double as two doubles) and idx; both merge_results overloads set them on a bucket they create.
 The bug was latent: no production caller merges partials (the server uses one spy over every shard). Wire format of
 partials changed (a per-bucket order string); both ends are ours and nothing stores them.
-A1 = verify 261112-002717-6d94f0 at the fixed head. A2 mutant 1 = the fix reverted (261112-002735-c8ec51, expects DIFF),
-mutant 2 = drop shard 1 (261112-002740-e497a2), both after A1. A3 = docs/dev/agg-shard-parity.md (written, states finding and fix).
+A1 = verify 261112-002820-f46d26 at the fixed head. A2 mutant 1 = the fix reverted (261112-002821-1d7a01, expects DIFF),
+mutant 2 = drop shard 1 (261112-002824-edede9), both after A1. A3 = docs/dev/agg-shard-parity.md (written, states finding and fix).
 If 2c8cb9 (diagnosis at the pre-fix commit) shows a difference beyond order, fix or report it.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pre-fix: failed on F1 (261112-000934-6482ef); at the fixed head: 261112-002717-6d94f0 (pending) |
-| A2 | 261112-002735-c8ec51 (fix reverted), 261112-002740-e497a2 (drop shard) (pending) |
+| A1 | pre-fix: failed on F1 (261112-000934-6482ef); at the fixed head: 261112-002820-f46d26 (pending) |
+| A2 | 261112-002821-1d7a01 (fix reverted), 261112-002824-edede9 (drop shard) (pending) |
 | A3 | docs/dev/agg-shard-parity.md |
 
 ## Result
