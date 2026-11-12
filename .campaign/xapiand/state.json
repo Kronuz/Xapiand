@@ -16171,6 +16171,35 @@
       "title": "Track P, the performance research items without a verdict",
       "updated": "2026-11-08T22:35:58"
     },
+    "unpin-after-kick": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/catalog.hh",
+        "test/catalog_test.cc"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A catalog unpin reads nothing after it kicks the slot's close",
+      "updated": "2026-11-12T04:55:42"
+    },
     "wbuf-inline": {
       "accepted": {
         "correctness": {
