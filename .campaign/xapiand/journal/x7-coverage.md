@@ -37,7 +37,7 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | job 261111-144409-ecb5b2 (`harness/coverage.sh`, ctest + docs E2E, exit 0), table below |
 | A2 | corpora committed (tests/corpora/alpha9, master; README names builds); replay job pending the fix (Blocked on) |
-| A3 | [artifact] TESTING.md |
+| A3 | `TESTING.md` |
 
 A1's table (ecb5b2, `coverage.txt`; `coverage-files.txt` per file):
 
