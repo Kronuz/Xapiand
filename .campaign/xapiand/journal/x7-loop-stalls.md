@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261112-002508-b6976b 261112-002521-478825 261112-002525-05438d 261112-002529-0c957d 261112-002533-5c5bae 261112-002537-86670c 261112-002541-b2314b
+State: waiting on jobs 261112-011615-3ea00b 261112-011622-75a8df 261112-011635-7eced3 261112-011639-a9f61f
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -37,14 +37,29 @@ Evidence so far (all at older heads; superseded by the jobs below):
 - At a2dffbd5e the D2 mutant's asserts build hit "a task holds one index's turn at most" (offer beside the apply):
   fixed by the fetch/pull/accept split (0c99ca2bd).
 
-Jobs at 6ff9db94a (`--for A4`; each mutant needs exit 1 and its check's line in test_loop_yield.cc):
+At 6ff9db94a every mutant failed at its line as required (478825, 05438d, 0c957d, 5c5bae, 86670c, b2314b) and the
+real suite (b6976b) ran 38/38 green but failed `async_check --strict`: one unclassified `sync_wait` at handler.cc's
+`prepare_plain`. Resolved (Xapiand:1faf61abb): `Schema::index` there is CPU only, so the chore keeps a blocking call,
+now `engine::sync_wait` (the one guarded bridge, as shard.cc's open chore does) instead of a raw `task::sync_wait`,
+with an allowlist row naming why. Prospect pin moved to b20e7c5 (Xapiand:232b81cba); strata pin unchanged (5d742b2).
+
+Jobs at 232b81cba: build-test 261112-011615-3ea00b; timing build (light, fresh) 261112-011622-75a8df copies the fix's
+binary to `~/.scratch/x7-loop-stalls/<commit>/xapiand`; A2 (T4+T5, exclusive) 261112-011635-7eced3; A3 (T10 + T12
+loadtest and profile_bulk, exclusive) 261112-011639-a9f61f. Pre-7c binary: `~/.scratch/x7-loop-stalls/142b2ca77/xapiand`,
+the same bytes as x7-gate's build-pre (shasum 787b7174). Targets: T4 every HTTP loop's p99 < 1,024 us; T5 loaded light
+p99 near pre's 8.93 ms; T10 flood light-GET p99 about 20 ms; T12 RESTORE docs/s and QPS >= 1.0x pre-7c.
+
+Older jobs at 6ff9db94a (`--for A4`; each mutant needs exit 1 and its check's line in test_loop_yield.cc):
 build-test (the real suite) 261112-002508-b6976b; mutants: hits checkpoint 478825 (:320), compress-once 05438d
 (:341), D1 in a batch 0c957d (:415), D1 batch boundary 5c5bae (:414, first:1 lost), D2 86670c (:447), every object
 a barrier b2314b (:383). 261112-000846-ac7a9e (build-test at a29bb36e6, a journal commit) is not mine to rely on.
 
 ## Next
 
-1. Read the 6ff9db94a jobs. Red suite: fix it, rerun `campaign verify`. A mutant that fails at another line: read
+1. Read 3ea00b (suite), then 7eced3 (A2) and a9f61f (A3): fill the Evidence table and Result with the numbers. A
+   row that misses: say so, with its cause from a profile (`harness/profile_light.sh`, `profile_bulk.sh`); T12 short
+   is fix (c), parallel apply. Then "ready for review".
+2. (done) Read the 6ff9db94a jobs. Red suite: fix it, rerun `campaign verify`. A mutant that fails at another line: read
    its log (`~/.scratch/campaign/jobs/<id>/a1/log`) and fix the test or the line number; resubmit with the same
    `--what` (it supersedes). Command template: the specs of these jobs (`campaign job show <id>`).
 2. Then paste `campaign brief`'s evidence table below and set State to "ready for review" for A1/A4; the
@@ -67,7 +82,12 @@ amendment; (b) compress once at finalise (`src/database/shard.cc` `finalise_writ
 ## Blocked on
 
 - Owner (D6): leave `_version` and a new numeric `_id` out of the stored record; not built.
-- x7-scan-slices landing, then the prospect pin bump and A2/A3.
+- Lead: `harness/async_allowlist.tsv` is outside the file set; its one row (handler.cc `sync_wait schema\.index`) went
+  in on the lead's step-1 instruction. Widen the set to it, or move the row.
+- Lead: prospect b20e7c5 pins strata 94480d5 (the manifest log), newer than Xapiand's 5d742b2, so `pins_check.py`'s A3
+  (Xapiand pins the newest any library pins) fails and CMakeLists' line 456 comment is false until a strata bump.
+  Prospect's library change is shards.hh alone and builds on 5d742b2. Recommendation: a separate strata-bump quest
+  (the manifest-log port is about 1,400 lines of index.hh), not this one.
 
 ## Evidence
 
@@ -91,8 +111,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   changed ones), so a round equals the sequential semantics without arguing which prefixes stay valid.
 - Chores pull from one cursor (not fixed sub-batches): a change wastes about one object per worker, so a new index
   costs one round per change; the 1 ms slice bounds a chore (D5).
-- The chore runs `Schema::index` through `task::sync_wait`: with barriers for scripts and `seq` never 0 it completes
-  without suspending.
+- The chore runs `Schema::index` through `engine::sync_wait` and stays a blocking call: chores are
+  `std::function<void()>`, and on this path `Schema::index` never suspends (its only awaits are `call_script`, a
+  barrier since a root `_script` comes only from the object or the schema, and `lock_shard`, only when `seq` is 0;
+  `seq` is idx+1). Classified `allow` in the async allowlist rather than reshaping the chore API.
 - Tests live in `tests/test_loop_yield.cc`, which has the in-process node and HTTP client; the reviewer named
   `test_reactor_requests.cc`, which has neither a manager nor schemas.
 - msg (lead, handler.h and phase7c.md in the file set): `DocIndexer` takes `engine::Chores&` (the RESTORE's
