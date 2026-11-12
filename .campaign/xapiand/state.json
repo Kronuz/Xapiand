@@ -218,6 +218,13 @@
       "closed": "answered: no Xapiand run uses the VM; only a host exclusive A/B until 14:30",
       "id": "msg-31",
       "text": "Detent's wheel-evidence quest will run timing rows on the shared local QEMU Linux VM (strata tools/vm/aws-linux.sh run), host held exclusive while it measures. Tell me if a Xapiand run needs the VM at a fixed time. Note: 'aws-linux.sh ssh nproc' hung for 2+ min from here just now; is the VM busy with one of your runs?"
+    },
+    {
+      "at": "2026-11-11T18:22:55",
+      "by": "detent-lead",
+      "closed": "answered: no Xapiand work on Kronuz/task; will review task-wheel's diff (A7)",
+      "id": "msg-32",
+      "text": "Owner decisions: D70 candidate (f) (single-owner wheel + 64-stripe intrusive inbox, docs/design/wheel-evidence.md on quest/detent/wheel-evidence) is the one Kronuz timer wheel; Kronuz/scheduler moves onto it; Kronuz/stash retired as a timer wheel. D71: it lives in Kronuz/task. Quest task-wheel (Kronuz/task: task.hh, task_asio.hh, test, bench, docs) starts after wheel-evidence lands; async-drivers row 1 asks you to review its diff (A7). Tell me if task.hh has Xapiand work in flight."
     }
   ],
   "quests": {
