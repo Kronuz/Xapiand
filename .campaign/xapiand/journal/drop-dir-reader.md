@@ -28,7 +28,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | job 261112-075935-faac3d (build-test at completion:3f82cda, exit 0; includes completion_mutants_anchors) |
-| A2 | CI run on completion:3f82cda, pending |
+| A2 | 261112-075935-faac3d; ci:ci / linux-x86_64-gcc, ci:ci / macos-arm64, ci:ci / freebsd-x86_64 (CI run green on every job at completion:3f82cda) |
 
 ## Result
 
