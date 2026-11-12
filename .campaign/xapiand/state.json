@@ -18035,7 +18035,7 @@
     "x7-loop-stalls": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-12T03:24:22",
+          "at": "2026-11-12T03:30:31",
           "base": "88a7c4312088d75a76a2fc0fd1b33143da821651",
           "blobs": {
             "CMakeLists.txt": "100644:19f094236c89998828537dc521e0147facc4928c",
@@ -18051,8 +18051,8 @@
             "tests/test_loop_yield.cc": "100644:dcbecaad3f4921b841a2cec3cac7c1378140bb41"
           },
           "by": "review",
-          "commit": "d272f0b6881b4857e4ecca45d506029c54c1ad04",
-          "criteria": "911ae9de8816cf00",
+          "commit": "cafd848d9c6ddd70cf03ea76e5d29de62f07dfe3",
+          "criteria": "8cc48b4703f3e349",
           "diffs": {
             "CMakeLists.txt": "2231df83de455318",
             "docs/design/phase7c.md": "7c0ebeff54e60945",
@@ -18140,7 +18140,7 @@
       "risk": "high",
       "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-12T03:24:22",
+      "updated": "2026-11-12T03:30:31",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-scan-slices": {
