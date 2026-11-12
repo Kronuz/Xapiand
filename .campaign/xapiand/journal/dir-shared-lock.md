@@ -1,6 +1,6 @@
 # dir-shared-lock: journal
 
-State: waiting on jobs 261112-045113-23f421 261112-045114-4fb679 261112-045118-31d22a
+State: ready for review
 Quest: .campaign/xapiand/quests/dir-shared-lock.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Correctness review CHANGES folded in at completion:504f409; jobs 261112-045113-23f421 261112-045114-4fb679 261112-045118-31d22a
-(suite for A1/A2/A4, `tools/mutants.py --only m1,m2,m3,m15` fails-without for A1, TSan for A1).
+Nothing: review fixes at completion:504f409 proven; GitHub CI run 43221701307 green.
 
 ## Next
 
-1. Read the jobs; `campaign accept dir-shared-lock correctness --confirm F1=261112-045113-23f421`
-   is the lead's; paste the brief's table; State "ready for review".
+1. Lead: `campaign accept dir-shared-lock correctness --confirm F1=261112-045113-23f421`.
 
 ## Blocked on
 
@@ -25,10 +23,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending at completion:504f409: 261112-045113-23f421 (suite), 261112-045118-31d22a (TSan); fails without: 261112-045114-4fb679 (m1,m2,m3,m15). Superseded at d06b019: 261112-044134-bf64d5, 261112-044138-a4fc2d, 261112-044136-c2bcfc |
-| A2 | pending: 261112-045113-23f421 |
+| A1 | 261112-045113-23f421 (suite), 261112-045118-31d22a (owner_lock_test under TSan, no reports); fails without: 261112-045114-4fb679 (m1, m2, m3, m15 all killed; m15 by completion_owner_lock) |
+| A2 | 261112-045113-23f421 (`base`, `unsupported`, `partial_failure`, `interrupted`) |
 | A3 | `docs/mechanisms/directory-locks.md` (completion) |
-| A4 | pending: 261112-045113-23f421 and GitHub CI at completion:504f409 (d06b019: run 43220197978 green) |
+| A4 | 261112-045113-23f421 (20/20, completion_mutants_anchors: 25 anchors); GitHub CI run 43221701307 green |
 
 ## Result
 
