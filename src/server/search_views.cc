@@ -2024,6 +2024,7 @@ search_view(Request& request)
 	auto& hits = obj[RESPONSE_HITS];
 
 	for (const auto& hit : mset.hits) {
+		co_await request.budget->checkpoint();   // the hits yield the loop between slices, as the search's windows do
 		auto did = hit.did;
 
 		// Retrive document data
