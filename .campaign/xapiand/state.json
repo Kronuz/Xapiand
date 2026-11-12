@@ -16022,7 +16022,68 @@
       "worktree": ""
     },
     "sync-at-first-commit": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-12T11:12:22",
+          "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "blobs": {
+            "bench/idle_index/idle_index.cc": "100644:e1c1e3cf14a04704b78878eec3739880cd2c513a",
+            "bench/open_sync/build.sh": "100755:2f6c155e694d242eb8e56290c0911d50ef7c77ef",
+            "bench/open_sync/first_commit_mutant.sh": "100755:56cd25e494adde1c0de3aa8d8ea150eeec3dc384",
+            "bench/open_sync/loaded.sh": "100755:dcd79d3fff6edb115b3e9de4aeabb902b8d3600f",
+            "bench/open_sync/mutant.sh": "deleted",
+            "bench/open_sync/run.sh": "100755:df9d33de59297b6bfb807d6308c95ea4c5e82df0",
+            "docs/design/manifest-log.md": "100644:7ba9d3e37f890b985a87fa2075aea930271f177e",
+            "docs/design/sync-at-first-commit.md": "100644:e9021a663f28f3075be7cfa5cc7bcede04cf9d5c",
+            "docs/perf/open-sync.md": "100644:b0b2950decf3127db959775f60d085455675a4c9",
+            "include/strata/core/faultfs.hh": "100644:a2504a99da0264e3c5e1cf7e8c8aab47e513d651",
+            "include/strata/core/index.hh": "100644:d91155af71b27642ee6fd26dc0e663433045c139",
+            "test/faultfs_test.cc": "100644:593818b3ed4277084a63750e3f989d2e837d43d7",
+            "test/index_test.cc": "100644:dd90dcb97b7fe153aa660ca7bd9ce7ca2c6c43ff"
+          },
+          "by": "review",
+          "commit": "9e12098974cf5a102db91d62c7c38f9036988994",
+          "criteria": "fdc26d9c5255fe1c",
+          "diffs": {
+            "bench/idle_index/idle_index.cc": "52f893f49540e4e2",
+            "bench/open_sync/build.sh": "e81feef045e1dfa5",
+            "bench/open_sync/first_commit_mutant.sh": "ee2951a821a82d26",
+            "bench/open_sync/loaded.sh": "b60d4955dc52207e",
+            "bench/open_sync/mutant.sh": "8eaa568057897cc5",
+            "bench/open_sync/run.sh": "35b97cfec306b26d",
+            "docs/design/manifest-log.md": "aa9cf70dccb4d25b",
+            "docs/design/sync-at-first-commit.md": "0d34cd849615022f",
+            "docs/perf/open-sync.md": "e7aaa05b8a938a83",
+            "include/strata/core/faultfs.hh": "f813ca0b3b370cb9",
+            "include/strata/core/index.hh": "680914eef57f89eb",
+            "test/faultfs_test.cc": "b1e6114712fa7f79",
+            "test/index_test.cc": "6df8b10f946704e5"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "9e12098974cf5a102db91d62c7c38f9036988994",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-110230-d89b3f",
+                  "level": "light",
+                  "seconds": 502.9,
+                  "state": "done",
+                  "what": "sync-at-first-commit check build-test at 9e12098974cf"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "d281f01b379be9d5708f876350fad779395ebfcb",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
       "branch": "quest/xapiand/sync-at-first-commit",
@@ -16059,7 +16120,7 @@
       "risk": "high",
       "status": "active",
       "title": "An open runs no sync; the first commit syncs what it inherited",
-      "updated": "2026-11-12T08:07:58",
+      "updated": "2026-11-12T11:12:22",
       "worktree": "../strata-wt/xapiand/sync-at-first-commit"
     },
     "t11-barriers": {
