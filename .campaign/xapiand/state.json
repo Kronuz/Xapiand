@@ -2702,7 +2702,72 @@
       "worktree": ""
     },
     "dir-shared-lock": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T04:57:22",
+          "base": "dfdac5d196b7253609175260d23c71841b0840df",
+          "blobs": {
+            ".github/workflows/mutants.yml": "100644:2fa76a687243b6a8e7d4e5c331273edb94ad2679",
+            "docs/mechanisms/directory-locks.md": "100644:5a2555b792e82d15ac9f02e70f5464fa9dbc8dfc",
+            "include/completion/io.h": "100644:947291393b32d1348ca17d68f1046e7cf9f95326",
+            "include/completion/posix.h": "100644:e4c3203179480c884ae5c230706f2cca9e502547",
+            "test/owner_lock_test.cc": "100644:f95d10e50526353dbd973bdef92ae52c30824e2e",
+            "tools/mutants.py": "100644:651460783b39d613ce996d33112d3bc90784b666"
+          },
+          "by": "review",
+          "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+          "criteria": "4b372834d83fd146",
+          "diffs": {
+            ".github/workflows/mutants.yml": "dd76e5f1f0ea1920",
+            "docs/mechanisms/directory-locks.md": "59121e4f121d5255",
+            "include/completion/io.h": "27f57a5559e2691c",
+            "include/completion/posix.h": "4a6b79b6836fc953",
+            "test/owner_lock_test.cc": "c7988133a71db391",
+            "tools/mutants.py": "b28da3ddc9c0b0c5"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-045113-23f421",
+                  "level": "light",
+                  "seconds": 86.6,
+                  "state": "done",
+                  "what": "dir-shared-lock check build-test at 504f4099b9a5"
+                },
+                {
+                  "cmd": "python3 tools/mutants.py --only m1,m2,m3,m15",
+                  "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-045114-4fb679",
+                  "level": "light",
+                  "seconds": 327.3,
+                  "state": "done",
+                  "what": "mutants m1,m2,m3,m15 killed"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              ".github/workflows/mutants.yml",
+              "tools/mutants.py"
+            ],
+            "reason": "F1 is the review's own fix: one lock helper replaces two loops; tools/mutants.py anchors and m15 and the workflow count follow; no new mechanism"
+          },
+          "note": "",
+          "review": "44bb0e3384389105b9140db82a4c28d8bd8cff24",
+          "reviewed": "d06b0190913ec067b9e0c4f3adedeb06c2f9de1a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "dfdac5d196b7253609175260d23c71841b0840df",
       "branch": "quest/xapiand/dir-shared-lock",
@@ -2737,7 +2802,7 @@
       "risk": "high",
       "status": "review",
       "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
-      "updated": "2026-11-12T04:49:58",
+      "updated": "2026-11-12T04:57:22",
       "worktree": "../completion-wt/xapiand/dir-shared-lock"
     },
     "direct-pins": {
