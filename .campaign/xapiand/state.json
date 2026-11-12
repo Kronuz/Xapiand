@@ -13498,11 +13498,12 @@
         "open-one-flush"
       ],
       "provides": [],
+      "reason": "owner 11-12 D60c: no read-only mode; the open's sync moves to the first commit (quest sync-at-first-commit); shared-lock work kept on its branch",
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T07:37:04",
+      "updated": "2026-11-12T07:57:28",
       "worktree": "../strata-wt/xapiand/read-only-open"
     },
     "reclaim-backlog": {
