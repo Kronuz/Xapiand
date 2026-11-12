@@ -2193,14 +2193,13 @@ void test_the_sweeps_close_syncs_a_merges_output() {
 		written = static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count());
 		engine::sync_wait(shard.commit());
 		revision = shard.engine().revision();
-		bool unsynced = false;
-		const auto end = std::chrono::steady_clock::now() + 10s;
-		while (!unsynced && std::chrono::steady_clock::now() < end) {
+		{
+			// wait_merges() is the index's own merge completion: it waits for the background merges and publishes them.
 			auto turn = engine::sync_wait(entry->take_turn(WRITE));
-			index.check_in();
-			unsynced = index.merges_pending() == 0 && index.merge_output_unsynced();
+			index.wait_merges();
+			REQUIRE(index.merges_pending() == 0);
+			REQUIRE(index.merge_output_unsynced());
 		}
-		REQUIRE(unsynced);
 	}
 	CHECK_TRUE(until([&] { return state_of(pool, path) == strata::slot_state::free; }, 10s));
 	CHECK_GE(pool.catalog().stats().merge_commits, 1u);
