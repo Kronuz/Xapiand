@@ -4622,9 +4622,9 @@
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A cancel that lands between a readiness wake and its handler stops the read",
-      "updated": "2026-11-12T03:24:51",
+      "updated": "2026-11-12T04:23:43",
       "worktree": "../http-wt/xapiand/http-cancel-race"
     },
     "http-phase7c-l3": {
