@@ -3456,6 +3456,37 @@
       "title": "The document profile gate, strata's core against RocksDB",
       "updated": "2026-11-08T22:35:42"
     },
+    "drop-dir-reader": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**",
+        "tools/mutants.py",
+        ".github/workflows/mutants.yml"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../completion",
+      "risk": "low",
+      "status": "planned",
+      "title": "completion drops the unused shared directory lock",
+      "updated": "2026-11-12T07:58:28"
+    },
     "drop-replicas": {
       "accepted": {},
       "after": [],
