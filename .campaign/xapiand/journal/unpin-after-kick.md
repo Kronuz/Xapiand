@@ -1,6 +1,6 @@
 # unpin-after-kick: journal
 
-State: waiting on jobs 261112-083911-63e3ed 261112-083917-866b8a 261112-083923-f54687 261112-083928-dbd7e3 261112-082842-4c0531
+State: waiting on jobs 261112-083911-63e3ed 261112-083917-866b8a 261112-083923-f54687 261112-083928-dbd7e3
 Quest: .campaign/xapiand/quests/unpin-after-kick.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fixed at strata:503df8f0, test reworked at 441abc39 (pushed, CI running):
+A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fixed at strata:503df8f0, test reworked at 441abc39 (pushed; CI 43260965516 queued, 43231465982 cancelled by the push):
 - Cause: end_at (catalog.hh, main ab0e26a6:1751) unbooked a closing slot after the exchange that left `closing`.
   A refused close ends `{0, open}`; a pass on another thread can begin_close it and book before that unbook runs
   (book asserts), and in NDEBUG the late unbook erases the new close's booking. Pre-existing since strata:7d031203.
@@ -22,7 +22,7 @@ A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fix
   stays at the slot's count after both closes end (local run at the mutant: that check fails, rc 1).
 - Attribution, proven: probe 261112-082839-973970 at main ab0e26a6 with only a 1 ms sleep after end_at's exchange on a
   closing end: catalog_stress (asserts) aborts on book's assertion on run 1. Same sleep at the fix:
-  261112-082842-4c0531 (10 runs, must stay clean). Scripts: strata worktree .scratch/tsan-book/{suite,mutant,delay}.sh.
+  261112-082842-4c0531 passed (10 runs, no assertion). Scripts: strata worktree .scratch/tsan-book/{suite,mutant,delay}.sh.
 - Jobs at 441abc39: TSan+asserts suite 261112-083911-63e3ed, ASan+UBSan+asserts 261112-083917-866b8a, mutant
   (`--fails-without`) 261112-083923-f54687, build-test 261112-083928-dbd7e3. Superseded at 503df8f0 (the first test
   version's throw at `close.call` was never reached: the hot slot refuses before it): 261112-082829-50b165,
