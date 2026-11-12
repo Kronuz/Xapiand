@@ -16281,7 +16281,9 @@
       "consumes": [],
       "files": [
         "include/strata/core/catalog.hh",
-        "test/catalog_teardown_test.cc"
+        "test/catalog_teardown_test.cc",
+        "docs/mechanisms/catalog.md",
+        "docs/design/cold-tier.md"
       ],
       "journal": "../Xapiand-wt/xapiand/unpin-after-kick",
       "landed": [],
@@ -16291,12 +16293,11 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
-      "reason": "started by force: overlaps read-only-open only on test/**; this quest edits test/catalog_teardown_test.cc, which read-only-open (IO wrappers, index_test) does not",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
       "title": "A catalog unpin reads nothing after it kicks the slot's close",
-      "updated": "2026-11-12T04:56:07",
+      "updated": "2026-11-12T05:29:56",
       "worktree": "../strata-wt/xapiand/unpin-after-kick"
     },
     "wbuf-inline": {
