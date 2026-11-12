@@ -4895,6 +4895,33 @@
       "title": "Refactor format layers and plugins",
       "updated": "2026-11-08T15:39:16"
     },
+    "lib-doc-nits": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/barriers.md",
+        "src/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../completion",
+      "risk": "low",
+      "status": "planned",
+      "title": "Review nits in completion's barrier docs and analysis's CJK licence and map",
+      "updated": "2026-11-12T03:24:06"
+    },
     "library-issues": {
       "accepted": {},
       "after": [],
