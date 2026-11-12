@@ -14437,9 +14437,9 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
           "level": "light",
-          "minutes": 120,
+          "minutes": 150,
           "name": "build-test"
         }
       ],
@@ -14450,6 +14450,34 @@
         "tests/test_stem*",
         "docs/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-12T00:08:38",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command lacked -DBUILD_TESTS=ON, so ctest found no tests (job 261111-232734-59ff14's log); now x7-gate's form",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "Phase 8",
@@ -14459,7 +14487,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-11T23:32:47"
+      "updated": "2026-11-12T00:08:38"
     },
     "storage-phase7c-l6": {
       "accepted": {},
