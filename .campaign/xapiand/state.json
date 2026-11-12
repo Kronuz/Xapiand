@@ -19389,15 +19389,15 @@
     "xapiand-strata-bump": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-12T11:34:15",
-          "base": "92535eeaa3fed2ae3a3c38dff0c75ebab91e34c5",
+          "at": "2026-11-12T13:22:06",
+          "base": "60acf47cbc7cc55dc3d2f4039b95190f26aae122",
           "blobs": {
             "CMakeLists.txt": "100644:c05f4b75f56c8a0851464f6cd021cfe76cb7ab61",
             "tests/test_engine_error.cc": "100644:3a0fbd5a5b574d18c932c7be8b20f93326fb4387",
             "tests/test_engine_error_mutant.sh": "100755:944d685c2a0931c41e84da001569937fa57ad664"
           },
           "by": "review",
-          "commit": "956f4b6ea104bf7e75e67e000c67b9753ceec514",
+          "commit": "83a887dccec571881a6f1088a7b8e62378e3828c",
           "criteria": "6dd0be634a95a3f8",
           "diffs": {
             "CMakeLists.txt": "8fd65fc08ca54df1",
@@ -19443,7 +19443,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
-      "updated": "2026-11-12T11:34:15",
+      "updated": "2026-11-12T13:22:06",
       "worktree": "../Xapiand-wt/xapiand/xapiand-strata-bump"
     }
   },
