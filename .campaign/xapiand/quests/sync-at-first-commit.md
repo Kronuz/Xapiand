@@ -27,6 +27,7 @@ Changes strata's open contract: an open does not make inherited state durable; t
 
 - Owner, 11-12 (D60c): no read-only mode; the sync is a writer's duty.
 - Lead, 11-12: design review CHANGES (F1): any directory sync outside a commit while the inherited sync is owed becomes the inherited sync (fences on failure, clears the owed flag), or skips; contributor's choice, stated in the note with D4's owed-state and post-demotion log handle (F5) and faultfs's single ordering mark (F3).
+- Lead, 11-12: durability review CHANGES (B1): the merge thread never syncs the directory; it reports removed bytes, publication adds them to `unlinked_`, and the owner's next `sync_dir()` returns them (one sync path). index_test gains the review's merge-cleanup probe shape.
 - Lead: read-only-open's branch (quest/xapiand/read-only-open, strata:6f83a4ff) holds the sync-counting tests, faultfs hooks and the open_sync/idle_index harness; reuse them, not its shared-lock code.
 
 ## May land early
