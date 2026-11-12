@@ -1,6 +1,6 @@
 # sync-at-first-commit: journal
 
-State: waiting on jobs 261112-090343-e602b5 261112-090406-e575c5 261112-090414-89aaae 261112-090438-33df17 261112-090447-4e4f75 261112-090455-1f97df
+State: waiting on jobs 261112-110230-d89b3f 261112-110231-eee06e 261112-110234-122749 261112-110237-c67ad9 261112-110241-adb8c7 261112-110244-c9702e
 Quest: .campaign/xapiand/quests/sync-at-first-commit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,18 +9,25 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Design review (CHANGES, F1-F6) folded in at strata:34aa3691; implementation of A2-A4 built and
-passing locally (index_test, faultfs_test). Jobs queued:
-- suite (A2,A3): 261112-090343-e602b5
-- mutants (--fails-without, bench/open_sync/first_commit_mutant.sh), done and killed: open A2 261112-090346-f32817
-  (index_test.cc:289), drop 261112-090352-1ecddc (:334), after 261112-090358-93f7af (:335); still running:
-  drop 261112-090352-1ecddc, after 261112-090358-93f7af, gate 261112-090406-e575c5, dir 261112-090414-89aaae (A3)
-- A4: build 261112-090438-33df17; opens+garbage (exclusive) 261112-090447-4e4f75; first commit (exclusive) 261112-090455-1f97df
+Suite 261112-090343-e602b5 at 34aa3691 failed 7 of 75 (reclaim, reclaim_bg_crash, lifecycle(+mapped),
+reclaim_mapped, reclaim_bg_crash_mapped, directory). Cause, by local bisection on reclaim_test:
+- new index.hh + main faultfs: ok; main index.hh + new faultfs: FAILS (16 failed opens) -> the model, not the code;
+- new faultfs without only the power-off change: ok -> that change exposed a model gap: a write after an
+  ordering point to a file the point did not stage (a commit's log edit after its segments' ordering) could
+  survive without the staged epoch. The IO contract forbids that state.
+Fix at strata:9e120989: faultfs snapshots a file's bytes at the first write after each ordering point; a crash
+that loses that epoch keeps those bytes, not later ones (new faultfs_test case). Locally all of reclaim,
+reclaim bg, lifecycle, directory, faultfs, index pass.
+
+Jobs at 9e120989: suite 261112-110230-d89b3f; mutants open 261112-110231-eee06e (A2), drop 261112-110234-122749,
+after 261112-110237-c67ad9, gate 261112-110241-adb8c7, dir 261112-110244-c9702e (A3).
+Earlier at 34aa3691: mutants open f32817, drop 1ecddc, after 93f7af, gate e575c5, dir 89aaae all killed.
+A4 done (34aa3691; code since changed only faultfs/tests): opens 261112-090447-4e4f75, first commit
+261112-090455-1f97df, build 261112-090438-33df17; numbers in strata docs/perf/open-sync.md.
 
 ## Next
 
-1. Read the jobs; put A4 numbers in strata docs/perf/open-sync.md ("Sync at first commit" section) and the note's Cost.
-2. `campaign accept sync-at-first-commit design --confirm F1=<suite job> ...` is the lead's; report ready for review.
+1. Read the suite and mutant jobs; if green, State: ready for review.
 
 ## Blocked on
 
@@ -37,7 +44,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | [artifact] strata `docs/design/sync-at-first-commit.md` |
 | A2 | <no evidence yet> |
 | A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
+| A4 | 261112-090447-4e4f75 (open p50 22.93-23.05 ms -> 0.13-0.18 ms, garbage 0/1000), 261112-090455-1f97df (first commit p50 23.08-23.67 -> 24.99-25.76 ms, +2.0 ms) |
 
 ## Result
 
@@ -54,7 +61,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - manifest-log.md D6.6 and T4 case 9/10 text updated (now in the file set); faultfs model tests in test/faultfs_test.cc.
 - F1: while owed, sync_dir() itself is the inherited sync (log + directory, fences, clears owed), so every caller (drain, ENOSPC cleanups, rollover) is covered by one rule rather than skipping.
 - F3: faultfs models chained ordering epochs (not a stated limitation); with one ordering point it draws the same outcomes from the same seeds as before.
-- faultfs: a failed sync keeps ordered (staged) bytes; a power-off sync has no effect (the crash decides). The second was needed for the `after` mutant to be caught: the old model dropped the cache at the power-off sync, hiding the write-before-sync crash point.
+- faultfs: a failed sync keeps ordered (staged) bytes; a power-off sync has no effect (the crash decides); a write after an ordering point to any file never survives without that epoch (needed once power-off leaves state to the crash). The second was needed for the `after` mutant to be caught: the old model dropped the cache at the power-off sync, hiding the write-before-sync crash point.
 - The dropped-segment state is built by replaying a twin index's durable edit bytes unsynced (identity_seed 7), since faultfs cannot kill a process between write and sync.
 - bench/open_sync/mutant.sh deleted (its line is gone); open-sync.md points at 8499e781 for it.
 - build.sh builds both A4 sides from this checkout's idle_index.cc (main's lacks `commit`).
