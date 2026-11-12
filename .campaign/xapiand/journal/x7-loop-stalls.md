@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261111-230627-642de6 261111-230628-74a222
+State: waiting on jobs 261111-230628-74a222 261111-231551-11dc15 261111-231553-7f715c
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,6 +18,13 @@ Test `tests/test_loop_yield.cc` (registered in `CMakeLists.txt`): an in-process 
 a `_limit: 5000` search; checks the HTTP loop's probe's worst wake in the window is under a third of the request.
 Jobs: build-test 261111-230627-642de6 (`--for A4`), mutant 261111-230628-74a222 (`--for A4 --fails-without`: deletes
 the checkpoint line, builds the test, exits 0 when it fails).
+
+Compress-once built (Xapiand:2f8145379): `Data::set_obj(obj, bool compress = true)`; `prepare` stores the record
+raw, `finalise_write` rewrites it once compressed when modified or raw. `Locator::compressions()` counts zstd record
+compressions. Test `test_a_restored_record_is_compressed_once_and_reads_back`: 200 restored records, 200
+compressions; three records read back with `n`, `text`, `_id`, `_version` 1.
+Jobs: build-test 261111-231551-11dc15 at 2f8145379 (`--for A4`; replaces 642de6, cancelled), mutant 261111-231553-7f715c
+(prepare compresses again; the test must fail), fix-1 mutant 261111-230628-74a222 (at 00cd38f39).
 
 E2 (no `--for`): 100-hit kinds p99 lag 12.3-14.3 ms, phrase 7.2-8.2, `_terms age` 6.1-7.2, `_values state` 3.1,
 RESTORE + one text client 0.38 ms median loop, 10.2 ms worst.
@@ -44,15 +51,8 @@ amendment; (b) compress once at finalise (`src/database/shard.cc` `finalise_writ
 
 ## Blocked on
 
-- Lead: compress-once at finalise needs `src/database/data.h` and `src/database/data.cc`. `prepare` (handler.cc)
-  writes the main record through `Data::set_obj`, whose `Locator` always zstd-compresses (records of 128 bytes or more);
-  no public `Data` call stores it uncompressed, so `finalise_write` (shard.cc) cannot skip the decompress. Options:
-  (1) `Data::set_obj(const MsgPack&, bool compress)`: `prepare` stores it raw, `finalise_write` always rewrites it once,
-  compressed (two files, one parameter); (2) the design section's alternative: keep `_version`/new `_id` out of the
-  record and compress once in `prepare`, so `finalise_write` does no record work (a record-content change, for the
-  design review). Recommend (1) now (it is (2)'s first step too: a raw record until the last writer).
-- Lead: the RESTORE-prepare-as-chore design is the note's "Design: RESTORE's prepare as an index chore" section,
-  ready for its review; not built.
+- Lead: the design review of the note's "Design: RESTORE's prepare as an index chore" section (running); not built.
+- x7-scan-slices landing, then the prospect pin bump and A2/A3.
 
 ## Evidence
 
@@ -75,6 +75,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - msg (lead, 11-11): E1 split; the mix sample first. RESTORE ruling recorded in the quest's Decisions (prepare as an
   index chore on the one WorkPool; compress once at finalise; parallel apply only if T12 stays short).
 
+- Lead's msg (11-11, data.h/data.cc): compress-once built with `Data::set_obj(obj, compress)` and a counted test; the
+  record-content alternative is in the design section as the reviewer's question only.
+- `finalise_write` also rewrites a raw record it did not modify, so no path that prepares raw stores it raw; a record
+  under 128 bytes stays raw after its compress attempt and is rewritten on its next write (cheap).
 - Lead's msg (11-11, rulings 1-4): file set widened; fix 2 is x7-scan-slices (prospect untouched); design written
   in the note; E2 folded in; A2/A3 wait for fix 1 and the pin.
 - Fix 1's checkpoint goes before each hit (not after): a hit's work is never split, and the first hit runs in the

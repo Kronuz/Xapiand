@@ -143,7 +143,7 @@ Loops (T4, T5, T10). Each bounds a turn without bringing back a pool (the quest'
 RESTORE (T12), the lead's ruling of 11-11: (a) prepare (`Schema::index`, `finalise_write`'s record work) as an index
 chore on the host `WorkPool`, the shard's turn keeping only the apply; one design review of phase7c.md's amendment
 first; (b) compress the record once, at finalise (34-44% of the loop's RESTORE time is `finalise_write` decompressing
-and recompressing what `prepare` compressed); (c) apply per shard in parallel only if (a) and (b) leave T12 short.
+and recompressing what `prepare` compressed; built: Xapiand:2f8145379, `Data::set_obj(obj, compress)`); (c) apply per shard in parallel only if (a) and (b) leave T12 short.
 
 ## Design: RESTORE's prepare as an index chore
 
@@ -151,8 +151,8 @@ The lead's ruling (fix (a) above); for one design review before it is built. It 
 D12 already says "RESTORE batches are prepared in parse-ahead chores" while master prepares them on the loop.
 
 **What moves.** The CPU of preparing an object, per sub-batch of a parsed batch: walking the object against a schema
-snapshot, generating fields, terms and values into an `engine::Document`, and serialising the record (where it is
-compressed is the open point below). It runs as a `flush` chore in the RESTORE's own `WorkGroup` (the group `restore_database_view`
+snapshot, generating fields, terms and values into an `engine::Document`, and serialising the record, raw; the one
+compress stays in `finalise_write`, in the shard's turn (fix (b)). It runs as a `flush` chore in the RESTORE's own `WorkGroup` (the group `restore_database_view`
 already makes for its parse-ahead chores), so the one host `WorkPool` serves it beside the parse and no thread or pool
 is added. A batch splits into up to `workers` sub-batches posted together; each returns its prepared objects in input
 order.
@@ -185,10 +185,10 @@ chore its state until the chore ends; the chore resumes the task with `post()` o
 state points into the task's frame, the `DatabaseHandler` or a view. Built documents cross threads once, chore to loop,
 by that `shared_ptr` (release on the worker, acquire on the loop through the post).
 
-**Expected effect, and the open point.** `Schema::index` plus `finalise_write` are 64-68% of the loop's RESTORE time
-(the RESTORE section: 29.3 + 34.3, 23.3 + 44.2, 23.2 + 43.6). The chore takes `Schema::index` off the loop. Fix (b) as
-ruled, compressing once at finalise, removes the decompress and the second compress but keeps one zstd compress in the
-shard's turn (16-19% of that time is compression). The alternative for the review: leave `_version`, and the `_id` of a
+**Expected effect, and a question for the reviewer.** `Schema::index` plus `finalise_write` are 64-68% of the loop's RESTORE time
+(the RESTORE section: 29.3 + 34.3, 23.3 + 44.2, 23.2 + 43.6). The chore takes `Schema::index` off the loop. Fix (b), built
+as ruled (compress once at finalise, Xapiand:2f8145379), removes the decompress and the second compress and keeps one
+zstd compress in the shard's turn (16-19% of that time is compression). The question, not part of this design: leave `_version`, and the `_id` of a
 new numeric id, out of the stored record and fill them at read from their value slots (`search_view` and
 `retrieve_document_view` already fill both when a record lacks them); then the record is compressed once in the chore
 and `finalise_write` does no record work. It changes what the record holds (formats are open until release); a
