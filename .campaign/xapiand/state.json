@@ -17014,6 +17014,8 @@
     "x7-view-bench": {
       "accepted": {},
       "after": [],
+      "base": "fc4cc8e9489e126a3919477a166ea4e4412c611d",
+      "branch": "quest/xapiand/x7-view-bench",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -17033,11 +17035,13 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
+      "reason": "started by force: docs/perf/shard-view.md is this quest's file; x7-gate cites the job (A22) and writes no file of that name",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
-      "updated": "2026-11-10T05:35:56"
+      "updated": "2026-11-11T16:07:20",
+      "worktree": "../Xapiand-wt/xapiand/x7-view-bench"
     },
     "xapiand-brand": {
       "accepted": {},
