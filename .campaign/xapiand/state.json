@@ -18270,7 +18270,8 @@
         "src/database/data.cc",
         "tests/test_loop_yield.cc",
         "tests/test_reactor_requests.cc",
-        "docs/perf/x7-loop-stalls.md"
+        "docs/perf/x7-loop-stalls.md",
+        "harness/async_allowlist.tsv"
       ],
       "history": [
         {
@@ -18301,7 +18302,7 @@
       "risk": "high",
       "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-12T04:31:59",
+      "updated": "2026-11-12T05:22:19",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
