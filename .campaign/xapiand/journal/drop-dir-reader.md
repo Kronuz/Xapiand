@@ -1,6 +1,6 @@
 # drop-dir-reader: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/drop-dir-reader.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Done; completion:3f82cda pushed, CI running.
 
 ## Next
 
-1. <step>
+1. Lead: confirm CI green on 3f82cda (A2).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
@@ -27,14 +27,15 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | job 261112-075935-faac3d (build-test at completion:3f82cda, exit 0; includes completion_mutants_anchors) |
+| A2 | CI run on completion:3f82cda, pending |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+completion:3f82cda removes acquire_directory_reader (io.h, posix.h), its owner_lock_test cases, m15 (24 mutants again in tools/mutants.py and mutants.yml) and docs/mechanisms/directory-locks.md. The tree matches completion:dfdac5d (before the shared lock) exactly. No user in strata, prospect or Xapiand checkouts (grep: only campaign files and a review scratch).
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- lock(fd, kind, ...) folded back to lock_exclusive: with one kind left the kind parameter is dead.
+- directory-locks.md deleted, not reduced: nothing links to it and no exclusive-only content existed before the shared lock.
+- docs/reviews/cl-2-code.md left alone (review history).
