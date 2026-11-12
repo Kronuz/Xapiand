@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261111-201659-919f00
+State: waiting on jobs 261111-221539-18ce81
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,8 +20,13 @@ A1 (profile note, `docs/perf/x7-loop-stalls.md`; file set is only that note). Bi
 
 ## Next
 
-1. Read E1's output (`campaign job show 261111-201659-919f00`: `A-mixed.sample.txt`, `A-threads-*.txt`, the B
-   table at the log's end); fill the note's loop, fixes and reproduce sections; commit; report to the lead.
+1. Read E1a's output (261111-221539-18ce81: `A-mixed.sample.txt`, `A-threads-*.txt`, `A-mixed.json`); fill the
+   note's loop, fixes and reproduce sections. Only if the mix leaves the cause open: per-kind loaded phases
+   (`.scratch/e1.sh`'s B runs, bare binary), each its own exclusive job well under 10 minutes.
+
+E1 261111-201659-919f00 is invalid (exit 124 at its deadline): the head node exited 109 at start (CLI11's extras
+error) because my wrapper passed `--solo`, which head no longer takes (x7-gate ran head's binary bare), and the
+sampler's wait had no bound. E1a runs the bare binary and bounds the wait.
 
 RESTORE section drafted (Xapiand:f1e29b97e): the accepting reactor is busy for the whole restore (83-86% of the
 profile window, all three head arms); `finalise_write`'s decompress-and-recompress is 34-44% of that loop and
@@ -52,5 +57,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+
+- msg (lead, 11-11): E1 split; the mix sample first. RESTORE ruling recorded in the quest's Decisions (prepare as an
+  index chore on the one WorkPool; compress once at finalise; parallel apply only if T12 stays short).
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
