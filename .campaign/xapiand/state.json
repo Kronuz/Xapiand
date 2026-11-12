@@ -244,7 +244,9 @@
       "consumes": [],
       "files": [
         "tests/test_aggregation_shards*",
-        "harness/agg_parity*"
+        "harness/agg_parity*",
+        "docs/dev/agg-shard-parity.md",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -283,7 +285,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
-      "updated": "2026-11-12T00:08:32",
+      "updated": "2026-11-12T00:08:56",
       "worktree": "../Xapiand-wt/xapiand/agg-shard-parity"
     },
     "alpha10-builds": {
