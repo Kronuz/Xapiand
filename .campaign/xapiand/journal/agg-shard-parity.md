@@ -1,6 +1,6 @@
 # agg-shard-parity: journal
 
-State: waiting on jobs 261112-002548-2c8cb9 (diagnosis); A1 261112-000934-6482ef failed on a finding below
+State: waiting on jobs 261112-002717-6d94f0 (A1) 261112-002735-c8ec51 261112-002740-e497a2 (A2 mutants); diagnosis 261112-002548-2c8cb9
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -48,13 +48,23 @@ paths the Xapian engine used, per docs/mechanisms/aggregation-scope.md) and woul
 Fix shape (lead's quest): serialise the order keys with each bucket (slot, idx) and set them in both merge overloads
 (or drop the merge API if nothing will use it: one mechanism). A2's mutant is meaningless until then: the test fails without it.
 
+## F1 fix (lead ruled: fix here)
+
+Commit "Carry a bucket's order keys through serialised and merged results" (src/aggregations/bucket.h): serialise_results sends
+each bucket's slot (long double as two doubles) and idx; both merge_results overloads set them on a bucket they create.
+The bug was latent: no production caller merges partials (the server uses one spy over every shard). Wire format of
+partials changed (a per-bucket order string); both ends are ours and nothing stores them.
+A1 = verify 261112-002717-6d94f0 at the fixed head. A2 mutant 1 = the fix reverted (261112-002735-c8ec51, expects DIFF),
+mutant 2 = drop shard 1 (261112-002740-e497a2), both after A1. A3 = docs/dev/agg-shard-parity.md (written, states finding and fix).
+If 2c8cb9 (diagnosis at the pre-fix commit) shows a difference beyond order, fix or report it.
+
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | FAILED, finding F1 (261112-000934-6482ef) |
-| A2 | job 261112-000944-ab7bd4 (mutant, after A1; pending) |
-| A3 | docs/dev/agg-shard-parity.md (pending) |
+| A1 | pre-fix: failed on F1 (261112-000934-6482ef); at the fixed head: 261112-002717-6d94f0 (pending) |
+| A2 | 261112-002735-c8ec51 (fix reverted), 261112-002740-e497a2 (drop shard) (pending) |
+| A3 | docs/dev/agg-shard-parity.md |
 
 ## Result
 
