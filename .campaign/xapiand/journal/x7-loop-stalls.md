@@ -106,8 +106,8 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | [artifact] `docs/perf/x7-loop-stalls.md` (profiles E1a 18ce81, E2 793974; causes, ranked fixes, the chore design) |
-| A2 | 261112-012855-b34e3c: T4 MISS (every HTTP loop p99 2.56-5.12 ms vs 1,024 us; pre 640-768 us); T5 MISS on its bound (light p99 27.1/22.7 ms vs 10.2/8.9 ms), below pre-7c (0.065x) |
-| A3 | 261112-012857-a77bf8: T10 MISS (flood light-GET p99 45.4 ms vs about 20); T12 RESTORE MISS 0.571x (loadtest) / 0.594x (profile_bulk); QPS PASS 2.69x |
+| A2 | `docs/perf/x7-loop-stalls.md`: "At the fix: x7-gate's rows" (job 261112-012855-b34e3c at 232b81cba: T4 MISS 2.56-5.12 ms vs 1,024 us; T5 MISS 22.7-27.1 ms vs bounds 8.9-10.2 ms; targets moved to x7-loop-fix-c) |
+| A3 | `docs/perf/x7-loop-stalls.md`: "At the fix: x7-gate's rows" (job 261112-012857-a77bf8 at 232b81cba: T10 MISS 45.4 ms vs about 20; T12 RESTORE 0.571x/0.594x pre-7c; QPS 2.69x; targets moved to x7-loop-fix-c and a T10 quest) |
 | A4 | suite 261112-025950-117b80 at the merged head (261112-023812-2706e5 passed at 4c1f38179); line-checked mutants 261112-023824-dee27d (:320), 261112-023824-c46ec7 (:341), 261112-023825-ef8bd1 (:415), 261112-023825-67a8c1 (:414), 261112-023825-4e7e65 (:447), 261112-023826-8e5dff (:383) at 6ff9db94a; reruns at 4c1f38179 pending (dee27d, c46ec7, ef8bd1, 67a8c1, 4e7e65, 8e5dff) |
 
 ## Result
