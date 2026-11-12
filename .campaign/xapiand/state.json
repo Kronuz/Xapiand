@@ -2140,17 +2140,58 @@
         "src/engine/strata/shard.cc",
         "tests/test_node.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T16:04:11",
+          "commit": "0ad80490621e2747d8d87c44876a2073509c4595",
+          "criteria": {
+            "A1": "261111-141746-cf5a35 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png); fails without: 261111-133753-938445, 261111-133756-65f3d0, 261111-141748-7c992a, 261111-154234-d4410a",
+            "A2": "261111-154237-c1fcd8 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png)",
+            "A3": "261111-141746-cf5a35 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png)",
+            "A4": "261111-141805-3e0ed7 (passed at 5027b816c172; ignores docs-only brand/README.md, docs/astro.config.mjs, docs/public/apple-touch-icon-152.png, docs/public/apple-touch-icon-167.png, docs/public/apple-touch-icon.png, docs/public/favicon.ico, docs/public/favicon.svg, docs/src/assets/logo-dark.svg, docs/src/assets/logo-light.svg, docs/src/assets/logo.png)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "24c5bacc64b8a951524da90f457f2a7ba4976715",
+              "docs": [
+                "brand/README.md",
+                "docs/astro.config.mjs",
+                "docs/public/apple-touch-icon-152.png",
+                "docs/public/apple-touch-icon-167.png",
+                "docs/public/apple-touch-icon.png",
+                "docs/public/favicon.ico",
+                "docs/public/favicon.svg",
+                "docs/src/assets/logo-dark.svg",
+                "docs/src/assets/logo-light.svg",
+                "docs/src/assets/logo.png"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-141805-3e0ed7",
+              "level": "light",
+              "seconds": 571.1,
+              "state": "done",
+              "what": "cross-shard-followups check suite at 24c5bacc64b8"
+            }
+          ],
+          "final": true,
+          "from": "0f63424dadb7ce7dd60e0933973fc6836d03f371",
+          "reason": "",
+          "tested": "0ad80490621e2747d8d87c44876a2073509c4595"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "cross-shard-id's review follow-ups: ordered tests, one catch, an assert",
-      "updated": "2026-11-11T13:22:20",
-      "worktree": "../Xapiand-wt/xapiand/cross-shard-followups"
+      "updated": "2026-11-11T16:04:25",
+      "worktree": ""
     },
     "cross-shard-id": {
       "accepted": {
