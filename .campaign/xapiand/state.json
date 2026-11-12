@@ -4677,20 +4677,48 @@
         "docs/perf/watch-peek.md",
         "bench/watch_ab.sh"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-cancel-race",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T04:29:44",
+          "commit": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "criteria": {
+            "A1": "261112-035947-754791, 261112-035951-01fc5f; fails without: 261112-035948-060f09",
+            "A2": "261112-035947-754791",
+            "A3": "[artifact] `docs/perf/watch-peek.md` (Timing: A/A printed as after/control; rotation stated)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-035947-754791",
+              "level": "light",
+              "seconds": 186.9,
+              "state": "done",
+              "what": "http-cancel-race check build-test at 473bbc32a4da"
+            }
+          ],
+          "final": true,
+          "from": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
+          "reason": "",
+          "tested": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A cancel that lands between a readiness wake and its handler stops the read",
-      "updated": "2026-11-12T04:29:39",
-      "worktree": "../http-wt/xapiand/http-cancel-race"
+      "updated": "2026-11-12T04:29:49",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
