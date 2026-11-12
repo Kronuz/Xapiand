@@ -1,6 +1,6 @@
 # release-rows: journal
 
-State: waiting on jobs 261111-201050-c7d247 261111-201053-f77c3a 261111-201056-33db85 261111-201059-749f46 261111-201102-4af80d 261111-201230-8ef3e1 261111-201233-507d9b and the 24 fuzz jobs below
+State: waiting on jobs 261111-201053-f77c3a 261111-201056-33db85 261111-201059-749f46 261111-201102-4af80d 261111-201230-8ef3e1 261111-201233-507d9b and the 24 fuzz jobs below
 Quest: .campaign/xapiand/quests/release-rows.md (the lead's; never edit it)
 
 ## Doing
@@ -13,7 +13,7 @@ summary). Everything resubmitted at `2cc69d4`.
 
 | Job | Step | For |
 |---|---|---|
-| 261111-201050-c7d247 | build: row tests at the release pins, binaries | A2 A3 A5 |
+| 261111-201050-c7d247 | build: row tests at the release pins, binaries: passed (8/8, 206 s) | A2 A3 A5 |
 | 261111-201053-f77c3a | parity (after build) | A1 A2 |
 | 261111-201056-33db85 | verify (after build) | A1 |
 | 261111-201059-749f46 | stems (after build) | A4 |
