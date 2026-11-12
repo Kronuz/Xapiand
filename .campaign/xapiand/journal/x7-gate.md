@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-200215-2567dc 261111-200219-6bf1ed 261111-200223-9495ee
+State: waiting on jobs 261111-200215-2567dc 261111-200219-6bf1ed 261111-200223-9495ee 261111-200411-02ffb3 261111-200411-e6bdb2 261111-200412-8fd049 261111-200412-f2f281
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
