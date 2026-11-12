@@ -3478,18 +3478,45 @@
         "tools/mutants.py",
         ".github/workflows/mutants.yml"
       ],
-      "journal": "../Xapiand-wt/xapiand/drop-dir-reader",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T08:03:26",
+          "commit": "3f82cda129a2abeb7fb57baff04fe3981dcc1d85",
+          "criteria": {
+            "A1": "261112-075935-faac3d",
+            "A2": "261112-075935-faac3d; ci:ci / linux-x86_64-gcc, ci:ci / macos-arm64, ci:ci / freebsd-x86_64 (CI run green on every job at completion:3f82cda)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "3f82cda129a2abeb7fb57baff04fe3981dcc1d85",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-075935-faac3d",
+              "level": "light",
+              "seconds": 55.2,
+              "state": "done",
+              "what": "drop-dir-reader check build-test at 3f82cda129a2"
+            }
+          ],
+          "final": true,
+          "from": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+          "reason": "",
+          "tested": "3f82cda129a2abeb7fb57baff04fe3981dcc1d85"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "completion drops the unused shared directory lock",
-      "updated": "2026-11-12T07:58:32",
-      "worktree": "../completion-wt/xapiand/drop-dir-reader"
+      "updated": "2026-11-12T08:03:28",
+      "worktree": ""
     },
     "drop-replicas": {
       "accepted": {},
