@@ -5,27 +5,25 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`exhaustive_search::scan` checks its slice budget every 256 ordinals when an aggregation or sort key
+runs per match, so one window no longer holds a Xapiand loop for ~2.3 ms (x7-loop-stalls cause 2,
+Xapiand docs/perf/x7-loop-stalls.md, job 261111-221539-18ce81). Scans with no per-match work keep
+the 4,096-ordinal window.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A sliced scan with a per-match collector yields at most every 256 ordinals and returns the same results and aggregation values as an unsliced scan: a test in `test/sliced_test.cc` (the build-test check), which fails with the check reverted (a `--fails-without` job)
+- A2 A scan with no per-match work is not slower: one strict job of at most 10 minutes, before and after at named commits, honest magnitude
+- A3 [artifact] The before/after: `docs/perf/scan-slices.md`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None beyond prospect's existing scan API; no signature changes.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-11: split from x7-loop-stalls (Xapiand's quest lands after this one and bumps the pin).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Everything.
