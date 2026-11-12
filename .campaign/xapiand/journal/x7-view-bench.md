@@ -1,6 +1,6 @@
 # x7-view-bench: journal
 
-State: waiting on jobs 261111-160905-d74ef9 (build), 261111-160901-23e3eb (A2)
+State: waiting on jobs 261111-170805-1b0cf8 (build), 261111-170808-5ba0b9 (strict run, A1, after the build)
 Quest: .campaign/xapiand/quests/x7-view-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Benchmark committed (34b610bf5, tests/bench_shard_view.cc, target xapiand_bench_shard_view, EXCLUDE_FROM_ALL). Build job in build-bench running.
+A2 passed (build-test 261111-160901-23e3eb). First bench build failed (Viewed incomplete); fixed by including engine/strata/viewed.h, resubmitted. Benchmark committed (34b610bf5, tests/bench_shard_view.cc, target xapiand_bench_shard_view, EXCLUDE_FROM_ALL). Build job in build-bench running.
 
 ## Next
 
-1. Submit one strict job (<=10 min) running build-bench/bin/xapiand_bench_shard_view --rounds 20 (interleaved rows).
+1. Read the strict job 5ba0b9 output (the table is in its log).
 2. Write docs/perf/shard-view.md, paste Evidence, State ready for review.
 
 ## Blocked on
