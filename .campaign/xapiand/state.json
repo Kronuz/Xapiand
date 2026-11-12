@@ -10121,9 +10121,9 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-12T02:17:26",
+      "updated": "2026-11-12T02:53:00",
       "worktree": "../strata-wt/xapiand/open-one-flush"
     },
     "perf-watch-peek": {
