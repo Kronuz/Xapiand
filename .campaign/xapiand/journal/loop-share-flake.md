@@ -1,6 +1,6 @@
 # loop-share-flake: journal
 
-State: waiting on jobs 261112-105953-49f5c7
+State: waiting on jobs 261112-110926-51a68c 261112-110934-a8f97e and CI
 Quest: .campaign/xapiand/quests/loop-share-flake.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Test rewritten (xapiand:26f30b20f): restores the same 3000 docs into /onloop/ (schema with a root `_script`, so every object prepares on the loop, D1) and /offloop/, checks chores share < on-loop share * MARGIN (placeholder 0.8). Job 261112-105953-49f5c7 builds and prints the shares 3 times; pick the margin from them.
+The check now compares loop CPU ms (chores < on-loop * 0.6; measured about 0.33-0.36; the root script also puts Lua work off the loop, so shares invert, per the lead's msg). Jobs: build-test 261112-110926-51a68c (A1 local), mutant 261112-110934-a8f97e (A2: `fetch` returns false, so every prepare is inline; it must fail; check its log that it fails on the CHECK, not the build). Branch pushed for CI (A1).
 
 ## Next
 
-1. Set the margin from the job's numbers, comment it in one line.
-2. `campaign verify loop-share-flake`; --fails-without job (A2); push the branch, record CI run id (A1).
+1. When the jobs finish: confirm the mutant failed on the loop-CPU CHECK; record the CI run id; fill Evidence from `campaign brief`.
 
 ## Blocked on
 
