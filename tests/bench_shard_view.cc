@@ -46,6 +46,7 @@
 #include "engine/document.h"
 #include "engine/open.h"
 #include "engine/strata/shard.h"
+#include "engine/strata/viewed.h"
 #include "engine/sync.h"
 
 namespace {
