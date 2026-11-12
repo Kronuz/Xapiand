@@ -1,6 +1,6 @@
 # xapiand-strata-bump: journal
 
-State: blocked on lead: strata catalog race (msg TSan); waiting on jobs 261112-042224-6d8e89 261112-043246-c284b3 261112-045455-99a56c 261112-045500-98a0ef
+State: waiting on jobs 261112-101724-de5872 261112-101724-33f78b 261112-101724-6a3348 261112-101725-a119a1; CI Xapiand 43278295136, prospect 43278199249
 Quest: .campaign/xapiand/quests/xapiand-strata-bump.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,48 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs queued at quest/xapiand/xapiand-strata-bump 3cdf295b2 (branch pushed for CI, A4):
-- 261112-042224-6d8e89 build-test check (A2)
-- 261112-042225-aad4d1 configure + harness/pins_check.py (A1): done, `pins_check: ok`, strata head ab0e26a6,
-  prospect's own pin d8ae10b8 listed as a stale pin inside prospect (ancestor; 24 stale library pins, none Xapiand's)
-- 261112-042228-ee73ed tests/test_engine_error.cc alone (A3): failed in configure, lua.org TLS fetch error while the
-  verify job configured the same slot; rerun as 261112-043246-c284b3 after the verify job. Local run: OK 144 checks
-- 261112-042232-481834 mutant tests/test_engine_error_mutant.sh, --fails-without (A3): done, exit 0, the test failed
-  test_engine_error.cc:240 and :244 `CHECK(kind == errc::corrupt)`, 2 of 144 checks
-- CI run 43217395714 on 05cba6694 (A4), in progress
+Lead's msg (strata main 86fe7c47, unpin-after-kick): prospect pin moved on its branch
+`quest/xapiand/xapiand-strata-bump` (prospect:61e09a6, pushed, ff of prospect main a938de6; prospect CI run
+43278199249). Merged master (Xapiand:a56be7bcc), pinned strata 86fe7c47 and prospect 61e09a6 (Xapiand:c3fec9b40), pushed.
+Rerun at c3fec9b40: A2 261112-101724-de5872, A1 261112-101724-33f78b, A3 261112-101724-6a3348,
+mutant 261112-101725-a119a1. Xapiand CI (A4) run 43278295136 (ASan+UBSan, TSan).
 
 ## Next
 
-1. Read the four jobs; paste `campaign brief`'s table under Evidence; check CI on the branch (A4).
-2. The lead rules on A3's wording (Blocked on); then "ready for review".
+1. Read the four jobs; paste `campaign brief`'s table under Evidence; check CI on both branches (A4).
+2. Prospect branch must be green and landed by the lead (ff of prospect main) before this lands.
+3. The lead rules on A3's wording (Blocked on); then "ready for review".
 
 ## Blocked on
 
-Lead (TSan, CI run 43217395714 "Unit tests under TSan", test_node
-test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time): introduced by the pin bump, root in strata.
-strata catalog `unpin` at ab0e26a6 ends `kick(idx); over_soft();` (catalog.hh:1416-1417); at 5d742b24 it ends with
-`kick(idx)`. Under shutdown, `kick` posts the slot's close (shutdown_slot), which lets the close and then
-`DatabasePool::~DatabasePool` (pool.cc:655) run on the manager thread; `over_soft()` then reads `started_` and
-`pass_queued_` of a catalog being deleted (the race TSan names at catalog.hh:1430). over_soft in unpin came with
-strata:5d3c948a "catalog: post a pass when its own soft caps are over" (in 5d742b24..ab0e26a6). Root fix (strata,
-include/strata/core/catalog.hh): call `over_soft()` before `kick(idx)`, so the event that may end the catalog is unpin's
-last touch of it; a strata test that destroys the catalog right after the last unpin's close under TSan. Xapiand cannot
-fix it in pool.* or test_node.cc: the joiner cannot see when another thread's `release()` has returned. Then re-pin
-strata here. Attribution jobs (same TSan command): 261112-045455-99a56c at master 793826408, 261112-045500-98a0ef at
-3cdf295b2 (macOS TSan; the race is timing-bound, so a clean run at either is not proof; the code diff is).
-
-Lead: A3 as written ("opened under the lazy default ... corrupt at first read") does not hold anywhere in Xapiand:
-- The node opens every index under `defer_io` (src/engine/strata/shard.cc:171), and strata forces eager segments under
-  it (strata:ab0e26a6 include/strata/core/index.hh:603, "a first-read map would be I/O inside apply()").
-- The hostless path (open_local, check) and `borrow` both call `Core::verify_fields()` at open, which maps every segment
-  and scans its dictionary directory and pool (shard.cc:291, 474, 1614). An experiment dropping it from `borrow` changed
-  nothing: the pin still failed with "corrupt segment: footer checksum" (defer_io).
-So a damaged segment fails the pin's open: the client gets 500 corrupt from the request that opens the index, the
-catalog backs off (10 ms doubling) and keeps no damaged index, and after the repair a request past the backoff reads it.
-The test proves that form. Options:
-1. Accept A3 in that form (recommended: it is the node's real behaviour and covers report + heal).
-2. Make the node lazy: strata maps lazily under defer_io outside apply() (a strata quest), and the field check moves
-   from Xapiand's open to prospect's first map. Worth measuring for the many-indexes per-open cost first.
+Resolved by strata:86fe7c47 (was: catalog race, TSan run 43217395714). Still open for the lead: A3's wording (the node opens
+every index under `defer_io`, which forces eager segments, so the damage surfaces at open and the test proves report plus
+heal in that form; the lead restated A3 on 11-12). The prospect pin is a branch commit; landing it is the lead's.
 
 ## Evidence
 
