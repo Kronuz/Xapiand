@@ -1,6 +1,6 @@
 # restore-mixed-sign-integers: journal
 
-State: waiting on jobs
+State: waiting on jobs 261111-171323-80d18b 261111-171345-4024c7 261111-171348-d191ec
 Quest: .campaign/xapiand/quests/restore-mixed-sign-integers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
