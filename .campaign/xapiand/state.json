@@ -231,6 +231,8 @@
     "agg-shard-parity": {
       "accepted": {},
       "after": [],
+      "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
+      "branch": "quest/xapiand/agg-shard-parity",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -251,9 +253,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
-      "updated": "2026-11-11T23:32:48"
+      "updated": "2026-11-11T23:55:35",
+      "worktree": "../Xapiand-wt/xapiand/agg-shard-parity"
     },
     "alpha10-builds": {
       "accepted": {},
