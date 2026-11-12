@@ -2351,7 +2351,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	// reserve, which flushes never take. With no reactor (the CLI) every write takes the serial path.
 	DatabaseHandler placement(endpoints, flags);
 	auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
-	const bool parallel = host != nullptr && &chores != &engine::inline_chores();
+	const bool parallel = host != nullptr && &chores != &engine::inline_chores() && !seams.serial.load(std::memory_order_relaxed);
 	const std::size_t n_shards = endpoints.size();
 	std::size_t threads = 1;
 	if (auto manager = XapiandManager::manager(); manager && manager->database_pool) {

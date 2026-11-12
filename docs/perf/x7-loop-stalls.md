@@ -336,9 +336,13 @@ deferred objects). Each test asserts its case occurred before it checks the outc
 - Shards in parallel: `DocIndexer` reports the children cap and the peak number of shards applying at once; with 5
   shards and a cap above 1 (a pool of 5 threads or more) the peak exceeds 1. Mutant: the children are awaited one at
   a time.
-- New numeric ids: an id-less RESTORE into a numeric-id index of 5 shards gives the same ids, shard by shard, as the
-  one-object-per-request run; the run met a range holding more than one such object. Mutant: no join before a
-  `NEW_NUMERIC_KEY` object.
+- New numeric ids: an id-less RESTORE into a numeric-id index of 5 shards gives the same ids and the same document
+  count as the same RESTORE with every write on the serial path (a test seam); the run met a range holding more than
+  one such object. Mutant: no join before a `NEW_NUMERIC_KEY` object. One object per request is not the model here:
+  the least used shard's count (`written_count`) counts a document replaced while it is still buffered twice, so an
+  id-less object after such a replace can take another shard, and its id then meets a later explicit id. Both
+  RESTORE paths agree (job 261112-054313-bda701, the serial path: object 31 gets 133, 39 documents); one object per
+  request gives 132 and 40 documents when the buffer flushes in between.
 - A miss between placement and apply (B1): a test seam runs on the loop after placement and before the children, and
   erases id 7 and writes it again through the RESTORE's handler; the stream holds three objects of id 7 in one range.
   The final document is the stream's last object of id 7, and the run reports all three deferred. Mutant: a missed
