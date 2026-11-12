@@ -27,6 +27,7 @@ None yet; A1 names any API the fix changes.
 
 - Lead, 11-11: profiling (A1) runs on master with `--commit master` jobs and no code change; the file set widens to the code the fix needs once A1 names it (src/** is held by restore-mixed-sign-integers until it lands). The offload pool stays gone (7c's design); the fix makes engine work yield or bounds it, it does not bring a pool back.
 
+- Lead, 11-11 (A1 RESTORE half, Xapiand:f1e29b97e): RESTORE's prepare (`finalise_write`, `Schema::index`) leaves the loop as an index chore on the one host `WorkPool` (phase7c.md section 2's mechanism, no new pool or threads); only the apply stays in the shard's turn. phase7c.md's list of chore kinds gains it, with one design review of that amendment before it lands. The record is compressed once, at finalise (fix 2). Parallel apply over the default shards (fix 3) only if 1 and 2 leave T12 short.
 ## May land early
 
 The profile note (A1).

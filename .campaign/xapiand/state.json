@@ -13134,9 +13134,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-11T18:45:11",
+      "updated": "2026-11-11T22:28:17",
       "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
@@ -17262,6 +17262,8 @@
     "x7-loop-stalls": {
       "accepted": {},
       "after": [],
+      "base": "de4d0ed26aa9256dcb289e7671d7c4e198b2635c",
+      "branch": "quest/xapiand/x7-loop-stalls",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -17281,11 +17283,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: docs/perf/x7-loop-stalls.md is this quest's own file; x7-gate writes no file of that name",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-11T20:05:18"
+      "updated": "2026-11-11T20:05:51",
+      "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-view-bench": {
       "accepted": {},
@@ -17306,18 +17310,45 @@
         "CMakeLists.txt",
         "docs/perf/shard-view.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T20:07:55",
+          "commit": "f52ab775e9eaf9f6b95c25afb57d81ce155072ae",
+          "criteria": {
+            "A1": "261111-175937-76ae57 (passed at 636895fa48d5; ignores docs-only docs/perf/shard-view.md)",
+            "A2": "261111-190002-a37529"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "263b75e73fe4ad085732217307b8a482ffba676c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-190002-a37529",
+              "level": "light",
+              "seconds": 417.4,
+              "state": "done",
+              "what": "x7-view-bench check build-test at 263b75e73fe4"
+            }
+          ],
+          "final": true,
+          "from": "d7d029a3b70a5c1427290786b7ccd4e0c18aa556",
+          "reason": "",
+          "tested": "7f4f9a45ed32a6d86384ed642677c80559da3d71"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "reason": "started by force: docs/perf/shard-view.md is this quest's file; x7-gate cites the job (A22) and writes no file of that name",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
-      "updated": "2026-11-11T16:07:20",
-      "worktree": "../Xapiand-wt/xapiand/x7-view-bench"
+      "updated": "2026-11-11T20:09:40",
+      "worktree": ""
     },
     "xapiand-brand": {
       "accepted": {},
