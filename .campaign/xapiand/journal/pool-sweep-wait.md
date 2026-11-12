@@ -1,6 +1,6 @@
 # pool-sweep-wait: journal
 
-State: waiting on jobs 261112-012420-23a451 261112-012422-bf1ed3
+State: waiting on jobs 261112-013706-bce470 261112-013709-c8d2f4 and the Linux CI run of the pushed head
 Quest: .campaign/xapiand/quests/pool-sweep-wait.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | jobs 261112-012420-23a451 (x50 beside 2x-CPU load), 261112-012422-bf1ed3 (build-test) |
+| A1 | jobs 261112-013706-bce470 (x50 beside 2x-CPU load, gated merge), 261112-013709-c8d2f4 (build-test); Linux CI on the pushed head |
 | A2 | `tests/test_pool.cc`: the wait is `index.wait_merges()`, the index's own merge completion (strata index.hh), under the entry's turn |
 
 ## Result
