@@ -147,59 +147,80 @@ and recompressing what `prepare` compressed; built: Xapiand:2f8145379, `Data::se
 
 ## Design: RESTORE's prepare as an index chore
 
-The lead's ruling (fix (a) above); for one design review before it is built. It amends phase7c.md D4 and D12, whose
-D12 already says "RESTORE batches are prepared in parse-ahead chores" while master prepares them on the loop.
+The lead's ruling (fix (a) above), revised for the design review's findings D1-D8
+(`.campaign/xapiand/reviews/x7-loop-stalls-design.md`). It amends phase7c.md D4 (the `flush` row gains "RESTORE
+prepare") and makes D12's "RESTORE batches are prepared in parse-ahead chores" true.
 
-**What moves.** The CPU of preparing an object, per sub-batch of a parsed batch: walking the object against a schema
-snapshot, generating fields, terms and values into an `engine::Document`, and serialising the record, raw; the one
-compress stays in `finalise_write`, in the shard's turn (fix (b)). It runs as a `flush` chore in the RESTORE's own `WorkGroup` (the group `restore_database_view`
-already makes for its parse-ahead chores), so the one host `WorkPool` serves it beside the parse and no thread or pool
-is added. A batch splits into up to `workers` sub-batches posted together; each returns its prepared objects in input
-order.
+**What moves.** The CPU of preparing a plain object: its id and `_data`, all of `Schema::index` (fields, terms,
+values, and the shard of a new uuid id, `seq % n_shards` checked with `Endpoint::is_active()`, an atomic read; a new
+numeric id takes `NEW_NUMERIC_KEY` and the shard numbers it in its turn, D8), and the record serialised raw. The one
+compress stays in `finalise_write`, in the shard's turn (fix (b)). It runs as `flush` chores on the one host
+`WorkPool`; no thread or pool is added.
 
-**What stays on the loop.** Everything that awaits or touches loop-bound state: the schema lookup and its update
-(`get_schema`, `update_schema`, control-plane caches); an object's id and the current document for `patch`, `update`
-and `merge` (reads through the shard's view); shard placement for new numeric ids (it pins shards for their counts);
-and the apply in the shard's turn (`replace_document_term`, `finalise_write`). This needs `Schema::index` split in
-two: a pure part over `(const Schema&, object, Data)` with no `DatabaseHandler`, and the loop part (placement, scripts
-that read the old document) around it.
+**Barriers (D1).** An object whose prepare reads the stored document or other loop-bound state takes today's path on
+the loop, and only after every earlier object of the stream has applied: an `_op_type` other than `index` (`patch`,
+`update` and `merge` read the current document), an object with a root `_script` (the script reads `_old_doc`) or
+`_schema` (its schema is updated as it is fetched), and every object while the index's schema has a root script.
+Plain `index` objects keep the parallel path. `DocIndexer::index` returns only after every object of its batch has
+applied, so a barrier at a batch's start sees the previous batch; no prepare runs ahead of a batch boundary.
 
-**Ordering.** Objects apply in input order, as today: the loop task awaits a batch's chores, then applies its objects
-one by one in its turns, with a checkpoint between objects. The next batch's chores may run while this batch applies
-(one batch ahead, as the parse already is), so prepare overlaps the apply. A schema change found while preparing (a
-new field) stops that sub-batch at the object: the chore returns the objects before it and the changed schema; the loop
-runs `update_schema` and posts the rest against the new snapshot. Two sub-batches that change the schema at once
-apply their updates one at a time on the loop, and the second re-prepares from its first changed object (the existing
-`SCHEMA_RETRIES` rule, moved to the batch).
+**Rounds and ordering (D2, D5).** The plain objects between two barriers form a run, prepared in rounds. A round
+fetches the schema on the loop and posts one chore per non-reserve worker (`threads() - 1`). Each chore builds its
+own `Schema` over the snapshot's locked `shared_ptr<const MsgPack>` (D4: `Schema::index` mutates its `Schema`, so
+nothing else is shared) and pulls the run's objects in input order from one atomic cursor. It stops after about 1 ms
+of work, at the run's end, or after its first object that changes the schema, so no chore holds a worker past about
+1 ms plus one object (D5) and the parse's chores interleave. When every chore of the round has ended, the loop takes
+the prepared objects in input order up to the first one that changed the schema and offers that change
+(`SchemasLRU::set`): changes commit in input order. Every later object was prepared on the old snapshot and is
+prepared again in the next round, against the new one (D2); completion order never shows, since the loop reads the
+round only after all its chores end. A refused offer prepares the object again from a fresh snapshot, at most
+`SCHEMA_RETRIES` times, as today. A change wastes at most the objects the other chores had pulled, about one per
+worker, so a new index (whose first objects change the schema) costs about one round per change.
 
-**Failure.** An object's error (bad field, type mismatch) is that object's result, as `co_catch_http_errors` makes it
-today; the others go on. A chore that throws (allocation, a bug) fails its sub-batch's objects with 500 and the
-request goes on. Cancellation: the request's token stops posting chores and is read between sub-batches; a cancelled
-RESTORE awaits its group's in-flight chores (its own group, so no chore waits on its own group) and drops what they
-prepared. Shutdown cancels the group through `IndexChores::cancel_all`, as for the parse.
+**Apply.** The loop applies the accepted objects in input order, one per shard turn (`replace_document_term`,
+`finalise_write`), with a checkpoint between, while the next round's chores prepare the objects after them
+(`task::when_all`, as the parse overlaps the batch). `_version` and new numeric ids are assigned in input order, as
+today.
 
-**Lifetime across threads.** A sub-batch's inputs and outputs live in one `shared_ptr` state: the objects moved in, the
-schema snapshot (`shared_ptr<const Schema>`, immutable), and the prepared `engine::Document`s, records and errors. The
-chore holds one reference and the loop task the other, so a task destroyed while suspended (teardown phase 3) leaves the
-chore its state until the chore ends; the chore resumes the task with `post()` only if it still waits. Nothing in the
-state points into the task's frame, the `DatabaseHandler` or a view. Built documents cross threads once, chore to loop,
-by that `shared_ptr` (release on the worker, acquire on the loop through the post).
+**Failure (D7).** Each object's prepare is caught inside the chore; its exception is that object's result, mapped on
+the loop as `co_catch_http_errors` maps it today, and the others go on. A queued chore that `IndexChores::cancel_all`
+drops resumes with `task::cancelled`; `task::when_all` rethrows only after every chore of the round has ended. The
+request's token is read at each checkpoint between applies. What applied stays and the closing commit runs on every
+exit (`restore_database_view`).
 
-**Expected effect, and a question for the reviewer.** `Schema::index` plus `finalise_write` are 64-68% of the loop's RESTORE time
-(the RESTORE section: 29.3 + 34.3, 23.3 + 44.2, 23.2 + 43.6). The chore takes `Schema::index` off the loop. Fix (b), built
-as ruled (compress once at finalise, Xapiand:2f8145379), removes the decompress and the second compress and keeps one
-zstd compress in the shard's turn (16-19% of that time is compression). The question, not part of this design: leave `_version`, and the `_id` of a
-new numeric id, out of the stored record and fill them at read from their value slots (`search_view` and
-`retrieve_document_view` already fill both when a record lacks them); then the record is compressed once in the chore
-and `finalise_write` does no record work. It changes what the record holds (formats are open until release); a
-response's field order may change, and `Document::get_obj`'s callers (patch, update, scripts) need the same fill. Fix (c), apply
-per shard in parallel, only if T12 stays short.
+**Lifetime (D3).** A round's state (its objects, their prepared documents and errors, the cursor, the snapshot)
+lives in the awaiting frame, as `Request::parse_ahead`'s does, and the chores reference it. A frame is never
+destroyed under a running chore: `cancel_all` drains running chores before the loops' tasks are destroyed (`pool.h`),
+and frames end by completing (D3 R6.3). A chore touches no loop-bound state: `Schema::index` reads the endpoints and
+flags of a `DatabaseHandler` of the batch's own, never written while chores run. Prepared documents cross threads once,
+written by a chore and read by the loop after the chore's completion resumes it (the pool's handoff orders them).
 
-**Files.** `docs/design/phase7c.md` (D4's `flush` row gains "RESTORE prepare", D12's sentence becomes true),
-`src/database/schema.{h,cc}` (the split), `src/database/handler.{h,cc}` (`DocIndexer`, `prepare_document`),
-`src/server/search_views.cc` (`restore_database_view`'s batch loop), `tests/test_reactor_requests.cc` (prepare off the
-loop: loop CPU per batch against inline, as the bulk-parse test measures; cancellation and teardown with chores in
-flight).
+**Group.** `DocIndexer`'s constructor (`src/database/handler.h`, outside this quest's files) has no handle on the
+RESTORE's own `IndexChores`, so each `DocIndexer::index` call makes a group of its own on the host pool, beside the
+RESTORE's parse group. Taking the RESTORE's group is a one-line header change for the lead.
+
+**Expected effect (D6).** From the RESTORE table's shares: with `Schema::index` off the loop and compress-once as
+ruled, the loop keeps the shard's turn (`finalise_write` less its decompress, 34.3 - 4.2%, plus the rest of
+`Shard::replace`, 45.1 - 34.3%), about 41% of today's loop time (about 50% in arms 3 and 6): 0.2-0.25 ms per object,
+about 4,000-5,000 docs/s, 0.55-0.7x pre-7c. An estimate from profile shares; A3's job decides. If T12 stays short,
+fix (c) (apply per shard in parallel) follows. The owner's question, not built: leave `_version` and a new numeric
+`_id` out of the stored record and fill them at read from their value slots, which takes the compress off the turn
+too (about 11% left). Its costs: `_dump_document` builds a dump from the record alone, so `dump_page` must return the
+id and version slots or a restore renumbers numeric ids; `call_script`'s `_old_doc` and the bases of patch, update and
+merge (`Data::get_obj`) need the same fill; tests of a dump-restore round trip of a numeric-id index and of `_version`
+in GET, search and dump.
+
+**Tests** (`tests/test_loop_yield.cc`, a node in the test's process; RESTORE over HTTP):
+
+- The probe's stream (index `a`, then an update of `a`) with plain objects before it, so the update follows a run in
+  one batch, and split across two body pieces with a pause, so the update starts the second batch: GET shows both
+  fields. Mutants: the run before a barrier is not applied first; a batch's last run is not applied before `index`
+  returns.
+- Schema order: a new index restored from `x` as an integer, then many plain objects, then `x` as a string; the
+  chores pull them in parallel. The integer wins, the string object alone fails, as in a sequential run. Mutant: the
+  round goes on past its first change, offering later objects' changes made on the old snapshot.
+- Prepare off the loop: the HTTP loop's CPU during a text-heavy RESTORE is under half the process's. Mutant: every
+  object is a barrier.
 
 ## Reproduce
 
