@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-135829-ed2a30 261112-135846-1ed27a 261112-135930-ac1627 261112-140230-7c5ae9
+State: waiting on jobs 261112-140616-4c616d 261112-140618-2747f2 261112-140621-59071a 261112-140623-b7a0b7
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -16,12 +16,13 @@ custom handler tracking marks a loop "in a handler", and env knobs per arm: `LS_
 `LS_WORKER_POLICY` (`qos:*` on macOS, `nice:N` on Linux), `LS_WORKERS` (WorkPool size).
 `ls_report.py` summarises the loaded phase; `vm_census.sh` (65d7e9ca4) runs the arms in the VM.
 
-Jobs:
-- 261112-135829-ed2a30 light: macOS census build (binary at `~/.scratch/loop-scheduling/2c41294a4/`).
-- 261112-135846-1ed27a strict (= exclusive on macOS): E1, census arms base, nocensus, loops `qos:ui`,
+Jobs (at bf0733fd5; the first builds at 2c41294a4 failed in CMake's CheckAtomic probe, which compiles
+with -std=c++11 under the force-included header: the header is now empty below C++17):
+- 261112-140616-4c616d light: macOS census build (binary at `~/.scratch/loop-scheduling/bf0733fd5/`).
+- 261112-140618-2747f2 strict (= exclusive on macOS): E1, census arms base, nocensus, loops `qos:ui`,
   workers `qos:ut`, 8 workers, 8 reactors (heavy clients pinned at 64).
-- 261112-135930-ac1627 light: the same build on strata's Linux VM (port 18772, `~/ls-loop-scheduling`).
-- 261112-140230-7c5ae9 exclusive: E3, the VM's census arms base, nocensus, workers nice 5, loops nice -5
+- 261112-140621-59071a light: the same build on strata's Linux VM (port 18772, `~/ls-loop-scheduling`).
+- 261112-140623-b7a0b7 exclusive: E3, the VM's census arms base, nocensus, workers nice 5, loops nice -5
   (RLIMIT_NICE raised), 4 workers, 4 reactors (heavy 32).
 
 ## Next
