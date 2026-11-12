@@ -1,6 +1,6 @@
 # unpin-after-kick: journal
 
-State: waiting on jobs 261112-055306-ba7c31 (build-test) and CI run 43231465982
+State: ready for review
 Quest: .campaign/xapiand/quests/unpin-after-kick.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,32 +31,36 @@ Earlier jobs at da983792, all exit 0: TSan 261112-051834-5fd5e6, ASan+UBSan 2611
 
 ## Next
 
-1. Read build-test 261112-055306-ba7c31 (A2, A3) and CI run 43231465982 (A3, every platform, Linux TSan).
-2. The lead rules on the unpin's hot-path cost (Blocked on); then "ready for review" (re-review of F1, F2).
+1. Re-review of F1, F2 and the N3 record; CI on a0bc0430 (docs only after b04ca9e0, whose build-test passed).
 
 ## Blocked on
 
-Lead (review N3, a decision on hot-path cost): pin_smoke A/B 261112-051905-9ea016 (strict, single thread, 3
-interleaved runs of 11 rounds x 2M pairs, medians of medians): by handle 48.7 ns/pin+unpin at ab0e26a6, 56.6 at
-the fix (+8 ns, 16% slower); by key 62.3 vs 74.9 (+12.6 ns, 20% slower). Only the unpin changed on that path
-(load + compare-exchange loop with over_soft() before it, instead of fetch_sub). Options:
-1. Accept: about 8 ns per unpin is the price of making the exchange the last touch.
-2. Recommended: before landing, a short experiment on this branch (perf annotate of pin_smoke; try over_soft()
-   off the exchange's dependency chain, compare_exchange_strong, a single exchange without the reload). The
-   compare-exchange the design needs costs about what fetch_sub does on x86, so 8 ns suggests codegen,
-   not the mechanism. Bring back numbers; the fix stays correct either way.
-3. Land now, optimize in a follow-up quest.
+Nothing. N3, the lead's ruling: at most 3 tries, else record the cost and stop. Two tries:
+- Try 1, strata:58f9e0ab, not kept: one inline compare-exchange, with the loop, mark and drain moved out of
+  line. Strict job 261112-074010-73b976, by handle, medians of 3 interleaved runs:
+  - base: 48.7, 54.3, 49.6
+  - fix: 58.4, 62.2, 58.4
+  - try 1: 61.4, 59.8, 55.5
+  It recovered nothing, so the branch is back at b04ca9e0.
+- Try 2, attribution probe 261112-075446-07de70 (unversioned): the old `fetch_sub` unpin body on the new
+  header. By handle, minimum of 3 runs:
+  - base: 46.1
+  - try 1: 53.2
+  - old body: 52.5
+  The exchange is not the cost. The gap comes from elsewhere in the header, likely layout or inlining, and is
+  not explained. The host's noise is large: one base median read 59.9.
+I stopped there and recorded the cost in docs/mechanisms/catalog.md (strata:a0bc0430).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | 261112-055252-e509d2 (TSan), 261112-055255-91db1f (ASan+UBSan); fails without: 261112-051840-b0a9ca (ab0e26a6's catalog.hh, ASan heap-use-after-free in over_soft from the unpin), 261112-055258-a6bd1d (F1: heap-use-after-free in over_soft from the miss), 261112-055301-475b83 (F2(a): mark-window checks fail), 261112-055304-392b68 (F2(b): unpin-window checks fail) |
-| A2 | <261112-055306-ba7c31 queued>; fails without: 261112-051843-666637 (no over_soft() in unpin: soft_caps_post's `hot_indexes() == 1` fails) |
-| A3 | <261112-055306-ba7c31 queued>; CI 43225986515 green at da983792; CI 43231465982 at b04ca9e0 running |
+| A2 | 261112-055306-ba7c31 (build-test at b04ca9e0); fails without: 261112-051843-666637 (no over_soft() in unpin: soft_caps_post's `hot_indexes() == 1` fails) |
+| A3 | 261112-055306-ba7c31 (build-test at b04ca9e0); CI 43225986515 green at da983792; CI at b04ca9e0/a0bc0430: see `campaign brief` |
 
 Review findings: F1 fixed (miss_under_shutdown, 261112-055258-a6bd1d); F2 fixed (mark_in_unpin_window,
-unpin_in_mark_window, 261112-055301-475b83, 261112-055304-392b68); N1, N2 left (R6); N3 measured (Blocked on).
+unpin_in_mark_window, 261112-055301-475b83, 261112-055304-392b68); N1, N2 left (R6); N3 measured, two tries, cost recorded (Blocked on).
 
 ## Result
 
@@ -64,7 +68,8 @@ strata:da983792 + b04ca9e0 (include/strata/core/catalog.hh, test/catalog_teardow
 3adfdc27). The slot word's `shut` bit makes the last unpin's exchange its last touch of the catalog (or the
 start of the shutdown close, whose post is last). The miss now runs over_soft() before posting the open. The
 refusal paths pass their count back in a chore. The waiter counters go in under the mutex. Hot-path cost:
-+8 ns per pin+unpin by handle (Blocked on).
+pin_smoke by handle 48.7 to 56.6 ns, by key 62.3 to 74.9, not attributable to the exchange (Blocked on);
+recorded in docs/mechanisms/catalog.md "Shutdown".
 
 ## Rulings I made
 
