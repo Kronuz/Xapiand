@@ -13214,7 +13214,8 @@
       ],
       "consumes": [],
       "files": [
-        "src/**",
+        "src/database/schema.cc",
+        "src/serialise.cc",
         "tests/restore_cli_check.sh",
         "tests/test_restore_integers.cc",
         "docs/dev/restore-integers.md"
@@ -13224,12 +13225,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: docs/dev/restore-integers.md is this quest's own file; x7-gate writes no file of that name",
       "repo": ".",
       "risk": "normal",
       "status": "active",
       "title": "A msgpack RESTORE keeps every document of a field holding both signs",
-      "updated": "2026-11-11T16:52:23",
+      "updated": "2026-11-11T23:00:35",
       "worktree": "../Xapiand-wt/xapiand/restore-mixed-sign-integers"
     },
     "retention": {
