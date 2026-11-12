@@ -19432,18 +19432,47 @@
         "tests/test_engine_*",
         "harness/pins_check*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T13:35:08",
+          "commit": "55741956f0b33de0d5a4f3baaa6e32e0b3592077",
+          "criteria": {
+            "A1": "261112-105156-3f234f (passed at 956f4b6ea104; only merges from main since)",
+            "A2": "261112-101724-de5872 (passed at 956f4b6ea104; only merges from main since)",
+            "A3": "261112-101724-6a3348 (passed at 956f4b6ea104; only merges from main since); fails without: 261112-042232-481834, 261112-105157-135ef5",
+            "A4": "`ci:Unit tests under ASan + UBSan`, `ci:Unit tests under TSan`, `ci:AddressSanitizer + UBSan`, `ci:ThreadSanitizer` (green at fa7eb4510, run 43298845480, and at 83a887dcc, run 43309562840)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "c3fec9b406490249ade38778ea1d4b356cc0646a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-101724-de5872",
+              "level": "light",
+              "seconds": 460.6,
+              "state": "done",
+              "what": "xapiand-strata-bump check build-test at c3fec9b40649"
+            }
+          ],
+          "final": true,
+          "from": "7ba0e592b6c9121da57141a74eb5f7acd1c6b1a3",
+          "reason": "",
+          "tested": "37f9ca1f39ccf8dabec3a7ab1ebe331d850ed031"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
-      "updated": "2026-11-12T13:22:06",
+      "updated": "2026-11-12T13:37:12",
       "worktree": "../Xapiand-wt/xapiand/xapiand-strata-bump"
     }
   },
