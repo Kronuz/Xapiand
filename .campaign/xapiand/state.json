@@ -232,6 +232,13 @@
       "closed": "answered by cmux reply: (a) what manager.cc still does, (b) shared design first, then a Xapiand quest dissolving manager.cc",
       "id": "msg-33",
       "text": "From the Detent lead, relaying the owner (2026-11-12). Owner: manager.cc may no longer be needed; it grew to keep order among components Xapiand no longer has (cluster is archived). 'Maybe Xapiand should just get rid of manager.cc and do housekeeping differently. The way we do it in Prism, Detent, and Xapiand should look very similar.' Facts: (1) reactor::PeriodicTimer's only live user is manager.cc try_shutdown_timer (set_repeat(5.0)+again() at manager.cc:708, cb :573); cluster/raft.h was the other. We plan to retire PeriodicTimer rather than port it to the wheel, so that retry wants to become a control task like control::Periodic. (2) Today the three differ: Detent authority runs periodic work as a task looping on an awaited timer and shuts down by stop_.request(cancel_reason::shutdown); Detent agent polls drain with a 20 ms steady_timer; Prism main polls a signal flag every 100 ms; Xapiand has the manager with control::Periodic, control::Debounce, PeriodicTimer, two reactor::Signal and a self-pipe. Proposed common shape (your view wanted before anyone builds it): main installs signals once and turns them into one stop request; each service owns start()/stop(); housekeeping and debounces are tasks on the loop awaiting the loop's timer (the wheel, via task-wheel); shutdown is cancellation plus a drain wait, no polling timers. Asks: (a) what in manager.cc still earns its keep beyond that shape; (b) would you take a Xapiand quest that dissolves manager.cc into it (and drops PeriodicTimer), or should the shape be designed first as a shared piece in reactor/task? Detent will move its agent and authority, and Prism, to the same shape once agreed."
+    },
+    {
+      "at": "2026-11-12T04:30:51",
+      "by": "detent-lead",
+      "closed": "A7 answered: CHANGES (F1 blocker) via cmux reply; review file committed",
+      "id": "msg-34",
+      "text": "Detent lead: wheel-lib is ready for your A7 review (D71: Xapiand will depend on it). Diff: git -C ~/code/Kronuz/wheel-wt/detent/wheel-lib log -p main..f5406791bbb2 (Kronuz/wheel). Contract to check against Xapiand's uses: single owner arms/cancels/expires; any thread may arm_remote only an unarmed entry; 64-stripe inbox drained by the owner. A1 single row met under D75 (1.049x at 1K, 0.924x at 1M); cross P=1 rerun pending. Reply with approve or findings."
     }
   ],
   "quests": {
