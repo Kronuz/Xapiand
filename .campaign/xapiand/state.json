@@ -17709,18 +17709,51 @@
         "docs/perf/README.md",
         "docs/mechanisms/sliced-search.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/x7-scan-slices",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T01:06:25",
+          "commit": "b20e7c555f37daad415cf658b32f99cc9a955464",
+          "criteria": {
+            "A1": "261112-003707-96568a (passed at ca65df92a186; ignores docs-only docs/mechanisms/sliced-search.md, docs/perf/README.md, docs/perf/scan-slices.md); fails without: 261111-230602-46c1c9",
+            "A2": "261112-003722-18be3b (passed at ca65df92a186; ignores docs-only docs/mechanisms/sliced-search.md, docs/perf/README.md, docs/perf/scan-slices.md)",
+            "A3": "`docs/perf/scan-slices.md` (prospect:b20e7c5)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ca65df92a186399cab3d0be982e04bf0829845af",
+              "docs": [
+                "docs/mechanisms/sliced-search.md",
+                "docs/perf/README.md",
+                "docs/perf/scan-slices.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-003707-96568a",
+              "level": "light",
+              "seconds": 196.3,
+              "state": "done",
+              "what": "x7-scan-slices check build-test at ca65df92a186"
+            }
+          ],
+          "final": true,
+          "from": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "reason": "",
+          "tested": "b20e7c555f37daad415cf658b32f99cc9a955464"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's scan yields every 256 ordinals when per-match work runs",
-      "updated": "2026-11-11T23:10:58",
-      "worktree": "../prospect-wt/xapiand/x7-scan-slices"
+      "updated": "2026-11-12T01:06:36",
+      "worktree": ""
     },
     "x7-view-bench": {
       "accepted": {},
