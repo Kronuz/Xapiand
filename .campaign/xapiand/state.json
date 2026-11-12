@@ -852,9 +852,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-12T00:05:31",
+      "updated": "2026-11-12T01:43:27",
       "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
