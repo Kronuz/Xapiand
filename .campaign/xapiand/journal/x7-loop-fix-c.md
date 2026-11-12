@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-042106-305a1a 261112-044733-b8b2e0
+State: waiting on jobs 261112-042106-305a1a 261112-045157-27ee29
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,7 +16,7 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-0. Read suite job 261112-044733-b8b2e0 (build-test at Xapiand:3c3cf24c4, A4). Expected: `harness/async_check.sh
+0. Read suite job 261112-045157-27ee29 (build-test at the head, A4; 261112-044733-b8b2e0 failed to compile: nested types with default member initializers in `static inline` members, fixed). Expected: `harness/async_check.sh
    --strict` fails on two allowlist counts (see Blocked on); everything before it must pass. Fix compile or test
    failures in the file set; set `CHECK_LT(loop_ms, process_ms * 0.25)` in
    `test_a_restore_prepares_and_writes_its_objects_off_its_loop` halfway between the build's printed share and the
