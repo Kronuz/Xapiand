@@ -57,6 +57,7 @@
 #include "opts.h"                           // for opts::
 #include "engine/open.h"                    // for engine::check
 #include "engine/search.h"                  // for engine::search, prepare
+#include "engine/sync.h"                    // for engine::sync_wait
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -2321,7 +2322,7 @@ reads_stored(const MsgPack& obj)
 
 
 // The prepare of a plain `index` object against `schema`, in a chore: DatabaseHandler::prepare once its schema is
-// fetched. `Schema::index` completes without waiting: no script, and `seq` is never 0 (no shard count is read).
+// fetched. `Schema::index` is CPU only here: no script (no call_script), and `seq` is never 0 (no lock_shard).
 std::tuple<std::string, engine::Document, MsgPack>
 prepare_plain(Schema& schema, DatabaseHandler& placement, MsgPack& body, std::size_t seq)
 {
@@ -2329,7 +2330,7 @@ prepare_plain(Schema& schema, DatabaseHandler& placement, MsgPack& body, std::si
 	take_op_type(body);
 	Data data;
 	inject_data(data, body);
-	auto prepared = task::sync_wait(schema.index(body, document_id, placement, data, seq));
+	auto prepared = engine::sync_wait(schema.index(body, document_id, placement, data, seq));
 	finish_prepared(prepared, data, UNKNOWN_REVISION);
 	return prepared;
 }
