@@ -10346,6 +10346,8 @@
       "after": [
         "phase3-ratchets"
       ],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/phase4-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -10466,6 +10468,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/phase4-gate",
       "landed": [],
       "lenses": [
         "correctness",
@@ -10476,9 +10479,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Phase 4's remaining items and its gate",
-      "updated": "2026-11-09T04:14:29"
+      "updated": "2026-11-11T18:22:21",
+      "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
       "accepted": {},
