@@ -34,7 +34,7 @@ heal in that form; the lead restated A3 on 11-12). The prospect pin is a branch 
 | A1 | job 261112-042225-aad4d1 (pins_check: ok) |
 | A2 | job 261112-042224-6d8e89 (running) |
 | A3 | job 261112-043246-c284b3 (queued), mutant 261112-042232-481834 (killed: exit 0) |
-| A4 | ci:Unit tests under ASan + UBSan, ci:Unit tests under TSan, ci:AddressSanitizer + UBSan, ci:ThreadSanitizer (run 43298845480 at fa7eb4510, all green) |
+| A4 | `ci:Unit tests under ASan + UBSan`, `ci:Unit tests under TSan`, `ci:AddressSanitizer + UBSan`, `ci:ThreadSanitizer` (green at fa7eb4510, run 43298845480, and at 83a887dcc, run 43309562840) |
 
 ## Result
 
