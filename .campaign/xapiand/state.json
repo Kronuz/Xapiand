@@ -229,7 +229,32 @@
   ],
   "quests": {
     "agg-shard-parity": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T01:45:49",
+          "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
+          "blobs": {
+            "CMakeLists.txt": "100644:0aeedd8176be43ef1c02d2e0cc790061d8340020",
+            "docs/dev/agg-shard-parity.md": "100644:214039a521f7b65ca853e96a1d4e0ae635bb9765",
+            "src/aggregations/bucket.h": "100644:ca186cd38e8f0cdb8786da475e4498990766333c",
+            "tests/test_aggregation_shards.cc": "100644:1cc19d724bc257f63f67c41b1893aa7e0b72dda5"
+          },
+          "by": "review",
+          "commit": "997e7db68999a773cb94f08916c3bdc56a9da002",
+          "criteria": "f21ce480a3278748",
+          "diffs": {
+            "CMakeLists.txt": "1880a606411a0776",
+            "docs/dev/agg-shard-parity.md": "b7ed670dec087dd2",
+            "src/aggregations/bucket.h": "0300a36526f6d78a",
+            "tests/test_aggregation_shards.cc": "d00c689df4f45cbd"
+          },
+          "findings": {},
+          "note": "",
+          "review": "0bc8123ea458378be1d084843d81941aaf0eddec",
+          "reviewed": "cdb757fc2a583e47b11b485234cfb3ba416d0de0",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
       "branch": "quest/xapiand/agg-shard-parity",
@@ -277,17 +302,47 @@
           ]
         }
       ],
-      "landed": [],
-      "lenses": [],
+      "landed": [
+        {
+          "at": "2026-11-12T01:58:55",
+          "commit": "01766e08840529f23bb6cb1972a2022f855abe8b",
+          "criteria": {
+            "A1": "261112-002820-f46d26",
+            "A2": "261112-002820-f46d26; fails without: 261112-002821-1d7a01, 261112-013131-08b954, 261112-013135-842794",
+            "A3": "[artifact] `docs/dev/agg-shard-parity.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "cdb757fc2a583e47b11b485234cfb3ba416d0de0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-002820-f46d26",
+              "level": "light",
+              "seconds": 276.5,
+              "state": "done",
+              "what": "agg-shard-parity check build-test at cdb757fc2a58"
+            }
+          ],
+          "final": true,
+          "from": "b08a7fde4020862e7b71df1b831f22fc18d7938a",
+          "reason": "",
+          "tested": "152f835d005e475335eeaa8bd235d5c6fe141a8b"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
-      "updated": "2026-11-12T00:26:29",
-      "worktree": "../Xapiand-wt/xapiand/agg-shard-parity"
+      "updated": "2026-11-12T01:59:05",
+      "worktree": ""
     },
     "alpha10-builds": {
       "accepted": {},
@@ -717,7 +772,48 @@
       "worktree": ""
     },
     "barrier-warning-strata": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-12T01:52:28",
+          "base": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "blobs": {
+            "CMakeLists.txt": "100644:b60636f163ba77ea89b66a156ee908387238a8b9",
+            "include/strata/core/counted_io.hh": "100644:bb4648d3ea97fa2a5e4cb1e0f1db9d32ee1ef43f",
+            "include/strata/core/faultfs.hh": "100644:156f9579da5141028181436a588b1df164063df9",
+            "test/background_merge_test.cc": "100644:2878321dd042fade89e81bbf70051af6d5f37290",
+            "test/cold_hooks.hh": "100644:e5fb072682af70dc0c2dc9fef1e24f7022e5d7be",
+            "test/counted_hooks.hh": "100644:97b7061de8565662ab73bffe988c2e6fb1f163d7",
+            "test/directory_test.cc": "100644:4e291380dfff856dfa5b04ec4b9ff78402c1d38c",
+            "test/faultfs_test.cc": "100644:fef21ffccd91b30d9a3ffca6bb16d2210e892d8c",
+            "test/flush_memory_test.cc": "100644:bd03de2960e3231cee5014054fa85de4fdefa630",
+            "test/format14_test.cc": "100644:c380113d5a0a52d983fbf8a610c116932fc124f8",
+            "test/index_test.cc": "100644:b829a357909248eb947226674e0b189cee58d109",
+            "test/install_errors_test.cc": "100644:d2ee37cbfce2a33790398f91c3435ffc9fdeb2f9"
+          },
+          "by": "review",
+          "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "criteria": "758c16c2ec0b2a4f",
+          "diffs": {
+            "CMakeLists.txt": "ccee07be76395d56",
+            "include/strata/core/counted_io.hh": "68443b64f7a1e62a",
+            "include/strata/core/faultfs.hh": "53c8363e0484be30",
+            "test/background_merge_test.cc": "ee5cb5d523c28e05",
+            "test/cold_hooks.hh": "f9785cd97a541345",
+            "test/counted_hooks.hh": "545610576c50e521",
+            "test/directory_test.cc": "84f1243c881ed3e1",
+            "test/faultfs_test.cc": "71cb199ed6008b63",
+            "test/flush_memory_test.cc": "9879a55c0299566c",
+            "test/format14_test.cc": "2f94148ffbc55d00",
+            "test/index_test.cc": "ae26e5088c8354a6",
+            "test/install_errors_test.cc": "5a2bdf776feacc24"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dd3d78ba6acbec94b6ca4e4b3f318fc6e7c2c747",
+          "reviewed": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "barrier-warning-completion"
       ],
@@ -843,18 +939,56 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/barrier-warning-strata",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T01:52:33",
+          "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "criteria": {
+            "A3": "261112-003214-3ac1cf",
+            "A4": "261112-013520-bd7c93",
+            "A5": "261112-003214-3ac1cf; fails without: 261112-011239-8f21e5",
+            "A6": "`docs/reviews/calibration.md` row 2026-10-29 (strata, already on main): \"Linux CI TSan is the authority for races on struct-copy writes; a local macOS TSan pass is not evidence for that class\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-003214-3ac1cf",
+              "level": "light",
+              "seconds": 409.0,
+              "state": "done",
+              "what": "barrier-warning-strata check build-test at d8ae10b8f1db"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "later": [
+            "261112-015233-4d4b38"
+          ],
+          "reason": "",
+          "tested": "d8ae10b8f1dbb31927fe6c01278fc7a476513864"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-12T00:05:31",
+      "updated": "2026-11-12T01:52:35",
       "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
@@ -11906,6 +12040,8 @@
     "pool-sweep-wait": {
       "accepted": {},
       "after": [],
+      "base": "30dc945b436a642b14659628ff6a31082d21ccca",
+      "branch": "quest/xapiand/pool-sweep-wait",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -11925,9 +12061,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "The sweep-merge pool test waits on a signal, not a 10 s loop",
-      "updated": "2026-11-12T01:21:56"
+      "updated": "2026-11-12T01:22:05",
+      "worktree": "../Xapiand-wt/xapiand/pool-sweep-wait"
     },
     "postings-fuzz-memory": {
       "accepted": {
@@ -12230,7 +12367,10 @@
       "files": [
         "test/background_merge_test.cc",
         "test/directory_test.cc",
-        "test/index_test.cc"
+        "test/index_test.cc",
+        "test/format13_test.cc",
+        "test/index_mapped_test.cc",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/prospect-completion-opens",
       "landed": [],
@@ -12238,12 +12378,11 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "started by force: release-rows' and x7-scan-slices' test/** globs; neither touches these three files",
       "repo": "../prospect",
       "risk": "low",
       "status": "active",
       "title": "prospect's test IOs implement completion's four read-only opens",
-      "updated": "2026-11-12T00:33:19",
+      "updated": "2026-11-12T01:53:09",
       "worktree": "../prospect-wt/xapiand/prospect-completion-opens"
     },
     "prospect-drop-threadpool": {
@@ -17670,7 +17809,8 @@
         "tests/test_loop_yield.cc",
         "CMakeLists.txt",
         "src/database/handler.h",
-        "docs/design/phase7c.md"
+        "docs/design/phase7c.md",
+        "harness/async_allowlist.tsv"
       ],
       "history": [
         {
@@ -17711,7 +17851,7 @@
       "risk": "high",
       "status": "active",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-12T00:23:11",
+      "updated": "2026-11-12T01:50:31",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
     },
     "x7-scan-slices": {
@@ -18019,6 +18159,41 @@
       "status": "landed",
       "title": "Strata migration design",
       "updated": "2026-11-08T13:25:34"
+    },
+    "xapiand-strata-bump": {
+      "accepted": {},
+      "after": [
+        "barrier-warning-strata",
+        "prospect-completion-opens"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "src/database/**io*",
+        "src/engine/strata/**",
+        "tests/test_engine_*",
+        "harness/pins_check*"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
+      "updated": "2026-11-12T01:50:43"
     }
   },
   "suite": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
