@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: waiting on jobs 261112-011615-3ea00b 261112-011622-75a8df 261112-011635-7eced3 261112-011639-a9f61f
+State: waiting on jobs 261112-011615-3ea00b 261112-012051-bb7a01 261112-012053-9511a1 261112-012055-a0d93d
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -43,9 +43,9 @@ real suite (b6976b) ran 38/38 green but failed `async_check --strict`: one uncla
 now `engine::sync_wait` (the one guarded bridge, as shard.cc's open chore does) instead of a raw `task::sync_wait`,
 with an allowlist row naming why. Prospect pin moved to b20e7c5 (Xapiand:232b81cba); strata pin unchanged (5d742b2).
 
-Jobs at 232b81cba: build-test 261112-011615-3ea00b; timing build (light, fresh) 261112-011622-75a8df copies the fix's
-binary to `~/.scratch/x7-loop-stalls/<commit>/xapiand`; A2 (T4+T5, exclusive) 261112-011635-7eced3; A3 (T10 + T12
-loadtest and profile_bulk, exclusive) 261112-011639-a9f61f. Pre-7c binary: `~/.scratch/x7-loop-stalls/142b2ca77/xapiand`,
+Jobs at 232b81cba: build-test 261112-011615-3ea00b; timing build (light, fresh) 261112-012051-bb7a01 (75a8df was lost: submitted from .scratch, its cwd) copies the fix's
+binary to `~/.scratch/x7-loop-stalls/<commit>/xapiand`; A2 (T4+T5, exclusive) 261112-012053-9511a1; A3 (T10 + T12
+loadtest and profile_bulk, exclusive) 261112-012055-a0d93d. Pre-7c binary: `~/.scratch/x7-loop-stalls/142b2ca77/xapiand`,
 the same bytes as x7-gate's build-pre (shasum 787b7174). Targets: T4 every HTTP loop's p99 < 1,024 us; T5 loaded light
 p99 near pre's 8.93 ms; T10 flood light-GET p99 about 20 ms; T12 RESTORE docs/s and QPS >= 1.0x pre-7c.
 
@@ -56,7 +56,7 @@ a barrier b2314b (:383). 261112-000846-ac7a9e (build-test at a29bb36e6, a journa
 
 ## Next
 
-1. Read 3ea00b (suite), then 7eced3 (A2) and a9f61f (A3): fill the Evidence table and Result with the numbers. A
+1. Read 3ea00b (suite), then 9511a1 (A2) and a0d93d (A3): fill the Evidence table and Result with the numbers. A
    row that misses: say so, with its cause from a profile (`harness/profile_light.sh`, `profile_bulk.sh`); T12 short
    is fix (c), parallel apply. Then "ready for review".
 2. (done) Read the 6ff9db94a jobs. Red suite: fix it, rerun `campaign verify`. A mutant that fails at another line: read
