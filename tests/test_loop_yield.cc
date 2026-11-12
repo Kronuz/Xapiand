@@ -203,13 +203,13 @@ MsgPack json_of(const std::string& reply) {
 	return MsgPack(rdoc);
 }
 
-// The value of a reply's field, whatever prefix the response gives its name ("items", "#items"); undefined when
-// there is none.
+// The value of a reply's field, as named or with the prefix the response may give it ("#items", "_schema");
+// undefined when there is none.
 MsgPack field_of(const MsgPack& obj, std::string_view name) {
 	if (obj.is_map()) {
 		for (auto it = obj.begin(); it != obj.end(); ++it) {
 			const auto key = it->str_view();
-			if (key.size() >= name.size() && key.substr(key.size() - name.size()) == name) {
+			if (key == name || (key.size() == name.size() + 1 && (key[0] == '#' || key[0] == '_') && key.substr(1) == name)) {
 				return it.value();
 			}
 		}
@@ -326,18 +326,16 @@ static void test_a_restored_record_is_compressed_once_and_reads_back() {
 
 	for (const int id : {11, 100, 10 + documents}) {
 		std::string reply;
-		CHECK_EQ(http_call("GET", "/once/" + std::to_string(id), "", "application/json", &reply), 200);
-		rapidjson::Document rdoc;
-		json_load(rdoc, reply);
-		const MsgPack obj(rdoc);
-		CHECK_TRUE(obj.is_map());
-		if (!obj.is_map()) {
+		const auto status = http_call("GET", "/once/" + std::to_string(id), "", "application/json", &reply);
+		CHECK_EQ(status, 200);
+		if (status != 200) {
 			continue;
 		}
-		CHECK_EQ(obj.at("n").str(), std::to_string(id));
-		CHECK_EQ(obj.at("text").str(), text + text);
-		CHECK_EQ(obj.at("_id").as_i64(), static_cast<std::int64_t>(id));
-		CHECK_EQ(obj.at("_version").as_i64(), static_cast<std::int64_t>(1));
+		const auto obj = json_of(reply);
+		CHECK_EQ(field_of(obj, "n").to_string(), "\"" + std::to_string(id) + "\"");
+		CHECK_EQ(field_of(obj, "text").to_string(), "\"" + text + text + "\"");
+		CHECK_EQ(field_of(obj, "_id").to_string(), std::to_string(id));
+		CHECK_EQ(field_of(obj, "_version").to_string(), std::string("1"));
 	}
 }
 

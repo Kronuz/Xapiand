@@ -2456,27 +2456,37 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 	};
 
-	// One round of the run from `from` (the design's Rounds): chores pull its objects in input order, each against a
-	// Schema of its own over one snapshot, until a slice is spent or an object changes the schema. The objects up to
-	// the first change are accepted, and that change is offered: changes commit in input order, and every later
-	// object is prepared again in the next round, on the new schema. Returns the end of the accepted objects;
-	// `scripted` when the schema has a script, whose objects all read the stored document.
-	const auto prepare_round = [&](std::size_t from, bool& scripted) -> task::task<std::size_t> {
+	// A round of the run (the design's Rounds): chores pull its objects in input order from `next`, each against a
+	// Schema of its own over `snapshot`, until a slice is spent or an object changes the schema.
+	struct Round {
+		std::shared_ptr<const MsgPack> snapshot;
+		std::string origin;
+		std::atomic<std::size_t> next{0};
+		std::atomic<std::size_t> changed{0};   // the first object whose prepare changed the schema
+	};
+
+	// Starts a round at `from` on the current schema; false when the schema has a script, whose objects all read
+	// the stored document.
+	const auto fetch = [&](Round& round, std::size_t from) -> task::task<bool> {
 		auto schema = co_await db_handler.get_schema();
 		if (!schema->get_data_script().is_undefined()) {
-			scripted = true;
-			co_return from;
+			co_return false;
 		}
-		const auto snapshot = schema->get_const_schema();
-		const std::string origin(schema->get_origin());
-		std::atomic<std::size_t> next{from};
-		std::atomic<std::size_t> changed{run.size()};   // the first object whose prepare changed the schema
+		round.snapshot = schema->get_const_schema();
+		round.origin = std::string(schema->get_origin());
+		round.next = from;
+		round.changed = run.size();
+		co_return true;
+	};
+
+	// The round's chores. They touch nothing loop-bound, so they overlap the apply of the objects before them.
+	const auto pull_round = [&](Round& round) -> task::task<void> {
 		const auto pull = [&] {
-			Schema own(snapshot, nullptr, origin);
+			Schema own(round.snapshot, nullptr, round.origin);
 			const auto until = std::chrono::steady_clock::now() + PREPARE_SLICE;
 			for (;;) {
-				const auto j = next.fetch_add(1, std::memory_order_relaxed);
-				if (j >= run.size() || j > changed.load(std::memory_order_relaxed)) {
+				const auto j = round.next.fetch_add(1, std::memory_order_relaxed);
+				if (j >= run.size() || j > round.changed.load(std::memory_order_relaxed)) {
 					return;
 				}
 				auto& one = run[j];
@@ -2488,8 +2498,8 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				}
 				one.changed = own.get_modified_schema();
 				if (one.changed) {
-					auto seen = changed.load(std::memory_order_relaxed);
-					while (j < seen && !changed.compare_exchange_weak(seen, j, std::memory_order_relaxed)) { }
+					auto seen = round.changed.load(std::memory_order_relaxed);
+					while (j < seen && !round.changed.compare_exchange_weak(seen, j, std::memory_order_relaxed)) { }
 					return;
 				}
 				if (std::chrono::steady_clock::now() >= until) {
@@ -2503,13 +2513,18 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			pulls.push_back(chores.run(engine::ChoreClass::flush, pull));
 		}
 		co_await task::when_all(std::move(pulls));
+	};
 
-		auto stop = std::min(next.load(), run.size());
-		const auto first_change = changed.load();
+	// Accepts the round's objects up to its first schema change and offers that change, with no apply in flight (a
+	// task holds one turn at most): changes commit in input order, and every later object is prepared again in the
+	// next round, on the new schema. Returns the end of the accepted objects.
+	const auto accept = [&](Round& round) -> task::task<std::size_t> {
+		auto stop = std::min(round.next.load(), run.size());
+		const auto first_change = round.changed.load();
 		if (first_change < stop) {
 			stop = first_change + 1;
 			auto& one = run[first_change];
-			if (!co_await offer_schema(&db_handler, snapshot, one.changed)) {
+			if (!co_await offer_schema(&db_handler, round.snapshot, one.changed)) {
 				if (++one.offers <= SCHEMA_RETRIES) {
 					stop = first_change;   // prepared again, on the schema that came first
 				} else {
@@ -2526,24 +2541,25 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 
 	// Prepares the run and applies it in input order; each round's chores overlap the apply of the round before.
 	const auto apply_run = [&]() -> task::task<void> {
-		bool scripted = false;
+		Round round;
 		std::size_t at = 0;
 		std::size_t stop = 0;
-		if (!run.empty()) {
-			stop = co_await prepare_round(0, scripted);
+		bool plain = !run.empty();
+		if (plain) {
+			plain = co_await fetch(round, 0);
 		}
-		while (at < run.size() && !scripted) {
-			if (stop == run.size()) {
-				co_await apply_range(at, stop);
-				at = stop;
+		if (plain) {
+			co_await pull_round(round);
+			stop = co_await accept(round);
+		}
+		while (plain && stop < run.size()) {
+			plain = co_await fetch(round, stop);   // the schema the accepted objects left
+			if (!plain) {
 				break;
 			}
-			std::size_t next_stop = stop;
-			co_await task::when_all(apply_range(at, stop), [&]() -> task::task<void> {
-				next_stop = co_await prepare_round(stop, scripted);
-			}());
+			co_await task::when_all(apply_range(at, stop), pull_round(round));
 			at = stop;
-			stop = next_stop;
+			stop = co_await accept(round);
 		}
 		co_await apply_range(at, stop);
 		for (at = stop; at < run.size(); ++at) {   // the schema's script reads each object's stored document
