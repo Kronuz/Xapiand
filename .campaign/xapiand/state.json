@@ -19472,8 +19472,8 @@
       "risk": "high",
       "status": "landed",
       "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
-      "updated": "2026-11-12T13:37:12",
-      "worktree": "../Xapiand-wt/xapiand/xapiand-strata-bump"
+      "updated": "2026-11-12T13:38:11",
+      "worktree": ""
     }
   },
   "suite": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
