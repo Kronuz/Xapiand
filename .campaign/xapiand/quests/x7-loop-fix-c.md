@@ -5,7 +5,7 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+x7-gate's loop rows pass at master: every HTTP loop's p99 lag stays within T4's edge under the loaded mix, T5's loaded light p99 meets its bound, and RESTORE (T12) runs at least as fast as pre-7c. At x7-loop-stalls' fix the rows missed (T4 2.56-5.12 ms against 1,024 us; T5 22.7-27.1 ms against bounds of 8.9-10.2 ms; T12 RESTORE 0.57-0.59x pre-7c); its E3 profile puts the remaining loop time in frame decode (23.4%), madvise (13.3%) and aggregation key work (32.9%), and its note designs the parallel apply, fix (c), estimated near 1.3x pre-7c (`docs/perf/x7-loop-stalls.md`). T10's flood row is its own quest (a Lua per-call cap).
 
 ## Acceptance criteria
 
@@ -14,18 +14,19 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 [artifact] Fix (c)'s design, settled by one concurrency design review before it is built: `docs/perf/x7-loop-stalls.md`
+- A2 T4 and T5 pass at the fix: one exclusive job of at most 10 minutes, x7-gate's procedure (D59)
+- A3 T12's RESTORE meets pre-7c at the fix: one exclusive job of at most 10 minutes
+- A4 The fix's tests pass (the build-test check), with a test for each new yield or handoff that fails without it: jobs
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Builds on x7-loop-stalls' chores, D1 barriers and D2 schema order (docs/design/phase7c.md D4/D12); keeps them.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-12: split from x7-loop-stalls when its fix landed; E3's profile is its starting evidence.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The design note (A1); any fix step that is a strict improvement on every row, after its correctness review.
