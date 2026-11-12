@@ -293,15 +293,12 @@ first. New numeric ids are numbered serially (above). Schema changes: `accept` o
 (D2); every object of the range was prepared on the schema the range applies under. A batch's end joins too.
 
 **Failure and cancel.** An object's write failure is its result, as today; the other objects and shards go on. A
-child whose pin or turn fails (busy, closed, cancelled) fails its sub-run's remaining objects with that error, each
-its own result. The children take the turn with the request's token, so a client gone stops each child at its next
-slice; `when_all` lets every child end, what applied stays, and the closing commit runs on every exit
-(`restore_database_view`). A wider failure is the owner's call (the review's N4): a child whose pin or turn fails
-fails its sub-run's remaining objects where the serial path gives each object its own turn wait, and inside a slice
-an error that marks the endpoint stale leaves the slice's later objects to the stale index, where the serial path
-reopens at release. Options: (1) keep that; (2) end the slice at a stale-marking error, and on busy fail the slice's
-first object and retry the rest in a new turn. The build does (2) for the stale case only if the owner rules so;
-otherwise each object's failure stays its own and a turn failure fails the sub-run's rest. Lifetimes: a sub-run's objects and results live in the awaiting frame, as the round's do
+write that fails and leaves the endpoint stale ends its slice, so the shard's later writes run after the index is
+replaced, as the serial path reopens at release. A pin, turn or slice that fails before its next write (busy, closed,
+cancelled) fails that write alone, its own result, and the rest of the sub-run retry in a new turn, as the serial path
+gives each object its own turn wait (the owner's ruling on the review's N4, D68). The children take the turn with the
+request's token, so a client gone stops each child at its next slice; `when_all` lets every child end, what applied
+stays, and the closing commit runs on every exit (`restore_database_view`). Lifetimes: a sub-run's objects and results live in the awaiting frame, as the round's do
 (D3); a child's chore ends before the child releases its turn.
 
 **What each row should gain.**
@@ -356,7 +353,7 @@ deferred objects). Each test asserts its case occurred before it checks the outc
 - Failures (N4, option 2): a write that fails and leaves the index stale ends its apply slice, so the later writes of
   the shard run after the index is replaced (a seam makes one write fail so; the run has one more slice than the same
   run with no failure, the failing write alone fails, every other object is stored). A pin, turn or slice that fails
-  before its next write fails that write alone and the rest retry (the thrown-slice seam: one write fails, 19 of 20
+  before its next write fails that write alone and the rest retry (the thrown-slice seam: one write fails, the seed and 39 of 40
   are stored). Mutants: the slice does not end at the stale failure; a failed slice fails the rest of the sub-run.
 - The chores swap (N5): a test seam makes one apply slice throw; afterwards no engine runs its chores inline
   (`ShardEndpoint::engines_inline()`, the guard's count), and a later RESTORE's write runs. Mutant: the guard

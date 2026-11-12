@@ -628,8 +628,9 @@ static void test_a_miss_defers_every_later_write_of_its_id() {
 // are restored: no engine runs its chores inline afterwards, and a later RESTORE writes.
 static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores() {
 	create_index("throws", 5);
+	CHECK_EQ(http_call("RESTORE", "/throws/?commit", R"({"_id":"seed","v":1})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists: no range of one
 	std::string body;
-	for (int k = 1; k <= 20; ++k) {
+	for (int k = 1; k <= 40; ++k) {
 		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":1})" "\n";
 	}
 	std::string reply;
@@ -643,11 +644,11 @@ static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines
 	for (const auto& item : items_of(reply)) {
 		failed += item.find("status") != std::string::npos;
 	}
-	std::fprintf(stderr, "  %zu of 20 writes failed with the slice\n", failed);
+	std::fprintf(stderr, "  %zu of 40 writes failed with the slice\n", failed);
 	CHECK_EQ(failed, std::size_t{1});
 	std::string found;
 	CHECK_EQ(http_call("SEARCH", "/throws/?volatile", R"({"_limit":100})", "application/json", &found), 200);
-	CHECK_EQ(field_of(json_of(found), "total").to_string(), std::string("19"));
+	CHECK_EQ(field_of(json_of(found), "total").to_string(), std::string("40"));   // the seed and 39 of 40
 	CHECK_TRUE(eventually([] { return ShardEndpoint::engines_inline() == 0; }, 2s));
 	CHECK_EQ(http_call("RESTORE", "/throws/?commit", R"({"_id":"k1","v":2})" "\n", "application/x-ndjson") / 100, 2);
 	std::string got;
@@ -663,6 +664,9 @@ static void test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines
 static void test_a_stale_marking_failure_ends_its_slice() {
 	create_index("stale_a", 5);
 	create_index("stale_b", 5);
+	for (const auto* index : {"/stale_a/?commit", "/stale_b/?commit"}) {
+		CHECK_EQ(http_call("RESTORE", index, R"({"_id":"seed","v":1})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists: no range of one
+	}
 	std::string body;
 	for (int k = 1; k <= 60; ++k) {
 		body += R"({"_id":"k)" + std::to_string(k) + R"(","v":1})" "\n";
@@ -696,7 +700,7 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 	std::fprintf(stderr, "  slices %zu without a failure, %zu with one; failed %zu; stored %s\n", without_slices, with_slices, with_failed, with_total.c_str());
 	CHECK_EQ(without_failed, std::size_t{0});
 	CHECK_EQ(with_failed, std::size_t{1});
-	CHECK_EQ(with_total, std::string("59"));
+	CHECK_EQ(with_total, std::string("60"));   // the seed and 59 of 60
 	CHECK_EQ(with_slices, without_slices + 1);
 	CHECK_TRUE(eventually([] { return ShardEndpoint::engines_inline() == 0; }, 2s));
 }
