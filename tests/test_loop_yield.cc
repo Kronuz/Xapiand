@@ -443,7 +443,7 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 	const auto peak = DocIndexer::stats.peak_children.load();
 	std::fprintf(stderr, "  restore of %d documents: loop %.1f ms of the process's %.1f ms CPU (%.0f%%); %zu children at most, %zu at once\n", documents, loop_ms, process_ms, 100 * loop_ms / process_ms, children, peak);
 	CHECK_GT(process_ms, 200.0);              // long enough to tell
-	CHECK_LT(loop_ms, process_ms * 0.25);     // the writes ran on the workers too: 34% with only the prepares there
+	CHECK_LT(loop_ms, process_ms * 0.2);      // the writes ran on the workers too: 9%, against 34% with only the prepares there
 	if (children > 1) {                       // a pool of 5 threads or more
 		CHECK_GT(peak, std::size_t{1});
 	}
@@ -518,6 +518,12 @@ static void test_new_numeric_ids_match_their_serial_model() {
 	CHECK_EQ(http_call("RESTORE", "/num_par2/?commit", body, "application/x-ndjson", &again) / 100, 2);
 	std::fprintf(stderr, "  a second run against the first:\n");
 	same_items(items_of(again), items_of(reply));
+	for (const auto* index : {"num_par", "num_seq", "num_par2"}) {
+		std::string found, doc;
+		http_call("SEARCH", "/" + std::string(index) + "/?volatile", R"({"_limit":100})", "application/json", &found);
+		http_call("GET", "/" + std::string(index) + "/117", "", "application/json", &doc);
+		std::fprintf(stderr, "  %s: total %s; 117: %s\n", index, field_of(json_of(found), "total").to_string().c_str(), doc.c_str());
+	}
 	std::fprintf(stderr, "  ids:");
 	for (const auto& item : serial) {
 		std::fprintf(stderr, " %s", item.c_str());
