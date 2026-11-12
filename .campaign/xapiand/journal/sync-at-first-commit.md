@@ -1,6 +1,6 @@
 # sync-at-first-commit: journal
 
-State: waiting on jobs 261112-090343-e602b5 261112-090346-f32817 261112-090352-1ecddc 261112-090358-93f7af 261112-090406-e575c5 261112-090414-89aaae 261112-090438-33df17 261112-090447-4e4f75 261112-090455-1f97df
+State: waiting on jobs 261112-090343-e602b5 261112-090406-e575c5 261112-090414-89aaae 261112-090438-33df17 261112-090447-4e4f75 261112-090455-1f97df
 Quest: .campaign/xapiand/quests/sync-at-first-commit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,7 +12,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Design review (CHANGES, F1-F6) folded in at strata:34aa3691; implementation of A2-A4 built and
 passing locally (index_test, faultfs_test). Jobs queued:
 - suite (A2,A3): 261112-090343-e602b5
-- mutants (--fails-without, bench/open_sync/first_commit_mutant.sh): open A2 261112-090346-f32817;
+- mutants (--fails-without, bench/open_sync/first_commit_mutant.sh), done and killed: open A2 261112-090346-f32817
+  (index_test.cc:289), drop 261112-090352-1ecddc (:334), after 261112-090358-93f7af (:335); still running:
   drop 261112-090352-1ecddc, after 261112-090358-93f7af, gate 261112-090406-e575c5, dir 261112-090414-89aaae (A3)
 - A4: build 261112-090438-33df17; opens+garbage (exclusive) 261112-090447-4e4f75; first commit (exclusive) 261112-090455-1f97df
 
