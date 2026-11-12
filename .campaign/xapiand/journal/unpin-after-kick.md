@@ -57,7 +57,7 @@ I stopped there and recorded the cost in docs/mechanisms/catalog.md (strata:a0bc
 |---|---|
 | A1 | 261112-055252-e509d2 (TSan), 261112-055255-91db1f (ASan+UBSan); fails without: 261112-051840-b0a9ca (ab0e26a6's catalog.hh, ASan heap-use-after-free in over_soft from the unpin), 261112-055258-a6bd1d (F1: heap-use-after-free in over_soft from the miss), 261112-055301-475b83 (F2(a): mark-window checks fail), 261112-055304-392b68 (F2(b): unpin-window checks fail) |
 | A2 | 261112-055306-ba7c31 (build-test at b04ca9e0); fails without: 261112-051843-666637 (no over_soft() in unpin: soft_caps_post's `hot_indexes() == 1` fails) |
-| A3 | 261112-055306-ba7c31 (build-test at b04ca9e0); CI 43225986515 green at da983792; CI at b04ca9e0/a0bc0430: see `campaign brief` |
+| A3 | 261112-055306-ba7c31 (build-test at b04ca9e0); CI 43225986515 green on every platform at da983792; CI 43231465982 at b04ca9e0: every job green but linux-tsan, whose catalog_stress aborted on `resource_counts::book`'s `booked[i] == 0` assertion. That failure is pre-existing: the same assertion fails in CI 43225658870 and 43218222486 on quest/xapiand/read-only-open, which does not change catalog.hh, resource_budget.hh or catalog_stress_test.cc from main (ab0e26a6). Job 261112-080635-a9cefb at main reproduces it under TSan with asserts (pending). The lead decides; CI on a0bc0430 is running. |
 
 Review findings: F1 fixed (miss_under_shutdown, 261112-055258-a6bd1d); F2 fixed (mark_in_unpin_window,
 unpin_in_mark_window, 261112-055301-475b83, 261112-055304-392b68); N1, N2 left (R6); N3 measured, two tries, cost recorded (Blocked on).
