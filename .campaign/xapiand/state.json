@@ -16534,18 +16534,46 @@
         "test/catalog_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/unpin-after-kick",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T10:15:02",
+          "commit": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "criteria": {
+            "A1": "261112-100846-e17523, 261112-100846-f0349c, 261112-100846-bcf929, 261112-100846-28f392; fails without: 261112-051840-b0a9ca, 261112-055258-a6bd1d, 261112-055301-475b83, 261112-055304-392b68",
+            "A2": "261112-090816-e82be7; fails without: 261112-051843-666637",
+            "A3": "261112-090816-e82be7, 261112-100846-bcf929, 261112-100846-28f392, 261112-090807-6824f4; fails without: 261112-083923-f54687"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "86fe7c476c64b86219350a999ee88467bf86269c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-090816-e82be7",
+              "level": "light",
+              "seconds": 148.8,
+              "state": "done",
+              "what": "unpin-after-kick check build-test at 86fe7c476c64"
+            }
+          ],
+          "final": true,
+          "from": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "reason": "",
+          "tested": "86fe7c476c64b86219350a999ee88467bf86269c"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "A catalog unpin reads nothing after it kicks the slot's close",
-      "updated": "2026-11-12T10:08:31",
+      "updated": "2026-11-12T10:15:11",
       "worktree": "../strata-wt/xapiand/unpin-after-kick"
     },
     "wbuf-inline": {
