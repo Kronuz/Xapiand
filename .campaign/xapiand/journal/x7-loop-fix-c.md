@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-042106-305a1a 261112-045157-27ee29
+State: waiting on jobs 261112-051110-ac40f0 261112-042106-305a1a
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,24 +16,43 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-0. Read suite job 261112-045157-27ee29 (build-test at the head, A4; 261112-044733-b8b2e0 failed to compile: nested types with default member initializers in `static inline` members, fixed). Expected: `harness/async_check.sh
-   --strict` fails on two allowlist counts (see Blocked on); everything before it must pass. Fix compile or test
-   failures in the file set; set `CHECK_LT(loop_ms, process_ms * 0.25)` in
-   `test_a_restore_prepares_and_writes_its_objects_off_its_loop` halfway between the build's printed share and the
-   writes-on-loop mutant's.
-1. Mutant jobs (`campaign job submit --quest x7-loop-fix-c --for A4 --fails-without ...`), each a one-line sed of the
-   fix, each must fail its named test:
+0. Read diagnostic 261112-051110-ac40f0 (test_loop_yield at Xapiand:b6cebfc29, light, queued behind an exclusive
+   hold): it prints `total` for num_par, num_seq and num_par2 and GET /num_*/117. The open failure is
+   `test_new_numeric_ids_match_their_serial_model`: object 31 gets id 133 in one RESTORE and 132 one object per
+   request. Both give the id-less object i=16 the new id 117, and the explicit id 117 (i=17) follows it. Per request,
+   the explicit 117 replaces it (sim of that order gives 132). In one RESTORE the placement after the join seems to
+   miss the just-added doc, so the explicit 117 adds a second one and the least-used counts shift (133). The second
+   run gives the same ids, so it is deterministic. Read the totals:
+   - num_par 41 vs num_seq 40: a duplicate id, a real bug. Check whether it is pre-existing: the same test with
+     `parallel = false` (the old serial path in one request), as a light job. If the bug is new, make placement after
+     a join see the serial write. Suspect `Shard::written_keys` vs an add whose key lands when its entry chores
+     settle. If it is pre-existing, report it under Blocked on and keep the test's model on one request.
+   - Equal totals: the counts differ by timing; find which `written_count` lags.
+1. Then run the full suite with `campaign verify x7-loop-fix-c --for A4`. Remove the diagnostic prints in the
+   numeric test (the second run and the totals) first, or keep the second run as a determinism check.
+2. Mutant jobs (`campaign job submit --quest x7-loop-fix-c --for A4 --fails-without ...`). Each is a one-line sed of
+   the fix that builds `xapiand_test_loop_yield`, runs it, and exits 0 only when the named test's CHECK fails:
    - sub-run reversed (iterate `writes` from the end in `apply_slice`) -> test_a_sharded_restore_matches_its_serial_model;
-   - writes on the loop (`parallel = false` in `DocIndexer::index`) -> test_a_restore_prepares_and_writes_its_objects_off_its_loop;
-   - children one at a time (`n_kids = 1`) -> the same test's peak check (needs `stats.children > 1` on the host);
+   - writes on the loop (`parallel = false` in `DocIndexer::index`) -> the off-loop test's `0.2` check;
+   - children one at a time (`n_kids = 1`) -> the same test's peak check (the cap was 5 on this host);
    - no join before a new numeric id (`new_numeric` returns false) -> test_new_numeric_ids_match_their_serial_model;
    - a missed write fails (`write.error = current_exception()` instead of `missed`) -> test_a_write_missed_since_placement_is_placed_afresh;
    - guard not restoring on a throw (dtor returns early when `std::uncaught_exceptions()`) -> test_a_throwing_apply_slice_restores_the_engines_chores.
-2. E4 (strict, queued behind other holds): job 261112-042106-305a1a; report at
-   `~/.scratch/campaign/jobs/261112-042106-305a1a/a1/log`. Read: handler tail2 ~ lag tail with cpu/wall ~1 = H1
-   (long turns); period tail without handler tail = queued short turns; cpu/wall well under 1, or no period tail =
-   H3 (descheduled). Record the numbers here and in the note's T4/T5 paragraph.
-3. Then (hand off first if past ~400k): A3 (T12, exclusive, <= 10 min) and A2 (T4/T5, exclusive).
+3. E4 (strict, still queued): job 261112-042106-305a1a. Its report is at
+   `~/.scratch/campaign/jobs/261112-042106-305a1a/a1/log`. Read: a handler tail2 near the lag tail with cpu/wall ~1
+   means H1 (long turns). A period tail without a handler tail means queued short turns. cpu/wall well under 1, or no
+   period tail, means H3 (descheduled). Record the numbers here and in the note's T4/T5 paragraph.
+4. A3 (T12, exclusive, <= 10 min), then A2 (T4/T5, exclusive).
+
+Suite so far (261112-045157-27ee29 at Xapiand:7e19c4475): every test passes but test_loop_yield.
+- Off-loop: the loop used 119 of the process's 1,356 ms of CPU (9%), against 34% before the writes moved. The
+  threshold is now 20%, halfway. The children cap was 5 and the peak was 5.
+- Model equality passes: largest range 300, 240 ids repeated within a sub-run.
+- The throw test passes: 1 of 20 writes failed with the slice, and the chores were restored.
+- B1 failed because the seam wrote with version 0, a conflict. Fixed in Xapiand:80d00a57f; diagnostic
+  261112-050521-14bfc2 shows 3 deferred and the check passing.
+- `async_check --strict` has not run yet, because ctest's failure stops the chain. Expect the two allowlist counts
+  under Blocked on.
 
 ## Blocked on
 
