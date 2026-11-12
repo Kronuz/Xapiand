@@ -1,6 +1,6 @@
 # phase3-ratchets: journal
 
-State: ready for review (correctness lens). Prospect branch head 0aa68f4, pushed; CI running there.
+State: ready for review (correctness lens). Prospect branch head 0aa68f4, pushed; docs-only pushes skip CI, so CI run 43136227608 was dispatched at 0aa68f4 (same tree as 8d149bb, run 43135835650).
 Quest: .campaign/xapiand/quests/phase3-ratchets.md (the lead's; never edit it)
 
 ## Doing
