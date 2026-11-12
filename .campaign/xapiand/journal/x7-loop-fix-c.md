@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-042104-fcdc82 261112-042106-305a1a
+State: waiting on jobs 261112-042106-305a1a
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,20 +16,25 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-0. E4 (lead's msg, 11-12): build 261112-042104-fcdc82 (light; first try 041113-b08090 failed on macro clashes, MS and L; xapiand with Asio custom handler tracking,
+0. E4 (lead's msg, 11-12): build 261112-042104-fcdc82 (light, done; first try 041113-b08090 failed on macro clashes, MS and L; xapiand with Asio custom handler tracking,
    `~/.scratch/x7-loop-fix-c/e4/e4_tracking.hpp` via `-include e4_pre.h`; binary to `~/.scratch/x7-loop-fix-c/e4/<commit>/`),
    then 261112-042106-305a1a (strict, 10 min): the T4/T5 loaded mix on it with `E4_OUT`, then on the plain fix
    binary (0072ba93e) for overhead; `e4_report.py` gives per loop the handler and busy-period tails (fraction of the
    window a 1 ms tick would wait >= 1/2 ms) and wall vs thread CPU. Read: handler tail2 ~ lag tail with cpu/wall ~1
    = H1 (long turns); period tail without handler tail = queued short turns; cpu/wall well under 1 in long
    handlers or periods, or no period tail at all = H3 (descheduled). Record the numbers here.
-1. Lead launches the design review; fold findings by id.
+1. Design review CHANGES (`.campaign/xapiand/reviews/x7-loop-fix-c-design.md`): B1, B2, N1, N2, N3, N5, N6, N7
+   folded as text in the design; N4 written as the owner's options (default kept). Tests for B1/B2/N5 come with
+   the build.
 2. Build step 2 of the design (apply chore + guard shared with `commit_blocking`, range placement, children under
    `engine::counted`), its tests and mutants; suite as a job.
 3. A3 (T12) exclusive job; then A2 with fix (c) and E4 (handler-duration histogram) exclusive jobs.
 
 ## Blocked on
 
+- Lead: the build needs `src/database/shard.h` (a `Shard` method for the apply slice, since `ShardEndpoint`'s
+  `do_replace*`, `engine_` and `chores` are private to `Shard`, `ReplayTarget`, `DatabasePool`) and
+  `src/database/pool.h` (N5's debug accessor beside the chores guard) in the file set.
 - Lead: the design review (A1).
 - Lead: phase7c.md D4 `flush` row ("RESTORE writes") and D12's RESTORE sentence need amending with the build;
   `docs/design/phase7c.md` is outside the file set. Widen, or the lead amends it.

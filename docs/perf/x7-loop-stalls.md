@@ -248,34 +248,43 @@ no thread or pool is added. The loop keeps placement, results, counters and the 
 **The chore.** It is `commit_blocking`'s shape (`src/database/shard.cc`), which already runs engine writes on a
 worker: the engine's chores are swapped to `engine::inline_chores()` for its run and restored on every exit,
 blocking is allowed (`engine::BlockingAllowed`), and each write runs under `engine::sync_wait`; an owed flush or
-drain then runs inline on that worker. One RAII guard serves both. The swap is sound only while the swapper holds
-the turn and every user of the engine's chores holds it too: writes, `fresh()` (`pool.cc:362-371`), commit, close
-and reopen take it; the review should confirm no turnless caller (strata's `reclaim` has none in `src/database`).
-The chore applies its shard's objects in input order until about 1 ms has passed (the prepare's `PREPARE_SLICE`,
+drain then runs inline on that worker. The chore passes `engine::inline_chores()` to `do_replace*` too, as
+`commit_blocking` does to `do_commit`, so a blob push runs on the same worker instead of waiting on another chore of
+the pool. One RAII guard serves both. The swap is sound only while the swapper holds the turn and every user of the
+engine's chores holds it too: writes, `fresh()` (`pool.cc:362-371`), `written_key`, commit and check take it, and
+`reclaim` and the closes have no caller in `src/` (the design review's Q1). The chore applies its shard's objects in input order until about 1 ms has passed (the prepare's `PREPARE_SLICE`,
 D5), catching each object's failure as that object's result (`WriteResult` or `exception_ptr`, filled by the chore
 and read by the loop after the chore's completion resumes it).
 
 **Children, one shard each.** After a round's join, the loop places the accepted range `[at, stop)` (below) and
 splits it into one sub-run per shard, in input order. Each sub-run is a child task, and `apply_run` awaits them with
 the next round's `pull_round` in one `task::when_all`, where it awaits `apply_range` today. A child repeats: pin the
-shard, take its turn, await one apply chore, release the turn. The rule "a task holds one index's turn at most"
+shard, take its turn, await one apply chore, release the turn; a sub-run's shards are served by at most `W`
+children, `W = min(sub-runs, max(1, (threads() - 1) / 2))`, each taking the next unserved sub-run when its own is
+done, so at most `W` turns are held at once and each held turn has a worker to run its chore (the review's N1). The
+rule "a task holds one index's turn at most"
 (`pool.cc:354`, counted per request in debug builds) is kept by running each child under `engine::counted`
 (`host_asio.h`), so each child is a task with its own counters and holds one turn; the parent holds none while it
 awaits them. No child waits for a second turn while it holds one, so the children cannot deadlock each other or
-other writers. A turn is held for one chore: its wait in the pool's queue plus about 1 ms, instead of one object
-today. The prepare chores take `threads() - 1 - shards` workers (at least 1), so a round's prepares and the shards'
-applies fit the non-reserve workers. With no reactor (the CLI's `--restore`, inline chores) the sub-runs run one
-after another, inline, as today.
+other writers. A turn is held for one chore: its wait in the pool's queue (other groups' work, by DRR) plus about
+1 ms, instead of one object today; A2's same-index run reports it. The prepare chores take `threads() - 1 - W`
+workers (at least 1), so a round's prepares and the applies fit the non-reserve workers. With no reactor (the CLI's
+`--restore`, inline chores) every object takes today's path, `apply` through `replace_document_term` in input order,
+with no apply chore and no nested `engine::sync_wait` (N7).
 
 **Placement.** Today's `replace_document_term` places each object on the loop in its turn; the parallel apply needs
 the placement of the whole range first. After the join, the loop asks each shard once, in its turn, which of the
 range's terms it holds (`written_key` for each, one turn per shard per range instead of one per shard per object).
-A term found in a shard goes to that shard as `do_replace(did, must_exist)`; a new term goes to `numeric_docid` or
+It keeps `find_docid_term`'s rules: shards in order, the first that holds a term wins, a shard's read retries and
+reopens as there, and a shard that is `not_available` fails only the objects no other shard holds (N3). A term found in a shard goes to that shard as `do_replace(did, must_exist)`; a new term goes to `numeric_docid` or
 `key_placement_hash`, as today. A term's objects in one range all reach one shard: the lookup and the hash answer the
 same for each, since nothing in the range erases (an erase is a barrier). Two cases go back to today's serial path
 after a join, applied alone: a new numeric id (`NEW_NUMERIC_KEY`), since `least_used_shard` reads the counts the
-range's earlier writes change, and a `must_exist` write whose document left its shard meanwhile (a concurrent erase),
-which is placed afresh. A dump carries its ids, so neither is on a dump restore's path.
+range's earlier writes change, and a `must_exist` write whose document left its shard meanwhile (a concurrent erase
+between placement and apply). At such a miss the chore defers that object and every later object of its term in the
+sub-run (a term's objects all share one sub-run), and after the join the deferred objects take today's path in input
+order, placed afresh: a concurrent write that reuses the id between the two cannot be overwritten by an earlier
+object of the stream (the review's B1). A dump carries its ids, so neither case is on a dump restore's path.
 
 **Ordering.** Per id: all its writes reach one shard and apply in input order there, so `_version` (assigned by
 strata in the turn) and the record equal a serial restore's. Across ids on different shards there is no order to
@@ -287,15 +296,23 @@ first. New numeric ids are numbered serially (above). Schema changes: `accept` o
 child whose pin or turn fails (busy, closed, cancelled) fails its sub-run's remaining objects with that error, each
 its own result. The children take the turn with the request's token, so a client gone stops each child at its next
 slice; `when_all` lets every child end, what applied stays, and the closing commit runs on every exit
-(`restore_database_view`). Lifetimes: a sub-run's objects and results live in the awaiting frame, as the round's do
+(`restore_database_view`). A wider failure is the owner's call (the review's N4): a child whose pin or turn fails
+fails its sub-run's remaining objects where the serial path gives each object its own turn wait, and inside a slice
+an error that marks the endpoint stale leaves the slice's later objects to the stale index, where the serial path
+reopens at release. Options: (1) keep that; (2) end the slice at a stale-marking error, and on busy fail the slice's
+first object and retry the rest in a new turn. The build does (2) for the stale case only if the owner rules so;
+otherwise each object's failure stays its own and a turn failure fails the sub-run's rest. Lifetimes: a sub-run's objects and results live in the awaiting frame, as the round's do
 (D3); a child's chore ends before the child releases its turn.
 
 **What each row should gain.**
 
-- T12 (RESTORE docs/s >= 1.0x pre-7c; 0.571x and 0.594x at the fix). The loop keeps at most 45-46% of its RESTORE
-  time, so its ceiling rises above 2x; the write's CPU spreads over up to 5 shards (the default) on the pool. CPU per
-  document stays about 0.6 ms (0.76x pre-7c's), plus a chore hop per shard per slice. At pre-7c's 5.9 busy cores that
-  is about 9,800 docs/s, about 1.3x pre-7c; 1.0x needs 4.5 busy cores. An estimate from shares; A3's job decides.
+- T12 (RESTORE docs/s >= 1.0x pre-7c; 0.571x and 0.594x at the fix). The whole turn (`Shard::replace*`) is 69-71%
+  of the loop's RESTORE time (the review's recount), so the loop keeps about 30% and its ceiling rises about 3x. The
+  critical path after the fix is the slowest of: the per-shard writes, about 0.1 ms per document over `W` children;
+  the prepares, about 0.34 ms of CPU per document over `threads() - 1 - W` workers; and the round barrier (`when_all`
+  of a range's apply and the next prepare). CPU per document stays about 0.6 ms (0.76x pre-7c's), plus a chore hop per
+  shard per slice. If it keeps pre-7c's 5.9 busy cores (assumed, not derived), that is about 9,800 docs/s, about 1.3x
+  pre-7c; 1.0x needs 4.5 busy cores. A3's job decides.
 - T12 saturated QPS (2.69x): unchanged; no read path changes.
 - T4 and T5: nothing measurable. RESTORE is 1.3% of the loops' busy time in the mix (E3), and fix (c) takes about
   half of that off. Risks to watch in A2: the apply chores occupy up to 5 more workers during the mix's RESTORE (the
@@ -303,23 +320,32 @@ slice; `when_all` lets every child end, what applied stays, and the closing comm
   same-index run (RESTORE into `accounts`, reported) holds an `accounts` shard's turn for one chore, about 1 ms, so a
   light write or refresh on that shard can wait that long.
 
-**Tests** (`tests/test_loop_yield.cc`; the RESTORE tests start their node with 4 processors and an index of 5
-shards; each new handoff has a mutant that fails it, run as a job):
+**Tests** (`tests/test_loop_yield.cc`; the RESTORE tests start their node with 8 processors and an index of 5
+shards; each new handoff has a mutant that fails it, run as a job). A wall-time range can hold one object on a
+Debug or TSan build, so a mutant could pass vacuously (the review's B2): a test seam sets the objects each prepare
+chore takes (a count instead of `PREPARE_SLICE`), and `DocIndexer` reports what the run met (the largest range, ids
+repeated within one sub-run, the peak number of children applying, the objects applied serially after a join, the
+deferred objects). Each test asserts its case occurred before it checks the outcome.
 
 - Model equality: one RESTORE of a stream with ids repeated across it (a later object replacing an earlier one), ids
   on every shard and ids that already exist, against the same stream restored one object per request into another
-  index: every result (status, `_id`, `_version`) and every GET equal. Mutant: each shard's sub-run applied in
-  reverse order.
+  index: every result (status, `_id`, `_version`) and every GET equal; the run met a range of at least 16 objects
+  and a repeated id within one sub-run. Mutant: each shard's sub-run applied in reverse order.
 - Writes off the loop: the HTTP loop's CPU for a 3,000-document RESTORE is under a threshold set halfway between the
   build's share and the mutant's (34% at the fix, the prepare test's measure). Mutant: the writes run on the loop.
 - Shards in parallel: `DocIndexer` reports the peak number of shards applying at once (beside `prepared()`); with 5
-  shards and 4 processors it exceeds 1. Mutant: the children are awaited one at a time.
+  shards and 8 processors it exceeds 1. Mutant: the children are awaited one at a time.
 - New numeric ids: an id-less RESTORE into a numeric-id index of 5 shards gives the same ids, shard by shard, as the
-  one-object-per-request run. Mutant: no join before a `NEW_NUMERIC_KEY` object.
+  one-object-per-request run; the run met a range holding more than one such object. Mutant: no join before a
+  `NEW_NUMERIC_KEY` object.
+- A miss between placement and apply (B1): a test seam runs on the loop after placement and before the children, and
+  erases id 7 and writes it again; the stream holds two objects of id 7 in one range. The final document is the
+  stream's last object of id 7, and the run reports both deferred. Mutant: only the missing object is deferred.
+- The chores swap (N5): a test seam makes one write of an apply chore throw; afterwards the endpoint reports its
+  engine's chores restored (a debug accessor beside the guard), and a later RESTORE's write runs. Mutant: the guard
+  does not restore on the throw path.
 - D1 and D2 as today (the update after a run, the schema order test), unchanged and passing.
 - Races: the reviewer's `restore_model.py` and the RESTORE tests on a TSan build, a light job (D61).
-- Not tested deterministically: the `must_exist` re-place (needs a concurrent erase between placement and apply,
-  as F1/F2's paths); argued here, left to the review.
 
 **T4 and T5: what they need, beyond fix (c).** At the fix every idle HTTP loop shows lag p50 320 us and p99 512 us
 (the timer's own wake-up on this host); loaded, p50 is 448 us but p99 is 3.0-5.1 ms and p99.9 6-12 ms (A2 job
