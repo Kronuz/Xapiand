@@ -18051,6 +18051,41 @@
       "status": "landed",
       "title": "Strata migration design",
       "updated": "2026-11-08T13:25:34"
+    },
+    "xapiand-strata-bump": {
+      "accepted": {},
+      "after": [
+        "barrier-warning-strata",
+        "prospect-completion-opens"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "src/database/**io*",
+        "src/engine/strata/**",
+        "tests/test_engine_*",
+        "harness/pins_check*"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
+      "updated": "2026-11-12T01:50:43"
     }
   },
   "suite": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
