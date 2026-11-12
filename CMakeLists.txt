@@ -769,7 +769,7 @@ FetchContent_MakeAvailable(task)
 # strata and the libraries strata links.
 # strata: the commit with defer_io and work_pool_executor.
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 5d742b2407f5048713cb39a625c017c455cb814e)  # strata main: the catalog host interface, destroy-safe pins with cancel tokens
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG b20e7c555f37daad415cf658b32f99cc9a955464)  # prospect main: the exhaustive scan checks its slice every 256 ordinals with host work
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
