@@ -10484,11 +10484,12 @@
       "milestone": "Phase 4",
       "needs": [],
       "provides": [],
+      "reason": "Phase 4 follows the release (D39); release-rows goes first. Branch kept at prospect:bd21e9f (estimate triples, real-time get from a kept frozen buffer, typed-values note); resumes after release-rows lands",
       "repo": "../prospect",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "title": "Phase 4's remaining items and its gate",
-      "updated": "2026-11-11T18:22:21",
+      "updated": "2026-11-11T18:45:07",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
