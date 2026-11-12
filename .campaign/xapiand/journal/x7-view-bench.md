@@ -1,6 +1,6 @@
 # x7-view-bench: journal
 
-State: waiting on jobs 261111-170805-1b0cf8 (build), 261111-170808-5ba0b9 (strict run, A1, after the build)
+State: waiting on jobs 261111-175933-48460d (build+copy to /Users/kronuz/.scratch/x7-view-bench/ff03d4e), 261111-175937-76ae57 (strict run, A1, after the build)
 Quest: .campaign/xapiand/quests/x7-view-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ A2 passed (build-test 261111-160901-23e3eb). First bench build failed (Viewed in
 
 ## Next
 
-1. Read the strict job 5ba0b9 output (the table is in its log).
+1. Read the strict job 261111-175937-76ae57 output (the table is in its log).
 2. Write docs/perf/shard-view.md, paste Evidence, State ready for review.
 
 ## Blocked on
