@@ -42,3 +42,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 - On-loop baseline is every object an `update` (above); the earlier `_script` baseline is dropped. (Was: schema root `_script` (`_doc.n = _doc.n`), since seams.serial does not exist on master. The script adds a little Lua + stored-doc read per object to the baseline, so it overstates the loop's serial share slightly; the margin absorbs it. Superseded.)
 - The bound 0.7 and the 2000 x 1000-word body are measured, not argued (Doing).
+
+Lead, 11-12 12:0x: removed the A2 fails-without tags of 261112-110934-a8f97e, 261112-112904-490120 and 261112-115802-19e0e1. Each exited 0 while the test passed (or ran nothing), so none showed the check failing; their for.json files are kept as for.json.removed-bogus-tag. A2 is now 261112-120316-53ad25 (the test passes at fbad838) and 261112-120322-64f547 (the mutant exits 0 only when the loop-CPU CHECK fails; exit 2 on a build error).
