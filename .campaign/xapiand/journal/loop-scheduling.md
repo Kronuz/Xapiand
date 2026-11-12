@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-144638-49d13f 261112-144641-58278e
+State: waiting on jobs 261112-145752-4c47b7 261112-145754-4dcc08
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -35,6 +35,13 @@ three targets' flags.make; thread.cc and pool.cc compile).
   `build-ls/CMakeCache.txt` held the first run's failed `HAVE_CXX_ATOMICS_WITHOUT_LIB` (empty, and no
   "Performing Test" line in the log); my local configure with the same `-fno-omit-frame-pointer` passed.
   Resubmitted with `rm -rf build-ls` first: 261112-144638-49d13f (build), 261112-144641-58278e (E1).
+
+- 261112-144638-49d13f got past configure and failed compiling: macOS's `sys/param.h` (through the Mach and
+  libproc headers in the force-included header) defines `MAX`, which broke `wal.h`'s `ENUM_CLASS`. The header
+  now declares only the loop mark and hooks; the sampler and platform headers moved to
+  `harness/experiments/ls_census.cc` (c4f11fd14). Checked locally: configure rc 0 (CheckAtomic passes with
+  `-fno-omit-frame-pointer`), and `ls_census.cc`, `wal.cc`, `pool.cc`, `thread.cc` compile. Resubmitted:
+  261112-145752-4c47b7 (build), 261112-145754-4dcc08 (E1).
 
 E3 (261112-141805-74aaf9, Linux VM, 8 vCPUs, 32 heavy clients), loaded phase, base arm: loops are
 saturated, not descheduled from idle CPUs: 8 loops use 6.68 cores, runnable 99% of the window, in a handler
