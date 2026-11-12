@@ -9941,7 +9941,52 @@
       "updated": "2026-11-08T15:39:07"
     },
     "phase3-ratchets": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-11T18:02:56",
+          "base": "b23d1397bd4ff2f56965eba301efb5b702fd540a",
+          "blobs": {
+            "bench/alloc_count.c": "100644:9e94c13b8b209eb32869426bbcf84cdea835956a",
+            "bench/allocs.py": "100644:449251412adeeb4906720e1edb0087625724b9cf",
+            "bench/cgmem.sh": "100755:ddcd6c1841714384193de8c7acdce54b83dc5a23",
+            "bench/engines/lucene-10.4.0-st/src/main/java/BuildIndex.java": "100644:143ba6267a09fa82107b305643af060ebe3897bb",
+            "bench/engines/tantivy-0.26-st/src/bin/build_index.rs": "100644:5b951f6ed5484dc57f83e042d8e40e6bf195db63",
+            "bench/gate3.sh": "100755:138288583b4b7205aefeb67ca93e006932e14dff",
+            "bench/gate3_report.py": "100755:f804d48242c9aa5e22f40579394f9c1eeb23020f",
+            "bench/phase2/gate.py": "100755:51d63e596ec1e6108954bd16e5d6fbfe508322cc",
+            "bench/write_amp.sh": "100755:4085722d4bf509949f3e00bec39fb425abb8036a",
+            "docs/gates/phase-3-ratchets.md": "100644:e83ba1cb6284d93ed18ae3cb152ea73404630d4a",
+            "docs/testing/parity.md": "100644:559474c08c9ed766d950815eaaf9596c9e70f68f",
+            "tools/parity.cc": "100644:8f8d251d94c2945c4aa3c2b5d827f21e1d090573",
+            "tools/vm/bsd_rows.sh": "100755:f7f9443bd2ccf65c94dead28a993884f40381e34",
+            "tools/vm/gate_job.sh": "100755:516e5cb2d7ae2e25af3f53bd379de6e5a67e38fe"
+          },
+          "by": "review",
+          "commit": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "criteria": "fd8516cd4e7711e0",
+          "diffs": {
+            "bench/alloc_count.c": "2883368631935cda",
+            "bench/allocs.py": "fabf4d57de871070",
+            "bench/cgmem.sh": "df92cd8904a779dc",
+            "bench/engines/lucene-10.4.0-st/src/main/java/BuildIndex.java": "4c96b3ecdafe9873",
+            "bench/engines/tantivy-0.26-st/src/bin/build_index.rs": "dce38a5fc8f98b89",
+            "bench/gate3.sh": "d854514ec66e1702",
+            "bench/gate3_report.py": "2153ccadf66b0e9a",
+            "bench/phase2/gate.py": "9ad05914e99a4d18",
+            "bench/write_amp.sh": "76444d26260ab2dc",
+            "docs/gates/phase-3-ratchets.md": "a42a3d71acb9f651",
+            "docs/testing/parity.md": "48d8685fea6e27b1",
+            "tools/parity.cc": "ab5d15b9af498afd",
+            "tools/vm/bsd_rows.sh": "e999647f6670206a",
+            "tools/vm/gate_job.sh": "3c31eacdec1cce4f"
+          },
+          "findings": {},
+          "note": "",
+          "review": "640f762451e21dd17f1ef669169f6cba8b117e10",
+          "reviewed": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
       "branch": "quest/xapiand/phase3-ratchets",
@@ -10001,7 +10046,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Phase 3's ratchet rows",
-      "updated": "2026-11-11T17:42:27",
+      "updated": "2026-11-11T18:02:56",
       "worktree": "../prospect-wt/xapiand/phase3-ratchets"
     },
     "phase3r": {
