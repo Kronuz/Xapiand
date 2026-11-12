@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-165347-d979c7 261111-171014-19268b 261111-171016-01a84c 261111-171041-c9ab68 261111-171043-7a746f 261111-171045-06e893 261111-171048-c39d8d 261111-171050-a82ab4 261111-171052-af8ee2 261111-171055-51a31b
+State: waiting on jobs 261111-165347-d979c7 261111-171014-19268b 261111-171016-01a84c 261111-171041-c9ab68 261111-171043-7a746f 261111-171045-06e893 261111-171048-c39d8d 261111-171050-a82ab4 261111-171052-af8ee2 261111-171055-51a31b 261111-171145-b4549d 261111-171146-002593
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,7 +24,8 @@ Xapiand:49ebb4481 (adds node CPU per phase to `stall_load.py`):
 | 261111-171052-af8ee2 | strict | A16 | wide_search_check gate, 10,000 indexes, 10 searches |
 | 261111-171055-51a31b | exclusive | A21 | before/after the one-shape wave, ABBA x3: CPU per light request, p99 |
 
-Each job prints its pairs' cur/pre ratios (`pairs.py`, written into `$JOB_OUT` by the command). Read them into
+The CPU change makes rows 048b3b and build-test c4aa56 other code: reruns 261111-171145-b4549d and
+261111-171146-002593 (cite them once they pass). Each job prints its pairs' cur/pre ratios (`pairs.py`, written into `$JOB_OUT` by the command). Read them into
 `docs/gates/phase7c.md`; a pair interval straddling a target earns one second run (D59).
 
 
