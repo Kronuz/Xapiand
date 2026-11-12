@@ -5,27 +5,24 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+completion:c315c03 made `kronuz::journal::IO`'s four read-only opens pure virtual. prospect's
+test IO wrappers (`gate_io`, `wrapper_io`, `flaky_io`) pass them through, so prospect's suite
+builds against the strata barrier-warning-strata lands (which pins completion:e49f288).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 prospect's suite passes against barrier-warning-strata's strata: barrier-warning-strata's A4 integration job, at this quest's commit
+- A2 [artifact] The three wrappers forward all four opens: `test/index_test.cc`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes completion's journal IO interface.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-12: split from barrier-warning-strata's A4 (the wrappers use `override`, so this lands
+  after strata's pin moves; prospect's repin follows).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: it does not build at prospect's current pins.
