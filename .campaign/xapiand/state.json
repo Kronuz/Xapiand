@@ -5612,6 +5612,8 @@
     "loop-share-flake": {
       "accepted": {},
       "after": [],
+      "base": "1b31d861d27c4435664fd165b5688853deb27a50",
+      "branch": "quest/xapiand/loop-share-flake",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5629,11 +5631,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: test file shared with held x7-loop-fix-c; master is red",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "test_loop_yield's RESTORE loop share holds on any core count",
-      "updated": "2026-11-12T10:52:42"
+      "updated": "2026-11-12T10:53:10",
+      "worktree": "../Xapiand-wt/xapiand/loop-share-flake"
     },
     "manifest-log": {
       "accepted": {
