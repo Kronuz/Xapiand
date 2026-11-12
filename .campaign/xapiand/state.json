@@ -10094,6 +10094,8 @@
     "open-one-flush": {
       "accepted": {},
       "after": [],
+      "base": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+      "branch": "quest/xapiand/open-one-flush",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -10109,6 +10111,7 @@
         "docs/design/manifest-log.md",
         "docs/perf/open-sync.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/open-one-flush",
       "landed": [],
       "lenses": [
         "durability"
@@ -10118,9 +10121,10 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-11T00:56:57"
+      "updated": "2026-11-12T02:17:26",
+      "worktree": "../strata-wt/xapiand/open-one-flush"
     },
     "perf-watch-peek": {
       "accepted": {
