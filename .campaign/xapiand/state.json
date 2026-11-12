@@ -12233,7 +12233,9 @@
       "files": [
         "test/background_merge_test.cc",
         "test/directory_test.cc",
-        "test/index_test.cc"
+        "test/index_test.cc",
+        "test/format13_test.cc",
+        "test/index_mapped_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/prospect-completion-opens",
       "landed": [],
@@ -12241,12 +12243,11 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "started by force: release-rows' and x7-scan-slices' test/** globs; neither touches these three files",
       "repo": "../prospect",
       "risk": "low",
       "status": "active",
       "title": "prospect's test IOs implement completion's four read-only opens",
-      "updated": "2026-11-12T00:33:19",
+      "updated": "2026-11-12T01:27:39",
       "worktree": "../prospect-wt/xapiand/prospect-completion-opens"
     },
     "prospect-drop-threadpool": {
