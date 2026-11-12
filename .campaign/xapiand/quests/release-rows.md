@@ -40,6 +40,12 @@ None: measurement. A row that fails is fixed by its own quest and measured again
 
 ## Decisions
 
+- Lead, 11-11, on review F1: A3 is a MISS at the release's level (Xapiand master serves
+  aggregations from its own src/aggregations, not prospect's collectors); prospect's 16-kind test
+  stays as prospect's evidence; the release's row is hunt row 91 (Xapiand shard-parity test).
+- Lead, 11-11, on review F2: A5 is a MISS as "one CPU-hour": six independent 10-minute starts per
+  decoder from one seed corpus, wall-clock at nice 19, coverage still rising; the report states the
+  reviewer's numbers; follow-ups are hunt row 92 (slow targets) and keeping the corpus across runs.
 - D39: these rows gate the release; the gates of Phases 3, 4 and 5 keep them and re-run them at
   their own commits after it.
 - The oracle is Kronuz/strata-oracle (GPL-2.0, kept apart so prospect and strata stay MIT): its
