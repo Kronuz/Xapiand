@@ -28,7 +28,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | jobs 261112-013706-bce470 (x50 beside 2x-CPU load, gated merge), 261112-013709-c8d2f4 (build-test); Linux CI on the pushed head |
-| A2 | `tests/test_pool.cc`: the wait is `index.wait_merges()`, the index's own merge completion (strata index.hh), under the entry's turn |
+| A2 | [artifact] `tests/test_pool.cc`: "index.wait_merges()" |
 
 ## Result
 
