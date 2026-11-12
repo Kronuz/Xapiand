@@ -1,6 +1,6 @@
 # sync-at-first-commit: journal
 
-State: waiting on jobs 261112-115005-1dba03 261112-115011-237ee0 261112-115015-c66d2c
+State: waiting on jobs 261112-115011-237ee0
 Quest: .campaign/xapiand/quests/sync-at-first-commit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,6 +18,7 @@ merge-thread sync) fails it at index_test.cc:495. Note D4, Evidence and review t
 Jobs at cb5294b8: reviewer's probe rerun 261112-115005-1dba03 (must exit 0); suite 261112-115011-237ee0;
 mutant merge 261112-115015-c66d2c (A3, fails-without). A4 not rerun: the commit path is unchanged
 (lead's reruns at a297ba00: 261112-111415-c3939c, 261112-111415-99e66d).
+Done: probe 261112-115005-1dba03 exit 0; mutant merge 261112-115015-c66d2c exit 0 (killed). Suite running.
 N1-N3 (hunt.md) left out: none falls out of this change.
 
 ## Next
