@@ -744,7 +744,48 @@
       "worktree": ""
     },
     "barrier-warning-strata": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-12T01:52:28",
+          "base": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "blobs": {
+            "CMakeLists.txt": "100644:b60636f163ba77ea89b66a156ee908387238a8b9",
+            "include/strata/core/counted_io.hh": "100644:bb4648d3ea97fa2a5e4cb1e0f1db9d32ee1ef43f",
+            "include/strata/core/faultfs.hh": "100644:156f9579da5141028181436a588b1df164063df9",
+            "test/background_merge_test.cc": "100644:2878321dd042fade89e81bbf70051af6d5f37290",
+            "test/cold_hooks.hh": "100644:e5fb072682af70dc0c2dc9fef1e24f7022e5d7be",
+            "test/counted_hooks.hh": "100644:97b7061de8565662ab73bffe988c2e6fb1f163d7",
+            "test/directory_test.cc": "100644:4e291380dfff856dfa5b04ec4b9ff78402c1d38c",
+            "test/faultfs_test.cc": "100644:fef21ffccd91b30d9a3ffca6bb16d2210e892d8c",
+            "test/flush_memory_test.cc": "100644:bd03de2960e3231cee5014054fa85de4fdefa630",
+            "test/format14_test.cc": "100644:c380113d5a0a52d983fbf8a610c116932fc124f8",
+            "test/index_test.cc": "100644:b829a357909248eb947226674e0b189cee58d109",
+            "test/install_errors_test.cc": "100644:d2ee37cbfce2a33790398f91c3435ffc9fdeb2f9"
+          },
+          "by": "review",
+          "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "criteria": "758c16c2ec0b2a4f",
+          "diffs": {
+            "CMakeLists.txt": "ccee07be76395d56",
+            "include/strata/core/counted_io.hh": "68443b64f7a1e62a",
+            "include/strata/core/faultfs.hh": "53c8363e0484be30",
+            "test/background_merge_test.cc": "ee5cb5d523c28e05",
+            "test/cold_hooks.hh": "f9785cd97a541345",
+            "test/counted_hooks.hh": "545610576c50e521",
+            "test/directory_test.cc": "84f1243c881ed3e1",
+            "test/faultfs_test.cc": "71cb199ed6008b63",
+            "test/flush_memory_test.cc": "9879a55c0299566c",
+            "test/format14_test.cc": "2f94148ffbc55d00",
+            "test/index_test.cc": "ae26e5088c8354a6",
+            "test/install_errors_test.cc": "5a2bdf776feacc24"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dd3d78ba6acbec94b6ca4e4b3f318fc6e7c2c747",
+          "reviewed": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "barrier-warning-completion"
       ],
@@ -881,7 +922,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-12T01:43:27",
+      "updated": "2026-11-12T01:52:28",
       "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
