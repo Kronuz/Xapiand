@@ -26,6 +26,7 @@
 // differs by design, are in docs/dev/agg-shard-parity.md.
 //
 // AGG_PARITY_DROP_SHARD=k leaves shard k out of every n-shard run (the mutant that proves the test sees it).
+// AGG_PARITY_ORDER_INSENSITIVE=1 compares buckets by key, not by position (a diagnosis; the test compares positions).
 
 #include "test_harness.h"
 
@@ -265,6 +266,11 @@ void compare(const MsgPack& a, const MsgPack& b, const std::string& path, Diff& 
 		std::vector<MsgPack> left, right;
 		for (const auto& v : a) { left.push_back(v); }
 		for (const auto& v : b) { right.push_back(v); }
+		if (std::getenv("AGG_PARITY_ORDER_INSENSITIVE") != nullptr) {  // a diagnosis: do the buckets agree but for their order
+			auto by_key = [](const MsgPack& x, const MsgPack& y) { return x.is_map() && y.is_map() && x.at("_key").to_string() < y.at("_key").to_string(); };
+			std::sort(left.begin(), left.end(), by_key);
+			std::sort(right.begin(), right.end(), by_key);
+		}
 		for (std::size_t i = 0; i < left.size(); ++i) {
 			compare(left[i], right[i], path + "[" + std::to_string(i) + "]", diff);
 		}
