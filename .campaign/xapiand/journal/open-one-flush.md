@@ -1,6 +1,6 @@
 # open-one-flush: journal
 
-State: waiting on jobs 261112-025326-d8e7e1 261112-025328-896ded
+State: waiting on jobs 261112-025326-d8e7e1 261112-025328-896ded 261112-025813-0362d3 261112-025815-cc2c50
 Quest: .campaign/xapiand/quests/open-one-flush.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,7 +18,14 @@ strict 261112-025328-896ded (`sh bench/open_sync/loaded.sh ~/.scratch/open-one-f
 
 1. Read 896ded; fill its row in strata docs/perf/open-sync.md (Evidence and the loaded table) and
    A2 below; set ready for review.
-2. Fold in the durability review's findings by id.
+2. Read mutants 0362d3 (M1) and cc2c50 (M2); fill A1 and open-sync.md's table; ready for review.
+
+Durability review (APPROVE) notes:
+- N1: fixed at strata:8499e781 (open-sync.md's last sentence: the log's `fdatasync` becomes `fsync`).
+- N2: `bench/open_sync/mutant.sh M1|M2` committed; jobs 261112-025813-0362d3 (M1, log only, must
+  fail `index_test.cc:182`, case 10) and 261112-025815-cc2c50 (M2, directory only, must fail `:137`,
+  case 9), `--for A1 --fails-without --fresh`.
+- N3: fixed at strata:8744f5a3 (harness paragraph names `bench/open_sync/loaded.sh`).
 
 ## Blocked on
 
@@ -29,7 +36,7 @@ regression.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261112-022003-37891b (index_test passes at strata:c35ce7e0, T4 cases 9 and 10 included); mutant 261112-022005-2de6e1 at strata:65fd2afd fails case 9 (`index_test.cc:137`, the reopened generation lost after the power loss, 31 failures then exit) |
+| A1 | 261112-022003-37891b (index_test passes at strata:c35ce7e0, T4 cases 9 and 10 included); mutant 261112-022005-2de6e1 at strata:65fd2afd fails case 9 (`index_test.cc:137`, the reopened generation lost after the power loss, 31 failures then exit) | Each half: M1 261112-025813-0362d3, M2 261112-025815-cc2c50 (pending).
 | A2 | pending: 261112-025328-896ded (strict, bench/open_sync/loaded.sh from the checkout at strata:f8747be0). Earlier probe 261112-023556-0291d4 (same harness from ~/.scratch, not rerunnable): p99 lower after in 5 of 6 pairs, p50 45.1-46.0 vs 23.0-25.9 ms. No regression: quiet run 261112-022029-add889, both sides ~0.1 ms per open, p99 lower in 3 of 6 pairs (tagged A2 by its submission; cited only as no regression) |
 | A3 | suite 261112-022007-45e212 passes at strata:c35ce7e0; CI 43199523054 at strata:c35ce7e0: linux-x86_64 gcc and clang, linux-arm64-gcc, linux-asan-ubsan, linux-tsan, freebsd-x86_64, macos-x86_64 pass; macos-arm64 cancelled with no runner assigned (15 min queued), rerun requested |
 
