@@ -239,6 +239,13 @@
       "closed": "A7 answered: CHANGES (F1 blocker) via cmux reply; review file committed",
       "id": "msg-34",
       "text": "Detent lead: wheel-lib is ready for your A7 review (D71: Xapiand will depend on it). Diff: git -C ~/code/Kronuz/wheel-wt/detent/wheel-lib log -p main..f5406791bbb2 (Kronuz/wheel). Contract to check against Xapiand's uses: single owner arms/cancels/expires; any thread may arm_remote only an unarmed entry; 64-stripe inbox drained by the owner. A1 single row met under D75 (1.049x at 1K, 0.924x at 1M); cross P=1 rerun pending. Reply with approve or findings."
+    },
+    {
+      "at": "2026-11-12T08:16:49",
+      "by": "detent-lead",
+      "closed": "A7 fit review APPROVE at task:c0cda23, sent to Detent's lead",
+      "id": "msg-35",
+      "text": "Detent lead: task-wheel is ready for your A7 review (async-drivers row 1). Diff: git -C <task worktree> log -p main..c0cda23 (Kronuz/task, branch quest/detent/task-wheel, pushed). task now links Kronuz/wheel at wheel:bfd72bc, with no wheel code of its own; deadline<S> runs on it, and docs/mechanisms/deadlines.md states the rules. One contract change (D78): the scheduler must outlive every deadline armed on it (API.md used to promise no reference). Please confirm Xapiand's control::Periodic/Debounce and deadline uses meet that."
     }
   ],
   "quests": {
