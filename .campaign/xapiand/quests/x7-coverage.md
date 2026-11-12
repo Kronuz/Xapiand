@@ -16,7 +16,7 @@ cannot show it.
 
 - A1 `harness/coverage.sh` builds with coverage and prints line coverage per area beside TESTING.md's targets: a job
 - A2 Restore corpora are committed under tests/corpora/ with the build that wrote each, and a harness replays each through RESTORE and compares every document: a job
-- A3 TESTING.md names both harnesses: [artifact] TESTING.md
+- A3 [artifact] TESTING.md names both harnesses: `TESTING.md`
 
 ## Contracts
 
