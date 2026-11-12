@@ -25,8 +25,9 @@ pins, named in the report.
   A8): jobs
 - A3 Aggregations equal over one shard and over many for every collector Xapiand serves
   (`phase4-gate` A9; strata `docs/DISTRIBUTION.md`, "Query"): jobs
-- A4 Stemmer vocabularies equal to Xapian's for every language Xapiand's schema accepts (`phase5` A6;
-  the oracle's vectors): jobs
+- A4 [artifact] Stemmer vocabularies compared to Xapian's for every language Xapiand's schema
+  accepts (`phase5` A6; the oracle's vectors), the result stated; equality for the release is quest
+  stemmer-names: `docs/gates/release-rows.md`
 - A5 Every decoder of prospect's formats that the release reads: one CPU-hour of fuzzing with zero
   findings; readers reject unknown versions, with a fixture per format: jobs
 - A6 The tests behind A1 to A5 pass under ASan and UBSan: the `asan` check
@@ -40,6 +41,8 @@ None: measurement. A row that fails is fixed by its own quest and measured again
 
 ## Decisions
 
+- Lead, 11-11: A4 becomes the measured row (artifact); its MISS (six names) moves to quest
+  stemmer-names, A3's to agg-shard-parity, A5's to fuzz-cpu-hour, all in milestone Phase 8.
 - Lead, 11-11, on review F1: A3 is a MISS at the release's level (Xapiand master serves
   aggregations from its own src/aggregations, not prospect's collectors); prospect's 16-kind test
   stays as prospect's evidence; the release's row is hunt row 91 (Xapiand shard-parity test).

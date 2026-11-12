@@ -5,27 +5,25 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+release-rows' fuzzing ran six independent 10-minute wall-clock starts per decoder at 3 to 32
+inputs/s, discarding each corpus, with coverage still rising (review F2). Each decoder the release
+reads (segment, postings, values, fielddict) gets one CPU-hour (measured CPU time) with a corpus
+kept across runs, after its per-input cost is understood and cut where it is the harness.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] Each decoder's per-input cost before and after, with its cause (segment build per input?): `docs/perf/fuzz-targets.md`
+- A2 One CPU-hour per decoder, CPU time measured, corpus kept across runs, zero findings: jobs
+- A3 fuzz_segment's input length limit grows past its seeds (no fixed 26-byte cap): the A2 jobs
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-11: split from release-rows A5 (review F2); hunt row on slow fuzz targets.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Everything.

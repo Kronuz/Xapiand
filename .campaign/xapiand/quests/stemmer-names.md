@@ -5,27 +5,25 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The six names release-rows found (`earlyenglish`, `german2`, `nb`, `nn` stemmed by Xapian but refused
+by snowball; `english_lovins`, `english_porter` refused by both; prospect `docs/gates/release-rows.md`
+A4) are served with vocabularies equal to the oracle's, or removed from the schema, docs and tests
+(remove-not-refuse). Removing a name narrows user-visible behavior: the owner decides per name first.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [decision] The owner's call per name (serve or remove): a PLAN.md Decisions id
+- A2 Every name the schema accepts stems equal to the oracle's vectors, word for word: a job (release-rows' stems row rerun at this quest's code)
+- A3 A removed name is refused with a 400 naming the accepted languages, and appears nowhere in docs: a test in the build-test check
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+The schema's language list (user-visible).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-11: split from release-rows A4 (review accepted at prospect:0ba797e).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing before A1.
