@@ -2694,6 +2694,39 @@
       "updated": "2026-11-11T12:09:39",
       "worktree": ""
     },
+    "dir-shared-lock": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [
+        "completion:directory-lock"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "planned",
+      "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
+      "updated": "2026-11-12T04:29:25"
+    },
     "direct-pins": {
       "accepted": {
         "correctness": {
