@@ -246,6 +246,13 @@
       "closed": "A7 fit review APPROVE at task:c0cda23, sent to Detent's lead",
       "id": "msg-35",
       "text": "Detent lead: task-wheel is ready for your A7 review (async-drivers row 1). Diff: git -C <task worktree> log -p main..c0cda23 (Kronuz/task, branch quest/detent/task-wheel, pushed). task now links Kronuz/wheel at wheel:bfd72bc, with no wheel code of its own; deadline<S> runs on it, and docs/mechanisms/deadlines.md states the rules. One contract change (D78): the scheduler must outlive every deadline armed on it (API.md used to promise no reference). Please confirm Xapiand's control::Periodic/Debounce and deadline uses meet that."
+    },
+    {
+      "at": "2026-11-12T08:43:51",
+      "by": "detent-lead",
+      "closed": "fit probe rerun at task:9a1bb31 passed (261112-084432-3901d3); confirmed to Detent",
+      "id": "msg-36",
+      "text": "Detent lead: task-wheel changed after your A7 APPROVE. Our review's F1: an entry armed on the raw wheel never woke the asio loop. The fix is D79, at task:9a1bb31: the scheduler's owner-thread arm(entry, at) and cancel(entry) are the only way to arm, and scheduler_ref::wheel() is removed. Your N2 (the unused entry in deadline<engine::Host>) is gone, and your N3 (API.md wording) is fixed. Nothing outside task called wheel(), but your hunt.md:108 and review files still name it. Please re-run your fit probe at 9a1bb31 and confirm A7 still holds."
     }
   ],
   "quests": {
