@@ -1,36 +1,28 @@
 # agg-shard-parity: journal
 
-State: waiting on jobs 261112-000453-a3919d 261112-000737-6be2d5
+State: waiting on jobs 261112-000934-6482ef 261112-000944-ab7bd4
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
 
-Test written and committed (tests/test_aggregation_shards.cc, xapiand-wt branch). First build+run job submitted (A1).
-It adds the CMake registration line inside the job, see Blocked on.
+Test, CMake line and journal committed. A1 is the quest's build-test check (verify --for A1), A2 the mutant job after it.
 
 ## Next
 
 1. Read the A1 job; fix compile errors or real mismatches (a mismatch is a finding: kind and values below, src/ is not mine).
-2. Submit the A2 mutant: `--fails-without --env AGG_PARITY_DROP_SHARD=1 --after <A1 job>`, same build slot.
+2. A2 mutant submitted (done).
 3. Write docs/dev/agg-shard-parity.md (A3) with the kinds and what differs by design.
 
 ## Blocked on
 
-The lead, three things outside my file set (tests/test_aggregation_shards*, harness/agg_parity*):
-1. CMakeLists.txt: add `aggregation_shards` to the engine-test `foreach (VAR_TEST ... root_routes)` list (line ~1894).
-   Without it ctest never runs the test. My jobs apply the one-line edit inside the job checkout; the branch lacks it.
-2. The quest's check `build-test` is `cmake -B build -DCMAKE_BUILD_TYPE=Release && ... ctest`: BUILD_TESTS is OFF
-   there, so ctest prints "No tests were found!!!" (see job 261111-232734-59ff14's log, x7-loop-stalls). It proves
-   nothing for any Xapiand test. Recommend the gate's form: `cmake -S . -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps"
-   -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest ...`.
-3. docs/dev/agg-shard-parity.md (A3's path) is outside the set; I write it as the criterion names it.
+Nothing. (Lead ruled 11-12: CMakeLists.txt line and docs/dev/agg-shard-parity.md are in the file set; the check now builds tests.)
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261112-000453-a3919d (pending) |
-| A2 | job 261112-000737-6be2d5 (mutant, after A1; pending) |
+| A1 | check build-test 261112-000934-6482ef (pending) |
+| A2 | job 261112-000944-ab7bd4 (mutant, after A1; pending) |
 | A3 | docs/dev/agg-shard-parity.md (pending) |
 
 ## Result
