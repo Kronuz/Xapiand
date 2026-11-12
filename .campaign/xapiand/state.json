@@ -2788,11 +2788,40 @@
         "tools/mutants.py",
         ".github/workflows/mutants.yml"
       ],
-      "journal": "../Xapiand-wt/xapiand/dir-shared-lock",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T04:57:29",
+          "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+          "criteria": {
+            "A1": "261112-045113-23f421, 261112-045118-31d22a; fails without: 261112-044136-c2bcfc, 261112-045114-4fb679",
+            "A2": "261112-045113-23f421",
+            "A3": "`docs/mechanisms/directory-locks.md` (completion)",
+            "A4": "261112-045113-23f421"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-045113-23f421",
+              "level": "light",
+              "seconds": 86.6,
+              "state": "done",
+              "what": "dir-shared-lock check build-test at 504f4099b9a5"
+            }
+          ],
+          "final": true,
+          "from": "dfdac5d196b7253609175260d23c71841b0840df",
+          "reason": "",
+          "tested": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -2800,10 +2829,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
-      "updated": "2026-11-12T04:57:22",
-      "worktree": "../completion-wt/xapiand/dir-shared-lock"
+      "updated": "2026-11-12T04:57:33",
+      "worktree": ""
     },
     "direct-pins": {
       "accepted": {
