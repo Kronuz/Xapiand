@@ -1,6 +1,6 @@
 # open-one-flush review: durability
 
-Commit: strata:c35ce7e0de996348e57970339b3f20e7015a5e29
+Commit: strata:ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad (code as at c35ce7e0de996348e57970339b3f20e7015a5e29)
 Verdict: APPROVE
 Date: 2026-11-12
 
@@ -79,3 +79,18 @@ c35ce7e0's one hunk in `include/strata/core/index.hh:5260-5267`.
 - macos-arm64 CI (cancelled, no runner). The local suite job ran on darwin arm64.
 - The fallback branch (`to` below the newest generation, `commit_files`) was unchanged and not
   re-examined.
+
+## Re-check (strata:ab0e26a6)
+
+Verdict stays APPROVE. `git diff c35ce7e0..ab0e26a6` touches only `bench/open_sync/{build,loaded,mutant,run}.sh`
+and `docs/perf/open-sync.md`: no engine or test change. The commits the new jobs ran at (8499e781,
+69b76e9c) are ancestors of ab0e26a6, with no diff to it in `include`, `src`, `test` or the four
+scripts. The scripts do what open-sync.md says:
+- `build.sh` builds `idle_index` (a target at main d8ae10b8 too) at `$JOB_REF_MAIN` and at the
+  checkout, then builds 1,000 indexes of 100 documents.
+- `run.sh` warms up each side, then runs interleaved AB/BA pairs, capped at 8 minutes.
+- `loaded.sh` adds a 4 MiB write-and-`fsync` loop with no `F_FULLFSYNC`.
+- `mutant.sh` is my M1/M2, keyed to `index_test.cc:182` and `:137`. Jobs 261112-025813-0362d3
+  and 261112-025815-cc2c50 are cited.
+
+N1 to N3 are fixed: the Linux wording, the mutant rows in the evidence table, and the harness path.

@@ -10094,25 +10094,33 @@
     "open-one-flush": {
       "accepted": {
         "durability": {
-          "at": "2026-11-12T03:19:11",
+          "at": "2026-11-12T03:19:49",
           "base": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
           "blobs": {
+            "bench/open_sync/build.sh": "100755:a541b8d0b5c496cad9db23aac83a9ff6494c4560",
+            "bench/open_sync/loaded.sh": "100755:8b1498cca0baebe8de33a5921638957cb3aa8409",
+            "bench/open_sync/mutant.sh": "100755:06dc22c84cdfba6cae66b89f7e0152b8c65bc6dd",
+            "bench/open_sync/run.sh": "100755:1bf87767bb5a9bc08843d25d6b46e22212b83ed3",
             "docs/design/manifest-log.md": "100644:70a4af6dbf8104dd386d35f401aed93f076cce6d",
-            "docs/perf/open-sync.md": "100644:6e1eb12388a8013a92a14af3ae0063fa83d879c3",
+            "docs/perf/open-sync.md": "100644:7c42711421e500413e90fc375c7a3d028561a71c",
             "include/strata/core/index.hh": "100644:d78eddbffd1b77eb61d148b6eff3372c916edcbe"
           },
           "by": "review",
-          "commit": "c35ce7e0de996348e57970339b3f20e7015a5e29",
+          "commit": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
           "criteria": "06bc211c287f6aa6",
           "diffs": {
+            "bench/open_sync/build.sh": "008f4eee816fffbf",
+            "bench/open_sync/loaded.sh": "b556bffc974f07e3",
+            "bench/open_sync/mutant.sh": "f29a938d0277420f",
+            "bench/open_sync/run.sh": "bcc0146b6a9d2544",
             "docs/design/manifest-log.md": "6d832e4600da5bcd",
-            "docs/perf/open-sync.md": "94646d6d712da3ed",
+            "docs/perf/open-sync.md": "222118211f05d293",
             "include/strata/core/index.hh": "db630379c03b90f2"
           },
           "findings": {},
           "note": "",
-          "review": "c91051f9c48ff75236e824719ed8c1abb37e8963",
-          "reviewed": "c35ce7e0de996348e57970339b3f20e7015a5e29",
+          "review": "943c345da06a2286e563d305a04cec6ef8d381c7",
+          "reviewed": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
           "verdict": "APPROVE"
         }
       },
@@ -10147,7 +10155,7 @@
       "risk": "high",
       "status": "review",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-12T03:19:11",
+      "updated": "2026-11-12T03:19:49",
       "worktree": "../strata-wt/xapiand/open-one-flush"
     },
     "perf-watch-peek": {
