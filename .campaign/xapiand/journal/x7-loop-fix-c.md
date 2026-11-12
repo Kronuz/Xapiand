@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: blocked on lead: design ready, waiting for its concurrency design review
+State: waiting on jobs 261112-041113-b08090 261112-041125-d88ef7
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,6 +16,13 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
+0. E4 (lead's msg, 11-12): build 261112-041113-b08090 (light; xapiand with Asio custom handler tracking,
+   `~/.scratch/x7-loop-fix-c/e4/e4_tracking.hpp` via `-include e4_pre.h`; binary to `~/.scratch/x7-loop-fix-c/e4/<commit>/`),
+   then 261112-041125-d88ef7 (strict, 10 min): the T4/T5 loaded mix on it with `E4_OUT`, then on the plain fix
+   binary (0072ba93e) for overhead; `e4_report.py` gives per loop the handler and busy-period tails (fraction of the
+   window a 1 ms tick would wait >= 1/2 ms) and wall vs thread CPU. Read: handler tail2 ~ lag tail with cpu/wall ~1
+   = H1 (long turns); period tail without handler tail = queued short turns; cpu/wall well under 1 in long
+   handlers or periods, or no period tail at all = H3 (descheduled). Record the numbers here.
 1. Lead launches the design review; fold findings by id.
 2. Build step 2 of the design (apply chore + guard shared with `commit_blocking`, range placement, children under
    `engine::counted`), its tests and mutants; suite as a job.
