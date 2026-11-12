@@ -17301,6 +17301,8 @@
     "x7-scan-slices": {
       "accepted": {},
       "after": [],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/x7-scan-slices",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -17315,16 +17317,19 @@
         "test/sliced_test.cc",
         "docs/perf/scan-slices.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/x7-scan-slices",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
+      "reason": "started by force: release-rows' test/** glob; its diff (prospect:7a3a54b) never touches test/sliced_test.cc",
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "prospect's scan yields every 256 ordinals when per-match work runs",
-      "updated": "2026-11-11T23:00:57"
+      "updated": "2026-11-11T23:01:19",
+      "worktree": "../prospect-wt/xapiand/x7-scan-slices"
     },
     "x7-view-bench": {
       "accepted": {},
