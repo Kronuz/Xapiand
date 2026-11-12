@@ -1,6 +1,6 @@
 # agg-shard-parity: journal
 
-State: waiting on jobs 261112-000934-6482ef 261112-000944-ab7bd4
+State: waiting on jobs 261112-002548-2c8cb9 (diagnosis); A1 261112-000934-6482ef failed on a finding below
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -17,11 +17,42 @@ Test, CMake line and journal committed. A1 is the quest's build-test check (veri
 
 Nothing. (Lead ruled 11-12: CMakeLists.txt line and docs/dev/agg-shard-parity.md are in the file set; the check now builds tests.)
 
+## Finding F1: merged per-shard partials lose the buckets' order keys (src/aggregations/bucket.h)
+
+A1 (261112-000934-6482ef, log /Users/kronuz/.scratch/campaign/jobs/261112-000934-6482ef/a1/log): test_aggregation_shards
+is the only failing ctest (36 of 38 pass otherwise). 168 DIFF lines, all on the "merged bytes" and "merged objects" paths,
+0 on "one spy". The one-spy path equals the one-shard answer for all 43 requests, 3 scenarios, 2 and 5 shards (774 compared).
+The other two tests pass (rows match; `_terms` past `_shard_size` approximate as ruled).
+Failing requests (12 each = 3 scenarios x 2 layouts x 2 merge paths): `_values`/`_terms` over age and score,
+`_histogram` age/age shift/score, `_range` age, and every nesting of those (`several at once`, `_terms cat > ...`,
+`_filter > _terms age > ...`). Passing under merge: every metric (count..extended_stats), `_values`/`_terms` over cat (keyword),
+`_filter` with metric subs. Examples: `_values age` 2 shards `x[7]/_key "-15"` vs `"-17"`; `_histogram age` `x[0]/_doc_count 7` vs `37`;
+`_range age` `x[0]/_doc_count 184` vs `114`.
+(The "5514 floating values differ by rounding, worst 2" line is noise from comparing misaligned buckets.)
+
+Cause (read from source; diagnosis job 261112-002548-2c8cb9 compares by key to confirm order-only): a bucket's sort keys
+`Aggregation::slot` (numeric key) and `idx` (range position) are set only while collecting, in `BucketAggregation::aggregate`
+(bucket.h:677-678). `serialise_results` (bucket.h:547-561) writes only the bucket name and its sub-results, and
+both `merge_results` overloads (bytes bucket.h:563 ff., objects bucket.h:607 ff.) emplace a new bucket without setting
+`slot` or `idx`: they stay 0 (aggregations.cc ctor). Orders by key (`CmpByKeyAsc/Desc`, histogram default), by count
+tie-break (`CmpByCountDesc`, `_values`/`_terms` default: ties fall to slot, then the key string) and by index
+(`CmpByIndex`, `_range` default) all read them, so a merged bucket sorts by its string key (or arbitrarily for ranges): "-15" < "-17"
+lexicographically, 10 before 5. Keyword buckets have slot 0 anyway, so they match. Counts and sums merge correctly.
+(Possible knock-on: `_limit` truncation then keeps the wrong buckets, since `_get_result` and `_best` pick by that order.)
+
+User-visible? Not today: nothing outside src/aggregations calls `serialise_results`/`merge_results` (grep of src: only the
+`MatchSpy` interface at src/engine/callbacks.h:101-102); `DatabaseHandler::get_mset` (handler.cc:1537) gives `search_batched`
+one borrowed spy and the strata engine's one spy sees every shard (docs/mechanisms/strata-callbacks.md item 10). So the
+HTTP path is the "one spy" path, which is equal. The bug is latent in the public merge API (the remote-shard and per-shard
+paths the Xapian engine used, per docs/mechanisms/aggregation-scope.md) and would bite any cross-node merge.
+Fix shape (lead's quest): serialise the order keys with each bucket (slot, idx) and set them in both merge overloads
+(or drop the merge API if nothing will use it: one mechanism). A2's mutant is meaningless until then: the test fails without it.
+
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | check build-test 261112-000934-6482ef (pending) |
+| A1 | FAILED, finding F1 (261112-000934-6482ef) |
 | A2 | job 261112-000944-ab7bd4 (mutant, after A1; pending) |
 | A3 | docs/dev/agg-shard-parity.md (pending) |
 
