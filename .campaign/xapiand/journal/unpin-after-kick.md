@@ -1,6 +1,6 @@
 # unpin-after-kick: journal
 
-State: waiting on jobs 261112-082829-50b165 261112-082833-a65a89 261112-082836-a10320 261112-082839-973970 261112-082842-4c0531 261112-082844-da8069
+State: waiting on jobs 261112-083911-63e3ed 261112-083917-866b8a 261112-083923-f54687 261112-083928-dbd7e3 261112-082842-4c0531
 Quest: .campaign/xapiand/quests/unpin-after-kick.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,19 +9,24 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fixed at strata:503df8f0 (pushed, CI running):
+A3's linux catalog_stress abort (`resource_counts::book`: `booked[i] == 0`), fixed at strata:503df8f0, test reworked at 441abc39 (pushed, CI running):
 - Cause: end_at (catalog.hh, main ab0e26a6:1751) unbooked a closing slot after the exchange that left `closing`.
   A refused close ends `{0, open}`; a pass on another thread can begin_close it and book before that unbook runs
   (book asserts), and in NDEBUG the late unbook erases the new close's booking. Pre-existing since strata:7d031203.
   Not this quest's change: da983792/b04ca9e0 do not touch end_at, book or unbook.
 - Fix: unbook before the exchange in end_at, and in finish_close the same way (there it was safe, free_slot and the
   open's post follow, but one rule). New hook site `transition.ended` after end_at's exchange.
-- Test: catalog_teardown_test `refused-end` (close refused via a throw at `close.call`; at `transition.ended` the hook
-  begins the next close; at `refuse.end` the booking must equal the slot's descriptors).
-- Jobs: TSan+asserts suite 261112-082829-50b165, ASan+UBSan+asserts 261112-082833-a65a89, mutant (main's order)
-  261112-082836-a10320, attribution probe at main (1 ms sleep after the exchange, stress must assert)
-  261112-082839-973970, same sleep at the fix (stress clean) 261112-082842-4c0531, build-test 261112-082844-da8069.
-  Scripts: strata worktree .scratch/tsan-book/{suite,mutant,delay}.sh.
+- Test: catalog_teardown_test `refused-end`: a hot slot's close is refused (a map held) and ends at `open`; at
+  `transition.ended` the hook begins the next close; at the end nothing may stay booked. Without the fix the late
+  unbook erases the second close's slot booking but not its share of the catalog's sum, so `pending_descriptors()`
+  stays at the slot's count after both closes end (local run at the mutant: that check fails, rc 1).
+- Attribution, proven: probe 261112-082839-973970 at main ab0e26a6 with only a 1 ms sleep after end_at's exchange on a
+  closing end: catalog_stress (asserts) aborts on book's assertion on run 1. Same sleep at the fix:
+  261112-082842-4c0531 (10 runs, must stay clean). Scripts: strata worktree .scratch/tsan-book/{suite,mutant,delay}.sh.
+- Jobs at 441abc39: TSan+asserts suite 261112-083911-63e3ed, ASan+UBSan+asserts 261112-083917-866b8a, mutant
+  (`--fails-without`) 261112-083923-f54687, build-test 261112-083928-dbd7e3. Superseded at 503df8f0 (the first test
+  version's throw at `close.call` was never reached: the hot slot refuses before it): 261112-082829-50b165,
+  261112-082833-a65a89, 261112-082836-a10320, 261112-082844-da8069.
 - Earlier attribution: the failure hit linux-tsan (runs 43214565766, 43218222486, 43231465982 attempt 1) and
   linux-asan-ubsan (43225658870), always in catalog_stress; macOS TSan at main did not reproduce in 25 runs
   (261112-080635-a9cefb), consistent with a narrow window.
