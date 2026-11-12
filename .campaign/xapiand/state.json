@@ -18124,6 +18124,8 @@
       "files": [
         "src/server/search_views.cc",
         "src/database/shard.cc",
+        "src/database/shard.h",
+        "src/database/pool.h",
         "src/database/handler.cc",
         "src/database/handler.h",
         "src/database/data.h",
@@ -18157,12 +18159,11 @@
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
-      "reason": "started by force: overlaps x7-gate only on docs/perf/**; x7-gate never edits docs/perf/x7-loop-stalls.md, this quest's only docs path (same as x7-loop-stalls)",
       "repo": ".",
       "risk": "high",
       "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-12T03:50:24",
+      "updated": "2026-11-12T04:31:59",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
