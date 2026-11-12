@@ -1,6 +1,6 @@
 # dir-shared-lock: journal
 
-State: waiting on jobs 261112-044134-bf64d5 261112-044136-c2bcfc 261112-044138-a4fc2d
+State: ready for review
 Quest: .campaign/xapiand/quests/dir-shared-lock.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs at completion:d06b019: build-test (A1, A2, A4), the LOCK_EX mutant (A1 --fails-without),
-owner_lock_test under TSan (A1). GitHub CI on the pushed branch (A4).
+Nothing: all criteria have evidence at completion:d06b019. GitHub CI run 43220197978 was in
+progress at handoff (`campaign brief` tracks it).
 
 ## Next
 
-1. Read the three jobs and GitHub CI for completion:d06b019; paste `campaign brief`'s table; State
-   "ready for review".
+1. Correctness review; fold in findings by id.
 
 ## Blocked on
 
@@ -25,10 +24,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending: 261112-044134-bf64d5 (suite), 261112-044136-c2bcfc (mutant), 261112-044138-a4fc2d (TSan) |
-| A2 | pending: 261112-044134-bf64d5 |
+| A1 | 261112-044134-bf64d5 (suite), 261112-044138-a4fc2d (owner_lock_test under TSan, no reports); fails without: 261112-044136-c2bcfc (LOCK_EX mutant fails at "separate processes: reader then reader: busy, expected acquired") |
+| A2 | 261112-044134-bf64d5 (`base`, `unsupported`, `partial_failure`, `interrupted` in owner_lock_test) |
 | A3 | `docs/mechanisms/directory-locks.md` (completion) |
-| A4 | pending: 261112-044134-bf64d5, GitHub CI |
+| A4 | 261112-044134-bf64d5 (20/20 tests, incl. completion_mutants_anchors); GitHub CI run 43220197978 |
 
 ## Result
 
