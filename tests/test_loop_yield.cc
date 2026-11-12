@@ -356,9 +356,9 @@ static void test_a_restored_record_is_compressed_once_and_reads_back() {
 }
 
 
-// A RESTORE's plain objects are prepared in chores while its HTTP loop applies them: the loop's share of the
-// process's CPU for a text-heavy restore is well below its share when every object is prepared on the loop, as it
-// is under a schema with a root script (D1). Both are measured here, so the check holds on any core count.
+// A RESTORE's plain objects are prepared in chores while its HTTP loop applies them: the loop's CPU for a text-heavy
+// restore is well below its CPU when every object is prepared on the loop, as it is under a schema with a root script
+// (D1). Both are measured here, so the check holds on any core count.
 static void test_a_restore_prepares_its_objects_off_its_loop() {
 	constexpr int documents = 3000;
 	// The first line of the seed carries the script: it fixes the index's schema, and every later object prepares on the loop.
@@ -374,8 +374,8 @@ static void test_a_restore_prepares_its_objects_off_its_loop() {
 		}
 		return body;
 	};
-	// The loop's CPU share of restoring the same documents into an index.
-	auto loop_share = [&](const std::string& index, bool on_loop) {
+	// The loop's CPU of restoring the same documents into an index.
+	auto loop_cpu = [&](const std::string& index, bool on_loop) {
 		CHECK_EQ(http_call("RESTORE", index + "?commit", lines(1, 10, on_loop), "application/x-ndjson") / 100, 2);   // the schema exists after it
 		const auto body = lines(11, documents, false);
 		const auto loop_before = loop_cpu_ms();
@@ -386,12 +386,12 @@ static void test_a_restore_prepares_its_objects_off_its_loop() {
 		std::fprintf(stderr, "  restore of %d documents %s: loop %.1f ms of the process's %.1f ms CPU\n", documents,
 			on_loop ? "prepared on the loop" : "prepared in chores", loop_ms, process_ms);
 		CHECK_GT(process_ms, 200.0);   // long enough to tell
-		return process_ms > 0 ? loop_ms / process_ms : 1.0;
+		return loop_ms;
 	};
-	const auto serial = loop_share("/onloop/", true);
-	const auto chores = loop_share("/offloop/", false);
-	std::fprintf(stderr, "  loop share: %.1f%% in chores, %.1f%% on the loop\n", chores * 100, serial * 100);
-	CHECK_LT(chores, serial * 0.8);   // MARGIN
+	const auto on_loop_ms = loop_cpu("/onloop/", true);
+	const auto chores_ms = loop_cpu("/offloop/", false);
+	std::fprintf(stderr, "  loop CPU: %.1f ms with the prepares in chores, %.1f ms on the loop\n", chores_ms, on_loop_ms);
+	CHECK_LT(chores_ms, on_loop_ms * 0.6);   // about 0.35 measured; the script also inflates the baseline, so this only proves the prepares left the loop
 }
 
 
