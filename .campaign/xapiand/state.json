@@ -911,18 +911,56 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/barrier-warning-strata",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T01:52:33",
+          "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "criteria": {
+            "A3": "261112-003214-3ac1cf",
+            "A4": "261112-013520-bd7c93",
+            "A5": "261112-003214-3ac1cf; fails without: 261112-011239-8f21e5",
+            "A6": "`docs/reviews/calibration.md` row 2026-10-29 (strata, already on main): \"Linux CI TSan is the authority for races on struct-copy writes; a local macOS TSan pass is not evidence for that class\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-003214-3ac1cf",
+              "level": "light",
+              "seconds": 409.0,
+              "state": "done",
+              "what": "barrier-warning-strata check build-test at d8ae10b8f1db"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "later": [
+            "261112-015233-4d4b38"
+          ],
+          "reason": "",
+          "tested": "d8ae10b8f1dbb31927fe6c01278fc7a476513864"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-12T01:52:28",
+      "updated": "2026-11-12T01:52:35",
       "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
