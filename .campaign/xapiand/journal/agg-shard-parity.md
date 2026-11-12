@@ -1,6 +1,6 @@
 # agg-shard-parity: journal
 
-State: waiting on jobs 261112-000453-a3919d
+State: waiting on jobs 261112-000453-a3919d 261112-000737-6be2d5
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -30,7 +30,7 @@ The lead, three things outside my file set (tests/test_aggregation_shards*, harn
 | Criterion | Evidence |
 |---|---|
 | A1 | job 261112-000453-a3919d (pending) |
-| A2 | pending |
+| A2 | job 261112-000737-6be2d5 (mutant, after A1; pending) |
 | A3 | docs/dev/agg-shard-parity.md (pending) |
 
 ## Result
