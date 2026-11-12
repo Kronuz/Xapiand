@@ -9,15 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Jobs at prospect:bcd57e0: build-test 261111-230601-107439 (A1), mutant 261111-230602-46c1c9 (A1
+--fails-without: span reverted to window_ordinals, expects `CHECK(got.most() <= 256)` to fail),
+A/B build 261111-230624-4bea51 (slot x7ss-ab: `build` = head, `build-base` = head's sliced_test
+with base prospect:0aa68f4's shards.hh via `-iquote .scratch/base`), strict smoke
+261111-230634-53c6e2 (one round of `sliced_test bench 150000 3`, sides A B A2).
 
 ## Next
 
-1. <step>
+1. From the smoke's per-invocation time, size and submit the strict row (≤10 min, rounds of A B A2
+   alternating order, `set -o pipefail`), `--after` the smoke, slot x7ss-ab, `--for A2`.
+2. Write docs/perf/scan-slices.md (A3) from the row; commit; push.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -37,4 +43,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- "Per-match work" is a visitor, or a key that runs (`o_.key && o_.k`): with k = 0 the key is never
+  called, so that scan keeps 4,096. A descending scan with no key or visitor keeps 4,096.
+- The constant `host_window_ordinals = 256` lives in shards.hh (slice.hh is outside the file set);
+  the span is chosen once per segment scan, so the per-match loop is unchanged.
+- The A/B harness is a `bench` mode of sliced_test (no bench tool uses shards.hh, and the file set
+  holds only the test); base is built from the same test source against base's shards.hh, so only
+  the header under test differs.
