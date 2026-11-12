@@ -1,6 +1,6 @@
 # x7-loop-stalls: journal
 
-State: ready for review
+State: waiting on jobs 261112-023812-2706e5 261112-023824-dee27d 261112-023824-c46ec7 261112-023825-ef8bd1 261112-023825-67a8c1 261112-023825-4e7e65 261112-023826-8e5dff
 Quest: .campaign/xapiand/quests/x7-loop-stalls.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -56,10 +56,19 @@ a barrier b2314b (:383). 261112-000846-ac7a9e (build-test at a29bb36e6, a journa
 
 ## Next
 
-1. Review (the lead's to launch; TSan over the chore handoff). Profile E3 (261112-020117-4c8576, no criterion) names
-   the turns that still hold the loops 2.5-5 ms; read it into the note's "What still misses".
-2. T12 short (0.57-0.59x): fix (c), the apply per shard in parallel, is the lead's call (a new step or quest).
-3. (done) Suite, pin, A2/A3.
+Correctness review APPROVE at 20fc9e133 (`.campaign/xapiand/reviews/x7-loop-stalls-correctness.md`); the lead asked
+for F1, F2, F4, F5 before landing. Done at Xapiand:4c1f38179: F1 `prepare_inline` clears `one.error`; F2 a schema
+`fetch` cannot read sends the run inline (each object's own prepare reads it; its failure is that object's result, as
+master's `index_one`), and a throw from `offer_schema` in `accept` is the changing object's result; F5 the
+CMakeLists pins comment names strata as the pin behind prospect's; F4 the Evidence row cites only line-checked
+mutants. F3 is the owner's (not changed). E3 read into the note; fix (c) written as a design section (not built).
+
+1. Read suite 261112-023812-2706e5 and the six mutant reruns at 4c1f38179 (dee27d c46ec7 ef8bd1 67a8c1 4e7e65
+   8e5dff; each needs exit 0 with `--fails-without`, i.e. its named test line failing). Red: fix and rerun.
+2. Paste `campaign brief`'s A4 row (line-checked jobs only) and set State to "ready for review".
+3. Push for CI is the lead's (contributors never push); the branch is ready at 4c1f38179 plus journal commits.
+4. Open: F1/F2 have no test (Blocked on). T4/T5/T10/T12 MISS rows stand (note, "At the fix"); fix 3 and fix (c) are
+   the lead's to schedule.
 
 ## Plan (the fix)
 
@@ -79,9 +88,14 @@ amendment; (b) compress once at finalise (`src/database/shard.cc` `finalise_writ
 - Lead: `harness/async_allowlist.tsv` is outside the file set; its one row (handler.cc `sync_wait schema\.index`) went
   in on the lead's step-1 instruction. Widen the set to it, or move the row.
 - Lead: prospect b20e7c5 pins strata 94480d5 (the manifest log), newer than Xapiand's 5d742b2, so `pins_check.py`'s A3
-  (Xapiand pins the newest any library pins) fails and CMakeLists' line 456 comment is false until a strata bump.
+  (Xapiand pins the newest any library pins) fails until a strata bump (CMakeLists' line 456 comment now says so, F5).
   Prospect's library change is shards.hh alone and builds on 5d742b2. Recommendation: a separate strata-bump quest
   (the manifest-log port is about 1,400 lines of index.hh), not this one.
+- Lead: F1 and F2 (review) are fixed without a test that fails without them. F1 needs another request to add a root
+  `_script` to the schema between two rounds of one RESTORE; F2 needs a schema read or write that fails (a foreign
+  schema that cannot be loaded or saved), which the in-process test node cannot produce deterministically. Options:
+  (a) a test-only fault point in `schemas_lru.cc` (outside this file set), with a mutant per fix; (b) land on the
+  reviewer's reading plus the model run; (c) a timing-based test (flaky). Recommendation: (a) as a follow-up.
 
 ## Evidence
 
@@ -94,7 +108,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | [artifact] `docs/perf/x7-loop-stalls.md` (profiles E1a 18ce81, E2 793974; causes, ranked fixes, the chore design) |
 | A2 | 261112-012855-b34e3c: T4 MISS (every HTTP loop p99 2.56-5.12 ms vs 1,024 us; pre 640-768 us); T5 MISS on its bound (light p99 27.1/22.7 ms vs 10.2/8.9 ms), below pre-7c (0.065x) |
 | A3 | 261112-012857-a77bf8: T10 MISS (flood light-GET p99 45.4 ms vs about 20); T12 RESTORE MISS 0.571x (loadtest) / 0.594x (profile_bulk); QPS PASS 2.69x |
-| A4 | 261112-011615-3ea00b; fails without: 261111-230628-74a222, 261111-232735-af5357, 261111-232738-c4c72b, 261111-235701-0ecdb6, 261111-235704-037ffb, 261111-235708-0e58e3, 261112-000958-55273a, 261112-002521-478825, 261112-002525-05438d, 261112-002529-0c957d, 261112-002533-5c5bae, 261112-002537-86670c, 261112-002541-b2314b |
+| A4 | suite 261112-011615-3ea00b at 232b81cba (rerun 261112-023812-2706e5 at 4c1f38179 pending); line-checked mutants 261112-002521-478825 (:320), 261112-002525-05438d (:341), 261112-002529-0c957d (:415), 261112-002533-5c5bae (:414), 261112-002537-86670c (:447), 261112-002541-b2314b (:383) at 6ff9db94a; reruns at 4c1f38179 pending (dee27d, c46ec7, ef8bd1, 67a8c1, 4e7e65, 8e5dff) |
 
 ## Result
 
@@ -103,10 +117,14 @@ WorkPool with the apply in the shard's turn (phase7c D4/D12 amended), prospect p
 window with host work). Measured at Xapiand:0072ba93e against pre-7c 142b2ca77 (table and causes:
 `docs/perf/x7-loop-stalls.md`, "At the fix"): the loops' long turns are gone (median loop p99.9 57 to 6-7 ms, max 69 to
 20-22 ms) at 5.6-6.0x pre-7c's heavy throughput, light p99 under load 0.065x pre-7c, RESTORE 0.29x to 0.57-0.59x, QPS
-2.69x. Open: T4/T5 still 2.5-5x over the edge (E3 names the turns; fix 3 next), T10 is the Lua per-call cap
-(outside this file set), T12 needs fix (c), the parallel apply (cores 2.6 vs pre's 5.9 at 0.76x the CPU per document).
+2.69x. Open: T4/T5 still 2.5-5x over the edge (E3: every turn bounded; a timer waits behind several, the stored frame decode and `madvise` are up to 37% of loop time; fix 3 next), T10 is the Lua per-call cap
+(outside this file set), T12 needs fix (c), the parallel apply (cores 2.6 vs pre's 5.9 at 0.76x the CPU per document; designed in the note, not built).
 
 ## Rulings I made
+
+- F2: `fetch` returning false on a failed schema read reuses the inline path (each object's prepare reads the schema
+  and fails alone), which is master's per-object behaviour without a new error path.
+- Did not push for CI (the lead's message asked): contributors never push; the branch is ready for the lead.
 
 - D2 rule built conservatively: every object after an accepted schema change is prepared again (not only the
   changed ones), so a round equals the sequential semantics without arguing which prefixes stay valid.

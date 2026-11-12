@@ -226,6 +226,42 @@ in GET, search and dump.
 `document_id_of`, `take_op_type`, `finish_prepared`, `offer_schema`), `src/server/search_views.cc` (the group),
 `docs/design/phase7c.md` (D4's `flush` row, D12), `tests/test_loop_yield.cc`.
 
+## Design: RESTORE's apply per shard in parallel (fix (c), not built)
+
+T12 at the fix is short of cores (2.6-2.7 busy against pre-7c's 5.8-6.1) while the CPU per document is 0.76x pre-7c's.
+The prepare already runs on the pool; the apply runs serially, every object in input order, on the RESTORE's loop.
+
+**What runs where.** After `accept`, the accepted range `[at, stop)` splits by target shard: an existing or given id's
+shard is `key_placement_hash(term_id) % n_shards`, a new id's is `seq % n_shards` (the prepare's placement, unchanged).
+Each shard's sub-run applies in input order in its own child task, and `apply_run` awaits them with `when_all` where it
+awaits `apply_range` today (beside the next round's `pull_round`). A child takes its shard's turn per object, as
+`apply` does, and runs the object's write (`finalise_write`'s record and `Shard::replace` into the write buffer) as an
+index chore on the host `WorkPool` while holding that turn, so N shards use up to N workers; the loop only sequences.
+Results go to `_results[idx]` as today; the counters (`_processed`, `_indexed`) are summed on the loop after the join.
+The pool's reserve and the prepare chores bound the width: a round's prepare chores and the shards' apply chores
+share the pool's non-reserve workers.
+
+**Order per id.** All writes of one id reach one shard, so its sub-run keeps their input order. Two ids on different
+shards are ordered only for a reader of the stream's own writes, a barrier, which joins every shard first. New numeric ids are numbered
+by their shard (`NumericId{shard_num, n_shards}`, a per-shard counter), so a shard's sub-run in input order numbers
+them as the serial apply does. Barriers (D1) and the batch end join every shard's sub-run before they read; a schema
+change (D2) is offered in `accept`, after the join, as today.
+
+**One turn per task.** A task holds one index's turn at most (the assertion at a2dffbd5e). Each child holds only its
+own shard's turn, one object at a time; `apply_run` holds none while it awaits them, and `fetch` and `accept` still run
+outside the `when_all`.
+
+**Failure.** An object's write failure is its result, in its shard's sub-run, as today; the other shards continue. A
+shard that cannot be written (its turn or engine fails) fails its sub-run's remaining objects with that error, each
+its own result. Cancel and a client gone: each child checks the request's budget between objects; `when_all` lets
+every child stop, and what applied stays (no rollback, as today). The commit at the stream's end commits every shard.
+
+**Tests.** The reviewer's sequential model (`restore_model.py`) at 2 and 5 shards: every result, every GET with
+`_version` and every schema entry equal a one-object-per-request restore, ids repeated across the stream. A stream of
+updates to one id interleaved with other shards' writes keeps that id's order. A mutant that applies the shards'
+sub-runs out of input order fails the model. T12 by x7-gate's procedure decides it; the estimate at pre-7c's 5.9
+busy cores is about 1.3x pre-7c, bounded by the default 5 shards and the pool's width.
+
 ## At the fix: x7-gate's rows (A2, A3)
 
 Binaries: the fix, Xapiand:0072ba93e (fix 1, compress-once, RESTORE prepare as chores, prospect b20e7c5's 256-ordinal
@@ -262,10 +298,29 @@ doubled (0.29x to 0.57-0.59x pre-7c), at the D6 estimate's low end (0.55-0.7x).
   keeps 5.8-6.1 (15.4-15.9 in 2.6-2.7 s). The prepare runs on the pool; the apply stays serial in one shard's turn and
   the rounds wait for it. At pre-7c's occupancy the fix's CPU per document would give about 1.3x pre-7c. Next: fix (c),
   the apply per shard in parallel (the lead's ruling).
-- T4 and T5: no single turn of tens of milliseconds remains, but every HTTP loop still sees 2.5-5 ms at p99. Which turns
-  last that long is not in these jobs' data; profile E3 (job 261112-020117-4c8576, E1a's procedure on the fix's binary)
-  answers it. Fix 3 (a reused frame buffer per request, `_terms` keys formatted at render) is the ranked next step for
-  turn cost. T5's bound follows T4: a light query waits behind the loop's turns.
+- T4 and T5: no single turn of tens of milliseconds remains, but every HTTP loop still sees 2.5-5 ms at p99. Profile
+  E3 (job 261112-020117-4c8576: E1a's procedure on the fix's binary, 16.7 s sampled) shows what the loops run now.
+  They are not saturated: each loop used 6.9-7.2 CPU-seconds in the window (42% of a CPU), 7.1 cores in all. Shares of
+  the loops' 46,222 busy samples:
+
+  | Work on the loops | Share | Bounded by |
+  |---|---:|---|
+  | Exhaustive scan with the aggregation spy | 37.7% | 256 ordinals with host work (prospect b20e7c5) |
+  | of which the spy per match (`TermsHandler`/`ValuesHandler::values`, `sortable_unserialise`, a key string per match: malloc, free, memcmp) | 32.9% | |
+  | Hit loop (`search_view`) | 23.8% | one hit (fix 1) |
+  | `Shard::get` -> `OwnedDocView`, 97% of it from the hit loop | 29.4% | one hit |
+  | of which `stored_plugin::reader::stored`, the hit's whole frame decoded into a new buffer | 23.4% | |
+  | `madvise` from freeing that buffer | 13.3% | |
+  | Record decompress (`Locator::data`), JSON writer, aggregation results | 4.6%, 3.0%, 1.7% | |
+  | RESTORE on the loop (`Shard::replace`, `finalise_write`, inline prepares) | 1.3% | one object |
+
+  Every turn now has a bound of one hit or 256 ordinals plus the 200 us slice, so the 2.5-5 ms p99 is a timer waiting
+  behind several such turns of the loop's 4 heavy requests, and behind the slow ones among them: a hit whose frame
+  decode and free (`madvise` is 13% of the loops' time in one syscall per hit) takes a page-release path. The
+  sampler cannot time single turns; a per-turn duration histogram on the loop (beside the lag probe) would. The two
+  largest costs are fix 3's: a frame buffer reused across a request's hits removes the decode's allocation, zero fill
+  and `madvise` (up to 37% of loop time, the two shares may overlap), and a `_terms` key formatted at render, not per match, removes
+  most of the spy's allocation. T5's bound follows T4: a light query waits behind the same turns.
 - T10: unchanged by this quest (50.9 to 45.4 ms). A worst-case script call is one non-yieldable library call up to the
   per-call cap (about 20 ms), and with 16 flood clients on 16 loops a light GET can land behind one running call and
   one queued (p99 45 ms, max 50 ms, about two caps). That bound is the Lua quest's (`src/lua/**`), outside this quest's
