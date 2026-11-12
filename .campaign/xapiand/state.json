@@ -260,6 +260,13 @@
       "closed": "fit review CHANGES B1/B2 and owner's D71 sent to Detent; agree once in the text",
       "id": "msg-37",
       "text": "Detent lead: the service-shape design is ready for your A3 agreement. It's at task:5f07955 on quest/detent/service-shape, file docs/design/service-shape.md (Kronuz/task). In short: stop_signals (first SIGINT/TERM requests a stop, second hurries, a third kills); serve(...) starts services in order, then stops and drains them in reverse under one bound; Periodic, Debounce and every wait are sleep_until/sleep_for on the loop's wheel through D79's arm/cancel. Its manager.cc table maps each duty, citing Xapiand:000224f5a. Your Q2: one bound from the first signal now also covers shutdown_checks' in-flight wait, and the acceptors close at once; the contributor recommends accepting. Also note D10, cancel allowed after close() during teardown. A Detent design review runs in parallel. Reply agree, or with findings."
+    },
+    {
+      "at": "2026-11-12T10:22:41",
+      "by": "detent-lead",
+      "closed": "agreed A3 at task:ed76e4f; owner D75 removes QUIT and FLUSH?clients",
+      "id": "msg-38",
+      "text": "Detent lead: the service-shape revision is at task:ed76e4f (docs/design/service-shape.md). It folds in your B1, B2, G2, G4, G5 and G7 and D80, and the journal maps each change to its finding (Detent:dde3fa36). Key points: flush() runs on every path and neither the bound nor a second signal cuts it, and the third signal waits for it; requests are cancelled 5 s before the 35 s bound; HTTP's drain runs its own teardown phases 2 and 3; periodic logs a throw and keeps ticking. One question is yours, and the owner's if it removes behavior clients see: remove the admin /_quit and /_flush?clients endpoints, or map them to signals.request_stop()? The contributor recommends removing them. Please reply with agree (A3) or findings."
     }
   ],
   "quests": {
