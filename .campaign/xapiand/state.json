@@ -302,19 +302,47 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T01:58:55",
+          "commit": "01766e08840529f23bb6cb1972a2022f855abe8b",
+          "criteria": {
+            "A1": "261112-002820-f46d26",
+            "A2": "261112-002820-f46d26; fails without: 261112-002821-1d7a01, 261112-013131-08b954, 261112-013135-842794",
+            "A3": "[artifact] `docs/dev/agg-shard-parity.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "cdb757fc2a583e47b11b485234cfb3ba416d0de0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-002820-f46d26",
+              "level": "light",
+              "seconds": 276.5,
+              "state": "done",
+              "what": "agg-shard-parity check build-test at cdb757fc2a58"
+            }
+          ],
+          "final": true,
+          "from": "b08a7fde4020862e7b71df1b831f22fc18d7938a",
+          "reason": "",
+          "tested": "152f835d005e475335eeaa8bd235d5c6fe141a8b"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
-      "updated": "2026-11-12T01:45:49",
-      "worktree": "../Xapiand-wt/xapiand/agg-shard-parity"
+      "updated": "2026-11-12T01:59:05",
+      "worktree": ""
     },
     "alpha10-builds": {
       "accepted": {},
