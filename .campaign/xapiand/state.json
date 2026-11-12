@@ -16201,21 +16201,50 @@
         "bench/open_sync/**",
         "bench/idle_index/idle_index.cc"
       ],
-      "journal": "../Xapiand-wt/xapiand/sync-at-first-commit",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T13:16:24",
+          "commit": "cb5294b8a45110ca65536eb7b0a59c832325a458",
+          "criteria": {
+            "A1": "[artifact] strata `docs/design/sync-at-first-commit.md`",
+            "A2": "261112-115011-237ee0; fails without: 261112-090346-f32817, 261112-110231-eee06e",
+            "A3": "261112-115011-237ee0; fails without: 261112-090352-1ecddc, 261112-090358-93f7af, 261112-090406-e575c5, 261112-090414-89aaae, 261112-110234-122749, 261112-110237-c67ad9, 261112-110241-adb8c7, 261112-110244-c9702e, 261112-115015-c66d2c",
+            "A4": "261112-120746-e910ec, 261112-120746-f3bcea, 261112-120746-62bb78"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cb5294b8a45110ca65536eb7b0a59c832325a458",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-115011-237ee0",
+              "level": "light",
+              "seconds": 827.0,
+              "state": "done",
+              "what": "sync-at-first-commit check build-test at cb5294b8a451"
+            }
+          ],
+          "final": true,
+          "from": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "reason": "",
+          "tested": "cb5294b8a45110ca65536eb7b0a59c832325a458"
+        }
+      ],
       "lenses": [
         "design",
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "An open runs no sync; the first commit syncs what it inherited",
-      "updated": "2026-11-12T12:07:22",
-      "worktree": "../strata-wt/xapiand/sync-at-first-commit"
+      "updated": "2026-11-12T13:16:29",
+      "worktree": ""
     },
     "t11-barriers": {
       "accepted": {},
