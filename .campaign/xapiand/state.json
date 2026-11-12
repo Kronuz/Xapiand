@@ -9999,9 +9999,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Phase 3's ratchet rows",
-      "updated": "2026-11-09T17:21:38",
+      "updated": "2026-11-11T17:42:27",
       "worktree": "../prospect-wt/xapiand/phase3-ratchets"
     },
     "phase3r": {
