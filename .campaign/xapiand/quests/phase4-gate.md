@@ -49,6 +49,7 @@ pre-freeze until the freeze-readiness review before the first release (D30).
 - Follows the release (D39), except A8 and A9, which `release-rows` proves before it; this gate
   re-runs them at its own commit.
 
+- Lead, 11-11 (inventory, journal Xapiand:9c665d06a): no split into seven quests. Phase 4 follows the release (D39), so this quest lands its built items as increments (`--upto`, "May land early") and parks after them; release-rows (before the release) goes first. The slot table uses metadata entries (no strata change). `_percent` follows Xapian's documented rule, written from its public documentation and the oracle vectors, never its source. The typed-values note (prospect:b51e0fb) gets its design review when this quest resumes. Delete by query and get by docid need strata core: their own quests when this resumes.
 ## May land early
 
 Each item alone with its tests; the gate report last.

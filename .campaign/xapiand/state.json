@@ -218,6 +218,13 @@
       "closed": "answered: no Xapiand run uses the VM; only a host exclusive A/B until 14:30",
       "id": "msg-31",
       "text": "Detent's wheel-evidence quest will run timing rows on the shared local QEMU Linux VM (strata tools/vm/aws-linux.sh run), host held exclusive while it measures. Tell me if a Xapiand run needs the VM at a fixed time. Note: 'aws-linux.sh ssh nproc' hung for 2+ min from here just now; is the VM busy with one of your runs?"
+    },
+    {
+      "at": "2026-11-11T18:22:55",
+      "by": "detent-lead",
+      "closed": "answered: no Xapiand work on Kronuz/task; will review task-wheel's diff (A7)",
+      "id": "msg-32",
+      "text": "Owner decisions: D70 candidate (f) (single-owner wheel + 64-stripe intrusive inbox, docs/design/wheel-evidence.md on quest/detent/wheel-evidence) is the one Kronuz timer wheel; Kronuz/scheduler moves onto it; Kronuz/stash retired as a timer wheel. D71: it lives in Kronuz/task. Quest task-wheel (Kronuz/task: task.hh, task_asio.hh, test, bench, docs) starts after wheel-evidence lands; async-drivers row 1 asks you to review its diff (A7). Tell me if task.hh has Xapiand work in flight."
     }
   ],
   "quests": {
@@ -1538,7 +1545,121 @@
       "updated": "2026-11-08T15:40:06"
     },
     "cold-tier-step2": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-11T18:08:52",
+          "base": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "blobs": {
+            "bench/catalog_tiers/CMakeLists.txt": "100644:65fabd2319e11276b2460283df7a5ed973c0c2f0",
+            "bench/catalog_tiers/catalog_tiers.cc": "100644:4c9b8310db95c9a9e6795f0e892cde70513e4248",
+            "bench/catalog_tiers/tiers.sh": "100755:a74e18589f96632a497dd2350b16ce17f769ddb6",
+            "bench/idle_index/heap_count.hh": "100644:45fb860c687635151e0717a7e05818fa753c720b",
+            "bench/idle_index/idle_index.cc": "100644:69fd054efe81e5d0fdc23a32d2e39e6f25baa879",
+            "bench/idle_index/k6.sh": "100755:e05b91dd847cd46d5d1b3b00c9668f1043bcdefa",
+            "bench/idle_index/meters.hh": "100644:7c1a1079ba5af2e87400ba7d4b12a9dc988b0956",
+            "docs/design/cold-tier-models/slot_model.py": "100644:6bcd5a68546ccacb9fc6dde2a1a94c20f2fa2ef2",
+            "docs/design/cold-tier-models/wake_model.py": "100644:11e45e9da8d61e15e116f1e24b710eb1b36dbe3a",
+            "docs/design/cold-tier.md": "100644:831e2b02af67be20a41f24c56d65c40bdbab0607",
+            "docs/mechanisms/catalog.md": "100644:a8aa9d2d8de5b9d9631fdad69836065016cea85b",
+            "docs/mechanisms/segment-records.md": "100644:ce570384405535b277bbb0f6833005d80366601b",
+            "docs/perf/catalog-tiers.md": "100644:78480804d5fd122ed1fa69f5d1991b5580f32f80",
+            "docs/reviews/cold-tier-design.md": "100644:419b2bd6aa44ce6c435083abb6b54c8560999a82",
+            "docs/reviews/cold-tier-xpool-host.md": "100644:1cf23ea23d65d4b12c513bc971c4eeeb60ed98dd",
+            "docs/status/cold-tier-step2.md": "100644:61319a575178c4aa71839527f2211dae23193cc2",
+            "docs/status/cold-tier.md": "100644:98129cc5260a9b6f8aa89248342a949cc6e7fe78",
+            "include/strata/core/catalog.hh": "100644:f31ddfbec570a852719a274e15557191474743d6",
+            "include/strata/core/index.hh": "100644:6d30fff1c03e392a3b9d211f78ca1553d7e01405",
+            "test/apply_atomic_test.cc": "100644:616959e29dd22ff442277ec4ada92adbe74f1298",
+            "test/catalog_stress_test.cc": "100644:00210ba4d153f01a3505bbe4c0e6f356f0a2fe7c",
+            "test/catalog_sweep_test.cc": "100644:4937640b964a77a676d60ff2dabf858a3a52e91f",
+            "test/catalog_wake_test.cc": "100644:870ca00994b72aae2ea9a80e4cc62626acbd7010",
+            "test/cold_segment_test.cc": "100644:415436b677ba6be3306b11b8268ca749d62d1deb",
+            "tools/mutants/cold_tier.py": "100755:e08e5505e676d5b962104ca100935a554d65bb65",
+            "tools/mutants/cold_tier_table.py": "100644:c8f95b489ad8560dd513e6ff7d9b6566cc423f1b",
+            "tools/mutants/rollback.py": "100755:2f87e0a879f97313545cbfc417293e40e1ad7a98"
+          },
+          "by": "review",
+          "commit": "32f197aa6935b03638fd1b1ee449634e1f32591a",
+          "criteria": "255e6ed03da895df",
+          "diffs": {
+            "bench/catalog_tiers/CMakeLists.txt": "075b9173818a677f",
+            "bench/catalog_tiers/catalog_tiers.cc": "abd2e16184a8da2d",
+            "bench/catalog_tiers/tiers.sh": "25a1f7a43b65e9a8",
+            "bench/idle_index/heap_count.hh": "71c7f86a9edaf4b5",
+            "bench/idle_index/idle_index.cc": "63aa21eb948b1321",
+            "bench/idle_index/k6.sh": "c1e6d1ce8560a640",
+            "bench/idle_index/meters.hh": "facdb69608da3359",
+            "docs/design/cold-tier-models/slot_model.py": "91565c46a24355e3",
+            "docs/design/cold-tier-models/wake_model.py": "860d955cf6515312",
+            "docs/design/cold-tier.md": "3797a53348b2b040",
+            "docs/mechanisms/catalog.md": "e0ebab085c66b8a0",
+            "docs/mechanisms/segment-records.md": "a7ff521a92b56735",
+            "docs/perf/catalog-tiers.md": "514fb268f90dbceb",
+            "docs/reviews/cold-tier-design.md": "a13b71c65894c519",
+            "docs/reviews/cold-tier-xpool-host.md": "4886740a0daf3c86",
+            "docs/status/cold-tier-step2.md": "9ab85ed8123eeaaf",
+            "docs/status/cold-tier.md": "29464f13e843617e",
+            "include/strata/core/catalog.hh": "a613351de6bc44da",
+            "include/strata/core/index.hh": "a551c4764fc3c1cb",
+            "test/apply_atomic_test.cc": "3cb36ee14c881848",
+            "test/catalog_stress_test.cc": "f18facf75717febf",
+            "test/catalog_sweep_test.cc": "5e41f64ee4a906d6",
+            "test/catalog_wake_test.cc": "d72a2e8a85d282b0",
+            "test/cold_segment_test.cc": "655f64925f56c162",
+            "tools/mutants/cold_tier.py": "b6ae23bc84a232b5",
+            "tools/mutants/cold_tier_table.py": "c14234a887f6167e",
+            "tools/mutants/rollback.py": "6c18bba1a02582dd"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bench/catalog_tiers/tiers.sh t3 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers 50000 100000 2000 500",
+                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
+                  "docs": [
+                    "docs/mechanisms/catalog.md",
+                    "docs/perf/catalog-tiers.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-151551-cd5253",
+                  "level": "strict",
+                  "seconds": 345.9,
+                  "state": "done",
+                  "what": "T3 at the band trigger (358d4c's command)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4'",
+                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
+                  "docs": [
+                    "docs/mechanisms/catalog.md",
+                    "docs/perf/catalog-tiers.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-151520-66533e",
+                  "level": "light",
+                  "seconds": 475.8,
+                  "state": "done",
+                  "what": "suite at the band trigger (062182b2)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "2396da2b1b51fb561eb24c313c9a254911d85862",
+          "reviewed": "bbef1d4a4115bf9323a0481ac7bcf7fa3cc41b0a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "15d39c3094966b262ac643327f6c68fa5bfa4dee",
       "branch": "quest/xapiand/cold-tier-step2",
@@ -1719,7 +1840,7 @@
       "risk": "high",
       "status": "review",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-11T10:52:37",
+      "updated": "2026-11-11T18:08:52",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
@@ -9941,7 +10062,52 @@
       "updated": "2026-11-08T15:39:07"
     },
     "phase3-ratchets": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-11T18:02:56",
+          "base": "b23d1397bd4ff2f56965eba301efb5b702fd540a",
+          "blobs": {
+            "bench/alloc_count.c": "100644:9e94c13b8b209eb32869426bbcf84cdea835956a",
+            "bench/allocs.py": "100644:449251412adeeb4906720e1edb0087625724b9cf",
+            "bench/cgmem.sh": "100755:ddcd6c1841714384193de8c7acdce54b83dc5a23",
+            "bench/engines/lucene-10.4.0-st/src/main/java/BuildIndex.java": "100644:143ba6267a09fa82107b305643af060ebe3897bb",
+            "bench/engines/tantivy-0.26-st/src/bin/build_index.rs": "100644:5b951f6ed5484dc57f83e042d8e40e6bf195db63",
+            "bench/gate3.sh": "100755:138288583b4b7205aefeb67ca93e006932e14dff",
+            "bench/gate3_report.py": "100755:f804d48242c9aa5e22f40579394f9c1eeb23020f",
+            "bench/phase2/gate.py": "100755:51d63e596ec1e6108954bd16e5d6fbfe508322cc",
+            "bench/write_amp.sh": "100755:4085722d4bf509949f3e00bec39fb425abb8036a",
+            "docs/gates/phase-3-ratchets.md": "100644:e83ba1cb6284d93ed18ae3cb152ea73404630d4a",
+            "docs/testing/parity.md": "100644:559474c08c9ed766d950815eaaf9596c9e70f68f",
+            "tools/parity.cc": "100644:8f8d251d94c2945c4aa3c2b5d827f21e1d090573",
+            "tools/vm/bsd_rows.sh": "100755:f7f9443bd2ccf65c94dead28a993884f40381e34",
+            "tools/vm/gate_job.sh": "100755:516e5cb2d7ae2e25af3f53bd379de6e5a67e38fe"
+          },
+          "by": "review",
+          "commit": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "criteria": "fd8516cd4e7711e0",
+          "diffs": {
+            "bench/alloc_count.c": "2883368631935cda",
+            "bench/allocs.py": "fabf4d57de871070",
+            "bench/cgmem.sh": "df92cd8904a779dc",
+            "bench/engines/lucene-10.4.0-st/src/main/java/BuildIndex.java": "4c96b3ecdafe9873",
+            "bench/engines/tantivy-0.26-st/src/bin/build_index.rs": "dce38a5fc8f98b89",
+            "bench/gate3.sh": "d854514ec66e1702",
+            "bench/gate3_report.py": "2153ccadf66b0e9a",
+            "bench/phase2/gate.py": "9ad05914e99a4d18",
+            "bench/write_amp.sh": "76444d26260ab2dc",
+            "docs/gates/phase-3-ratchets.md": "a42a3d71acb9f651",
+            "docs/testing/parity.md": "48d8685fea6e27b1",
+            "tools/parity.cc": "ab5d15b9af498afd",
+            "tools/vm/bsd_rows.sh": "e999647f6670206a",
+            "tools/vm/gate_job.sh": "3c31eacdec1cce4f"
+          },
+          "findings": {},
+          "note": "",
+          "review": "640f762451e21dd17f1ef669169f6cba8b117e10",
+          "reviewed": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "9b8826349cfe6681e6f99aa10aa376366a8d6a7a",
       "branch": "quest/xapiand/phase3-ratchets",
@@ -9989,20 +10155,60 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/phase3-ratchets",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-11T18:03:18",
+          "commit": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "criteria": {
+            "A1": "261111-072709-569667 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072711-f9506e (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A10": "decision D51; `docs/gates/phase-3-ratchets.md` \"Phase 2 gate conditions\"",
+            "A11": "`docs/gates/phase-3-ratchets.md` \"Gate report at main\" and \"Gate status (2026-11-11)\"",
+            "A2": "261111-072646-cbabd8 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072713-3b714c (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072715-8d41f8 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A3": "261111-072642-12c9fe (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072644-00aa3e (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A4": "261111-072646-cbabd8 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072649-debd0a (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072651-cf4452 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A5": "261111-072649-debd0a (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A6": "261111-072649-debd0a (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md), 261111-072654-b92e66 (passed at fba0e0dc148e; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A7": "`docs/testing/parity.md` \"Coverage\" (job 261111-072722-2332c9)",
+            "A8": "261111-073924-e0cd69 (passed at 9de065a306d6; ignores docs-only docs/gates/phase-3-ratchets.md, docs/testing/parity.md)",
+            "A9": "`docs/gates/phase-3-ratchets.md` \"Tools\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fba0e0dc148e240965cedef85292da3bc4ceb63a",
+              "docs": [
+                "docs/gates/phase-3-ratchets.md",
+                "docs/testing/parity.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-072724-f42070",
+              "level": "light",
+              "seconds": 187.1,
+              "state": "done",
+              "what": "phase3-ratchets check build-test at fba0e0dc148e"
+            }
+          ],
+          "final": true,
+          "from": "b23d1397bd4ff2f56965eba301efb5b702fd540a",
+          "reason": "",
+          "tested": "0aa68f435bd2579e8f43eaec28f34e46669001fc"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 3",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Phase 3's ratchet rows",
-      "updated": "2026-11-09T17:21:38",
-      "worktree": "../prospect-wt/xapiand/phase3-ratchets"
+      "updated": "2026-11-11T18:03:57",
+      "worktree": ""
     },
     "phase3r": {
       "accepted": {},
@@ -10147,6 +10353,8 @@
       "after": [
         "phase3-ratchets"
       ],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/phase4-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -10267,6 +10475,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/phase4-gate",
       "landed": [],
       "lenses": [
         "correctness",
@@ -10275,11 +10484,13 @@
       "milestone": "Phase 4",
       "needs": [],
       "provides": [],
+      "reason": "Phase 4 follows the release (D39); release-rows goes first. Branch kept at prospect:bd21e9f (estimate triples, real-time get from a kept frozen buffer, typed-values note); resumes after release-rows lands",
       "repo": "../prospect",
       "risk": "high",
-      "status": "planned",
+      "status": "blocked",
       "title": "Phase 4's remaining items and its gate",
-      "updated": "2026-11-09T04:14:29"
+      "updated": "2026-11-11T18:45:07",
+      "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
       "accepted": {},
@@ -12796,6 +13007,8 @@
     "release-rows": {
       "accepted": {},
       "after": [],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/release-rows",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -12911,6 +13124,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/release-rows",
       "landed": [],
       "lenses": [
         "correctness"
@@ -12920,9 +13134,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-09T04:14:33"
+      "updated": "2026-11-11T18:45:11",
+      "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
       "accepted": {},
@@ -17044,6 +17259,38 @@
       "updated": "2026-11-10T10:31:57",
       "worktree": ""
     },
+    "x7-loop-stalls": {
+      "accepted": {},
+      "after": [],
+      "base": "de4d0ed26aa9256dcb289e7671d7c4e198b2635c",
+      "branch": "quest/xapiand/x7-loop-stalls",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/perf/x7-loop-stalls.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: docs/perf/x7-loop-stalls.md is this quest's own file; x7-gate writes no file of that name",
+      "repo": ".",
+      "risk": "high",
+      "status": "active",
+      "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
+      "updated": "2026-11-11T20:05:51",
+      "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
+    },
     "x7-view-bench": {
       "accepted": {},
       "after": [],
@@ -17063,18 +17310,45 @@
         "CMakeLists.txt",
         "docs/perf/shard-view.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T20:07:55",
+          "commit": "f52ab775e9eaf9f6b95c25afb57d81ce155072ae",
+          "criteria": {
+            "A1": "261111-175937-76ae57 (passed at 636895fa48d5; ignores docs-only docs/perf/shard-view.md)",
+            "A2": "261111-190002-a37529"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "263b75e73fe4ad085732217307b8a482ffba676c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-190002-a37529",
+              "level": "light",
+              "seconds": 417.4,
+              "state": "done",
+              "what": "x7-view-bench check build-test at 263b75e73fe4"
+            }
+          ],
+          "final": true,
+          "from": "d7d029a3b70a5c1427290786b7ccd4e0c18aa556",
+          "reason": "",
+          "tested": "7f4f9a45ed32a6d86384ed642677c80559da3d71"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "reason": "started by force: docs/perf/shard-view.md is this quest's file; x7-gate cites the job (A22) and writes no file of that name",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Shard::view() benchmark at 1 and 8 threads (x7-gate A22)",
-      "updated": "2026-11-11T16:07:20",
-      "worktree": "../Xapiand-wt/xapiand/x7-view-bench"
+      "updated": "2026-11-11T20:09:40",
+      "worktree": ""
     },
     "xapiand-brand": {
       "accepted": {},

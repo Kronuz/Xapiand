@@ -76,3 +76,61 @@ REJECT: the approach is wrong; the quest is re-planned.
 - Linux, cache-dropped and full-scale rows (milestone checks by the quest's D57).
 - I did not review `docs/reviews/*`, the design's revision history, or prospect's and Xapiand's
   seams (A10) beyond the K7 listing's existence.
+
+## Re-check
+
+Commit: strata:bbef1d4a4115bf9323a0481ac7bcf7fa3cc41b0a
+Verdict: CHANGES
+Date: 2026-11-11
+
+Range strata:58812244..bbef1d4a. Its code is strata:062182b2's (the later commits change only
+`docs/mechanisms/catalog.md` and `docs/perf/catalog-tiers.md`), so suite 261111-151520-66533e
+(74 of 74 at 062182b2) and the jobs below stand for the head's code.
+
+### What I checked
+
+- Risk 1, the trigger's concurrency (`catalog.hh:585-593`, `:1374-1377`, `:1403-1435`, `:2393-2404`):
+  read, no build. `over_soft()` runs after the shard lock's scope in `acquire_impl` and in `unpin`,
+  whose callers (`reopen`, `deliver`, `abandon`, `~pin`) hold no catalog lock there; it reads only
+  atomics and `h_`, which nothing assigns after construction, so TSan has nothing new to see.
+  `pass_queued_` is set only by `post_pass`'s exchange and cleared by its catch or by `run_pass`
+  after the pass, so a throwing post no longer leaves it set (mutant 261111-123743-7732e9 fails
+  `catalog_sweep_test.cc:611` without the reset). A post that throws in `over_soft` is swallowed,
+  and the next miss, last unpin or period posts the pass. The one window: a miss or unpin that finds a
+  pass queued or running posts nothing, and if that pass ends without posting (so `again` is false)
+  the excess waits for the next event or the 1 s period. That is the "one sweep pass" of the target,
+  not a cap held past it. A pass can only stay queued forever behind a cancelled group, which is
+  shutdown.
+- Risk 2, T3 against the lead's bound (soft + 16 + the opens in flight): probe
+  `.scratch/review-cold-tier-step2-correctness/t3_bound.py` over 261111-151551-cd5253's log, the 259
+  samples after the touch (t+36 s on). The bound holds on the net counts of each `flow` line,
+  measured against that line's own `opening`: 0 of 259 over for open and 0 of 259 for hot. The net
+  maxima are 2,019 and 519, and 4 and 5 samples sit over soft+16, as the doc says. The counted
+  `t+` line, read at another instant, exceeds soft+16+8 in 5 samples (max 2,029 at t+246 s, with 24
+  closing in flight), which is relief in flight. The harness does not assert the bound: see F8.
+- Risk 3, F2: see F2 below.
+- Risk 4: mutant 261111-151526-29ff8a (strata:7b126bc1's `catalog.hh`, the one-slot trigger) fails
+  only at `catalog_sweep_test.cc:550` (3 over, a pass of 4: posts nothing), and the job requires that
+  line, so it fails for the right reason. The test pins both edges for `soft_open`: a band of
+  `pass_posts` would fail `:553`.
+
+### Findings
+
+| ID | Blocking | Kind | Status | Finding | Evidence | Fix |
+|---|---|---|---|---|---|---|
+| F1 | no | gap | fixed | T3 is judged at every sample after the touch, per the lead's 11-11 ruling: MISS before the trigger, then the cause measured and fixed. At the band trigger the net counts meet soft + 16 + the opens in flight in 259 of 259 samples. | `t3_bound.py` over cd5253; `catalog-tiers.md` T3 verdict | None. F8 covers the wording and the harness. |
+| F2 | yes | gap | open, narrowed | T1's targets and T2 hot d1s1 now have verdicts, and A4's Evidence row lists their misses. T2 hot on d1000s1 and d1000s10 still has no verdict line, but A4's "met except" list implies it is met. Per pair at p50 it misses 5% in 2 of 3 pairs on each fixture: d1000s1 8.3/9.0 (-8%), 5.9/5.1 (+16%), 9.3/7.6 (+22%) µs; d1000s10 7.6/5.7 (+33%), 7.7/6.4 (+20%), 5.9/5.8 (+2%). At p99 the d1000s1 pairs are +52% and +80% and the d1000s10 pairs +92% and +14%, the others below main. | 261111-085644-609714 log `:4-50`; 261111-035757-f9dbcf log `:4-50`; `catalog-tiers.md` verdicts; journal Evidence A4 | One verdict line each in `catalog-tiers.md` and both cells in A4's "except" list. The lead rules whether d1s1's residual (the request pin by key, about 0.6 µs) covers them. Docs only, no rerun. |
+| F8 | no | gap | new | The harness does not judge the ruled bound. `count_mode`'s T3 line still reads only the 3 s-after sample against soft+16, and it returns 0 on FAIL (`catalog_tiers.cc:749-758`), so a T3 job passes whatever happens and the per-sample verdict exists only in prose. The doc's verdict also says "255 and 254 of 259" and "at most 3 past soft+16" where the ruled bound is met in 259 of 259. | `catalog_tiers.cc:749-758`; cd5253 `exit 0` | Judge each `flow` sample's net counts against soft + `pass_posts` + `opening` in the harness and exit nonzero on FAIL, before the Linux and full-scale milestone reruns. State the verdict as MET against the ruled bound. |
+| F9 | no | gap | new | T4 has no run at the band trigger. The reruns at the one-slot trigger passed (261111-123758-7ea903: 0.6780 and 0.6776; 261111-123800-7a33ff: 0.8718 and 0.8717, each above the model less 1 point), but the doc says only "T4 reruns at" without their results, and A4's row cites T4 at 9621595f alone. | `catalog-tiers.md` T4 verdict; the two job logs | Record the two reruns' numbers, and say the band trigger posts between off and one-slot (both PASS), or rerun T4 at 062182b2. |
+| F10 | no | nit | new | `soft_caps_post` pins the band's lower edge only for `soft_open`. A one-slot trigger on `soft_hot` alone would pass the hot case, and no case exercises the "net of relief" terms (`pending_hot_`, `closing_`, `pending_open_`). | `catalog_sweep_test.cc:555-559`; `catalog.hh:1419-1429` | Optional: a hot case one under the band that posts nothing, and one with a demotion in flight. |
+| F11 | no | nit | new | A last unpin now posts to the host's executor from the pin's destructor on the host's thread. Before, it did so only during shutdown (`kick`). A host that drops a pin while holding a lock its executor's `post` takes would deadlock. | `catalog.hh:1403-1414` | One line in `catalog.md`'s host contract: a pin's release may post a pass. |
+
+F3, F4, F6 and F7 are outside the range. The range rewords F5's sentence (`catalog-tiers.md`:
+"at most one per concurrent chore (eight), so the bound grows with the chores' concurrency"),
+which settles it as written.
+
+### Not run
+
+- No TSan build: risk 1 is settled by reading, since the trigger adds only atomic reads and posts
+  outside every catalog lock. CI's `linux-tsan` at the head is still owed by the quest's checks.
+- No rerun of any passed job; the T rows are read from their logs.

@@ -1274,6 +1274,18 @@ target_link_libraries(strata_check PRIVATE
 	${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 )
 
+# Times Shard::view() per call at 1 and 8 threads on one index (docs/perf/shard-view.md).
+# Built on request: cmake --build build --target xapiand_bench_shard_view  ->  build/bin/xapiand_bench_shard_view
+add_executable(xapiand_bench_shard_view EXCLUDE_FROM_ALL
+	"${PROJECT_SOURCE_DIR}/tests/bench_shard_view.cc"
+	"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+)
+target_link_libraries(xapiand_bench_shard_view PRIVATE
+	XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+	${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+)
+
 
 ########################################################################
 # Copy data files (stopwords, mime types) from source to build directory
