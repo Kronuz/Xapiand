@@ -1,6 +1,6 @@
 # prospect-completion-opens: journal
 
-State: waiting on jobs 261112-013520-bd7c93
+State: ready for review
 Quest: .campaign/xapiand/quests/prospect-completion-opens.md (the lead's; never edit it)
 
 ## Doing
@@ -10,8 +10,7 @@ mutant jobs are done. A1 is barrier-warning-strata's A4 integration job rerun at
 
 ## Next
 
-1. Read 261112-013520-bd7c93 when it finishes (ctest 51/51, churn/dump identical); if a test other than
-   the six fails, fix it inside the file set.
+1. Nothing; A1 passed (ctest 51 of 51, churn and dump identical at t1 and t2).
 
 ## Blocked on
 
@@ -21,7 +20,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261112-013520-bd7c93 (barrier-warning-strata A4 command at prospect:27ca2d9, strata:d8ae10b8, main 4c45e3dd), pending |
+| A1 | job 261112-013520-bd7c93 (barrier-warning-strata A4 command at prospect:27ca2d9, strata:d8ae10b8, main 4c45e3dd): ctest 51/51, churn and dump identical |
 | A2 | [artifact] `test/index_test.cc`: gate_io/wrapper_io/flaky_io forward all four read-only opens (prospect:ea89758; flaky_io at lines 112-115); not changed here |
 | A3 | pass job 261112-013148-b915bd (format13, index, index_mapped pass; strata d8ae10b8); mutant job 261112-013153-51da31 (`--fails-without`: strata's first-map failure throws corrupt_index; all three abort) |
 
