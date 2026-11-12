@@ -2733,9 +2733,9 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
-      "updated": "2026-11-12T04:30:23",
+      "updated": "2026-11-12T04:44:00",
       "worktree": "../completion-wt/xapiand/dir-shared-lock"
     },
     "direct-pins": {
