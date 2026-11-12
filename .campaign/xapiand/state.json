@@ -13007,6 +13007,8 @@
     "release-rows": {
       "accepted": {},
       "after": [],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/release-rows",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13122,6 +13124,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/release-rows",
       "landed": [],
       "lenses": [
         "correctness"
@@ -13131,9 +13134,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-09T04:14:33"
+      "updated": "2026-11-11T18:45:11",
+      "worktree": "../prospect-wt/xapiand/release-rows"
     },
     "repo-split": {
       "accepted": {},
