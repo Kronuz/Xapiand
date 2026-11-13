@@ -10,6 +10,8 @@ Every numeric `_id` is its own key: a document's id term, its routing and every 
 ## Acceptance criteria
 
 - A1 Ids that collide today stay distinct: 4294967297 and 4311744512, 2^40+3 and 2^40+3*2^24, 2^53-1 and 2^53+1, 2^63 and 2^64-1 are separate documents through PUT, GET, DELETE, RESTORE and a term search on `_id`, across a reopen: a test with values, and a `--fails-without` job putting the old id encoding back
+- A2 Automatic ids pass 2^32: a counter started near 2^32-1 issues the next ids above it with the D85 bucket stride; a test with values and a mutant restoring the 2^32-1 cap
+- A3 [artifact] `docs/design/exact-id-keys.md`
 - A4 The suite passes, and CI's sanitizers are green at the landed code
 
 ## Contracts
