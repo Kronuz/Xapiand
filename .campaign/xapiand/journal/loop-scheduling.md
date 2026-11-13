@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-163009-f675a9 261112-163032-c04fc9
+State: waiting on jobs 261112-170146-163a2c 261112-170149-32915c 261112-170152-275ba3 (and builds 261112-170140-f2c47f, 261112-170143-aabac2)
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -92,6 +92,19 @@ tasks pass K.
   and a light request holds the light lane for at most K slices; library default K = 0 keeps today's policy
   (Detent, prospect, completion and consensus use task); inline resumes (`await_asio`, http `resume_waiter`) only
   for a light ref; no per-loop heavy admission cap. Matches strata `docs/ARCHITECTURE.md:178-180` (LAS).
+
+- X1 261112-163009-f675a9: exit 124 at the 10-minute deadline (lead's msg); invalid as a whole. Only the off arm
+  finished. Off arm, loaded phase, per kind (budget slices spent): light_search n 1,803, mean 4.4, p50 4, p99 7,
+  99.6% under 8, all under 12; heavy_search n 13,401, mean 23.4, p50 27, none under 8; agg n 8,944, mean 42.5,
+  none under 12; get and put 0. So K = 8 slices (1.6 ms of attained CPU) separates them. Server-side light_search
+  p50 under 16 ms (log2 bucket), so T5's light latency is server queueing, not the generator.
+  The k1 and k4 arms hung in the accounts load: the prototype's heavy resume from a chore called
+  `post_demoted` from a WorkPool thread, but the demoted queue is loop-thread-only (`task_asio.hh:47-50`). Fixed on
+  scratch 15ef779e6 (off the loop it posts a handler that queues); the design states it as a contract.
+- Split per D59: 261112-170140-f2c47f light (macOS build at 3c064618a), 261112-170143-aabac2 light (VM build);
+  X2a 261112-170146-163a2c exclusive (T4/T5 ABBA off/lane K 8), X2b 261112-170149-32915c exclusive (T12 loadtest
+  ABBA), X3 261112-170152-275ba3 exclusive (VM T4/T5 ABBA K 8). E2-shaped jobs fit in 10 minutes; X1's overrun
+  was the hang.
 
 ## Next
 
