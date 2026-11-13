@@ -10709,6 +10709,45 @@
       "title": "Bound control-worker command draining",
       "updated": "2026-11-08T13:25:10"
     },
+    "one-id": {
+      "accepted": {},
+      "after": [
+        "loop-scheduling",
+        "x7-loop-fix-c"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/database/schema.cc",
+        "src/engine/strata/shard.cc",
+        "src/engine/strata/search.cc",
+        "src/engine/shard.h",
+        "src/server/search_views.cc",
+        "tests/**",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "A document's id is its only id; docids stay internal and dense",
+      "updated": "2026-11-13T03:31:18"
+    },
     "open-mix": {
       "accepted": {},
       "after": [],
