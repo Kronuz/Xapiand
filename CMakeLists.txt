@@ -767,7 +767,7 @@ FetchContent_MakeAvailable(task)
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 86fe7c476c64b86219350a999ee88467bf86269c)  # strata main: lazy segments by default, one device flush per open, unpin-after-kick
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 61e09a60e0bf15c9d44a35b7819d08052f474071)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
