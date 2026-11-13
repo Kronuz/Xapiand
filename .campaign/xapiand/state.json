@@ -19437,20 +19437,50 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-13T06:55:12",
+          "commit": "08a85cca932b479f1534fa65c94c007d86a5b983",
+          "criteria": {
+            "A1": "[artifact] `docs/perf/x7-loop-stalls.md`, \"Design: fix (c), RESTORE's writes off the loop, one shard per child\" (review pending)",
+            "A2": "[artifact] `docs/perf/x7-loop-stalls.md`, \"At the fix\", fix (c)'s column and \"At fix (c)\" (job 261112-060352-3a68bf: T4 and T5 miss, recorded)",
+            "A3": "261113-062507-b2f95d",
+            "A4": "261113-055628-d24819 (passed at be90536b2282; only merges from main since); fails without: 261112-060244-26054a, 261112-060247-915bc9, 261112-060250-fff57b, 261112-060253-438fbd, 261112-060256-a08cb1, 261112-060259-0555e1, 261112-084825-447568, 261112-084828-d30d45, 261112-090511-afb297, 261112-100709-ef6a59, 261112-201040-503fe0, 261112-201042-dc40d0, 261112-201043-19e10d, 261112-201043-1d9816, 261112-201044-0da49c, 261112-201045-5f5375, 261112-202556-1a371b, 261112-202557-3315c8, 261112-204313-122916, 261112-215730-1dc11c, 261113-062507-bb2005, 261113-062508-1cf78c",
+            "A5": "261113-064313-d2e40f; fails without: 261112-231447-8579aa, 261113-055631-a31da6"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "0ed7e885cdfabdd7f9e640a05d53ad1ea6c34309",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-055628-d24819",
+              "level": "light",
+              "seconds": 365.6,
+              "state": "done",
+              "what": "x7-loop-fix-c check build-test at 0ed7e885cdfa"
+            }
+          ],
+          "final": true,
+          "from": "98530775033f248718cd94d6fbe70620065299e5",
+          "reason": "",
+          "tested": "4c84091ea8556ec7c75122b6e67ac4b0aaf02ad9"
+        }
+      ],
       "lenses": [
         "design",
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-13T06:54:43",
-      "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
+      "updated": "2026-11-13T06:56:22",
+      "worktree": ""
     },
     "x7-loop-stalls": {
       "accepted": {
