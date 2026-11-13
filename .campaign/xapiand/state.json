@@ -10809,6 +10809,8 @@
         "loop-scheduling",
         "x7-loop-fix-c"
       ],
+      "base": "3962041365b38a2a0079336c9358de896a3c7fcc",
+      "branch": "quest/xapiand/one-id",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
@@ -10840,9 +10842,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A document's id is its only id; docids stay internal and dense",
-      "updated": "2026-11-13T07:20:30"
+      "updated": "2026-11-13T07:20:32",
+      "worktree": "../Xapiand-wt/xapiand/one-id"
     },
     "open-mix": {
       "accepted": {},
