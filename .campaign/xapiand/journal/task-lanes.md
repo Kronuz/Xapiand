@@ -1,17 +1,17 @@
 # task-lanes: journal
 
-State: waiting on jobs 261112-204846-725ea8 261112-204849-91803a 261112-204854-7e293b 261112-204858-0e6b9d 261112-204902-8b592b 261112-204905-205bd3 261112-204909-7b597e 261112-204914-1d26c6 261112-204918-7d0c0f 261112-204923-7f2258 261112-204928-6befdc 261112-204935-9ea300 261112-204942-de21a3 261112-204947-85fbaf
+State: waiting on jobs 261112-214929-dfac91 261112-214931-341d4a 261112-214934-bb3d65 261112-214937-b6d183 261112-214941-85d939 261112-214945-9995a1 261112-214949-5b89c5 261112-214952-0d0642 261112-214956-c1b908 261112-215000-7f3020 261112-215004-e2d24e 261112-215008-8ab078 261112-215012-f7d1c9 261112-215014-07a8ed
 Quest: .campaign/xapiand/quests/task-lanes.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at task:90b50f0 (pushed; CI on quest/** running). At task:5ae571a every job passed: build-test 261112-204125-ade849, all 11 mutants killed (261112-204139-c030da ... 261112-204222-565acd), TSan 261112-204230-c172ff. CI at 5ae571a failed on linux-arm64-gcc only: `heavy_sticky_across_chore` raced (an idle loop ran the hop and the drainer before the second wake was posted). task:90b50f0 holds the loop in a handler while the test posts both wakes (20/20 local runs green). The header code is unchanged since 0484a73.
+Jobs at task:18eb516 (pushed). A3 at 90b50f0 (261112-204947-85fbaf): demote 1.031x main (8 pairs 1.022-1.049, +5 ns), yield 1.009, inline_await 1.017, child 1.005. Cause: `io_->running_in_this_thread()` on every demotion (asio's call-stack TLS walk). Local probe, strict, 4 ABBA blocks, demote median ns: main 128.44, 90b50f0 130.27, fast path 128.85, fast path + 8-byte packed entries 128.12. 18eb516 takes the fast path only: inside this scheduler's own scope (`current() == of(*this)`, a checkpoint's case) it is on the loop, so the io_context is not asked. The packed entry (lane in the handle's low bit) is the fallback if A3 still shows a cost. resume_ab.py now runs an A/A arm (main against a second build of main) beside B/A, per Detent's request.
 
 ## Next
 
-1. Read the jobs at 90b50f0 (CI there is green).
-2. A3: read `build-resume-ab/ab.json` from 261112-204947-85fbaf; record the median B/A ratio per measurement, honest magnitude.
-3. When green: State "ready for review", sha for Detent (A4).
+1. Read A3 261112-215014-07a8ed: per path B/A beside the A/A band. If demote is outside the band, try the packed entry.
+2. Read A1/A2 jobs; CI at 18eb516.
+3. When green: "ready for review", sha for Detent (A4).
 
 ## Blocked on
 
