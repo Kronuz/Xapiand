@@ -461,7 +461,7 @@ static void test_a_restore_prepares_and_writes_its_objects_off_its_loop() {
 	const auto on_loop_ms = loop_cpu("onloop", true);
 	const auto chores_ms = loop_cpu("offloop", false);
 	std::fprintf(stderr, "  loop CPU: %.1f ms with the objects in chores, %.1f ms on the loop\n", chores_ms, on_loop_ms);
-	CHECK_LT(chores_ms, on_loop_ms * 0.7);   // the writes ran in the chores too: see the measured ratios
+	CHECK_LT(chores_ms, on_loop_ms * 0.2);   // 0.06-0.09 measured; 0.34 with the restore fan-out off
 }
 
 
