@@ -696,9 +696,6 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 			index_settings.num_replicas_plus_master = num_replicas_plus_master;
 			index_settings.modified = true;
 			index_settings.saved = false;
-			if (!index_settings.loaded) {
-				index_settings.shards.clear();   // placed again for the replicas asked: settling only adds replicas
-			}
 		}
 
 		if (index_settings.num_shards != num_shards) {
