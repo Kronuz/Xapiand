@@ -14670,7 +14670,7 @@
     "schema-load-once": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-13T02:33:01",
+          "at": "2026-11-13T02:49:31",
           "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
           "blobs": {
             "harness/async_allowlist.tsv": "100644:af020e0a283b37b3b34816db8a7b3ce17778d3af",
@@ -14682,8 +14682,8 @@
             "tests/test_node.cc": "100644:49fe0230e2d384d14076aaddd99cc3d3c94daeba"
           },
           "by": "review",
-          "commit": "6dcc636d2e62ba5f0039823bd69366bad3e10c5a",
-          "criteria": "6ec5d57f5659fb5e",
+          "commit": "9d17d9b3feaec71ddf17175638a0e7af4e5debab",
+          "criteria": "ac230091164f5a9d",
           "diffs": {
             "harness/async_allowlist.tsv": "6a1f30b2f4996f0b",
             "src/database/schemas_lru.cc": "669a654210b167a0",
@@ -14748,7 +14748,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Concurrent first uses of a schema load it once, foreign links included",
-      "updated": "2026-11-13T02:33:01",
+      "updated": "2026-11-13T02:49:31",
       "worktree": "../Xapiand-wt/xapiand/schema-load-once"
     },
     "seam-census": {
