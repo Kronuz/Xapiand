@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-081918-7c337f 261113-081923-84a5a2 261113-081926-acb3fe 261113-081928-4e1d4f 261113-081931-ca0c13 261113-081933-c321a0 261113-081935-39bc44 261113-081938-76f0fe 261113-081947-dd255a 261113-081954-b7a600
+State: waiting on jobs 261113-082922-3f2ebf 261113-082930-72d60f 261113-082932-b0d7dd 261113-082935-ecda23 261113-082937-a0d792 261113-082940-a6258e 261113-082942-7818c1 261113-082945-4f215a 261113-082947-f7da32 261113-082953-82e3f3
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on jobs at d174690aa (the fixes below, master merged in; branch pushed for CI):
+Waiting on jobs at 2890b08db (branch pushed for CI):
 
-- 261113-081918-7c337f build-test, tagged A1, A2, A4, A6, A7.
-- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the build-test): A1 named-docid 261113-081923-84a5a2;
-  A2 no-persist 261113-081926-acb3fe, no-replay 261113-081928-4e1d4f (test_pool), no-advance 261113-081931-ca0c13,
-  no-stride 261113-081933-c321a0 (test_node); A7 hash-route 261113-081935-39bc44; A6 no-advance 261113-081938-76f0fe.
-- A5: release builds master 261113-080915-1d19d5 (done), head 261113-081947-dd255a, then the exclusive ABBA
-  261113-081954-b7a600 (.scratch/ab/ab.sh, arms pre/cur).
+- 261113-082922-3f2ebf build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the build-test): A1 named-docid 261113-082930-72d60f;
+  A2 no-persist 261113-082932-b0d7dd, no-replay 261113-082935-ecda23 (test_pool), no-advance 261113-082937-a0d792,
+  no-stride 261113-082940-a6258e (test_node); A7 hash-route 261113-082942-7818c1; A6 no-advance 261113-082945-4f215a.
+- A5: release builds master 261113-080915-1d19d5 (done), head 261113-082947-f7da32, then the exclusive ABBA
+  261113-082953-82e3f3 (.scratch/ab/ab.sh, arms pre/cur).
+
+Round 2 (d174690aa): build-test 261113-081918-7c337f failed only on the id key. Probe lines, test_node.cc:2426:
+`id 4294967297: its key names 4311744512, as a float 4311744512` and `id 1099511627779: its key names
+1099561959424, as a float 1099561959424`; :1633 `/ids_int_s2/4311744512: GET gives _id 4294967297`. The issued key
+equals `Serialise::integer`'s (that check passed); the numeric key encoding itself does not name integers past 2^32
+exactly (both integer and float keys), and the GET of 4311744512 finding the document keyed 4294967297 shows two ids
+share one key. 2^53 - 1 and ids below 2^32 round trip. Fix (2890b08db): MAX_NUMERIC_ID = 2^32 - 1 (R4 revised);
+larger ids hash. The ids test's far integer id moves to 4294967000 (an explicit 2^32 - 1 would leave the counter
+nothing to issue) and 4294967297 joins as a hashed id; the stride test checks integer and float keys up to the bound.
 
 Round 1 (622f57d08) failed: build-test 261113-074720-30a477 exit 8, probe 261113-074628-298443; the master build
 261113-074808-b39d85 copied `build-rel/xapiand`, which is `build-rel/bin/xapiand`. Diagnosed with probe
@@ -42,8 +51,9 @@ Round 1 (622f57d08) failed: build-test 261113-074720-30a477 exit 8, probe 261113
 
 ## Blocked on
 
-Nothing. The lead settled msg-44 and msg-45 (pool.h and docs/mechanisms/document-ids-and-versions.md are in the
-file set) and the table question as option (b), recorded in the quest at Xapiand:4bd077bed.
+Nothing blocking. For the lead (finding, pre-existing on master's encoding, outside this quest): explicit PUTs of
+4294967297 and 4311744512 name one key, so one overwrites the other. The serialisation is GPL code I may not read;
+license-closure's replacement could make the key exact to 2^53, and MAX_NUMERIC_ID would follow it.
 
 ## Evidence
 
@@ -64,7 +74,9 @@ file set) and the table question as option (b), recorded in the quest at Xapiand
   now reads each counter there and passes the largest as a floor (DB_SLOT_SHARDS third value).
 - R3 An automatic id is written with expected version 0 (must not exist): a counter that fell behind conflicts,
   never overwrites.
-- R4 Numeric ids with buckets are integers 1..2^53-1 (exact as a double key); others hash. Was 1..2^32-2 (docid range).
+- R4 Numeric ids with buckets are integers 1..2^32-1, the range the numeric key names exactly (2^32 + 1's key names
+  2^32 + 2^24, job 261113-081918-7c337f); others hash. Was 1..2^32-2 (docid range). A counter at 2^32 - 1 issues
+  nothing: a POST then fails (invalid), documented in index-api.md. Owner may want a different policy (lead).
 - R5 `DatabaseHandler::replace_document(string_view)` (`&N` creating at a caller's docid) removed: no callers.
 - R6 WAL replay raises the counter from the replayed document's stored `_id` (engine::Document has no key getter, and
   src/engine/document.h is outside the file set).
