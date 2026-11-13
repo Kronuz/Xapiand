@@ -18,7 +18,7 @@ job can show it.
 - A2 Automatic numeric ids keep the stride and never collide with explicit ones, across a reopen (the counter persists) and with ids written before and after: tests with values, each with a mutant
 - A7 Routing is by bucket, never by shard count: an explicit numeric id lands in the shard owning bucket (N-1) % B, and an automatic id is issued only from a bucket its shard owns: tests with values over n = 1, 3 and 5 shards, and a mutant routing numeric ids by key hash
 - A6 A dump and RESTORE round trip keeps ids: documents with explicit ids (strings and numbers) and automatic numeric ids, dumped and restored into a fresh index, come back with every `_id` and body unchanged, and the next automatic id is above every restored numeric id, across a reopen: a test with values and a mutant (the restore not advancing the counter)
-- A3 No docid is derived from an id or an id from a docid anywhere in src/ (NumericId, numeric_docid and new_did gone or internal to the counter): [artifact] the design note `docs/design/one-id.md` names every former use and its replacement
+- A3 [artifact] No docid is derived from an id or an id from a docid anywhere in src/ (NumericId, numeric_docid and new_did gone or internal to the counter): the design note `docs/design/one-id.md` names every former use and its replacement
 - A4 The build-test check passes, CI's sanitizers green
 - A5 x7-gate's T4/T5 rerun with fix (c) and lanes landed shows light p99 and heavy searches against master, a miss stated as a miss: one exclusive job of at most 10 minutes (D59)
 
