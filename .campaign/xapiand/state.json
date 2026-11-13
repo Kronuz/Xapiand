@@ -14737,19 +14737,47 @@
         "tests/test_node.cc",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-13T02:49:47",
+          "commit": "60f5a34be59001f36729faa624ec83534b39848a",
+          "criteria": {
+            "A1": "261113-023141-e19d6c; fails without: 261112-223932-8ff4dc, 261112-224936-c667cc, 261112-230448-142f23, 261112-232218-983be8, 261113-022116-7d1cf5",
+            "A3": "261113-012502-21f3c1",
+            "A4": "`ci:Unit tests under ASan + UBSan`, `ci:AddressSanitizer + UBSan` (green at 8225c9831 and 6dcc636d2; why not a local run: see Rulings)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "8225c9831bbf4e7ce5d654b6d979ace5a1b45f93",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-012502-21f3c1",
+              "level": "light",
+              "seconds": 518.7,
+              "state": "done",
+              "what": "schema-load-once check build-test at 8225c9831bbf"
+            }
+          ],
+          "final": true,
+          "from": "d6aea03fcb377ae0ee10968a64faef0b933f5b29",
+          "reason": "",
+          "tested": "9d17d9b3feaec71ddf17175638a0e7af4e5debab"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Concurrent first uses of a schema load it once, foreign links included",
-      "updated": "2026-11-13T02:49:31",
-      "worktree": "../Xapiand-wt/xapiand/schema-load-once"
+      "updated": "2026-11-13T02:49:54",
+      "worktree": ""
     },
     "seam-census": {
       "accepted": {},
