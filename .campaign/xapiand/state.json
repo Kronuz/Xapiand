@@ -3875,6 +3875,7 @@
         "src/database/pool.h",
         "src/serialise.*",
         "src/engine/strata/*.cc",
+        "src/query_dsl.cc",
         "tests/**",
         "CMakeLists.txt",
         "docs/design/exact-id-keys.md",
@@ -3894,7 +3895,7 @@
       "risk": "high",
       "status": "active",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-13T13:15:28",
+      "updated": "2026-11-13T13:23:48",
       "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
     },
     "f14-step1": {
