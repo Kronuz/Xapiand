@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-074628-298443 261113-074720-30a477 261113-074651-a42351 261113-074654-a175a2 261113-074657-794e8b 261113-074700-cc13f7 261113-074703-8f82e0 261113-074707-55907d 261113-074710-bc8074 261113-074808-b39d85 261113-074731-77e865 261113-074811-d08bbf
+State: waiting on jobs 261113-081918-7c337f 261113-081923-84a5a2 261113-081926-acb3fe 261113-081928-4e1d4f 261113-081931-ca0c13 261113-081933-c321a0 261113-081935-39bc44 261113-081938-76f0fe 261113-081947-dd255a 261113-081954-b7a600
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,30 +9,41 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on jobs at 622f57d08 (tests and mutants committed; user docs and the ids mechanism note updated):
+Waiting on jobs at d174690aa (the fixes below, master merged in; branch pushed for CI):
 
-- 261113-074628-298443 probe: the new tests and engine placement tests (not evidence).
-- 261113-074720-30a477 build-test, tagged A1, A2, A4, A6, A7.
-- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the probe): A1 named-docid 261113-074651-a42351;
-  A2 no-persist 261113-074654-a175a2, no-replay 261113-074657-794e8b (test_pool), no-advance 261113-074700-cc13f7,
-  no-stride 261113-074703-8f82e0 (test_node); A7 hash-route 261113-074707-55907d; A6 no-advance 261113-074710-bc8074.
-- A5: release builds master 261113-074808-b39d85, head 261113-074731-77e865 (into .scratch/rel-<sha>), then the
-  exclusive ABBA 261113-074811-d08bbf (.scratch/ab/ab.sh, the loop-scheduling A2 harness with arms pre/cur).
+- 261113-081918-7c337f build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the build-test): A1 named-docid 261113-081923-84a5a2;
+  A2 no-persist 261113-081926-acb3fe, no-replay 261113-081928-4e1d4f (test_pool), no-advance 261113-081931-ca0c13,
+  no-stride 261113-081933-c321a0 (test_node); A7 hash-route 261113-081935-39bc44; A6 no-advance 261113-081938-76f0fe.
+- A5: release builds master 261113-080915-1d19d5 (done), head 261113-081947-dd255a, then the exclusive ABBA
+  261113-081954-b7a600 (.scratch/ab/ab.sh, arms pre/cur).
+
+Round 1 (622f57d08) failed: build-test 261113-074720-30a477 exit 8, probe 261113-074628-298443; the master build
+261113-074808-b39d85 copied `build-rel/xapiand`, which is `build-rel/bin/xapiand`. Diagnosed with probe
+261113-081251-9ec85d (prints at 73c5cb00d). Causes and fixes (40f8fb586):
+
+- test_pool counter test, version conflict on f: the blobs' push hands the log a copy of the record taken before
+  `finalise_write`, so the logged d and e kept the placeholder `_id` 0, the replay raised nothing, and f was issued
+  12 again. Code: `issue_id` writes the id into the record, id slot and key before the push; `finalise_write` only
+  stamps the version. (Also fixes a replayed automatic id reading back as `_id` 0.)
+- test_document_ids_are_themselves, `/ids_int_s2/4311744512: GET gives _id 4294967297`: `numeric_key` used the
+  long double encoding, whose key for 2^32 + 1 is the integer encoding's key for 2^32 + 2^24. Code: `numeric_key`
+  is the integer encoding a PUT uses (`Serialise::positive`); a float placeholder keeps the float encoding. The
+  stride test now checks the keys of ids up to 2^53 - 1 against `Serialise::integer` and their round trip.
+- test_far_ids `CHECK(merged)` on shards 0 and 1: the write buffer held the far ids (no commit reached those
+  shards), so `merge_all` saw one segment. Test: `merge_all` commits before listing segments (passes in the probe).
+- `next_auto_id(1020, 0, 3)`: 1021 is bucket 1020, shard 0's; my expectation was wrong. Test: 1021, and the wrap
+  case from 1021 gives 1024 (passes in the probe).
 
 ## Next
 
-1. Read the probe; fix any test; when green, paste `campaign brief`'s table, push the branch for CI (A4 sanitizers).
-2. A5 numbers into the Result (light p99 loaded, heavy searches, cur/pre per pair; a miss stated as a miss).
-3. Correctness review is the lead's to launch.
+1. On green: paste `campaign brief`'s table, CI result for A4, A5 numbers into the Result (a miss stated as one).
+2. Correctness review is the lead's to launch.
 
 ## Blocked on
 
-msg-44 to the lead (asked, proceeding): src/database/pool.h is outside the file set; ShardEndpoint, declared
-there, holds the id counter (two members and `raise_id_high`).
-
-The bucket-to-shard table is not persisted (design note, "Open"): `bucket % n` until the reshard quest. Options:
-(a) persist it now in the index settings beside number_of_shards (format and plumbing with no reader that could
-differ); (b) persist it with the reshard quest. Recommendation: (b).
+Nothing. The lead settled msg-44 and msg-45 (pool.h and docs/mechanisms/document-ids-and-versions.md are in the
+file set) and the table question as option (b), recorded in the quest at Xapiand:4bd077bed.
 
 ## Evidence
 
