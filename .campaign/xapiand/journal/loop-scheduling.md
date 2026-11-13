@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-190109-e3c447 (build) 261112-190112-421854 (X5)
+State: ready for review (A1, lens design/concurrency, round 2): `docs/design/loop-scheduling.md`; X5 261112-190112-421854
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -148,6 +148,11 @@ tasks pass K.
   - F10: D4 threshold, per-handle fairness.
   - F11: exit scope guard.
 
+- X5 261112-190112-421854 (ABBA, off at 16 loops vs the D81 lane at 8 loops): RESTOREs 5 vs 4 per phase (1.25x),
+  RESTORE client p50 0.824x (4.43 vs 5.38 s), server 3.8-4.6 vs 5.3-7.6 s; heavy searches 0.800, 0.777; light
+  p99 0.849, 1.060 (MISS, bound 8.5 ms); lag p99 median 3.07 (MISS). D81 fixes F1 but overshoots: Q5 (a stream
+  allowance below K per chunk, one more ABBA) put to the owner.
+
 ## Next
 
 1. The design review (lens design/concurrency) of `docs/design/loop-scheduling.md`; fold findings by id.
@@ -162,7 +167,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
+| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
 
 ## Result
 

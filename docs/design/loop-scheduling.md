@@ -29,7 +29,9 @@ Measured on the prototype:
 - With D80's 8 loops on macOS, light p99 is 0.78x and heavy searches 0.957x against today (X4).
 - RESTORE alone is flat (T12, X2b).
 - With lifetime classing, a RESTORE under the heavy-search mix runs at about 0.7x on macOS, because it is heavy
-  for life (review F1). D81's per-chunk classing is measured in X5: TBD-X5.
+  for life (review F1). D81's per-chunk classing overshoots (X5, against today's code): RESTORE ingests 1.25x
+  (RESTORE time 0.824x), but heavy searches fall to 0.788x and loaded light p99 is back at today's (0.955x).
+  Q5 asks the owner how much of the loop a stream's chunks may take.
 
 T4 and T5 still miss:
 
@@ -362,6 +364,31 @@ What X4 says:
    share the server's 16 logical CPUs (today one Python process on the same host measures T5), or fewer loops
    than cores, at the VM's 0.64x-scale heavy cost. Neither has been measured on macOS here: Q3.
 
+X5, review F1's confirming probe: D81 (each body chunk starts light) at D80's 8 loops, against today's code at 16
+loops (job 261112-190112-421854, exclusive, macOS, 64 heavy clients plus the RESTORE stream; prototype
+Xapiand:7b14863d5, built by job 261112-190109-e3c447):
+
+| Loaded phase | Off, 16 loops (arms 1, 4) | D81 lane, 8 loops (arms 2, 3) | Lane/off per pair |
+|---|---|---|---|
+| RESTOREs of 20,000 docs completed | 4, 4 | 5, 5 | 1.25, 1.25 |
+| RESTORE client time p50 (max) | 5.40 (7.70), 5.37 (7.49) s | 4.44 (4.65), 4.42 (4.61) s | 0.824, 0.824 |
+| RESTORE server times under load | 5.32, 6.53, 7.64; 5.30, 6.81, 7.43 s | 4.09-4.60 s, 3.76-4.56 s | about 0.65x |
+| Light query p99 (T5 bound 8.3-8.6 ms) | 51.4, 42.9 ms | 43.6, 45.5 ms | 0.849, 1.060: MISS |
+| Loop lag p99 median (max) | 3.07 (5.12), 3.07 (5.12) ms | 3.07 (4.10), 3.07 (4.10) ms | MISS, 3x |
+| Heavy searches | 23,514, 24,078 | 18,802, 18,699 | 0.800, 0.777 |
+
+What X5 says:
+
+8. D81 fixes F1 and overshoots. With lifetime classing a RESTORE ran at about 0.7x under the mix (X4's arms,
+   probe 261112-183821-695fc9). With per-chunk classing it runs at 1.25x today's, because each chunk's prepare
+   and apply now run in the light lane, ahead of every heavy search.
+9. The loop time it takes comes from the heavy searches and from the light requests. Against X4's lifetime lane
+   at the same 8 loops, heavy searches drop from 0.957x to 0.788x, and loaded light p99 from 0.78x back to
+   0.955x, because light requests now queue behind chunk work in the light lane. The unloaded RESTORE and the
+   T12 rows are untouched: X2b ran without a heavy mix.
+10. Between the two lies a stream's allowance per chunk. A chunk light for fewer than K slices, say 1-2, would put
+    its first turns ahead of the searches and the rest in the heavy lane. That needs one more ABBA: Q5.
+
 ## Contracts
 
 - No API, format or wire change. No option: K is a constant beside `REQUEST_SLICE`.
@@ -423,6 +450,16 @@ What X4 says:
 
   Recommendation: (b). It keeps today's meaning for anyone who passes the flag, adds no option, and gives an
   explicit escape from D6's default.
+
+- **Q5 (owner, after D81 and X5).** How much of a loop may a stream's chunks take? Options:
+  - (a) D81 as ruled, light for K slices per chunk: RESTORE 1.25x, heavy 0.788x, light p99 0.955x.
+  - (b) A stream allowance below K per chunk (`REQUEST_STREAM_SLICES`, 1-2), measured by one more X5-shaped ABBA
+    before the build.
+  - (c) Lifetime classing: RESTORE 0.7x, heavy 0.957x, light p99 0.78x.
+
+  Recommendation: (b), with the ABBA run in this quest's build step. It is a constant, not a mechanism: D1's
+  `rearm_light` stays, with the allowance as its argument. Taking (a) and recording the heavy and light cost is
+  the fallback.
 
 ## First steps after the review
 
