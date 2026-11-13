@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs: gate 261113-033300-555be1; A4 mutants 261113-033318-52f956, 261113-033325-227525 (no-exit-guard), 261113-033332-72bffb, 261113-033338-89cc5a; builds mac head 261113-033417-58d0d0, mac master 261113-033446-472538, VM master 261113-034617-473893, VM head 261113-034627-9f77b5 (retries: lua.org reset the VM's first fetch); A2 mac 261113-033501-e28b59, A3 261113-033505-0e9874, A2 VM (see campaign job list, latest A2 exclusive VM job)
+State: waiting on jobs: gate 261113-033300-555be1; A4 mutants 261113-033318-52f956, 261113-033325-227525 (no-exit-guard), 261113-033332-72bffb, 261113-033338-89cc5a; builds mac head 261113-033417-58d0d0, mac master 261113-033446-472538, VM master 261113-034617-473893, VM head 261113-034627-9f77b5 (retries: lua.org reset the VM's first fetch); A2 mac 261113-033501-e28b59, A3 261113-033505-0e9874, A2 VM 261113-034646-1334b1
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
