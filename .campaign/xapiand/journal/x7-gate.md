@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261113-125938-4f5407 261113-125941-90ebdc 261113-125943-736919 261113-125946-4ec27a 261113-130015-3cce93
+State: ready for review
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,6 +31,19 @@ A21 9495ee (allocations 0.988, bytes 1.000, handlers 0.986: no worse); A9 from x
 A13 coverage from x7-coverage (6 of 9 areas below TESTING.md). All in `docs/gates/phase7c.md`.
 
 Done so far: e2e 261113-111813-3013ac GREEN at Xapiand:0a0321691.
+
+Read 2026-11-13 (Xapiand:6dcc770ff, master's `src`), all into `docs/gates/phase7c.md`:
+- t12q 4f5407 (exclusive): RESTORE 1.121 (1.030-1.141), QPS 2.642 (2.638-3.105), p99 0.301: T12 now PASS (was 0.288).
+  t12b 90ebdc: RESTORE 1.052 (1.046-1.222), CPU/doc 0.641; arm 2's profile invalid (147 samples), smoke kept; job rc 0.
+- t10 736919 (strict): flood light-GET p99 45.61 ms (MISS against about 20 ms); T4 beside 4 scripts worst p99 6,144 us.
+- a16 4ec27a (strict, 2,500 indexes): p50 23,136 ms, p99 29,177 ms, peak pinned 100, 200 open after the first search.
+  2567dc at Xapiand:77d649648: p50 108 ms, 1,382 open. 214x slower on master's code: lead's finding, unattributed.
+  SR3: loops p99/p99.9 in the 1,280 us bucket over the timed searches; max since start 99.0 ms (http1). Not closed.
+- linux 3cce93 (light, VM; job failed on one row): 13 of 14 gating rows pass with gcc 13 ASan; `t10_lua` flood p99
+  118.0 ms against its 100 ms limit, a timing claim a light VM job cannot decide (unproven, not rerun); census 27
+  threads, section 2 only; corpora pass. T6 2x RAM: unloaded 292 per 1,000 (1,679 of 1,752 on reactors), loaded
+  76,250 per 1,000 (437,992 of 439,351 on reactors), loaded light p99 21.1 s; in RAM 0 faults, loaded p99 37.9 ms.
+  Design target (Phase 6 gate): at most 1 per 1,000.
 
 ### Earlier sessions
 
@@ -119,9 +132,9 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read t12q 4f5407, t12b 90ebdc, t10 736919, a16+SR3 4ec27a and Linux 3cce93 (ASan rows with gcc, census with
-   Linux names, T6 loaded at memory.high) into `docs/gates/phase7c.md`; update its Status line.
-2. Paste `campaign brief`'s Evidence table; State "ready for review".
+1. Lead: correctness and security reviews of the report; the landing verify reruns the evidence jobs at the final
+   head (`campaign brief` lists them; master's CMakeLists.txt change is not merged here, it would make every job
+   other code again). Owner rules on the misses (Evidence table).
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
 
@@ -192,12 +205,17 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
    builds and runs the Release rows (`.github/`, outside this file set); (c) rule FreeBSD a stated miss for 7c and
    carry it to Phase 8. Recommendation: (b), since CI is where the other platforms prove; the report states the miss.
 
-7. **T4, T5, T10's flood, T12's RESTORE miss (the lead's: the gate's outcome).** With no offload pool every HTTP loop
-   stalls 25-29 ms at p99 under the mixed load (pre-7c: under 1 ms), and RESTORE runs at 0.29x pre-7c while using
-   0.81x its CPU per document (wall lost to serialization, not work). Options: (a) a profiling quest on the loaded
-   phase (which work runs unsliced on the reactors: the RESTORE stream, aggregations, or merges) and on RESTORE's
-   wall; (b) rule the targets for 7c and carry them to Phase 8. Recommendation: (a), the gate's claim is "never
-   blocks a reactor". The report states the misses as they are.
+9. **A16: a wide search is 214x slower on master's code (the lead's).** 2,500 indexes, strict: p50 23,136 ms at
+   Xapiand:6dcc770ff (4ec27a) against 108 ms at Xapiand:77d649648 (2567dc), with 200 indexes open after the first
+   search instead of 1,382. Between them `src` changes `schemas_lru`, `index_resolver_lru`, `single_flight.h`,
+   `database/handler.cc`, `database/shard.cc` (schema-load-once, one-id, x7-loop-fix-c, loop-scheduling). Options:
+   (a) a hunt row bisecting those landings with `wide_search_check.py gate --indexes 2500 --runs 3`; (b) carry it.
+   Recommendation: (a), before Phase 8 builds on wide searches.
+
+7. **T4, T5, T10's flood (the lead's: the gate's outcome; owner D86 took P1).** Loaded, every HTTP loop's p99 is
+   6,144 us (2026-11-11: 24-28 ms) against 1,024 us; server-side loaded light p99 40.2 ms against 9.14 ms; the flood
+   45.6 ms against about 20 ms. T12's RESTORE miss is gone (1.121 of pre-7c after fix (c)). The report states the
+   misses as they are.
 
 0. A6, A15 and A21's Linux half wait on the Linux VM (Detent is timing on it, lead 11-11). FreeBSD: no functional
    CI job. A9: x7-cancel-rows. A13 coverage, corpora: x7-coverage. A22: x7-view-bench. R4 is ruled (lead, quest
@@ -235,36 +253,41 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Evidence
 
+Verdicts: 16 PASS (A1-A3, A6 reported, A7, A11, A12, A14, A17-A24), 2 PASS with a part not shown (A8, A9), 5 MISS (A4,
+A5, A10, A13, A15), 1 not shown (A16).
+
 | Criterion | Evidence |
 |---|---|
-| A1 | rows 261111-171145-b4549d (`t1_strict_owed`, `t1_census`: only section 2's threads) |
-| A2 | rows 261111-171145-b4549d (`t2_e2e_asan`, `t2_stored_asan`); e2e 261111-142834-e6b01e |
-| A3 | recovery 261111-142835-bb67a2; rows 261111-171145-b4549d (`t3_crash`, `t3_crash_asan`) |
-| A4 | 261111-171041-c9ab68: MISS, every HTTP loop's p99 24.6-28.7 ms against 1,024 us (Blocked on 7) |
-| A5 | 261111-171041-c9ab68: MISS on 2x unloaded + 1 ms (76.8 against 8.93 ms); 0.194 of pre-7c; same index 98.2 ms |
-| A6 | <no evidence yet> (Linux VM) |
-| A7 | t7-tsan 261111-142834-da0a9e; rows 261111-171145-b4549d (`t7_asan`) |
-| A8 | rows 261111-171145-b4549d (`t8_overload_*`: enforced rounds, peaks 1,000 / 23, 0 other errors); RSS within 10% of T4's not comparable (2 against 16 reactors) |
-| A9 | <no evidence yet> (quest x7-cancel-rows) |
-| A10 | rows 261111-171145-b4549d (every case); 261111-171050-a82ab4: flood p99 50.94 ms MISS, T4 with loops MISS |
-| A11 | 261111-171043-7a746f: PASS, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone |
-| A12 | 261111-171045-06e893, 261111-171048-c39d8d: RESTORE 0.288 / 0.284 MISS; QPS 2.599 PASS; 16 logical CPUs |
-| A13 | rows 261111-171145-b4549d (ASan+UBSan ctest); t7-tsan 261111-142834-da0a9e; 261111-165347-d979c7 (35.1 KiB per open index at 10,001); coverage, corpora: x7-coverage |
-| A14 | `docs/gates/phase7c.md` (draft, every row scored) |
-| A15 | <no evidence yet> (Linux VM, FreeBSD) |
-| A16 | 261111-165347-d979c7 (10,000 indexes, light: p50 686 ms, peak pinned 5,000); strict 261111-200215-2567dc pending |
-| A17 | build-test 261111-171146-002593; rows 261111-171145-b4549d (`t1_strict_owed`) |
+| A1 | PASS: rows 261113-111808-93efd0 (`t1_strict_owed`, `t1_census` 51 threads, section 2 only); Linux 261113-130015-3cce93 (`t1_census` 27 threads, section 2 only) |
+| A2 | PASS: rows 261113-111808-93efd0 and Linux 261113-130015-3cce93 (`t2_e2e_asan`, `t2_stored_asan`); e2e 261113-111813-3013ac |
+| A3 | PASS: recovery 261113-111814-f9dc7f; rows 261113-111808-93efd0, Linux 261113-130015-3cce93 (`t3_crash`, `t3_crash_asan`) |
+| A4 | MISS: 261113-125927-90f8a3, every HTTP loop over the edge loaded, worst p99 6,144 us against 1,024 us (p99.9 12,288-24,576 us); pre-7c's loops under it |
+| A5 | MISS on the first half: 261113-125927-90f8a3, server-side loaded light p99 40.2 ms against 2x unloaded + 1 ms = 9.14 ms (client 32.3 ms; PLAN P1); met on the second, head/pre 0.070; same index 78.3 ms |
+| A6 | PASS (reported; gated at Phase 6): Linux 261113-130015-3cce93, 2x RAM unloaded 292 per 1,000, loaded 76,250 per 1,000 (99.7% on reactors, light p99 21.1 s); in RAM 0. Phase 6's target is 1 per 1,000 |
+| A7 | PASS: t7-tsan 261113-111814-1a49cf; rows 261113-111808-93efd0, Linux 261113-130015-3cce93 (`t7_asan`) |
+| A8 | PASS with parts not shown: rows 261113-111808-93efd0 (`t8_overload_*`: enforced rounds, peaks 1,000 / 0 and 49, 0 other errors), build-test 261113-111813-3cf199 (`test_readers_cap`); RSS within 10% of T4's (2 against 16 reactors) and 503s within one slice: not shown |
+| A9 | PASS with a part not shown: build-test 261113-111813-3cf199 (x7-cancel-rows tests; mutants 261110-164634-b7eb0b, 261110-164637-c92fef); "within one slice" not shown: freed 2.1-3.1 ms after the close |
+| A10 | MISS: rows 261113-111808-93efd0 every case passes (and Linux ASan); t10 261113-125943-736919 flood p99 45.61 ms against about 20 ms, T4 with 4 looping scripts worst p99 6,144 us; Linux Release flood 118.0 ms (261113-130015-3cce93, light: unproven) |
+| A11 | PASS at Xapiand:49ebb4481: 261111-171043-7a746f, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone; not rerun on master's code |
+| A12 | PASS: 261113-125938-4f5407 RESTORE 1.121 (1.030-1.141), QPS 2.642 (2.638-3.105); 261113-125941-90ebdc RESTORE 1.052 (1.046-1.222); 16 logical CPUs |
+| A13 | MISS: sanitizers pass (rows 261113-111808-93efd0, t7-tsan 261113-111814-1a49cf, Linux 261113-130015-3cce93); corpora pass (261113-111821-2f9e75, 261113-130015-3cce93); 35.1 KiB per open index at 10,001 (261111-165347-d979c7); coverage 6 of 9 areas below TESTING.md (261111-144409-ecb5b2); reader registry's bytes not measured |
+| A14 | `docs/gates/phase7c.md` (every row scored, misses stated) |
+| A15 | MISS: Linux 261113-130015-3cce93, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (118.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run |
+| A16 | Not shown: 261113-125946-4ec27a at 2,500 indexes, p50 23,136 ms, p99 29,177 ms, peak pinned 100 (214x slower than 2567dc's 108 ms at Xapiand:77d649648); 10,000 only at older code (261111-165347-d979c7, p50 686 ms); SR3 not closed (p99.9 at the 1,280 us bucket, max 99.0 ms unattributed) |
+| A17 | PASS: build-test 261113-111813-3cf199; rows 261113-111808-93efd0 (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
-| A19 | removed 261111-142835-15e20c; rows 261111-171145-b4549d (`x6_shutdown`) |
-| A20 | build-test 261111-171146-002593 |
-| A21 | 261111-171055-51a31b (macOS CPU 0.958, p99 0.962: within D62); allocations, handlers 261111-200223-9495ee pending; Linux owed |
-| A22 | <no evidence yet> (quest x7-view-bench) |
+| A19 | PASS: removed 261113-111814-e12ef2; rows 261113-111808-93efd0 (`x6_shutdown`) |
+| A20 | PASS: build-test 261113-111813-3cf199 |
+| A21 | PASS: macOS 261111-171055-51a31b (CPU 0.958, p99 0.962), Linux 261113-111904-2e33d9 (CPU 1.008, p99 1.001), allocations 0.988 and handlers 0.986 261111-200223-9495ee: within D62 |
+| A22 | PASS (measured): 261111-175937-76ae57 (x7-view-bench), 18.6 ns per call at 1 thread, 20.3 ns at 8 |
 | A23 | D53 (T4 reads the control loop only while busy) |
-| A24 | pins http:51d153a, prospect 850d4e8; T12's jobs 261111-171045-06e893, 261111-171048-c39d8d (RESTORE miss stands with both) |
+| A24 | PASS: pins http:51d153a, prospect 850d4e8; T12's jobs 261113-125938-4f5407, 261113-125941-90ebdc |
 
 ## Result
 
-Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/phase7c.md` skeleton.
+`docs/gates/phase7c.md`: every row scored at master Xapiand:6ede7a0ce's `src`, misses stated. Harness:
+`harness/gate7c_rows.sh`, `stall_load.py` (T6 `--index-size 2xram`, T8 held overloads, P1 split), `wide_search_check.py`
+(SR3), `lua_bounds.py`, tests in `test_gate_tools.py`.
 
 ## Rulings I made
 
@@ -281,6 +304,9 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
 - R18. Linux ASan builds with gcc 13 (as CI): clang 18's UBSan stops every ASan row on lz4's `lz4.c:1069` (zero
   offset applied to a null pointer, third-party C). Linux's census allows `Xapiand:MAIN` (reactors inherit main's
   name there). T6 caps with `memory.high`: `memory.max` OOM-killed the node in the loaded phase (184241).
+- R19. Linux `t10_lua`'s flood p99 (118.0 ms against 100 ms) is reported as unproven, not a miss or a pass, and not
+  rerun: the light job shares the host at `nice 19` inside a VM without pinned cores, so it cannot decide a p99 bound;
+  macOS's strict t10 already misses the design's 20 ms, so T10's verdict does not hang on it.
 - R17. T10, T12 rerun with T4/T5: x7-loop-fix-c rewrote RESTORE's path and loop-scheduling the loops' turns, so their
   2026-11-11 values describe code master no longer has.
 
