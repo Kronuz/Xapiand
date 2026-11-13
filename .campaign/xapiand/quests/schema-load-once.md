@@ -5,7 +5,7 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Concurrent first uses of a schema load it once, and the foreign schema its metadata links to once, however the waiters wake. Today test_node.cc:535 (`test_concurrent_first_uses_of_a_schema_load_it_once`) saw 3 loads, not 2, under ASan+UBSan (CI run 43287306312); the held-turn check (1 load for 6 calls) passed, so the extra load comes after release, likely the foreign link loaded by more than one woken waiter. See hunt.md, "Duplicate schema load".
 
 ## Acceptance criteria
 
@@ -14,18 +14,18 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 The second loader is found and named in the journal with the interleaving that produces it, and a deterministic test (no sleeps or timing luck) forces that interleaving and counts exactly 2 loads: a test that fails without the fix (`--fails-without` job, exits 0 only when the named CHECK fails, 2 on a build error)
+- A2 test_node passes 20 repeats under ASan+UBSan: a light job looping `ctest -R test_node`
+- A3 The suite passes: the build-test check
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None; no API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-12: fix the dedup where the second load starts; no retry or tolerance in the test.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
