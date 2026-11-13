@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-103109-652819 261113-103110-b89722 261113-103112-482015 261113-103114-8bb3e1 261113-103117-f82b70 261113-103119-c46bdd 261113-103121-12d765 261113-103124-d6917a 261113-103126-1cc5d1 261113-103128-415311 261113-103131-b6dd14 261113-103133-a069fe 261113-103135-ce00ce 261113-103138-58a7c1
+State: landed by the lead at 1f5b791d2 (all jobs passed; durability re-check APPROVE).
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -125,6 +125,8 @@ buckets (`bucket % n`); each shard issues automatic ids from a persisted, replay
   - restored docs: 80,000 in every run.
   - unloaded light query p99: 3.7 ms pre vs 7.2 ms cur (per pair 1.50 and 2.30). Not explained: two pairs, and
     the cur runs drift (5.0 then 9.3 ms); stated as a possible regression for the P1 diagnosis to rule on.
+
+Lead, at 1f5b791d2: A5 job 261113-103135-ce00ce (exclusive ABBA, master 396204136 vs one-id): unloaded light p99 3.93 vs 4.13 ms (the earlier 2.1x does not reproduce at this head); loaded light p99 44.3 vs 49.3 ms, a miss of the 8-10 ms bound on both sides (PLAN P1); loaded pair p50 11.0 vs 16.7 ms (1.5x), not the _id_high write (job 261113-103138-58a7c1: 15.6-17.7 ms with and without it); filed for the P1 diagnosis.
 
 ## Rulings I made
 
