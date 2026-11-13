@@ -24,7 +24,7 @@ Nothing
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261113-012502-21f3c1 at 8225c9831 runs the four paused-claim tests and the publication-window test; fails without: 261113-022116-7d1cf5 (publications removed: CHECK(loads == 2u) fails), 261112-232218-983be8 (probes disabled) |
-| A2 | `ci:43401120786` at 8225c9831: "Unit tests under ASan + UBSan" and "AddressSanitizer + UBSan" green (local macOS ASan fails master's shutdown tests, 261113-022127-b46700) |
+| A2 | `ci:Unit tests under ASan + UBSan`, `ci:AddressSanitizer + UBSan` (green at 8225c9831, run 43401120786; local macOS ASan fails master's shutdown tests, 261113-022127-b46700) |
 | A3 | 261113-012502-21f3c1 |
 
 ## Result
