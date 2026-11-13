@@ -14194,7 +14194,7 @@
       "risk": "high",
       "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T08:26:54",
+      "updated": "2026-11-13T14:27:52",
       "worktree": ""
     },
     "reclaim-backlog": {
