@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-170146-163a2c 261112-170149-32915c 261112-170152-275ba3 (and builds 261112-170140-f2c47f, 261112-170143-aabac2)
+State: ready for review (A1, lens design/concurrency): `docs/design/loop-scheduling.md`
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -109,6 +109,14 @@ tasks pass K.
 - Note rewritten (07488172c): D1-D6, bounds, D2 replacement text, Kronuz/task quest `task-lanes`, checks, Q1-Q3,
   census and E2 kept as the parked option. X2/X3 sections and Q3 are TBD until the jobs finish.
 
+- X2a 261112-170146-163a2c (macOS T4/T5 ABBA, lane K 8): light search client p50 11.2/12.1 -> 5.2/5.2 ms, server
+  p50 <16.4 -> <4.1 ms; loaded light p99 63.5/71.1 -> 61.9/97.1 (0.974, 1.366): T5 MISS; GET p99 (0 slices)
+  51.7/35.5 -> 56.8/92.2; lag p99 median 4.10/5.12 -> 4.10/4.10: T4 MISS; heavy searches 1.098, 1.175.
+- X2b 261112-170149-32915c (T12 loadtest ABBA, all 4 arms ran): RESTORE docs/s 1.007, 0.969; qps 1.242, 1.013.
+- X3 261112-170152-275ba3 (VM ABBA): light p99 0.579, 0.895 (25.6/19.4 -> 14.8/17.4 ms, bound 10.1): MISS 1.5-1.7x;
+  heavy 0.998, 1.021; lag floor 2.05 ms hides T4. Light search slices p99 5, heavy median 16: K 8 holds.
+- Note filled: evidence section, Answer, Q3 (lane alone, then X4: lane at 8/4 loops vs today, owner's call).
+
 ## Next
 
 1. Read E1 and E3; pick the candidate the census supports; E2: an exclusive ABBA of it against base
@@ -123,13 +131,18 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <the design note, once committed> |
+| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
 
 ## Result
 
 <pending>
 
 ## Rulings I made
+
+- K = 8 slices from X1's off-arm histogram (light p99 7, heavy min 8), not from a K sweep; X3 confirms the gap on
+  Linux. The sweep's arms were dropped after the hang, per D59's 10-minute cap.
+- X4 (lane plus fewer loops) is proposed in Q3 rather than run: the lead asked for the note now, and the loop count
+  is the owner's parked D79 question.
 
 - The census uses an in-process sampler on an experiment build (scratch branch only), not `sample(1)`:
   run state per thread separates "runnable but off CPU" from "blocked", which wall-clock profiles cannot.

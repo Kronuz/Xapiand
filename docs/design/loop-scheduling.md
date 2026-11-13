@@ -19,7 +19,19 @@ is heavy for the rest of its life. Every resumption of a heavy request goes to t
 demoted queue), whatever woke it: a slice, a chore, an event, a timer or a body read. The heavy lane keeps today's
 rule, one turn per pass of the loop's FIFO. So a light resumption, an I/O completion or a timer waits for at most
 one heavy turn per pass, and a heavy request still gets a turn every pass. The mechanism is generic and belongs to
-Kronuz/task (D5). With it, X2 and X3 measure: TBD.
+Kronuz/task (D5).
+
+Measured on the prototype, the lane fixes the queueing it targets. A light search's p50 drops 0.45x on macOS
+(11.6 to 5.2 ms) and its server-side p50 about 4x, heavy search throughput rises 1.14x, and RESTORE stays flat.
+Loaded light p99 is 0.74x on Linux, but T4 and T5 still miss:
+
+- macOS: light p99 is not improved (lane/off 0.97 and 1.37) and stays 7-11x over its bound. Lag p99 stays at
+  4.1 ms, 4x the edge.
+- Linux: light p99 is 1.5-1.7x over its bound.
+
+What is left on macOS is the tail of requests that spend no slice at all: GET p99 35-92 ms, with a server-side p99
+up to 32 ms. It comes from the OS descheduling runnable loops, which no in-loop order can fix. Q3 proposes the one
+experiment that decides how to close it: the lane combined with the parked one loop per physical core.
 
 ## How a loop orders work today
 
@@ -186,11 +198,61 @@ behaviour for the other users of `task::budget` and `asio_scheduler`: Detent, pr
 
 **D6. The loop count stays at one per logical CPU.** One loop per physical core is parked (owner, D79): E2
 measured 0.785x heavy searches for a lag p99 that still misses. The section below keeps its evidence. Q3 asks
-whether to combine it with the lane if T4 still misses on macOS.
+whether to combine it with the lane, since T4 and T5 still miss with the lane alone (X2, X3).
 
 ## Evidence for the lane (X2, X3)
 
-TBD
+All three runs are exclusive jobs of at most 10 minutes. Each is an ABBA of today's policy (off) against the lane
+at K = 8 (lane), on the fixed prototype Xapiand:3c064618a: the macOS build is job 261112-170140-f2c47f, the VM
+build 261112-170143-aabac2. Ratios are lane/off per adjacent pair. A cell lists the two arms of a kind.
+
+X2a, macOS, 16 loops, 64 heavy clients (job 261112-170146-163a2c):
+
+| Loaded phase | Off (arms 1, 4) | Lane (arms 2, 3) | Lane/off per pair |
+|---|---|---|---|
+| Light query p99 (T5 bound 8.1-8.8 ms) | 63.5, 71.1 ms | 61.9, 97.1 ms | 0.974, 1.366: MISS |
+| Light search p50, client | 11.2, 12.1 ms | 5.2, 5.2 ms | about 0.45 |
+| Light search p50, server (log2 edge) | < 16.4 ms | < 4.1 ms | about 4x lower |
+| Light search p99, client | 69.9, 84.3 ms | 68.0, 114.1 ms | not improved |
+| GET by id p99, client (0 slices) | 51.7, 35.5 ms | 56.8, 92.2 ms | worse or noise |
+| Loop lag p99 median (max), T4 edge 1,024 us | 4.10 (7.17), 5.12 (7.17) ms | 4.10 (4.10), 4.10 (5.12) ms | MISS, 16 of 16 loops over |
+| Heavy searches | 22,102, 20,571 | 24,263, 24,162 | 1.098, 1.175 |
+
+X2b, macOS, T12 loadtest (job 261112-170149-32915c). It ran all four arms in full, each restoring 20,000 documents
+and running 26,856-33,932 queries:
+
+- RESTORE docs/s: 7,699 and 7,951 against 7,751 and 7,706; lane/off 1.007 and 0.969, so flat.
+- Query qps: lane/off 1.242 and 1.013. The first off arm is low, at 3,354.
+- Query p99: lane/off 0.555 and 1.018.
+
+X3, Linux VM, 8 loops, 32 heavy clients (job 261112-170152-275ba3):
+
+| Loaded phase | Off (arms 1, 4) | Lane (arms 2, 3) | Lane/off per pair |
+|---|---|---|---|
+| Light query p99 (T5 bound 10.1-10.2 ms) | 25.6, 19.4 ms | 14.8, 17.4 ms | 0.579, 0.895: MISS by 1.5-1.7x |
+| Light search p50 / p99, client | 7.2 / 30.3, 7.3 / 22.2 ms | 5.2 / 17.5, 5.8 / 18.6 ms | lower |
+| GET by id p99, client | 10.7, 12.0 ms | 12.8, 13.0 ms | flat |
+| Loop lag p99 median (max) | 5.12 (8.19), 5.12 (10.24) ms | 4.10 (6.14), 5.12 (7.17) ms | idle floor 2.05 ms, so T4 cannot be judged here |
+| Heavy searches | 25,507, 24,921 | 25,452, 25,439 | 0.998, 1.021 |
+
+The slice counts hold on Linux. Light searches spend 3 slices at the median and 5 at p99; heavy searches 16 at the
+median and aggregations 22. K = 8 sits in the gap on both hosts. The lane arms ran the accounts load and
+RESTORE to the end, so D2 (e)'s fix holds.
+
+What the numbers say:
+
+1. The lane removes the light search's queueing behind heavy turns. Its client p50 drops 0.45x on macOS and 0.75x
+   on Linux. Heavy throughput rises 1.14x on macOS and is flat on Linux. RESTORE is flat (0.99x).
+2. T5 still misses on both hosts. On macOS its p99 is set by tails that spend no slice. A GET's server-side p99
+   reaches 32 ms in every arm, lane or not. A request of 0 slices waits only in the light lane, behind at most one
+   heavy turn per pass (D3), so a 32 ms wait is a loop thread off its CPU: E1's loops sit ready 32% of their
+   runnable time. The client is also one Python process on the same host, and its own delay counts in T5.
+3. T4 misses on macOS by the same cause. The lag p99 median stays at 4.1 ms, and only the worst loop improves
+   (7.2 to 4.1-5.1 ms). On the VM, the 2.05 ms idle floor hides T4.
+4. What closes them is fewer runnable loops than CPUs, combined with the lane. E1's 8-loop arm cut the loops'
+   ready share from 32% to 12% and the lag p99 to 2.56 ms, at 0.79x heavy throughput (E2). That arm still had
+   light searches queueing behind heavy turns, which the lane removes, and the lane's 1.14x heavy gain may pay back
+   part of that cost. Not measured: Q3.
 
 ## Contracts
 
@@ -231,8 +293,19 @@ TBD
   it, not the host's speed relative to the loop count.
 - **Q2 (review).** Count whole spent slices (measured, simplest) or accumulated CPU per resume (exact for many
   short turns)? Recommendation: slices. A short turn already yields within a slice.
-- **Q3 (owner).** TBD from X2: if T4 still misses on macOS because the OS deschedules runnable loops, combine the
-  lane with the parked one loop per physical core, or accept T4 on macOS at the measured value.
+- **Q3 (owner).** With the lane, T4 and T5 still miss: on macOS by 4x (lag) and 7-11x (light p99), on Linux by
+  1.5-1.7x (light p99). The remainder is runnable loops off their CPUs, which is the parked D6 question again.
+  Options:
+  - (a) Land the lane alone. It is a measured win (light search p50 0.45x, heavy 1.14x, RESTORE flat). Record
+    T4 and T5 as misses.
+  - (b) First run one exclusive job of at most 10 minutes, X4: an ABBA of today's code (16 loops, lane off)
+    against the lane at 8 loops on macOS, and 4 loops on the VM. Take D6's one loop per physical core only if
+    X4 passes T5 or T4 at no worse than 0.9x heavy throughput.
+  - (c) Accept T4 and T5 as unreachable on a 16-thread host that runs its own load generator, and change the
+    gate.
+
+  Recommendation: (a), then (b). The lane is needed under either loop count. X4 is the single experiment that
+  says whether placement is worth its cost now that the lane recovers heavy throughput.
 
 ## First steps after the review
 
