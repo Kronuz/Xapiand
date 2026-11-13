@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-145752-4c47b7 261112-145754-4dcc08
+State: waiting on jobs 261112-154306-4d90d5
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -52,6 +52,16 @@ HVF), so T4's 1,024 us edge cannot be judged there. Arms (loop lag p99 median, l
 base 5.63 ms, 19.8 ms; nocensus 8.19 worst, 20.0 ms; workers nice 5 (applied: pri 25) 4.61, 20.9; loops
 nice -5 (applied: pri 15, RLIMIT_NICE raised) 5.12, 23.1 (the generator's ready share 34% to 57%); 4 workers
 4.10, 16.7; 4 reactors (heavy 32) 2.56 (loops ready 0.5%, run-queue wait 0.003 s/s), 24.7.
+
+E1 (261112-145754-4dcc08, macOS, 16 logical CPUs, 64 heavy clients), loaded phase, base arm: 16 loops use
+10.07 cores, runnable 92% of the window, ready 32% of their runnable time; runnable threads mean 17.3 on 16 CPUs
+(loops 14.7, workers 1.95, generator 0.44). Arms (loop lag p99 median, light p99, heavy searches): base 6.14 ms,
+43.8 ms, 22,999; nocensus 6.14 worst, 67.4 ms; loops qos:ui (call returned 0 on 16 loops, priority stayed 31:
+not applied) 5.12, 71.1; workers qos:ut (applied: priority 20) 5.12, 43.5, loops' ready unchanged; 8 workers 6.14,
+63.0; 8 reactors 2.56 ms (ready 12%), 38.9 ms, 18,623 (0.81x).
+Draft note written (`docs/design/loop-scheduling.md`); E2 261112-154306-4d90d5 (exclusive, scratch 58d1b9493,
+`harness/experiments/e2_ab.sh`): ABBA 16 vs 8 reactors, T4/T5 then T12 loadtest, on the census build with the
+census off.
 
 ## Next
 
