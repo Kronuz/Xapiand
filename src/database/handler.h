@@ -161,8 +161,8 @@ private:
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
-	// The docid holding the term, read in the one shard its id routes to (id_shard), from the published view or
-	// (written) as the writes left it.
+	// The docid holding the term, read in the shard its id routes to (id_shard) and, on a miss, in the others, from
+	// the published views or (written) as the writes left them.
 	task::task<engine::docid> find_docid_term(const std::string& term, bool written);
 
 	// The active shard with the fewest documents as the writes left them, where a new numeric id goes, and the largest

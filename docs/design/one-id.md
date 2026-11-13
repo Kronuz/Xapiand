@@ -24,9 +24,13 @@ docid the shard assigned (`NumericId`). Under the T4/T5 mix, explicit PUTs at id
 - `id_shard(key, n)` combines the two. Every new document is placed with it: by PUT, RESTORE (slices or serial),
   a streamed upload's blob, a delete of a missing id, and the automatic UUID and keyword ids that schema.cc picks
   to land in the least used shard.
-- Lookups route the same way: since every placement uses `id_shard`, a document with a given id can only be in
-  that shard. `find_docid_term` (GET, PUT, PATCH and DELETE of an existing id, version checks) and a RESTORE
-  slice's placement read each key in its one shard, not in every shard (`DatabaseHandler::key_reads` counts them).
+- Lookups read the routed shard first: `find_docid_term` (GET, PUT, PATCH and DELETE of an existing id, version
+  checks) and a RESTORE slice's placement read each key in `id_shard`'s shard, so a hit is one read
+  (`DatabaseHandler::key_reads` counts them). A miss reads the other shards in order, as before: every placement
+  since this quest routes by `id_shard`, but an index written under an earlier rule (numeric ids by `(N - 1) % n`,
+  other ids by `hash % n`; they differ from the buckets whenever n does not divide 1,024, as with the default 5),
+  or a document written straight to a shard, can hold an id off its routed shard, and cross-shard-id's handling
+  (docs/dev/cross-shard-id.md) still covers it. Routed-only lookups would need such indexes ruled out.
 
 ## The id counter
 

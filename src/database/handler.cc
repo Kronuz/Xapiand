@@ -1823,9 +1823,11 @@ DatabaseHandler::find_docid_term(const std::string& term, bool written)
 
 	std::exception_ptr eptr;
 
-	// Every placement routes by id_shard, so the document with this id can only be in that shard.
-	const size_t first = id_shard(term, n_shards), last = first + 1;
-	for (size_t shard_num = first; shard_num < last; ++shard_num) {
+	// Every placement routes by id_shard, so the document is read there first: a hit is one read. Only a document
+	// written under an earlier rule, or straight to a shard, sits elsewhere, so a miss reads the other shards in order.
+	const size_t routed = id_shard(term, n_shards);
+	for (size_t i = 0; i < n_shards; ++i) {
+		const size_t shard_num = i == 0 ? routed : i <= routed ? i - 1 : i;
 		lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 		co_await lk_shard.pin();
 		key_reads.fetch_add(1, std::memory_order_relaxed);
@@ -2518,9 +2520,10 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	// docs/perf/x7-loop-stalls.md): placed first, then one sub-run per shard in input order, written in chores by
 	// at most `children` child tasks, each holding one turn at a time.
 	const auto apply_shards = [&](std::size_t from, std::size_t to) -> task::task<void> {
-		// Placement, by find_docid_term's rules: each term is read in the one shard its id routes to, a shard's read
-		// retries and reopens, and a shard that is not available fails the terms not found. A term whose pin or read
-		// failed otherwise (busy, corrupt) takes the serial path after the join: each its own turn.
+		// Placement, by find_docid_term's rules: each term is read in the shard its id routes to, then in the others
+		// while not found; a shard's read retries and reopens, and a shard that is not available fails only the terms
+		// no other shard holds. A term whose pin or read failed otherwise (busy, corrupt) takes the serial path after
+		// the join: each its own turn.
 		std::vector<std::string> terms;
 		std::unordered_map<std::string, std::size_t> term_at;
 		for (auto j = from; j < to; ++j) {
@@ -2538,11 +2541,14 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		if (n_shards > 1) {
 			std::exception_ptr unavailable;
 			bool missing = false;   // the lookup met a missing index: the rest are placed afresh, as the serial path
-			for (std::size_t shard = 0; shard < n_shards && !missing; ++shard) {
+			// Each shard is asked first for the ids routed to it, then, in a second pass, for the ids not found yet.
+			for (std::size_t step = 0; step < 2 * n_shards && !missing; ++step) {
+				const std::size_t shard = step % n_shards;
+				const bool routed = step < n_shards;
 				std::vector<std::string> ask;
 				std::vector<std::size_t> ask_at;
 				for (std::size_t k = 0; k < terms.size(); ++k) {
-					if (found[k].first == 0 && !failed[k] && !serial[k] && id_shard(terms[k], n_shards) == shard) {
+					if (found[k].first == 0 && !failed[k] && !serial[k] && (id_shard(terms[k], n_shards) == shard) == routed) {
 						ask.push_back(terms[k]);
 						ask_at.push_back(k);
 					}

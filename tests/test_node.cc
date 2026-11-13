@@ -2431,8 +2431,9 @@ static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
 	CHECK_EQ(numeric_id(document_key(Serialise::integer((std::int64_t{1} << 32) + 1), 'N')), 0u);
 }
 
-// A lookup by id reads only the shard the id routes to: a GET of an existing or a missing id reads one key in one
-// shard, and a RESTORE's placement reads each new id once, in its own shard, over 3 shards.
+// A lookup by id reads the shard the id routes to first: over 3 shards a GET of an existing id reads one key in one
+// shard and a RESTORE's placement of existing ids one key each; a miss reads every shard (an id written under an
+// earlier rule can sit off its routed shard).
 static void test_a_lookup_by_id_reads_one_shard() {
 	Watchdog watchdog("a lookup by id reads one shard", 120s);
 	const std::string index = "lookup_s3";
@@ -2444,17 +2445,21 @@ static void test_a_lookup_by_id_reads_one_shard() {
 	for (const int id : {1, 2, 3, 4, 5, 6, 100}) {
 		const auto before = DatabaseHandler::key_reads.load();
 		CHECK_EQ(call("GET", path + std::to_string(id)).status, id == 100 ? 404 : 200);
-		CHECK_EQ(DatabaseHandler::key_reads.load() - before, 1u);
+		CHECK_EQ(DatabaseHandler::key_reads.load() - before, id == 100 ? 3u : 1u);
 	}
 	std::string body;
 	for (int id = 101; id <= 130; ++id) {
 		body += R"({"_id":)" + std::to_string(id) + R"(,"n":"r"})" "\n";
 	}
-	const auto before = DatabaseHandler::key_reads.load();
-	CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
-	const auto reads = DatabaseHandler::key_reads.load() - before;
-	std::fprintf(stderr, "  a RESTORE of 30 new ids over 3 shards read %llu keys\n", static_cast<unsigned long long>(reads));
-	CHECK_EQ(reads, 30u);
+	for (const auto [round, expected] : {std::pair{1, 90u}, std::pair{2, 30u}}) {   // new ids miss, then they hit
+		const auto before = DatabaseHandler::key_reads.load();
+		CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+		const auto reads = DatabaseHandler::key_reads.load() - before;
+		std::fprintf(stderr, "  RESTORE %d of 30 ids over 3 shards read %llu keys\n", round, static_cast<unsigned long long>(reads));
+		CHECK_EQ(reads, expected);
+	}
+	CHECK_EQ(version_of(call("GET", path + "130")), 2);
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 36u);
 }
 
 // Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket

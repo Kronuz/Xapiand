@@ -41,14 +41,14 @@ case $mutant in
 		mutate src/database/handler.cc \
 			'	if (const auto id = numeric_id(key); id != 0) {' \
 			'	if (const auto id = numeric_id(key); id != 0 && key.empty()) {' ;;
-	lookup-fan-out)   # a lookup by id reads every shard
+	lookup-fan-out)   # a lookup by id reads the shards in order from the first, not its routed shard first
 		mutate src/database/handler.cc \
-			'	const size_t first = id_shard(term, n_shards), last = first + 1;' \
-			'	const size_t first = 0, last = n_shards;' ;;
-	bulk-fan-out)   # a RESTORE's placement asks every shard for every id it has not found
+			'	const size_t routed = id_shard(term, n_shards);' \
+			'	const size_t routed = 0;' ;;
+	bulk-fan-out)   # a RESTORE's placement asks the shards in order for every id it has not found
 		mutate src/database/handler.cc \
-			'					if (found[k].first == 0 && !failed[k] && !serial[k] && id_shard(terms[k], n_shards) == shard) {' \
-			'					if (found[k].first == 0 && !failed[k] && !serial[k]) {' ;;
+			'					if (found[k].first == 0 && !failed[k] && !serial[k] && (id_shard(terms[k], n_shards) == shard) == routed) {' \
+			'					if (found[k].first == 0 && !failed[k] && !serial[k] && routed) {' ;;
 	*) echo "unknown mutant $mutant"; exit 1 ;;
 esac
 
