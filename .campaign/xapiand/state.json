@@ -5702,6 +5702,85 @@
     },
     "loop-scheduling": {
       "accepted": {
+        "correctness": {
+          "at": "2026-11-13T05:55:21",
+          "base": "3777ad818136578a64c2f8d1c93cdad65621c4b0",
+          "blobs": {
+            "CMakeLists.txt": "100644:77eb22a373af61835444541398a61b02111c2604",
+            "docs/design/loop-scheduling.md": "100644:c13bb088b2c99f891420f2f021d5f15310330ddb",
+            "docs/design/phase7c.md": "100644:a01dc58cce8bfee02bc4f491d400a87a977b7393",
+            "docs/perf/x7-loop-stalls.md": "100644:b44265160321dc0ea5e5f193c42ac9e45f7e3e7b",
+            "harness/async_allowlist.tsv": "100644:6b3d58f68a88ea25dda2933ca22c822984671cc6",
+            "src/database/handler.cc": "100644:8f2c5ae9db8a24e10b9e2eeb258682a74a22455d",
+            "src/database/handler.h": "100644:80ffe1e54639ebb21f85c1e891175c86bf923c5c",
+            "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
+            "src/database/shard.cc": "100644:a3b860cb9e91b25723471eae8569e69716abd0d2",
+            "src/database/shard.h": "100644:3aa33fe7123cd5637c3a76ae601f2ca4f40d2749",
+            "src/engine/host.h": "100644:b46134b601dc24a1230fe257c5b2b4ff22db5fb9",
+            "src/engine/host_asio.h": "100644:e19e0e62bc03b1ecafe10fdbd1f6f8e09cdb535c",
+            "src/server/search_views.cc": "100644:b84dc058a82af94802b9eaf20539057cf38d5342",
+            "tests/test_loop_yield.cc": "100644:90a509fdfa19a2d0388eba29d79182afa6623381"
+          },
+          "by": "review",
+          "commit": "1e59b305795c1c9eae22966dc8be9e97eab19b60",
+          "criteria": "8b51c97f2a355f33",
+          "diffs": {
+            "CMakeLists.txt": "fd865634a193008f",
+            "docs/design/loop-scheduling.md": "f15819020c15fe6a",
+            "docs/design/phase7c.md": "b2a02df557a40f0d",
+            "docs/perf/x7-loop-stalls.md": "388d1c8c73041573",
+            "harness/async_allowlist.tsv": "4c913c72a946a94d",
+            "src/database/handler.cc": "8f016afc7db396c4",
+            "src/database/handler.h": "ec39d487ae25d5a5",
+            "src/database/pool.h": "88a10ee0d67eb6d3",
+            "src/database/shard.cc": "d3ca28e329931422",
+            "src/database/shard.h": "be35c25d42302bf9",
+            "src/engine/host.h": "e9d531f1c2d05b2e",
+            "src/engine/host_asio.h": "0103ed39a30e7790",
+            "src/server/search_views.cc": "8232bc52a14766ca",
+            "tests/test_loop_yield.cc": "9a5d9ffececd0db4"
+          },
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'trap \"git -C \\\"$PWD\\\" checkout -- src/server/search_views.cc\" EXIT\npython3 - <<\"PY2\" || exit 2\np = \"src/server/search_views.cc\"\ns = open(p).read()\nk = \"\\t\\t\\t\\trequest.budget->rearm_light(REQUEST_STREAM_SLICES);\\n\"\nassert s.count(k) == 1\ns = s.replace(k, \"\", 1)\nk2 = \"\\tauto& stream = *http_req->body_stream;\\n\\tconst asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());\"\nassert s.count(k2) == 1\ns = s.replace(k2, \"\\tauto& stream = *http_req->body_stream;\\n\\tif (budget) {\\n\\t\\tbudget->rearm_light(REQUEST_STREAM_SLICES);\\n\\t}\\n\\tconst asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());\", 1)\nopen(p, \"w\").write(s)\nPY2\ncmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF > cfg.log 2>&1 || { tail -30 cfg.log; exit 2; }\nT=$(cmake --build build --target help | grep -o \"[A-Za-z_]*test_loop_yield\" | head -1)\ncmake --build build -j4 --target $T > bld.log 2>&1 || { grep -m5 -B2 -A8 \"error\" bld.log; tail -20 bld.log; exit 2; }\nctest --test-dir build -R loop_yield -V > mutant.log 2>&1; cat mutant.log\ngrep -qF \"test_loop_yield.cc\" mutant.log && grep -F \"FAIL\" mutant.log | grep -qF \"CHECK(first_light)\" && grep -F \"FAIL\" mutant.log | grep -qF \"CHECK(lanes_by_count)\"'",
+                  "commit": "206c93e45e1206f9d970bf26bed23fe3d4bbef98",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-050325-7998cd",
+                  "level": "light",
+                  "seconds": 708.9,
+                  "state": "done",
+                  "what": "loop-scheduling mutant rearm-in-read: rearm_light moved into Request::read_chunk must fail CHECK(first_light) and CHECK(lanes_by_count)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "C2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "206c93e45e1206f9d970bf26bed23fe3d4bbef98",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-050313-690238",
+                  "level": "light",
+                  "seconds": 306.5,
+                  "state": "done",
+                  "what": "loop-scheduling check build-test at 206c93e45e12"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "12cbd4e26af036d5a6a787912a6ea87109c12ae6",
+          "reviewed": "1317dd6850f17433f0b76fc0afd5ce576b7313f7",
+          "verdict": "CHANGES"
+        },
         "design": {
           "at": "2026-11-12T20:06:28",
           "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
@@ -5756,7 +5835,7 @@
       "risk": "high",
       "status": "review",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-13T04:24:15",
+      "updated": "2026-11-13T05:55:21",
       "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
