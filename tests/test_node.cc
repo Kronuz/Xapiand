@@ -96,6 +96,7 @@ struct PoolTestAccess {
 	}
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
 	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
+	static engine::Shard& engine(ShardEndpoint& entry) { return *entry.engine_; }
 };
 
 namespace {
@@ -2299,13 +2300,14 @@ static std::vector<SegmentDocids> segment_docids(const Endpoint& endpoint) {
 	return segments;
 }
 
-// Merges all the segments of a shard's index into one, in docid order, and commits it. The first commit flushes the
-// write buffer, so its documents are in a segment the merge takes.
+// Merges all the segments of a shard's index into one, in docid order, and commits it. The shard's own commit takes
+// its pending writes into a segment the merge takes, and keeps the engine's revision: a commit of the index itself
+// would leave it behind, and the next commit of the shard would find two revisions where it made one.
 static void merge_all(const Endpoint& endpoint) {
 	auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE_QUIET);
+	engine::sync_wait(use_index(pin, WRITE_QUIET).commit());
 	auto turn = engine::sync_wait(pin->take_turn(WRITE_QUIET));
 	auto& index = A::index(pin.entry());
-	index.commit();
 	std::vector<std::uint64_t> ids;
 	for (const auto& segment : index.segments()) {
 		ids.push_back(segment.id);
@@ -2313,7 +2315,8 @@ static void merge_all(const Endpoint& endpoint) {
 	if (ids.size() > 1) {
 		index.merge(ids);
 	}
-	index.commit();
+	index.commit();   // the merge's output alone: no new revision
+	CHECK_EQ(A::engine(pin.entry()).revision(), index.manifest().revision);
 }
 
 // A RESTORE of ids 1..N and PUTs of explicit ids far above them (the T4/T5 mix's 11,000,001 and up) leave every

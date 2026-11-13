@@ -22,9 +22,10 @@ case $mutant in
 		mutate src/serialise.cc '					return sortable::encode(value.u64());' '					return positive(value.u64());'
 		mutate src/serialise.cc '					return sortable::encode(value.f64());' '					return floating(value.f64());'
 		mutate src/serialise.cc '	return sortable::encode(document_id);' '	return positive(document_id);'
-		mutate src/serialise.cc '	const auto number = sortable::decode(serialised_id);' '	const auto number = sortable_unserialise(serialised_id);'
-		mutate src/serialise.cc '	return number ? number->to_uint64() : std::nullopt;' \
-			'	return number >= 0 && number < 0x1p64 && number == static_cast<long double>(static_cast<std::uint64_t>(number)) ? std::optional<std::uint64_t>(static_cast<std::uint64_t>(number)) : std::nullopt;' ;;
+		mutate src/serialise.cc $'\tconst auto number = sortable::decode(serialised_id);\n\treturn number ? number->to_uint64() : std::nullopt;' \
+			$'\tconst auto number = sortable_unserialise(serialised_id);\n\treturn number >= 0 && number < 0x1p64 && number == static_cast<long double>(static_cast<std::uint64_t>(number)) ? std::optional<std::uint64_t>(static_cast<std::uint64_t>(number)) : std::nullopt;'
+		mutate src/serialise.cc $'\tconst auto number = sortable::decode(serialised_id);\n\tif (!number) {' \
+			$'\treturn Unserialise::MsgPack(field_type, serialised_id);   // the value codec\n\tconst auto number = sortable::decode(serialised_id);\n\tif (!number) {' ;;
 	query-old-codec)   # a term search on a numeric _id builds its term with the value codec
 		mutate src/query_dsl.cc \
 			"	const bool numeric_id = field_spc.prefix() == DOCUMENT_ID_TERM_PREFIX && field_spc.get_ctype() == 'N';" \
@@ -33,6 +34,10 @@ case $mutant in
 		mutate src/database/handler.h \
 			'inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 63) - 1;' \
 			'inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 32) - 1;' ;;
+	index-commit)   # the test's merge_all commits the index itself, behind the engine's revision
+		mutate tests/test_node.cc $'\tengine::sync_wait(use_index(pin, WRITE_QUIET).commit());\n' ''
+		mutate tests/test_node.cc $'\tauto& index = A::index(pin.entry());\n\tstd::vector<std::uint64_t> ids;' \
+			$'\tauto& index = A::index(pin.entry());\n\tindex.commit();\n\tstd::vector<std::uint64_t> ids;' ;;
 	*) echo "unknown mutant $mutant"; exit 1 ;;
 esac
 
