@@ -1102,6 +1102,9 @@ static void test_each_chunk_of_a_streamed_restore_starts_light() {
 		}
 		pieces.push_back(piece);
 	}
+	// One round per chunk on any build: a slow prepare (TSan) splits a chunk into rounds, and a later round's
+	// placement continues the chunk's budget, heavy by count.
+	FixedRanges ranges(5);
 	lanes::Seam seam(lanes::Mode::record_chunks);
 	CHECK_EQ(http_call_pieces("RESTORE", "/lanestream/?commit", pieces, "application/x-ndjson", 150ms) / 100, 2);
 	std::lock_guard<std::mutex> lk(lanes::chunks_mtx);
