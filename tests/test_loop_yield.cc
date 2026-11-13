@@ -349,6 +349,7 @@ public:
 		DocIndexer::seams.throw_in_slice = false;
 		DocIndexer::seams.stale_on_term.clear();
 		DocIndexer::seams.serial = false;
+		DocIndexer::seams.busy_placement_shard = 0;
 	}
 };
 
@@ -717,6 +718,50 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 }
 
 
+// A placement read that fails (here shard 2's turn, busy) sends the terms it asked to the serial path after the join,
+// in input order, each object with its own turn, as one request each would: no object fails, every object is
+// stored, and the deferred objects are those of the ids neither shard 0 nor shard 1 holds (D68).
+static void test_a_failed_placement_read_defers_its_terms_to_the_serial_path() {
+	create_index("placebusy", 5);
+	std::string seed;
+	for (int k = 1; k <= 40; ++k) {
+		seed += R"({"_id":)" + std::to_string(k) + R"(,"v":"seed"})" "\n";
+	}
+	CHECK_EQ(http_call("RESTORE", "/placebusy/?commit", seed, "application/x-ndjson") / 100, 2);
+	std::string body;
+	std::size_t affected = 0;
+	for (int k = 1; k <= 40; ++k) {
+		body += R"({"_id":)" + std::to_string(k) + R"(,"v":"new"})" "\n";
+		affected += (k - 1) % 5 >= 2;   // id k is on shard (k - 1) % 5: shards 2-4 are asked of shard 2
+		if (k == 20) {
+			body += R"({"_id":3,"v":"last"})" "\n";   // a second object of a deferred id, later in the stream
+			++affected;
+		}
+	}
+	std::string reply;
+	{
+		FixedRanges ranges(64);
+		DocIndexer::seams.busy_placement_shard = 3;
+		const auto status = http_call("RESTORE", "/placebusy/?commit", body, "application/x-ndjson", &reply);
+		CHECK_EQ(status / 100, 2);
+		std::fprintf(stderr, "  %zu writes deferred of %zu affected\n", DocIndexer::stats.deferred.load(), affected);
+		CHECK_EQ(DocIndexer::seams.busy_placement_shard.load(), std::size_t{0});   // it threw
+		CHECK_GE(DocIndexer::stats.largest_range.load(), std::size_t{16});
+		CHECK_EQ(DocIndexer::stats.deferred.load(), affected);
+	}
+	const auto items = items_of(reply);
+	CHECK_EQ(items.size(), std::size_t{41});
+	for (const auto& item : items) {
+		CHECK_TRUE(item.find("status") == std::string::npos);
+	}
+	for (int k = 1; k <= 40; ++k) {
+		std::string got;
+		CHECK_EQ(http_call("GET", "/placebusy/" + std::to_string(k), "", "application/json", &got), 200);
+		CHECK_EQ(field_of(json_of(got), "v").to_string(), std::string(k == 3 ? "\"last\"" : "\"new\""));
+	}
+}
+
+
 // An object that reads the stored document (an update) sees every earlier object of its stream applied, whether it
 // follows a run of plain objects in its batch or starts the next batch.
 static void test_an_update_sees_the_earlier_objects_of_its_stream() {
@@ -809,6 +854,7 @@ int main() {
 	test_a_miss_defers_every_later_write_of_its_id();
 	test_a_throwing_apply_slice_fails_one_write_and_restores_the_engines_chores();
 	test_a_stale_marking_failure_ends_its_slice();
+	test_a_failed_placement_read_defers_its_terms_to_the_serial_path();
 	test_an_update_sees_the_earlier_objects_of_its_stream();
 	test_schema_changes_commit_in_input_order();
 	if (testh::failures != 0) {
