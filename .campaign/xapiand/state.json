@@ -14640,9 +14640,9 @@
       ],
       "consumes": [],
       "files": [
-        "src/schemas_lru.*",
-        "src/schema.*",
+        "src/database/schemas_lru.*",
         "src/single_flight.h",
+        "src/index_resolver_lru.h",
         "tests/test_node.cc"
       ],
       "landed": [],
@@ -14654,7 +14654,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "Concurrent first uses of a schema load it once, foreign links included",
-      "updated": "2026-11-12T22:25:18"
+      "updated": "2026-11-12T22:25:36"
     },
     "seam-census": {
       "accepted": {},
