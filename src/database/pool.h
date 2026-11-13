@@ -59,6 +59,7 @@
 #include "strata/core/catalog.hh"          // for strata::catalog
 #include "strata/core/resource_budget.hh"  // for strata::resource_budget
 #include "task.hh"              // for task::task, task::async_mutex, task::event
+#include "p1_probe.h"           // P1 diagnostic probes
 
 // <sys/sysctl.h> (strata's resource budget, outside Linux) defines MIN and MAX, which Xapiand's enums name.
 #undef MIN
@@ -140,11 +141,14 @@ public:
 		return static_cast<bool>(guard_);
 	}
 	void release() noexcept;
+	void p1_mark(p1::Cls cls) noexcept { p1_t_ = p1::clock::now(); p1_cls_ = cls; }
 
 private:
 	task::async_mutex::guard guard_;
 	int* held_ = nullptr;
 	prospect::index* index_ = nullptr;
+	p1::clock::time_point p1_t_{};
+	p1::Cls p1_cls_ = p1::other;
 };
 
 

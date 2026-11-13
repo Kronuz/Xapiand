@@ -335,6 +335,7 @@ def parse_metrics(text: str) -> dict[str, dict[str, Any]]:
     """Prometheus text -> {"lag": {loop: {"edges": [(le_us, cumulative)], "count", "sum_us", "max_us"}}, "gauges": {}}."""
     lag: dict[str, dict[str, Any]] = {}
     gauges: dict[str, float] = {}
+    p1: dict[str, list[tuple[float, int]]] = {}  # P1 probe: "stage/cls" -> cumulative (le_us, count)
     for line in text.splitlines():
         if line.startswith("#"):
             continue
@@ -343,6 +344,12 @@ def parse_metrics(text: str) -> dict[str, dict[str, Any]]:
             continue
         name, labels, value = m.group(1), m.group(2) or "", m.group(3)
         lab = dict(re.findall(r'(\w+)="([^"]*)"', labels))
+        if name == "xapiand_p1_us_bucket":
+            le = lab["le"]
+            p1.setdefault(f"{lab['stage']}/{lab['cls']}", []).append((math.inf if le == "+Inf" else float(le), int(float(value))))
+            continue
+        if name.startswith("xapiand_p1_"):
+            continue
         if name.startswith("xapiand_reactor_lag") and "loop" in lab:
             loop = lag.setdefault(lab["loop"], {"edges": [], "count": 0, "sum_us": 0.0, "max_us": 0.0})
             if name == "xapiand_reactor_lag_seconds_bucket":
@@ -357,7 +364,34 @@ def parse_metrics(text: str) -> dict[str, dict[str, Any]]:
                 loop["max_us"] = float(value) * 1e6
         else:
             gauges[name] = float(value) if value not in ("NaN", "+Inf", "-Inf") else math.nan
-    return {"lag": lag, "gauges": gauges}
+    return {"lag": lag, "gauges": gauges, "p1": p1}
+
+
+def p1_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    """P1 probe: per stage/cls between two scrapes, n and p50/p90/p99/p99.9 (log2 bucket upper edges, us)."""
+    out: dict[str, Any] = {}
+    for key, post in after.get("p1", {}).items():
+        pre = dict(before.get("p1", {}).get(key, []))
+        cnt = []
+        prev_post = prev_pre = 0
+        for edge, cum in post:
+            pc = pre.get(edge, prev_pre)
+            cnt.append((edge, (cum - prev_post) - (pc - prev_pre)))
+            prev_post, prev_pre = cum, pc
+        total = sum(c for _, c in cnt)
+        if total <= 0:
+            continue
+
+        def q(frac: float, d: list[tuple[float, int]] = cnt, t: int = total) -> float:
+            need, seen = max(1, math.ceil(frac * t)), 0
+            for edge, c in d:
+                seen += c
+                if seen >= need:
+                    return edge
+            return math.inf
+
+        out[key] = {"n": total, "p50": q(0.5), "p90": q(0.9), "p99": q(0.99), "p999": q(0.999), "hist": [c for _, c in cnt]}
+    return out
 
 
 def lag_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
@@ -399,7 +433,7 @@ def lag_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
 async def scrape(conn: Conn) -> dict[str, Any]:
     status, data = await conn.request("GET", "/:metrics")
     if status != 200:
-        return {"lag": {}, "gauges": {}}
+        return {"lag": {}, "gauges": {}, "p1": {}}
     return parse_metrics(data.decode("utf-8", "replace"))
 
 
@@ -908,6 +942,7 @@ async def phase(
         "heavy_clients": heavy_clients if heavy else 0,
         "restore_index": ctx.restore_index if heavy else None,
         "lag": lag_delta(before, after) if before["lag"] and after["lag"] else None,
+        "p1": p1_delta(before, after),
         "peaks": {
             "inflight": after["gauges"].get("xapiand_admission_inflight_peak"),
             "demoted": after["gauges"].get("xapiand_scheduler_demoted_peak"),

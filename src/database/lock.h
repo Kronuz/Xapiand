@@ -32,6 +32,7 @@
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager
 #include "engine/error.h"       // for engine::Error
+#include "p1_probe.h"           // P1 diagnostic probes
 
 
 // A use of an index: it pins the index (docs/design/x-pool.md D3) and makes the Shard through which the index is
@@ -76,7 +77,9 @@ public:
 			}
 			auto& pool = *manager->database_pool;
 			try {
+				const auto p1_t0 = p1::clock::now();
 				_shard.emplace(co_await pool.pin(endpoint, flags, cancel), flags, cancel);
+				p1::add(p1::pin_wait, p1::cls_of(endpoint.path), p1_t0, p1::clock::now());
 			} catch (const engine::Error& error) {
 				if (error.kind != engine::errc::not_found) {
 					throw;

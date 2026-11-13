@@ -83,6 +83,7 @@
 #include "serialise.h"                      // for Serialise::boolean
 #include "xapiand_strings.hh"                       // for strings::from_delta
 #include "system.hh"                        // for check_compiler, check_OS, check_architecture
+#include "p1_probe.h"           // P1 diagnostic probes
 
 
 // #undef L_DEBUG
@@ -828,6 +829,7 @@ metrics_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
+	server_info += p1::text();
 	emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size());
 	co_return;
 }
@@ -943,6 +945,8 @@ write_document_view(Request& request)
 	auto document_id = request.path_parser.get_id();
 
 	request.processing = std::chrono::steady_clock::now();
+	const auto p1_cls = p1::cls_of(request.endpoints.empty() ? std::string_view{} : std::string_view(request.endpoints[0].path));
+	p1::add(p1::put_resolve, p1_cls, request.begins, request.processing);
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
@@ -1006,6 +1010,12 @@ write_document_view(Request& request)
 		}
 
 		write_http_response(request, document_id.empty() ? HTTP_STATUS_CREATED : HTTP_STATUS_NO_CONTENT, MsgPack(), location);
+	}
+
+	p1::add(p1::put_index, p1_cls, request.processing, request.ready);
+	if (request.ends != p1::clock::time_point{}) {
+		p1::add(p1::put_tail, p1_cls, request.ready, request.ends);
+		p1::add(p1::put_total, p1_cls, request.begins, request.ends);
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
@@ -1857,6 +1867,8 @@ retrieve_document_view(Request& request)
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
 	request.processing = std::chrono::steady_clock::now();
+	const auto p1_cls = p1::cls_of(request.endpoints.empty() ? std::string_view{} : std::string_view(request.endpoints[0].path));
+	p1::add(p1::get_resolve, p1_cls, request.begins, request.processing);
 
 	// Open database
 	DatabaseHandler db_handler;
@@ -1869,10 +1881,14 @@ retrieve_document_view(Request& request)
 	// Retrive document ID
 	engine::docid did;
 	did = co_await db_handler.get_docid(id);
+	const auto p1_docid = p1::clock::now();
+	p1::add(p1::get_docid, p1_cls, request.processing, p1_docid);
 
 	// Retrive document data
 	auto document = db_handler.get_document(did);
 	auto document_data = co_await document.get_data();
+	const auto p1_data = p1::clock::now();
+	p1::add(p1::get_data, p1_cls, p1_docid, p1_data);
 	const Data data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 	auto selector_mime_type = mime_type(selector);
 	auto accepted = data.get_accepted(request.accept_set, selector_mime_type);
@@ -1938,6 +1954,11 @@ retrieve_document_view(Request& request)
 
 		request.response_ct_type = ct_type;
 		emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response_blob, "", ct_type.to_string());
+	}
+
+	if (request.ends != p1::clock::time_point{}) {
+		p1::add(p1::get_tail, p1_cls, p1_data, request.ends);
+		p1::add(p1::get_total, p1_cls, request.begins, request.ends);
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();

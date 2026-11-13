@@ -79,6 +79,8 @@ struct ChoreAwaiter final : WorkItem {
 	std::exception_ptr error;
 	std::coroutine_handle<> handle;
 	task::scheduler_ref sched;
+	unsigned p1_base = p1::chore_queue_query;
+	p1::clock::time_point p1_post{}, p1_end{};
 
 	ChoreAwaiter(WorkGroup& group_, std::atomic<std::size_t>& awaited_, engine::ChoreClass chore_class, std::function<void()> fn_) : group(group_), awaited(awaited_), fn(std::move(fn_)) {
 		run = &ChoreAwaiter::invoke;
@@ -87,6 +89,7 @@ struct ChoreAwaiter final : WorkItem {
 			case engine::ChoreClass::flush: cls = WorkClass::flush; break;
 			case engine::ChoreClass::merge: cls = WorkClass::merge; break;
 		}
+		p1_base = chore_class == engine::ChoreClass::query ? p1::chore_queue_query : chore_class == engine::ChoreClass::flush ? p1::chore_queue_flush : p1::chore_queue_merge;
 	}
 
 	bool await_ready() const noexcept { return false; }
@@ -96,10 +99,14 @@ struct ChoreAwaiter final : WorkItem {
 		sched = task::current();
 		assert(sched && "a chore is awaited by a task that runs on a scheduler");
 		awaited.fetch_add(1, std::memory_order_relaxed);
+		p1_post = p1::clock::now();
 		group.post(*this);  // the chore may finish, and resume h, before this returns
 	}
 
 	void await_resume() {
+		if (p1_end != p1::clock::time_point{}) {
+			p1::add(static_cast<p1::Stage>(p1_base + 2), p1::other, p1_end, p1::clock::now());
+		}
 		if (error) {
 			std::rethrow_exception(error);
 		}
@@ -107,11 +114,16 @@ struct ChoreAwaiter final : WorkItem {
 
 	static void invoke(WorkItem* item) noexcept {
 		auto* self = static_cast<ChoreAwaiter*>(item);
+		const auto p1_start = p1::clock::now();
 		try {
 			self->fn();
 		} catch (...) {
 			self->error = std::current_exception();
 		}
+		const auto p1_end = p1::clock::now();
+		p1::add(static_cast<p1::Stage>(self->p1_base), p1::other, self->p1_post, p1_start);
+		p1::add(static_cast<p1::Stage>(self->p1_base + 1), p1::other, p1_start, p1_end);
+		self->p1_end = p1_end;
 		self->resume();
 	}
 
@@ -273,7 +285,7 @@ Turn::Turn(task::async_mutex::guard guard, int* held, prospect::index* index) no
 
 
 Turn::Turn(Turn&& other) noexcept
-	: guard_(std::move(other.guard_)), held_(std::exchange(other.held_, nullptr)), index_(std::exchange(other.index_, nullptr))
+	: guard_(std::move(other.guard_)), held_(std::exchange(other.held_, nullptr)), index_(std::exchange(other.index_, nullptr)), p1_t_(std::exchange(other.p1_t_, {})), p1_cls_(other.p1_cls_)
 {
 }
 
@@ -286,6 +298,8 @@ Turn::operator=(Turn&& other) noexcept
 		guard_ = std::move(other.guard_);
 		held_ = std::exchange(other.held_, nullptr);
 		index_ = std::exchange(other.index_, nullptr);
+		p1_t_ = std::exchange(other.p1_t_, {});
+		p1_cls_ = other.p1_cls_;
 	}
 	return *this;
 }
@@ -300,6 +314,10 @@ Turn::~Turn()
 void
 Turn::release() noexcept
 {
+	if (guard_ && p1_t_ != p1::clock::time_point{}) {
+		p1::add(p1::turn_hold, p1_cls_, p1_t_, p1::clock::now());
+		p1_t_ = {};
+	}
 	// The holder checks the index in while it still holds the turn: a check-in is safe only while no thread makes
 	// the owner's lease-less reads, which a writer makes under its turn (strata's checkout contract, x-pool D5).
 	if (auto* index = std::exchange(index_, nullptr); index && guard_) {
@@ -334,6 +352,8 @@ ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 
 	task::async_mutex::guard guard;
 	int* held = nullptr;
+	const auto p1_cls = p1::cls_of(path);
+	const auto p1_t0 = p1::clock::now();
 	if (auto* host = engine::Host::current()) {
 		const auto at = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(database_pool.turn_timeout_.load(std::memory_order_relaxed)));
 		task::deadline<engine::Host> expiry(*host, at, cancel);
@@ -354,7 +374,10 @@ ShardEndpoint::take_turn(int flags, task::cancel_token cancel)
 		assert(*held == 0 && "a task holds one index's turn at most");
 		++*held;
 	}
-	co_return Turn(std::move(guard), held, index_);
+	p1::add(p1::turn_wait, p1_cls, p1_t0, p1::clock::now());
+	Turn p1_turn(std::move(guard), held, index_);
+	p1_turn.p1_mark(p1_cls);
+	co_return std::move(p1_turn);
 }
 
 
@@ -364,10 +387,14 @@ ShardEndpoint::fresh(int flags, task::cancel_token cancel)
 	if (!engine_->dirty()) {
 		co_return;
 	}
+	const auto p1_t0 = p1::clock::now();
 	auto mine = co_await take_turn(flags, std::move(cancel));
 	if (engine_->dirty()) {
+		const auto p1_t1 = p1::clock::now();
 		co_await engine_->refresh();
+		p1::add(p1::refresh_run, p1::cls_of(path), p1_t1, p1::clock::now());
 	}
+	p1::add(p1::fresh_dirty, p1::cls_of(path), p1_t0, p1::clock::now());
 }
 
 
