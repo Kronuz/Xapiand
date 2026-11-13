@@ -3850,6 +3850,8 @@
     "exact-id-keys": {
       "accepted": {},
       "after": [],
+      "base": "b37b42b0498ac975bafda90470806c960455e6ee",
+      "branch": "quest/xapiand/exact-id-keys",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -3883,9 +3885,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-13T13:15:04"
+      "updated": "2026-11-13T13:15:28",
+      "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
     },
     "f14-step1": {
       "accepted": {},
