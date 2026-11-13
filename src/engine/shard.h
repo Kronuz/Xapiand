@@ -57,10 +57,6 @@ struct WriteArgs {
 	// Empty accepts any.
 	std::optional<rev> expected_version;
 
-	// For replace_by_key: the id a new document takes when no document holds it; 0 numbers it after
-	// the last.
-	docid new_did = 0;
-
 	// For replace: the keyed document must still be at the id. When it is not, the write is checked as one to no
 	// document (an expected version answers version_conflict) and answers errc::doc_not_found instead of creating it.
 	bool must_exist = false;

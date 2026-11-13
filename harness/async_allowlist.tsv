@@ -22,6 +22,7 @@ src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs 
 src/database/shard.cc	pool	ShardEndpoint::storage_commit	allow	1	the definition: the commit is chores_.run(flush, ...) (D7)
 src/database/shard.cc	pool	writable_storage->	allow	11	the blob writes, reads and rollovers run in flush chores of the entry or the upload (D9)
 src/database/shard.cc	sync_wait	entry\.do_replace	allow	2	a RESTORE's apply slice writes in a flush chore on a WorkPool worker, in the index's turn with the engine's chores inline: chore code, never a request thread (x7-loop-fix-c)
+src/database/shard.cc	sync_wait	engine_->metadata\(std::string\(ID_HIGH_METADATA\)\)	allow	1	the open chore reads the id counter on a WorkPool worker before the replay: strata's metadata() finds the key in the open view's map and never suspends, no I/O (one-id)
 src/database/shard.cc	sync_wait	.	allow	7	the open chore replays the WAL and opens the engine on a WorkPool worker, with chores inline (D4, D8): chore code, never a request thread
 src/database/shard.cc	wal	DatabaseWAL wal\(&target\)	allow	1	the open chore replays the log on a WorkPool worker (D4, D8)
 src/engine/census.cc	file	.	compiled_out	4	ENGINE_CENSUS is OFF in gate builds (D1)

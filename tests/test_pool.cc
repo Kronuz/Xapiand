@@ -1775,6 +1775,78 @@ void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	CHECK_EQ(indexes.pool.catalog().stats().opens, 2u);
 }
 
+// A document with an `_id` and an `n` in its stored data, as a request's prepare leaves it: `id` 0 for a new numeric
+// id the shard issues.
+engine::Document numbered(std::uint64_t id, const std::string& n) {
+	engine::Document doc;
+	doc.add_term(doc.field("f"), n, 1);
+	Data data;
+	data.set_obj(MsgPack({{"_id", id}, {"n", n}}));
+	data.flush();
+	doc.set_data(data.serialise());
+	return doc;
+}
+
+// Writes a new numeric id's document: the id the shard issued.
+std::uint64_t issue(Shard& shard, const std::string& n) {
+	try {
+		const auto info = engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, n)));
+		std::fprintf(stderr, "  issued %llu for %s\n", static_cast<unsigned long long>(numeric_id(info.term)), n.c_str());
+		return numeric_id(info.term);
+	} catch (const engine::Error& error) {
+		std::fprintf(stderr, "  issuing %s threw %s\n", n.c_str(), error.reason().c_str());
+		throw;
+	}
+}
+
+// The id counter (docs/design/one-id.md): a new numeric id is issued above every numeric id the shard holds or
+// issued. An explicit id advances it, a commit persists it, and a log replayed by the next open raises it past the
+// writes the last commit missed; each document keeps the id it was written with.
+void test_the_id_counter_persists_replays_and_advances() {
+	Watchdog watchdog("the id counter persists, replays and advances", 60s);
+	strata::faultfs::filesystem fs;
+	const auto path = fresh("id_counter");
+	std::map<std::uint64_t, std::string> written;   // id -> n
+	{
+		FaultyIndexes indexes(fs);
+		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
+		written[issue(shard, "a")] = "a";
+		written[issue(shard, "b")] = "b";
+		engine::sync_wait(shard.replace_document_term(numeric_key(10), numbered(10, "ten")));
+		written[10] = "ten";
+		written[issue(shard, "c")] = "c";
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+	}
+	{
+		FaultyIndexes indexes(fs);   // a clean reopen: the counter comes from the commit
+		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
+		written[issue(shard, "d")] = "d";
+		written[issue(shard, "e")] = "e";   // logged, not committed
+		fs.add_fault({strata::faultfs::op::sync});   // the shutdown's commit fails
+	}
+	fs.clear_faults();
+	{
+		FaultyIndexes indexes(fs);   // the log replays d and e, past the committed counter
+		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
+		written[issue(shard, "f")] = "f";
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+		const std::map<std::uint64_t, std::string> expected{{1, "a"}, {2, "b"}, {10, "ten"}, {11, "c"}, {12, "d"}, {13, "e"}, {14, "f"}};
+		CHECK_TRUE(written == expected);
+		for (const auto& [id, n] : expected) {
+			const auto did = engine::sync_wait(shard.written_key(numeric_key(id)));
+			CHECK_TRUE(did != 0);
+			if (did != 0) {
+				const auto view = engine::sync_wait(shard.get_view(did));
+				auto obj = Data(view->data()).get_obj();
+				CHECK_EQ(obj["n"].str(), n);
+				CHECK_EQ(obj["_id"].u64(), id);   // the issued id is the stored one
+				CHECK_EQ(view->version(), 1u);   // written once: no write landed on another's id
+			}
+		}
+		CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), expected.size());
+	}
+}
+
 // The turn's end checks the index in (D5, F6): a background merge that finished is published when the next turn is
 // let go, with no write and no commit after it.
 void test_the_turns_end_publishes_a_finished_merge() {
@@ -2385,6 +2457,7 @@ int main(int argc, char** argv) {
 		{"test_a_repin_after_a_reopen_is_not_a_use", test_a_repin_after_a_reopen_is_not_a_use},
 		{"test_a_cold_pin_reads_what_the_log_replays", test_a_cold_pin_reads_what_the_log_replays},
 		{"test_a_fenced_index_is_replaced_and_replays_its_log", test_a_fenced_index_is_replaced_and_replays_its_log},
+		{"test_the_id_counter_persists_replays_and_advances", test_the_id_counter_persists_replays_and_advances},
 		{"test_the_turns_end_publishes_a_finished_merge", test_the_turns_end_publishes_a_finished_merge},
 		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},

@@ -224,6 +224,11 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool modified;              // applied since the last commit
 	std::atomic<std::uint64_t> applied_;    // the writes applied so far (a position of the commits)
 	std::uint64_t committed_ = 0;           // the writes the last commit covered
+	// The id counter (docs/design/one-id.md): the largest numeric id the shard holds or issued, and whether it moved
+	// since the last commit, which persists it.
+	std::uint64_t id_high_ = 0;
+	bool id_high_moved_ = false;
+	void raise_id_high(std::uint64_t id) noexcept;
 #ifdef XAPIAND_DATA_STORAGE
 	std::unique_ptr<DataStorage> writable_storage;
 	// The next volume number nobody has: the shared writer's rollover and each streamed upload take theirs from

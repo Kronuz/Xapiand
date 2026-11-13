@@ -25,6 +25,8 @@
 
 #include <algorithm>              // for std::move
 #include <cassert>                // for assert
+#include <cmath>                  // for std::floor
+#include <cstdint>                // for std::uint64_t
 #include <optional>                // for std::optional
 #include <unistd.h>                // for unlink
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
@@ -49,6 +51,7 @@
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
+#include "serialise.h"             // for Serialise::floating
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
@@ -82,13 +85,6 @@
 #define DATA_STORAGE_PATH "docdata."
 
 
-// The numbering of a document whose id is new: which shard it lands in, out of how many.
-struct NumericId {
-	size_t shard_num;
-	size_t n_shards;
-};
-
-
 // The version a write requires, as its document asks for it in the version slot.
 static inline std::optional<engine::rev>
 expected_version(const engine::Document& doc)
@@ -101,40 +97,14 @@ expected_version(const engine::Document& doc)
 }
 
 
-// Completes a document the engine is about to write: embeds its numeric id (when it is new)
-// and its new version in the stored data, compressing the record once, and clears the shards slot.
+// Completes a document the engine is about to write: embeds its new version in the stored data, compressing the
+// record once, and clears the shards slot.
 static void
-finalise_write(engine::Document& doc, engine::WriteResult& info, const std::optional<NumericId>& numeric)
+finalise_write(engine::Document& doc, engine::WriteResult& info)
 {
 	bool data_modified = false;
 	Data data(doc.get_data());
 	auto data_obj = data.get_obj();
-	if (numeric) {
-		auto did = static_cast<double>((info.did - 1) * numeric->n_shards + numeric->shard_num + 1);  // unshard number and shard docid to docid in multi-db
-		auto did_serialised = sortable_serialise(did);
-		info.term = document_key(did_serialised, 'N');
-		doc.set_key(info.term);
-		doc.add_value(DB_SLOT_ID, did_serialised);
-		// Set id inside serialized object:
-		auto it = data_obj.find(ID_FIELD_NAME);
-		if (it != data_obj.end()) {
-			auto& value = it.value();
-			switch (value.get_type()) {
-				case MsgPack::Type::POSITIVE_INTEGER:
-					value = static_cast<uint64_t>(did);
-					break;
-				case MsgPack::Type::NEGATIVE_INTEGER:
-					value = static_cast<int64_t>(did);
-					break;
-				case MsgPack::Type::FLOAT:
-					value = static_cast<double>(did);
-					break;
-				default:
-					break;
-			}
-			data_modified = true;
-		}
-	}
 	auto it = data_obj.find(VERSION_FIELD_NAME);
 	if (it != data_obj.end()) {
 		auto& value = it.value();
@@ -387,6 +357,76 @@ ShardEndpoint::note_failure(const engine::Error& error) noexcept
 }
 
 
+// The numeric id a document's stored data names (its _id, an integer from 1 to MAX_NUMERIC_ID), else 0.
+static std::uint64_t
+stored_numeric_id(const engine::Document& doc)
+{
+	Data data(doc.get_data());
+	const auto obj = data.get_obj();
+	const auto it = obj.find(ID_FIELD_NAME);
+	if (it == obj.end()) {
+		return 0;
+	}
+	const auto& value = it.value();
+	switch (value.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return value.u64() <= MAX_NUMERIC_ID ? value.u64() : 0;
+		case MsgPack::Type::FLOAT: {
+			const auto f = value.f64();
+			return f >= 1 && f <= static_cast<double>(MAX_NUMERIC_ID) && f == std::floor(f) ? static_cast<std::uint64_t>(f) : 0;
+		}
+		default:
+			return 0;
+	}
+}
+
+
+// Writes an issued numeric id into a new document: its stored `_id` (in its placeholder's type), its id slot and its
+// key, which is the one a PUT of that id names, so the log and the stored data carry the id too. The record stays raw
+// for finalise_write to compress once.
+static std::string
+issue_id(engine::Document& doc, std::uint64_t issued)
+{
+	Data data(doc.get_data());
+	auto obj = data.get_obj();
+	bool floating = false;
+	if (auto it = obj.find(ID_FIELD_NAME); it != obj.end()) {
+		auto& value = it.value();
+		switch (value.get_type()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+				value = issued;
+				break;
+			case MsgPack::Type::NEGATIVE_INTEGER:
+				value = static_cast<int64_t>(issued);
+				break;
+			case MsgPack::Type::FLOAT:
+				value = static_cast<double>(issued);
+				floating = true;
+				break;
+			default:
+				break;
+		}
+		data.set_obj(obj, false);
+		data.flush();
+		doc.set_data(data.serialise());
+	}
+	auto key = floating ? document_key(Serialise::floating(static_cast<long double>(issued)), 'N') : numeric_key(issued);
+	doc.set_key(key);
+	doc.add_value(DB_SLOT_ID, key.substr(1));
+	return key;
+}
+
+
+void
+ShardEndpoint::raise_id_high(std::uint64_t id) noexcept
+{
+	if (id > id_high_) {
+		id_high_ = id;
+		id_high_moved_ = true;
+	}
+}
+
+
 // What the log replays into while the index is opened: the engine alone, with chores inline.
 class ReplayTarget final : public WalTarget {
 	ShardEndpoint& entry_;
@@ -415,7 +455,9 @@ public:
 	}
 
 	void replace_document(engine::docid did, engine::Document&& doc, bool commit_, bool wal, bool version) override {
+		const auto id = stored_numeric_id(doc);
 		engine::sync_wait(entry_.do_replace(engine_, engine::inline_chores(), flags_, did, std::move(doc), wal, version));
+		entry_.raise_id_high(id);  // a write the last commit missed advances the counter again
 		if (commit_) {
 			commit(wal);
 		}
@@ -475,6 +517,12 @@ ShardEndpoint::open_blocking(prospect::index& index)
 	}
 	set_revision(engine_->revision());
 	modified.store(false, std::memory_order_relaxed);
+	{
+		// The id counter as the last commit left it; the replay below raises it past the writes that commit missed.
+		const auto stored = engine::sync_wait(engine_->metadata(std::string(ID_HIGH_METADATA)));
+		id_high_ = stored.empty() ? 0 : MsgPack::unserialise(stored).u64();
+		id_high_moved_ = false;
+	}
 
 #ifdef XAPIAND_DATA_STORAGE
 	writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
@@ -663,7 +711,11 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 	co_await storage_commit(chores_);
 #endif  // XAPIAND_DATA_STORAGE
 	const auto prior_revision = eng.revision();
+	if (id_high_moved_) {
+		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialise());  // durable with its documents
+	}
 	co_await eng.commit(engine::Transaction::none);
+	id_high_moved_ = false;
 	modified.store(false, std::memory_order_relaxed);
 	const auto current_revision = eng.revision();
 	if (prior_revision == current_revision) {
@@ -708,7 +760,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 #endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteArgs args;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, {}); };
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
 	} else {
@@ -767,7 +819,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 
 	engine::WriteArgs args;
 	args.must_exist = must_exist;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
 	} else {
@@ -816,6 +868,24 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
+	std::string key = term;
+	std::uint64_t issued = 0;
+	if (term == NEW_NUMERIC_KEY) {
+		// A new numeric id: issued from the counter, in a bucket this shard owns of the shards the handler placed it in.
+		const auto shards = doc.get_value(DB_SLOT_SHARDS);
+		const char *p = shards.data();
+		const char *p_end = p + shards.size();
+		const size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+		const size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
+		const std::uint64_t floor = p == p_end ? 0 : unserialise_length(&p, p_end);  // the other shards' counters
+		issued = next_auto_id(std::max(id_high_, floor), shard_num, n_shards);
+		if (issued == 0) {
+			throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
+		}
+		key = issue_id(doc, issued);  // before the blobs' push, whose record the log keeps
+		raise_id_high(issued);  // taken even if the write fails: a retry gets the next one
+	}
+
 #ifdef XAPIAND_DATA_STORAGE
 	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
 	if (!pushed.first.empty()) {
@@ -831,32 +901,21 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	} else {
 		doc.add_value(DB_SLOT_VERSION, "");
 	}
-
-	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
+	if (issued != 0 && !args.expected_version) {
+		args.expected_version = 0;  // a counter behind an existing id conflicts, never overwrites
+	}
 
 	engine::WriteResult info;
-	info.term = term;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+	info.term = key;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		const char *p = n_shards_ser.data();
-		const char *p_end = p + n_shards_ser.size();
-		size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-		size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-		if (term == NEW_NUMERIC_KEY) {
-			// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
-			args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
-			info = co_await eng.add(doc, args);
-		} else {
-			// Found by its key; a new numeric id takes the document id it names when that is free, so the ids the
-			// shard numbers (above its last document id) are never taken.
-			if (const auto did = numeric_docid(term); did != 0 && (did - 1) % n_shards == shard_num) {
-				args.new_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-			}
-			info = co_await eng.replace_by_key(term, doc, args);
-		}
+		info = co_await eng.replace_by_key(key, doc, args);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
+	}
+	if (issued == 0) {
+		raise_id_high(numeric_id(key));  // an explicit numeric id advances the counter past it
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
@@ -1362,12 +1421,13 @@ Shard::written_key(const std::string& term)
 }
 
 
-task::task<engine::doccount>
-Shard::written_count()
+task::task<std::pair<engine::doccount, std::uint64_t>>
+Shard::written_load()
 {
 	co_await ready();
 	auto turn = co_await endpoint().take_turn(flags, cancel);
-	co_return co_await endpoint().engine().written_count();
+	auto& entry = endpoint();
+	co_return std::make_pair(co_await entry.engine().written_count(), entry.id_high_);
 }
 
 

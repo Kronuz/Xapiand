@@ -270,11 +270,17 @@ current document version matches the passed `version` in the query param (or the
 A write is directed to one of the index's shards by its ID (an index has 5
 shards by default, see [Create Index](/Xapiand/reference-guide/indexes/create-api)):
 
-- A document that exists is written in the shard that holds it.
-- A new integer ID `k` from 1 to 4,294,967,294 goes to shard `(k - 1) mod n` of
-  the `n` shards, where it takes its own document number when that is free.
-- Any other new ID goes to the shard the hash of its term names (FNV-1a).
-- A `POST` to an index whose IDs are integers goes to the least used shard,
-  which numbers the new ID after its last document.
+- An ID goes to one of 1,024 fixed buckets: an integer ID `k` from 1 to 2^32 - 1
+  to bucket `(k - 1) mod 1024`, any other ID to the FNV-1a hash of its term
+  modulo 1,024. Bucket `b` belongs to shard `b mod n` of the `n` shards.
+- A document that exists is written in the shard that holds it; a new one in the
+  shard its bucket belongs to.
+- A `POST` to an index whose IDs are integers goes to the least used shard. It
+  issues the smallest integer ID above every integer ID in the index whose bucket
+  it owns, so new IDs never take an ID that was written before. With one shard
+  they run 1, 2, 3, and so on, up to 2^32 - 1; past the last one, a `POST` fails.
+
+An ID is only an ID: the document numbers each shard keeps are its own, in the
+order documents arrive, and never derive from an ID.
 
 Source: `docs/mechanisms/document-ids-and-versions.md`.

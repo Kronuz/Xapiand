@@ -70,6 +70,7 @@
 #include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
+#include "serialise.h"
 #include "sortable_serialise.h"
 #include "engine/chores.h"
 #include "engine/host.h"
@@ -94,6 +95,7 @@ struct PoolTestAccess {
 		entry.engine_->use_chores(entry.chores.get());
 	}
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
+	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
 };
 
 namespace {
@@ -1605,7 +1607,7 @@ static std::size_t requests_inflight() {
 
 // Ids round trip through PUT, GET, SEARCH and DELETE, each touching only its own document: `ids` in the index at
 // `path`, whose first id sets the type of its ids, each written once with its `n` the id's text; `literal` is an id
-// as a JSON value. With `numbered`, a POST then adds a document whose id the shard numbers, which takes none of them.
+// as a JSON value. With `numbered`, a POST then adds a document whose id the shard issues, which takes none of them.
 static void ids_round_trip(const std::string& path, const std::vector<std::string>& ids, std::string (*literal)(const std::string&), bool numbered) {
 	for (const auto& id : ids) {
 		CHECK_EQ(call("PUT", path + id + "?commit", R"({"n":")" + id + R"("})").status, 204);
@@ -1625,6 +1627,9 @@ static void ids_round_trip(const std::string& path, const std::vector<std::strin
 		const auto got = call("GET", path + all[i]);
 		CHECK_EQ(got.status, 200);
 		CHECK_EQ(text_of(got, "n"), n_of(i));
+		if (text_of(got, "_id") != all[i]) {
+			std::fprintf(stderr, "  %s%s: GET gives _id %s\n", path.c_str(), all[i].c_str(), text_of(got, "_id").c_str());
+		}
 		CHECK_EQ(text_of(got, "_id"), all[i]);
 		CHECK_EQ(version_of(got), 1);   // written once: no other write landed on it
 		const auto found = call("SEARCH", path + "?volatile", R"({"_query":{"_id":)" + literal(all[i]) + "}}");
@@ -1645,23 +1650,22 @@ static void ids_round_trip(const std::string& path, const std::vector<std::strin
 static std::string number(const std::string& id) { return id; }
 static std::string quoted(const std::string& id) { return "\"" + id + "\""; }
 
-// A document id 0 is the document 0: it was the id a new numeric id is numbered from, so a PUT of id 0 landed on
-// the next free document id, the id of another document. Negative, the largest, and those beside them are stored
-// as themselves too, and a keyword id "0" or "00" is its own. The largest docid as an id leaves the shard ids to
-// number after it.
+// A document id 0 is the document 0, not a new id. Negative, the largest, and those beside them are stored as
+// themselves too, and a keyword id "0" or "00" is its own. An id above the docids, such as 2^32 - 1, still leaves
+// new ids to issue after it.
 static void test_document_ids_are_themselves() {
 	Watchdog watchdog("document ids are themselves", 240s);
 	for (const int shards : shard_counts) {
 		const auto at = "_s" + std::to_string(shards);
 		create_index("ids_int" + at, shards);
-		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967295", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
+		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967000", "4294967297", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
 		create_index("ids_pos" + at, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
 		ids_round_trip("/ids_pos" + at + "/", {"0", "1", "18446744073709551615"}, number, true);
 		create_index("ids_kw" + at, shards);
 		ids_round_trip("/ids_kw" + at + "/", {"a", "0", "00", "-1"}, quoted, false);   // a first: the ids are keywords
 
-		// An id names the document id it would take when that is free: a new id the shard numbers is not it. One
-		// shard numbers it after the id; more shards put it in the least used one, which numbers it there.
+		// A new id is issued above every numeric id the shards hold: one shard issues the next after it; more shards
+		// put it in the least used one, which issues it from a bucket it owns.
 		const auto seq = "/ids_seq" + at + "/";
 		create_index("ids_seq" + at, shards);
 		CHECK_EQ(call("PUT", seq + "2?commit", R"({"n":"2"})").status, 204);
@@ -1948,7 +1952,7 @@ static void test_an_existing_id_written_again_lands_on_its_shard() {
 		auto obj = MsgPack{{"_id", id}, {"n", "first"}};
 		auto prepared = engine::sync_wait(db.prepare_document(obj, 0));
 		const auto term = std::get<0>(prepared);
-		const std::size_t hashed = key_placement_hash(term) % shards;
+		const std::size_t hashed = id_shard(term, shards);
 		const std::size_t held = (hashed + 1 + static_cast<std::size_t>(i) % (shards - 1)) % shards;   // any shard but the hash's
 		{
 			auto pin = pin_index(*manager()->database_pool, endpoints[held].path, WRITE_QUIET);
@@ -1987,7 +1991,7 @@ struct OffHashId {
 		CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
 		endpoints = endpoints_of(index);
 		term = std::get<0>(prepare("first"));
-		hashed = key_placement_hash(term) % shards;
+		hashed = id_shard(term, shards);
 		off = hashed == 1 ? 2 : 1;   // not the hash's, and not shard 0, which a request's schema reads
 		seat(off, "first");
 		CHECK(holds(off));
@@ -2196,6 +2200,378 @@ static void test_new_numeric_ids_spread_over_the_shards_while_buffered() {
 	const auto [fewest, most] = std::minmax_element(per.begin(), per.end());
 	CHECK_LE(*most - *fewest, 1);
 	CHECK_EQ(std::accumulate(per.begin(), per.end(), 0), 4 * shards);
+}
+
+// ---- one id (docs/design/one-id.md): ids route by bucket, the shards issue numeric ids, docids stay dense ----
+
+// The shard whose index holds the document with this key, by a lookup in each; shards.size() when none does.
+static std::size_t holder_of(const Endpoints& endpoints, const std::string& term) {
+	std::size_t holder = endpoints.size();
+	for (std::size_t s = 0; s < endpoints.size(); ++s) {
+		try {
+			if (engine::sync_wait(DatabaseHandler(Endpoints(endpoints[s]), DB_OPEN).get_docid_term(term)) != 0) {
+				CHECK_EQ(holder, endpoints.size());   // on one shard only
+				holder = s;
+			}
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+		}
+	}
+	return holder;
+}
+
+// Replaces every shard's open index by a fresh open of what its last commit left, as a restart does.
+static void reopen_index(const std::string& index) {
+	const auto before = manager()->database_pool->catalog().stats().replaces;
+	const auto endpoints = endpoints_of(index);
+	for (const auto& endpoint : endpoints) {
+		pin_index(*manager()->database_pool, endpoint.path, WRITE).reopen();
+	}
+	CHECK(eventually([&] { return manager()->database_pool->catalog().stats().replaces >= before + endpoints.size(); }));
+}
+
+// POSTs a document with `n` and answers its new id (0 when the write failed).
+static std::uint64_t post(const std::string& path, const std::string& n) {
+	const auto posted = call("POST", path + "?commit&echo", R"({"n":")" + n + R"("})");
+	CHECK(success(posted));
+	const auto id = field_of(posted, "_id");
+	return id.is_number() ? id.u64() : 0;
+}
+
+// Every segment file of a shard's index: its docids kind (strata docids.hh: 0 contiguous, 1 monotone, 2 permuted),
+// documents and docid bounds, read from its footer and table of contents (strata format.hh).
+struct SegmentDocids {
+	int kind = -1;
+	std::uint64_t count = 0;
+	std::uint64_t min = 0;
+	std::uint64_t max = 0;
+};
+
+static std::vector<SegmentDocids> segment_docids(const Endpoint& endpoint) {
+	auto dir = std::filesystem::path(endpoint.path) / "strata";
+	if (dir.is_relative()) {
+		dir = std::filesystem::path(Endpoint::cwd) / dir;
+	}
+	const auto u16 = [](const std::string& b, std::size_t at) { std::uint16_t v; std::memcpy(&v, b.data() + at, 2); return v; };
+	const auto u32 = [](const std::string& b, std::size_t at) { std::uint32_t v; std::memcpy(&v, b.data() + at, 4); return v; };
+	const auto u64 = [](const std::string& b, std::size_t at) { std::uint64_t v; std::memcpy(&v, b.data() + at, 8); return v; };
+	std::vector<SegmentDocids> segments;
+	std::error_code ec;
+	for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+		const auto name = entry.path().filename().string();
+		if (name.rfind("seg-", 0) != 0 || !name.ends_with(".sx")) {
+			continue;
+		}
+		std::FILE* f = std::fopen(entry.path().c_str(), "rb");
+		if (f == nullptr) {
+			continue;   // merged away and removed since the listing
+		}
+		std::string b;
+		char chunk[65536];
+		for (std::size_t got; (got = std::fread(chunk, 1, sizeof chunk, f)) > 0;) {
+			b.append(chunk, got);
+		}
+		std::fclose(f);
+		constexpr std::size_t footer = 56;
+		if (b.size() < 36 + footer) {
+			continue;
+		}
+		const auto at = b.size() - footer;   // toc offset u64, toc length u64, crc u32, count u32, min u64, max u64
+		SegmentDocids seg;
+		seg.count = u32(b, at + 20);
+		seg.min = u64(b, at + 24);
+		seg.max = u64(b, at + 32);
+		const auto toc = static_cast<std::size_t>(u64(b, at));
+		const auto sections = u32(b, toc);
+		for (std::size_t i = 0, p = toc + 4; i < sections; ++i) {
+			const auto kind = u16(b, p);
+			const auto shift = u16(b, p + 2);
+			const auto offset = u64(b, p + 4);
+			const auto length = u64(b, p + 12);
+			p += 24 + 4 * ((length + (std::uint64_t{1} << shift) - 1) >> shift);
+			if (kind == 7) {   // the docids section
+				seg.kind = static_cast<unsigned char>(b[offset]);
+			}
+		}
+		segments.push_back(seg);
+	}
+	CHECK_FALSE(ec);
+	return segments;
+}
+
+// Merges all the segments of a shard's index into one, in docid order, and commits it. The first commit flushes the
+// write buffer, so its documents are in a segment the merge takes.
+static void merge_all(const Endpoint& endpoint) {
+	auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE_QUIET);
+	auto turn = engine::sync_wait(pin->take_turn(WRITE_QUIET));
+	auto& index = A::index(pin.entry());
+	index.commit();
+	std::vector<std::uint64_t> ids;
+	for (const auto& segment : index.segments()) {
+		ids.push_back(segment.id);
+	}
+	if (ids.size() > 1) {
+		index.merge(ids);
+	}
+	index.commit();
+}
+
+// A RESTORE of ids 1..N and PUTs of explicit ids far above them (the T4/T5 mix's 11,000,001 and up) leave every
+// shard's docids dense: after a merge of all its segments, it holds its documents in one contiguous segment
+// (docids kind 0). Docids named by ids put the far ones millions apart, and the merged segment was monotone.
+static void test_far_ids_keep_the_docids_dense() {
+	Watchdog watchdog("far ids keep the docids dense", 240s);
+	for (const int shards : {1, 3}) {
+		const auto index = "dense_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		std::vector<std::uint64_t> ids;
+		std::string body;
+		for (std::uint64_t id = 1; id <= 300; ++id) {
+			body += R"({"_id":)" + std::to_string(id) + R"(,"n":"base"})" "\n";
+			ids.push_back(id);
+		}
+		CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+		for (std::uint64_t id = 11000001; id <= 11000030; ++id) {
+			CHECK_EQ(call("PUT", path + std::to_string(id) + (id == 11000030 ? "?commit" : ""), R"({"n":"far"})").status, 204);
+			ids.push_back(id);
+		}
+		const auto endpoints = endpoints_of(index);
+		std::vector<std::uint64_t> per(endpoints.size(), 0);
+		for (const auto id : ids) {
+			++per[id_shard(numeric_key(id), endpoints.size())];
+		}
+		for (std::size_t s = 0; s < endpoints.size(); ++s) {
+			merge_all(endpoints[s]);
+			bool merged = false;
+			for (const auto& seg : segment_docids(endpoints[s])) {
+				std::fprintf(stderr, "  %s shard %zu: kind %d, %llu docs, docids %llu-%llu\n", index.c_str(), s, seg.kind,
+					static_cast<unsigned long long>(seg.count), static_cast<unsigned long long>(seg.min), static_cast<unsigned long long>(seg.max));
+				CHECK_EQ(seg.kind, 0);
+				CHECK_EQ(seg.max - seg.min + 1, seg.count);
+				merged = merged || seg.count == per[s];
+			}
+			CHECK(merged);   // one segment holds every document of the shard
+		}
+		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), ids.size());
+		CHECK_EQ(text_of(call("GET", path + "11000030"), "n"), "far");
+	}
+}
+
+// New numeric ids keep their stride and never collide with explicit ones: one shard numbers 1, 2, then above an
+// explicit 10, and above every id after a reopen (the counter persists with the commit); over 3 shards, a shard
+// that takes every new id issues only ids of the buckets it owns (stride 3 below 1024), above the others' ids.
+static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
+	Watchdog watchdog("new numeric ids keep their stride across a reopen", 240s);
+	{
+		const std::string index = "stride_s1";
+		const auto path = "/" + index + "/";
+		create_index(index, 1, R"({"_type":"object","_id":{"_type":"positive"}})");
+		std::map<std::uint64_t, std::string> written;
+		written[post(path, "a")] = "a";
+		written[post(path, "b")] = "b";
+		CHECK_EQ(call("PUT", path + "10?commit", R"({"n":"ten"})").status, 204);
+		written[10] = "ten";
+		written[post(path, "c")] = "c";
+		reopen_index(index);
+		written[post(path, "d")] = "d";
+		CHECK_EQ(call("PUT", path + "20?commit", R"({"n":"twenty"})").status, 204);
+		written[20] = "twenty";
+		written[post(path, "e")] = "e";
+		const std::map<std::uint64_t, std::string> expected{{1, "a"}, {2, "b"}, {10, "ten"}, {11, "c"}, {12, "d"}, {20, "twenty"}, {21, "e"}};
+		CHECK_TRUE(written == expected);
+		for (const auto& [id, n] : expected) {
+			const auto got = call("GET", path + std::to_string(id));
+			CHECK_EQ(text_of(got, "n"), n);
+			CHECK_EQ(text_of(got, "_id"), std::to_string(id));
+			CHECK_EQ(version_of(got), 1);   // written once: no new id landed on it
+		}
+	}
+	{
+		const std::string index = "stride_s3";
+		const auto path = "/" + index + "/";
+		create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+		for (const int id : {2, 3, 5, 6, 8, 9}) {   // buckets 1, 2, 4, 5, 7, 8: shards 1 and 2, three each
+			CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"x"})").status, 204);
+		}
+		const auto endpoints = endpoints_of(index);
+		std::vector<std::uint64_t> got;
+		for (int i = 0; i < 3; ++i) {
+			got.push_back(post(path, "new"));   // shard 0 is the least used for all three
+		}
+		CHECK_TRUE((got == std::vector<std::uint64_t>{10, 13, 16}));   // above 9, buckets 9, 12 and 15
+		for (const auto id : got) {
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), 0u);
+		}
+		reopen_index(index);
+		const auto after = post(path, "after");
+		CHECK_EQ(after, 19u);   // shard 0 again (three each, the first is taken), above 16: bucket 18
+		CHECK_EQ(holder_of(endpoints, numeric_key(after)), 0u);
+		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 10u);
+	}
+	// The ids a shard of 3 issues next, across the wrap of the buckets: 1,021 is bucket 1,020 (shard 0), 1,022 and
+	// 1,023 buckets 1,021 and 1,022 (shards 1 and 2), 1,024 bucket 1,023 (shard 0), 1,025 bucket 0 (shard 0) again.
+	CHECK_EQ(next_auto_id(1020, 0, 3), 1021u);
+	CHECK_EQ(next_auto_id(1021, 0, 3), 1024u);
+	CHECK_EQ(next_auto_id(1024, 0, 3), 1025u);
+	CHECK_EQ(next_auto_id(1020, 2, 3), 1023u);
+	CHECK_EQ(next_auto_id(1023, 2, 3), 1027u);
+	CHECK_EQ(next_auto_id(7, 0, 1), 8u);
+	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
+
+	// An issued id's key is the one a PUT of that id names, as an integer or a positive, and it names that id again,
+	// up to MAX_NUMERIC_ID. Past it, 2^32 + 1's key names 2^32 + 2^24, so such ids are placed by hash.
+	for (const std::uint64_t id : {std::uint64_t{1}, std::uint64_t{1023}, (std::uint64_t{1} << 24) + 1, (std::uint64_t{1} << 31) + 5, MAX_NUMERIC_ID - 1, MAX_NUMERIC_ID}) {
+		const auto key = numeric_key(id);
+		CHECK_EQ(key, document_key(Serialise::integer(static_cast<std::int64_t>(id)), 'N'));
+		CHECK_EQ(numeric_id(key), id);
+		CHECK_EQ(numeric_id(document_key(Serialise::floating(static_cast<long double>(id)), 'N')), id);   // a float id's key
+	}
+	CHECK_EQ(numeric_id(document_key(Serialise::integer(std::int64_t{1} << 32), 'N')), 0u);
+	CHECK_EQ(numeric_id(document_key(Serialise::integer((std::int64_t{1} << 32) + 1), 'N')), 0u);
+}
+
+// A lookup by id reads the shard the id routes to first: over 3 shards a GET of an existing id reads one key in one
+// shard and a RESTORE's placement of existing ids one key each; a miss reads every shard (an id written under an
+// earlier rule can sit off its routed shard).
+static void test_a_lookup_by_id_reads_one_shard() {
+	Watchdog watchdog("a lookup by id reads one shard", 120s);
+	const std::string index = "lookup_s3";
+	const auto path = "/" + index + "/";
+	create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+	for (int id = 1; id <= 6; ++id) {
+		CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"x"})").status, 204);
+	}
+	for (const int id : {1, 2, 3, 4, 5, 6, 100}) {
+		const auto before = DatabaseHandler::key_reads.load();
+		CHECK_EQ(call("GET", path + std::to_string(id)).status, id == 100 ? 404 : 200);
+		CHECK_EQ(DatabaseHandler::key_reads.load() - before, id == 100 ? 3u : 1u);
+	}
+	std::string body;
+	for (int id = 101; id <= 130; ++id) {
+		body += R"({"_id":)" + std::to_string(id) + R"(,"n":"r"})" "\n";
+	}
+	for (const auto [round, expected] : {std::pair{1, 90u}, std::pair{2, 30u}}) {   // new ids miss, then they hit
+		const auto before = DatabaseHandler::key_reads.load();
+		CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+		const auto reads = DatabaseHandler::key_reads.load() - before;
+		std::fprintf(stderr, "  RESTORE %d of 30 ids over 3 shards read %llu keys\n", round, static_cast<unsigned long long>(reads));
+		CHECK_EQ(reads, expected);
+	}
+	CHECK_EQ(version_of(call("GET", path + "130")), 2);
+	// A new numeric id is issued in its shard's turn: the POST looks no key up in any shard.
+	const auto before_post = DatabaseHandler::key_reads.load();
+	CHECK(success(call("POST", path + "?commit", R"({"n":"p"})")));
+	CHECK_EQ(DatabaseHandler::key_reads.load() - before_post, 0u);
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 37u);
+}
+
+// Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket
+// (N - 1) % 1024 and a keyword id in the one its hash's bucket names, and every new numeric id lives in the shard
+// owning its bucket, ascending across the shards, over 1, 3 and 5 shards.
+static void test_ids_route_by_bucket() {
+	Watchdog watchdog("ids route by bucket", 240s);
+	for (const int shards : {1, 3, 5}) {
+		const auto index = "buckets_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		const auto endpoints = endpoints_of(index);
+		std::uint64_t last = 0;
+		for (int i = 0; i < 2 * shards; ++i) {
+			const auto id = post(path, "new");
+			CHECK_EQ(id, last + 1);   // the shards fill in turn, each above the others
+			last = id;
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), static_cast<std::size_t>(i % shards));
+		}
+		const std::uint64_t explicit_ids[] = {1023, 1024, 1025, 2049, 3000, 4096, 11000001, 11000002, 11000003};
+		for (const auto id : explicit_ids) {
+			CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"explicit"})").status, 204);
+			const auto bucket = (id - 1) % 1024;
+			CHECK_EQ(id_bucket(numeric_key(id)), bucket);
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), static_cast<std::size_t>(bucket % static_cast<std::uint64_t>(shards)));
+		}
+		const auto above = post(path, "above");
+		CHECK(above > 11000003u);
+		CHECK_EQ(holder_of(endpoints, numeric_key(above)), bucket_shard((above - 1) % 1024, static_cast<std::size_t>(shards)));
+	}
+	for (const int shards : {1, 3, 5}) {
+		const auto index = "buckets_kw_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards);
+		CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
+		const auto endpoints = endpoints_of(index);
+		DatabaseHandler db(endpoints, WRITE);
+		for (const std::string id : {"a", "b", "c", "zeta", "1025"}) {
+			CHECK_EQ(call("PUT", path + id + "?commit", R"({"n":"kw"})").status, 204);
+			auto obj = MsgPack{{"_id", id}, {"n", "kw"}};
+			const auto term = std::get<0>(engine::sync_wait(db.prepare_document(obj, 0)));
+			CHECK_EQ(holder_of(endpoints, term), static_cast<std::size_t>(key_placement_hash(term) % 1024 % static_cast<std::uint64_t>(shards)));
+		}
+	}
+}
+
+// A DUMP and RESTORE into a fresh index keeps every id: explicit numbers, new numeric ids and keywords come back
+// with the same `_id` and body, and the next new id of the restored index is above every restored numeric id,
+// after a reopen too.
+static void test_a_dump_and_restore_keeps_every_id() {
+	Watchdog watchdog("a dump and restore keeps every id", 240s);
+	for (const int shards : {1, 3}) {
+		const auto at = "_s" + std::to_string(shards);
+		const auto round_trip = [&](const std::string& source, const std::string& target) {
+			const auto dumped = call("DUMP", "/" + source + "/");
+			CHECK_EQ(dumped.status, 200);
+			CHECK(dumped.body.is_array());
+			std::string lines;
+			std::map<std::string, std::string> bodies;   // _id -> n
+			if (dumped.body.is_array()) {
+				for (const auto& obj : dumped.body) {
+					lines += obj.to_string() + "\n";
+					bodies[obj.at(std::string_view("_id")).to_string()] = obj.at(std::string_view("n")).str();
+				}
+			}
+			create_index(target, shards);
+			CHECK(success(call("RESTORE", "/" + target + "/?commit", lines, "application/x-ndjson")));
+			for (const auto& [id, n] : bodies) {
+				const auto key = id.size() > 1 && id.front() == '"' ? id.substr(1, id.size() - 2) : id;
+				const auto got = call("GET", "/" + target + "/" + key);
+				CHECK_EQ(got.status, 200);
+				CHECK_EQ(field_of(got, "_id").to_string(), id);
+				CHECK_EQ(text_of(got, "n"), n);
+			}
+			CHECK_EQ(field_of(call("SEARCH", "/" + target + "/?volatile", R"({"_limit":1})"), "total").as_u64(), bodies.size());
+			return bodies.size();
+		};
+
+		const auto numbers = "dump_num" + at;
+		create_index(numbers, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		for (const int id : {5, 7, 1000}) {
+			CHECK_EQ(call("PUT", "/" + numbers + "/" + std::to_string(id) + "?commit", R"({"n":"explicit )" + std::to_string(id) + "\"}").status, 204);
+		}
+		std::uint64_t highest = 1000;
+		for (int i = 0; i < 3; ++i) {
+			highest = std::max(highest, post("/" + numbers + "/", "auto " + std::to_string(i)));
+		}
+		CHECK(highest > 1000u);   // 1,001 to 1,003 on one shard
+		CHECK_EQ(round_trip(numbers, "restored_num" + at), 6u);
+		const auto restored = "/restored_num" + at + "/";
+		const auto next = post(restored, "next");
+		CHECK(next > highest);
+		reopen_index("restored_num" + at);
+		const auto after = post(restored, "after");
+		CHECK(after > next);
+		if (shards == 1) {
+			CHECK_EQ(highest, 1003u);
+			CHECK_EQ(next, 1004u);
+			CHECK_EQ(after, 1005u);
+		}
+
+		const auto keywords = "dump_kw" + at;
+		create_index(keywords, shards);
+		for (const std::string id : {"a", "b", "zeta"}) {
+			CHECK_EQ(call("PUT", "/" + keywords + "/" + id + "?commit", R"({"n":"kw )" + id + "\"}").status, 204);
+		}
+		CHECK_EQ(round_trip(keywords, "restored_kw" + at), 3u);
+	}
 }
 
 // Writers on few documents, each writing the version it read (PUT and PATCH, with ?version), against the sequential
@@ -2576,6 +2952,11 @@ int main(int argc, char** argv) {
 		{"test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh", test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh},
 		{"test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document", test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document},
 		{"test_new_numeric_ids_spread_over_the_shards_while_buffered", test_new_numeric_ids_spread_over_the_shards_while_buffered},
+		{"test_far_ids_keep_the_docids_dense", test_far_ids_keep_the_docids_dense},
+		{"test_new_numeric_ids_keep_their_stride_across_a_reopen", test_new_numeric_ids_keep_their_stride_across_a_reopen},
+		{"test_a_lookup_by_id_reads_one_shard", test_a_lookup_by_id_reads_one_shard},
+		{"test_ids_route_by_bucket", test_ids_route_by_bucket},
+		{"test_a_dump_and_restore_keeps_every_id", test_a_dump_and_restore_keeps_every_id},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},

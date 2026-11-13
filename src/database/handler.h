@@ -28,6 +28,7 @@
 #include <atomic>                            // for std::atomic
 #include <cassert>                           // for assert
 #include <chrono>                            // for std::chrono
+#include <cstdint>                           // for std::uint64_t
 #include <functional>                        // for std::function
 #include <memory>                            // for std::shared_ptr, std::make_shared
 #include <stddef.h>                          // for size_t
@@ -69,18 +70,43 @@ engine::docid to_docid(std::string_view document_id);
 // Whether a document id is given: a missing or null id, an empty string or false is none; a number is one, 0 included.
 bool has_document_id(const MsgPack& document_id);
 
-// The key of a new document whose numeric id the shard numbers: a numeric key always has a value after its 'N'.
+// The key of a new document whose numeric id the shard issues: a numeric key always has a value after its 'N'.
 inline constexpr std::string_view NEW_NUMERIC_KEY = "N";
 
-// The document id a numeric key names: the id when it is a whole number from 1 to below the largest docid, else 0
-// (an id such as 0, -1, 1.5, 2^32-1 or 2^63 is placed by its key alone).
-engine::docid numeric_docid(std::string_view key);
+// Ids route to fixed buckets and buckets to shards (docs/design/one-id.md, D85).
+inline constexpr std::size_t ID_BUCKETS = 1024;
+
+// The shard metadata key of its id counter, a MessagePack integer.
+inline constexpr std::string_view ID_HIGH_METADATA = "_id_high";
+
+// The largest numeric id with a bucket: the numeric key names every integer up to it exactly (2^32 + 1's key names
+// 2^32 + 2^24), so the counter never issues an id whose key names another.
+inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 32) - 1;
+
+// The integer id a numeric key names, from 1 to MAX_NUMERIC_ID, else 0 (0, -1, 1.5 or 2^32 are placed by hash).
+std::uint64_t numeric_id(std::string_view key);
+
+// The key a PUT of the integer id names, in an index whose ids are integers or positive.
+std::string numeric_key(std::uint64_t id);
+
+// An id's bucket: (N - 1) % ID_BUCKETS for a numeric id N, else its key's placement hash modulo ID_BUCKETS.
+std::size_t id_bucket(std::string_view key);
+
+// The bucket-to-shard table of an index of n shards.
+std::size_t bucket_shard(std::size_t bucket, std::size_t n_shards);
+
+// The shard a new document with this key goes to.
+std::size_t id_shard(std::string_view key, std::size_t n_shards);
+
+// The automatic id shard `shard_num` of n issues after `high`: the smallest id above it in a bucket the shard owns;
+// 0 when none is left up to MAX_NUMERIC_ID.
+std::uint64_t next_auto_id(std::uint64_t high, std::size_t shard_num, std::size_t n_shards);
 
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
 
-// Where a document id across `shards` shards lives: the shard's position and the document's id in that shard,
-// which is the id one shard numbers. (hit id = (docid - 1) * shards + shard + 1.) A hit id is 64 bits wide, a
+// Where a hit across `shards` shards lives: the shard's position and the document's docid in that shard
+// (hit id = (docid - 1) * shards + shard + 1). A hit id is a docid handle, never a document's _id. A hit id is 64 bits wide, a
 // shard's docid 32: an id with no such docid, or 0, raises errc::doc_not_found.
 struct SplitHitId {
 	size_t shard;
@@ -120,6 +146,9 @@ public:
 	// The budget's token, which the index uses this handler makes pass to their turn waits (empty without one).
 	task::cancel_token turn_token() const { return budget != nullptr ? budget->token() : task::cancel_token{}; }
 
+	// Reads of a key in a shard that by-id lookups made, one per key and shard (tests count them).
+	static inline std::atomic<std::uint64_t> key_reads{0};
+
 private:
 #ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;
@@ -132,11 +161,13 @@ private:
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
-	// The docid holding the term in any shard, read from the published views or (written) as the writes left them.
+	// The docid holding the term, read in the shard its id routes to (id_shard) and, on a miss, in the others, from
+	// the published views or (written) as the writes left them.
 	task::task<engine::docid> find_docid_term(const std::string& term, bool written);
 
-	// The active shard with the fewest documents as the writes left them, where a new numeric id goes.
-	task::task<size_t> least_used_shard();
+	// The active shard with the fewest documents as the writes left them, where a new numeric id goes, and the largest
+	// of the shards' id counters, which the new id goes above.
+	task::task<std::pair<size_t, std::uint64_t>> least_used_shard();
 
 	// Pins the indexes [begin, end) of the endpoints and searches them: one batch of a wide search.
 	task::task<engine::BatchResult> search_batch(size_t begin, size_t end, const engine::SearchRequest& request);
@@ -253,7 +284,6 @@ public:
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false);
-	task::task<engine::WriteResult> replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 
 	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);

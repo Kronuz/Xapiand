@@ -99,9 +99,12 @@ An index created with one shard keeps those files in its own directory. Indexes
 nest: `twitter/user` is an index inside `twitter`'s directory, and the pattern
 `twitter/**` names both.
 
-A document belongs to one shard. A numeric id `n` goes to shard `(n - 1) mod
-shards`, any other id to the FNV-1a hash of the id modulo the shards, and a new
-document without an id to the shard that holds the fewest documents.
+A document belongs to one shard. Its id goes to one of 1,024 fixed buckets (a
+numeric id `n` to bucket `(n - 1) mod 1024`, any other id to the FNV-1a hash of
+the id modulo 1,024), and bucket `b` to shard `b mod shards`. A new document
+without an id goes to the shard that holds the fewest documents, which issues
+its numeric id from a bucket it owns. Docids are each shard's own, in append
+order, and never derive from an id.
 
 The **index registry** keeps the open indexes. It is a strata catalog keyed by
 path: a request *pins* an index to use it, and the first pin opens it in a chore.
