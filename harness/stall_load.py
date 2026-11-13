@@ -367,7 +367,9 @@ def faults_delta(
 
 
 def cap_memory(node: Node, factor: float) -> dict[str, Any]:
-    """T6's "index at FACTOR x RAM": the node's cgroup gets its anonymous memory plus 1/FACTOR of the index in page cache."""
+    """T6's "index at FACTOR x RAM": the node's cgroup reclaims down to its anonymous memory plus 1/FACTOR of the index.
+
+    memory.high, not memory.max: past it the kernel reclaims (page cache first) instead of killing the node."""
     pid = node.pid
     if pid is None or not os.path.isdir("/proc"):
         raise SystemExit("--index-size needs a node this script started, on Linux")
@@ -383,14 +385,14 @@ def cap_memory(node: Node, factor: float) -> dict[str, Any]:
 
     anon = stat()["anon"]
     limit = anon + int(index_bytes / factor)
-    with open(os.path.join(cg, "memory.max"), "w") as f:
+    with open(os.path.join(cg, "memory.high"), "w") as f:
         f.write(str(limit))
     after = stat()
     return {
         "cgroup": cg,
         "index_bytes": index_bytes,
         "anon_bytes": anon,
-        "memory_max": limit,
+        "memory_high": limit,
         "file_bytes_after_cap": after["file"],
     }
 
