@@ -1,6 +1,6 @@
 # exact-id-keys: journal
 
-State: waiting on jobs 261113-133028-5a3e88 261113-133032-02c164 261113-133034-97a8fa
+State: waiting on jobs 261113-140055-efd7e7 261113-140057-32e4ef 261113-140102-b8b97c 261113-140111-a97edc
 Quest: .campaign/xapiand/quests/exact-id-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Lead narrowed the quest to A1 + A4 (quick fix). Jobs at 58a14faf6: A1 test 261113-133028-5a3e88, A1 mutant
-old-codec 261113-133032-02c164 (--fails-without), suite 261113-133034-97a8fa (A4). Branch pushed for CI.
+Suite 261113-133034-97a8fa failed at 58a14faf6: every POST echoed a wrong `_id` because
+`DatabaseHandler::unserialise_term_id` decoded 'N' keys with the value codec. Fixed at 83fea2fc4
+(`Unserialise::id(FieldType, bytes)`). Jobs at 83fea2fc4: suite 261113-140055-efd7e7 (A4), A1 test
+261113-140057-32e4ef, A1 mutant old-codec 261113-140102-b8b97c (--fails-without), follow-up cap-2-32 mutant probe
+261113-140111-a97edc (exit 0 = killed; no criterion since A2 was dropped). Branch pushed for CI.
 
 ## Next
 
@@ -25,8 +28,8 @@ there; edited minimally, see R5.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | jobs 261113-133028-5a3e88 (test), 261113-133032-02c164 (old-codec mutant) |
-| A4 | suite 261113-133034-97a8fa; CI on quest/xapiand/exact-id-keys |
+| A1 | jobs 261113-140057-32e4ef (test), 261113-140102-b8b97c (old-codec mutant) |
+| A4 | suite 261113-140055-efd7e7; CI on quest/xapiand/exact-id-keys |
 
 ## Result
 
@@ -54,5 +57,7 @@ still says 2^32 - 1.
   leaves no id for the POST that follows; the cap itself is tested in test_new_numeric_ids_pass_two_to_the_thirty_two.
   The old key-equals-value-codec checks in test_new_numeric_ids_keep_their_stride_across_a_reopen moved to the
   new tests with the new codec.
+- R6 `unserialise_term_id` (response `_id` of POST, RESTORE, bulk) decodes 'N' keys with sortable in the id
+  field's type: integer to int64, positive to uint64, floating to double.
 - R5 src/query_dsl.cc edited outside the file set (msg-46): one branch in get_regular_query. docs/design/one-id.md
   (outside the file set) still says 2^32 - 1; the new note says it supersedes that bound.
